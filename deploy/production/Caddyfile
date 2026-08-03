@@ -10,6 +10,24 @@
 	auto_https off
 }
 
+# Plain HTTP (port 80): send every browser that types the bare domain on to
+# HTTPS, so `mail.example.com` reaches the app instead of a dead port. The one
+# exception is Let's Encrypt's HTTP-01 renewal probe: `certbot renew --webroot`
+# (in the certbot service) writes the challenge token into the shared
+# `acme_challenge` volume, mounted here read-only at /var/www/certbot, and we
+# serve it as a static file. Caddy owns host port 80 for this; certbot no
+# longer publishes it. auto_https is off, so this stays plain HTTP — Caddy
+# won't try to get a cert for it or add its own redirect.
+http://{$DOMAIN} {
+	handle /.well-known/acme-challenge/* {
+		root * /var/www/certbot
+		file_server
+	}
+	handle {
+		redir https://{host}{uri} permanent
+	}
+}
+
 # The one origin: the alo web app (SPA) plus the JMAP API + OIDC provider it
 # talks to. The app and its backend share an origin, so there is no CORS and
 # the login redirect stays first-party.

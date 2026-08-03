@@ -45,6 +45,8 @@ volumes:
   # Post-rebrand volumes (new since the rename) — no legacy names.
   redis_data:
   clamav_db:
+  # ACME HTTP-01 challenge webroot: certbot writes tokens, Caddy serves them.
+  acme_challenge:
 
 services:
   postgres:
@@ -138,13 +140,15 @@ services:
       ALO_GID: ${ALO_GID:-10001}
     entrypoint: >
       sh -c 'trap exit TERM;
-             while :; do certbot renew --standalone --quiet;
+             while :; do certbot renew --webroot -w /var/www/certbot --quiet;
                          sleep 12h & wait $${!}; done'
     volumes:
       - certs:/etc/letsencrypt
+      - acme_challenge:/var/www/certbot
       - ./certbot-deploy-hook.sh:/etc/letsencrypt/renewal-hooks/deploy/50-alo-perms.sh:ro
-    ports:
-      - "80:80"
+    # No published port: Caddy owns host :80 and serves the HTTP-01 challenge
+    # token that `certbot renew --webroot` writes into the shared acme_challenge
+    # volume. See the http:// block in Caddyfile.
     networks: [alo]
 
   alo-smtp:
@@ -313,7 +317,9 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./web:/srv:ro
       - certs:/certs:ro
+      - acme_challenge:/var/www/certbot:ro
       - caddy_data:/data
     ports:
+      - "80:80" # HTTP→HTTPS redirect + ACME-challenge passthrough to certbot
       - "443:443"
     networks: [alo]
