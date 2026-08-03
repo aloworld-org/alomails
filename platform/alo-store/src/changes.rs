@@ -20,6 +20,8 @@ pub const TYPE_EMAIL: &str = "Email";
 pub const TYPE_THREAD: &str = "Thread";
 /// See [`TYPE_MAILBOX`].
 pub const TYPE_CONTACT: &str = "Contact";
+/// See [`TYPE_MAILBOX`].
+pub const TYPE_EVENT: &str = "Event";
 
 /// What happened to an object.
 #[derive(Debug, Clone, Copy)]

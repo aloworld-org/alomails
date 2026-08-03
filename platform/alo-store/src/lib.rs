@@ -20,6 +20,7 @@ pub mod dkim;
 pub mod dmarc_reports;
 pub mod document;
 pub mod error;
+pub mod ical;
 pub mod id;
 pub mod identity;
 pub mod maintenance;

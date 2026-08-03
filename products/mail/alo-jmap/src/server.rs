@@ -111,6 +111,7 @@ pub fn app(state: AppState) -> Router {
         // Any WebDAV method routes to the one handler, which dispatches by
         // method + path; well-known bootstraps discovery.
         .route("/.well-known/carddav", any(carddav::well_known))
+        .route("/.well-known/caldav", any(carddav::well_known))
         .route("/dav", any(carddav::handle))
         .route("/dav/", any(carddav::handle))
         .route("/dav/{*rest}", any(carddav::handle))
