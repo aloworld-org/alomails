@@ -7,9 +7,9 @@ import { NavLink } from "react-router-dom";
 
 import { strings } from "../i18n";
 import { cx } from "../ds";
+import { surface } from "../product";
 import { Logo } from "./Logo";
 import { UserMenu } from "./UserMenu";
-import { modules } from "./moduleRegistry";
 import styles from "./Rail.module.css";
 
 interface RailProps {
@@ -32,7 +32,7 @@ export function Rail({ onNew, onAskAi }: RailProps) {
       </div>
 
       <ul className={styles.modules}>
-        {modules.map((m) => (
+        {surface.modules.map((m) => (
           <li key={m.id}>
             <NavLink
               to={m.path}

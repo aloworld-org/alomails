@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 
 import { strings } from "../../i18n";
+import { surface } from "../../product";
 import styles from "./RichTextEditor.module.css";
 
 /** Largest inline image edge (px); wider images are downscaled before embedding. */
@@ -112,7 +113,14 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }
   const ref = useRef<HTMLDivElement>(null);
   const savedRange = useRef<Range | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  // The id of the open compose-insert (from the product surface), or null.
+  const [insert, setInsert] = useState<string | null>(null);
   const [font, setFont] = useState(DEFAULT_FONT);
+  // Compose-editor inserts (e.g. equation/code) are contributed by the product
+  // surface (ADR 0019): the mail product has none, so the mail build carries no
+  // KaTeX/Prism; the workspace supplies them. Read at render, not module scope
+  // (the surface ↔ mail import cycle leaves it unset at module init).
+  const composeInserts = surface.composeInserts;
   const [size, setSize] = useState("3");
 
   useEffect(() => {
@@ -191,8 +199,14 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }
     execRestored("createLink", url.trim());
   }
 
+  function openInsert(id: string) {
+    saveRange();
+    setInsert(id);
+  }
+
   /** Insert HTML at the saved caret, parsed via <template> so MathML/atoms survive. */
   function insertHtml(html: string) {
+    setInsert(null);
     const el = ref.current;
     if (el === null) return;
     el.focus();
@@ -372,6 +386,10 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }
           fileInput.current?.click();
         })}
         {divider("d3")}
+
+        {composeInserts.map((ci) =>
+          tool(ci.id, ci.label, <ci.Icon size={16} />, () => openInsert(ci.id)),
+        )}
         {tool("clear", strings.clearFormatting, <Eraser size={16} />, () => exec("removeFormat"))}
       </div>
 
@@ -401,6 +419,13 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }
         onDrop={(e) => void onDrop(e)}
         suppressContentEditableWarning
       />
+      {(() => {
+        if (insert === null) return null;
+        const ci = composeInserts.find((c) => c.id === insert);
+        if (ci === undefined) return null;
+        const Modal = ci.Modal;
+        return <Modal onInsert={insertHtml} onClose={() => setInsert(null)} />;
+      })()}
     </div>
   );
 }
