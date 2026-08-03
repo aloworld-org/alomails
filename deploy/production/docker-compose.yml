@@ -277,6 +277,10 @@ services:
       ALO_SMTP_LOCAL_DOMAINS: ${ALO_SMTP_LOCAL_DOMAINS:?set the hosted mail domain(s) in .env}
       ALO_SMTP_DKIM_SELECTOR: ${ALO_SMTP_DKIM_SELECTOR:-}
       ALO_SMTP_DKIM_DOMAIN: ${ALO_SMTP_DKIM_DOMAIN:-}
+      # Domains open to self-service personal signup (ADR 0018), comma-separated.
+      # Empty (default) disables the /signup surface entirely. Set to the
+      # platform mail domain (e.g. alomails.com) to turn personal signup on.
+      ALO_PERSONAL_DOMAINS: ${ALO_PERSONAL_DOMAINS:-}
       # AI backend egress policy (ADR 0012). Default `open` allows any endpoint
       # — correct for self-hosted deployments where the model runs on localhost
       # or a private LAN. Set to `restricted` on shared/multi-tenant hosting to
