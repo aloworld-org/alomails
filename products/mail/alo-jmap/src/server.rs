@@ -7,7 +7,7 @@ use std::sync::Arc;
 use alo_identity::Identity;
 use alo_store::Store;
 use axum::extract::{DefaultBodyLimit, State};
-use axum::routing::{any, get, post, put};
+use axum::routing::{any, get, post};
 use axum::{Json, Router};
 use serde_json::{Value, json};
 

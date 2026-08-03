@@ -19,10 +19,38 @@ pub fn to_ics(event: &CalendarEvent) -> String {
         "BEGIN:VCALENDAR".to_owned(),
         "VERSION:2.0".to_owned(),
         format!("PRODID:{PRODID}"),
+    ];
+    lines.extend(vevent_lines(event, None));
+    lines.push("END:VCALENDAR".to_owned());
+    fold_join(&lines)
+}
+
+/// Serialize an iMIP scheduling message (`VCALENDAR` with a `METHOD` and an
+/// `ORGANIZER`) for emailing an invitation/update/cancel. `method` is e.g.
+/// `REQUEST`; `organizer` is the sender's email.
+pub fn to_imip(event: &CalendarEvent, organizer: &str, method: &str) -> String {
+    let mut lines = vec![
+        "BEGIN:VCALENDAR".to_owned(),
+        "VERSION:2.0".to_owned(),
+        format!("PRODID:{PRODID}"),
+        format!("METHOD:{method}"),
+    ];
+    lines.extend(vevent_lines(event, Some(organizer)));
+    lines.push("END:VCALENDAR".to_owned());
+    fold_join(&lines)
+}
+
+/// The `VEVENT` body shared by [`to_ics`] and [`to_imip`]; an `organizer`, when
+/// given, adds the `ORGANIZER` property (present only in scheduling messages).
+fn vevent_lines(event: &CalendarEvent, organizer: Option<&str>) -> Vec<String> {
+    let mut lines = vec![
         "BEGIN:VEVENT".to_owned(),
         format!("UID:{}", event.id.as_str()),
         format!("DTSTAMP:{}", fmt_utc(OffsetDateTime::now_utc())),
     ];
+    if let Some(org) = organizer {
+        lines.push(format!("ORGANIZER:mailto:{org}"));
+    }
     if event.all_day {
         lines.push(format!("DTSTART;VALUE=DATE:{}", fmt_date(event.starts_at)));
         lines.push(format!("DTEND;VALUE=DATE:{}", fmt_date(event.ends_at)));
@@ -40,8 +68,16 @@ pub fn to_ics(event: &CalendarEvent) -> String {
     if let Some(desc) = &event.description {
         lines.push(format!("DESCRIPTION:{}", escape(desc)));
     }
+    for a in &event.attendees {
+        lines.push(format!(
+            "ATTENDEE;ROLE=REQ-PARTICIPANT;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:{a}"
+        ));
+    }
     lines.push("END:VEVENT".to_owned());
-    lines.push("END:VCALENDAR".to_owned());
+    lines
+}
+
+fn fold_join(lines: &[String]) -> String {
     lines.iter().map(|l| fold(l)).collect::<Vec<_>>().join("\r\n") + "\r\n"
 }
 
@@ -57,6 +93,7 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
     let mut start: Option<(OffsetDateTime, bool)> = None;
     let mut end: Option<(OffsetDateTime, bool)> = None;
     let mut recurrence: Option<String> = None;
+    let mut attendees: Vec<String> = Vec::new();
 
     for line in unfolded.lines() {
         let upper = line.to_ascii_uppercase();
@@ -84,6 +121,16 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
             "DTSTART" => start = parse_dt(value.trim(), is_date),
             "DTEND" => end = parse_dt(value.trim(), is_date),
             "RRULE" => recurrence = Some(value.trim().to_owned()),
+            "ATTENDEE" => {
+                let addr = value
+                    .trim()
+                    .strip_prefix("mailto:")
+                    .or_else(|| value.trim().strip_prefix("MAILTO:"))
+                    .unwrap_or(value.trim());
+                if addr.contains('@') {
+                    attendees.push(addr.to_owned());
+                }
+            }
             _ => {}
         }
     }
@@ -102,6 +149,7 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
         ends_at,
         all_day,
         recurrence,
+        attendees,
     })
 }
 
@@ -174,11 +222,14 @@ fn fold(line: &str) -> String {
     let bytes = line.as_bytes();
     let mut out = String::new();
     let mut i = 0;
-    let mut limit = 75;
+    let mut chunk = 75;
     while i < bytes.len() {
-        // Don't split a UTF-8 sequence: back off to a char boundary.
-        let mut end = limit.min(bytes.len());
-        while end < bytes.len() && (bytes[end] & 0xC0) == 0x80 {
+        // Take up to `chunk` more octets, but don't split a UTF-8 sequence:
+        // back off to a char boundary. `chunk` is measured from `i`, the start
+        // of this run — a fixed absolute limit would slice backwards once past
+        // the first fold.
+        let mut end = (i + chunk).min(bytes.len());
+        while end > i && end < bytes.len() && (bytes[end] & 0xC0) == 0x80 {
             end -= 1;
         }
         if i > 0 {
@@ -186,7 +237,7 @@ fn fold(line: &str) -> String {
         }
         out.push_str(&line[i..end]);
         i = end;
-        limit = 74; // subsequent lines carry a leading space
+        chunk = 74; // continuation lines carry a leading space, so one octet less
     }
     out
 }
@@ -230,8 +281,11 @@ mod tests {
             ),
             all_day: false,
             recurrence: Some("FREQ=WEEKLY".to_owned()),
+            attendees: vec!["guest@example.com".to_owned()],
         };
         let ics = to_ics(&e);
+        // The ATTENDEE line exceeds 75 octets and folds; unfold to check it.
+        assert!(unfold(&ics).contains("mailto:guest@example.com"));
         assert!(ics.contains("DTSTART:20260815T090000Z"));
         assert!(ics.contains("DTEND:20260815T103000Z"));
         assert!(ics.contains("SUMMARY:Team sync\\; weekly"));
@@ -244,7 +298,40 @@ mod tests {
         assert_eq!(back.starts_at, e.starts_at);
         assert_eq!(back.ends_at, e.ends_at);
         assert_eq!(back.recurrence.as_deref(), Some("FREQ=WEEKLY"));
+        assert_eq!(back.attendees, vec!["guest@example.com".to_owned()]);
         assert!(!back.all_day);
+    }
+
+    #[test]
+    fn imip_request_carries_method_and_organizer() {
+        let e = CalendarEvent {
+            id: EventId::new("mtg-1".to_owned()),
+            summary: "Kickoff".into(),
+            description: None,
+            location: None,
+            starts_at: OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::September, 1).unwrap(),
+                Time::from_hms(14, 0, 0).unwrap(),
+            ),
+            ends_at: OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::September, 1).unwrap(),
+                Time::from_hms(15, 0, 0).unwrap(),
+            ),
+            all_day: false,
+            recurrence: None,
+            attendees: vec!["guest@example.com".to_owned()],
+        };
+        let msg = to_imip(&e, "owner@alomails.com", "REQUEST");
+        assert!(msg.contains("METHOD:REQUEST"));
+        assert!(msg.contains("ORGANIZER:mailto:owner@alomails.com"));
+        // The ATTENDEE line folds past 75 octets; check it unfolded.
+        assert!(unfold(&msg).contains(
+            "ATTENDEE;ROLE=REQ-PARTICIPANT;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:guest@example.com"
+        ));
+        assert!(msg.contains("UID:mtg-1"));
+        // A plain export never advertises a scheduling method or organizer.
+        assert!(!to_ics(&e).contains("METHOD:"));
+        assert!(!to_ics(&e).contains("ORGANIZER:"));
     }
 
     #[test]
@@ -264,6 +351,7 @@ mod tests {
             ),
             all_day: true,
             recurrence: None,
+            attendees: vec![],
         };
         let ics = to_ics(&e);
         assert!(ics.contains("DTSTART;VALUE=DATE:20261225"));

@@ -7,13 +7,17 @@
 //! - `PUT  /calendar/events/:id` — replace.
 //! - `DELETE /calendar/events/:id` — delete.
 //!
-//! Times cross the wire as RFC 3339 (UTC). Slice 1 is plain timed/all-day
-//! events on the user's single implicit calendar; recurrence, attendees and
-//! CalDAV sync are later slices. No event content is logged (Law 1).
+//! Times cross the wire as RFC 3339 (UTC), on the user's single implicit
+//! calendar. Events may recur (an iCalendar `RRULE`) and carry guest addresses;
+//! saving an event with guests mails each an iMIP `METHOD:REQUEST` invitation
+//! from the owner's address (see [`send_invitations`]). CalDAV sync of the same
+//! events lives in `carddav`. No event content is logged (Law 1).
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
+use base64::Engine;
+use base64::engine::general_purpose::STANDARD as B64;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::OffsetDateTime;
@@ -22,7 +26,7 @@ use time::format_description::well_known::Rfc3339;
 use alo_store::{CalendarEvent, EventId, StoreError};
 
 use crate::error::Problem;
-use crate::state::{AppState, authenticate};
+use crate::state::{Account, AppState, authenticate};
 
 /// Widest window a single range query may span (guards a pathological pull).
 const MAX_RANGE_DAYS: i64 = 400;
@@ -49,6 +53,9 @@ struct EventBody {
     /// An iCalendar RRULE (e.g. `FREQ=WEEKLY`) or empty/absent for a one-off.
     #[serde(default)]
     recurrence: Option<String>,
+    /// Guest email addresses to invite (iMIP invitations are mailed on save).
+    #[serde(default)]
+    attendees: Vec<String>,
 }
 
 /// `GET /calendar/events?from=&to=` → `{"events": [...]}`.
@@ -109,7 +116,9 @@ pub async fn create(
         .create_event(&event)
         .await
         .map_err(|_| Problem::server_error())?;
-    Ok(Json(event_json(&CalendarEvent { id, ..event })))
+    let saved = CalendarEvent { id, ..event };
+    send_invitations(&state, &account, &saved).await;
+    Ok(Json(event_json(&saved)))
 }
 
 /// `PUT /calendar/events/:id` → `{status:"ok"}`.
@@ -127,6 +136,7 @@ pub async fn update(
         .update_event(&EventId::new(id), &event)
         .await
         .map_err(map_store_err)?;
+    send_invitations(&state, &account, &event).await;
     Ok(Json(json!({ "status": "ok" })))
 }
 
@@ -169,6 +179,18 @@ fn build_event(id: EventId, req: EventBody) -> Result<CalendarEvent, Problem> {
         ends_at,
         all_day: req.all_day,
         recurrence: clean(req.recurrence),
+        attendees: req
+            .attendees
+            .into_iter()
+            .map(|a| a.trim().to_owned())
+            // A plausible address, and no whitespace/control chars — the latter
+            // would let a crafted address inject headers into the invitation.
+            .filter(|a| {
+                a.contains('@')
+                    && a.len() <= 254
+                    && !a.contains(|c: char| c.is_whitespace() || c.is_control())
+            })
+            .collect(),
     })
 }
 
@@ -188,6 +210,7 @@ fn event_json(e: &CalendarEvent) -> Value {
         "endsAt": e.ends_at.format(&Rfc3339).unwrap_or_default(),
         "allDay": e.all_day,
         "recurrence": e.recurrence,
+        "attendees": e.attendees,
     })
 }
 
@@ -196,4 +219,80 @@ fn map_store_err(e: StoreError) -> Problem {
         StoreError::NotFound => Problem::with(StatusCode::NOT_FOUND, "no such event"),
         _ => Problem::server_error(),
     }
+}
+
+/// MIME boundary for the invitation's `multipart/alternative`. A fixed token is
+/// safe: it never occurs in a base64-encoded part body.
+const IMIP_BOUNDARY: &str = "=_alo_imip_iX9q2p";
+
+/// Mails each guest an iMIP `METHOD:REQUEST` invitation from the organizer's own
+/// address, so recipients on any calendar (Gmail/Outlook/Apple) get a real,
+/// RSVP-able invite. Best-effort: the event is already persisted, so a send
+/// failure is logged — never with addresses or content (Law 1) — and does not
+/// fail the write. Sending an update to an existing event re-issues the request,
+/// which those clients treat as an update (same `UID`). No listener or unknown
+/// organizer address means no mail rather than an error.
+async fn send_invitations(state: &AppState, account: &Account, event: &CalendarEvent) {
+    if event.attendees.is_empty() {
+        return;
+    }
+    let Some(addr) = state.submission_addr.as_deref() else {
+        tracing::warn!("calendar: no submission listener; invitations not sent");
+        return;
+    };
+    let organizer = match state
+        .store
+        .for_tenant(account.tenant.clone())
+        .email_of(&account.user)
+        .await
+    {
+        Ok(Some(email)) => email,
+        _ => {
+            tracing::warn!("calendar: organizer address unknown; invitations not sent");
+            return;
+        }
+    };
+    let subject = crate::mime::encode_unstructured(&format!("Invitation: {}", event.summary));
+    let plain_b64 = wrap76(&B64.encode(format!("You're invited to {}.", event.summary)));
+    let ics_b64 = wrap76(&B64.encode(alo_store::ical::to_imip(event, &organizer, "REQUEST")));
+    for attendee in &event.attendees {
+        let message = format!(
+            "From: {organizer}\r\n\
+             To: {attendee}\r\n\
+             Subject: {subject}\r\n\
+             MIME-Version: 1.0\r\n\
+             Content-Type: multipart/alternative; boundary=\"{IMIP_BOUNDARY}\"\r\n\
+             \r\n\
+             --{IMIP_BOUNDARY}\r\n\
+             Content-Type: text/plain; charset=utf-8\r\n\
+             Content-Transfer-Encoding: base64\r\n\
+             \r\n\
+             {plain_b64}\r\n\
+             --{IMIP_BOUNDARY}\r\n\
+             Content-Type: text/calendar; charset=utf-8; method=REQUEST\r\n\
+             Content-Transfer-Encoding: base64\r\n\
+             \r\n\
+             {ics_b64}\r\n\
+             --{IMIP_BOUNDARY}--\r\n"
+        );
+        if let Err(reason) = crate::submission::submit(
+            addr,
+            &organizer,
+            std::slice::from_ref(attendee),
+            message.as_bytes(),
+        )
+        .await
+        {
+            tracing::warn!(reason = %reason, "calendar: could not send an invitation");
+        }
+    }
+}
+
+/// Wraps a base64 string to 76-column lines (RFC 2045) with CRLF separators.
+fn wrap76(b64: &str) -> String {
+    b64.as_bytes()
+        .chunks(76)
+        .map(|c| String::from_utf8_lossy(c).into_owned())
+        .collect::<Vec<_>>()
+        .join("\r\n")
 }

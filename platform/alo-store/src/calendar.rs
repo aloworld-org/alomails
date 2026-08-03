@@ -30,7 +30,7 @@ impl AccountStore {
         // inside — expanded below). The master's own `starts_at`/`ends_at` are
         // the first occurrence.
         let rows = sqlx::query_as::<_, EventRow>(
-            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule \
+            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees \
              FROM calendar_events \
              WHERE tenant_id = $1 AND user_id = $2 AND ( \
                  (rrule IS NULL AND starts_at < $3 AND ends_at > $4) OR \
@@ -64,7 +64,7 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn all_events(&self) -> Result<Vec<CalendarEvent>> {
         let rows = sqlx::query_as::<_, EventRow>(
-            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule \
+            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees \
              FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 \
              ORDER BY starts_at, id",
         )
@@ -81,7 +81,7 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn event(&self, id: &EventId) -> Result<Option<CalendarEvent>> {
         let row = sqlx::query_as::<_, EventRow>(
-            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule \
+            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees \
              FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
         )
         .bind(self.tenant.as_str())
@@ -104,8 +104,8 @@ impl AccountStore {
         sqlx::query(
             "INSERT INTO calendar_events \
              (tenant_id, user_id, id, summary, description, location, \
-              starts_at, ends_at, all_day, rrule) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+              starts_at, ends_at, all_day, rrule, attendees) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -117,6 +117,7 @@ impl AccountStore {
         .bind(event.ends_at)
         .bind(event.all_day)
         .bind(&event.recurrence)
+        .bind(sqlx::types::Json(&event.attendees))
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -152,13 +153,13 @@ impl AccountStore {
         sqlx::query(
             "INSERT INTO calendar_events \
              (tenant_id, user_id, id, summary, description, location, \
-              starts_at, ends_at, all_day, rrule) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
+              starts_at, ends_at, all_day, rrule, attendees) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) \
              ON CONFLICT (tenant_id, user_id, id) DO UPDATE SET \
                summary = EXCLUDED.summary, description = EXCLUDED.description, \
                location = EXCLUDED.location, starts_at = EXCLUDED.starts_at, \
                ends_at = EXCLUDED.ends_at, all_day = EXCLUDED.all_day, \
-               rrule = EXCLUDED.rrule, updated_at = now()",
+               rrule = EXCLUDED.rrule, attendees = EXCLUDED.attendees, updated_at = now()",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -170,6 +171,7 @@ impl AccountStore {
         .bind(event.ends_at)
         .bind(event.all_day)
         .bind(&event.recurrence)
+        .bind(sqlx::types::Json(&event.attendees))
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -192,7 +194,8 @@ impl AccountStore {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         let done = sqlx::query(
             "UPDATE calendar_events SET summary = $4, description = $5, location = $6, \
-                    starts_at = $7, ends_at = $8, all_day = $9, rrule = $10, updated_at = now() \
+                    starts_at = $7, ends_at = $8, all_day = $9, rrule = $10, attendees = $11, \
+                    updated_at = now() \
              WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
         )
         .bind(self.tenant.as_str())
@@ -205,6 +208,7 @@ impl AccountStore {
         .bind(event.ends_at)
         .bind(event.all_day)
         .bind(&event.recurrence)
+        .bind(sqlx::types::Json(&event.attendees))
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -398,6 +402,7 @@ struct EventRow {
     ends_at: OffsetDateTime,
     all_day: bool,
     rrule: Option<String>,
+    attendees: sqlx::types::Json<Vec<String>>,
 }
 
 impl EventRow {
@@ -411,6 +416,7 @@ impl EventRow {
             ends_at: self.ends_at,
             all_day: self.all_day,
             recurrence: self.rrule,
+            attendees: self.attendees.0,
         }
     }
 }
@@ -435,6 +441,7 @@ mod tests {
             ends_at: start + Duration::minutes(30),
             all_day: false,
             recurrence: rrule.map(str::to_owned),
+            attendees: vec![],
         }
     }
 

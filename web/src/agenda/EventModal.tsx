@@ -4,7 +4,7 @@
 // midnight).
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { MapPin, Trash2, X } from "lucide-react";
+import { MapPin, Trash2, Users, X } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button } from "../ds";
@@ -50,6 +50,7 @@ export function EventModal({ event, initialStart, onSave, onDelete, onClose }: P
   const [startDay, setStartDay] = useState(toDateInput(startDate));
   const [endDay, setEndDay] = useState(toDateInput(allDay ? addDays(endDate, -1) : startDate));
   const [location, setLocation] = useState(event?.location ?? "");
+  const [guests, setGuests] = useState((event?.attendees ?? []).join(", "));
   const [description, setDescription] = useState(event?.description ?? "");
   const [repeat, setRepeat] = useState<Repeat>(repeatOf(event?.recurrence ?? null));
   const [busy, setBusy] = useState(false);
@@ -89,6 +90,13 @@ export function EventModal({ event, initialStart, onSave, onDelete, onClose }: P
     const loc = location.trim();
     if (loc) input.location = loc;
     if (repeat !== "none") input.recurrence = `FREQ=${repeat.toUpperCase()}`;
+    // Guests: split on commas/semicolons/whitespace, keep anything address-like.
+    // The server validates and mails each an invitation.
+    const guestList = guests
+      .split(/[\s,;]+/)
+      .map((g) => g.trim())
+      .filter((g) => g.includes("@"));
+    if (guestList.length > 0) input.attendees = guestList;
     try {
       await onSave(event?.id ?? null, input);
     } catch {
@@ -173,6 +181,22 @@ export function EventModal({ event, initialStart, onSave, onDelete, onClose }: P
             <MapPin size={13} /> {strings.agendaEventLocation}
           </span>
           <input value={location} onChange={(e) => setLocation(e.target.value)} />
+        </label>
+
+        <label className={styles.field}>
+          <span>
+            <Users size={13} /> {strings.agendaEventGuests}
+          </span>
+          <input
+            value={guests}
+            onChange={(e) => setGuests(e.target.value)}
+            placeholder={strings.agendaGuestsPlaceholder}
+            inputMode="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+          <small className={styles.fieldHint}>{strings.agendaGuestsHint}</small>
         </label>
 
         <label className={styles.field}>

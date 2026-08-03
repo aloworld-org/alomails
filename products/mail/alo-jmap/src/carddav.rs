@@ -670,6 +670,7 @@ fn event_etag(e: &CalendarEvent) -> String {
     e.ends_at.unix_timestamp().hash(&mut hasher);
     e.all_day.hash(&mut hasher);
     e.recurrence.hash(&mut hasher);
+    e.attendees.hash(&mut hasher);
     format!("\"{:016x}\"", hasher.finish())
 }
 

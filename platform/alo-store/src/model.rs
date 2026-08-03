@@ -254,6 +254,10 @@ pub struct CalendarEvent {
     /// expands the rest within a queried range. Slice scope: simple
     /// `FREQ`+`INTERVAL`+`COUNT`/`UNTIL`; per-occurrence exceptions come later.
     pub recurrence: Option<String>,
+    /// Guest email addresses (iCalendar `ATTENDEE`s). The owner emails each an
+    /// iMIP invitation when the event is saved; their status tracking + RSVP
+    /// replies are a later slice, so this is just the invited addresses.
+    pub attendees: Vec<String>,
 }
 
 /// A compact message row for mailbox listings (no body).

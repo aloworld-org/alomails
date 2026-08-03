@@ -271,7 +271,7 @@ fn format_addr_list(list: &[Addr]) -> String {
 }
 
 /// An unstructured header value (Subject): raw when ASCII, else encoded-words.
-fn encode_unstructured(s: &str) -> String {
+pub(crate) fn encode_unstructured(s: &str) -> String {
     let s = sanitize(s);
     if is_ascii_clean(&s) {
         s

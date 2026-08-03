@@ -361,6 +361,9 @@ export interface CalendarEvent {
   /** iCalendar RRULE (e.g. `FREQ=WEEKLY`) for a recurring event, else null. In
    *  a range listing, occurrences of one series share the master's id + rule. */
   recurrence: string | null;
+  /** Guest email addresses invited to the event (empty when there are none).
+   *  Saving with guests mails each an iMIP invitation from the owner. */
+  attendees: string[];
 }
 
 /** The writable fields when creating or replacing an event. */
@@ -372,4 +375,5 @@ export interface EventInput {
   endsAt: string;
   allDay: boolean;
   recurrence?: string;
+  attendees?: string[];
 }
