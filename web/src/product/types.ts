@@ -46,6 +46,15 @@ export interface ComposeInsert {
   Modal: ComponentType<{ onInsert: (html: string) => void; onClose: () => void }>;
 }
 
+/** Login brand-panel copy. Each getter resolves an i18n string at call time,
+ *  so the panel speaks the product's own language and still follows the active
+ *  locale — `alomails` reads as a mail product, the suite as a workspace. */
+export interface ProductBrand {
+  headline: () => string;
+  subtitle: () => string;
+  euBadge: () => string;
+}
+
 /** The complete definition of a product. */
 export interface ProductSurface {
   modules: ProductModule[];
@@ -53,4 +62,6 @@ export interface ProductSurface {
   composeInserts: ComposeInsert[];
   /** Where a bare `/` (and post-login) should land. */
   defaultPath: string;
+  /** Brand copy for the login screen. */
+  brand: ProductBrand;
 }

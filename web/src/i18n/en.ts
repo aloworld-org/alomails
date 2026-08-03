@@ -131,6 +131,11 @@ export const en = {
   brandSubtitle:
     "Mail, calendar, chat, and files — sovereign, AI-native, and hosted in Europe.",
   brandEuBadge: "Hosted on your infrastructure · EU",
+  // auth — brand panel, standalone mail product (alomails)
+  brandHeadlineMail: "Your mail.\nYour privacy.\nYour rules.",
+  brandSubtitleMail:
+    "Private, AI-native email — sovereign and hosted in Europe.",
+  brandEuBadgeMail: "Sovereign email · Hosted in Europe",
 
   // auth — sign in
   signInHeading: "Sign in",

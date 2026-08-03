@@ -132,6 +132,11 @@ export const fr: Partial<Catalog> = {
   brandSubtitle:
     "Courrier, calendrier, messagerie et fichiers — souverains, natifs à l’IA et hébergés en Europe.",
   brandEuBadge: "Hébergé sur votre infrastructure · UE",
+  // auth — brand panel, produit courrier autonome (alomails)
+  brandHeadlineMail: "Votre courrier.\nVotre vie privée.\nVos règles.",
+  brandSubtitleMail:
+    "Une messagerie privée et native à l’IA — souveraine et hébergée en Europe.",
+  brandEuBadgeMail: "Messagerie souveraine · Hébergée en Europe",
 
   // auth — sign in
   signInHeading: "Connexion",

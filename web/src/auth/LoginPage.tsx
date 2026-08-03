@@ -7,6 +7,7 @@ import type { FormEvent } from "react";
 import { Eye, EyeOff, KeyRound } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
+import { surface } from "@product";
 import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
 import { Logo } from "../shell/Logo";
@@ -109,12 +110,12 @@ export function LoginPage() {
           <Logo size={40} withWordmark onDark />
         </div>
         <div className={styles.brandBody}>
-          <h1 className={styles.headline}>{strings.brandHeadline}</h1>
-          <p className={styles.brandSub}>{strings.brandSubtitle}</p>
+          <h1 className={styles.headline}>{surface.brand.headline()}</h1>
+          <p className={styles.brandSub}>{surface.brand.subtitle()}</p>
         </div>
         <div className={styles.brandFooter}>
           <span className={styles.dot} aria-hidden="true" />
-          {strings.brandEuBadge}
+          {surface.brand.euBadge()}
         </div>
       </aside>
 
