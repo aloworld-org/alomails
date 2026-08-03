@@ -1,13 +1,13 @@
 [workspace]
 resolver = "3"
 members = [
-    # platform — the shared kernel (ADR 0019 in the alo-workplace monorepo)
+    # platform — the shared kernel every product builds on (ADR 0019)
     "platform/alo-store",
     "platform/alo-identity",
     "platform/alo-auth-mail",
     "platform/alo-sieve",
     "platform/alo-ai",
-    # products/mail — the Mail product
+    # products/mail — the Mail product (alomails)
     "products/mail/alo-smtp",
     "products/mail/alo-smtp-client",
     "products/mail/alo-imap",
@@ -36,7 +36,7 @@ flate2 = { version = "1", default-features = false, features = ["rust_backend"] 
 # Pinned ≥0.26.1: earlier hickory-proto carries RUSTSEC-2026-0119.
 hickory-resolver = { version = "0.26", features = ["dnssec-ring"] }
 # TLS via rustls with the ring provider (pure Rust, no OpenSSL/C — see
-# doctrine "Rust below the waterline"). tls12 for broad client
+# ADR/doctrine "Rust below the waterline"). tls12 for broad client
 # compatibility; STARTTLS (RFC 3207) and implicit TLS.
 rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12", "logging"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12", "logging"] }
@@ -79,12 +79,13 @@ psl = "2"
 # `object_store` abstraction; the default build carries only its lean
 # in-memory/local core, and the S3 (Garage) client — which pulls the
 # reqwest/quick-xml tree — is gated behind alo-store's `garage`
-# feature. `bytes` for zero-copy blob buffers.
+# feature (see docs/decisions/0006). `bytes` for zero-copy blob buffers.
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "macros", "migrate", "time"] }
 time = { version = "0.3", default-features = false, features = ["std", "parsing", "formatting"] }
 object_store = { version = "0.11", default-features = false }
 bytes = "1"
 # alo-identity: argon2id password hashing (the credential authority).
+# See docs/design/identity.md and docs/decisions/0008.
 argon2 = "0.5"
 # alo-jmap: the JMAP HTTP service (RFC 8620/8621). axum over hyper
 # (already in-tree) for routing, JSON, and Server-Sent-Events push;
@@ -92,8 +93,8 @@ argon2 = "0.5"
 axum = "0.8"
 futures = "0.3"
 
-# Stubs and swallowed panics cannot merge because they cannot compile under
-# `clippy -D warnings`.
+# CLAUDE.md law 2 enforced by the compiler: stubs and swallowed panics
+# cannot merge because they cannot compile under `clippy -D warnings`.
 [workspace.lints.clippy]
 todo = "deny"
 unimplemented = "deny"

@@ -53,6 +53,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "alo-control"
+version = "0.0.1"
+dependencies = [
+ "alo-auth-mail",
+ "alo-identity",
+ "alo-store",
+ "axum",
+ "hickory-resolver",
+ "serde",
+ "serde_json",
+ "time",
+ "tokio",
+ "tower",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "alo-identity"
 version = "0.0.1"
 dependencies = [
