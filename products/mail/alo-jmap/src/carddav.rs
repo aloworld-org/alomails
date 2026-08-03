@@ -243,7 +243,11 @@ async fn addressbook_response(acc: &AccountStore, uid: &str) -> String {
          <d:sync-token>{ctag}</d:sync-token>\
          <card:supported-address-data>\
            <card:address-data-type content-type=\"text/vcard\" version=\"4.0\"/>\
-         </card:supported-address-data>",
+         </card:supported-address-data>\
+         <d:supported-report-set>\
+           <d:supported-report><d:report><d:sync-collection/></d:report></d:supported-report>\
+           <d:supported-report><d:report><card:addressbook-multiget/></d:report></d:supported-report>\
+         </d:supported-report-set>",
     );
     response(&href, &props)
 }
@@ -282,7 +286,12 @@ async fn calendar_response(acc: &AccountStore, uid: &str) -> String {
          <cs:getctag>{ctag}</cs:getctag>\
          <d:sync-token>{ctag}</d:sync-token>\
          <cal:supported-calendar-component-set><cal:comp name=\"VEVENT\"/></cal:supported-calendar-component-set>\
-         <cs:calendar-color>#e76f51ff</cs:calendar-color>",
+         <cs:calendar-color>#e76f51ff</cs:calendar-color>\
+         <d:supported-report-set>\
+           <d:supported-report><d:report><d:sync-collection/></d:report></d:supported-report>\
+           <d:supported-report><d:report><cal:calendar-multiget/></d:report></d:supported-report>\
+           <d:supported-report><d:report><cal:calendar-query/></d:report></d:supported-report>\
+         </d:supported-report-set>",
     );
     response(&href, &props)
 }
