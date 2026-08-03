@@ -251,6 +251,12 @@ export const fr: Partial<Catalog> = {
   agendaEditEventTitle: "Modifier l'événement",
   agendaEndBeforeStart: "L'événement se termine avant de commencer.",
   agendaSaveError: "Impossible d'enregistrer l'événement. Veuillez réessayer.",
+  agendaRepeat: "Répéter",
+  agendaRepeatNone: "Ne se répète pas",
+  agendaRepeatDaily: "Tous les jours",
+  agendaRepeatWeekly: "Toutes les semaines",
+  agendaRepeatMonthly: "Tous les mois",
+  agendaRepeatYearly: "Tous les ans",
 
   // mail
   mailLoading: "Chargement de votre courrier…",

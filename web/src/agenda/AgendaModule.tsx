@@ -73,6 +73,22 @@ export function AgendaModule() {
     setEditing({ event: null, initialStart: at });
   }
 
+  // Editing a recurring occurrence edits the whole series — load the stored
+  // master (unexpanded) so its base time + rule, not the clicked occurrence's
+  // shifted time, drive the form. A one-off opens directly.
+  async function openEvent(e: CalendarEvent) {
+    if (e.recurrence !== null) {
+      try {
+        const master = await client.getEvent(e.id);
+        setEditing({ event: master, initialStart: new Date(master.startsAt) });
+        return;
+      } catch {
+        /* fall back to the occurrence */
+      }
+    }
+    setEditing({ event: e, initialStart: new Date(e.startsAt) });
+  }
+
   async function save(id: string | null, input: EventInput) {
     if (id === null) await client.createEvent(input);
     else await client.updateEvent(id, input);
@@ -139,7 +155,7 @@ export function AgendaModule() {
               today={today}
               events={events}
               onDayClick={(day) => openNew(dayAtNine(day))}
-              onEventClick={(e) => setEditing({ event: e, initialStart: new Date(e.startsAt) })}
+              onEventClick={(e) => void openEvent(e)}
             />
           ) : (
             <WeekView
@@ -147,7 +163,7 @@ export function AgendaModule() {
               today={today}
               events={events}
               onSlotClick={(at) => openNew(at)}
-              onEventClick={(e) => setEditing({ event: e, initialStart: new Date(e.startsAt) })}
+              onEventClick={(e) => void openEvent(e)}
             />
           )}
         </div>

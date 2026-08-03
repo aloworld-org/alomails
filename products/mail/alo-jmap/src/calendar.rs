@@ -46,6 +46,9 @@ struct EventBody {
     ends_at: String,
     #[serde(default, rename = "allDay")]
     all_day: bool,
+    /// An iCalendar RRULE (e.g. `FREQ=WEEKLY`) or empty/absent for a one-off.
+    #[serde(default)]
+    recurrence: Option<String>,
 }
 
 /// `GET /calendar/events?from=&to=` → `{"events": [...]}`.
@@ -70,6 +73,26 @@ pub async fn list(
         .map_err(|_| Problem::server_error())?;
     let out: Vec<Value> = events.iter().map(event_json).collect();
     Ok(Json(json!({ "events": out })))
+}
+
+/// `GET /calendar/events/:id` → the stored (unexpanded) event. Used by the
+/// editor to load a recurring event's series template, since the list returns
+/// expanded occurrences that share the master's id.
+pub async fn get_one(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    match account
+        .acc
+        .event(&EventId::new(id))
+        .await
+        .map_err(|_| Problem::server_error())?
+    {
+        Some(e) => Ok(Json(event_json(&e))),
+        None => Err(Problem::with(StatusCode::NOT_FOUND, "no such event")),
+    }
 }
 
 /// `POST /calendar/events` → `{id, ...}` (the created event).
@@ -145,6 +168,7 @@ fn build_event(id: EventId, req: EventBody) -> Result<CalendarEvent, Problem> {
         starts_at,
         ends_at,
         all_day: req.all_day,
+        recurrence: clean(req.recurrence),
     })
 }
 
@@ -163,6 +187,7 @@ fn event_json(e: &CalendarEvent) -> Value {
         "startsAt": e.starts_at.format(&Rfc3339).unwrap_or_default(),
         "endsAt": e.ends_at.format(&Rfc3339).unwrap_or_default(),
         "allDay": e.all_day,
+        "recurrence": e.recurrence,
     })
 }
 

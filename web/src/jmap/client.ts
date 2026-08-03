@@ -1321,6 +1321,17 @@ export class JmapClient {
     return json.events;
   }
 
+  /** The stored (unexpanded) event by id — used to edit a recurring series
+   *  template, since range listings return occurrences sharing the master id. */
+  async getEvent(id: string): Promise<CalendarEvent> {
+    const res = await this.#fetch(
+      `${window.location.origin}/calendar/events/${encodeURIComponent(id)}`,
+      { method: "GET" },
+    );
+    if (!res.ok) throw new JmapError(`calendar get ${res.status}`);
+    return (await res.json()) as CalendarEvent;
+  }
+
   /** Create a calendar event; returns the stored event (with its id). */
   async createEvent(input: EventInput): Promise<CalendarEvent> {
     const res = await this.#fetch(`${window.location.origin}/calendar/events`, {

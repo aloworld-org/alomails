@@ -60,7 +60,7 @@ export function WeekView({ anchor, today, events, onSlotClick, onEventClick }: P
                 .filter(({ s, en }) => eventOnDay(s, en, day))
                 .map(({ e }) => (
                   <button
-                    key={e.id}
+                    key={`${e.id}-${e.startsAt}`}
                     className={`${styles.chip} ${styles.chipAllDay}`}
                     onClick={() => onEventClick(e)}
                     title={e.summary}
@@ -105,7 +105,7 @@ export function WeekView({ anchor, today, events, onSlotClick, onEventClick }: P
                   const height = Math.max(18, (endFrac - Math.max(0, hourFraction(s))) * HOUR_HEIGHT - 2);
                   return (
                     <button
-                      key={e.id}
+                      key={`${e.id}-${e.startsAt}`}
                       className={styles.eventBlock}
                       style={{ top, height }}
                       onClick={(clickEv) => {

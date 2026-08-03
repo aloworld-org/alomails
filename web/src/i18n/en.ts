@@ -249,6 +249,12 @@ export const en = {
   agendaEditEventTitle: "Edit event",
   agendaEndBeforeStart: "The event ends before it starts.",
   agendaSaveError: "Couldn't save the event. Please try again.",
+  agendaRepeat: "Repeat",
+  agendaRepeatNone: "Does not repeat",
+  agendaRepeatDaily: "Every day",
+  agendaRepeatWeekly: "Every week",
+  agendaRepeatMonthly: "Every month",
+  agendaRepeatYearly: "Every year",
 
   // mail
   mailLoading: "Loading your mail…",

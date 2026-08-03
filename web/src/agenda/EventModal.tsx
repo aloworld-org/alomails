@@ -28,6 +28,16 @@ function localFromInput(value: string): Date {
   return new Date(value);
 }
 
+type Repeat = "none" | "daily" | "weekly" | "monthly" | "yearly";
+
+/** The dropdown value for an existing RRULE (by FREQ; extra params like
+ *  INTERVAL/BYDAY aren't surfaced in this simple picker). */
+function repeatOf(rrule: string | null): Repeat {
+  const m = /FREQ=([A-Z]+)/i.exec(rrule ?? "");
+  const f = m?.[1]?.toLowerCase();
+  return f === "daily" || f === "weekly" || f === "monthly" || f === "yearly" ? f : "none";
+}
+
 export function EventModal({ event, initialStart, onSave, onDelete, onClose }: Props) {
   const startDate = event ? new Date(event.startsAt) : initialStart;
   const endDate = event ? new Date(event.endsAt) : new Date(initialStart.getTime() + 3600_000);
@@ -41,6 +51,7 @@ export function EventModal({ event, initialStart, onSave, onDelete, onClose }: P
   const [endDay, setEndDay] = useState(toDateInput(allDay ? addDays(endDate, -1) : startDate));
   const [location, setLocation] = useState(event?.location ?? "");
   const [description, setDescription] = useState(event?.description ?? "");
+  const [repeat, setRepeat] = useState<Repeat>(repeatOf(event?.recurrence ?? null));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +88,7 @@ export function EventModal({ event, initialStart, onSave, onDelete, onClose }: P
     if (desc) input.description = desc;
     const loc = location.trim();
     if (loc) input.location = loc;
+    if (repeat !== "none") input.recurrence = `FREQ=${repeat.toUpperCase()}`;
     try {
       await onSave(event?.id ?? null, input);
     } catch {
@@ -144,6 +156,17 @@ export function EventModal({ event, initialStart, onSave, onDelete, onClose }: P
             </label>
           </div>
         )}
+
+        <label className={styles.field}>
+          <span>{strings.agendaRepeat}</span>
+          <select value={repeat} onChange={(e) => setRepeat(e.target.value as Repeat)}>
+            <option value="none">{strings.agendaRepeatNone}</option>
+            <option value="daily">{strings.agendaRepeatDaily}</option>
+            <option value="weekly">{strings.agendaRepeatWeekly}</option>
+            <option value="monthly">{strings.agendaRepeatMonthly}</option>
+            <option value="yearly">{strings.agendaRepeatYearly}</option>
+          </select>
+        </label>
 
         <label className={styles.field}>
           <span>

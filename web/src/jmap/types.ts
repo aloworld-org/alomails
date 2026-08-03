@@ -358,6 +358,9 @@ export interface CalendarEvent {
   startsAt: string;
   endsAt: string;
   allDay: boolean;
+  /** iCalendar RRULE (e.g. `FREQ=WEEKLY`) for a recurring event, else null. In
+   *  a range listing, occurrences of one series share the master's id + rule. */
+  recurrence: string | null;
 }
 
 /** The writable fields when creating or replacing an event. */
@@ -368,4 +371,5 @@ export interface EventInput {
   startsAt: string;
   endsAt: string;
   allDay: boolean;
+  recurrence?: string;
 }

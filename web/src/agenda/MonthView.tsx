@@ -55,7 +55,7 @@ export function MonthView({ anchor, today, events, onDayClick, onEventClick }: P
               <div className={styles.dayEvents}>
                 {dayEvents.slice(0, MAX_CHIPS).map(({ e, s }) => (
                   <button
-                    key={e.id}
+                    key={`${e.id}-${e.startsAt}`}
                     className={`${styles.chip} ${e.allDay ? styles.chipAllDay : ""}`}
                     onClick={(ev) => {
                       ev.stopPropagation();

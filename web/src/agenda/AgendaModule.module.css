@@ -485,7 +485,8 @@
   gap: 4px;
 }
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   padding: 8px 10px;
@@ -495,7 +496,8 @@
   resize: vertical;
 }
 .field input:focus,
-.field textarea:focus {
+.field textarea:focus,
+.field select:focus {
   outline: none;
   border-color: var(--terracotta);
 }

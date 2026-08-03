@@ -244,10 +244,16 @@ pub struct CalendarEvent {
     pub location: Option<String>,
     /// Start instant (UTC).
     pub starts_at: OffsetDateTime,
-    /// End instant (UTC), exclusive.
+    /// End instant (UTC), exclusive. For a recurring event this is the end of
+    /// the FIRST occurrence; every occurrence shares this duration.
     pub ends_at: OffsetDateTime,
     /// All-day (date-only) event.
     pub all_day: bool,
+    /// An iCalendar `RRULE` recurrence (e.g. `FREQ=WEEKLY`), or `None` for a
+    /// one-off. `starts_at`/`ends_at` describe the first occurrence; the store
+    /// expands the rest within a queried range. Slice scope: simple
+    /// `FREQ`+`INTERVAL`+`COUNT`/`UNTIL`; per-occurrence exceptions come later.
+    pub recurrence: Option<String>,
 }
 
 /// A compact message row for mailbox listings (no body).

@@ -30,6 +30,9 @@ pub fn to_ics(event: &CalendarEvent) -> String {
         lines.push(format!("DTSTART:{}", fmt_utc(event.starts_at)));
         lines.push(format!("DTEND:{}", fmt_utc(event.ends_at)));
     }
+    if let Some(rrule) = &event.recurrence {
+        lines.push(format!("RRULE:{rrule}"));
+    }
     lines.push(format!("SUMMARY:{}", escape(&event.summary)));
     if let Some(loc) = &event.location {
         lines.push(format!("LOCATION:{}", escape(loc)));
@@ -53,6 +56,7 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
     let mut location: Option<String> = None;
     let mut start: Option<(OffsetDateTime, bool)> = None;
     let mut end: Option<(OffsetDateTime, bool)> = None;
+    let mut recurrence: Option<String> = None;
 
     for line in unfolded.lines() {
         let upper = line.to_ascii_uppercase();
@@ -79,6 +83,7 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
             "LOCATION" => location = Some(unescape(value)),
             "DTSTART" => start = parse_dt(value.trim(), is_date),
             "DTEND" => end = parse_dt(value.trim(), is_date),
+            "RRULE" => recurrence = Some(value.trim().to_owned()),
             _ => {}
         }
     }
@@ -96,6 +101,7 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
         starts_at,
         ends_at,
         all_day,
+        recurrence,
     })
 }
 
@@ -223,11 +229,13 @@ mod tests {
                 Time::from_hms(10, 30, 0).unwrap(),
             ),
             all_day: false,
+            recurrence: Some("FREQ=WEEKLY".to_owned()),
         };
         let ics = to_ics(&e);
         assert!(ics.contains("DTSTART:20260815T090000Z"));
         assert!(ics.contains("DTEND:20260815T103000Z"));
         assert!(ics.contains("SUMMARY:Team sync\\; weekly"));
+        assert!(ics.contains("RRULE:FREQ=WEEKLY"));
         let back = from_ics(&ics, "fallback").unwrap();
         assert_eq!(back.id.as_str(), "abc123");
         assert_eq!(back.summary, "Team sync; weekly");
@@ -235,6 +243,7 @@ mod tests {
         assert_eq!(back.location.as_deref(), Some("Room A"));
         assert_eq!(back.starts_at, e.starts_at);
         assert_eq!(back.ends_at, e.ends_at);
+        assert_eq!(back.recurrence.as_deref(), Some("FREQ=WEEKLY"));
         assert!(!back.all_day);
     }
 
@@ -254,6 +263,7 @@ mod tests {
                 Time::MIDNIGHT,
             ),
             all_day: true,
+            recurrence: None,
         };
         let ics = to_ics(&e);
         assert!(ics.contains("DTSTART;VALUE=DATE:20261225"));
