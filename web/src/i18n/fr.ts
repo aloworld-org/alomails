@@ -143,6 +143,7 @@ export const fr: Partial<Catalog> = {
   signInSubtitle: "Bon retour. Saisissez vos identifiants pour continuer.",
   emailLabel: "Adresse e-mail",
   emailPlaceholder: "vous@votredomaine.com",
+  emailPlaceholderMail: "vous@alomails.com",
   passwordLabel: "Mot de passe",
   showPassword: "Afficher le mot de passe",
   hidePassword: "Masquer le mot de passe",

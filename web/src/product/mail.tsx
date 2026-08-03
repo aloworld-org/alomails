@@ -16,4 +16,9 @@ export const surface: ProductSurface = {
     subtitle: () => strings.brandSubtitleMail,
     euBadge: () => strings.brandEuBadgeMail,
   },
+  // Consumer product: no enterprise SSO, and a personal address placeholder.
+  login: {
+    sso: false,
+    emailPlaceholder: () => strings.emailPlaceholderMail,
+  },
 };

@@ -55,6 +55,15 @@ export interface ProductBrand {
   euBadge: () => string;
 }
 
+/** Login-form options that differ by product — so the consumer mail product
+ *  doesn't wear the workspace's business clothes (SSO, "your domain"). */
+export interface ProductLogin {
+  /** Offer "Sign in with SSO" — an enterprise feature; off for consumer mail. */
+  sso: boolean;
+  /** Email-field placeholder, resolved at render (i18n). */
+  emailPlaceholder: () => string;
+}
+
 /** The complete definition of a product. */
 export interface ProductSurface {
   modules: ProductModule[];
@@ -64,4 +73,6 @@ export interface ProductSurface {
   defaultPath: string;
   /** Brand copy for the login screen. */
   brand: ProductBrand;
+  /** Login-form options (SSO, email placeholder). */
+  login: ProductLogin;
 }

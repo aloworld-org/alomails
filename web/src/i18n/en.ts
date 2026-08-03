@@ -142,6 +142,7 @@ export const en = {
   signInSubtitle: "Welcome back. Enter your credentials to continue.",
   emailLabel: "Email",
   emailPlaceholder: "you@yourdomain.com",
+  emailPlaceholderMail: "you@alomails.com",
   passwordLabel: "Password",
   showPassword: "Show password",
   hidePassword: "Hide password",

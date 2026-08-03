@@ -132,7 +132,7 @@ export function LoginPage() {
               className={styles.input}
               type="email"
               autoComplete="username"
-              placeholder={strings.emailPlaceholder}
+              placeholder={surface.login.emailPlaceholder()}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -193,20 +193,24 @@ export function LoginPage() {
             {submitting ? <Spinner size={16} label={strings.signingIn} /> : strings.signInButton}
           </Button>
 
-          <div className={styles.divider}>
-            <span className={styles.rule} />
-            <span className={styles.or}>{strings.orDivider}</span>
-            <span className={styles.rule} />
-          </div>
+          {surface.login.sso && (
+            <>
+              <div className={styles.divider}>
+                <span className={styles.rule} />
+                <span className={styles.or}>{strings.orDivider}</span>
+                <span className={styles.rule} />
+              </div>
 
-          <button
-            type="button"
-            className={styles.sso}
-            onClick={() => setNote(strings.ssoComingSoon)}
-          >
-            <KeyRound size={18} />
-            <span>{strings.signInWithSso}</span>
-          </button>
+              <button
+                type="button"
+                className={styles.sso}
+                onClick={() => setNote(strings.ssoComingSoon)}
+              >
+                <KeyRound size={18} />
+                <span>{strings.signInWithSso}</span>
+              </button>
+            </>
+          )}
 
           {signupOn && (
             <p className={styles.signupPrompt}>
