@@ -13,10 +13,12 @@ import {
   type AdminUser,
   type AiProvider,
   type AuditEntry,
+  type CalendarEvent,
   type Category,
   type Contact,
   type ContactDraft,
   type ControlDomain,
+  type EventInput,
   type ControlTenant,
   type EmailAddress,
   type MailFilterRule,
@@ -1306,6 +1308,50 @@ export class JmapClient {
     if (!res.ok) throw new JmapError(`contacts ${res.status}`);
     const json = (await res.json()) as { contacts: EmailAddress[] };
     return json.contacts;
+  }
+
+  /** Calendar events overlapping `[fromIso, toIso)` (RFC 3339 UTC). */
+  async calendarEvents(fromIso: string, toIso: string): Promise<CalendarEvent[]> {
+    const url = `${window.location.origin}/calendar/events?from=${encodeURIComponent(
+      fromIso,
+    )}&to=${encodeURIComponent(toIso)}`;
+    const res = await this.#fetch(url, { method: "GET" });
+    if (!res.ok) throw new JmapError(`calendar ${res.status}`);
+    const json = (await res.json()) as { events: CalendarEvent[] };
+    return json.events;
+  }
+
+  /** Create a calendar event; returns the stored event (with its id). */
+  async createEvent(input: EventInput): Promise<CalendarEvent> {
+    const res = await this.#fetch(`${window.location.origin}/calendar/events`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new JmapError(`calendar create ${res.status}`);
+    return (await res.json()) as CalendarEvent;
+  }
+
+  /** Replace a calendar event's fields. */
+  async updateEvent(id: string, input: EventInput): Promise<void> {
+    const res = await this.#fetch(
+      `${window.location.origin}/calendar/events/${encodeURIComponent(id)}`,
+      {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(input),
+      },
+    );
+    if (!res.ok) throw new JmapError(`calendar update ${res.status}`);
+  }
+
+  /** Delete a calendar event. */
+  async deleteEvent(id: string): Promise<void> {
+    const res = await this.#fetch(
+      `${window.location.origin}/calendar/events/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) throw new JmapError(`calendar delete ${res.status}`);
   }
 
   /** The user's server-side mail filter rules. */

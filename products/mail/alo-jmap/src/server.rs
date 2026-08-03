@@ -7,7 +7,7 @@ use std::sync::Arc;
 use alo_identity::Identity;
 use alo_store::Store;
 use axum::extract::{DefaultBodyLimit, State};
-use axum::routing::{any, get, post};
+use axum::routing::{any, get, post, put};
 use axum::{Json, Router};
 use serde_json::{Value, json};
 
@@ -15,7 +15,7 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, ai, api, autoconfig, blob, carddav, contacts, delegates, docs, filters, flagdue,
+    admin, ai, api, autoconfig, blob, calendar, carddav, contacts, delegates, docs, filters, flagdue,
     imap_import_route, push, reset_route, schedule, security, session, settings, share,
     signup_route, snooze,
     unsubscribe,
@@ -63,6 +63,14 @@ pub fn app(state: AppState) -> Router {
         .route("/send-later", post(schedule::send_later))
         .route("/send-later/cancel", post(schedule::cancel_send))
         // Recent correspondents for compose recipient autocomplete.
+        .route(
+            "/calendar/events",
+            get(calendar::list).post(calendar::create),
+        )
+        .route(
+            "/calendar/events/{id}",
+            put(calendar::update).delete(calendar::delete),
+        )
         .route("/contacts", get(contacts::list))
         // Address-book import (a .vcf upload) and export (whole book as .vcf).
         .route("/contacts/import", post(contacts::import))

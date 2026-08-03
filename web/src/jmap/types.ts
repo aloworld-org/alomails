@@ -348,3 +348,24 @@ export function categoryIdOf(keyword: string): string | null {
     ? keyword.slice(CATEGORY_KEYWORD_PREFIX.length)
     : null;
 }
+
+/** A calendar event as it crosses the wire (times are RFC 3339, UTC). */
+export interface CalendarEvent {
+  id: string;
+  summary: string;
+  description: string | null;
+  location: string | null;
+  startsAt: string;
+  endsAt: string;
+  allDay: boolean;
+}
+
+/** The writable fields when creating or replacing an event. */
+export interface EventInput {
+  summary: string;
+  description?: string;
+  location?: string;
+  startsAt: string;
+  endsAt: string;
+  allDay: boolean;
+}

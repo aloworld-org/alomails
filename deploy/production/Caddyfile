@@ -39,7 +39,7 @@ https://{$DOMAIN} {
 	# endpoint (discovery, authorize, token, userinfo, jwks, revoke). Everything
 	# else is the web app. `/auth/token` is backend; `/auth/callback` is a client
 	# route (falls through to the SPA).
-	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
+	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /calendar/* /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
 	handle @backend {
 		reverse_proxy alo-jmap:8080
 	}

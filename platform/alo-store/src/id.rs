@@ -134,6 +134,11 @@ opaque_id!(
     /// keeps its identity across a CardDAV/JMAP round-trip.
     ContactId
 );
+opaque_id!(
+    /// A calendar event. Also serves as the iCalendar `UID`, so an event keeps
+    /// its identity across a CalDAV round-trip once calendar sync lands.
+    EventId
+);
 
 #[cfg(test)]
 mod tests {

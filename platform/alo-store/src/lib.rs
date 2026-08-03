@@ -12,6 +12,7 @@ pub mod account_imap;
 pub mod account_sieve;
 pub mod audit;
 pub mod blob;
+pub mod calendar;
 pub mod changes;
 pub mod contacts;
 pub mod control;
@@ -49,14 +50,16 @@ pub use dmarc_reports::{DmarcAggregateRow, DmarcEventRecord};
 pub use document::{Document, DocumentSummary};
 pub use error::{Result, StoreError};
 pub use id::{
-    BlobId, CategoryId, ContactId, GroupId, MailboxId, MessageId, TenantId, ThreadId, UserId,
+    BlobId, CategoryId, ContactId, EventId, GroupId, MailboxId, MessageId, TenantId, ThreadId,
+    UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
     RefreshTokenRow, SigningKeyRow, TotpRow,
 };
 pub use model::{
-    AiConfigRow, AiProviderRow, AuditEntry, Blob, Category, Contact, ContactField, DkimKeyRow,
+    AiConfigRow, AiProviderRow, AuditEntry, Blob, CalendarEvent, Category, Contact, ContactField,
+    DkimKeyRow,
     DomainRow, EmailFilter, EmailQuery, GroupRow, MAX_PAGE, Mailbox, Message, MessageSummary, Page,
     SortDirection, TenantSummary, UserRow,
 };

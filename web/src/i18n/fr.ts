@@ -231,6 +231,27 @@ export const fr: Partial<Catalog> = {
   resetRequestError: "Impossible de démarrer la réinitialisation. Veuillez réessayer.",
   resetVerifyError: "Cela n'a pas fonctionné — vérifiez le code et réessayez.",
 
+  // agenda (calendrier)
+  agendaNewEvent: "Nouvel événement",
+  agendaToday: "Aujourd'hui",
+  agendaPrev: "Précédent",
+  agendaNext: "Suivant",
+  agendaMonth: "Mois",
+  agendaWeek: "Semaine",
+  agendaAllDay: "Toute la journée",
+  agendaEventTitle: "Ajouter un titre",
+  agendaEventStart: "Début",
+  agendaEventEnd: "Fin",
+  agendaEventLocation: "Lieu",
+  agendaEventDescription: "Notes",
+  agendaSave: "Enregistrer",
+  agendaDelete: "Supprimer",
+  agendaCancel: "Annuler",
+  agendaNewEventTitle: "Nouvel événement",
+  agendaEditEventTitle: "Modifier l'événement",
+  agendaEndBeforeStart: "L'événement se termine avant de commencer.",
+  agendaSaveError: "Impossible d'enregistrer l'événement. Veuillez réessayer.",
+
   // mail
   mailLoading: "Chargement de votre courrier…",
   mailSearching: "Recherche…",

@@ -17,6 +17,7 @@ pub mod ai;
 pub mod api;
 pub mod autoconfig;
 pub mod blob;
+pub mod calendar;
 pub mod carddav;
 pub mod contacts;
 pub mod delegates;

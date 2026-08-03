@@ -9,6 +9,8 @@ export {
   categoryKeyword,
   categoryIdOf,
   type Category,
+  type CalendarEvent,
+  type EventInput,
   type Contact,
   type ContactField,
   type ContactDraft,

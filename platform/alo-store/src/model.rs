@@ -2,7 +2,7 @@
 
 use time::OffsetDateTime;
 
-use crate::id::{BlobId, CategoryId, ContactId, MailboxId, MessageId, ThreadId};
+use crate::id::{BlobId, CategoryId, ContactId, EventId, MailboxId, MessageId, ThreadId};
 
 /// The resolved AI backend a tenant's default provider points at (ADR 0011),
 /// mapped for the inference client. `api_key` is a secret, never returned to
@@ -224,6 +224,30 @@ pub struct Contact {
     pub job_title: Option<String>,
     /// Free-form note (vCard `NOTE`).
     pub notes: Option<String>,
+}
+
+/// A calendar event (the calendar unit; also the future CalDAV/iCalendar
+/// `VEVENT`). Slice 1 is a plain timed or all-day event on the user's single
+/// implicit calendar — recurrence, attendees, and multiple calendars come
+/// later. Times are UTC instants; an all-day event uses midnight-UTC bounds and
+/// the client renders it date-only. `ends_at` is exclusive and must be
+/// `>= starts_at`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CalendarEvent {
+    /// Opaque id (also the iCalendar `UID`).
+    pub id: EventId,
+    /// Title shown on the event (iCalendar `SUMMARY`; never empty).
+    pub summary: String,
+    /// Free-form details (iCalendar `DESCRIPTION`).
+    pub description: Option<String>,
+    /// Where it happens (iCalendar `LOCATION`).
+    pub location: Option<String>,
+    /// Start instant (UTC).
+    pub starts_at: OffsetDateTime,
+    /// End instant (UTC), exclusive.
+    pub ends_at: OffsetDateTime,
+    /// All-day (date-only) event.
+    pub all_day: bool,
 }
 
 /// A compact message row for mailbox listings (no body).

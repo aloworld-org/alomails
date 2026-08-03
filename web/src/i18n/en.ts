@@ -229,6 +229,27 @@ export const en = {
   resetRequestError: "We couldn't start the reset. Please try again.",
   resetVerifyError: "That didn't work — check the code and try again.",
 
+  // agenda (calendar)
+  agendaNewEvent: "New event",
+  agendaToday: "Today",
+  agendaPrev: "Previous",
+  agendaNext: "Next",
+  agendaMonth: "Month",
+  agendaWeek: "Week",
+  agendaAllDay: "All day",
+  agendaEventTitle: "Add a title",
+  agendaEventStart: "Starts",
+  agendaEventEnd: "Ends",
+  agendaEventLocation: "Location",
+  agendaEventDescription: "Notes",
+  agendaSave: "Save",
+  agendaDelete: "Delete",
+  agendaCancel: "Cancel",
+  agendaNewEventTitle: "New event",
+  agendaEditEventTitle: "Edit event",
+  agendaEndBeforeStart: "The event ends before it starts.",
+  agendaSaveError: "Couldn't save the event. Please try again.",
+
   // mail
   mailLoading: "Loading your mail…",
   mailSearching: "Searching…",
