@@ -208,7 +208,7 @@ pub async fn verify(
 
     match state
         .identity
-        .provision_personal(&domain, &localpart, &req.password)
+        .provision_personal(&domain, &localpart, &req.password, &pending.recovery_email)
         .await
     {
         Ok(account) => {
@@ -272,7 +272,7 @@ async fn availability(state: &AppState, address: &str) -> Result<String, Problem
 
 /// Validates that `address` is a well-formed, valid, non-reserved localpart on
 /// a configured personal domain, returning `(localpart, domain)`.
-fn parse_personal(state: &AppState, address: &str) -> Result<(String, String), Problem> {
+pub(crate) fn parse_personal(state: &AppState, address: &str) -> Result<(String, String), Problem> {
     let Some((local, domain)) = split_address(address) else {
         return Err(Problem::with(
             StatusCode::BAD_REQUEST,
@@ -292,12 +292,12 @@ fn parse_personal(state: &AppState, address: &str) -> Result<(String, String), P
     Ok((local, domain))
 }
 
-fn is_personal_domain(state: &AppState, domain: &str) -> bool {
+pub(crate) fn is_personal_domain(state: &AppState, domain: &str) -> bool {
     state.personal_domains.iter().any(|d| d == domain)
 }
 
 /// Splits `local@domain`, lowercased. `None` if malformed.
-fn split_address(address: &str) -> Option<(String, String)> {
+pub(crate) fn split_address(address: &str) -> Option<(String, String)> {
     let addr = address.trim().to_ascii_lowercase();
     let (local, domain) = addr.rsplit_once('@')?;
     if local.is_empty() || !domain.contains('.') {
@@ -316,12 +316,12 @@ fn looks_like_email(s: &str) -> bool {
 
 /// Salts the code with the address so a stolen `code_hash` cannot be matched
 /// against a precomputed table of 6-digit codes.
-fn salt(address: &str, code: &str) -> String {
+pub(crate) fn salt(address: &str, code: &str) -> String {
     format!("{address}:{code}")
 }
 
 /// A random 6-digit numeric code.
-fn generate_code() -> String {
+pub(crate) fn generate_code() -> String {
     let mut buf = [0u8; 4];
     // A fill failure is astronomically unlikely; fall back to a fixed value
     // that is still gated by the attempt cap + expiry rather than panicking.
@@ -333,7 +333,7 @@ fn generate_code() -> String {
 }
 
 /// The client IP for rate-limiting, from the proxy's forwarding headers.
-fn client_ip(headers: &HeaderMap) -> String {
+pub(crate) fn client_ip(headers: &HeaderMap) -> String {
     headers
         .get("x-forwarded-for")
         .and_then(|v| v.to_str().ok())

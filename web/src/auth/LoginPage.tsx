@@ -179,13 +179,9 @@ export function LoginPage() {
               />
               <span>{strings.rememberMe}</span>
             </label>
-            <button
-              type="button"
-              className={styles.linkButton}
-              onClick={() => setNote(strings.forgotPasswordNote)}
-            >
+            <Link to="/reset" className={styles.linkButton}>
               {strings.forgotPassword}
-            </button>
+            </Link>
           </div>
 
           {error !== null && (

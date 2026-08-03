@@ -38,6 +38,7 @@ pub mod session;
 pub mod settings;
 pub mod share;
 pub mod sieve;
+pub mod reset_route;
 pub mod signup_route;
 pub mod snooze;
 pub mod state;

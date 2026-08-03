@@ -27,7 +27,7 @@ async fn provisions_a_usable_personal_account() {
     let domain = unique_domain("prov");
 
     let acct = identity
-        .provision_personal(&domain, "JohnSmith", "correct-horse-battery")
+        .provision_personal(&domain, "JohnSmith", "correct-horse-battery", "recover@example.test")
         .await
         .expect("provisioned");
     assert_eq!(acct.email, format!("johnsmith@{domain}"));
@@ -50,13 +50,13 @@ async fn duplicate_address_is_taken_with_no_dangling_user() {
     let domain = unique_domain("dup");
 
     let first = identity
-        .provision_personal(&domain, "jane", "correct-horse-battery")
+        .provision_personal(&domain, "jane", "correct-horse-battery", "recover@example.test")
         .await
         .expect("first claim");
 
     // A second claim of the same address is refused …
     let err = identity
-        .provision_personal(&domain, "jane", "another-password-xyz")
+        .provision_personal(&domain, "jane", "another-password-xyz", "recover@example.test")
         .await
         .unwrap_err();
     assert_eq!(err, SignupError::AddressTaken);
@@ -78,14 +78,14 @@ async fn reserved_and_invalid_addresses_are_refused() {
 
     assert_eq!(
         identity
-            .provision_personal(&domain, "postmaster", "correct-horse-battery")
+            .provision_personal(&domain, "postmaster", "correct-horse-battery", "recover@example.test")
             .await
             .unwrap_err(),
         SignupError::Reserved
     );
     assert_eq!(
         identity
-            .provision_personal(&domain, "ab", "correct-horse-battery")
+            .provision_personal(&domain, "ab", "correct-horse-battery", "recover@example.test")
             .await
             .unwrap_err(),
         SignupError::InvalidAddress
@@ -107,11 +107,11 @@ async fn personal_users_are_isolated_tenants() {
     let db = unique_domain("isob");
 
     let a = identity
-        .provision_personal(&da, "alice", "correct-horse-battery")
+        .provision_personal(&da, "alice", "correct-horse-battery", "recover@example.test")
         .await
         .unwrap();
     let b = identity
-        .provision_personal(&db, "bob", "correct-horse-battery")
+        .provision_personal(&db, "bob", "correct-horse-battery", "recover@example.test")
         .await
         .unwrap();
 

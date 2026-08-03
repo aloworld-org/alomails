@@ -140,6 +140,7 @@ impl Identity {
         domain: &str,
         localpart: &str,
         password: &str,
+        recovery_email: &str,
     ) -> Result<PersonalAccount, SignupError> {
         let localpart = normalize_localpart(localpart)?;
         let domain = domain.trim().to_ascii_lowercase();
@@ -212,11 +213,43 @@ impl Identity {
             return Err(SignupError::Internal);
         }
 
+        // Persist the recovery mailbox so a forgotten password can later be
+        // reset by mailing a code to it. Best-effort: the account is already
+        // usable, so a failure here is logged, not surfaced — reset simply
+        // won't be available for this account until the value is re-captured.
+        if let Err(error) = self
+            .store()
+            .set_account_recovery(&email, tenant.as_str(), user.as_str(), recovery_email)
+            .await
+        {
+            tracing::warn!(%error, "personal signup: recovery-email capture failed");
+        }
+
         Ok(PersonalAccount {
             tenant,
             user,
             email,
         })
+    }
+
+    /// Sets a new password for an existing account identified by its address
+    /// (its login username). The primitive behind the verified password-reset
+    /// surface; the caller owns the verification gate (a code mailed to the
+    /// recovery address). Cross-tenant by address — a personal account lives in
+    /// its own tenant, resolved here from the global username index.
+    ///
+    /// # Errors
+    /// [`IdentityError::Store`] if no account has that address or on a store
+    /// failure; [`IdentityError::Crypto`] on a hashing failure.
+    pub async fn reset_password(&self, address: &str, password: &str) -> Result<(), IdentityError> {
+        let address = address.trim().to_ascii_lowercase();
+        let cred = self
+            .store()
+            .credentials_by_username(&address)
+            .await?
+            .ok_or(IdentityError::Store(StoreError::NotFound))?;
+        self.set_password(&cred.tenant, &cred.user, &address, password)
+            .await
     }
 
     /// Compensating rollback: delete a half-provisioned personal tenant so no

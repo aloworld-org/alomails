@@ -7,7 +7,7 @@ import { Fragment } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { useLocale } from "./i18n";
-import { AuthProvider, LoginPage, RequireAuth } from "./auth";
+import { AuthProvider, ForgotPasswordPage, LoginPage, RequireAuth } from "./auth";
 import { SignupPage } from "./signup";
 import { AppShell, ComingSoon } from "./shell";
 import { surface } from "./product";
@@ -27,6 +27,7 @@ export function App() {
             {/* Public personal signup (ADR 0018); the page hides itself when no
                 personal domains are configured. */}
             <Route path="/signup" element={<SignupPage />} />
+            <Route path="/reset" element={<ForgotPasswordPage />} />
             {/* The OIDC redirect target; the login flow reads the code inline, so
                 a stray navigation here just returns to the app. */}
             <Route path="/auth/callback" element={<Navigate to={surface.defaultPath} replace />} />

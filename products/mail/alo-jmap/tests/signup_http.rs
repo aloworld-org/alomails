@@ -160,7 +160,7 @@ async fn available_reports_status() {
 
     // An address already provisioned is taken.
     h.identity
-        .provision_personal(&domain, "occupied", "correct-horse-battery")
+        .provision_personal(&domain, "occupied", "correct-horse-battery", "recover@example.test")
         .await
         .unwrap();
     let (_s, body) = send(

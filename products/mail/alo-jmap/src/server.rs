@@ -16,7 +16,8 @@ use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
     admin, ai, api, autoconfig, blob, carddav, contacts, delegates, docs, filters, flagdue,
-    imap_import_route, push, schedule, security, session, settings, share, signup_route, snooze,
+    imap_import_route, push, reset_route, schedule, security, session, settings, share,
+    signup_route, snooze,
     unsubscribe,
 };
 
@@ -88,6 +89,8 @@ pub fn app(state: AppState) -> Router {
         .route("/signup/available", post(signup_route::available))
         .route("/signup/begin", post(signup_route::begin))
         .route("/signup/verify", post(signup_route::verify))
+        .route("/reset/request", post(reset_route::request))
+        .route("/reset/verify", post(reset_route::verify))
         .route(
             "/autodiscover/autodiscover.xml",
             get(autoconfig::outlook).post(autoconfig::outlook),

@@ -213,6 +213,24 @@ export const fr: Partial<Catalog> = {
   signupBackToLogin: "Se connecter",
   signupCreateLink: "Créer un compte personnel",
 
+  // auth — réinitialisation du mot de passe
+  resetHeading: "Réinitialiser votre mot de passe",
+  resetSubtitle:
+    "Saisissez votre adresse alo — nous enverrons un code de réinitialisation à votre boîte de secours.",
+  resetAddressLabel: "Votre adresse alo",
+  resetSendCode: "Envoyer le code",
+  resetSending: "Envoi…",
+  resetVerifyHeading: "Saisissez le code",
+  resetVerifySubtitle: (address: string) =>
+    `Si un compte alo existe pour ${address}, un code de réinitialisation est en route vers sa boîte de secours. Saisissez-le ci-dessous avec un nouveau mot de passe.`,
+  resetNewPasswordLabel: "Nouveau mot de passe",
+  resetSubmit: "Définir le mot de passe",
+  resetSubmitting: "Enregistrement…",
+  resetDoneHeading: "Mot de passe mis à jour",
+  resetDoneBody: "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+  resetRequestError: "Impossible de démarrer la réinitialisation. Veuillez réessayer.",
+  resetVerifyError: "Cela n'a pas fonctionné — vérifiez le code et réessayez.",
+
   // mail
   mailLoading: "Chargement de votre courrier…",
   mailSearching: "Recherche…",

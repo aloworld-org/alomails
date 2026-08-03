@@ -58,3 +58,19 @@ export function signupVerify(
 ): Promise<{ accountId: string; email: string }> {
   return post("/signup/verify", { address, code, password });
 }
+
+/** Request a password-reset code to the account's recovery mailbox. Always
+ *  resolves the same way — the server never reveals whether the account (or a
+ *  recovery mailbox for it) exists, so the page must not either. */
+export function resetRequest(address: string): Promise<{ status: string }> {
+  return post("/reset/request", { address });
+}
+
+/** Verify the reset code and set the new password. */
+export function resetVerify(
+  address: string,
+  code: string,
+  password: string,
+): Promise<{ status: string }> {
+  return post("/reset/verify", { address, code, password });
+}

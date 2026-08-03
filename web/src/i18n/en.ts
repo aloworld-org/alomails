@@ -212,6 +212,23 @@ export const en = {
   signupBackToLogin: "Sign in",
   signupCreateLink: "Create a personal account",
 
+  // auth — password reset
+  resetHeading: "Reset your password",
+  resetSubtitle: "Enter your alo address — we'll email a reset code to your recovery mailbox.",
+  resetAddressLabel: "Your alo address",
+  resetSendCode: "Send reset code",
+  resetSending: "Sending…",
+  resetVerifyHeading: "Enter the code",
+  resetVerifySubtitle: (address: string) =>
+    `If ${address} has an alo account, a reset code is on its way to its recovery mailbox. Enter it below with a new password.`,
+  resetNewPasswordLabel: "New password",
+  resetSubmit: "Set new password",
+  resetSubmitting: "Saving…",
+  resetDoneHeading: "Password updated",
+  resetDoneBody: "You can now sign in with your new password.",
+  resetRequestError: "We couldn't start the reset. Please try again.",
+  resetVerifyError: "That didn't work — check the code and try again.",
+
   // mail
   mailLoading: "Loading your mail…",
   mailSearching: "Searching…",
