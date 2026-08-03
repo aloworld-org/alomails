@@ -1,0 +1,170 @@
+/*
+ * alo design tokens — the single source of visual truth.
+ *
+ * "aloworld": navy structure, terracotta greeting, cream ground, stone
+ * neutrals. Navy (#102A43) is trust/enterprise and carries the rail, headers,
+ * and primary text (~55% of the surface). Terracotta (#E76F51) is the human
+ * accent — buttons, links, unread, AI, active state — kept deliberately scarce
+ * (~5%) so it always means "that's alo". Cream (#FAF7F2) is the comfortable
+ * reading ground; stone/slate stay out of the way on borders and metadata.
+ *
+ * The raw scale variable names are historical (verdigris/copper/warm) but now
+ * hold the aloworld palette, so every component that reads them re-themes from
+ * this one file. Components MUST use the semantic tokens (--bg-*, --text-*,
+ * --border-*, --accent*), never ad-hoc hex.
+ */
+:root {
+  /* ---- brand ---- */
+  --cream: #faf7f2;
+  --navy: #102a43;
+  --terracotta: #e76f51;
+  --ink: #102a43; /* primary text is navy */
+
+  /* Legacy brand aliases (kept so existing references resolve). */
+  --paper: var(--cream);
+  --verdigris: var(--terracotta);
+  --copper: #cf5e40;
+
+  /* ---- terracotta scale (primary accent; historical name: verdigris) ---- */
+  --verdigris-50: #fceee9;
+  --verdigris-100: #f8d6cc; /* soft terracotta */
+  --verdigris-200: #f1bdad;
+  --verdigris-400: #ea8368;
+  --verdigris-500: #e76f51; /* base terracotta */
+  --verdigris-600: #d65b3e;
+  --verdigris-700: #b84a32;
+  --verdigris-800: #8f3a28;
+
+  /* ---- deep-terracotta scale (secondary accent / avatars; name: copper) ---- */
+  --copper-50: #fbebe4;
+  --copper-100: #f6d0c4;
+  --copper-400: #e28062;
+  --copper-500: #cf5e40;
+  --copper-600: #b84a32;
+
+  /* ---- navy scale ---- */
+  --navy-50: #e7ecf1;
+  --navy-100: #c6d2de;
+  --navy-400: #35506b;
+  --navy-500: #1f3d5b; /* soft navy — rail hover, dark cards */
+  --navy-600: #102a43; /* navy */
+  --navy-700: #0c2036;
+
+  /* ---- neutrals: cream ground → cool grays (historical name: warm) ---- */
+  --warm-0: #ffffff;
+  --warm-50: #faf7f2; /* cream */
+  --warm-100: #f4efe8;
+  --warm-150: #ede7dd;
+  --warm-200: #e4ddd0;
+  --warm-300: #d4ccbe; /* scrollbar / spinner track */
+  --warm-400: #b3a48f;
+  --warm-500: #6b7280; /* metadata / tertiary text */
+  --warm-600: #4b5563;
+  --warm-700: #374151;
+  --warm-800: #1f2937;
+  --warm-900: #102a43;
+
+  /* ---- semantic: backgrounds ---- */
+  --bg-app: var(--cream);              /* the workspace canvas */
+  --bg-surface: #ffffff;               /* panels, cards, reading pane */
+  --bg-raised: #f4efe8;                /* hover / input fills */
+  --bg-sunken: var(--warm-50);         /* list backgrounds */
+  --bg-rail: var(--navy-600);          /* the module rail — navy */
+  --bg-rail-hover: var(--navy-500);    /* soft navy for hover/active on the rail */
+  --bg-selected: var(--verdigris-100); /* selected list row — soft terracotta */
+  --bg-overlay: rgba(16, 42, 67, 0.45);
+
+  /* ---- semantic: text ---- */
+  --text-primary: var(--ink);          /* navy */
+  --text-secondary: #334155;           /* slate */
+  --text-tertiary: var(--warm-500);
+  --text-on-accent: #ffffff;
+  --text-on-rail: #f4f7fa;
+  --text-on-rail-muted: #93a3b5;
+  --text-link: var(--verdigris-600);   /* links are terracotta */
+
+  /* ---- semantic: borders ---- */
+  --border-subtle: #ece6dc;
+  --border-default: #ded8cd;
+  --border-strong: #cbd5e1; /* stone */
+
+  /* ---- semantic: accents & states ---- */
+  --accent: var(--verdigris-500);
+  --accent-hover: var(--verdigris-600);
+  --accent-active: var(--verdigris-700);
+  --accent-tint: var(--verdigris-100);
+  --accent-soft: #fceae3;               /* quiet terracotta ground (AI summary) */
+  --accent-secondary: var(--copper-500);
+  --accent-secondary-hover: var(--copper-600);
+  --accent-secondary-tint: var(--copper-100);
+  --copper-soft: #f8d6cc;               /* AI pill ground — soft terracotta */
+
+  --danger: #dc2626;
+  --danger-tint: #fbe3e3;
+  --success: #2e8b57;
+  --warning: #f59e0b;
+  --unread: var(--verdigris-500);       /* unread dot — terracotta */
+
+  /* Focus: a soft terracotta ring (brief, on-brand). */
+  --focus-ring: 0 0 0 3px rgba(231, 111, 81, 0.22);
+
+  /* ---- typography ---- */
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-body: "EB Garamond", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+
+  --text-xs: 0.75rem;    /* 12 */
+  --text-sm: 0.8125rem;  /* 13 */
+  --text-base: 0.875rem; /* 14 */
+  --text-md: 0.9375rem;  /* 15 */
+  --text-lg: 1.0625rem;  /* 17 */
+  --text-xl: 1.25rem;    /* 20 */
+  --text-2xl: 1.5rem;    /* 24 */
+  --text-3xl: 1.875rem;  /* 30 */
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.7;
+
+  /* ---- spacing (4px base) ---- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* ---- radius ---- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 999px;
+
+  /* ---- elevation (navy-tinted shadows) ---- */
+  --shadow-sm: 0 1px 2px rgba(16, 42, 67, 0.06), 0 1px 1px rgba(16, 42, 67, 0.04);
+  --shadow-md: 0 4px 12px rgba(16, 42, 67, 0.08), 0 2px 4px rgba(16, 42, 67, 0.05);
+  --shadow-lg: 0 12px 32px rgba(16, 42, 67, 0.12), 0 4px 8px rgba(16, 42, 67, 0.06);
+
+  /* ---- motion ---- */
+  --transition-fast: 120ms ease;
+  --transition-base: 180ms ease;
+
+  /* ---- layout ---- */
+  --rail-width: 72px;
+  --list-width: 372px;
+  --sidebar-width: 232px;
+  --z-rail: 20;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-toast: 60;
+}

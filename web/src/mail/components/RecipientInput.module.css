@@ -1,0 +1,142 @@
+.row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-1);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.label {
+  flex-shrink: 0;
+  padding-top: 7px;
+  width: 34px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.fieldWrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Autocomplete dropdown of recent correspondents, under the input. */
+.suggestions {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  z-index: 30;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: var(--space-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.suggest,
+.suggestActive {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.suggestActive {
+  background: var(--bg-raised);
+}
+
+.suggestText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.suggestName {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestEmail {
+  overflow: hidden;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  height: 30px;
+  padding: 0 var(--space-1) 0 3px;
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+}
+
+.chipLabel {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.remove:hover {
+  background: var(--border-default);
+  color: var(--text-primary);
+}
+
+.input {
+  flex: 1;
+  min-width: 120px;
+  height: 30px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+}
+
+.input:focus {
+  outline: none;
+}
+
+.trailing {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-top: 3px;
+}

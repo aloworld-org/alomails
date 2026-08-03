@@ -1,0 +1,266 @@
+.split {
+  min-height: 100%;
+  display: flex;
+}
+
+/* ---- brand panel (charcoal) ---- */
+.brand {
+  width: 42%;
+  max-width: 640px;
+  flex-shrink: 0;
+  background: var(--bg-rail);
+  color: var(--text-on-rail);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-16) var(--space-16);
+}
+
+.brandTop {
+  display: flex;
+}
+
+.brandBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  max-width: 480px;
+}
+
+.headline {
+  font-family: var(--font-ui);
+  font-weight: var(--weight-bold);
+  font-size: clamp(2.4rem, 4vw, 3.5rem);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  color: var(--text-on-rail);
+  white-space: pre-line;
+}
+
+.brandSub {
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+  color: var(--text-on-rail-muted);
+  max-width: 470px;
+}
+
+.brandFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-on-rail-muted);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--success);
+}
+
+/* ---- form panel (white) ---- */
+.formPanel {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-6);
+}
+
+.form {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.formHead {
+  margin-bottom: var(--space-2);
+}
+
+.heading {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  margin-top: var(--space-1);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.input {
+  height: 46px;
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* password field with a reveal toggle */
+.passwordWrap {
+  position: relative;
+  display: flex;
+}
+
+.passwordInput {
+  flex: 1;
+  min-width: 0;
+  padding-right: 44px;
+}
+
+.reveal {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 46px;
+  color: var(--text-tertiary);
+  border-radius: var(--radius-md);
+  transition: color var(--transition-fast);
+}
+
+.reveal:hover {
+  color: var(--text-secondary);
+}
+
+.reveal:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: -2px;
+}
+
+.input:focus {
+  outline: none;
+  background: var(--bg-surface);
+  border-color: var(--border-strong);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.remember {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.remember input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.linkButton {
+  color: var(--text-link);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.linkButton:hover {
+  text-decoration: underline;
+}
+
+.error {
+  font-size: var(--text-sm);
+  color: var(--danger);
+  background: var(--danger-tint);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+.note {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  background: var(--bg-raised);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rule {
+  flex: 1;
+  height: 1px;
+  background: var(--border-default);
+}
+
+.or {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.sso {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 46px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.sso:hover {
+  background: var(--bg-raised);
+  border-color: var(--border-strong);
+}
+
+@media (max-width: 860px) {
+  .brand {
+    display: none;
+  }
+}
+
+/* The personal-signup prompt under the sign-in form (ADR 0018). */
+.signupPrompt {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}

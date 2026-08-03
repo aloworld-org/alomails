@@ -1,0 +1,572 @@
+/* The compose host spans the viewport but lets clicks pass through, so a docked
+   or minimized window never blocks the mailbox behind it (Gmail model). */
+.host {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  pointer-events: none;
+}
+
+/* Full-screen centers the dialog over a dim, click-blocking backdrop. */
+.host_full {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.backdrop {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-overlay);
+  pointer-events: auto;
+}
+
+.modal {
+  pointer-events: auto;
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Docked bottom-right — the default, non-blocking. */
+.modal_normal {
+  position: absolute;
+  right: var(--space-6);
+  bottom: 0;
+  width: 500px;
+  max-width: calc(100vw - var(--space-6) * 2);
+  height: 620px;
+  max-height: calc(100vh - var(--space-4));
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+/* Minimized to its title bar, still docked bottom-right. */
+.modal_min {
+  position: absolute;
+  right: var(--space-6);
+  bottom: 0;
+  width: 340px;
+  max-width: calc(100vw - var(--space-6) * 2);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.modal_min .form > *:not(header) {
+  display: none;
+}
+
+.modal_min .head {
+  cursor: pointer;
+  border-bottom: none;
+}
+
+/* Full-screen — a large centered dialog. */
+.modal_full {
+  position: relative;
+  width: 100%;
+  max-width: 920px;
+  height: 94vh;
+  border-radius: var(--radius-xl);
+}
+
+@media (max-width: 560px) {
+  .modal_normal,
+  .modal_min {
+    right: 0;
+    left: 0;
+    width: auto;
+    max-width: none;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+/* header */
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.countPill {
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.headSpacer {
+  flex: 1;
+}
+
+.iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.iconBtn:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+/* recipient + subject fields */
+.fields {
+  padding: 0 var(--space-4);
+}
+
+/* From picker row (shown only when the user has aliases) — matches the
+   recipient rows' label + border rhythm. */
+.fromRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-1);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.fromLabel {
+  flex-shrink: 0;
+  width: 34px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.fromSelect {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-family: inherit;
+}
+
+.ccBtn {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.ccBtn:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.subjectRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-1);
+}
+
+.subjectLabel {
+  flex-shrink: 0;
+  width: 56px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.subjectInput {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+}
+
+.subjectInput:focus {
+  outline: none;
+}
+
+/* body */
+.textarea {
+  flex: 1;
+  min-height: 200px;
+  margin: var(--space-4);
+  border: none;
+  background: none;
+  resize: none;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+}
+
+.textarea:focus {
+  outline: none;
+}
+
+/* quoted original */
+.quotedWrap {
+  margin: 0 var(--space-4) var(--space-3);
+}
+
+.quotedToggle {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.quotedToggle:hover {
+  background: var(--bg-sunken);
+  color: var(--text-primary);
+}
+
+.quoted {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3);
+  max-height: 220px;
+  overflow: auto;
+  border-left: 2px solid var(--border-strong);
+  background: var(--bg-raised);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* attachments */
+.attachRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 var(--space-4) var(--space-3);
+}
+
+.attachChip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  height: 32px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  font-size: var(--text-sm);
+}
+
+/* Link-expiry picker, sat by the attach button. */
+.expirySelect {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: 34px;
+  padding: 0 var(--space-1) 0 var(--space-2);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.expirySelect:hover {
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+}
+
+.expirySelect select {
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: var(--text-sm);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.expirySelect select:focus {
+  outline: none;
+}
+
+/* A large file sent as a share link — tinted to read as a link, not a file. */
+.linkChip {
+  border-color: var(--accent-soft);
+  background: var(--accent-soft);
+}
+
+.linkChip .attachIcon {
+  color: var(--accent);
+}
+
+.attachIcon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.attachName {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachSize {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.attachRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.attachRemove:hover {
+  background: var(--border-default);
+  color: var(--text-primary);
+}
+
+.fileInput {
+  display: none;
+}
+
+.error {
+  margin: 0 var(--space-4) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--danger);
+  background: var(--danger-tint);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+/* footer */
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.discard {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.discard:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.improve {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--copper-600);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  transition: background-color var(--transition-fast);
+}
+
+.improve:hover:not(:disabled) {
+  background: var(--copper-50);
+}
+
+.improve:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.send {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  transition: background-color var(--transition-fast);
+}
+
+.send:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.send:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* Split send button: Send + a caret that opens the schedule menu. */
+.sendGroup {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.sendGroup .send {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.sendCaret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 40px;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  border-left: 1px solid color-mix(in srgb, var(--text-on-accent) 25%, transparent);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  transition: background-color var(--transition-fast);
+}
+
+.sendCaret:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.sendCaret:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* Invisible full-screen scrim so an outside click closes the schedule menu. */
+.scheduleScrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  cursor: default;
+}
+
+/* The schedule menu opens upward from the caret (the footer sits at the bottom). */
+.schedulePop {
+  position: absolute;
+  bottom: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 21;
+  min-width: 240px;
+  padding: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+
+.scheduleHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.scheduleItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  text-align: left;
+  transition: background-color var(--transition-fast);
+}
+
+.scheduleItem:hover {
+  background: var(--bg-raised);
+}
+
+.scheduleWhen {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.scheduleCustom {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.scheduleInput {
+  height: 34px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+}

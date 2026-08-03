@@ -1,0 +1,104 @@
+.wrap {
+  position: relative;
+}
+
+.trigger {
+  display: inline-flex;
+  border-radius: var(--radius-full);
+  transition: box-shadow var(--transition-fast);
+}
+
+.trigger:hover {
+  box-shadow: 0 0 0 2px var(--bg-rail-hover);
+}
+
+.menu {
+  position: absolute;
+  bottom: 0;
+  left: calc(100% + var(--space-3));
+  width: 220px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-2);
+  z-index: var(--z-overlay);
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: var(--space-2);
+}
+
+.who {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.name {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.email {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  text-align: left;
+  text-decoration: none;
+}
+
+/* The row highlights with a background on hover; no anchor underline (these are
+   menu items, not inline links). */
+.item:hover {
+  background: var(--bg-raised);
+  text-decoration: none;
+}
+
+/* Language row: an icon + label with the selector pushed to the right. It is a
+   settings control, not a navigable menu item, so it does not take the hover
+   background of `.item`. */
+.languageRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+}
+
+.languageSelect {
+  margin-left: auto;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 2px var(--space-2);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.menuDivider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: var(--space-2) 0;
+}

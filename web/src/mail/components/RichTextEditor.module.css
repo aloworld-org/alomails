@@ -1,0 +1,180 @@
+.wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--space-3) var(--space-4) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* Grey icons, thin dividers, subtle rounded hover; wraps to a second row so
+   every tool is visible without horizontal scrolling. */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1px;
+  row-gap: var(--space-1);
+  padding: 2px var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* text-style dropdown (Gmail's font/style select) */
+.select {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.select:hover {
+  background: var(--bg-raised);
+}
+
+.selectSize {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 var(--space-1);
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.selectSize:hover {
+  background: var(--bg-raised);
+}
+
+/* colour swatch buttons (an icon over a native colour input) */
+.color {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.color:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.colorInput {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  background: none;
+}
+
+.fileInput {
+  display: none;
+}
+
+.tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.tool:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  flex-shrink: 0;
+  margin: 0 var(--space-2);
+  background: var(--border-subtle);
+}
+
+.editor {
+  flex: 1;
+  min-height: 180px;
+  padding: var(--space-3) 0;
+  overflow-y: auto;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
+  outline: none;
+}
+
+.editor:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-tertiary);
+  pointer-events: none;
+}
+
+.editor a {
+  color: var(--text-link);
+  text-decoration: underline;
+}
+
+.editor ul,
+.editor ol {
+  margin: var(--space-2) 0;
+  padding-left: var(--space-6);
+}
+
+.editor li {
+  margin: 2px 0;
+}
+
+.editor blockquote {
+  margin: var(--space-3) 0;
+  padding-left: var(--space-4);
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-secondary);
+}
+
+.editor h1 {
+  font-size: 1.5rem;
+  font-weight: var(--weight-semibold);
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.editor h2 {
+  font-size: 1.2rem;
+  font-weight: var(--weight-semibold);
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+.editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  margin: var(--space-2) 0;
+}
+
+.editor hr {
+  border: none;
+  border-top: 1px solid var(--border-subtle);
+  margin: var(--space-3) 0;
+}

@@ -1,0 +1,70 @@
+.mail {
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+
+/* ---- Phone layout: one pane at a time, folders in a drawer ---- */
+@media (max-width: 768px) {
+  /* The single visible content pane (list or reading) fills the width.
+     The folders nav is only ever the drawer on mobile, styled below. */
+  .mail > :global(section),
+  .mail > :global(article) {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* Folders as an off-canvas drawer sliding in from the left. */
+  .drawer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: var(--z-overlay, 50);
+    width: min(82vw, 320px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .drawerOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: calc(var(--z-overlay, 50) - 1);
+    background: var(--bg-overlay, rgba(0, 0, 0, 0.4));
+  }
+}
+
+.toast {
+  position: absolute;
+  bottom: var(--space-6);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--warm-900);
+  color: var(--text-on-rail);
+  font-size: var(--text-sm);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-full);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-toast);
+}
+
+/* The Undo-send bar: the toast plus an inline action. */
+.undoToast {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.undoButton {
+  color: var(--copper-300, var(--accent));
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.undoButton:hover {
+  color: var(--text-on-rail);
+}

@@ -1,0 +1,30 @@
+.group {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: center;
+}
+
+.box {
+  width: 48px;
+  height: 56px;
+  text-align: center;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  background: var(--bg-raised);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.box:focus {
+  outline: none;
+  background: var(--bg-surface);
+  border-color: var(--border-strong);
+}
+
+.box:disabled {
+  opacity: 0.6;
+}

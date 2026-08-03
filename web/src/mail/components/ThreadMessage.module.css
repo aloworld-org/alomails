@@ -1,0 +1,347 @@
+/* Gmail thread: one continuous white surface. Messages are stacked with a
+   hairline divider — no cards, borders, radius, or shadow. Collapsed messages
+   are compact rows; the expanded one flows inline. */
+.message {
+  position: relative;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.message:last-child {
+  border-bottom: none;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+}
+
+/* collapsed rows highlight on hover, like a Gmail thread */
+.message:not(.expanded) .head {
+  cursor: pointer;
+  border-radius: var(--radius-md);
+}
+
+.message:not(.expanded) .head:hover {
+  background: var(--bg-sunken);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.expanded .head {
+  padding: var(--space-4) var(--space-3) var(--space-2);
+  background: transparent;
+}
+
+.headText {
+  flex: 1;
+  min-width: 0;
+}
+
+.headTop {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.sender {
+  flex-shrink: 0;
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The sender's address, shown beside the name on an expanded message. */
+.senderEmail {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clip {
+  width: 13px;
+  height: 13px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.date {
+  margin-left: auto;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.headSub {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* collapsed single-line row: sender · snippet ........ date (Gmail) */
+.collapsedSender {
+  flex-shrink: 0;
+  max-width: 40%;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collapsedPreview {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A small "Verified" pill beside the sender when inbound authentication
+   (SPF/DKIM/DMARC) vouches for the address. */
+.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--verdigris-50);
+  color: var(--verdigris-600);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 1.5;
+}
+
+.verifiedIcon {
+  width: 12px;
+  height: 12px;
+}
+
+/* The expanded To / Cc / Bcc block: one label + names per line. */
+/* the expanded header's sender row is its own toggle (collapses the message) */
+.headToggle {
+  display: block;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recipients {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+/* Gmail "to me ▾" compact recipient line + caret */
+.recipSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.recipSummary:hover {
+  color: var(--text-primary);
+}
+
+.recipCaret {
+  color: var(--text-tertiary);
+  transition: transform var(--transition-fast);
+}
+
+.recipCaretOpen {
+  transform: rotate(180deg);
+}
+
+.recipDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: var(--space-1);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--border-subtle);
+}
+
+.recipientRow {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  min-width: 0;
+}
+
+.recipientLabel {
+  flex-shrink: 0;
+  width: 2.2em;
+  color: var(--text-tertiary);
+  text-transform: lowercase;
+}
+
+.recipientNames {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Body aligns under the sender name (past the avatar), Gmail-style. */
+.body {
+  padding: var(--space-2) var(--space-3) var(--space-5) calc(40px + var(--space-3) * 2);
+}
+
+.text {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+}
+
+.html {
+  width: 100%;
+  min-height: 40vh;
+  border: none;
+  background: #fff;
+  border-radius: var(--radius-md);
+}
+
+.empty {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Gmail "···" quoted-history collapse */
+.quoted {
+  margin-top: var(--space-3);
+}
+
+.quotedToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.quotedToggle:hover,
+.quotedToggleOpen {
+  background: var(--bg-sunken);
+  color: var(--text-primary);
+}
+
+.quotedText {
+  margin-top: var(--space-3);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+/* attachments — Gmail-style rectangular cards with a file-type icon */
+.attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.attachment {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 264px;
+  max-width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  text-align: left;
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast);
+}
+
+.attachment:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--bg-sunken);
+}
+
+.attachment:disabled {
+  cursor: default;
+}
+
+.attachmentFailed {
+  border-color: var(--copper-500);
+}
+
+.attachIconBox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.attachmentFailed .attachIconBox {
+  background: var(--copper-50);
+  color: var(--copper-600);
+}
+
+.attachIcon {
+  width: 20px;
+  height: 20px;
+}
+
+.attachMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.attachName {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachSize {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.attachDownload {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}

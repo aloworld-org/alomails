@@ -1,0 +1,28 @@
+.shell {
+  height: 100%;
+  display: grid;
+  grid-template-columns: var(--rail-width) 1fr auto;
+  grid-template-areas: "rail main panel";
+}
+
+.main {
+  grid-area: main;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+
+.panel {
+  grid-area: panel;
+  width: 340px;
+  border-left: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.panelHead {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-3);
+}

@@ -39,6 +39,19 @@ Then connect Thunderbird / Apple Mail / your phone over IMAP 993 + SMTP 465,
 or point a JMAP client at the same origin. Mail-client autoconfiguration
 (Thunderbird/Apple Mail/Outlook) is served out of the box.
 
+### Webmail
+
+A browser client ships in [`web/`](web/) — a JMAP web app (mail, contacts,
+IMAP import, personal signup), served at the same origin as the API:
+
+```sh
+cd web && npm ci && npm run build      # build the SPA
+# publish the built dist/ to the server (see deploy/production/deploy-web.sh)
+```
+
+It is the alo mail surface with the suite-only modules (Docs, Chat, Meet, and
+the multi-tenant control plane) removed — Mail as a standalone product.
+
 ## Build
 
 ```sh
