@@ -206,6 +206,9 @@ export function SignupPage() {
                   className={`${login.input} ${login.passwordInput}`}
                   type={showPassword ? "text" : "password"}
                   autoComplete="new-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   minLength={8}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -254,6 +257,7 @@ export function SignupPage() {
                   placeholder={strings.signupPickPlaceholder}
                   autoComplete="off"
                   autoCapitalize="none"
+                  autoCorrect="off"
                   spellCheck={false}
                   required
                   autoFocus

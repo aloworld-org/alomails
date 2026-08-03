@@ -132,6 +132,9 @@ export function LoginPage() {
               className={styles.input}
               type="email"
               autoComplete="username"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
               placeholder={surface.login.emailPlaceholder()}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -147,6 +150,9 @@ export function LoginPage() {
                 className={`${styles.input} ${styles.passwordInput}`}
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
