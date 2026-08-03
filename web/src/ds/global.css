@@ -114,3 +114,14 @@ svg {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* iOS Safari zooms toward a focused control whose text is smaller than 16px.
+   Bump form controls to 16px on phone-sized screens so tapping a field to type
+   never zooms the page; desktop keeps the compact scale. */
+@media (max-width: 768px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}
