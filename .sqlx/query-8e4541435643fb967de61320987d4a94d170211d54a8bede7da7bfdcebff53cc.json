@@ -1,0 +1,70 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT DISTINCT m.id, m.thread_id, m.subject, m.from_addr, m.sent_at,\n                              m.received_at, m.size\n                       FROM messages m\n                       LEFT JOIN mailbox_messages mm\n                         ON mm.message_id = m.id AND mm.tenant_id = m.tenant_id\n                       WHERE m.tenant_id = $1 AND m.user_id = $2\n                         AND ($3::text IS NULL OR mm.mailbox_id = $3)\n                         AND ($4::text IS NULL OR m.from_addr ILIKE '%' || $4 || '%')\n                         AND ($5::text IS NULL OR m.to_addrs ILIKE '%' || $5 || '%')\n                         AND ($6::text IS NULL OR m.subject ILIKE '%' || $6 || '%')\n                         AND ($7::text IS NULL OR m.search @@ plainto_tsquery('simple', $7))\n                         AND ($8::timestamptz IS NULL OR m.received_at < $8)\n                         AND ($9::timestamptz IS NULL OR m.received_at >= $9)\n                         AND ($10::text IS NULL OR EXISTS\n                              (SELECT 1 FROM message_keywords k\n                               WHERE k.message_id = m.id AND k.keyword = $10))\n                         AND ($11::text IS NULL OR NOT EXISTS\n                              (SELECT 1 FROM message_keywords k\n                               WHERE k.message_id = m.id AND k.keyword = $11))\n                       ORDER BY m.received_at ASC, m.id ASC\n                       LIMIT $12 OFFSET $13",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "thread_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "subject",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "from_addr",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "sent_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "received_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "size",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "8e4541435643fb967de61320987d4a94d170211d54a8bede7da7bfdcebff53cc"
+}

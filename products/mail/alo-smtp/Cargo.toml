@@ -1,0 +1,49 @@
+[package]
+name = "alo-smtp"
+description = "alo mail transfer and submission: SMTP receiving, queueing, routing"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+alo-smtp-client = { path = "../alo-smtp-client" }
+alo-auth-mail = { path = "../../../platform/alo-auth-mail" }
+alo-store = { path = "../../../platform/alo-store" }
+alo-sieve = { path = "../../../platform/alo-sieve" }
+alo-identity = { path = "../../../platform/alo-identity" }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+# Zeroize the short-lived DKIM seed pulled from the store during signing.
+zeroize = { workspace = true }
+# Envelope sidecar serialization for the spool (M2 reads it back).
+serde = { workspace = true }
+serde_json = { workspace = true }
+# RFC 2822 date-time formatting for Received:/DSN headers.
+jiff = { workspace = true }
+# Gzip for DMARC aggregate-report attachments (RFC 7489 §7.2.1.1).
+flate2 = { workspace = true }
+# MX resolution for outbound delivery.
+hickory-resolver = { workspace = true }
+# TLS transport (STARTTLS + implicit TLS) and SASL AUTH.
+rustls = { workspace = true }
+tokio-rustls = { workspace = true }
+rustls-pki-types = { workspace = true }
+rcgen = { workspace = true }
+base64 = { workspace = true }
+
+[dev-dependencies]
+# The in-memory fixture DNS resolver, to verify a captured DKIM signature
+# against its published key in the per-tenant DKIM end-to-end test (ADR 0014).
+alo-auth-mail = { path = "../../../platform/alo-auth-mail", features = ["test-fixtures"] }
+# Unique temp spool directories for integration tests.
+tempfile = "3"
+# A real TLS client for the STARTTLS/AUTH submission integration test.
+rustls = { workspace = true }
+tokio-rustls = { workspace = true }
+base64 = { workspace = true }
+
+[lints]
+workspace = true

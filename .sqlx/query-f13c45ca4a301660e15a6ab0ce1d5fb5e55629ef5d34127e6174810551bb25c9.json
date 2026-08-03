@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT 1 AS one FROM object_changes WHERE tenant_id = $1 AND user_id = $2 AND type = $3 AND modseq > $4 LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "one",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f13c45ca4a301660e15a6ab0ce1d5fb5e55629ef5d34127e6174810551bb25c9"
+}

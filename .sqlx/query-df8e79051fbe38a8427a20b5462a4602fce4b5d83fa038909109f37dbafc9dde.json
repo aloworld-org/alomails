@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM sieve_scripts WHERE tenant_id = $1 AND user_id = $2 AND name = $3 AND NOT active RETURNING 1 AS one",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "one",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "df8e79051fbe38a8427a20b5462a4602fce4b5d83fa038909109f37dbafc9dde"
+}

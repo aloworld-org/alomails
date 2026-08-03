@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO redirect_budget (tenant_id, user_id, window_start, count) VALUES ($1, $2, now(), 0) ON CONFLICT (tenant_id, user_id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b39a2659dcb9e0e2396663abc3d3edefc58f86719ed3c82b9fa960c4cb974a13"
+}

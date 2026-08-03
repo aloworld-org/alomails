@@ -1,0 +1,72 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT mm.uid, m.id, m.subject, m.from_addr, m.to_addrs, m.size, m.received_at, m.sent_at, COALESCE(array_agg(k.keyword) FILTER (WHERE k.keyword IS NOT NULL), '{}') AS \"flags!: Vec<String>\" FROM mailbox_messages mm JOIN messages m ON m.id = mm.message_id AND m.tenant_id = mm.tenant_id LEFT JOIN message_keywords k ON k.message_id = mm.message_id AND k.tenant_id = mm.tenant_id WHERE mm.tenant_id = $1 AND mm.mailbox_id = $2 AND m.user_id = $3 GROUP BY mm.uid, m.id ORDER BY mm.uid ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "uid",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "subject",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "from_addr",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "to_addrs",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "size",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "received_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "sent_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "flags!: Vec<String>",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "412964cee22576ad3fe3d49b1554caa0206994f37b8b93dcf649d653bacf7c7d"
+}

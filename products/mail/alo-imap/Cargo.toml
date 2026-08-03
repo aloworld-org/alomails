@@ -1,0 +1,41 @@
+[package]
+name = "alo-imap"
+description = "alo IMAP4rev2/rev1 + POP3 compatibility shims over the account store"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+alo-store = { path = "../../../platform/alo-store" }
+alo-identity = { path = "../../../platform/alo-identity" }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+# INTERNALDATE / APPEND date formatting and parsing (RFC 3501 date-time).
+time = { workspace = true, features = ["macros"] }
+# TLS transport (implicit TLS + STARTTLS), mirroring alo-smtp. A shared
+# transport crate is deliberately deferred (see docs/design/imap-pop3-shims.md).
+rustls = { workspace = true }
+tokio-rustls = { workspace = true }
+rustls-pki-types = { workspace = true }
+rcgen = { workspace = true }
+# SASL AUTH=PLAIN/LOGIN base64 (RFC 4959/4954-style).
+base64 = { workspace = true }
+# Raw message bytes for FETCH BODY[] slicing.
+bytes = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+# A live store for integration tests (a small pool + migrations).
+sqlx = { workspace = true }
+# A real TLS client for the implicit-TLS integration tests.
+tokio-rustls = { workspace = true }
+rustls = { workspace = true }
+rustls-pki-types = { workspace = true }
+base64 = { workspace = true }
+time = { workspace = true, features = ["macros"] }
+
+[lints]
+workspace = true

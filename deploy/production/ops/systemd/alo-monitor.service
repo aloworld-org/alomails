@@ -1,0 +1,8 @@
+[Unit]
+Description=alo production monitor (health + alerting)
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/alo/monitoring/monitor.py
+WorkingDirectory=/opt/alo/deploy/production

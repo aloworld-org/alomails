@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT 1 AS one FROM message_keywords WHERE tenant_id = $1 AND message_id = $2 AND keyword = $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "one",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "8174c62c890f820ecf1b35bbf55693e3958b78a1ebb4e13294f1680821bf1ade"
+}

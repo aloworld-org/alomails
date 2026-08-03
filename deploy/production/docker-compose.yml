@@ -1,0 +1,315 @@
+# alo — single-server production stack (receive + read + login).
+#
+# This runs the full first-class mail path on ONE host and ONE database:
+#   - alo-smtp : receive (25) + authenticated submission (587/465) + outbound
+#   - alo-imap : read mail from any mail app (993 IMAPS, 995 POP3S). Port
+#                   143 (cleartext-then-STARTTLS) is deliberately NOT published
+#                   to the host — secure implicit-TLS 993 fully covers reading
+#                   mail, so the downgrade-capable port is closed (see README).
+#   - alo-jmap : the native API + the OpenID Connect login provider (behind Caddy)
+#   - postgres    : system of record
+#   - rspamd      : spam scoring at SMTP time (fail-closed)
+#   - caddy       : HTTPS reverse proxy for the web/login origin (port 443)
+#   - certbot     : the dedicated Let's Encrypt helper — obtains + renews ONE
+#                   certificate that Caddy, SMTP and IMAP all read from a
+#                   shared volume at a stable path (/certs/live/<domain>/).
+#
+# Message bodies live on a shared on-disk volume (`blobs`), so all three
+# alo services read and write the same blob store (single-node; a
+# multi-node deployment swaps this for Garage/S3 — see docs/decisions/0006).
+#
+# Bring-up and the TLS model are documented in ./README.md. Copy
+# .env.example to .env and fill it in first; .env is gitignored and never
+# holds a real secret in the repo (CLAUDE.md law 1). The certificate is
+# obtained once with ./init-certs.sh before the first `up`.
+
+name: alo
+
+networks:
+  alo:
+
+volumes:
+  # Pinned to the pre-rebrand names so the renamed `alo` project attaches to the
+  # EXISTING data volumes created under the old `ficina` project rather than
+  # provisioning empty ones. See docs/rename-migration.md.
+  pg_data:
+    name: ficina_pg_data
+  blobs:
+    name: ficina_blobs
+  smtp_spool:
+    name: ficina_smtp_spool
+  certs:
+    name: ficina_certs
+  caddy_data:
+    name: ficina_caddy_data
+  # Post-rebrand volumes (new since the rename) — no legacy names.
+  redis_data:
+  clamav_db:
+
+services:
+  postgres:
+    image: postgres:16.14
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-alo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-alo}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks: [alo]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Malware scanning at SMTP DATA time (fail-closed, like rspamd). The
+  # official image serves clamd on TCP 3310 (private network only) and
+  # runs freshclam alongside; signatures live on the volume so the
+  # ~300 MB download happens once. Memory: clamd holds the signature DB
+  # resident (~1.2 GiB); the limit below caps the daily reload spike —
+  # if it trips, the container restarts and the MX defers (451) until
+  # healthy again, which is the fail-closed behavior we want anyway.
+  clamav:
+    image: clamav/clamav:1.4.5
+    restart: unless-stopped
+    networks: [alo]
+    volumes:
+      - clamav_db:/var/lib/clamav
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    # The image ships its own healthcheck (clamdcheck.sh); give the
+    # first boot time to download signatures before it must pass.
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 600s
+
+  # Rspamd's statistics backend: Bayes tokens (spam/ham learning) live in
+  # redis and survive restarts via AOF on the volume. Never published.
+  redis:
+    image: redis:7.4.2-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    networks: [alo]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  rspamd:
+    image: rspamd/rspamd:4.1.2
+    restart: unless-stopped
+    depends_on:
+      redis: { condition: service_healthy }
+    volumes:
+      # Engine configured, never patched: redis backend for Bayes, and
+      # controller access for the junk-training learn calls (alo-jmap).
+      - ./rspamd/redis.conf:/etc/rspamd/local.d/redis.conf:ro
+      - ./rspamd/worker-controller.inc:/etc/rspamd/local.d/worker-controller.inc:ro
+    networks: [alo]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/11334'"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # The dedicated ACME helper. Standalone mode: it binds port 80 to answer
+  # Let's Encrypt's HTTP-01 challenge (during the one-off issuance and, later,
+  # during the periodic renewal check when a cert is within 30 days of
+  # expiry). The cert lands in the shared `certs` volume at
+  # /etc/letsencrypt/live/<domain>/, which every other service reads as
+  # /certs/live/<domain>/. First issuance is ./init-certs.sh (run once).
+  certbot:
+    image: certbot/certbot:v3.1.0
+    restart: unless-stopped
+    environment:
+      # The gid the alo services run as; the deploy hook grants this group
+      # read access to the certificate.
+      ALO_GID: ${ALO_GID:-10001}
+    entrypoint: >
+      sh -c 'trap exit TERM;
+             while :; do certbot renew --standalone --quiet;
+                         sleep 12h & wait $${!}; done'
+    volumes:
+      - certs:/etc/letsencrypt
+      - ./certbot-deploy-hook.sh:/etc/letsencrypt/renewal-hooks/deploy/50-alo-perms.sh:ro
+    ports:
+      - "80:80"
+    networks: [alo]
+
+  alo-smtp:
+    build:
+      context: ../..
+      dockerfile: products/mail/alo-smtp/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+      rspamd: { condition: service_started }
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-alo}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-alo}?sslmode=disable
+      # The SMTP service reads its own ALO_SMTP_BLOB_DIR; the shared value
+      # is set too so the whole stack points at one blob backend.
+      ALO_BLOB_DIR: /var/lib/alo/blobs
+      ALO_SMTP_BLOB_DIR: /var/lib/alo/blobs
+      ALO_SMTP_SPOOL_DIR: /var/spool/alo
+      ALO_SMTP_ADDR: 0.0.0.0:25
+      ALO_SMTP_HOSTNAME: ${DOMAIN:?set DOMAIN in .env}
+      ALO_SMTP_LOCAL_DOMAINS: ${ALO_SMTP_LOCAL_DOMAINS:?set the hosted mail domain(s) in .env}
+      ALO_SMTP_SUBMISSION_ADDR: 0.0.0.0:587
+      ALO_SMTP_IMPLICIT_TLS_ADDR: 0.0.0.0:465
+      # Trusted internal submission listener for alo-jmap's EmailSubmission/set.
+      # NO AUTH — safe ONLY because this port is never published (see the `ports:`
+      # block below: 2526 is absent, so it is reachable only on the private
+      # docker network). Never add 2526 to a published ports mapping.
+      ALO_SMTP_INTERNAL_SUBMISSION_ADDR: 0.0.0.0:2526
+      # Outbound sending: ON in production. Requires LOCAL_DOMAINS (set
+      # above) or startup is refused (anti-open-relay).
+      ALO_SMTP_OUTBOUND_ENABLED: ${ALO_SMTP_OUTBOUND_ENABLED:-true}
+      ALO_SMTP_SMARTHOST: ${ALO_SMTP_SMARTHOST:-}
+      # The shared Let's Encrypt certificate (one stable path for every
+      # service). allow_self_signed stays false so the server refuses to
+      # present an untrusted cert (set true only for a local test with no
+      # public domain — see README).
+      ALO_SMTP_TLS_CERT: ${ALO_SMTP_TLS_CERT:-/certs/live/${DOMAIN}/fullchain.pem}
+      ALO_SMTP_TLS_KEY: ${ALO_SMTP_TLS_KEY:-/certs/live/${DOMAIN}/privkey.pem}
+      ALO_SMTP_ALLOW_SELF_SIGNED: ${ALO_SMTP_ALLOW_SELF_SIGNED:-false}
+      # DKIM signing (all three together). Publish the public key at
+      # <selector>._domainkey.<domain>. Generate with ./generate-dkim.sh.
+      ALO_SMTP_DKIM_DOMAIN: ${ALO_SMTP_DKIM_DOMAIN:-}
+      ALO_SMTP_DKIM_SELECTOR: ${ALO_SMTP_DKIM_SELECTOR:-}
+      ALO_SMTP_DKIM_KEY: ${ALO_SMTP_DKIM_KEY:-}
+      ALO_SMTP_DKIM_ALGORITHM: ${ALO_SMTP_DKIM_ALGORITHM:-rsa}
+      # Spam scoring (fail-closed if unreachable).
+      ALO_SMTP_RSPAMD_URL: http://rspamd:11333
+      # Malware scanning at DATA (fail-closed 451 when the scanner is
+      # down — a scanner outage never means unscanned mail gets in).
+      ALO_SMTP_CLAMAV_ADDR: clamav:3310
+      # MTA-STS policy served internally; Caddy fronts mta-sts.<domain>.
+      ALO_SMTP_MTA_STS_ADDR: 0.0.0.0:8461
+      ALO_SMTP_MTA_STS_MODE: ${ALO_SMTP_MTA_STS_MODE:-enforce}
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - blobs:/var/lib/alo/blobs
+      - smtp_spool:/var/spool/alo
+      - certs:/certs:ro
+      - ${DKIM_KEY_HOST_DIR:-./dkim}:/dkim:ro
+    ports:
+      - "25:25"
+      - "587:587"
+      - "465:465"
+    networks: [alo]
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/alo-smtp", "--healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  alo-imap:
+    build:
+      context: ../..
+      dockerfile: products/mail/alo-imap/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-alo}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-alo}?sslmode=disable
+      ALO_BLOB_DIR: /var/lib/alo/blobs
+      ALO_IDENTITY_ISSUER: https://${DOMAIN}
+      ALO_IMAP_HOSTNAME: ${DOMAIN}
+      ALO_IMAPS_ADDR: 0.0.0.0:993
+      ALO_IMAP_ADDR: 0.0.0.0:143
+      ALO_POP3S_ADDR: 0.0.0.0:995
+      ALO_IMAP_TLS_CERT: ${ALO_IMAP_TLS_CERT:-/certs/live/${DOMAIN}/fullchain.pem}
+      ALO_IMAP_TLS_KEY: ${ALO_IMAP_TLS_KEY:-/certs/live/${DOMAIN}/privkey.pem}
+      ALO_IMAP_ALLOW_SELF_SIGNED: ${ALO_IMAP_ALLOW_SELF_SIGNED:-false}
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - blobs:/var/lib/alo/blobs
+      - certs:/certs:ro
+    # 143 is intentionally NOT published (downgrade-capable); 993 covers IMAP.
+    ports:
+      - "993:993"
+      - "995:995"
+    networks: [alo]
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/alo-imap", "--healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  alo-jmap:
+    build:
+      context: ../..
+      dockerfile: products/mail/alo-jmap/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-alo}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-alo}?sslmode=disable
+      ALO_BLOB_DIR: /var/lib/alo/blobs
+      # The public HTTPS origin (Caddy terminates TLS and forwards here).
+      ALO_IDENTITY_ISSUER: https://${DOMAIN}
+      ALO_JMAP_BASE_URL: https://${DOMAIN}
+      ALO_JMAP_ADDR: 0.0.0.0:8080
+      # Where EmailSubmission/set sends: the SMTP trusted internal listener,
+      # reached over the private docker network (not the internet).
+      ALO_JMAP_SUBMISSION_ADDR: alo-smtp:2526
+      # Junk training: moving mail into/out of Junk teaches the spam
+      # filter (rspamd controller learnspam/learnham, private network).
+      ALO_JMAP_RSPAMD_URL: http://rspamd:11334
+      # For the admin Security & trust page's live DNS checks: the hosted mail
+      # domain(s) — the same value alo-smtp treats as local, so SPF/DMARC/MX
+      # are checked at the email domain (e.g. example.com), not the server FQDN
+      # (mail.example.com) — plus the DKIM selector/domain (mirrors smtp's DKIM).
+      DOMAIN: ${DOMAIN}
+      ALO_SMTP_LOCAL_DOMAINS: ${ALO_SMTP_LOCAL_DOMAINS:?set the hosted mail domain(s) in .env}
+      ALO_SMTP_DKIM_SELECTOR: ${ALO_SMTP_DKIM_SELECTOR:-}
+      ALO_SMTP_DKIM_DOMAIN: ${ALO_SMTP_DKIM_DOMAIN:-}
+      # AI backend egress policy (ADR 0012). Default `open` allows any endpoint
+      # — correct for self-hosted deployments where the model runs on localhost
+      # or a private LAN. Set to `restricted` on shared/multi-tenant hosting to
+      # require https and block loopback/link-local/private/ULA targets (SSRF
+      # guard, since a tenant admin is then a customer, not the box operator).
+      ALO_AI_EGRESS: ${ALO_AI_EGRESS:-open}
+      # Enforce tenant->domain ownership on address assignment (ADR 0012). Off
+      # by default (single-tenant safe); set to `on` once domains are registered
+      # and verified for every tenant on a shared deployment.
+      ALO_ENFORCE_DOMAIN_OWNERSHIP: ${ALO_ENFORCE_DOMAIN_OWNERSHIP:-off}
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - blobs:/var/lib/alo/blobs
+    networks: [alo]
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/alo-jmap", "--healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      alo-jmap: { condition: service_started }
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web:/srv:ro
+      - certs:/certs:ro
+      - caddy_data:/data
+    ports:
+      - "443:443"
+    networks: [alo]

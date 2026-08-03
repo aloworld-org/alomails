@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM mailbox_messages WHERE tenant_id = $1 AND mailbox_id = $2 AND message_id = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0edff015d4f695bfb0b8ba5831360e8984bcb8e6e85401f8b64938db608e2646"
+}

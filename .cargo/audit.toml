@@ -1,0 +1,23 @@
+# cargo-audit configuration. Each ignore below is a transitive advisory
+# that is either not compiled into our binaries or not reachable in our
+# threat model. Every entry has a rationale and is tracked for removal
+# when upstream fixes land. See docs/decisions/0006-message-store-blobs.md.
+
+[advisories]
+ignore = [
+    # rsa (RUSTSEC-2023-0071, Marvin timing sidechannel). NOT COMPILED:
+    # a phantom lockfile entry from sqlx's optional `sqlx-mysql` backend,
+    # which we do not enable (postgres only). Verified absent from the
+    # build graph via `cargo tree -i rsa` (empty). Our own crypto never
+    # uses the `rsa` crate — DKIM uses ring (see the 2026-07-27
+    # interop.md note). Drop when sqlx stops listing the unused backend.
+    "RUSTSEC-2023-0071",
+    # quick-xml (RUSTSEC-2026-0194 / -0195, XML-parsing DoS). Reachable
+    # only with the `garage` feature, where object_store's S3 client
+    # parses responses from OUR OWN Garage cluster — trusted infra behind
+    # our network boundary, never attacker-controlled XML. Both are
+    # availability (DoS) issues, not confidentiality/integrity. Drop when
+    # object_store ships a patched quick-xml.
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
+]

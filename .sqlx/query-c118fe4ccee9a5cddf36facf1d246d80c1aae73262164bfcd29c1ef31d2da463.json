@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT b.id, b.size, b.content_type FROM blobs b WHERE b.tenant_id = $1 AND b.id = $2 AND EXISTS (SELECT 1 FROM messages m WHERE m.tenant_id = $1 AND m.user_id = $3 AND m.blob_id = b.id)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "size",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 2,
+        "name": "content_type",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "c118fe4ccee9a5cddf36facf1d246d80c1aae73262164bfcd29c1ef31d2da463"
+}

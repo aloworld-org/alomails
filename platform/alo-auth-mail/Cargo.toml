@@ -1,0 +1,31 @@
+[package]
+name = "alo-auth-mail"
+description = "alo email authentication: SPF, DKIM, DMARC, ARC, MTA-STS, Authentication-Results"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+hickory-resolver = { workspace = true }
+base64 = { workspace = true }
+jiff = { workspace = true }
+ring = { workspace = true }
+ed25519-dalek = { workspace = true }
+sha2 = { workspace = true }
+zeroize = { workspace = true }
+psl = { workspace = true }
+
+[features]
+# Exposes the in-memory fixture resolver to dependent crates' tests.
+test-fixtures = []
+
+[dev-dependencies]
+tokio = { workspace = true }
+tempfile = "3"
+
+[lints]
+workspace = true

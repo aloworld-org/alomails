@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT b.hash FROM blobs b WHERE b.tenant_id = $1 AND b.id = $2 AND EXISTS (SELECT 1 FROM messages m WHERE m.tenant_id = $1 AND m.user_id = $3 AND m.blob_id = b.id)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "hash",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c44b0853971d3dec7c55c1fe5c63e7c4a8711c0c009e77c82a63c1a6edbd97ae"
+}

@@ -1,0 +1,27 @@
+[package]
+name = "alo-smtp-client"
+description = "alo outbound SMTP client and reply/line parsing, shared by the SMTP delivery path and the JMAP submission path"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+# Opportunistic STARTTLS on delivery (RFC 3207). rustls + ring, matching the
+# rest of the TLS stack; no OpenSSL.
+rustls = { workspace = true }
+tokio-rustls = { workspace = true }
+rustls-pki-types = { workspace = true }
+# TLSA certificate matching for DANE (RFC 7672/6698): SHA-256/SHA-512
+# digests of the presented certificate or its SPKI.
+sha2 = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+rcgen = { workspace = true }
+
+[lints]
+workspace = true

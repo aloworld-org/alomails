@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT mm.uid, mm.message_id, COALESCE(array_agg(k.keyword) FILTER (WHERE k.keyword IS NOT NULL), '{}') AS \"flags!: Vec<String>\" FROM mailbox_messages mm JOIN messages m ON m.id = mm.message_id AND m.tenant_id = mm.tenant_id LEFT JOIN message_keywords k ON k.message_id = mm.message_id AND k.tenant_id = mm.tenant_id WHERE mm.tenant_id = $1 AND mm.mailbox_id = $2 AND m.user_id = $3 GROUP BY mm.uid, mm.message_id ORDER BY mm.uid ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "uid",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 1,
+        "name": "message_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "flags!: Vec<String>",
+        "type_info": "TextArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "d694ea808c9d73c4c64ca141f45eec7554412cf20f17411ce4708e5c0ac36030"
+}

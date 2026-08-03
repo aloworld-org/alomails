@@ -1,0 +1,39 @@
+[package]
+name = "alo-store"
+description = "alo message store: tenant-scoped mailboxes, messages, flags, threads, and blobs on PostgreSQL + Garage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+alo-sieve = { path = "../alo-sieve" }
+alo-auth-mail = { path = "../alo-auth-mail" }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+sqlx = { workspace = true }
+# Contact multi-value fields (emails/phones) serialize to the JSONB columns
+# and to the JMAP/vCard surfaces.
+serde = { workspace = true }
+time = { workspace = true }
+object_store = { workspace = true }
+futures = { workspace = true }
+bytes = { workspace = true }
+sha2 = { workspace = true }
+ring = { workspace = true }
+base64 = { workspace = true }
+encoding_rs = { workspace = true }
+argon2 = { workspace = true }
+
+[features]
+# The Garage (S3) blob backend. Off by default: it pulls object_store's
+# cloud client (reqwest + quick-xml). The in-memory backend and all store
+# logic build without it (see docs/decisions/0006).
+garage = ["object_store/aws"]
+
+[dev-dependencies]
+tokio = { workspace = true }
+
+[lints]
+workspace = true

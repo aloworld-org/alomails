@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO account_modseq (tenant_id, user_id, modseq) VALUES ($1, $2, 1) ON CONFLICT (tenant_id, user_id) DO UPDATE SET modseq = account_modseq.modseq + 1 RETURNING modseq",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "modseq",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "627b09ac69970452f4d32a915667cc104d0c74b49675bad28c58020047f0d596"
+}

@@ -1,0 +1,54 @@
+# Caddy fronts the HTTPS origin for alo. It does NOT obtain certificates
+# here — the dedicated `certbot` service obtains and renews one Let's Encrypt
+# certificate into the shared `certs` volume, and every service (Caddy, SMTP,
+# IMAP) reads it from the same stable path /certs/live/<domain>/. Caddy just
+# terminates TLS on 443, serves the web app, and reverse-proxies the API +
+# OIDC paths to the internal JMAP service. See docker-compose.yml and README.md.
+
+{
+	# We manage certificates with certbot, not Caddy's own ACME.
+	auto_https off
+}
+
+# The one origin: the alo web app (SPA) plus the JMAP API + OIDC provider it
+# talks to. The app and its backend share an origin, so there is no CORS and
+# the login redirect stays first-party.
+https://{$DOMAIN} {
+	tls /certs/live/{$DOMAIN}/fullchain.pem /certs/live/{$DOMAIN}/privkey.pem
+	encode zstd gzip
+
+	# Backend paths: the JMAP API, the blob up/download + push, and every OIDC
+	# endpoint (discovery, authorize, token, userinfo, jwks, revoke). Everything
+	# else is the web app. `/auth/token` is backend; `/auth/callback` is a client
+	# route (falls through to the SPA).
+	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /contacts /contacts/* /import/* /signup/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
+	handle @backend {
+		reverse_proxy alo-jmap:8080
+	}
+
+
+	# The web app: static files with client-side-routing fallback to index.html.
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+
+		# A strict CSP: the app loads only its own code, styles, fonts, and
+		# images, talks only to its own origin, and may not be framed. Inline
+		# styles are allowed (component style attributes); scripts are not.
+		header {
+			Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+			X-Content-Type-Options nosniff
+			Referrer-Policy strict-origin-when-cross-origin
+			-Server
+		}
+	}
+}
+
+# MTA-STS policy host (RFC 8461). Senders fetch
+# https://mta-sts.<domain>/.well-known/mta-sts.txt. Covered by the same
+# certificate (issued with both names as SANs — see init-certs.sh).
+https://mta-sts.{$DOMAIN} {
+	tls /certs/live/{$DOMAIN}/fullchain.pem /certs/live/{$DOMAIN}/privkey.pem
+	reverse_proxy alo-smtp:8461
+}

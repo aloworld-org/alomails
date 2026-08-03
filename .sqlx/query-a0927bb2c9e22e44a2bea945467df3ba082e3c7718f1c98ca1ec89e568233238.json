@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT k.keyword FROM message_keywords k JOIN messages m ON m.id = k.message_id AND m.tenant_id = k.tenant_id WHERE k.tenant_id = $1 AND m.user_id = $2 AND k.message_id = $3 ORDER BY k.keyword",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "keyword",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a0927bb2c9e22e44a2bea945467df3ba082e3c7718f1c98ca1ec89e568233238"
+}

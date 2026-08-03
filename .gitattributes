@@ -1,0 +1,6 @@
+# Line endings are LF everywhere, on every platform — shell scripts
+# break under CRLF and the toolchain (rustfmt, prettier) emits LF.
+* text=auto eol=lf
+
+# Windows-only files that genuinely require CRLF would be listed here;
+# none exist today.

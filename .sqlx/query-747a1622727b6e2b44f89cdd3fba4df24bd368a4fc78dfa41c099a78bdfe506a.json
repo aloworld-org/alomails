@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO mailbox_messages (tenant_id, mailbox_id, message_id, uid) VALUES ($1,$2,$3,$4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "747a1622727b6e2b44f89cdd3fba4df24bd368a4fc78dfa41c099a78bdfe506a"
+}

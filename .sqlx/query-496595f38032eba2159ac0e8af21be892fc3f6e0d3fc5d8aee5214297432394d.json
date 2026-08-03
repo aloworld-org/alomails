@@ -1,0 +1,65 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, parent_id, name, role, uid_validity, uid_next, total_messages, unread_messages FROM mailboxes WHERE tenant_id = $1 AND user_id = $2 ORDER BY name LIMIT 500",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "parent_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "role",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "uid_validity",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 5,
+        "name": "uid_next",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "total_messages",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 7,
+        "name": "unread_messages",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "496595f38032eba2159ac0e8af21be892fc3f6e0d3fc5d8aee5214297432394d"
+}

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO blobs (id, tenant_id, hash, size, refcount, content_type) VALUES ($1, $2, $3, $4, 1, 'message/rfc822') ON CONFLICT (tenant_id, hash) DO UPDATE SET refcount = blobs.refcount + 1 RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d91db4413a6fd95e9e88dce0f6699cf700bf6fd8b664d4e87b07054311684726"
+}

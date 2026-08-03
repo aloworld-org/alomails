@@ -1,0 +1,6 @@
+[Unit]
+Description=Alert that the alo backup failed
+
+[Service]
+Type=oneshot
+ExecStart=/opt/alo/monitoring/send-alert.sh "[alo] BACKUP FAILED" "The nightly alo backup job failed. Run: journalctl -u alo-backup.service -n50  on the server to see why. Until it succeeds, no new off-site-ready snapshot exists."

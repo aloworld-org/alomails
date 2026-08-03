@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE mailboxes SET unread_messages = unread_messages + $1 WHERE tenant_id = $2 AND id IN (SELECT mailbox_id FROM mailbox_messages WHERE tenant_id = $2 AND message_id = $3)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Int8",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c23f69061970630dec2e5e846f8a7774467240c22e0216b54743a801af2b2b8c"
+}

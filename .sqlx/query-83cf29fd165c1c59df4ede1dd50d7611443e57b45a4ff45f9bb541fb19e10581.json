@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM mailboxes WHERE tenant_id = $1 AND user_id = $2 AND role = 'inbox'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "83cf29fd165c1c59df4ede1dd50d7611443e57b45a4ff45f9bb541fb19e10581"
+}

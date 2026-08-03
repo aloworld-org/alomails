@@ -1,0 +1,15 @@
+[package]
+name = "alo-sieve"
+description = "alo Sieve engine (RFC 5228 + vacation/subaddress/imap4flags): compile and evaluate user filter scripts at delivery time"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+thiserror = { workspace = true }
+
+[dev-dependencies]
+
+[lints]
+workspace = true

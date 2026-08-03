@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT b.hash FROM messages m JOIN blobs b ON b.id = m.blob_id WHERE m.tenant_id = $1 AND m.user_id = $2 AND m.id = $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "hash",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6932c267385b76f8de3f5640f3d28310e05b8d5a7148ca034444d209301f9040"
+}

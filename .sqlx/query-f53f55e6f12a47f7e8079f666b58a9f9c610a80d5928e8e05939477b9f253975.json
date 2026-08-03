@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH RECURSIVE ancestors AS ( SELECT id, parent_id FROM mailboxes WHERE tenant_id = $1 AND user_id = $2 AND id = $3 UNION ALL SELECT m.id, m.parent_id FROM mailboxes m JOIN ancestors a ON m.id = a.parent_id WHERE m.tenant_id = $1 AND m.user_id = $2 ) SELECT 1 AS one FROM ancestors WHERE id = $4 LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "one",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f53f55e6f12a47f7e8079f666b58a9f9c610a80d5928e8e05939477b9f253975"
+}

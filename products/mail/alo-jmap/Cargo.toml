@@ -1,0 +1,56 @@
+[package]
+name = "alo-jmap"
+description = "alo JMAP API (RFC 8620 core, RFC 8621 mail) over alo-store"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+alo-store = { path = "../../../platform/alo-store" }
+alo-sieve = { path = "../../../platform/alo-sieve" }
+alo-identity = { path = "../../../platform/alo-identity" }
+# The shared outbound SMTP client — EmailSubmission/set sends through the
+# trusted internal submission listener using the same production client the
+# SMTP delivery path uses.
+alo-smtp-client = { path = "../alo-smtp-client" }
+# The AI inference layer (ADR 0011) — the /ai/improve route bridges to it.
+alo-ai = { path = "../../../platform/alo-ai" }
+# Per-domain DKIM key generation when a domain is verified (ADR 0014).
+alo-auth-mail = { path = "../../../platform/alo-auth-mail" }
+# Live DNS checks for the admin Security & trust page (SPF/DMARC/DKIM/MX/PTR).
+hickory-resolver = { workspace = true }
+# The MTA-STS policy fetch (HTTPS) in the Security & trust checks.
+reqwest = { workspace = true }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+axum = { workspace = true }
+futures = { workspace = true }
+time = { workspace = true }
+bytes = { workspace = true }
+# RFC 2047 encoded-words + base64 message bodies for outgoing mail.
+base64 = { workspace = true }
+# Outbound IMAP client for the Gmail/Outlook import wizard: implicit-TLS
+# (rustls + ring, no OpenSSL) with real cert verification against the
+# Mozilla roots — the user's credentials go over this wire.
+rustls = { workspace = true }
+tokio-rustls = { workspace = true }
+rustls-pki-types = { workspace = true }
+webpki-roots = "0.26"
+# MIME parsing for inbound bodies + attachments (Email/get, download).
+mail-parser = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+# In-process HTTP testing (drive the router without a socket) + a small
+# test pool.
+tower = { version = "0.5", features = ["util"] }
+sqlx = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

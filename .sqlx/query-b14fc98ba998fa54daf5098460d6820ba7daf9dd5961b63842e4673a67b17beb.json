@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE redirect_budget SET window_start = now(), count = 1 WHERE tenant_id = $1 AND user_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b14fc98ba998fa54daf5098460d6820ba7daf9dd5961b63842e4673a67b17beb"
+}

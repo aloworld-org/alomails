@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO mailbox_messages (tenant_id, mailbox_id, message_id, uid) SELECT $1, $2, id, $5 FROM messages WHERE tenant_id = $1 AND user_id = $4 AND id = $3 ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "064d8e9bd02bfaddf02773c636e9ead61fe047d03a505a5406cef761d64caa4a"
+}

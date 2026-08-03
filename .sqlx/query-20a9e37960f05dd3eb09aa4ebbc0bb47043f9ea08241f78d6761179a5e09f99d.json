@@ -1,0 +1,114 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, thread_id, blob_id, message_id_hdr, subject, from_addr, to_addrs, cc_addrs, bcc_addrs, has_attachment, sent_at, received_at, size, auth_spf, auth_dkim, auth_dmarc FROM messages WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "thread_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "blob_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "message_id_hdr",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "subject",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "from_addr",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "to_addrs",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "cc_addrs",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "bcc_addrs",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "has_attachment",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "sent_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "received_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "size",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 13,
+        "name": "auth_spf",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "auth_dkim",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "auth_dmarc",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "20a9e37960f05dd3eb09aa4ebbc0bb47043f9ea08241f78d6761179a5e09f99d"
+}

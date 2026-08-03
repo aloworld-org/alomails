@@ -1,0 +1,45 @@
+[package]
+name = "alo-identity"
+description = "alo identity: argon2id credentials, TOTP 2FA, and an OpenID Connect / OAuth 2.0 provider — the credential authority behind SMTP/IMAP/JMAP"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+alo-store = { path = "../alo-store" }
+tokio = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+axum = { workspace = true }
+time = { workspace = true }
+# Credential + token crypto. argon2id for passwords; ring for the
+# constant-time comparison primitive, HMAC-SHA1 (TOTP, RFC 6238) and the
+# CSPRNG; ed25519-dalek to sign ID-token JWTs (EdDSA, RFC 8037); sha2 for
+# token/recovery-code hashing at rest; base64 for JWS + token encoding;
+# zeroize to wipe secret buffers.
+argon2 = { workspace = true }
+ring = { workspace = true }
+ed25519-dalek = { workspace = true }
+sha2 = { workspace = true }
+base64 = { workspace = true }
+zeroize = { workspace = true }
+subtle = { workspace = true }
+
+[[bin]]
+name = "identityctl"
+path = "src/bin/identityctl.rs"
+
+[dev-dependencies]
+tokio = { workspace = true }
+# Drive the OAuth router in-process (oneshot) without a socket.
+tower = { version = "0.5", features = ["util"] }
+# Compute the PKCE challenge and parse token responses in the OAuth tests.
+sha2 = { workspace = true }
+base64 = { workspace = true }
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

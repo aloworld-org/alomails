@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT thread_id FROM messages WHERE tenant_id = $1 AND user_id = $2 AND message_id_hdr = ANY($3::text[]) ORDER BY created_at LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "thread_id",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "69d8f2e01eb5c145c81f2d5e0a8df4ab183fe8b997c7eb67206b9963116b1451"
+}

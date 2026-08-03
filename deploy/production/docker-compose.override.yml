@@ -1,0 +1,16 @@
+# Production log rotation — applied automatically by `docker compose` in this
+# directory (Compose auto-merges docker-compose.override.yml).
+#
+# Caps every container's logs at 5 x 10 MB = 50 MB, rotated. This keeps a
+# generous window of authentication/security events for investigation while
+# guaranteeing container logs can never silently fill the disk. Added during
+# production hardening; the cap is verifiable with:
+#   docker inspect alo-alo-smtp-1 --format '{{json .HostConfig.LogConfig.Config}}'
+services:
+  postgres:     { logging: &cap { driver: json-file, options: { max-size: "10m", max-file: "5" } } }
+  rspamd:       { logging: *cap }
+  alo-smtp:  { logging: *cap }
+  alo-imap:  { logging: *cap }
+  alo-jmap:  { logging: *cap }
+  caddy:        { logging: *cap }
+  certbot:      { logging: *cap }

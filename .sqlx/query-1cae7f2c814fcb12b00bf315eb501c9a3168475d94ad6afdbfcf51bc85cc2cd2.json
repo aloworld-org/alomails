@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM message_keywords WHERE tenant_id = $1 AND message_id = $2 AND keyword = $3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1cae7f2c814fcb12b00bf315eb501c9a3168475d94ad6afdbfcf51bc85cc2cd2"
+}

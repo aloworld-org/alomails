@@ -1,0 +1,203 @@
+//! Thin binary entry point for the JMAP API + OpenID Connect provider:
+//! read config from the environment, wire the store + identity, serve. All
+//! logic lives in the library (`new-component` skill). The OIDC login
+//! endpoints are mounted by [`alo_jmap::app`], so this one service is
+//! both the native mail API and the identity provider.
+//!
+//! Environment:
+//! - `DATABASE_URL` — the Postgres system of record (required),
+//! - `ALO_BLOB_DIR` — the on-disk blob backend, shared with the SMTP and
+//!   IMAP services (required),
+//! - `ALO_IDENTITY_ISSUER` — the OIDC issuer URL, the public HTTPS origin
+//!   this service is reached at, e.g. `https://mail.example` (required),
+//! - `ALO_JMAP_ADDR` — the internal bind address (default `0.0.0.0:8080`;
+//!   TLS is terminated by the front proxy),
+//! - `ALO_JMAP_BASE_URL` — the external base URL for session resource
+//!   links (defaults to the issuer).
+
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::path::PathBuf;
+use std::process::ExitCode;
+use std::sync::Arc;
+
+use alo_identity::{Identity, IdentityConfig};
+use alo_jmap::{app_state, serve};
+use alo_store::{BlobStore, Store};
+
+/// Per-object blob ceiling for content-addressed message blobs (attachments);
+/// matches the SMTP + IMAP services. Large-file shares (alo Transfer) do not
+/// go through this path — they stream to their own object key with no ceiling —
+/// so this stays at the ordinary attachment size.
+const BLOB_MAX_BYTES: usize = 50 * 1024 * 1024;
+/// Default internal bind (the front proxy terminates TLS and forwards here).
+const DEFAULT_ADDR: &str = "0.0.0.0:8080";
+
+#[tokio::main]
+async fn main() -> ExitCode {
+    let addr = match bind_addr() {
+        Ok(addr) => addr,
+        Err(error) => {
+            eprintln!("alo-jmap: {error}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    // `--healthcheck` TCP-probes the bind address over loopback and exits.
+    if std::env::args().nth(1).as_deref() == Some("--healthcheck") {
+        return match healthcheck(addr).await {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(error) => {
+                eprintln!("alo-jmap: {error}");
+                ExitCode::FAILURE
+            }
+        };
+    }
+
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
+
+    match run(addr).await {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(error) => {
+            tracing::error!(%error, "fatal");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
+    let database_url = require_env("DATABASE_URL")?;
+    let blob_dir = PathBuf::from(require_env("ALO_BLOB_DIR")?);
+    let issuer = require_env("ALO_IDENTITY_ISSUER")?;
+    let base_url = std::env::var("ALO_JMAP_BASE_URL")
+        .ok()
+        .filter(|v| !v.is_empty())
+        .unwrap_or_else(|| issuer.clone());
+
+    let blobs = BlobStore::local(&blob_dir, BLOB_MAX_BYTES)
+        .map_err(|e| format!("cannot open blob directory {}: {e}", blob_dir.display()))?;
+    let store = Arc::new(
+        Store::connect(&database_url, blobs)
+            .await
+            .map_err(|_| "cannot connect to the database")?,
+    );
+    store
+        .migrate()
+        .await
+        .map_err(|_| "database migration failed")?;
+
+    // One-time backfill: compute `has_attachment` for messages ingested before
+    // the column existed (migration 0022), in the background so startup is not
+    // blocked. Stops when there is nothing left to compute.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            loop {
+                match store.backfill_has_attachment(200).await {
+                    Ok(0) => break,
+                    Ok(n) => tracing::info!(backfilled = n, "has_attachment backfill"),
+                    Err(error) => {
+                        tracing::warn!(%error, "has_attachment backfill failed");
+                        break;
+                    }
+                }
+                tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            }
+        });
+    }
+
+    // Background snooze sweeper (ADR-less; mirrors the vacation machinery):
+    // return due snoozed messages to their owners' Inbox, unread.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(60));
+            loop {
+                tick.tick().await;
+                match store.sweep_snoozes().await {
+                    Ok(n) if n > 0 => tracing::info!(woken = n, "snooze sweep"),
+                    Ok(_) => {}
+                    Err(error) => tracing::warn!(%error, "snooze sweep failed"),
+                }
+            }
+        });
+    }
+
+    // Background share-expiry sweeper (alo Transfer): drop expired share links
+    // and reclaim any blob no live share still holds.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(300));
+            loop {
+                tick.tick().await;
+                match store.sweep_expired_shares().await {
+                    Ok(n) if n > 0 => tracing::info!(expired = n, "share sweep"),
+                    Ok(_) => {}
+                    Err(error) => tracing::warn!(%error, "share sweep failed"),
+                }
+            }
+        });
+    }
+
+    let identity = Identity::new(Arc::clone(&store), IdentityConfig::new(issuer))
+        .map_err(|_| "could not initialise the credential authority")?;
+
+    let state = app_state(store, identity, base_url);
+
+    // Background scheduled-send sweeper (send later): submit drafts whose chosen
+    // time has arrived, through the same outbound path as an interactive send.
+    // Needs the full app state (submission listener address), so it starts here.
+    {
+        let state = state.clone();
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(30));
+            loop {
+                tick.tick().await;
+                alo_jmap::submission::run_due_scheduled(&state).await;
+            }
+        });
+    }
+
+    tracing::info!(%addr, "alo-jmap (API + OIDC provider) starting");
+    // `serve` provisions the OIDC signing key at startup (fail-fast).
+    serve(addr, state).await?;
+    Ok(())
+}
+
+async fn healthcheck(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
+    let probe = loopback(addr);
+    tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        tokio::net::TcpStream::connect(probe),
+    )
+    .await
+    .map_err(|_| "healthcheck: connection timed out")?
+    .map_err(|e| format!("healthcheck: {e}"))?;
+    Ok(())
+}
+
+fn bind_addr() -> Result<SocketAddr, String> {
+    let raw = std::env::var("ALO_JMAP_ADDR").unwrap_or_else(|_| DEFAULT_ADDR.to_owned());
+    raw.parse()
+        .map_err(|e| format!("ALO_JMAP_ADDR: invalid socket address {raw:?}: {e}"))
+}
+
+fn loopback(bind: SocketAddr) -> SocketAddr {
+    if bind.ip().is_unspecified() {
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), bind.port())
+    } else {
+        bind
+    }
+}
+
+fn require_env(key: &str) -> Result<String, String> {
+    match std::env::var(key) {
+        Ok(v) if !v.is_empty() => Ok(v),
+        _ => Err(format!("{key} is required")),
+    }
+}

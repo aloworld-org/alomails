@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT mm.uid FROM mailbox_messages mm JOIN messages m ON m.id = mm.message_id AND m.tenant_id = mm.tenant_id WHERE mm.tenant_id = $1 AND mm.mailbox_id = $2 AND m.user_id = $3 AND mm.message_id = $4",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "uid",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "a5f7bc4a68b34a5d9d506a301c273fc0511fba9636962cf62b89e72d6e020e30"
+}

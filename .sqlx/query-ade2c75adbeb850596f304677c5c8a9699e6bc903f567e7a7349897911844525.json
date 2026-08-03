@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE mailboxes SET uid_next = uid_next + 1, total_messages = total_messages + 1, unread_messages = unread_messages + 1 WHERE tenant_id = $1 AND id = $2 RETURNING uid_next - 1 AS \"uid!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "uid!",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ade2c75adbeb850596f304677c5c8a9699e6bc903f567e7a7349897911844525"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE signing_keys SET retired_at = now() WHERE kid = $1 AND retired_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "48a7560d66680130c2a8ae6b93c87d3ade66022bc5a181a2ea44b41379a7299b"
+}

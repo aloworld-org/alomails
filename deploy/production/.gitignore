@@ -1,0 +1,3 @@
+# Real secrets and keys never enter the repo (CLAUDE.md law 1).
+.env
+dkim/

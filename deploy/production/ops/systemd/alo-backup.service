@@ -1,0 +1,9 @@
+[Unit]
+OnFailure=alo-backup-failed.service
+Description=alo encrypted backup
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/alo/backups/backup.sh

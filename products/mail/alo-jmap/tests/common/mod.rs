@@ -1,0 +1,159 @@
+//! JMAP test harness: an in-process router over a real Postgres store,
+//! per test, with a logged-in account. Requests are driven through the
+//! router as a `tower::Service` (no socket).
+#![allow(clippy::unwrap_used, clippy::expect_used, dead_code)]
+
+use std::sync::Arc;
+
+use alo_identity::{Identity, IdentityConfig};
+use alo_store::{AccountStore, BlobStore, Store, TenantId, TenantStore, UserId};
+use axum::Router;
+use axum::body::Body;
+use axum::http::{Request, StatusCode};
+use serde_json::Value;
+use sqlx::postgres::PgPoolOptions;
+use tower::ServiceExt;
+
+/// Builds a test `Identity` over a store handle (a fixed dev issuer).
+pub fn test_identity(store: Arc<Store>) -> Identity {
+    Identity::new(store, IdentityConfig::new("https://id.test")).expect("identity")
+}
+
+pub fn database_url() -> String {
+    std::env::var("DATABASE_URL")
+        .unwrap_or_else(|_| "postgres://alo:alo-dev-only@127.0.0.1:5433/alo".to_owned())
+}
+
+pub struct Harness {
+    pub app: Router,
+    pub token: String,
+    pub account_id: String,
+    pub email: String,
+    pub store: Arc<Store>,
+    pub identity: Identity,
+    pub ts: TenantStore,
+    pub acc: AccountStore,
+    pub user: UserId,
+    pub tenant: TenantId,
+}
+
+/// A fresh tenant + logged-in user over the shared Postgres, with the
+/// JMAP router wired up.
+pub async fn harness(tag: &str) -> Harness {
+    let pool = PgPoolOptions::new()
+        .max_connections(4)
+        .connect(&database_url())
+        .await
+        .expect("connect to test postgres");
+    let store = Arc::new(Store::new(pool, BlobStore::in_memory(50 * 1024 * 1024)));
+    store.migrate().await.unwrap();
+    let tenant = store.create_tenant(&format!("jmap-{tag}")).await.unwrap();
+    // The username has a global unique index; include the random tenant id
+    // so reruns against the shared database never collide.
+    let email = format!("{tag}-{tenant}@example.test");
+    let ts = store.for_tenant(tenant.clone());
+    let user = ts.create_user(&email).await.unwrap();
+    let identity = test_identity(Arc::clone(&store));
+    identity
+        .set_password(&tenant, &user, &email, "s3cret-pw")
+        .await
+        .unwrap();
+    let acc = store.for_account(tenant.clone(), user.clone());
+    let token = identity
+        .password_login(&email, "s3cret-pw", None)
+        .await
+        .unwrap()
+        .expect("token issued")
+        .0
+        .reveal()
+        .to_owned();
+    let app = alo_jmap::app(alo_jmap::app_state(
+        Arc::clone(&store),
+        identity.clone(),
+        "http://test",
+    ));
+    Harness {
+        app,
+        token,
+        account_id: user.to_string(),
+        email,
+        store,
+        identity,
+        ts,
+        acc,
+        user,
+        tenant,
+    }
+}
+
+/// Sends a raw request through the router; returns (status, body-json).
+pub async fn send(app: &Router, req: Request<Body>) -> (StatusCode, Value) {
+    let resp = app.clone().oneshot(req).await.unwrap();
+    let status = resp.status();
+    let bytes = axum::body::to_bytes(resp.into_body(), 64 * 1024 * 1024)
+        .await
+        .unwrap();
+    let json = serde_json::from_slice(&bytes).unwrap_or(Value::Null);
+    (status, json)
+}
+
+/// POSTs a JMAP Request to `/jmap/api` with the given bearer token.
+pub async fn api(app: &Router, token: &str, body: Value) -> (StatusCode, Value) {
+    let req = Request::builder()
+        .method("POST")
+        .uri("/jmap/api")
+        .header("authorization", format!("Bearer {token}"))
+        .header("content-type", "application/json")
+        .body(Body::from(body.to_string()))
+        .unwrap();
+    send(app, req).await
+}
+
+/// GETs `path` with the given bearer token (for the small REST endpoints
+/// alongside the JMAP API, e.g. `/contacts`).
+pub async fn get(app: &Router, token: &str, path: &str) -> (StatusCode, Value) {
+    let req = Request::builder()
+        .method("GET")
+        .uri(path)
+        .header("authorization", format!("Bearer {token}"))
+        .body(Body::empty())
+        .unwrap();
+    send(app, req).await
+}
+
+/// GETs `path` and returns the raw response body as text (for non-JSON
+/// endpoints, e.g. the `.vcf` export).
+pub async fn get_text(app: &Router, token: &str, path: &str) -> (StatusCode, String) {
+    let req = Request::builder()
+        .method("GET")
+        .uri(path)
+        .header("authorization", format!("Bearer {token}"))
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    let status = resp.status();
+    let bytes = axum::body::to_bytes(resp.into_body(), 64 * 1024 * 1024)
+        .await
+        .unwrap();
+    (status, String::from_utf8_lossy(&bytes).into_owned())
+}
+
+/// POSTs a raw text/bytes body to `path` (e.g. a `.vcf` import).
+pub async fn post_raw(app: &Router, token: &str, path: &str, body: &str) -> (StatusCode, Value) {
+    let req = Request::builder()
+        .method("POST")
+        .uri(path)
+        .header("authorization", format!("Bearer {token}"))
+        .header("content-type", "text/vcard")
+        .body(Body::from(body.to_owned()))
+        .unwrap();
+    send(app, req).await
+}
+
+/// A single method call wrapped in a Request envelope.
+pub fn call(method: &str, args: Value) -> Value {
+    serde_json::json!({
+        "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+        "methodCalls": [[method, args, "c0"]]
+    })
+}

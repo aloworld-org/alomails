@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT uid_next FROM mailboxes WHERE tenant_id = $1 AND user_id = $2 AND id = $3 FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "uid_next",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "212e5f9c4e47b54ae2607aa7d3fefdcde71413bf08e3790c856b858c4e540389"
+}

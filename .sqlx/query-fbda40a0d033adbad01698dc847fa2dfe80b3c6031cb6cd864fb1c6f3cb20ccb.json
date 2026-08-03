@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM aliases WHERE tenant_id = $1 AND address = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fbda40a0d033adbad01698dc847fa2dfe80b3c6031cb6cd864fb1c6f3cb20ccb"
+}
