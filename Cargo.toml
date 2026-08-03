@@ -1,13 +1,11 @@
 [workspace]
 resolver = "3"
 members = [
-    # platform — the shared kernel every product builds on (ADR 0019)
     "platform/alo-store",
     "platform/alo-identity",
     "platform/alo-auth-mail",
     "platform/alo-sieve",
     "platform/alo-ai",
-    # products/mail — the Mail product (alomails)
     "products/mail/alo-smtp",
     "products/mail/alo-smtp-client",
     "products/mail/alo-imap",
