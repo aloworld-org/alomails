@@ -45,6 +45,15 @@ https://{$DOMAIN} {
 	}
 
 
+	# Desktop-app installers + a small download page (ADR 0005). Served from a
+	# separate mount so a web deploy (which wipes /srv) never removes them.
+	# `handle_path` strips the /download prefix: /download/alomails-...msi →
+	# /srv/downloads/alomails-...msi, and /download/ → the download index.
+	handle_path /download/* {
+		root * /srv-downloads
+		file_server
+	}
+
 	# The web app: static files with client-side-routing fallback to index.html.
 	handle {
 		root * /srv

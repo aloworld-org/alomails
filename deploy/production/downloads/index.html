@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Download alomails</title>
+    <style>
+      :root {
+        --terracotta: #e76f51;
+        --terracotta-dark: #cf5b3e;
+        --navy: #1f2b45;
+        --ink: #24303f;
+        --muted: #64748b;
+        --cream: #faf7f2;
+        --card: #ffffff;
+        --line: #e7e0d6;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        min-height: 100vh;
+        background: var(--cream);
+        color: var(--ink);
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.55;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 6vh 20px 40px;
+      }
+      .wrap {
+        width: 100%;
+        max-width: 720px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 34px;
+      }
+      .brand svg {
+        width: 40px;
+        height: 40px;
+      }
+      .brand span {
+        font-size: 1.6rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--navy);
+      }
+      h1 {
+        font-size: clamp(1.9rem, 5vw, 2.6rem);
+        letter-spacing: -0.02em;
+        margin: 0 0 10px;
+        color: var(--navy);
+        text-wrap: balance;
+      }
+      .lede {
+        color: var(--muted);
+        font-size: 1.08rem;
+        margin: 0 0 32px;
+        max-width: 44ch;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      @media (max-width: 560px) {
+        .cards {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 24px 22px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .card.rec {
+        border-color: var(--terracotta);
+        box-shadow: 0 6px 24px -12px rgba(231, 111, 81, 0.5);
+      }
+      .os {
+        font-size: 1.15rem;
+        font-weight: 650;
+        color: var(--navy);
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin-bottom: 14px;
+      }
+      .btn {
+        margin-top: auto;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-decoration: none;
+        background: var(--terracotta);
+        color: #fff;
+        font-weight: 600;
+        padding: 12px 16px;
+        border-radius: 10px;
+        transition: background 0.15s;
+      }
+      .btn:hover {
+        background: var(--terracotta-dark);
+      }
+      .badge {
+        align-self: flex-start;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--terracotta-dark);
+        background: #fbe6df;
+        padding: 3px 8px;
+        border-radius: 999px;
+        margin-bottom: 6px;
+      }
+      .note {
+        margin-top: 26px;
+        font-size: 0.86rem;
+        color: var(--muted);
+        border-top: 1px solid var(--line);
+        padding-top: 18px;
+      }
+      .note code {
+        background: #efe9e0;
+        padding: 1px 6px;
+        border-radius: 5px;
+      }
+      a.back {
+        color: var(--terracotta-dark);
+        text-decoration: none;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#e76f51" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
+          <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
+          <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
+          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+        </svg>
+        <span>alomails</span>
+      </div>
+
+      <h1>Get the alomails app</h1>
+      <p class="lede">Your private, sovereign email as a real desktop app — on your dock or taskbar, its own window, always a click away.</p>
+
+      <div class="cards">
+        <div class="card" id="card-win">
+          <span class="badge" id="badge-win" hidden>Your device</span>
+          <div class="os">Windows</div>
+          <div class="meta">Windows 10 &amp; 11 · 64-bit · .msi installer</div>
+          <a class="btn" href="/download/alomails-windows-x64.msi" download>Download for Windows</a>
+        </div>
+
+        <div class="card" id="card-mac">
+          <span class="badge" id="badge-mac" hidden>Your device</span>
+          <div class="os">macOS</div>
+          <div class="meta">Apple Silicon &amp; Intel · universal · .dmg</div>
+          <a class="btn" href="/download/alomails-mac-universal.dmg" download>Download for Mac</a>
+        </div>
+      </div>
+
+      <p class="note">
+        Prefer the web? Just open <a class="back" href="https://mail.alomails.com">mail.alomails.com</a> in any browser.
+        <br /><br />
+        On first launch your system may warn about an “unidentified developer” — that's because the app isn't code-signed yet, not because anything is wrong. On Windows choose <code>More info → Run anyway</code>; on macOS right-click the app and choose <code>Open</code>.
+      </p>
+    </div>
+
+    <script>
+      // Highlight the visitor's platform.
+      var p = navigator.platform || "";
+      var ua = navigator.userAgent || "";
+      var isMac = /Mac/.test(p) || /Mac OS X/.test(ua);
+      var isWin = /Win/.test(p) || /Windows/.test(ua);
+      if (isMac) {
+        document.getElementById("card-mac").classList.add("rec");
+        document.getElementById("badge-mac").hidden = false;
+      } else if (isWin) {
+        document.getElementById("card-win").classList.add("rec");
+        document.getElementById("badge-win").hidden = false;
+      }
+
+      // Grey out any installer that isn't hosted yet (e.g. the macOS build
+      // arrives from CI); the button auto-enables once the file is present.
+      document.querySelectorAll(".btn[href]").forEach(function (a) {
+        var href = a.getAttribute("href");
+        fetch(href, { method: "HEAD" })
+          .then(function (r) {
+            if (!r.ok) mark(a);
+          })
+          .catch(function () {
+            mark(a);
+          });
+      });
+      function mark(a) {
+        a.textContent = "Building — available shortly";
+        a.removeAttribute("href");
+        a.style.background = "#c7bfb2";
+        a.style.cursor = "default";
+        a.style.pointerEvents = "none";
+      }
+    </script>
+  </body>
+</html>
