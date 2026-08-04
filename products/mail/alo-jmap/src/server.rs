@@ -74,6 +74,7 @@ pub fn app(state: AppState) -> Router {
                 .delete(calendar::delete),
         )
         .route("/calendar/rsvp", post(calendar::rsvp))
+        .route("/calendar/cancel", post(calendar::cancel))
         .route("/contacts", get(contacts::list))
         // Address-book import (a .vcf upload) and export (whole book as .vcf).
         .route("/contacts/import", post(contacts::import))

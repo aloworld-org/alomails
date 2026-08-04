@@ -140,18 +140,25 @@ pub async fn update(
     Ok(Json(json!({ "status": "ok" })))
 }
 
-/// `DELETE /calendar/events/:id` → `{status:"ok"}`.
+/// `DELETE /calendar/events/:id` → `{status:"ok"}`. If the deleted event had
+/// guests, each is emailed a cancellation so their calendar removes it too.
 pub async fn delete(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    account
+    let eid = EventId::new(id);
+    // Read the event before deleting so we know whom to notify.
+    let event = account
         .acc
-        .delete_event(&EventId::new(id))
+        .event(&eid)
         .await
-        .map_err(map_store_err)?;
+        .map_err(|_| Problem::server_error())?;
+    account.acc.delete_event(&eid).await.map_err(map_store_err)?;
+    if let Some(ev) = event {
+        send_cancellations(&state, &account, &ev).await;
+    }
     Ok(Json(json!({ "status": "ok" })))
 }
 
@@ -216,6 +223,47 @@ pub async fn rsvp(
     let organizer = alo_store::ical::organizer_of(&ics);
     let replied = send_reply(&state, &account, &event, partstat, organizer.as_deref()).await;
     Ok(Json(json!({ "status": "ok", "added": added, "replied": replied })))
+}
+
+#[derive(Deserialize)]
+struct CancelBody {
+    #[serde(rename = "blobId")]
+    blob_id: String,
+}
+
+/// `POST /calendar/cancel` — apply an organizer's cancellation. Loads the
+/// message (account-scoped), confirms it is a `METHOD:CANCEL`, and removes the
+/// matching event (by `UID`) from the caller's calendar. Removing an event that
+/// isn't there (declined, or already removed) is success with `removed:false` —
+/// the cancellation is honoured either way. Re-reading the message server-side
+/// means a client can't ask to delete an arbitrary id: only the `UID` named by
+/// a real cancellation the user received is acted on.
+pub async fn cancel(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: CancelBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let raw = account
+        .acc
+        .blob_bytes(&BlobId::new(req.blob_id))
+        .await
+        .map_err(map_store_err)?;
+    let not_cancel =
+        || Problem::with(StatusCode::BAD_REQUEST, "this message is not a cancellation");
+    let ics_bytes = crate::mime_read::calendar_part(&raw).ok_or_else(not_cancel)?;
+    let ics = String::from_utf8_lossy(&ics_bytes);
+    if alo_store::ical::method_of(&ics).as_deref() != Some("CANCEL") {
+        return Err(not_cancel());
+    }
+    let uid = alo_store::ical::uid_of(&ics).ok_or_else(not_cancel)?;
+    let removed = match account.acc.delete_event(&EventId::new(uid)).await {
+        Ok(()) => true,
+        Err(StoreError::NotFound) => false,
+        Err(_) => return Err(Problem::server_error()),
+    };
+    Ok(Json(json!({ "status": "ok", "removed": removed })))
 }
 
 /// Emails a `METHOD:REPLY` to the invitation's organizer, from the responder's
@@ -357,19 +405,55 @@ fn map_store_err(e: StoreError) -> Problem {
 /// safe: it never occurs in a base64-encoded part body.
 const IMIP_BOUNDARY: &str = "=_alo_imip_iX9q2p";
 
-/// Mails each guest an iMIP `METHOD:REQUEST` invitation from the organizer's own
+/// Mails each guest an iMIP invitation (`METHOD:REQUEST`) from the organizer's
 /// address, so recipients on any calendar (Gmail/Outlook/Apple) get a real,
-/// RSVP-able invite. Best-effort: the event is already persisted, so a send
-/// failure is logged — never with addresses or content (Law 1) — and does not
-/// fail the write. Sending an update to an existing event re-issues the request,
-/// which those clients treat as an update (same `UID`). No listener or unknown
-/// organizer address means no mail rather than an error.
+/// RSVP-able invite. A save on an existing event re-issues the request (same
+/// `UID`), which those clients treat as an update.
 async fn send_invitations(state: &AppState, account: &Account, event: &CalendarEvent) {
+    notify_attendees(
+        state,
+        account,
+        event,
+        "REQUEST",
+        "Invitation",
+        &format!("You're invited to {}.", event.summary),
+    )
+    .await;
+}
+
+/// Mails each guest an iMIP cancellation (`METHOD:CANCEL`) when the owner
+/// deletes an event, so their calendar (and alomails') removes it. Same `UID`,
+/// so clients match it to the original.
+async fn send_cancellations(state: &AppState, account: &Account, event: &CalendarEvent) {
+    notify_attendees(
+        state,
+        account,
+        event,
+        "CANCEL",
+        "Cancelled",
+        &format!("{} has been cancelled.", event.summary),
+    )
+    .await;
+}
+
+/// Mails every guest an iMIP scheduling message for `event` from the owner's
+/// address: a `multipart/alternative` of a short note and a `text/calendar;
+/// method={method}` part. Best-effort — the calendar write already happened, so
+/// a missing listener/organizer or a send failure is logged (never with
+/// addresses or content — Law 1) rather than failing the request.
+async fn notify_attendees(
+    state: &AppState,
+    account: &Account,
+    event: &CalendarEvent,
+    method: &str,
+    subject_prefix: &str,
+    plain: &str,
+) {
     if event.attendees.is_empty() {
         return;
     }
     let Some(addr) = state.submission_addr.as_deref() else {
-        tracing::warn!("calendar: no submission listener; invitations not sent");
+        tracing::warn!("calendar: no submission listener; {method} not sent");
         return;
     };
     let organizer = match state
@@ -380,13 +464,14 @@ async fn send_invitations(state: &AppState, account: &Account, event: &CalendarE
     {
         Ok(Some(email)) => email,
         _ => {
-            tracing::warn!("calendar: organizer address unknown; invitations not sent");
+            tracing::warn!("calendar: organizer address unknown; {method} not sent");
             return;
         }
     };
-    let subject = crate::mime::encode_unstructured(&format!("Invitation: {}", event.summary));
-    let plain_b64 = wrap76(&B64.encode(format!("You're invited to {}.", event.summary)));
-    let ics_b64 = wrap76(&B64.encode(alo_store::ical::to_imip(event, &organizer, "REQUEST")));
+    let subject =
+        crate::mime::encode_unstructured(&format!("{subject_prefix}: {}", event.summary));
+    let plain_b64 = wrap76(&B64.encode(plain));
+    let ics_b64 = wrap76(&B64.encode(alo_store::ical::to_imip(event, &organizer, method)));
     for attendee in &event.attendees {
         let message = format!(
             "From: {organizer}\r\n\
@@ -401,7 +486,7 @@ async fn send_invitations(state: &AppState, account: &Account, event: &CalendarE
              \r\n\
              {plain_b64}\r\n\
              --{IMIP_BOUNDARY}\r\n\
-             Content-Type: text/calendar; charset=utf-8; method=REQUEST\r\n\
+             Content-Type: text/calendar; charset=utf-8; method={method}\r\n\
              Content-Transfer-Encoding: base64\r\n\
              \r\n\
              {ics_b64}\r\n\
@@ -415,7 +500,7 @@ async fn send_invitations(state: &AppState, account: &Account, event: &CalendarE
         )
         .await
         {
-            tracing::warn!(reason = %reason, "calendar: could not send an invitation");
+            tracing::warn!(reason = %reason, "calendar: could not send a {method}");
         }
     }
 }

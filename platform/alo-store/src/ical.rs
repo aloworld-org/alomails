@@ -183,6 +183,35 @@ pub fn method_of(text: &str) -> Option<String> {
     None
 }
 
+/// The `UID` of the first `VEVENT`, if present — the stable key that ties a
+/// CANCEL/REPLY back to the original event. Read on its own (not via
+/// [`from_ics`]) so a minimal CANCEL that omits `DTSTART` still identifies what
+/// to remove.
+pub fn uid_of(text: &str) -> Option<String> {
+    let unfolded = unfold(text);
+    let mut in_event = false;
+    for line in unfolded.lines() {
+        let upper = line.to_ascii_uppercase();
+        if upper == "BEGIN:VEVENT" {
+            in_event = true;
+            continue;
+        }
+        if upper == "END:VEVENT" {
+            break;
+        }
+        if !in_event {
+            continue;
+        }
+        let Some((spec, value)) = line.split_once(':') else {
+            continue;
+        };
+        if spec.eq_ignore_ascii_case("UID") && !value.trim().is_empty() {
+            return Some(value.trim().to_owned());
+        }
+    }
+    None
+}
+
 /// The `ORGANIZER` address of the first `VEVENT` (any `mailto:` prefix and
 /// parameters stripped), if present. A REPLY must be addressed here, and the
 /// stored event does not keep it — it is read from the inbound invitation.
@@ -441,6 +470,11 @@ mod tests {
         );
         assert_eq!(method_of(invite).as_deref(), Some("REQUEST"));
         assert_eq!(organizer_of(invite).as_deref(), Some("boss@example.com"));
+        assert_eq!(uid_of(invite).as_deref(), Some("evt-9"));
+        // A minimal CANCEL (no DTSTART) is still identified by its UID + method.
+        let cancel = "BEGIN:VCALENDAR\r\nMETHOD:CANCEL\r\nBEGIN:VEVENT\r\nUID:evt-9\r\nSTATUS:CANCELLED\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        assert_eq!(method_of(cancel).as_deref(), Some("CANCEL"));
+        assert_eq!(uid_of(cancel).as_deref(), Some("evt-9"));
         // No method / organizer on a plain export.
         let plain = to_ics(&CalendarEvent {
             id: EventId::new("x".to_owned()),

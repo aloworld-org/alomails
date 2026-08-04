@@ -1421,4 +1421,17 @@ export class JmapClient {
     if (!res.ok) throw new JmapError(`rsvp ${res.status}`);
     return (await res.json()) as { added: boolean; replied: boolean };
   }
+
+  /** Apply an organizer's cancellation: removes the matching event from the
+   * user's calendar. `blobId` is the cancellation message's blobId. `removed`
+   * is false when the event wasn't on the calendar (already gone). */
+  async cancelInvitation(blobId: string): Promise<{ removed: boolean }> {
+    const res = await this.#fetch(`${API_BASE}/calendar/cancel`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ blobId }),
+    });
+    if (!res.ok) throw new JmapError(`cancel ${res.status}`);
+    return (await res.json()) as { removed: boolean };
+  }
 }

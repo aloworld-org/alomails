@@ -2012,13 +2012,15 @@ fn read_body(raw: &[u8], blob_id: &str, max: usize) -> jtypes::ReadBody {
     }
 }
 
-/// Summarise an inbound invitation from the message's `text/calendar` part, but
-/// only when it is a scheduling `REQUEST` (not our own sent copy's REPLY, nor a
-/// CANCEL). Times are emitted as RFC 3339 (UTC). `None` for ordinary mail.
+/// Summarise an inbound scheduling message from the message's `text/calendar`
+/// part: an invitation (`REQUEST`) or a cancellation (`CANCEL`). Our own sent
+/// copies (`REPLY`) and other methods are ignored. Times are RFC 3339 (UTC).
+/// `None` for ordinary mail.
 fn read_invitation(raw: &[u8]) -> Option<jtypes::Invitation> {
     let ics = crate::mime_read::calendar_part(raw)?;
     let text = String::from_utf8_lossy(&ics);
-    if alo_store::ical::method_of(&text).as_deref() != Some("REQUEST") {
+    let method = alo_store::ical::method_of(&text)?;
+    if method != "REQUEST" && method != "CANCEL" {
         return None;
     }
     let ev = alo_store::ical::from_ics(&text, "")?;
@@ -2027,6 +2029,7 @@ fn read_invitation(raw: &[u8]) -> Option<jtypes::Invitation> {
             .unwrap_or_default()
     };
     Some(jtypes::Invitation {
+        method,
         uid: ev.id.as_str().to_owned(),
         summary: ev.summary,
         organizer: alo_store::ical::organizer_of(&text),

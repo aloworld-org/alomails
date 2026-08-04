@@ -3,8 +3,8 @@
 // `alo:invitation`). Responding adds the event to the user's calendar (unless
 // declining) and emails a reply to the organizer — both handled server-side via
 // the message's blobId, so this component only needs the parsed summary.
-import { useState } from "react";
-import { CalendarCheck, Check, HelpCircle, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { CalendarCheck, CalendarX, Check, HelpCircle, X } from "lucide-react";
 
 import { strings } from "../../i18n";
 import { useJmapClient } from "../../jmap/useJmapClient";
@@ -44,11 +44,55 @@ function doneLabel(r: RsvpResponse): string {
   return strings.rsvpTentative;
 }
 
+/** The cancellation notice: shown when the organizer withdrew the event. It
+ *  removes the event from the calendar on mount (once) and reports the result. */
+function CancellationCard({ invitation, blobId }: Props) {
+  const client = useJmapClient();
+  const applied = useRef(false);
+  const [state, setState] = useState<"working" | "removed" | "absent" | "error">("working");
+
+  useEffect(() => {
+    if (applied.current) return; // guard React 18 double-invoke
+    applied.current = true;
+    void (async () => {
+      try {
+        const { removed } = await client.cancelInvitation(blobId);
+        setState(removed ? "removed" : "absent");
+      } catch {
+        setState("error");
+      }
+    })();
+  }, [client, blobId]);
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.head}>
+        <CalendarX size={20} className={styles.icon} aria-hidden="true" />
+        <div className={styles.info}>
+          <div className={styles.title}>
+            {strings.cancelledTitle} {invitation.summary}
+          </div>
+          <div className={styles.when}>{whenLabel(invitation)}</div>
+          <div className={styles.meta}>
+            {state === "removed" && strings.cancelledRemoved}
+            {state === "absent" && strings.cancelledAbsent}
+            {state === "error" && strings.rsvpError}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function InvitationCard({ invitation, blobId }: Props) {
   const client = useJmapClient();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<RsvpResponse | null>(null);
   const [error, setError] = useState(false);
+
+  if (invitation.method === "CANCEL") {
+    return <CancellationCard invitation={invitation} blobId={blobId} />;
+  }
 
   async function respond(response: RsvpResponse) {
     setBusy(true);

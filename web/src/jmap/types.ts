@@ -183,6 +183,9 @@ export interface EmailHeaders {
 /** A received invitation, summarised for the reading pane. Times are RFC 3339
  * (UTC). RSVP acts on the message's blobId, so no event fields are writable. */
 export interface CalendarInvitation {
+  /** `REQUEST` (an invitation, shows Accept/Decline) or `CANCEL` (the organizer
+   *  withdrew it, shows a cancellation notice and removes the event). */
+  method: "REQUEST" | "CANCEL";
   uid: string;
   summary: string;
   organizer: string | null;

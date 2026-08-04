@@ -137,6 +137,10 @@ pub struct ReadBody {
 /// RFC 3339 (UTC). The RSVP endpoint re-reads the raw part from the message, so
 /// this is display-only.
 pub struct Invitation {
+    /// The scheduling method: `REQUEST` (an invitation) or `CANCEL` (the
+    /// organizer withdrew it). Drives whether the reading pane shows an
+    /// Accept/Decline card or a cancellation notice.
+    pub method: String,
     pub uid: String,
     pub summary: String,
     pub organizer: Option<String>,
@@ -289,6 +293,7 @@ pub fn email_json(
     // acts on the message id, re-reading the raw part — this is display-only.
     if let Some(inv) = body.and_then(|b| b.invitation.as_ref()) {
         email["alo:invitation"] = json!({
+            "method": inv.method,
             "uid": inv.uid,
             "summary": inv.summary,
             "organizer": inv.organizer,
