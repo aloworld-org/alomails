@@ -1348,7 +1348,7 @@ export class JmapClient {
     return (await res.json()) as CalendarEvent;
   }
 
-  /** Replace a calendar event's fields. */
+  /** Replace a calendar event's fields (the whole event/series). */
   async updateEvent(id: string, input: EventInput): Promise<void> {
     const res = await this.#fetch(
       `${API_BASE}/calendar/events/${encodeURIComponent(id)}`,
@@ -1359,6 +1359,21 @@ export class JmapClient {
       },
     );
     if (!res.ok) throw new JmapError(`calendar update ${res.status}`);
+  }
+
+  /** Override a single occurrence of a recurring series in place: `occurrence`
+   * is that instance's ORIGINAL slot (RFC 3339); `input` carries its new fields
+   * (possibly a new time). The rest of the series is untouched. */
+  async overrideOccurrence(id: string, occurrence: string, input: EventInput): Promise<void> {
+    const url = `${API_BASE}/calendar/events/${encodeURIComponent(id)}?occurrence=${encodeURIComponent(
+      occurrence,
+    )}`;
+    const res = await this.#fetch(url, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new JmapError(`calendar override ${res.status}`);
   }
 
   /** Delete a calendar event. */

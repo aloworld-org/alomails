@@ -264,6 +264,8 @@ export const fr: Partial<Catalog> = {
   agendaGuestsHint: "Nous enverrons à chaque invité une invitation qu'il pourra accepter dans son propre agenda.",
   agendaEventDescription: "Notes",
   agendaSave: "Enregistrer",
+  agendaSaveThis: "Cet évènement",
+  agendaSaveAll: "Toute la série",
   agendaDelete: "Supprimer",
   agendaDeleteThis: "Cet évènement",
   agendaDeleteAll: "Toute la série",

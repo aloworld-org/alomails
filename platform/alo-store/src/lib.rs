@@ -61,7 +61,8 @@ pub use identity::{
 pub use model::{
     AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, CalendarGrant, Category,
     Contact, ContactField, DkimKeyRow, DomainRow, EmailFilter, EmailQuery, GroupRow, MAX_PAGE,
-    Mailbox, Message, MessageSummary, Page, SortDirection, TenantSummary, UserRow,
+    Mailbox, Message, MessageSummary, OccurrenceOverride, Page, SortDirection, TenantSummary,
+    UserRow,
 };
 pub use reset::PendingReset;
 pub use schedule::DueSend;

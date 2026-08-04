@@ -419,6 +419,11 @@ export interface CalendarEvent {
   /** Guest email addresses invited to the event (empty when there are none).
    *  Saving with guests mails each an iMIP invitation from the owner. */
   attendees: string[];
+  /** For an expanded occurrence of a recurring series, its ORIGINAL slot
+   *  (RFC 3339) — the stable handle for editing/skipping just that instance,
+   *  which differs from `startsAt` once the occurrence has been moved. Null on a
+   *  stored master or a one-off. */
+  recurrenceId: string | null;
 }
 
 /** The writable fields when creating or replacing an event. */

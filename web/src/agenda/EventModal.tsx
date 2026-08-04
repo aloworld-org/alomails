@@ -17,12 +17,17 @@ interface Props {
   event: CalendarEvent | null;
   /** For a new event, the local start the user clicked (defaults applied). */
   initialStart: Date;
-  /** For a recurring event, the RFC 3339 start of the clicked occurrence —
-   *  enables "delete this event" (skip just that instance). */
+  /** For a recurring event, the RFC 3339 ORIGINAL slot of the clicked occurrence
+   *  — enables "this event" (skip or override just that instance). */
   occurrenceStart?: string | undefined;
+  /** The stored series master (recurring edits only); its base time anchors a
+   *  whole-series ("all events") edit. */
+  master?: CalendarEvent | undefined;
   /** The calendars the event can be placed on. */
   calendars: Calendar[];
   onSave: (id: string | null, input: EventInput) => Promise<void>;
+  /** Override just one occurrence in place (edit this instance of a series). */
+  onSaveOccurrence?: (id: string, occurrence: string, input: EventInput) => Promise<void>;
   onDelete: (id: string, occurrence?: string) => Promise<void>;
   onClose: () => void;
 }
@@ -45,10 +50,12 @@ function repeatOf(rrule: string | null): Repeat {
 
 export function EventModal({
   event,
+  master,
   initialStart,
   occurrenceStart,
   calendars,
   onSave,
+  onSaveOccurrence,
   onDelete,
   onClose,
 }: Props) {
@@ -77,34 +84,28 @@ export function EventModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (summary.trim() === "") return;
-    let startsAt: string;
-    let endsAt: string;
+  /** The form's start/end as RFC 3339 UTC, or null if the range is invalid. */
+  function readTimes(): { startsAt: string; endsAt: string } | null {
     if (allDay) {
       const s = localFromInput(`${startDay}T00:00`);
-      const eInclusive = localFromInput(`${endDay}T00:00`);
-      const eExclusive = addDays(eInclusive, 1); // exclusive end
+      const eExclusive = addDays(localFromInput(`${endDay}T00:00`), 1); // exclusive end
       if (eExclusive <= s) {
         setError(strings.agendaEndBeforeStart);
-        return;
+        return null;
       }
-      startsAt = s.toISOString();
-      endsAt = eExclusive.toISOString();
-    } else {
-      const s = localFromInput(start);
-      const en = localFromInput(end);
-      if (en < s) {
-        setError(strings.agendaEndBeforeStart);
-        return;
-      }
-      startsAt = s.toISOString();
-      endsAt = en.toISOString();
+      return { startsAt: s.toISOString(), endsAt: eExclusive.toISOString() };
     }
-    setError(null);
-    setBusy(true);
-    // Omit empty optional fields (exactOptionalPropertyTypes: no `undefined`).
+    const s = localFromInput(start);
+    const en = localFromInput(end);
+    if (en < s) {
+      setError(strings.agendaEndBeforeStart);
+      return null;
+    }
+    return { startsAt: s.toISOString(), endsAt: en.toISOString() };
+  }
+
+  /** Assemble the writable event fields, omitting empty optionals. */
+  function inputFrom(startsAt: string, endsAt: string): EventInput {
     const input: EventInput = { summary: summary.trim(), startsAt, endsAt, allDay };
     const desc = description.trim();
     if (desc) input.description = desc;
@@ -119,12 +120,47 @@ export function EventModal({
       .map((g) => g.trim())
       .filter((g) => g.includes("@"));
     if (guestList.length > 0) input.attendees = guestList;
+    return input;
+  }
+
+  async function run(fn: () => Promise<void>) {
+    setError(null);
+    setBusy(true);
     try {
-      await onSave(event?.id ?? null, input);
+      await fn();
     } catch {
       setError(strings.agendaSaveError);
       setBusy(false);
     }
+  }
+
+  /** Save the whole event/series (new, one-off, or "all events"). When editing
+   *  a recurring occurrence, the master is shifted by however much the user
+   *  moved this instance, so the series keeps its cadence. */
+  async function submitSeries(e?: FormEvent) {
+    e?.preventDefault();
+    if (summary.trim() === "") return;
+    const t = readTimes();
+    if (t === null) return;
+    let input = inputFrom(t.startsAt, t.endsAt);
+    if (recurringOccurrence && master && event) {
+      const delta = new Date(t.startsAt).getTime() - new Date(event.startsAt).getTime();
+      const ms = new Date(master.startsAt).getTime() + delta;
+      const me = ms + (new Date(master.endsAt).getTime() - new Date(master.startsAt).getTime());
+      input = { ...input, startsAt: new Date(ms).toISOString(), endsAt: new Date(me).toISOString() };
+    }
+    await run(() => onSave(event?.id ?? null, input));
+  }
+
+  /** Override just this occurrence in place (edit "this event" of a series). */
+  async function submitThis() {
+    if (summary.trim() === "" || !onSaveOccurrence || occurrenceStart === undefined || !event) {
+      return;
+    }
+    const t = readTimes();
+    if (t === null) return;
+    const input = inputFrom(t.startsAt, t.endsAt);
+    await run(() => onSaveOccurrence(event.id, occurrenceStart, input));
   }
 
   async function remove(occurrence?: string) {
@@ -145,7 +181,7 @@ export function EventModal({
 
   return (
     <div className={styles.modalScrim} role="dialog" aria-modal="true" onMouseDown={onClose}>
-      <form className={styles.modal} onSubmit={submit} onMouseDown={(e) => e.stopPropagation()}>
+      <form className={styles.modal} onSubmit={submitSeries} onMouseDown={(e) => e.stopPropagation()}>
         <div className={styles.modalHead}>
           <h2>{event ? strings.agendaEditEventTitle : strings.agendaNewEventTitle}</h2>
           <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.agendaCancel}>
@@ -290,11 +326,30 @@ export function EventModal({
             <button type="button" className={styles.linkBtn} onClick={onClose} disabled={busy}>
               {readOnly ? strings.agendaClose : strings.agendaCancel}
             </button>
-            {!readOnly && (
-              <Button type="submit" disabled={busy || summary.trim() === ""}>
-                {strings.agendaSave}
-              </Button>
+            {!readOnly && recurringOccurrence && onSaveOccurrence && (
+              <button
+                type="button"
+                className={styles.linkBtn}
+                onClick={() => void submitThis()}
+                disabled={busy || summary.trim() === ""}
+              >
+                {strings.agendaSaveThis}
+              </button>
             )}
+            {!readOnly &&
+              (recurringOccurrence ? (
+                <Button
+                  type="button"
+                  onClick={() => void submitSeries()}
+                  disabled={busy || summary.trim() === ""}
+                >
+                  {strings.agendaSaveAll}
+                </Button>
+              ) : (
+                <Button type="submit" disabled={busy || summary.trim() === ""}>
+                  {strings.agendaSave}
+                </Button>
+              ))}
           </div>
         </div>
       </form>

@@ -23,7 +23,9 @@ use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
-use alo_store::{BlobId, Calendar, CalendarEvent, CalendarId, EventId, StoreError, UserId};
+use alo_store::{
+    BlobId, Calendar, CalendarEvent, CalendarId, EventId, OccurrenceOverride, StoreError, UserId,
+};
 
 use crate::error::Problem;
 use crate::state::{Account, AppState, authenticate};
@@ -127,15 +129,39 @@ pub async fn create(
     Ok(Json(event_json(&saved)))
 }
 
-/// `PUT /calendar/events/:id` → `{status:"ok"}`.
+#[derive(Deserialize)]
+pub struct UpdateQuery {
+    /// When present, edit only the single occurrence of a recurring series whose
+    /// original start is this instant (RFC 3339) — a per-occurrence override
+    /// (iCalendar `RECURRENCE-ID`). Absent → replace the whole event/series.
+    occurrence: Option<String>,
+}
+
+/// `PUT /calendar/events/:id[?occurrence=<rfc3339>]` → `{status:"ok"}`.
+///
+/// - With `occurrence`: override just that instance of a recurring series (move
+///   and/or re-title it) while the rest stays. The instance is addressed by its
+///   ORIGINAL slot, so re-editing it is stable even after it was moved.
+/// - Without it: replace the whole event/series (and re-issue invitations).
 pub async fn update(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(id): Path<String>,
+    Query(q): Query<UpdateQuery>,
     body: axum::body::Bytes,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let req: EventBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    if let Some(occ) = q.occurrence {
+        let recurrence_id = parse_time(&occ)?;
+        let ov = build_override(&req)?;
+        account
+            .acc
+            .override_occurrence(&EventId::new(id), recurrence_id, &ov)
+            .await
+            .map_err(map_store_err)?;
+        return Ok(Json(json!({ "status": "ok", "scope": "occurrence" })));
+    }
     let calendar_id = resolve_calendar(&account, &req).await?;
     let event = build_event(EventId::new(id.clone()), calendar_id, req)?;
     account
@@ -431,6 +457,41 @@ fn build_event(
         // separate action (DELETE with an `occurrence`). CalDAV PUTs preserve
         // any EXDATE via put_event/from_ics, not this create path.
         exdates: Vec::new(),
+        // Masters/one-offs have no recurrence-id; only expanded occurrences do.
+        recurrence_id: None,
+    })
+}
+
+/// Builds a per-occurrence override from an event body (the editable fields of a
+/// single instance; placement + rule are not per-occurrence, so they're absent).
+fn build_override(req: &EventBody) -> Result<OccurrenceOverride, Problem> {
+    let summary = req.summary.trim().to_owned();
+    if summary.is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "a title is required",
+        ));
+    }
+    let starts_at = parse_time(&req.starts_at)?;
+    let ends_at = parse_time(&req.ends_at)?;
+    if ends_at < starts_at {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "the event ends before it starts",
+        ));
+    }
+    let clean = |s: &Option<String>| {
+        s.as_ref()
+            .map(|v| v.trim().to_owned())
+            .filter(|v| !v.is_empty())
+    };
+    Ok(OccurrenceOverride {
+        summary,
+        description: clean(&req.description),
+        location: clean(&req.location),
+        starts_at,
+        ends_at,
+        all_day: req.all_day,
     })
 }
 
@@ -755,6 +816,10 @@ fn event_json(e: &CalendarEvent) -> Value {
         "allDay": e.all_day,
         "recurrence": e.recurrence,
         "attendees": e.attendees,
+        // The occurrence's original slot (its stable edit/skip handle); null on
+        // a stored master or one-off. For a moved occurrence it differs from
+        // startsAt, so the client edits/skips by this, not the displayed start.
+        "recurrenceId": e.recurrence_id.and_then(|t| t.format(&Rfc3339).ok()),
     })
 }
 

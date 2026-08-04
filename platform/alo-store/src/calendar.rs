@@ -12,7 +12,8 @@ use crate::account::AccountStore;
 use crate::changes::{self, Change, TYPE_EVENT};
 use crate::error::{Result, StoreError};
 use crate::id::{CalendarId, EventId};
-use crate::model::{Calendar, CalendarEvent, CalendarGrant};
+use crate::model::{Calendar, CalendarEvent, CalendarGrant, OccurrenceOverride};
+use std::collections::HashMap;
 
 impl AccountStore {
     /// The account's events overlapping the half-open window `[from, to)`,
@@ -48,17 +49,87 @@ impl AccountStore {
             .bind(from)
             .fetch_all(&self.pool)
             .await?;
+        let masters: Vec<CalendarEvent> = rows.into_iter().map(EventRow::into_event).collect();
+        // Per-occurrence overrides for the recurring series in view. Fetched by
+        // series id (the masters are already visible-scoped, so their overrides
+        // are too); each replaces one occurrence in place.
+        let series_ids: Vec<String> = masters
+            .iter()
+            .filter(|e| e.recurrence.is_some())
+            .map(|e| e.id.as_str().to_owned())
+            .collect();
+        let overrides = self.overrides_for(&series_ids).await?;
+
         let mut out = Vec::new();
-        for row in rows {
-            let event = row.into_event();
-            if event.recurrence.is_some() {
-                out.extend(expand_occurrences(&event, from, to));
-            } else {
+        for event in masters {
+            if event.recurrence.is_none() {
                 out.push(event);
+                continue;
+            }
+            let ovs = overrides.get(event.id.as_str());
+            let slots: Vec<OffsetDateTime> = ovs
+                .map(|v| v.iter().map(|(slot, _)| *slot).collect())
+                .unwrap_or_default();
+            out.extend(expand_occurrences(&event, from, to, &slots));
+            // Emit each override that lands in the window, in place of the
+            // default occurrence it replaced (which expansion skipped).
+            if let Some(ovs) = ovs {
+                for (slot, ov) in ovs {
+                    if ov.ends_at > from && ov.starts_at < to {
+                        out.push(CalendarEvent {
+                            id: event.id.clone(),
+                            calendar_id: event.calendar_id.clone(),
+                            summary: ov.summary.clone(),
+                            description: ov.description.clone(),
+                            location: ov.location.clone(),
+                            starts_at: ov.starts_at,
+                            ends_at: ov.ends_at,
+                            all_day: ov.all_day,
+                            recurrence: event.recurrence.clone(),
+                            attendees: event.attendees.clone(),
+                            exdates: Vec::new(),
+                            recurrence_id: Some(*slot),
+                        });
+                    }
+                }
             }
         }
         out.sort_by_key(|e| e.starts_at);
         Ok(out)
+    }
+
+    /// Loads every per-occurrence override for the given series, grouped by
+    /// series id (slot → the overridden fields). Tenant-scoped.
+    async fn overrides_for(
+        &self,
+        series_ids: &[String],
+    ) -> Result<HashMap<String, Vec<(OffsetDateTime, OccurrenceOverride)>>> {
+        if series_ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let rows = sqlx::query_as::<_, OverrideRow>(
+            "SELECT series_id, recurrence_id, summary, description, location, starts_at, ends_at, all_day \
+             FROM calendar_event_overrides WHERE tenant_id = $1 AND series_id = ANY($2)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(series_ids)
+        .fetch_all(&self.pool)
+        .await?;
+        let mut map: HashMap<String, Vec<(OffsetDateTime, OccurrenceOverride)>> = HashMap::new();
+        for r in rows {
+            map.entry(r.series_id).or_default().push((
+                r.recurrence_id,
+                OccurrenceOverride {
+                    summary: r.summary,
+                    description: r.description,
+                    location: r.location,
+                    starts_at: r.starts_at,
+                    ends_at: r.ends_at,
+                    all_day: r.all_day,
+                },
+            ));
+        }
+        Ok(map)
     }
 
     /// Every event in the account's calendar, earliest first. Used by the
@@ -278,6 +349,13 @@ impl AccountStore {
         if done.rows_affected() == 0 {
             return Err(StoreError::NotFound);
         }
+        // Deleting the series discards any per-occurrence overrides it carried.
+        sqlx::query("DELETE FROM calendar_event_overrides WHERE tenant_id = $1 AND series_id = $2")
+            .bind(self.tenant.as_str())
+            .bind(id.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
         changes::bump_and_record(
             &mut tx,
             self.tenant.as_str(),
@@ -300,10 +378,80 @@ impl AccountStore {
         let Some(mut event) = self.event(id).await? else {
             return Err(StoreError::NotFound);
         };
+        // Skipping a slot discards any in-place edit (override) it carried.
+        sqlx::query(
+            "DELETE FROM calendar_event_overrides \
+             WHERE tenant_id = $1 AND series_id = $2 AND recurrence_id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(occurrence)
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
         if !event.exdates.contains(&occurrence) {
             event.exdates.push(occurrence);
             self.update_event(id, &event).await?;
         }
+        Ok(())
+    }
+
+    /// Overrides a single occurrence of a recurring series in place (iCalendar
+    /// `RECURRENCE-ID`): the instance whose original start is `recurrence_id`
+    /// takes on `ov`'s fields (possibly a new time), while the rest of the
+    /// series is untouched. Upserts, so re-editing the same instance replaces
+    /// the prior override. The caller must be able to edit the series' calendar.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the series is not visible/editable to the
+    /// caller; [`StoreError::Db`] on failure.
+    pub async fn override_occurrence(
+        &self,
+        series: &EventId,
+        recurrence_id: OffsetDateTime,
+        ov: &OccurrenceOverride,
+    ) -> Result<()> {
+        // Resolve the series through the account door (view access) and confirm
+        // edit access to its calendar — same gate as editing the series itself.
+        let Some(master) = self.event(series).await? else {
+            return Err(StoreError::NotFound);
+        };
+        if !self.can_edit_calendar(&master.calendar_id).await? {
+            return Err(StoreError::NotFound);
+        }
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        sqlx::query(
+            "INSERT INTO calendar_event_overrides \
+                 (tenant_id, user_id, series_id, recurrence_id, summary, description, \
+                  location, starts_at, ends_at, all_day) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
+             ON CONFLICT (tenant_id, series_id, recurrence_id) DO UPDATE SET \
+                 summary = EXCLUDED.summary, description = EXCLUDED.description, \
+                 location = EXCLUDED.location, starts_at = EXCLUDED.starts_at, \
+                 ends_at = EXCLUDED.ends_at, all_day = EXCLUDED.all_day, updated_at = now()",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(series.as_str())
+        .bind(recurrence_id)
+        .bind(&ov.summary)
+        .bind(&ov.description)
+        .bind(&ov.location)
+        .bind(ov.starts_at)
+        .bind(ov.ends_at)
+        .bind(ov.all_day)
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        // The series' sync state advances so CalDAV/JMAP clients re-read it.
+        changes::bump_and_record(
+            &mut tx,
+            self.tenant.as_str(),
+            self.user.as_str(),
+            &[Change::updated(TYPE_EVENT, series.as_str())],
+        )
+        .await?;
+        tx.commit().await.map_err(StoreError::Db)?;
         Ok(())
     }
 
@@ -550,6 +698,16 @@ impl AccountStore {
             }
             _ => {}
         }
+        // Drop any per-occurrence overrides of events in this calendar first.
+        sqlx::query(
+            "DELETE FROM calendar_event_overrides WHERE tenant_id = $1 AND series_id IN \
+                 (SELECT id FROM calendar_events WHERE tenant_id = $1 AND calendar_id = $2)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
         sqlx::query(
             "DELETE FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 AND calendar_id = $3",
         )
@@ -658,6 +816,7 @@ fn expand_occurrences(
     master: &CalendarEvent,
     from: OffsetDateTime,
     to: OffsetDateTime,
+    overridden: &[OffsetDateTime],
 ) -> Vec<CalendarEvent> {
     let Some((freq, interval, count, until)) = master.recurrence.as_deref().and_then(parse_rrule)
     else {
@@ -674,12 +833,15 @@ fn expand_occurrences(
         let Some(occ_end) = occ.checked_add(duration) else {
             break;
         };
-        // Skip occurrences the owner individually cancelled (EXDATE).
-        let excluded = master.exdates.contains(&occ);
+        // Skip occurrences the owner cancelled (EXDATE) or moved/edited via a
+        // per-occurrence override (those are emitted from the overrides table).
+        let excluded = master.exdates.contains(&occ) || overridden.contains(&occ);
         if occ_end > from && !excluded {
             out.push(CalendarEvent {
                 starts_at: occ,
                 ends_at: occ_end,
+                // The slot this occurrence fills — its stable edit/skip handle.
+                recurrence_id: Some(occ),
                 ..master.clone()
             });
         }
@@ -789,6 +951,19 @@ struct EventRow {
     exdates: sqlx::types::Json<Vec<String>>,
 }
 
+/// A raw `calendar_event_overrides` row (a single overridden occurrence).
+#[derive(sqlx::FromRow)]
+struct OverrideRow {
+    series_id: String,
+    recurrence_id: OffsetDateTime,
+    summary: String,
+    description: Option<String>,
+    location: Option<String>,
+    starts_at: OffsetDateTime,
+    ends_at: OffsetDateTime,
+    all_day: bool,
+}
+
 impl EventRow {
     fn into_event(self) -> CalendarEvent {
         CalendarEvent {
@@ -803,6 +978,9 @@ impl EventRow {
             recurrence: self.rrule,
             attendees: self.attendees.0,
             exdates: exdates_from_json(self.exdates.0),
+            // A stored row is always a master or one-off (overrides live in
+            // their own table); expansion stamps the slot on each occurrence.
+            recurrence_id: None,
         }
     }
 }
@@ -847,6 +1025,7 @@ mod tests {
             recurrence: rrule.map(str::to_owned),
             attendees: vec![],
             exdates: vec![],
+            recurrence_id: None,
         }
     }
 
@@ -870,7 +1049,7 @@ mod tests {
     #[test]
     fn weekly_expands_within_range() {
         let e = ev(Some("FREQ=WEEKLY"), 2026, 8, 3, 9);
-        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 8, 31));
+        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 8, 31), &[]);
         assert_eq!(occ.len(), 4, "Aug 3/10/17/24 (31 is exclusive)");
         assert_eq!(occ[0].starts_at, e.starts_at);
         assert_eq!(occ[1].starts_at, e.starts_at + Duration::weeks(1));
@@ -886,7 +1065,7 @@ mod tests {
         let mut e = ev(Some("FREQ=WEEKLY"), 2026, 8, 3, 9);
         // Cancel just Aug 10; the rest of the series stays.
         e.exdates.push(e.starts_at + Duration::weeks(1));
-        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 8, 31));
+        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 8, 31), &[]);
         assert_eq!(occ.len(), 3, "Aug 3/17/24 (10 excluded)");
         assert!(
             occ.iter()
@@ -897,16 +1076,29 @@ mod tests {
     }
 
     #[test]
+    fn override_skips_the_default_and_stamps_the_slot() {
+        let e = ev(Some("FREQ=WEEKLY"), 2026, 8, 3, 9);
+        let moved = e.starts_at + Duration::weeks(1); // the Aug 10 slot is edited
+        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 8, 31), &[moved]);
+        // The overridden slot's default is omitted (the override is emitted
+        // separately from the overrides table); Aug 3/17/24 remain.
+        assert_eq!(occ.len(), 3);
+        assert!(occ.iter().all(|o| o.starts_at != moved));
+        // Every occurrence carries its original slot as the recurrence id.
+        assert!(occ.iter().all(|o| o.recurrence_id == Some(o.starts_at)));
+    }
+
+    #[test]
     fn count_caps_the_series() {
         let e = ev(Some("FREQ=DAILY;COUNT=3"), 2026, 8, 3, 9);
-        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 9, 1));
+        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 9, 1), &[]);
         assert_eq!(occ.len(), 3);
     }
 
     #[test]
     fn until_stops_the_series() {
         let e = ev(Some("FREQ=DAILY;UNTIL=20260805"), 2026, 8, 3, 9);
-        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 9, 1));
+        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 9, 1), &[]);
         assert_eq!(occ.len(), 3, "Aug 3/4/5, inclusive of the UNTIL day");
     }
 

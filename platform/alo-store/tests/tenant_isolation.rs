@@ -329,8 +329,20 @@ async fn unreferenced_blob_is_not_found_for_a_non_owner() {
 // cross a tenant boundary. Every calendar/event query keeps `tenant_id = $1`,
 // so a grant can only ever name a subject inside the owner's tenant.
 
-use alo_store::{CalendarEvent, CalendarId, EventId};
+use alo_store::{CalendarEvent, CalendarId, EventId, OccurrenceOverride};
 use time::{Duration, OffsetDateTime};
+
+/// A per-occurrence override payload for the given new start (one hour long).
+fn sample_override(start: OffsetDateTime) -> OccurrenceOverride {
+    OccurrenceOverride {
+        summary: "moved".to_owned(),
+        description: None,
+        location: None,
+        starts_at: start,
+        ends_at: start + Duration::hours(1),
+        all_day: false,
+    }
+}
 
 /// A one-hour, one-off event on `cal`. `create_event` assigns the real id, so
 /// the placeholder here is never persisted.
@@ -348,6 +360,7 @@ fn sample_event(cal: &CalendarId, summary: &str) -> CalendarEvent {
         recurrence: None,
         attendees: Vec::new(),
         exdates: Vec::new(),
+        recurrence_id: None,
     }
 }
 
@@ -413,6 +426,12 @@ async fn calendar_sharing_follows_the_grant_and_never_crosses_tenants() {
     assert!(!b.can_edit_calendar(&cal).await.unwrap());
     assert_not_found(b.delete_event(&eid).await);
     assert_not_found(b.create_event(&sample_event(&cal, "sneaky")).await);
+    // A viewer cannot override one occurrence either (same edit gate).
+    let slot = OffsetDateTime::from_unix_timestamp(1_800_000_000).unwrap();
+    assert_not_found(
+        b.override_occurrence(&eid, slot, &sample_override(slot))
+            .await,
+    );
     assert!(a.event(&eid).await.unwrap().is_some());
 
     // Stranger C has no grant: sees nothing, writes nothing.
@@ -432,6 +451,10 @@ async fn calendar_sharing_follows_the_grant_and_never_crosses_tenants() {
         a.event(&eid).await.unwrap().unwrap().summary,
         "standup (edited by B)"
     );
+    // As an editor, B may now override a single occurrence.
+    b.override_occurrence(&eid, slot, &sample_override(slot))
+        .await
+        .unwrap();
 
     // Group sharing reaches every member: C, via the group, sees a second calendar.
     let group = ts1.create_group("eng").await.unwrap();
@@ -457,4 +480,8 @@ async fn calendar_sharing_follows_the_grant_and_never_crosses_tenants() {
     assert!(!d.can_edit_calendar(&cal).await.unwrap());
     assert_not_found(d.delete_event(&eid).await);
     assert_not_found(d.grant_calendar(&cal, "user", "anyone", "editor").await);
+    assert_not_found(
+        d.override_occurrence(&eid, slot, &sample_override(slot))
+            .await,
+    );
 }

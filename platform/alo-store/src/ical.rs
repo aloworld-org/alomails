@@ -177,6 +177,9 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
         recurrence,
         attendees,
         exdates,
+        // A parsed VEVENT is a master/one-off; RECURRENCE-ID overrides are not
+        // read here (see docs/interop.md — CalDAV override sync is a later slice).
+        recurrence_id: None,
     })
 }
 
@@ -437,6 +440,7 @@ mod tests {
             recurrence: Some("FREQ=WEEKLY".to_owned()),
             attendees: vec!["guest@example.com".to_owned()],
             exdates: vec![],
+            recurrence_id: None,
         };
         let ics = to_ics(&e);
         // The ATTENDEE line exceeds 75 octets and folds; unfold to check it.
@@ -477,6 +481,7 @@ mod tests {
             recurrence: None,
             attendees: vec!["guest@example.com".to_owned()],
             exdates: vec![],
+            recurrence_id: None,
         };
         let msg = to_imip(&e, "owner@alomails.com", "REQUEST");
         assert!(msg.contains("METHOD:REQUEST"));
@@ -525,6 +530,7 @@ mod tests {
             recurrence: None,
             attendees: vec![],
             exdates: vec![],
+            recurrence_id: None,
         });
         assert_eq!(method_of(&plain), None);
         assert_eq!(organizer_of(&plain), None);
@@ -563,6 +569,7 @@ mod tests {
             recurrence: Some("FREQ=WEEKLY".to_owned()),
             attendees: vec![],
             exdates: vec![ex],
+            recurrence_id: None,
         };
         let ics = to_ics(&e);
         assert!(ics.contains("EXDATE:20260915T090000Z"));
@@ -590,6 +597,7 @@ mod tests {
             recurrence: None,
             attendees: vec![],
             exdates: vec![],
+            recurrence_id: None,
         };
         let ics = to_ics(&e);
         assert!(ics.contains("DTSTART;VALUE=DATE:20261225"));

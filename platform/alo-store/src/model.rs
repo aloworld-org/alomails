@@ -296,6 +296,27 @@ pub struct CalendarEvent {
     /// rest stays. Empty for a one-off or an untouched series. Each matches an
     /// occurrence's `starts_at`; the store omits them when expanding a range.
     pub exdates: Vec<OffsetDateTime>,
+    /// For an expanded occurrence of a recurring series, its **original** slot
+    /// (iCalendar `RECURRENCE-ID`) — the start the occurrence would have had
+    /// before any per-occurrence override moved it. `None` on a stored master or
+    /// a one-off. It is the stable handle for editing/skipping that instance,
+    /// since an override's `starts_at` may differ from its slot.
+    pub recurrence_id: Option<OffsetDateTime>,
+}
+
+/// The editable fields of a single overridden occurrence (iCalendar
+/// `RECURRENCE-ID` override). Placement (which calendar) and the recurrence rule
+/// are not per-occurrence, so they are absent here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OccurrenceOverride {
+    /// Title (never empty; the caller enforces).
+    pub summary: String,
+    pub description: Option<String>,
+    pub location: Option<String>,
+    /// The occurrence's NEW bounds (UTC; `ends_at` exclusive, >= `starts_at`).
+    pub starts_at: OffsetDateTime,
+    pub ends_at: OffsetDateTime,
+    pub all_day: bool,
 }
 
 /// A compact message row for mailbox listings (no body).

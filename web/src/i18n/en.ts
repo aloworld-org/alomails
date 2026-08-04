@@ -262,6 +262,8 @@ export const en = {
   agendaGuestsHint: "We'll email each guest an invitation they can accept in their own calendar.",
   agendaEventDescription: "Notes",
   agendaSave: "Save",
+  agendaSaveThis: "This event",
+  agendaSaveAll: "All events",
   agendaDelete: "Delete",
   agendaDeleteThis: "This event",
   agendaDeleteAll: "All events",

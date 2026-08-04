@@ -19,11 +19,16 @@ import styles from "./AgendaModule.module.css";
 
 type View = "month" | "week";
 type Editing = {
+  /** The seed event: the clicked occurrence for a recurring instance, the event
+   *  itself for a one-off, or null when creating. */
   event: CalendarEvent | null;
   initialStart: Date;
-  /** For a recurring event, the RFC 3339 start of the specific occurrence the
-   *  user clicked — lets "delete this event" skip just that instance. */
+  /** For a recurring event, the RFC 3339 ORIGINAL slot of the clicked occurrence
+   *  — lets "this event" skip or override just that instance. */
   occurrenceStart?: string;
+  /** The stored series master (recurring edits only) — its base time anchors a
+   *  whole-series ("all events") edit. */
+  master?: CalendarEvent;
 } | null;
 
 export function AgendaModule() {
@@ -114,18 +119,20 @@ export function AgendaModule() {
     setEditing({ event: null, initialStart: at });
   }
 
-  // Editing a recurring occurrence edits the whole series — load the stored
-  // master (unexpanded) so its base time + rule, not the clicked occurrence's
-  // shifted time, drive the form. A one-off opens directly.
+  // Editing a recurring occurrence seeds the form from THAT instance (its own
+  // time + the series' text), and loads the stored master too — so "this event"
+  // overrides just this instance while "all events" shifts the whole series by
+  // however much the user moved it. A one-off opens directly.
   async function openEvent(e: CalendarEvent) {
     if (e.recurrence !== null) {
       try {
         const master = await client.getEvent(e.id);
-        // Keep the clicked instance's start so "delete this event" can skip it.
         setEditing({
-          event: master,
-          initialStart: new Date(master.startsAt),
-          occurrenceStart: e.startsAt,
+          event: e,
+          initialStart: new Date(e.startsAt),
+          // The instance's ORIGINAL slot — stable across a move — for edit/skip.
+          occurrenceStart: e.recurrenceId ?? e.startsAt,
+          master,
         });
         return;
       } catch {
@@ -138,6 +145,13 @@ export function AgendaModule() {
   async function save(id: string | null, input: EventInput) {
     if (id === null) await client.createEvent(input);
     else await client.updateEvent(id, input);
+    setEditing(null);
+    await reload();
+  }
+
+  /** Override just one occurrence of a series (edit this instance in place). */
+  async function saveOccurrence(id: string, occurrence: string, input: EventInput) {
+    await client.overrideOccurrence(id, occurrence, input);
     setEditing(null);
     await reload();
   }
@@ -273,10 +287,12 @@ export function AgendaModule() {
       {editing !== null && (
         <EventModal
           event={editing.event}
+          master={editing.master}
           initialStart={editing.initialStart}
           occurrenceStart={editing.occurrenceStart}
           calendars={calendars}
           onSave={save}
+          onSaveOccurrence={saveOccurrence}
           onDelete={remove}
           onClose={() => setEditing(null)}
         />
