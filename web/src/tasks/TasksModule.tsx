@@ -8,6 +8,7 @@ import {
   CalendarRange,
   ClipboardList,
   GanttChartSquare,
+  LayoutDashboard,
   LayoutGrid,
   List,
   Plus,
@@ -25,13 +26,14 @@ import { ListView } from "./ListView";
 import { TimelineView } from "./TimelineView";
 import { CalendarView } from "./CalendarView";
 import { TaskToolbar } from "./TaskToolbar";
+import { OverviewView } from "./OverviewView";
 import { NewTaskModal } from "./NewTaskModal";
 import { TaskDetail } from "./TaskDetail";
 import { Avatar, DueChip, PriorityChip } from "./parts";
 import { DEFAULT_CONFIG, filterTasks, type ViewConfig } from "./viewConfig";
 import styles from "./TasksModule.module.css";
 
-type View = "list" | "board" | "timeline" | "calendar";
+type View = "overview" | "list" | "board" | "timeline" | "calendar";
 
 type Mode = { type: "project"; id: string } | { type: "plate" } | { type: "proposals" };
 
@@ -219,6 +221,7 @@ export function TasksModule() {
           <div className={styles.tabs} role="tablist">
             {(
               [
+                { id: "overview", label: strings.taskOverview, Icon: LayoutDashboard },
                 { id: "list", label: strings.taskList, Icon: List },
                 { id: "board", label: strings.taskBoard, Icon: LayoutGrid },
                 { id: "timeline", label: strings.taskTimeline, Icon: GanttChartSquare },
@@ -239,7 +242,7 @@ export function TasksModule() {
           </div>
         )}
 
-        {mode.type !== "proposals" && tasks.length > 0 && (
+        {mode.type !== "proposals" && view !== "overview" && tasks.length > 0 && (
           <TaskToolbar config={config} onChange={setConfig} />
         )}
 
@@ -263,6 +266,14 @@ export function TasksModule() {
                 <Plus size={17} /> {strings.taskCreateFirst}
               </button>
             </div>
+          ) : view === "overview" ? (
+            <OverviewView
+              tasks={tasks}
+              me={identity?.email}
+              onOpen={setSelected}
+              onAdd={() => openCreate()}
+              onViewAll={() => setView("list")}
+            />
           ) : view === "board" ? (
             <BoardView
               tasks={filterTasks(tasks, config, identity?.email)}
