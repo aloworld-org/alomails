@@ -26,6 +26,10 @@ import {
   type MailFilterRule,
   type SecurityCheck,
   type FreeBusyPerson,
+  type Task,
+  type TaskProject,
+  type TaskDetailData,
+  type TaskInput,
   type ShareableGroup,
   type SharedMailbox,
   type Delegate,
@@ -1457,6 +1461,149 @@ export class JmapClient {
     const res = await this.#fetch(`${API_BASE}/calendar/groups`);
     if (!res.ok) throw new JmapError(`shareableGroups ${res.status}`);
     return ((await res.json()) as { groups: ShareableGroup[] }).groups;
+  }
+
+  // --- Tasks (ADR 0021–0023) -------------------------------------------------
+
+  /** The caller's visible task projects (personal + team). */
+  async taskProjects(): Promise<TaskProject[]> {
+    const res = await this.#fetch(`${API_BASE}/tasks/projects`);
+    if (!res.ok) throw new JmapError(`taskProjects ${res.status}`);
+    return ((await res.json()) as { projects: TaskProject[] }).projects;
+  }
+
+  /** Create a team project; returns it. */
+  async createTaskProject(name: string, color?: string): Promise<TaskProject> {
+    const res = await this.#fetch(`${API_BASE}/tasks/projects`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(color !== undefined ? { name, color } : { name }),
+    });
+    if (!res.ok) throw new JmapError(`createTaskProject ${res.status}`);
+    return (await res.json()) as TaskProject;
+  }
+
+  /** The active tasks on a project (the client groups into board/list). */
+  async tasks(projectId: string): Promise<Task[]> {
+    const res = await this.#fetch(`${API_BASE}/tasks?project=${encodeURIComponent(projectId)}`);
+    if (!res.ok) throw new JmapError(`tasks ${res.status}`);
+    return ((await res.json()) as { tasks: Task[] }).tasks;
+  }
+
+  /** Create a task; returns the stored task. */
+  async createTask(input: TaskInput): Promise<Task> {
+    const res = await this.#fetch(`${API_BASE}/tasks`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new JmapError(`createTask ${res.status}`);
+    return (await res.json()) as Task;
+  }
+
+  /** A task with its subtasks, comments, and activity (the detail panel). */
+  async taskDetail(id: string): Promise<TaskDetailData> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new JmapError(`taskDetail ${res.status}`);
+    return (await res.json()) as TaskDetailData;
+  }
+
+  /** Edit a task's fields (not status/position — that is a move). */
+  async updateTask(id: string, input: TaskInput): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) throw new JmapError(`updateTask ${res.status}`);
+  }
+
+  /** Move a task to a status/position — board drag or list status-change. */
+  async moveTask(id: string, status: string, position: number): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(id)}/move`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status, position }),
+    });
+    if (!res.ok) throw new JmapError(`moveTask ${res.status}`);
+  }
+
+  async deleteTask(id: string): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new JmapError(`deleteTask ${res.status}`);
+  }
+
+  /** "What's on my plate": due/overdue assigned tasks. */
+  async myPlate(): Promise<Task[]> {
+    const res = await this.#fetch(`${API_BASE}/tasks/today`);
+    if (!res.ok) throw new JmapError(`myPlate ${res.status}`);
+    return ((await res.json()) as { tasks: Task[] }).tasks;
+  }
+
+  /** Pending AI proposals (awaiting accept/reject). */
+  async taskProposals(): Promise<Task[]> {
+    const res = await this.#fetch(`${API_BASE}/tasks/proposals`);
+    if (!res.ok) throw new JmapError(`taskProposals ${res.status}`);
+    return ((await res.json()) as { tasks: Task[] }).tasks;
+  }
+
+  /** Approve a proposal (optionally with edits), making it a real task. */
+  async acceptTask(id: string, edits?: TaskInput): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(id)}/accept`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: edits ? JSON.stringify(edits) : "",
+    });
+    if (!res.ok) throw new JmapError(`acceptTask ${res.status}`);
+  }
+
+  /** Drop a proposal. */
+  async rejectTask(id: string): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(id)}/reject`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new JmapError(`rejectTask ${res.status}`);
+  }
+
+  async addSubtask(taskId: string, title: string): Promise<{ id: string }> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/subtasks`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title }),
+    });
+    if (!res.ok) throw new JmapError(`addSubtask ${res.status}`);
+    return (await res.json()) as { id: string };
+  }
+
+  async setSubtask(taskId: string, subtaskId: string, done: boolean): Promise<void> {
+    const res = await this.#fetch(
+      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/subtasks/${encodeURIComponent(subtaskId)}`,
+      {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ done }),
+      },
+    );
+    if (!res.ok) throw new JmapError(`setSubtask ${res.status}`);
+  }
+
+  async deleteSubtask(taskId: string, subtaskId: string): Promise<void> {
+    const res = await this.#fetch(
+      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/subtasks/${encodeURIComponent(subtaskId)}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) throw new JmapError(`deleteSubtask ${res.status}`);
+  }
+
+  async addTaskComment(taskId: string, body: string): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/comments`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ body }),
+    });
+    if (!res.ok) throw new JmapError(`addTaskComment ${res.status}`);
   }
 
   /** Busy intervals for each person (by email, in the tenant) over `[from,to)`. */

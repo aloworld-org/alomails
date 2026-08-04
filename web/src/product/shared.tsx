@@ -1,12 +1,13 @@
 // Surface pieces common to every product built on the mail core: the Home and
 // Mail modules and the tenant-admin console. No suite-only imports live here,
 // so this file (and everything it pulls in) ships in alomails unchanged.
-import { Calendar, Home, Mail, Shield } from "lucide-react";
+import { Calendar, Home, ListChecks, Mail, Shield } from "lucide-react";
 
 import { strings } from "../i18n";
 import { HomeModule } from "../home";
 import { MailModule } from "../mail";
 import { AgendaModule } from "../agenda";
+import { TasksModule } from "../tasks";
 import { AdminConsole } from "../admin";
 import type { ProductConsole, ProductModule } from "./types";
 
@@ -34,6 +35,14 @@ export const sharedModules: ProductModule[] = [
     Icon: Calendar,
     enabled: true,
     element: () => <AgendaModule />,
+  },
+  {
+    id: "tasks",
+    path: "/tasks",
+    label: strings.moduleTasks,
+    Icon: ListChecks,
+    enabled: true,
+    element: () => <TasksModule />,
   },
 ];
 

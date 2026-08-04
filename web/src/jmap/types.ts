@@ -458,3 +458,83 @@ export interface EventInput {
   /** Reminder lead-time in minutes before the start; omit for no reminder. */
   reminderMinutes?: number;
 }
+
+// --- Tasks (ADR 0021–0023) ---------------------------------------------------
+
+/** A task project (board): personal (private) or team (shared). */
+export interface TaskProject {
+  id: string;
+  name: string;
+  kind: "personal" | "team";
+  color: string | null;
+}
+
+export type TaskPriority = "none" | "low" | "medium" | "high";
+
+/** The core task record — one row that both board and list render (ADR 0022). */
+export interface Task {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string | null;
+  /** The board column. */
+  status: string;
+  position: number;
+  /** Assignee's user id and resolved email (null when unassigned). */
+  assigneeId: string | null;
+  assignee: string | null;
+  dueAt: string | null;
+  priority: TaskPriority;
+  /** `active` work, or an AI `proposed` suggestion awaiting approval. */
+  state: "active" | "proposed";
+  /** The source link: `email` / `event` + its id (jump-back). */
+  sourceKind: string | null;
+  sourceId: string | null;
+  subtaskDone: number;
+  subtaskTotal: number;
+  commentCount: number;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export interface TaskSubtask {
+  id: string;
+  title: string;
+  done: boolean;
+}
+
+export interface TaskCommentDto {
+  id: string;
+  author: string;
+  body: string;
+  createdAt: string;
+}
+
+export interface TaskActivityDto {
+  actor: string;
+  kind: string;
+  detail: unknown;
+  createdAt: string;
+}
+
+/** A task with its subtasks, comments, and activity (the detail panel). */
+export interface TaskDetailData {
+  task: Task;
+  subtasks: TaskSubtask[];
+  comments: TaskCommentDto[];
+  activity: TaskActivityDto[];
+}
+
+/** The writable fields when creating or editing a task. */
+export interface TaskInput {
+  projectId?: string;
+  title: string;
+  description?: string;
+  status?: string;
+  /** Assignee email (resolved to a user in the tenant). */
+  assignee?: string;
+  dueAt?: string;
+  priority?: TaskPriority;
+  sourceKind?: string;
+  sourceId?: string;
+}
