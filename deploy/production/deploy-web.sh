@@ -25,7 +25,11 @@ fi
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$root/web"
 
-echo "==> building the web app"
+# This deployment IS alomails (mail.alomails.com): build the mail surface —
+# Home + Mail + Agenda, no suite modules (Chat/Drive/Meet). A plain build
+# defaults to the full workplace surface, so ALO_PRODUCT=mail is mandatory here.
+export ALO_PRODUCT="${ALO_PRODUCT:-mail}"
+echo "==> building the web app (ALO_PRODUCT=$ALO_PRODUCT)"
 npm ci
 npm run build
 
