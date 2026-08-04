@@ -287,6 +287,10 @@ export function TasksModule() {
       {selected !== null && (
         <TaskDetail
           taskId={selected}
+          projectName={(() => {
+            const st = tasks.find((t) => t.id === selected);
+            return st !== undefined ? projectName(st.projectId) : undefined;
+          })()}
           onClose={() => setSelected(null)}
           onChanged={() => {
             void reload();

@@ -1510,3 +1510,186 @@
 .ntCancel:disabled {
   opacity: 0.6;
 }
+
+/* ---- task detail (redesigned rows + progress) ---- */
+.tdHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.tdStatus {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 5px 10px;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+.tdDelete {
+  margin-left: auto;
+  color: var(--text-tertiary);
+  padding: 6px;
+  border-radius: var(--radius-md);
+}
+.tdDelete:hover {
+  color: var(--danger);
+  background: var(--bg-raised);
+}
+.tdTitleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.tdTitleCheck {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  display: inline-flex;
+  transition: color var(--transition-fast);
+}
+.tdTitleCheck:hover {
+  color: var(--success);
+}
+.tdTitle {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  padding: 4px 2px;
+}
+.tdTitle:focus {
+  outline: none;
+  border-bottom: 2px solid var(--accent);
+}
+.tdTitleDone {
+  color: var(--text-tertiary);
+  text-decoration: line-through;
+}
+.tdFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.tdField {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 36px;
+}
+.tdFieldLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.tdFieldLabel > svg {
+  color: var(--text-tertiary);
+}
+.tdFieldInput {
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 5px 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.tdFieldInput:hover {
+  background: var(--bg-raised);
+}
+.tdFieldInput:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--bg-surface);
+}
+.tdFieldValue {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  padding: 5px 8px;
+}
+.tdSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+.tdSectionLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.tdSectionLabel > svg {
+  color: var(--text-tertiary);
+}
+.tdSubHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.tdProgressWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.tdProgressText {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.tdProgressBar {
+  width: 80px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+  overflow: hidden;
+}
+.tdProgressFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--success);
+  transition: width var(--transition-base, 0.2s);
+}
+.tdDescription {
+  width: 100%;
+  padding: 10px 12px;
+  min-height: 70px;
+  resize: vertical;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.tdDescription:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+.tdSubAdd {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+.tdSubAdd:focus {
+  outline: none;
+  border-color: var(--accent);
+}
