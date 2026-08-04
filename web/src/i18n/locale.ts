@@ -7,26 +7,29 @@ import { useSyncExternalStore } from "react";
 
 import { en, type Catalog } from "./en";
 import { fr } from "./fr";
+import { nl } from "./nl";
 
 /** The languages alo ships. `en` is the source and always complete. */
-export type Locale = "en" | "fr";
+export type Locale = "en" | "fr" | "nl";
 
 /** Display metadata for the language switcher, in menu order. */
 export const LOCALES: ReadonlyArray<{ code: Locale; label: string }> = [
   { code: "en", label: "English" },
+  { code: "nl", label: "Nederlands" },
   { code: "fr", label: "Français" },
 ];
 
 /** Partial catalogs per locale; missing keys fall back to English. */
 const CATALOGS: Record<Locale, Partial<Catalog>> = {
   en: {},
+  nl,
   fr,
 };
 
 const STORAGE_KEY = "alo.locale";
 
 function isLocale(value: string | null): value is Locale {
-  return value === "en" || value === "fr";
+  return value === "en" || value === "fr" || value === "nl";
 }
 
 /**
@@ -43,7 +46,9 @@ function detectLocale(): Locale {
   }
   const nav = typeof navigator !== "undefined" ? navigator.language : "";
   const prefix = nav.slice(0, 2).toLowerCase();
-  return prefix === "fr" ? "fr" : "en";
+  if (prefix === "nl") return "nl";
+  if (prefix === "fr") return "fr";
+  return "en";
 }
 
 /** The full catalog for `locale`: English overlaid with its overrides. */

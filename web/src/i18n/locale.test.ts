@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { en } from "./en";
 import { fr } from "./fr";
+import { nl } from "./nl";
 import { buildCatalog, getLocale, setLocale } from "./locale";
 import { strings } from "./strings";
 
@@ -26,6 +27,14 @@ describe("catalog fallback", () => {
     // ...and every fr key actually matches an English key (no typos /
     // stale keys that would silently never render).
     for (const key of Object.keys(fr)) {
+      expect(en).toHaveProperty(key);
+    }
+  });
+
+  test("Dutch keys override English, and every nl key is a real English key", () => {
+    const catalog = buildCatalog("nl");
+    expect(catalog.moduleMail).toBe("E-mail");
+    for (const key of Object.keys(nl)) {
       expect(en).toHaveProperty(key);
     }
   });
