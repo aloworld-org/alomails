@@ -789,6 +789,17 @@ mod tests {
     }
 
     #[test]
+    fn reply_of_reads_attendee_and_partstat() {
+        let ics = "BEGIN:VCALENDAR\r\nMETHOD:REPLY\r\nBEGIN:VEVENT\r\nUID:e1\r\n\
+                   ATTENDEE;PARTSTAT=ACCEPTED;CN=Al:mailto:al@example.test\r\n\
+                   END:VEVENT\r\nEND:VCALENDAR\r\n";
+        assert_eq!(
+            reply_of(ics),
+            Some(("al@example.test".to_owned(), "ACCEPTED".to_owned()))
+        );
+    }
+
+    #[test]
     fn trigger_durations_parse_to_minutes() {
         assert_eq!(trigger_to_minutes("-PT15M"), Some(15));
         assert_eq!(trigger_to_minutes("-PT1H"), Some(60));
