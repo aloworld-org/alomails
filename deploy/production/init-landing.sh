@@ -46,8 +46,11 @@ docker compose run --rm --entrypoint certbot certbot \
   certonly --webroot -w /var/www/certbot --non-interactive --agree-tos --no-eff-email \
   --email "${ACME_EMAIL}" -d "${APEX}" -d "www.${APEX}"
 
-echo "==> 4/4 Reloading Caddy to pick up the real certificate"
-docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile
+echo "==> 4/4 Restarting Caddy to pick up the real certificate"
+# A graceful `caddy reload` does NOT re-read a file-based cert whose path is
+# unchanged (it served the seed cert from step 1 straight through). A restart
+# forces a fresh read of the now-real cert; the blip is ~1s.
+docker compose restart caddy
 
 echo
 echo "Done — https://${APEX} is live (the app stays on https://mail.${APEX})."
