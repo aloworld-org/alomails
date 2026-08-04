@@ -154,6 +154,32 @@ impl AccountStore {
         Ok(rows.into_iter().map(EventRow::into_event).collect())
     }
 
+    /// Every event on one calendar (unexpanded masters/one-offs), earliest
+    /// first — for serving that calendar as its own CalDAV collection. Only if
+    /// the calendar is visible to the caller (owner or a grant); otherwise empty.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn events_of_calendar(&self, calendar: &CalendarId) -> Result<Vec<CalendarEvent>> {
+        let visible = visible_pred();
+        let sql = format!(
+            "SELECT e.id, e.calendar_id, e.summary, e.description, e.location, e.starts_at, \
+                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates, e.reminder_minutes, \
+                    e.attendee_status \
+             FROM calendar_events e \
+             WHERE e.tenant_id = $1 AND e.calendar_id = $3 AND e.calendar_id IN ( \
+                 SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {visible}) \
+             ORDER BY e.starts_at, e.id",
+        );
+        let rows = sqlx::query_as::<_, EventRow>(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(calendar.as_str())
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows.into_iter().map(EventRow::into_event).collect())
+    }
+
     /// One event by id, or `None` when it is not this account's.
     ///
     /// # Errors

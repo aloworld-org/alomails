@@ -17,6 +17,9 @@ sqlx = { workspace = true }
 # and to the JMAP/vCard surfaces.
 serde = { workspace = true }
 time = { workspace = true }
+# IANA timezone database, for converting TZID-qualified iCalendar times to UTC
+# (already a vetted workspace dependency — alo-auth-mail, alo-smtp).
+jiff = { workspace = true }
 object_store = { workspace = true }
 futures = { workspace = true }
 bytes = { workspace = true }

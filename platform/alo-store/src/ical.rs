@@ -171,9 +171,16 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
         let Some((spec, value)) = line.split_once(':') else {
             continue;
         };
-        let mut parts = spec.split(';');
-        let name = parts.next().unwrap_or("").to_ascii_uppercase();
-        let is_date = parts.any(|p| p.eq_ignore_ascii_case("VALUE=DATE"));
+        let mut segs = spec.split(';');
+        let name = segs.next().unwrap_or("").to_ascii_uppercase();
+        let params: Vec<&str> = segs.collect();
+        let is_date = params.iter().any(|p| p.eq_ignore_ascii_case("VALUE=DATE"));
+        // A `TZID=<zone>` parameter names the wall-clock's IANA zone.
+        let tzid = params.iter().find_map(|p| {
+            p.split_once('=')
+                .filter(|(k, _)| k.eq_ignore_ascii_case("TZID"))
+                .map(|(_, v)| v)
+        });
         if in_alarm {
             // Only the alarm's lead time matters; the first VALARM wins.
             if name == "TRIGGER" && reminder_minutes.is_none() {
@@ -186,14 +193,14 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
             "SUMMARY" => summary = unescape(value),
             "DESCRIPTION" => description = Some(unescape(value)),
             "LOCATION" => location = Some(unescape(value)),
-            "DTSTART" => start = parse_dt(value.trim(), is_date),
-            "DTEND" => end = parse_dt(value.trim(), is_date),
+            "DTSTART" => start = parse_dt(value.trim(), is_date, tzid),
+            "DTEND" => end = parse_dt(value.trim(), is_date, tzid),
             "RRULE" => recurrence = Some(value.trim().to_owned()),
             "EXDATE" => {
                 // One or more excluded instants, comma-separated; the value may
-                // be date-only (`VALUE=DATE`) or a UTC date-time.
+                // be date-only (`VALUE=DATE`) or a UTC/zoned date-time.
                 for token in value.split(',') {
-                    if let Some((dt, _)) = parse_dt(token.trim(), is_date) {
+                    if let Some((dt, _)) = parse_dt(token.trim(), is_date, tzid) {
                         exdates.push(dt);
                     }
                 }
@@ -464,7 +471,7 @@ fn fmt_date(t: OffsetDateTime) -> String {
 
 /// Parse an iCalendar date-time from its digits. `Z`/naive → UTC;
 /// `VALUE=DATE` (or a bare `YYYYMMDD`) → midnight UTC, all-day.
-fn parse_dt(value: &str, is_date: bool) -> Option<(OffsetDateTime, bool)> {
+fn parse_dt(value: &str, is_date: bool, tzid: Option<&str>) -> Option<(OffsetDateTime, bool)> {
     let digits = value.trim_end_matches('Z');
     let year: i32 = digits.get(0..4)?.parse().ok()?;
     let month: u8 = digits.get(4..6)?.parse().ok()?;
@@ -478,7 +485,41 @@ fn parse_dt(value: &str, is_date: bool) -> Option<(OffsetDateTime, bool)> {
     let minute: u8 = t.get(2..4)?.parse().ok()?;
     let second: u8 = t.get(4..6).and_then(|s| s.parse().ok()).unwrap_or(0);
     let time = Time::from_hms(hour, minute, second).ok()?;
+    // A `TZID=` on a non-UTC (no trailing Z) value names an IANA zone: convert
+    // that wall-clock time to the UTC instant. An unknown zone (e.g. a Windows
+    // name) or a floating time falls back to UTC (documented, docs/interop.md).
+    if !value.ends_with('Z')
+        && let Some(utc) =
+            tzid.and_then(|z| local_to_utc(year, month, day, hour, minute, second, z))
+    {
+        return Some((utc, false));
+    }
     Some((OffsetDateTime::new_utc(date, time), false))
+}
+
+/// Convert a wall-clock time in the named IANA zone to a UTC `OffsetDateTime`,
+/// or `None` if the zone is unknown or the civil time is invalid.
+fn local_to_utc(
+    year: i32,
+    month: u8,
+    day: u8,
+    hour: u8,
+    minute: u8,
+    second: u8,
+    tzid: &str,
+) -> Option<OffsetDateTime> {
+    let zone = jiff::tz::TimeZone::get(tzid).ok()?;
+    let civil = jiff::civil::datetime(
+        year as i16,
+        month as i8,
+        day as i8,
+        hour as i8,
+        minute as i8,
+        second as i8,
+        0,
+    );
+    let zoned = civil.to_zoned(zone).ok()?;
+    OffsetDateTime::from_unix_timestamp(zoned.timestamp().as_second()).ok()
 }
 
 fn escape(s: &str) -> String {
@@ -782,10 +823,36 @@ mod tests {
             ..master.clone()
         };
         let ics = to_ics_series(&master, std::slice::from_ref(&override_ev));
-        assert_eq!(ics.matches("BEGIN:VEVENT").count(), 2, "master + one override");
+        assert_eq!(
+            ics.matches("BEGIN:VEVENT").count(),
+            2,
+            "master + one override"
+        );
         assert!(ics.contains("RRULE:FREQ=WEEKLY"));
         assert!(ics.contains("RECURRENCE-ID:20260908T090000Z"));
         assert!(ics.contains("DTSTART:20260908T150000Z"));
+    }
+
+    #[test]
+    fn tzid_datetime_converts_to_utc() {
+        // 09:00 America/New_York on 2026-09-01 is EDT (UTC-4) → 13:00Z.
+        let ics = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:tz1\r\n\
+                   DTSTART;TZID=America/New_York:20260901T090000\r\n\
+                   DTEND;TZID=America/New_York:20260901T093000\r\n\
+                   SUMMARY:Zoned\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        let e = from_ics(ics, "fb").unwrap();
+        assert_eq!(fmt_utc(e.starts_at), "20260901T130000Z");
+        assert_eq!(fmt_utc(e.ends_at), "20260901T133000Z");
+    }
+
+    #[test]
+    fn unknown_tzid_falls_back_to_utc() {
+        // A Windows zone name jiff can't resolve → the wall time is kept as UTC.
+        let ics = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:tz2\r\n\
+                   DTSTART;TZID=Eastern Standard Time:20260901T090000\r\n\
+                   SUMMARY:Winzone\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+        let e = from_ics(ics, "fb").unwrap();
+        assert_eq!(fmt_utc(e.starts_at), "20260901T090000Z");
     }
 
     #[test]

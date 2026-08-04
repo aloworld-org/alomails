@@ -207,6 +207,7 @@ dependencies = [
  "bytes",
  "encoding_rs",
  "futures",
+ "jiff",
  "object_store",
  "ring",
  "serde",

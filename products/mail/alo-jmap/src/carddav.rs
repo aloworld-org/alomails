@@ -2,7 +2,9 @@
 //! (RFC 4791, calendar) — the protocols phones and desktops (Apple Contacts /
 //! Calendar, Thunderbird, DAVx5) sync against natively. One handler serves both
 //! under `/dav`; contacts live at `addressbooks/<user>/default/<id>.vcf` and
-//! events at `calendars/<user>/default/<id>.ics`, and the principal advertises
+//! events at `calendars/<user>/<coll>/<id>.ics` — `coll` is `default` (personal,
+//! kept stable for existing clients) or a calendar id (a shared/team calendar);
+//! one collection per calendar the user can see. The principal advertises
 //! both home-sets so a client discovers whichever it asks for.
 //!
 //! CardDAV: address-object resources are `<contactId>.vcf`. Discovery is the
@@ -27,12 +29,15 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-use alo_store::{AccountStore, CalendarEvent, Contact, ContactId, EventId, ical, vcard};
+use alo_store::{
+    AccountStore, Calendar, CalendarEvent, CalendarId, Contact, ContactId, EventId, ical, vcard,
+};
 use axum::body::Body;
 use axum::extract::State;
 use axum::http::{HeaderMap, Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use base64::Engine;
+use time::OffsetDateTime;
 
 use crate::state::AppState;
 
@@ -88,7 +93,7 @@ pub async fn handle(State(state): State<AppState>, req: axum::extract::Request) 
         "PROPFIND" => propfind(&acc, &uid, &resource, depth, &body).await,
         "REPORT" => report(&acc, &uid, &resource, &body).await,
         "GET" | "HEAD" => get_object(&acc, &resource, method == Method::HEAD).await,
-        "PUT" => put_object(&acc, &resource, &headers, &body).await,
+        "PUT" => put_object(&acc, &uid, &resource, &headers, &body).await,
         "DELETE" => delete_object(&acc, &resource, &headers).await,
         _ => status(StatusCode::METHOD_NOT_ALLOWED),
     }
@@ -107,10 +112,11 @@ enum Resource {
     Object(String),
     /// The calendar-home collection.
     CalHome,
-    /// The one calendar collection.
-    Calendar,
-    /// One calendar object (an event), by id.
-    CalObject(String),
+    /// One calendar collection, by its path segment (`default` = personal, else
+    /// a calendar id — a shared/team calendar the user can see).
+    Calendar(String),
+    /// One calendar object (an event): `(collection segment, event id)`.
+    CalObject(String, String),
     /// A path that does not belong to this user.
     NotFound,
 }
@@ -126,11 +132,39 @@ fn classify(rel: &str, uid: &str) -> Resource {
             Resource::Object(obj.trim_end_matches(".vcf").to_owned())
         }
         ["calendars", u] if *u == uid => Resource::CalHome,
-        ["calendars", u, "default"] if *u == uid => Resource::Calendar,
-        ["calendars", u, "default", obj] if *u == uid => {
-            Resource::CalObject(obj.trim_end_matches(".ics").to_owned())
+        // The collection segment is `default` (the personal calendar) or a
+        // calendar id — any calendar the user can see (own, shared, or team).
+        ["calendars", u, coll] if *u == uid => Resource::Calendar((*coll).to_owned()),
+        ["calendars", u, coll, obj] if *u == uid => {
+            Resource::CalObject((*coll).to_owned(), obj.trim_end_matches(".ics").to_owned())
         }
         _ => Resource::NotFound,
+    }
+}
+
+/// The personal calendar's stable id for a user (matches
+/// `ensure_personal_calendar`), served as the backward-compatible `default`
+/// CalDAV collection.
+fn personal_cal_id(uid: &str) -> String {
+    format!("cal_personal_{uid}")
+}
+
+/// A calendar id → its CalDAV collection segment: `default` for the personal
+/// calendar (so existing clients keep working), else the calendar id itself.
+fn collection_for(uid: &str, cal_id: &str) -> String {
+    if cal_id == personal_cal_id(uid) {
+        "default".to_owned()
+    } else {
+        cal_id.to_owned()
+    }
+}
+
+/// A CalDAV collection segment → the calendar id it addresses.
+fn resolve_collection(uid: &str, coll: &str) -> String {
+    if coll == "default" {
+        personal_cal_id(uid)
+    } else {
+        coll.to_owned()
     }
 }
 
@@ -189,13 +223,31 @@ async fn propfind(
         Resource::CalHome => {
             responses.push_str(&cal_home_response(uid));
             if depth >= 1 {
-                responses.push_str(&calendar_response(acc, uid).await);
+                // One collection per calendar the user can see (own + shared).
+                let cals = acc.calendars().await.unwrap_or_default();
+                for cal in &cals {
+                    responses.push_str(&calendar_response(acc, uid, cal).await);
+                }
             }
         }
-        Resource::Calendar => {
-            responses.push_str(&calendar_response(acc, uid).await);
+        Resource::Calendar(coll) => {
+            let cal_id = resolve_collection(uid, coll);
+            if let Some(cal) = acc
+                .calendars()
+                .await
+                .unwrap_or_default()
+                .into_iter()
+                .find(|c| c.id.as_str() == cal_id)
+            {
+                responses.push_str(&calendar_response(acc, uid, &cal).await);
+            } else {
+                return status(StatusCode::NOT_FOUND);
+            }
             if depth >= 1 {
-                let events = match acc.all_events().await {
+                let events = match acc
+                    .events_of_calendar(&alo_store::CalendarId::new(cal_id))
+                    .await
+                {
                     Ok(e) => e,
                     Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
                 };
@@ -204,7 +256,7 @@ async fn propfind(
                 }
             }
         }
-        Resource::CalObject(id) => match fetch_event(acc, id).await {
+        Resource::CalObject(_coll, id) => match fetch_event(acc, id).await {
             Some(e) => responses.push_str(&event_propstat(uid, &e, false, &[])),
             None => return status(StatusCode::NOT_FOUND),
         },
@@ -277,16 +329,31 @@ fn cal_home_response(uid: &str) -> String {
     response(&href, props)
 }
 
-async fn calendar_response(acc: &AccountStore, uid: &str) -> String {
-    let href = format!("/dav/calendars/{uid}/default/");
+async fn calendar_response(acc: &AccountStore, uid: &str, cal: &Calendar) -> String {
+    let coll = collection_for(uid, cal.id.as_str());
+    let href = format!("/dav/calendars/{uid}/{coll}/");
     let ctag = cal_collection_tag(acc).await;
+    let name = esc(&cal.name);
+    let color = cal
+        .color
+        .as_deref()
+        .filter(|c| c.starts_with('#'))
+        .unwrap_or("#e76f51");
+    // A shared/team calendar the viewer can only read advertises no write
+    // privileges, so clients present it read-only.
+    let privileges = if cal.role == "viewer" {
+        "<d:current-user-privilege-set><d:privilege><d:read/></d:privilege></d:current-user-privilege-set>"
+    } else {
+        ""
+    };
     let props = format!(
         "<d:resourcetype><d:collection/><cal:calendar/></d:resourcetype>\
-         <d:displayname>Calendar</d:displayname>\
+         <d:displayname>{name}</d:displayname>\
          <cs:getctag>{ctag}</cs:getctag>\
          <d:sync-token>{ctag}</d:sync-token>\
          <cal:supported-calendar-component-set><cal:comp name=\"VEVENT\"/></cal:supported-calendar-component-set>\
-         <cs:calendar-color>#e76f51ff</cs:calendar-color>\
+         <cs:calendar-color>{color}ff</cs:calendar-color>\
+         {privileges}\
          <d:supported-report-set>\
            <d:supported-report><d:report><d:sync-collection/></d:report></d:supported-report>\
            <d:supported-report><d:report><cal:calendar-multiget/></d:report></d:supported-report>\
@@ -304,7 +371,7 @@ fn event_propstat(
     with_data: bool,
     overrides: &[CalendarEvent],
 ) -> String {
-    let href = event_href(uid, &e.id);
+    let href = event_href(uid, e);
     let etag = event_etag(e);
     let mut props = format!(
         "<d:getetag>{etag}</d:getetag>\
@@ -336,7 +403,7 @@ async fn report(acc: &AccountStore, uid: &str, resource: &Resource, body: &[u8])
     let text = String::from_utf8_lossy(body);
     match resource {
         Resource::Addressbook => report_contacts(acc, uid, &text).await,
-        Resource::Calendar => report_events(acc, uid, &text).await,
+        Resource::Calendar(coll) => report_events(acc, uid, coll, &text).await,
         _ => status(StatusCode::NOT_FOUND),
     }
 }
@@ -371,19 +438,27 @@ async fn report_contacts(acc: &AccountStore, uid: &str, text: &str) -> Response 
     multistatus(&responses)
 }
 
-async fn report_events(acc: &AccountStore, uid: &str, text: &str) -> Response {
+async fn report_events(acc: &AccountStore, uid: &str, coll: &str, text: &str) -> Response {
     if text.contains("sync-collection") {
-        return cal_sync_collection(acc, uid, text).await;
+        return cal_sync_collection(acc, uid, coll, text).await;
     }
-    // calendar-multiget, or a calendar-query we answer unfiltered.
+    // calendar-multiget (explicit hrefs), or a calendar-query — which we answer
+    // by its <C:time-range> when present, else the whole collection.
     let hrefs = extract_hrefs(text);
     let mut responses = String::new();
     if hrefs.is_empty() {
-        let events = match acc.all_events().await {
+        let cal_id = resolve_collection(uid, coll);
+        let events = match acc.events_of_calendar(&CalendarId::new(cal_id)).await {
             Ok(e) => e,
             Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
         };
+        let range = extract_time_range(text);
         for e in &events {
+            if let Some((start, end)) = range
+                && !event_overlaps(e, start, end)
+            {
+                continue;
+            }
             let ovs = overrides_for_ics(acc, e).await;
             responses.push_str(&event_propstat(uid, e, true, &ovs));
         }
@@ -404,25 +479,31 @@ async fn report_events(acc: &AccountStore, uid: &str, text: &str) -> Response {
     multistatus(&responses)
 }
 
-async fn cal_sync_collection(acc: &AccountStore, uid: &str, body: &str) -> Response {
+async fn cal_sync_collection(acc: &AccountStore, uid: &str, coll: &str, body: &str) -> Response {
+    let cal_id = resolve_collection(uid, coll);
     let since = extract_sync_token(body)
         .and_then(|t| t.strip_prefix(CAL_SYNC_PREFIX).map(str::to_owned))
         .and_then(|n| n.parse::<i64>().ok())
         .unwrap_or(0);
+    // Event changes are account-wide (one modseq); keep only those on this
+    // collection's calendar so each collection syncs independently.
     let changes = match acc.changes("Event", since, MAX_SYNC).await {
         Ok(c) => c,
         Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
     };
     let mut responses = String::new();
     for id in changes.created.iter().chain(changes.updated.iter()) {
-        if let Some(e) = fetch_event(acc, id).await {
+        if let Some(e) = fetch_event(acc, id).await
+            && e.calendar_id.as_str() == cal_id
+        {
             responses.push_str(&event_propstat(uid, &e, false, &[]));
         }
     }
     for id in &changes.destroyed {
-        responses.push_str(&not_found_response(&event_href(
-            uid,
-            &EventId::new(id.clone()),
+        // A destroyed event's calendar is gone; report the removal under this
+        // collection (the client drops it wherever it held it).
+        responses.push_str(&not_found_response(&format!(
+            "/dav/calendars/{uid}/{coll}/{id}.ics"
         )));
     }
     let token = format!("{CAL_SYNC_PREFIX}{}", changes.new_state);
@@ -477,7 +558,7 @@ async fn get_object(acc: &AccountStore, resource: &Resource, head: bool) -> Resp
             ),
             None => status(StatusCode::NOT_FOUND),
         },
-        Resource::CalObject(id) => match fetch_event(acc, id).await {
+        Resource::CalObject(_coll, id) => match fetch_event(acc, id).await {
             Some(e) => {
                 let ovs = overrides_for_ics(acc, &e).await;
                 serve(
@@ -513,13 +594,14 @@ fn serve(head: bool, body: String, etag: &str, content_type: &'static str) -> Re
 
 async fn put_object(
     acc: &AccountStore,
+    uid: &str,
     resource: &Resource,
     headers: &HeaderMap,
     body: &[u8],
 ) -> Response {
     match resource {
         Resource::Object(id) => put_contact_object(acc, id, headers, body).await,
-        Resource::CalObject(id) => put_event_object(acc, id, headers, body).await,
+        Resource::CalObject(coll, id) => put_event_object(acc, uid, coll, id, headers, body).await,
         _ => status(StatusCode::NOT_FOUND),
     }
 }
@@ -561,6 +643,8 @@ async fn put_contact_object(
 
 async fn put_event_object(
     acc: &AccountStore,
+    uid: &str,
+    coll: &str,
     id: &str,
     headers: &HeaderMap,
     body: &[u8],
@@ -580,12 +664,16 @@ async fn put_event_object(
     };
     // The href is authoritative: store under the path id (= iCalendar UID).
     event.id = EventId::new(id.to_owned());
-    // iCalendar carries no calendar grouping; a DAV PUT lands on the personal
-    // calendar (per-collection calendars arrive with the CalDAV multi-collection
-    // slice).
-    event.calendar_id = match acc.ensure_personal_calendar().await {
-        Ok(c) => c,
-        Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
+    // The event lands on the collection's calendar (iCalendar carries no
+    // grouping). put_event refuses a calendar the caller can't edit, so a PUT
+    // to a read-only shared collection is denied rather than misfiled.
+    event.calendar_id = if coll == "default" {
+        match acc.ensure_personal_calendar().await {
+            Ok(c) => c,
+            Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
+        }
+    } else {
+        CalendarId::new(resolve_collection(uid, coll))
     };
     match acc.put_event(&EventId::new(id.to_owned()), &event).await {
         Ok(created) => created_or_updated(created, &event_etag(&event)),
@@ -620,7 +708,7 @@ async fn delete_object(acc: &AccountStore, resource: &Resource, headers: &Header
             }
             store_delete(acc.delete_contact(&ContactId::new(id.to_owned())).await)
         }
-        Resource::CalObject(id) => {
+        Resource::CalObject(_coll, id) => {
             if let Some(want) = want {
                 match fetch_event(acc, id).await {
                     Some(e) if event_etag(&e) == want.trim() => {}
@@ -735,8 +823,9 @@ fn event_etag(e: &CalendarEvent) -> String {
     format!("\"{:016x}\"", hasher.finish())
 }
 
-fn event_href(uid: &str, id: &EventId) -> String {
-    format!("/dav/calendars/{uid}/default/{}.ics", id.as_str())
+fn event_href(uid: &str, e: &CalendarEvent) -> String {
+    let coll = collection_for(uid, e.calendar_id.as_str());
+    format!("/dav/calendars/{uid}/{coll}/{}.ics", e.id.as_str())
 }
 
 fn cal_href_object_id(href: &str) -> Option<String> {
@@ -763,6 +852,60 @@ fn extract_hrefs(body: &str) -> Vec<String> {
         }
     }
     out
+}
+
+/// The `<C:time-range start=.. end=..>` of a calendar-query, as UTC instants.
+/// `None` (→ unfiltered) if absent or either bound is missing/unparseable.
+fn extract_time_range(body: &str) -> Option<(OffsetDateTime, OffsetDateTime)> {
+    let seg = &body[body.find("time-range")?..];
+    let start = attr_value(seg, "start").and_then(parse_ical_utc)?;
+    let end = attr_value(seg, "end").and_then(parse_ical_utc)?;
+    Some((start, end))
+}
+
+/// The value of an XML attribute `name="..."` (or `'...'`) in `seg`.
+fn attr_value<'a>(seg: &'a str, name: &str) -> Option<&'a str> {
+    let at = seg.find(&format!("{name}="))? + name.len() + 1;
+    let rest = seg.get(at..)?;
+    let quote = rest.chars().next()?;
+    let inner = &rest[1..];
+    inner.find(quote).map(|end| &inner[..end])
+}
+
+/// Parse a compact iCalendar UTC timestamp (`YYYYMMDDTHHMMSSZ`) to UTC.
+fn parse_ical_utc(v: &str) -> Option<OffsetDateTime> {
+    let d = v.trim().trim_end_matches('Z');
+    let n = |a: usize, b: usize| d.get(a..b)?.parse::<u32>().ok();
+    let date = time::Date::from_calendar_date(
+        d.get(0..4)?.parse().ok()?,
+        time::Month::try_from(n(4, 6)? as u8).ok()?,
+        n(6, 8)? as u8,
+    )
+    .ok()?;
+    let (h, mi, s) = if d.contains('T') {
+        (
+            n(9, 11)? as u8,
+            n(11, 13)? as u8,
+            n(13, 15).unwrap_or(0) as u8,
+        )
+    } else {
+        (0, 0, 0)
+    };
+    Some(OffsetDateTime::new_utc(
+        date,
+        time::Time::from_hms(h, mi, s).ok()?,
+    ))
+}
+
+/// Whether an event could have an instance in `[start, end)`. A recurring master
+/// is kept if it starts before `end` (its occurrences may fall inside — the
+/// client expands and narrows); a one-off must actually overlap.
+fn event_overlaps(e: &CalendarEvent, start: OffsetDateTime, end: OffsetDateTime) -> bool {
+    if e.recurrence.is_some() {
+        e.starts_at < end
+    } else {
+        e.starts_at < end && e.ends_at > start
+    }
 }
 
 /// The `<sync-token>` value from a sync-collection body, if present.
