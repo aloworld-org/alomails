@@ -127,10 +127,8 @@ fn parse_one(tok: &str) -> Option<FetchItem> {
             // BODY[...] / BODY.PEEK[...] possibly with <partial>.
             let (peek, rest) = if let Some(r) = upper.strip_prefix("BODY.PEEK") {
                 (true, r)
-            } else if let Some(r) = upper.strip_prefix("BODY") {
-                (false, r)
             } else {
-                return None;
+                (false, upper.strip_prefix("BODY")?)
             };
             // `rest` (uppercased) begins with `[`. Use the original-case tok
             // for HEADER.FIELDS names.
