@@ -15,6 +15,7 @@ import {
   type AuditEntry,
   type Calendar,
   type CalendarEvent,
+  type CalendarGrant,
   type Category,
   type Contact,
   type ContactDraft,
@@ -24,6 +25,7 @@ import {
   type EmailAddress,
   type MailFilterRule,
   type SecurityCheck,
+  type ShareableGroup,
   type SharedMailbox,
   type Delegate,
   type SendMode,
@@ -1395,6 +1397,50 @@ export class JmapClient {
       method: "DELETE",
     });
     if (!res.ok) throw new JmapError(`deleteCalendar ${res.status}`);
+  }
+
+  /** Who a calendar the caller owns is shared with. */
+  async calendarGrants(id: string): Promise<CalendarGrant[]> {
+    const res = await this.#fetch(
+      `${API_BASE}/calendar/calendars/${encodeURIComponent(id)}/grants`,
+    );
+    if (!res.ok) throw new JmapError(`calendarGrants ${res.status}`);
+    return ((await res.json()) as { grants: CalendarGrant[] }).grants;
+  }
+
+  /** Share a calendar with a person (by email) or a group at viewer/editor. */
+  async shareCalendar(
+    id: string,
+    kind: "user" | "group",
+    subject: string,
+    role: "viewer" | "editor",
+  ): Promise<void> {
+    const res = await this.#fetch(
+      `${API_BASE}/calendar/calendars/${encodeURIComponent(id)}/grants`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind, subject, role }),
+      },
+    );
+    if (!res.ok) throw new JmapError(`shareCalendar ${res.status}`);
+  }
+
+  /** Remove a share from a calendar the caller owns. */
+  async unshareCalendar(id: string, kind: "user" | "group", subject: string): Promise<void> {
+    const q = `kind=${encodeURIComponent(kind)}&subject=${encodeURIComponent(subject)}`;
+    const res = await this.#fetch(
+      `${API_BASE}/calendar/calendars/${encodeURIComponent(id)}/grants?${q}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) throw new JmapError(`unshareCalendar ${res.status}`);
+  }
+
+  /** The tenant's groups, for offering team sharing in the share dialog. */
+  async shareableGroups(): Promise<ShareableGroup[]> {
+    const res = await this.#fetch(`${API_BASE}/calendar/groups`);
+    if (!res.ok) throw new JmapError(`shareableGroups ${res.status}`);
+    return ((await res.json()) as { groups: ShareableGroup[] }).groups;
   }
 
   /** The user's server-side mail filter rules. */

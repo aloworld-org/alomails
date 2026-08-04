@@ -12,7 +12,7 @@ use crate::account::AccountStore;
 use crate::changes::{self, Change, TYPE_EVENT};
 use crate::error::{Result, StoreError};
 use crate::id::{CalendarId, EventId};
-use crate::model::{Calendar, CalendarEvent};
+use crate::model::{Calendar, CalendarEvent, CalendarGrant};
 
 impl AccountStore {
     /// The account's events overlapping the half-open window `[from, to)`,
@@ -30,20 +30,24 @@ impl AccountStore {
         // master that starts before the window ends (its occurrences may land
         // inside — expanded below). The master's own `starts_at`/`ends_at` are
         // the first occurrence.
-        let rows = sqlx::query_as::<_, EventRow>(
-            "SELECT id, calendar_id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
-             FROM calendar_events \
-             WHERE tenant_id = $1 AND user_id = $2 AND ( \
-                 (rrule IS NULL AND starts_at < $3 AND ends_at > $4) OR \
-                 (rrule IS NOT NULL AND starts_at < $3)) \
-             ORDER BY starts_at, id",
-        )
-        .bind(self.tenant.as_str())
-        .bind(self.user.as_str())
-        .bind(to)
-        .bind(from)
-        .fetch_all(&self.pool)
-        .await?;
+        let visible = visible_pred();
+        let sql = format!(
+            "SELECT e.id, e.calendar_id, e.summary, e.description, e.location, e.starts_at, \
+                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates \
+             FROM calendar_events e \
+             WHERE e.tenant_id = $1 AND e.calendar_id IN ( \
+                 SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {visible}) AND ( \
+                 (e.rrule IS NULL AND e.starts_at < $3 AND e.ends_at > $4) OR \
+                 (e.rrule IS NOT NULL AND e.starts_at < $3)) \
+             ORDER BY e.starts_at, e.id",
+        );
+        let rows = sqlx::query_as::<_, EventRow>(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(to)
+            .bind(from)
+            .fetch_all(&self.pool)
+            .await?;
         let mut out = Vec::new();
         for row in rows {
             let event = row.into_event();
@@ -81,15 +85,20 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn event(&self, id: &EventId) -> Result<Option<CalendarEvent>> {
-        let row = sqlx::query_as::<_, EventRow>(
-            "SELECT id, calendar_id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
-             FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
-        )
-        .bind(self.tenant.as_str())
-        .bind(self.user.as_str())
-        .bind(id.as_str())
-        .fetch_optional(&self.pool)
-        .await?;
+        let visible = visible_pred();
+        let sql = format!(
+            "SELECT e.id, e.calendar_id, e.summary, e.description, e.location, e.starts_at, \
+                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates \
+             FROM calendar_events e \
+             WHERE e.tenant_id = $1 AND e.id = $3 AND e.calendar_id IN ( \
+                 SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {visible})",
+        );
+        let row = sqlx::query_as::<_, EventRow>(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(id.as_str())
+            .fetch_optional(&self.pool)
+            .await?;
         Ok(row.map(EventRow::into_event))
     }
 
@@ -100,6 +109,10 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn create_event(&self, event: &CalendarEvent) -> Result<EventId> {
+        // Only place an event on a calendar the caller can edit.
+        if !self.can_edit_calendar(&event.calendar_id).await? {
+            return Err(StoreError::NotFound);
+        }
         let id = EventId::generate();
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         sqlx::query(
@@ -142,6 +155,9 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn put_event(&self, id: &EventId, event: &CalendarEvent) -> Result<bool> {
+        if !self.can_edit_calendar(&event.calendar_id).await? {
+            return Err(StoreError::NotFound);
+        }
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         let existed: bool = sqlx::query_scalar(
             "SELECT EXISTS(SELECT 1 FROM calendar_events \
@@ -200,28 +216,31 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn update_event(&self, id: &EventId, event: &CalendarEvent) -> Result<()> {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
-        let done = sqlx::query(
-            "UPDATE calendar_events SET summary = $4, description = $5, location = $6, \
+        let editable = editable_pred();
+        let sql = format!(
+            "UPDATE calendar_events AS e SET summary = $4, description = $5, location = $6, \
                     starts_at = $7, ends_at = $8, all_day = $9, rrule = $10, attendees = $11, \
                     exdates = $12, calendar_id = $13, updated_at = now() \
-             WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
-        )
-        .bind(self.tenant.as_str())
-        .bind(self.user.as_str())
-        .bind(id.as_str())
-        .bind(&event.summary)
-        .bind(&event.description)
-        .bind(&event.location)
-        .bind(event.starts_at)
-        .bind(event.ends_at)
-        .bind(event.all_day)
-        .bind(&event.recurrence)
-        .bind(sqlx::types::Json(&event.attendees))
-        .bind(exdates_to_json(&event.exdates))
-        .bind(event.calendar_id.as_str())
-        .execute(&mut *tx)
-        .await
-        .map_err(StoreError::Db)?;
+             WHERE e.tenant_id = $1 AND e.id = $3 AND e.calendar_id IN ( \
+                 SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {editable})",
+        );
+        let done = sqlx::query(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(id.as_str())
+            .bind(&event.summary)
+            .bind(&event.description)
+            .bind(&event.location)
+            .bind(event.starts_at)
+            .bind(event.ends_at)
+            .bind(event.all_day)
+            .bind(&event.recurrence)
+            .bind(sqlx::types::Json(&event.attendees))
+            .bind(exdates_to_json(&event.exdates))
+            .bind(event.calendar_id.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
         if done.rows_affected() == 0 {
             return Err(StoreError::NotFound);
         }
@@ -244,15 +263,18 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn delete_event(&self, id: &EventId) -> Result<()> {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
-        let done = sqlx::query(
-            "DELETE FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
-        )
-        .bind(self.tenant.as_str())
-        .bind(self.user.as_str())
-        .bind(id.as_str())
-        .execute(&mut *tx)
-        .await
-        .map_err(StoreError::Db)?;
+        let editable = editable_pred();
+        let sql = format!(
+            "DELETE FROM calendar_events AS e WHERE e.tenant_id = $1 AND e.id = $3 \
+             AND e.calendar_id IN (SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {editable})",
+        );
+        let done = sqlx::query(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(id.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
         if done.rows_affected() == 0 {
             return Err(StoreError::NotFound);
         }
@@ -292,15 +314,144 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn calendars(&self) -> Result<Vec<Calendar>> {
         self.ensure_personal_calendar().await?;
-        let rows = sqlx::query_as::<_, CalendarRow>(
-            "SELECT id, owner_user_id, name, color, kind FROM calendars \
-             WHERE tenant_id = $1 AND owner_user_id = $2 ORDER BY created_at, id",
+        // Owned first, then shared; each row carries the viewer's role.
+        let editor = grant_exists(true);
+        let visible = visible_pred();
+        let sql = format!(
+            "SELECT c.id, c.owner_user_id, c.name, c.color, c.kind, \
+                CASE WHEN c.owner_user_id = $2 THEN 'owner' \
+                     WHEN {editor} THEN 'editor' ELSE 'viewer' END AS role \
+             FROM calendars c \
+             WHERE c.tenant_id = $1 AND {visible} \
+             ORDER BY (c.owner_user_id = $2) DESC, c.created_at, c.id",
+        );
+        let rows = sqlx::query_as::<_, CalendarRow>(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows.into_iter().map(CalendarRow::into_calendar).collect())
+    }
+
+    /// Whether the viewer may edit the given calendar (owner, or an `editor`
+    /// grant to them directly or via a group). Tenant-scoped.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn can_edit_calendar(&self, id: &CalendarId) -> Result<bool> {
+        let editable = editable_pred();
+        let sql = format!(
+            "SELECT EXISTS (SELECT 1 FROM calendars c WHERE c.tenant_id = $1 AND c.id = $3 AND {editable})",
+        );
+        sqlx::query_scalar(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(id.as_str())
+            .fetch_one(&self.pool)
+            .await
+            .map_err(StoreError::Db)
+    }
+
+    /// Shares a calendar the caller **owns** with a subject (a user or group) at
+    /// a role. Upserts the role if the share exists. Only the owner may share.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the calendar is not the caller's own;
+    /// [`StoreError::Db`] on failure.
+    pub async fn grant_calendar(
+        &self,
+        id: &CalendarId,
+        subject_kind: &str,
+        subject_id: &str,
+        role: &str,
+    ) -> Result<()> {
+        if !self.owns_calendar(id).await? {
+            return Err(StoreError::NotFound);
+        }
+        sqlx::query(
+            "INSERT INTO calendar_grants (tenant_id, calendar_id, subject_kind, subject_id, role) \
+             VALUES ($1, $2, $3, $4, $5) \
+             ON CONFLICT (tenant_id, calendar_id, subject_kind, subject_id) \
+             DO UPDATE SET role = EXCLUDED.role",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(subject_kind)
+        .bind(subject_id)
+        .bind(role)
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// Removes a share from a calendar the caller owns.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the calendar is not the caller's own;
+    /// [`StoreError::Db`] on failure.
+    pub async fn revoke_calendar(
+        &self,
+        id: &CalendarId,
+        subject_kind: &str,
+        subject_id: &str,
+    ) -> Result<()> {
+        if !self.owns_calendar(id).await? {
+            return Err(StoreError::NotFound);
+        }
+        sqlx::query(
+            "DELETE FROM calendar_grants \
+             WHERE tenant_id = $1 AND calendar_id = $2 AND subject_kind = $3 AND subject_id = $4",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(subject_kind)
+        .bind(subject_id)
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// The shares on a calendar the caller owns (who it's shared with).
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the calendar is not the caller's own;
+    /// [`StoreError::Db`] on failure.
+    pub async fn calendar_grants(&self, id: &CalendarId) -> Result<Vec<CalendarGrant>> {
+        if !self.owns_calendar(id).await? {
+            return Err(StoreError::NotFound);
+        }
+        let rows: Vec<(String, String, String)> = sqlx::query_as(
+            "SELECT subject_kind, subject_id, role FROM calendar_grants \
+             WHERE tenant_id = $1 AND calendar_id = $2 ORDER BY subject_kind, subject_id",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|(subject_kind, subject_id, role)| CalendarGrant {
+                subject_kind,
+                subject_id,
+                role,
+            })
+            .collect())
+    }
+
+    /// Whether this account owns the calendar (tenant-scoped).
+    async fn owns_calendar(&self, id: &CalendarId) -> Result<bool> {
+        sqlx::query_scalar(
+            "SELECT EXISTS (SELECT 1 FROM calendars \
+             WHERE tenant_id = $1 AND owner_user_id = $2 AND id = $3)",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
-        .fetch_all(&self.pool)
-        .await?;
-        Ok(rows.into_iter().map(CalendarRow::into_calendar).collect())
+        .bind(id.as_str())
+        .fetch_one(&self.pool)
+        .await
+        .map_err(StoreError::Db)
     }
 
     /// The user's personal (default) calendar id, creating it if absent. The id
@@ -328,11 +479,7 @@ impl AccountStore {
     ///
     /// # Errors
     /// [`StoreError::Db`] on failure.
-    pub async fn create_calendar(
-        &self,
-        name: &str,
-        color: Option<&str>,
-    ) -> Result<CalendarId> {
+    pub async fn create_calendar(&self, name: &str, color: Option<&str>) -> Result<CalendarId> {
         let id = CalendarId::generate();
         sqlx::query(
             "INSERT INTO calendars (tenant_id, id, owner_user_id, name, color, kind) \
@@ -412,13 +559,15 @@ impl AccountStore {
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
-        sqlx::query("DELETE FROM calendars WHERE tenant_id = $1 AND owner_user_id = $2 AND id = $3")
-            .bind(self.tenant.as_str())
-            .bind(self.user.as_str())
-            .bind(id.as_str())
-            .execute(&mut *tx)
-            .await
-            .map_err(StoreError::Db)?;
+        sqlx::query(
+            "DELETE FROM calendars WHERE tenant_id = $1 AND owner_user_id = $2 AND id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(id.as_str())
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
         changes::bump_and_record(
             &mut tx,
             self.tenant.as_str(),
@@ -439,6 +588,8 @@ struct CalendarRow {
     name: String,
     color: Option<String>,
     kind: String,
+    #[sqlx(default)]
+    role: Option<String>,
 }
 
 impl CalendarRow {
@@ -449,8 +600,41 @@ impl CalendarRow {
             name: self.name,
             color: self.color,
             kind: self.kind,
+            role: self.role.unwrap_or_else(|| "owner".to_owned()),
         }
     }
+}
+
+/// SQL predicate `EXISTS(...)` — the viewer (tenant `$1`, user `$2`) has a grant
+/// on calendar `c`. `editor_only` narrows it to `editor` grants. Matches a grant
+/// to the user directly, or to any group the user belongs to. Tenant-scoped.
+fn grant_exists(editor_only: bool) -> String {
+    let role = if editor_only {
+        " AND g.role = 'editor'"
+    } else {
+        ""
+    };
+    format!(
+        "EXISTS (SELECT 1 FROM calendar_grants g \
+         WHERE g.tenant_id = $1 AND g.calendar_id = c.id{role} AND ( \
+           (g.subject_kind = 'user' AND g.subject_id = $2) \
+           OR (g.subject_kind = 'group' AND g.subject_id IN \
+              (SELECT group_id FROM group_members WHERE tenant_id = $1 AND user_id = $2))))"
+    )
+}
+
+/// SQL predicate (calendar aliased `c`, viewer `$2`): the viewer may *see* the
+/// calendar — they own it or hold any grant (direct or via a group).
+fn visible_pred() -> String {
+    let grant = grant_exists(false);
+    format!("(c.owner_user_id = $2 OR {grant})")
+}
+
+/// SQL predicate (calendar aliased `c`, viewer `$2`): the viewer may *edit* the
+/// calendar — they own it or hold an `editor` grant (direct or via a group).
+fn editable_pred() -> String {
+    let grant = grant_exists(true);
+    format!("(c.owner_user_id = $2 OR {grant})")
 }
 
 /// Recurrence frequency (the `FREQ` of a supported `RRULE`).

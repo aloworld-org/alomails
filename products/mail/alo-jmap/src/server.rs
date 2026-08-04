@@ -82,6 +82,15 @@ pub fn app(state: AppState) -> Router {
             "/calendar/calendars/{id}",
             put(calendar::rename_calendar).delete(calendar::remove_calendar),
         )
+        // Calendar sharing (slice 2): grant/list/revoke access on a calendar.
+        .route(
+            "/calendar/calendars/{id}/grants",
+            get(calendar::list_grants)
+                .post(calendar::share_calendar)
+                .delete(calendar::unshare_calendar),
+        )
+        // Groups the caller can share a calendar with (team access).
+        .route("/calendar/groups", get(calendar::list_shareable_groups))
         .route("/contacts", get(contacts::list))
         // Address-book import (a .vcf upload) and export (whole book as .vcf).
         .route("/contacts/import", post(contacts::import))

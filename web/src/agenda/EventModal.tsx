@@ -52,8 +52,13 @@ export function EventModal({
   onDelete,
   onClose,
 }: Props) {
+  // Only calendars the viewer can write to may host a new or moved event.
+  const editable = calendars.filter((c) => c.role === "owner" || c.role === "editor");
   const defaultCalendar =
-    event?.calendarId ?? calendars.find((c) => c.kind === "personal")?.id ?? calendars[0]?.id ?? "";
+    event?.calendarId ?? editable.find((c) => c.kind === "personal")?.id ?? editable[0]?.id ?? "";
+  // An existing event on a view-only shared calendar is shown read-only.
+  const readOnly =
+    event != null && calendars.find((c) => c.id === event.calendarId)?.role === "viewer";
   const startDate = event ? new Date(event.startsAt) : initialStart;
   const endDate = event ? new Date(event.endsAt) : new Date(initialStart.getTime() + 3600_000);
 
@@ -148,6 +153,9 @@ export function EventModal({
           </button>
         </div>
 
+        {/* A disabled fieldset makes every control read-only in one place; it
+            lays out transparently (display:contents) so nothing shifts. */}
+        <fieldset disabled={readOnly} style={{ display: "contents" }}>
         <input
           className={styles.titleInput}
           placeholder={strings.agendaEventTitle}
@@ -187,11 +195,11 @@ export function EventModal({
           </div>
         )}
 
-        {calendars.length > 1 && (
+        {editable.length > 1 && (
           <label className={styles.field}>
             <span>{strings.agendaCalendar}</span>
             <select value={calendarId} onChange={(e) => setCalendarId(e.target.value)}>
-              {calendars.map((c) => (
+              {editable.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
                 </option>
@@ -238,6 +246,13 @@ export function EventModal({
           <span>{strings.agendaEventDescription}</span>
           <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
         </label>
+        </fieldset>
+
+        {readOnly && (
+          <p className={styles.fieldHint} role="note">
+            {strings.agendaReadOnly}
+          </p>
+        )}
 
         {error !== null && (
           <p className={styles.modalError} role="alert">
@@ -246,12 +261,12 @@ export function EventModal({
         )}
 
         <div className={styles.modalActions}>
-          {event !== null && !recurringOccurrence && (
+          {!readOnly && event !== null && !recurringOccurrence && (
             <button type="button" className={styles.deleteBtn} onClick={() => void remove()} disabled={busy}>
               <Trash2 size={15} /> {strings.agendaDelete}
             </button>
           )}
-          {recurringOccurrence && (
+          {!readOnly && recurringOccurrence && (
             <div className={styles.deleteChoice}>
               <button
                 type="button"
@@ -273,11 +288,13 @@ export function EventModal({
           )}
           <div className={styles.modalActionsRight}>
             <button type="button" className={styles.linkBtn} onClick={onClose} disabled={busy}>
-              {strings.agendaCancel}
+              {readOnly ? strings.agendaClose : strings.agendaCancel}
             </button>
-            <Button type="submit" disabled={busy || summary.trim() === ""}>
-              {strings.agendaSave}
-            </Button>
+            {!readOnly && (
+              <Button type="submit" disabled={busy || summary.trim() === ""}>
+                {strings.agendaSave}
+              </Button>
+            )}
           </div>
         </div>
       </form>

@@ -319,3 +319,142 @@ async fn unreferenced_blob_is_not_found_for_a_non_owner() {
     assert_not_found(b.blob(&blob).await);
     assert_not_found(b.blob_bytes(&blob).await);
 }
+
+// --- Calendar sharing (Agenda slice 2) --------------------------------------
+//
+// Sharing deliberately opens a *within-tenant* path: a grant lets another user
+// of the same tenant see (and, as editor, write) a calendar they don't own.
+// The isolation contract is therefore sharper here than elsewhere — access
+// must follow the grant exactly (right subject, right role) and STILL never
+// cross a tenant boundary. Every calendar/event query keeps `tenant_id = $1`,
+// so a grant can only ever name a subject inside the owner's tenant.
+
+use alo_store::{CalendarEvent, CalendarId, EventId};
+use time::{Duration, OffsetDateTime};
+
+/// A one-hour, one-off event on `cal`. `create_event` assigns the real id, so
+/// the placeholder here is never persisted.
+fn sample_event(cal: &CalendarId, summary: &str) -> CalendarEvent {
+    let start = OffsetDateTime::from_unix_timestamp(1_800_000_000).unwrap();
+    CalendarEvent {
+        id: EventId::generate(),
+        calendar_id: cal.clone(),
+        summary: summary.to_owned(),
+        description: None,
+        location: None,
+        starts_at: start,
+        ends_at: start + Duration::hours(1),
+        all_day: false,
+        recurrence: None,
+        attendees: Vec::new(),
+        exdates: Vec::new(),
+    }
+}
+
+#[tokio::test]
+async fn calendar_sharing_follows_the_grant_and_never_crosses_tenants() {
+    let store = common::test_store().await;
+    let window = (
+        OffsetDateTime::from_unix_timestamp(1_700_000_000).unwrap(),
+        OffsetDateTime::from_unix_timestamp(1_900_000_000).unwrap(),
+    );
+    let sees = |ks: &[alo_store::Calendar], id: &CalendarId| ks.iter().any(|k| &k.id == id);
+
+    // Tenant 1: owner A, grantee B, stranger C.
+    let t1 = store.create_tenant("cal-share").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("owner@example.test").await.unwrap();
+    let ub = ts1.create_user("grantee@example.test").await.unwrap();
+    let uc = ts1.create_user("stranger@example.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub.clone());
+    let c = store.for_account(t1.clone(), uc.clone());
+
+    // A owns a shared calendar carrying one event.
+    let cal = a.create_calendar("Team", None).await.unwrap();
+    let eid = a
+        .create_event(&sample_event(&cal, "standup"))
+        .await
+        .unwrap();
+
+    // Before any grant, only A can see the calendar or its event.
+    assert!(sees(&a.calendars().await.unwrap(), &cal));
+    assert!(!sees(&b.calendars().await.unwrap(), &cal));
+    assert!(b.event(&eid).await.unwrap().is_none());
+    assert!(
+        !b.events_in_range(window.0, window.1)
+            .await
+            .unwrap()
+            .iter()
+            .any(|e| e.id == eid)
+    );
+
+    // Grant B *viewer*: B sees the calendar (role reported) and the event, but
+    // may not write; its writes are a clean NotFound and leave A's event intact.
+    a.grant_calendar(&cal, "user", ub.as_str(), "viewer")
+        .await
+        .unwrap();
+    let b_cal = b
+        .calendars()
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|k| k.id == cal)
+        .expect("viewer sees the shared calendar");
+    assert_eq!(b_cal.role, "viewer");
+    assert!(b.event(&eid).await.unwrap().is_some());
+    assert!(
+        b.events_in_range(window.0, window.1)
+            .await
+            .unwrap()
+            .iter()
+            .any(|e| e.id == eid)
+    );
+    assert!(!b.can_edit_calendar(&cal).await.unwrap());
+    assert_not_found(b.delete_event(&eid).await);
+    assert_not_found(b.create_event(&sample_event(&cal, "sneaky")).await);
+    assert!(a.event(&eid).await.unwrap().is_some());
+
+    // Stranger C has no grant: sees nothing, writes nothing.
+    assert!(!sees(&c.calendars().await.unwrap(), &cal));
+    assert!(c.event(&eid).await.unwrap().is_none());
+    assert_not_found(c.delete_event(&eid).await);
+
+    // Upgrade B to *editor*: B can now update the event; it stays on A's calendar.
+    a.grant_calendar(&cal, "user", ub.as_str(), "editor")
+        .await
+        .unwrap();
+    assert!(b.can_edit_calendar(&cal).await.unwrap());
+    let mut ev = a.event(&eid).await.unwrap().unwrap();
+    ev.summary = "standup (edited by B)".to_owned();
+    b.update_event(&eid, &ev).await.unwrap();
+    assert_eq!(
+        a.event(&eid).await.unwrap().unwrap().summary,
+        "standup (edited by B)"
+    );
+
+    // Group sharing reaches every member: C, via the group, sees a second calendar.
+    let group = ts1.create_group("eng").await.unwrap();
+    ts1.add_group_member(&group, &uc).await.unwrap();
+    let cal2 = a.create_calendar("Eng", None).await.unwrap();
+    a.grant_calendar(&cal2, "group", group.as_str(), "viewer")
+        .await
+        .unwrap();
+    assert!(sees(&c.calendars().await.unwrap(), &cal2));
+
+    // Cross-tenant: an outsider in tenant 2 sees none of it and cannot forge a
+    // grant onto tenant 1's calendar (it isn't theirs to share).
+    let t2 = store.create_tenant("cal-other").await.unwrap();
+    let ud = store
+        .for_tenant(t2.clone())
+        .create_user("outsider@example.test")
+        .await
+        .unwrap();
+    let d = store.for_account(t2, ud);
+    let d_cals = d.calendars().await.unwrap();
+    assert!(!sees(&d_cals, &cal) && !sees(&d_cals, &cal2));
+    assert!(d.event(&eid).await.unwrap().is_none());
+    assert!(!d.can_edit_calendar(&cal).await.unwrap());
+    assert_not_found(d.delete_event(&eid).await);
+    assert_not_found(d.grant_calendar(&cal, "user", "anyone", "editor").await);
+}

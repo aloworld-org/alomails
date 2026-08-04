@@ -80,6 +80,62 @@
 .calDel:hover {
   color: var(--danger, #c0392b);
 }
+/* Access badge on a calendar shared with the viewer (view/edit). */
+.calShared {
+  flex-shrink: 0;
+  font-size: var(--text-xs, 11px);
+  color: var(--text-tertiary, var(--text-secondary));
+  text-transform: lowercase;
+}
+
+/* --- Share dialog --- */
+.shareList {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.shareRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+}
+.shareLabel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shareTag {
+  font-size: var(--text-xs, 11px);
+  color: var(--text-tertiary, var(--text-secondary));
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 6px;
+}
+.shareRole {
+  font-size: var(--text-xs, 12px);
+  color: var(--text-secondary);
+}
+.shareForm {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+.shareForm .field {
+  flex: 1;
+  min-width: 140px;
+}
 
 .newBtn {
   display: inline-flex;

@@ -59,10 +59,9 @@ pub use identity::{
     RefreshTokenRow, SigningKeyRow, TotpRow,
 };
 pub use model::{
-    AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, Category, Contact,
-    ContactField,
-    DkimKeyRow, DomainRow, EmailFilter, EmailQuery, GroupRow, MAX_PAGE, Mailbox, Message,
-    MessageSummary, Page, SortDirection, TenantSummary, UserRow,
+    AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, CalendarGrant, Category,
+    Contact, ContactField, DkimKeyRow, DomainRow, EmailFilter, EmailQuery, GroupRow, MAX_PAGE,
+    Mailbox, Message, MessageSummary, Page, SortDirection, TenantSummary, UserRow,
 };
 pub use reset::PendingReset;
 pub use schedule::DueSend;

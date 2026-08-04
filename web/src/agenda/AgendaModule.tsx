@@ -4,12 +4,13 @@
 // view. All data goes through the authenticated /calendar API on the store; the
 // UI works in local time and converts at the edges.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Share2, Trash2 } from "lucide-react";
 
 import { getLocale, strings } from "../i18n";
 import { useJmapClient, type Calendar, type CalendarEvent, type EventInput } from "../jmap";
 import { Spinner } from "../ds";
 import { EventModal } from "./EventModal";
+import { ShareDialog } from "./ShareDialog";
 import { MiniMonth } from "./MiniMonth";
 import { MonthView } from "./MonthView";
 import { WeekView } from "./WeekView";
@@ -35,6 +36,7 @@ export function AgendaModule() {
   const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Editing>(null);
+  const [sharing, setSharing] = useState<Calendar | null>(null);
 
   const loadCalendars = useCallback(async () => {
     try {
@@ -184,7 +186,25 @@ export function AgendaModule() {
                 aria-hidden="true"
               />
               <span className={styles.calName}>{c.name}</span>
-              {c.kind !== "personal" && (
+              {/* Shared-with-me: show the access level, no owner controls. */}
+              {c.role !== "owner" && (
+                <span className={styles.calShared}>
+                  {c.role === "editor" ? strings.agendaShareEditor : strings.agendaShareViewer}
+                </span>
+              )}
+              {/* Owner controls: share any calendar; delete only non-personal ones. */}
+              {c.role === "owner" && (
+                <button
+                  type="button"
+                  className={styles.calDel}
+                  onClick={() => setSharing(c)}
+                  aria-label={strings.agendaShare}
+                  title={strings.agendaShare}
+                >
+                  <Share2 size={13} />
+                </button>
+              )}
+              {c.role === "owner" && c.kind !== "personal" && (
                 <button
                   type="button"
                   className={styles.calDel}
@@ -260,6 +280,10 @@ export function AgendaModule() {
           onDelete={remove}
           onClose={() => setEditing(null)}
         />
+      )}
+
+      {sharing !== null && (
+        <ShareDialog calendar={sharing} onClose={() => setSharing(null)} />
       )}
     </div>
   );

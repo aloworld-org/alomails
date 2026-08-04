@@ -243,6 +243,20 @@ pub struct Calendar {
     pub color: Option<String>,
     /// `personal` (the auto-created default; not deletable) or `shared`.
     pub kind: String,
+    /// The **viewing** user's access: `owner`, `editor`, or `viewer`. Set when a
+    /// calendar is listed for a user; drives what the UI lets them do.
+    pub role: String,
+}
+
+/// A share of a calendar with a subject (a user or a group) at a role.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CalendarGrant {
+    /// `user` or `group`.
+    pub subject_kind: String,
+    /// The granted user id or group id.
+    pub subject_id: String,
+    /// `viewer` or `editor`.
+    pub role: String,
 }
 
 /// A calendar event (also the CalDAV/iCalendar `VEVENT`). Times are UTC

@@ -379,6 +379,27 @@ export interface Calendar {
   color: string | null;
   /** `personal` (the default, not deletable) or `shared`. */
   kind: "personal" | "shared";
+  /** The viewer's access: `owner` (created it — may share), `editor` (may add
+   *  and change events), or `viewer` (read-only). Shared calendars are the ones
+   *  where role is not `owner`. */
+  role: "owner" | "editor" | "viewer";
+}
+
+/** A share on a calendar the viewer owns: who it's shared with, and at what role. */
+export interface CalendarGrant {
+  /** `user` (a person) or `group` (a team). */
+  kind: "user" | "group";
+  /** The stored subject id (a user id or group id). */
+  subject: string;
+  /** Human label — the person's email or the group's name. */
+  label: string;
+  role: "viewer" | "editor";
+}
+
+/** A group the viewer can share a calendar with (team access). */
+export interface ShareableGroup {
+  id: string;
+  name: string;
 }
 
 /** A calendar event as it crosses the wire (times are RFC 3339, UTC). */

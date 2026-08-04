@@ -23,7 +23,7 @@ use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
-use alo_store::{BlobId, Calendar, CalendarEvent, CalendarId, EventId, StoreError};
+use alo_store::{BlobId, Calendar, CalendarEvent, CalendarId, EventId, StoreError, UserId};
 
 use crate::error::Problem;
 use crate::state::{Account, AppState, authenticate};
@@ -453,7 +453,14 @@ struct CalendarBody {
 }
 
 fn calendar_json(c: &Calendar) -> Value {
-    json!({ "id": c.id.as_str(), "name": c.name, "color": c.color, "kind": c.kind })
+    json!({
+        "id": c.id.as_str(),
+        "name": c.name,
+        "color": c.color,
+        "kind": c.kind,
+        // The viewer's access: "owner" | "editor" | "viewer".
+        "role": c.role,
+    })
 }
 
 /// `GET /calendar/calendars` → `{"calendars": [...]}` — the caller's calendars.
@@ -486,7 +493,11 @@ pub async fn create_calendar(
             "a calendar name is required",
         ));
     }
-    let color = req.color.as_deref().map(str::trim).filter(|c| !c.is_empty());
+    let color = req
+        .color
+        .as_deref()
+        .map(str::trim)
+        .filter(|c| !c.is_empty());
     let id = account
         .acc
         .create_calendar(name, color)
@@ -513,7 +524,11 @@ pub async fn rename_calendar(
             "a calendar name is required",
         ));
     }
-    let color = req.color.as_deref().map(str::trim).filter(|c| !c.is_empty());
+    let color = req
+        .color
+        .as_deref()
+        .map(str::trim)
+        .filter(|c| !c.is_empty());
     account
         .acc
         .update_calendar(&CalendarId::new(id), name, color)
@@ -536,6 +551,183 @@ pub async fn remove_calendar(
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "status": "ok" })))
+}
+
+// --- Sharing (Agenda slice 2) -----------------------------------------------
+
+fn default_role() -> String {
+    "viewer".to_owned()
+}
+
+/// Normalises a requested role, rejecting anything but `viewer`/`editor`.
+fn valid_role(role: &str) -> Result<&str, Problem> {
+    match role {
+        "viewer" | "editor" => Ok(role),
+        _ => Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "role must be 'viewer' or 'editor'",
+        )),
+    }
+}
+
+/// Resolves a share subject to its stored `(kind, id)`. A `user` subject is an
+/// email address (resolved within the caller's tenant); a `group` subject is a
+/// group id, validated to exist in the tenant. Tenant-scoped throughout.
+async fn resolve_subject(
+    state: &AppState,
+    account: &Account,
+    kind: &str,
+    subject: &str,
+) -> Result<(&'static str, String), Problem> {
+    let ts = state.store.for_tenant(account.tenant.clone());
+    match kind {
+        "user" => {
+            let uid = ts
+                .user_by_email(subject.trim())
+                .await
+                .map_err(|e| match e {
+                    StoreError::NotFound => {
+                        Problem::with(StatusCode::NOT_FOUND, "no user with that email address")
+                    }
+                    _ => Problem::server_error(),
+                })?;
+            Ok(("user", uid.as_str().to_owned()))
+        }
+        "group" => {
+            let groups = ts
+                .list_groups()
+                .await
+                .map_err(|_| Problem::server_error())?;
+            let g = groups
+                .into_iter()
+                .find(|g| g.id == subject.trim())
+                .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such group"))?;
+            Ok(("group", g.id))
+        }
+        _ => Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "kind must be 'user' or 'group'",
+        )),
+    }
+}
+
+#[derive(Deserialize)]
+struct GrantBody {
+    /// `"user"` (share with a person) or `"group"` (team access).
+    kind: String,
+    /// The person's email address, or the group's id.
+    subject: String,
+    #[serde(default = "default_role")]
+    role: String,
+}
+
+/// `POST /calendar/calendars/:id/grants` → `{status:"ok"}`. Shares a calendar
+/// the caller owns with a person (by email) or a group at viewer/editor. Only
+/// the owner may share (enforced in the store).
+pub async fn share_calendar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: GrantBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let role = valid_role(req.role.trim())?;
+    let (kind, subject_id) =
+        resolve_subject(&state, &account, req.kind.trim(), &req.subject).await?;
+    account
+        .acc
+        .grant_calendar(&CalendarId::new(id), kind, &subject_id, role)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+#[derive(Deserialize)]
+pub struct RevokeQuery {
+    kind: String,
+    subject: String,
+}
+
+/// `DELETE /calendar/calendars/:id/grants?kind=&subject=` → `{status:"ok"}`.
+/// Removes a share from a calendar the caller owns.
+pub async fn unshare_calendar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(q): Query<RevokeQuery>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let (kind, subject_id) = resolve_subject(&state, &account, q.kind.trim(), &q.subject).await?;
+    account
+        .acc
+        .revoke_calendar(&CalendarId::new(id), kind, &subject_id)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `GET /calendar/calendars/:id/grants` → `{"grants":[...]}`. Who a calendar the
+/// caller owns is shared with, each subject resolved to a human label.
+pub async fn list_grants(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let grants = account
+        .acc
+        .calendar_grants(&CalendarId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    let ts = state.store.for_tenant(account.tenant.clone());
+    let groups = ts
+        .list_groups()
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let mut out = Vec::with_capacity(grants.len());
+    for g in grants {
+        // Resolve the subject to a display label; fall back to the raw id.
+        let label = match g.subject_kind.as_str() {
+            "user" => ts
+                .email_of(&UserId::new(g.subject_id.clone()))
+                .await
+                .ok()
+                .flatten()
+                .unwrap_or_else(|| g.subject_id.clone()),
+            "group" => groups
+                .iter()
+                .find(|x| x.id == g.subject_id)
+                .map_or_else(|| g.subject_id.clone(), |x| x.name.clone()),
+            _ => g.subject_id.clone(),
+        };
+        out.push(json!({
+            "kind": g.subject_kind,
+            "subject": g.subject_id,
+            "label": label,
+            "role": g.role,
+        }));
+    }
+    Ok(Json(json!({ "grants": out })))
+}
+
+/// `GET /calendar/groups` → `{"groups":[{id,name}]}`. The tenant's groups, so
+/// the share dialog can offer team/group sharing.
+pub async fn list_shareable_groups(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let ts = state.store.for_tenant(account.tenant.clone());
+    let groups = ts
+        .list_groups()
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let out: Vec<Value> = groups
+        .into_iter()
+        .map(|g| json!({ "id": g.id, "name": g.name }))
+        .collect();
+    Ok(Json(json!({ "groups": out })))
 }
 
 fn parse_time(s: &str) -> Result<OffsetDateTime, Problem> {
