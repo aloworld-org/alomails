@@ -317,6 +317,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./web:/srv:ro
       - ./downloads:/srv-downloads:ro
+      - ./landing:/srv-landing:ro
       - certs:/certs:ro
       - acme_challenge:/var/www/certbot:ro
       - caddy_data:/data

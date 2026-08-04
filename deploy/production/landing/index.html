@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>alomails — sovereign email &amp; calendar, hosted in Europe</title>
+    <meta
+      name="description"
+      content="alomails is private, sovereign email and calendar — hosted in Europe, never scanned, never sold. Use it as a real desktop app or in any browser."
+    />
+    <style>
+      /* Brand fonts, self-hosted — the sovereignty promise means no third-party
+         requests, not even for type. Latin + latin-ext cover accented copy. */
+      @font-face {
+        font-family: "EB Garamond";
+        src: url("/fonts/eb-garamond.woff2") format("woff2");
+        font-weight: 400 700;
+        font-display: swap;
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+          U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: "EB Garamond";
+        src: url("/fonts/eb-garamond-ext.woff2") format("woff2");
+        font-weight: 400 700;
+        font-display: swap;
+        unicode-range: U+0100-02AF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+          U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: "InterVar";
+        src: url("/fonts/inter.woff2") format("woff2");
+        font-weight: 100 900;
+        font-display: swap;
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+          U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2212, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: "InterVar";
+        src: url("/fonts/inter-ext.woff2") format("woff2");
+        font-weight: 100 900;
+        font-display: swap;
+        unicode-range: U+0100-02AF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB,
+          U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+
+      :root {
+        --terracotta: #e76f51;
+        --terracotta-dark: #cf5b3e;
+        --navy: #1f2b45;
+        --ink: #26303f;
+        --muted: #6a7688;
+        --cream: #faf7f2;
+        --cream-deep: #f3ede3;
+        --card: #ffffff;
+        --line: #e7e0d6;
+        --sage: #4c7a63;
+        --sans: "InterVar", system-ui, -apple-system, "Segoe UI", sans-serif;
+        --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+        --wrap: 1080px;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      html,
+      body {
+        margin: 0;
+      }
+      body {
+        background: var(--cream);
+        color: var(--ink);
+        font-family: var(--sans);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: var(--terracotta-dark);
+      }
+      .wrap {
+        width: 100%;
+        max-width: var(--wrap);
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* Top bar */
+      header.top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: color-mix(in srgb, var(--cream) 88%, transparent);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid var(--line);
+      }
+      .top .wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 66px;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        text-decoration: none;
+      }
+      .brand svg {
+        width: 26px;
+        height: 26px;
+      }
+      .brand b {
+        font-size: 1.28rem;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--navy);
+      }
+      .top nav {
+        display: flex;
+        align-items: center;
+        gap: 22px;
+      }
+      .top nav a.link {
+        color: var(--navy);
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 0.96rem;
+      }
+      .top nav a.link:hover {
+        color: var(--terracotta-dark);
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        text-decoration: none;
+        font-weight: 600;
+        border-radius: 11px;
+        padding: 11px 18px;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, transform 0.05s;
+      }
+      .btn.primary {
+        background: var(--terracotta);
+        color: #fff;
+      }
+      .btn.primary:hover {
+        background: var(--terracotta-dark);
+      }
+      .btn.primary:active {
+        transform: translateY(1px);
+      }
+      .btn.ghost {
+        background: transparent;
+        color: var(--navy);
+        border-color: var(--line);
+      }
+      .btn.ghost:hover {
+        border-color: var(--terracotta);
+        color: var(--terracotta-dark);
+      }
+      @media (max-width: 620px) {
+        .top nav a.link {
+          display: none;
+        }
+      }
+
+      /* Hero */
+      .hero {
+        padding: clamp(48px, 8vw, 96px) 0 clamp(40px, 6vw, 72px);
+      }
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: clamp(28px, 5vw, 60px);
+        align-items: center;
+      }
+      @media (max-width: 860px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--sage);
+        margin-bottom: 18px;
+      }
+      .eyebrow .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--sage);
+      }
+      h1 {
+        font-family: var(--serif);
+        font-weight: 600;
+        font-size: clamp(2.5rem, 6vw, 4rem);
+        line-height: 1.04;
+        letter-spacing: -0.01em;
+        color: var(--navy);
+        margin: 0 0 18px;
+        text-wrap: balance;
+      }
+      h1 em {
+        font-style: italic;
+        color: var(--terracotta-dark);
+      }
+      .lede {
+        font-size: clamp(1.08rem, 1.6vw, 1.24rem);
+        color: var(--muted);
+        max-width: 46ch;
+        margin: 0 0 28px;
+      }
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 22px;
+      }
+      .trust {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 20px;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      .trust span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .trust svg {
+        width: 15px;
+        height: 15px;
+        color: var(--sage);
+      }
+
+      /* Hero product frame — an abstract window, not a screenshot */
+      .frame {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 30px 60px -30px rgba(31, 43, 69, 0.35);
+        overflow: hidden;
+      }
+      .frame .chrome {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 13px 15px;
+        border-bottom: 1px solid var(--line);
+        background: var(--cream-deep);
+      }
+      .frame .chrome i {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: #d9cfc0;
+      }
+      .frame .chrome i:first-child {
+        background: var(--terracotta);
+      }
+      .frame .chrome .t {
+        margin-left: 8px;
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+      .frame .body {
+        display: grid;
+        grid-template-columns: 54px 1fr;
+        min-height: 300px;
+      }
+      .frame .rail {
+        background: var(--navy);
+        padding: 16px 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+      }
+      .frame .rail b {
+        width: 22px;
+        height: 22px;
+        border-radius: 7px;
+        background: rgba(255, 255, 255, 0.14);
+      }
+      .frame .rail b.on {
+        background: var(--terracotta);
+      }
+      .frame .list {
+        padding: 8px 0;
+      }
+      .frame .row {
+        display: grid;
+        grid-template-columns: 34px 1fr auto;
+        gap: 12px;
+        align-items: center;
+        padding: 13px 18px;
+        border-bottom: 1px solid var(--cream-deep);
+      }
+      .frame .row .av {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--terracotta), #f0a58e);
+      }
+      .frame .row.alt .av {
+        background: linear-gradient(135deg, var(--navy), #5a6b8c);
+      }
+      .frame .row.alt2 .av {
+        background: linear-gradient(135deg, var(--sage), #8fb7a3);
+      }
+      .frame .row .l1 {
+        height: 9px;
+        width: 62%;
+        border-radius: 5px;
+        background: #dfe4ea;
+        margin-bottom: 7px;
+      }
+      .frame .row .l2 {
+        height: 8px;
+        width: 84%;
+        border-radius: 5px;
+        background: #eef1f4;
+      }
+      .frame .row .when {
+        font-size: 0.72rem;
+        color: var(--muted);
+      }
+      .frame .invite {
+        margin: 12px 18px 16px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 14px;
+        display: flex;
+        gap: 11px;
+        align-items: center;
+        background: var(--cream);
+      }
+      .frame .invite .cal {
+        width: 34px;
+        height: 34px;
+        border-radius: 9px;
+        background: var(--terracotta);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+      }
+      .frame .invite .txt {
+        flex: 1;
+      }
+      .frame .invite .txt .a {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--navy);
+      }
+      .frame .invite .txt .b {
+        font-size: 0.74rem;
+        color: var(--muted);
+      }
+      .frame .invite .pill {
+        font-size: 0.72rem;
+        font-weight: 600;
+        color: #fff;
+        background: var(--sage);
+        border-radius: 999px;
+        padding: 4px 10px;
+      }
+
+      /* Section shell */
+      section.band {
+        padding: clamp(48px, 8vw, 88px) 0;
+      }
+      section.band.tint {
+        background: var(--cream-deep);
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+      .kicker {
+        font-family: var(--serif);
+        font-style: italic;
+        font-size: 1.15rem;
+        color: var(--terracotta-dark);
+        margin: 0 0 8px;
+      }
+      h2 {
+        font-family: var(--serif);
+        font-weight: 600;
+        font-size: clamp(1.9rem, 4vw, 2.7rem);
+        line-height: 1.1;
+        letter-spacing: -0.01em;
+        color: var(--navy);
+        margin: 0 0 14px;
+        text-wrap: balance;
+      }
+      .section-lede {
+        color: var(--muted);
+        font-size: 1.06rem;
+        max-width: 60ch;
+        margin: 0 0 40px;
+      }
+
+      /* Features */
+      .features {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+      @media (max-width: 720px) {
+        .features {
+          grid-template-columns: 1fr;
+        }
+      }
+      .feature {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 26px 24px;
+      }
+      .feature .ic {
+        width: 42px;
+        height: 42px;
+        border-radius: 11px;
+        background: #fbe6df;
+        color: var(--terracotta-dark);
+        display: grid;
+        place-items: center;
+        margin-bottom: 16px;
+      }
+      .feature .ic svg {
+        width: 22px;
+        height: 22px;
+      }
+      .feature h3 {
+        font-size: 1.16rem;
+        color: var(--navy);
+        margin: 0 0 8px;
+        letter-spacing: -0.01em;
+      }
+      .feature p {
+        color: var(--muted);
+        margin: 0;
+        font-size: 0.98rem;
+      }
+
+      /* Download */
+      .dl-head {
+        text-align: center;
+        margin-bottom: 36px;
+      }
+      .dl-head h2 {
+        margin-bottom: 10px;
+      }
+      .dl-head p {
+        color: var(--muted);
+        margin: 0 auto;
+        max-width: 52ch;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 18px;
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      @media (max-width: 560px) {
+        .cards {
+          grid-template-columns: 1fr;
+        }
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 26px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .card.rec {
+        border-color: var(--terracotta);
+        box-shadow: 0 10px 30px -16px rgba(231, 111, 81, 0.55);
+      }
+      .card .badge {
+        align-self: flex-start;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--terracotta-dark);
+        background: #fbe6df;
+        padding: 3px 9px;
+        border-radius: 999px;
+        margin-bottom: 8px;
+      }
+      .card .os {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 1.18rem;
+        font-weight: 650;
+        color: var(--navy);
+      }
+      .card .os svg {
+        width: 22px;
+        height: 22px;
+      }
+      .card .meta {
+        color: var(--muted);
+        font-size: 0.9rem;
+        margin: 4px 0 18px;
+      }
+      .card .btn {
+        margin-top: auto;
+        width: 100%;
+      }
+      .dl-foot {
+        text-align: center;
+        margin-top: 26px;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .dl-foot a {
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .dl-note {
+        text-align: center;
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 0.84rem;
+      }
+      .dl-note code {
+        background: #efe9e0;
+        padding: 1px 6px;
+        border-radius: 5px;
+      }
+
+      /* Footer */
+      footer.foot {
+        background: var(--navy);
+        color: #cdd5e4;
+        padding: 44px 0;
+      }
+      .foot .wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .foot .brand b {
+        color: #fff;
+      }
+      .foot .brand svg {
+        stroke: var(--terracotta);
+      }
+      .foot .tag {
+        color: #97a1b6;
+        font-size: 0.92rem;
+        margin-top: 4px;
+      }
+      .foot nav {
+        display: flex;
+        gap: 22px;
+        flex-wrap: wrap;
+      }
+      .foot nav a {
+        color: #cdd5e4;
+        text-decoration: none;
+        font-size: 0.95rem;
+      }
+      .foot nav a:hover {
+        color: #fff;
+      }
+      .foot .madein {
+        width: 100%;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        margin-top: 8px;
+        padding-top: 18px;
+        font-size: 0.85rem;
+        color: #8b95ab;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <a class="brand" href="/">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#e76f51" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
+            <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
+            <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
+            <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+          </svg>
+          <b>alomails</b>
+        </a>
+        <nav>
+          <a class="link" href="#features">Why alomails</a>
+          <a class="link" href="#download">Download</a>
+          <a class="btn ghost" href="https://mail.alomails.com">Open the app</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div>
+            <span class="eyebrow"><span class="dot"></span> Hosted in Europe</span>
+            <h1>Email that <em>answers to you.</em></h1>
+            <p class="lede">
+              alomails is private, sovereign email and calendar — kept in Europe, never
+              scanned, never sold. Run it as a real desktop app, or open it in any browser.
+            </p>
+            <div class="cta-row">
+              <a class="btn primary" href="#download">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                Download the app
+              </a>
+              <a class="btn ghost" href="https://mail.alomails.com">Open in your browser →</a>
+            </div>
+            <div class="trust">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg> Private by design</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /><path d="M2 12h20" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg> EU-hosted</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5" /></svg> No ads, no tracking</span>
+            </div>
+          </div>
+
+          <div class="frame" aria-hidden="true">
+            <div class="chrome"><i></i><i></i><i></i><span class="t">alomails</span></div>
+            <div class="body">
+              <div class="rail"><b class="on"></b><b></b><b></b></div>
+              <div class="list">
+                <div class="row"><div class="av"></div><div><div class="l1"></div><div class="l2"></div></div><div class="when">9:24</div></div>
+                <div class="row alt"><div class="av"></div><div><div class="l1"></div><div class="l2"></div></div><div class="when">Tue</div></div>
+                <div class="row alt2"><div class="av"></div><div><div class="l1"></div><div class="l2"></div></div><div class="when">Mon</div></div>
+                <div class="invite">
+                  <div class="cal">15</div>
+                  <div class="txt"><div class="a">Project kickoff</div><div class="b">Wed · 15:00 – 15:30</div></div>
+                  <span class="pill">Accept</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="band tint" id="features">
+        <div class="wrap">
+          <p class="kicker">Why alomails</p>
+          <h2>A workspace that's yours, not rented.</h2>
+          <p class="section-lede">
+            The convenience of the big providers, without handing them your correspondence.
+            alomails is built on the promise that your mail is yours alone.
+          </p>
+          <div class="features">
+            <div class="feature">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg></div>
+              <h3>Private &amp; sovereign</h3>
+              <p>Your mail lives in Europe, on infrastructure that answers to European law — not to an advertising business. Nothing is scanned to profile you, and nothing is ever sold.</p>
+            </div>
+            <div class="feature">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg></div>
+              <h3>Mail and calendar, together</h3>
+              <p>Write, schedule, and invite in one place. Send real invitations, RSVP to the ones you receive, and handle repeating events cleanly — the way Outlook and Gmail work, without the watching.</p>
+            </div>
+            <div class="feature">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg></div>
+              <h3>A real desktop app</h3>
+              <p>Not a browser tab — an installed app with its own window and icon, on Windows and macOS, that keeps itself up to date automatically. Prefer the web? The same alomails is one click away.</p>
+            </div>
+            <div class="feature">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg></div>
+              <h3>Yours, with no lock-in</h3>
+              <p>Open standards — IMAP for mail, CalDAV and CardDAV for calendar and contacts — mean your phone and other apps just work. And you can leave whenever you like, taking everything with you.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="band" id="download">
+        <div class="wrap">
+          <div class="dl-head">
+            <p class="kicker">Get the app</p>
+            <h2>Download alomails</h2>
+            <p>Install it once — it keeps itself up to date in the background. Your device is highlighted below.</p>
+          </div>
+
+          <div class="cards">
+            <div class="card" id="card-win">
+              <span class="badge" id="badge-win" hidden>Your device</span>
+              <div class="os">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.7 10 4.8v6.7H3zM10 12.5v6.7l-7-.9v-5.8zM11 4.6 21 3.3v8.2H11zM21 12.5v8.2l-10-1.3v-6.9z" /></svg>
+                Windows
+              </div>
+              <div class="meta">Windows 10 &amp; 11 · 64-bit</div>
+              <a class="btn primary" href="/download/alomails-windows-x64-setup.exe" download>Download for Windows</a>
+            </div>
+
+            <div class="card" id="card-mac">
+              <span class="badge" id="badge-mac" hidden>Your device</span>
+              <div class="os">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.9c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.1-2.8.9-3.5.9s-1.8-.8-3-.8c-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 7 1.2 9.3.8 1.1 1.7 2.4 2.9 2.3 1.2-.1 1.6-.7 3-.7s1.8.7 3 .7 2-1.1 2.8-2.2c.9-1.3 1.2-2.5 1.3-2.6-.1 0-2.5-1-2.5-3.8zM14.3 5.6c.6-.8 1.1-1.9 1-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2-.5 2.7-1.3z" /></svg>
+                macOS
+              </div>
+              <div class="meta">Apple Silicon &amp; Intel · universal</div>
+              <a class="btn primary" href="/download/alomails-mac-universal.dmg" download>Download for Mac</a>
+            </div>
+          </div>
+
+          <p class="dl-foot">
+            No desktop? <a href="https://mail.alomails.com">Open alomails in your browser →</a>
+          </p>
+          <p class="dl-note">
+            On first launch your system may warn about an “unidentified developer” — the app isn't
+            code-signed yet, nothing is wrong. On Windows choose <code>More info → Run anyway</code>;
+            on macOS right-click the app and choose <code>Open</code>.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap">
+        <div>
+          <a class="brand" href="/">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#e76f51" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M18 11V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2" />
+              <path d="M14 10V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v2" />
+              <path d="M10 10.5V6a2 2 0 0 0-2-2a2 2 0 0 0-2 2v8" />
+              <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+            </svg>
+            <b>alomails</b>
+          </a>
+          <div class="tag">Sovereign email &amp; calendar, hosted in Europe.</div>
+        </div>
+        <nav>
+          <a href="https://mail.alomails.com">Open the app</a>
+          <a href="#download">Download</a>
+          <a href="#features">Why alomails</a>
+        </nav>
+        <div class="madein">
+          <span>© <span id="yr">2026</span> alomails</span>
+          <span>Made in Europe · your data stays yours</span>
+        </div>
+      </div>
+    </footer>
+
+    <script src="/site.js" defer></script>
+  </body>
+</html>

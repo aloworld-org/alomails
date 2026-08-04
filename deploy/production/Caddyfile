@@ -79,3 +79,48 @@ https://mta-sts.{$DOMAIN} {
 	tls /certs/live/{$DOMAIN}/fullchain.pem /certs/live/{$DOMAIN}/privkey.pem
 	reverse_proxy alo-smtp:8461
 }
+
+# ── Marketing landing site on the apex (alomails.com) ──────────────────────
+# A separate static site: the app itself stays on mail.alomails.com, untouched.
+# The apex has its OWN certbot certificate (init-landing.sh issues it into
+# /certs/live/alomails.com/). These blocks must not be loaded until that cert
+# exists, or Caddy fails to start the site — see the landing runbook in README.
+http://alomails.com, http://www.alomails.com {
+	handle /.well-known/acme-challenge/* {
+		root * /var/www/certbot
+		file_server
+	}
+	handle {
+		redir https://alomails.com{uri} permanent
+	}
+}
+
+# www → apex canonical.
+https://www.alomails.com {
+	tls /certs/live/alomails.com/fullchain.pem /certs/live/alomails.com/privkey.pem
+	redir https://alomails.com{uri} permanent
+}
+
+https://alomails.com {
+	tls /certs/live/alomails.com/fullchain.pem /certs/live/alomails.com/privkey.pem
+	encode zstd gzip
+
+	# The same installer downloads served on mail.alomails.com/download (one
+	# shared directory), so the landing page's buttons work on the apex too.
+	handle_path /download/* {
+		root * /srv-downloads
+		file_server
+	}
+
+	# The static marketing site.
+	handle {
+		root * /srv-landing
+		file_server
+		header {
+			Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'"
+			X-Content-Type-Options nosniff
+			Referrer-Policy strict-origin-when-cross-origin
+			-Server
+		}
+	}
+}
