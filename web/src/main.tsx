@@ -10,6 +10,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
+import { checkForUpdatesInBackground } from "./platform/updater";
 
 const container = document.getElementById("root");
 if (container === null) {
@@ -21,3 +22,6 @@ createRoot(container).render(
     <App />
   </StrictMode>,
 );
+
+// Desktop app only: keep itself current. No-op in the browser.
+void checkForUpdatesInBackground();
