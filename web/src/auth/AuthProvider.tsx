@@ -7,6 +7,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
+import { apiFetch } from "../platform/runtime";
 import { login as oidcLogin, refresh as oidcRefresh, revoke } from "./oidcClient";
 import {
   accessTokenStale,
@@ -96,14 +97,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ...init,
         headers: { ...(init.headers ?? {}), authorization: `Bearer ${t}` },
       });
-      let response = await fetch(input, withAuth(token));
+      let response = await apiFetch(input, withAuth(token));
       if (response.status === 401) {
         const fresh = await renew();
         if (fresh === null) {
           await signOut();
           throw new Error("session expired");
         }
-        response = await fetch(input, withAuth(fresh));
+        response = await apiFetch(input, withAuth(fresh));
       }
       return response;
     },

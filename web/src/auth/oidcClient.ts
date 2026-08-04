@@ -3,7 +3,9 @@
 // for OIDC, its /oauth/authorize accepts the credentials as a POST form (the
 // IdP renders no login page of its own), so THIS app owns the login UI and
 // posts here; on success the server 302-redirects to our redirect URI with a
-// code, which we exchange for tokens. All endpoints are same-origin.
+// code, which we exchange for tokens. Endpoints resolve against `API_BASE`
+// (same-origin in the browser; the hosted server in the desktop app).
+import { API_BASE, apiFetch } from "../platform/runtime";
 import { challengeFor, createState, createVerifier } from "./pkce";
 import { decodeIdentity } from "./session";
 import type { Identity } from "./session";
@@ -11,11 +13,11 @@ import type { Identity } from "./session";
 const config = {
   clientId: "web",
   scope: "openid email profile",
-  authorizeEndpoint: "/oauth/authorize",
-  tokenEndpoint: "/oauth/token",
-  revokeEndpoint: "/oauth/revoke",
+  authorizeEndpoint: `${API_BASE}/oauth/authorize`,
+  tokenEndpoint: `${API_BASE}/oauth/token`,
+  revokeEndpoint: `${API_BASE}/oauth/revoke`,
   get redirectUri(): string {
-    return `${window.location.origin}/auth/callback`;
+    return `${API_BASE}/auth/callback`;
   },
 };
 
@@ -75,7 +77,7 @@ export async function login(
 
   let response: Response;
   try {
-    response = await fetch(config.authorizeEndpoint, {
+    response = await apiFetch(config.authorizeEndpoint, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body,
@@ -161,7 +163,7 @@ export async function refresh(refreshToken: string): Promise<LoginResult | null>
 /** Best-effort revoke of the refresh token on sign-out. */
 export async function revoke(refreshToken: string): Promise<void> {
   try {
-    await fetch(config.revokeEndpoint, {
+    await apiFetch(config.revokeEndpoint, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -176,7 +178,7 @@ export async function revoke(refreshToken: string): Promise<void> {
 }
 
 function fetchToken(body: URLSearchParams): Promise<Response> {
-  return fetch(config.tokenEndpoint, {
+  return apiFetch(config.tokenEndpoint, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body,

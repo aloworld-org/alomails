@@ -1,17 +1,17 @@
 // The public signup API (ADR 0018). Unauthenticated — a person has no
-// credentials yet — so these are plain fetches to the same origin, not the
-// bearer-authenticated JMAP client. Errors carry the server's `detail` string
-// where present so the page can show a specific reason.
+// credentials yet — so these are plain fetches to the API (`apiFetch`/`API_BASE`
+// resolve same-origin in the browser and the hosted server in the desktop app),
+// not the bearer-authenticated JMAP client. Errors carry the server's `detail`
+// string where present so the page can show a specific reason.
+import { API_BASE, apiFetch } from "../platform/runtime";
 
 /** A signup request failed; `message` is safe to show the user. */
 export class SignupError extends Error {}
 
-const base = () => window.location.origin;
-
 async function post<T>(path: string, body: unknown): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${base()}${path}`, {
+    res = await apiFetch(`${API_BASE}${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -29,7 +29,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 /** The domains open to personal signup. Empty means signup is disabled. */
 export async function signupDomains(): Promise<string[]> {
   try {
-    const res = await fetch(`${base()}/signup/domains`);
+    const res = await apiFetch(`${API_BASE}/signup/domains`);
     if (!res.ok) return [];
     const data = (await res.json()) as { domains?: string[] };
     return data.domains ?? [];

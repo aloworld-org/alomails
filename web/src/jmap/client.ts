@@ -34,6 +34,7 @@ import {
   type MethodCall,
   type Session,
 } from "./types";
+import { API_BASE } from "../platform/runtime";
 
 export class JmapError extends Error {
   constructor(message: string) {
@@ -376,7 +377,7 @@ export class JmapClient {
   /** Imports a `.vcf` document (one or many cards); returns how many were
    * imported and how many skipped. */
   async importContacts(vcf: string): Promise<{ imported: number; skipped: number }> {
-    const res = await this.#fetch(`${window.location.origin}/contacts/import`, {
+    const res = await this.#fetch(`${API_BASE}/contacts/import`, {
       method: "POST",
       headers: { "content-type": "text/vcard" },
       body: vcf,
@@ -387,7 +388,7 @@ export class JmapClient {
 
   /** The whole address book as a `.vcf` document (for download). */
   async exportContacts(): Promise<string> {
-    const res = await this.#fetch(`${window.location.origin}/contacts/export`, { method: "GET" });
+    const res = await this.#fetch(`${API_BASE}/contacts/export`, { method: "GET" });
     if (!res.ok) throw new JmapError(`export ${res.status}`);
     return await res.text();
   }
@@ -401,7 +402,7 @@ export class JmapClient {
     username: string;
     password: string;
   }): Promise<{ imported: number; skipped: number; failed: number }> {
-    const res = await this.#fetch(`${window.location.origin}/import/imap`, {
+    const res = await this.#fetch(`${API_BASE}/import/imap`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(input),
@@ -593,7 +594,7 @@ export class JmapClient {
   }
 
   async #admin(path: string, init: RequestInit): Promise<unknown> {
-    const res = await this.#fetch(`${window.location.origin}${path}`, init);
+    const res = await this.#fetch(`${API_BASE}${path}`, init);
     if (!res.ok) throw new JmapError(`admin ${res.status}`);
     return res.json();
   }
@@ -961,7 +962,7 @@ export class JmapClient {
    * Returns the improved text; throws if AI is unavailable or the backend fails
    * (the caller keeps the user's original draft either way). */
   async improveDraft(text: string): Promise<string> {
-    const res = await this.#fetch(`${window.location.origin}/ai/improve`, {
+    const res = await this.#fetch(`${API_BASE}/ai/improve`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
@@ -974,7 +975,7 @@ export class JmapClient {
   /** Summarize an email thread via the tenant's AI backend (ADR 0011); throws
    * if AI is unavailable (the reading pane then just hides the summary card). */
   async summarizeThread(text: string): Promise<string> {
-    const res = await this.#fetch(`${window.location.origin}/ai/summarize`, {
+    const res = await this.#fetch(`${API_BASE}/ai/summarize`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
@@ -987,7 +988,7 @@ export class JmapClient {
   /** Suggest up to three short, ready-to-send replies for a conversation.
    * `text` is the same flattened thread text used for summarization. */
   async smartReplies(text: string): Promise<string[]> {
-    const res = await this.#fetch(`${window.location.origin}/ai/replies`, {
+    const res = await this.#fetch(`${API_BASE}/ai/replies`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
@@ -1000,7 +1001,7 @@ export class JmapClient {
   /** Snooze conversations: hide the given messages (in `mailboxId`) until
    * `until` (Unix seconds); a server sweeper returns them to the Inbox. */
   async snooze(ids: string[], mailboxId: string, until: number): Promise<void> {
-    const res = await this.#fetch(`${window.location.origin}/snooze`, {
+    const res = await this.#fetch(`${API_BASE}/snooze`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ids, mailboxId, until }),
@@ -1012,7 +1013,7 @@ export class JmapClient {
 
   /** List the caller's documents (metadata only), newest-first. */
   async listDocs(): Promise<DocsSummaryDto[]> {
-    const res = await this.#fetch(`${window.location.origin}/docs`, { method: "GET" });
+    const res = await this.#fetch(`${API_BASE}/docs`, { method: "GET" });
     if (!res.ok) throw new JmapError(`listDocs ${res.status}`);
     const json = (await res.json()) as { documents: DocsSummaryDto[] };
     return json.documents;
@@ -1020,7 +1021,7 @@ export class JmapClient {
 
   /** Create a document and return it (with empty blocks). */
   async createDoc(title: string): Promise<DocsDto> {
-    const res = await this.#fetch(`${window.location.origin}/docs`, {
+    const res = await this.#fetch(`${API_BASE}/docs`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ title }),
@@ -1031,7 +1032,7 @@ export class JmapClient {
 
   /** Load one document with its blocks. */
   async getDoc(id: string): Promise<DocsDto> {
-    const res = await this.#fetch(`${window.location.origin}/docs/${encodeURIComponent(id)}`, {
+    const res = await this.#fetch(`${API_BASE}/docs/${encodeURIComponent(id)}`, {
       method: "GET",
     });
     if (!res.ok) throw new JmapError(`getDoc ${res.status}`);
@@ -1040,7 +1041,7 @@ export class JmapClient {
 
   /** Save a document's title and blocks. */
   async saveDoc(id: string, title: string, blocks: unknown[]): Promise<void> {
-    const res = await this.#fetch(`${window.location.origin}/docs/${encodeURIComponent(id)}`, {
+    const res = await this.#fetch(`${API_BASE}/docs/${encodeURIComponent(id)}`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ title, blocks }),
@@ -1050,7 +1051,7 @@ export class JmapClient {
 
   /** Delete a document. */
   async deleteDoc(id: string): Promise<void> {
-    const res = await this.#fetch(`${window.location.origin}/docs/${encodeURIComponent(id)}`, {
+    const res = await this.#fetch(`${API_BASE}/docs/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
     if (!res.ok) throw new JmapError(`deleteDoc ${res.status}`);
@@ -1083,7 +1084,7 @@ export class JmapClient {
   /** Set (epoch seconds) or clear (null) a flagged message's follow-up due-date.
    * Setting a date also flags the message server-side. */
   async setFlagDue(id: string, dueAt: number | null): Promise<void> {
-    const res = await this.#fetch(`${window.location.origin}/jmap/flag-due`, {
+    const res = await this.#fetch(`${API_BASE}/jmap/flag-due`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ emailId: id, dueAt }),
@@ -1176,7 +1177,7 @@ export class JmapClient {
     days: number,
   ): Promise<{ url: string; filename: string; size: number; expiresAt: number }> {
     const url =
-      `${window.location.origin}/share/upload` +
+      `${API_BASE}/share/upload` +
       `?name=${encodeURIComponent(file.name)}&days=${encodeURIComponent(String(days))}`;
     const res = await this.#fetch(url, {
       method: "POST",
@@ -1279,7 +1280,7 @@ export class JmapClient {
     rcptTo: string[],
     sendAt: number,
   ): Promise<void> {
-    const res = await this.#fetch(`${window.location.origin}/send-later`, {
+    const res = await this.#fetch(`${API_BASE}/send-later`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -1293,7 +1294,7 @@ export class JmapClient {
 
   /** Cancel a scheduled send: the draft returns to Drafts, editable again. */
   async cancelScheduledSend(emailId: string): Promise<void> {
-    const res = await this.#fetch(`${window.location.origin}/send-later/cancel`, {
+    const res = await this.#fetch(`${API_BASE}/send-later/cancel`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ emailId }),
@@ -1304,7 +1305,7 @@ export class JmapClient {
   /** Recent correspondents for compose recipient autocomplete, most frequent +
    * recent first. Fetched once per compose session; the client filters locally. */
   async recentContacts(): Promise<EmailAddress[]> {
-    const res = await this.#fetch(`${window.location.origin}/contacts`, { method: "GET" });
+    const res = await this.#fetch(`${API_BASE}/contacts`, { method: "GET" });
     if (!res.ok) throw new JmapError(`contacts ${res.status}`);
     const json = (await res.json()) as { contacts: EmailAddress[] };
     return json.contacts;
@@ -1312,7 +1313,7 @@ export class JmapClient {
 
   /** Calendar events overlapping `[fromIso, toIso)` (RFC 3339 UTC). */
   async calendarEvents(fromIso: string, toIso: string): Promise<CalendarEvent[]> {
-    const url = `${window.location.origin}/calendar/events?from=${encodeURIComponent(
+    const url = `${API_BASE}/calendar/events?from=${encodeURIComponent(
       fromIso,
     )}&to=${encodeURIComponent(toIso)}`;
     const res = await this.#fetch(url, { method: "GET" });
@@ -1325,7 +1326,7 @@ export class JmapClient {
    *  template, since range listings return occurrences sharing the master id. */
   async getEvent(id: string): Promise<CalendarEvent> {
     const res = await this.#fetch(
-      `${window.location.origin}/calendar/events/${encodeURIComponent(id)}`,
+      `${API_BASE}/calendar/events/${encodeURIComponent(id)}`,
       { method: "GET" },
     );
     if (!res.ok) throw new JmapError(`calendar get ${res.status}`);
@@ -1334,7 +1335,7 @@ export class JmapClient {
 
   /** Create a calendar event; returns the stored event (with its id). */
   async createEvent(input: EventInput): Promise<CalendarEvent> {
-    const res = await this.#fetch(`${window.location.origin}/calendar/events`, {
+    const res = await this.#fetch(`${API_BASE}/calendar/events`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(input),
@@ -1346,7 +1347,7 @@ export class JmapClient {
   /** Replace a calendar event's fields. */
   async updateEvent(id: string, input: EventInput): Promise<void> {
     const res = await this.#fetch(
-      `${window.location.origin}/calendar/events/${encodeURIComponent(id)}`,
+      `${API_BASE}/calendar/events/${encodeURIComponent(id)}`,
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -1359,7 +1360,7 @@ export class JmapClient {
   /** Delete a calendar event. */
   async deleteEvent(id: string): Promise<void> {
     const res = await this.#fetch(
-      `${window.location.origin}/calendar/events/${encodeURIComponent(id)}`,
+      `${API_BASE}/calendar/events/${encodeURIComponent(id)}`,
       { method: "DELETE" },
     );
     if (!res.ok) throw new JmapError(`calendar delete ${res.status}`);
@@ -1367,7 +1368,7 @@ export class JmapClient {
 
   /** The user's server-side mail filter rules. */
   async filters(): Promise<MailFilterRule[]> {
-    const res = await this.#fetch(`${window.location.origin}/filters`, { method: "GET" });
+    const res = await this.#fetch(`${API_BASE}/filters`, { method: "GET" });
     if (!res.ok) throw new JmapError(`filters ${res.status}`);
     const json = (await res.json()) as { rules: MailFilterRule[] };
     return json.rules;
@@ -1376,7 +1377,7 @@ export class JmapClient {
   /** Replace the user's mail filter rules; the server recompiles the delivery
    * script. Returns the stored rules. */
   async saveFilters(rules: MailFilterRule[]): Promise<MailFilterRule[]> {
-    const res = await this.#fetch(`${window.location.origin}/filters`, {
+    const res = await this.#fetch(`${API_BASE}/filters`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ rules }),
@@ -1388,7 +1389,7 @@ export class JmapClient {
 
   /** Block a sender: append a rule filing their mail into Junk (idempotent). */
   async blockSender(email: string): Promise<void> {
-    const res = await this.#fetch(`${window.location.origin}/filters/block`, {
+    const res = await this.#fetch(`${API_BASE}/filters/block`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email }),
@@ -1399,7 +1400,7 @@ export class JmapClient {
   /** Perform the RFC 8058 one-click unsubscribe for a message (server-side POST
    * to the sender's List-Unsubscribe endpoint, SSRF-guarded). */
   async unsubscribe(emailId: string): Promise<void> {
-    const res = await this.#fetch(`${window.location.origin}/jmap/unsubscribe`, {
+    const res = await this.#fetch(`${API_BASE}/jmap/unsubscribe`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ emailId }),
