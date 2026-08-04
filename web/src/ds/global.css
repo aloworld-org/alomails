@@ -125,3 +125,42 @@ svg {
     font-size: 16px;
   }
 }
+
+/* Desktop shell (Tauri): the interface should feel like a native app, not a web
+   page — chrome text (headings, labels, buttons, the rail) is not selectable.
+   Real content stays selectable: form fields, the compose editor, and message
+   bodies (marked with [data-selectable]). HTML email renders in its own iframe,
+   which is a separate document and unaffected by this rule. Scoped to `.desktop`
+   (added only in the desktop app), so the browser keeps normal selection. */
+.desktop {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.desktop input,
+.desktop textarea,
+.desktop select,
+.desktop [contenteditable="true"],
+.desktop [data-selectable],
+.desktop [data-selectable] * {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Desktop shell: a fixed app frame, not a scrolling web page. The window itself
+   never scrolls (page-level scroll reads as a website and leaves empty space
+   below the content) — only inner panels do, via their own overflow. And hide
+   the scrollbars entirely: the visible web scrollbar is one of the biggest "this
+   is a browser" tells; content still scrolls by wheel/trackpad. Scoped to
+   `.desktop` so the browser app keeps its normal scrollbars. */
+.desktop,
+.desktop body {
+  overflow: hidden;
+}
+.desktop * {
+  scrollbar-width: none; /* Firefox/spec */
+}
+.desktop *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none; /* Chromium/WebView2 */
+}

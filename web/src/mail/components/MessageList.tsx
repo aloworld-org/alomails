@@ -37,6 +37,8 @@ import styles from "./MessageList.module.css";
 interface MessageListProps {
   folderName: string;
   emails: Async<EmailHeaders[]>;
+  /** A search term seeded from outside (Home search bar); pre-fills the box. */
+  initialQuery?: string;
   selectedThreadId: string | null;
   readIds: ReadonlySet<string>;
   flagOverrides: ReadonlyMap<string, boolean>;
@@ -85,6 +87,7 @@ function CheckBox({ on }: { on: boolean }) {
 
 export function MessageList({
   folderName,
+  initialQuery = "",
   flat,
   onToggleView,
   categories,
@@ -103,8 +106,12 @@ export function MessageList({
   onToggleFlag,
 }: MessageListProps) {
   const client = useJmapClient();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery);
   const [results, setResults] = useState<EmailHeaders[] | null>(null);
+  // Adopt a new seed from the Home search bar when it arrives.
+  useEffect(() => {
+    if (initialQuery.length > 0) setQuery(initialQuery);
+  }, [initialQuery]);
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
   const isSearch = query.trim() !== "";
 

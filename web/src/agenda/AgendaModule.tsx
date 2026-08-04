@@ -1,47 +1,70 @@
-// The Calendar (Agenda) module — the Outlook/Google-style shell: a left sidebar
-// with a "New event" button and a mini-month navigator, and a main area with a
-// toolbar (Today, prev/next, period label, Month/Week switch) over the active
-// view. All data goes through the authenticated /calendar API on the store; the
-// UI works in local time and converts at the edges.
+// The Calendar (Agenda) module — an Outlook/Google-style three-pane shell: a
+// left sidebar (New event, mini-month, and the calendar list with colour toggles
+// that filter the grid), the main view (Day / Week / Month / Agenda over a
+// toolbar), and a right day-panel with the selected day's schedule and what's
+// upcoming. All data goes through the authenticated /calendar API; the UI works
+// in local time and converts at the edges.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Share2, Trash2 } from "lucide-react";
+import {
+  CalendarPlus,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Share2,
+  Trash2,
+} from "lucide-react";
 
 import { getLocale, strings } from "../i18n";
 import { useJmapClient, type Calendar, type CalendarEvent, type EventInput } from "../jmap";
-import { Spinner } from "../ds";
+import { Spinner, useDialogs } from "../ds";
 import { EventModal } from "./EventModal";
 import { ShareDialog } from "./ShareDialog";
 import { MiniMonth } from "./MiniMonth";
 import { MonthView } from "./MonthView";
 import { WeekView } from "./WeekView";
+import { AgendaListView } from "./AgendaListView";
+import { DayPanel } from "./DayPanel";
+import { calendarColorMap } from "./colors";
 import { addDays, addMonths, startOfDay, startOfMonth, startOfWeek, weekDays } from "./dates";
 import styles from "./AgendaModule.module.css";
 
-type View = "month" | "week";
+type View = "day" | "week" | "month" | "agenda";
 type Editing = {
-  /** The seed event: the clicked occurrence for a recurring instance, the event
-   *  itself for a one-off, or null when creating. */
   event: CalendarEvent | null;
   initialStart: Date;
-  /** For a recurring event, the RFC 3339 ORIGINAL slot of the clicked occurrence
-   *  — lets "this event" skip or override just that instance. */
   occurrenceStart?: string;
-  /** The stored series master (recurring edits only) — its base time anchors a
-   *  whole-series ("all events") edit. */
   master?: CalendarEvent;
 } | null;
 
+const VIEWS: { id: View; label: () => string }[] = [
+  { id: "day", label: () => strings.agendaDay },
+  { id: "week", label: () => strings.agendaWeek },
+  { id: "month", label: () => strings.agendaMonth },
+  { id: "agenda", label: () => strings.agendaAgenda },
+];
+
 export function AgendaModule() {
   const client = useJmapClient();
+  const { prompt } = useDialogs();
   const locale = getLocale();
   const today = useMemo(() => startOfDay(new Date()), []);
   const [view, setView] = useState<View>("month");
   const [anchor, setAnchor] = useState<Date>(today);
+  const [selectedDay, setSelectedDay] = useState<Date>(today);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [calendars, setCalendars] = useState<Calendar[]>([]);
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Editing>(null);
   const [sharing, setSharing] = useState<Calendar | null>(null);
+
+  const colorMap = useMemo(() => calendarColorMap(calendars), [calendars]);
+  const colorOf = useCallback((id: string) => colorMap.get(id) ?? "#e76f51", [colorMap]);
+  const visibleEvents = useMemo(
+    () => events.filter((e) => !hidden.has(e.calendarId)),
+    [events, hidden],
+  );
 
   const loadCalendars = useCallback(async () => {
     try {
@@ -55,8 +78,17 @@ export function AgendaModule() {
     void loadCalendars();
   }, [loadCalendars]);
 
+  function toggleCalendar(id: string) {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   async function newCalendar() {
-    const name = window.prompt(strings.agendaNewCalendarPrompt)?.trim();
+    const name = (await prompt({ message: strings.agendaNewCalendarPrompt }))?.trim();
     if (name === undefined || name === "") return;
     try {
       await client.createCalendar(name);
@@ -75,14 +107,17 @@ export function AgendaModule() {
     }
   }
 
-  // The visible [from, to) window for the current view.
+  // The window to load: the visible view, widened to at least three weeks so the
+  // day-panel's "upcoming" always has something ahead of the selected day.
   const [from, to] = useMemo<[Date, Date]>(() => {
-    if (view === "month") {
-      const first = startOfWeek(startOfMonth(anchor)); // 6-week grid start
-      return [first, addDays(first, 42)];
-    }
-    const first = startOfWeek(anchor);
-    return [first, addDays(first, 7)];
+    const base =
+      view === "month"
+        ? startOfWeek(startOfMonth(anchor))
+        : view === "week"
+          ? startOfWeek(anchor)
+          : startOfDay(anchor);
+    const span = view === "month" ? 42 : view === "week" ? 7 : view === "agenda" ? 30 : 1;
+    return [base, addDays(base, Math.max(span, 21))];
   }, [view, anchor]);
 
   const reload = useCallback(async () => {
@@ -105,6 +140,12 @@ export function AgendaModule() {
     if (view === "month") {
       return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(anchor);
     }
+    if (view === "day") {
+      return new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(anchor);
+    }
+    if (view === "agenda") {
+      return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(anchor);
+    }
     const week = weekDays(anchor);
     const fmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
     const yr = new Intl.DateTimeFormat(locale, { year: "numeric" }).format(week[6]);
@@ -112,17 +153,27 @@ export function AgendaModule() {
   }, [view, anchor, locale]);
 
   function step(dir: -1 | 1) {
-    setAnchor((a) => (view === "month" ? addMonths(a, dir) : addDays(startOfWeek(a), dir * 7)));
+    setAnchor((a) => {
+      if (view === "month" || view === "agenda") return addMonths(a, dir);
+      if (view === "day") return addDays(startOfDay(a), dir);
+      return addDays(startOfWeek(a), dir * 7);
+    });
+  }
+
+  function goToday() {
+    setAnchor(today);
+    setSelectedDay(today);
+  }
+
+  function pickDay(day: Date) {
+    setSelectedDay(day);
+    setAnchor(day);
   }
 
   function openNew(at: Date) {
     setEditing({ event: null, initialStart: at });
   }
 
-  // Editing a recurring occurrence seeds the form from THAT instance (its own
-  // time + the series' text), and loads the stored master too — so "this event"
-  // overrides just this instance while "all events" shifts the whole series by
-  // however much the user moved it. A one-off opens directly.
   async function openEvent(e: CalendarEvent) {
     if (e.recurrence !== null) {
       try {
@@ -130,7 +181,6 @@ export function AgendaModule() {
         setEditing({
           event: e,
           initialStart: new Date(e.startsAt),
-          // The instance's ORIGINAL slot — stable across a move — for edit/skip.
           occurrenceStart: e.recurrenceId ?? e.startsAt,
           master,
         });
@@ -149,39 +199,90 @@ export function AgendaModule() {
     await reload();
   }
 
-  /** Override just one occurrence of a series (edit this instance in place). */
   async function saveOccurrence(id: string, occurrence: string, input: EventInput) {
     await client.overrideOccurrence(id, occurrence, input);
     setEditing(null);
     await reload();
   }
 
-  /** Delete the whole event/series, or — with `occurrence` — just that instance. */
   async function remove(id: string, occurrence?: string) {
     await client.deleteEvent(id, occurrence);
     setEditing(null);
     await reload();
   }
 
-  // A sensible default start when the user clicks a bare day (9:00 that day).
   function dayAtNine(day: Date): Date {
     const d = startOfDay(day);
     d.setHours(9, 0, 0, 0);
     return d;
   }
 
+  const mine = calendars.filter((c) => c.role === "owner");
+  const others = calendars.filter((c) => c.role !== "owner");
+
+  const calendarRow = (c: Calendar) => {
+    const visible = !hidden.has(c.id);
+    const color = colorOf(c.id);
+    return (
+      <div key={c.id} className={styles.calItem}>
+        <button
+          type="button"
+          className={styles.calToggle}
+          onClick={() => toggleCalendar(c.id)}
+          aria-pressed={visible}
+          aria-label={c.name}
+        >
+          <span
+            className={`${styles.calCheck} ${visible ? styles.calCheckOn : ""}`}
+            style={{ ["--cal"]: color } as React.CSSProperties}
+          >
+            {visible && <Check size={12} strokeWidth={3} />}
+          </span>
+          <span className={styles.calName}>{c.name}</span>
+        </button>
+        {c.role !== "owner" && (
+          <span className={styles.calShared}>
+            {c.role === "editor" ? strings.agendaShareEditor : strings.agendaShareViewer}
+          </span>
+        )}
+        {c.role === "owner" && (
+          <button
+            type="button"
+            className={styles.calDel}
+            onClick={() => setSharing(c)}
+            aria-label={strings.agendaShare}
+            title={strings.agendaShare}
+          >
+            <Share2 size={13} />
+          </button>
+        )}
+        {c.role === "owner" && c.kind !== "personal" && (
+          <button
+            type="button"
+            className={styles.calDel}
+            onClick={() => void removeCalendar(c.id)}
+            aria-label={strings.agendaDeleteCalendar}
+            title={strings.agendaDeleteCalendar}
+          >
+            <Trash2 size={13} />
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className={styles.agenda}>
       <aside className={styles.sidebar}>
-        <button className={styles.newBtn} onClick={() => openNew(dayAtNine(today))}>
+        <button className={styles.newBtn} onClick={() => openNew(dayAtNine(selectedDay))}>
           <CalendarPlus size={18} />
           {strings.agendaNewEvent}
         </button>
-        <MiniMonth anchor={anchor} today={today} onPick={(d) => setAnchor(d)} />
+        <MiniMonth anchor={anchor} today={today} onPick={pickDay} />
 
         <div className={styles.calList}>
           <div className={styles.calListHead}>
-            <span>{strings.agendaCalendars}</span>
+            <span>{strings.agendaMyCalendars}</span>
             <button
               type="button"
               className={styles.calAdd}
@@ -192,51 +293,22 @@ export function AgendaModule() {
               <Plus size={15} />
             </button>
           </div>
-          {calendars.map((c) => (
-            <div key={c.id} className={styles.calItem}>
-              <span
-                className={styles.calDot}
-                style={{ background: c.color ?? "var(--terracotta, #e76f51)" }}
-                aria-hidden="true"
-              />
-              <span className={styles.calName}>{c.name}</span>
-              {/* Shared-with-me: show the access level, no owner controls. */}
-              {c.role !== "owner" && (
-                <span className={styles.calShared}>
-                  {c.role === "editor" ? strings.agendaShareEditor : strings.agendaShareViewer}
-                </span>
-              )}
-              {/* Owner controls: share any calendar; delete only non-personal ones. */}
-              {c.role === "owner" && (
-                <button
-                  type="button"
-                  className={styles.calDel}
-                  onClick={() => setSharing(c)}
-                  aria-label={strings.agendaShare}
-                  title={strings.agendaShare}
-                >
-                  <Share2 size={13} />
-                </button>
-              )}
-              {c.role === "owner" && c.kind !== "personal" && (
-                <button
-                  type="button"
-                  className={styles.calDel}
-                  onClick={() => void removeCalendar(c.id)}
-                  aria-label={strings.agendaDeleteCalendar}
-                  title={strings.agendaDeleteCalendar}
-                >
-                  <Trash2 size={13} />
-                </button>
-              )}
-            </div>
-          ))}
+          {mine.map(calendarRow)}
         </div>
+
+        {others.length > 0 && (
+          <div className={styles.calList}>
+            <div className={styles.calListHead}>
+              <span>{strings.agendaOtherCalendars}</span>
+            </div>
+            {others.map(calendarRow)}
+          </div>
+        )}
       </aside>
 
       <section className={styles.main}>
         <header className={styles.toolbar}>
-          <button className={styles.todayBtn} onClick={() => setAnchor(today)}>
+          <button className={styles.todayBtn} onClick={goToday}>
             {strings.agendaToday}
           </button>
           <button className={styles.navBtn} onClick={() => step(-1)} aria-label={strings.agendaPrev}>
@@ -248,18 +320,15 @@ export function AgendaModule() {
           <h1 className={styles.periodLabel}>{label}</h1>
           {loading && <Spinner size={16} />}
           <div className={styles.viewSwitch}>
-            <button
-              className={view === "month" ? styles.viewActive : ""}
-              onClick={() => setView("month")}
-            >
-              {strings.agendaMonth}
-            </button>
-            <button
-              className={view === "week" ? styles.viewActive : ""}
-              onClick={() => setView("week")}
-            >
-              {strings.agendaWeek}
-            </button>
+            {VIEWS.map((v) => (
+              <button
+                key={v.id}
+                className={view === v.id ? styles.viewActive : ""}
+                onClick={() => setView(v.id)}
+              >
+                {v.label()}
+              </button>
+            ))}
           </div>
         </header>
 
@@ -268,21 +337,40 @@ export function AgendaModule() {
             <MonthView
               anchor={anchor}
               today={today}
-              events={events}
-              onDayClick={(day) => openNew(dayAtNine(day))}
+              selectedDay={selectedDay}
+              events={visibleEvents}
+              colorOf={colorOf}
+              onDayClick={pickDay}
               onEventClick={(e) => void openEvent(e)}
             />
-          ) : (
+          ) : view === "week" ? (
             <WeekView
               anchor={anchor}
               today={today}
-              events={events}
+              events={visibleEvents}
               onSlotClick={(at) => openNew(at)}
+              onEventClick={(e) => void openEvent(e)}
+            />
+          ) : (
+            <AgendaListView
+              from={view === "day" ? startOfDay(anchor) : anchor}
+              to={view === "day" ? addDays(startOfDay(anchor), 1) : to}
+              today={today}
+              events={visibleEvents}
+              colorOf={colorOf}
               onEventClick={(e) => void openEvent(e)}
             />
           )}
         </div>
       </section>
+
+      <DayPanel
+        day={selectedDay}
+        today={today}
+        events={visibleEvents}
+        colorOf={colorOf}
+        onEventClick={(e) => void openEvent(e)}
+      />
 
       {editing !== null && (
         <EventModal
@@ -298,9 +386,7 @@ export function AgendaModule() {
         />
       )}
 
-      {sharing !== null && (
-        <ShareDialog calendar={sharing} onClose={() => setSharing(null)} />
-      )}
+      {sharing !== null && <ShareDialog calendar={sharing} onClose={() => setSharing(null)} />}
     </div>
   );
 }

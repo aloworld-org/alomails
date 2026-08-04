@@ -26,6 +26,7 @@ import {
 
 import { strings } from "../../i18n";
 import { surface } from "../../product";
+import { useDialogs } from "../../ds";
 import styles from "./RichTextEditor.module.css";
 
 /** Largest inline image edge (px); wider images are downscaled before embedding. */
@@ -110,6 +111,7 @@ async function imageDataUrl(file: File): Promise<string> {
 }
 
 export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }: RichTextEditorProps) {
+  const { prompt } = useDialogs();
   const ref = useRef<HTMLDivElement>(null);
   const savedRange = useRef<Range | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -192,9 +194,9 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }
     emit();
   }
 
-  function addLink() {
+  async function addLink() {
     saveRange();
-    const url = window.prompt(strings.linkPrompt);
+    const url = await prompt({ message: strings.linkPrompt });
     if (url === null || url.trim().length === 0) return;
     execRestored("createLink", url.trim());
   }

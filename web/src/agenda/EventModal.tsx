@@ -2,15 +2,37 @@
 // converts to/from the UTC RFC 3339 the API speaks at save time. All-day events
 // use date-only bounds (end is exclusive, so a one-day event ends the next
 // midnight).
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Bell, MapPin, Trash2, Users, X } from "lucide-react";
+import {
+  Bell,
+  CalendarDays,
+  Check,
+  Clock,
+  FileText,
+  Globe,
+  MapPin,
+  Repeat as RepeatIcon,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button } from "../ds";
 import { useJmapClient, type Calendar, type CalendarEvent, type EventInput } from "../jmap";
 import { addDays, toDateInput, toLocalInput } from "./dates";
+import { calendarColorMap } from "./colors";
 import styles from "./AgendaModule.module.css";
+
+/** The date part (YYYY-MM-DD) of a `datetime-local` string. */
+function dateOf(local: string): string {
+  return local.slice(0, 10);
+}
+/** The time part (HH:mm) of a `datetime-local` string. */
+function timeOf(local: string): string {
+  return local.slice(11, 16);
+}
 
 interface Props {
   /** The event being edited, or `null` for a new one. */
@@ -123,6 +145,19 @@ export function EventModal({
   const [availability, setAvailability] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const client = useJmapClient();
+
+  const colorMap = useMemo(() => calendarColorMap(calendars), [calendars]);
+
+  // The viewer's timezone, shown read-only so they know what wall-time the
+  // fields mean (times are entered locally and stored as UTC).
+  const tzLabel = useMemo(() => {
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const offMin = -new Date().getTimezoneOffset();
+    const sign = offMin >= 0 ? "+" : "-";
+    const hh = String(Math.floor(Math.abs(offMin) / 60)).padStart(2, "0");
+    const mm = String(Math.abs(offMin) % 60).padStart(2, "0");
+    return `(GMT${sign}${hh}:${mm}) ${zone.replace(/_/g, " ")}`;
+  }, []);
 
   function guestList(): string[] {
     return guests
@@ -256,144 +291,239 @@ export function EventModal({
 
   return (
     <div className={styles.modalScrim} role="dialog" aria-modal="true" onMouseDown={onClose}>
-      <form className={styles.modal} onSubmit={submitSeries} onMouseDown={(e) => e.stopPropagation()}>
-        <div className={styles.modalHead}>
-          <h2>{event ? strings.agendaEditEventTitle : strings.agendaNewEventTitle}</h2>
-          <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.agendaCancel}>
+      <form className={styles.emModal} onSubmit={submitSeries} onMouseDown={(e) => e.stopPropagation()}>
+        <div className={styles.emHead}>
+          <span className={styles.emHeadIcon}>
+            <CalendarDays size={20} />
+          </span>
+          <div className={styles.emHeadText}>
+            <h2>{event ? strings.agendaEditEventTitle : strings.agendaNewEventTitle}</h2>
+            <p>{event ? strings.agendaEditEventSubtitle : strings.agendaNewEventSubtitle}</p>
+          </div>
+          <button
+            type="button"
+            className={styles.emClose}
+            onClick={onClose}
+            aria-label={strings.agendaCancel}
+          >
             <X size={18} />
           </button>
         </div>
 
-        {/* A disabled fieldset makes every control read-only in one place; it
-            lays out transparently (display:contents) so nothing shifts. */}
-        <fieldset disabled={readOnly} style={{ display: "contents" }}>
-        <input
-          className={styles.titleInput}
-          placeholder={strings.agendaEventTitle}
-          value={summary}
-          onChange={(e) => setSummary(e.target.value)}
-          autoCapitalize="sentences"
-          required
-          autoFocus
-        />
-
-        <label className={styles.allDayRow}>
-          <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
-          <span>{strings.agendaAllDay}</span>
-        </label>
-
-        {allDay ? (
-          <div className={styles.timeRow}>
-            <label className={styles.field}>
-              <span>{strings.agendaEventStart}</span>
-              <input type="date" value={startDay} onChange={(e) => setStartDay(e.target.value)} required />
-            </label>
-            <label className={styles.field}>
-              <span>{strings.agendaEventEnd}</span>
-              <input type="date" value={endDay} onChange={(e) => setEndDay(e.target.value)} required />
-            </label>
-          </div>
-        ) : (
-          <div className={styles.timeRow}>
-            <label className={styles.field}>
-              <span>{strings.agendaEventStart}</span>
-              <input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} required />
-            </label>
-            <label className={styles.field}>
-              <span>{strings.agendaEventEnd}</span>
-              <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} required />
-            </label>
-          </div>
-        )}
-
-        {editable.length > 1 && (
-          <label className={styles.field}>
-            <span>{strings.agendaCalendar}</span>
-            <select value={calendarId} onChange={(e) => setCalendarId(e.target.value)}>
-              {editable.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-
-        <label className={styles.field}>
-          <span>{strings.agendaRepeat}</span>
-          <select value={repeat} onChange={(e) => setRepeat(e.target.value as Repeat)}>
-            <option value="none">{strings.agendaRepeatNone}</option>
-            <option value="daily">{strings.agendaRepeatDaily}</option>
-            <option value="weekly">{strings.agendaRepeatWeekly}</option>
-            <option value="weekdays">{strings.agendaRepeatWeekdays}</option>
-            <option value="monthly">{strings.agendaRepeatMonthly}</option>
-            <option value="yearly">{strings.agendaRepeatYearly}</option>
-          </select>
-        </label>
-
-        <label className={styles.field}>
-          <span>
-            <Bell size={13} /> {strings.agendaReminder}
-          </span>
-          <select value={reminder} onChange={(e) => setReminder(e.target.value)}>
-            <option value="">{strings.agendaReminderNone}</option>
-            <option value="0">{strings.agendaReminderAtStart}</option>
-            <option value="5">{strings.agendaReminder5}</option>
-            <option value="10">{strings.agendaReminder10}</option>
-            <option value="15">{strings.agendaReminder15}</option>
-            <option value="30">{strings.agendaReminder30}</option>
-            <option value="60">{strings.agendaReminder60}</option>
-            <option value="1440">{strings.agendaReminder1Day}</option>
-          </select>
-        </label>
-
-        <label className={styles.field}>
-          <span>
-            <MapPin size={13} /> {strings.agendaEventLocation}
-          </span>
-          <input value={location} onChange={(e) => setLocation(e.target.value)} />
-        </label>
-
-        <label className={styles.field}>
-          <span>
-            <Users size={13} /> {strings.agendaEventGuests}
-          </span>
+        <fieldset disabled={readOnly} className={styles.emBody}>
           <input
-            value={guests}
-            onChange={(e) => setGuests(e.target.value)}
-            placeholder={strings.agendaGuestsPlaceholder}
-            inputMode="email"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
+            className={styles.emTitle}
+            placeholder={strings.agendaEventTitle}
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            autoCapitalize="sentences"
+            required
+            autoFocus
           />
-          <small className={styles.fieldHint}>{strings.agendaGuestsHint}</small>
-          <div className={styles.availabilityRow}>
-            <button
-              type="button"
-              className={styles.linkBtn}
-              onClick={() => void checkAvailability()}
-              disabled={checking}
-            >
-              {checking ? strings.agendaAvailChecking : strings.agendaCheckAvailability}
-            </button>
-            {availability !== null && (
-              <small className={styles.fieldHint}>{availability}</small>
-            )}
-          </div>
-          {event?.attendeeStatus && event.attendeeStatus.length > 0 && (
-            <small className={styles.fieldHint}>
-              {event.attendeeStatus
-                .map((a) => `${a.email} — ${rsvpLabel(a.status)}`)
-                .join(" · ")}
-            </small>
-          )}
-        </label>
 
-        <label className={styles.field}>
-          <span>{strings.agendaEventDescription}</span>
-          <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-        </label>
+          <label className={styles.emToggleRow}>
+            <input
+              type="checkbox"
+              className={styles.emSwitch}
+              checked={allDay}
+              onChange={(e) => setAllDay(e.target.checked)}
+            />
+            <span>{strings.agendaAllDay}</span>
+          </label>
+
+          <div className={styles.emTwoCol}>
+            <div className={styles.emField}>
+              <span className={styles.emLabel}>{strings.agendaEventStart}</span>
+              <div className={styles.emDateTime}>
+                {allDay ? (
+                  <span className={styles.emControl}>
+                    <CalendarDays size={15} className={styles.emControlIcon} />
+                    <input type="date" value={startDay} onChange={(e) => setStartDay(e.target.value)} required />
+                  </span>
+                ) : (
+                  <>
+                    <span className={styles.emControl}>
+                      <CalendarDays size={15} className={styles.emControlIcon} />
+                      <input
+                        type="date"
+                        value={dateOf(start)}
+                        onChange={(e) => setStart(`${e.target.value}T${timeOf(start)}`)}
+                        required
+                      />
+                    </span>
+                    <span className={styles.emControl}>
+                      <Clock size={15} className={styles.emControlIcon} />
+                      <input
+                        type="time"
+                        value={timeOf(start)}
+                        onChange={(e) => setStart(`${dateOf(start)}T${e.target.value}`)}
+                        required
+                      />
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+            <div className={styles.emField}>
+              <span className={styles.emLabel}>{strings.agendaEventEnd}</span>
+              <div className={styles.emDateTime}>
+                {allDay ? (
+                  <span className={styles.emControl}>
+                    <CalendarDays size={15} className={styles.emControlIcon} />
+                    <input type="date" value={endDay} onChange={(e) => setEndDay(e.target.value)} required />
+                  </span>
+                ) : (
+                  <>
+                    <span className={styles.emControl}>
+                      <CalendarDays size={15} className={styles.emControlIcon} />
+                      <input
+                        type="date"
+                        value={dateOf(end)}
+                        onChange={(e) => setEnd(`${e.target.value}T${timeOf(end)}`)}
+                        required
+                      />
+                    </span>
+                    <span className={styles.emControl}>
+                      <Clock size={15} className={styles.emControlIcon} />
+                      <input
+                        type="time"
+                        value={timeOf(end)}
+                        onChange={(e) => setEnd(`${dateOf(end)}T${e.target.value}`)}
+                        required
+                      />
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.emTz}>
+            <Globe size={15} className={styles.emControlIcon} />
+            <span>{tzLabel}</span>
+          </div>
+
+          {editable.length > 1 && (
+            <div className={styles.emField}>
+              <span className={styles.emLabel}>{strings.agendaCalendar}</span>
+              <div className={styles.emControl}>
+                <span
+                  className={styles.emCalDot}
+                  style={{ background: colorMap.get(calendarId) ?? "#e76f51" }}
+                  aria-hidden
+                />
+                <select value={calendarId} onChange={(e) => setCalendarId(e.target.value)}>
+                  {editable.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          <div className={styles.emDivider} />
+
+          <div className={styles.emTwoCol}>
+            <div className={styles.emField}>
+              <span className={styles.emLabel}>
+                <RepeatIcon size={15} /> {strings.agendaRepeat}
+              </span>
+              <div className={styles.emControl}>
+                <select value={repeat} onChange={(e) => setRepeat(e.target.value as Repeat)}>
+                  <option value="none">{strings.agendaRepeatNone}</option>
+                  <option value="daily">{strings.agendaRepeatDaily}</option>
+                  <option value="weekly">{strings.agendaRepeatWeekly}</option>
+                  <option value="weekdays">{strings.agendaRepeatWeekdays}</option>
+                  <option value="monthly">{strings.agendaRepeatMonthly}</option>
+                  <option value="yearly">{strings.agendaRepeatYearly}</option>
+                </select>
+              </div>
+            </div>
+            <div className={styles.emField}>
+              <span className={styles.emLabel}>
+                <Bell size={15} /> {strings.agendaReminder}
+              </span>
+              <div className={styles.emControl}>
+                <select value={reminder} onChange={(e) => setReminder(e.target.value)}>
+                  <option value="">{strings.agendaReminderNone}</option>
+                  <option value="0">{strings.agendaReminderAtStart}</option>
+                  <option value="5">{strings.agendaReminder5}</option>
+                  <option value="10">{strings.agendaReminder10}</option>
+                  <option value="15">{strings.agendaReminder15}</option>
+                  <option value="30">{strings.agendaReminder30}</option>
+                  <option value="60">{strings.agendaReminder60}</option>
+                  <option value="1440">{strings.agendaReminder1Day}</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.emTwoCol}>
+            <div className={styles.emField}>
+              <span className={styles.emLabel}>
+                <MapPin size={15} /> {strings.agendaEventLocation}
+              </span>
+              <div className={styles.emControl}>
+                <input
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder={strings.agendaLocationPlaceholder}
+                />
+                <MapPin size={15} className={styles.emControlTrail} />
+              </div>
+            </div>
+            <div className={styles.emField}>
+              <span className={styles.emLabel}>
+                <Users size={15} /> {strings.agendaEventGuests}
+              </span>
+              <div className={styles.emControl}>
+                <input
+                  value={guests}
+                  onChange={(e) => setGuests(e.target.value)}
+                  placeholder={strings.agendaGuestsPlaceholder}
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </div>
+              <small className={styles.fieldHint}>{strings.agendaGuestsHint}</small>
+              <div className={styles.availabilityRow}>
+                <button
+                  type="button"
+                  className={styles.emAvailBtn}
+                  onClick={() => void checkAvailability()}
+                  disabled={checking}
+                >
+                  <CalendarDays size={15} />
+                  {checking ? strings.agendaAvailChecking : strings.agendaCheckAvailability}
+                </button>
+                {availability !== null && <small className={styles.fieldHint}>{availability}</small>}
+              </div>
+              {event?.attendeeStatus && event.attendeeStatus.length > 0 && (
+                <small className={styles.fieldHint}>
+                  {event.attendeeStatus.map((a) => `${a.email} — ${rsvpLabel(a.status)}`).join(" · ")}
+                </small>
+              )}
+            </div>
+          </div>
+
+          <div className={styles.emDivider} />
+
+          <div className={styles.emField}>
+            <span className={styles.emLabel}>
+              <FileText size={15} /> {strings.agendaEventDescription}
+            </span>
+            <textarea
+              className={styles.emTextarea}
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={strings.agendaDescriptionPlaceholder}
+            />
+          </div>
         </fieldset>
 
         {readOnly && (
@@ -408,7 +538,7 @@ export function EventModal({
           </p>
         )}
 
-        <div className={styles.modalActions}>
+        <div className={styles.emFooter}>
           {!readOnly && event !== null && !recurringOccurrence && (
             <button type="button" className={styles.deleteBtn} onClick={() => void remove()} disabled={busy}>
               <Trash2 size={15} /> {strings.agendaDelete}
@@ -435,13 +565,13 @@ export function EventModal({
             </div>
           )}
           <div className={styles.modalActionsRight}>
-            <button type="button" className={styles.linkBtn} onClick={onClose} disabled={busy}>
+            <button type="button" className={styles.emCancel} onClick={onClose} disabled={busy}>
               {readOnly ? strings.agendaClose : strings.agendaCancel}
             </button>
             {!readOnly && recurringOccurrence && onSaveOccurrence && (
               <button
                 type="button"
-                className={styles.linkBtn}
+                className={styles.emCancel}
                 onClick={() => void submitThis()}
                 disabled={busy || summary.trim() === ""}
               >
@@ -450,16 +580,12 @@ export function EventModal({
             )}
             {!readOnly &&
               (recurringOccurrence ? (
-                <Button
-                  type="button"
-                  onClick={() => void submitSeries()}
-                  disabled={busy || summary.trim() === ""}
-                >
+                <Button type="button" onClick={() => void submitSeries()} disabled={busy || summary.trim() === ""}>
                   {strings.agendaSaveAll}
                 </Button>
               ) : (
                 <Button type="submit" disabled={busy || summary.trim() === ""}>
-                  {strings.agendaSave}
+                  <Check size={16} /> {event ? strings.agendaSave : strings.agendaCreateEvent}
                 </Button>
               ))}
           </div>

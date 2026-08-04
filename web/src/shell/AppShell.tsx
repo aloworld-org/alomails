@@ -4,7 +4,7 @@
 // mail-specific — every module lives inside this same frame.
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import { Plus, Sparkles, X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 
 import { strings } from "../i18n";
 import { IconButton } from "../ds";
@@ -12,34 +12,23 @@ import { Rail } from "./Rail";
 import { ComingSoon } from "./ComingSoon";
 import styles from "./AppShell.module.css";
 
-type Panel = "new" | "ai" | null;
-
 export function AppShell() {
-  const [panel, setPanel] = useState<Panel>(null);
+  const [aiOpen, setAiOpen] = useState(false);
 
   return (
     <div className={styles.shell}>
-      <Rail onNew={() => setPanel("new")} onAskAi={() => setPanel("ai")} />
+      <Rail onAskAi={() => setAiOpen(true)} />
 
       <main className={styles.main}>
         <Outlet />
       </main>
 
-      {panel !== null && (
-        <aside className={styles.panel} aria-label={panel === "ai" ? strings.moduleAi : strings.newButton}>
+      {aiOpen && (
+        <aside className={styles.panel} aria-label={strings.moduleAi}>
           <div className={styles.panelHead}>
-            <IconButton
-              size="sm"
-              label="Close"
-              icon={<X />}
-              onClick={() => setPanel(null)}
-            />
+            <IconButton size="sm" label="Close" icon={<X />} onClick={() => setAiOpen(false)} />
           </div>
-          {panel === "ai" ? (
-            <ComingSoon title={strings.moduleAi} Icon={Sparkles} />
-          ) : (
-            <ComingSoon title={strings.newButton} Icon={Plus} />
-          )}
+          <ComingSoon title={strings.moduleAi} Icon={Sparkles} />
         </aside>
       )}
     </div>

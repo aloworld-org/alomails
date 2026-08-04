@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AtSign, Plus, Trash2, Users } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Spinner, cx } from "../ds";
+import { Spinner, cx, useDialogs } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { AdminGroup } from "../jmap";
 import { GroupModal } from "./GroupModal";
@@ -14,6 +14,7 @@ import styles from "./admin.module.css";
 type Editing = { group?: AdminGroup } | null;
 
 export function GroupsPage() {
+  const { confirm } = useDialogs();
   const client = useJmapClient();
   const [groups, setGroups] = useState<AdminGroup[] | null>(null);
   const [error, setError] = useState(false);
@@ -30,7 +31,7 @@ export function GroupsPage() {
   useEffect(load, [load]);
 
   async function remove(g: AdminGroup) {
-    if (!window.confirm(strings.groupDeleteConfirm(g.name))) return;
+    if (!(await confirm({ message: strings.groupDeleteConfirm(g.name), danger: true }))) return;
     try {
       await client.deleteGroup(g.id);
     } finally {

@@ -12,4 +12,6 @@ export type { ButtonVariant, ButtonSize } from "./Button";
 export { IconButton } from "./IconButton";
 export { Avatar } from "./Avatar";
 export { Spinner } from "./Spinner";
+export { DialogProvider, useDialogs } from "./Dialog";
+export type { Dialogs } from "./Dialog";
 export { useMediaQuery, useIsMobile, MOBILE_MAX_WIDTH } from "./useMediaQuery";

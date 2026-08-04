@@ -6,7 +6,7 @@ import type { FormEvent } from "react";
 import { X } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner } from "../ds";
+import { Button, Spinner, useDialogs } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { AdminUser } from "../jmap";
 import styles from "./admin.module.css";
@@ -19,6 +19,7 @@ interface UserModalProps {
 }
 
 export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) {
+  const { confirm } = useDialogs();
   const client = useJmapClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -89,7 +90,7 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
   }
 
   async function del() {
-    if (user === undefined || !window.confirm(strings.userDeleteConfirm(user.email))) return;
+    if (user === undefined || !(await confirm({ message: strings.userDeleteConfirm(user.email), danger: true }))) return;
     setBusy(true);
     try {
       await client.deleteUser(user.id);

@@ -5,7 +5,7 @@ import type { FormEvent } from "react";
 import { X } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner } from "../ds";
+import { Button, Spinner, useDialogs } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { AdminGroup, AdminUser } from "../jmap";
 import styles from "./admin.module.css";
@@ -17,6 +17,7 @@ interface GroupModalProps {
 }
 
 export function GroupModal({ group, onClose, onChanged }: GroupModalProps) {
+  const { confirm } = useDialogs();
   const client = useJmapClient();
   const [name, setName] = useState("");
   const [listName, setListName] = useState(group?.name ?? "");
@@ -120,7 +121,7 @@ export function GroupModal({ group, onClose, onChanged }: GroupModalProps) {
   }
 
   async function del() {
-    if (group === undefined || !window.confirm(strings.groupDeleteConfirm(group.name))) return;
+    if (group === undefined || !(await confirm({ message: strings.groupDeleteConfirm(group.name), danger: true }))) return;
     setBusy(true);
     try {
       await client.deleteGroup(group.id);

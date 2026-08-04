@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Avatar, Spinner } from "../ds";
+import { Avatar, Spinner, useDialogs } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { AdminUser } from "../jmap";
 import { formatBytes } from "../mail/format";
@@ -17,6 +17,7 @@ import styles from "./admin.module.css";
 type Editing = { user?: AdminUser } | null;
 
 export function UsersPage() {
+  const { confirm } = useDialogs();
   const client = useJmapClient();
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [selfId, setSelfId] = useState("");
@@ -52,7 +53,7 @@ export function UsersPage() {
   }
 
   async function remove(u: AdminUser) {
-    if (!window.confirm(strings.userDeleteConfirm(u.email))) return;
+    if (!(await confirm({ message: strings.userDeleteConfirm(u.email), danger: true }))) return;
     try {
       await client.deleteUser(u.id);
     } finally {

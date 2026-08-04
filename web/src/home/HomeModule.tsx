@@ -1,29 +1,30 @@
-// The Home dashboard — the landing surface of alo workplace. It greets the user
-// and gathers what's actually available today: real mail (unread count, recent
-// and flagged messages) and document counts. Modules that aren't built yet
-// (Agenda, Chat) are shown honestly as "coming soon" rather than with invented
-// numbers, so the dashboard never implies data the product can't back.
-import { useEffect, useMemo, useState } from "react";
+// The Home dashboard — the "here's your day" landing surface of the mail
+// product. A greeting + global search, three live stat tiles (unread mail,
+// this week's events, tasks due today), recent mail, today's calendar, the
+// tasks on your plate, and the Ask-alo prompt. Every number and list is backed
+// by a real call (mailboxes, calendar, tasks) — no placeholders for things the
+// product doesn't have. Search and compose route into Mail, which owns them.
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
+  Bell,
   Calendar,
-  FileText,
+  CheckCircle2,
+  Circle,
   Hand,
   Mail,
-  MessagesSquare,
   PenLine,
+  Search,
   Sparkles,
   Star,
-  Upload,
-  Video,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { strings } from "../i18n";
+import { getLocale, strings } from "../i18n";
 import { Spinner } from "../ds";
 import { KEYWORD_FLAGGED, KEYWORD_SEEN, useJmapClient } from "../jmap";
-import type { EmailHeaders } from "../jmap";
+import type { CalendarEvent, EmailHeaders, Task } from "../jmap";
 import { useAuth } from "../auth";
 import { formatDate, senderName, subjectOr } from "../mail/format";
 import styles from "./HomeModule.module.css";
@@ -37,44 +38,75 @@ function greeting(): string {
   return strings.homeGreetingEvening;
 }
 
+function hm(iso: string): string {
+  return new Date(iso).toLocaleTimeString(getLocale(), { hour: "2-digit", minute: "2-digit" });
+}
+
+function sameDay(iso: string, d: Date): boolean {
+  const x = new Date(iso);
+  return (
+    x.getFullYear() === d.getFullYear() &&
+    x.getMonth() === d.getMonth() &&
+    x.getDate() === d.getDate()
+  );
+}
+
 export function HomeModule() {
   const client = useJmapClient();
   const { identity } = useAuth();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState("");
   const [unreadEmails, setUnreadEmails] = useState<number | null>(null);
-  const [docCount, setDocCount] = useState<number | null>(null);
+  const [upcomingEvents, setUpcomingEvents] = useState<number | null>(null);
+  const [dueToday, setDueToday] = useState<number | null>(null);
   const [recent, setRecent] = useState<EmailHeaders[]>([]);
   const [starred, setStarred] = useState<EmailHeaders[]>([]);
+  const [todayEvents, setTodayEvents] = useState<CalendarEvent[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [tab, setTab] = useState<Tab>("recent");
 
-  useEffect(() => {
-    let live = true;
-    void (async () => {
-      try {
-        const boxes = await client.mailboxes();
-        const inbox = boxes.find((b) => b.role === "inbox") ?? boxes[0];
-        if (live) setUnreadEmails(inbox?.unreadEmails ?? 0);
-        const [headers, flagged, docs] = await Promise.all([
-          inbox ? client.emailHeaders(inbox.id, 8) : Promise.resolve([]),
-          client.flaggedHeaders(8).catch(() => []),
-          client.listDocs().catch(() => []),
-        ]);
-        if (!live) return;
-        setRecent(headers);
-        setStarred(flagged);
-        setDocCount(docs.length);
-      } catch {
-        // Best-effort: the dashboard degrades to empty states, never an error.
-      } finally {
-        if (live) setLoading(false);
-      }
-    })();
-    return () => {
-      live = false;
-    };
+  const load = useCallback(async () => {
+    try {
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+      const weekAhead = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+      const boxes = await client.mailboxes();
+      const inbox = boxes.find((b) => b.role === "inbox") ?? boxes[0];
+      setUnreadEmails(inbox?.unreadEmails ?? 0);
+
+      const [headers, flagged, plate, events] = await Promise.all([
+        inbox ? client.emailHeaders(inbox.id, 8) : Promise.resolve([]),
+        client.flaggedHeaders(8).catch(() => []),
+        client.myPlate().catch(() => []),
+        client.calendarEvents(startOfToday.toISOString(), weekAhead.toISOString()).catch(() => []),
+      ]);
+
+      setRecent(headers);
+      setStarred(flagged);
+      setTasks(plate);
+      setDueToday(
+        plate.filter((t) => t.dueAt !== null && new Date(t.dueAt) <= endOfToday).length,
+      );
+      setTodayEvents(
+        events
+          .filter((e) => sameDay(e.startsAt, now))
+          .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
+      );
+      setUpcomingEvents(events.filter((e) => new Date(e.startsAt) >= now).length);
+    } catch {
+      // Best-effort: the dashboard degrades to empty states, never an error.
+    } finally {
+      setLoading(false);
+    }
   }, [client]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   const firstName = useMemo(() => {
     const name = identity?.name?.trim();
@@ -88,54 +120,96 @@ export function HomeModule() {
   );
   const rows = tab === "recent" ? recent : tab === "starred" ? starred : unreadList;
 
+  function runSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchText.trim();
+    if (q.length > 0) navigate(`/mail?q=${encodeURIComponent(q)}`);
+  }
+
+  async function completeTask(task: Task) {
+    // Optimistically drop it, then persist; a failure reloads the true state.
+    setTasks((prev) => prev.filter((t) => t.id !== task.id));
+    try {
+      await client.moveTask(task.id, "done", task.position);
+      await load();
+    } catch {
+      await load();
+    }
+  }
+
   return (
     <div className={styles.home}>
       <header className={styles.head}>
-        <div>
+        <div className={styles.headLeft}>
           <h1 className={styles.greeting}>
+            <Hand className={styles.wave} size={26} aria-hidden />
             {greeting()}
             {firstName.length > 0 ? `, ${firstName}` : ""}
-            <Hand className={styles.wave} size={26} aria-hidden />
           </h1>
-          <p className={styles.welcome}>{strings.homeWelcome}</p>
+          <p className={styles.welcome}>{strings.homeSubtitle}</p>
         </div>
-        <button type="button" className={styles.compose} onClick={() => navigate("/mail")}>
-          <PenLine size={17} />
-          <span>{strings.homeCompose}</span>
-        </button>
+
+        <form className={styles.search} onSubmit={runSearch} role="search">
+          <Search size={16} className={styles.searchIcon} aria-hidden />
+          <input
+            className={styles.searchInput}
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            placeholder={strings.homeSearchPlaceholder}
+            aria-label={strings.homeSearchPlaceholder}
+          />
+        </form>
+
+        <div className={styles.headRight}>
+          <button
+            type="button"
+            className={styles.bell}
+            onClick={() => navigate("/mail")}
+            aria-label={strings.homeNotifications}
+          >
+            <Bell size={18} />
+            {unreadEmails !== null && unreadEmails > 0 && (
+              <span className={styles.bellBadge}>{unreadEmails > 9 ? "9+" : unreadEmails}</span>
+            )}
+          </button>
+          <button
+            type="button"
+            className={styles.compose}
+            onClick={() => navigate("/mail?compose=1")}
+          >
+            <PenLine size={17} />
+            <span>{strings.homeCompose}</span>
+          </button>
+        </div>
       </header>
 
       <section className={styles.stats}>
         <StatCard
           Icon={Mail}
+          tone="accent"
           value={unreadEmails}
           loading={loading}
           label={strings.homeStatUnreadEmails}
           cta={strings.homeGoToMail}
-          accent
           onClick={() => navigate("/mail")}
         />
         <StatCard
           Icon={Calendar}
-          soon
+          tone="neutral"
+          value={upcomingEvents}
+          loading={loading}
           label={strings.homeStatEvents}
-          cta={strings.homeViewAgenda}
+          cta={strings.homeViewCalendar}
           onClick={() => navigate("/agenda")}
         />
         <StatCard
-          Icon={MessagesSquare}
-          soon
-          label={strings.homeStatMessages}
-          cta={strings.homeOpenChat}
-          onClick={() => navigate("/chat")}
-        />
-        <StatCard
-          Icon={FileText}
-          value={docCount}
+          Icon={CheckCircle2}
+          tone="success"
+          value={dueToday}
           loading={loading}
-          label={strings.homeStatFiles}
-          cta={strings.homeOpenDrive}
-          onClick={() => navigate("/drive")}
+          label={strings.homeStatTasks}
+          cta={strings.homeViewTasks}
+          onClick={() => navigate("/tasks")}
         />
       </section>
 
@@ -187,22 +261,79 @@ export function HomeModule() {
 
         <aside className={styles.side}>
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>{strings.homeQuickActions}</h2>
-            <div className={styles.actions}>
-              <Action Icon={PenLine} label={strings.homeCompose} onClick={() => navigate("/mail")} />
-              <Action Icon={Calendar} label={strings.homeCreateEvent} onClick={() => navigate("/agenda")} />
-              <Action Icon={MessagesSquare} label={strings.homeStartChat} onClick={() => navigate("/chat")} />
-              <Action Icon={Upload} label={strings.homeUploadFile} onClick={() => navigate("/drive")} />
-              <Action Icon={FileText} label={strings.homeCreateDoc} onClick={() => navigate("/drive")} />
+            <div className={styles.cardHead}>
+              <h2 className={styles.cardHeadTitle}>{strings.homeTodaysCalendar}</h2>
+              <button type="button" className={styles.link} onClick={() => navigate("/agenda")}>
+                {strings.homeViewFullCalendar}
+                <ArrowRight size={14} />
+              </button>
             </div>
+            {loading ? (
+              <div className={styles.state}>
+                <Spinner size={18} />
+              </div>
+            ) : todayEvents.length === 0 ? (
+              <p className={styles.empty}>{strings.homeNoEventsToday}</p>
+            ) : (
+              <ul className={styles.agenda}>
+                {todayEvents.slice(0, 4).map((e, i) => (
+                  <li key={`${e.id}-${i}`} className={styles.agendaRow}>
+                    <span className={styles.agendaTime}>
+                      <span className={styles.agendaStart}>{e.allDay ? "—" : hm(e.startsAt)}</span>
+                      {!e.allDay && <span className={styles.agendaEnd}>{hm(e.endsAt)}</span>}
+                    </span>
+                    <span className={styles.agendaBar} aria-hidden />
+                    <span className={styles.agendaBody}>
+                      <span className={styles.agendaSummary}>{subjectFor(e)}</span>
+                      {e.location !== null && e.location.length > 0 && (
+                        <span className={styles.agendaLocation}>{e.location}</span>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className={styles.card}>
-            <h2 className={styles.cardTitle}>{strings.homeToday}</h2>
-            <div className={styles.todayEmpty}>
-              <Video className={styles.todayIcon} size={22} aria-hidden />
-              <p className={styles.muted}>{strings.homeAgendaComingSoon}</p>
+            <div className={styles.cardHead}>
+              <h2 className={styles.cardHeadTitle}>{strings.homeMyTasks}</h2>
+              <button type="button" className={styles.link} onClick={() => navigate("/tasks")}>
+                {strings.homeViewAllTasks}
+                <ArrowRight size={14} />
+              </button>
             </div>
+            {loading ? (
+              <div className={styles.state}>
+                <Spinner size={18} />
+              </div>
+            ) : tasks.length === 0 ? (
+              <p className={styles.empty}>{strings.homeNoTasks}</p>
+            ) : (
+              <ul className={styles.taskList}>
+                {tasks.slice(0, 5).map((t) => (
+                  <li key={t.id} className={styles.taskRow}>
+                    <button
+                      type="button"
+                      className={styles.taskCheck}
+                      onClick={() => void completeTask(t)}
+                      aria-label={t.title}
+                    >
+                      <Circle className={styles.taskCircle} size={18} />
+                      <CheckCircle2 className={styles.taskCircleDone} size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.taskTitle}
+                      onClick={() => navigate("/tasks")}
+                    >
+                      {t.title}
+                    </button>
+                    <DueLabel dueAt={t.dueAt} />
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         </aside>
       </div>
@@ -224,6 +355,24 @@ export function HomeModule() {
   );
 }
 
+function subjectFor(e: CalendarEvent): string {
+  return e.summary.trim().length > 0 ? e.summary : strings.agendaUntitledEvent;
+}
+
+function DueLabel({ dueAt }: { dueAt: string | null }) {
+  if (dueAt === null) return null;
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const due = new Date(dueAt);
+  if (due < startOfToday) {
+    return <span className={`${styles.taskDue} ${styles.taskDueOverdue}`}>{strings.homeTaskOverdue}</span>;
+  }
+  if (sameDay(dueAt, now)) {
+    return <span className={`${styles.taskDue} ${styles.taskDueToday}`}>{strings.homeTaskToday}</span>;
+  }
+  return <span className={styles.taskDue}>{formatDate(dueAt)}</span>;
+}
+
 interface StatCardProps {
   Icon: LucideIcon;
   label: string;
@@ -231,21 +380,22 @@ interface StatCardProps {
   onClick: () => void;
   value?: number | null;
   loading?: boolean;
-  soon?: boolean;
-  accent?: boolean;
+  tone: "accent" | "neutral" | "success";
 }
 
-function StatCard({ Icon, label, cta, onClick, value, loading, soon, accent }: StatCardProps) {
+function StatCard({ Icon, label, cta, onClick, value, loading, tone }: StatCardProps) {
+  const iconClass =
+    tone === "accent"
+      ? `${styles.statIcon} ${styles.statIconAccent}`
+      : tone === "success"
+        ? `${styles.statIcon} ${styles.statIconSuccess}`
+        : styles.statIcon;
   return (
     <button type="button" className={styles.stat} onClick={onClick}>
-      <span className={accent === true ? `${styles.statIcon} ${styles.statIconAccent}` : styles.statIcon}>
+      <span className={iconClass}>
         <Icon size={20} />
       </span>
-      {soon === true ? (
-        <span className={styles.soon}>{strings.homeComingSoonShort}</span>
-      ) : (
-        <span className={styles.statValue}>{loading === true ? "—" : (value ?? 0)}</span>
-      )}
+      <span className={styles.statValue}>{loading === true ? "—" : (value ?? 0)}</span>
       <span className={styles.statLabel}>{label}</span>
       <span className={styles.statCta}>
         {cta}
@@ -276,14 +426,5 @@ function Tabs({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
         </button>
       ))}
     </>
-  );
-}
-
-function Action({ Icon, label, onClick }: { Icon: LucideIcon; label: string; onClick: () => void }) {
-  return (
-    <button type="button" className={styles.action} onClick={onClick}>
-      <Icon size={17} className={styles.actionIcon} />
-      <span>{label}</span>
-    </button>
   );
 }

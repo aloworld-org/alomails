@@ -276,7 +276,8 @@ export function ThreadMessage({ email, expanded, me, onToggle }: ThreadMessagePr
       )}
 
       {expanded && (
-        <div className={styles.body}>
+        <div className={styles.body} data-selectable>
+
           {email["alo:invitation"] != null && (
             <InvitationCard invitation={email["alo:invitation"]} blobId={email.blobId} />
           )}

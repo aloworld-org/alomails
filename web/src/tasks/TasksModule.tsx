@@ -4,29 +4,73 @@
 // (propose-then-approve). All data goes through the authenticated /tasks API;
 // the board's grouping and the list's flattening are the client's job.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LayoutGrid, List, Plus, Sparkles, Sun } from "lucide-react";
+import {
+  CalendarRange,
+  ClipboardList,
+  GanttChartSquare,
+  LayoutGrid,
+  List,
+  Plus,
+  Search,
+  Sparkles,
+  Sun,
+} from "lucide-react";
 
 import { strings } from "../i18n";
 import { useJmapClient, type Task, type TaskProject } from "../jmap";
-import { Spinner } from "../ds";
+import { Spinner, useDialogs } from "../ds";
+import { useAuth } from "../auth";
 import { BoardView } from "./BoardView";
 import { ListView } from "./ListView";
+import { TimelineView } from "./TimelineView";
+import { CalendarView } from "./CalendarView";
+import { TaskToolbar } from "./TaskToolbar";
 import { TaskDetail } from "./TaskDetail";
 import { Avatar, DueChip, PriorityChip } from "./parts";
+import { DEFAULT_CONFIG, filterTasks, type ViewConfig } from "./viewConfig";
 import styles from "./TasksModule.module.css";
+
+type View = "list" | "board" | "timeline" | "calendar";
 
 type Mode = { type: "project"; id: string } | { type: "plate" } | { type: "proposals" };
 
 export function TasksModule() {
   const client = useJmapClient();
+  const { prompt } = useDialogs();
+  const { identity } = useAuth();
   const [projects, setProjects] = useState<TaskProject[]>([]);
   const [mode, setMode] = useState<Mode>({ type: "plate" });
-  const [view, setView] = useState<"board" | "list">("board");
+  const [view, setView] = useState<View>("list");
+  const [config, setConfig] = useState<ViewConfig>(DEFAULT_CONFIG);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [proposals, setProposals] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
-  const [quick, setQuick] = useState("");
+  const [search, setSearch] = useState("");
+
+  const projectName = useCallback(
+    (id: string) => projects.find((p) => p.id === id)?.name ?? "",
+    [projects],
+  );
+
+  /** The project a new task lands in: the active one, else the personal one. */
+  function targetProject(): string | undefined {
+    if (mode.type === "project") return mode.id;
+    return (projects.find((p) => p.kind === "personal") ?? projects[0])?.id;
+  }
+
+  /** Add a task (optionally into a given status column) via a titled prompt. */
+  async function addTask(status?: string) {
+    const projectId = targetProject();
+    if (projectId === undefined) return;
+    const title = (await prompt({ message: strings.taskNewTaskPrompt }))?.trim();
+    if (title === undefined || title === "") return;
+    const created = await client.createTask({ projectId, title });
+    if (status !== undefined && status !== "todo") {
+      await client.moveTask(created.id, status, created.position);
+    }
+    await reload();
+  }
 
   const loadProjects = useCallback(async () => {
     try {
@@ -83,16 +127,8 @@ export function TasksModule() {
     }
   }
 
-  async function addQuick() {
-    const title = quick.trim();
-    if (title === "" || mode.type !== "project") return;
-    setQuick("");
-    await client.createTask({ projectId: mode.id, title });
-    await reload();
-  }
-
   async function newProject() {
-    const name = window.prompt(strings.taskNewProjectPrompt)?.trim();
+    const name = (await prompt({ message: strings.taskNewProjectPrompt }))?.trim();
     if (!name) return;
     const p = await client.createTaskProject(name);
     await loadProjects();
@@ -162,41 +198,56 @@ export function TasksModule() {
       </aside>
 
       <section className={styles.main}>
-        <header className={styles.toolbar}>
-          <h1 className={styles.title}>{title}</h1>
-          {loading && <Spinner size={16} />}
-          {mode.type !== "proposals" && (
-            <div className={styles.viewSwitch}>
-              <button
-                className={view === "board" ? styles.viewActive : ""}
-                onClick={() => setView("board")}
-              >
-                <LayoutGrid size={15} /> {strings.taskBoard}
-              </button>
-              <button
-                className={view === "list" ? styles.viewActive : ""}
-                onClick={() => setView("list")}
-              >
-                <List size={15} /> {strings.taskList}
-              </button>
-            </div>
-          )}
-        </header>
-
-        {mode.type === "project" && (
-          <div className={styles.quickAdd}>
+        <header className={styles.topbar}>
+          <h1 className={styles.pageTitle}>{title}</h1>
+          <form
+            className={styles.searchWrap}
+            role="search"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            <Search size={16} className={styles.searchIcon} aria-hidden />
             <input
-              value={quick}
-              placeholder={strings.taskQuickAdd}
-              onChange={(e) => setQuick(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void addQuick();
-              }}
+              className={styles.searchInput}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={strings.taskSearchPlaceholder}
+              aria-label={strings.taskSearchPlaceholder}
             />
-            <button type="button" className={styles.addBtn} onClick={() => void addQuick()}>
-              <Plus size={15} /> {strings.taskAdd}
+          </form>
+          <div className={styles.topActions}>
+            {loading && <Spinner size={16} />}
+            <button type="button" className={styles.newTaskBtn} onClick={() => void addTask()}>
+              <Plus size={16} /> {strings.taskNew}
             </button>
           </div>
+        </header>
+
+        {mode.type !== "proposals" && (
+          <div className={styles.tabs} role="tablist">
+            {(
+              [
+                { id: "list", label: strings.taskList, Icon: List },
+                { id: "board", label: strings.taskBoard, Icon: LayoutGrid },
+                { id: "timeline", label: strings.taskTimeline, Icon: GanttChartSquare },
+                { id: "calendar", label: strings.taskCalendar, Icon: CalendarRange },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={view === t.id}
+                className={view === t.id ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+                onClick={() => setView(t.id)}
+              >
+                <t.Icon size={16} /> {t.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {mode.type !== "proposals" && view === "list" && tasks.length > 0 && (
+          <TaskToolbar config={config} onChange={setConfig} />
         )}
 
         <div className={styles.viewport}>
@@ -209,13 +260,33 @@ export function TasksModule() {
               }}
             />
           ) : tasks.length === 0 ? (
-            <div className={styles.empty}>
-              {mode.type === "plate" ? strings.taskPlateEmpty : strings.taskEmpty}
+            <div className={styles.emptyState}>
+              <span className={styles.emptyArt}>
+                <ClipboardList size={40} />
+              </span>
+              <h2 className={styles.emptyTitle}>{strings.taskEmptyTitle}</h2>
+              <p className={styles.emptyBody}>{strings.taskEmptyBody}</p>
+              <button type="button" className={styles.emptyCta} onClick={() => void addTask()}>
+                <Plus size={17} /> {strings.taskCreateFirst}
+              </button>
             </div>
-          ) : view === "board" && mode.type === "project" ? (
+          ) : view === "board" ? (
             <BoardView tasks={tasks} onOpen={setSelected} onMove={move} />
+          ) : view === "timeline" ? (
+            <TimelineView tasks={filterTasks(tasks, config, identity?.email)} onOpen={setSelected} />
+          ) : view === "calendar" ? (
+            <CalendarView tasks={filterTasks(tasks, config, identity?.email)} onOpen={setSelected} />
           ) : (
-            <ListView tasks={tasks} onOpen={setSelected} onMove={move} />
+            <ListView
+              tasks={tasks}
+              config={config}
+              projectName={projectName}
+              me={identity?.email}
+              search={search}
+              onOpen={setSelected}
+              onMove={move}
+              onAdd={(status) => void addTask(status)}
+            />
           )}
         </div>
       </section>

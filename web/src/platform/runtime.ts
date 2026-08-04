@@ -27,7 +27,18 @@ export const API_BASE: string = inTauri
 
 /** `fetch` for API requests: the native Tauri HTTP client in the desktop app
  *  (bypasses the webview's origin/CORS rules), the platform `fetch` in a
- *  browser. Signature-compatible with WHATWG `fetch`. */
+ *  browser. Signature-compatible with WHATWG `fetch`.
+ *
+ *  In the browser a root-relative URL (`/.well-known/jmap`) resolves against the
+ *  page origin — which IS the API host. In the desktop app the page origin is
+ *  `tauri://localhost`, and the native HTTP client requires an absolute URL, so
+ *  a root-relative request must be re-based onto `API_BASE` (the hosted server)
+ *  first — otherwise the session/push calls that use relative paths silently
+ *  fail and the app never leaves a blank screen. */
 export const apiFetch: typeof fetch = inTauri
-  ? (tauriFetch as typeof fetch)
+  ? ((input: RequestInfo | URL, init?: RequestInit) => {
+      const rebased =
+        typeof input === "string" && input.startsWith("/") ? `${API_BASE}${input}` : input;
+      return (tauriFetch as typeof fetch)(rebased, init);
+    })
   : globalThis.fetch.bind(globalThis);

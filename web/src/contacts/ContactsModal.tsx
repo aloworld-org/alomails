@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Download, Mail, Phone, Plus, Search, Trash2, Upload, UserPlus, X } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner, cx } from "../ds";
+import { Button, Spinner, cx, useDialogs } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { Contact, ContactDraft, ContactField } from "../jmap";
 import styles from "./ContactsModal.module.css";
@@ -79,6 +79,7 @@ export function toDraft(f: FormState): ContactDraft {
 
 export function ContactsModal({ onClose }: ContactsModalProps) {
   const client = useJmapClient();
+  const { confirm } = useDialogs();
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [query, setQuery] = useState("");
@@ -208,7 +209,7 @@ export function ContactsModal({ onClose }: ContactsModalProps) {
     if (selected === null || selected === "new") return;
     const contact = (contacts ?? []).find((c) => c.id === selected);
     const label = contact?.name ?? "";
-    if (!window.confirm(strings.contactDeleteConfirm(label))) return;
+    if (!(await confirm({ message: strings.contactDeleteConfirm(label), danger: true }))) return;
     setBusy(true);
     try {
       await client.deleteContact(selected);

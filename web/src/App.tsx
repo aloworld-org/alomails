@@ -11,6 +11,7 @@ import { AuthProvider, ForgotPasswordPage, LoginPage, RequireAuth } from "./auth
 import { SignupPage } from "./signup";
 import { AppShell, ComingSoon } from "./shell";
 import { surface } from "./product";
+import { DialogProvider } from "./ds";
 
 export function App() {
   // Subscribe to the active language. Keying the route tree on the locale
@@ -21,6 +22,7 @@ export function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <DialogProvider>
         <Fragment key={locale}>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -54,6 +56,7 @@ export function App() {
             </Route>
           </Routes>
         </Fragment>
+        </DialogProvider>
       </AuthProvider>
     </BrowserRouter>
   );

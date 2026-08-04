@@ -7,12 +7,13 @@ import type { FormEvent } from "react";
 import { CheckCircle2, Clock, Plus, Trash2 } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner, cx } from "../ds";
+import { Button, Spinner, cx, useDialogs } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { ControlDomain } from "../jmap";
 import styles from "./admin.module.css";
 
 export function DomainsPage() {
+  const { confirm } = useDialogs();
   const client = useJmapClient();
   const [domains, setDomains] = useState<ControlDomain[] | null>(null);
   const [error, setError] = useState(false);
@@ -64,7 +65,7 @@ export function DomainsPage() {
   }
 
   async function remove(d: ControlDomain) {
-    if (!window.confirm(strings.domainDeleteConfirm(d.domain))) return;
+    if (!(await confirm({ message: strings.domainDeleteConfirm(d.domain), danger: true }))) return;
     try {
       await client.adminDeleteDomain(d.domain);
     } finally {
@@ -73,7 +74,7 @@ export function DomainsPage() {
   }
 
   async function rotateDkim(d: ControlDomain) {
-    if (!window.confirm(strings.dkimRotateConfirm(d.domain))) return;
+    if (!(await confirm({ message: strings.dkimRotateConfirm(d.domain), danger: true }))) return;
     setNote(null);
     try {
       await client.adminRotateDkim(d.domain);

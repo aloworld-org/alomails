@@ -8,7 +8,7 @@ import type { CSSProperties } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { strings } from "../i18n";
-import { ResizeHandle, cx, usePanelWidth, useIsMobile } from "../ds";
+import { ResizeHandle, cx, usePanelWidth, useIsMobile, useDialogs } from "../ds";
 import { KEYWORD_FLAGGED, useJmapClient } from "../jmap";
 import type { Category, EmailAddress, EmailFull, SharedMailbox } from "../jmap";
 import { useAuth } from "../auth";
@@ -47,6 +47,7 @@ function parseMailto(mailto: string): {
 
 export function MailModule() {
   const client = useJmapClient();
+  const { confirm } = useDialogs();
   const { identity } = useAuth();
   const categories = useCategories();
   const categoryList = categories.status === "ready" ? (categories.data ?? []) : [];
@@ -339,27 +340,38 @@ export function MailModule() {
   // Jump back from a task's "From an email" link: /mail?open=<messageId> opens
   // the source message's thread (tenant-scoped — a foreign id resolves to
   // nothing), then clears the parameter.
+  // A search term seeded from elsewhere (the Home search bar → /mail?q=…),
+  // handed to the message list as its initial query.
+  const [searchSeed, setSearchSeed] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const open = searchParams.get("open");
-    if (open === null) return;
+    const compose = searchParams.get("compose");
+    const q = searchParams.get("q");
+    if (open === null && compose === null && q === null) return;
+    // Home routes "Compose email" and global search into Mail via query params.
+    if (compose !== null) setCompose({ mode: "new" });
+    if (q !== null) setSearchSeed(q);
     void (async () => {
-      try {
-        const email = await client.email(open);
-        if (email !== null) {
-          const inBox = Object.entries(email.mailboxIds).find(([, v]) => v)?.[0];
-          if (inBox !== undefined) setMailboxId(inBox);
-          setFlaggedView(false);
-          setThreadId(email.threadId);
+      if (open !== null) {
+        try {
+          const email = await client.email(open);
+          if (email !== null) {
+            const inBox = Object.entries(email.mailboxIds).find(([, v]) => v)?.[0];
+            if (inBox !== undefined) setMailboxId(inBox);
+            setFlaggedView(false);
+            setThreadId(email.threadId);
+          }
+        } catch {
+          /* a foreign or missing id just does nothing */
         }
-      } catch {
-        /* a foreign or missing id just does nothing */
       }
       const next = new URLSearchParams(searchParams);
       next.delete("open");
+      next.delete("compose");
+      next.delete("q");
       setSearchParams(next, { replace: true });
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   // Undo send: a created draft is held for a few seconds before it is actually
@@ -461,7 +473,7 @@ export function MailModule() {
     }
   }
   async function deleteFolder(box: { id: string; name: string }) {
-    if (!window.confirm(strings.folderDeleteConfirm(box.name))) return;
+    if (!(await confirm({ message: strings.folderDeleteConfirm(box.name), danger: true }))) return;
     try {
       await client.deleteMailbox(box.id);
       if (mailboxId === box.id) setMailboxId(null);
@@ -479,7 +491,7 @@ export function MailModule() {
     if (latest === undefined || opts == null) return;
     const who = senderName(latest);
     if (opts.oneClick) {
-      if (!window.confirm(strings.unsubscribeConfirm(who))) return;
+      if (!(await confirm({ message: strings.unsubscribeConfirm(who) }))) return;
       try {
         await client.unsubscribe(latest.id);
         setToast(strings.unsubscribed);
@@ -585,7 +597,7 @@ export function MailModule() {
     }
   }
   async function deleteCategory(cat: Category) {
-    if (!window.confirm(strings.categoryDeleteConfirm(cat.name))) return;
+    if (!(await confirm({ message: strings.categoryDeleteConfirm(cat.name), danger: true }))) return;
     try {
       await client.deleteCategory(cat.id);
       if (categoryFilter === cat.id) selectCategory(null);
@@ -864,6 +876,7 @@ export function MailModule() {
       <MessageList
         folderName={folderName}
         emails={emails}
+        initialQuery={searchSeed}
         selectedThreadId={threadId}
         readIds={readIds}
         flagOverrides={flags}
