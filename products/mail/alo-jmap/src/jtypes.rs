@@ -137,9 +137,9 @@ pub struct ReadBody {
 /// RFC 3339 (UTC). The RSVP endpoint re-reads the raw part from the message, so
 /// this is display-only.
 pub struct Invitation {
-    /// The scheduling method: `REQUEST` (an invitation) or `CANCEL` (the
-    /// organizer withdrew it). Drives whether the reading pane shows an
-    /// Accept/Decline card or a cancellation notice.
+    /// The scheduling method: `REQUEST` (an invitation), `CANCEL` (the organizer
+    /// withdrew it), or `REPLY` (a guest responded). Drives whether the reading
+    /// pane shows an Accept/Decline card, a cancellation notice, or a reply.
     pub method: String,
     pub uid: String,
     pub summary: String,
@@ -148,6 +148,11 @@ pub struct Invitation {
     pub ends_at: String,
     pub all_day: bool,
     pub location: Option<String>,
+    /// For a `REPLY`: the replying guest's email; `None` otherwise.
+    pub attendee: Option<String>,
+    /// For a `REPLY`: their status (`accepted`/`declined`/`tentative`); `None`
+    /// otherwise.
+    pub partstat: Option<String>,
 }
 
 /// Derive a short preview from the text body, else a crude tag-stripped HTML

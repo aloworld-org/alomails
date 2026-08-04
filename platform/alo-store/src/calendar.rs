@@ -34,7 +34,8 @@ impl AccountStore {
         let visible = visible_pred();
         let sql = format!(
             "SELECT e.id, e.calendar_id, e.summary, e.description, e.location, e.starts_at, \
-                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates \
+                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates, e.reminder_minutes, \
+                    e.attendee_status \
              FROM calendar_events e \
              WHERE e.tenant_id = $1 AND e.calendar_id IN ( \
                  SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {visible}) AND ( \
@@ -89,6 +90,8 @@ impl AccountStore {
                             attendees: event.attendees.clone(),
                             exdates: Vec::new(),
                             recurrence_id: Some(*slot),
+                            reminder_minutes: event.reminder_minutes,
+                            attendee_status: event.attendee_status.clone(),
                         });
                     }
                 }
@@ -140,7 +143,7 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn all_events(&self) -> Result<Vec<CalendarEvent>> {
         let rows = sqlx::query_as::<_, EventRow>(
-            "SELECT id, calendar_id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
+            "SELECT id, calendar_id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates, reminder_minutes, attendee_status \
              FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 \
              ORDER BY starts_at, id",
         )
@@ -159,7 +162,8 @@ impl AccountStore {
         let visible = visible_pred();
         let sql = format!(
             "SELECT e.id, e.calendar_id, e.summary, e.description, e.location, e.starts_at, \
-                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates \
+                    e.ends_at, e.all_day, e.rrule, e.attendees, e.exdates, e.reminder_minutes, \
+                    e.attendee_status \
              FROM calendar_events e \
              WHERE e.tenant_id = $1 AND e.id = $3 AND e.calendar_id IN ( \
                  SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {visible})",
@@ -189,8 +193,8 @@ impl AccountStore {
         sqlx::query(
             "INSERT INTO calendar_events \
              (tenant_id, user_id, id, calendar_id, summary, description, location, \
-              starts_at, ends_at, all_day, rrule, attendees, exdates) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
+              starts_at, ends_at, all_day, rrule, attendees, exdates, reminder_minutes) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -205,6 +209,7 @@ impl AccountStore {
         .bind(&event.recurrence)
         .bind(sqlx::types::Json(&event.attendees))
         .bind(exdates_to_json(&event.exdates))
+        .bind(event.reminder_minutes)
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -243,15 +248,16 @@ impl AccountStore {
         sqlx::query(
             "INSERT INTO calendar_events \
              (tenant_id, user_id, id, calendar_id, summary, description, location, \
-              starts_at, ends_at, all_day, rrule, attendees, exdates) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
+              starts_at, ends_at, all_day, rrule, attendees, exdates, reminder_minutes) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
              ON CONFLICT (tenant_id, user_id, id) DO UPDATE SET \
                calendar_id = EXCLUDED.calendar_id, \
                summary = EXCLUDED.summary, description = EXCLUDED.description, \
                location = EXCLUDED.location, starts_at = EXCLUDED.starts_at, \
                ends_at = EXCLUDED.ends_at, all_day = EXCLUDED.all_day, \
                rrule = EXCLUDED.rrule, attendees = EXCLUDED.attendees, \
-               exdates = EXCLUDED.exdates, updated_at = now()",
+               exdates = EXCLUDED.exdates, reminder_minutes = EXCLUDED.reminder_minutes, \
+               updated_at = now()",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -266,6 +272,7 @@ impl AccountStore {
         .bind(&event.recurrence)
         .bind(sqlx::types::Json(&event.attendees))
         .bind(exdates_to_json(&event.exdates))
+        .bind(event.reminder_minutes)
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -291,7 +298,7 @@ impl AccountStore {
         let sql = format!(
             "UPDATE calendar_events AS e SET summary = $4, description = $5, location = $6, \
                     starts_at = $7, ends_at = $8, all_day = $9, rrule = $10, attendees = $11, \
-                    exdates = $12, calendar_id = $13, updated_at = now() \
+                    exdates = $12, calendar_id = $13, reminder_minutes = $14, updated_at = now() \
              WHERE e.tenant_id = $1 AND e.id = $3 AND e.calendar_id IN ( \
                  SELECT c.id FROM calendars c WHERE c.tenant_id = $1 AND {editable})",
         );
@@ -309,6 +316,7 @@ impl AccountStore {
             .bind(sqlx::types::Json(&event.attendees))
             .bind(exdates_to_json(&event.exdates))
             .bind(event.calendar_id.as_str())
+            .bind(event.reminder_minutes)
             .execute(&mut *tx)
             .await
             .map_err(StoreError::Db)?;
@@ -453,6 +461,87 @@ impl AccountStore {
         .await?;
         tx.commit().await.map_err(StoreError::Db)?;
         Ok(())
+    }
+
+    /// Records a guest's RSVP status on the organizer's copy of an event (from an
+    /// inbound iMIP `REPLY`): merges `email -> partstat` into the event's status
+    /// map, leaving other guests untouched. The caller must be able to edit the
+    /// event's calendar. Returns whether a matching event was updated.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn set_attendee_status(
+        &self,
+        id: &EventId,
+        email: &str,
+        partstat: &str,
+    ) -> Result<bool> {
+        // Resolve + edit-gate through the account door before touching the row.
+        let Some(master) = self.event(id).await? else {
+            return Ok(false);
+        };
+        if !self.can_edit_calendar(&master.calendar_id).await? {
+            return Ok(false);
+        }
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let done = sqlx::query(
+            "UPDATE calendar_events \
+             SET attendee_status = attendee_status || jsonb_build_object($3::text, $4::text), \
+                 updated_at = now() \
+             WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(email)
+        .bind(partstat)
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        changes::bump_and_record(
+            &mut tx,
+            self.tenant.as_str(),
+            self.user.as_str(),
+            &[Change::updated(TYPE_EVENT, id.as_str())],
+        )
+        .await?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(done.rows_affected() > 0)
+    }
+
+    /// The per-occurrence overrides of a series as full occurrence events (each
+    /// with its `recurrence_id` set), for serialising a series to CalDAV as the
+    /// master plus one `RECURRENCE-ID` VEVENT per edited instance. Empty when the
+    /// series is not visible to the caller or has no overrides.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn override_occurrences(&self, series: &EventId) -> Result<Vec<CalendarEvent>> {
+        let Some(master) = self.event(series).await? else {
+            return Ok(Vec::new());
+        };
+        let map = self.overrides_for(&[series.as_str().to_owned()]).await?;
+        let Some(ovs) = map.get(series.as_str()) else {
+            return Ok(Vec::new());
+        };
+        Ok(ovs
+            .iter()
+            .map(|(slot, ov)| CalendarEvent {
+                id: master.id.clone(),
+                calendar_id: master.calendar_id.clone(),
+                summary: ov.summary.clone(),
+                description: ov.description.clone(),
+                location: ov.location.clone(),
+                starts_at: ov.starts_at,
+                ends_at: ov.ends_at,
+                all_day: ov.all_day,
+                recurrence: None,
+                attendees: master.attendees.clone(),
+                exdates: Vec::new(),
+                recurrence_id: Some(*slot),
+                reminder_minutes: master.reminder_minutes,
+                attendee_status: master.attendee_status.clone(),
+            })
+            .collect())
     }
 
     /// The owner's calendars, creation order. Ensures the personal calendar
@@ -804,68 +893,188 @@ enum Freq {
     Yearly,
 }
 
+/// A parsed `RRULE` (the supported subset). `byday`/`bymonthday` refine which
+/// day(s) each period yields; empty means "keep the master's weekday/day".
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Rrule {
+    freq: Freq,
+    interval: i64,
+    count: Option<usize>,
+    until: Option<OffsetDateTime>,
+    /// `BYDAY`: `(ordinal, weekday)` — ordinal `None` for a plain weekday
+    /// (weekly Mon/Wed/Fri), `Some(n)` for the n-th of a month (`2TU`, `-1FR`).
+    byday: Vec<(Option<i32>, time::Weekday)>,
+    /// `BYMONTHDAY`: day of month, `1..=31` or negative from the month's end.
+    bymonthday: Vec<i32>,
+}
+
 /// Upper bound on generated occurrences per master, so an open-ended rule cannot
 /// blow up a range query (~10 years of a daily event).
 const MAX_OCCURRENCES: usize = 3660;
+/// Upper bound on periods scanned (weeks/months/years), a second backstop for a
+/// rule whose periods yield few or no in-range occurrences.
+const MAX_PERIODS: i64 = 4000;
 
 /// Expand a recurring master into the occurrences overlapping `[from, to)`. Each
 /// occurrence is the master with `starts_at`/`ends_at` shifted — the series
-/// shares one id and duration (per-occurrence exceptions are a later slice). An
-/// unparseable rule degrades to the single master event.
+/// shares one id and duration; a per-occurrence override/exclusion is applied by
+/// the caller/expander. An unparseable rule degrades to the single master.
 fn expand_occurrences(
     master: &CalendarEvent,
     from: OffsetDateTime,
     to: OffsetDateTime,
     overridden: &[OffsetDateTime],
 ) -> Vec<CalendarEvent> {
-    let Some((freq, interval, count, until)) = master.recurrence.as_deref().and_then(parse_rrule)
-    else {
+    let Some(rule) = master.recurrence.as_deref().and_then(parse_rrule) else {
         return vec![master.clone()];
     };
+    let anchor = master.starts_at;
     let duration = master.ends_at - master.starts_at;
     let mut out = Vec::new();
-    let mut occ = master.starts_at;
-    let mut total = 0usize;
-    while total < MAX_OCCURRENCES && occ < to {
-        if until.is_some_and(|u| occ > u) {
-            break;
+    let mut total = 0usize; // occurrences counted from the series start (for COUNT)
+    let mut period = 0i64;
+    'outer: while total < MAX_OCCURRENCES && period < MAX_PERIODS {
+        for occ in period_occurrences(&rule, anchor, period) {
+            if occ < anchor {
+                continue; // BYDAY days before DTSTART in the first period
+            }
+            if occ >= to {
+                break 'outer; // periods only move forward — nothing later is in range
+            }
+            if rule.until.is_some_and(|u| occ > u) {
+                break 'outer;
+            }
+            total += 1;
+            let Some(occ_end) = occ.checked_add(duration) else {
+                break 'outer;
+            };
+            // Skip occurrences the owner cancelled (EXDATE) or moved/edited via a
+            // per-occurrence override (emitted separately from the overrides table).
+            let excluded = master.exdates.contains(&occ) || overridden.contains(&occ);
+            if occ_end > from && !excluded {
+                out.push(CalendarEvent {
+                    starts_at: occ,
+                    ends_at: occ_end,
+                    recurrence_id: Some(occ),
+                    ..master.clone()
+                });
+            }
+            if rule.count.is_some_and(|c| total >= c) {
+                break 'outer;
+            }
         }
-        let Some(occ_end) = occ.checked_add(duration) else {
-            break;
-        };
-        // Skip occurrences the owner cancelled (EXDATE) or moved/edited via a
-        // per-occurrence override (those are emitted from the overrides table).
-        let excluded = master.exdates.contains(&occ) || overridden.contains(&occ);
-        if occ_end > from && !excluded {
-            out.push(CalendarEvent {
-                starts_at: occ,
-                ends_at: occ_end,
-                // The slot this occurrence fills — its stable edit/skip handle.
-                recurrence_id: Some(occ),
-                ..master.clone()
-            });
-        }
-        total += 1;
-        if count.is_some_and(|c| total >= c) {
-            break;
-        }
-        let Some(next) = advance(occ, freq, interval) else {
-            break;
-        };
-        if next <= occ {
-            break; // guard against a non-advancing rule
-        }
-        occ = next;
+        period += 1;
     }
     out
 }
 
-fn advance(dt: OffsetDateTime, freq: Freq, interval: i64) -> Option<OffsetDateTime> {
-    match freq {
-        Freq::Daily => dt.checked_add(Duration::days(interval)),
-        Freq::Weekly => dt.checked_add(Duration::weeks(interval)),
-        Freq::Monthly => Some(add_months(dt, interval)),
-        Freq::Yearly => Some(add_months(dt, interval * 12)),
+/// The occurrence start-instants the rule yields in its `period`-th period
+/// (0 = the anchor's), sorted ascending. Time-of-day comes from the anchor.
+fn period_occurrences(rule: &Rrule, anchor: OffsetDateTime, period: i64) -> Vec<OffsetDateTime> {
+    match rule.freq {
+        Freq::Daily => {
+            let Some(occ) = anchor.checked_add(Duration::days(period * rule.interval)) else {
+                return Vec::new();
+            };
+            // A plain BYDAY on a daily rule filters to those weekdays.
+            if rule.byday.is_empty() || rule.byday.iter().any(|(_, w)| *w == occ.weekday()) {
+                vec![occ]
+            } else {
+                Vec::new()
+            }
+        }
+        Freq::Weekly => {
+            // Monday of the anchor's week, then `period*interval` weeks on (WKST=MO).
+            let back = i64::from(anchor.weekday().number_days_from_monday());
+            let Some(monday) = anchor
+                .checked_sub(Duration::days(back))
+                .and_then(|m| m.checked_add(Duration::weeks(period * rule.interval)))
+            else {
+                return Vec::new();
+            };
+            let weekdays: Vec<time::Weekday> = if rule.byday.is_empty() {
+                vec![anchor.weekday()]
+            } else {
+                rule.byday.iter().map(|(_, w)| *w).collect()
+            };
+            let mut out: Vec<OffsetDateTime> = weekdays
+                .iter()
+                .filter_map(|w| {
+                    monday.checked_add(Duration::days(i64::from(w.number_days_from_monday())))
+                })
+                .collect();
+            out.sort_unstable();
+            out.dedup();
+            out
+        }
+        Freq::Monthly => {
+            // `add_months` gives the target month (anchor day clamped) + the time.
+            let base = add_months(anchor, period * rule.interval);
+            let (year, month, tod) = (base.year(), base.month(), anchor.time());
+            let mut days: Vec<u8> = Vec::new();
+            if !rule.bymonthday.is_empty() {
+                days.extend(
+                    rule.bymonthday
+                        .iter()
+                        .filter_map(|&md| resolve_monthday(year, month, md)),
+                );
+            } else if !rule.byday.is_empty() {
+                days.extend(
+                    rule.byday
+                        .iter()
+                        .filter_map(|&(ord, wd)| nth_weekday(year, month, wd, ord.unwrap_or(1))),
+                );
+            } else {
+                days.push(base.day());
+            }
+            days.sort_unstable();
+            days.dedup();
+            days.into_iter()
+                .filter_map(|d| Date::from_calendar_date(year, month, d).ok())
+                .map(|date| OffsetDateTime::new_utc(date, tod))
+                .collect()
+        }
+        Freq::Yearly => {
+            // Same month/day, `period*interval` years on (Feb 29 clamps to 28).
+            let year = anchor.year() + (period * rule.interval) as i32;
+            let month = anchor.month();
+            let day = anchor.day().min(month.length(year));
+            Date::from_calendar_date(year, month, day)
+                .ok()
+                .map(|d| vec![OffsetDateTime::new_utc(d, anchor.time())])
+                .unwrap_or_default()
+        }
+    }
+}
+
+/// A `BYMONTHDAY` value resolved to a day-of-month in the given month, or `None`
+/// if it falls outside it. Positive counts from the 1st; negative from the end
+/// (`-1` = last day).
+fn resolve_monthday(year: i32, month: Month, md: i32) -> Option<u8> {
+    let len = i32::from(month.length(year));
+    let day = match md {
+        d if d > 0 => d,
+        d if d < 0 => len + d + 1,
+        _ => return None,
+    };
+    (1..=len).contains(&day).then_some(day as u8)
+}
+
+/// The day-of-month of the `ord`-th `wd` weekday in the month (`1` = first,
+/// `-1` = last), or `None` if there is no such weekday (e.g. a 5th Friday).
+fn nth_weekday(year: i32, month: Month, wd: time::Weekday, ord: i32) -> Option<u8> {
+    let matches: Vec<u8> = (1..=month.length(year))
+        .filter(|&d| Date::from_calendar_date(year, month, d).is_ok_and(|x| x.weekday() == wd))
+        .collect();
+    if ord > 0 {
+        matches.get((ord - 1) as usize).copied()
+    } else if ord < 0 {
+        matches
+            .len()
+            .checked_sub((-ord) as usize)
+            .map(|i| matches[i])
+    } else {
+        None
     }
 }
 
@@ -882,13 +1091,15 @@ fn add_months(dt: OffsetDateTime, months: i64) -> OffsetDateTime {
 }
 
 /// Parse the supported subset of an `RRULE`: `FREQ` (required) plus optional
-/// `INTERVAL`, `COUNT`, `UNTIL`. `BYDAY`/`BYMONTHDAY` etc. are ignored (an
-/// occurrence keeps the master's weekday/day-of-month). `None` if no `FREQ`.
-fn parse_rrule(rule: &str) -> Option<(Freq, i64, Option<usize>, Option<OffsetDateTime>)> {
+/// `INTERVAL`, `COUNT`, `UNTIL`, `BYDAY`, `BYMONTHDAY`. `BYMONTH`/`BYSETPOS`/
+/// `WKST` are ignored (Monday week-start assumed). `None` if there is no `FREQ`.
+fn parse_rrule(rule: &str) -> Option<Rrule> {
     let mut freq = None;
     let mut interval = 1i64;
     let mut count = None;
     let mut until = None;
+    let mut byday = Vec::new();
+    let mut bymonthday = Vec::new();
     for part in rule.trim().trim_start_matches("RRULE:").split(';') {
         let Some((key, value)) = part.split_once('=') else {
             continue;
@@ -906,10 +1117,50 @@ fn parse_rrule(rule: &str) -> Option<(Freq, i64, Option<usize>, Option<OffsetDat
             "INTERVAL" => interval = value.trim().parse::<i64>().unwrap_or(1).max(1),
             "COUNT" => count = value.trim().parse().ok(),
             "UNTIL" => until = parse_until(value.trim()),
+            "BYDAY" => byday = value.split(',').filter_map(parse_byday).collect(),
+            "BYMONTHDAY" => {
+                bymonthday = value
+                    .split(',')
+                    .filter_map(|d| d.trim().parse::<i32>().ok())
+                    .filter(|&d| d != 0 && d.abs() <= 31)
+                    .collect();
+            }
             _ => {}
         }
     }
-    freq.map(|f| (f, interval, count, until))
+    freq.map(|f| Rrule {
+        freq: f,
+        interval,
+        count,
+        until,
+        byday,
+        bymonthday,
+    })
+}
+
+/// Parse one `BYDAY` token — an optional signed ordinal then a two-letter
+/// weekday, e.g. `MO`, `2TU`, `-1FR`. `None` on a bad weekday code.
+fn parse_byday(token: &str) -> Option<(Option<i32>, time::Weekday)> {
+    use time::Weekday::*;
+    let t = token.trim().to_ascii_uppercase();
+    let split = t.len().saturating_sub(2);
+    let (ord_str, wd_str) = t.split_at(split);
+    let weekday = match wd_str {
+        "MO" => Monday,
+        "TU" => Tuesday,
+        "WE" => Wednesday,
+        "TH" => Thursday,
+        "FR" => Friday,
+        "SA" => Saturday,
+        "SU" => Sunday,
+        _ => return None,
+    };
+    let ord = if ord_str.is_empty() {
+        None
+    } else {
+        Some(ord_str.parse::<i32>().ok()?)
+    };
+    Some((ord, weekday))
 }
 
 /// Parse an `UNTIL` (`YYYYMMDD` or `YYYYMMDDTHHMMSS[Z]`) to a UTC instant; a
@@ -949,6 +1200,8 @@ struct EventRow {
     // Stored as RFC 3339 strings: `time::OffsetDateTime` isn't serde-encodable
     // (the crate's serde feature is off), and strings keep the column readable.
     exdates: sqlx::types::Json<Vec<String>>,
+    reminder_minutes: Option<i32>,
+    attendee_status: sqlx::types::Json<HashMap<String, String>>,
 }
 
 /// A raw `calendar_event_overrides` row (a single overridden occurrence).
@@ -981,6 +1234,12 @@ impl EventRow {
             // A stored row is always a master or one-off (overrides live in
             // their own table); expansion stamps the slot on each occurrence.
             recurrence_id: None,
+            reminder_minutes: self.reminder_minutes,
+            attendee_status: {
+                let mut v: Vec<(String, String)> = self.attendee_status.0.into_iter().collect();
+                v.sort();
+                v
+            },
         }
     }
 }
@@ -1026,6 +1285,8 @@ mod tests {
             attendees: vec![],
             exdates: vec![],
             recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
         }
     }
 
@@ -1038,12 +1299,64 @@ mod tests {
 
     #[test]
     fn parses_rrule() {
-        let (f, i, c, u) = parse_rrule("FREQ=WEEKLY;INTERVAL=2;COUNT=3").unwrap();
-        assert_eq!(f, Freq::Weekly);
-        assert_eq!(i, 2);
-        assert_eq!(c, Some(3));
-        assert!(u.is_none());
+        let r = parse_rrule("FREQ=WEEKLY;INTERVAL=2;COUNT=3").unwrap();
+        assert_eq!(r.freq, Freq::Weekly);
+        assert_eq!(r.interval, 2);
+        assert_eq!(r.count, Some(3));
+        assert!(r.until.is_none());
         assert!(parse_rrule("INTERVAL=2").is_none()); // no FREQ
+    }
+
+    #[test]
+    fn parses_byday_and_bymonthday() {
+        use time::Weekday::{Friday, Monday, Tuesday, Wednesday};
+        let r = parse_rrule("FREQ=WEEKLY;BYDAY=MO,WE,FR").unwrap();
+        assert_eq!(
+            r.byday,
+            vec![(None, Monday), (None, Wednesday), (None, Friday)]
+        );
+        let r = parse_rrule("FREQ=MONTHLY;BYDAY=2TU").unwrap();
+        assert_eq!(r.byday, vec![(Some(2), Tuesday)]);
+        let r = parse_rrule("FREQ=MONTHLY;BYDAY=-1FR").unwrap();
+        assert_eq!(r.byday, vec![(Some(-1), Friday)]);
+        let r = parse_rrule("FREQ=MONTHLY;BYMONTHDAY=15,-1").unwrap();
+        assert_eq!(r.bymonthday, vec![15, -1]);
+    }
+
+    #[test]
+    fn weekly_byday_expands_each_named_weekday() {
+        // Aug 3 2026 is a Monday. Mon/Wed/Fri across the month.
+        let e = ev(Some("FREQ=WEEKLY;BYDAY=MO,WE,FR"), 2026, 8, 3, 9);
+        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 8, 31), &[]);
+        // Mon 3, Wed 5, Fri 7 … Fri 28 → 12 (Mon 31 falls on the exclusive end).
+        assert_eq!(occ.len(), 12);
+        assert!(occ.iter().all(|o| matches!(
+            o.starts_at.weekday(),
+            time::Weekday::Monday | time::Weekday::Wednesday | time::Weekday::Friday
+        )));
+        assert_eq!(occ[0].starts_at, e.starts_at); // first is DTSTART (Mon 3)
+    }
+
+    #[test]
+    fn monthly_nth_weekday() {
+        // 2nd Tuesday each month. Aug 3 2026 (Mon) anchor; expansion uses BYDAY.
+        let e = ev(Some("FREQ=MONTHLY;BYDAY=2TU"), 2026, 8, 3, 9);
+        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 11, 1), &[]);
+        // 2nd Tuesdays: Aug 11, Sep 8, Oct 13.
+        let days: Vec<(u8, u8)> = occ
+            .iter()
+            .map(|o| (o.starts_at.month() as u8, o.starts_at.day()))
+            .collect();
+        assert_eq!(days, vec![(8, 11), (9, 8), (10, 13)]);
+    }
+
+    #[test]
+    fn monthly_last_day() {
+        // BYMONTHDAY=-1 → the last day of each month (28/30/31 vary).
+        let e = ev(Some("FREQ=MONTHLY;BYMONTHDAY=-1"), 2026, 1, 15, 9);
+        let occ = expand_occurrences(&e, at(2026, 1, 1), at(2026, 4, 1), &[]);
+        let days: Vec<u8> = occ.iter().map(|o| o.starts_at.day()).collect();
+        assert_eq!(days, vec![31, 28, 31]); // Jan 31, Feb 28, Mar 31
     }
 
     #[test]

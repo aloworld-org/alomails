@@ -200,12 +200,12 @@ async fn propfind(
                     Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
                 };
                 for e in &events {
-                    responses.push_str(&event_propstat(uid, e, false));
+                    responses.push_str(&event_propstat(uid, e, false, &[]));
                 }
             }
         }
         Resource::CalObject(id) => match fetch_event(acc, id).await {
-            Some(e) => responses.push_str(&event_propstat(uid, &e, false)),
+            Some(e) => responses.push_str(&event_propstat(uid, &e, false, &[])),
             None => return status(StatusCode::NOT_FOUND),
         },
         Resource::NotFound => return status(StatusCode::NOT_FOUND),
@@ -298,7 +298,12 @@ async fn calendar_response(acc: &AccountStore, uid: &str) -> String {
 
 /// A `<response>` for one event object: its href + getetag, and (when
 /// `with_data`) the iCalendar as `calendar-data`.
-fn event_propstat(uid: &str, e: &CalendarEvent, with_data: bool) -> String {
+fn event_propstat(
+    uid: &str,
+    e: &CalendarEvent,
+    with_data: bool,
+    overrides: &[CalendarEvent],
+) -> String {
     let href = event_href(uid, &e.id);
     let etag = event_etag(e);
     let mut props = format!(
@@ -306,12 +311,23 @@ fn event_propstat(uid: &str, e: &CalendarEvent, with_data: bool) -> String {
          <d:getcontenttype>text/calendar; charset=utf-8; component=VEVENT</d:getcontenttype>"
     );
     if with_data {
+        // The master plus one VEVENT per RECURRENCE-ID override, so a client sees
+        // per-occurrence edits (equals to_ics when there are none).
         props.push_str(&format!(
             "<cal:calendar-data>{}</cal:calendar-data>",
-            esc(&ical::to_ics(e))
+            esc(&ical::to_ics_series(e, overrides))
         ));
     }
     response(&href, &props)
+}
+
+/// The overrides to include alongside a recurring event's `calendar-data` (empty
+/// for a one-off or an un-edited series).
+async fn overrides_for_ics(acc: &AccountStore, e: &CalendarEvent) -> Vec<CalendarEvent> {
+    if e.recurrence.is_none() {
+        return Vec::new();
+    }
+    acc.override_occurrences(&e.id).await.unwrap_or_default()
 }
 
 // ---- REPORT (multiget + sync-collection) ------------------------------
@@ -368,13 +384,17 @@ async fn report_events(acc: &AccountStore, uid: &str, text: &str) -> Response {
             Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
         };
         for e in &events {
-            responses.push_str(&event_propstat(uid, e, true));
+            let ovs = overrides_for_ics(acc, e).await;
+            responses.push_str(&event_propstat(uid, e, true, &ovs));
         }
     } else {
         for href in hrefs {
             match cal_href_object_id(&href) {
                 Some(id) => match fetch_event(acc, &id).await {
-                    Some(e) => responses.push_str(&event_propstat(uid, &e, true)),
+                    Some(e) => {
+                        let ovs = overrides_for_ics(acc, &e).await;
+                        responses.push_str(&event_propstat(uid, &e, true, &ovs));
+                    }
                     None => responses.push_str(&not_found_response(&href)),
                 },
                 None => responses.push_str(&not_found_response(&href)),
@@ -396,7 +416,7 @@ async fn cal_sync_collection(acc: &AccountStore, uid: &str, body: &str) -> Respo
     let mut responses = String::new();
     for id in changes.created.iter().chain(changes.updated.iter()) {
         if let Some(e) = fetch_event(acc, id).await {
-            responses.push_str(&event_propstat(uid, &e, false));
+            responses.push_str(&event_propstat(uid, &e, false, &[]));
         }
     }
     for id in &changes.destroyed {
@@ -458,12 +478,15 @@ async fn get_object(acc: &AccountStore, resource: &Resource, head: bool) -> Resp
             None => status(StatusCode::NOT_FOUND),
         },
         Resource::CalObject(id) => match fetch_event(acc, id).await {
-            Some(e) => serve(
-                head,
-                ical::to_ics(&e),
-                &event_etag(&e),
-                "text/calendar; charset=utf-8",
-            ),
+            Some(e) => {
+                let ovs = overrides_for_ics(acc, &e).await;
+                serve(
+                    head,
+                    ical::to_ics_series(&e, &ovs),
+                    &event_etag(&e),
+                    "text/calendar; charset=utf-8",
+                )
+            }
             None => status(StatusCode::NOT_FOUND),
         },
         _ => status(StatusCode::NOT_FOUND),

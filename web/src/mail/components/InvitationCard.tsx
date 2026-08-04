@@ -84,6 +84,48 @@ function CancellationCard({ invitation, blobId }: Props) {
   );
 }
 
+/** A guest's reply, shown on the organizer's copy. Records the response on the
+ *  event on mount (once) and reports whose reply it was. */
+function ReplyCard({ invitation, blobId }: Props) {
+  const client = useJmapClient();
+  const applied = useRef(false);
+  const [state, setState] = useState<"working" | "applied" | "other" | "error">("working");
+
+  useEffect(() => {
+    if (applied.current) return; // guard React 18 double-invoke
+    applied.current = true;
+    void (async () => {
+      try {
+        const { applied: ok } = await client.applyReply(blobId);
+        setState(ok ? "applied" : "other");
+      } catch {
+        setState("error");
+      }
+    })();
+  }, [client, blobId]);
+
+  const who = invitation.attendee ?? strings.rsvpFrom;
+  const verb =
+    invitation.partstat != null ? doneLabel(invitation.partstat) : strings.replyResponded;
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.head}>
+        <CalendarCheck size={20} className={styles.icon} aria-hidden="true" />
+        <div className={styles.info}>
+          <div className={styles.title}>{invitation.summary}</div>
+          <div className={styles.when}>{whenLabel(invitation)}</div>
+          <div className={styles.meta}>{strings.replyFrom(who, verb)}</div>
+          <div className={styles.meta}>
+            {state === "applied" && strings.replyApplied}
+            {state === "error" && strings.rsvpError}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function InvitationCard({ invitation, blobId }: Props) {
   const client = useJmapClient();
   const [busy, setBusy] = useState(false);
@@ -92,6 +134,9 @@ export function InvitationCard({ invitation, blobId }: Props) {
 
   if (invitation.method === "CANCEL") {
     return <CancellationCard invitation={invitation} blobId={blobId} />;
+  }
+  if (invitation.method === "REPLY") {
+    return <ReplyCard invitation={invitation} blobId={blobId} />;
   }
 
   async function respond(response: RsvpResponse) {

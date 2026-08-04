@@ -61,6 +61,9 @@ struct EventBody {
     /// Which calendar to place the event on; absent → the personal calendar.
     #[serde(default, rename = "calendarId")]
     calendar_id: Option<String>,
+    /// Reminder lead-time in minutes before the start, or absent for none.
+    #[serde(default, rename = "reminderMinutes")]
+    reminder_minutes: Option<i32>,
 }
 
 /// `GET /calendar/events?from=&to=` → `{"events": [...]}`.
@@ -152,21 +155,41 @@ pub async fn update(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let req: EventBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let eid = EventId::new(id);
     if let Some(occ) = q.occurrence {
         let recurrence_id = parse_time(&occ)?;
         let ov = build_override(&req)?;
         account
             .acc
-            .override_occurrence(&EventId::new(id), recurrence_id, &ov)
+            .override_occurrence(&eid, recurrence_id, &ov)
             .await
             .map_err(map_store_err)?;
+        // If the series has guests, tell them this one instance moved: a REQUEST
+        // update carrying the same UID with a RECURRENCE-ID at the original slot.
+        if let Ok(Some(master)) = account.acc.event(&eid).await
+            && !master.attendees.is_empty()
+        {
+            let occurrence = CalendarEvent {
+                summary: ov.summary.clone(),
+                description: ov.description.clone(),
+                location: ov.location.clone(),
+                starts_at: ov.starts_at,
+                ends_at: ov.ends_at,
+                all_day: ov.all_day,
+                recurrence: None,
+                recurrence_id: Some(recurrence_id),
+                exdates: Vec::new(),
+                ..master
+            };
+            send_invitations(&state, &account, &occurrence).await;
+        }
         return Ok(Json(json!({ "status": "ok", "scope": "occurrence" })));
     }
     let calendar_id = resolve_calendar(&account, &req).await?;
-    let event = build_event(EventId::new(id.clone()), calendar_id, req)?;
+    let event = build_event(eid.clone(), calendar_id, req)?;
     account
         .acc
-        .update_event(&EventId::new(id), &event)
+        .update_event(&eid, &event)
         .await
         .map_err(map_store_err)?;
     send_invitations(&state, &account, &event).await;
@@ -185,8 +208,8 @@ pub struct DeleteQuery {
 ///
 /// - With `occurrence`: skip just that instance of a recurring series (the
 ///   series and every other instance remain); syncs to phones as an `EXDATE`.
-///   Guests are not (yet) emailed a per-occurrence cancellation — that rides
-///   with the edit-one-occurrence slice.
+///   If the event has guests, each is emailed a one-instance `CANCEL` (same UID
+///   with a `RECURRENCE-ID`) so that occurrence drops off their calendar too.
 /// - Without it: delete the whole event; if it had guests, each is emailed a
 ///   cancellation so their calendar removes it too.
 pub async fn delete(
@@ -199,11 +222,33 @@ pub async fn delete(
     let eid = EventId::new(id);
     if let Some(occ) = q.occurrence {
         let when = parse_time(&occ)?;
+        // Read the event first, so we can tell guests just this instance is off.
+        let event = account
+            .acc
+            .event(&eid)
+            .await
+            .map_err(|_| Problem::server_error())?;
         account
             .acc
             .exclude_occurrence(&eid, when)
             .await
             .map_err(map_store_err)?;
+        if let Some(ev) = event
+            && !ev.attendees.is_empty()
+        {
+            // A CANCEL for one instance: the same UID with a RECURRENCE-ID at the
+            // cancelled slot and no RRULE, so clients drop only that one.
+            let duration = ev.ends_at - ev.starts_at;
+            let occurrence = CalendarEvent {
+                starts_at: when,
+                ends_at: when + duration,
+                recurrence: None,
+                recurrence_id: Some(when),
+                exdates: Vec::new(),
+                ..ev
+            };
+            send_cancellations(&state, &account, &occurrence).await;
+        }
         return Ok(Json(json!({ "status": "ok", "scope": "occurrence" })));
     }
     // Read the event before deleting so we know whom to notify.
@@ -339,6 +384,43 @@ pub async fn cancel(
     Ok(Json(json!({ "status": "ok", "removed": removed })))
 }
 
+/// `POST /calendar/apply-reply` — record a guest's reply on the organizer's
+/// event. Loads the reply message (account-scoped), reads its iMIP `REPLY`
+/// (the replying attendee + `PARTSTAT`), and merges that status onto the event
+/// the caller organizes (matched by `UID`). Returns `{applied, email, status}`;
+/// `applied:false` when the event isn't the caller's to update.
+pub async fn apply_reply(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: CancelBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let raw = account
+        .acc
+        .blob_bytes(&BlobId::new(req.blob_id))
+        .await
+        .map_err(map_store_err)?;
+    let not_reply = || Problem::with(StatusCode::BAD_REQUEST, "this message is not a reply");
+    let ics_bytes = crate::mime_read::calendar_part(&raw).ok_or_else(not_reply)?;
+    let ics = String::from_utf8_lossy(&ics_bytes);
+    if alo_store::ical::method_of(&ics).as_deref() != Some("REPLY") {
+        return Err(not_reply());
+    }
+    let uid = alo_store::ical::uid_of(&ics).ok_or_else(not_reply)?;
+    let (email, partstat) = alo_store::ical::reply_of(&ics).ok_or_else(not_reply)?;
+    // Only updates an event the caller can edit (their organized event);
+    // otherwise a clean `applied:false`, never another account's data.
+    let applied = account
+        .acc
+        .set_attendee_status(&EventId::new(uid), &email, &partstat)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(
+        json!({ "applied": applied, "email": email, "status": partstat }),
+    ))
+}
+
 /// Emails a `METHOD:REPLY` to the invitation's organizer, from the responder's
 /// own address, carrying their participation status. Best-effort: the RSVP is
 /// already recorded on the calendar, so a missing organizer or send failure is
@@ -459,6 +541,9 @@ fn build_event(
         exdates: Vec::new(),
         // Masters/one-offs have no recurrence-id; only expanded occurrences do.
         recurrence_id: None,
+        // Clamp to a sane, non-negative lead time (0 = at start time).
+        reminder_minutes: req.reminder_minutes.filter(|&m| (0..=40_320).contains(&m)),
+        attendee_status: Vec::new(),
     })
 }
 
@@ -793,6 +878,81 @@ pub async fn list_shareable_groups(
     Ok(Json(json!({ "groups": out })))
 }
 
+// --- Free/busy (Agenda) -----------------------------------------------------
+
+#[derive(Deserialize)]
+struct FreeBusyBody {
+    /// The people to check (email addresses in the caller's tenant).
+    emails: Vec<String>,
+    #[serde(rename = "from")]
+    from: String,
+    #[serde(rename = "to")]
+    to: String,
+}
+
+/// `POST /calendar/freebusy` → `{"freebusy":[{email,known,busy:[{start,end}]}]}`.
+/// Each person's **busy intervals** in `[from, to)` — merged, clamped to the
+/// window, and carrying no event details (only busy/free). Strictly within the
+/// caller's tenant: an email that isn't a user there comes back `known:false`.
+pub async fn free_busy(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: FreeBusyBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let from = parse_time(&req.from)?;
+    let to = parse_time(&req.to)?;
+    if to <= from || (to - from).whole_days() > MAX_RANGE_DAYS {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "invalid or too-wide time range",
+        ));
+    }
+    let ts = state.store.for_tenant(account.tenant.clone());
+    let mut out = Vec::new();
+    // Bound the fan-out; a scheduling UI checks a handful of people at a time.
+    for email in req.emails.iter().take(50) {
+        let email = email.trim();
+        let Ok(uid) = ts.user_by_email(email).await else {
+            out.push(json!({ "email": email, "known": false, "busy": [] }));
+            continue;
+        };
+        // Their own busy time (reusing the recurrence/override-aware expander),
+        // tenant-scoped by construction — same tenant as the caller.
+        let events = state
+            .store
+            .for_account(account.tenant.clone(), uid)
+            .events_in_range(from, to)
+            .await
+            .map_err(|_| Problem::server_error())?;
+        let mut spans: Vec<(OffsetDateTime, OffsetDateTime)> = events
+            .iter()
+            .map(|e| (e.starts_at.max(from), e.ends_at.min(to)))
+            .filter(|(s, e)| e > s)
+            .collect();
+        spans.sort_by_key(|(s, _)| *s);
+        let mut merged: Vec<(OffsetDateTime, OffsetDateTime)> = Vec::new();
+        for (s, e) in spans {
+            match merged.last_mut() {
+                Some(last) if s <= last.1 => last.1 = last.1.max(e),
+                _ => merged.push((s, e)),
+            }
+        }
+        let busy: Vec<Value> = merged
+            .iter()
+            .map(|(s, e)| {
+                json!({
+                    "start": s.format(&Rfc3339).unwrap_or_default(),
+                    "end": e.format(&Rfc3339).unwrap_or_default(),
+                })
+            })
+            .collect();
+        out.push(json!({ "email": email, "known": true, "busy": busy }));
+    }
+    Ok(Json(json!({ "freebusy": out })))
+}
+
 fn parse_time(s: &str) -> Result<OffsetDateTime, Problem> {
     OffsetDateTime::parse(s, &Rfc3339)
         .map(|t| t.to_offset(time::UtcOffset::UTC))
@@ -820,6 +980,11 @@ fn event_json(e: &CalendarEvent) -> Value {
         // a stored master or one-off. For a moved occurrence it differs from
         // startsAt, so the client edits/skips by this, not the displayed start.
         "recurrenceId": e.recurrence_id.and_then(|t| t.format(&Rfc3339).ok()),
+        "reminderMinutes": e.reminder_minutes,
+        // Who has responded (organizer's view): [{email, status}], as guests reply.
+        "attendeeStatus": e.attendee_status.iter()
+            .map(|(email, status)| json!({ "email": email, "status": status }))
+            .collect::<Vec<_>>(),
     })
 }
 

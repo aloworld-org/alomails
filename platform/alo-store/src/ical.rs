@@ -25,6 +25,24 @@ pub fn to_ics(event: &CalendarEvent) -> String {
     fold_join(&lines)
 }
 
+/// Serialize a recurring master plus its `RECURRENCE-ID` override instances as a
+/// single `VCALENDAR` (the master `VEVENT`, then one `VEVENT` per edited
+/// occurrence), so a CalDAV client renders per-occurrence edits. With no
+/// overrides this equals [`to_ics`].
+pub fn to_ics_series(master: &CalendarEvent, overrides: &[CalendarEvent]) -> String {
+    let mut lines = vec![
+        "BEGIN:VCALENDAR".to_owned(),
+        "VERSION:2.0".to_owned(),
+        format!("PRODID:{PRODID}"),
+    ];
+    lines.extend(vevent_lines(master, None));
+    for ov in overrides {
+        lines.extend(vevent_lines(ov, None));
+    }
+    lines.push("END:VCALENDAR".to_owned());
+    fold_join(&lines)
+}
+
 /// Serialize an iMIP scheduling message (`VCALENDAR` with a `METHOD` and an
 /// `ORGANIZER`) for emailing an invitation/update/cancel. `method` is e.g.
 /// `REQUEST`; `organizer` is the sender's email.
@@ -58,6 +76,14 @@ fn vevent_lines(event: &CalendarEvent, organizer: Option<&str>) -> Vec<String> {
         lines.push(format!("DTSTART:{}", fmt_utc(event.starts_at)));
         lines.push(format!("DTEND:{}", fmt_utc(event.ends_at)));
     }
+    // For an overridden/one-off instance of a series, the slot it replaces.
+    if let Some(rid) = event.recurrence_id {
+        if event.all_day {
+            lines.push(format!("RECURRENCE-ID;VALUE=DATE:{}", fmt_date(rid)));
+        } else {
+            lines.push(format!("RECURRENCE-ID:{}", fmt_utc(rid)));
+        }
+    }
     if let Some(rrule) = &event.recurrence {
         lines.push(format!("RRULE:{rrule}"));
     }
@@ -80,6 +106,15 @@ fn vevent_lines(event: &CalendarEvent, organizer: Option<&str>) -> Vec<String> {
         lines.push(format!(
             "ATTENDEE;ROLE=REQ-PARTICIPANT;RSVP=TRUE;PARTSTAT=NEEDS-ACTION:mailto:{a}"
         ));
+    }
+    // A reminder becomes a display VALARM triggered `n` minutes before the start,
+    // so the alert fires natively in the client (phone/Apple Calendar).
+    if let Some(mins) = event.reminder_minutes {
+        lines.push("BEGIN:VALARM".to_owned());
+        lines.push("ACTION:DISPLAY".to_owned());
+        lines.push(format!("DESCRIPTION:{}", escape(&event.summary)));
+        lines.push(format!("TRIGGER:-PT{}M", mins.max(0)));
+        lines.push("END:VALARM".to_owned());
     }
     lines.push("END:VEVENT".to_owned());
     lines
@@ -108,6 +143,10 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
     let mut recurrence: Option<String> = None;
     let mut attendees: Vec<String> = Vec::new();
     let mut exdates: Vec<OffsetDateTime> = Vec::new();
+    let mut reminder_minutes: Option<i32> = None;
+    // A VALARM is a nested block: read only its TRIGGER, and never let its
+    // properties (e.g. DESCRIPTION) bleed into the event's.
+    let mut in_alarm = false;
 
     for line in unfolded.lines() {
         let upper = line.to_ascii_uppercase();
@@ -121,12 +160,27 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
         if !in_event {
             continue;
         }
+        if upper == "BEGIN:VALARM" {
+            in_alarm = true;
+            continue;
+        }
+        if upper == "END:VALARM" {
+            in_alarm = false;
+            continue;
+        }
         let Some((spec, value)) = line.split_once(':') else {
             continue;
         };
         let mut parts = spec.split(';');
         let name = parts.next().unwrap_or("").to_ascii_uppercase();
         let is_date = parts.any(|p| p.eq_ignore_ascii_case("VALUE=DATE"));
+        if in_alarm {
+            // Only the alarm's lead time matters; the first VALARM wins.
+            if name == "TRIGGER" && reminder_minutes.is_none() {
+                reminder_minutes = trigger_to_minutes(value.trim());
+            }
+            continue;
+        }
         match name.as_str() {
             "UID" => uid = Some(value.trim().to_owned()),
             "SUMMARY" => summary = unescape(value),
@@ -180,7 +234,44 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
         // A parsed VEVENT is a master/one-off; RECURRENCE-ID overrides are not
         // read here (see docs/interop.md — CalDAV override sync is a later slice).
         recurrence_id: None,
+        reminder_minutes,
+        attendee_status: Vec::new(),
     })
+}
+
+/// Convert a VALARM `TRIGGER` duration to a reminder lead-time in minutes before
+/// the start. A negative (before-start) trigger yields that many minutes; a
+/// zero/positive one is treated as "at start" (0). Weeks/days/hours/minutes of
+/// the ISO-8601 duration are summed; sub-minute parts are ignored.
+fn trigger_to_minutes(value: &str) -> Option<i32> {
+    let neg = value.starts_with('-');
+    let body = value.trim_start_matches(['-', '+']).strip_prefix('P')?;
+    let (date_part, time_part) = body.split_once('T').unwrap_or((body, ""));
+    let mut total: i64 = 0;
+    let mut scan = |part: &str, in_time: bool| -> Option<()> {
+        let mut num = String::new();
+        for ch in part.chars() {
+            if ch.is_ascii_digit() {
+                num.push(ch);
+                continue;
+            }
+            let n: i64 = num.parse().ok()?;
+            num.clear();
+            total += match (ch.to_ascii_uppercase(), in_time) {
+                ('W', false) => n * 7 * 24 * 60,
+                ('D', false) => n * 24 * 60,
+                ('H', true) => n * 60,
+                ('M', true) => n,
+                ('S', true) => 0,
+                _ => return None,
+            };
+        }
+        Some(())
+    };
+    scan(date_part, false)?;
+    scan(time_part, true)?;
+    let mins = if neg { total } else { 0 };
+    i32::try_from(mins.clamp(0, 40_320)).ok()
 }
 
 /// The scheduling `METHOD` of an iCalendar message (`REQUEST`, `REPLY`,
@@ -273,6 +364,50 @@ pub fn organizer_of(text: &str) -> Option<String> {
             if addr.contains('@') {
                 return Some(addr.to_owned());
             }
+        }
+    }
+    None
+}
+
+/// For an iMIP `REPLY`, the replying attendee's email and `PARTSTAT`
+/// (`ACCEPTED` | `DECLINED` | `TENTATIVE` | `NEEDS-ACTION`). Used by the
+/// organizer's side to record who responded. `None` if no attendee is present.
+pub fn reply_of(text: &str) -> Option<(String, String)> {
+    let unfolded = unfold(text);
+    let mut in_event = false;
+    for line in unfolded.lines() {
+        let upper = line.to_ascii_uppercase();
+        if upper == "BEGIN:VEVENT" {
+            in_event = true;
+            continue;
+        }
+        if upper == "END:VEVENT" {
+            break;
+        }
+        if !in_event {
+            continue;
+        }
+        let Some((spec, value)) = line.split_once(':') else {
+            continue;
+        };
+        let mut params = spec.split(';');
+        if !params.next().unwrap_or("").eq_ignore_ascii_case("ATTENDEE") {
+            continue;
+        }
+        let partstat = params
+            .find_map(|p| {
+                p.to_ascii_uppercase()
+                    .strip_prefix("PARTSTAT=")
+                    .map(str::to_owned)
+            })
+            .unwrap_or_else(|| "NEEDS-ACTION".to_owned());
+        let v = value.trim();
+        let addr = v
+            .strip_prefix("mailto:")
+            .or_else(|| v.strip_prefix("MAILTO:"))
+            .unwrap_or(v);
+        if addr.contains('@') {
+            return Some((addr.to_owned(), partstat));
         }
     }
     None
@@ -441,6 +576,8 @@ mod tests {
             attendees: vec!["guest@example.com".to_owned()],
             exdates: vec![],
             recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
         };
         let ics = to_ics(&e);
         // The ATTENDEE line exceeds 75 octets and folds; unfold to check it.
@@ -482,6 +619,8 @@ mod tests {
             attendees: vec!["guest@example.com".to_owned()],
             exdates: vec![],
             recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
         };
         let msg = to_imip(&e, "owner@alomails.com", "REQUEST");
         assert!(msg.contains("METHOD:REQUEST"));
@@ -531,6 +670,8 @@ mod tests {
             attendees: vec![],
             exdates: vec![],
             recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
         });
         assert_eq!(method_of(&plain), None);
         assert_eq!(organizer_of(&plain), None);
@@ -570,11 +711,90 @@ mod tests {
             attendees: vec![],
             exdates: vec![ex],
             recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
         };
         let ics = to_ics(&e);
         assert!(ics.contains("EXDATE:20260915T090000Z"));
         let back = from_ics(&ics, "fb").unwrap();
         assert_eq!(back.exdates, vec![ex]);
+    }
+
+    #[test]
+    fn reminder_round_trips_as_valarm() {
+        let start = OffsetDateTime::new_utc(
+            Date::from_calendar_date(2026, time::Month::September, 1).unwrap(),
+            Time::from_hms(9, 0, 0).unwrap(),
+        );
+        let e = CalendarEvent {
+            id: EventId::new("rem-1".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
+            summary: "Standup".into(),
+            description: None,
+            location: None,
+            starts_at: start,
+            ends_at: start + time::Duration::minutes(30),
+            all_day: false,
+            recurrence: None,
+            attendees: vec![],
+            exdates: vec![],
+            recurrence_id: None,
+            reminder_minutes: Some(10),
+            attendee_status: vec![],
+        };
+        let ics = to_ics(&e);
+        assert!(ics.contains("BEGIN:VALARM"));
+        assert!(ics.contains("TRIGGER:-PT10M"));
+        assert_eq!(from_ics(&ics, "fb").unwrap().reminder_minutes, Some(10));
+        // A VALARM DESCRIPTION must not clobber the event's fields.
+        assert!(from_ics(&ics, "fb").unwrap().description.is_none());
+    }
+
+    #[test]
+    fn series_serializes_master_plus_override_vevents() {
+        let start = OffsetDateTime::new_utc(
+            Date::from_calendar_date(2026, time::Month::September, 1).unwrap(),
+            Time::from_hms(9, 0, 0).unwrap(),
+        );
+        let master = CalendarEvent {
+            id: EventId::new("series-9".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
+            summary: "Standup".into(),
+            description: None,
+            location: None,
+            starts_at: start,
+            ends_at: start + time::Duration::minutes(30),
+            all_day: false,
+            recurrence: Some("FREQ=WEEKLY".to_owned()),
+            attendees: vec![],
+            exdates: vec![],
+            recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
+        };
+        // The Sep 8 occurrence, moved to 15:00 (its slot stays Sep 8 09:00).
+        let slot = start + time::Duration::weeks(1);
+        let override_ev = CalendarEvent {
+            starts_at: slot + time::Duration::hours(6),
+            ends_at: slot + time::Duration::hours(6) + time::Duration::minutes(30),
+            recurrence: None,
+            recurrence_id: Some(slot),
+            ..master.clone()
+        };
+        let ics = to_ics_series(&master, std::slice::from_ref(&override_ev));
+        assert_eq!(ics.matches("BEGIN:VEVENT").count(), 2, "master + one override");
+        assert!(ics.contains("RRULE:FREQ=WEEKLY"));
+        assert!(ics.contains("RECURRENCE-ID:20260908T090000Z"));
+        assert!(ics.contains("DTSTART:20260908T150000Z"));
+    }
+
+    #[test]
+    fn trigger_durations_parse_to_minutes() {
+        assert_eq!(trigger_to_minutes("-PT15M"), Some(15));
+        assert_eq!(trigger_to_minutes("-PT1H"), Some(60));
+        assert_eq!(trigger_to_minutes("-P1D"), Some(1440));
+        assert_eq!(trigger_to_minutes("-PT0S"), Some(0));
+        assert_eq!(trigger_to_minutes("PT30M"), Some(0)); // after-start → at start
     }
 
     #[test]
@@ -598,6 +818,8 @@ mod tests {
             attendees: vec![],
             exdates: vec![],
             recurrence_id: None,
+            reminder_minutes: None,
+            attendee_status: vec![],
         };
         let ics = to_ics(&e);
         assert!(ics.contains("DTSTART;VALUE=DATE:20261225"));

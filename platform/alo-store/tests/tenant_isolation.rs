@@ -361,6 +361,8 @@ fn sample_event(cal: &CalendarId, summary: &str) -> CalendarEvent {
         attendees: Vec::new(),
         exdates: Vec::new(),
         recurrence_id: None,
+        reminder_minutes: None,
+        attendee_status: Vec::new(),
     }
 }
 

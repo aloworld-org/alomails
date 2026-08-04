@@ -41,6 +41,7 @@ export {
   type ControlTenant,
   type ControlDomain,
   type Session,
+  type FreeBusyPerson,
   type ShareableGroup,
   type SharedMailbox,
   type Delegate,

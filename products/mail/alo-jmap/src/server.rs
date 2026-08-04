@@ -74,6 +74,8 @@ pub fn app(state: AppState) -> Router {
         )
         .route("/calendar/rsvp", post(calendar::rsvp))
         .route("/calendar/cancel", post(calendar::cancel))
+        // Record a guest's reply on the organizer's event (attendee PARTSTAT).
+        .route("/calendar/apply-reply", post(calendar::apply_reply))
         .route(
             "/calendar/calendars",
             get(calendar::list_calendars).post(calendar::create_calendar),
@@ -91,6 +93,8 @@ pub fn app(state: AppState) -> Router {
         )
         // Groups the caller can share a calendar with (team access).
         .route("/calendar/groups", get(calendar::list_shareable_groups))
+        // Free/busy: when are these people (in the tenant) busy?
+        .route("/calendar/freebusy", post(calendar::free_busy))
         .route("/contacts", get(contacts::list))
         // Address-book import (a .vcf upload) and export (whole book as .vcf).
         .route("/contacts/import", post(contacts::import))

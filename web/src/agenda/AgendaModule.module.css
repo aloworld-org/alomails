@@ -676,3 +676,12 @@
     font-size: var(--text-base);
   }
 }
+
+/* Free/busy availability check under the guests field. */
+.availabilityRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: 4px;
+}

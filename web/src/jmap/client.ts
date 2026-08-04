@@ -25,6 +25,7 @@ import {
   type EmailAddress,
   type MailFilterRule,
   type SecurityCheck,
+  type FreeBusyPerson,
   type ShareableGroup,
   type SharedMailbox,
   type Delegate,
@@ -1458,6 +1459,17 @@ export class JmapClient {
     return ((await res.json()) as { groups: ShareableGroup[] }).groups;
   }
 
+  /** Busy intervals for each person (by email, in the tenant) over `[from,to)`. */
+  async freeBusy(emails: string[], fromIso: string, toIso: string): Promise<FreeBusyPerson[]> {
+    const res = await this.#fetch(`${API_BASE}/calendar/freebusy`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ emails, from: fromIso, to: toIso }),
+    });
+    if (!res.ok) throw new JmapError(`freebusy ${res.status}`);
+    return ((await res.json()) as { freebusy: FreeBusyPerson[] }).freebusy;
+  }
+
   /** The user's server-side mail filter rules. */
   async filters(): Promise<MailFilterRule[]> {
     const res = await this.#fetch(`${API_BASE}/filters`, { method: "GET" });
@@ -1524,5 +1536,19 @@ export class JmapClient {
     });
     if (!res.ok) throw new JmapError(`cancel ${res.status}`);
     return (await res.json()) as { removed: boolean };
+  }
+
+  /** Record a guest's reply (from the REPLY message's blob) on the organizer's
+   * event. `applied:false` when the event isn't the caller's to update. */
+  async applyReply(
+    blobId: string,
+  ): Promise<{ applied: boolean; email: string; status: string }> {
+    const res = await this.#fetch(`${API_BASE}/calendar/apply-reply`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ blobId }),
+    });
+    if (!res.ok) throw new JmapError(`applyReply ${res.status}`);
+    return (await res.json()) as { applied: boolean; email: string; status: string };
   }
 }

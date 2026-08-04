@@ -4,11 +4,11 @@
 // midnight).
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { MapPin, Trash2, Users, X } from "lucide-react";
+import { Bell, MapPin, Trash2, Users, X } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button } from "../ds";
-import type { Calendar, CalendarEvent, EventInput } from "../jmap";
+import { useJmapClient, type Calendar, type CalendarEvent, type EventInput } from "../jmap";
 import { addDays, toDateInput, toLocalInput } from "./dates";
 import styles from "./AgendaModule.module.css";
 
@@ -38,14 +38,47 @@ function localFromInput(value: string): Date {
   return new Date(value);
 }
 
-type Repeat = "none" | "daily" | "weekly" | "monthly" | "yearly";
+type Repeat = "none" | "daily" | "weekly" | "weekdays" | "monthly" | "yearly";
 
-/** The dropdown value for an existing RRULE (by FREQ; extra params like
- *  INTERVAL/BYDAY aren't surfaced in this simple picker). */
+const WEEKDAYS_RRULE = "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR";
+
+/** The dropdown value for an existing RRULE. Recognises the "every weekday"
+ *  preset (weekly on Mon–Fri); other BYDAY/BYMONTHDAY rules the engine supports
+ *  fall back to their FREQ so editing never silently drops them. */
 function repeatOf(rrule: string | null): Repeat {
-  const m = /FREQ=([A-Z]+)/i.exec(rrule ?? "");
-  const f = m?.[1]?.toLowerCase();
+  const up = (rrule ?? "").toUpperCase();
+  if (/FREQ=WEEKLY/.test(up)) {
+    const byday = /BYDAY=([^;]+)/.exec(up)?.[1];
+    if (byday) {
+      const set = new Set(byday.split(",").map((s) => s.trim()));
+      if (set.size === 5 && ["MO", "TU", "WE", "TH", "FR"].every((d) => set.has(d))) {
+        return "weekdays";
+      }
+    }
+  }
+  const f = /FREQ=([A-Z]+)/.exec(up)?.[1]?.toLowerCase();
   return f === "daily" || f === "weekly" || f === "monthly" || f === "yearly" ? f : "none";
+}
+
+/** A short label for a guest's RSVP PARTSTAT (organizer's view). */
+function rsvpLabel(status: string): string {
+  switch (status.toUpperCase()) {
+    case "ACCEPTED":
+      return strings.agendaRsvpAccepted;
+    case "DECLINED":
+      return strings.agendaRsvpDeclined;
+    case "TENTATIVE":
+      return strings.agendaRsvpTentative;
+    default:
+      return strings.agendaRsvpPending;
+  }
+}
+
+/** The RRULE for a picker value (`none` → no rule). */
+function rruleFor(repeat: Repeat): string | undefined {
+  if (repeat === "none") return undefined;
+  if (repeat === "weekdays") return WEEKDAYS_RRULE;
+  return `FREQ=${repeat.toUpperCase()}`;
 }
 
 export function EventModal({
@@ -80,9 +113,53 @@ export function EventModal({
   const [guests, setGuests] = useState((event?.attendees ?? []).join(", "));
   const [description, setDescription] = useState(event?.description ?? "");
   const [repeat, setRepeat] = useState<Repeat>(repeatOf(event?.recurrence ?? null));
+  // "" = no reminder; otherwise minutes-before-start as a string.
+  const [reminder, setReminder] = useState<string>(
+    event?.reminderMinutes != null ? String(event.reminderMinutes) : "",
+  );
   const [calendarId, setCalendarId] = useState(defaultCalendar);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const client = useJmapClient();
+
+  function guestList(): string[] {
+    return guests
+      .split(/[\s,;]+/)
+      .map((g) => g.trim())
+      .filter((g) => g.includes("@"));
+  }
+
+  /** Ask the server who among the guests is busy over the chosen window. */
+  async function checkAvailability() {
+    const t = readTimes();
+    if (t === null) return;
+    const people = guestList();
+    if (people.length === 0) {
+      setAvailability(strings.agendaAvailNoGuests);
+      return;
+    }
+    setChecking(true);
+    setAvailability(null);
+    try {
+      const fb = await client.freeBusy(people, t.startsAt, t.endsAt);
+      const s = new Date(t.startsAt).getTime();
+      const e = new Date(t.endsAt).getTime();
+      const clash = fb
+        .filter((p) =>
+          p.busy.some((b) => new Date(b.start).getTime() < e && new Date(b.end).getTime() > s),
+        )
+        .map((p) => p.email);
+      setAvailability(
+        clash.length === 0 ? strings.agendaAvailAllFree : strings.agendaAvailBusy(clash.join(", ")),
+      );
+    } catch {
+      setAvailability(strings.agendaAvailError);
+    } finally {
+      setChecking(false);
+    }
+  }
 
   /** The form's start/end as RFC 3339 UTC, or null if the range is invalid. */
   function readTimes(): { startsAt: string; endsAt: string } | null {
@@ -111,15 +188,13 @@ export function EventModal({
     if (desc) input.description = desc;
     const loc = location.trim();
     if (loc) input.location = loc;
-    if (repeat !== "none") input.recurrence = `FREQ=${repeat.toUpperCase()}`;
+    const rrule = rruleFor(repeat);
+    if (rrule) input.recurrence = rrule;
+    if (reminder !== "") input.reminderMinutes = Number(reminder);
     if (calendarId !== "") input.calendarId = calendarId;
-    // Guests: split on commas/semicolons/whitespace, keep anything address-like.
-    // The server validates and mails each an invitation.
-    const guestList = guests
-      .split(/[\s,;]+/)
-      .map((g) => g.trim())
-      .filter((g) => g.includes("@"));
-    if (guestList.length > 0) input.attendees = guestList;
+    // Guests: address-like tokens only. The server validates and mails each.
+    const people = guestList();
+    if (people.length > 0) input.attendees = people;
     return input;
   }
 
@@ -250,8 +325,25 @@ export function EventModal({
             <option value="none">{strings.agendaRepeatNone}</option>
             <option value="daily">{strings.agendaRepeatDaily}</option>
             <option value="weekly">{strings.agendaRepeatWeekly}</option>
+            <option value="weekdays">{strings.agendaRepeatWeekdays}</option>
             <option value="monthly">{strings.agendaRepeatMonthly}</option>
             <option value="yearly">{strings.agendaRepeatYearly}</option>
+          </select>
+        </label>
+
+        <label className={styles.field}>
+          <span>
+            <Bell size={13} /> {strings.agendaReminder}
+          </span>
+          <select value={reminder} onChange={(e) => setReminder(e.target.value)}>
+            <option value="">{strings.agendaReminderNone}</option>
+            <option value="0">{strings.agendaReminderAtStart}</option>
+            <option value="5">{strings.agendaReminder5}</option>
+            <option value="10">{strings.agendaReminder10}</option>
+            <option value="15">{strings.agendaReminder15}</option>
+            <option value="30">{strings.agendaReminder30}</option>
+            <option value="60">{strings.agendaReminder60}</option>
+            <option value="1440">{strings.agendaReminder1Day}</option>
           </select>
         </label>
 
@@ -276,6 +368,26 @@ export function EventModal({
             spellCheck={false}
           />
           <small className={styles.fieldHint}>{strings.agendaGuestsHint}</small>
+          <div className={styles.availabilityRow}>
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={() => void checkAvailability()}
+              disabled={checking}
+            >
+              {checking ? strings.agendaAvailChecking : strings.agendaCheckAvailability}
+            </button>
+            {availability !== null && (
+              <small className={styles.fieldHint}>{availability}</small>
+            )}
+          </div>
+          {event?.attendeeStatus && event.attendeeStatus.length > 0 && (
+            <small className={styles.fieldHint}>
+              {event.attendeeStatus
+                .map((a) => `${a.email} — ${rsvpLabel(a.status)}`)
+                .join(" · ")}
+            </small>
+          )}
         </label>
 
         <label className={styles.field}>

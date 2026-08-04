@@ -2020,13 +2020,31 @@ fn read_invitation(raw: &[u8]) -> Option<jtypes::Invitation> {
     let ics = crate::mime_read::calendar_part(raw)?;
     let text = String::from_utf8_lossy(&ics);
     let method = alo_store::ical::method_of(&text)?;
-    if method != "REQUEST" && method != "CANCEL" {
+    if method != "REQUEST" && method != "CANCEL" && method != "REPLY" {
         return None;
     }
     let ev = alo_store::ical::from_ics(&text, "")?;
     let fmt = |t: time::OffsetDateTime| {
         t.format(&time::format_description::well_known::Rfc3339)
             .unwrap_or_default()
+    };
+    // A REPLY carries the responding guest's status; map PARTSTAT to the same
+    // lowercase vocabulary the RSVP card uses.
+    let (attendee, partstat) = if method == "REPLY" {
+        match alo_store::ical::reply_of(&text) {
+            Some((email, ps)) => {
+                let status = match ps.as_str() {
+                    "ACCEPTED" => "accepted",
+                    "DECLINED" => "declined",
+                    "TENTATIVE" => "tentative",
+                    _ => "tentative",
+                };
+                (Some(email), Some(status.to_owned()))
+            }
+            None => (None, None),
+        }
+    } else {
+        (None, None)
     };
     Some(jtypes::Invitation {
         method,
@@ -2037,6 +2055,8 @@ fn read_invitation(raw: &[u8]) -> Option<jtypes::Invitation> {
         ends_at: fmt(ev.ends_at),
         all_day: ev.all_day,
         location: ev.location,
+        attendee,
+        partstat,
     })
 }
 

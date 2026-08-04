@@ -302,6 +302,15 @@ pub struct CalendarEvent {
     /// a one-off. It is the stable handle for editing/skipping that instance,
     /// since an override's `starts_at` may differ from its slot.
     pub recurrence_id: Option<OffsetDateTime>,
+    /// Reminder lead-time in minutes before the start (iCalendar `VALARM` with a
+    /// negative `TRIGGER`), or `None` for no reminder. A recurring series shares
+    /// one reminder across its occurrences.
+    pub reminder_minutes: Option<i32>,
+    /// Per-guest RSVP status on the **organizer's** copy: `(email, PARTSTAT)`
+    /// (`ACCEPTED` | `DECLINED` | `TENTATIVE` | `NEEDS-ACTION`), sorted by email.
+    /// Populated as guests reply; empty otherwise. Read-only on writes — set via
+    /// [`AccountStore::set_attendee_status`], preserved across event edits.
+    pub attendee_status: Vec<(String, String)>,
 }
 
 /// The editable fields of a single overridden occurrence (iCalendar

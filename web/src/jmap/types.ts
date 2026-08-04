@@ -183,9 +183,10 @@ export interface EmailHeaders {
 /** A received invitation, summarised for the reading pane. Times are RFC 3339
  * (UTC). RSVP acts on the message's blobId, so no event fields are writable. */
 export interface CalendarInvitation {
-  /** `REQUEST` (an invitation, shows Accept/Decline) or `CANCEL` (the organizer
-   *  withdrew it, shows a cancellation notice and removes the event). */
-  method: "REQUEST" | "CANCEL";
+  /** `REQUEST` (an invitation, shows Accept/Decline), `CANCEL` (the organizer
+   *  withdrew it, shows a notice and removes the event), or `REPLY` (a guest
+   *  responded — the organizer's copy records it on the event). */
+  method: "REQUEST" | "CANCEL" | "REPLY";
   uid: string;
   summary: string;
   organizer: string | null;
@@ -193,6 +194,10 @@ export interface CalendarInvitation {
   endsAt: string;
   allDay: boolean;
   location: string | null;
+  /** For a `REPLY`: the responding guest's email. */
+  attendee?: string | null;
+  /** For a `REPLY`: their status. */
+  partstat?: RsvpResponse | null;
 }
 
 /** The reply to an invitation. */
@@ -402,6 +407,14 @@ export interface ShareableGroup {
   name: string;
 }
 
+/** One person's free/busy: their busy intervals in the queried window (no event
+ *  detail), or `known: false` if the email isn't a user in the tenant. */
+export interface FreeBusyPerson {
+  email: string;
+  known: boolean;
+  busy: { start: string; end: string }[];
+}
+
 /** A calendar event as it crosses the wire (times are RFC 3339, UTC). */
 export interface CalendarEvent {
   id: string;
@@ -424,6 +437,10 @@ export interface CalendarEvent {
    *  which differs from `startsAt` once the occurrence has been moved. Null on a
    *  stored master or a one-off. */
   recurrenceId: string | null;
+  /** Reminder lead-time in minutes before the start, or null for none. */
+  reminderMinutes: number | null;
+  /** Organizer's view of who has responded (as guests reply); empty otherwise. */
+  attendeeStatus: { email: string; status: string }[];
 }
 
 /** The writable fields when creating or replacing an event. */
@@ -438,4 +455,6 @@ export interface EventInput {
   attendees?: string[];
   /** Which calendar to place the event on; omit for the personal calendar. */
   calendarId?: string;
+  /** Reminder lead-time in minutes before the start; omit for no reminder. */
+  reminderMinutes?: number;
 }
