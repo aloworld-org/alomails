@@ -115,11 +115,13 @@ pub async fn create(
     let req: EventBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let calendar_id = resolve_calendar(&account, &req).await?;
     let event = build_event(EventId::generate(), calendar_id, req)?;
+    // create_event denies a calendar the caller can't edit with NotFound → 404,
+    // so map through the store-error translator rather than a blanket 500.
     let id = account
         .acc
         .create_event(&event)
         .await
-        .map_err(|_| Problem::server_error())?;
+        .map_err(map_store_err)?;
     let saved = CalendarEvent { id, ..event };
     send_invitations(&state, &account, &saved).await;
     Ok(Json(event_json(&saved)))
