@@ -25,6 +25,7 @@ import { ListView } from "./ListView";
 import { TimelineView } from "./TimelineView";
 import { CalendarView } from "./CalendarView";
 import { TaskToolbar } from "./TaskToolbar";
+import { NewTaskModal } from "./NewTaskModal";
 import { TaskDetail } from "./TaskDetail";
 import { Avatar, DueChip, PriorityChip } from "./parts";
 import { DEFAULT_CONFIG, filterTasks, type ViewConfig } from "./viewConfig";
@@ -47,6 +48,7 @@ export function TasksModule() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [creating, setCreating] = useState<{ status?: string } | null>(null);
 
   const projectName = useCallback(
     (id: string) => projects.find((p) => p.id === id)?.name ?? "",
@@ -59,17 +61,8 @@ export function TasksModule() {
     return (projects.find((p) => p.kind === "personal") ?? projects[0])?.id;
   }
 
-  /** Add a task (optionally into a given status column) via a titled prompt. */
-  async function addTask(status?: string) {
-    const projectId = targetProject();
-    if (projectId === undefined) return;
-    const title = (await prompt({ message: strings.taskNewTaskPrompt }))?.trim();
-    if (title === undefined || title === "") return;
-    const created = await client.createTask({ projectId, title });
-    if (status !== undefined && status !== "todo") {
-      await client.moveTask(created.id, status, created.position);
-    }
-    await reload();
+  function openCreate(status?: string) {
+    setCreating(status !== undefined ? { status } : {});
   }
 
   const loadProjects = useCallback(async () => {
@@ -216,7 +209,7 @@ export function TasksModule() {
           </form>
           <div className={styles.topActions}>
             {loading && <Spinner size={16} />}
-            <button type="button" className={styles.newTaskBtn} onClick={() => void addTask()}>
+            <button type="button" className={styles.newTaskBtn} onClick={() => openCreate()}>
               <Plus size={16} /> {strings.taskNew}
             </button>
           </div>
@@ -266,7 +259,7 @@ export function TasksModule() {
               </span>
               <h2 className={styles.emptyTitle}>{strings.taskEmptyTitle}</h2>
               <p className={styles.emptyBody}>{strings.taskEmptyBody}</p>
-              <button type="button" className={styles.emptyCta} onClick={() => void addTask()}>
+              <button type="button" className={styles.emptyCta} onClick={() => openCreate()}>
                 <Plus size={17} /> {strings.taskCreateFirst}
               </button>
             </div>
@@ -285,7 +278,7 @@ export function TasksModule() {
               search={search}
               onOpen={setSelected}
               onMove={move}
-              onAdd={(status) => void addTask(status)}
+              onAdd={(status) => openCreate(status)}
             />
           )}
         </div>
@@ -298,6 +291,18 @@ export function TasksModule() {
           onChanged={() => {
             void reload();
             void loadProposals();
+          }}
+        />
+      )}
+
+      {creating !== null && (
+        <NewTaskModal
+          projects={projects}
+          defaultProjectId={targetProject()}
+          defaultStatus={creating.status}
+          onClose={() => setCreating(null)}
+          onCreated={() => {
+            void reload();
           }}
         />
       )}
