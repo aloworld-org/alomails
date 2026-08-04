@@ -233,7 +233,7 @@ where
             classify(&attrs, &name, delim).map(|(prio, target)| (prio, name, target))
         })
         .collect();
-    classified.sort_by(|a, b| a.0.cmp(&b.0));
+    classified.sort_by_key(|a| a.0);
 
     let mut folders = Vec::new();
     let mut remaining = budget;

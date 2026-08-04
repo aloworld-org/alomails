@@ -800,7 +800,7 @@ fn parse_contact(props: &Value, base: Option<&Contact>) -> Result<Contact, Value
         }
     };
     let field = |key: &str| -> Option<String> {
-        get_str(key).map_or_else(|| base.and_then(|b| pick(b, key)), |v| v)
+        get_str(key).unwrap_or_else(|| base.and_then(|b| pick(b, key)))
     };
 
     let first_name = field("firstName");
