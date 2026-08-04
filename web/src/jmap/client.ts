@@ -13,6 +13,7 @@ import {
   type AdminUser,
   type AiProvider,
   type AuditEntry,
+  type Calendar,
   type CalendarEvent,
   type Category,
   type Contact,
@@ -1368,6 +1369,32 @@ export class JmapClient {
       occurrence !== undefined ? `${base}?occurrence=${encodeURIComponent(occurrence)}` : base;
     const res = await this.#fetch(url, { method: "DELETE" });
     if (!res.ok) throw new JmapError(`calendar delete ${res.status}`);
+  }
+
+  /** The user's calendars (personal + any they created). */
+  async calendars(): Promise<Calendar[]> {
+    const res = await this.#fetch(`${API_BASE}/calendar/calendars`);
+    if (!res.ok) throw new JmapError(`calendars ${res.status}`);
+    return ((await res.json()) as { calendars: Calendar[] }).calendars;
+  }
+
+  /** Create a calendar; returns it. */
+  async createCalendar(name: string, color?: string): Promise<Calendar> {
+    const res = await this.#fetch(`${API_BASE}/calendar/calendars`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(color !== undefined ? { name, color } : { name }),
+    });
+    if (!res.ok) throw new JmapError(`createCalendar ${res.status}`);
+    return (await res.json()) as Calendar;
+  }
+
+  /** Delete a calendar and its events (the personal one is protected → 409). */
+  async deleteCalendar(id: string): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/calendar/calendars/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new JmapError(`deleteCalendar ${res.status}`);
   }
 
   /** The user's server-side mail filter rules. */

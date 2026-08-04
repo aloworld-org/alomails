@@ -231,6 +231,11 @@ export const en = {
 
   // agenda (calendar)
   agendaNewEvent: "New event",
+  agendaCalendars: "Calendars",
+  agendaCalendar: "Calendar",
+  agendaNewCalendar: "New calendar",
+  agendaNewCalendarPrompt: "Name for the new calendar",
+  agendaDeleteCalendar: "Delete calendar",
   agendaToday: "Today",
   agendaPrev: "Previous",
   agendaNext: "Next",

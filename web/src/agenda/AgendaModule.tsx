@@ -4,10 +4,10 @@
 // view. All data goes through the authenticated /calendar API on the store; the
 // UI works in local time and converts at the edges.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarPlus, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 
 import { getLocale, strings } from "../i18n";
-import { useJmapClient, type CalendarEvent, type EventInput } from "../jmap";
+import { useJmapClient, type Calendar, type CalendarEvent, type EventInput } from "../jmap";
 import { Spinner } from "../ds";
 import { EventModal } from "./EventModal";
 import { MiniMonth } from "./MiniMonth";
@@ -32,8 +32,41 @@ export function AgendaModule() {
   const [view, setView] = useState<View>("month");
   const [anchor, setAnchor] = useState<Date>(today);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
+  const [calendars, setCalendars] = useState<Calendar[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Editing>(null);
+
+  const loadCalendars = useCallback(async () => {
+    try {
+      setCalendars(await client.calendars());
+    } catch {
+      /* keep whatever we have */
+    }
+  }, [client]);
+
+  useEffect(() => {
+    void loadCalendars();
+  }, [loadCalendars]);
+
+  async function newCalendar() {
+    const name = window.prompt(strings.agendaNewCalendarPrompt)?.trim();
+    if (name === undefined || name === "") return;
+    try {
+      await client.createCalendar(name);
+      await loadCalendars();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function removeCalendar(id: string) {
+    try {
+      await client.deleteCalendar(id);
+      await Promise.all([loadCalendars(), reload()]);
+    } catch {
+      /* the personal calendar is protected (409) */
+    }
+  }
 
   // The visible [from, to) window for the current view.
   const [from, to] = useMemo<[Date, Date]>(() => {
@@ -129,6 +162,42 @@ export function AgendaModule() {
           {strings.agendaNewEvent}
         </button>
         <MiniMonth anchor={anchor} today={today} onPick={(d) => setAnchor(d)} />
+
+        <div className={styles.calList}>
+          <div className={styles.calListHead}>
+            <span>{strings.agendaCalendars}</span>
+            <button
+              type="button"
+              className={styles.calAdd}
+              onClick={() => void newCalendar()}
+              aria-label={strings.agendaNewCalendar}
+              title={strings.agendaNewCalendar}
+            >
+              <Plus size={15} />
+            </button>
+          </div>
+          {calendars.map((c) => (
+            <div key={c.id} className={styles.calItem}>
+              <span
+                className={styles.calDot}
+                style={{ background: c.color ?? "var(--terracotta, #e76f51)" }}
+                aria-hidden="true"
+              />
+              <span className={styles.calName}>{c.name}</span>
+              {c.kind !== "personal" && (
+                <button
+                  type="button"
+                  className={styles.calDel}
+                  onClick={() => void removeCalendar(c.id)}
+                  aria-label={strings.agendaDeleteCalendar}
+                  title={strings.agendaDeleteCalendar}
+                >
+                  <Trash2 size={13} />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       </aside>
 
       <section className={styles.main}>
@@ -186,6 +255,7 @@ export function AgendaModule() {
           event={editing.event}
           initialStart={editing.initialStart}
           occurrenceStart={editing.occurrenceStart}
+          calendars={calendars}
           onSave={save}
           onDelete={remove}
           onClose={() => setEditing(null)}

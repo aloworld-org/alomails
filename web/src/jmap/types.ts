@@ -371,9 +371,21 @@ export function categoryIdOf(keyword: string): string | null {
     : null;
 }
 
+/** A calendar (a named collection of events). */
+export interface Calendar {
+  id: string;
+  name: string;
+  /** Display colour (hex like `#e76f51`), or null. */
+  color: string | null;
+  /** `personal` (the default, not deletable) or `shared`. */
+  kind: "personal" | "shared";
+}
+
 /** A calendar event as it crosses the wire (times are RFC 3339, UTC). */
 export interface CalendarEvent {
   id: string;
+  /** The calendar this event belongs to. */
+  calendarId: string;
   summary: string;
   description: string | null;
   location: string | null;
@@ -398,4 +410,6 @@ export interface EventInput {
   allDay: boolean;
   recurrence?: string;
   attendees?: string[];
+  /** Which calendar to place the event on; omit for the personal calendar. */
+  calendarId?: string;
 }

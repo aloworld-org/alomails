@@ -8,7 +8,7 @@ import { MapPin, Trash2, Users, X } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button } from "../ds";
-import type { CalendarEvent, EventInput } from "../jmap";
+import type { Calendar, CalendarEvent, EventInput } from "../jmap";
 import { addDays, toDateInput, toLocalInput } from "./dates";
 import styles from "./AgendaModule.module.css";
 
@@ -20,6 +20,8 @@ interface Props {
   /** For a recurring event, the RFC 3339 start of the clicked occurrence —
    *  enables "delete this event" (skip just that instance). */
   occurrenceStart?: string | undefined;
+  /** The calendars the event can be placed on. */
+  calendars: Calendar[];
   onSave: (id: string | null, input: EventInput) => Promise<void>;
   onDelete: (id: string, occurrence?: string) => Promise<void>;
   onClose: () => void;
@@ -45,10 +47,13 @@ export function EventModal({
   event,
   initialStart,
   occurrenceStart,
+  calendars,
   onSave,
   onDelete,
   onClose,
 }: Props) {
+  const defaultCalendar =
+    event?.calendarId ?? calendars.find((c) => c.kind === "personal")?.id ?? calendars[0]?.id ?? "";
   const startDate = event ? new Date(event.startsAt) : initialStart;
   const endDate = event ? new Date(event.endsAt) : new Date(initialStart.getTime() + 3600_000);
 
@@ -63,6 +68,7 @@ export function EventModal({
   const [guests, setGuests] = useState((event?.attendees ?? []).join(", "));
   const [description, setDescription] = useState(event?.description ?? "");
   const [repeat, setRepeat] = useState<Repeat>(repeatOf(event?.recurrence ?? null));
+  const [calendarId, setCalendarId] = useState(defaultCalendar);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -100,6 +106,7 @@ export function EventModal({
     const loc = location.trim();
     if (loc) input.location = loc;
     if (repeat !== "none") input.recurrence = `FREQ=${repeat.toUpperCase()}`;
+    if (calendarId !== "") input.calendarId = calendarId;
     // Guests: split on commas/semicolons/whitespace, keep anything address-like.
     // The server validates and mails each an invitation.
     const guestList = guests
@@ -178,6 +185,19 @@ export function EventModal({
               <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} required />
             </label>
           </div>
+        )}
+
+        {calendars.length > 1 && (
+          <label className={styles.field}>
+            <span>{strings.agendaCalendar}</span>
+            <select value={calendarId} onChange={(e) => setCalendarId(e.target.value)}>
+              {calendars.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
         )}
 
         <label className={styles.field}>

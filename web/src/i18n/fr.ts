@@ -233,6 +233,11 @@ export const fr: Partial<Catalog> = {
 
   // agenda (calendrier)
   agendaNewEvent: "Nouvel événement",
+  agendaCalendars: "Agendas",
+  agendaCalendar: "Agenda",
+  agendaNewCalendar: "Nouvel agenda",
+  agendaNewCalendarPrompt: "Nom du nouvel agenda",
+  agendaDeleteCalendar: "Supprimer l'agenda",
   agendaToday: "Aujourd'hui",
   agendaPrev: "Précédent",
   agendaNext: "Suivant",

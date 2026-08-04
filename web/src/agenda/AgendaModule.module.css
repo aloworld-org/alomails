@@ -19,6 +19,68 @@
   overflow-y: auto;
 }
 
+.calList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.calListHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.calAdd {
+  display: inline-flex;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 2px;
+}
+.calAdd:hover {
+  color: var(--terracotta);
+  background: var(--bg-raised);
+}
+.calItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 4px;
+  border-radius: var(--radius-sm);
+}
+.calItem:hover {
+  background: var(--bg-raised);
+}
+.calItem:hover .calDel {
+  opacity: 1;
+}
+.calDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.calName {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.calDel {
+  opacity: 0;
+  color: var(--text-tertiary, var(--text-secondary));
+  transition: opacity 0.12s;
+}
+.calDel:hover {
+  color: var(--danger, #c0392b);
+}
+
 .newBtn {
   display: inline-flex;
   align-items: center;

@@ -9,6 +9,7 @@ export {
   categoryKeyword,
   categoryIdOf,
   type Category,
+  type Calendar,
   type CalendarEvent,
   type CalendarInvitation,
   type RsvpResponse,
