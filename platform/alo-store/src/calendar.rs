@@ -11,8 +11,8 @@ use time::{Date, Duration, Month, OffsetDateTime};
 use crate::account::AccountStore;
 use crate::changes::{self, Change, TYPE_EVENT};
 use crate::error::{Result, StoreError};
-use crate::id::EventId;
-use crate::model::CalendarEvent;
+use crate::id::{CalendarId, EventId};
+use crate::model::{Calendar, CalendarEvent};
 
 impl AccountStore {
     /// The account's events overlapping the half-open window `[from, to)`,
@@ -31,7 +31,7 @@ impl AccountStore {
         // inside — expanded below). The master's own `starts_at`/`ends_at` are
         // the first occurrence.
         let rows = sqlx::query_as::<_, EventRow>(
-            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
+            "SELECT id, calendar_id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
              FROM calendar_events \
              WHERE tenant_id = $1 AND user_id = $2 AND ( \
                  (rrule IS NULL AND starts_at < $3 AND ends_at > $4) OR \
@@ -65,7 +65,7 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn all_events(&self) -> Result<Vec<CalendarEvent>> {
         let rows = sqlx::query_as::<_, EventRow>(
-            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
+            "SELECT id, calendar_id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
              FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 \
              ORDER BY starts_at, id",
         )
@@ -82,7 +82,7 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn event(&self, id: &EventId) -> Result<Option<CalendarEvent>> {
         let row = sqlx::query_as::<_, EventRow>(
-            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
+            "SELECT id, calendar_id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
              FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
         )
         .bind(self.tenant.as_str())
@@ -104,13 +104,14 @@ impl AccountStore {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         sqlx::query(
             "INSERT INTO calendar_events \
-             (tenant_id, user_id, id, summary, description, location, \
+             (tenant_id, user_id, id, calendar_id, summary, description, location, \
               starts_at, ends_at, all_day, rrule, attendees, exdates) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
         .bind(id.as_str())
+        .bind(event.calendar_id.as_str())
         .bind(&event.summary)
         .bind(&event.description)
         .bind(&event.location)
@@ -154,10 +155,11 @@ impl AccountStore {
         .map_err(StoreError::Db)?;
         sqlx::query(
             "INSERT INTO calendar_events \
-             (tenant_id, user_id, id, summary, description, location, \
+             (tenant_id, user_id, id, calendar_id, summary, description, location, \
               starts_at, ends_at, all_day, rrule, attendees, exdates) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
              ON CONFLICT (tenant_id, user_id, id) DO UPDATE SET \
+               calendar_id = EXCLUDED.calendar_id, \
                summary = EXCLUDED.summary, description = EXCLUDED.description, \
                location = EXCLUDED.location, starts_at = EXCLUDED.starts_at, \
                ends_at = EXCLUDED.ends_at, all_day = EXCLUDED.all_day, \
@@ -167,6 +169,7 @@ impl AccountStore {
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
         .bind(id.as_str())
+        .bind(event.calendar_id.as_str())
         .bind(&event.summary)
         .bind(&event.description)
         .bind(&event.location)
@@ -200,7 +203,7 @@ impl AccountStore {
         let done = sqlx::query(
             "UPDATE calendar_events SET summary = $4, description = $5, location = $6, \
                     starts_at = $7, ends_at = $8, all_day = $9, rrule = $10, attendees = $11, \
-                    exdates = $12, updated_at = now() \
+                    exdates = $12, calendar_id = $13, updated_at = now() \
              WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
         )
         .bind(self.tenant.as_str())
@@ -215,6 +218,7 @@ impl AccountStore {
         .bind(&event.recurrence)
         .bind(sqlx::types::Json(&event.attendees))
         .bind(exdates_to_json(&event.exdates))
+        .bind(event.calendar_id.as_str())
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -279,6 +283,173 @@ impl AccountStore {
             self.update_event(id, &event).await?;
         }
         Ok(())
+    }
+
+    /// The owner's calendars, creation order. Ensures the personal calendar
+    /// exists first, so every account always has at least one.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn calendars(&self) -> Result<Vec<Calendar>> {
+        self.ensure_personal_calendar().await?;
+        let rows = sqlx::query_as::<_, CalendarRow>(
+            "SELECT id, owner_user_id, name, color, kind FROM calendars \
+             WHERE tenant_id = $1 AND owner_user_id = $2 ORDER BY created_at, id",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(CalendarRow::into_calendar).collect())
+    }
+
+    /// The user's personal (default) calendar id, creating it if absent. The id
+    /// is deterministic (`cal_personal_<user>`) so it is stable across calls.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn ensure_personal_calendar(&self) -> Result<CalendarId> {
+        let id = format!("cal_personal_{}", self.user.as_str());
+        sqlx::query(
+            "INSERT INTO calendars (tenant_id, id, owner_user_id, name, kind) \
+             VALUES ($1, $2, $3, 'Personal', 'personal') \
+             ON CONFLICT (tenant_id, id) DO NOTHING",
+        )
+        .bind(self.tenant.as_str())
+        .bind(&id)
+        .bind(self.user.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(CalendarId::new(id))
+    }
+
+    /// Creates a calendar owned by this user; returns its id.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn create_calendar(
+        &self,
+        name: &str,
+        color: Option<&str>,
+    ) -> Result<CalendarId> {
+        let id = CalendarId::generate();
+        sqlx::query(
+            "INSERT INTO calendars (tenant_id, id, owner_user_id, name, color, kind) \
+             VALUES ($1, $2, $3, $4, $5, 'shared')",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(self.user.as_str())
+        .bind(name)
+        .bind(color)
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(id)
+    }
+
+    /// Renames / recolours a calendar the user owns.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when it is not the user's; [`StoreError::Db`].
+    pub async fn update_calendar(
+        &self,
+        id: &CalendarId,
+        name: &str,
+        color: Option<&str>,
+    ) -> Result<()> {
+        let done = sqlx::query(
+            "UPDATE calendars SET name = $4, color = $5, updated_at = now() \
+             WHERE tenant_id = $1 AND owner_user_id = $2 AND id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(id.as_str())
+        .bind(name)
+        .bind(color)
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        if done.rows_affected() == 0 {
+            return Err(StoreError::NotFound);
+        }
+        Ok(())
+    }
+
+    /// Deletes a calendar the user owns **and all its events**. The personal
+    /// calendar is protected and cannot be deleted.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when it is not the user's;
+    /// [`StoreError::Conflict`] for the personal calendar; [`StoreError::Db`].
+    pub async fn delete_calendar(&self, id: &CalendarId) -> Result<()> {
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let kind: Option<String> = sqlx::query_scalar(
+            "SELECT kind FROM calendars WHERE tenant_id = $1 AND owner_user_id = $2 AND id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(id.as_str())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        match kind.as_deref() {
+            None => return Err(StoreError::NotFound),
+            Some("personal") => {
+                return Err(StoreError::Conflict(
+                    "the personal calendar cannot be deleted".to_owned(),
+                ));
+            }
+            _ => {}
+        }
+        sqlx::query(
+            "DELETE FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 AND calendar_id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(id.as_str())
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        sqlx::query("DELETE FROM calendars WHERE tenant_id = $1 AND owner_user_id = $2 AND id = $3")
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(id.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
+        changes::bump_and_record(
+            &mut tx,
+            self.tenant.as_str(),
+            self.user.as_str(),
+            &[Change::destroyed(TYPE_EVENT, id.as_str())],
+        )
+        .await?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(())
+    }
+}
+
+/// A raw `calendars` row.
+#[derive(sqlx::FromRow)]
+struct CalendarRow {
+    id: String,
+    owner_user_id: String,
+    name: String,
+    color: Option<String>,
+    kind: String,
+}
+
+impl CalendarRow {
+    fn into_calendar(self) -> Calendar {
+        Calendar {
+            id: CalendarId::new(self.id),
+            owner: self.owner_user_id,
+            name: self.name,
+            color: self.color,
+            kind: self.kind,
+        }
     }
 }
 
@@ -420,6 +591,7 @@ fn parse_until(value: &str) -> Option<OffsetDateTime> {
 #[derive(sqlx::FromRow)]
 struct EventRow {
     id: String,
+    calendar_id: String,
     summary: String,
     description: Option<String>,
     location: Option<String>,
@@ -437,6 +609,7 @@ impl EventRow {
     fn into_event(self) -> CalendarEvent {
         CalendarEvent {
             id: EventId::new(self.id),
+            calendar_id: CalendarId::new(self.calendar_id),
             summary: self.summary,
             description: self.description,
             location: self.location,
@@ -480,6 +653,7 @@ mod tests {
         );
         CalendarEvent {
             id: EventId::new("m1".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
             summary: "Standup".to_owned(),
             description: None,
             location: None,

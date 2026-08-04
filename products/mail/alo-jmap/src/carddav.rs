@@ -557,6 +557,13 @@ async fn put_event_object(
     };
     // The href is authoritative: store under the path id (= iCalendar UID).
     event.id = EventId::new(id.to_owned());
+    // iCalendar carries no calendar grouping; a DAV PUT lands on the personal
+    // calendar (per-collection calendars arrive with the CalDAV multi-collection
+    // slice).
+    event.calendar_id = match acc.ensure_personal_calendar().await {
+        Ok(c) => c,
+        Err(_) => return status(StatusCode::INTERNAL_SERVER_ERROR),
+    };
     match acc.put_event(&EventId::new(id.to_owned()), &event).await {
         Ok(created) => created_or_updated(created, &event_etag(&event)),
         Err(_) => status(StatusCode::INTERNAL_SERVER_ERROR),

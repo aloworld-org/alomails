@@ -2,7 +2,9 @@
 
 use time::OffsetDateTime;
 
-use crate::id::{BlobId, CategoryId, ContactId, EventId, MailboxId, MessageId, ThreadId};
+use crate::id::{
+    BlobId, CalendarId, CategoryId, ContactId, EventId, MailboxId, MessageId, ThreadId,
+};
 
 /// The resolved AI backend a tenant's default provider points at (ADR 0011),
 /// mapped for the inference client. `api_key` is a secret, never returned to
@@ -226,16 +228,33 @@ pub struct Contact {
     pub notes: Option<String>,
 }
 
-/// A calendar event (the calendar unit; also the future CalDAV/iCalendar
-/// `VEVENT`). Slice 1 is a plain timed or all-day event on the user's single
-/// implicit calendar — recurrence, attendees, and multiple calendars come
-/// later. Times are UTC instants; an all-day event uses midnight-UTC bounds and
-/// the client renders it date-only. `ends_at` is exclusive and must be
-/// `>= starts_at`.
+/// A calendar: a named collection of events a user owns (and, once grants land,
+/// may share). Every event belongs to exactly one. The auto-created `personal`
+/// calendar is the default and cannot be deleted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Calendar {
+    /// Opaque id (also the CalDAV collection name).
+    pub id: CalendarId,
+    /// The user who owns the calendar.
+    pub owner: String,
+    /// Display name (e.g. "Personal", "Team").
+    pub name: String,
+    /// Optional display colour (hex, e.g. `#e76f51`).
+    pub color: Option<String>,
+    /// `personal` (the auto-created default; not deletable) or `shared`.
+    pub kind: String,
+}
+
+/// A calendar event (also the CalDAV/iCalendar `VEVENT`). Times are UTC
+/// instants; an all-day event uses midnight-UTC bounds and the client renders it
+/// date-only. `ends_at` is exclusive and must be `>= starts_at`. Every event
+/// belongs to a `calendar_id`.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CalendarEvent {
     /// Opaque id (also the iCalendar `UID`).
     pub id: EventId,
+    /// The calendar this event belongs to.
+    pub calendar_id: CalendarId,
     /// Title shown on the event (iCalendar `SUMMARY`; never empty).
     pub summary: String,
     /// Free-form details (iCalendar `DESCRIPTION`).

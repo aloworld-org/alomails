@@ -139,6 +139,11 @@ opaque_id!(
     /// its identity across a CalDAV round-trip once calendar sync lands.
     EventId
 );
+opaque_id!(
+    /// A calendar (a named collection of events). Also the CalDAV collection
+    /// name. Every event belongs to exactly one calendar.
+    CalendarId
+);
 
 #[cfg(test)]
 mod tests {

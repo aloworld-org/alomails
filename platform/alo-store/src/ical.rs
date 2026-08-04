@@ -8,7 +8,7 @@
 
 use time::{Date, Month, OffsetDateTime, Time, UtcOffset};
 
-use crate::id::EventId;
+use crate::id::{CalendarId, EventId};
 use crate::model::CalendarEvent;
 
 const PRODID: &str = "-//alo//calendar//EN";
@@ -165,6 +165,9 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
     }
     Some(CalendarEvent {
         id: EventId::new(uid.unwrap_or_else(|| fallback_id.to_owned())),
+        // iCalendar carries no calendar grouping; the caller (CalDAV collection
+        // or RSVP → personal) sets which calendar this lands on.
+        calendar_id: CalendarId::new(String::new()),
         summary,
         description: description.filter(|s| !s.is_empty()),
         location: location.filter(|s| !s.is_empty()),
@@ -418,6 +421,7 @@ mod tests {
     fn timed_event_round_trips() {
         let e = CalendarEvent {
             id: EventId::new("abc123".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
             summary: "Team sync; weekly".into(),
             description: Some("Line1\nLine2".into()),
             location: Some("Room A".into()),
@@ -457,6 +461,7 @@ mod tests {
     fn imip_request_carries_method_and_organizer() {
         let e = CalendarEvent {
             id: EventId::new("mtg-1".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
             summary: "Kickoff".into(),
             description: None,
             location: None,
@@ -504,6 +509,7 @@ mod tests {
         // No method / organizer on a plain export.
         let plain = to_ics(&CalendarEvent {
             id: EventId::new("x".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
             summary: "Plain".into(),
             description: None,
             location: None,
@@ -541,6 +547,7 @@ mod tests {
         );
         let e = CalendarEvent {
             id: EventId::new("series-1".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
             summary: "Standup".into(),
             description: None,
             location: None,
@@ -567,6 +574,7 @@ mod tests {
     fn all_day_uses_value_date() {
         let e = CalendarEvent {
             id: EventId::new("day1".to_owned()),
+            calendar_id: CalendarId::new("cal".to_owned()),
             summary: "Holiday".into(),
             description: None,
             location: None,

@@ -23,7 +23,7 @@ use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
-use alo_store::{BlobId, CalendarEvent, EventId, StoreError};
+use alo_store::{BlobId, Calendar, CalendarEvent, CalendarId, EventId, StoreError};
 
 use crate::error::Problem;
 use crate::state::{Account, AppState, authenticate};
@@ -56,6 +56,9 @@ struct EventBody {
     /// Guest email addresses to invite (iMIP invitations are mailed on save).
     #[serde(default)]
     attendees: Vec<String>,
+    /// Which calendar to place the event on; absent → the personal calendar.
+    #[serde(default, rename = "calendarId")]
+    calendar_id: Option<String>,
 }
 
 /// `GET /calendar/events?from=&to=` → `{"events": [...]}`.
@@ -110,7 +113,8 @@ pub async fn create(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let req: EventBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
-    let event = build_event(EventId::generate(), req)?;
+    let calendar_id = resolve_calendar(&account, &req).await?;
+    let event = build_event(EventId::generate(), calendar_id, req)?;
     let id = account
         .acc
         .create_event(&event)
@@ -130,7 +134,8 @@ pub async fn update(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let req: EventBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
-    let event = build_event(EventId::new(id.clone()), req)?;
+    let calendar_id = resolve_calendar(&account, &req).await?;
+    let event = build_event(EventId::new(id.clone()), calendar_id, req)?;
     account
         .acc
         .update_event(&EventId::new(id), &event)
@@ -235,9 +240,15 @@ pub async fn rsvp(
     if alo_store::ical::method_of(&ics).as_deref() != Some("REQUEST") {
         return Err(not_invite());
     }
-    let event = alo_store::ical::from_ics(&ics, "").ok_or_else(|| {
+    let mut event = alo_store::ical::from_ics(&ics, "").ok_or_else(|| {
         Problem::with(StatusCode::BAD_REQUEST, "the invitation could not be read")
     })?;
+    // An accepted invitation lands on the recipient's personal calendar.
+    event.calendar_id = account
+        .acc
+        .ensure_personal_calendar()
+        .await
+        .map_err(|_| Problem::server_error())?;
     // Declining doesn't clutter the calendar; accept/tentative land the event
     // (upsert keyed on the organizer's UID, so a re-RSVP updates in place).
     let added = partstat != "DECLINED";
@@ -369,8 +380,13 @@ async fn send_reply(
     }
 }
 
-/// Validates and assembles a [`CalendarEvent`] from a request body.
-fn build_event(id: EventId, req: EventBody) -> Result<CalendarEvent, Problem> {
+/// Validates and assembles a [`CalendarEvent`] from a request body. The
+/// `calendar_id` is resolved by the caller (the request's or the personal one).
+fn build_event(
+    id: EventId,
+    calendar_id: CalendarId,
+    req: EventBody,
+) -> Result<CalendarEvent, Problem> {
     let summary = req.summary.trim().to_owned();
     if summary.is_empty() {
         return Err(Problem::with(
@@ -389,6 +405,7 @@ fn build_event(id: EventId, req: EventBody) -> Result<CalendarEvent, Problem> {
     let clean = |s: Option<String>| s.map(|v| v.trim().to_owned()).filter(|v| !v.is_empty());
     Ok(CalendarEvent {
         id,
+        calendar_id,
         summary,
         description: clean(req.description),
         location: clean(req.location),
@@ -415,6 +432,112 @@ fn build_event(id: EventId, req: EventBody) -> Result<CalendarEvent, Problem> {
     })
 }
 
+/// The calendar an event goes on: the request's `calendarId`, else the caller's
+/// personal calendar (created on demand).
+async fn resolve_calendar(account: &Account, req: &EventBody) -> Result<CalendarId, Problem> {
+    match req.calendar_id.as_deref() {
+        Some(c) if !c.is_empty() => Ok(CalendarId::new(c.to_owned())),
+        _ => account
+            .acc
+            .ensure_personal_calendar()
+            .await
+            .map_err(|_| Problem::server_error()),
+    }
+}
+
+#[derive(Deserialize)]
+struct CalendarBody {
+    name: String,
+    #[serde(default)]
+    color: Option<String>,
+}
+
+fn calendar_json(c: &Calendar) -> Value {
+    json!({ "id": c.id.as_str(), "name": c.name, "color": c.color, "kind": c.kind })
+}
+
+/// `GET /calendar/calendars` → `{"calendars": [...]}` — the caller's calendars.
+pub async fn list_calendars(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let cals = account
+        .acc
+        .calendars()
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let out: Vec<Value> = cals.iter().map(calendar_json).collect();
+    Ok(Json(json!({ "calendars": out })))
+}
+
+/// `POST /calendar/calendars` → the created calendar.
+pub async fn create_calendar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: CalendarBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let name = req.name.trim();
+    if name.is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "a calendar name is required",
+        ));
+    }
+    let color = req.color.as_deref().map(str::trim).filter(|c| !c.is_empty());
+    let id = account
+        .acc
+        .create_calendar(name, color)
+        .await
+        .map_err(|_| Problem::server_error())?;
+    Ok(Json(json!({
+        "id": id.as_str(), "name": name, "color": color, "kind": "shared"
+    })))
+}
+
+/// `PUT /calendar/calendars/:id` → `{status:"ok"}` (rename / recolour).
+pub async fn rename_calendar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: CalendarBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let name = req.name.trim();
+    if name.is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "a calendar name is required",
+        ));
+    }
+    let color = req.color.as_deref().map(str::trim).filter(|c| !c.is_empty());
+    account
+        .acc
+        .update_calendar(&CalendarId::new(id), name, color)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `DELETE /calendar/calendars/:id` → `{status:"ok"}`. Deletes the calendar and
+/// its events; the personal calendar is protected.
+pub async fn remove_calendar(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .delete_calendar(&CalendarId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
 fn parse_time(s: &str) -> Result<OffsetDateTime, Problem> {
     OffsetDateTime::parse(s, &Rfc3339)
         .map(|t| t.to_offset(time::UtcOffset::UTC))
@@ -432,6 +555,7 @@ fn event_json(e: &CalendarEvent) -> Value {
         "summary": e.summary,
         "description": e.description,
         "location": e.location,
+        "calendarId": e.calendar_id.as_str(),
         "startsAt": e.starts_at.format(&Rfc3339).unwrap_or_default(),
         "endsAt": e.ends_at.format(&Rfc3339).unwrap_or_default(),
         "allDay": e.all_day,
@@ -442,7 +566,8 @@ fn event_json(e: &CalendarEvent) -> Value {
 
 fn map_store_err(e: StoreError) -> Problem {
     match e {
-        StoreError::NotFound => Problem::with(StatusCode::NOT_FOUND, "no such event"),
+        StoreError::NotFound => Problem::with(StatusCode::NOT_FOUND, "not found"),
+        StoreError::Conflict(msg) => Problem::with(StatusCode::CONFLICT, &msg),
         _ => Problem::server_error(),
     }
 }

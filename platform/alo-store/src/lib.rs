@@ -51,15 +51,16 @@ pub use dmarc_reports::{DmarcAggregateRow, DmarcEventRecord};
 pub use document::{Document, DocumentSummary};
 pub use error::{Result, StoreError};
 pub use id::{
-    BlobId, CategoryId, ContactId, EventId, GroupId, MailboxId, MessageId, TenantId, ThreadId,
-    UserId,
+    BlobId, CalendarId, CategoryId, ContactId, EventId, GroupId, MailboxId, MessageId, TenantId,
+    ThreadId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
     RefreshTokenRow, SigningKeyRow, TotpRow,
 };
 pub use model::{
-    AiConfigRow, AiProviderRow, AuditEntry, Blob, CalendarEvent, Category, Contact, ContactField,
+    AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, Category, Contact,
+    ContactField,
     DkimKeyRow, DomainRow, EmailFilter, EmailQuery, GroupRow, MAX_PAGE, Mailbox, Message,
     MessageSummary, Page, SortDirection, TenantSummary, UserRow,
 };

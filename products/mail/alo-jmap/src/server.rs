@@ -7,7 +7,7 @@ use std::sync::Arc;
 use alo_identity::Identity;
 use alo_store::Store;
 use axum::extract::{DefaultBodyLimit, State};
-use axum::routing::{any, get, post};
+use axum::routing::{any, get, post, put};
 use axum::{Json, Router};
 use serde_json::{Value, json};
 
@@ -74,6 +74,14 @@ pub fn app(state: AppState) -> Router {
         )
         .route("/calendar/rsvp", post(calendar::rsvp))
         .route("/calendar/cancel", post(calendar::cancel))
+        .route(
+            "/calendar/calendars",
+            get(calendar::list_calendars).post(calendar::create_calendar),
+        )
+        .route(
+            "/calendar/calendars/{id}",
+            put(calendar::rename_calendar).delete(calendar::remove_calendar),
+        )
         .route("/contacts", get(contacts::list))
         // Address-book import (a .vcf upload) and export (whole book as .vcf).
         .route("/contacts/import", post(contacts::import))
