@@ -52,7 +52,7 @@ pub use dmarc_reports::{DmarcAggregateRow, DmarcEventRecord};
 pub use document::{Document, DocumentSummary};
 pub use error::{Result, StoreError};
 pub use id::{
-    BlobId, CalendarId, CategoryId, CommentId, ContactId, EventId, GroupId, MailboxId, MessageId,
+    AttachmentId, BlobId, CalendarId, CategoryId, CommentId, ContactId, EventId, GroupId, MailboxId, MessageId,
     ProjectId, SubtaskId, TaskId, TenantId, ThreadId, UserId,
 };
 pub use identity::{

@@ -12,7 +12,7 @@ use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
-use crate::id::{CommentId, ProjectId, SubtaskId, TaskId};
+use crate::id::{AttachmentId, CommentId, ProjectId, SubtaskId, TaskId};
 
 /// A task project (board): the group a task belongs to.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -69,6 +69,30 @@ pub struct TaskComment {
     pub id: CommentId,
     pub author: String,
     pub body: String,
+    pub created_at: OffsetDateTime,
+}
+
+/// A file attached to a task: a reference to a tenant blob (uploaded via the
+/// JMAP blob upload) plus its display name and size.
+#[derive(Debug, Clone)]
+pub struct TaskAttachment {
+    pub id: AttachmentId,
+    pub blob_id: String,
+    pub filename: String,
+    pub size: i64,
+    pub created_at: OffsetDateTime,
+}
+
+/// A task attachment rolled up to the project level (with the task it hangs on),
+/// for the project-wide "Files" view.
+#[derive(Debug, Clone)]
+pub struct ProjectFile {
+    pub id: AttachmentId,
+    pub task_id: String,
+    pub task_title: String,
+    pub blob_id: String,
+    pub filename: String,
+    pub size: i64,
     pub created_at: OffsetDateTime,
 }
 
@@ -694,6 +718,111 @@ impl AccountStore {
         Ok(id)
     }
 
+    /// The files attached to a visible task (a reference to a tenant blob each).
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the task isn't visible to the caller;
+    /// [`StoreError::Db`] on failure.
+    pub async fn task_attachments(&self, task: &TaskId) -> Result<Vec<TaskAttachment>> {
+        if self.task(task).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        let rows = sqlx::query_as::<_, AttachmentRow>(
+            "SELECT id, blob_id, filename, size, created_at FROM task_attachments \
+             WHERE tenant_id = $1 AND task_id = $2 ORDER BY created_at",
+        )
+        .bind(self.tenant.as_str())
+        .bind(task.as_str())
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(AttachmentRow::into_attachment).collect())
+    }
+
+    /// Attaches an already-uploaded blob to a visible task.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the task isn't visible to the caller;
+    /// [`StoreError::Db`] on failure.
+    pub async fn add_task_attachment(
+        &self,
+        task: &TaskId,
+        blob_id: &str,
+        filename: &str,
+        size: i64,
+    ) -> Result<AttachmentId> {
+        if self.task(task).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        let id = AttachmentId::generate();
+        sqlx::query(
+            "INSERT INTO task_attachments (tenant_id, id, task_id, blob_id, filename, size) \
+             VALUES ($1, $2, $3, $4, $5, $6)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(task.as_str())
+        .bind(blob_id)
+        .bind(filename)
+        .bind(size)
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(id)
+    }
+
+    /// Removes an attachment from a visible task (the blob itself is left in the
+    /// store; task attachments are references, and a blob may be shared).
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the task isn't visible;
+    /// [`StoreError::Db`] on failure.
+    pub async fn delete_task_attachment(
+        &self,
+        task: &TaskId,
+        attachment: &AttachmentId,
+    ) -> Result<()> {
+        if self.task(task).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        sqlx::query(
+            "DELETE FROM task_attachments \
+             WHERE tenant_id = $1 AND task_id = $2 AND id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(task.as_str())
+        .bind(attachment.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// Every attachment across the tasks of a project the caller can see — the
+    /// project-wide "Files" roll-up. Scoped by the same project-visibility rule
+    /// as the task lists, so a personal project's files stay private to its owner
+    /// and nothing crosses tenants.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn project_files(&self, project: &ProjectId) -> Result<Vec<ProjectFile>> {
+        let sql = format!(
+            "SELECT a.id, a.task_id, t.title AS task_title, a.blob_id, a.filename, a.size, \
+                    a.created_at \
+             FROM task_attachments a \
+             JOIN tasks t ON t.tenant_id = a.tenant_id AND t.id = a.task_id \
+             WHERE a.tenant_id = $1 AND t.project_id = $3 AND {vis} \
+             ORDER BY a.created_at DESC",
+            vis = visible_projects(),
+        );
+        let rows = sqlx::query_as::<_, ProjectFileRow>(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(project.as_str())
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows.into_iter().map(ProjectFileRow::into_file).collect())
+    }
+
     /// A task's activity history, newest first.
     ///
     /// # Errors
@@ -836,6 +965,50 @@ impl CommentRow {
             id: CommentId::new(self.id),
             author: self.author_user_id,
             body: self.body,
+            created_at: self.created_at,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct AttachmentRow {
+    id: String,
+    blob_id: String,
+    filename: String,
+    size: i64,
+    created_at: OffsetDateTime,
+}
+impl AttachmentRow {
+    fn into_attachment(self) -> TaskAttachment {
+        TaskAttachment {
+            id: AttachmentId::new(self.id),
+            blob_id: self.blob_id,
+            filename: self.filename,
+            size: self.size,
+            created_at: self.created_at,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct ProjectFileRow {
+    id: String,
+    task_id: String,
+    task_title: String,
+    blob_id: String,
+    filename: String,
+    size: i64,
+    created_at: OffsetDateTime,
+}
+impl ProjectFileRow {
+    fn into_file(self) -> ProjectFile {
+        ProjectFile {
+            id: AttachmentId::new(self.id),
+            task_id: self.task_id,
+            task_title: self.task_title,
+            blob_id: self.blob_id,
+            filename: self.filename,
+            size: self.size,
             created_at: self.created_at,
         }
     }

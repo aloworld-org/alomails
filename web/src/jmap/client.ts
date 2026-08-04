@@ -29,6 +29,8 @@ import {
   type Task,
   type TaskProject,
   type TaskDetailData,
+  type TaskAttachmentDto,
+  type ProjectFileDto,
   type TaskInput,
   type ShareableGroup,
   type SharedMailbox,
@@ -1506,6 +1508,53 @@ export class JmapClient {
     const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(id)}`);
     if (!res.ok) throw new JmapError(`taskDetail ${res.status}`);
     return (await res.json()) as TaskDetailData;
+  }
+
+  /** Attach an already-uploaded blob (see uploadFile) to a task. */
+  async addTaskAttachment(
+    taskId: string,
+    blobId: string,
+    filename: string,
+    size: number,
+  ): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/attachments`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ blobId, filename, size }),
+    });
+    if (!res.ok) throw new JmapError(`addTaskAttachment ${res.status}`);
+  }
+
+  /** The files on a task. */
+  async taskAttachments(taskId: string): Promise<TaskAttachmentDto[]> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/attachments`);
+    if (!res.ok) throw new JmapError(`taskAttachments ${res.status}`);
+    return ((await res.json()) as { attachments: TaskAttachmentDto[] }).attachments;
+  }
+
+  /** Remove a file from a task (the blob itself is left in the store). */
+  async deleteTaskAttachment(taskId: string, attachmentId: string): Promise<void> {
+    const res = await this.#fetch(
+      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/attachments/${encodeURIComponent(attachmentId)}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) throw new JmapError(`deleteTaskAttachment ${res.status}`);
+  }
+
+  /** Every file across a project's tasks (the Files view). */
+  async projectFiles(projectId: string): Promise<ProjectFileDto[]> {
+    const res = await this.#fetch(`${API_BASE}/tasks/files?project=${encodeURIComponent(projectId)}`);
+    if (!res.ok) throw new JmapError(`projectFiles ${res.status}`);
+    return ((await res.json()) as { files: ProjectFileDto[] }).files;
+  }
+
+  /** Download a task attachment's bytes (gated by task visibility). */
+  async downloadTaskAttachment(taskId: string, attachmentId: string): Promise<Blob> {
+    const res = await this.#fetch(
+      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/attachments/${encodeURIComponent(attachmentId)}/download`,
+    );
+    if (!res.ok) throw new JmapError(`downloadTaskAttachment ${res.status}`);
+    return res.blob();
   }
 
   /** Edit a task's fields (not status/position — that is a move). */

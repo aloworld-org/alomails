@@ -3,15 +3,17 @@
 // fields, the source link (jump back to the email/event it came from), a
 // subtask checklist, comments, and the activity history. Field edits persist on
 // change; a change bubbles up so the board/list behind stays in sync.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlignLeft,
   CalendarDays,
   CheckCircle2,
   Circle,
+  Download,
   FolderClosed,
   Link2,
+  Paperclip,
   Trash2,
   User,
   X,
@@ -22,6 +24,13 @@ import { useJmapClient, type TaskDetailData, type TaskInput, type TaskPriority }
 import { Spinner } from "../ds";
 import { COLUMNS } from "./parts";
 import styles from "./TasksModule.module.css";
+
+/** Human file size (kB/MB) for the attachment rows. */
+function fileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 interface Props {
   taskId: string;
@@ -37,6 +46,8 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
   const [data, setData] = useState<TaskDetailData | null>(null);
   const [newSub, setNewSub] = useState("");
   const [newComment, setNewComment] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -95,6 +106,33 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
       await client.moveTask(t.id, status, t.position);
       await load();
       onChanged();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function uploadAttachment(file: File) {
+    setUploading(true);
+    try {
+      const { blobId, size } = await client.uploadFile(file);
+      await client.addTaskAttachment(t.id, blobId, file.name, size);
+      await load();
+    } catch {
+      /* leave state as-is on failure */
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function downloadAttachment(attachmentId: string, filename: string) {
+    try {
+      const blob = await client.downloadTaskAttachment(t.id, attachmentId);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
     } catch {
       /* ignore */
     }
@@ -306,6 +344,60 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 }
               }}
             />
+          </div>
+
+          <div className={styles.tdSection}>
+            <span className={styles.tdSectionLabel}>
+              <Paperclip size={15} /> {strings.taskAttachments}
+            </span>
+            {data.attachments.map((f) => (
+              <div key={f.id} className={styles.tdFile}>
+                <span className={styles.tdFileIcon}>
+                  <Paperclip size={14} />
+                </span>
+                <span className={styles.tdFileMeta}>
+                  <span className={styles.tdFileName}>{f.filename}</span>
+                  <span className={styles.tdFileSize}>{fileSize(f.size)}</span>
+                </span>
+                <button
+                  type="button"
+                  className={styles.tdFileBtn}
+                  onClick={() => void downloadAttachment(f.id, f.filename)}
+                  aria-label={strings.taskDownload}
+                >
+                  <Download size={15} />
+                </button>
+                <button
+                  type="button"
+                  className={styles.tdFileBtn}
+                  onClick={async () => {
+                    await client.deleteTaskAttachment(t.id, f.id);
+                    await load();
+                  }}
+                  aria-label={strings.taskDelete}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ))}
+            <input
+              ref={fileRef}
+              type="file"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file !== undefined) void uploadAttachment(file);
+                e.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              className={styles.tdSubAdd}
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+            >
+              <Paperclip size={15} /> {uploading ? strings.taskUploading : strings.taskAddAttachment}
+            </button>
           </div>
 
           <div className={styles.tdSection}>

@@ -610,6 +610,53 @@ async fn email_sourced_task_keeps_source_and_never_crosses_tenant() {
     );
 }
 
+/// Task files (ADR 0021 attachments): an attachment is reachable only through a
+/// task the caller can see, and the project-wide roll-up honours project
+/// visibility — so a personal project's files stay private to its owner and
+/// nothing crosses tenants.
+#[tokio::test]
+async fn task_attachments_scope_by_visibility_and_never_cross_tenant() {
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("attach-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@attach.test").await.unwrap();
+    let ub = ts1.create_user("b@attach.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub);
+
+    // A: a private personal task with a file, and a team task with a file.
+    let a_personal = a.ensure_personal_project().await.unwrap();
+    let private = a.create_task(&a_personal, &task("private")).await.unwrap();
+    a.add_task_attachment(&private, "blob-1", "secret.pdf", 100).await.unwrap();
+    let team = a.create_task_project("Team", None).await.unwrap();
+    let shared = a.create_task(&team, &task("shared")).await.unwrap();
+    a.add_task_attachment(&shared, "blob-2", "brief.pdf", 200).await.unwrap();
+
+    // A sees both, on the task and in the project roll-up.
+    assert_eq!(a.task_attachments(&private).await.unwrap().len(), 1);
+    assert_eq!(a.project_files(&a_personal).await.unwrap().len(), 1);
+    assert_eq!(a.project_files(&team).await.unwrap().len(), 1);
+
+    // B (co-tenant): the team task's file is visible; the personal one is not,
+    // by the task id or the project roll-up, and B can't attach to it.
+    assert_eq!(b.task_attachments(&shared).await.unwrap().len(), 1);
+    assert_eq!(b.project_files(&team).await.unwrap().len(), 1);
+    assert_not_found(b.task_attachments(&private).await);
+    assert!(
+        b.project_files(&a_personal).await.unwrap().is_empty(),
+        "a personal project's files stay private to its owner"
+    );
+    assert_not_found(b.add_task_attachment(&private, "x", "x.pdf", 1).await);
+
+    // Cross-tenant: an outsider sees nothing and can attach nothing.
+    let t2 = store.create_tenant("attach-t2").await.unwrap();
+    let ud = store.for_tenant(t2.clone()).create_user("d@attach.test").await.unwrap();
+    let d = store.for_account(t2, ud);
+    assert_not_found(d.task_attachments(&shared).await);
+    assert!(d.project_files(&team).await.unwrap().is_empty());
+    assert_not_found(d.add_task_attachment(&shared, "x", "x.pdf", 1).await);
+}
+
 /// Law #1: deleting a tenant leaves nothing behind. A task query is scoped by
 /// `tenant_id`, so an orphaned row (same tenant id, no tenant) would still be
 /// returned — this asserts the tenant-delete cascade (migration 0047) removes

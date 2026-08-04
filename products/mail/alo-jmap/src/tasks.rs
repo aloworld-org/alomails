@@ -19,7 +19,8 @@ use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
 use alo_store::{
-    CommentId, NewTask, ProjectId, StoreError, SubtaskId, Task, TaskEdit, TaskId, TenantStore,
+    AttachmentId, BlobId, CommentId, NewTask, ProjectId, StoreError, SubtaskId, Task, TaskEdit, TaskId,
+    TenantStore,
     UserId,
 };
 
@@ -321,6 +322,11 @@ pub async fn get_task(
         .task_activity(&tid)
         .await
         .map_err(|_| Problem::server_error())?;
+    let attachments = account
+        .acc
+        .task_attachments(&tid)
+        .await
+        .map_err(|_| Problem::server_error())?;
     let ts = state.store.for_tenant(account.tenant.clone());
     let emails = resolve_emails(&ts, std::slice::from_ref(&task)).await;
     // Resolve comment/activity actors too.
@@ -345,6 +351,10 @@ pub async fn get_task(
         })).collect::<Vec<_>>(),
         "activity": activity.iter().map(|a| json!({
             "actor": name(&a.actor), "kind": a.kind, "detail": a.detail, "createdAt": iso(a.created_at),
+        })).collect::<Vec<_>>(),
+        "attachments": attachments.iter().map(|a| json!({
+            "id": a.id.as_str(), "blobId": a.blob_id, "filename": a.filename,
+            "size": a.size, "createdAt": iso(a.created_at),
         })).collect::<Vec<_>>(),
     })))
 }
@@ -679,4 +689,118 @@ pub async fn add_comment(
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "id": cid.as_str() })))
+}
+
+/// The body of `POST /tasks/:id/attachments`: an already-uploaded blob plus its
+/// display name and size (the upload itself uses the JMAP blob upload).
+#[derive(Deserialize)]
+struct AttachBody {
+    #[serde(rename = "blobId")]
+    blob_id: String,
+    filename: String,
+    #[serde(default)]
+    size: i64,
+}
+
+/// `GET /tasks/:id/attachments` → `{"attachments":[...]}` — the files on a task.
+pub async fn list_attachments(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let items = account
+        .acc
+        .task_attachments(&TaskId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "attachments": items.iter().map(|a| json!({
+            "id": a.id.as_str(), "blobId": a.blob_id, "filename": a.filename,
+            "size": a.size, "createdAt": iso(a.created_at),
+        })).collect::<Vec<_>>(),
+    })))
+}
+
+/// `POST /tasks/:id/attachments` → `{"id": "..."}` — attach an uploaded blob.
+pub async fn add_attachment(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: AttachBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    if req.blob_id.trim().is_empty() || req.filename.trim().is_empty() {
+        return Err(Problem::with(StatusCode::BAD_REQUEST, "blobId and filename required"));
+    }
+    let aid = account
+        .acc
+        .add_task_attachment(&TaskId::new(id), req.blob_id.trim(), req.filename.trim(), req.size)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "id": aid.as_str() })))
+}
+
+/// `DELETE /tasks/:id/attachments/:aid` → `{"status":"ok"}`.
+pub async fn delete_attachment(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, aid)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .delete_task_attachment(&TaskId::new(id), &AttachmentId::new(aid))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `GET /tasks/files?project=` → `{"files":[...]}` — every attachment across the
+/// tasks of a project the caller can see (the project-wide Files view).
+pub async fn project_files(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<ProjectQuery>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let files = account
+        .acc
+        .project_files(&ProjectId::new(q.project))
+        .await
+        .map_err(|_| Problem::server_error())?;
+    Ok(Json(json!({
+        "files": files.iter().map(|f| json!({
+            "id": f.id.as_str(), "taskId": f.task_id, "taskTitle": f.task_title,
+            "blobId": f.blob_id, "filename": f.filename, "size": f.size,
+            "createdAt": iso(f.created_at),
+        })).collect::<Vec<_>>(),
+    })))
+}
+
+/// `GET /tasks/:id/attachments/:aid/download` — stream a task's attached file.
+/// Gated by task visibility (a caller who can't see the task gets 404); the blob
+/// is then served tenant-scoped, since the attachment reference proves access.
+pub async fn download_attachment(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, aid)): Path<(String, String)>,
+) -> Result<axum::response::Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let items = account
+        .acc
+        .task_attachments(&TaskId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    let att = items
+        .iter()
+        .find(|a| a.id.as_str() == aid)
+        .ok_or_else(Problem::not_found)?;
+    let bytes = account
+        .acc
+        .blob_bytes_for_send(&BlobId::new(att.blob_id.clone()))
+        .await
+        .map_err(map_store_err)?;
+    Ok(crate::blob::serve_download(bytes, "application/octet-stream", &att.filename))
 }

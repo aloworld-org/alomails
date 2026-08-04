@@ -518,11 +518,26 @@ export interface TaskActivityDto {
 }
 
 /** A task with its subtasks, comments, and activity (the detail panel). */
+export interface TaskAttachmentDto {
+  id: string;
+  blobId: string;
+  filename: string;
+  size: number;
+  createdAt: string;
+}
+
+/** A task attachment rolled up to the project level (with its task). */
+export interface ProjectFileDto extends TaskAttachmentDto {
+  taskId: string;
+  taskTitle: string;
+}
+
 export interface TaskDetailData {
   task: Task;
   subtasks: TaskSubtask[];
   comments: TaskCommentDto[];
   activity: TaskActivityDto[];
+  attachments: TaskAttachmentDto[];
 }
 
 /** The writable fields when creating or editing a task. */

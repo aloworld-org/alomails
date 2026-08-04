@@ -2049,3 +2049,117 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- attachments (task detail rows) ---- */
+.tdFile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.tdFileIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-tint);
+  color: var(--accent-hover);
+  flex-shrink: 0;
+}
+.tdFileMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.tdFileName {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tdFileSize {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+.tdFileBtn {
+  color: var(--text-tertiary);
+  padding: 6px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+.tdFileBtn:hover {
+  color: var(--accent);
+  background: var(--bg-raised);
+}
+
+/* ---- files tab ---- */
+.filesView {
+  padding: var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 720px;
+}
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.fileRow:hover {
+  border-color: var(--border-default);
+}
+.fileIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--accent-tint);
+  color: var(--accent-hover);
+  flex-shrink: 0;
+}
+.fileMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.fileName {
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fileName:hover {
+  color: var(--text-link);
+}
+.fileSub {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fileDl {
+  color: var(--text-tertiary);
+  padding: 8px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+.fileDl:hover {
+  color: var(--accent);
+  background: var(--bg-raised);
+}

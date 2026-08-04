@@ -161,6 +161,10 @@ opaque_id!(
     /// A task comment.
     CommentId
 );
+opaque_id!(
+    /// A file attached to a task (a reference to a tenant blob).
+    AttachmentId
+);
 
 #[cfg(test)]
 mod tests {

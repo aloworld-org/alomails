@@ -109,6 +109,7 @@ pub fn app(state: AppState) -> Router {
         // (static paths before /tasks/{id}).
         .route("/tasks/today", get(tasks::my_plate))
         .route("/tasks/due", get(tasks::due_tasks))
+        .route("/tasks/files", get(tasks::project_files))
         .route("/tasks/proposals", get(tasks::list_proposals))
         .route("/tasks/propose", post(tasks::propose_tasks))
         .route(
@@ -126,6 +127,18 @@ pub fn app(state: AppState) -> Router {
             put(tasks::set_subtask).delete(tasks::delete_subtask),
         )
         .route("/tasks/{id}/comments", post(tasks::add_comment))
+        .route(
+            "/tasks/{id}/attachments",
+            get(tasks::list_attachments).post(tasks::add_attachment),
+        )
+        .route(
+            "/tasks/{id}/attachments/{aid}",
+            axum::routing::delete(tasks::delete_attachment),
+        )
+        .route(
+            "/tasks/{id}/attachments/{aid}/download",
+            get(tasks::download_attachment),
+        )
         .route("/contacts", get(contacts::list))
         // Address-book import (a .vcf upload) and export (whole book as .vcf).
         .route("/contacts/import", post(contacts::import))

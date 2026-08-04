@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LayoutGrid,
   List,
+  Paperclip,
   Plus,
   Search,
   Sparkles,
@@ -27,13 +28,14 @@ import { TimelineView } from "./TimelineView";
 import { CalendarView } from "./CalendarView";
 import { TaskToolbar } from "./TaskToolbar";
 import { OverviewView } from "./OverviewView";
+import { FilesView } from "./FilesView";
 import { NewTaskModal } from "./NewTaskModal";
 import { TaskDetail } from "./TaskDetail";
 import { Avatar, DueChip, PriorityChip } from "./parts";
 import { DEFAULT_CONFIG, filterTasks, type ViewConfig } from "./viewConfig";
 import styles from "./TasksModule.module.css";
 
-type View = "overview" | "list" | "board" | "timeline" | "calendar";
+type View = "overview" | "list" | "board" | "timeline" | "calendar" | "files";
 
 type Mode = { type: "project"; id: string } | { type: "plate" } | { type: "proposals" };
 
@@ -226,6 +228,7 @@ export function TasksModule() {
                 { id: "board", label: strings.taskBoard, Icon: LayoutGrid },
                 { id: "timeline", label: strings.taskTimeline, Icon: GanttChartSquare },
                 { id: "calendar", label: strings.taskCalendar, Icon: CalendarRange },
+                { id: "files", label: strings.taskFiles, Icon: Paperclip },
               ] as const
             ).map((t) => (
               <button
@@ -242,7 +245,7 @@ export function TasksModule() {
           </div>
         )}
 
-        {mode.type !== "proposals" && view !== "overview" && tasks.length > 0 && (
+        {mode.type !== "proposals" && view !== "overview" && view !== "files" && tasks.length > 0 && (
           <TaskToolbar config={config} onChange={setConfig} />
         )}
 
@@ -285,6 +288,8 @@ export function TasksModule() {
             <TimelineView tasks={filterTasks(tasks, config, identity?.email)} onOpen={setSelected} />
           ) : view === "calendar" ? (
             <CalendarView tasks={filterTasks(tasks, config, identity?.email)} onOpen={setSelected} />
+          ) : view === "files" ? (
+            <FilesView projectId={targetProject() ?? ""} onOpen={setSelected} />
           ) : (
             <ListView
               tasks={tasks}

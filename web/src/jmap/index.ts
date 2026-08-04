@@ -48,6 +48,8 @@ export {
   type TaskSubtask,
   type TaskCommentDto,
   type TaskActivityDto,
+  type TaskAttachmentDto,
+  type ProjectFileDto,
   type TaskInput,
   type TaskPriority,
   type ShareableGroup,
