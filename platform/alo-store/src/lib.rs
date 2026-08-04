@@ -26,11 +26,11 @@ pub mod identity;
 pub mod maintenance;
 pub mod message;
 pub mod model;
+pub mod reset;
 pub mod rfc2047;
 pub mod schedule;
 pub mod settings;
 pub mod share;
-pub mod reset;
 pub mod signup;
 pub mod snooze;
 pub mod store;
@@ -60,12 +60,11 @@ pub use identity::{
 };
 pub use model::{
     AiConfigRow, AiProviderRow, AuditEntry, Blob, CalendarEvent, Category, Contact, ContactField,
-    DkimKeyRow,
-    DomainRow, EmailFilter, EmailQuery, GroupRow, MAX_PAGE, Mailbox, Message, MessageSummary, Page,
-    SortDirection, TenantSummary, UserRow,
+    DkimKeyRow, DomainRow, EmailFilter, EmailQuery, GroupRow, MAX_PAGE, Mailbox, Message,
+    MessageSummary, Page, SortDirection, TenantSummary, UserRow,
 };
+pub use reset::PendingReset;
 pub use schedule::DueSend;
 pub use share::{ShareCreated, ShareTarget};
-pub use reset::PendingReset;
 pub use signup::PendingSignup;
 pub use store::{CATEGORY_KEYWORD_PREFIX, SEEN, Store, TenantStore, category_keyword};

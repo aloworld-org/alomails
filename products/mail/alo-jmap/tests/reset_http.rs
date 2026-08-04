@@ -83,7 +83,12 @@ async fn recovery_and_pending_reset_store_roundtrip() {
 
     // pending_resets
     h.store
-        .upsert_pending_reset(&address, "john@gmail.test", &code_hash(&address, "123456"), 600)
+        .upsert_pending_reset(
+            &address,
+            "john@gmail.test",
+            &code_hash(&address, "123456"),
+            600,
+        )
         .await
         .unwrap();
     let pending = h.store.pending_reset(&address).await.unwrap().unwrap();
@@ -98,12 +103,20 @@ async fn recovery_and_pending_reset_store_roundtrip() {
 async fn request_is_enumeration_safe() {
     let h = harness("reset-request").await;
     let domain = unique_domain("req");
-    let app = reset_app(Arc::clone(&h.store), h.identity.clone(), vec![domain.clone()]);
+    let app = reset_app(
+        Arc::clone(&h.store),
+        h.identity.clone(),
+        vec![domain.clone()],
+    );
 
     // Unknown address (no account, no recovery) → a silent "sent", and no
     // pending row is created (nothing to leak).
     let unknown = format!("ghost@{domain}");
-    let (s, body) = send(&app, post("/reset/request", serde_json::json!({"address": unknown}))).await;
+    let (s, body) = send(
+        &app,
+        post("/reset/request", serde_json::json!({"address": unknown})),
+    )
+    .await;
     assert_eq!(s, StatusCode::OK, "{body}");
     assert_eq!(body["status"], "sent");
     assert!(h.store.pending_reset(&unknown).await.unwrap().is_none());
@@ -111,7 +124,10 @@ async fn request_is_enumeration_safe() {
     // A non-personal domain is likewise a silent no-op.
     let (s, body) = send(
         &app,
-        post("/reset/request", serde_json::json!({"address": "x@notoffered.test"})),
+        post(
+            "/reset/request",
+            serde_json::json!({"address": "x@notoffered.test"}),
+        ),
     )
     .await;
     assert_eq!(s, StatusCode::OK);
@@ -125,7 +141,11 @@ async fn request_is_enumeration_safe() {
         .await
         .unwrap();
     let address = format!("realuser@{domain}");
-    let (s, _b) = send(&app, post("/reset/request", serde_json::json!({"address": address}))).await;
+    let (s, _b) = send(
+        &app,
+        post("/reset/request", serde_json::json!({"address": address})),
+    )
+    .await;
     assert_eq!(s, StatusCode::SERVICE_UNAVAILABLE);
     assert!(
         h.store.pending_reset(&address).await.unwrap().is_some(),
@@ -137,7 +157,11 @@ async fn request_is_enumeration_safe() {
 async fn verify_resets_password_after_correct_code() {
     let h = harness("reset-verify").await;
     let domain = unique_domain("verify");
-    let app = reset_app(Arc::clone(&h.store), h.identity.clone(), vec![domain.clone()]);
+    let app = reset_app(
+        Arc::clone(&h.store),
+        h.identity.clone(),
+        vec![domain.clone()],
+    );
     let address = format!("resetme@{domain}");
 
     h.identity
@@ -146,7 +170,12 @@ async fn verify_resets_password_after_correct_code() {
         .unwrap();
     // Seed a pending reset as `request` would (bypassing the email send).
     h.store
-        .upsert_pending_reset(&address, "r@gmail.test", &code_hash(&address, "424242"), 600)
+        .upsert_pending_reset(
+            &address,
+            "r@gmail.test",
+            &code_hash(&address, "424242"),
+            600,
+        )
         .await
         .unwrap();
 
@@ -172,7 +201,10 @@ async fn verify_resets_password_after_correct_code() {
     .await;
     assert_eq!(s, StatusCode::OK, "{body}");
     assert_eq!(body["status"], "ok");
-    assert!(h.store.pending_reset(&address).await.unwrap().is_none(), "pending cleared");
+    assert!(
+        h.store.pending_reset(&address).await.unwrap().is_none(),
+        "pending cleared"
+    );
 
     // The new password authenticates; the old one no longer does.
     assert!(
@@ -197,10 +229,19 @@ async fn verify_resets_password_after_correct_code() {
 async fn verify_caps_attempts_then_burns_the_reset() {
     let h = harness("reset-cap").await;
     let domain = unique_domain("cap");
-    let app = reset_app(Arc::clone(&h.store), h.identity.clone(), vec![domain.clone()]);
+    let app = reset_app(
+        Arc::clone(&h.store),
+        h.identity.clone(),
+        vec![domain.clone()],
+    );
     let address = format!("bruteme@{domain}");
     h.store
-        .upsert_pending_reset(&address, "r@gmail.test", &code_hash(&address, "999999"), 600)
+        .upsert_pending_reset(
+            &address,
+            "r@gmail.test",
+            &code_hash(&address, "999999"),
+            600,
+        )
         .await
         .unwrap();
 
@@ -221,5 +262,8 @@ async fn verify_caps_attempts_then_burns_the_reset() {
         assert_eq!(s, StatusCode::BAD_REQUEST, "wrong code before the cap");
     }
     assert!(saw_stop, "the attempt cap tripped a 429");
-    assert!(h.store.pending_reset(&address).await.unwrap().is_none(), "reset burned");
+    assert!(
+        h.store.pending_reset(&address).await.unwrap().is_none(),
+        "reset burned"
+    );
 }

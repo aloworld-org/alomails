@@ -15,10 +15,9 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, ai, api, autoconfig, blob, calendar, carddav, contacts, delegates, docs, filters, flagdue,
-    imap_import_route, push, reset_route, schedule, security, session, settings, share,
-    signup_route, snooze,
-    unsubscribe,
+    admin, ai, api, autoconfig, blob, calendar, carddav, contacts, delegates, docs, filters,
+    flagdue, imap_import_route, push, reset_route, schedule, security, session, settings, share,
+    signup_route, snooze, unsubscribe,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /

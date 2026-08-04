@@ -184,7 +184,8 @@ impl AccountStore {
         } else {
             Change::created(TYPE_EVENT, id.as_str())
         };
-        changes::bump_and_record(&mut tx, self.tenant.as_str(), self.user.as_str(), &[change]).await?;
+        changes::bump_and_record(&mut tx, self.tenant.as_str(), self.user.as_str(), &[change])
+            .await?;
         tx.commit().await.map_err(StoreError::Db)?;
         Ok(!existed)
     }
@@ -303,8 +304,7 @@ fn expand_occurrences(
     from: OffsetDateTime,
     to: OffsetDateTime,
 ) -> Vec<CalendarEvent> {
-    let Some((freq, interval, count, until)) =
-        master.recurrence.as_deref().and_then(parse_rrule)
+    let Some((freq, interval, count, until)) = master.recurrence.as_deref().and_then(parse_rrule)
     else {
         return vec![master.clone()];
     };
@@ -517,7 +517,10 @@ mod tests {
         assert_eq!(occ[0].starts_at, e.starts_at);
         assert_eq!(occ[1].starts_at, e.starts_at + Duration::weeks(1));
         assert!(occ.iter().all(|o| o.id.as_str() == "m1"));
-        assert!(occ.iter().all(|o| (o.ends_at - o.starts_at) == Duration::minutes(30)));
+        assert!(
+            occ.iter()
+                .all(|o| (o.ends_at - o.starts_at) == Duration::minutes(30))
+        );
     }
 
     #[test]
@@ -527,7 +530,10 @@ mod tests {
         e.exdates.push(e.starts_at + Duration::weeks(1));
         let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 8, 31));
         assert_eq!(occ.len(), 3, "Aug 3/17/24 (10 excluded)");
-        assert!(occ.iter().all(|o| o.starts_at != e.starts_at + Duration::weeks(1)));
+        assert!(
+            occ.iter()
+                .all(|o| o.starts_at != e.starts_at + Duration::weeks(1))
+        );
         assert_eq!(occ[0].starts_at, e.starts_at); // Aug 3 kept
         assert_eq!(occ[1].starts_at, e.starts_at + Duration::weeks(2)); // Aug 17
     }

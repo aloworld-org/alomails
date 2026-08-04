@@ -91,7 +91,11 @@ async fn domains_lists_configured_and_empty_when_off() {
     let domain = unique_domain("dom");
 
     // Configured: the domain is listed.
-    let on = signup_app(Arc::clone(&h.store), h.identity.clone(), vec![domain.clone()]);
+    let on = signup_app(
+        Arc::clone(&h.store),
+        h.identity.clone(),
+        vec![domain.clone()],
+    );
     let req = Request::builder()
         .method("GET")
         .uri("/signup/domains")
@@ -160,7 +164,12 @@ async fn available_reports_status() {
 
     // An address already provisioned is taken.
     h.identity
-        .provision_personal(&domain, "occupied", "correct-horse-battery", "recover@example.test")
+        .provision_personal(
+            &domain,
+            "occupied",
+            "correct-horse-battery",
+            "recover@example.test",
+        )
         .await
         .unwrap();
     let (_s, body) = send(

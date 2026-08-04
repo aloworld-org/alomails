@@ -122,10 +122,21 @@ mod tests {
             "fd00::1", // ULA
             "fe80::1", // link-local
         ] {
-            assert!(is_blocked_ip(ip.parse::<IpAddr>().unwrap()), "should block {ip}");
+            assert!(
+                is_blocked_ip(ip.parse::<IpAddr>().unwrap()),
+                "should block {ip}"
+            );
         }
-        for ip in ["8.8.8.8", "1.1.1.1", "93.184.216.34", "2606:4700:4700::1111"] {
-            assert!(!is_blocked_ip(ip.parse::<IpAddr>().unwrap()), "should allow {ip}");
+        for ip in [
+            "8.8.8.8",
+            "1.1.1.1",
+            "93.184.216.34",
+            "2606:4700:4700::1111",
+        ] {
+            assert!(
+                !is_blocked_ip(ip.parse::<IpAddr>().unwrap()),
+                "should allow {ip}"
+            );
         }
     }
 

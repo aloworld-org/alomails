@@ -179,7 +179,11 @@ pub async fn delete(
         .event(&eid)
         .await
         .map_err(|_| Problem::server_error())?;
-    account.acc.delete_event(&eid).await.map_err(map_store_err)?;
+    account
+        .acc
+        .delete_event(&eid)
+        .await
+        .map_err(map_store_err)?;
     if let Some(ev) = event {
         send_cancellations(&state, &account, &ev).await;
     }
@@ -246,7 +250,9 @@ pub async fn rsvp(
     }
     let organizer = alo_store::ical::organizer_of(&ics);
     let replied = send_reply(&state, &account, &event, partstat, organizer.as_deref()).await;
-    Ok(Json(json!({ "status": "ok", "added": added, "replied": replied })))
+    Ok(Json(
+        json!({ "status": "ok", "added": added, "replied": replied }),
+    ))
 }
 
 #[derive(Deserialize)]
@@ -274,8 +280,12 @@ pub async fn cancel(
         .blob_bytes(&BlobId::new(req.blob_id))
         .await
         .map_err(map_store_err)?;
-    let not_cancel =
-        || Problem::with(StatusCode::BAD_REQUEST, "this message is not a cancellation");
+    let not_cancel = || {
+        Problem::with(
+            StatusCode::BAD_REQUEST,
+            "this message is not a cancellation",
+        )
+    };
     let ics_bytes = crate::mime_read::calendar_part(&raw).ok_or_else(not_cancel)?;
     let ics = String::from_utf8_lossy(&ics_bytes);
     if alo_store::ical::method_of(&ics).as_deref() != Some("CANCEL") {
@@ -363,7 +373,10 @@ async fn send_reply(
 fn build_event(id: EventId, req: EventBody) -> Result<CalendarEvent, Problem> {
     let summary = req.summary.trim().to_owned();
     if summary.is_empty() {
-        return Err(Problem::with(StatusCode::BAD_REQUEST, "a title is required"));
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "a title is required",
+        ));
     }
     let starts_at = parse_time(&req.starts_at)?;
     let ends_at = parse_time(&req.ends_at)?;
@@ -405,7 +418,12 @@ fn build_event(id: EventId, req: EventBody) -> Result<CalendarEvent, Problem> {
 fn parse_time(s: &str) -> Result<OffsetDateTime, Problem> {
     OffsetDateTime::parse(s, &Rfc3339)
         .map(|t| t.to_offset(time::UtcOffset::UTC))
-        .map_err(|_| Problem::with(StatusCode::BAD_REQUEST, "invalid date/time (expected RFC 3339)"))
+        .map_err(|_| {
+            Problem::with(
+                StatusCode::BAD_REQUEST,
+                "invalid date/time (expected RFC 3339)",
+            )
+        })
 }
 
 fn event_json(e: &CalendarEvent) -> Value {
@@ -496,8 +514,7 @@ async fn notify_attendees(
             return;
         }
     };
-    let subject =
-        crate::mime::encode_unstructured(&format!("{subject_prefix}: {}", event.summary));
+    let subject = crate::mime::encode_unstructured(&format!("{subject_prefix}: {}", event.summary));
     let plain_b64 = wrap76(&B64.encode(plain));
     let ics_b64 = wrap76(&B64.encode(alo_store::ical::to_imip(event, &organizer, method)));
     for attendee in &event.attendees {

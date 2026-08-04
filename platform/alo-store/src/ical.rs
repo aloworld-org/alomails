@@ -86,7 +86,12 @@ fn vevent_lines(event: &CalendarEvent, organizer: Option<&str>) -> Vec<String> {
 }
 
 fn fold_join(lines: &[String]) -> String {
-    lines.iter().map(|l| fold(l)).collect::<Vec<_>>().join("\r\n") + "\r\n"
+    lines
+        .iter()
+        .map(|l| fold(l))
+        .collect::<Vec<_>>()
+        .join("\r\n")
+        + "\r\n"
 }
 
 /// Parse the first `VEVENT` in an iCalendar document into an event, using

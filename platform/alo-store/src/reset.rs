@@ -60,13 +60,12 @@ impl Store {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn account_recovery_email(&self, address: &str) -> Result<Option<String>> {
-        let row: Option<(String,)> = sqlx::query_as(
-            "SELECT recovery_email FROM account_recovery WHERE address = lower($1)",
-        )
-        .bind(address)
-        .fetch_optional(self.pool())
-        .await
-        .map_err(StoreError::Db)?;
+        let row: Option<(String,)> =
+            sqlx::query_as("SELECT recovery_email FROM account_recovery WHERE address = lower($1)")
+                .bind(address)
+                .fetch_optional(self.pool())
+                .await
+                .map_err(StoreError::Db)?;
         Ok(row.map(|(e,)| e))
     }
 

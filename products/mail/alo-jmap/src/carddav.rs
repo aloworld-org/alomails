@@ -400,7 +400,10 @@ async fn cal_sync_collection(acc: &AccountStore, uid: &str, body: &str) -> Respo
         }
     }
     for id in &changes.destroyed {
-        responses.push_str(&not_found_response(&event_href(uid, &EventId::new(id.clone()))));
+        responses.push_str(&not_found_response(&event_href(
+            uid,
+            &EventId::new(id.clone()),
+        )));
     }
     let token = format!("{CAL_SYNC_PREFIX}{}", changes.new_state);
     let xml = format!(
@@ -446,11 +449,21 @@ async fn sync_collection(acc: &AccountStore, uid: &str, body: &str) -> Response 
 async fn get_object(acc: &AccountStore, resource: &Resource, head: bool) -> Response {
     match resource {
         Resource::Object(id) => match fetch(acc, id).await {
-            Some(c) => serve(head, vcard::to_vcard(&c), &etag(&c), "text/vcard; charset=utf-8"),
+            Some(c) => serve(
+                head,
+                vcard::to_vcard(&c),
+                &etag(&c),
+                "text/vcard; charset=utf-8",
+            ),
             None => status(StatusCode::NOT_FOUND),
         },
         Resource::CalObject(id) => match fetch_event(acc, id).await {
-            Some(e) => serve(head, ical::to_ics(&e), &event_etag(&e), "text/calendar; charset=utf-8"),
+            Some(e) => serve(
+                head,
+                ical::to_ics(&e),
+                &event_etag(&e),
+                "text/calendar; charset=utf-8",
+            ),
             None => status(StatusCode::NOT_FOUND),
         },
         _ => status(StatusCode::NOT_FOUND),
@@ -488,7 +501,12 @@ async fn put_object(
     }
 }
 
-async fn put_contact_object(acc: &AccountStore, id: &str, headers: &HeaderMap, body: &[u8]) -> Response {
+async fn put_contact_object(
+    acc: &AccountStore,
+    id: &str,
+    headers: &HeaderMap,
+    body: &[u8],
+) -> Response {
     let existing = fetch(acc, id).await;
     // Preconditions (RFC 7232): If-None-Match: * = create-only;
     // If-Match: <etag> = update-only-if-current.
@@ -507,7 +525,10 @@ async fn put_contact_object(acc: &AccountStore, id: &str, headers: &HeaderMap, b
     // The href is authoritative in CardDAV: store under the path id,
     // whatever UID the card carries.
     contact.id = ContactId::new(id.to_owned());
-    match acc.put_contact(&ContactId::new(id.to_owned()), &contact).await {
+    match acc
+        .put_contact(&ContactId::new(id.to_owned()), &contact)
+        .await
+    {
         Ok(created) => created_or_updated(created, &etag(&contact)),
         // The href is taken by another account (global-id collision).
         Err(alo_store::StoreError::Conflict(_)) => status(StatusCode::CONFLICT),
@@ -515,7 +536,12 @@ async fn put_contact_object(acc: &AccountStore, id: &str, headers: &HeaderMap, b
     }
 }
 
-async fn put_event_object(acc: &AccountStore, id: &str, headers: &HeaderMap, body: &[u8]) -> Response {
+async fn put_event_object(
+    acc: &AccountStore,
+    id: &str,
+    headers: &HeaderMap,
+    body: &[u8],
+) -> Response {
     let existing = fetch_event(acc, id).await;
     if header_has(headers, header::IF_NONE_MATCH, "*") && existing.is_some() {
         return status(StatusCode::PRECONDITION_FAILED);
