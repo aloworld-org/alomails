@@ -239,7 +239,7 @@ export function TasksModule() {
           </div>
         )}
 
-        {mode.type !== "proposals" && view === "list" && tasks.length > 0 && (
+        {mode.type !== "proposals" && tasks.length > 0 && (
           <TaskToolbar config={config} onChange={setConfig} />
         )}
 
@@ -264,7 +264,12 @@ export function TasksModule() {
               </button>
             </div>
           ) : view === "board" ? (
-            <BoardView tasks={tasks} onOpen={setSelected} onMove={move} />
+            <BoardView
+              tasks={filterTasks(tasks, config, identity?.email)}
+              onOpen={setSelected}
+              onMove={move}
+              onAdd={(status) => openCreate(status)}
+            />
           ) : view === "timeline" ? (
             <TimelineView tasks={filterTasks(tasks, config, identity?.email)} onOpen={setSelected} />
           ) : view === "calendar" ? (

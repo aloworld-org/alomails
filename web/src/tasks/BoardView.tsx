@@ -2,21 +2,23 @@
 // rows the list renders (ADR 0022). Drag a card between columns to change its
 // status, or drop it onto a card to reorder — each is a single-field move whose
 // position is a fractional index (midpoint of its new neighbours), so one row
-// changes. Native HTML5 drag-and-drop; no dependency.
+// changes. Native HTML5 drag-and-drop.
 import { useState } from "react";
-import { MessageSquare } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
 
+import { strings } from "../i18n";
 import type { Task } from "../jmap";
-import { Avatar, COLUMNS, DueChip, PriorityChip, SourceMark, columnLabel } from "./parts";
+import { Avatar, COLUMNS, columnLabel, dueLabel, isOverdue, statusColor } from "./parts";
 import styles from "./TasksModule.module.css";
 
 interface Props {
   tasks: Task[];
   onOpen: (id: string) => void;
   onMove: (id: string, status: string, position: number) => void;
+  onAdd?: (status: string) => void;
 }
 
-export function BoardView({ tasks, onOpen, onMove }: Props) {
+export function BoardView({ tasks, onOpen, onMove, onAdd }: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<string | null>(null);
 
@@ -51,6 +53,7 @@ export function BoardView({ tasks, onOpen, onMove }: Props) {
     <div className={styles.board}>
       {COLUMNS.map((c) => {
         const cards = inColumn(c.key);
+        const color = statusColor(c.key);
         return (
           <div
             key={c.key}
@@ -63,45 +66,50 @@ export function BoardView({ tasks, onOpen, onMove }: Props) {
             onDrop={() => dropOnColumn(c.key)}
           >
             <div className={styles.columnHead}>
-              {columnLabel(c.key)} <span className={styles.columnCount}>{cards.length}</span>
+              <span className={styles.columnDot} style={{ background: color }} aria-hidden />
+              <span className={styles.columnName}>{columnLabel(c.key)}</span>
+              <span className={styles.columnCount}>{cards.length}</span>
             </div>
-            {cards.map((t) => (
-              <div
-                key={t.id}
-                className={`${styles.card} ${dragId === t.id ? styles.cardDragging : ""}`}
-                draggable
-                onDragStart={() => setDragId(t.id)}
-                onDragEnd={() => {
-                  setDragId(null);
-                  setOverCol(null);
-                }}
-                onDrop={(e) => {
-                  e.stopPropagation();
-                  dropOnCard(c.key, t.id);
-                }}
-                onClick={() => onOpen(t.id)}
-              >
-                <div className={styles.cardTitle}>{t.title}</div>
-                <div className={styles.cardMeta}>
-                  <PriorityChip priority={t.priority} />
-                  {t.dueAt && <DueChip iso={t.dueAt} done={t.status === "done"} />}
-                  <SourceMark task={t} />
-                  {t.subtaskTotal > 0 && (
-                    <span className={styles.metaIcon}>
-                      ✓ {t.subtaskDone}/{t.subtaskTotal}
-                    </span>
-                  )}
-                  {t.commentCount > 0 && (
-                    <span className={styles.metaIcon}>
-                      <MessageSquare size={12} /> {t.commentCount}
-                    </span>
-                  )}
-                  <span style={{ marginLeft: "auto" }}>
-                    {t.assignee && <Avatar email={t.assignee} />}
-                  </span>
+            {cards.map((t) => {
+              const done = t.status === "done";
+              return (
+                <div
+                  key={t.id}
+                  className={`${styles.card} ${dragId === t.id ? styles.cardDragging : ""}`}
+                  draggable
+                  onDragStart={() => setDragId(t.id)}
+                  onDragEnd={() => {
+                    setDragId(null);
+                    setOverCol(null);
+                  }}
+                  onDrop={(e) => {
+                    e.stopPropagation();
+                    dropOnCard(c.key, t.id);
+                  }}
+                  onClick={() => onOpen(t.id)}
+                >
+                  <div className={styles.cardTitle}>{t.title}</div>
+                  <div className={styles.cardMeta}>
+                    {t.dueAt !== null && (
+                      <span
+                        className={styles.cardDue}
+                        style={{ color: !done && isOverdue(t.dueAt) ? "var(--danger)" : color }}
+                      >
+                        <CalendarDays size={13} />
+                        {dueLabel(t.dueAt)}
+                      </span>
+                    )}
+                    <span className={styles.cardSpacer} />
+                    {t.assignee !== null && <Avatar email={t.assignee} />}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
+            {onAdd !== undefined && (
+              <button type="button" className={styles.cardAdd} onClick={() => onAdd(c.key)}>
+                <Plus size={15} /> {strings.taskAdd}
+              </button>
+            )}
           </div>
         );
       })}

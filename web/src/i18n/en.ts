@@ -323,6 +323,7 @@ export const en = {
   taskList: "List",
   taskQuickAdd: "Add a task…",
   taskAdd: "Add",
+  taskColReview: "Review",
   taskColName: "Task name",
   taskColProject: "Project",
   taskColAssignee: "Assignee",

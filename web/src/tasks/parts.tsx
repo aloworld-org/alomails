@@ -7,15 +7,30 @@ import { strings } from "../i18n";
 import type { Task, TaskPriority } from "../jmap";
 import styles from "./TasksModule.module.css";
 
-/** The board's default columns (the task `status` values). */
+/** The board's default columns (the task `status` values). Status is free text
+ *  in the store, so this list defines the ordered, named workflow the UI shows. */
 export const COLUMNS: { key: string; label: () => string }[] = [
   { key: "todo", label: () => strings.taskColTodo },
   { key: "in_progress", label: () => strings.taskColInProgress },
+  { key: "review", label: () => strings.taskColReview },
   { key: "done", label: () => strings.taskColDone },
 ];
 
 export function columnLabel(status: string): string {
   return COLUMNS.find((c) => c.key === status)?.label() ?? status;
+}
+
+/** A colour per workflow status — shared by the board, list, and timeline so a
+ *  task reads the same everywhere (coral → blue → violet → green). */
+export const STATUS_COLORS: Record<string, string> = {
+  todo: "#e76f51",
+  in_progress: "#4b83c4",
+  review: "#9b6dd6",
+  done: "#2e8b57",
+};
+
+export function statusColor(status: string): string {
+  return STATUS_COLORS[status] ?? "#e76f51";
 }
 
 /** Two-letter initials from an email/name for the assignee avatar. */
