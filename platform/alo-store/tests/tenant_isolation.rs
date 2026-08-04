@@ -609,3 +609,39 @@ async fn email_sourced_task_keeps_source_and_never_crosses_tenant() {
         "an email-sourced task, and its source link, never cross tenants"
     );
 }
+
+/// Law #1: deleting a tenant leaves nothing behind. A task query is scoped by
+/// `tenant_id`, so an orphaned row (same tenant id, no tenant) would still be
+/// returned — this asserts the tenant-delete cascade (migration 0047) removes
+/// the task and its children, not just the tenant + users.
+#[tokio::test]
+async fn deleting_a_tenant_purges_its_tasks() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("purge-tasks").await.unwrap();
+    let u = store.for_tenant(t.clone()).create_user("a@purge.test").await.unwrap();
+    let a = store.for_account(t.clone(), u);
+
+    let project = a.ensure_personal_project().await.unwrap();
+    let task = a.create_task(&project, &task("keep me until purge")).await.unwrap();
+    a.add_subtask(&task, "a step").await.unwrap();
+    a.add_task_comment(&task, "a note").await.unwrap();
+    // Present before the delete.
+    assert!(a.task(&task).await.unwrap().is_some());
+    assert_eq!(a.subtasks(&task).await.unwrap().len(), 1);
+    assert_eq!(a.task_comments(&task).await.unwrap().len(), 1);
+
+    store.delete_tenant(&t).await.unwrap();
+
+    // Gone after it — a tenant-scoped query returns nothing because the rows
+    // were cascaded away, not merely detached.
+    assert!(
+        a.task(&task).await.unwrap().is_none(),
+        "the task is purged with its tenant, not orphaned"
+    );
+    assert!(a.subtasks(&task).await.unwrap().is_empty(), "subtasks purged too");
+    assert!(a.task_comments(&task).await.unwrap().is_empty(), "comments purged too");
+    assert!(
+        a.task_projects().await.unwrap().is_empty(),
+        "the tenant's task projects are purged too"
+    );
+}
