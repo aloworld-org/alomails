@@ -211,6 +211,7 @@ dependencies = [
  "object_store",
  "ring",
  "serde",
+ "serde_json",
  "sha2",
  "sqlx",
  "thiserror",

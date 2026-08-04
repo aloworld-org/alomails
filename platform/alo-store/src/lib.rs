@@ -34,6 +34,7 @@ pub mod share;
 pub mod signup;
 pub mod snooze;
 pub mod store;
+pub mod tasks;
 pub mod thread;
 pub mod vcard;
 
@@ -51,8 +52,8 @@ pub use dmarc_reports::{DmarcAggregateRow, DmarcEventRecord};
 pub use document::{Document, DocumentSummary};
 pub use error::{Result, StoreError};
 pub use id::{
-    BlobId, CalendarId, CategoryId, ContactId, EventId, GroupId, MailboxId, MessageId, TenantId,
-    ThreadId, UserId,
+    BlobId, CalendarId, CategoryId, CommentId, ContactId, EventId, GroupId, MailboxId, MessageId,
+    ProjectId, SubtaskId, TaskId, TenantId, ThreadId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -69,3 +70,4 @@ pub use schedule::DueSend;
 pub use share::{ShareCreated, ShareTarget};
 pub use signup::PendingSignup;
 pub use store::{CATEGORY_KEYWORD_PREFIX, SEEN, Store, TenantStore, category_keyword};
+pub use tasks::{NewTask, Subtask, Task, TaskActivity, TaskComment, TaskEdit, TaskProject};

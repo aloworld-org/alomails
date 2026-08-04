@@ -17,7 +17,7 @@ use crate::state::{AppState, Limits};
 use crate::{
     admin, ai, api, autoconfig, blob, calendar, carddav, contacts, delegates, docs, filters,
     flagdue, imap_import_route, push, reset_route, schedule, security, session, settings, share,
-    signup_route, snooze, unsubscribe,
+    signup_route, snooze, tasks, unsubscribe,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -95,6 +95,33 @@ pub fn app(state: AppState) -> Router {
         .route("/calendar/groups", get(calendar::list_shareable_groups))
         // Free/busy: when are these people (in the tenant) busy?
         .route("/calendar/freebusy", post(calendar::free_busy))
+        // Tasks (ADR 0021–0023). Rows out; the client groups into board/list.
+        .route(
+            "/tasks/projects",
+            get(tasks::list_projects).post(tasks::create_project),
+        )
+        .route("/tasks", get(tasks::list_tasks).post(tasks::create_task))
+        // "What's on my plate", the calendar's due-task overlay, and AI proposals
+        // (static paths before /tasks/{id}).
+        .route("/tasks/today", get(tasks::my_plate))
+        .route("/tasks/due", get(tasks::due_tasks))
+        .route("/tasks/proposals", get(tasks::list_proposals))
+        .route("/tasks/propose", post(tasks::propose_tasks))
+        .route(
+            "/tasks/{id}",
+            get(tasks::get_task)
+                .put(tasks::update_task)
+                .delete(tasks::delete_task),
+        )
+        .route("/tasks/{id}/move", post(tasks::move_task))
+        .route("/tasks/{id}/accept", post(tasks::accept_task))
+        .route("/tasks/{id}/reject", post(tasks::reject_task))
+        .route("/tasks/{id}/subtasks", post(tasks::add_subtask))
+        .route(
+            "/tasks/{id}/subtasks/{sid}",
+            put(tasks::set_subtask).delete(tasks::delete_subtask),
+        )
+        .route("/tasks/{id}/comments", post(tasks::add_comment))
         .route("/contacts", get(contacts::list))
         // Address-book import (a .vcf upload) and export (whole book as .vcf).
         .route("/contacts/import", post(contacts::import))

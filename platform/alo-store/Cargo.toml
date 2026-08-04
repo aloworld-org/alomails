@@ -16,6 +16,7 @@ sqlx = { workspace = true }
 # Contact multi-value fields (emails/phones) serialize to the JSONB columns
 # and to the JMAP/vCard surfaces.
 serde = { workspace = true }
+serde_json = { workspace = true }
 time = { workspace = true }
 # IANA timezone database, for converting TZID-qualified iCalendar times to UTC
 # (already a vetted workspace dependency — alo-auth-mail, alo-smtp).

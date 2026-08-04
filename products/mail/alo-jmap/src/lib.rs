@@ -44,6 +44,7 @@ pub mod signup_route;
 pub mod snooze;
 pub mod state;
 pub mod submission;
+pub mod tasks;
 pub mod unsubscribe;
 
 pub use push::PushHub;

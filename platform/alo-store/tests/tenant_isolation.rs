@@ -487,3 +487,83 @@ async fn calendar_sharing_follows_the_grant_and_never_crosses_tenants() {
             .await,
     );
 }
+
+// --- Tasks (ADR 0021–0023) --------------------------------------------------
+//
+// A personal project resolves only for its owner; a team project is visible to
+// its whole tenant (v1) but never across tenants. Proposals are scoped the same
+// way and never surface as active work.
+
+use alo_store::{NewTask, TaskEdit};
+
+fn task(title: &str) -> NewTask {
+    NewTask { title: title.to_owned(), ..Default::default() }
+}
+
+#[tokio::test]
+async fn tasks_scope_by_project_and_never_cross_tenant() {
+    let store = common::test_store().await;
+
+    // Tenant 1: owner A + co-tenant B.
+    let t1 = store.create_tenant("task-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@task.test").await.unwrap();
+    let ub = ts1.create_user("b@task.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub);
+
+    // A: a private task on the personal project, a task on a team project.
+    let a_personal = a.ensure_personal_project().await.unwrap();
+    let private = a.create_task(&a_personal, &task("private")).await.unwrap();
+    let team = a.create_task_project("Team", None).await.unwrap();
+    let shared = a.create_task(&team, &task("shared")).await.unwrap();
+
+    // A sees both; B sees the team task but NOT A's personal task.
+    assert!(a.task(&private).await.unwrap().is_some());
+    assert!(a.task(&shared).await.unwrap().is_some());
+    assert!(
+        b.task(&private).await.unwrap().is_none(),
+        "a personal task is hidden from a co-tenant"
+    );
+    assert!(
+        b.task(&shared).await.unwrap().is_some(),
+        "a team task is visible to a co-tenant"
+    );
+    let b_projects = b.task_projects().await.unwrap();
+    assert!(b_projects.iter().any(|p| p.id == team));
+    assert!(!b_projects.iter().any(|p| p.id == a_personal));
+
+    // B cannot edit/move/delete A's personal task (not visible → NotFound).
+    let edit = TaskEdit { title: "hijack".to_owned(), priority: "none".to_owned(), ..Default::default() };
+    assert_not_found(b.update_task(&private, &edit).await);
+    assert_not_found(b.move_task(&private, "done", 1.0).await);
+    assert_not_found(b.delete_task(&private).await);
+    assert_eq!(a.task(&private).await.unwrap().unwrap().title, "private"); // intact
+
+    // Cross-tenant: an outsider sees nothing and can touch nothing.
+    let t2 = store.create_tenant("task-t2").await.unwrap();
+    let ud = store.for_tenant(t2.clone()).create_user("d@task.test").await.unwrap();
+    let d = store.for_account(t2, ud);
+    assert!(d.task(&private).await.unwrap().is_none());
+    assert!(d.task(&shared).await.unwrap().is_none());
+    assert_not_found(d.delete_task(&shared).await);
+    assert_not_found(d.move_task(&shared, "done", 1.0).await);
+
+    // Proposals (ADR 0023): scoped like tasks, and never shown as active work.
+    a.create_task(
+        &a_personal,
+        &NewTask { title: "maybe".to_owned(), state: Some("proposed".to_owned()), ..Default::default() },
+    )
+    .await
+    .unwrap();
+    assert_eq!(a.task_proposals().await.unwrap().len(), 1);
+    assert_eq!(d.task_proposals().await.unwrap().len(), 0, "proposals don't cross tenants");
+    assert!(
+        a.tasks_in_project(&a_personal)
+            .await
+            .unwrap()
+            .iter()
+            .all(|t| t.title != "maybe"),
+        "a proposal never appears as active work"
+    );
+}

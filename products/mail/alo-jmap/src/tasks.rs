@@ -1,0 +1,682 @@
+//! Tasks HTTP surface (ADR 0021–0023). Authenticated, tenant/user-scoped through
+//! the account door — every handler resolves the caller with [`authenticate`]
+//! and touches only tasks on projects visible to them.
+//!
+//! The API returns tasks as plain rows; the client groups them into a board
+//! (by status) or a flat list (ADR 0022), so there is no server-side "board
+//! shape" to keep in sync. Moving a card is one endpoint (`/move`) shared by the
+//! board drag and the list status-change. AI-created tasks arrive via `/propose`
+//! as `proposed` and are only ever surfaced as work after `/accept` (ADR 0023).
+
+use std::collections::HashMap;
+
+use axum::Json;
+use axum::extract::{Path, Query, State};
+use axum::http::{HeaderMap, StatusCode};
+use serde::Deserialize;
+use serde_json::{Value, json};
+use time::OffsetDateTime;
+use time::format_description::well_known::Rfc3339;
+
+use alo_store::{
+    CommentId, NewTask, ProjectId, StoreError, SubtaskId, Task, TaskEdit, TaskId, TenantStore,
+    UserId,
+};
+
+use crate::error::Problem;
+use crate::state::{Account, AppState, authenticate};
+
+// ---- JSON shaping -----------------------------------------------------------
+
+fn iso(t: OffsetDateTime) -> String {
+    t.format(&Rfc3339).unwrap_or_default()
+}
+
+/// A task as JSON. `emails` maps assignee user ids to display addresses.
+fn task_json(t: &Task, emails: &HashMap<String, String>) -> Value {
+    json!({
+        "id": t.id.as_str(),
+        "projectId": t.project_id.as_str(),
+        "title": t.title,
+        "description": t.description,
+        "status": t.status,
+        "position": t.position,
+        "assigneeId": t.assignee,
+        "assignee": t.assignee.as_deref().and_then(|u| emails.get(u)).cloned(),
+        "dueAt": t.due_at.map(iso),
+        "priority": t.priority,
+        "state": t.state,
+        "sourceKind": t.source_kind,
+        "sourceId": t.source_id,
+        "subtaskDone": t.subtask_done,
+        "subtaskTotal": t.subtask_total,
+        "commentCount": t.comment_count,
+        "completedAt": t.completed_at.map(iso),
+        "createdAt": iso(t.created_at),
+    })
+}
+
+/// Resolve a set of user ids to their email addresses (deduped, best-effort).
+async fn resolve_emails(ts: &TenantStore, tasks: &[Task]) -> HashMap<String, String> {
+    let mut ids: Vec<String> = tasks.iter().filter_map(|t| t.assignee.clone()).collect();
+    ids.sort();
+    ids.dedup();
+    let mut map = HashMap::new();
+    for id in ids {
+        if let Ok(Some(email)) = ts.email_of(&UserId::new(id.clone())).await {
+            map.insert(id, email);
+        }
+    }
+    map
+}
+
+async fn tasks_response(ts: &TenantStore, tasks: Vec<Task>) -> Value {
+    let emails = resolve_emails(ts, &tasks).await;
+    let out: Vec<Value> = tasks.iter().map(|t| task_json(t, &emails)).collect();
+    json!({ "tasks": out })
+}
+
+fn parse_time(s: &str) -> Result<OffsetDateTime, Problem> {
+    OffsetDateTime::parse(s, &Rfc3339)
+        .map(|t| t.to_offset(time::UtcOffset::UTC))
+        .map_err(|_| {
+            Problem::with(
+                StatusCode::BAD_REQUEST,
+                "invalid date/time (expected RFC 3339)",
+            )
+        })
+}
+
+fn map_store_err(e: StoreError) -> Problem {
+    match e {
+        StoreError::NotFound => Problem::with(StatusCode::NOT_FOUND, "not found"),
+        StoreError::Conflict(msg) => Problem::with(StatusCode::CONFLICT, &msg),
+        _ => Problem::server_error(),
+    }
+}
+
+// ---- projects ---------------------------------------------------------------
+
+/// `GET /tasks/projects` → `{"projects":[...]}` — the caller's visible projects.
+pub async fn list_projects(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let projects = account
+        .acc
+        .task_projects()
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let out: Vec<Value> = projects
+        .iter()
+        .map(|p| {
+            json!({
+                "id": p.id.as_str(), "name": p.name, "kind": p.kind, "color": p.color,
+            })
+        })
+        .collect();
+    Ok(Json(json!({ "projects": out })))
+}
+
+#[derive(Deserialize)]
+struct ProjectBody {
+    name: String,
+    #[serde(default)]
+    color: Option<String>,
+}
+
+/// `POST /tasks/projects` → the created team project.
+pub async fn create_project(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: ProjectBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let name = req.name.trim();
+    if name.is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "a project name is required",
+        ));
+    }
+    let color = req
+        .color
+        .as_deref()
+        .map(str::trim)
+        .filter(|c| !c.is_empty());
+    let id = account
+        .acc
+        .create_task_project(name, color)
+        .await
+        .map_err(|_| Problem::server_error())?;
+    Ok(Json(
+        json!({ "id": id.as_str(), "name": name, "kind": "team", "color": color }),
+    ))
+}
+
+// ---- tasks ------------------------------------------------------------------
+
+#[derive(Deserialize)]
+pub struct ProjectQuery {
+    project: String,
+}
+
+/// `GET /tasks?project=` → `{"tasks":[...]}` — the active tasks on a project
+/// (the client groups them into board columns or a list).
+pub async fn list_tasks(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<ProjectQuery>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let tasks = account
+        .acc
+        .tasks_in_project(&ProjectId::new(q.project))
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let ts = state.store.for_tenant(account.tenant.clone());
+    Ok(Json(tasks_response(&ts, tasks).await))
+}
+
+#[derive(Deserialize)]
+struct TaskBody {
+    #[serde(default, rename = "projectId")]
+    project_id: Option<String>,
+    title: String,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    status: Option<String>,
+    #[serde(default)]
+    assignee: Option<String>,
+    #[serde(default, rename = "dueAt")]
+    due_at: Option<String>,
+    #[serde(default)]
+    priority: Option<String>,
+    #[serde(default, rename = "sourceKind")]
+    source_kind: Option<String>,
+    #[serde(default, rename = "sourceId")]
+    source_id: Option<String>,
+}
+
+/// Resolves an assignee email/id to a user id in the caller's tenant, or `None`.
+async fn resolve_assignee(
+    state: &AppState,
+    account: &Account,
+    assignee: &Option<String>,
+) -> Option<String> {
+    let raw = assignee.as_deref()?.trim();
+    if raw.is_empty() {
+        return None;
+    }
+    let ts = state.store.for_tenant(account.tenant.clone());
+    // An email resolves to its user id; a bare user id is kept as-is.
+    match ts.user_by_email(raw).await {
+        Ok(uid) => Some(uid.as_str().to_owned()),
+        Err(_) => Some(raw.to_owned()),
+    }
+}
+
+async fn build_new_task(
+    state: &AppState,
+    account: &Account,
+    req: TaskBody,
+    proposed: bool,
+) -> Result<NewTask, Problem> {
+    let title = req.title.trim().to_owned();
+    if title.is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "a title is required",
+        ));
+    }
+    let due_at = match &req.due_at {
+        Some(s) if !s.is_empty() => Some(parse_time(s)?),
+        _ => None,
+    };
+    let assignee = resolve_assignee(state, account, &req.assignee).await;
+    Ok(NewTask {
+        title,
+        description: req
+            .description
+            .map(|d| d.trim().to_owned())
+            .filter(|d| !d.is_empty()),
+        status: req.status.filter(|s| !s.is_empty()),
+        assignee,
+        due_at,
+        priority: req.priority.filter(|p| !p.is_empty()),
+        state: proposed.then(|| "proposed".to_owned()),
+        source_kind: req.source_kind,
+        source_id: req.source_id,
+    })
+}
+
+/// `POST /tasks` → the created task (on `projectId`, else the personal project).
+pub async fn create_task(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: TaskBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let project = match req.project_id.as_deref().filter(|p| !p.is_empty()) {
+        Some(p) => ProjectId::new(p.to_owned()),
+        None => account
+            .acc
+            .ensure_personal_project()
+            .await
+            .map_err(|_| Problem::server_error())?,
+    };
+    let new = build_new_task(&state, &account, req, false).await?;
+    let id = account
+        .acc
+        .create_task(&project, &new)
+        .await
+        .map_err(map_store_err)?;
+    match account
+        .acc
+        .task(&id)
+        .await
+        .map_err(|_| Problem::server_error())?
+    {
+        Some(t) => {
+            let ts = state.store.for_tenant(account.tenant.clone());
+            let emails = resolve_emails(&ts, std::slice::from_ref(&t)).await;
+            Ok(Json(task_json(&t, &emails)))
+        }
+        None => Err(Problem::server_error()),
+    }
+}
+
+/// `GET /tasks/:id` → the task with its subtasks, comments, and activity.
+pub async fn get_task(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let tid = TaskId::new(id);
+    let Some(task) = account
+        .acc
+        .task(&tid)
+        .await
+        .map_err(|_| Problem::server_error())?
+    else {
+        return Err(Problem::with(StatusCode::NOT_FOUND, "no such task"));
+    };
+    let subtasks = account
+        .acc
+        .subtasks(&tid)
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let comments = account
+        .acc
+        .task_comments(&tid)
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let activity = account
+        .acc
+        .task_activity(&tid)
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let ts = state.store.for_tenant(account.tenant.clone());
+    let emails = resolve_emails(&ts, std::slice::from_ref(&task)).await;
+    // Resolve comment/activity actors too.
+    let mut actor_ids: Vec<String> = comments.iter().map(|c| c.author.clone()).collect();
+    actor_ids.extend(activity.iter().map(|a| a.actor.clone()));
+    actor_ids.sort();
+    actor_ids.dedup();
+    let mut actors = HashMap::new();
+    for uid in actor_ids {
+        if let Ok(Some(e)) = ts.email_of(&UserId::new(uid.clone())).await {
+            actors.insert(uid, e);
+        }
+    }
+    let name = |u: &str| actors.get(u).cloned().unwrap_or_else(|| u.to_owned());
+    Ok(Json(json!({
+        "task": task_json(&task, &emails),
+        "subtasks": subtasks.iter().map(|s| json!({
+            "id": s.id.as_str(), "title": s.title, "done": s.done,
+        })).collect::<Vec<_>>(),
+        "comments": comments.iter().map(|c| json!({
+            "id": c.id.as_str(), "author": name(&c.author), "body": c.body, "createdAt": iso(c.created_at),
+        })).collect::<Vec<_>>(),
+        "activity": activity.iter().map(|a| json!({
+            "actor": name(&a.actor), "kind": a.kind, "detail": a.detail, "createdAt": iso(a.created_at),
+        })).collect::<Vec<_>>(),
+    })))
+}
+
+/// `PUT /tasks/:id` → `{status:"ok"}` — edit title/description/assignee/due/
+/// priority (status + position move via `/move`).
+pub async fn update_task(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: TaskBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let title = req.title.trim().to_owned();
+    if title.is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "a title is required",
+        ));
+    }
+    let due_at = match &req.due_at {
+        Some(s) if !s.is_empty() => Some(parse_time(s)?),
+        _ => None,
+    };
+    let assignee = resolve_assignee(&state, &account, &req.assignee).await;
+    let edit = TaskEdit {
+        title,
+        description: req
+            .description
+            .map(|d| d.trim().to_owned())
+            .filter(|d| !d.is_empty()),
+        assignee,
+        due_at,
+        priority: req
+            .priority
+            .filter(|p| !p.is_empty())
+            .unwrap_or_else(|| "none".to_owned()),
+    };
+    account
+        .acc
+        .update_task(&TaskId::new(id), &edit)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+#[derive(Deserialize)]
+struct MoveBody {
+    status: String,
+    position: f64,
+}
+
+/// `POST /tasks/:id/move` → `{status:"ok"}` — the one move (board drag or list
+/// status-change), ADR 0022.
+pub async fn move_task(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: MoveBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    account
+        .acc
+        .move_task(&TaskId::new(id), req.status.trim(), req.position)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `DELETE /tasks/:id` → `{status:"ok"}`.
+pub async fn delete_task(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .delete_task(&TaskId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+// ---- the connections --------------------------------------------------------
+
+/// `GET /tasks/today` → `{"tasks":[...]}` — the caller's due/overdue assigned
+/// tasks ("what's on my plate"). The tasks half of the aggregate.
+pub async fn my_plate(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    // End of today, UTC (a per-user timezone refinement can come later).
+    let now = OffsetDateTime::now_utc();
+    let today_end =
+        now.replace_time(time::Time::from_hms(23, 59, 59).unwrap_or(time::Time::MIDNIGHT));
+    let tasks = account
+        .acc
+        .my_plate(today_end)
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let ts = state.store.for_tenant(account.tenant.clone());
+    Ok(Json(tasks_response(&ts, tasks).await))
+}
+
+#[derive(Deserialize)]
+pub struct RangeQuery {
+    from: String,
+    to: String,
+}
+
+/// `GET /tasks/due?from=&to=` → `{"tasks":[...]}` — active tasks with a due date
+/// in the window, for the calendar to overlay alongside events.
+pub async fn due_tasks(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<RangeQuery>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let from = parse_time(&q.from)?;
+    let to = parse_time(&q.to)?;
+    let tasks = account
+        .acc
+        .due_tasks_in_range(from, to)
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let ts = state.store.for_tenant(account.tenant.clone());
+    Ok(Json(tasks_response(&ts, tasks).await))
+}
+
+// ---- propose-then-approve (ADR 0023) ----------------------------------------
+
+/// `GET /tasks/proposals` → `{"tasks":[...]}` — pending AI proposals.
+pub async fn list_proposals(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let tasks = account
+        .acc
+        .task_proposals()
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let ts = state.store.for_tenant(account.tenant.clone());
+    Ok(Json(tasks_response(&ts, tasks).await))
+}
+
+#[derive(Deserialize)]
+struct ProposeBody {
+    #[serde(default, rename = "projectId")]
+    project_id: Option<String>,
+    tasks: Vec<TaskBody>,
+}
+
+/// `POST /tasks/propose` → `{"created":n}` — the AI hook: suggests tasks as
+/// `proposed`, never active work (ADR 0023). Sources (meeting/email) plug in
+/// here as those modules land; the approval half is live now.
+pub async fn propose_tasks(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: ProposeBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let default_project = account
+        .acc
+        .ensure_personal_project()
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let mut created = 0;
+    for t in req.tasks {
+        let project = match req.project_id.as_deref().filter(|p| !p.is_empty()) {
+            Some(p) => ProjectId::new(p.to_owned()),
+            None => default_project.clone(),
+        };
+        let new = build_new_task(&state, &account, t, true).await?;
+        if account.acc.create_task(&project, &new).await.is_ok() {
+            created += 1;
+        }
+    }
+    Ok(Json(json!({ "created": created })))
+}
+
+/// `POST /tasks/:id/accept` → `{status:"ok"}` — approve a proposal (make it real).
+pub async fn accept_task(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    // An empty body accepts as-is; a body refines the AI's suggestion first.
+    let edit = if body.is_empty() {
+        None
+    } else {
+        let req: TaskBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+        let due_at = match &req.due_at {
+            Some(s) if !s.is_empty() => Some(parse_time(s)?),
+            _ => None,
+        };
+        Some(TaskEdit {
+            title: req.title.trim().to_owned(),
+            description: req
+                .description
+                .map(|d| d.trim().to_owned())
+                .filter(|d| !d.is_empty()),
+            assignee: resolve_assignee(&state, &account, &req.assignee).await,
+            due_at,
+            priority: req
+                .priority
+                .filter(|p| !p.is_empty())
+                .unwrap_or_else(|| "none".to_owned()),
+        })
+    };
+    account
+        .acc
+        .accept_task(&TaskId::new(id), edit.as_ref())
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `POST /tasks/:id/reject` → `{status:"ok"}` — drop a proposal.
+pub async fn reject_task(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .reject_task(&TaskId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+// ---- subtasks / comments ----------------------------------------------------
+
+#[derive(Deserialize)]
+struct SubtaskBody {
+    title: String,
+}
+
+/// `POST /tasks/:id/subtasks` → `{id}` — add a checklist item.
+pub async fn add_subtask(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: SubtaskBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let title = req.title.trim();
+    if title.is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "a subtask title is required",
+        ));
+    }
+    let sid = account
+        .acc
+        .add_subtask(&TaskId::new(id), title)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(
+        json!({ "id": sid.as_str(), "title": title, "done": false }),
+    ))
+}
+
+#[derive(Deserialize)]
+struct SubtaskDoneBody {
+    done: bool,
+}
+
+/// `PUT /tasks/:id/subtasks/:sid` → `{status:"ok"}` — check/uncheck.
+pub async fn set_subtask(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, sid)): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: SubtaskDoneBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    account
+        .acc
+        .set_subtask_done(&TaskId::new(id), &SubtaskId::new(sid), req.done)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `DELETE /tasks/:id/subtasks/:sid` → `{status:"ok"}`.
+pub async fn delete_subtask(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, sid)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .delete_subtask(&TaskId::new(id), &SubtaskId::new(sid))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+#[derive(Deserialize)]
+struct CommentBody {
+    body: String,
+}
+
+/// `POST /tasks/:id/comments` → `{id}` — add a comment.
+pub async fn add_comment(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: CommentBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let text = req.body.trim();
+    if text.is_empty() {
+        return Err(Problem::with(StatusCode::BAD_REQUEST, "an empty comment"));
+    }
+    let cid: CommentId = account
+        .acc
+        .add_task_comment(&TaskId::new(id), text)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "id": cid.as_str() })))
+}

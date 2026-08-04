@@ -144,6 +144,23 @@ opaque_id!(
     /// name. Every event belongs to exactly one calendar.
     CalendarId
 );
+opaque_id!(
+    /// A task — the core record of the Tasks module (ADR 0021).
+    TaskId
+);
+opaque_id!(
+    /// A task project (board): the group a task belongs to, and how personal
+    /// vs team is expressed (ADR 0021).
+    ProjectId
+);
+opaque_id!(
+    /// A task subtask (checklist item).
+    SubtaskId
+);
+opaque_id!(
+    /// A task comment.
+    CommentId
+);
 
 #[cfg(test)]
 mod tests {
