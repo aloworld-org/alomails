@@ -12,4 +12,11 @@ export default tseslint.config(
       globals: globals.browser,
     },
   },
+  {
+    // Build/codegen scripts run in Node, not the browser.
+    files: ["**/*.mjs", "scripts/**/*.js"],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 );
