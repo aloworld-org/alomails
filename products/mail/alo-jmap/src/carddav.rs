@@ -671,6 +671,11 @@ fn event_etag(e: &CalendarEvent) -> String {
     e.all_day.hash(&mut hasher);
     e.recurrence.hash(&mut hasher);
     e.attendees.hash(&mut hasher);
+    // Excluding an occurrence changes the event; the ETag must move so CalDAV
+    // clients re-sync it.
+    for ex in &e.exdates {
+        ex.unix_timestamp().hash(&mut hasher);
+    }
     format!("\"{:016x}\"", hasher.finish())
 }
 

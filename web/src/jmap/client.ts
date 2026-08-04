@@ -1359,11 +1359,14 @@ export class JmapClient {
   }
 
   /** Delete a calendar event. */
-  async deleteEvent(id: string): Promise<void> {
-    const res = await this.#fetch(
-      `${API_BASE}/calendar/events/${encodeURIComponent(id)}`,
-      { method: "DELETE" },
-    );
+  /** Delete an event. With `occurrence` (a recurring instance's RFC 3339 start),
+   * only that instance is skipped (the series stays); without it, the whole
+   * event/series is deleted. */
+  async deleteEvent(id: string, occurrence?: string): Promise<void> {
+    const base = `${API_BASE}/calendar/events/${encodeURIComponent(id)}`;
+    const url =
+      occurrence !== undefined ? `${base}?occurrence=${encodeURIComponent(occurrence)}` : base;
+    const res = await this.#fetch(url, { method: "DELETE" });
     if (!res.ok) throw new JmapError(`calendar delete ${res.status}`);
   }
 

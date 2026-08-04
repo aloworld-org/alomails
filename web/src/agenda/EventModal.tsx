@@ -17,8 +17,11 @@ interface Props {
   event: CalendarEvent | null;
   /** For a new event, the local start the user clicked (defaults applied). */
   initialStart: Date;
+  /** For a recurring event, the RFC 3339 start of the clicked occurrence —
+   *  enables "delete this event" (skip just that instance). */
+  occurrenceStart?: string | undefined;
   onSave: (id: string | null, input: EventInput) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onDelete: (id: string, occurrence?: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -38,7 +41,14 @@ function repeatOf(rrule: string | null): Repeat {
   return f === "daily" || f === "weekly" || f === "monthly" || f === "yearly" ? f : "none";
 }
 
-export function EventModal({ event, initialStart, onSave, onDelete, onClose }: Props) {
+export function EventModal({
+  event,
+  initialStart,
+  occurrenceStart,
+  onSave,
+  onDelete,
+  onClose,
+}: Props) {
   const startDate = event ? new Date(event.startsAt) : initialStart;
   const endDate = event ? new Date(event.endsAt) : new Date(initialStart.getTime() + 3600_000);
 
@@ -105,16 +115,21 @@ export function EventModal({ event, initialStart, onSave, onDelete, onClose }: P
     }
   }
 
-  async function remove() {
+  async function remove(occurrence?: string) {
     if (event === null) return;
     setBusy(true);
     try {
-      await onDelete(event.id);
+      await onDelete(event.id, occurrence);
     } catch {
       setError(strings.agendaSaveError);
       setBusy(false);
     }
   }
+
+  // A recurring event opened from a specific instance offers "this one" vs the
+  // whole series; a one-off just deletes.
+  const recurringOccurrence =
+    event !== null && event.recurrence !== null && occurrenceStart !== undefined;
 
   return (
     <div className={styles.modalScrim} role="dialog" aria-modal="true" onMouseDown={onClose}>
@@ -211,10 +226,30 @@ export function EventModal({ event, initialStart, onSave, onDelete, onClose }: P
         )}
 
         <div className={styles.modalActions}>
-          {event !== null && (
+          {event !== null && !recurringOccurrence && (
             <button type="button" className={styles.deleteBtn} onClick={() => void remove()} disabled={busy}>
               <Trash2 size={15} /> {strings.agendaDelete}
             </button>
+          )}
+          {recurringOccurrence && (
+            <div className={styles.deleteChoice}>
+              <button
+                type="button"
+                className={styles.deleteBtn}
+                onClick={() => void remove(occurrenceStart)}
+                disabled={busy}
+              >
+                <Trash2 size={15} /> {strings.agendaDeleteThis}
+              </button>
+              <button
+                type="button"
+                className={styles.deleteBtn}
+                onClick={() => void remove()}
+                disabled={busy}
+              >
+                {strings.agendaDeleteAll}
+              </button>
+            </div>
           )}
           <div className={styles.modalActionsRight}>
             <button type="button" className={styles.linkBtn} onClick={onClose} disabled={busy}>

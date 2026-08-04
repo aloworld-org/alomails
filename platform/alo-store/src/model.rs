@@ -258,6 +258,11 @@ pub struct CalendarEvent {
     /// iMIP invitation when the event is saved; their status tracking + RSVP
     /// replies are a later slice, so this is just the invited addresses.
     pub attendees: Vec<String>,
+    /// Excluded occurrence start-instants (iCalendar `EXDATE`): individual
+    /// instances of a recurring series that were skipped/cancelled while the
+    /// rest stays. Empty for a one-off or an untouched series. Each matches an
+    /// occurrence's `starts_at`; the store omits them when expanding a range.
+    pub exdates: Vec<OffsetDateTime>,
 }
 
 /// A compact message row for mailbox listings (no body).

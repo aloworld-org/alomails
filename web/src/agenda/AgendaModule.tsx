@@ -17,7 +17,13 @@ import { addDays, addMonths, startOfDay, startOfMonth, startOfWeek, weekDays } f
 import styles from "./AgendaModule.module.css";
 
 type View = "month" | "week";
-type Editing = { event: CalendarEvent | null; initialStart: Date } | null;
+type Editing = {
+  event: CalendarEvent | null;
+  initialStart: Date;
+  /** For a recurring event, the RFC 3339 start of the specific occurrence the
+   *  user clicked — lets "delete this event" skip just that instance. */
+  occurrenceStart?: string;
+} | null;
 
 export function AgendaModule() {
   const client = useJmapClient();
@@ -80,7 +86,12 @@ export function AgendaModule() {
     if (e.recurrence !== null) {
       try {
         const master = await client.getEvent(e.id);
-        setEditing({ event: master, initialStart: new Date(master.startsAt) });
+        // Keep the clicked instance's start so "delete this event" can skip it.
+        setEditing({
+          event: master,
+          initialStart: new Date(master.startsAt),
+          occurrenceStart: e.startsAt,
+        });
         return;
       } catch {
         /* fall back to the occurrence */
@@ -96,8 +107,9 @@ export function AgendaModule() {
     await reload();
   }
 
-  async function remove(id: string) {
-    await client.deleteEvent(id);
+  /** Delete the whole event/series, or — with `occurrence` — just that instance. */
+  async function remove(id: string, occurrence?: string) {
+    await client.deleteEvent(id, occurrence);
     setEditing(null);
     await reload();
   }
@@ -173,6 +185,7 @@ export function AgendaModule() {
         <EventModal
           event={editing.event}
           initialStart={editing.initialStart}
+          occurrenceStart={editing.occurrenceStart}
           onSave={save}
           onDelete={remove}
           onClose={() => setEditing(null)}

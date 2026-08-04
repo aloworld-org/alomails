@@ -535,6 +535,11 @@
 .deleteBtn:hover {
   background: var(--danger-soft, #fbe6e2);
 }
+.deleteChoice {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
 .linkBtn {
   color: var(--text-secondary);
   font-size: var(--text-sm);

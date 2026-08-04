@@ -260,6 +260,8 @@ export const fr: Partial<Catalog> = {
   agendaEventDescription: "Notes",
   agendaSave: "Enregistrer",
   agendaDelete: "Supprimer",
+  agendaDeleteThis: "Cet évènement",
+  agendaDeleteAll: "Toute la série",
   agendaCancel: "Annuler",
   agendaNewEventTitle: "Nouvel événement",
   agendaEditEventTitle: "Modifier l'événement",

@@ -140,15 +140,39 @@ pub async fn update(
     Ok(Json(json!({ "status": "ok" })))
 }
 
-/// `DELETE /calendar/events/:id` → `{status:"ok"}`. If the deleted event had
-/// guests, each is emailed a cancellation so their calendar removes it too.
+#[derive(Deserialize)]
+pub struct DeleteQuery {
+    /// When present, delete only this one occurrence of a recurring series (its
+    /// start-instant, RFC 3339) by adding an `EXDATE` — the rest of the series
+    /// stays. Absent → delete the whole event/series.
+    occurrence: Option<String>,
+}
+
+/// `DELETE /calendar/events/:id[?occurrence=<rfc3339>]`.
+///
+/// - With `occurrence`: skip just that instance of a recurring series (the
+///   series and every other instance remain); syncs to phones as an `EXDATE`.
+///   Guests are not (yet) emailed a per-occurrence cancellation — that rides
+///   with the edit-one-occurrence slice.
+/// - Without it: delete the whole event; if it had guests, each is emailed a
+///   cancellation so their calendar removes it too.
 pub async fn delete(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(id): Path<String>,
+    Query(q): Query<DeleteQuery>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let eid = EventId::new(id);
+    if let Some(occ) = q.occurrence {
+        let when = parse_time(&occ)?;
+        account
+            .acc
+            .exclude_occurrence(&eid, when)
+            .await
+            .map_err(map_store_err)?;
+        return Ok(Json(json!({ "status": "ok", "scope": "occurrence" })));
+    }
     // Read the event before deleting so we know whom to notify.
     let event = account
         .acc
@@ -159,7 +183,7 @@ pub async fn delete(
     if let Some(ev) = event {
         send_cancellations(&state, &account, &ev).await;
     }
-    Ok(Json(json!({ "status": "ok" })))
+    Ok(Json(json!({ "status": "ok", "scope": "series" })))
 }
 
 #[derive(Deserialize)]
@@ -371,6 +395,10 @@ fn build_event(id: EventId, req: EventBody) -> Result<CalendarEvent, Problem> {
                     && !a.contains(|c: char| c.is_whitespace() || c.is_control())
             })
             .collect(),
+        // A new event carries no exceptions; excluding an occurrence is a
+        // separate action (DELETE with an `occurrence`). CalDAV PUTs preserve
+        // any EXDATE via put_event/from_ics, not this create path.
+        exdates: Vec::new(),
     })
 }
 

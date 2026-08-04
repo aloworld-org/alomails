@@ -258,6 +258,8 @@ export const en = {
   agendaEventDescription: "Notes",
   agendaSave: "Save",
   agendaDelete: "Delete",
+  agendaDeleteThis: "This event",
+  agendaDeleteAll: "All events",
   agendaCancel: "Cancel",
   agendaNewEventTitle: "New event",
   agendaEditEventTitle: "Edit event",

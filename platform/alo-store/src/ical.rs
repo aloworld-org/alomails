@@ -61,6 +61,14 @@ fn vevent_lines(event: &CalendarEvent, organizer: Option<&str>) -> Vec<String> {
     if let Some(rrule) = &event.recurrence {
         lines.push(format!("RRULE:{rrule}"));
     }
+    // Individually cancelled occurrences of the series.
+    for ex in &event.exdates {
+        if event.all_day {
+            lines.push(format!("EXDATE;VALUE=DATE:{}", fmt_date(*ex)));
+        } else {
+            lines.push(format!("EXDATE:{}", fmt_utc(*ex)));
+        }
+    }
     lines.push(format!("SUMMARY:{}", escape(&event.summary)));
     if let Some(loc) = &event.location {
         lines.push(format!("LOCATION:{}", escape(loc)));
@@ -94,6 +102,7 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
     let mut end: Option<(OffsetDateTime, bool)> = None;
     let mut recurrence: Option<String> = None;
     let mut attendees: Vec<String> = Vec::new();
+    let mut exdates: Vec<OffsetDateTime> = Vec::new();
 
     for line in unfolded.lines() {
         let upper = line.to_ascii_uppercase();
@@ -121,6 +130,15 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
             "DTSTART" => start = parse_dt(value.trim(), is_date),
             "DTEND" => end = parse_dt(value.trim(), is_date),
             "RRULE" => recurrence = Some(value.trim().to_owned()),
+            "EXDATE" => {
+                // One or more excluded instants, comma-separated; the value may
+                // be date-only (`VALUE=DATE`) or a UTC date-time.
+                for token in value.split(',') {
+                    if let Some((dt, _)) = parse_dt(token.trim(), is_date) {
+                        exdates.push(dt);
+                    }
+                }
+            }
             "ATTENDEE" => {
                 let addr = value
                     .trim()
@@ -150,6 +168,7 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
         all_day,
         recurrence,
         attendees,
+        exdates,
     })
 }
 
@@ -408,6 +427,7 @@ mod tests {
             all_day: false,
             recurrence: Some("FREQ=WEEKLY".to_owned()),
             attendees: vec!["guest@example.com".to_owned()],
+            exdates: vec![],
         };
         let ics = to_ics(&e);
         // The ATTENDEE line exceeds 75 octets and folds; unfold to check it.
@@ -446,6 +466,7 @@ mod tests {
             all_day: false,
             recurrence: None,
             attendees: vec!["guest@example.com".to_owned()],
+            exdates: vec![],
         };
         let msg = to_imip(&e, "owner@alomails.com", "REQUEST");
         assert!(msg.contains("METHOD:REQUEST"));
@@ -492,6 +513,7 @@ mod tests {
             all_day: false,
             recurrence: None,
             attendees: vec![],
+            exdates: vec![],
         });
         assert_eq!(method_of(&plain), None);
         assert_eq!(organizer_of(&plain), None);
@@ -504,6 +526,36 @@ mod tests {
         assert!(reply.contains("ORGANIZER:mailto:boss@example.com"));
         assert!(unfold(&reply).contains("ATTENDEE;PARTSTAT=ACCEPTED:mailto:me@alomails.com"));
         assert_eq!(method_of(&reply).as_deref(), Some("REPLY"));
+    }
+
+    #[test]
+    fn exdates_round_trip() {
+        let ex = OffsetDateTime::new_utc(
+            Date::from_calendar_date(2026, time::Month::September, 15).unwrap(),
+            Time::from_hms(9, 0, 0).unwrap(),
+        );
+        let e = CalendarEvent {
+            id: EventId::new("series-1".to_owned()),
+            summary: "Standup".into(),
+            description: None,
+            location: None,
+            starts_at: OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::September, 1).unwrap(),
+                Time::from_hms(9, 0, 0).unwrap(),
+            ),
+            ends_at: OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::September, 1).unwrap(),
+                Time::from_hms(9, 15, 0).unwrap(),
+            ),
+            all_day: false,
+            recurrence: Some("FREQ=WEEKLY".to_owned()),
+            attendees: vec![],
+            exdates: vec![ex],
+        };
+        let ics = to_ics(&e);
+        assert!(ics.contains("EXDATE:20260915T090000Z"));
+        let back = from_ics(&ics, "fb").unwrap();
+        assert_eq!(back.exdates, vec![ex]);
     }
 
     #[test]
@@ -524,6 +576,7 @@ mod tests {
             all_day: true,
             recurrence: None,
             attendees: vec![],
+            exdates: vec![],
         };
         let ics = to_ics(&e);
         assert!(ics.contains("DTSTART;VALUE=DATE:20261225"));

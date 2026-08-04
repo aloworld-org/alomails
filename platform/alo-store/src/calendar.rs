@@ -5,6 +5,7 @@
 //! slices. Every statement carries `tenant_id = $tenant AND user_id = $user`,
 //! so isolation is inherited from `AccountStore` and never assumed.
 
+use time::format_description::well_known::Rfc3339;
 use time::{Date, Duration, Month, OffsetDateTime};
 
 use crate::account::AccountStore;
@@ -30,7 +31,7 @@ impl AccountStore {
         // inside — expanded below). The master's own `starts_at`/`ends_at` are
         // the first occurrence.
         let rows = sqlx::query_as::<_, EventRow>(
-            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees \
+            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
              FROM calendar_events \
              WHERE tenant_id = $1 AND user_id = $2 AND ( \
                  (rrule IS NULL AND starts_at < $3 AND ends_at > $4) OR \
@@ -64,7 +65,7 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn all_events(&self) -> Result<Vec<CalendarEvent>> {
         let rows = sqlx::query_as::<_, EventRow>(
-            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees \
+            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
              FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 \
              ORDER BY starts_at, id",
         )
@@ -81,7 +82,7 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn event(&self, id: &EventId) -> Result<Option<CalendarEvent>> {
         let row = sqlx::query_as::<_, EventRow>(
-            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees \
+            "SELECT id, summary, description, location, starts_at, ends_at, all_day, rrule, attendees, exdates \
              FROM calendar_events WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
         )
         .bind(self.tenant.as_str())
@@ -104,8 +105,8 @@ impl AccountStore {
         sqlx::query(
             "INSERT INTO calendar_events \
              (tenant_id, user_id, id, summary, description, location, \
-              starts_at, ends_at, all_day, rrule, attendees) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
+              starts_at, ends_at, all_day, rrule, attendees, exdates) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -118,6 +119,7 @@ impl AccountStore {
         .bind(event.all_day)
         .bind(&event.recurrence)
         .bind(sqlx::types::Json(&event.attendees))
+        .bind(exdates_to_json(&event.exdates))
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -153,13 +155,14 @@ impl AccountStore {
         sqlx::query(
             "INSERT INTO calendar_events \
              (tenant_id, user_id, id, summary, description, location, \
-              starts_at, ends_at, all_day, rrule, attendees) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) \
+              starts_at, ends_at, all_day, rrule, attendees, exdates) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
              ON CONFLICT (tenant_id, user_id, id) DO UPDATE SET \
                summary = EXCLUDED.summary, description = EXCLUDED.description, \
                location = EXCLUDED.location, starts_at = EXCLUDED.starts_at, \
                ends_at = EXCLUDED.ends_at, all_day = EXCLUDED.all_day, \
-               rrule = EXCLUDED.rrule, attendees = EXCLUDED.attendees, updated_at = now()",
+               rrule = EXCLUDED.rrule, attendees = EXCLUDED.attendees, \
+               exdates = EXCLUDED.exdates, updated_at = now()",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -172,6 +175,7 @@ impl AccountStore {
         .bind(event.all_day)
         .bind(&event.recurrence)
         .bind(sqlx::types::Json(&event.attendees))
+        .bind(exdates_to_json(&event.exdates))
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -195,7 +199,7 @@ impl AccountStore {
         let done = sqlx::query(
             "UPDATE calendar_events SET summary = $4, description = $5, location = $6, \
                     starts_at = $7, ends_at = $8, all_day = $9, rrule = $10, attendees = $11, \
-                    updated_at = now() \
+                    exdates = $12, updated_at = now() \
              WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
         )
         .bind(self.tenant.as_str())
@@ -209,6 +213,7 @@ impl AccountStore {
         .bind(event.all_day)
         .bind(&event.recurrence)
         .bind(sqlx::types::Json(&event.attendees))
+        .bind(exdates_to_json(&event.exdates))
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -256,6 +261,24 @@ impl AccountStore {
         tx.commit().await.map_err(StoreError::Db)?;
         Ok(())
     }
+
+    /// Excludes a single occurrence of a recurring event (adds an `EXDATE`): the
+    /// series stays, but the instance starting exactly at `occurrence` is
+    /// skipped. Idempotent — excluding an already-excluded instant is a no-op.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the event is not this account's;
+    /// [`StoreError::Db`] on failure.
+    pub async fn exclude_occurrence(&self, id: &EventId, occurrence: OffsetDateTime) -> Result<()> {
+        let Some(mut event) = self.event(id).await? else {
+            return Err(StoreError::NotFound);
+        };
+        if !event.exdates.contains(&occurrence) {
+            event.exdates.push(occurrence);
+            self.update_event(id, &event).await?;
+        }
+        Ok(())
+    }
 }
 
 /// Recurrence frequency (the `FREQ` of a supported `RRULE`).
@@ -296,7 +319,9 @@ fn expand_occurrences(
         let Some(occ_end) = occ.checked_add(duration) else {
             break;
         };
-        if occ_end > from {
+        // Skip occurrences the owner individually cancelled (EXDATE).
+        let excluded = master.exdates.contains(&occ);
+        if occ_end > from && !excluded {
             out.push(CalendarEvent {
                 starts_at: occ,
                 ends_at: occ_end,
@@ -403,6 +428,9 @@ struct EventRow {
     all_day: bool,
     rrule: Option<String>,
     attendees: sqlx::types::Json<Vec<String>>,
+    // Stored as RFC 3339 strings: `time::OffsetDateTime` isn't serde-encodable
+    // (the crate's serde feature is off), and strings keep the column readable.
+    exdates: sqlx::types::Json<Vec<String>>,
 }
 
 impl EventRow {
@@ -417,8 +445,26 @@ impl EventRow {
             all_day: self.all_day,
             recurrence: self.rrule,
             attendees: self.attendees.0,
+            exdates: exdates_from_json(self.exdates.0),
         }
     }
+}
+
+/// Encode EXDATEs as an RFC 3339 string array for the JSONB column.
+fn exdates_to_json(exdates: &[OffsetDateTime]) -> sqlx::types::Json<Vec<String>> {
+    sqlx::types::Json(
+        exdates
+            .iter()
+            .map(|t| t.format(&Rfc3339).unwrap_or_default())
+            .collect(),
+    )
+}
+
+/// Decode stored EXDATE strings back to instants, dropping any unparseable one.
+fn exdates_from_json(raw: Vec<String>) -> Vec<OffsetDateTime> {
+    raw.iter()
+        .filter_map(|s| OffsetDateTime::parse(s, &Rfc3339).ok())
+        .collect()
 }
 
 #[cfg(test)]
@@ -442,6 +488,7 @@ mod tests {
             all_day: false,
             recurrence: rrule.map(str::to_owned),
             attendees: vec![],
+            exdates: vec![],
         }
     }
 
@@ -471,6 +518,18 @@ mod tests {
         assert_eq!(occ[1].starts_at, e.starts_at + Duration::weeks(1));
         assert!(occ.iter().all(|o| o.id.as_str() == "m1"));
         assert!(occ.iter().all(|o| (o.ends_at - o.starts_at) == Duration::minutes(30)));
+    }
+
+    #[test]
+    fn exdate_skips_one_occurrence() {
+        let mut e = ev(Some("FREQ=WEEKLY"), 2026, 8, 3, 9);
+        // Cancel just Aug 10; the rest of the series stays.
+        e.exdates.push(e.starts_at + Duration::weeks(1));
+        let occ = expand_occurrences(&e, at(2026, 8, 1), at(2026, 8, 31));
+        assert_eq!(occ.len(), 3, "Aug 3/17/24 (10 excluded)");
+        assert!(occ.iter().all(|o| o.starts_at != e.starts_at + Duration::weeks(1)));
+        assert_eq!(occ[0].starts_at, e.starts_at); // Aug 3 kept
+        assert_eq!(occ[1].starts_at, e.starts_at + Duration::weeks(2)); // Aug 17
     }
 
     #[test]
