@@ -2008,7 +2008,33 @@ fn read_body(raw: &[u8], blob_id: &str, max: usize) -> jtypes::ReadBody {
         html: parsed.html,
         attachments,
         unsubscribe: parsed.unsubscribe,
+        invitation: read_invitation(raw),
     }
+}
+
+/// Summarise an inbound invitation from the message's `text/calendar` part, but
+/// only when it is a scheduling `REQUEST` (not our own sent copy's REPLY, nor a
+/// CANCEL). Times are emitted as RFC 3339 (UTC). `None` for ordinary mail.
+fn read_invitation(raw: &[u8]) -> Option<jtypes::Invitation> {
+    let ics = crate::mime_read::calendar_part(raw)?;
+    let text = String::from_utf8_lossy(&ics);
+    if alo_store::ical::method_of(&text).as_deref() != Some("REQUEST") {
+        return None;
+    }
+    let ev = alo_store::ical::from_ics(&text, "")?;
+    let fmt = |t: time::OffsetDateTime| {
+        t.format(&time::format_description::well_known::Rfc3339)
+            .unwrap_or_default()
+    };
+    Some(jtypes::Invitation {
+        uid: ev.id.as_str().to_owned(),
+        summary: ev.summary,
+        organizer: alo_store::ical::organizer_of(&text),
+        starts_at: fmt(ev.starts_at),
+        ends_at: fmt(ev.ends_at),
+        all_day: ev.all_day,
+        location: ev.location,
+    })
 }
 
 /// Truncate a string to at most `max` bytes on a char boundary, reporting

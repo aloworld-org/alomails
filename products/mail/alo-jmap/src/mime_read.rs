@@ -151,6 +151,21 @@ pub fn parse(raw: &[u8]) -> Parsed {
     }
 }
 
+/// The decoded bytes of the message's iCalendar part (`text/calendar`), if it
+/// has one — the payload of an iMIP invitation/reply/cancel. Walks every MIME
+/// part (not just `attachments()`) so it also finds a calendar part that is the
+/// message's sole body. Returns the first such part; the caller reads the
+/// `METHOD` from the iCalendar body (authoritative per RFC 6047) to tell a
+/// REQUEST from a REPLY. `None` for ordinary mail.
+pub fn calendar_part(raw: &[u8]) -> Option<Vec<u8>> {
+    let message = MessageParser::default().parse(raw)?;
+    message
+        .parts
+        .iter()
+        .find(|p| content_type_of(p).eq_ignore_ascii_case("text/calendar"))
+        .map(|p| p.contents().to_vec())
+}
+
 /// The decoded bytes of the `index`-th attachment, plus its MIME type and
 /// display name — for the download route. `None` if the message doesn't parse
 /// or the index is out of range.
@@ -192,6 +207,41 @@ mod tests {
         "--b--\r\n",
     )
     .as_bytes();
+
+    // An iMIP invitation in the exact shape send_invitations produces:
+    // multipart/alternative { text/plain, text/calendar; method=REQUEST }.
+    const INVITE: &[u8] = concat!(
+        "From: organizer@example.com\r\n",
+        "To: guest@example.com\r\n",
+        "Subject: Invitation: Kickoff\r\n",
+        "MIME-Version: 1.0\r\n",
+        "Content-Type: multipart/alternative; boundary=\"=_alo\"\r\n",
+        "\r\n",
+        "--=_alo\r\n",
+        "Content-Type: text/plain; charset=utf-8\r\n",
+        "\r\n",
+        "You're invited to Kickoff.\r\n",
+        "--=_alo\r\n",
+        "Content-Type: text/calendar; charset=utf-8; method=REQUEST\r\n",
+        "\r\n",
+        "BEGIN:VCALENDAR\r\nMETHOD:REQUEST\r\nBEGIN:VEVENT\r\nUID:evt-1\r\n",
+        "SUMMARY:Kickoff\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n",
+        "--=_alo--\r\n",
+    )
+    .as_bytes();
+
+    #[test]
+    fn surfaces_the_calendar_part_of_an_invitation() {
+        let ics = calendar_part(INVITE).expect("the text/calendar part is reachable");
+        let text = String::from_utf8(ics).unwrap();
+        assert!(text.contains("METHOD:REQUEST"));
+        assert!(text.contains("UID:evt-1"));
+    }
+
+    #[test]
+    fn ordinary_mail_has_no_calendar_part() {
+        assert!(calendar_part(MSG).is_none());
+    }
 
     #[test]
     fn extracts_text_body_not_the_attachment() {

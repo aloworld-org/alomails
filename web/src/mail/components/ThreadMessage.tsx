@@ -21,6 +21,7 @@ import { useJmapClient } from "../../jmap";
 import type { EmailAddress, EmailAttachment, EmailFull } from "../../jmap";
 import { formatBytes, formatDate, senderName, subjectOr } from "../format";
 import { htmlContent, sandboxedHtml, splitQuotedHtml, splitQuotedText, textContent } from "../body";
+import { InvitationCard } from "./InvitationCard";
 import styles from "./ThreadMessage.module.css";
 
 function blobToDataUrl(blob: Blob): Promise<string> {
@@ -276,6 +277,9 @@ export function ThreadMessage({ email, expanded, me, onToggle }: ThreadMessagePr
 
       {expanded && (
         <div className={styles.body}>
+          {email["alo:invitation"] != null && (
+            <InvitationCard invitation={email["alo:invitation"]} blobId={email.blobId} />
+          )}
           {textSplit !== null && <pre className={styles.text}>{textSplit.main}</pre>}
           {htmlSplit !== null && (
             <iframe

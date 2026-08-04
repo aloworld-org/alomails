@@ -153,6 +153,103 @@ pub fn from_ics(text: &str, fallback_id: &str) -> Option<CalendarEvent> {
     })
 }
 
+/// The scheduling `METHOD` of an iCalendar message (`REQUEST`, `REPLY`,
+/// `CANCEL`, …), uppercased — a `VCALENDAR`-level property, so it is read
+/// outside any `VEVENT`. `None` for a plain calendar with no method. This is
+/// what distinguishes an inbound invitation (`REQUEST`) from other traffic.
+pub fn method_of(text: &str) -> Option<String> {
+    let unfolded = unfold(text);
+    let mut in_event = false;
+    for line in unfolded.lines() {
+        let upper = line.to_ascii_uppercase();
+        if upper == "BEGIN:VEVENT" {
+            in_event = true;
+            continue;
+        }
+        if upper == "END:VEVENT" {
+            in_event = false;
+            continue;
+        }
+        if in_event {
+            continue;
+        }
+        let Some((name, value)) = line.split_once(':') else {
+            continue;
+        };
+        if name.eq_ignore_ascii_case("METHOD") {
+            return Some(value.trim().to_ascii_uppercase());
+        }
+    }
+    None
+}
+
+/// The `ORGANIZER` address of the first `VEVENT` (any `mailto:` prefix and
+/// parameters stripped), if present. A REPLY must be addressed here, and the
+/// stored event does not keep it — it is read from the inbound invitation.
+pub fn organizer_of(text: &str) -> Option<String> {
+    let unfolded = unfold(text);
+    let mut in_event = false;
+    for line in unfolded.lines() {
+        let upper = line.to_ascii_uppercase();
+        if upper == "BEGIN:VEVENT" {
+            in_event = true;
+            continue;
+        }
+        if upper == "END:VEVENT" {
+            break;
+        }
+        if !in_event {
+            continue;
+        }
+        let Some((spec, value)) = line.split_once(':') else {
+            continue;
+        };
+        let name = spec.split(';').next().unwrap_or("");
+        if name.eq_ignore_ascii_case("ORGANIZER") {
+            let v = value.trim();
+            let addr = v
+                .strip_prefix("mailto:")
+                .or_else(|| v.strip_prefix("MAILTO:"))
+                .unwrap_or(v);
+            if addr.contains('@') {
+                return Some(addr.to_owned());
+            }
+        }
+    }
+    None
+}
+
+/// Build an iMIP `REPLY`: a `VCALENDAR` carrying one attendee's participation
+/// status back to the organizer. `partstat` is `ACCEPTED`, `DECLINED`, or
+/// `TENTATIVE`. A REPLY speaks for a single attendee, so only `attendee` is
+/// listed — with the original `UID` and `ORGANIZER` so the organizer's client
+/// matches it to the event.
+pub fn to_reply(event: &CalendarEvent, organizer: &str, attendee: &str, partstat: &str) -> String {
+    let mut lines = vec![
+        "BEGIN:VCALENDAR".to_owned(),
+        "VERSION:2.0".to_owned(),
+        format!("PRODID:{PRODID}"),
+        "METHOD:REPLY".to_owned(),
+        "BEGIN:VEVENT".to_owned(),
+        format!("UID:{}", event.id.as_str()),
+        format!("DTSTAMP:{}", fmt_utc(OffsetDateTime::now_utc())),
+        format!("ORGANIZER:mailto:{organizer}"),
+        format!("ATTENDEE;PARTSTAT={partstat}:mailto:{attendee}"),
+    ];
+    if event.all_day {
+        lines.push(format!("DTSTART;VALUE=DATE:{}", fmt_date(event.starts_at)));
+        lines.push(format!("DTEND;VALUE=DATE:{}", fmt_date(event.ends_at)));
+    } else {
+        lines.push(format!("DTSTART:{}", fmt_utc(event.starts_at)));
+        lines.push(format!("DTEND:{}", fmt_utc(event.ends_at)));
+    }
+    lines.push(format!("SUMMARY:{}", escape(&event.summary)));
+    lines.push("SEQUENCE:0".to_owned());
+    lines.push("END:VEVENT".to_owned());
+    lines.push("END:VCALENDAR".to_owned());
+    fold_join(&lines)
+}
+
 fn fmt_utc(t: OffsetDateTime) -> String {
     let t = t.to_offset(UtcOffset::UTC);
     format!(
@@ -332,6 +429,47 @@ mod tests {
         // A plain export never advertises a scheduling method or organizer.
         assert!(!to_ics(&e).contains("METHOD:"));
         assert!(!to_ics(&e).contains("ORGANIZER:"));
+    }
+
+    #[test]
+    fn reads_method_and_organizer_and_replies() {
+        let invite = concat!(
+            "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nMETHOD:REQUEST\r\n",
+            "BEGIN:VEVENT\r\nUID:evt-9\r\nORGANIZER;CN=Boss:mailto:boss@example.com\r\n",
+            "DTSTART:20260910T130000Z\r\nDTEND:20260910T140000Z\r\nSUMMARY:Kickoff\r\n",
+            "ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:me@alomails.com\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        );
+        assert_eq!(method_of(invite).as_deref(), Some("REQUEST"));
+        assert_eq!(organizer_of(invite).as_deref(), Some("boss@example.com"));
+        // No method / organizer on a plain export.
+        let plain = to_ics(&CalendarEvent {
+            id: EventId::new("x".to_owned()),
+            summary: "Plain".into(),
+            description: None,
+            location: None,
+            starts_at: OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::September, 10).unwrap(),
+                Time::from_hms(13, 0, 0).unwrap(),
+            ),
+            ends_at: OffsetDateTime::new_utc(
+                Date::from_calendar_date(2026, time::Month::September, 10).unwrap(),
+                Time::from_hms(14, 0, 0).unwrap(),
+            ),
+            all_day: false,
+            recurrence: None,
+            attendees: vec![],
+        });
+        assert_eq!(method_of(&plain), None);
+        assert_eq!(organizer_of(&plain), None);
+
+        // A REPLY carries the same UID, the organizer, and just the responder.
+        let event = from_ics(invite, "fallback").unwrap();
+        let reply = to_reply(&event, "boss@example.com", "me@alomails.com", "ACCEPTED");
+        assert!(reply.contains("METHOD:REPLY"));
+        assert!(reply.contains("UID:evt-9"));
+        assert!(reply.contains("ORGANIZER:mailto:boss@example.com"));
+        assert!(unfold(&reply).contains("ATTENDEE;PARTSTAT=ACCEPTED:mailto:me@alomails.com"));
+        assert_eq!(method_of(&reply).as_deref(), Some("REPLY"));
     }
 
     #[test]

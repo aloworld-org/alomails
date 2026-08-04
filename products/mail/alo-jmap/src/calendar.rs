@@ -23,7 +23,7 @@ use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
-use alo_store::{CalendarEvent, EventId, StoreError};
+use alo_store::{BlobId, CalendarEvent, EventId, StoreError};
 
 use crate::error::Problem;
 use crate::state::{Account, AppState, authenticate};
@@ -153,6 +153,138 @@ pub async fn delete(
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "status": "ok" })))
+}
+
+#[derive(Deserialize)]
+struct RsvpBody {
+    /// The invitation message's blob id (the ownership boundary — loading it is
+    /// scoped to the caller's account).
+    #[serde(rename = "blobId")]
+    blob_id: String,
+    /// `accepted`, `declined`, or `tentative`.
+    response: String,
+}
+
+/// `POST /calendar/rsvp` — respond to an inbound invitation. Loads the message
+/// (account-scoped), reads its iMIP `REQUEST`, adds the event to the caller's
+/// calendar (unless declining), and emails a `METHOD:REPLY` to the organizer
+/// carrying the chosen status. Returns `{status, added, replied}`.
+pub async fn rsvp(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: RsvpBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let partstat = match req.response.as_str() {
+        "accepted" => "ACCEPTED",
+        "declined" => "DECLINED",
+        "tentative" => "TENTATIVE",
+        _ => {
+            return Err(Problem::with(
+                StatusCode::BAD_REQUEST,
+                "response must be accepted, declined, or tentative",
+            ));
+        }
+    };
+    // The blob load is the tenant/account ownership boundary: a foreign or
+    // unreferenced blob is NotFound from the store itself.
+    let raw = account
+        .acc
+        .blob_bytes(&BlobId::new(req.blob_id))
+        .await
+        .map_err(map_store_err)?;
+    let not_invite = || Problem::with(StatusCode::BAD_REQUEST, "this message is not an invitation");
+    let ics_bytes = crate::mime_read::calendar_part(&raw).ok_or_else(not_invite)?;
+    let ics = String::from_utf8_lossy(&ics_bytes);
+    if alo_store::ical::method_of(&ics).as_deref() != Some("REQUEST") {
+        return Err(not_invite());
+    }
+    let event = alo_store::ical::from_ics(&ics, "").ok_or_else(|| {
+        Problem::with(StatusCode::BAD_REQUEST, "the invitation could not be read")
+    })?;
+    // Declining doesn't clutter the calendar; accept/tentative land the event
+    // (upsert keyed on the organizer's UID, so a re-RSVP updates in place).
+    let added = partstat != "DECLINED";
+    if added {
+        account
+            .acc
+            .put_event(&event.id, &event)
+            .await
+            .map_err(|_| Problem::server_error())?;
+    }
+    let organizer = alo_store::ical::organizer_of(&ics);
+    let replied = send_reply(&state, &account, &event, partstat, organizer.as_deref()).await;
+    Ok(Json(json!({ "status": "ok", "added": added, "replied": replied })))
+}
+
+/// Emails a `METHOD:REPLY` to the invitation's organizer, from the responder's
+/// own address, carrying their participation status. Best-effort: the RSVP is
+/// already recorded on the calendar, so a missing organizer or send failure is
+/// logged — never with addresses or content (Law 1) — and reported as
+/// `replied: false` rather than failing the request.
+async fn send_reply(
+    state: &AppState,
+    account: &Account,
+    event: &CalendarEvent,
+    partstat: &str,
+    organizer: Option<&str>,
+) -> bool {
+    let Some(organizer) = organizer else {
+        tracing::warn!("calendar: invitation has no organizer; no reply sent");
+        return false;
+    };
+    let Some(addr) = state.submission_addr.as_deref() else {
+        return false;
+    };
+    let responder = match state
+        .store
+        .for_tenant(account.tenant.clone())
+        .email_of(&account.user)
+        .await
+    {
+        Ok(Some(email)) => email,
+        _ => {
+            tracing::warn!("calendar: responder address unknown; no reply sent");
+            return false;
+        }
+    };
+    let ics = alo_store::ical::to_reply(event, organizer, &responder, partstat);
+    let verb = match partstat {
+        "ACCEPTED" => "Accepted",
+        "DECLINED" => "Declined",
+        _ => "Tentative",
+    };
+    let subject = crate::mime::encode_unstructured(&format!("{verb}: {}", event.summary));
+    let plain_b64 = wrap76(&B64.encode(format!("{responder} responded: {partstat}.")));
+    let ics_b64 = wrap76(&B64.encode(ics));
+    let message = format!(
+        "From: {responder}\r\n\
+         To: {organizer}\r\n\
+         Subject: {subject}\r\n\
+         MIME-Version: 1.0\r\n\
+         Content-Type: multipart/alternative; boundary=\"{IMIP_BOUNDARY}\"\r\n\
+         \r\n\
+         --{IMIP_BOUNDARY}\r\n\
+         Content-Type: text/plain; charset=utf-8\r\n\
+         Content-Transfer-Encoding: base64\r\n\
+         \r\n\
+         {plain_b64}\r\n\
+         --{IMIP_BOUNDARY}\r\n\
+         Content-Type: text/calendar; charset=utf-8; method=REPLY\r\n\
+         Content-Transfer-Encoding: base64\r\n\
+         \r\n\
+         {ics_b64}\r\n\
+         --{IMIP_BOUNDARY}--\r\n"
+    );
+    let rcpts = [organizer.to_owned()];
+    match crate::submission::submit(addr, &responder, &rcpts, message.as_bytes()).await {
+        Ok(()) => true,
+        Err(reason) => {
+            tracing::warn!(reason = %reason, "calendar: could not send the RSVP reply");
+            false
+        }
+    }
 }
 
 /// Validates and assembles a [`CalendarEvent`] from a request body.

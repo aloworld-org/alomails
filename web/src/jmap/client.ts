@@ -32,6 +32,7 @@ import {
   type JmapResponse,
   type Mailbox,
   type MethodCall,
+  type RsvpResponse,
   type Session,
 } from "./types";
 import { API_BASE } from "../platform/runtime";
@@ -1406,5 +1407,18 @@ export class JmapClient {
       body: JSON.stringify({ emailId }),
     });
     if (!res.ok) throw new JmapError(`unsubscribe ${res.status}`);
+  }
+
+  /** Respond to a received calendar invitation: adds the event to the user's
+   * calendar (unless declining) and emails a reply to the organizer. `blobId`
+   * is the invitation message's blobId. */
+  async rsvp(blobId: string, response: RsvpResponse): Promise<{ added: boolean; replied: boolean }> {
+    const res = await this.#fetch(`${API_BASE}/calendar/rsvp`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ blobId, response }),
+    });
+    if (!res.ok) throw new JmapError(`rsvp ${res.status}`);
+    return (await res.json()) as { added: boolean; replied: boolean };
   }
 }

@@ -127,6 +127,23 @@ pub struct ReadBody {
     pub attachments: Vec<AttachmentJson>,
     /// Parsed List-Unsubscribe options, surfaced as `alo:listUnsubscribe`.
     pub unsubscribe: Option<crate::mime_read::Unsubscribe>,
+    /// An inbound calendar invitation, surfaced as `alo:invitation`.
+    pub invitation: Option<Invitation>,
+}
+
+/// An inbound calendar invitation (an iMIP `METHOD:REQUEST` in the message's
+/// `text/calendar` part), summarised for the reading pane so it can show an
+/// Accept/Decline card without parsing iCalendar in the client. Times are
+/// RFC 3339 (UTC). The RSVP endpoint re-reads the raw part from the message, so
+/// this is display-only.
+pub struct Invitation {
+    pub uid: String,
+    pub summary: String,
+    pub organizer: Option<String>,
+    pub starts_at: String,
+    pub ends_at: String,
+    pub all_day: bool,
+    pub location: Option<String>,
 }
 
 /// Derive a short preview from the text body, else a crude tag-stripped HTML
@@ -266,6 +283,19 @@ pub fn email_json(
             "http": u.http,
             "mailto": u.mailto,
             "oneClick": u.one_click,
+        });
+    }
+    // An inbound invitation, so the reading pane can offer Accept/Decline. RSVP
+    // acts on the message id, re-reading the raw part — this is display-only.
+    if let Some(inv) = body.and_then(|b| b.invitation.as_ref()) {
+        email["alo:invitation"] = json!({
+            "uid": inv.uid,
+            "summary": inv.summary,
+            "organizer": inv.organizer,
+            "startsAt": inv.starts_at,
+            "endsAt": inv.ends_at,
+            "allDay": inv.all_day,
+            "location": inv.location,
         });
     }
     email

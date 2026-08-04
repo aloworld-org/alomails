@@ -1,0 +1,86 @@
+.card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.head {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.icon {
+  color: var(--terracotta);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+
+.when {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.meta {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.actions button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.accept {
+  border-color: var(--terracotta) !important;
+  background: var(--terracotta) !important;
+  color: #fff !important;
+}
+
+.responded {
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+}
+
+.error {
+  font-size: var(--text-sm);
+  color: var(--danger, #c0392b);
+}

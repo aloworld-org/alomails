@@ -174,7 +174,26 @@ export interface EmailHeaders {
   "alo:listUnsubscribe"?: ListUnsubscribe | null;
   /** A flagged message's follow-up due-date (UTCDate), or null/absent. */
   "alo:flagDue"?: string | null;
+  /** An inbound calendar invitation (iMIP REQUEST) parsed from the message's
+   * text/calendar part, present only on the full email when the message is an
+   * invitation — drives the reading pane's Accept/Decline card. */
+  "alo:invitation"?: CalendarInvitation | null;
 }
+
+/** A received invitation, summarised for the reading pane. Times are RFC 3339
+ * (UTC). RSVP acts on the message's blobId, so no event fields are writable. */
+export interface CalendarInvitation {
+  uid: string;
+  summary: string;
+  organizer: string | null;
+  startsAt: string;
+  endsAt: string;
+  allDay: boolean;
+  location: string | null;
+}
+
+/** The reply to an invitation. */
+export type RsvpResponse = "accepted" | "declined" | "tentative";
 
 export interface MessageAuthentication {
   spf: string | null;

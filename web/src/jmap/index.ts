@@ -10,6 +10,8 @@ export {
   categoryIdOf,
   type Category,
   type CalendarEvent,
+  type CalendarInvitation,
+  type RsvpResponse,
   type EventInput,
   type Contact,
   type ContactField,
