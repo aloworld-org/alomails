@@ -1542,6 +1542,30 @@ export class JmapClient {
     return ((await res.json()) as { tasks: Task[] }).tasks;
   }
 
+  /** Propose tasks (AI-detected) — they land in the Suggestions inbox as
+   * `proposed`, never on the board (ADR 0023). */
+  async proposeTasks(tasks: TaskInput[], projectId?: string): Promise<{ created: number }> {
+    const res = await this.#fetch(`${API_BASE}/tasks/propose`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(projectId !== undefined ? { projectId, tasks } : { tasks }),
+    });
+    if (!res.ok) throw new JmapError(`proposeTasks ${res.status}`);
+    return (await res.json()) as { created: number };
+  }
+
+  /** Ask the AI to extract candidate tasks from text (needs a tenant AI
+   * provider; 503 when AI is off). The caller feeds these to proposeTasks. */
+  async extractTasks(text: string): Promise<{ title: string; dueAt?: string }[]> {
+    const res = await this.#fetch(`${API_BASE}/ai/extract-tasks`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) throw new JmapError(`extractTasks ${res.status}`);
+    return ((await res.json()) as { tasks: { title: string; dueAt?: string }[] }).tasks;
+  }
+
   /** Pending AI proposals (awaiting accept/reject). */
   async taskProposals(): Promise<Task[]> {
     const res = await this.#fetch(`${API_BASE}/tasks/proposals`);

@@ -4,6 +4,7 @@
 // subtask checklist, comments, and the activity history. Field edits persist on
 // change; a change bubbles up so the board/list behind stays in sync.
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Link2, Trash2, X } from "lucide-react";
 
 import { strings } from "../i18n";
@@ -21,6 +22,7 @@ interface Props {
 
 export function TaskDetail({ taskId, onClose, onChanged }: Props) {
   const client = useJmapClient();
+  const navigate = useNavigate();
   const [data, setData] = useState<TaskDetailData | null>(null);
   const [newSub, setNewSub] = useState("");
   const [newComment, setNewComment] = useState("");
@@ -126,10 +128,21 @@ export function TaskDetail({ taskId, onClose, onChanged }: Props) {
             }}
           />
 
-          {t.sourceKind && (
+          {t.sourceKind === "email" && t.sourceId && (
+            <button
+              type="button"
+              className={styles.sourceLink}
+              onClick={() => {
+                onClose();
+                navigate(`/mail?open=${encodeURIComponent(t.sourceId!)}`);
+              }}
+            >
+              <Link2 size={14} /> {strings.taskOpenEmail}
+            </button>
+          )}
+          {t.sourceKind === "event" && (
             <span className={styles.sourceLink}>
-              <Link2 size={14} />{" "}
-              {t.sourceKind === "email" ? strings.taskFromEmail : strings.taskFromEvent}
+              <Link2 size={14} /> {strings.taskFromEvent}
             </span>
           )}
 

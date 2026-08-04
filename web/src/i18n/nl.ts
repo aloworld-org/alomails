@@ -304,6 +304,17 @@ export const nl: Partial<Catalog> = {
   taskPrioHigh: "Hoog",
   taskFromEmail: "Uit een e-mail",
   taskFromEvent: "Uit een afspraak",
+  taskOpenEmail: "Open de bron-e-mail",
+  createTask: "Taak aanmaken",
+  suggestTasks: "Taken voorstellen uit deze e-mail",
+  taskCreatedFromMail: "Taak aangemaakt uit deze e-mail.",
+  taskSuggesting: "E-mail lezen op actiepunten…",
+  taskNoSuggestions: "Geen actiepunten gevonden in deze e-mail.",
+  taskSuggested: (n: number) =>
+    n === 1
+      ? "1 suggestie toegevoegd aan je takenpostvak."
+      : `${n} suggesties toegevoegd aan je takenpostvak.`,
+  taskAiOff: "AI staat uit, er kon niets worden voorgesteld.",
   taskClose: "Sluiten",
   taskDelete: "Verwijderen",
   taskAssignee: "Toegewezen aan",

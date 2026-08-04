@@ -307,6 +307,17 @@ export const fr: Partial<Catalog> = {
   taskPrioHigh: "Haute",
   taskFromEmail: "Depuis un e-mail",
   taskFromEvent: "Depuis un événement",
+  taskOpenEmail: "Ouvrir l’e-mail d’origine",
+  createTask: "Créer une tâche",
+  suggestTasks: "Proposer des tâches depuis cet e-mail",
+  taskCreatedFromMail: "Tâche créée depuis cet e-mail.",
+  taskSuggesting: "Lecture de l’e-mail pour en extraire les actions…",
+  taskNoSuggestions: "Aucune action trouvée dans cet e-mail.",
+  taskSuggested: (n: number) =>
+    n === 1
+      ? "1 suggestion ajoutée à votre boîte de tâches."
+      : `${n} suggestions ajoutées à votre boîte de tâches.`,
+  taskAiOff: "L’IA est désactivée, aucune suggestion n’a pu être faite.",
   taskClose: "Fermer",
   taskDelete: "Supprimer",
   taskAssignee: "Responsable",

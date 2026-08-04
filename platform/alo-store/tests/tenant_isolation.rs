@@ -567,3 +567,45 @@ async fn tasks_scope_by_project_and_never_cross_tenant() {
         "a proposal never appears as active work"
     );
 }
+
+/// Email → task (ADR 0024): a task made from an email carries the source link,
+/// and that link is just an opaque id scoped like any other task — it never lets
+/// an outsider reach across tenants to the source message.
+#[tokio::test]
+async fn email_sourced_task_keeps_source_and_never_crosses_tenant() {
+    let store = common::test_store().await;
+
+    // Tenant 1: A turns an email into a task (explicit path → active).
+    let t1 = store.create_tenant("mailtask-t1").await.unwrap();
+    let ua = store.for_tenant(t1.clone()).create_user("a@mailtask.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let project = a.ensure_personal_project().await.unwrap();
+    let created = a
+        .create_task(
+            &project,
+            &NewTask {
+                title: "Reply to the tender".to_owned(),
+                source_kind: Some("email".to_owned()),
+                source_id: Some("M-abc123".to_owned()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+
+    // The source link round-trips for the owner (task → email marker uses these).
+    let got = a.task(&created).await.unwrap().unwrap();
+    assert_eq!(got.source_kind.as_deref(), Some("email"));
+    assert_eq!(got.source_id.as_deref(), Some("M-abc123"));
+
+    // A different tenant cannot see the task at all — so it can never learn the
+    // source id, and the "?open=" round-trip resolves through its own mail door
+    // (Email/get is tenant-scoped), never tenant 1's message.
+    let t2 = store.create_tenant("mailtask-t2").await.unwrap();
+    let ux = store.for_tenant(t2.clone()).create_user("x@mailtask.test").await.unwrap();
+    let x = store.for_account(t2, ux);
+    assert!(
+        x.task(&created).await.unwrap().is_none(),
+        "an email-sourced task, and its source link, never cross tenants"
+    );
+}

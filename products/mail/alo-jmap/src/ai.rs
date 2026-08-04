@@ -93,6 +93,35 @@ pub async fn replies(
     Ok(Json(json!({ "replies": replies })))
 }
 
+/// `POST /ai/extract-tasks` — `{"text": "<email>"}` → `{"tasks": [{"title": "..."}]}`.
+/// Reads an email's text and returns candidate action items (titles only) for the
+/// propose-then-approve flow (ADR 0024). Never creates a task itself — the client
+/// feeds these to `/tasks/propose`. Degrades like the other AI endpoints (503 when
+/// AI is off, 502 on a backend failure).
+pub async fn extract_tasks(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    if body.len() > MAX_SUMMARIZE_BYTES {
+        return Err(Problem::with(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "text too large",
+        ));
+    }
+    let request: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let text = request.get("text").and_then(Value::as_str).unwrap_or("");
+    if text.trim().is_empty() {
+        return Err(Problem::with(StatusCode::BAD_REQUEST, "text required"));
+    }
+    let config = tenant_ai_config(&account).await?;
+    let tasks = alo_ai::extract_tasks(&config, text)
+        .await
+        .map_err(|e| ai_problem(&e))?;
+    Ok(Json(json!({ "tasks": tasks })))
+}
+
 /// `POST /ai/improve` — `{"text": "..."}` → `{"text": "improved"}`.
 ///
 /// Soft-degrading by contract: if AI is disabled/unconfigured the caller gets a

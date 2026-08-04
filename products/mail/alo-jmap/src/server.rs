@@ -56,6 +56,10 @@ pub fn app(state: AppState) -> Router {
             "/ai/replies",
             post(ai::replies).layer(DefaultBodyLimit::max(ai::MAX_SUMMARIZE_BYTES)),
         )
+        .route(
+            "/ai/extract-tasks",
+            post(ai::extract_tasks).layer(DefaultBodyLimit::max(ai::MAX_SUMMARIZE_BYTES)),
+        )
         // Snooze: hide conversations until a chosen time (a background sweeper wakes them).
         .route("/snooze", post(snooze::snooze))
         // Send later: hold a draft until a chosen time (a background sweeper sends it).

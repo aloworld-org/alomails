@@ -13,6 +13,7 @@ import {
   Download,
   FolderInput,
   Forward,
+  ListChecks,
   MailOpen,
   MoreHorizontal,
   Paperclip,
@@ -123,6 +124,13 @@ interface ReadingPaneProps {
   canSnooze: boolean;
   /** Set/clear the follow-up due-date on the flagged conversation. */
   onSetFlagDue: (dueAt: number | null) => void;
+  /** Create a task from this message (direct — no AI), carrying its source
+   *  link so the task shows "From an email" and can jump back (ADR 0024). */
+  onCreateTask: () => void;
+  /** Ask the AI to suggest tasks from this email; they land in the Suggestions
+   *  inbox to accept/dismiss, never straight on the board (ADR 0023/0024). The
+   *  action is offered only when the pane's own `aiEnabled` is true. */
+  onSuggestTasks: () => void;
 }
 
 export function ReadingPane({
@@ -152,6 +160,8 @@ export function ReadingPane({
   onUnsubscribe,
   canSnooze,
   onSetFlagDue,
+  onCreateTask,
+  onSuggestTasks,
 }: ReadingPaneProps) {
   const { identity } = useAuth();
   const client = useJmapClient();
@@ -362,6 +372,17 @@ export function ReadingPane({
             label: strings.cancelSend,
             icon: <CalendarClock />,
             onClick: onCancelSend,
+          },
+        ]
+      : []),
+    { key: "task", label: strings.createTask, icon: <ListChecks />, onClick: onCreateTask },
+    ...(aiEnabled
+      ? [
+          {
+            key: "ai-tasks",
+            label: strings.suggestTasks,
+            icon: <Sparkles />,
+            onClick: onSuggestTasks,
           },
         ]
       : []),

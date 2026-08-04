@@ -251,6 +251,65 @@ pub fn parse_replies(text: &str) -> Vec<String> {
         .collect()
 }
 
+/// The system prompt for extracting action items from an email (ADR 0024). The
+/// result is fed to the propose-then-approve flow, never created directly.
+const EXTRACT_TASKS_SYSTEM: &str = "You extract concrete action items from an email — things the \
+reader must do. Return ONLY a JSON array of objects like [{\"title\":\"Send the report\"}], each \
+a short imperative task under 12 words, in the email's own language. Include only real, actionable \
+items; if there are none, return []. No prose and no code fences — just the JSON array.";
+
+/// A candidate task the AI extracted from text.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ExtractedTask {
+    pub title: String,
+}
+
+/// The chat messages for [`extract_tasks`].
+pub fn extract_tasks_messages(text: &str) -> Vec<ChatMessage> {
+    vec![
+        ChatMessage {
+            role: "system".to_owned(),
+            content: EXTRACT_TASKS_SYSTEM.to_owned(),
+        },
+        ChatMessage {
+            role: "user".to_owned(),
+            content: text.to_owned(),
+        },
+    ]
+}
+
+/// Parse the model's JSON array of `{title}` objects, leniently (models sometimes
+/// wrap it in prose). Titles only; the user sets due/assignee on accept.
+pub fn parse_extracted_tasks(text: &str) -> Vec<ExtractedTask> {
+    let (Some(start), Some(end)) = (text.find('['), text.rfind(']')) else {
+        return Vec::new();
+    };
+    if end <= start {
+        return Vec::new();
+    }
+    let Ok(items) = serde_json::from_str::<Vec<serde_json::Value>>(&text[start..=end]) else {
+        return Vec::new();
+    };
+    items
+        .iter()
+        .filter_map(|item| {
+            let title = item.get("title")?.as_str()?.trim().to_owned();
+            (!title.is_empty()).then_some(ExtractedTask { title })
+        })
+        .take(8)
+        .collect()
+}
+
+/// Extract action items from an email's text. Soft-degrades like the other AI
+/// helpers (disabled/unconfigured → an error the caller turns into "AI is off").
+///
+/// # Errors
+/// [`InferenceError`] on a disabled/unconfigured backend or transport failure.
+pub async fn extract_tasks(config: &AiConfig, text: &str) -> Result<Vec<ExtractedTask>, InferenceError> {
+    let out = chat(config, &extract_tasks_messages(text), 0.2).await?;
+    Ok(parse_extracted_tasks(&out))
+}
+
 /// Suggest up to three short replies to a thread. Soft-degrades like the other
 /// AI helpers; returns [`InferenceError::Empty`] when nothing usable comes back.
 ///

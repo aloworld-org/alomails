@@ -5,6 +5,7 @@
 // drag-and-drop on the whole thread within the current folder).
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { strings } from "../i18n";
 import { ResizeHandle, cx, usePanelWidth, useIsMobile } from "../ds";
@@ -289,6 +290,77 @@ export function MailModule() {
     mailboxes.reload();
   };
   const fail = () => setToast(strings.mailActionFailed);
+
+  // --- Email → task (ADR 0024) ---------------------------------------------
+
+  /** Direct: create an active task from the open message, carrying its source
+   *  link so the task shows "From an email" and can jump back. */
+  async function createTaskFromMessage() {
+    if (latest === undefined) return;
+    try {
+      await client.createTask({
+        title: latest.subject?.trim() || strings.mailNoSubject,
+        sourceKind: "email",
+        sourceId: latest.id,
+      });
+      setToast(strings.taskCreatedFromMail);
+    } catch {
+      setToast(strings.mailActionFailed);
+    }
+  }
+
+  /** AI: extract candidate tasks from the message and PROPOSE them — they go to
+   *  the Suggestions inbox, never straight on the board (ADR 0023/0024). */
+  async function suggestTasksFromMessage() {
+    if (latest === undefined) return;
+    setToast(strings.taskSuggesting);
+    try {
+      const text = `${latest.subject ?? ""}\n\n${latest.preview}`.trim();
+      const suggested = await client.extractTasks(text);
+      if (suggested.length === 0) {
+        setToast(strings.taskNoSuggestions);
+        return;
+      }
+      await client.proposeTasks(
+        suggested.map((s) => ({
+          title: s.title,
+          ...(s.dueAt ? { dueAt: s.dueAt } : {}),
+          sourceKind: "email",
+          sourceId: latest.id,
+        })),
+      );
+      setToast(strings.taskSuggested(suggested.length));
+    } catch {
+      // AI off / no provider / backend error — the user's mail is untouched.
+      setToast(strings.taskAiOff);
+    }
+  }
+
+  // Jump back from a task's "From an email" link: /mail?open=<messageId> opens
+  // the source message's thread (tenant-scoped — a foreign id resolves to
+  // nothing), then clears the parameter.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const open = searchParams.get("open");
+    if (open === null) return;
+    void (async () => {
+      try {
+        const email = await client.email(open);
+        if (email !== null) {
+          const inBox = Object.entries(email.mailboxIds).find(([, v]) => v)?.[0];
+          if (inBox !== undefined) setMailboxId(inBox);
+          setFlaggedView(false);
+          setThreadId(email.threadId);
+        }
+      } catch {
+        /* a foreign or missing id just does nothing */
+      }
+      const next = new URLSearchParams(searchParams);
+      next.delete("open");
+      setSearchParams(next, { replace: true });
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // Undo send: a created draft is held for a few seconds before it is actually
   // submitted, so a mistaken send can be taken back — Undo just leaves it in
@@ -847,6 +919,8 @@ export function MailModule() {
         onUnsubscribe={() => void unsubscribe()}
         canSnooze={!flaggedView}
         onSetFlagDue={setFlagDue}
+        onCreateTask={() => void createTaskFromMessage()}
+        onSuggestTasks={() => void suggestTasksFromMessage()}
       />
       )}
       {compose !== null && (
