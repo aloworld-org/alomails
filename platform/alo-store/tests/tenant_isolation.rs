@@ -925,3 +925,88 @@ async fn spaces_scope_by_membership_and_role_never_cross_tenant() {
     assert!(c.space(&space).await.unwrap().is_none());
     assert_not_found(c.space_members(&space).await);
 }
+
+/// Drive (ADR 0027): a node's access follows its location. Personal files are
+/// private to their owner; Space files are readable by members and writable by
+/// editors+; moving a file re-scopes its access; and nothing — a node, its
+/// bytes, its versions — ever crosses to a non-member or another tenant.
+#[tokio::test]
+async fn drive_nodes_scope_by_location_and_never_cross_tenant() {
+    use alo_store::{DriveLocation, NewDriveFile, SpaceRole, UserId};
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("drive-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@drive.test").await.unwrap();
+    let ub = ts1.create_user("b@drive.test").await.unwrap();
+    let ub_id = ub.as_str().to_owned();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub);
+
+    let file = |name: &str| NewDriveFile {
+        name: name.to_owned(),
+        blob_id: format!("blob-{name}"),
+        size: 10,
+        ..Default::default()
+    };
+
+    // A's personal file: private to A. B (same tenant) cannot see it at all.
+    let mine = a
+        .drive_create_file(&DriveLocation::Personal, None, &file("secret.txt"))
+        .await
+        .unwrap();
+    assert!(a.drive_node(&mine).await.unwrap().is_some());
+    assert_eq!(a.drive_list(&DriveLocation::Personal, None).await.unwrap().len(), 1);
+    assert!(b.drive_node(&mine).await.unwrap().is_none(), "another user's personal file is invisible");
+    assert_not_found(b.drive_rename(&mine, "hax").await);
+    // B's own personal location never shows A's file.
+    assert!(b.drive_list(&DriveLocation::Personal, None).await.unwrap().is_empty());
+
+    // A Space with a file. B is added as a viewer.
+    let space = a.create_space("Team").await.unwrap();
+    let sloc = DriveLocation::Space(space.clone());
+    let folder = a.drive_create_folder(&sloc, None, "Docs").await.unwrap();
+    let shared = a.drive_create_file(&sloc, Some(&folder), &file("brief.pdf")).await.unwrap();
+    a.add_space_member(&space, &UserId::new(ub_id.clone()), SpaceRole::Viewer).await.unwrap();
+
+    // Viewer B can read the space's files but not write them.
+    assert!(b.drive_node(&shared).await.unwrap().is_some(), "a member reads space files");
+    assert_eq!(b.drive_list(&sloc, Some(&folder)).await.unwrap().len(), 1);
+    assert_forbidden(b.drive_rename(&shared, "nope").await);
+    assert_forbidden(b.drive_create_file(&sloc, None, &file("x")).await);
+
+    // Promote B to editor → now B can write.
+    a.add_space_member(&space, &UserId::new(ub_id.clone()), SpaceRole::Editor).await.unwrap();
+    b.drive_rename(&shared, "brief-v2.pdf").await.unwrap();
+    assert_eq!(a.drive_node(&shared).await.unwrap().unwrap().name, "brief-v2.pdf");
+
+    // Versioning: a new upload appends a version; history is kept.
+    let v = a.drive_add_version(&shared, "blob-new", 20).await.unwrap();
+    assert_eq!(v, 2);
+    assert_eq!(a.drive_versions(&shared).await.unwrap().len(), 2);
+
+    // Move re-scopes access: move A's PERSONAL file into the Space → B (a member)
+    // can now see it; move it back → B loses access.
+    a.drive_move(&mine, &sloc, None).await.unwrap();
+    assert!(b.drive_node(&mine).await.unwrap().is_some(), "moving into a space grants members access");
+    a.drive_move(&mine, &DriveLocation::Personal, None).await.unwrap();
+    assert!(b.drive_node(&mine).await.unwrap().is_none(), "moving back out revokes it");
+
+    // Trash / restore keep scoping.
+    a.drive_trash_node(&shared).await.unwrap();
+    assert!(a.drive_list(&sloc, Some(&folder)).await.unwrap().is_empty(), "trashed is hidden from listing");
+    assert_eq!(a.drive_trash(&sloc).await.unwrap().len(), 1);
+    a.drive_restore_node(&shared).await.unwrap();
+    assert_eq!(a.drive_list(&sloc, Some(&folder)).await.unwrap().len(), 1);
+
+    // Cross-tenant: an outsider sees nothing and can touch nothing.
+    let t2 = store.create_tenant("drive-t2").await.unwrap();
+    let ud = store.for_tenant(t2.clone()).create_user("d@drive.test").await.unwrap();
+    let d = store.for_account(t2, ud);
+    assert!(d.drive_node(&shared).await.unwrap().is_none());
+    assert!(d.drive_node(&mine).await.unwrap().is_none());
+    assert_not_found(d.drive_rename(&shared, "evil").await);
+    assert_not_found(d.drive_versions(&shared).await);
+    assert_not_found(d.drive_move(&shared, &DriveLocation::Personal, None).await);
+    // The outsider cannot even address the Space location as their own.
+    assert_not_found(d.drive_list(&DriveLocation::Space(space.clone()), None).await);
+}

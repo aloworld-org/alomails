@@ -15,7 +15,7 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, ai, api, autoconfig, blob, calendar, carddav, contacts, delegates, docs, filters,
+    admin, ai, api, autoconfig, blob, calendar, carddav, contacts, delegates, docs, drive, filters,
     flagdue, imap_import_route, push, reset_route, schedule, security, session, settings, share,
     signup_route, snooze, spaces, tasks, unsubscribe,
 };
@@ -174,6 +174,30 @@ pub fn app(state: AppState) -> Router {
             axum::routing::delete(spaces::remove_member),
         )
         .route("/spaces/{id}/modules", post(spaces::set_module))
+        // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
+        .route("/drive/list", get(drive::list))
+        .route("/drive/trash", get(drive::trash))
+        .route("/drive/folders", post(drive::create_folder))
+        .route("/drive/files", post(drive::create_file))
+        .route(
+            "/drive/nodes/{id}",
+            get(drive::get_node)
+                .put(drive::rename)
+                .delete(drive::purge),
+        )
+        .route("/drive/nodes/{id}/move", post(drive::move_node))
+        .route("/drive/nodes/{id}/copy", post(drive::copy_node))
+        .route("/drive/nodes/{id}/trash", post(drive::trash_node))
+        .route("/drive/nodes/{id}/restore", post(drive::restore_node))
+        .route(
+            "/drive/nodes/{id}/versions",
+            get(drive::versions).post(drive::add_version),
+        )
+        .route(
+            "/drive/nodes/{id}/versions/{no}/restore",
+            post(drive::restore_version),
+        )
+        .route("/drive/nodes/{id}/download", get(drive::download))
         .route("/contacts", get(contacts::list))
         // Address-book import (a .vcf upload) and export (whole book as .vcf).
         .route("/contacts/import", post(contacts::import))

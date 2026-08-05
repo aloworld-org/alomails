@@ -22,6 +22,7 @@ pub mod carddav;
 pub mod contacts;
 pub mod delegates;
 pub mod docs;
+pub mod drive;
 pub mod error;
 pub mod filters;
 pub mod flagdue;

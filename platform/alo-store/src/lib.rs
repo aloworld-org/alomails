@@ -31,6 +31,7 @@ pub mod rfc2047;
 pub mod schedule;
 pub mod settings;
 pub mod share;
+pub mod drive;
 pub mod signup;
 pub mod snooze;
 pub mod spaces;
@@ -69,6 +70,7 @@ pub use model::{
 pub use reset::PendingReset;
 pub use schedule::DueSend;
 pub use share::{ShareCreated, ShareTarget};
+pub use drive::{DriveLocation, DriveNode, DriveVersion, NewDriveFile};
 pub use signup::PendingSignup;
 pub use spaces::{Space, SpaceMember, SpaceRole};
 pub use store::{CATEGORY_KEYWORD_PREFIX, SEEN, Store, TenantStore, category_keyword};
