@@ -1,0 +1,226 @@
+// Drive modals: choose a destination (move/copy), browse version history, and
+// view/manage a Space's membership. Each is a small focused dialog over the
+// file manager.
+import { useEffect, useState } from "react";
+import { HardDrive, Users, X } from "lucide-react";
+
+import { strings } from "../i18n";
+import {
+  useJmapClient,
+  type DriveVersionDto,
+  type SpaceDto,
+  type SpaceDetailDto,
+  type SpaceRole,
+} from "../jmap";
+import { Avatar, Spinner, useDialogs } from "../ds";
+import { fileSize } from "./parts";
+import styles from "./DriveModule.module.css";
+
+/** Pick a destination location (My Files or a writable Space) for move/copy. */
+export function DestinationDialog({
+  spaces,
+  mode,
+  onPick,
+  onClose,
+}: {
+  spaces: SpaceDto[];
+  mode: "move" | "copy";
+  onPick: (space: string | null) => void;
+  onClose: () => void;
+}) {
+  const writable = spaces.filter((s) => s.myRole !== "viewer" && !s.archived);
+  return (
+    <div className={styles.scrim} onMouseDown={onClose}>
+      <div className={styles.dialog} onMouseDown={(e) => e.stopPropagation()}>
+        <div className={styles.dialogHead}>
+          <h2>{mode === "move" ? strings.driveMoveTo : strings.driveCopyTo}</h2>
+          <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.close}>
+            <X size={18} />
+          </button>
+        </div>
+        <div className={styles.destList}>
+          <button type="button" className={styles.destItem} onClick={() => onPick(null)}>
+            <HardDrive size={18} />
+            <span>{strings.driveMyFiles}</span>
+          </button>
+          {writable.map((s) => (
+            <button key={s.id} type="button" className={styles.destItem} onClick={() => onPick(s.id)}>
+              <Users size={18} />
+              <span>{s.name}</span>
+            </button>
+          ))}
+        </div>
+        <p className={styles.destHint}>{strings.driveDestHint}</p>
+      </div>
+    </div>
+  );
+}
+
+/** A file's version history, with restore. */
+export function VersionsDialog({ nodeId, onChanged, onClose }: { nodeId: string; onChanged: () => void; onClose: () => void }) {
+  const client = useJmapClient();
+  const [versions, setVersions] = useState<DriveVersionDto[] | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void client
+      .driveVersions(nodeId)
+      .then((v) => live && setVersions(v))
+      .catch(() => live && setVersions([]));
+    return () => {
+      live = false;
+    };
+  }, [client, nodeId]);
+
+  async function restore(no: number) {
+    try {
+      await client.driveRestoreVersion(nodeId, no);
+      setVersions(await client.driveVersions(nodeId));
+      onChanged();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <div className={styles.scrim} onMouseDown={onClose}>
+      <div className={styles.dialog} onMouseDown={(e) => e.stopPropagation()}>
+        <div className={styles.dialogHead}>
+          <h2>{strings.driveVersionHistory}</h2>
+          <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.close}>
+            <X size={18} />
+          </button>
+        </div>
+        {versions === null ? (
+          <div className={styles.center}>
+            <Spinner size={20} />
+          </div>
+        ) : versions.length === 0 ? (
+          <p className={styles.destHint}>{strings.driveNoVersions}</p>
+        ) : (
+          <ul className={styles.versionList}>
+            {versions.map((v, i) => (
+              <li key={v.versionNo} className={styles.versionRow}>
+                <span className={styles.versionNo}>v{v.versionNo}</span>
+                <span className={styles.versionMeta}>
+                  {fileSize(v.size)} · {new Date(v.createdAt).toLocaleString()}
+                </span>
+                {i === 0 ? (
+                  <span className={styles.versionCurrent}>{strings.driveCurrent}</span>
+                ) : (
+                  <button type="button" className={styles.versionRestore} onClick={() => void restore(v.versionNo)}>
+                    {strings.driveRestore}
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** A Space's membership — who has access — with manage controls for managers. */
+export function MembersDialog({ space, onClose }: { space: SpaceDto; onClose: () => void }) {
+  const client = useJmapClient();
+  const { confirm } = useDialogs();
+  const [detail, setDetail] = useState<SpaceDetailDto | null>(null);
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<SpaceRole>("editor");
+  const [error, setError] = useState("");
+
+  const load = () => void client.spaceDetail(space.id).then(setDetail).catch(() => setDetail(null));
+  useEffect(load, [client, space.id]);
+
+  const canManage = space.myRole === "manager";
+
+  async function add() {
+    const addr = email.trim();
+    if (addr === "") return;
+    setError("");
+    try {
+      await client.addSpaceMember(space.id, addr, role);
+      setEmail("");
+      load();
+    } catch {
+      setError(strings.driveMemberError);
+    }
+  }
+
+  async function remove(userId: string, who: string) {
+    if (!(await confirm({ message: strings.driveRemoveMemberConfirm(who), danger: true }))) return;
+    try {
+      await client.removeSpaceMember(space.id, userId);
+      load();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <div className={styles.scrim} onMouseDown={onClose}>
+      <div className={styles.dialog} onMouseDown={(e) => e.stopPropagation()}>
+        <div className={styles.dialogHead}>
+          <h2>{strings.driveMembersOf(space.name)}</h2>
+          <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.close}>
+            <X size={18} />
+          </button>
+        </div>
+        {detail === null ? (
+          <div className={styles.center}>
+            <Spinner size={20} />
+          </div>
+        ) : (
+          <>
+            <ul className={styles.memberList}>
+              {detail.members.map((m) => (
+                <li key={m.userId} className={styles.memberRow}>
+                  <Avatar name={m.email ?? m.userId} />
+                  <span className={styles.memberEmail}>{m.email ?? m.userId}</span>
+                  <span className={styles.memberRole}>{strings.driveRole(m.role)}</span>
+                  {canManage && (
+                    <button
+                      type="button"
+                      className={styles.iconBtn}
+                      onClick={() => void remove(m.userId, m.email ?? m.userId)}
+                      aria-label={strings.driveRemoveMember}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {canManage && (
+              <div className={styles.addMember}>
+                <input
+                  className={styles.addEmail}
+                  value={email}
+                  placeholder={strings.driveAddMemberPlaceholder}
+                  inputMode="email"
+                  autoCapitalize="none"
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && void add()}
+                />
+                <select
+                  className={styles.addRole}
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as SpaceRole)}
+                >
+                  <option value="viewer">{strings.driveRole("viewer")}</option>
+                  <option value="editor">{strings.driveRole("editor")}</option>
+                  <option value="manager">{strings.driveRole("manager")}</option>
+                </select>
+                <button type="button" className={styles.addBtn} onClick={() => void add()}>
+                  {strings.driveAdd}
+                </button>
+              </div>
+            )}
+            {error !== "" && <p className={styles.memberErr}>{error}</p>}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

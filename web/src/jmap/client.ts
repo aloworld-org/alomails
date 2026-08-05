@@ -46,6 +46,11 @@ import {
   type MethodCall,
   type RsvpResponse,
   type Session,
+  type SpaceDto,
+  type SpaceDetailDto,
+  type SpaceRole,
+  type DriveNodeDto,
+  type DriveVersionDto,
 } from "./types";
 import { API_BASE } from "../platform/runtime";
 
@@ -1180,6 +1185,192 @@ export class JmapClient {
     if (!res.ok) throw new JmapError(`upload ${res.status}`);
     const json = (await res.json()) as { blobId: string; type: string; size: number };
     return { blobId: json.blobId, type: json.type, size: json.size };
+  }
+
+  // ---- Spaces (ADR 0026) ----------------------------------------------------
+
+  /** The Spaces the caller belongs to. */
+  async spaces(): Promise<SpaceDto[]> {
+    const res = await this.#fetch(`${API_BASE}/spaces`);
+    if (!res.ok) throw new JmapError(`spaces ${res.status}`);
+    return ((await res.json()) as { spaces: SpaceDto[] }).spaces;
+  }
+
+  /** Create a Space (caller becomes its manager). */
+  async createSpace(name: string): Promise<string> {
+    const res = await this.#fetch(`${API_BASE}/spaces`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) throw new JmapError(`createSpace ${res.status}`);
+    return ((await res.json()) as { id: string }).id;
+  }
+
+  /** A Space with its members and modules. */
+  async spaceDetail(id: string): Promise<SpaceDetailDto> {
+    const res = await this.#fetch(`${API_BASE}/spaces/${encodeURIComponent(id)}`);
+    if (!res.ok) throw new JmapError(`spaceDetail ${res.status}`);
+    return (await res.json()) as SpaceDetailDto;
+  }
+
+  /** Rename and/or (un)archive a Space (manager only). */
+  async updateSpace(id: string, patch: { name?: string; archived?: boolean }): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/spaces/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    if (!res.ok) throw new JmapError(`updateSpace ${res.status}`);
+  }
+
+  /** Add or re-role a member by email (manager only). */
+  async addSpaceMember(id: string, email: string, role: SpaceRole): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/spaces/${encodeURIComponent(id)}/members`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, role }),
+    });
+    if (!res.ok) throw new JmapError(`addSpaceMember ${res.status}`);
+  }
+
+  /** Remove a member (manager only). */
+  async removeSpaceMember(id: string, userId: string): Promise<void> {
+    const res = await this.#fetch(
+      `${API_BASE}/spaces/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) throw new JmapError(`removeSpaceMember ${res.status}`);
+  }
+
+  // ---- Drive (ADR 0027) -----------------------------------------------------
+
+  /** A folder's live contents. `space` = null lists personal My Files; `parent`
+   *  = null lists the location root. */
+  async driveList(space: string | null, parent: string | null): Promise<DriveNodeDto[]> {
+    const q = new URLSearchParams();
+    if (space) q.set("space", space);
+    if (parent) q.set("parent", parent);
+    const res = await this.#fetch(`${API_BASE}/drive/list?${q.toString()}`);
+    if (!res.ok) throw new JmapError(`driveList ${res.status}`);
+    return ((await res.json()) as { nodes: DriveNodeDto[] }).nodes;
+  }
+
+  /** The trashed nodes of a location. */
+  async driveTrash(space: string | null): Promise<DriveNodeDto[]> {
+    const q = new URLSearchParams();
+    if (space) q.set("space", space);
+    const res = await this.#fetch(`${API_BASE}/drive/trash?${q.toString()}`);
+    if (!res.ok) throw new JmapError(`driveTrash ${res.status}`);
+    return ((await res.json()) as { nodes: DriveNodeDto[] }).nodes;
+  }
+
+  /** Create a folder. */
+  async driveCreateFolder(space: string | null, parent: string | null, name: string): Promise<string> {
+    const res = await this.#fetch(`${API_BASE}/drive/folders`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ space, parent, name }),
+    });
+    if (!res.ok) throw new JmapError(`driveCreateFolder ${res.status}`);
+    return ((await res.json()) as { id: string }).id;
+  }
+
+  /** Upload a file and register it in the drive at the given location. */
+  async driveUpload(space: string | null, parent: string | null, file: File): Promise<string> {
+    const { blobId, size } = await this.uploadFile(file);
+    const res = await this.#fetch(`${API_BASE}/drive/files`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        space,
+        parent,
+        name: file.name,
+        blobId,
+        size,
+        contentType: file.type.length > 0 ? file.type : null,
+      }),
+    });
+    if (!res.ok) throw new JmapError(`driveUpload ${res.status}`);
+    return ((await res.json()) as { id: string }).id;
+  }
+
+  /** Rename a node. */
+  async driveRename(id: string, name: string): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) throw new JmapError(`driveRename ${res.status}`);
+  }
+
+  /** Move a node to another location/parent (re-scopes access). */
+  async driveMove(id: string, space: string | null, parent: string | null): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}/move`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ space, parent }),
+    });
+    if (!res.ok) throw new JmapError(`driveMove ${res.status}`);
+  }
+
+  /** Copy a node to another location/parent. */
+  async driveCopy(id: string, space: string | null, parent: string | null): Promise<string> {
+    const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}/copy`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ space, parent }),
+    });
+    if (!res.ok) throw new JmapError(`driveCopy ${res.status}`);
+    return ((await res.json()) as { id: string }).id;
+  }
+
+  /** Move a node (and its subtree) to trash. */
+  async driveTrashNode(id: string): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}/trash`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new JmapError(`driveTrashNode ${res.status}`);
+  }
+
+  /** Restore a node from trash. */
+  async driveRestoreNode(id: string): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}/restore`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new JmapError(`driveRestoreNode ${res.status}`);
+  }
+
+  /** Permanently delete a node (and its subtree) from trash. */
+  async drivePurge(id: string): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new JmapError(`drivePurge ${res.status}`);
+  }
+
+  /** A node's version history. */
+  async driveVersions(id: string): Promise<DriveVersionDto[]> {
+    const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}/versions`);
+    if (!res.ok) throw new JmapError(`driveVersions ${res.status}`);
+    return ((await res.json()) as { versions: DriveVersionDto[] }).versions;
+  }
+
+  /** Restore an old version as a new current one. */
+  async driveRestoreVersion(id: string, versionNo: number): Promise<void> {
+    const res = await this.#fetch(
+      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}/versions/${versionNo}/restore`,
+      { method: "POST" },
+    );
+    if (!res.ok) throw new JmapError(`driveRestoreVersion ${res.status}`);
+  }
+
+  /** Download a node's current bytes (gated by read access). */
+  async driveDownload(id: string): Promise<Blob> {
+    const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}/download`);
+    if (!res.ok) throw new JmapError(`driveDownload ${res.status}`);
+    return res.blob();
   }
 
   /** Upload a large file as an expiring public share link (alo Transfer),

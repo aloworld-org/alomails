@@ -583,3 +583,63 @@ export interface TaskInput {
   sourceKind?: string;
   sourceId?: string;
 }
+
+// ---- Spaces (ADR 0026) ------------------------------------------------------
+
+export type SpaceRole = "viewer" | "editor" | "manager";
+
+/** A Space the caller belongs to, with their own role. */
+export interface SpaceDto {
+  id: string;
+  name: string;
+  archived: boolean;
+  myRole: SpaceRole;
+  createdAt: string;
+}
+
+/** One membership row. */
+export interface SpaceMemberDto {
+  userId: string;
+  email: string | null;
+  role: SpaceRole;
+  addedAt: string;
+}
+
+/** A Space with its membership and enabled modules (the detail view). */
+export interface SpaceDetailDto {
+  space: SpaceDto;
+  members: SpaceMemberDto[];
+  modules: string[];
+}
+
+// ---- Drive (ADR 0027) -------------------------------------------------------
+
+export type DriveNodeKind = "folder" | "file" | "doc" | "sheet" | "slides";
+
+/** A node in the Drive tree. `space` is the Space id when it lives in a Space,
+ *  or null for the caller's personal My Files. */
+export interface DriveNodeDto {
+  id: string;
+  parentId: string | null;
+  space: string | null;
+  kind: DriveNodeKind;
+  name: string;
+  blobId: string | null;
+  size: number;
+  contentType: string | null;
+  trashed: boolean;
+  sourceKind: string | null;
+  sourceId: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** One entry in a node's version history. */
+export interface DriveVersionDto {
+  versionNo: number;
+  blobId: string;
+  size: number;
+  createdBy: string;
+  createdAt: string;
+}
