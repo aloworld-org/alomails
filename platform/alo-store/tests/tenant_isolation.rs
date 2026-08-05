@@ -719,6 +719,52 @@ async fn task_followers_scope_by_visibility_and_never_cross_tenant() {
     assert_not_found(d.follow_task(&shared).await);
 }
 
+/// Task dependencies: a "blocked by" edge is reachable only through a task the
+/// caller can see, both endpoints must be visible to add one, a task can't depend
+/// on itself, and no edge — on the task or in the project roll-up — crosses tenants.
+#[tokio::test]
+async fn task_dependencies_scope_by_visibility_and_never_cross_tenant() {
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("dep-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@dep.test").await.unwrap();
+    let ub = ts1.create_user("b@dep.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub);
+
+    // A team project with two tasks; the second is blocked by the first.
+    let team = a.create_task_project("Team", None).await.unwrap();
+    let first = a.create_task(&team, &task("first")).await.unwrap();
+    let second = a.create_task(&team, &task("second")).await.unwrap();
+    a.add_dependency(&second, &first).await.unwrap();
+    assert_eq!(a.dependencies(&second).await.unwrap().len(), 1, "second is blocked by first");
+    assert_eq!(a.project_dependencies(&team).await.unwrap().len(), 1);
+
+    // A task cannot depend on itself.
+    assert!(a.add_dependency(&second, &second).await.is_err());
+
+    // A private personal task can't be pointed at from a visible task by an
+    // outsider, nor can B read/remove edges on a task it can't see.
+    let a_personal = a.ensure_personal_project().await.unwrap();
+    let private = a.create_task(&a_personal, &task("private")).await.unwrap();
+    assert_not_found(b.dependencies(&private).await);
+    assert_not_found(b.add_dependency(&private, &first).await);
+    // B (co-tenant) sees the team edge but can't add one pointing at A's private task.
+    assert_eq!(b.dependencies(&second).await.unwrap().len(), 1);
+    assert_not_found(b.add_dependency(&second, &private).await);
+
+    // Cross-tenant: an outsider sees no edges and can add none, in either direction.
+    let t2 = store.create_tenant("dep-t2").await.unwrap();
+    let ux = store.for_tenant(t2.clone()).create_user("x@dep.test").await.unwrap();
+    let x = store.for_account(t2, ux);
+    let x_task = x.create_task(&x.ensure_personal_project().await.unwrap(), &task("x")).await.unwrap();
+    assert_not_found(x.dependencies(&second).await);
+    assert!(x.project_dependencies(&team).await.unwrap().is_empty());
+    assert_not_found(x.add_dependency(&second, &first).await);
+    // Can't make one's own task depend on another tenant's task either.
+    assert_not_found(x.add_dependency(&x_task, &first).await);
+}
+
 /// Task labels (ADR 0021): labels are tenant-scoped (a shared vocabulary), and a
 /// task's labels are reachable only through a task the caller can see. Nothing —
 /// the label list, a task's labels, or the batch stamp — crosses tenants.

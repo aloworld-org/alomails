@@ -32,6 +32,7 @@ import {
   type TaskAttachmentDto,
   type ProjectFileDto,
   type TaskLabelDto,
+  type TaskDepEdgeDto,
   type TaskInput,
   type ShareableGroup,
   type SharedMailbox,
@@ -1600,6 +1601,34 @@ export class JmapClient {
       method: follow ? "POST" : "DELETE",
     });
     if (!res.ok) throw new JmapError(`followTask ${res.status}`);
+  }
+
+  /** Record that `taskId` is blocked by `dependsOn` (both must be visible). */
+  async addTaskDependency(taskId: string, dependsOn: string): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/dependencies`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ dependsOn }),
+    });
+    if (!res.ok) throw new JmapError(`addTaskDependency ${res.status}`);
+  }
+
+  /** Drop a "blocked by" edge from `taskId` to `dependsOn`. */
+  async removeTaskDependency(taskId: string, dependsOn: string): Promise<void> {
+    const res = await this.#fetch(
+      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/dependencies/${encodeURIComponent(dependsOn)}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) throw new JmapError(`removeTaskDependency ${res.status}`);
+  }
+
+  /** Every dependency edge among a project's visible tasks (Timeline arrows). */
+  async projectDependencies(projectId: string): Promise<TaskDepEdgeDto[]> {
+    const res = await this.#fetch(
+      `${API_BASE}/tasks/dependencies?project=${encodeURIComponent(projectId)}`,
+    );
+    if (!res.ok) throw new JmapError(`projectDependencies ${res.status}`);
+    return ((await res.json()) as { edges: TaskDepEdgeDto[] }).edges;
   }
 
   /** Download a task attachment's bytes (gated by task visibility). */

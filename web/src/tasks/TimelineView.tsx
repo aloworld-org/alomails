@@ -1,11 +1,12 @@
 // Timeline: a Gantt-lite over real task dates — each task a bar from when it was
 // created to its due date, on a horizontal day axis, coloured by workflow status
 // (the shared status palette). Tasks with no due date are listed separately.
-// (Dependency arrows would need a task-dependency model we don't have yet.)
+// Dependency edges (task X blocked by task Y) are drawn as arrows from the
+// blocker's bar to the blocked task's bar, when both are scheduled.
 import { useMemo } from "react";
 
 import { getLocale, strings } from "../i18n";
-import type { Task } from "../jmap";
+import type { Task, TaskDepEdgeDto } from "../jmap";
 import { addDays, startOfDay } from "../agenda/dates";
 import { Avatar, COLUMNS, columnLabel, statusColor } from "./parts";
 import styles from "./TasksModule.module.css";
@@ -13,13 +14,15 @@ import styles from "./TasksModule.module.css";
 const DAY = 86400000;
 const COL = 40; // px per day
 const LABEL = 240; // px, the sticky name column
+const ROW = 40; // px, one task row's height (matches .tlRow)
 
 interface Props {
   tasks: Task[];
+  edges?: TaskDepEdgeDto[];
   onOpen: (id: string) => void;
 }
 
-export function TimelineView({ tasks, onOpen }: Props) {
+export function TimelineView({ tasks, edges = [], onOpen }: Props) {
   const locale = getLocale();
   const scheduled = tasks.filter((t) => t.dueAt !== null);
   const unscheduled = tasks.filter((t) => t.dueAt === null);
@@ -61,6 +64,18 @@ export function TimelineView({ tasks, onOpen }: Props) {
     return { left, width };
   }
 
+  // Bar geometry per scheduled task, in the coordinate space of `.tlRows`
+  // (x measured from the sticky label column, y down the rows) — the anchors the
+  // dependency arrows connect.
+  const geom = new Map<string, { x1: number; x2: number; y: number }>();
+  scheduled.forEach((t, i) => {
+    const { left, width } = bar(t);
+    geom.set(t.id, { x1: LABEL + left, x2: LABEL + left + width, y: i * ROW + 20 });
+  });
+  const arrows = edges
+    .map((e) => ({ blocked: geom.get(e.blocked), blocker: geom.get(e.blockedBy) }))
+    .filter((a): a is { blocked: { x1: number; x2: number; y: number }; blocker: { x1: number; x2: number; y: number } } => a.blocked !== undefined && a.blocker !== undefined);
+
   return (
     <div className={styles.timeline}>
       <div className={styles.tlTitle}>{rangeLabel}</div>
@@ -86,6 +101,46 @@ export function TimelineView({ tasks, onOpen }: Props) {
       </div>
 
       <div className={styles.tlRows}>
+        {arrows.length > 0 && (
+          <svg
+            className={styles.tlArrows}
+            width={LABEL + total}
+            height={scheduled.length * ROW}
+            aria-hidden
+          >
+            <defs>
+              <marker
+                id="tl-arrowhead"
+                viewBox="0 0 10 10"
+                refX="8"
+                refY="5"
+                markerWidth="6"
+                markerHeight="6"
+                orient="auto-start-reverse"
+              >
+                <path d="M0,0 L10,5 L0,10 z" fill="var(--text-tertiary)" />
+              </marker>
+            </defs>
+            {arrows.map((a, i) => {
+              // From the blocker's right end to the blocked task's left start:
+              // out a little, then an elbow to the target row.
+              const sx = a.blocker.x2;
+              const sy = a.blocker.y;
+              const tx = a.blocked.x1;
+              const ty = a.blocked.y;
+              const midX = Math.max(sx + 12, tx - 12);
+              const d = `M ${sx} ${sy} H ${midX} V ${ty} H ${tx}`;
+              return (
+                <path
+                  key={i}
+                  d={d}
+                  className={styles.tlArrowPath}
+                  markerEnd="url(#tl-arrowhead)"
+                />
+              );
+            })}
+          </svg>
+        )}
         {scheduled.map((t) => {
           const { left, width } = bar(t);
           return (

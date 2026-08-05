@@ -104,6 +104,16 @@ pub struct TaskLabel {
     pub color: Option<String>,
 }
 
+/// A lightweight reference to another task, used for dependency edges: enough
+/// to render a "blocked by" chip and colour a Timeline arrow.
+#[derive(Debug, Clone)]
+pub struct TaskDepRef {
+    pub id: TaskId,
+    pub title: String,
+    /// The blocker's board column, so the UI can colour the arrow by state.
+    pub status: String,
+}
+
 /// One entry in a task's history.
 #[derive(Debug, Clone)]
 pub struct TaskActivity {
@@ -1068,6 +1078,111 @@ impl AccountStore {
         Ok(())
     }
 
+    /// The tasks a visible task is blocked by ("blocked by" list), each itself
+    /// visible to the caller. A blocker that has become invisible is silently
+    /// omitted rather than leaking its existence.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the task isn't visible; [`StoreError::Db`].
+    pub async fn dependencies(&self, task: &TaskId) -> Result<Vec<TaskDepRef>> {
+        if self.task(task).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        let sql = format!(
+            "SELECT t.id, t.title, t.status FROM task_dependencies d \
+             JOIN tasks t ON t.tenant_id = d.tenant_id AND t.id = d.depends_on_task_id \
+             WHERE d.tenant_id = $1 AND d.task_id = $3 AND ({vis}) \
+             ORDER BY d.created_at",
+            vis = visible_projects(),
+        );
+        let rows = sqlx::query_as::<_, DepRow>(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(task.as_str())
+            .fetch_all(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+        Ok(rows.into_iter().map(DepRow::into_ref).collect())
+    }
+
+    /// Records that `task` is blocked by `depends_on` (idempotent). Both tasks
+    /// must be visible to the caller, so a dependency can never point at another
+    /// tenant's — or another user's private — task.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when either task isn't visible;
+    /// [`StoreError::Conflict`] when a task is made to depend on itself;
+    /// [`StoreError::Db`] on failure.
+    pub async fn add_dependency(&self, task: &TaskId, depends_on: &TaskId) -> Result<()> {
+        if task.as_str() == depends_on.as_str() {
+            return Err(StoreError::Conflict("a task cannot depend on itself".into()));
+        }
+        if self.task(task).await?.is_none() || self.task(depends_on).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        sqlx::query(
+            "INSERT INTO task_dependencies (tenant_id, task_id, depends_on_task_id) \
+             VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+        )
+        .bind(self.tenant.as_str())
+        .bind(task.as_str())
+        .bind(depends_on.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// Removes the "blocked by" edge from `task` to `depends_on`.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the task isn't visible; [`StoreError::Db`].
+    pub async fn remove_dependency(&self, task: &TaskId, depends_on: &TaskId) -> Result<()> {
+        if self.task(task).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        sqlx::query(
+            "DELETE FROM task_dependencies \
+             WHERE tenant_id = $1 AND task_id = $2 AND depends_on_task_id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(task.as_str())
+        .bind(depends_on.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// Every dependency edge among the visible tasks of a project, as
+    /// `(blocked_task, blocking_task)` pairs — the Timeline's arrow set. Both
+    /// endpoints are filtered by project visibility, so nothing crosses tenants
+    /// and a personal project's edges stay private to its owner.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn project_dependencies(&self, project: &ProjectId) -> Result<Vec<(TaskId, TaskId)>> {
+        let sql = format!(
+            "SELECT d.task_id, d.depends_on_task_id FROM task_dependencies d \
+             JOIN tasks t ON t.tenant_id = d.tenant_id AND t.id = d.task_id \
+             JOIN tasks b ON b.tenant_id = d.tenant_id AND b.id = d.depends_on_task_id \
+             WHERE d.tenant_id = $1 AND t.project_id = $3 AND b.project_id = $3 AND ({vis}) \
+             ORDER BY d.created_at",
+            vis = visible_projects(),
+        );
+        let rows = sqlx::query_as::<_, (String, String)>(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(project.as_str())
+            .fetch_all(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+        Ok(rows
+            .into_iter()
+            .map(|(t, b)| (TaskId::new(t), TaskId::new(b)))
+            .collect())
+    }
+
     /// A task's activity history, newest first.
     ///
     /// # Errors
@@ -1281,6 +1396,22 @@ struct TaskLabelRow {
     id: String,
     name: String,
     color: Option<String>,
+}
+
+#[derive(sqlx::FromRow)]
+struct DepRow {
+    id: String,
+    title: String,
+    status: String,
+}
+impl DepRow {
+    fn into_ref(self) -> TaskDepRef {
+        TaskDepRef {
+            id: TaskId::new(self.id),
+            title: self.title,
+            status: self.status,
+        }
+    }
 }
 
 #[derive(sqlx::FromRow)]

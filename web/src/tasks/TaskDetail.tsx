@@ -7,6 +7,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   AlignLeft,
+  Ban,
   CalendarDays,
   CheckCircle2,
   Circle,
@@ -25,13 +26,14 @@ import {
 import { strings } from "../i18n";
 import {
   useJmapClient,
+  type Task,
   type TaskDetailData,
   type TaskInput,
   type TaskLabelDto,
   type TaskPriority,
 } from "../jmap";
 import { DatePicker, Spinner } from "../ds";
-import { Avatar, COLUMNS, LABEL_PALETTE } from "./parts";
+import { Avatar, COLUMNS, LABEL_PALETTE, statusColor } from "./parts";
 import styles from "./TasksModule.module.css";
 
 /** Human file size (kB/MB) for the attachment rows. */
@@ -61,6 +63,9 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
   const [allLabels, setAllLabels] = useState<TaskLabelDto[]>([]);
   const [newLabel, setNewLabel] = useState("");
   const labelWrapRef = useRef<HTMLDivElement>(null);
+  const [blockMenu, setBlockMenu] = useState(false);
+  const [siblings, setSiblings] = useState<Task[]>([]);
+  const blockWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!labelMenu) return undefined;
@@ -73,6 +78,20 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
     document.addEventListener("pointerdown", down);
     return () => document.removeEventListener("pointerdown", down);
   }, [labelMenu, client]);
+
+  useEffect(() => {
+    if (!blockMenu) return undefined;
+    if (data?.task.projectId !== undefined) {
+      void client.tasks(data.task.projectId).then(setSiblings).catch(() => setSiblings([]));
+    }
+    function down(e: PointerEvent) {
+      if (blockWrapRef.current !== null && !blockWrapRef.current.contains(e.target as Node)) {
+        setBlockMenu(false);
+      }
+    }
+    document.addEventListener("pointerdown", down);
+    return () => document.removeEventListener("pointerdown", down);
+  }, [blockMenu, client, data?.task.projectId]);
 
   const load = useCallback(async () => {
     try {
@@ -183,6 +202,27 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
     }
   }
 
+  async function addBlocker(dependsOn: string) {
+    try {
+      await client.addTaskDependency(t.id, dependsOn);
+      setBlockMenu(false);
+      await load();
+      onChanged();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function removeBlocker(dependsOn: string) {
+    try {
+      await client.removeTaskDependency(t.id, dependsOn);
+      await load();
+      onChanged();
+    } catch {
+      /* ignore */
+    }
+  }
+
   async function createAndAddLabel() {
     const name = newLabel.trim();
     if (name === "") return;
@@ -202,6 +242,10 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
   const dueDate = t.dueAt ? t.dueAt.slice(0, 10) : "";
   const done = t.status === "done";
   const labelIds = new Set(data.labels.map((l) => l.id));
+  const blockerIds = new Set(data.blockedBy.map((b) => b.id));
+  const blockerCandidates = siblings.filter(
+    (s) => s.id !== t.id && !blockerIds.has(s.id) && s.state !== "proposed",
+  );
   const subDone = data.subtasks.filter((s) => s.done).length;
   const subTotal = data.subtasks.length;
   const prioClass =
@@ -407,6 +451,64 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                   )}
                 </span>
               </div>
+            </div>
+          </div>
+
+          <div className={styles.tdSection}>
+            <span className={styles.tdSectionLabel}>
+              <Ban size={15} /> {strings.taskBlockedBy}
+            </span>
+            <div className={styles.tdBlockers} ref={blockWrapRef}>
+              {data.blockedBy.map((b) => (
+                <span
+                  key={b.id}
+                  className={styles.tdBlockerChip}
+                  style={{ ["--bc"]: statusColor(b.status) } as React.CSSProperties}
+                >
+                  <span className={styles.tdBlockerDot} aria-hidden />
+                  {b.title}
+                  <button
+                    type="button"
+                    className={styles.tdLabelDel}
+                    onClick={() => void removeBlocker(b.id)}
+                    aria-label={strings.taskDelete}
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+              <span className={styles.tdLabelAddWrap}>
+                <button
+                  type="button"
+                  className={styles.tdLabelAdd}
+                  onClick={() => setBlockMenu((v) => !v)}
+                >
+                  <Plus size={12} /> {strings.taskAddBlocker}
+                </button>
+                {blockMenu && (
+                  <div className={styles.tdLabelMenu}>
+                    {blockerCandidates.length === 0 ? (
+                      <div className={styles.tdBlockerEmpty}>{strings.taskNoBlockerCandidates}</div>
+                    ) : (
+                      blockerCandidates.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          className={styles.tdLabelOption}
+                          onClick={() => void addBlocker(s.id)}
+                        >
+                          <span
+                            className={styles.tdLabelDot}
+                            style={{ background: statusColor(s.status) }}
+                            aria-hidden
+                          />
+                          {s.title}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </span>
             </div>
           </div>
 

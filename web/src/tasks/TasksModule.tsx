@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import { strings } from "../i18n";
-import { useJmapClient, type Task, type TaskProject } from "../jmap";
+import { useJmapClient, type Task, type TaskDepEdgeDto, type TaskProject } from "../jmap";
 import { Spinner, useDialogs } from "../ds";
 import { useAuth } from "../auth";
 import { BoardView } from "./BoardView";
@@ -44,6 +44,7 @@ export function TasksModule() {
   const { prompt } = useDialogs();
   const { identity } = useAuth();
   const [projects, setProjects] = useState<TaskProject[]>([]);
+  const [edges, setEdges] = useState<TaskDepEdgeDto[]>([]);
   const [mode, setMode] = useState<Mode>({ type: "plate" });
   const [view, setView] = useState<View>("list");
   const [config, setConfig] = useState<ViewConfig>(DEFAULT_CONFIG);
@@ -93,8 +94,13 @@ export function TasksModule() {
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      if (mode.type === "project") setTasks(await client.tasks(mode.id));
-      else if (mode.type === "plate") setTasks(await client.myPlate());
+      if (mode.type === "project") {
+        setTasks(await client.tasks(mode.id));
+        setEdges(await client.projectDependencies(mode.id).catch(() => []));
+      } else if (mode.type === "plate") {
+        setTasks(await client.myPlate());
+        setEdges([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -285,7 +291,7 @@ export function TasksModule() {
               onAdd={(status) => openCreate(status)}
             />
           ) : view === "timeline" ? (
-            <TimelineView tasks={filterTasks(tasks, config, identity?.email)} onOpen={setSelected} />
+            <TimelineView tasks={filterTasks(tasks, config, identity?.email)} edges={edges} onOpen={setSelected} />
           ) : view === "calendar" ? (
             <CalendarView tasks={filterTasks(tasks, config, identity?.email)} onOpen={setSelected} />
           ) : view === "files" ? (

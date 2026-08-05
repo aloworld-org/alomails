@@ -357,6 +357,11 @@ pub async fn get_task(
         .await
         .map_err(|_| Problem::server_error())?;
     let following = followers.iter().any(|u| u == account.user.as_str());
+    let blocked_by = account
+        .acc
+        .dependencies(&tid)
+        .await
+        .map_err(|_| Problem::server_error())?;
     let ts = state.store.for_tenant(account.tenant.clone());
     let emails = resolve_emails(&ts, std::slice::from_ref(&task)).await;
     // Resolve comment/activity actors too.
@@ -390,6 +395,9 @@ pub async fn get_task(
         "labels": labels.iter().map(label_json).collect::<Vec<_>>(),
         "followers": followers.iter().map(|u| name(u)).collect::<Vec<_>>(),
         "following": following,
+        "blockedBy": blocked_by.iter().map(|d| json!({
+            "id": d.id.as_str(), "title": d.title, "status": d.status,
+        })).collect::<Vec<_>>(),
     })))
 }
 
@@ -963,4 +971,69 @@ pub async fn unfollow_task(
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "status": "ok" })))
+}
+
+// ---- dependencies -----------------------------------------------------------
+
+#[derive(Deserialize)]
+struct DependencyBody {
+    #[serde(rename = "dependsOn")]
+    depends_on: String,
+}
+
+/// `POST /tasks/:id/dependencies` `{dependsOn}` → `{"status":"ok"}` — record that
+/// this task is blocked by another. Both must be visible to the caller.
+pub async fn add_dependency(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: DependencyBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    if req.depends_on.trim().is_empty() {
+        return Err(Problem::with(StatusCode::BAD_REQUEST, "dependsOn is required"));
+    }
+    account
+        .acc
+        .add_dependency(&TaskId::new(id), &TaskId::new(req.depends_on.trim().to_owned()))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `DELETE /tasks/:id/dependencies/:dep` → `{"status":"ok"}` — drop a "blocked
+/// by" edge.
+pub async fn remove_dependency(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, dep)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .remove_dependency(&TaskId::new(id), &TaskId::new(dep))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `GET /tasks/dependencies?project=` → `{"edges":[{blocked,blockedBy}]}` — every
+/// dependency edge among the caller's visible tasks in a project (Timeline arrows).
+pub async fn project_dependencies(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<ProjectQuery>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let edges = account
+        .acc
+        .project_dependencies(&ProjectId::new(q.project))
+        .await
+        .map_err(|_| Problem::server_error())?;
+    Ok(Json(json!({
+        "edges": edges.iter().map(|(blocked, blocker)| json!({
+            "blocked": blocked.as_str(), "blockedBy": blocker.as_str(),
+        })).collect::<Vec<_>>(),
+    })))
 }

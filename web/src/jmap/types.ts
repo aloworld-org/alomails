@@ -541,6 +541,20 @@ export interface ProjectFileDto extends TaskAttachmentDto {
   taskTitle: string;
 }
 
+/** A "blocked by" reference: another task this one depends on. */
+export interface TaskDepRefDto {
+  id: string;
+  title: string;
+  /** The blocker's board column, so the UI can colour it by state. */
+  status: string;
+}
+
+/** One dependency edge in a project: `blocked` is blocked by `blockedBy`. */
+export interface TaskDepEdgeDto {
+  blocked: string;
+  blockedBy: string;
+}
+
 export interface TaskDetailData {
   task: Task;
   subtasks: TaskSubtask[];
@@ -552,6 +566,8 @@ export interface TaskDetailData {
   followers: string[];
   /** Whether the current user follows it. */
   following: boolean;
+  /** The tasks this one is blocked by. */
+  blockedBy: TaskDepRefDto[];
 }
 
 /** The writable fields when creating or editing a task. */

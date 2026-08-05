@@ -70,4 +70,6 @@ pub use schedule::DueSend;
 pub use share::{ShareCreated, ShareTarget};
 pub use signup::PendingSignup;
 pub use store::{CATEGORY_KEYWORD_PREFIX, SEEN, Store, TenantStore, category_keyword};
-pub use tasks::{NewTask, Subtask, Task, TaskActivity, TaskComment, TaskEdit, TaskLabel, TaskProject};
+pub use tasks::{
+    NewTask, Subtask, Task, TaskActivity, TaskComment, TaskDepRef, TaskEdit, TaskLabel, TaskProject,
+};
