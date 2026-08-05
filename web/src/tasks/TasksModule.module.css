@@ -2298,3 +2298,31 @@
   font-weight: var(--weight-semibold);
   padding: 0 6px;
 }
+
+/* ---- followers ---- */
+.tdFollowRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.tdFollowerAvatars {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tdFollowBtn {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.tdFollowBtn:hover {
+  background: var(--bg-raised);
+  border-color: var(--accent);
+  color: var(--accent);
+}

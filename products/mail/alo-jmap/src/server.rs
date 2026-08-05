@@ -136,6 +136,10 @@ pub fn app(state: AppState) -> Router {
         )
         .route("/tasks/{id}/comments", post(tasks::add_comment))
         .route(
+            "/tasks/{id}/followers",
+            post(tasks::follow_task).delete(tasks::unfollow_task),
+        )
+        .route(
             "/tasks/{id}/attachments",
             get(tasks::list_attachments).post(tasks::add_attachment),
         )

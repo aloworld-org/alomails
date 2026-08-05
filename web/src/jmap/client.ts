@@ -1594,6 +1594,14 @@ export class JmapClient {
     if (!res.ok) throw new JmapError(`removeTaskLabel ${res.status}`);
   }
 
+  /** Follow / stop following a task (the current user). */
+  async followTask(taskId: string, follow: boolean): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/followers`, {
+      method: follow ? "POST" : "DELETE",
+    });
+    if (!res.ok) throw new JmapError(`followTask ${res.status}`);
+  }
+
   /** Download a task attachment's bytes (gated by task visibility). */
   async downloadTaskAttachment(taskId: string, attachmentId: string): Promise<Blob> {
     const res = await this.#fetch(

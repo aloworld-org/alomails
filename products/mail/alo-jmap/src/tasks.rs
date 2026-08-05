@@ -351,11 +351,18 @@ pub async fn get_task(
         .labels_for_task(&tid)
         .await
         .map_err(|_| Problem::server_error())?;
+    let followers = account
+        .acc
+        .task_followers(&tid)
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let following = followers.iter().any(|u| u == account.user.as_str());
     let ts = state.store.for_tenant(account.tenant.clone());
     let emails = resolve_emails(&ts, std::slice::from_ref(&task)).await;
     // Resolve comment/activity actors too.
     let mut actor_ids: Vec<String> = comments.iter().map(|c| c.author.clone()).collect();
     actor_ids.extend(activity.iter().map(|a| a.actor.clone()));
+    actor_ids.extend(followers.iter().cloned());
     actor_ids.sort();
     actor_ids.dedup();
     let mut actors = HashMap::new();
@@ -381,6 +388,8 @@ pub async fn get_task(
             "size": a.size, "createdAt": iso(a.created_at),
         })).collect::<Vec<_>>(),
         "labels": labels.iter().map(label_json).collect::<Vec<_>>(),
+        "followers": followers.iter().map(|u| name(u)).collect::<Vec<_>>(),
+        "following": following,
     })))
 }
 
@@ -918,6 +927,39 @@ pub async fn remove_task_label(
     account
         .acc
         .remove_task_label(&TaskId::new(id), &LabelId::new(lid))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+// ---- followers --------------------------------------------------------------
+
+/// `POST /tasks/:id/followers` → `{"status":"ok"}` — the caller follows a task.
+pub async fn follow_task(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .follow_task(&TaskId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `DELETE /tasks/:id/followers` → `{"status":"ok"}` — the caller stops
+/// following a task ("Leave task").
+pub async fn unfollow_task(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .unfollow_task(&TaskId::new(id))
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "status": "ok" })))

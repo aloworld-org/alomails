@@ -548,6 +548,10 @@ export interface TaskDetailData {
   activity: TaskActivityDto[];
   attachments: TaskAttachmentDto[];
   labels: TaskLabelDto[];
+  /** Emails of the users following this task. */
+  followers: string[];
+  /** Whether the current user follows it. */
+  following: boolean;
 }
 
 /** The writable fields when creating or editing a task. */

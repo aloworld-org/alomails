@@ -681,6 +681,44 @@ async fn task_attachments_scope_by_visibility_and_never_cross_tenant() {
     assert_not_found(d.add_task_attachment(&shared, "x", "x.pdf", 1).await);
 }
 
+/// Task followers (ADR 0021): a follower row is reachable only through a task the
+/// caller can see; the creator auto-follows; co-tenants can follow a team task;
+/// and nothing crosses tenants.
+#[tokio::test]
+async fn task_followers_scope_by_visibility_and_never_cross_tenant() {
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("follow-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@follow.test").await.unwrap();
+    let ub = ts1.create_user("b@follow.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub);
+
+    // A creates a team task → A auto-follows it.
+    let team = a.create_task_project("Team", None).await.unwrap();
+    let shared = a.create_task(&team, &task("shared")).await.unwrap();
+    assert_eq!(a.task_followers(&shared).await.unwrap().len(), 1, "creator auto-follows");
+
+    // B (co-tenant) can follow the team task, then leave.
+    b.follow_task(&shared).await.unwrap();
+    assert_eq!(a.task_followers(&shared).await.unwrap().len(), 2);
+    b.unfollow_task(&shared).await.unwrap();
+    assert_eq!(a.task_followers(&shared).await.unwrap().len(), 1);
+
+    // A's private personal task: B can neither see nor follow it.
+    let a_personal = a.ensure_personal_project().await.unwrap();
+    let private = a.create_task(&a_personal, &task("private")).await.unwrap();
+    assert_not_found(b.task_followers(&private).await);
+    assert_not_found(b.follow_task(&private).await);
+
+    // Cross-tenant: an outsider sees no followers and can follow nothing.
+    let t2 = store.create_tenant("follow-t2").await.unwrap();
+    let ud = store.for_tenant(t2.clone()).create_user("d@follow.test").await.unwrap();
+    let d = store.for_account(t2, ud);
+    assert_not_found(d.task_followers(&shared).await);
+    assert_not_found(d.follow_task(&shared).await);
+}
+
 /// Task labels (ADR 0021): labels are tenant-scoped (a shared vocabulary), and a
 /// task's labels are reachable only through a task the caller can see. Nothing —
 /// the label list, a task's labels, or the batch stamp — crosses tenants.

@@ -31,7 +31,7 @@ import {
   type TaskPriority,
 } from "../jmap";
 import { DatePicker, Spinner } from "../ds";
-import { COLUMNS, LABEL_PALETTE } from "./parts";
+import { Avatar, COLUMNS, LABEL_PALETTE } from "./parts";
 import styles from "./TasksModule.module.css";
 
 /** Human file size (kB/MB) for the attachment rows. */
@@ -169,6 +169,15 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
       else await client.addTaskLabel(t.id, labelId);
       await load();
       onChanged();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function toggleFollow() {
+    try {
+      await client.followTask(t.id, !data!.following);
+      await load();
     } catch {
       /* ignore */
     }
@@ -555,6 +564,20 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 }
               }}
             />
+          </div>
+
+          <div className={styles.tdSection}>
+            <div className={styles.tdFollowRow}>
+              <span className={styles.tdSectionLabel}>{strings.taskFollowers}</span>
+              <div className={styles.tdFollowerAvatars}>
+                {data.followers.map((email, i) => (
+                  <Avatar key={i} email={email} />
+                ))}
+              </div>
+              <button type="button" className={styles.tdFollowBtn} onClick={() => void toggleFollow()}>
+                {data.following ? strings.taskLeave : strings.taskFollow}
+              </button>
+            </div>
           </div>
 
           {data.activity.length > 0 && (

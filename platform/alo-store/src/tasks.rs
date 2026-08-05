@@ -338,6 +338,19 @@ impl AccountStore {
         };
         self.record_activity(&mut tx, id.as_str(), kind, json!({}))
             .await?;
+        // The creator follows their own real task (not AI proposals).
+        if state != "proposed" {
+            sqlx::query(
+                "INSERT INTO task_followers (tenant_id, task_id, user_id) VALUES ($1, $2, $3) \
+                 ON CONFLICT DO NOTHING",
+            )
+            .bind(self.tenant.as_str())
+            .bind(id.as_str())
+            .bind(self.user.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
+        }
         tx.commit().await.map_err(StoreError::Db)?;
         Ok(id)
     }
@@ -992,6 +1005,67 @@ impl AccountStore {
             });
         }
         Ok(map)
+    }
+
+    /// The user ids following a visible task.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the task isn't visible; [`StoreError::Db`].
+    pub async fn task_followers(&self, task: &TaskId) -> Result<Vec<String>> {
+        if self.task(task).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        let ids: Vec<String> = sqlx::query_scalar(
+            "SELECT user_id FROM task_followers WHERE tenant_id = $1 AND task_id = $2 \
+             ORDER BY created_at",
+        )
+        .bind(self.tenant.as_str())
+        .bind(task.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(ids)
+    }
+
+    /// The caller follows a visible task (idempotent).
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the task isn't visible; [`StoreError::Db`].
+    pub async fn follow_task(&self, task: &TaskId) -> Result<()> {
+        if self.task(task).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        sqlx::query(
+            "INSERT INTO task_followers (tenant_id, task_id, user_id) VALUES ($1, $2, $3) \
+             ON CONFLICT DO NOTHING",
+        )
+        .bind(self.tenant.as_str())
+        .bind(task.as_str())
+        .bind(self.user.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// The caller stops following a visible task.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the task isn't visible; [`StoreError::Db`].
+    pub async fn unfollow_task(&self, task: &TaskId) -> Result<()> {
+        if self.task(task).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        sqlx::query(
+            "DELETE FROM task_followers WHERE tenant_id = $1 AND task_id = $2 AND user_id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(task.as_str())
+        .bind(self.user.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
     }
 
     /// A task's activity history, newest first.
