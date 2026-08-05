@@ -17,7 +17,7 @@ use crate::state::{AppState, Limits};
 use crate::{
     admin, ai, api, autoconfig, blob, calendar, carddav, contacts, delegates, docs, filters,
     flagdue, imap_import_route, push, reset_route, schedule, security, session, settings, share,
-    signup_route, snooze, tasks, unsubscribe,
+    signup_route, snooze, spaces, tasks, unsubscribe,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -162,6 +162,18 @@ pub fn app(state: AppState) -> Router {
             "/tasks/{id}/dependencies/{dep}",
             axum::routing::delete(tasks::remove_dependency),
         )
+        // Spaces — the membership spine (ADR 0026). Static paths before /{id}.
+        .route("/spaces", get(spaces::list_spaces).post(spaces::create_space))
+        .route(
+            "/spaces/{id}",
+            get(spaces::get_space).put(spaces::update_space),
+        )
+        .route("/spaces/{id}/members", post(spaces::add_member))
+        .route(
+            "/spaces/{id}/members/{uid}",
+            axum::routing::delete(spaces::remove_member),
+        )
+        .route("/spaces/{id}/modules", post(spaces::set_module))
         .route("/contacts", get(contacts::list))
         // Address-book import (a .vcf upload) and export (whole book as .vcf).
         .route("/contacts/import", post(contacts::import))

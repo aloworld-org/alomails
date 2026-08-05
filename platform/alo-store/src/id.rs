@@ -169,6 +169,14 @@ opaque_id!(
     /// A task label (tag) — reusable and tenant-scoped.
     LabelId
 );
+opaque_id!(
+    /// A Space — the membership group modules attach to (ADR 0026).
+    SpaceId
+);
+opaque_id!(
+    /// A node in the Drive tree: a folder, file, or document (ADR 0027).
+    DriveNodeId
+);
 
 #[cfg(test)]
 mod tests {

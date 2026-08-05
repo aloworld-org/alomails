@@ -24,6 +24,16 @@ fn assert_not_found<T: std::fmt::Debug>(result: Result<T, StoreError>) {
     }
 }
 
+/// Asserts a result is the clean forbidden denial — the caller can see the
+/// resource but lacks the role (ADR 0026), never data, never a 500.
+fn assert_forbidden<T: std::fmt::Debug>(result: Result<T, StoreError>) {
+    match result {
+        Err(StoreError::Forbidden) => {}
+        Err(other) => panic!("expected Forbidden, got: {other:?}"),
+        Ok(value) => panic!("expected Forbidden, but got data: {value:?}"),
+    }
+}
+
 /// One account plus the ids of its single delivered message, that
 /// message's thread, and the blob it references — everything a probe
 /// needs to address it.
@@ -837,4 +847,81 @@ async fn deleting_a_tenant_purges_its_tasks() {
         a.task_projects().await.unwrap().is_empty(),
         "the tenant's task projects are purged too"
     );
+}
+
+/// Spaces (ADR 0026): a Space and its membership are reachable only by members;
+/// a non-member — same tenant or another — gets `NotFound` (existence hidden);
+/// a member below the required role gets `Forbidden`; and no cross-tenant user
+/// can be added to a space.
+#[tokio::test]
+async fn spaces_scope_by_membership_and_role_never_cross_tenant() {
+    use alo_store::{SpaceRole, UserId};
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("space-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@space.test").await.unwrap();
+    let ub = ts1.create_user("b@space.test").await.unwrap();
+    let uc = ts1.create_user("c@space.test").await.unwrap();
+    let ua_id = ua.as_str().to_owned();
+    let ub_id = ub.as_str().to_owned();
+    let uc_id = uc.as_str().to_owned();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub);
+    let c = store.for_account(t1.clone(), uc);
+
+    // A creates a Space → A is its manager and sees it; the files module is on.
+    let space = a.create_space("Acme project").await.unwrap();
+    assert_eq!(a.spaces().await.unwrap().len(), 1);
+    assert_eq!(a.space(&space).await.unwrap().unwrap().my_role, SpaceRole::Manager);
+    assert_eq!(a.space_modules(&space).await.unwrap(), vec!["files".to_owned()]);
+
+    // B is not a member: the Space and its membership are invisible, and B can
+    // neither read members nor manage.
+    assert!(b.space(&space).await.unwrap().is_none());
+    assert!(b.spaces().await.unwrap().is_empty());
+    assert_not_found(b.space_members(&space).await);
+    assert_not_found(b.rename_space(&space, "hijacked").await);
+    assert_not_found(b.add_space_member(&space, &UserId::new(ua_id.clone()), SpaceRole::Viewer).await);
+
+    // A adds B as a viewer. Now B sees the space + membership, but as a viewer
+    // cannot manage — that is Forbidden (B knows it exists), not NotFound.
+    a.add_space_member(&space, &UserId::new(ub_id.clone()), SpaceRole::Viewer).await.unwrap();
+    assert_eq!(b.space(&space).await.unwrap().unwrap().my_role, SpaceRole::Viewer);
+    assert_eq!(b.space_members(&space).await.unwrap().len(), 2);
+    assert_forbidden(b.rename_space(&space, "nope").await);
+    assert_forbidden(
+        b.add_space_member(&space, &UserId::new(uc_id.clone()), SpaceRole::Viewer).await,
+    );
+
+    // A promotes B to manager; B can now manage.
+    a.add_space_member(&space, &UserId::new(ub_id.clone()), SpaceRole::Manager).await.unwrap();
+    b.rename_space(&space, "Acme").await.unwrap();
+    assert_eq!(a.space(&space).await.unwrap().unwrap().name, "Acme");
+
+    // The last-manager guard: with two managers, A can be removed; the guard
+    // only bites when it would leave zero managers.
+    a.remove_space_member(&space, &UserId::new(ua_id.clone())).await.unwrap();
+    // Now B is the only manager and cannot be removed or demoted.
+    match b.remove_space_member(&space, &UserId::new(ub_id.clone())).await {
+        Err(StoreError::Conflict(_)) => {}
+        other => panic!("expected last-manager Conflict, got {other:?}"),
+    }
+
+    // Cross-tenant: an outsider sees nothing, and B cannot add a user from
+    // another tenant into the space.
+    let t2 = store.create_tenant("space-t2").await.unwrap();
+    let ud = store.for_tenant(t2.clone()).create_user("d@space.test").await.unwrap();
+    let ud_id = ud.as_str().to_owned();
+    let d = store.for_account(t2, ud);
+    assert!(d.space(&space).await.unwrap().is_none());
+    assert_not_found(d.space_members(&space).await);
+    assert_not_found(d.add_space_member(&space, &UserId::new(ub_id.clone()), SpaceRole::Viewer).await);
+    match b.add_space_member(&space, &UserId::new(ud_id), SpaceRole::Viewer).await {
+        Err(StoreError::Conflict(_)) => {}
+        other => panic!("expected cross-tenant-user Conflict, got {other:?}"),
+    }
+
+    // C (still a non-member) remains fully locked out throughout.
+    assert!(c.space(&space).await.unwrap().is_none());
+    assert_not_found(c.space_members(&space).await);
 }

@@ -9,6 +9,13 @@ pub enum StoreError {
     /// is indistinguishable by design.
     #[error("not found")]
     NotFound,
+    /// The caller can see the resource but lacks the role to perform the
+    /// action (e.g. a Space viewer trying to write, or a non-manager trying
+    /// to change membership — ADR 0026). Distinct from [`Self::NotFound`],
+    /// which hides existence from non-members; a `Forbidden` is only ever
+    /// returned to someone who already knows the resource exists.
+    #[error("forbidden")]
+    Forbidden,
     /// A uniqueness/precondition conflict (e.g. duplicate mailbox name).
     #[error("conflict: {0}")]
     Conflict(String),

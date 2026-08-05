@@ -42,6 +42,7 @@ pub mod share;
 pub mod sieve;
 pub mod signup_route;
 pub mod snooze;
+pub mod spaces;
 pub mod state;
 pub mod submission;
 pub mod tasks;
