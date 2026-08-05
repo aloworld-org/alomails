@@ -681,6 +681,44 @@ async fn task_attachments_scope_by_visibility_and_never_cross_tenant() {
     assert_not_found(d.add_task_attachment(&shared, "x", "x.pdf", 1).await);
 }
 
+/// Task labels (ADR 0021): labels are tenant-scoped (a shared vocabulary), and a
+/// task's labels are reachable only through a task the caller can see. Nothing —
+/// the label list, a task's labels, or the batch stamp — crosses tenants.
+#[tokio::test]
+async fn task_labels_scope_by_tenant_and_task_visibility() {
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("label-t1").await.unwrap();
+    let ua = store.for_tenant(t1.clone()).create_user("a@label.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let a_personal = a.ensure_personal_project().await.unwrap();
+    let the_task = a.create_task(&a_personal, &task("labelled")).await.unwrap();
+    let label = a.create_task_label("Design", Some("#4b83c4")).await.unwrap();
+    a.add_task_label(&the_task, &label).await.unwrap();
+
+    assert_eq!(a.labels_for_task(&the_task).await.unwrap().len(), 1);
+    assert_eq!(a.task_labels().await.unwrap().len(), 1);
+    assert_eq!(
+        a.labels_for_task_ids(&[the_task.as_str().to_owned()])
+            .await
+            .unwrap()
+            .get(the_task.as_str())
+            .map(Vec::len),
+        Some(1),
+    );
+
+    // Cross-tenant: an outsider sees no labels and can attach none.
+    let t2 = store.create_tenant("label-t2").await.unwrap();
+    let ud = store.for_tenant(t2.clone()).create_user("d@label.test").await.unwrap();
+    let d = store.for_account(t2, ud);
+    assert!(d.task_labels().await.unwrap().is_empty(), "labels are tenant-scoped");
+    assert_not_found(d.labels_for_task(&the_task).await);
+    assert_not_found(d.add_task_label(&the_task, &label).await);
+    assert!(
+        d.labels_for_task_ids(&[the_task.as_str().to_owned()]).await.unwrap().is_empty(),
+        "the batch label stamp never crosses tenants"
+    );
+}
+
 /// Law #1: deleting a tenant leaves nothing behind. A task query is scoped by
 /// `tenant_id`, so an orphaned row (same tenant id, no tenant) would still be
 /// returned — this asserts the tenant-delete cascade (migration 0047) removes

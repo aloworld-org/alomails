@@ -50,6 +50,7 @@ export {
   type TaskActivityDto,
   type TaskAttachmentDto,
   type ProjectFileDto,
+  type TaskLabelDto,
   type TaskInput,
   type TaskPriority,
   type ShareableGroup,

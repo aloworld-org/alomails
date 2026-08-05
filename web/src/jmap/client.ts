@@ -31,6 +31,7 @@ import {
   type TaskDetailData,
   type TaskAttachmentDto,
   type ProjectFileDto,
+  type TaskLabelDto,
   type TaskInput,
   type ShareableGroup,
   type SharedMailbox,
@@ -1546,6 +1547,51 @@ export class JmapClient {
     const res = await this.#fetch(`${API_BASE}/tasks/files?project=${encodeURIComponent(projectId)}`);
     if (!res.ok) throw new JmapError(`projectFiles ${res.status}`);
     return ((await res.json()) as { files: ProjectFileDto[] }).files;
+  }
+
+  /** Every label in the tenant (reusable across tasks). */
+  async taskLabels(): Promise<TaskLabelDto[]> {
+    const res = await this.#fetch(`${API_BASE}/tasks/labels`);
+    if (!res.ok) throw new JmapError(`taskLabels ${res.status}`);
+    return ((await res.json()) as { labels: TaskLabelDto[] }).labels;
+  }
+
+  /** Create a tenant label. */
+  async createTaskLabel(name: string, color?: string): Promise<TaskLabelDto> {
+    const res = await this.#fetch(`${API_BASE}/tasks/labels`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(color !== undefined ? { name, color } : { name }),
+    });
+    if (!res.ok) throw new JmapError(`createTaskLabel ${res.status}`);
+    return (await res.json()) as TaskLabelDto;
+  }
+
+  /** Delete a label from the tenant (and every task). */
+  async deleteTaskLabel(labelId: string): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/tasks/labels/${encodeURIComponent(labelId)}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new JmapError(`deleteTaskLabel ${res.status}`);
+  }
+
+  /** Attach a label to a task. */
+  async addTaskLabel(taskId: string, labelId: string): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/tasks/${encodeURIComponent(taskId)}/labels`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ labelId }),
+    });
+    if (!res.ok) throw new JmapError(`addTaskLabel ${res.status}`);
+  }
+
+  /** Remove a label from a task. */
+  async removeTaskLabel(taskId: string, labelId: string): Promise<void> {
+    const res = await this.#fetch(
+      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/labels/${encodeURIComponent(labelId)}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) throw new JmapError(`removeTaskLabel ${res.status}`);
   }
 
   /** Download a task attachment's bytes (gated by task visibility). */

@@ -4,8 +4,29 @@
 import { Calendar, Link2 } from "lucide-react";
 
 import { strings } from "../i18n";
-import type { Task, TaskPriority } from "../jmap";
+import type { Task, TaskLabelDto, TaskPriority } from "../jmap";
 import styles from "./TasksModule.module.css";
+
+/** A default palette offered when creating a label without a chosen colour. */
+export const LABEL_PALETTE = ["#e76f51", "#4b83c4", "#2e8b57", "#9b6dd6", "#e0a63b", "#d1568f", "#3aa8a0"];
+
+/** A task's labels as tinted pills. */
+export function LabelChips({ labels }: { labels?: TaskLabelDto[] | undefined }) {
+  if (labels === undefined || labels.length === 0) return null;
+  return (
+    <span className={styles.labelChips}>
+      {labels.map((l) => (
+        <span
+          key={l.id}
+          className={styles.labelChip}
+          style={{ ["--lc"]: l.color ?? "var(--accent)" } as React.CSSProperties}
+        >
+          {l.name}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 /** The board's default columns (the task `status` values). Status is free text
  *  in the store, so this list defines the ordered, named workflow the UI shows. */

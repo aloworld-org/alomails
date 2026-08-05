@@ -165,6 +165,10 @@ opaque_id!(
     /// A file attached to a task (a reference to a tenant blob).
     AttachmentId
 );
+opaque_id!(
+    /// A task label (tag) — reusable and tenant-scoped.
+    LabelId
+);
 
 #[cfg(test)]
 mod tests {

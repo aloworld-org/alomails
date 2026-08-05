@@ -10,19 +10,28 @@ import {
   CalendarDays,
   CheckCircle2,
   Circle,
+  Check,
   Download,
   FolderClosed,
   Link2,
   Paperclip,
+  Plus,
+  Tag,
   Trash2,
   User,
   X,
 } from "lucide-react";
 
 import { strings } from "../i18n";
-import { useJmapClient, type TaskDetailData, type TaskInput, type TaskPriority } from "../jmap";
+import {
+  useJmapClient,
+  type TaskDetailData,
+  type TaskInput,
+  type TaskLabelDto,
+  type TaskPriority,
+} from "../jmap";
 import { DatePicker, Spinner } from "../ds";
-import { COLUMNS } from "./parts";
+import { COLUMNS, LABEL_PALETTE } from "./parts";
 import styles from "./TasksModule.module.css";
 
 /** Human file size (kB/MB) for the attachment rows. */
@@ -48,6 +57,22 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
   const [newComment, setNewComment] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [labelMenu, setLabelMenu] = useState(false);
+  const [allLabels, setAllLabels] = useState<TaskLabelDto[]>([]);
+  const [newLabel, setNewLabel] = useState("");
+  const labelWrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!labelMenu) return undefined;
+    void client.taskLabels().then(setAllLabels).catch(() => setAllLabels([]));
+    function down(e: PointerEvent) {
+      if (labelWrapRef.current !== null && !labelWrapRef.current.contains(e.target as Node)) {
+        setLabelMenu(false);
+      }
+    }
+    document.addEventListener("pointerdown", down);
+    return () => document.removeEventListener("pointerdown", down);
+  }, [labelMenu, client]);
 
   const load = useCallback(async () => {
     try {
@@ -138,8 +163,36 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
     }
   }
 
+  async function toggleLabel(labelId: string, on: boolean) {
+    try {
+      if (on) await client.removeTaskLabel(t.id, labelId);
+      else await client.addTaskLabel(t.id, labelId);
+      await load();
+      onChanged();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function createAndAddLabel() {
+    const name = newLabel.trim();
+    if (name === "") return;
+    try {
+      const color = LABEL_PALETTE[allLabels.length % LABEL_PALETTE.length];
+      const created = await client.createTaskLabel(name, color);
+      await client.addTaskLabel(t.id, created.id);
+      setNewLabel("");
+      setAllLabels((cur) => [...cur, created]);
+      await load();
+      onChanged();
+    } catch {
+      /* ignore */
+    }
+  }
+
   const dueDate = t.dueAt ? t.dueAt.slice(0, 10) : "";
   const done = t.status === "done";
+  const labelIds = new Set(data.labels.map((l) => l.id));
   const subDone = data.subtasks.filter((s) => s.done).length;
   const subTotal = data.subtasks.length;
   const prioClass =
@@ -269,6 +322,83 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 <option value="high">{strings.taskPrioHigh}</option>
               </select>
             </label>
+            <div className={styles.tdField}>
+              <span className={styles.tdFieldLabel}>
+                <Tag size={15} /> {strings.taskLabelsTitle}
+              </span>
+              <div className={styles.tdLabels} ref={labelWrapRef}>
+                {data.labels.map((l) => (
+                  <span
+                    key={l.id}
+                    className={styles.tdLabelChip}
+                    style={{ ["--lc"]: l.color ?? "var(--accent)" } as React.CSSProperties}
+                  >
+                    {l.name}
+                    <button
+                      type="button"
+                      className={styles.tdLabelDel}
+                      onClick={() => void toggleLabel(l.id, true)}
+                      aria-label={strings.taskDelete}
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+                <span className={styles.tdLabelAddWrap}>
+                  <button
+                    type="button"
+                    className={styles.tdLabelAdd}
+                    onClick={() => setLabelMenu((v) => !v)}
+                  >
+                    <Plus size={12} /> {strings.taskAddLabel}
+                  </button>
+                  {labelMenu && (
+                    <div className={styles.tdLabelMenu}>
+                      {allLabels.map((l) => {
+                        const on = labelIds.has(l.id);
+                        return (
+                          <button
+                            key={l.id}
+                            type="button"
+                            className={styles.tdLabelOption}
+                            onClick={() => void toggleLabel(l.id, on)}
+                          >
+                            <span
+                              className={styles.tdLabelDot}
+                              style={{ background: l.color ?? "var(--accent)" }}
+                              aria-hidden
+                            />
+                            {l.name}
+                            {on && (
+                              <span className={styles.tdLabelCheck}>
+                                <Check size={14} />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                      <div className={styles.tdLabelNew}>
+                        <input
+                          value={newLabel}
+                          onChange={(e) => setNewLabel(e.target.value)}
+                          placeholder={strings.taskNewLabelPlaceholder}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") void createAndAddLabel();
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className={styles.tdLabelNewBtn}
+                          onClick={() => void createAndAddLabel()}
+                        >
+                          {strings.taskCreateLabel}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </span>
+              </div>
+            </div>
           </div>
 
           <div className={styles.tdSection}>

@@ -19,7 +19,7 @@ use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
 use alo_store::{
-    AttachmentId, BlobId, CommentId, NewTask, ProjectId, StoreError, SubtaskId, Task, TaskEdit, TaskId,
+    AccountStore, AttachmentId, BlobId, CommentId, LabelId, NewTask, ProjectId, StoreError, SubtaskId, Task, TaskEdit, TaskId, TaskLabel,
     TenantStore,
     UserId,
 };
@@ -71,9 +71,28 @@ async fn resolve_emails(ts: &TenantStore, tasks: &[Task]) -> HashMap<String, Str
     map
 }
 
-async fn tasks_response(ts: &TenantStore, tasks: Vec<Task>) -> Value {
+fn label_json(l: &TaskLabel) -> Value {
+    json!({ "id": l.id.as_str(), "name": l.name, "color": l.color })
+}
+
+async fn tasks_response(ts: &TenantStore, acc: &AccountStore, tasks: Vec<Task>) -> Value {
     let emails = resolve_emails(ts, &tasks).await;
-    let out: Vec<Value> = tasks.iter().map(|t| task_json(t, &emails)).collect();
+    let ids: Vec<String> = tasks.iter().map(|t| t.id.as_str().to_owned()).collect();
+    let labels = acc.labels_for_task_ids(&ids).await.unwrap_or_default();
+    let out: Vec<Value> = tasks
+        .iter()
+        .map(|t| {
+            let mut j = task_json(t, &emails);
+            let ls: Vec<Value> = labels
+                .get(t.id.as_str())
+                .map(|v| v.iter().map(label_json).collect())
+                .unwrap_or_default();
+            if let Some(obj) = j.as_object_mut() {
+                obj.insert("labels".to_owned(), Value::Array(ls));
+            }
+            j
+        })
+        .collect();
     json!({ "tasks": out })
 }
 
@@ -178,7 +197,7 @@ pub async fn list_tasks(
         .await
         .map_err(|_| Problem::server_error())?;
     let ts = state.store.for_tenant(account.tenant.clone());
-    Ok(Json(tasks_response(&ts, tasks).await))
+    Ok(Json(tasks_response(&ts, &account.acc, tasks).await))
 }
 
 #[derive(Deserialize)]
@@ -327,6 +346,11 @@ pub async fn get_task(
         .task_attachments(&tid)
         .await
         .map_err(|_| Problem::server_error())?;
+    let labels = account
+        .acc
+        .labels_for_task(&tid)
+        .await
+        .map_err(|_| Problem::server_error())?;
     let ts = state.store.for_tenant(account.tenant.clone());
     let emails = resolve_emails(&ts, std::slice::from_ref(&task)).await;
     // Resolve comment/activity actors too.
@@ -356,6 +380,7 @@ pub async fn get_task(
             "id": a.id.as_str(), "blobId": a.blob_id, "filename": a.filename,
             "size": a.size, "createdAt": iso(a.created_at),
         })).collect::<Vec<_>>(),
+        "labels": labels.iter().map(label_json).collect::<Vec<_>>(),
     })))
 }
 
@@ -460,7 +485,7 @@ pub async fn my_plate(
         .await
         .map_err(|_| Problem::server_error())?;
     let ts = state.store.for_tenant(account.tenant.clone());
-    Ok(Json(tasks_response(&ts, tasks).await))
+    Ok(Json(tasks_response(&ts, &account.acc, tasks).await))
 }
 
 #[derive(Deserialize)]
@@ -485,7 +510,7 @@ pub async fn due_tasks(
         .await
         .map_err(|_| Problem::server_error())?;
     let ts = state.store.for_tenant(account.tenant.clone());
-    Ok(Json(tasks_response(&ts, tasks).await))
+    Ok(Json(tasks_response(&ts, &account.acc, tasks).await))
 }
 
 // ---- propose-then-approve (ADR 0023) ----------------------------------------
@@ -502,7 +527,7 @@ pub async fn list_proposals(
         .await
         .map_err(|_| Problem::server_error())?;
     let ts = state.store.for_tenant(account.tenant.clone());
-    Ok(Json(tasks_response(&ts, tasks).await))
+    Ok(Json(tasks_response(&ts, &account.acc, tasks).await))
 }
 
 #[derive(Deserialize)]
@@ -803,4 +828,97 @@ pub async fn download_attachment(
         .await
         .map_err(map_store_err)?;
     Ok(crate::blob::serve_download(bytes, "application/octet-stream", &att.filename))
+}
+
+// ---- labels -----------------------------------------------------------------
+
+/// `GET /tasks/labels` → `{"labels":[...]}` — every label in the tenant.
+pub async fn list_labels(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let labels = account.acc.task_labels().await.map_err(|_| Problem::server_error())?;
+    Ok(Json(json!({ "labels": labels.iter().map(label_json).collect::<Vec<_>>() })))
+}
+
+#[derive(Deserialize)]
+struct LabelBody {
+    name: String,
+    #[serde(default)]
+    color: Option<String>,
+}
+
+/// `POST /tasks/labels` → the created label.
+pub async fn create_label(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: LabelBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let name = req.name.trim();
+    if name.is_empty() {
+        return Err(Problem::with(StatusCode::BAD_REQUEST, "a label name is required"));
+    }
+    let color = req.color.as_deref().map(str::trim).filter(|c| !c.is_empty());
+    let id = account
+        .acc
+        .create_task_label(name, color)
+        .await
+        .map_err(|_| Problem::server_error())?;
+    Ok(Json(json!({ "id": id.as_str(), "name": name, "color": color })))
+}
+
+/// `DELETE /tasks/labels/:id` → remove a label from the tenant (and every task).
+pub async fn delete_label(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .delete_task_label(&LabelId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+#[derive(Deserialize)]
+struct AddLabelBody {
+    #[serde(rename = "labelId")]
+    label_id: String,
+}
+
+/// `POST /tasks/:id/labels` → attach a tenant label to a task.
+pub async fn add_task_label(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: AddLabelBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    account
+        .acc
+        .add_task_label(&TaskId::new(id), &LabelId::new(req.label_id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `DELETE /tasks/:id/labels/:lid` → remove a label from a task.
+pub async fn remove_task_label(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, lid)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .remove_task_label(&TaskId::new(id), &LabelId::new(lid))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
 }

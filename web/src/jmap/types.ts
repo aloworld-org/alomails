@@ -495,6 +495,15 @@ export interface Task {
   commentCount: number;
   completedAt: string | null;
   createdAt: string;
+  /** Labels stamped onto the task (present in list/board responses). */
+  labels?: TaskLabelDto[];
+}
+
+/** A reusable, tenant-scoped label (tag). */
+export interface TaskLabelDto {
+  id: string;
+  name: string;
+  color: string | null;
 }
 
 export interface TaskSubtask {
@@ -538,6 +547,7 @@ export interface TaskDetailData {
   comments: TaskCommentDto[];
   activity: TaskActivityDto[];
   attachments: TaskAttachmentDto[];
+  labels: TaskLabelDto[];
 }
 
 /** The writable fields when creating or editing a task. */

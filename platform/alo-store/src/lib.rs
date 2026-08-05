@@ -52,7 +52,7 @@ pub use dmarc_reports::{DmarcAggregateRow, DmarcEventRecord};
 pub use document::{Document, DocumentSummary};
 pub use error::{Result, StoreError};
 pub use id::{
-    AttachmentId, BlobId, CalendarId, CategoryId, CommentId, ContactId, EventId, GroupId, MailboxId, MessageId,
+    AttachmentId, BlobId, CalendarId, CategoryId, CommentId, ContactId, EventId, GroupId, LabelId, MailboxId, MessageId,
     ProjectId, SubtaskId, TaskId, TenantId, ThreadId, UserId,
 };
 pub use identity::{
@@ -70,4 +70,4 @@ pub use schedule::DueSend;
 pub use share::{ShareCreated, ShareTarget};
 pub use signup::PendingSignup;
 pub use store::{CATEGORY_KEYWORD_PREFIX, SEEN, Store, TenantStore, category_keyword};
-pub use tasks::{NewTask, Subtask, Task, TaskActivity, TaskComment, TaskEdit, TaskProject};
+pub use tasks::{NewTask, Subtask, Task, TaskActivity, TaskComment, TaskEdit, TaskLabel, TaskProject};

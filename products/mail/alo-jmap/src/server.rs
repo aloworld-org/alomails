@@ -110,6 +110,14 @@ pub fn app(state: AppState) -> Router {
         .route("/tasks/today", get(tasks::my_plate))
         .route("/tasks/due", get(tasks::due_tasks))
         .route("/tasks/files", get(tasks::project_files))
+        .route(
+            "/tasks/labels",
+            get(tasks::list_labels).post(tasks::create_label),
+        )
+        .route(
+            "/tasks/labels/{id}",
+            axum::routing::delete(tasks::delete_label),
+        )
         .route("/tasks/proposals", get(tasks::list_proposals))
         .route("/tasks/propose", post(tasks::propose_tasks))
         .route(
@@ -138,6 +146,11 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/tasks/{id}/attachments/{aid}/download",
             get(tasks::download_attachment),
+        )
+        .route("/tasks/{id}/labels", post(tasks::add_task_label))
+        .route(
+            "/tasks/{id}/labels/{lid}",
+            axum::routing::delete(tasks::remove_task_label),
         )
         .route("/contacts", get(contacts::list))
         // Address-book import (a .vcf upload) and export (whole book as .vcf).

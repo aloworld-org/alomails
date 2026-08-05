@@ -8,7 +8,7 @@ import { CheckCircle2, ChevronDown, ChevronRight, Circle, Plus } from "lucide-re
 
 import { strings } from "../i18n";
 import type { Task } from "../jmap";
-import { Avatar, dueLabel, isOverdue, statusColor } from "./parts";
+import { Avatar, LabelChips, dueLabel, isOverdue, statusColor } from "./parts";
 import { filterTasks, groupTasks, sortTasks, type ViewConfig } from "./viewConfig";
 import styles from "./TasksModule.module.css";
 
@@ -133,6 +133,7 @@ export function ListView({ tasks, config, projectName, me, search, onOpen, onMov
                           {done ? <CheckCircle2 size={18} /> : <Circle size={18} />}
                         </button>
                         <span className={styles.tTitle}>{t.title}</span>
+                        <LabelChips labels={t.labels} />
                       </span>
                       <span className={styles.tCell}>{projectName(t.projectId)}</span>
                       <span className={styles.tCell}>

@@ -12,7 +12,7 @@ use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
-use crate::id::{AttachmentId, CommentId, ProjectId, SubtaskId, TaskId};
+use crate::id::{AttachmentId, CommentId, LabelId, ProjectId, SubtaskId, TaskId};
 
 /// A task project (board): the group a task belongs to.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -94,6 +94,14 @@ pub struct ProjectFile {
     pub filename: String,
     pub size: i64,
     pub created_at: OffsetDateTime,
+}
+
+/// A reusable, tenant-scoped label (tag) a task can carry.
+#[derive(Debug, Clone)]
+pub struct TaskLabel {
+    pub id: LabelId,
+    pub name: String,
+    pub color: Option<String>,
 }
 
 /// One entry in a task's history.
@@ -826,6 +834,166 @@ impl AccountStore {
         Ok(rows.into_iter().map(ProjectFileRow::into_file).collect())
     }
 
+    /// Every label defined in the tenant (reusable across tasks), by name.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn task_labels(&self) -> Result<Vec<TaskLabel>> {
+        let rows = sqlx::query_as::<_, LabelRow>(
+            "SELECT id, name, color FROM task_labels WHERE tenant_id = $1 ORDER BY name",
+        )
+        .bind(self.tenant.as_str())
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(LabelRow::into_label).collect())
+    }
+
+    /// Creates a tenant label. Names aren't forced unique (two "Design"s are
+    /// allowed); the UI dedups by offering existing ones first.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn create_task_label(&self, name: &str, color: Option<&str>) -> Result<LabelId> {
+        let id = LabelId::generate();
+        sqlx::query("INSERT INTO task_labels (tenant_id, id, name, color) VALUES ($1, $2, $3, $4)")
+            .bind(self.tenant.as_str())
+            .bind(id.as_str())
+            .bind(name)
+            .bind(color)
+            .execute(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+        Ok(id)
+    }
+
+    /// Deletes a tenant label and unlinks it from every task (one transaction).
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn delete_task_label(&self, label: &LabelId) -> Result<()> {
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        sqlx::query("DELETE FROM task_label_links WHERE tenant_id = $1 AND label_id = $2")
+            .bind(self.tenant.as_str())
+            .bind(label.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
+        sqlx::query("DELETE FROM task_labels WHERE tenant_id = $1 AND id = $2")
+            .bind(self.tenant.as_str())
+            .bind(label.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// The labels on a visible task.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the task isn't visible; [`StoreError::Db`].
+    pub async fn labels_for_task(&self, task: &TaskId) -> Result<Vec<TaskLabel>> {
+        if self.task(task).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        let rows = sqlx::query_as::<_, LabelRow>(
+            "SELECT tl.id, tl.name, tl.color FROM task_label_links l \
+             JOIN task_labels tl ON tl.tenant_id = l.tenant_id AND tl.id = l.label_id \
+             WHERE l.tenant_id = $1 AND l.task_id = $2 ORDER BY tl.name",
+        )
+        .bind(self.tenant.as_str())
+        .bind(task.as_str())
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(LabelRow::into_label).collect())
+    }
+
+    /// Attaches a tenant label to a visible task (idempotent).
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the task isn't visible or the label isn't
+    /// this tenant's; [`StoreError::Db`].
+    pub async fn add_task_label(&self, task: &TaskId, label: &LabelId) -> Result<()> {
+        if self.task(task).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        let exists: Option<String> =
+            sqlx::query_scalar("SELECT id FROM task_labels WHERE tenant_id = $1 AND id = $2")
+                .bind(self.tenant.as_str())
+                .bind(label.as_str())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(StoreError::Db)?;
+        if exists.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        sqlx::query(
+            "INSERT INTO task_label_links (tenant_id, task_id, label_id) VALUES ($1, $2, $3) \
+             ON CONFLICT DO NOTHING",
+        )
+        .bind(self.tenant.as_str())
+        .bind(task.as_str())
+        .bind(label.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// Removes a label from a visible task.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the task isn't visible; [`StoreError::Db`].
+    pub async fn remove_task_label(&self, task: &TaskId, label: &LabelId) -> Result<()> {
+        if self.task(task).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        sqlx::query(
+            "DELETE FROM task_label_links WHERE tenant_id = $1 AND task_id = $2 AND label_id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(task.as_str())
+        .bind(label.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// Labels for a batch of task ids (tenant-scoped), grouped by task id — for
+    /// stamping chips onto a task list. Callers pass ids they already resolved
+    /// as visible, so this only reads within the tenant.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn labels_for_task_ids(
+        &self,
+        task_ids: &[String],
+    ) -> Result<std::collections::HashMap<String, Vec<TaskLabel>>> {
+        let mut map: std::collections::HashMap<String, Vec<TaskLabel>> =
+            std::collections::HashMap::new();
+        if task_ids.is_empty() {
+            return Ok(map);
+        }
+        let rows = sqlx::query_as::<_, TaskLabelRow>(
+            "SELECT l.task_id, tl.id, tl.name, tl.color FROM task_label_links l \
+             JOIN task_labels tl ON tl.tenant_id = l.tenant_id AND tl.id = l.label_id \
+             WHERE l.tenant_id = $1 AND l.task_id = ANY($2) ORDER BY tl.name",
+        )
+        .bind(self.tenant.as_str())
+        .bind(task_ids)
+        .fetch_all(&self.pool)
+        .await?;
+        for r in rows {
+            map.entry(r.task_id).or_default().push(TaskLabel {
+                id: LabelId::new(r.id),
+                name: r.name,
+                color: r.color,
+            });
+        }
+        Ok(map)
+    }
+
     /// A task's activity history, newest first.
     ///
     /// # Errors
@@ -1015,6 +1183,30 @@ impl ProjectFileRow {
             created_at: self.created_at,
         }
     }
+}
+
+#[derive(sqlx::FromRow)]
+struct LabelRow {
+    id: String,
+    name: String,
+    color: Option<String>,
+}
+impl LabelRow {
+    fn into_label(self) -> TaskLabel {
+        TaskLabel {
+            id: LabelId::new(self.id),
+            name: self.name,
+            color: self.color,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct TaskLabelRow {
+    task_id: String,
+    id: String,
+    name: String,
+    color: Option<String>,
 }
 
 #[derive(sqlx::FromRow)]

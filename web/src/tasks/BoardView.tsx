@@ -8,7 +8,7 @@ import { CalendarDays, Plus } from "lucide-react";
 
 import { strings } from "../i18n";
 import type { Task } from "../jmap";
-import { Avatar, COLUMNS, columnLabel, dueLabel, isOverdue, statusColor } from "./parts";
+import { Avatar, COLUMNS, LabelChips, columnLabel, dueLabel, isOverdue, statusColor } from "./parts";
 import styles from "./TasksModule.module.css";
 
 interface Props {
@@ -89,6 +89,7 @@ export function BoardView({ tasks, onOpen, onMove, onAdd }: Props) {
                   onClick={() => onOpen(t.id)}
                 >
                   <div className={styles.cardTitle}>{t.title}</div>
+                  <LabelChips labels={t.labels} />
                   <div className={styles.cardMeta}>
                     {t.dueAt !== null && (
                       <span
