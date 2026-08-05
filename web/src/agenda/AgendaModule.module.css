@@ -964,7 +964,7 @@
 .emTitle:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-tint);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
 }
 .emToggleRow {
   display: inline-flex;
@@ -1053,7 +1053,7 @@
 }
 .emControl:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-tint);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
 }
 .emControl input,
 .emControl select {
@@ -1119,7 +1119,7 @@
 .emTextarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-tint);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
 }
 .emAvailBtn {
   display: inline-flex;

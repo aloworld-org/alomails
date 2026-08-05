@@ -358,6 +358,8 @@ export const en = {
   taskUploading: "Uploading…",
   taskDownload: "Download",
   taskCreateAnother: "Create another task",
+  datePickerClear: "Clear",
+  datePickerToday: "Today",
   taskAllTasks: "All tasks",
   taskUnassigned: "Unassigned",
   taskFilter: "Filter",

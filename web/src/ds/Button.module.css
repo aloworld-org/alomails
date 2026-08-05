@@ -89,3 +89,11 @@
 .danger:hover:not(:disabled) {
   filter: brightness(0.94);
 }
+
+/* A disabled primary reads as a clean neutral, not a faded accent. */
+.primary:disabled,
+.danger:disabled {
+  opacity: 1;
+  background: var(--border-default);
+  color: var(--text-tertiary);
+}

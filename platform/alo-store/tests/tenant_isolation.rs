@@ -509,6 +509,7 @@ async fn tasks_scope_by_project_and_never_cross_tenant() {
     let ts1 = store.for_tenant(t1.clone());
     let ua = ts1.create_user("a@task.test").await.unwrap();
     let ub = ts1.create_user("b@task.test").await.unwrap();
+    let ub_id = ub.as_str().to_owned();
     let a = store.for_account(t1.clone(), ua);
     let b = store.for_account(t1.clone(), ub);
 
@@ -548,6 +549,29 @@ async fn tasks_scope_by_project_and_never_cross_tenant() {
     assert!(d.task(&shared).await.unwrap().is_none());
     assert_not_found(d.delete_task(&shared).await);
     assert_not_found(d.move_task(&shared, "done", 1.0).await);
+
+    // A task assigned to B is visible to B even though it lives in A's personal
+    // project (so an assignee can open and work on their task) — but assignment
+    // never crosses tenants.
+    let for_b = a
+        .create_task(
+            &a_personal,
+            &NewTask {
+                title: "for b".to_owned(),
+                assignee: Some(ub_id.clone()),
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    assert!(
+        b.task(&for_b).await.unwrap().is_some(),
+        "an assignee sees a task assigned to them, even in another's personal project"
+    );
+    assert!(
+        d.task(&for_b).await.unwrap().is_none(),
+        "assignment never makes a task visible across tenants"
+    );
 
     // Proposals (ADR 0023): scoped like tasks, and never shown as active work.
     a.create_task(

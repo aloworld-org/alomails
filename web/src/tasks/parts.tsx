@@ -79,9 +79,18 @@ export function DueChip({ iso, done }: { iso: string; done: boolean }) {
   );
 }
 
+const AVATAR_COLORS = ["#e76f51", "#4b83c4", "#2e8b57", "#9b6dd6", "#e0a63b", "#d1568f", "#3aa8a0"];
+
+/** A stable colour per person, so assignees read as distinct at a glance. */
+function avatarColor(email: string): string {
+  let h = 0;
+  for (const ch of email) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length] ?? "#e76f51";
+}
+
 export function Avatar({ email }: { email: string }) {
   return (
-    <span className={styles.avatar} title={email}>
+    <span className={styles.avatar} style={{ background: avatarColor(email) }} title={email}>
       {initials(email)}
     </span>
   );

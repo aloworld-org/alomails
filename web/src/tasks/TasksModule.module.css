@@ -324,8 +324,7 @@
   width: 22px;
   height: 22px;
   border-radius: 999px;
-  background: var(--verdigris-200, #e2c4b8);
-  color: var(--verdigris-800, #7a3a26);
+  color: #fff;
   font-size: 10px;
   font-weight: var(--weight-semibold);
   display: inline-flex;
@@ -597,7 +596,7 @@
 }
 .searchWrap:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-tint);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
 }
 .searchIcon {
   color: var(--text-tertiary);
@@ -1333,7 +1332,7 @@
 .ntTitle:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-tint);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
 }
 .ntTwoCol {
   display: grid;
@@ -1356,7 +1355,7 @@
 }
 .ntControl:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-tint);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
 }
 .ntControl input,
 .ntControl select {
@@ -1427,7 +1426,7 @@
 .ntTextarea:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-tint);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
 }
 .ntSubtask {
   display: flex;
@@ -1677,7 +1676,7 @@
 .tdDescription:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-tint);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 13%, transparent);
 }
 .tdSubAdd {
   width: 100%;
@@ -2162,4 +2161,12 @@
 .fileDl:hover {
   color: var(--accent);
   background: var(--bg-raised);
+}
+
+/* colour dot on a list status group */
+.tGroupDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }

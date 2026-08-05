@@ -258,9 +258,12 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn task(&self, id: &TaskId) -> Result<Option<Task>> {
+        // Visible if the task's project is visible, OR the task is assigned to
+        // the caller — so an assignee can open (and work on) a task even when it
+        // lives in someone else's personal project. Tenant-scoped either way.
         let sql = format!(
             "SELECT {TASK_COLS} FROM tasks t \
-             WHERE t.tenant_id = $1 AND t.id = $3 AND {vis}",
+             WHERE t.tenant_id = $1 AND t.id = $3 AND ({vis} OR t.assignee_user_id = $2)",
             vis = visible_projects(),
         );
         let row = sqlx::query_as::<_, TaskRow>(&sql)

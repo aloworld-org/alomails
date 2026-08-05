@@ -21,7 +21,7 @@ import {
 
 import { strings } from "../i18n";
 import { useJmapClient, type TaskDetailData, type TaskInput, type TaskPriority } from "../jmap";
-import { Spinner } from "../ds";
+import { DatePicker, Spinner } from "../ds";
 import { COLUMNS } from "./parts";
 import styles from "./TasksModule.module.css";
 
@@ -248,11 +248,10 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
               <span className={styles.tdFieldLabel}>
                 <CalendarDays size={15} /> {strings.taskDue}
               </span>
-              <input
-                className={styles.tdFieldInput}
-                type="date"
-                defaultValue={dueDate}
-                onChange={(e) => void save({ dueAt: e.target.value ? `${e.target.value}T12:00:00Z` : null })}
+              <DatePicker
+                value={dueDate}
+                onChange={(v) => void save({ dueAt: v !== "" ? `${v}T12:00:00Z` : null })}
+                placeholder={strings.taskDue}
               />
             </label>
             <label className={styles.tdField}>

@@ -8,7 +8,7 @@ import { CheckCircle2, ChevronDown, ChevronRight, Circle, Plus } from "lucide-re
 
 import { strings } from "../i18n";
 import type { Task } from "../jmap";
-import { Avatar, dueLabel, isOverdue } from "./parts";
+import { Avatar, dueLabel, isOverdue, statusColor } from "./parts";
 import { filterTasks, groupTasks, sortTasks, type ViewConfig } from "./viewConfig";
 import styles from "./TasksModule.module.css";
 
@@ -103,6 +103,9 @@ export function ListView({ tasks, config, projectName, me, search, onOpen, onMov
           <div key={group.key} className={styles.tGroup}>
             <button type="button" className={styles.tGroupHead} onClick={() => toggleGroup(group.key)}>
               {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              {group.status !== undefined && (
+                <span className={styles.tGroupDot} style={{ background: statusColor(group.status) }} aria-hidden />
+              )}
               <span className={styles.tGroupName}>{group.label}</span>
               <span className={styles.tGroupCount}>{group.items.length}</span>
             </button>

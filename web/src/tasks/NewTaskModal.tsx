@@ -4,11 +4,11 @@
 // line). "Create another" keeps it open and clears it for fast entry.
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { CalendarDays, FolderClosed, Plus, SquareCheckBig, Trash2, User, X } from "lucide-react";
+import { FolderClosed, Plus, SquareCheckBig, Trash2, User, X } from "lucide-react";
 
 import { strings } from "../i18n";
 import { useJmapClient, type TaskPriority, type TaskProject } from "../jmap";
-import { Button } from "../ds";
+import { Button, DatePicker } from "../ds";
 import styles from "./TasksModule.module.css";
 
 interface Props {
@@ -143,13 +143,10 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, onClos
           </div>
 
           <div className={styles.ntTwoCol}>
-            <label className={styles.ntField}>
+            <div className={styles.ntField}>
               <span className={styles.ntLabel}>{strings.taskColDue}</span>
-              <span className={styles.ntControl}>
-                <CalendarDays size={16} className={styles.ntControlIcon} />
-                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
-              </span>
-            </label>
+              <DatePicker value={dueDate} onChange={setDueDate} placeholder={strings.taskColDue} />
+            </div>
             <div className={styles.ntField}>
               <span className={styles.ntLabel}>{strings.taskColPriority}</span>
               <div className={styles.ntPrios}>

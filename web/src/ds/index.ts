@@ -13,5 +13,6 @@ export { IconButton } from "./IconButton";
 export { Avatar } from "./Avatar";
 export { Spinner } from "./Spinner";
 export { DialogProvider, useDialogs } from "./Dialog";
+export { DatePicker } from "./DatePicker";
 export type { Dialogs } from "./Dialog";
 export { useMediaQuery, useIsMobile, MOBILE_MAX_WIDTH } from "./useMediaQuery";
