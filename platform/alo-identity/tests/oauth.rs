@@ -134,6 +134,17 @@ async fn setup_app() -> (axum::Router, common::TestUser) {
     (router(id), u)
 }
 
+const RS_SECRET: &str = "resource-server-shared-secret-abc123";
+
+async fn setup_app_with_introspect() -> (axum::Router, common::TestUser) {
+    let (store, id) = common::setup_with_introspect(RS_SECRET).await;
+    let u = make_user(&store, &id, "intro").await;
+    id.register_public_client(CLIENT, "Web", &[REDIRECT.to_owned()])
+        .await
+        .unwrap();
+    (router(id), u)
+}
+
 #[tokio::test]
 async fn discovery_and_jwks_are_published() {
     let (app, _u) = setup_app().await;
@@ -206,6 +217,96 @@ async fn full_auth_code_pkce_flow() {
     assert_eq!(status, StatusCode::OK);
     let (status, _ui) = get(&app, "/oauth/userinfo", Some(&access)).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED, "revoked token refused");
+}
+
+async fn post_form_auth(
+    app: &axum::Router,
+    path: &str,
+    body: String,
+    bearer: Option<&str>,
+) -> (StatusCode, serde_json::Value) {
+    let mut b = Request::builder()
+        .method("POST")
+        .uri(path)
+        .header("content-type", "application/x-www-form-urlencoded");
+    if let Some(t) = bearer {
+        b = b.header("authorization", format!("Bearer {t}"));
+    }
+    let resp = app.clone().oneshot(b.body(Body::from(body)).unwrap()).await.unwrap();
+    let status = resp.status();
+    let bytes = axum::body::to_bytes(resp.into_body(), 1 << 20).await.unwrap();
+    (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+}
+
+/// RFC 7662 introspection is the SSO seam standalone products use: it must
+/// return the **tenant** (which `userinfo` omits), guard on the resource-server
+/// secret, and never leak validity to an unauthenticated caller.
+#[tokio::test]
+async fn token_introspection_returns_tenant_and_is_guarded() {
+    let (app, u) = setup_app_with_introspect().await;
+    let code = authorize_ok(&app, &u.email, &u.password).await;
+    let (status, body, _l) = post_form(
+        &app,
+        "/oauth/token",
+        form(&[
+            ("grant_type", "authorization_code"),
+            ("code", &code),
+            ("redirect_uri", REDIRECT),
+            ("client_id", CLIENT),
+            ("code_verifier", VERIFIER),
+        ]),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let tok: serde_json::Value = serde_json::from_slice(&body).unwrap();
+    let access = tok["access_token"].as_str().unwrap().to_owned();
+
+    // With the RS secret, a live token resolves to its principal — tenant + sub.
+    let (status, doc) =
+        post_form_auth(&app, "/oauth/introspect", form(&[("token", &access)]), Some(RS_SECRET)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(doc["active"], true);
+    assert_eq!(doc["sub"], u.user.as_str());
+    assert_eq!(doc["tenant"], u.tenant.as_str(), "the tenant userinfo omits");
+    assert_eq!(doc["username"], u.email);
+
+    // A bogus token is a normal {active:false}, not an error, not an oracle.
+    let (status, doc) = post_form_auth(
+        &app,
+        "/oauth/introspect",
+        form(&[("token", "not-a-real-token")]),
+        Some(RS_SECRET),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(doc["active"], false);
+    assert!(doc["tenant"].is_null(), "no principal leaked for an invalid token");
+
+    // Wrong RS secret → 401; missing → 401. The endpoint is not a public oracle.
+    let (status, _d) =
+        post_form_auth(&app, "/oauth/introspect", form(&[("token", &access)]), Some("wrong")).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    let (status, _d) =
+        post_form_auth(&app, "/oauth/introspect", form(&[("token", &access)]), None).await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+    // After revocation the same token introspects inactive.
+    let (status, _b, _l) = post_form(&app, "/oauth/revoke", form(&[("token", &access)])).await;
+    assert_eq!(status, StatusCode::OK);
+    let (status, doc) =
+        post_form_auth(&app, "/oauth/introspect", form(&[("token", &access)]), Some(RS_SECRET)).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(doc["active"], false, "revoked token is inactive");
+}
+
+/// When no RS secret is configured, introspection does not exist (404) — it is
+/// off by default, never an accidentally-public oracle.
+#[tokio::test]
+async fn token_introspection_disabled_without_secret() {
+    let (app, _u) = setup_app().await;
+    let (status, _d) =
+        post_form_auth(&app, "/oauth/introspect", form(&[("token", "x")]), Some("anything")).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]

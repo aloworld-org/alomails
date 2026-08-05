@@ -9,8 +9,13 @@ use std::env;
 
 use time::Duration;
 
+use crate::secret::Secret;
+
 /// Env var for the OIDC issuer (the `iss` claim and discovery base URL).
 pub const ENV_ISSUER: &str = "ALO_IDENTITY_ISSUER";
+/// Env var for the resource-server secret that guards token introspection
+/// (RFC 7662). Unset ⇒ the introspection endpoint is disabled entirely.
+pub const ENV_INTROSPECT_SECRET: &str = "ALO_IDENTITY_INTROSPECT_SECRET";
 /// Env var for the access-token lifetime, in seconds.
 pub const ENV_ACCESS_TTL: &str = "ALO_IDENTITY_ACCESS_TTL_SECS";
 /// Env var for the refresh-token lifetime, in seconds.
@@ -60,6 +65,11 @@ pub struct IdentityConfig {
     pub argon2_t: u32,
     /// argon2id parallelism.
     pub argon2_p: u32,
+    /// The shared secret a resource server (a standalone product like Drive)
+    /// presents to call the token-introspection endpoint. `None` disables
+    /// introspection — the endpoint 404s — so it is off unless deliberately
+    /// configured.
+    pub introspect_secret: Option<Secret>,
 }
 
 impl IdentityConfig {
@@ -73,6 +83,7 @@ impl IdentityConfig {
             argon2_m_kib: DEFAULT_ARGON2_M_KIB,
             argon2_t: DEFAULT_ARGON2_T,
             argon2_p: DEFAULT_ARGON2_P,
+            introspect_secret: None,
         }
     }
 
@@ -102,6 +113,12 @@ impl IdentityConfig {
         if let Some(p) = env_u32(ENV_ARGON2_P)? {
             cfg.argon2_p = p;
         }
+        if let Ok(secret) = env::var(ENV_INTROSPECT_SECRET) {
+            let secret = secret.trim();
+            if !secret.is_empty() {
+                cfg.introspect_secret = Some(Secret::new(secret));
+            }
+        }
         Ok(cfg)
     }
 
@@ -123,6 +140,11 @@ impl IdentityConfig {
     /// The userinfo endpoint URL.
     pub fn userinfo_endpoint(&self) -> String {
         format!("{}/oauth/userinfo", self.issuer)
+    }
+
+    /// The token-introspection endpoint URL (RFC 7662).
+    pub fn introspection_endpoint(&self) -> String {
+        format!("{}/oauth/introspect", self.issuer)
     }
 }
 

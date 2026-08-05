@@ -144,7 +144,17 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    let identity = Identity::new(Arc::clone(&store), IdentityConfig::new(issuer))
+    // Start from the issuer default, then layer any env overrides (notably the
+    // resource-server introspection secret) so a standalone product — Drive —
+    // can exchange a bearer token for its principal over the wire (RFC 7662).
+    let mut identity_config = IdentityConfig::new(issuer);
+    if let Ok(secret) = std::env::var(alo_identity::config::ENV_INTROSPECT_SECRET) {
+        let secret = secret.trim();
+        if !secret.is_empty() {
+            identity_config.introspect_secret = Some(alo_identity::secret::Secret::new(secret));
+        }
+    }
+    let identity = Identity::new(Arc::clone(&store), identity_config)
         .map_err(|_| "could not initialise the credential authority")?;
 
     let state = app_state(store, identity, base_url);

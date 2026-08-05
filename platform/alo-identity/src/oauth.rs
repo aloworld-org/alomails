@@ -37,6 +37,7 @@ pub fn router(identity: Identity) -> Router {
         .route("/oauth/authorize", post(authorize))
         .route("/oauth/token", post(token))
         .route("/oauth/userinfo", get(userinfo))
+        .route("/oauth/introspect", post(introspect))
         .route("/oauth/revoke", post(revoke))
         .with_state(identity)
 }
@@ -50,6 +51,7 @@ async fn discovery(State(id): State<Identity>) -> Json<Value> {
         "authorization_endpoint": cfg.authorization_endpoint(),
         "token_endpoint": cfg.token_endpoint(),
         "userinfo_endpoint": cfg.userinfo_endpoint(),
+        "introspection_endpoint": cfg.introspection_endpoint(),
         "jwks_uri": cfg.jwks_uri(),
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
@@ -498,6 +500,68 @@ async fn userinfo(State(id): State<Identity>, headers: HeaderMap) -> Response {
         claims["preferred_username"] = json!(e);
     }
     Json(claims).into_response()
+}
+
+// ---- introspect (RFC 7662) -------------------------------------------
+
+#[derive(Deserialize)]
+struct IntrospectForm {
+    token: String,
+    #[serde(default)]
+    #[allow(dead_code)]
+    token_type_hint: String,
+}
+
+/// RFC 7662 token introspection: the SSO seam a resource server (a standalone
+/// product such as Drive) calls to turn an opaque access token into the
+/// principal behind it — crucially the **tenant**, which `userinfo` omits.
+///
+/// The endpoint is disabled (404) unless `ALO_IDENTITY_INTROSPECT_SECRET` is
+/// set, and every call must present that secret as a bearer credential
+/// (constant-time compared). This keeps it off-limits to the public even
+/// though it shares the `/oauth/*` path space — an unauthenticated
+/// introspection endpoint would be a token-validity oracle (RFC 7662 §2.1).
+async fn introspect(
+    State(id): State<Identity>,
+    headers: HeaderMap,
+    Form(f): Form<IntrospectForm>,
+) -> Response {
+    let Some(rs_secret) = id.config().introspect_secret.as_ref() else {
+        // Not configured ⇒ the endpoint does not exist for this deployment.
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let Some(presented) = bearer(&headers) else {
+        return unauthorized("missing resource-server credential");
+    };
+    if !secret::ct_eq(presented.as_bytes(), rs_secret.reveal().as_bytes()) {
+        return unauthorized("invalid resource-server credential");
+    }
+
+    let principal = match id.resolve_access_token(&f.token).await {
+        Ok(Some(p)) => p,
+        // RFC 7662 §2.2: an inactive/unknown token is a normal 200 {active:false},
+        // never an error — the caller learns nothing beyond "not usable".
+        Ok(None) => return Json(json!({ "active": false })).into_response(),
+        Err(_) => return server_error(),
+    };
+    let username = id
+        .store()
+        .for_tenant(principal.tenant.clone())
+        .email_of(&principal.user)
+        .await
+        .ok()
+        .flatten();
+
+    Json(json!({
+        "active": true,
+        "sub": principal.user.as_str(),
+        "tenant": principal.tenant.as_str(),
+        "scope": principal.scope,
+        "username": username,
+        "token_type": "Bearer",
+        "iss": id.config().issuer,
+    }))
+    .into_response()
 }
 
 // ---- revoke ----------------------------------------------------------

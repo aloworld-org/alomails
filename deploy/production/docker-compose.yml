@@ -265,6 +265,10 @@ services:
       ALO_BLOB_DIR: /var/lib/alo/blobs
       # The public HTTPS origin (Caddy terminates TLS and forwards here).
       ALO_IDENTITY_ISSUER: https://${DOMAIN}
+      # Resource-server secret guarding RFC 7662 token introspection: the SSO
+      # seam standalone products (Drive) use to resolve a bearer token to its
+      # tenant + user. Unset ⇒ the introspection endpoint stays disabled (404).
+      ALO_IDENTITY_INTROSPECT_SECRET: ${ALO_IDENTITY_INTROSPECT_SECRET:-}
       ALO_JMAP_BASE_URL: https://${DOMAIN}
       ALO_JMAP_ADDR: 0.0.0.0:8080
       # Where EmailSubmission/set sends: the SMTP trusted internal listener,

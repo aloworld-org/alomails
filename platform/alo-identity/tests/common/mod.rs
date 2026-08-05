@@ -15,13 +15,25 @@ pub fn database_url() -> String {
 
 /// A migrated store plus an identity with a signing key provisioned.
 pub async fn setup() -> (Arc<Store>, Identity) {
+    setup_with(IdentityConfig::new(ISSUER)).await
+}
+
+/// Like [`setup`], but with a resource-server secret configured so the token
+/// introspection endpoint (RFC 7662) is enabled.
+pub async fn setup_with_introspect(secret: &str) -> (Arc<Store>, Identity) {
+    let mut cfg = IdentityConfig::new(ISSUER);
+    cfg.introspect_secret = Some(alo_identity::secret::Secret::new(secret));
+    setup_with(cfg).await
+}
+
+async fn setup_with(cfg: IdentityConfig) -> (Arc<Store>, Identity) {
     let store = Arc::new(
         Store::connect(&database_url(), BlobStore::in_memory(25 * 1024 * 1024))
             .await
             .expect("connect to test postgres (is DATABASE_URL set / compose up?)"),
     );
     store.migrate().await.unwrap();
-    let identity = Identity::new(Arc::clone(&store), IdentityConfig::new(ISSUER)).unwrap();
+    let identity = Identity::new(Arc::clone(&store), cfg).unwrap();
     identity.ensure_signing_key().await.unwrap();
     (store, identity)
 }
