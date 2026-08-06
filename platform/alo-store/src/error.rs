@@ -19,6 +19,14 @@ pub enum StoreError {
     /// A uniqueness/precondition conflict (e.g. duplicate mailbox name).
     #[error("conflict: {0}")]
     Conflict(String),
+    /// The input is malformed — a field the caller can fix before retrying
+    /// (a malformed VAT id, a negative amount, an unknown currency code).
+    /// Distinct from [`Self::Conflict`], which is a well-formed request that
+    /// disagrees with the current state: routes map this to `422`, a conflict
+    /// to `409`. The message names the violated rule and never echoes stored
+    /// data from another tenant.
+    #[error("invalid input: {0}")]
+    Validation(String),
     /// An object exceeded the configured byte ceiling.
     #[error("object too large: {size} bytes exceeds limit of {limit}")]
     TooLarge {

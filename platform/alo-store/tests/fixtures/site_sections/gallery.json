@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "gallery",
+      "heading": "Inside the roastery",
+      "images": [
+        {
+          "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg",
+          "alt": "Green coffee sacks stacked by origin"
+        },
+        {
+          "blob_id": "2fN8wE5rT9yU3iO7pA1sDg",
+          "alt": "Cupping table set for the morning tasting"
+        },
+        {
+          "blob_id": "6mB4nV8cX2zL5kJ9hG3fDa",
+          "alt": ""
+        }
+      ]
+    }
+  ]
+}

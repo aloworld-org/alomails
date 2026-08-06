@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "nav",
+      "links": [
+        { "label": "Home", "href": "/" },
+        { "label": "Roasts", "href": "/roasts" },
+        { "label": "Wholesale", "href": "/wholesale" },
+        { "label": "Contact", "href": "#contact" }
+      ],
+      "cta": { "label": "Order beans", "href": "/order" }
+    }
+  ]
+}

@@ -214,7 +214,9 @@ impl AccountStore {
     pub async fn base_add_table(&self, node: &DriveNodeId, name: &str) -> Result<BaseTableId> {
         self.drive_require_write(node).await?;
         let id = BaseTableId::generate();
-        let pos = self.next_position("base_tables", "node_id", node.as_str()).await?;
+        let pos = self
+            .next_position("base_tables", "node_id", node.as_str())
+            .await?;
         sqlx::query(
             "INSERT INTO base_tables (tenant_id, id, node_id, name, position) \
              VALUES ($1, $2, $3, $4, $5)",
@@ -248,7 +250,9 @@ impl AccountStore {
         }
         self.require_table_write(table).await?;
         let id = BaseFieldId::generate();
-        let pos = self.next_position("base_fields", "table_id", table.as_str()).await?;
+        let pos = self
+            .next_position("base_fields", "table_id", table.as_str())
+            .await?;
         sqlx::query(
             "INSERT INTO base_fields (tenant_id, id, table_id, name, type, options, position) \
              VALUES ($1, $2, $3, $4, $5, $6, $7)",
@@ -270,10 +274,16 @@ impl AccountStore {
     ///
     /// # Errors
     /// [`StoreError::NotFound`]/[`StoreError::Forbidden`]/[`StoreError::Db`].
-    pub async fn base_add_record(&self, table: &BaseTableId, cells: &Value) -> Result<BaseRecordId> {
+    pub async fn base_add_record(
+        &self,
+        table: &BaseTableId,
+        cells: &Value,
+    ) -> Result<BaseRecordId> {
         self.require_table_write(table).await?;
         let id = BaseRecordId::generate();
-        let pos = self.next_position("base_records", "table_id", table.as_str()).await?;
+        let pos = self
+            .next_position("base_records", "table_id", table.as_str())
+            .await?;
         sqlx::query(
             "INSERT INTO base_records (tenant_id, id, table_id, cells, position) \
              VALUES ($1, $2, $3, $4, $5)",
@@ -338,7 +348,9 @@ impl AccountStore {
         }
         self.require_table_write(table).await?;
         let id = BaseViewId::generate();
-        let pos = self.next_position("base_views", "table_id", table.as_str()).await?;
+        let pos = self
+            .next_position("base_views", "table_id", table.as_str())
+            .await?;
         sqlx::query(
             "INSERT INTO base_views (tenant_id, id, table_id, kind, name, config, position) \
              VALUES ($1, $2, $3, $4, $5, $6, $7)",

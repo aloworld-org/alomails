@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "testimonials",
+      "heading": "What cafés say",
+      "items": [
+        {
+          "quote": "The freshest beans we've ever pulled shots with — our regulars noticed in a week.",
+          "author": "Mara Lindqvist",
+          "role": "Head barista, Kaffebaren"
+        },
+        {
+          "quote": "Deliveries land on roast day, every time. That reliability is why we switched.",
+          "author": "Pieter Claes",
+          "role": "Owner, Café Zeewind"
+        }
+      ]
+    }
+  ]
+}

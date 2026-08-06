@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "pricing",
+      "heading": "Subscriptions",
+      "intro": "Pause, swap roasts, or cancel any time.",
+      "tiers": [
+        {
+          "name": "Monthly",
+          "price": "€24/month",
+          "period": "billed monthly",
+          "description": "Two 250g bags of the current roast.",
+          "features": ["Free shipping", "Roast-day dispatch"],
+          "cta": { "label": "Start monthly", "href": "/subscribe/monthly" },
+          "highlighted": false
+        },
+        {
+          "name": "Weekly",
+          "price": "€18/week",
+          "period": "billed weekly",
+          "description": "Two 250g bags every week, roaster's pick.",
+          "features": [
+            "Free shipping",
+            "Roast-day dispatch",
+            "First taste of new origins"
+          ],
+          "cta": { "label": "Start weekly", "href": "/subscribe/weekly" },
+          "highlighted": true
+        },
+        {
+          "name": "Wholesale",
+          "price": "Sur mesure",
+          "features": ["Dedicated roast profile", "Barista training included"],
+          "cta": { "label": "Talk to us", "href": "#contact" },
+          "highlighted": false
+        }
+      ]
+    }
+  ]
+}

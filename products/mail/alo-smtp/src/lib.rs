@@ -19,6 +19,9 @@ pub mod address;
 pub mod auth;
 pub mod authmail;
 pub mod backoff;
+/// A canned loopback HTTP responder shared by the Rspamd-facing tests.
+#[cfg(test)]
+pub mod canned_http;
 // The outbound SMTP client + reply/line parsing live in the shared
 // `alo-smtp-client` crate (also used by alo-jmap's submission path).
 // Re-exported here so `crate::client` / `crate::client_reply` keep resolving.

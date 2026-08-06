@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "features",
+      "heading": "Why Nordwind",
+      "intro": "Three promises printed on every bag.",
+      "items": [
+        {
+          "title": "Roasted to order",
+          "body": "Your batch goes into the drum only after you order — never warehouse stock.",
+          "icon": "flame"
+        },
+        {
+          "title": "Direct trade",
+          "body": "We buy from four farms we visit every harvest and publish what we pay.",
+          "icon": "handshake"
+        },
+        {
+          "title": "Carbon-neutral shipping",
+          "body": "Every parcel travels by rail and bike courier, offset at the roastery.",
+          "icon": "leaf"
+        }
+      ]
+    }
+  ]
+}

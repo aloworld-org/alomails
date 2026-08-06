@@ -43,6 +43,9 @@ garage = ["object_store/aws"]
 [dev-dependencies]
 tokio = { workspace = true }
 time = { workspace = true }
+# Purge assertions read rows directly: the public list APIs may lazily
+# re-create defaults, which a deleted tenant can no longer satisfy.
+sqlx = { workspace = true }
 
 [lints]
 workspace = true

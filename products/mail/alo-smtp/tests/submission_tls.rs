@@ -16,12 +16,11 @@ use alo_identity::{Identity, IdentityConfig};
 use alo_smtp::server::{self, Runtime};
 use alo_smtp::spool::Spool;
 use alo_smtp::tls;
-use alo_store::{BlobStore, Store};
+use alo_store::{BlobStore, Store, TenantId, UserId};
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
-use tokio::sync::OnceCell;
 use tokio_rustls::TlsConnector;
 use tokio_rustls::client::TlsStream;
 use tokio_rustls::rustls::{self, ClientConfig};
@@ -48,46 +47,60 @@ fn fast_config() -> IdentityConfig {
     c
 }
 
-/// A process-shared store with the fixed test credential
-/// (`alice@alo.test` / `s3cret`) provisioned once — the login username
-/// has a global unique index, so the tests share one user rather than
-/// racing to create it. The password is (re)hashed with [`fast_config`]
-/// every process start so a hash left by an earlier run at production cost
-/// cannot slow verification.
-static STORE: OnceCell<Arc<Store>> = OnceCell::const_new();
-
+/// A store for **one** test, carrying the fixed test credential
+/// (`alice@alo.test` / `s3cret`). The user row is shared across tests —
+/// the login username has a global unique index, so they reuse one user
+/// rather than racing to create it — but the `Store`, and therefore its
+/// `PgPool`, is per test on purpose: a pool must not outlive the
+/// `#[tokio::test]` runtime that built it, because its background tasks
+/// die with that runtime and every later query then hangs instead of
+/// failing (the same rule `alo-store`'s harness documents). A
+/// process-shared pool here made the AUTH tests time out whenever more
+/// than one of them ran.
+///
+/// The password is (re)hashed with [`fast_config`] on each build, so a
+/// hash left by an earlier run at production cost cannot slow verification.
 async fn shared_store() -> Arc<Store> {
-    STORE
-        .get_or_init(|| async {
-            let store = Arc::new(
-                Store::connect(&database_url(), BlobStore::in_memory(25 * 1024 * 1024))
-                    .await
-                    .unwrap(),
-            );
-            store.migrate().await.unwrap();
-            let identity = Identity::new(Arc::clone(&store), fast_config()).unwrap();
-            // Reuse the existing alice (the username is globally unique) or
-            // create her; then always reset the password with fast params.
-            let (tenant, user) = match store.account_by_email("alice@alo.test").await.unwrap() {
-                Some(existing) => existing,
-                None => {
-                    let tenant = store.create_tenant("submission-tls").await.unwrap();
-                    let user = store
-                        .for_tenant(tenant.clone())
-                        .create_user("alice@alo.test")
-                        .await
-                        .unwrap();
-                    (tenant, user)
-                }
-            };
-            identity
-                .set_password(&tenant, &user, "alice@alo.test", "s3cret")
-                .await
-                .unwrap();
-            store
-        })
+    let store = Arc::new(
+        Store::connect(&database_url(), BlobStore::in_memory(25 * 1024 * 1024))
+            .await
+            .unwrap(),
+    );
+    store.migrate().await.unwrap();
+    let identity = Identity::new(Arc::clone(&store), fast_config()).unwrap();
+    let (tenant, user) = alice(&store).await;
+    identity
+        .set_password(&tenant, &user, "alice@alo.test", "s3cret")
         .await
-        .clone()
+        .unwrap();
+    store
+}
+
+/// Resolves the shared `alice@alo.test`, creating her if she is not there
+/// yet. A concurrent test may win the race to insert her, so a failed
+/// create falls back to re-reading the row that won rather than failing on
+/// the username's unique index.
+async fn alice(store: &Store) -> (TenantId, UserId) {
+    if let Some(existing) = store.account_by_email("alice@alo.test").await.unwrap() {
+        return existing;
+    }
+    let created = async {
+        let tenant = store.create_tenant("submission-tls").await?;
+        let user = store
+            .for_tenant(tenant.clone())
+            .create_user("alice@alo.test")
+            .await?;
+        Ok::<_, alo_store::StoreError>((tenant, user))
+    }
+    .await;
+    match created {
+        Ok(pair) => pair,
+        Err(_) => store
+            .account_by_email("alice@alo.test")
+            .await
+            .unwrap()
+            .expect("alice exists once the racing creator committed"),
+    }
 }
 
 /// A **fresh** identity over the shared store for each listener — its own

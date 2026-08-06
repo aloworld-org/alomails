@@ -283,7 +283,6 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-    use tokio::net::TcpListener;
 
     #[test]
     fn from_url_parses_and_rejects() {
@@ -350,22 +349,8 @@ mod tests {
     #[tokio::test]
     async fn check_talks_to_a_loopback_endpoint() {
         // A canned Rspamd stand-in: reads the request, returns a verdict.
-        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        let server = tokio::spawn(async move {
-            let (mut sock, _) = listener.accept().await.unwrap();
-            // Drain the request (best-effort) then answer.
-            let mut buf = [0u8; 4096];
-            let _ = sock.read(&mut buf).await;
-            let body = b"{\"action\":\"add header\",\"score\":6.7}";
-            let resp = format!(
-                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-                body.len()
-            );
-            sock.write_all(resp.as_bytes()).await.unwrap();
-            sock.write_all(body).await.unwrap();
-            sock.flush().await.unwrap();
-        });
+        let (addr, server) =
+            crate::canned_http::serve_once(b"{\"action\":\"add header\",\"score\":6.7}").await;
 
         let client =
             RspamdClient::from_url(&format!("http://{addr}"), Duration::from_secs(5)).unwrap();

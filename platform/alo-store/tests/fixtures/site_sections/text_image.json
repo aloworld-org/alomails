@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "text_image",
+      "heading": "The roastery",
+      "body": "A 1962 Probat drum, rebuilt by hand over two winters, sits at the centre of the roastery. We roast in 12-kilo batches, cup every one, and log every curve — the boring discipline that makes the coffee taste the same in February as it did in July.",
+      "image": {
+        "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg",
+        "alt": "The restored Probat roasting drum"
+      },
+      "image_side": "right"
+    }
+  ]
+}

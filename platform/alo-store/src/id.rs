@@ -61,7 +61,7 @@ pub(crate) fn generate_token() -> String {
 macro_rules! opaque_id {
     ($(#[$m:meta])* $name:ident) => {
         $(#[$m])*
-        #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
         pub struct $name(String);
 
         impl $name {
@@ -192,6 +192,19 @@ opaque_id!(
 opaque_id!(
     /// A saved view over a Base table.
     BaseViewId
+);
+opaque_id!(
+    /// A tenant's website built with alo Sites (ADR 0036).
+    SiteId
+);
+opaque_id!(
+    /// One page of an alo Sites website.
+    SitePageId
+);
+opaque_id!(
+    /// A billing customer — the company or person a tenant invoices
+    /// (alo Billing, ADR 0035).
+    BillingCustomerId
 );
 
 #[cfg(test)]

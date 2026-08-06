@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "nav",
+      "links": [
+        { "label": "Home", "href": "/" },
+        { "label": "Roasts", "href": "/roasts" },
+        { "label": "Wholesale", "href": "/wholesale" }
+      ],
+      "cta": { "label": "Order beans", "href": "/order" }
+    },
+    {
+      "type": "hero",
+      "heading": "Coffee roasted the morning it ships",
+      "subheading": "Small-batch roastery on the Ostend harbour, since 2009.",
+      "image": {
+        "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg",
+        "alt": "Freshly roasted beans pouring from the cooling tray"
+      },
+      "primary_cta": { "label": "Shop roasts", "href": "/shop" },
+      "secondary_cta": { "label": "Our story", "href": "/about" }
+    },
+    {
+      "type": "features",
+      "heading": "Why Nordwind",
+      "items": [
+        {
+          "title": "Roasted to order",
+          "body": "Your batch goes into the drum only after you order.",
+          "icon": "flame"
+        },
+        {
+          "title": "Direct trade",
+          "body": "We buy from four farms we visit every harvest.",
+          "icon": "handshake"
+        }
+      ]
+    },
+    {
+      "type": "text_image",
+      "heading": "The roastery",
+      "body": "A 1962 Probat drum, rebuilt by hand over two winters.",
+      "image": {
+        "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg",
+        "alt": "The restored Probat roasting drum"
+      },
+      "image_side": "left"
+    },
+    {
+      "type": "gallery",
+      "images": [
+        {
+          "blob_id": "2fN8wE5rT9yU3iO7pA1sDg",
+          "alt": "Cupping table set for the morning tasting"
+        }
+      ]
+    },
+    {
+      "type": "testimonials",
+      "items": [
+        {
+          "quote": "The freshest beans we've ever pulled shots with.",
+          "author": "Mara Lindqvist",
+          "role": "Head barista, Kaffebaren"
+        }
+      ]
+    },
+    {
+      "type": "pricing",
+      "heading": "Subscriptions",
+      "tiers": [
+        {
+          "name": "Weekly",
+          "price": "€18/week",
+          "period": "billed weekly",
+          "features": ["Free shipping", "Roast-day dispatch"],
+          "cta": { "label": "Start weekly", "href": "/subscribe/weekly" },
+          "highlighted": true
+        }
+      ]
+    },
+    {
+      "type": "team",
+      "members": [
+        {
+          "name": "Jonas Meer",
+          "role": "Founder & head roaster",
+          "bio": "Twenty years at the drum, still cups every batch."
+        }
+      ]
+    },
+    {
+      "type": "faq",
+      "items": [
+        {
+          "question": "How fresh is the coffee when it arrives?",
+          "answer": "It ships the day it is roasted and usually arrives within two days."
+        }
+      ]
+    },
+    {
+      "type": "cta",
+      "heading": "Taste the difference fresh makes",
+      "body": "Your first bag ships free.",
+      "button": { "label": "Order now", "href": "/order" }
+    },
+    {
+      "type": "contact_form",
+      "heading": "Wholesale enquiries",
+      "form_id": "f4K9sL2wN7qR5tYx8vB1cA",
+      "success_message": "Thanks — we'll be in touch soon."
+    },
+    {
+      "type": "footer",
+      "text": "© Nordwind Coffee Roasters, Ostend",
+      "links": [
+        { "label": "Imprint", "href": "/imprint" },
+        { "label": "Privacy", "href": "/privacy" }
+      ]
+    }
+  ]
+}

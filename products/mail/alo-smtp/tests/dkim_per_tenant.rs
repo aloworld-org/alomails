@@ -43,6 +43,14 @@ fn write_file_key(dir: &std::path::Path, seed: &[u8]) -> std::path::PathBuf {
     let pem = format!("-----BEGIN PRIVATE KEY-----\n{b64}\n-----END PRIVATE KEY-----\n");
     let path = dir.join("filekey.pem");
     std::fs::write(&path, pem).unwrap();
+    // The keystore refuses group/world-readable private keys on unix, and
+    // `fs::write` honours the umask (0o644 by default) — without this the key
+    // loads only on Windows, where the permission check is a no-op.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
     path
 }
 

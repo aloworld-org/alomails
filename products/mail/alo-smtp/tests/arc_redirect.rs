@@ -77,6 +77,14 @@ async fn sieve_redirect_is_arc_sealed_and_validates() {
     let dir = tempfile::tempdir().unwrap();
     let key_path = dir.path().join("seal.pem");
     std::fs::write(&key_path, pem).unwrap();
+    // The keystore refuses group/world-readable private keys on unix, and
+    // `fs::write` honours the umask (0o644 by default) — without this the seal
+    // key loads only on Windows, where the permission check is a no-op.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&key_path, std::fs::Permissions::from_mode(0o600)).unwrap();
+    }
     let keys = FileKeyStore::new().with_key(
         "sealer.test",
         &key.selector,

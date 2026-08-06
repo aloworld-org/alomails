@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "faq",
+      "heading": "Questions",
+      "items": [
+        {
+          "question": "How fresh is the coffee when it arrives?",
+          "answer": "It ships the day it is roasted and usually arrives within two days — right when the beans hit their peak."
+        },
+        {
+          "question": "Do you ship outside Belgium?",
+          "answer": "Yes, everywhere in the EU. Shipping is free on subscriptions and on orders over €35."
+        },
+        {
+          "question": "Whole bean or ground?",
+          "answer": "Both. Pick your grind at checkout; we grind seconds before sealing the bag."
+        }
+      ]
+    }
+  ]
+}

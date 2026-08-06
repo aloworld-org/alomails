@@ -198,7 +198,7 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn ensure_personal_project(&self) -> Result<ProjectId> {
         let id = format!("proj_personal_{}", self.user.as_str());
-        sqlx::query(
+        let inserted = sqlx::query(
             "INSERT INTO task_projects (tenant_id, id, name, kind, owner_user_id) \
              VALUES ($1, $2, 'My tasks', 'personal', $3) \
              ON CONFLICT (tenant_id, id) DO NOTHING",
@@ -207,8 +207,16 @@ impl AccountStore {
         .bind(&id)
         .bind(self.user.as_str())
         .execute(&self.pool)
-        .await
-        .map_err(StoreError::Db)?;
+        .await;
+        match inserted {
+            Ok(_) => {}
+            // The tenant was deleted out from under this door (offboarding
+            // racing a request): there is nothing to ensure, and every
+            // tenant-scoped read correctly comes back empty — a deleted
+            // tenant must read as absent, never as an internal error.
+            Err(sqlx::Error::Database(ref db)) if db.code().as_deref() == Some("23503") => {}
+            Err(e) => return Err(StoreError::Db(e)),
+        }
         Ok(ProjectId::new(id))
     }
 
@@ -769,7 +777,10 @@ impl AccountStore {
         .bind(task.as_str())
         .fetch_all(&self.pool)
         .await?;
-        Ok(rows.into_iter().map(AttachmentRow::into_attachment).collect())
+        Ok(rows
+            .into_iter()
+            .map(AttachmentRow::into_attachment)
+            .collect())
     }
 
     /// Attaches an already-uploaded blob to a visible task.
@@ -1115,7 +1126,9 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn add_dependency(&self, task: &TaskId, depends_on: &TaskId) -> Result<()> {
         if task.as_str() == depends_on.as_str() {
-            return Err(StoreError::Conflict("a task cannot depend on itself".into()));
+            return Err(StoreError::Conflict(
+                "a task cannot depend on itself".into(),
+            ));
         }
         if self.task(task).await?.is_none() || self.task(depends_on).await?.is_none() {
             return Err(StoreError::NotFound);

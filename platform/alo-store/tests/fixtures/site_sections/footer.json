@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "footer",
+      "text": "© Nordwind Coffee Roasters, Ostend",
+      "links": [
+        { "label": "Imprint", "href": "/imprint" },
+        { "label": "Privacy", "href": "/privacy" },
+        { "label": "Instagram", "href": "https://instagram.com/nordwindcoffee" },
+        { "label": "hello@nordwind.example", "href": "mailto:hello@nordwind.example" }
+      ]
+    }
+  ]
+}

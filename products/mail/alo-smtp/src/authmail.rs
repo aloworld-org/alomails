@@ -879,22 +879,8 @@ hello",
     async fn rspamd_runs_and_stamps_without_a_resolver() {
         // Happy path with no resolver: Rspamd still runs; a clean verdict
         // accepts and records the x-spam method (no SPF/DKIM/DMARC).
-        use tokio::io::{AsyncReadExt, AsyncWriteExt};
-        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-        let addr = listener.local_addr().unwrap();
-        let server = tokio::spawn(async move {
-            let (mut sock, _) = listener.accept().await.unwrap();
-            let mut buf = [0u8; 4096];
-            let _ = sock.read(&mut buf).await;
-            let body = b"{\"action\":\"no action\",\"score\":0.1}";
-            let resp = format!(
-                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-                body.len()
-            );
-            sock.write_all(resp.as_bytes()).await.unwrap();
-            sock.write_all(body).await.unwrap();
-            sock.flush().await.unwrap();
-        });
+        let (addr, server) =
+            crate::canned_http::serve_once(b"{\"action\":\"no action\",\"score\":0.1}").await;
         let rspamd =
             RspamdClient::from_url(&format!("http://{addr}"), std::time::Duration::from_secs(5))
                 .unwrap();

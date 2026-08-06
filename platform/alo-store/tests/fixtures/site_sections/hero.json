@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "hero",
+      "heading": "Coffee roasted the morning it ships",
+      "subheading": "Small-batch roastery on the Ostend harbour, since 2009.",
+      "image": {
+        "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg",
+        "alt": "Freshly roasted beans pouring from the cooling tray"
+      },
+      "primary_cta": { "label": "Shop roasts", "href": "/shop" },
+      "secondary_cta": { "label": "Our story", "href": "/about" }
+    }
+  ]
+}

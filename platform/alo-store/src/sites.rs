@@ -1,0 +1,456 @@
+//! Sites — a tenant's websites (alo Sites, ADR 0036), reached through the
+//! account door like [`crate::tasks`] and [`crate::spaces`]. Sites are
+//! tenant-wide: every user of the tenant sees and manages all of its sites
+//! (no per-site membership in v1). The `subdomain` column is the module's one
+//! deliberate cross-tenant surface — `<subdomain>.<SITES_DOMAIN>` is a single
+//! public namespace guarded by a global unique index — and the claim check
+//! reveals only taken/free, never the owner (`docs/design/sites.md`).
+
+use serde_json::Value;
+use time::OffsetDateTime;
+
+use crate::account::AccountStore;
+use crate::error::{Result, StoreError};
+use crate::id::SiteId;
+
+/// Subdomain length bounds (DNS label rules, tightened for a public product
+/// namespace: real DNS allows 63 octets, we cap at 40 for URL sanity).
+pub const SUBDOMAIN_MIN_LEN: usize = 3;
+/// See [`SUBDOMAIN_MIN_LEN`].
+pub const SUBDOMAIN_MAX_LEN: usize = 40;
+
+/// A site name is a human label, not an identifier — generous but bounded.
+const SITE_NAME_MAX_CHARS: usize = 120;
+
+/// Subdomains a tenant can never claim: infrastructure labels, mail/protocol
+/// hostnames, product and brand names, and abuse-prone words. Checked after
+/// the syntax rules, so entries here are all lowercase and DNS-safe.
+const RESERVED_SUBDOMAINS: &[&str] = &[
+    // Infrastructure / web convention.
+    "www",
+    "mail",
+    "email",
+    "webmail",
+    "admin",
+    "api",
+    "app",
+    "cdn",
+    "static",
+    "assets",
+    "status",
+    "ftp",
+    "vpn",
+    "ns1",
+    "ns2",
+    "localhost",
+    "internal",
+    "dev",
+    "staging",
+    "test",
+    "demo",
+    // Mail / protocol hostnames a mail platform must keep.
+    "smtp",
+    "imap",
+    "pop",
+    "pop3",
+    "jmap",
+    "dav",
+    "caldav",
+    "carddav",
+    "autodiscover",
+    "autoconfig",
+    "mta-sts",
+    "dkim",
+    "dmarc",
+    "spf",
+    "postmaster",
+    "abuse",
+    "webmaster",
+    "hostmaster",
+    "noreply",
+    "no-reply",
+    // Identity / account surfaces.
+    "login",
+    "auth",
+    "sso",
+    "identity",
+    "account",
+    "accounts",
+    "signup",
+    "register",
+    "oauth",
+    // Brand + product names (the alo suite).
+    "alo",
+    "aloworkplace",
+    "alomails",
+    "sites",
+    "docs",
+    "drive",
+    "tasks",
+    "calendar",
+    "contacts",
+    "chat",
+    "meet",
+    "spaces",
+    "base",
+    "billing",
+    "crm",
+    "help",
+    "support",
+    "security",
+    "blog",
+    "root",
+    "official",
+];
+
+/// Where a site is in its lifecycle. `Live` is set by the publish flow only —
+/// there is no direct status setter on the store.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SiteStatus {
+    /// Being built; nothing is publicly reachable.
+    Draft,
+    /// Published: the public service serves its snapshots.
+    Live,
+}
+
+impl SiteStatus {
+    /// The wire/storage token for this status.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            SiteStatus::Draft => "draft",
+            SiteStatus::Live => "live",
+        }
+    }
+
+    /// Parses a stored/wire token, rejecting anything else.
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "draft" => Some(SiteStatus::Draft),
+            "live" => Some(SiteStatus::Live),
+            _ => None,
+        }
+    }
+}
+
+/// One website of the tenant.
+#[derive(Debug, Clone)]
+pub struct Site {
+    pub id: SiteId,
+    pub name: String,
+    /// The site's label under the public sites domain (globally unique).
+    pub subdomain: String,
+    pub status: SiteStatus,
+    /// Theme tokens as stored; typed theme validation lives with the theme
+    /// model, the store treats it as opaque JSON.
+    pub theme: Value,
+    pub created_by: String,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
+}
+
+/// Validates a subdomain claim: DNS-safe `[a-z0-9-]`, 3–40 chars, no leading
+/// or trailing hyphen, and not a reserved word. The rules are strict on
+/// write — a stored subdomain is always safe to put on the wire as a host
+/// label.
+///
+/// # Errors
+/// [`StoreError::Conflict`] naming the violated rule (safe to surface as a
+/// field-level validation detail).
+pub fn validate_subdomain(subdomain: &str) -> Result<()> {
+    if subdomain.len() < SUBDOMAIN_MIN_LEN || subdomain.len() > SUBDOMAIN_MAX_LEN {
+        return Err(StoreError::Conflict(format!(
+            "subdomain must be {SUBDOMAIN_MIN_LEN}-{SUBDOMAIN_MAX_LEN} characters"
+        )));
+    }
+    if !subdomain
+        .bytes()
+        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+    {
+        return Err(StoreError::Conflict(
+            "subdomain may only contain lowercase letters, digits, and hyphens".to_owned(),
+        ));
+    }
+    if subdomain.starts_with('-') || subdomain.ends_with('-') {
+        return Err(StoreError::Conflict(
+            "subdomain may not start or end with a hyphen".to_owned(),
+        ));
+    }
+    if RESERVED_SUBDOMAINS.contains(&subdomain) {
+        return Err(StoreError::Conflict("subdomain is reserved".to_owned()));
+    }
+    Ok(())
+}
+
+/// Validates a site's display name: non-blank after trimming, bounded.
+fn validate_site_name(name: &str) -> Result<()> {
+    if name.trim().is_empty() {
+        return Err(StoreError::Conflict(
+            "site name must not be empty".to_owned(),
+        ));
+    }
+    if name.chars().count() > SITE_NAME_MAX_CHARS {
+        return Err(StoreError::Conflict(format!(
+            "site name must be at most {SITE_NAME_MAX_CHARS} characters"
+        )));
+    }
+    Ok(())
+}
+
+/// Translates a unique-index violation on the global subdomain namespace into
+/// the taken/free answer — the only information the cross-tenant surface may
+/// reveal. Anything else passes through the standard mapping.
+fn map_subdomain_unique(error: sqlx::Error) -> StoreError {
+    if let sqlx::Error::Database(ref db) = error
+        && db.constraint() == Some("sites_subdomain_unique")
+    {
+        return StoreError::Conflict("subdomain is already taken".to_owned());
+    }
+    error.into()
+}
+
+impl AccountStore {
+    /// Creates a site in `draft` status with an empty theme, claiming
+    /// `subdomain` in the global namespace.
+    ///
+    /// # Errors
+    /// [`StoreError::Conflict`] on an invalid name, an invalid or reserved
+    /// subdomain, or a subdomain already taken (by any tenant — the message
+    /// says taken, nothing more); [`StoreError::Db`] on failure.
+    pub async fn create_site(&self, name: &str, subdomain: &str) -> Result<SiteId> {
+        validate_site_name(name)?;
+        validate_subdomain(subdomain)?;
+        let id = SiteId::generate();
+        sqlx::query(
+            "INSERT INTO sites (tenant_id, id, name, subdomain, created_by) \
+             VALUES ($1, $2, $3, $4, $5)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(name.trim())
+        .bind(subdomain)
+        .bind(self.user.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(map_subdomain_unique)?;
+        Ok(id)
+    }
+
+    /// The tenant's sites, name order.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn sites(&self) -> Result<Vec<Site>> {
+        let rows = sqlx::query_as::<_, SiteRow>(
+            "SELECT id, name, subdomain, status, theme, created_by, created_at, updated_at \
+             FROM sites WHERE tenant_id = $1 ORDER BY lower(name), id",
+        )
+        .bind(self.tenant.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        rows.into_iter().map(SiteRow::into_site).collect()
+    }
+
+    /// A single site of the tenant, or `None` — including when the id belongs
+    /// to another tenant (indistinguishable by design).
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn site(&self, id: &SiteId) -> Result<Option<Site>> {
+        let row = sqlx::query_as::<_, SiteRow>(
+            "SELECT id, name, subdomain, status, theme, created_by, created_at, updated_at \
+             FROM sites WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        row.map(SiteRow::into_site).transpose()
+    }
+
+    /// Renames a site.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the site isn't the tenant's;
+    /// [`StoreError::Conflict`] on an invalid name; [`StoreError::Db`].
+    pub async fn rename_site(&self, id: &SiteId, name: &str) -> Result<()> {
+        validate_site_name(name)?;
+        let done = sqlx::query(
+            "UPDATE sites SET name = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(name.trim())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        if done.rows_affected() == 0 {
+            return Err(StoreError::NotFound);
+        }
+        Ok(())
+    }
+
+    /// Moves a site to a new subdomain, claiming it in the global namespace.
+    /// The old subdomain is released atomically by the same statement.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the site isn't the tenant's;
+    /// [`StoreError::Conflict`] on an invalid, reserved, or taken subdomain;
+    /// [`StoreError::Db`].
+    pub async fn set_site_subdomain(&self, id: &SiteId, subdomain: &str) -> Result<()> {
+        validate_subdomain(subdomain)?;
+        let done = sqlx::query(
+            "UPDATE sites SET subdomain = $3, updated_at = now() \
+             WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(subdomain)
+        .execute(&self.pool)
+        .await
+        .map_err(map_subdomain_unique)?;
+        if done.rows_affected() == 0 {
+            return Err(StoreError::NotFound);
+        }
+        Ok(())
+    }
+
+    /// Deletes a site, releasing its subdomain. Dependent rows (pages,
+    /// snapshots, posts, …) cascade as their tables land.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the site isn't the tenant's;
+    /// [`StoreError::Db`].
+    pub async fn delete_site(&self, id: &SiteId) -> Result<()> {
+        let done = sqlx::query("DELETE FROM sites WHERE tenant_id = $1 AND id = $2")
+            .bind(self.tenant.as_str())
+            .bind(id.as_str())
+            .execute(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+        if done.rows_affected() == 0 {
+            return Err(StoreError::NotFound);
+        }
+        Ok(())
+    }
+
+    /// Whether `subdomain` is free to claim. This is the deliberate
+    /// cross-tenant read: it touches the global unique index and answers
+    /// taken/free only — never who holds it. A syntactically invalid or
+    /// reserved subdomain errs instead, so the UI can show the specific rule.
+    ///
+    /// # Errors
+    /// [`StoreError::Conflict`] on an invalid or reserved subdomain;
+    /// [`StoreError::Db`] on failure.
+    pub async fn subdomain_available(&self, subdomain: &str) -> Result<bool> {
+        validate_subdomain(subdomain)?;
+        let taken: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM sites WHERE subdomain = $1)")
+                .bind(subdomain)
+                .fetch_one(&self.pool)
+                .await
+                .map_err(StoreError::Db)?;
+        Ok(!taken)
+    }
+}
+
+// ---- row types --------------------------------------------------------------
+
+#[derive(sqlx::FromRow)]
+struct SiteRow {
+    id: String,
+    name: String,
+    subdomain: String,
+    status: String,
+    theme: sqlx::types::Json<Value>,
+    created_by: String,
+    created_at: OffsetDateTime,
+    updated_at: OffsetDateTime,
+}
+impl SiteRow {
+    fn into_site(self) -> Result<Site> {
+        Ok(Site {
+            id: SiteId::new(self.id),
+            name: self.name,
+            subdomain: self.subdomain,
+            status: SiteStatus::parse(&self.status).ok_or(StoreError::NotFound)?,
+            theme: self.theme.0,
+            created_by: self.created_by,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn subdomain_rules_accept_dns_safe_labels() {
+        for ok in ["abc", "my-site", "a1b2c3", "x".repeat(40).as_str(), "123"] {
+            assert!(validate_subdomain(ok).is_ok(), "expected valid: {ok}");
+        }
+    }
+
+    #[test]
+    fn subdomain_rules_reject_bad_syntax() {
+        let too_long = "x".repeat(41);
+        for bad in [
+            "",
+            "ab",              // too short
+            too_long.as_str(), // too long
+            "-leading",
+            "trailing-",
+            "Upper",
+            "under_score",
+            "dot.dot",
+            "spa ce",
+            "ünïcode",
+        ] {
+            assert!(
+                matches!(validate_subdomain(bad), Err(StoreError::Conflict(_))),
+                "expected rejection: {bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn subdomain_rules_reject_reserved_words() {
+        for reserved in [
+            "www", "mail", "admin", "api", "smtp", "alo", "sites", "login",
+        ] {
+            assert!(
+                matches!(validate_subdomain(reserved), Err(StoreError::Conflict(_))),
+                "expected reserved: {reserved}"
+            );
+        }
+    }
+
+    #[test]
+    fn reserved_list_entries_all_pass_the_syntax_rules() {
+        // A reserved word that fails syntax would be dead weight — the syntax
+        // check runs first and would already have rejected it.
+        for entry in RESERVED_SUBDOMAINS {
+            assert!(
+                entry.len() >= SUBDOMAIN_MIN_LEN
+                    && entry.len() <= SUBDOMAIN_MAX_LEN
+                    && entry
+                        .bytes()
+                        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+                    && !entry.starts_with('-')
+                    && !entry.ends_with('-'),
+                "reserved entry not DNS-safe or out of bounds: {entry}"
+            );
+        }
+    }
+
+    #[test]
+    fn status_tokens_round_trip() {
+        for status in [SiteStatus::Draft, SiteStatus::Live] {
+            assert_eq!(SiteStatus::parse(status.as_str()), Some(status));
+        }
+        assert_eq!(SiteStatus::parse("published"), None);
+    }
+}

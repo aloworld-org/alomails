@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "team",
+      "heading": "The roasters",
+      "members": [
+        {
+          "name": "Jonas Meer",
+          "role": "Founder & head roaster",
+          "photo": {
+            "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg",
+            "alt": "Jonas Meer at the roasting drum"
+          },
+          "bio": "Twenty years at the drum, still cups every batch."
+        },
+        {
+          "name": "Amara Osei",
+          "role": "Green buyer",
+          "photo": {
+            "blob_id": "2fN8wE5rT9yU3iO7pA1sDg",
+            "alt": "Amara Osei grading green coffee samples"
+          },
+          "bio": "Splits the year between Ostend and the farms we buy from."
+        }
+      ]
+    }
+  ]
+}
