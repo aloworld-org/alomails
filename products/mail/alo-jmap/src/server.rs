@@ -15,9 +15,10 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, agent, ai, api, autoconfig, base, blob, calendar, carddav, contacts, delegates, docs, drive,
-    filters, flagdue, imap_import_route, push, reset_route, schedule, security, session, settings,
-    share, signup_route, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    admin, agent, ai, api, autoconfig, base, billing_customers, billing_products, blob, calendar,
+    carddav, contacts, delegates, docs, drive, filters, flagdue, imap_import_route, push,
+    reset_route, schedule, security, session, settings, share, signup_route, snooze, spaces, tasks,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -199,6 +200,35 @@ pub fn app(state: AppState) -> Router {
             axum::routing::delete(spaces::remove_member),
         )
         .route("/spaces/{id}/modules", post(spaces::set_module))
+        // alo Billing (ADR 0035, wave B1) — the customer list and the price
+        // list. `/billing` is a NEW top-level prefix: the production Caddyfile
+        // needs it added at the next deploy (docs/design/billing.md § Routes).
+        // Archiving is its own POST, never a field on the PATCH, so an
+        // ordinary edit cannot drop a record out of the pickers.
+        .route(
+            "/billing/customers",
+            get(billing_customers::list_customers).post(billing_customers::create_customer),
+        )
+        .route(
+            "/billing/customers/{id}",
+            get(billing_customers::get_customer).patch(billing_customers::update_customer),
+        )
+        .route(
+            "/billing/customers/{id}/archive",
+            post(billing_customers::archive_customer),
+        )
+        .route(
+            "/billing/products",
+            get(billing_products::list_products).post(billing_products::create_product),
+        )
+        .route(
+            "/billing/products/{id}",
+            get(billing_products::get_product).patch(billing_products::update_product),
+        )
+        .route(
+            "/billing/products/{id}/archive",
+            post(billing_products::archive_product),
+        )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))
