@@ -17,6 +17,12 @@ use crate::error::{Result, StoreError};
 use crate::id::{DriveNodeId, SpaceId};
 use crate::spaces::SpaceRole;
 
+/// Largest file we pull back to build a content index. Bigger files stay
+/// name-searchable; we just don't read the whole blob to index its text. Office
+/// files and PDFs are commonly a few MiB, so this is well above the plain-text
+/// range while still bounding the memory/CPU an index build can cost.
+const INDEX_MAX_BYTES: i64 = 12 * 1024 * 1024;
+
 /// Where a node lives — the unit access is scoped to.
 #[derive(Debug, Clone)]
 pub enum DriveLocation {
@@ -137,6 +143,76 @@ impl AccountStore {
         self.require_location_write(&row.location_kind, &row.location_id)
             .await?;
         Ok(row)
+    }
+
+    /// Gate for another module attaching to a Drive node (e.g. alo Base, ADR
+    /// 0032): the caller may **read** the node's location, else `NotFound`.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] / [`StoreError::Db`].
+    pub(crate) async fn drive_require_read(&self, id: &DriveNodeId) -> Result<()> {
+        self.readable_row(id).await.map(|_| ())
+    }
+
+    /// Gate for another module attaching to a Drive node: the caller may
+    /// **write** the node's location, else `NotFound`/`Forbidden`.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] / [`StoreError::Forbidden`] / [`StoreError::Db`].
+    pub(crate) async fn drive_require_write(&self, id: &DriveNodeId) -> Result<()> {
+        self.writable_row(id).await.map(|_| ())
+    }
+
+    /// Whether the caller may write a node they can see: `true` (writable),
+    /// `false` (read-only). `NotFound` if they cannot see it at all — used to
+    /// decide a WOPI editor's edit-vs-view permission.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] / [`StoreError::Db`].
+    pub async fn drive_writable(&self, id: &DriveNodeId) -> Result<bool> {
+        self.readable_row(id).await?; // NotFound if invisible
+        match self.writable_row(id).await {
+            Ok(_) => Ok(true),
+            Err(StoreError::Forbidden) => Ok(false),
+            Err(e) => Err(e),
+        }
+    }
+
+    /// Inserts a bare (blob-less) node — used by attached modules that create a
+    /// Drive node of their own kind (e.g. alo Base's `kind='base'`). Write
+    /// access to the location is enforced.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`]/[`StoreError::Forbidden`] per access;
+    /// [`StoreError::Conflict`] on a bad parent; [`StoreError::Db`].
+    pub(crate) async fn drive_insert_node(
+        &self,
+        loc: &DriveLocation,
+        parent: Option<&DriveNodeId>,
+        kind: &str,
+        name: &str,
+    ) -> Result<DriveNodeId> {
+        let (lkind, lid) = self.loc_parts(loc);
+        self.require_location_write(&lkind, &lid).await?;
+        self.check_parent(&lkind, &lid, parent).await?;
+        let node = DriveNodeId::generate();
+        sqlx::query(
+            "INSERT INTO drive_nodes \
+               (tenant_id, id, location_kind, location_id, parent_id, kind, name, created_by) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(node.as_str())
+        .bind(&lkind)
+        .bind(&lid)
+        .bind(parent.map(DriveNodeId::as_str))
+        .bind(kind)
+        .bind(name)
+        .bind(self.user.as_str())
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(node)
     }
 
     // ---- reads ---------------------------------------------------------------
@@ -310,6 +386,8 @@ impl AccountStore {
         self.insert_version(&mut tx, node.as_str(), 1, &new.blob_id, new.size)
             .await?;
         tx.commit().await.map_err(StoreError::Db)?;
+        // Best-effort content index (never fails the create).
+        self.drive_index_node(node.as_str()).await;
         Ok(node)
     }
 
@@ -349,7 +427,65 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         tx.commit().await.map_err(StoreError::Db)?;
+        // The bytes changed — re-index the node's content (best-effort).
+        self.drive_index_node(id.as_str()).await;
         Ok(next)
+    }
+
+    /// Rebuilds a node's `content` full-text index from its current bytes, when
+    /// they are text-extractable (a text file, an alo Doc, an Office file, or a
+    /// PDF — see [`crate::extract`]). Best-effort: a failure to read the blob or
+    /// parse the text leaves the node without a content index (still
+    /// name-searchable) rather than failing the save that triggered it.
+    /// Extraction runs on the blocking pool, so a slow or panicking parse can't
+    /// stall the async runtime or crash the store.
+    async fn drive_index_node(&self, node: &str) {
+        // Read what we need to decide + extract. A missing/oversized/foreign row
+        // simply means "don't index".
+        let row = sqlx::query_as::<_, (String, Option<String>, Option<String>, i64)>(
+            "SELECT kind, blob_id, content_type, size FROM drive_nodes \
+             WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(node)
+        .fetch_optional(&self.pool)
+        .await;
+        let Ok(Some((kind, Some(blob_id), content_type, size))) = row else {
+            return;
+        };
+        if size > INDEX_MAX_BYTES || !crate::extract::is_extractable(&kind, content_type.as_deref())
+        {
+            return;
+        }
+        // Resolve the blob's hash, then pull its bytes from the blob store.
+        let hash = sqlx::query_scalar::<_, String>(
+            "SELECT hash FROM blobs WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(&blob_id)
+        .fetch_optional(&self.pool)
+        .await;
+        let Ok(Some(hash)) = hash else { return };
+        let Ok(bytes) = self.blobs.get(self.tenant.as_str(), &hash).await else {
+            return;
+        };
+        // Parse off the async runtime; a parser panic becomes a JoinError (→
+        // "not indexed"), never a crash.
+        let text = tokio::task::spawn_blocking(move || {
+            crate::extract::extract_text(&kind, content_type.as_deref(), &bytes)
+        })
+        .await;
+        let Ok(Some(text)) = text else { return };
+        // Set the content vector. Best-effort.
+        let _ = sqlx::query(
+            "UPDATE drive_nodes SET content = to_tsvector('simple', $3) \
+             WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(node)
+        .bind(&text)
+        .execute(&self.pool)
+        .await;
     }
 
     /// Restores an old version by appending it as a NEW current version (history
@@ -436,15 +572,13 @@ impl AccountStore {
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
-        sqlx::query(
-            "UPDATE drive_nodes SET parent_id = $3 WHERE tenant_id = $1 AND id = $2",
-        )
-        .bind(self.tenant.as_str())
-        .bind(id.as_str())
-        .bind(dest_parent.map(DriveNodeId::as_str))
-        .execute(&mut *tx)
-        .await
-        .map_err(StoreError::Db)?;
+        sqlx::query("UPDATE drive_nodes SET parent_id = $3 WHERE tenant_id = $1 AND id = $2")
+            .bind(self.tenant.as_str())
+            .bind(id.as_str())
+            .bind(dest_parent.map(DriveNodeId::as_str))
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
         tx.commit().await.map_err(StoreError::Db)?;
         Ok(())
     }
@@ -512,7 +646,8 @@ impl AccountStore {
             .await
             .map_err(StoreError::Db)?;
             if let Some(blob) = &n.blob_id {
-                self.insert_version(&mut tx, new_id, 1, blob, n.size).await?;
+                self.insert_version(&mut tx, new_id, 1, blob, n.size)
+                    .await?;
             }
         }
         tx.commit().await.map_err(StoreError::Db)?;
@@ -579,12 +714,7 @@ impl AccountStore {
     }
 
     /// A destination parent must be a live folder in the same location.
-    async fn check_parent(
-        &self,
-        kind: &str,
-        id: &str,
-        parent: Option<&DriveNodeId>,
-    ) -> Result<()> {
+    async fn check_parent(&self, kind: &str, id: &str, parent: Option<&DriveNodeId>) -> Result<()> {
         let Some(parent) = parent else {
             return Ok(());
         };

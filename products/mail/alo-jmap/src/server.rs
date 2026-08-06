@@ -15,9 +15,9 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, ai, api, autoconfig, blob, calendar, carddav, contacts, delegates, docs, drive, filters,
-    flagdue, imap_import_route, push, reset_route, schedule, security, session, settings, share,
-    signup_route, snooze, spaces, tasks, unsubscribe,
+    admin, agent, ai, api, autoconfig, base, blob, calendar, carddav, contacts, delegates, docs, drive,
+    filters, flagdue, imap_import_route, push, reset_route, schedule, security, session, settings,
+    share, signup_route, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -59,6 +59,28 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/ai/extract-tasks",
             post(ai::extract_tasks).layer(DefaultBodyLimit::max(ai::MAX_SUMMARIZE_BYTES)),
+        )
+        // Ask across the workspace (ADR 0029): cited answers over access-scoped
+        // retrieval of files, tasks, and mail.
+        .route(
+            "/ai/ask",
+            post(ai::ask).layer(DefaultBodyLimit::max(ai::MAX_ASK_BYTES)),
+        )
+        // Document AI (ADR 0029 §3): propose text for the alo Doc editor to
+        // apply only on approval.
+        .route(
+            "/ai/compose",
+            post(ai::compose).layer(DefaultBodyLimit::max(ai::MAX_SUMMARIZE_BYTES)),
+        )
+        // "Ask alo" agent (ADR 0034): answer OR propose one action; a separate,
+        // approval-gated route is the only one that executes.
+        .route(
+            "/ai/agent",
+            post(agent::agent).layer(DefaultBodyLimit::max(ai::MAX_ASK_BYTES)),
+        )
+        .route(
+            "/ai/agent/execute",
+            post(agent::agent_execute).layer(DefaultBodyLimit::max(ai::MAX_ASK_BYTES)),
         )
         // Snooze: hide conversations until a chosen time (a background sweeper wakes them).
         .route("/snooze", post(snooze::snooze))
@@ -163,7 +185,10 @@ pub fn app(state: AppState) -> Router {
             axum::routing::delete(tasks::remove_dependency),
         )
         // Spaces — the membership spine (ADR 0026). Static paths before /{id}.
-        .route("/spaces", get(spaces::list_spaces).post(spaces::create_space))
+        .route(
+            "/spaces",
+            get(spaces::list_spaces).post(spaces::create_space),
+        )
         .route(
             "/spaces/{id}",
             get(spaces::get_space).put(spaces::update_space),
@@ -181,9 +206,7 @@ pub fn app(state: AppState) -> Router {
         .route("/drive/files", post(drive::create_file))
         .route(
             "/drive/nodes/{id}",
-            get(drive::get_node)
-                .put(drive::rename)
-                .delete(drive::purge),
+            get(drive::get_node).put(drive::rename).delete(drive::purge),
         )
         .route("/drive/nodes/{id}/move", post(drive::move_node))
         .route("/drive/nodes/{id}/copy", post(drive::copy_node))
@@ -198,6 +221,28 @@ pub fn app(state: AppState) -> Router {
             post(drive::restore_version),
         )
         .route("/drive/nodes/{id}/download", get(drive::download))
+        // Office editing (Collabora over WOPI, ADR 0010): mint a token, then the
+        // token-authed WOPI host endpoints Collabora calls to load/save bytes.
+        .route("/drive/nodes/{id}/office", get(wopi::office_token))
+        .route("/wopi/files/{id}", get(wopi::check_file_info))
+        .route(
+            "/wopi/files/{id}/contents",
+            get(wopi::get_file).post(wopi::put_file),
+        )
+        // alo Base (ADR 0032) — relational data under a base drive node. Distinct
+        // literal prefixes so a node-id param never collides with a literal.
+        .route("/drive/base", post(base::create_base))
+        .route("/drive/base/{node}", get(base::get_base))
+        .route("/drive/base/{node}/tables", post(base::add_table))
+        .route("/drive/base-tables/{table}/fields", post(base::add_field))
+        .route("/drive/base-tables/{table}/records", post(base::add_record))
+        .route("/drive/base-tables/{table}/views", post(base::add_view))
+        .route(
+            "/drive/base-records/{record}",
+            put(base::update_record).delete(base::delete_record),
+        )
+        // Workspace search (ADR 0029): files + tasks by name/title.
+        .route("/search", get(workspace_search::search))
         .route("/contacts", get(contacts::list))
         // Address-book import (a .vcf upload) and export (whole book as .vcf).
         .route("/contacts/import", post(contacts::import))

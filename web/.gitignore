@@ -1,0 +1,5 @@
+
+# Vite build outputs for the per-surface deploys
+/dist-workplace/
+/dist-drive/
+/dist-mail/

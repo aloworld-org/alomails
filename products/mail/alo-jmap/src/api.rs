@@ -1309,7 +1309,7 @@ fn compose_body_html(props: &Value) -> Option<String> {
 }
 
 /// The domain of an addr-spec, for seeding the `Message-ID`.
-fn domain_of(email: &str) -> String {
+pub(crate) fn domain_of(email: &str) -> String {
     match email.rsplit('@').next() {
         Some(d) if !d.is_empty() && d != email => d.to_owned(),
         _ => "localhost".to_owned(),
@@ -1317,7 +1317,7 @@ fn domain_of(email: &str) -> String {
 }
 
 /// A unique-enough local part for a generated `Message-ID`.
-fn new_message_token() -> String {
+pub(crate) fn new_message_token() -> String {
     use std::time::{SystemTime, UNIX_EPOCH};
     let nanos = SystemTime::now()
         .duration_since(UNIX_EPOCH)

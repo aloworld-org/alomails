@@ -13,9 +13,11 @@
 //! IdP.
 
 pub mod admin;
+pub mod agent;
 pub mod ai;
 pub mod api;
 pub mod autoconfig;
+pub mod base;
 pub mod blob;
 pub mod calendar;
 pub mod carddav;
@@ -46,6 +48,8 @@ pub mod snooze;
 pub mod spaces;
 pub mod state;
 pub mod submission;
+pub mod wopi;
+pub mod workspace_search;
 pub mod tasks;
 pub mod unsubscribe;
 

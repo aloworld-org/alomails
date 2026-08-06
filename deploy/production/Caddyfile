@@ -39,7 +39,7 @@ https://{$DOMAIN} {
 	# endpoint (discovery, authorize, token, userinfo, jwks, revoke). Everything
 	# else is the web app. `/auth/token` is backend; `/auth/callback` is a client
 	# route (falls through to the SPA).
-	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /calendar/* /tasks /tasks/* /spaces /spaces/* /drive/* /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
+	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /calendar/* /tasks /tasks/* /spaces /spaces/* /drive/* /wopi/* /search /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
 	handle @backend {
 		reverse_proxy alo-jmap:8080
 	}
@@ -52,6 +52,15 @@ https://{$DOMAIN} {
 	handle_path /download/* {
 		root * /srv-downloads
 		file_server
+	}
+
+	# Collabora Online (ADR 0010): the office editor bundle and its WOPI
+	# discovery are served same-origin by proxying to the pinned engine
+	# container. Must come BEFORE the SPA fallback, or /hosting/discovery is
+	# swallowed by index.html and the Office editor can't find its URL.
+	@collabora path /browser/* /cool/* /lool/* /hosting/*
+	handle @collabora {
+		reverse_proxy collabora:9980
 	}
 
 	# The web app: static files with client-side-routing fallback to index.html.
@@ -118,6 +127,171 @@ https://alomails.com {
 		file_server
 		header {
 			Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'"
+			X-Content-Type-Options nosniff
+			Referrer-Policy strict-origin-when-cross-origin
+			-Server
+		}
+	}
+}
+
+# ── aloworkplace.com — landing page (apex) + the workspace app (app subdomain) ──
+# Same split as alomails: the apex aloworkplace.com is a static marketing landing
+# (/srv-workplace-landing), the workspace app (all products, one login) lives at
+# app.aloworkplace.com (/srv-workplace) and talks to the shared alo-jmap
+# same-origin so login stays first-party. ONE certbot cert covers all three names
+# (aloworkplace.com + www + app as SANs, in /certs/live/aloworkplace.com/). These
+# blocks must NOT load until that cert exists — bring app online + expand the
+# cert with init-workplace-app.sh (seed already done for the apex).
+http://aloworkplace.com, http://www.aloworkplace.com, http://app.aloworkplace.com {
+	handle /.well-known/acme-challenge/* {
+		root * /var/www/certbot
+		file_server
+	}
+	handle {
+		redir https://{host}{uri} permanent
+	}
+}
+
+# www → apex canonical.
+https://www.aloworkplace.com {
+	tls /certs/live/aloworkplace.com/fullchain.pem /certs/live/aloworkplace.com/privkey.pem
+	redir https://aloworkplace.com{uri} permanent
+}
+
+# The apex: the static marketing landing (its own repo, aloworkplace-website).
+https://aloworkplace.com {
+	tls /certs/live/aloworkplace.com/fullchain.pem /certs/live/aloworkplace.com/privkey.pem
+	encode zstd gzip
+
+	handle_path /download/* {
+		root * /srv-downloads
+		file_server
+	}
+
+	handle {
+		root * /srv-workplace-landing
+		file_server
+		header {
+			Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'"
+			X-Content-Type-Options nosniff
+			Referrer-Policy strict-origin-when-cross-origin
+			-Server
+		}
+	}
+}
+
+# app.aloworkplace.com: the workspace app (all products, one login). Same cert as
+# the apex (app is a SAN). Same backend paths as mail, same-origin.
+https://app.aloworkplace.com {
+	tls /certs/live/aloworkplace.com/fullchain.pem /certs/live/aloworkplace.com/privkey.pem
+	encode zstd gzip
+
+	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /calendar/* /tasks /tasks/* /spaces /spaces/* /drive/* /wopi/* /search /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
+	handle @backend {
+		reverse_proxy alo-jmap:8080
+	}
+
+
+	handle_path /download/* {
+		root * /srv-downloads
+		file_server
+	}
+
+	# Collabora Online (office editor): its assets + websocket editing traffic,
+	# same-origin so the app can embed it without CSP/CORS friction.
+	@collabora path /browser/* /cool/* /lool/* /hosting/*
+	handle @collabora {
+		reverse_proxy collabora:9980
+	}
+
+	# The workspace SPA (a separate build from the mail app).
+	handle {
+		root * /srv-workplace
+		try_files {path} /index.html
+		file_server
+		header {
+			Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+			X-Content-Type-Options nosniff
+			Referrer-Policy strict-origin-when-cross-origin
+			-Server
+		}
+	}
+}
+
+# ── alodrives.com — landing page (apex) + the standalone Drive app (app subdomain)
+# Same split as aloworkplace: the apex alodrives.com is a static marketing
+# landing (/srv-drive-landing, its own repo alodrives-website), the Drive app
+# (a Drive-only build) lives at app.alodrives.com (/srv-drive), shared alo-jmap
+# backend, same-origin. ONE certbot cert covers alodrives.com + www + app. These
+# blocks must NOT load until that cert exists — bring online with init-alodrives.sh.
+http://alodrives.com, http://www.alodrives.com, http://app.alodrives.com {
+	handle /.well-known/acme-challenge/* {
+		root * /var/www/certbot
+		file_server
+	}
+	handle {
+		redir https://{host}{uri} permanent
+	}
+}
+
+# www → apex canonical.
+https://www.alodrives.com {
+	tls /certs/live/alodrives.com/fullchain.pem /certs/live/alodrives.com/privkey.pem
+	redir https://alodrives.com{uri} permanent
+}
+
+# The apex: the static marketing landing (its own repo, alodrives-website).
+https://alodrives.com {
+	tls /certs/live/alodrives.com/fullchain.pem /certs/live/alodrives.com/privkey.pem
+	encode zstd gzip
+
+	handle_path /download/* {
+		root * /srv-downloads
+		file_server
+	}
+
+	handle {
+		root * /srv-drive-landing
+		file_server
+		header {
+			Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'"
+			X-Content-Type-Options nosniff
+			Referrer-Policy strict-origin-when-cross-origin
+			-Server
+		}
+	}
+}
+
+# app.alodrives.com: the standalone Drive app (Drive-only build). Same cert as
+# the apex (app is a SAN). Same backend paths as mail, same-origin.
+https://app.alodrives.com {
+	tls /certs/live/alodrives.com/fullchain.pem /certs/live/alodrives.com/privkey.pem
+	encode zstd gzip
+
+	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /calendar/* /tasks /tasks/* /spaces /spaces/* /drive/* /wopi/* /search /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
+	handle @backend {
+		reverse_proxy alo-jmap:8080
+	}
+
+
+	handle_path /download/* {
+		root * /srv-downloads
+		file_server
+	}
+
+	# Collabora Online (office editor): its assets + websocket editing traffic.
+	@collabora path /browser/* /cool/* /lool/* /hosting/*
+	handle @collabora {
+		reverse_proxy collabora:9980
+	}
+
+	# The Drive-only SPA.
+	handle {
+		root * /srv-drive
+		try_files {path} /index.html
+		file_server
+		header {
+			Content-Security-Policy "default-src 'self'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
 			X-Content-Type-Options nosniff
 			Referrer-Policy strict-origin-when-cross-origin
 			-Server

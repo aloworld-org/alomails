@@ -614,7 +614,7 @@ export interface SpaceDetailDto {
 
 // ---- Drive (ADR 0027) -------------------------------------------------------
 
-export type DriveNodeKind = "folder" | "file" | "doc" | "sheet" | "slides";
+export type DriveNodeKind = "folder" | "file" | "doc" | "sheet" | "slides" | "base";
 
 /** A node in the Drive tree. `space` is the Space id when it lives in a Space,
  *  or null for the caller's personal My Files. */
@@ -642,4 +642,92 @@ export interface DriveVersionDto {
   size: number;
   createdBy: string;
   createdAt: string;
+}
+
+// ---- alo Base (ADR 0032) ----------------------------------------------------
+
+export type BaseFieldType =
+  | "text" | "number" | "date" | "checkbox" | "select"
+  | "multiselect" | "attachment" | "person" | "link";
+
+export type BaseViewKind = "grid" | "board" | "calendar" | "gallery";
+
+export interface BaseFieldDto {
+  id: string;
+  name: string;
+  type: BaseFieldType;
+  options: Record<string, unknown>;
+}
+
+export interface BaseViewDto {
+  id: string;
+  kind: BaseViewKind;
+  name: string;
+  config: Record<string, unknown>;
+}
+
+export interface BaseRecordDto {
+  id: string;
+  /** Cell values keyed by field id. */
+  cells: Record<string, unknown>;
+}
+
+export interface BaseTableDto {
+  id: string;
+  name: string;
+  fields: BaseFieldDto[];
+  views: BaseViewDto[];
+  records: BaseRecordDto[];
+}
+
+/** A whole Base: its tables, each with fields, views, and records. */
+export interface BaseDto {
+  nodeId: string;
+  tables: BaseTableDto[];
+}
+
+// ---- Workspace search (ADR 0029) --------------------------------------------
+
+/** One search result: a Drive node (kind folder/file/doc/base), a task, or a
+ * mail message (kind "message"). */
+export interface SearchHitDto {
+  kind: string;
+  id: string;
+  title: string;
+  /** The Space id when it's a Space file, else null (personal / task / mail). */
+  space: string | null;
+}
+
+/** Answer from "ask your workspace" (ADR 0029). `answer` is the cited text, or
+ * null when no model produced one; `reason` says why (no model configured, or
+ * the backend was unreachable). `sources` — the access-scoped matches — are
+ * always present, so the UI shows results even when the AI half is unavailable. */
+export interface AiAnswerDto {
+  answer: string | null;
+  reason: "unconfigured" | "unreachable" | null;
+  sources: SearchHitDto[];
+}
+
+/** An action the "Ask alo" agent proposes (ADR 0034) — shown for approval, run
+ *  only via `executeAgentAction`. `say` is a one-line human description. */
+export interface AgentActionDto {
+  tool: string;
+  args: Record<string, unknown>;
+  say: string;
+}
+
+/** The agent's reply: an answer, or a proposed action, over the same
+ *  access-scoped sources as Ask AI. Exactly one of `answer` / `action` is set
+ *  (both null when AI is off/unreachable — `reason` says which). */
+export interface AgentAnswerDto {
+  answer: string | null;
+  action: AgentActionDto | null;
+  reason: "unconfigured" | "unreachable" | null;
+  sources: SearchHitDto[];
+}
+
+/** Result of executing an approved agent action. */
+export interface AgentExecuteResultDto {
+  ok: boolean;
+  result: { kind: string; id: string; title?: string };
 }

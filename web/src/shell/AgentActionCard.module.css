@@ -1,0 +1,123 @@
+/* Rich approval card for a proposed agent action (ADR 0034). Uses the shared
+   design tokens so it inherits light/dark automatically. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.iconWrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  background: var(--accent-tint);
+}
+.title {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+}
+.field {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.fieldLabel {
+  flex: none;
+  min-width: 72px;
+  color: var(--text-tertiary);
+}
+.fieldValue {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.body {
+  margin: var(--space-1) 0 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+/* Outward, irreversible action (send) — a quiet caution, not an error. */
+.caution {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--warning);
+}
+.caution svg {
+  flex: none;
+}
+
+.buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+.approve,
+.discard {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  min-height: 32px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+.approve {
+  color: var(--on-accent, #fff);
+  background: var(--accent);
+}
+.approve:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+.discard {
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+}
+.discard:hover:not(:disabled) {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+.approve:disabled,
+.discard:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

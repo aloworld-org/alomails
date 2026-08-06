@@ -1,14 +1,15 @@
 // Surface pieces common to every product built on the mail core: the Home and
 // Mail modules and the tenant-admin console. No suite-only imports live here,
-// so this file (and everything it pulls in) ships in alomails unchanged.
-import { Calendar, HardDrive, Home, ListChecks, Mail, Shield } from "lucide-react";
+// so this file (and everything it pulls in) ships in alomails unchanged. Drive
+// is NOT here — it is its own product (alodrives), present in the workspace
+// surface, not inside the mail app.
+import { Calendar, Home, ListChecks, Mail, Shield } from "lucide-react";
 
 import { strings } from "../i18n";
 import { HomeModule } from "../home";
 import { MailModule } from "../mail";
 import { AgendaModule } from "../agenda";
 import { TasksModule } from "../tasks";
-import { DriveModule } from "../drive";
 import { AdminConsole } from "../admin";
 import type { ProductConsole, ProductModule } from "./types";
 
@@ -44,14 +45,6 @@ export const sharedModules: ProductModule[] = [
     Icon: ListChecks,
     enabled: true,
     element: () => <TasksModule />,
-  },
-  {
-    id: "drive",
-    path: "/drive",
-    label: strings.moduleDrive,
-    Icon: HardDrive,
-    enabled: true,
-    element: () => <DriveModule />,
   },
 ];
 

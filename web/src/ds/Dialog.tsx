@@ -1,4 +1,5 @@
 // Branded, centred dialogs — our replacement for native window.confirm /
+// The context itself lives in DialogContext.ts so Fast Refresh keeps its identity.
 // window.prompt, which render the webview's own "tauri.localhost says" chrome in
 // the desktop app (and a bare browser dialog on the web). A single provider
 // renders one modal; `useDialogs()` exposes promise-returning confirm/prompt/
@@ -6,9 +7,7 @@
 //   if (!(await confirm({ message }))) return;
 //   const name = (await prompt({ message }))?.trim();
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -18,51 +17,17 @@ import type { ReactNode } from "react";
 
 import { strings } from "../i18n";
 import { Button } from "./Button";
+import {
+  DialogContext,
+  type Dialogs,
+  type PromptOptions,
+} from "./DialogContext";
 import styles from "./Dialog.module.css";
-
-interface ConfirmOptions {
-  title?: string;
-  message: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  /** Style the confirm action as destructive (used for deletes). */
-  danger?: boolean;
-}
-
-interface PromptOptions extends ConfirmOptions {
-  placeholder?: string;
-  defaultValue?: string;
-}
-
-interface AlertOptions {
-  title?: string;
-  message: string;
-  confirmLabel?: string;
-}
-
-export interface Dialogs {
-  /** Ask yes/no. Resolves true on confirm, false on cancel/escape/scrim. */
-  confirm(options: ConfirmOptions): Promise<boolean>;
-  /** Ask for a line of text. Resolves the value on confirm, null on cancel. */
-  prompt(options: PromptOptions): Promise<string | null>;
-  /** Tell the user something. Resolves when dismissed. */
-  alert(options: AlertOptions): Promise<void>;
-}
 
 type Kind = "confirm" | "prompt" | "alert";
 
 interface Request extends PromptOptions {
   kind: Kind;
-}
-
-const DialogContext = createContext<Dialogs | null>(null);
-
-export function useDialogs(): Dialogs {
-  const ctx = useContext(DialogContext);
-  if (ctx === null) {
-    throw new Error("useDialogs must be used within <DialogProvider>");
-  }
-  return ctx;
 }
 
 export function DialogProvider({ children }: { children: ReactNode }) {
@@ -132,6 +97,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
             <input
               ref={inputRef}
               className={styles.input}
+              name="dialog-value"
+              autoComplete="off"
+              aria-label={request.title ?? request.message}
               value={value}
               placeholder={request.placeholder}
               onChange={(e) => setValue(e.target.value)}

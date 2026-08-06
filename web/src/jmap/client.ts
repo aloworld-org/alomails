@@ -51,6 +51,13 @@ import {
   type SpaceRole,
   type DriveNodeDto,
   type DriveVersionDto,
+  type BaseDto,
+  type BaseFieldType,
+  type BaseViewKind,
+  type SearchHitDto,
+  type AiAnswerDto,
+  type AgentAnswerDto,
+  type AgentExecuteResultDto,
 } from "./types";
 import { API_BASE } from "../platform/runtime";
 
@@ -1176,7 +1183,12 @@ export class JmapClient {
   async uploadFile(file: File): Promise<{ blobId: string; type: string; size: number }> {
     const session = await this.session();
     const accountId = await this.accountId();
-    const url = session.uploadUrl.replace("{accountId}", encodeURIComponent(accountId));
+    const absolute = session.uploadUrl.replace("{accountId}", encodeURIComponent(accountId));
+    // The session's uploadUrl is absolute (the server's own origin). Use only its
+    // path against our API base — same-origin in the browser (proxied in dev, so
+    // no CORS), and the hosted server in the desktop app — like every other call.
+    const { pathname, search } = new URL(absolute, API_BASE);
+    const url = `${API_BASE}${pathname}${search}`;
     const res = await this.#fetch(url, {
       method: "POST",
       headers: { "content-type": file.type.length > 0 ? file.type : "application/octet-stream" },
@@ -1254,6 +1266,14 @@ export class JmapClient {
     const res = await this.#fetch(`${API_BASE}/drive/list?${q.toString()}`);
     if (!res.ok) throw new JmapError(`driveList ${res.status}`);
     return ((await res.json()) as { nodes: DriveNodeDto[] }).nodes;
+  }
+
+  /** A single Drive node the caller can read (for opening a search result). */
+  async driveNode(id: string): Promise<DriveNodeDto | null> {
+    const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}`);
+    if (res.status === 404) return null;
+    if (!res.ok) throw new JmapError(`driveNode ${res.status}`);
+    return ((await res.json()) as { node: DriveNodeDto }).node;
   }
 
   /** The trashed nodes of a location. */
@@ -1371,6 +1391,275 @@ export class JmapClient {
     const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}/download`);
     if (!res.ok) throw new JmapError(`driveDownload ${res.status}`);
     return res.blob();
+  }
+
+  /** Mint a WOPI token to open a file in the Collabora office editor. */
+  async driveOfficeToken(id: string): Promise<string> {
+    const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}/office`);
+    if (!res.ok) throw new JmapError(`driveOfficeToken ${res.status}`);
+    return ((await res.json()) as { token: string }).token;
+  }
+
+  /** Workspace search: files + tasks by name/title (ADR 0029). */
+  async search(query: string): Promise<SearchHitDto[]> {
+    const res = await this.#fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+    if (!res.ok) throw new JmapError(`search ${res.status}`);
+    return ((await res.json()) as { hits: SearchHitDto[] }).hits;
+  }
+
+  /** Ask a question across the workspace (ADR 0029): a cited answer over the
+   * caller's access-scoped files, tasks, and mail. The matches come back even
+   * when no model is configured (`answer` null, `reason` set), so the caller
+   * can always show results. */
+  async askWorkspace(query: string): Promise<AiAnswerDto> {
+    const res = await this.#fetch(`${API_BASE}/ai/ask`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ q: query }),
+    });
+    if (!res.ok) throw new JmapError(`ask ${res.status}`);
+    return (await res.json()) as AiAnswerDto;
+  }
+
+  /** The "Ask alo" agent (ADR 0034): like `askWorkspace`, but the model may
+   * return a *proposed action* instead of an answer. Nothing is executed here —
+   * a returned `action` must be approved by the user, which then calls
+   * `executeAgentAction`. Matches come back even with no model configured. */
+  async askAgent(query: string): Promise<AgentAnswerDto> {
+    const res = await this.#fetch(`${API_BASE}/ai/agent`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ q: query }),
+    });
+    if (!res.ok) throw new JmapError(`agent ${res.status}`);
+    return (await res.json()) as AgentAnswerDto;
+  }
+
+  /** Execute an agent action the user approved (ADR 0034). The only path that
+   * acts; the server re-validates the tool + args and runs it within the caller's
+   * tenant. Throws on any non-2xx so the caller can surface a failure. */
+  async executeAgentAction(
+    tool: string,
+    args: Record<string, unknown>,
+  ): Promise<AgentExecuteResultDto> {
+    const res = await this.#fetch(`${API_BASE}/ai/agent/execute`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tool, args }),
+    });
+    if (!res.ok) throw new JmapError(`agent/execute ${res.status}`);
+    return (await res.json()) as AgentExecuteResultDto;
+  }
+
+  /** Propose document text from an instruction + the current doc (ADR 0029 §3).
+   * Returns proposed Markdown the caller shows for approval; throws if AI is
+   * unavailable (the editor then surfaces a hint). Never applies anything
+   * itself — approval happens in the editor. */
+  async composeDoc(instruction: string, context: string): Promise<string> {
+    const res = await this.#fetch(`${API_BASE}/ai/compose`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ instruction, context }),
+    });
+    if (!res.ok) throw new JmapError(`compose ${res.status}`);
+    return ((await res.json()) as { proposal: string }).proposal;
+  }
+
+  /** Append a new version to a node from an already-uploaded blob. */
+  async driveAddVersion(id: string, blobId: string, size: number): Promise<void> {
+    const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}/versions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ blobId, size }),
+    });
+    if (!res.ok) throw new JmapError(`driveAddVersion ${res.status}`);
+  }
+
+  // ---- alo Doc (ADR 0031): a doc is a drive node (kind=doc) whose blob holds a
+  //      BlockNote block tree (JSON). Content in a blob, versioned by Drive.
+
+  /** Create an empty alo Doc and return its node id. */
+  async driveCreateDoc(space: string | null, parent: string | null, name: string): Promise<string> {
+    const { blobId, size } = await this.uploadFile(
+      new File(["[]"], `${name}.json`, { type: "application/json" }),
+    );
+    const res = await this.#fetch(`${API_BASE}/drive/files`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        space,
+        parent,
+        name,
+        blobId,
+        size,
+        contentType: "application/json",
+        kind: "doc",
+      }),
+    });
+    if (!res.ok) throw new JmapError(`driveCreateDoc ${res.status}`);
+    return ((await res.json()) as { id: string }).id;
+  }
+
+  /** Load an alo Doc's block content (the parsed BlockNote document). */
+  async driveDocContent(id: string): Promise<unknown[]> {
+    const text = await (await this.driveDownload(id)).text();
+    if (text.trim() === "") return [];
+    try {
+      const parsed = JSON.parse(text);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  /** Save an alo Doc's block content as a new version. */
+  async driveSaveDoc(id: string, content: unknown[]): Promise<void> {
+    const json = JSON.stringify(content);
+    const { blobId, size } = await this.uploadFile(
+      new File([json], "doc.json", { type: "application/json" }),
+    );
+    await this.driveAddVersion(id, blobId, size);
+  }
+
+  /** Create an alo Sheet (a Univer workbook): a drive node whose blob holds the
+   *  workbook snapshot JSON. Starts empty ("{}" → a blank default workbook). */
+  async driveCreateSheet(space: string | null, parent: string | null, name: string): Promise<string> {
+    const { blobId, size } = await this.uploadFile(
+      new File(["{}"], `${name}.json`, { type: "application/json" }),
+    );
+    const res = await this.#fetch(`${API_BASE}/drive/files`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ space, parent, name, blobId, size, contentType: "application/json", kind: "sheet" }),
+    });
+    if (!res.ok) throw new JmapError(`driveCreateSheet ${res.status}`);
+    return ((await res.json()) as { id: string }).id;
+  }
+
+  /** Load an alo Sheet's workbook snapshot (the parsed Univer object). */
+  async driveSheetContent(id: string): Promise<Record<string, unknown>> {
+    const text = await (await this.driveDownload(id)).text();
+    if (text.trim() === "") return {};
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      return parsed !== null && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
+    } catch {
+      return {};
+    }
+  }
+
+  /** Save an alo Sheet's workbook snapshot as a new version. */
+  async driveSaveSheet(id: string, workbook: Record<string, unknown>): Promise<void> {
+    const { blobId, size } = await this.uploadFile(
+      new File([JSON.stringify(workbook)], "sheet.json", { type: "application/json" }),
+    );
+    await this.driveAddVersion(id, blobId, size);
+  }
+
+  // ---- alo Base (ADR 0032): a relational base is a drive node (kind=base)
+  //      whose tables/fields/records/views are relational data.
+
+  /** Create a Base (its node + a default table). Returns the base node id. */
+  async createBase(space: string | null, parent: string | null, name: string): Promise<string> {
+    const res = await this.#fetch(`${API_BASE}/drive/base`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ space, parent, name }),
+    });
+    if (!res.ok) throw new JmapError(`createBase ${res.status}`);
+    return ((await res.json()) as { nodeId: string }).nodeId;
+  }
+
+  /** The whole Base at a node. */
+  async base(nodeId: string): Promise<BaseDto> {
+    const res = await this.#fetch(`${API_BASE}/drive/base/${encodeURIComponent(nodeId)}`);
+    if (!res.ok) throw new JmapError(`base ${res.status}`);
+    return (await res.json()) as BaseDto;
+  }
+
+  /** Add a table to a Base. */
+  async baseAddTable(nodeId: string, name: string): Promise<string> {
+    const res = await this.#fetch(`${API_BASE}/drive/base/${encodeURIComponent(nodeId)}/tables`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    if (!res.ok) throw new JmapError(`baseAddTable ${res.status}`);
+    return ((await res.json()) as { id: string }).id;
+  }
+
+  /** Add a typed field (column) to a table. */
+  async baseAddField(
+    tableId: string,
+    name: string,
+    type: BaseFieldType,
+    options?: Record<string, unknown>,
+  ): Promise<string> {
+    const res = await this.#fetch(
+      `${API_BASE}/drive/base-tables/${encodeURIComponent(tableId)}/fields`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name, type, options: options ?? {} }),
+      },
+    );
+    if (!res.ok) throw new JmapError(`baseAddField ${res.status}`);
+    return ((await res.json()) as { id: string }).id;
+  }
+
+  /** Add a record (row) to a table. */
+  async baseAddRecord(tableId: string, cells?: Record<string, unknown>): Promise<string> {
+    const res = await this.#fetch(
+      `${API_BASE}/drive/base-tables/${encodeURIComponent(tableId)}/records`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ cells: cells ?? {} }),
+      },
+    );
+    if (!res.ok) throw new JmapError(`baseAddRecord ${res.status}`);
+    return ((await res.json()) as { id: string }).id;
+  }
+
+  /** Replace a record's cells. */
+  async baseUpdateRecord(recordId: string, cells: Record<string, unknown>): Promise<void> {
+    const res = await this.#fetch(
+      `${API_BASE}/drive/base-records/${encodeURIComponent(recordId)}`,
+      {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ cells }),
+      },
+    );
+    if (!res.ok) throw new JmapError(`baseUpdateRecord ${res.status}`);
+  }
+
+  /** Delete a record. */
+  async baseDeleteRecord(recordId: string): Promise<void> {
+    const res = await this.#fetch(
+      `${API_BASE}/drive/base-records/${encodeURIComponent(recordId)}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) throw new JmapError(`baseDeleteRecord ${res.status}`);
+  }
+
+  /** Add a view over a table. */
+  async baseAddView(
+    tableId: string,
+    kind: BaseViewKind,
+    name: string,
+    config?: Record<string, unknown>,
+  ): Promise<string> {
+    const res = await this.#fetch(
+      `${API_BASE}/drive/base-tables/${encodeURIComponent(tableId)}/views`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ kind, name, config: config ?? {} }),
+      },
+    );
+    if (!res.ok) throw new JmapError(`baseAddView ${res.status}`);
+    return ((await res.json()) as { id: string }).id;
   }
 
   /** Upload a large file as an expiring public share link (alo Transfer),

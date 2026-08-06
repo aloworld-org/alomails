@@ -177,6 +177,22 @@ opaque_id!(
     /// A node in the Drive tree: a folder, file, or document (ADR 0027).
     DriveNodeId
 );
+opaque_id!(
+    /// A table within an alo Base (ADR 0032).
+    BaseTableId
+);
+opaque_id!(
+    /// A typed field (column) of a Base table.
+    BaseFieldId
+);
+opaque_id!(
+    /// A record (row) in a Base table.
+    BaseRecordId
+);
+opaque_id!(
+    /// A saved view over a Base table.
+    BaseViewId
+);
 
 #[cfg(test)]
 mod tests {

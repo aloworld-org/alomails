@@ -177,7 +177,11 @@ export function ProviderModal({ entry, provider, makeDefaultOnSave, onClose, onS
                       addModel();
                     }
                   }}
-                  placeholder={models.length === 0 ? (entry.needsKey ? "gpt-4o-mini" : "llama3.2") : strings.providerModelPlaceholder}
+                  placeholder={
+                    models.length === 0
+                      ? (entry.defaultModel ?? (entry.needsKey ? "gpt-4o-mini" : "llama3.2"))
+                      : strings.providerModelPlaceholder
+                  }
                 />
                 <button type="button" className={styles.addChip} onClick={addModel}>
                   {strings.providerAddModel}

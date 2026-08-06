@@ -12,6 +12,8 @@ export interface CatalogEntry {
   group: "self" | "keys";
   defaultBaseUrl: string;
   needsKey: boolean;
+  /** A sensible model name to prefill the "add model" hint. */
+  defaultModel?: string;
   /** Shown with a "Built in" tag. */
   builtIn?: boolean;
 }
@@ -24,6 +26,7 @@ export const CATALOG: CatalogEntry[] = [
     group: "self",
     defaultBaseUrl: "http://localhost:11434",
     needsKey: false,
+    defaultModel: "llama3.2",
   },
   {
     kind: "alo",
@@ -34,6 +37,16 @@ export const CATALOG: CatalogEntry[] = [
     needsKey: false,
     builtIn: true,
   },
+  // EU-hosted first among the key-based providers — the sovereignty-aligned pick.
+  {
+    kind: "mistral",
+    name: strings.kindMistral,
+    description: strings.mistralDesc,
+    group: "keys",
+    defaultBaseUrl: "https://api.mistral.ai",
+    needsKey: true,
+    defaultModel: "mistral-small-latest",
+  },
   {
     kind: "openai",
     name: strings.kindOpenai,
@@ -41,6 +54,7 @@ export const CATALOG: CatalogEntry[] = [
     group: "keys",
     defaultBaseUrl: "https://api.openai.com",
     needsKey: true,
+    defaultModel: "gpt-4o-mini",
   },
   {
     kind: "anthropic",
@@ -49,6 +63,7 @@ export const CATALOG: CatalogEntry[] = [
     group: "keys",
     defaultBaseUrl: "https://api.anthropic.com",
     needsKey: true,
+    defaultModel: "claude-3-5-sonnet-latest",
   },
   {
     kind: "custom",

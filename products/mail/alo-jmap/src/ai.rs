@@ -4,7 +4,7 @@
 //! never logged (law #1); errors carry a coarse machine code, never a backend
 //! body.
 
-use alo_ai::{AiConfig, InferenceError};
+use alo_ai::{AiConfig, InferenceError, WorkspaceSource};
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::{Json, body::Bytes};
@@ -12,6 +12,14 @@ use serde_json::{Value, json};
 
 use crate::error::Problem;
 use crate::state::{AppState, authenticate};
+
+/// Cap the question sent to "ask your workspace" (bytes). A question, not a
+/// document — kept small.
+pub const MAX_ASK_BYTES: usize = 4 * 1024;
+
+/// How many retrieved items to ground the answer on. Enough to cover the
+/// question without overrunning the model's context.
+const ASK_SOURCES: i64 = 8;
 
 /// Cap the draft we send for improvement (bytes) — a sane bound independent of
 /// the JMAP request ceiling. Also applied as a per-route body limit in
@@ -150,6 +158,137 @@ pub async fn improve(
         .await
         .map_err(|e| ai_problem(&e))?;
     Ok(Json(json!({ "text": improved })))
+}
+
+/// `POST /ai/ask` — `{"q": "<question>"}` → `{"answer": "..."|null, "reason":
+/// null|"unconfigured"|"unreachable", "sources": [{kind,id,title,space}]}`.
+///
+/// The cross-workspace, source-cited assistant (ADR 0029 §1). Retrieval runs
+/// first and is **always** returned, scoped to exactly what the caller can see
+/// (their files, Spaces, tasks, and mailbox — the same `workspace_search`
+/// predicates). Only then is the model asked to answer *from those sources* and
+/// cite them. Access is never widened by AI. If no model is configured or the
+/// backend is unreachable, the matches are still returned (`answer: null` with a
+/// `reason`) — the search half degrades gracefully without the AI half.
+pub async fn ask(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    if body.len() > MAX_ASK_BYTES {
+        return Err(Problem::with(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "question too large",
+        ));
+    }
+    let request: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let question = request
+        .get("q")
+        .or_else(|| request.get("question"))
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_owned();
+    if question.is_empty() {
+        return Err(Problem::with(StatusCode::BAD_REQUEST, "q required"));
+    }
+
+    // Access-scoped retrieval — the only thing the AI may ever see. Keyword-aware
+    // so a natural-language question matches on its content words.
+    let hits = account
+        .acc
+        .workspace_search_terms(&question, ASK_SOURCES)
+        .await
+        .map_err(|_| Problem::server_error())?;
+    let sources_json: Vec<Value> = hits
+        .iter()
+        .map(|h| json!({ "kind": h.kind, "id": h.id, "title": h.title, "space": h.space }))
+        .collect();
+
+    // Nothing matched → no model call; the UI shows "no matches".
+    if hits.is_empty() {
+        return Ok(Json(
+            json!({ "answer": Value::Null, "reason": Value::Null, "sources": sources_json }),
+        ));
+    }
+
+    let ground: Vec<WorkspaceSource> = hits
+        .iter()
+        .enumerate()
+        .map(|(i, h)| WorkspaceSource {
+            index: i + 1,
+            kind: h.kind.clone(),
+            title: h.title.clone(),
+            detail: String::new(),
+        })
+        .collect();
+
+    // Model half — degrade to sources-only if AI is off or unreachable.
+    let Some(row) = account
+        .acc
+        .default_ai_config()
+        .await
+        .map_err(|_| Problem::server_error())?
+    else {
+        return Ok(Json(
+            json!({ "answer": Value::Null, "reason": "unconfigured", "sources": sources_json }),
+        ));
+    };
+    let config = AiConfig {
+        base_url: row.base_url,
+        model: row.model,
+        api_key: row.api_key,
+        enabled: row.enabled,
+    };
+    match alo_ai::ask_workspace(&config, &question, &ground).await {
+        Ok(answer) => Ok(Json(
+            json!({ "answer": answer, "reason": Value::Null, "sources": sources_json }),
+        )),
+        Err(InferenceError::Disabled | InferenceError::NotConfigured) => Ok(Json(
+            json!({ "answer": Value::Null, "reason": "unconfigured", "sources": sources_json }),
+        )),
+        Err(_) => Ok(Json(
+            json!({ "answer": Value::Null, "reason": "unreachable", "sources": sources_json }),
+        )),
+    }
+}
+
+/// `POST /ai/compose` — `{"instruction": "...", "context": "<current doc md>"}`
+/// → `{"proposal": "..."}`. Document AI (ADR 0029 §3): returns *proposed* text
+/// for the alo Doc editor to show; the editor only writes it on the user's
+/// approval, never silently. Degrades like the other AI endpoints (503 when AI
+/// is off, 502 on a backend failure).
+pub async fn compose(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    if body.len() > MAX_SUMMARIZE_BYTES {
+        return Err(Problem::with(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "context too large",
+        ));
+    }
+    let request: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let instruction = request
+        .get("instruction")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
+    if instruction.is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "instruction required",
+        ));
+    }
+    let context = request.get("context").and_then(Value::as_str).unwrap_or("");
+    let config = tenant_ai_config(&account).await?;
+    let proposal = alo_ai::compose_doc(&config, instruction, context)
+        .await
+        .map_err(|e| ai_problem(&e))?;
+    Ok(Json(json!({ "proposal": proposal })))
 }
 
 /// Map an inference error to a client problem with a coarse, safe code.

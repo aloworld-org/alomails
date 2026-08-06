@@ -55,6 +55,15 @@ mail-parser = "0.11"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 # Browser-grade charset decoding for RFC 2047 encoded-word header values.
 encoding_rs = "0.8"
+# Drive content search (ADR 0029): pull searchable text out of binary files.
+# Office (docx/xlsx/pptx) is ZIP-of-XML — `zip` (pure Rust; deflate via the
+# in-tree flate2 backend) opens the archive, `quick-xml` walks the parts; PDF
+# via `pdf-extract`'s text layer. All pure Rust (no C), below the waterline.
+# Extraction runs in spawn_blocking so a malformed file can never stall or
+# crash the store — a parser panic just means "not content-indexed".
+zip = { version = "2", default-features = false, features = ["deflate"] }
+quick-xml = "0.37"
+pdf-extract = "0.7"
 # Trust-stack (alo-auth-mail) crypto primitives. RSA sign/verify use
 # `ring` (constant-time, already in-tree via rustls) rather than the
 # `rsa` crate, which carries the unfixed Marvin timing sidechannel
@@ -63,6 +72,7 @@ encoding_rs = "0.8"
 ring = "0.17"
 ed25519-dalek = { version = "2", features = ["pkcs8", "rand_core"] }
 sha2 = "0.10"
+hmac = "0.12"
 zeroize = "1"
 # Auditable constant-time byte comparison for alo-identity's secret and
 # token-hash checks (ring's own helper is deprecated as "no side-channel

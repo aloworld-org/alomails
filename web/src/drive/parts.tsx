@@ -7,6 +7,7 @@ import {
   Folder,
   Image as ImageIcon,
   Presentation,
+  Table2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,6 +24,8 @@ export function nodeIcon(n: DriveNodeDto): LucideIcon {
       return FileSpreadsheet;
     case "slides":
       return Presentation;
+    case "base":
+      return Table2;
     default:
       break;
   }

@@ -17,6 +17,11 @@ use serde::{Deserialize, Serialize};
 pub mod egress;
 use egress::{is_blocked_ip, split_authority};
 
+mod agent;
+pub use agent::{
+    agent_messages, parse_decision, run_agent, AgentDecision, ProposedAction, AGENT_TOOLS,
+};
+
 /// Per-tenant backend configuration (admin-set, ADR 0011).
 #[derive(Debug, Clone)]
 pub struct AiConfig {
@@ -305,7 +310,10 @@ pub fn parse_extracted_tasks(text: &str) -> Vec<ExtractedTask> {
 ///
 /// # Errors
 /// [`InferenceError`] on a disabled/unconfigured backend or transport failure.
-pub async fn extract_tasks(config: &AiConfig, text: &str) -> Result<Vec<ExtractedTask>, InferenceError> {
+pub async fn extract_tasks(
+    config: &AiConfig,
+    text: &str,
+) -> Result<Vec<ExtractedTask>, InferenceError> {
     let out = chat(config, &extract_tasks_messages(text), 0.2).await?;
     Ok(parse_extracted_tasks(&out))
 }
@@ -331,7 +339,7 @@ pub async fn suggest_replies(
 /// One chat-completions round-trip to the configured backend, returning the
 /// assistant's text. Shared by [`improve`] and [`summarize`]; enforces the
 /// enabled/configured gates and the egress policy, and never logs content.
-async fn chat(
+pub(crate) async fn chat(
     config: &AiConfig,
     messages: &[ChatMessage],
     temperature: f32,
@@ -385,6 +393,136 @@ pub async fn improve(config: &AiConfig, draft: &str) -> Result<String, Inference
 /// empty — all safe to surface (no message content leaks).
 pub async fn summarize(config: &AiConfig, thread: &str) -> Result<String, InferenceError> {
     chat(config, &summarize_messages(thread), 0.2).await
+}
+
+/// One retrieved item offered to the model as grounding for a workspace answer
+/// (ADR 0029). The retrieval layer has already applied the caller's access, so
+/// every source here is something they could open themselves — the model is
+/// never shown more than the user can see.
+#[derive(Debug, Clone)]
+pub struct WorkspaceSource {
+    /// 1-based citation number the model refers to (e.g. `[1]`).
+    pub index: usize,
+    /// `file` | `doc` | `base` | `folder` | `task` | `message`.
+    pub kind: String,
+    /// The item's name/title/subject.
+    pub title: String,
+    /// A short extra line (e.g. a task's description); empty when there is none.
+    pub detail: String,
+}
+
+/// The system prompt for answering a question across the user's own workspace
+/// (ADR 0029). It is strict about grounding: answer only from the listed
+/// sources, cite them, and never invent — the product's trust promise.
+const ASK_WORKSPACE_SYSTEM: &str = "You are the assistant inside the user's own private workspace. \
+Answer their question using ONLY the numbered sources below — the files, tasks, and emails of theirs \
+that matched a search. Cite every source you use by its number in square brackets, like [1] or [2]. \
+Be concise and concrete, and answer in the question's language. If the sources do not contain the \
+answer, say you could not find it in their workspace — never invent files, people, facts, or details \
+that are not in the sources. Return only the answer — no preamble or heading.";
+
+/// Renders the retrieved sources into the grounding block the model reads.
+pub(crate) fn render_sources(sources: &[WorkspaceSource]) -> String {
+    let mut out = String::new();
+    for source in sources {
+        let kind = match source.kind.as_str() {
+            "message" => "email",
+            "doc" => "document",
+            other => other,
+        };
+        out.push_str(&format!("[{}] {} \"{}\"", source.index, kind, source.title));
+        if !source.detail.trim().is_empty() {
+            out.push_str(" — ");
+            out.push_str(source.detail.trim());
+        }
+        out.push('\n');
+    }
+    out
+}
+
+/// The chat messages for an "ask across my workspace" request. Pure and exported
+/// so the prompt is testable without a backend.
+#[must_use]
+pub fn ask_workspace_messages(question: &str, sources: &[WorkspaceSource]) -> Vec<ChatMessage> {
+    let user = format!(
+        "Question: {}\n\nSources:\n{}",
+        question.trim(),
+        render_sources(sources)
+    );
+    vec![
+        ChatMessage {
+            role: "system".to_owned(),
+            content: ASK_WORKSPACE_SYSTEM.to_owned(),
+        },
+        ChatMessage {
+            role: "user".to_owned(),
+            content: user,
+        },
+    ]
+}
+
+/// Answer a question grounded in the caller's retrieved workspace items (ADR
+/// 0029). The caller assembles `sources` from access-scoped search; this only
+/// builds the prompt and calls the backend.
+///
+/// # Errors
+/// [`InferenceError`] variants for disabled/unconfigured/unreachable/backend/
+/// empty — all safe to surface (they carry no content).
+pub async fn ask_workspace(
+    config: &AiConfig,
+    question: &str,
+    sources: &[WorkspaceSource],
+) -> Result<String, InferenceError> {
+    chat(config, &ask_workspace_messages(question, sources), 0.2).await
+}
+
+/// The system prompt for document authoring (ADR 0029 §3). The result is always
+/// a *proposal* the user approves before it enters their document — this prompt
+/// only shapes the text; the caller never applies it silently.
+const COMPOSE_SYSTEM: &str = "You help write a document. Follow the user's instruction to produce the \
+text they asked for, using the current document (if given) only as context. Write in the document's \
+language. Return ONLY the text to add or the revised text, formatted as plain Markdown — no preamble, \
+explanation, or surrounding quotes.";
+
+/// The chat messages for a "draft/continue/revise this document" request. Pure
+/// and exported so the prompt is testable without a backend. `context` is the
+/// current document text (may be empty for a from-scratch draft).
+#[must_use]
+pub fn compose_doc_messages(instruction: &str, context: &str) -> Vec<ChatMessage> {
+    let user = if context.trim().is_empty() {
+        format!("Instruction: {}", instruction.trim())
+    } else {
+        format!(
+            "Current document:\n{}\n\nInstruction: {}",
+            context.trim(),
+            instruction.trim()
+        )
+    };
+    vec![
+        ChatMessage {
+            role: "system".to_owned(),
+            content: COMPOSE_SYSTEM.to_owned(),
+        },
+        ChatMessage {
+            role: "user".to_owned(),
+            content: user,
+        },
+    ]
+}
+
+/// Draft or revise document text from an instruction and the current document
+/// (ADR 0029 §3). Returns a *proposal*; the caller shows it and only writes it
+/// to the document on the user's approval — never silently.
+///
+/// # Errors
+/// [`InferenceError`] variants for disabled/unconfigured/unreachable/backend/
+/// empty — all safe to surface (they carry no content).
+pub async fn compose_doc(
+    config: &AiConfig,
+    instruction: &str,
+    context: &str,
+) -> Result<String, InferenceError> {
+    chat(config, &compose_doc_messages(instruction, context), 0.4).await
 }
 
 /// A lightweight connectivity check for the admin "Test connection" action:
@@ -465,6 +603,62 @@ mod tests {
         assert_eq!(m[0].role, "system");
         assert_eq!(m[1].role, "user");
         assert_eq!(m[1].content, "Hey, wanna meet tmrw?");
+    }
+
+    #[test]
+    fn ask_workspace_prompt_lists_numbered_cited_sources() {
+        let sources = vec![
+            WorkspaceSource {
+                index: 1,
+                kind: "file".to_owned(),
+                title: "Acme proposal.docx".to_owned(),
+                detail: String::new(),
+            },
+            WorkspaceSource {
+                index: 2,
+                kind: "task".to_owned(),
+                title: "Acme kickoff".to_owned(),
+                detail: "Prepare the deck".to_owned(),
+            },
+            WorkspaceSource {
+                index: 3,
+                kind: "message".to_owned(),
+                title: "Re: pricing".to_owned(),
+                detail: String::new(),
+            },
+        ];
+        let m = ask_workspace_messages("where is the acme proposal?", &sources);
+        assert_eq!(m.len(), 2);
+        assert_eq!(m[0].role, "system");
+        // The system prompt enforces grounding + citation.
+        assert!(m[0].content.contains("ONLY the numbered sources"));
+        assert!(m[0].content.contains("square brackets"));
+        // The user turn carries the question and each numbered source.
+        let u = &m[1].content;
+        assert!(u.contains("where is the acme proposal?"));
+        assert!(u.contains("[1] file \"Acme proposal.docx\""));
+        assert!(u.contains("[2] task \"Acme kickoff\" — Prepare the deck"));
+        // 'message' is rendered as the user-facing "email".
+        assert!(u.contains("[3] email \"Re: pricing\""));
+    }
+
+    #[test]
+    fn compose_doc_prompt_includes_context_then_instruction() {
+        let m = compose_doc_messages("continue the intro", "# Title\nSome text.");
+        assert_eq!(m[0].role, "system");
+        assert!(m[0].content.contains("proposal") || m[0].content.contains("ONLY"));
+        let u = &m[1].content;
+        assert!(u.contains("Current document:"));
+        assert!(u.contains("Some text."));
+        assert!(u.contains("Instruction: continue the intro"));
+        // From-scratch: no context section.
+        let blank = compose_doc_messages("write a haiku about the sea", "   ");
+        assert!(!blank[1].content.contains("Current document:"));
+        assert!(
+            blank[1]
+                .content
+                .contains("Instruction: write a haiku about the sea")
+        );
     }
 
     #[test]

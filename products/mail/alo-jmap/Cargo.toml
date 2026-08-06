@@ -34,6 +34,9 @@ time = { workspace = true }
 bytes = { workspace = true }
 # RFC 2047 encoded-words + base64 message bodies for outgoing mail.
 base64 = { workspace = true }
+# HMAC-signed, stateless WOPI access tokens for the Collabora office editor.
+sha2 = { workspace = true }
+hmac = { workspace = true }
 # Outbound IMAP client for the Gmail/Outlook import wizard: implicit-TLS
 # (rustls + ring, no OpenSSL) with real cert verification against the
 # Mozilla roots — the user's credentials go over this wire.

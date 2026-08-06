@@ -125,6 +125,39 @@ services:
       retries: 5
       start_period: 15s
 
+  # Collabora Online (CODE) — the pinned office-editing engine (ADR 0010/0030).
+  # A headless LibreOffice reached over WOPI: the app embeds its iframe and it
+  # calls back to alo-jmap's /wopi/* host to load and save the .docx/.xlsx/.pptx
+  # bytes. Configured, never patched (doctrine). aliasgroupN lists the app
+  # origins allowed to embed + act as WOPI host; TLS is terminated by Caddy so
+  # Collabora runs plain HTTP on 9980 behind it. Memory-capped so a heavy
+  # editing session can never starve the mail/DB services on this small host.
+  collabora:
+    image: collabora/code:24.04.10.1.1
+    restart: unless-stopped
+    cap_add: [MKNOD]
+    mem_limit: 1500m
+    environment:
+      aliasgroup1: "https://app\\.aloworkplace\\.com:443"
+      aliasgroup2: "https://app\\.alodrives\\.com:443"
+      aliasgroup3: "https://mail\\.alomails\\.com:443"
+      # Caddy terminates TLS; allow our app origins to frame the editor; no
+      # admin console. frame_ancestors is space-separated but the entrypoint
+      # word-splits it, so only the first token is the static value — the app
+      # domains are added dynamically per request (their WOPI host). We put
+      # http://localhost:5173 first so a local dev app (which proxies its API to
+      # this server) can frame the editor too; the domains stay listed for
+      # documentation and are honoured dynamically.
+      extra_params: "--o:ssl.enable=false --o:ssl.termination=true --o:net.frame_ancestors=http://localhost:5173 https://app.aloworkplace.com https://app.alodrives.com https://mail.alomails.com --o:home_mode.enable=true"
+      DONT_GEN_SSL_CERT: "1"
+    networks: [alo]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/9980'"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
   # The dedicated ACME helper. Standalone mode: it binds port 80 to answer
   # Let's Encrypt's HTTP-01 challenge (during the one-off issuance and, later,
   # during the periodic renewal check when a cert is within 30 days of
@@ -269,6 +302,9 @@ services:
       # seam standalone products (Drive) use to resolve a bearer token to its
       # tenant + user. Unset ⇒ the introspection endpoint stays disabled (404).
       ALO_IDENTITY_INTROSPECT_SECRET: ${ALO_IDENTITY_INTROSPECT_SECRET:-}
+      # HMAC secret for the WOPI office-editor tokens (ADR 0010). Unset ⇒ office
+      # editing is disabled (the endpoints 404).
+      ALO_JMAP_WOPI_SECRET: ${ALO_JMAP_WOPI_SECRET:-}
       ALO_JMAP_BASE_URL: https://${DOMAIN}
       ALO_JMAP_ADDR: 0.0.0.0:8080
       # Where EmailSubmission/set sends: the SMTP trusted internal listener,
@@ -320,6 +356,10 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./web:/srv:ro
+      - ./web-workplace:/srv-workplace:ro
+      - ./web-workplace-landing:/srv-workplace-landing:ro
+      - ./web-drive:/srv-drive:ro
+      - ./web-drive-landing:/srv-drive-landing:ro
       - ./downloads:/srv-downloads:ro
       - ./landing:/srv-landing:ro
       - certs:/certs:ro

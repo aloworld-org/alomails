@@ -355,7 +355,7 @@ fn set_err(kind: &str, description: &str) -> Value {
 
 /// A safe addr-spec for an SMTP command: non-empty, has `@`, and contains no
 /// whitespace, control chars, or angle brackets (no SMTP-command injection).
-fn valid_addr(addr: &str) -> bool {
+pub(crate) fn valid_addr(addr: &str) -> bool {
     !addr.is_empty()
         && addr.len() <= 320
         && addr.contains('@')
@@ -368,7 +368,7 @@ fn valid_addr(addr: &str) -> bool {
 /// the last `<…>`, else the trimmed value), honoring folded continuation
 /// lines. `None` if absent or without an `@`. Used to bind the *visible*
 /// author to the authenticated account (defence against From spoofing).
-fn extract_from_addr(msg: &[u8]) -> Option<String> {
+pub(crate) fn extract_from_addr(msg: &[u8]) -> Option<String> {
     let end = msg
         .windows(4)
         .position(|w| w == b"\r\n\r\n")

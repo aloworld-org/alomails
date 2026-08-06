@@ -3,12 +3,17 @@
 // and per-item actions. Every file lives in one location; its access is that
 // location's access (ADR 0027), so there is no per-file sharing here — sharing
 // is membership of the Space it lives in, always visible via "Members".
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   ChevronRight,
   Copy,
   Download,
+  FileText,
+  FileType,
   FolderPlus,
+  Presentation,
+  Sheet,
   HardDrive,
   History,
   MoveRight,
@@ -18,13 +23,29 @@ import {
   Trash2,
   Upload,
   Users,
+  X,
 } from "lucide-react";
 
 import { strings } from "../i18n";
 import { useJmapClient, type DriveNodeDto, type SpaceDto } from "../jmap";
 import { Menu, Spinner, useDialogs, type MenuItem } from "../ds";
 import { DestinationDialog, MembersDialog, VersionsDialog } from "./dialogs";
+import { blankOfficeFile, type OfficeExt } from "./blankTemplates";
+// BlockNote is heavy and only needed when a doc opens — code-split it out.
+const DocEditor = lazy(() => import("./DocEditor").then((m) => ({ default: m.DocEditor })));
+// Univer is heavy; the native Sheet editor only loads when a sheet is opened.
+const SheetEditor = lazy(() => import("./SheetEditor").then((m) => ({ default: m.SheetEditor })));
+const OfficeEditor = lazy(() => import("./OfficeEditor").then((m) => ({ default: m.OfficeEditor })));
+
+/** Real Office files open in Collabora; kept here so it doesn't pull the editor
+ *  into the main bundle. */
+const OFFICE_EXT = /\.(docx?|xlsx?|pptx?|odt|ods|odp|rtf|csv)$/i;
+// Spreadsheets we import natively into alo Sheet instead of opening in Collabora
+// (ADR 0033, stage 1). `.xlsx`/`.xlsm` are OOXML; `.xls` (old binary) and `.ods`
+// are not covered yet and still fall through to the Office path.
+const SPREADSHEET_IMPORT = /\.xls[mx]$/i;
 import { fileSize, nodeIcon, saveBlob } from "./parts";
+import { xlsxToUniverSnapshot } from "./importOffice";
 import styles from "./DriveModule.module.css";
 
 type Crumb = { id: string; name: string };
@@ -43,6 +64,12 @@ export function DriveModule() {
 
   const [moveNode, setMoveNode] = useState<{ id: string; mode: "move" | "copy" } | null>(null);
   const [versionsNode, setVersionsNode] = useState<string | null>(null);
+  const [openDoc, setOpenDoc] = useState<{ id: string; name: string } | null>(null);
+  const [openSheet, setOpenSheet] = useState<{ id: string; name: string } | null>(null);
+  const [openOffice, setOpenOffice] = useState<{ id: string; name: string } | null>(null);
+  // Best-effort import of a real Office file into a native editor (ADR 0033).
+  const [importing, setImporting] = useState<string | null>(null);
+  const [importFailed, setImportFailed] = useState<string | null>(null);
   const [showMembers, setShowMembers] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -71,6 +98,30 @@ export function DriveModule() {
     void load();
   }, [load]);
 
+  // Open a node arrived at from workspace search (?open=<id>&space=<id>).
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const id = searchParams.get("open");
+    if (id === null) return;
+    const sp = searchParams.get("space");
+    const next = new URLSearchParams(searchParams);
+    next.delete("open");
+    next.delete("space");
+    setSearchParams(next, { replace: true });
+    setLocation(sp);
+    setTrashView(false);
+    setPath([]);
+    void client.driveNode(id).then((node) => {
+      if (node === null) return;
+      if (node.kind === "folder") setPath([{ id: node.id, name: node.name }]);
+      else if (node.kind === "doc") setOpenDoc({ id, name: node.name });
+      else if (node.kind === "sheet") setOpenSheet({ id, name: node.name });
+      else if (node.kind === "file" && SPREADSHEET_IMPORT.test(node.name))
+        void importSpreadsheet(id, node.name);
+      else if (node.kind === "file" && OFFICE_EXT.test(node.name)) setOpenOffice({ id, name: node.name });
+    });
+  }, [searchParams, setSearchParams, client]);
+
   function selectLocation(space: string | null) {
     setLocation(space);
     setTrashView(false);
@@ -79,7 +130,73 @@ export function DriveModule() {
 
   function openNode(n: DriveNodeDto) {
     if (n.kind === "folder") setPath((p) => [...p, { id: n.id, name: n.name }]);
+    else if (n.kind === "doc") setOpenDoc({ id: n.id, name: n.name });
+    else if (n.kind === "sheet") setOpenSheet({ id: n.id, name: n.name });
+    else if (n.kind === "file" && SPREADSHEET_IMPORT.test(n.name)) void importSpreadsheet(n.id, n.name);
+    else if (n.kind === "file" && OFFICE_EXT.test(n.name)) setOpenOffice({ id: n.id, name: n.name });
     else void download(n);
+  }
+
+  async function newDoc() {
+    const name = (await prompt({ message: strings.driveNewDocPrompt }))?.trim();
+    if (!name) return;
+    try {
+      const id = await client.driveCreateDoc(location, parent, name);
+      await load();
+      setOpenDoc({ id, name });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  async function newSheet() {
+    const name = (await prompt({ message: strings.driveNewSheetPrompt }))?.trim();
+    if (!name) return;
+    try {
+      const id = await client.driveCreateSheet(location, parent, name);
+      await load();
+      setOpenSheet({ id, name });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** Import a real `.xlsx` into a new alo Sheet (ADR 0033, stage 1): convert its
+   *  cells to a Univer snapshot, create a native sheet node, and open it. One-way
+   *  — the original file is left untouched in Drive. */
+  async function importSpreadsheet(fileId: string, fileName: string) {
+    const base = fileName.replace(/\.[^.]+$/, "") || fileName;
+    setImportFailed(null);
+    setImporting(base);
+    try {
+      const bytes = new Uint8Array(await (await client.driveDownload(fileId)).arrayBuffer());
+      const snapshot = xlsxToUniverSnapshot(bytes, base);
+      const id = await client.driveCreateSheet(location, parent, base);
+      await client.driveSaveSheet(id, snapshot);
+      await load();
+      setOpenSheet({ id, name: base });
+    } catch {
+      setImportFailed(fileName);
+    } finally {
+      setImporting(null);
+    }
+  }
+
+  /** Create a blank Office document (Word/Excel/PowerPoint) from a template and
+   *  open it in the Collabora editor — the two-file-types rule (ADR 0030). */
+  async function newOffice(ext: OfficeExt) {
+    const kind =
+      ext === "docx" ? strings.driveKindWord : ext === "xlsx" ? strings.driveKindExcel : strings.driveKindSlides;
+    const name = (await prompt({ message: strings.driveNameNew(kind) }))?.trim();
+    if (!name) return;
+    try {
+      const file = blankOfficeFile(ext, name);
+      const id = await client.driveUpload(location, parent, file);
+      await load();
+      setOpenOffice({ id, name: file.name });
+    } catch {
+      /* ignore */
+    }
   }
 
   async function download(n: DriveNodeDto) {
@@ -236,7 +353,7 @@ export function DriveModule() {
           ))}
         </div>
 
-        <div className={styles.sideGroup}>
+        <div className={`${styles.sideGroup} ${styles.sideBottom}`}>
           <button
             type="button"
             className={trashView ? `${styles.sideItem} ${styles.sideActive}` : styles.sideItem}
@@ -290,9 +407,22 @@ export function DriveModule() {
             )}
             {canWrite && !trashView && (
               <>
-                <button type="button" className={styles.ghostBtn} onClick={() => void newFolder()}>
-                  <FolderPlus size={15} /> {strings.driveNewFolder}
-                </button>
+                <Menu
+                  triggerLabel={strings.driveNew}
+                  label={strings.driveNew}
+                  icon={<Plus size={15} />}
+                  align="end"
+                  items={[
+                    { key: "doc", label: strings.driveKindDoc, icon: <FileText size={15} />, onClick: () => void newDoc() },
+                    { key: "sheet", label: strings.driveKindSheet, icon: <Sheet size={15} />, onClick: () => void newSheet() },
+                    // Spreadsheets are alo Sheet only now (ADR 0033): "Sheet"
+                    // creates one, and it exports to .xlsx. Word/Slides stay on
+                    // Collabora until their native stages land.
+                    { key: "word", label: strings.driveKindWord, icon: <FileType size={15} />, onClick: () => void newOffice("docx"), divider: true },
+                    { key: "slides", label: strings.driveKindSlides, icon: <Presentation size={15} />, onClick: () => void newOffice("pptx") },
+                    { key: "folder", label: strings.driveKindFolder, icon: <FolderPlus size={15} />, onClick: () => void newFolder(), divider: true },
+                  ]}
+                />
                 <button type="button" className={styles.primaryBtn} onClick={() => fileRef.current?.click()} disabled={uploading}>
                   <Upload size={15} /> {uploading ? strings.driveUploading : strings.driveUpload}
                 </button>
@@ -365,6 +495,62 @@ export function DriveModule() {
       )}
       {showMembers && currentSpace !== null && (
         <MembersDialog space={currentSpace} onClose={() => setShowMembers(false)} />
+      )}
+      {openDoc !== null && (
+        <Suspense fallback={null}>
+          <DocEditor
+            nodeId={openDoc.id}
+            name={openDoc.name}
+            onClose={() => {
+              setOpenDoc(null);
+              void load();
+            }}
+          />
+        </Suspense>
+      )}
+      {openSheet !== null && (
+        <Suspense fallback={null}>
+          <SheetEditor
+            nodeId={openSheet.id}
+            name={openSheet.name}
+            onClose={() => {
+              setOpenSheet(null);
+              void load();
+            }}
+          />
+        </Suspense>
+      )}
+      {openOffice !== null && (
+        <Suspense fallback={null}>
+          <OfficeEditor
+            nodeId={openOffice.id}
+            name={openOffice.name}
+            onClose={() => {
+              setOpenOffice(null);
+              void load();
+            }}
+          />
+        </Suspense>
+      )}
+      {importing !== null && (
+        <div className={styles.importOverlay}>
+          <Spinner size={24} />
+          <div className={styles.importTitle}>{strings.driveImporting(importing)}</div>
+          <div className={styles.importNote}>{strings.driveImportNote}</div>
+        </div>
+      )}
+      {importFailed !== null && (
+        <div className={styles.importToast} role="alert">
+          <span>{strings.driveImportFailed(importFailed)}</span>
+          <button
+            type="button"
+            className={styles.importToastClose}
+            onClick={() => setImportFailed(null)}
+            aria-label={strings.close}
+          >
+            <X size={16} />
+          </button>
+        </div>
       )}
     </div>
   );

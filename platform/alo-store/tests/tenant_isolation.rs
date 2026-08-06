@@ -1010,3 +1010,244 @@ async fn drive_nodes_scope_by_location_and_never_cross_tenant() {
     // The outsider cannot even address the Space location as their own.
     assert_not_found(d.drive_list(&DriveLocation::Space(space.clone()), None).await);
 }
+
+/// alo Base (ADR 0032): a Base's data is reachable only through its Drive node's
+/// access — a Space viewer reads but cannot write (Forbidden), an editor writes,
+/// a non-member or another tenant gets NotFound/None on every path.
+#[tokio::test]
+async fn base_data_scopes_through_its_drive_node() {
+    use alo_store::{DriveLocation, SpaceRole, UserId};
+    use serde_json::json;
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("base-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@base.test").await.unwrap();
+    let ub = ts1.create_user("b@base.test").await.unwrap();
+    let ub_id = ub.as_str().to_owned();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub);
+
+    // A creates a Space + a Base in it; B is added as a viewer.
+    let space = a.create_space("Team").await.unwrap();
+    let sloc = DriveLocation::Space(space.clone());
+    let node = a.create_base(&sloc, None, "CRM").await.unwrap();
+    a.add_space_member(&space, &UserId::new(ub_id.clone()), SpaceRole::Viewer).await.unwrap();
+
+    // The Base loads with its default table; a record can be added by A.
+    let base = a.base(&node).await.unwrap().unwrap();
+    assert_eq!(base.tables.len(), 1, "default table");
+    let table = base.tables[0].id.clone();
+    assert_eq!(base.tables[0].fields.len(), 2, "Name + Notes");
+    assert_eq!(base.tables[0].records.len(), 3, "three seed rows");
+    let rec = a.base_add_record(&table, &json!({ "x": "hi" })).await.unwrap();
+
+    // Viewer B can READ the base but not write it.
+    assert!(b.base(&node).await.unwrap().is_some(), "a member reads the base");
+    assert_forbidden(b.base_add_record(&table, &json!({})).await);
+    assert_forbidden(b.base_update_record(&rec, &json!({})).await);
+    assert_forbidden(b.base_add_field(&table, "Extra", "text", &json!({})).await);
+    assert_forbidden(b.base_add_table(&node, "T2").await);
+
+    // Promote B to editor → now B can write.
+    a.add_space_member(&space, &UserId::new(ub_id.clone()), SpaceRole::Editor).await.unwrap();
+    b.base_update_record(&rec, &json!({ "x": "edited" })).await.unwrap();
+
+    // A private personal Base stays private to its owner.
+    let personal = a.create_base(&DriveLocation::Personal, None, "Private").await.unwrap();
+    assert!(a.base(&personal).await.unwrap().is_some());
+    assert!(b.base(&personal).await.unwrap().is_none(), "another user's personal base is invisible");
+
+    // Cross-tenant: an outsider sees nothing and can write nothing.
+    let t2 = store.create_tenant("base-t2").await.unwrap();
+    let ud = store.for_tenant(t2.clone()).create_user("d@base.test").await.unwrap();
+    let d = store.for_account(t2, ud);
+    assert!(d.base(&node).await.unwrap().is_none());
+    assert_not_found(d.base_add_record(&table, &json!({})).await);
+    assert_not_found(d.base_update_record(&rec, &json!({})).await);
+    assert_not_found(d.base_add_table(&node, "evil").await);
+    // A bad field type / view kind is refused (Conflict), not a silent accept.
+    assert!(a.base_add_field(&table, "F", "not-a-type", &json!({})).await.is_err());
+    assert!(a.base_add_view(&table, "not-a-kind", "V", &json!({})).await.is_err());
+}
+
+/// Workspace search (ADR 0029): only surfaces what the caller can already see —
+/// their personal files, member-Space files, and visible tasks — never another
+/// user's private items and never another tenant's.
+#[tokio::test]
+async fn workspace_search_only_returns_visible_items() {
+    use alo_store::{DriveLocation, NewDriveFile};
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("srch-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@srch.test").await.unwrap();
+    let ub = ts1.create_user("b@srch.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub);
+
+    // A's private file + task both mention "acme".
+    a.drive_create_file(
+        &DriveLocation::Personal,
+        None,
+        &NewDriveFile { name: "Acme brief".to_owned(), blob_id: "x".to_owned(), size: 1, ..Default::default() },
+    )
+    .await
+    .unwrap();
+    let proj = a.ensure_personal_project().await.unwrap();
+    a.create_task(&proj, &task("Acme kickoff")).await.unwrap();
+
+    // A finds both; B (same tenant, non-owner) finds neither (private).
+    assert_eq!(a.workspace_search("acme", 20).await.unwrap().len(), 2);
+    assert!(b.workspace_search("acme", 20).await.unwrap().is_empty(), "another user's private items");
+
+    // Cross-tenant: an outsider finds nothing.
+    let t2 = store.create_tenant("srch-t2").await.unwrap();
+    let ud = store.for_tenant(t2.clone()).create_user("d@srch.test").await.unwrap();
+    let d = store.for_account(t2, ud);
+    assert!(d.workspace_search("acme", 20).await.unwrap().is_empty(), "never across tenants");
+
+    // An empty query is empty, not everything.
+    assert!(a.workspace_search("   ", 20).await.unwrap().is_empty());
+}
+
+/// Workspace search — mail is matched by full CONTENT (the body, via the mail
+/// full-text index), not just the subject, and only ever the caller's own mail.
+#[tokio::test]
+async fn workspace_search_finds_own_mail_by_body_only() {
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("srchm-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@srchm.test").await.unwrap();
+    let ub = ts1.create_user("b@srchm.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub);
+    let inbox = a.inbox().await.unwrap();
+
+    // The distinctive term lives ONLY in the body, never the subject — so a hit
+    // proves content search, not subject search.
+    let raw = "From: sender@example.test\r\nSubject: Status update\r\n\r\n\
+               Please review the flamingo migration plan before Friday.\r\n";
+    a.ingest(&inbox, raw.as_bytes()).await.unwrap();
+
+    let hits = a.workspace_search("flamingo", 20).await.unwrap();
+    assert_eq!(hits.len(), 1, "own message matched by body");
+    assert_eq!(hits[0].kind, "message");
+
+    // A co-tenant who doesn't own the mailbox sees nothing; nor does another
+    // tenant. Mail is per-user (Law 1).
+    assert!(b.workspace_search("flamingo", 20).await.unwrap().is_empty(), "another user's mail");
+    let t2 = store.create_tenant("srchm-t2").await.unwrap();
+    let ud = store.for_tenant(t2.clone()).create_user("d@srchm.test").await.unwrap();
+    let d = store.for_account(t2, ud);
+    assert!(d.workspace_search("flamingo", 20).await.unwrap().is_empty(), "never across tenants");
+}
+
+/// Workspace search — Drive files match by CONTENT, not just name: a plain-text
+/// file and an alo Doc are indexed from their bytes at write time. Content is
+/// still location-scoped (personal → owner only), never cross-tenant.
+#[tokio::test]
+async fn workspace_search_finds_drive_files_by_content() {
+    use alo_store::{DriveLocation, NewDriveFile};
+    use bytes::Bytes;
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("srchc-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@srchc.test").await.unwrap();
+    let ub = ts1.create_user("b@srchc.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub);
+
+    // A text file whose NAME ("notes.txt") does not contain the term, but whose
+    // BODY does.
+    let txt = a
+        .put_blob(Bytes::from_static(b"the migration plan is due friday"), Some("text/plain"))
+        .await
+        .unwrap();
+    a.drive_create_file(
+        &DriveLocation::Personal,
+        None,
+        &NewDriveFile {
+            name: "notes.txt".to_owned(),
+            blob_id: txt.as_str().to_owned(),
+            size: 32,
+            content_type: Some("text/plain".to_owned()),
+            kind: Some("file".to_owned()),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    // An alo Doc (BlockNote JSON) with a distinctive word only in its text run.
+    let doc_json = br#"[{"type":"paragraph","content":[{"type":"text","text":"secret pangolin roadmap","styles":{}}]}]"#;
+    let dblob = a.put_blob(Bytes::from_static(doc_json), Some("application/json")).await.unwrap();
+    a.drive_create_file(
+        &DriveLocation::Personal,
+        None,
+        &NewDriveFile {
+            name: "Untitled".to_owned(),
+            blob_id: dblob.as_str().to_owned(),
+            size: doc_json.len() as i64,
+            content_type: Some("application/json".to_owned()),
+            kind: Some("doc".to_owned()),
+            ..Default::default()
+        },
+    )
+    .await
+    .unwrap();
+
+    // A finds each by a word that lives only inside the file.
+    let mig = a.workspace_search("migration", 20).await.unwrap();
+    assert_eq!(mig.len(), 1, "text file matched by body");
+    let pan = a.workspace_search("pangolin", 20).await.unwrap();
+    assert_eq!(pan.len(), 1, "alo Doc matched by content");
+    assert_eq!(pan[0].kind, "doc");
+
+    // A co-tenant who doesn't own these personal files sees nothing; neither
+    // does another tenant.
+    assert!(b.workspace_search("migration", 20).await.unwrap().is_empty(), "another user's private file");
+    let t2 = store.create_tenant("srchc-t2").await.unwrap();
+    let ud = store.for_tenant(t2.clone()).create_user("d@srchc.test").await.unwrap();
+    let d = store.for_account(t2, ud);
+    assert!(d.workspace_search("pangolin", 20).await.unwrap().is_empty(), "never across tenants");
+}
+
+/// AI retrieval reduces a natural-language question to keywords, so it matches
+/// items a literal substring of the whole question never would — still scoped to
+/// what the caller can see.
+#[tokio::test]
+async fn workspace_search_terms_matches_question_keywords() {
+    use alo_store::{DriveLocation, NewDriveFile};
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("kw-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@kw.test").await.unwrap();
+    let ub = ts1.create_user("b@kw.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1.clone(), ub);
+
+    a.drive_create_file(
+        &DriveLocation::Personal,
+        None,
+        &NewDriveFile { name: "Acme proposal.docx".to_owned(), blob_id: "x".to_owned(), size: 1, ..Default::default() },
+    )
+    .await
+    .unwrap();
+    let proj = a.ensure_personal_project().await.unwrap();
+    a.create_task(&proj, &task("Acme kickoff meeting")).await.unwrap();
+
+    // The literal question is not a substring of either title, but its keyword
+    // "acme" is — keyword retrieval finds both.
+    let q = "what do I have about the Acme proposal?";
+    assert!(a.workspace_search(q, 20).await.unwrap().is_empty(), "literal search misses");
+    assert_eq!(a.workspace_search_terms(q, 20).await.unwrap().len(), 2, "keyword search finds both");
+
+    // Still access-scoped: another user and another tenant get nothing.
+    assert!(b.workspace_search_terms(q, 20).await.unwrap().is_empty());
+    let t2 = store.create_tenant("kw-t2").await.unwrap();
+    let ud = store.for_tenant(t2.clone()).create_user("d@kw.test").await.unwrap();
+    let d = store.for_account(t2, ud);
+    assert!(d.workspace_search_terms(q, 20).await.unwrap().is_empty());
+
+    // An all-stopword question falls back cleanly (no keywords → no crash).
+    assert!(a.workspace_search_terms("what is this?", 20).await.unwrap().is_empty());
+}

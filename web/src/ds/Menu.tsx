@@ -3,6 +3,7 @@
 // "Move to" and "More" menus; reusable anywhere a small action menu is needed.
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
 
 import { IconButton } from "./IconButton";
 import { cx } from "./cx";
@@ -15,6 +16,8 @@ export interface MenuItem {
   onClick: () => void;
   danger?: boolean;
   disabled?: boolean;
+  /** Draw a separator line above this item (groups the menu). */
+  divider?: boolean;
 }
 
 interface MenuProps {
@@ -25,9 +28,12 @@ interface MenuProps {
   items: MenuItem[];
   /** Which edge the popover aligns to (default: end/right). */
   align?: "start" | "end";
+  /** When set, the trigger is a labelled text button (e.g. "New ▾") instead of
+   *  an icon-only button. */
+  triggerLabel?: string;
 }
 
-export function Menu({ label, icon, items, align = "end" }: MenuProps) {
+export function Menu({ label, icon, items, align = "end", triggerLabel }: MenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -49,30 +55,46 @@ export function Menu({ label, icon, items, align = "end" }: MenuProps) {
 
   return (
     <div className={styles.wrap} ref={ref}>
-      <IconButton
-        size="sm"
-        label={label}
-        icon={icon}
-        active={open}
-        onClick={() => setOpen((v) => !v)}
-      />
+      {triggerLabel !== undefined ? (
+        <button
+          type="button"
+          className={cx(styles.textTrigger, open && styles.textTriggerOpen)}
+          aria-label={label}
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+        >
+          {icon}
+          <span>{triggerLabel}</span>
+          <ChevronDown size={15} className={styles.chev} aria-hidden />
+        </button>
+      ) : (
+        <IconButton
+          size="sm"
+          label={label}
+          icon={icon}
+          active={open}
+          onClick={() => setOpen((v) => !v)}
+        />
+      )}
       {open && (
         <div className={cx(styles.menu, align === "start" ? styles.start : styles.end)} role="menu">
           {items.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              role="menuitem"
-              className={cx(styles.item, item.danger && styles.danger)}
-              disabled={item.disabled}
-              onClick={() => {
-                setOpen(false);
-                item.onClick();
-              }}
-            >
-              {item.icon !== undefined && <span className={styles.itemIcon}>{item.icon}</span>}
-              <span className={styles.itemLabel}>{item.label}</span>
-            </button>
+            <div key={item.key} className={styles.itemWrap}>
+              {item.divider === true && <div className={styles.divider} role="separator" />}
+              <button
+                type="button"
+                role="menuitem"
+                className={cx(styles.item, item.danger && styles.danger)}
+                disabled={item.disabled}
+                onClick={() => {
+                  setOpen(false);
+                  item.onClick();
+                }}
+              >
+                {item.icon !== undefined && <span className={styles.itemIcon}>{item.icon}</span>}
+                <span className={styles.itemLabel}>{item.label}</span>
+              </button>
+            </div>
           ))}
         </div>
       )}

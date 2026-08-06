@@ -1,0 +1,109 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 66px;
+  padding: 0 var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.back {
+  display: inline-flex;
+  color: var(--text-secondary);
+  border-radius: 6px;
+  padding: 5px;
+}
+.back:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+/* Editable sheet name — reads as text until focused. */
+.nameInput {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  font-size: 18px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 3px 8px;
+  background: transparent;
+  max-width: 40ch;
+  min-width: 8ch;
+  font-family: inherit;
+}
+.nameInput:hover {
+  background: var(--bg-raised);
+}
+.nameInput:focus {
+  outline: none;
+  border-color: var(--border-strong);
+  background: var(--bg-surface);
+}
+/* Saved / saving indicator. */
+.saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+.savedIcon {
+  color: var(--success, #16a34a);
+}
+/* Pushes the right-hand controls to the far edge. */
+.grow {
+  flex: 1;
+}
+/* Export button — a clean bordered action. */
+.export {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+}
+.export:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+.export:focus-visible,
+.back:focus-visible,
+.nameInput:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 2px;
+}
+.export:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+.center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+/* Univer fills the body; it renders its own toolbar/grid/formula bar inside. */
+.univer {
+  position: absolute;
+  inset: 0;
+}

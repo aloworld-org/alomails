@@ -4,6 +4,7 @@
 // (propose-then-approve). All data goes through the authenticated /tasks API;
 // the board's grouping and the list's flattening are the client's job.
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   CalendarRange,
   ClipboardList,
@@ -52,6 +53,17 @@ export function TasksModule() {
   const [proposals, setProposals] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
+
+  // Open a task arrived at from workspace search (?open=<taskId>).
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const id = searchParams.get("open");
+    if (id === null) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("open");
+    setSearchParams(next, { replace: true });
+    setSelected(id);
+  }, [searchParams, setSearchParams]);
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState<{ status?: string } | null>(null);
 

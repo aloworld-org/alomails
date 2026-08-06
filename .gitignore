@@ -17,3 +17,6 @@ Thumbs.db
 
 # Local per-developer Claude Code permissions (never shared)
 .claude/settings.local.json
+
+# Local dev backend (postgres data mirror, blob store, run scripts)
+.localdev/

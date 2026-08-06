@@ -4,6 +4,7 @@
   height: 100%;
   min-height: 0;
   background: var(--bg-surface);
+  position: relative;
 }
 
 /* ---- sidebar ---- */
@@ -19,6 +20,13 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+/* Trash lives at the very bottom of the sidebar (file-manager convention),
+   set off from the locations above by a hairline. */
+.sideBottom {
+  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
 }
 .sideLabel {
   display: flex;
@@ -159,6 +167,61 @@
   color: var(--text-tertiary);
   font-size: var(--text-sm);
   padding: var(--space-8);
+}
+
+/* ---- Office import (ADR 0033) ---- */
+.importOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  background: color-mix(in srgb, var(--bg-surface) 88%, transparent);
+  backdrop-filter: blur(2px);
+  text-align: center;
+  padding: var(--space-6);
+}
+.importTitle {
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+}
+.importNote {
+  max-width: 340px;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+/* A dismissible failure notice, bottom-centred. */
+.importToast {
+  position: absolute;
+  bottom: var(--space-5);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-3) 10px var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+.importToastClose {
+  display: inline-flex;
+  color: var(--text-tertiary);
+  border-radius: 6px;
+  padding: 4px;
+}
+.importToastClose:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
 }
 
 /* ---- list ---- */

@@ -42,3 +42,17 @@ export const apiFetch: typeof fetch = inTauri
       return (tauriFetch as typeof fetch)(rebased, init);
     })
   : globalThis.fetch.bind(globalThis);
+
+// Build-time injected host for the Office (Collabora) editor — see vite.config.
+declare const __ALO_OFFICE_HOST__: string;
+
+/** Absolute host the Collabora editor loads and saves through. Same-origin (the
+ *  page origin) in a real deployment; in local dev it is the real backend host
+ *  (injected at build time), because Collabora runs there and must fetch the
+ *  WOPI file from a host it can reach — never the developer's localhost. */
+export const OFFICE_HOST: string =
+  __ALO_OFFICE_HOST__.length > 0
+    ? __ALO_OFFICE_HOST__
+    : typeof window !== "undefined"
+      ? window.location.origin
+      : "";
