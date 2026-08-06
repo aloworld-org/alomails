@@ -54,19 +54,19 @@
 //! cross-tenant link), and the database backs that with a composite foreign
 //! key on `(tenant_id, customer_id)`.
 
-use std::collections::HashMap;
-
 use time::{Date, Duration, OffsetDateTime};
 
 use crate::account::AccountStore;
 use crate::billing_field::{bounded, currency, payment_terms_days};
-use crate::billing_line::{Line, NewLine, NormalizedLine, normalize_lines};
+use crate::billing_line::{
+    FiguresRow, INVOICE_LINES, Line, NewLine, NormalizedLine, group_figures, normalize_lines,
+};
 use crate::billing_sequence::{
     INVOICE_NUMBER_PREFIX, INVOICE_SEQUENCE_KIND, document_number, draw_next,
 };
 use crate::billing_totals::{LineFigures, Totals, totals};
 use crate::error::{Result, StoreError};
-use crate::id::{BillingCustomerId, BillingInvoiceId, BillingLineId};
+use crate::id::{BillingCustomerId, BillingInvoiceId, BillingQuoteId};
 
 /// The customer's own reference (a PO number, a cost centre) printed on the
 /// document.
@@ -77,12 +77,8 @@ pub const INVOICE_NOTE_MAX_CHARS: usize = 2_000;
 
 /// The columns every read of an invoice selects, in `InvoiceRow` order.
 const INVOICE_COLS: &str = "id, customer_id, status, currency, number, issue_date, due_date, \
-     payment_terms_days, is_credit_note, credits_invoice_id, reference, note, created_by, \
-     created_at, updated_at";
-
-/// The columns every read of a line selects, in `LineRow` order.
-const LINE_COLS: &str = "id, line_order, description, unit, qty_milli, unit_price_cents, \
-     vat_rate_bp";
+     payment_terms_days, is_credit_note, credits_invoice_id, quote_id, reference, note, \
+     created_by, created_at, updated_at";
 
 /// Where a document is in its life.
 ///
@@ -296,6 +292,10 @@ pub struct Invoice {
     pub is_credit_note: bool,
     /// The document credited, when this is a credit note.
     pub credits_invoice_id: Option<BillingInvoiceId>,
+    /// The accepted quote this draft was raised from (B1.12), when it came
+    /// from one. Never writable from a request: it is stamped by the
+    /// acceptance itself and stays for the life of the document.
+    pub quote_id: Option<BillingQuoteId>,
     /// The customer's own reference.
     pub reference: String,
     /// Free-text note.
@@ -307,6 +307,26 @@ pub struct Invoice {
     /// Last modification time — moved by a header edit and by a line edit,
     /// since both change what the document says.
     pub updated_at: OffsetDateTime,
+}
+
+impl Invoice {
+    /// Whether the document is **overdue** as of `today`: issued, still owed,
+    /// and past the due date it was stamped with.
+    ///
+    /// Derived, never stored — a stored flag would be wrong every midnight,
+    /// and the two facts it is derived from (status and due date) are frozen
+    /// on the document already. It lives here rather than at the route edge so
+    /// the list surface, the overdue view (B1.19) and the dunning drafts
+    /// (B1.26) all answer from one definition.
+    ///
+    /// A `draft` has no due date, a `void` one is owed by nobody, and a `paid`
+    /// one is settled; none of them is ever overdue. Partial payments arrive
+    /// with B1.19 and will narrow `Issued` further — a partially-paid document
+    /// past its date is still overdue for the remainder, so this predicate
+    /// keeps its shape.
+    pub fn is_overdue(&self, today: Date) -> bool {
+        matches!(self.status, InvoiceStatus::Issued) && self.due_date.is_some_and(|due| due < today)
+    }
 }
 
 /// An invoice as a list entry: the header and what it is worth, without the
@@ -488,7 +508,7 @@ impl AccountStore {
         .map_err(StoreError::Db)?;
 
         let figures = sqlx::query_as::<_, FiguresRow>(
-            "SELECT invoice_id, qty_milli, unit_price_cents, vat_rate_bp \
+            "SELECT invoice_id AS doc_id, qty_milli, unit_price_cents, vat_rate_bp \
              FROM billing_invoice_lines \
              WHERE tenant_id = $1 AND invoice_id IN ( \
                  SELECT id FROM billing_invoices \
@@ -499,18 +519,7 @@ impl AccountStore {
         .fetch_all(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-
-        let mut by_invoice: HashMap<String, Vec<LineFigures>> = HashMap::new();
-        for row in figures {
-            by_invoice
-                .entry(row.invoice_id)
-                .or_default()
-                .push(LineFigures {
-                    qty_milli: row.qty_milli,
-                    unit_price_cents: row.unit_price_cents,
-                    vat_rate_bp: row.vat_rate_bp,
-                });
-        }
+        let mut by_invoice = group_figures(figures);
 
         rows.into_iter()
             .map(|row| {
@@ -541,18 +550,9 @@ impl AccountStore {
         else {
             return Ok(None);
         };
-        let lines: Vec<Line> = sqlx::query_as::<_, LineRow>(&format!(
-            "SELECT {LINE_COLS} FROM billing_invoice_lines \
-             WHERE tenant_id = $1 AND invoice_id = $2 ORDER BY line_order"
-        ))
-        .bind(self.tenant.as_str())
-        .bind(id.as_str())
-        .fetch_all(&self.pool)
-        .await
-        .map_err(StoreError::Db)?
-        .into_iter()
-        .map(LineRow::into_line)
-        .collect();
+        let lines = INVOICE_LINES
+            .read(&self.pool, self.tenant.as_str(), id.as_str())
+            .await?;
         let figures: Vec<LineFigures> = lines.iter().map(Line::figures).collect();
         Ok(Some(InvoiceDocument {
             invoice: row.into_invoice()?,
@@ -656,36 +656,9 @@ impl AccountStore {
             .await?
             .status
             .ensure_editable()?;
-        let lines: Vec<NormalizedLine> = normalize_lines(lines)?;
-
-        sqlx::query("DELETE FROM billing_invoice_lines WHERE tenant_id = $1 AND invoice_id = $2")
-            .bind(self.tenant.as_str())
-            .bind(id.as_str())
-            .execute(&mut *tx)
-            .await
-            .map_err(StoreError::Db)?;
-
-        for (index, line) in lines.iter().enumerate() {
-            let order = i32::try_from(index)
-                .map_err(|_| StoreError::Validation("a document has too many lines".to_owned()))?;
-            sqlx::query(
-                "INSERT INTO billing_invoice_lines (tenant_id, invoice_id, id, line_order, \
-                     description, unit, qty_milli, unit_price_cents, vat_rate_bp) \
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-            )
-            .bind(self.tenant.as_str())
-            .bind(id.as_str())
-            .bind(BillingLineId::generate().as_str())
-            .bind(order)
-            .bind(&line.description)
-            .bind(&line.unit)
-            .bind(line.qty_milli)
-            .bind(line.unit_price_cents)
-            .bind(line.vat_rate_bp)
-            .execute(&mut *tx)
-            .await
-            .map_err(StoreError::Db)?;
-        }
+        INVOICE_LINES
+            .replace(&mut tx, self.tenant.as_str(), id.as_str(), lines)
+            .await?;
 
         sqlx::query(
             "UPDATE billing_invoices SET updated_at = now() WHERE tenant_id = $1 AND id = $2",
@@ -932,34 +905,20 @@ impl AccountStore {
         // quantity always has a storable negation, and every line gets an id of
         // its own like any other written line — a credit note's lines are
         // ordinary lines, not shadows of the original's.
-        let source: Vec<LineRow> = sqlx::query_as(&format!(
-            "SELECT {LINE_COLS} FROM billing_invoice_lines \
-             WHERE tenant_id = $1 AND invoice_id = $2 ORDER BY line_order"
-        ))
-        .bind(self.tenant.as_str())
-        .bind(original_id.as_str())
-        .fetch_all(&mut *tx)
-        .await
-        .map_err(StoreError::Db)?;
+        let source = INVOICE_LINES
+            .read(&mut *tx, self.tenant.as_str(), original_id.as_str())
+            .await?;
 
         for line in &source {
-            sqlx::query(
-                "INSERT INTO billing_invoice_lines (tenant_id, invoice_id, id, line_order, \
-                     description, unit, qty_milli, unit_price_cents, vat_rate_bp) \
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-            )
-            .bind(self.tenant.as_str())
-            .bind(id.as_str())
-            .bind(BillingLineId::generate().as_str())
-            .bind(line.line_order)
-            .bind(&line.description)
-            .bind(&line.unit)
-            .bind(-line.qty_milli)
-            .bind(line.unit_price_cents)
-            .bind(line.vat_rate_bp)
-            .execute(&mut *tx)
-            .await
-            .map_err(StoreError::Db)?;
+            INVOICE_LINES
+                .write(
+                    &mut tx,
+                    self.tenant.as_str(),
+                    id.as_str(),
+                    line.line_order,
+                    &line.negated(),
+                )
+                .await?;
         }
 
         tx.commit().await.map_err(StoreError::Db)?;
@@ -996,7 +955,7 @@ impl AccountStore {
         .map_err(StoreError::Db)?;
 
         let figures = sqlx::query_as::<_, FiguresRow>(
-            "SELECT l.invoice_id, l.qty_milli, l.unit_price_cents, l.vat_rate_bp \
+            "SELECT l.invoice_id AS doc_id, l.qty_milli, l.unit_price_cents, l.vat_rate_bp \
              FROM billing_invoice_lines l \
              JOIN billing_invoices i ON i.tenant_id = l.tenant_id AND i.id = l.invoice_id \
              WHERE l.tenant_id = $1 AND i.credits_invoice_id = $2",
@@ -1006,18 +965,7 @@ impl AccountStore {
         .fetch_all(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-
-        let mut by_invoice: HashMap<String, Vec<LineFigures>> = HashMap::new();
-        for row in figures {
-            by_invoice
-                .entry(row.invoice_id)
-                .or_default()
-                .push(LineFigures {
-                    qty_milli: row.qty_milli,
-                    unit_price_cents: row.unit_price_cents,
-                    vat_rate_bp: row.vat_rate_bp,
-                });
-        }
+        let mut by_invoice = group_figures(figures);
 
         rows.into_iter()
             .map(|row| {
@@ -1028,6 +976,95 @@ impl AccountStore {
                 })
             })
             .collect()
+    }
+
+    /// Raises the **draft** invoice an accepted quote produces, inside the
+    /// transaction that accepts it ([`AccountStore::accept_billing_quote`]).
+    ///
+    /// It writes only the header; the caller copies the quote's lines onto it
+    /// under the same transaction, so acceptance either leaves a whole draft or
+    /// leaves nothing at all. This lives here rather than in the quote module
+    /// because `billing_invoices` is the one file that writes this table.
+    ///
+    /// What is copied from the offer and what is not:
+    ///
+    /// - **Customer and currency** are copied, not re-resolved. The offer was
+    ///   made in them, so the invoice for it is raised in them — and copying is
+    ///   also what lets an offer to a customer archived since it was sent still
+    ///   be honoured, exactly as a credit note can still be raised for one.
+    /// - **The customer's reference** (their RFQ number) is copied: it is the
+    ///   customer's own thread of the transaction, and they will look for it on
+    ///   the invoice.
+    /// - **The note is not.** A quote's note states the terms of an *offer*
+    ///   ("valid for fourteen days"), which is untrue the moment it becomes an
+    ///   invoice. The draft is editable, so a caller that wants one writes it.
+    /// - **Payment terms are the customer's today**, since a quote carries none
+    ///   — the days an offer stands and the days a bill is owed in are
+    ///   different facts — and they are then snapshotted on the document like
+    ///   any other invoice's.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the customer is gone (impossible while the
+    /// quote's own foreign key holds); [`StoreError::Db`] on failure.
+    pub(crate) async fn insert_invoice_from_quote(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        source: &InvoiceFromQuote<'_>,
+    ) -> Result<BillingInvoiceId> {
+        let terms: Option<i32> = sqlx::query_scalar(
+            "SELECT payment_terms_days FROM billing_customers WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(source.customer_id)
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(StoreError::Db)?;
+        let terms = terms.ok_or(StoreError::NotFound)?;
+
+        let id = BillingInvoiceId::generate();
+        sqlx::query(
+            "INSERT INTO billing_invoices (tenant_id, id, customer_id, status, currency, \
+                 payment_terms_days, quote_id, reference, note, created_by) \
+             VALUES ($1, $2, $3, 'draft', $4, $5, $6, $7, '', $8)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(source.customer_id)
+        .bind(source.currency)
+        .bind(terms)
+        .bind(source.quote_id)
+        .bind(source.reference)
+        .bind(self.user.as_str())
+        .execute(&mut **tx)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(id)
+    }
+
+    /// The invoice raised from one of this tenant's quotes, or `None` — the
+    /// read behind "was this offer billed?", and the link a quote's screen
+    /// follows to the draft its acceptance produced.
+    ///
+    /// At most one exists: acceptance is terminal, and the database backs that
+    /// with a unique index (migration 0106). A quote id that is absent or
+    /// another tenant's yields `None`, like every other read here — never an
+    /// existence oracle.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn billing_invoice_for_quote(
+        &self,
+        quote_id: &BillingQuoteId,
+    ) -> Result<Option<BillingInvoiceId>> {
+        let id: Option<String> = sqlx::query_scalar(
+            "SELECT id FROM billing_invoices WHERE tenant_id = $1 AND quote_id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(quote_id.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(id.map(BillingInvoiceId::new))
     }
 
     /// What a line set **would** total, without writing anything — the same
@@ -1045,6 +1082,24 @@ impl AccountStore {
 }
 
 // ---- row types --------------------------------------------------------------
+
+/// The facts an accepted quote hands its invoice draft
+/// ([`AccountStore::insert_invoice_from_quote`]).
+///
+/// Borrowed rather than owned: every field is read from the quote's own locked
+/// row inside the accepting transaction and outlives the call.
+#[derive(Debug)]
+pub(crate) struct InvoiceFromQuote<'a> {
+    /// The quote being accepted, which the new document points back to.
+    pub(crate) quote_id: &'a str,
+    /// The party quoted, copied so an archived customer can still be billed
+    /// for an offer they accepted.
+    pub(crate) customer_id: &'a str,
+    /// The currency the offer was made in.
+    pub(crate) currency: &'a str,
+    /// The customer's own reference, as it appeared on the offer.
+    pub(crate) reference: &'a str,
+}
 
 /// What a locking read hands back: the stored facts a write decides against,
 /// with the status already parsed.
@@ -1080,6 +1135,7 @@ struct InvoiceRow {
     payment_terms_days: i32,
     is_credit_note: bool,
     credits_invoice_id: Option<String>,
+    quote_id: Option<String>,
     reference: String,
     note: String,
     created_by: String,
@@ -1101,6 +1157,7 @@ impl InvoiceRow {
             payment_terms_days: self.payment_terms_days,
             is_credit_note: self.is_credit_note,
             credits_invoice_id: self.credits_invoice_id.map(BillingInvoiceId::new),
+            quote_id: self.quote_id.map(BillingQuoteId::new),
             reference: self.reference,
             note: self.note,
             created_by: self.created_by,
@@ -1108,41 +1165,6 @@ impl InvoiceRow {
             updated_at: self.updated_at,
         })
     }
-}
-
-#[derive(sqlx::FromRow)]
-struct LineRow {
-    id: String,
-    line_order: i32,
-    description: String,
-    unit: String,
-    qty_milli: i64,
-    unit_price_cents: i64,
-    vat_rate_bp: i32,
-}
-
-impl LineRow {
-    fn into_line(self) -> Line {
-        Line {
-            id: BillingLineId::new(self.id),
-            line_order: self.line_order,
-            description: self.description,
-            unit: self.unit,
-            qty_milli: self.qty_milli,
-            unit_price_cents: self.unit_price_cents,
-            vat_rate_bp: self.vat_rate_bp,
-        }
-    }
-}
-
-/// Just the numbers, for the list surface: the totals of many documents
-/// without dragging every description over the wire.
-#[derive(sqlx::FromRow)]
-struct FiguresRow {
-    invoice_id: String,
-    qty_milli: i64,
-    unit_price_cents: i64,
-    vat_rate_bp: i32,
 }
 
 #[cfg(test)]
@@ -1246,6 +1268,58 @@ mod tests {
             void.contains("void") && void.contains("cancelled"),
             "{void}"
         );
+    }
+
+    /// A header in a given state, for the overdue predicate: everything else
+    /// about a document is irrelevant to it.
+    fn dated(status: InvoiceStatus, due: Option<Date>) -> Invoice {
+        Invoice {
+            id: BillingInvoiceId::new("inv"),
+            customer_id: BillingCustomerId::new("cust"),
+            status,
+            currency: "EUR".to_owned(),
+            number: Some("INV-2026-00001".to_owned()),
+            issue_date: due,
+            due_date: due,
+            payment_terms_days: 14,
+            is_credit_note: false,
+            credits_invoice_id: None,
+            quote_id: None,
+            reference: String::new(),
+            note: String::new(),
+            created_by: "u".to_owned(),
+            created_at: OffsetDateTime::UNIX_EPOCH,
+            updated_at: OffsetDateTime::UNIX_EPOCH,
+        }
+    }
+
+    #[test]
+    fn only_an_issued_document_past_its_date_is_overdue() {
+        let today = Date::from_calendar_date(2026, time::Month::August, 6)
+            .unwrap_or_else(|e| panic!("{e}"));
+        let day_before = today
+            .previous_day()
+            .unwrap_or_else(|| panic!("no yesterday"));
+        let day_after = today.next_day().unwrap_or_else(|| panic!("no tomorrow"));
+
+        assert!(dated(InvoiceStatus::Issued, Some(day_before)).is_overdue(today));
+        // Due *today* is not yet late: the customer has the whole day.
+        assert!(!dated(InvoiceStatus::Issued, Some(today)).is_overdue(today));
+        assert!(!dated(InvoiceStatus::Issued, Some(day_after)).is_overdue(today));
+        // No due date at all (a draft's shape) is never overdue, whatever the
+        // status column says.
+        assert!(!dated(InvoiceStatus::Issued, None).is_overdue(today));
+        // Settled, cancelled, or never a document: none of them is owed.
+        for other in [
+            InvoiceStatus::Draft,
+            InvoiceStatus::Paid,
+            InvoiceStatus::Void,
+        ] {
+            assert!(
+                !dated(other, Some(day_before)).is_overdue(today),
+                "{other:?} is not owed and cannot be overdue"
+            );
+        }
     }
 
     #[test]

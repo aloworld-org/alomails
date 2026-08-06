@@ -30,6 +30,17 @@ pub const INVOICE_SEQUENCE_KIND: &str = "invoice";
 /// The prefix printed on an invoice number.
 pub const INVOICE_NUMBER_PREFIX: &str = "INV";
 
+/// The series quotes draw from (B1.11) — deliberately **not** the invoice
+/// series. An offer is not a ledger entry: numbering it alongside invoices
+/// would leave visible holes in the invoice series for every quote that was
+/// never accepted, which is exactly the appearance gaplessness exists to
+/// avoid. Quotes are numbered the same transactional way only so that no
+/// customer ever receives two offers bearing one number.
+pub const QUOTE_SEQUENCE_KIND: &str = "quote";
+
+/// The prefix printed on a quote number.
+pub const QUOTE_NUMBER_PREFIX: &str = "QUO";
+
 /// The smallest number of digits a counter is printed with. A tenant issuing
 /// more than 99 999 documents in one year simply gets a sixth digit — numbers
 /// grow, they are never truncated or reused.
@@ -132,6 +143,28 @@ mod tests {
                 "INV-2026-00100",
             ]
         );
+    }
+
+    #[test]
+    fn quotes_and_invoices_are_told_apart_by_prefix_and_by_series() {
+        // Same format, different series: a quote number can never be mistaken
+        // for an invoice number on a document, and an unaccepted quote can
+        // never leave a hole in the invoice series.
+        assert_eq!(
+            document_number(QUOTE_NUMBER_PREFIX, 2026, 1),
+            "QUO-2026-00001"
+        );
+        assert_ne!(QUOTE_SEQUENCE_KIND, INVOICE_SEQUENCE_KIND);
+        // Both kinds satisfy the table's shape check (lowercase, ≤ 32 chars),
+        // which is what lets a new series be a row rather than a migration.
+        for kind in [INVOICE_SEQUENCE_KIND, QUOTE_SEQUENCE_KIND] {
+            assert!(
+                !kind.is_empty()
+                    && kind.len() <= 32
+                    && kind.bytes().all(|b| b.is_ascii_lowercase() || b == b'_'),
+                "{kind:?} must satisfy billing_sequences_kind_shape"
+            );
+        }
     }
 
     #[test]

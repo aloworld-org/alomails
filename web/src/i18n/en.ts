@@ -17,6 +17,7 @@ export const en = {
   moduleMeet: "Meet",
   moduleDrive: "Drive",
   moduleDocs: "Docs",
+  moduleBilling: "Billing",
 
   // Home dashboard
   homeGreetingMorning: "Good morning",
@@ -1472,6 +1473,230 @@ export const en = {
   baseLink: "Link",
   baseLinkNoTable: "No linked table set.",
   baseLinkNoRecords: "The linked table has no records yet.",
+
+  // alo Billing (ADR 0035, wave B1) — customers and the price list. Wording
+  // note: the module speaks about documents ("raise an invoice"), not about
+  // rows, and never states a validation rule the server owns — a refusal is
+  // shown in the server's own words so the two can never disagree.
+  billingCustomers: "Customers",
+  billingProducts: "Price list",
+  billingSearchCustomers: "Search customers…",
+  billingSearchProducts: "Search the price list…",
+  billingShowArchived: "Show archived",
+  billingArchived: "Archived",
+  billingArchive: "Archive",
+  billingRestore: "Restore",
+  billingNewCustomer: "New customer",
+  billingNewProduct: "New item",
+  billingEditCustomer: "Edit customer",
+  billingEditProduct: "Edit item",
+  billingCustomerSubtitle: "Who your invoices are made out to.",
+  billingProductSubtitle: "An item you can pick when you raise a document.",
+  billingArchiveCustomerConfirm: (name: string) =>
+    `Archive ${name}? They disappear from the pickers; every document already raised still names them.`,
+  billingArchiveProductConfirm: (name: string) =>
+    `Archive ${name}? It disappears from the pickers; documents already raised keep the price they were raised at.`,
+  billingCreate: "Create",
+  billingSave: "Save",
+  billingCancel: "Cancel",
+  billingLoadFailed: "Could not load this list. Check your connection and try again.",
+  billingSaveFailed: "Could not save. Check your connection and try again.",
+  billingNoMatches: "Nothing matches that search.",
+  billingNoCustomersTitle: "No customers yet",
+  billingNoCustomersBody:
+    "A customer carries the address, VAT id and payment terms every invoice you raise for them starts from.",
+  billingNoProductsTitle: "Your price list is empty",
+  billingNoProductsBody:
+    "Add the things you sell once, then pick them when you raise a quote or an invoice.",
+  billingColName: "Name",
+  billingColLocation: "Location",
+  billingColVatId: "VAT id",
+  billingColEmail: "Email",
+  billingColTerms: "Payment terms",
+  billingColCurrency: "Currency",
+  billingColUnit: "Unit",
+  billingColUnitPrice: "Unit price",
+  billingColVatRate: "VAT rate",
+  billingColActions: "Actions",
+  billingTermsDays: (days: number) => `${days} days`,
+  billingFieldName: "Name",
+  billingFieldEmail: "Invoice email",
+  billingFieldAddress: "Address",
+  billingFieldAddress2: "Address, second line",
+  billingFieldPostalCode: "Postal code",
+  billingFieldCity: "City",
+  billingFieldCountry: "Country",
+  billingFieldVatId: "VAT id",
+  billingFieldTerms: "Payment terms (days)",
+  billingFieldCurrency: "Currency",
+  billingFieldUnit: "Unit",
+  billingFieldUnitPrice: "Unit price",
+  billingFieldVatRate: "VAT rate (%)",
+  billingEmailPlaceholder: "billing@example.com",
+  billingAddressPlaceholder: "Street and number",
+  billingCountryPlaceholder: "DE",
+  billingCountryHint: "Two-letter country code.",
+  billingCurrencyPlaceholder: "EUR",
+  billingVatIdPlaceholder: "DE811907980",
+  billingVatIdHint: "Leave empty for a private customer.",
+  billingTermsPlaceholder: "30",
+  billingTermsHint: "Days from issue to due date.",
+  billingUnitPlaceholder: "hour",
+  billingUnitHint: "What one of it is called. Leave empty for a flat item.",
+  billingAmountPlaceholder: "0.00",
+  billingPriceHint: "Excluding VAT.",
+  billingRatePlaceholder: "21",
+  billingRateHint: "0 for an exempt item.",
+  billingNotAnAmount: "Enter an amount like 1250.00.",
+  billingNotARate: "Enter a rate like 21.",
+
+  // Invoices (B1.14): the list, and the draft editor. Every figure a user
+  // reads here is the server's — the wording never promises a total the
+  // browser worked out, and says so plainly when a figure is one edit behind.
+  billingInvoices: "Invoices",
+  billingNewInvoice: "New invoice",
+  billingSearchInvoices: "Search by number, customer or reference…",
+  billingFilterStatus: "Show",
+  billingFilterAll: "All documents",
+  billingStatusDraft: "Draft",
+  billingStatusIssued: "Issued",
+  billingStatusPaid: "Paid",
+  billingStatusVoid: "Void",
+  billingStatusOverdue: "Overdue",
+  billingCreditNote: "Credit note",
+  billingCreditNotes: "Credit notes",
+  billingNoInvoicesTitle: "No invoices yet",
+  billingNoInvoicesBody:
+    "Raise a draft for a customer, add what you are billing them for, and issue it when it is right.",
+  billingColNumber: "Number",
+  billingColCustomer: "Customer",
+  // "Issue date", not "Issued": a column header that reads the same as the
+  // status chip below it makes a list of documents ambiguous at a glance.
+  billingColIssueDate: "Issue date",
+  billingColDueDate: "Due date",
+  billingColStatus: "Status",
+  billingColTotal: "Total",
+  billingColDescription: "Description",
+  billingColQty: "Quantity",
+  billingColNet: "Net",
+  /** A draft has no number and no dates yet — it has not consumed one. */
+  billingNotNumbered: "—",
+  billingNoDate: "—",
+  billingUnknownCustomer: "Unknown customer",
+  billingDraftInvoice: "Draft invoice",
+  billingBackToInvoices: "All invoices",
+  billingInvoiceGone: "This document no longer exists.",
+  billingFieldCustomer: "Customer",
+  billingChooseCustomer: "Choose a customer…",
+  billingCustomerFixedHint: "Their currency and payment terms are copied onto the document.",
+  billingFieldReference: "Their reference",
+  billingReferencePlaceholder: "PO-1234",
+  billingReferenceHint: "The customer's own order number, printed on the document.",
+  billingFieldNote: "Note",
+  billingNotePlaceholder: "Anything the customer should read on the document.",
+  billingNoteHint: "Printed under the lines.",
+  billingFieldIssueDate: "Issue date",
+  billingFieldDueDate: "Due date",
+  billingCreateDraft: "Create draft",
+  billingCreateDraftHint: "The draft is raised first; then you add what you are billing for.",
+  billingLines: "Lines",
+  billingAddLine: "Add line",
+  billingRemoveLine: "Remove this line",
+  billingNoLines: "Nothing on this document yet.",
+  billingPickProduct: "From the price list…",
+  billingDescriptionPlaceholder: "What you are billing for",
+  billingQtyPlaceholder: "1",
+  billingLineNeedsDescription: "A line needs a description before the draft can save.",
+  billingNotAQuantity: "Enter a quantity like 1.5.",
+  billingTotalsNet: "Net",
+  billingTotalsGross: "Total",
+  billingVatAtRate: (rate: string) => `VAT at ${rate}`,
+  billingTotalsStale: "These are the last figures the server sent; they update when the draft saves.",
+  billingSaving: "Saving…",
+  billingSaved: "Saved",
+  billingUnsaved: "Not saved yet",
+  billingSaveNotDone: "Could not save",
+  billingSaveNow: "Try again",
+  billingDeleteDraft: "Delete draft",
+  billingDeleteDraftConfirm:
+    "Delete this draft? It carries no number, so nothing is left behind — and nothing can be recovered.",
+  billingFrozenNotice:
+    "This document carries a number and can no longer be changed. Correct it with a credit note.",
+
+  // Lifecycle (B1.15). Every one of these actions is irreversible on a legal
+  // document, so the confirmation says what it will DO — spends a number,
+  // freezes the prices, closes the offer — rather than asking whether the
+  // person is sure. None of them promises an email: nothing is sent to anyone
+  // until B1.18.
+  billingActionFailed: "That did not go through. Check your connection and try again.",
+  billingActionsWaitForSave: "These wait until your last change has been saved.",
+  billingIssue: "Issue",
+  billingIssueTitle: "Issue this invoice?",
+  billingIssueConfirm:
+    "Issuing takes the next number in your series, dates the document and freezes it. It can never be changed again — a mistake afterwards is corrected with a credit note. Nothing is emailed to the customer.",
+  billingVoid: "Void",
+  billingVoidTitle: "Void this invoice?",
+  billingVoidConfirm:
+    "A void invoice keeps its number and stays readable, but is worth nothing. Void one nobody has seen; if the customer already holds this document, raise a credit note instead.",
+  billingVoidNotice: "This invoice has been voided. It keeps its number and is worth nothing.",
+  billingCreditNoteAction: "Credit note",
+  billingCreditNoteTitle: "Raise a credit note?",
+  billingCreditNoteConfirm:
+    "This raises a draft credit note mirroring every line of this invoice. Edit it down for a partial credit, then issue it like any other document.",
+  billingCreditsInvoice: "The invoice this credits",
+  billingFromQuote: "The quote this came from",
+
+  // Quotes (B1.15): the same document as an invoice until somebody says yes,
+  // and deliberately the same words wherever the two screens agree.
+  billingQuotes: "Quotes",
+  billingNewQuote: "New quote",
+  billingSearchQuotes: "Search by number, customer or reference…",
+  billingNoQuotesTitle: "No quotes yet",
+  billingNoQuotesBody:
+    "Offer a customer a price. When they accept, the quote becomes a draft invoice with the same lines.",
+  billingQuoteStatusSent: "Sent",
+  billingQuoteStatusAccepted: "Accepted",
+  billingQuoteStatusDeclined: "Declined",
+  billingQuoteStatusExpired: "Expired",
+  /** The computed flag: the validity date has passed. Worded apart from the
+   *  "Expired" status, which is somebody's decision to stop chasing it. */
+  billingQuoteLapsed: "Past its date",
+  // "Sent on", not "Sent", for the same reason the invoice list says "Issue
+  // date": a column header that reads the same as the status chip under it
+  // makes a list of documents ambiguous at a glance.
+  billingColSentDate: "Sent on",
+  billingColValidUntil: "Valid until",
+  billingDraftQuote: "Draft quote",
+  billingBackToQuotes: "All quotes",
+  billingQuoteGone: "This quote no longer exists.",
+  billingQuoteCustomerHint: "Their currency is copied onto the offer.",
+  billingCreateQuoteHint: "The draft is raised first; then you add what you are offering.",
+  billingFieldSentDate: "Sent on",
+  billingFieldValidUntil: "Valid until",
+  billingValidForDays: (days: number) => `Stands for ${days} days from the day it is sent.`,
+  billingDeleteQuoteDraft: "Delete draft",
+  billingDeleteQuoteDraftConfirm:
+    "Delete this draft? It carries no number and was never made to anybody — and nothing can be recovered.",
+  billingQuoteSentNotice:
+    "This offer has been sent and can no longer be changed. If the price moves, make a new quote.",
+  billingQuoteClosedNotice: "This offer is closed and can no longer be changed.",
+  billingSendQuote: "Mark as sent",
+  billingSendQuoteTitle: "Send this quote?",
+  billingSendQuoteConfirm:
+    "This takes the next quote number, dates the offer and freezes its prices, so what the customer holds cannot change under them. Nothing is emailed — send it yourself and record it here.",
+  billingAcceptQuote: "Accepted",
+  billingAcceptQuoteTitle: "The customer accepted?",
+  billingAcceptQuoteConfirm:
+    "This closes the offer and raises a draft invoice with the same lines at the same prices. Nothing is issued yet — you will land on the draft.",
+  billingDeclineQuote: "Declined",
+  billingDeclineQuoteTitle: "The customer declined?",
+  billingDeclineQuoteConfirm:
+    "The offer closes for good and stays readable. A change of mind is a new quote, not a reopened one.",
+  billingExpireQuote: "Give up on it",
+  billingExpireQuoteTitle: "Stop chasing this offer?",
+  billingExpireQuoteConfirm:
+    "The offer closes as expired, with today as the day you stopped chasing it. It cannot be answered afterwards.",
+  billingQuoteInvoice: "The invoice this became",
 } as const;
 
 /** Every string key in the catalog. */

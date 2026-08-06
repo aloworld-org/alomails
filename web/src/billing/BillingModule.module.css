@@ -1,0 +1,597 @@
+/* Billing — a records surface in the warm-workshop palette: a quiet table that
+   reads like a ledger, and forms that stay out of the way. Both list pages and
+   both dialogs share these classes, so customers and the price list cannot
+   drift into two different-looking screens. */
+
+.billing {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-surface);
+}
+
+/* ---- header + tabs ---- */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-6) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+.title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0 0 var(--space-3);
+}
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  align-self: flex-end;
+}
+.tab {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 2px solid transparent;
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+.tab:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+.tabActive {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+
+/* ---- a list page ---- */
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  flex-shrink: 0;
+}
+.search {
+  flex: 1;
+  max-width: 340px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}
+.search:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-right: auto;
+  white-space: nowrap;
+}
+
+/* ---- the table ---- */
+.tableWrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 var(--space-6) var(--space-6);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-base);
+}
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-surface);
+  text-align: left;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-default);
+  white-space: nowrap;
+}
+.table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+.table tbody tr:hover {
+  background: var(--bg-raised);
+}
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+.rowName {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.rowName:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.archivedRow td {
+  color: var(--text-tertiary);
+}
+.archivedRow .rowName {
+  color: var(--text-tertiary);
+}
+.badge {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-default);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  vertical-align: middle;
+}
+.rowActions {
+  text-align: right;
+  white-space: nowrap;
+}
+.linkAction {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+}
+.linkAction:hover {
+  color: var(--accent);
+  background: var(--bg-raised);
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- empty / error states ---- */
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-10);
+  text-align: center;
+}
+.emptyArt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.emptyTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+.emptyBody {
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+  max-width: 42ch;
+  margin: 0 0 var(--space-2);
+}
+.noMatches {
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-base);
+}
+.error {
+  margin: 0 var(--space-6) var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--danger-tint);
+  border: 1px solid var(--danger);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+/* ---- the dialogs ---- */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+.modal {
+  width: min(620px, 100%);
+  max-height: min(88vh, 860px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+.modalHead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.modalIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.modalHeadText {
+  flex: 1;
+  min-width: 0;
+}
+.modalHeadText h2 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+.modalHeadText p {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  margin: 2px 0 0;
+}
+.modalClose {
+  color: var(--text-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  cursor: pointer;
+}
+.modalClose:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+.modalBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-sunken);
+}
+.row {
+  display: flex;
+  gap: var(--space-4);
+}
+.row > * {
+  flex: 1;
+  min-width: 0;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.label {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+}
+.input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}
+.input:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.hint {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+.fieldError {
+  font-size: var(--text-xs);
+  color: var(--danger);
+}
+.textarea {
+  resize: vertical;
+  min-height: 60px;
+  font-family: inherit;
+}
+.select {
+  padding: 6px 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  max-width: 100%;
+}
+.select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+/* ---- document state ---- */
+.chips {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.chip {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-default);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+.chip_info {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+/* Paid is the only good news a document carries, and the palette has one
+   green; it is used as the border and the text, over the raised background the
+   other chips share, so no new token is invented here. */
+.chip_good {
+  border-color: var(--success);
+  color: var(--success);
+}
+.chip_warn {
+  border-color: var(--danger);
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+.chip_muted {
+  color: var(--text-tertiary);
+}
+.overdueRow td {
+  background: var(--danger-tint);
+}
+.notice {
+  margin: 0 var(--space-6) var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10);
+}
+
+/* ---- the document editor ---- */
+.editor {
+  overflow: auto;
+}
+.editorHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6) 0;
+  flex-wrap: wrap;
+}
+.editorTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+.saveState {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.editorBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--space-6) var(--space-8);
+}
+.headerFields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+}
+.readOnlyValue {
+  margin: 0;
+  padding: 8px 0;
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  min-height: 20px;
+}
+.createBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+.createBar .hint {
+  margin-right: auto;
+}
+
+/* ---- the line grid ---- */
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.linesHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.sectionTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
+  margin: 0;
+}
+.lines .tableWrap {
+  padding: 0;
+  overflow-x: auto;
+}
+.lineDescription {
+  min-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.inputNarrow {
+  width: 8ch;
+  min-width: 8ch;
+}
+.creditList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.creditList li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ---- what the document is worth ---- */
+.totals {
+  align-self: flex-end;
+  min-width: min(320px, 100%);
+}
+.totalsList {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.totalsRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-6);
+  font-size: var(--text-base);
+  color: var(--text-secondary);
+}
+.totalsRow dt,
+.totalsRow dd {
+  margin: 0;
+}
+.totalsGross {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-default);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.totalsNote {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+/* A figure the server has not confirmed yet is dimmed, never hidden: the last
+   one it sent is still the truth about the last saved version. */
+.stale {
+  opacity: 0.55;
+}
+
+/* The lifecycle actions of a document (B1.15). They sit under the totals,
+   because what a document is worth is what you decide about it on. Right
+   aligned so the primary action lands where the eye leaves the gross. */
+.actionBar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+/* A link to the document this one came from or became. */
+.relation {
+  margin: 0;
+  font-size: var(--text-sm);
+}

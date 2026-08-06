@@ -1,6 +1,14 @@
 //! The line of a billing document (alo Billing, ADR 0035, wave B1) — shared
 //! by invoices and, from B1.11, by quotes.
 //!
+//! "Shared" is meant literally: the two documents keep their own tables
+//! (`billing_invoice_lines`, `billing_quote_lines`, which differ only in the
+//! column naming their document), and this module owns the one line model,
+//! the one set of field rules, and the one statement that writes a line
+//! ([`LineTable`]). A quote's line and an invoice's line are the same thing —
+//! which is what makes copying an accepted quote onto an invoice draft (B1.12)
+//! a copy rather than a translation.
+//!
 //! A line is a **snapshot**, not a reference. Picking a product copies its
 //! description, unit, price and VAT rate onto the line at that moment; there
 //! is no foreign key back to the price list, because editing a price must
@@ -17,6 +25,8 @@
 //! provably safe: |qty| ≤ 10^9 milli-units, price ≤ 10^9 cents and
 //! [`MAX_LINES`] lines put a document's gross four orders of magnitude below
 //! `i64::MAX`.
+
+use std::collections::HashMap;
 
 use crate::billing_field::{bounded, required, unit_price_cents, vat_rate_bp};
 use crate::billing_totals::LineFigures;
@@ -170,6 +180,233 @@ pub(crate) fn normalize_lines(lines: &[NewLine]) -> Result<Vec<NormalizedLine>> 
             })
         })
         .collect()
+}
+
+// ---- storage ----------------------------------------------------------------
+
+/// The columns every read of a line selects, in [`LineRow`] order.
+pub(crate) const LINE_COLS: &str = "id, line_order, description, unit, qty_milli, \
+     unit_price_cents, vat_rate_bp";
+
+/// One of the tables a line set lives in, and the column naming the document
+/// each line belongs to.
+///
+/// Invoices and quotes keep separate tables — they are separate documents with
+/// separate lives — but the statements over those tables differ only in these
+/// two identifiers, so they are written once here rather than copied. Both
+/// fields are compile-time constants of this crate; no caller-supplied text
+/// ever reaches a statement built from them.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct LineTable {
+    table: &'static str,
+    doc_column: &'static str,
+}
+
+/// The lines of an invoice ([`crate::billing_invoices`]).
+pub(crate) const INVOICE_LINES: LineTable = LineTable {
+    table: "billing_invoice_lines",
+    doc_column: "invoice_id",
+};
+
+/// The lines of a quote ([`crate::billing_quotes`]).
+pub(crate) const QUOTE_LINES: LineTable = LineTable {
+    table: "billing_quote_lines",
+    doc_column: "quote_id",
+};
+
+impl LineTable {
+    /// The lines of one document of `tenant`, in print order.
+    ///
+    /// Takes any executor so the same read serves a plain pool read and a read
+    /// inside the transaction that holds the document's lock.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn read<'e, E>(
+        self,
+        executor: E,
+        tenant: &str,
+        doc_id: &str,
+    ) -> Result<Vec<Line>>
+    where
+        E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+    {
+        let rows: Vec<LineRow> = sqlx::query_as(&format!(
+            "SELECT {LINE_COLS} FROM {} WHERE tenant_id = $1 AND {} = $2 ORDER BY line_order",
+            self.table, self.doc_column
+        ))
+        .bind(tenant)
+        .bind(doc_id)
+        .fetch_all(executor)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(rows.into_iter().map(LineRow::into_line).collect())
+    }
+
+    /// Writes one line at `order`, with an id of its own.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn write(
+        self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tenant: &str,
+        doc_id: &str,
+        order: i32,
+        line: &NormalizedLine,
+    ) -> Result<()> {
+        sqlx::query(&format!(
+            "INSERT INTO {} (tenant_id, {}, id, line_order, description, unit, qty_milli, \
+                 unit_price_cents, vat_rate_bp) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+            self.table, self.doc_column
+        ))
+        .bind(tenant)
+        .bind(doc_id)
+        .bind(BillingLineId::generate().as_str())
+        .bind(order)
+        .bind(&line.description)
+        .bind(&line.unit)
+        .bind(line.qty_milli)
+        .bind(line.unit_price_cents)
+        .bind(line.vat_rate_bp)
+        .execute(&mut **tx)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// Replaces the whole line set of one document, in the caller's order,
+    /// inside `tx`: either the document reads exactly as the caller sent it or
+    /// it is untouched.
+    ///
+    /// Every line is validated **before** anything is written, so a document is
+    /// never left half-replaced by a bad line at the end. The caller is
+    /// expected to hold the document's row lock already — this function decides
+    /// nothing about whether the document may be edited.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] when the set is too long or a line breaks a
+    /// field rule (the message names the line's position);
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn replace(
+        self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        tenant: &str,
+        doc_id: &str,
+        lines: &[NewLine],
+    ) -> Result<()> {
+        let lines: Vec<NormalizedLine> = normalize_lines(lines)?;
+
+        sqlx::query(&format!(
+            "DELETE FROM {} WHERE tenant_id = $1 AND {} = $2",
+            self.table, self.doc_column
+        ))
+        .bind(tenant)
+        .bind(doc_id)
+        .execute(&mut **tx)
+        .await
+        .map_err(StoreError::Db)?;
+
+        for (index, line) in lines.iter().enumerate() {
+            // Unreachable while MAX_LINES is far below i32::MAX — kept because
+            // a raised cap must fail loudly here, never wrap into a negative
+            // print position.
+            let order = i32::try_from(index)
+                .map_err(|_| StoreError::Validation("a document has too many lines".to_owned()))?;
+            self.write(tx, tenant, doc_id, order, line).await?;
+        }
+        Ok(())
+    }
+}
+
+/// A stored line as read back, in [`LINE_COLS`] order.
+#[derive(sqlx::FromRow)]
+pub(crate) struct LineRow {
+    id: String,
+    pub(crate) line_order: i32,
+    description: String,
+    unit: String,
+    qty_milli: i64,
+    unit_price_cents: i64,
+    vat_rate_bp: i32,
+}
+
+impl LineRow {
+    /// The stored line.
+    pub(crate) fn into_line(self) -> Line {
+        Line {
+            id: BillingLineId::new(self.id),
+            line_order: self.line_order,
+            description: self.description,
+            unit: self.unit,
+            qty_milli: self.qty_milli,
+            unit_price_cents: self.unit_price_cents,
+            vat_rate_bp: self.vat_rate_bp,
+        }
+    }
+}
+
+impl Line {
+    /// This line as a writable line, unchanged — the copy an accepted quote
+    /// puts on its invoice draft ([`crate::billing_quotes`]).
+    ///
+    /// It is already normalised: it was validated on the way in, and the rules
+    /// are the same on both documents (that is the point of this module), so a
+    /// copy can never fail a check the original passed. Copying the *frozen*
+    /// values is the whole contract — a price that moved since the offer was
+    /// made must not follow the customer onto the invoice.
+    pub(crate) fn copied(&self) -> NormalizedLine {
+        NormalizedLine {
+            description: self.description.clone(),
+            unit: self.unit.clone(),
+            qty_milli: self.qty_milli,
+            unit_price_cents: self.unit_price_cents,
+            vat_rate_bp: self.vat_rate_bp,
+        }
+    }
+
+    /// This line as a writable line with its quantity negated — the mirror a
+    /// credit note is built from ([`crate::billing_invoices`]).
+    ///
+    /// It is already normalised: it was validated on the way in, and the
+    /// quantity bound is symmetric ([`QTY_MAX_MILLI`]), so a stored quantity
+    /// always has a storable negation.
+    pub(crate) fn negated(&self) -> NormalizedLine {
+        NormalizedLine {
+            description: self.description.clone(),
+            unit: self.unit.clone(),
+            qty_milli: -self.qty_milli,
+            unit_price_cents: self.unit_price_cents,
+            vat_rate_bp: self.vat_rate_bp,
+        }
+    }
+}
+
+/// Just the numbers, for a list surface: the totals of many documents without
+/// dragging every description over the wire. `doc_id` is whichever document
+/// column the query aliased.
+#[derive(sqlx::FromRow)]
+pub(crate) struct FiguresRow {
+    pub(crate) doc_id: String,
+    pub(crate) qty_milli: i64,
+    pub(crate) unit_price_cents: i64,
+    pub(crate) vat_rate_bp: i32,
+}
+
+/// Groups the figures of many documents by document id, so a list read costs
+/// one statement for the headers and one for every line of all of them —
+/// never one per document.
+pub(crate) fn group_figures(rows: Vec<FiguresRow>) -> HashMap<String, Vec<LineFigures>> {
+    let mut by_doc: HashMap<String, Vec<LineFigures>> = HashMap::new();
+    for row in rows {
+        by_doc.entry(row.doc_id).or_default().push(LineFigures {
+            qty_milli: row.qty_milli,
+            unit_price_cents: row.unit_price_cents,
+            vat_rate_bp: row.vat_rate_bp,
+        });
+    }
+    by_doc
 }
 
 #[cfg(test)]
@@ -354,5 +591,81 @@ mod tests {
         // 1.5 h at €120.00 = €180.00; VAT is not a per-line number.
         assert_eq!(line.net_cents(), 18_000);
         assert_eq!(line.figures().vat_rate_bp, 2100);
+    }
+
+    #[test]
+    fn negating_a_line_touches_only_its_quantity() {
+        let line = Line {
+            id: BillingLineId::generate(),
+            line_order: 3,
+            description: "Consulting".to_owned(),
+            unit: "hour".to_owned(),
+            qty_milli: 1_500,
+            unit_price_cents: 12_000,
+            vat_rate_bp: 2100,
+        };
+        let mirror = line.negated();
+        assert_eq!(mirror.qty_milli, -1_500);
+        assert_eq!(mirror.description, "Consulting");
+        assert_eq!(mirror.unit, "hour");
+        assert_eq!(mirror.unit_price_cents, 12_000, "a price is never negated");
+        assert_eq!(mirror.vat_rate_bp, 2100);
+        // A discount line credits back as a charge, and the extremes have a
+        // storable mirror because the quantity bound is symmetric.
+        assert_eq!(
+            Line {
+                qty_milli: -QTY_MAX_MILLI,
+                ..line
+            }
+            .negated()
+            .qty_milli,
+            QTY_MAX_MILLI
+        );
+    }
+
+    #[test]
+    fn copying_a_line_changes_nothing_about_it() {
+        // The copy an accepted quote makes onto its invoice draft: the same
+        // words, the same frozen price and rate, the same quantity — a copy,
+        // not a re-pricing.
+        let line = Line {
+            id: BillingLineId::generate(),
+            line_order: 2,
+            description: "Consulting".to_owned(),
+            unit: "hour".to_owned(),
+            qty_milli: -1_500,
+            unit_price_cents: 12_000,
+            vat_rate_bp: 2100,
+        };
+        let copy = line.copied();
+        assert_eq!(copy.description, line.description);
+        assert_eq!(copy.unit, line.unit);
+        assert_eq!(copy.qty_milli, -1_500, "a discount line copies as one");
+        assert_eq!(copy.unit_price_cents, 12_000);
+        assert_eq!(copy.vat_rate_bp, 2100);
+        assert_eq!(copy.figures().qty_milli, line.figures().qty_milli);
+    }
+
+    #[test]
+    fn figures_group_by_their_document() {
+        let row = |doc: &str, qty: i64| FiguresRow {
+            doc_id: doc.to_owned(),
+            qty_milli: qty,
+            unit_price_cents: 1_000,
+            vat_rate_bp: 2100,
+        };
+        let grouped = group_figures(vec![row("a", 1_000), row("b", 2_000), row("a", 3_000)]);
+        assert_eq!(grouped.len(), 2);
+        assert_eq!(
+            grouped
+                .get("a")
+                .map(|lines| lines.iter().map(|line| line.qty_milli).sum::<i64>()),
+            Some(4_000)
+        );
+        assert_eq!(grouped.get("b").map(Vec::len), Some(1));
+        // A document with no lines is simply absent; the caller reads that as
+        // an empty set rather than as a missing document.
+        assert!(!grouped.contains_key("c"));
+        assert!(group_figures(Vec::new()).is_empty());
     }
 }

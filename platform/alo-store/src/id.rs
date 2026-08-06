@@ -217,6 +217,11 @@ opaque_id!(
     BillingInvoiceId
 );
 opaque_id!(
+    /// A billing quote — the offer a tenant makes a customer before invoicing
+    /// them (alo Billing, ADR 0035).
+    BillingQuoteId
+);
+opaque_id!(
     /// One line of a billing document. Invoices and quotes share the line
     /// model (`crate::billing_line`), so they share its id type.
     BillingLineId

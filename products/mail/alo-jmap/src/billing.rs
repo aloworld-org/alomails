@@ -11,8 +11,8 @@
 use axum::http::StatusCode;
 use serde::Deserialize;
 use serde::de::DeserializeOwned;
-use time::OffsetDateTime;
-use time::format_description::well_known::Rfc3339;
+use time::format_description::well_known::{Iso8601, Rfc3339};
+use time::{Date, OffsetDateTime};
 
 use alo_store::StoreError;
 
@@ -52,6 +52,16 @@ pub fn parse_body<T: DeserializeOwned>(body: &[u8]) -> Result<T, Problem> {
 /// Formats a timestamp the way every billing resource reports one.
 pub fn iso(t: OffsetDateTime) -> String {
     t.format(&Rfc3339).unwrap_or_default()
+}
+
+/// Formats a calendar date — an issue date, a due date — as `YYYY-MM-DD`.
+///
+/// A billing date is a **day**, not an instant: an invoice issued in Warsaw is
+/// dated the day the tenant issued it, and giving it a time and a zone would
+/// invite a client to shift it across midnight. Kept separate from [`iso`] for
+/// exactly that reason.
+pub fn iso_date(d: Date) -> String {
+    d.format(&Iso8601::DATE).unwrap_or_default()
 }
 
 /// Deserializes a field that may be absent, `null`, or a value, keeping the
@@ -104,6 +114,14 @@ mod tests {
         for off in [None, Some(""), Some("0"), Some("false"), Some("maybe")] {
             assert!(!flag(off), "expected off: {off:?}");
         }
+    }
+
+    #[test]
+    fn a_billing_date_is_a_plain_day() {
+        let d = Date::from_calendar_date(2026, time::Month::January, 9).unwrap_or_else(|e| {
+            panic!("{e}");
+        });
+        assert_eq!(iso_date(d), "2026-01-09");
     }
 
     #[test]
