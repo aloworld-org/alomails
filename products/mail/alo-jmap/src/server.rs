@@ -17,10 +17,10 @@ use crate::state::{AppState, Limits};
 use crate::{
     admin, agent, ai, api, autoconfig, base, billing_bills, billing_customers, billing_fx,
     billing_invoices, billing_payments, billing_products, billing_quotes, billing_reminder,
-    billing_reports, billing_send, billing_settings, blob, calendar, carddav, contacts, delegates,
-    docs, drive, filters, flagdue, imap_import_route, push, reset_route, schedule, security,
-    session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
-    workspace_search,
+    billing_reports, billing_send, billing_settings, blob, calendar, carddav, contacts, crm_deals,
+    crm_pipelines, crm_stages, delegates, docs, drive, filters, flagdue, imap_import_route, push,
+    reset_route, schedule, security, session, settings, share, signup_route, sites, snooze, spaces,
+    tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -429,6 +429,59 @@ pub fn app(state: AppState) -> Router {
             "/billing/reports/vat.csv",
             get(billing_reports::vat_report_csv),
         )
+        // alo CRM (ADR 0035, wave B2) — the boards deals move across, their
+        // columns, and the deals themselves (B2.04). `/crm` is a NEW top-level
+        // prefix: the production Caddyfile needs it added at the next deploy,
+        // the same standing human action `/billing` carries
+        // (docs/design/crm.md § Routes).
+        //
+        // Listing the boards is also what SEEDS a tenant's first one, in the
+        // language `?lang=` asks for — a new tenant opens CRM onto a working
+        // funnel rather than a setup form.
+        .route(
+            "/crm/pipelines",
+            get(crm_pipelines::list_pipelines).post(crm_pipelines::create_pipeline),
+        )
+        .route(
+            "/crm/pipelines/{id}",
+            get(crm_pipelines::get_pipeline).patch(crm_pipelines::update_pipeline),
+        )
+        .route(
+            "/crm/pipelines/{id}/archive",
+            post(crm_pipelines::archive_pipeline),
+        )
+        // A column is created under its board and addressed on its own after
+        // that. Reordering is its own POST, never a field on the PATCH: a board
+        // drag must not be able to rename a column, and saving an edit form must
+        // not be able to reorder the board. DELETE is for a column created by
+        // mistake — one no deal and no history row has ever named.
+        .route(
+            "/crm/pipelines/{id}/stages",
+            get(crm_stages::list_stages).post(crm_stages::create_stage),
+        )
+        .route(
+            "/crm/stages/{id}",
+            get(crm_stages::get_stage)
+                .patch(crm_stages::update_stage)
+                .delete(crm_stages::delete_stage),
+        )
+        .route("/crm/stages/{id}/move", post(crm_stages::move_stage))
+        .route("/crm/stages/{id}/archive", post(crm_stages::archive_stage))
+        // Deals. The move is its own POST for the same reason issuing an
+        // invoice is: it writes a history row and can close the deal, so it must
+        // never happen because an editor submitted a stale form.
+        .route(
+            "/crm/deals",
+            get(crm_deals::list_deals).post(crm_deals::create_deal),
+        )
+        .route(
+            "/crm/deals/{id}",
+            get(crm_deals::get_deal)
+                .patch(crm_deals::update_deal)
+                .delete(crm_deals::delete_deal),
+        )
+        .route("/crm/deals/{id}/stage", post(crm_deals::move_deal))
+        .route("/crm/deals/{id}/history", get(crm_deals::deal_history))
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))
