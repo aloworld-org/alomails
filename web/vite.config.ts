@@ -45,7 +45,7 @@ const API_PATHS = [
   "/jmap", "/ai", "/admin", "/settings", "/docs", "/snooze", "/send-later",
   "/calendar", "/tasks", "/spaces", "/drive", "/search", "/contacts",
   "/import", "/signup", "/reset", "/autodiscover", "/Autodiscover", "/dav",
-  "/filters", "/share", "/oauth", "/.well-known", "/auth", "/billing",
+  "/filters", "/share", "/oauth", "/.well-known", "/auth", "/billing", "/crm",
 ];
 // Collabora paths are loaded by the editor itself (and its server), never a
 // user page navigation — proxy them straight through with no SPA bypass.

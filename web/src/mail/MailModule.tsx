@@ -340,18 +340,28 @@ export function MailModule() {
   // Jump back from a task's "From an email" link: /mail?open=<messageId> opens
   // the source message's thread (tenant-scoped — a foreign id resolves to
   // nothing), then clears the parameter.
+  // /mail?thread=<threadId> is the same door for a CRM deal's linked
+  // conversation (B2.07), which knows the conversation and not any one message
+  // in it. The thread is read through this user's own account door, so an id
+  // they do not hold simply shows nothing — CRM hands over an id, never a right
+  // to read it.
   // A search term seeded from elsewhere (the Home search bar → /mail?q=…),
   // handed to the message list as its initial query.
   const [searchSeed, setSearchSeed] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
     const open = searchParams.get("open");
+    const openThread = searchParams.get("thread");
     const compose = searchParams.get("compose");
     const q = searchParams.get("q");
-    if (open === null && compose === null && q === null) return;
+    if (open === null && openThread === null && compose === null && q === null) return;
     // Home routes "Compose email" and global search into Mail via query params.
     if (compose !== null) setCompose({ mode: "new" });
     if (q !== null) setSearchSeed(q);
+    if (openThread !== null) {
+      setFlaggedView(false);
+      setThreadId(openThread);
+    }
     void (async () => {
       if (open !== null) {
         try {
@@ -368,6 +378,7 @@ export function MailModule() {
       }
       const next = new URLSearchParams(searchParams);
       next.delete("open");
+      next.delete("thread");
       next.delete("compose");
       next.delete("q");
       setSearchParams(next, { replace: true });

@@ -16,6 +16,7 @@ import { useMemo } from "react";
 import { useAuth } from "../auth";
 import { getLocale } from "../i18n";
 import { API_BASE } from "../platform/runtime";
+import { RestError, problemDetail, restMessage } from "../platform/rest";
 import type {
   BillingCustomer,
   BillingInvoice,
@@ -49,16 +50,14 @@ type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
  * never to echo stored data, so they are safe to put in front of a user.
  * `status` lets a caller tell "you typed something impossible" (422) from
  * "that record is gone" (404) without parsing prose.
+ *
+ * The failure shape itself lives in `platform/rest` now that a second business
+ * module answers the same `Problem` bodies (B2.07): one implementation, so the
+ * two surfaces cannot drift about how a server sentence reaches a user.
  */
-export class BillingError extends Error {
-  readonly status: number;
-  readonly detail: string | null;
-
+export class BillingError extends RestError {
   constructor(status: number, detail: string | null) {
-    super(detail ?? `billing request failed (${status})`);
-    this.name = "BillingError";
-    this.status = status;
-    this.detail = detail;
+    super(status, detail, "BillingError");
   }
 }
 
@@ -69,7 +68,7 @@ export class BillingError extends Error {
  * screen reports a failure the same way.
  */
 export function billingMessage(error: unknown, fallback: string): string {
-  return error instanceof BillingError && error.detail !== null ? error.detail : fallback;
+  return restMessage(error, fallback);
 }
 
 /** The query string naming a reporting period. The two days are sent exactly
@@ -514,10 +513,7 @@ export class BillingApi {
    *  `Problem` detail, which is JSON — the same error shape as everywhere. */
   async #text(path: string): Promise<string> {
     const res = await this.#send(path, { method: "GET" });
-    if (!res.ok) {
-      const problem = (await res.json().catch(() => ({}))) as { detail?: unknown };
-      throw new BillingError(res.status, typeof problem.detail === "string" ? problem.detail : null);
-    }
+    if (!res.ok) throw new BillingError(res.status, await problemDetail(res));
     return res.text();
   }
 
@@ -548,11 +544,7 @@ export class BillingApi {
   }
 
   async #json<T>(res: Response): Promise<T> {
-    if (!res.ok) {
-      const problem = (await res.json().catch(() => ({}))) as { detail?: unknown };
-      const detail = typeof problem.detail === "string" ? problem.detail : null;
-      throw new BillingError(res.status, detail);
-    }
+    if (!res.ok) throw new BillingError(res.status, await problemDetail(res));
     return (await res.json()) as T;
   }
 }

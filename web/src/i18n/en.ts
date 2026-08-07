@@ -1857,6 +1857,114 @@ export const en = {
   billingReminderFailed: "The reminder could not be written. Check your connection and try again.",
   billingNothingOverdue: "Nothing is overdue. Every issued invoice is either settled or still in date.",
 
+  // CRM (alo CRM, ADR 0035, wave B2). The words of a sales record: a board of
+  // opportunities, what each is worth, what was said about it, what happens
+  // next, and the conversation it came from.
+  moduleCrm: "Sales",
+  crmBoard: "Board",
+  crmList: "List",
+  crmPipeline: "Pipeline",
+  crmDeal: "Deal",
+  crmStage: "Stage",
+  crmStageArchived: "Archived column",
+  crmLoadFailed: "Your deals could not be loaded.",
+  crmSaveFailed: "The change could not be saved.",
+  crmDeleteFailed: "That could not be removed.",
+  crmSuggestFailed: "No conversations could be suggested just now.",
+  crmNoBoardTitle: "No pipeline yet",
+  crmNoBoardBody:
+    "Every board you had has been archived. Restore one to start working deals again.",
+  crmNoDealsTitle: "No deals yet",
+  crmNoDealsBody: "Raise the first opportunity and move it across the board as it progresses.",
+  crmNoMatches: "No deal matches what you typed.",
+
+  // The deal form
+  crmNewDeal: "New deal",
+  crmEditDeal: "Edit deal",
+  crmEdit: "Edit",
+  crmCreate: "Create",
+  crmSave: "Save",
+  crmCancel: "Cancel",
+  crmClose: "Close",
+  crmDealSubtitle: "What the opportunity is, who it is with, and what it is worth.",
+  crmFieldTitle: "Deal",
+  crmFieldCompany: "Company",
+  crmCompanyHint: "The company as your whole team should see it.",
+  crmFieldContactName: "Contact",
+  crmFieldContactEmail: "Contact email",
+  crmContactEmailHint: "Used to suggest the conversations this deal belongs to.",
+  crmFieldValue: "Value",
+  crmValueHint: "What the deal is worth, before VAT.",
+  crmFieldCurrency: "Currency",
+  crmCurrencyHint: "Three letters, e.g. EUR.",
+  crmFieldExpectedClose: "Expected close",
+  crmFieldSource: "Source",
+  crmSourceHint: "Where the opportunity came from — a referral, a campaign, a call.",
+  crmNotAnAmount: "That is not an amount.",
+  crmDeleteDeal: "Delete",
+  crmDeleteDealConfirm:
+    "This removes the deal and everything logged on it. Tasks raised from it stay in their owners' lists. It cannot be undone.",
+
+  // The list
+  crmSearchDeals: "Search deals",
+  crmFilterStage: "Filter by stage",
+  crmFilterAnyStage: "Any stage",
+  crmFilterState: "Filter by state",
+  crmFilterAnyState: "Any state",
+  crmFilterMine: "Only mine",
+  crmColDeal: "Deal",
+  crmColCompany: "Company",
+  crmColStage: "Stage",
+  crmColValue: "Value",
+  crmColExpectedClose: "Expected close",
+  crmColState: "State",
+  crmStateOpen: "Open",
+  crmStateWon: "Won",
+  crmStateLost: "Lost",
+  crmExpectedClose: (day: string) => `Expected ${day}`,
+  crmLostBecause: (reason: string) => `Lost: ${reason}`,
+
+  // Losing a deal asks why, because a reason that is optional is a reason
+  // nobody enters — and win/loss reporting is the feature.
+  crmLostTitle: "Why was it lost?",
+  crmLostMessage: (stage: string) =>
+    `Moving this deal to “${stage}” closes it as lost. Say why, so the reason shows in your win/loss report.`,
+  crmLostPlaceholder: "Price, timing, went to a competitor…",
+  crmLostConfirm: "Mark as lost",
+
+  // The log
+  crmActivityTitle: "Log",
+  crmActivityKind: "Kind of entry",
+  crmActivityPlaceholder: "What was said or agreed…",
+  crmActivityAdd: "Log it",
+  crmActivityDelete: "Delete entry",
+  crmActivityEmpty: "Nothing logged yet.",
+  crmKindNote: "Note",
+  crmKindCall: "Call",
+  crmKindMeeting: "Meeting",
+
+  // Next steps — real tasks, in the list their owner already opens.
+  crmNextStepsTitle: "Next steps",
+  crmNextStepPlaceholder: "What happens next…",
+  crmNextStepDue: "Due",
+  crmNextStepAdd: "Add",
+  crmNextStepsEmpty: "No next step agreed yet.",
+  crmOpenInTasks: "Open in Tasks",
+
+  // Linked conversations. Mail stays in mail: the link is a pointer, and only
+  // a colleague who already holds the conversation can open it.
+  crmThreadsTitle: "Conversations",
+  crmThreadsEmpty: "No conversation linked yet.",
+  crmThreadSuggest: "Suggest conversations",
+  crmThreadLink: "Link",
+  crmThreadUnlink: "Unlink",
+  crmThreadOpenInMail: "Open in Mail",
+  crmThreadNotYours: "This conversation is not in your mailbox — ask the colleague who linked it.",
+  crmThreadLinkedBy: (who: string, when: string) => `Linked by ${who} · ${when}`,
+  crmSuggestionsEmpty: "Nothing in your recent mail matches this deal's addresses.",
+  crmSuggestionAddress: (address: string) => `Matches ${address}`,
+  crmSuggestionDomain: (address: string) => `Same company as ${address}`,
+
   // Sites (alo Sites, ADR 0036, wave S1). The rail says "Websites" — the
   // module is where a tenant's public sites are made, in the word a stranger
   // uses for them.
