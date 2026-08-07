@@ -126,7 +126,9 @@ const CMD_FILTER = "sheet.command.smart-toggle-filter";
 const CMD_FIND = "ui.operation.open-find-dialog";
 const CMD_CONDITIONAL_FORMATTING = "sheet.operation.open";
 const CMD_DATA_VALIDATION = "data-validation.operation.toggle-validation-panel";
-const CMD_DRAWING_PANEL = "sidebar.operation.sheet-image";
+// Opens Univer's native image picker and inserts the selected file as a
+// floating sheet image. Registered by the sheets-drawing UI preset.
+const CMD_INSERT_IMAGE = "sheet.command.insert-float-image";
 const CMD_HYPERLINK = "sheet.operation.insert-hyper-link-toolbar";
 const CMD_NOTE = "sheet.command.toggle-note-popup";
 const CMD_TABLE = "sheet.operation.open-table-selector";
@@ -190,7 +192,7 @@ const BORDER_GLYPHS: Record<string, string> = {
   "diag-up-center": "╱┼",
 };
 
-const TABS = ["home", "insert", "layout", "formulas", "data", "review", "view"] as const;
+const TABS = ["home", "layout", "formulas", "data", "review", "view"] as const;
 type Tab = (typeof TABS)[number];
 // Tabs whose tools need Univer plugins we haven't wired yet — honest placeholder.
 const SOON: Tab[] = ["layout"];
@@ -199,8 +201,6 @@ function tabLabel(tab: Tab): string {
   switch (tab) {
     case "home":
       return strings.sheetTabHome;
-    case "insert":
-      return strings.sheetTabInsert;
     case "layout":
       return strings.sheetTabLayout;
     case "formulas":
@@ -294,7 +294,6 @@ export function SheetRibbon({ actions, disabled, formulaCategories, activeBorder
       </div>
 
       {tab === "home" && <HomeTab actions={actions} disabled={disabled} selectionFormatting={selectionFormatting} />}
-      {tab === "insert" && <InsertTab actions={actions} disabled={disabled} />}
       {tab === "formulas" && <FormulasTab actions={actions} disabled={disabled} categories={formulaCategories} />}
       {tab === "data" && <DataTab actions={actions} disabled={disabled} />}
       {tab === "review" && <ReviewTab actions={actions} disabled={disabled} />}
@@ -580,7 +579,7 @@ function HomeTab({ actions, disabled, selectionFormatting }: { actions: SheetAct
           <IconBtn label={strings.sheetInsertLink} onClick={() => actions.exec(CMD_HYPERLINK)} disabled={disabled} showLabel>
             <Link size={16} />
           </IconBtn>
-          <IconBtn label={strings.sheetInsertImage} onClick={() => actions.exec(CMD_DRAWING_PANEL)} disabled={disabled} showLabel>
+          <IconBtn label={strings.sheetInsertImage} onClick={() => actions.exec(CMD_INSERT_IMAGE)} disabled={disabled} showLabel>
             <Image size={16} />
           </IconBtn>
         </div>
@@ -625,26 +624,6 @@ function DataTab({ actions, disabled }: { actions: SheetActions; disabled: boole
         <IconBtn label={strings.sheetConditionalFormatting} onClick={() => actions.exec(CMD_CONDITIONAL_FORMATTING)} disabled={disabled} large showLabel>
           <Palette size={20} />
         </IconBtn>
-      </Group>
-    </div>
-  );
-}
-
-function InsertTab({ actions, disabled }: { actions: SheetActions; disabled: boolean }) {
-  return (
-    <div className={styles.groups}>
-      <Group label={strings.sheetGroupInsertObjects}>
-        <div className={styles.row}>
-          <IconBtn label={strings.sheetInsertTable} onClick={() => actions.exec(CMD_TABLE)} disabled={disabled} showLabel>
-            <Table2 size={16} />
-          </IconBtn>
-          <IconBtn label={strings.sheetInsertLink} onClick={() => actions.exec(CMD_HYPERLINK)} disabled={disabled} showLabel>
-            <Link size={16} />
-          </IconBtn>
-          <IconBtn label={strings.sheetInsertImage} onClick={() => actions.exec(CMD_DRAWING_PANEL)} disabled={disabled} showLabel>
-            <Image size={16} />
-          </IconBtn>
-        </div>
       </Group>
     </div>
   );
