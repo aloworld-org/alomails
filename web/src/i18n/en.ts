@@ -358,6 +358,7 @@ export const en = {
   taskNamePlaceholder: "e.g. Design landing page",
   taskCancel: "Cancel",
   taskCreate: "Create task",
+  taskCreating: "Creating…",
   taskAttachments: "Attachments",
   taskAddAttachment: "Add attachment",
   taskFilesEmpty: "No files yet. Attach one from any task.",

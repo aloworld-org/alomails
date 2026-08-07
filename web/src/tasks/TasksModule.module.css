@@ -1527,6 +1527,21 @@
 .ntCancel:disabled {
   opacity: 0.6;
 }
+.ntCreate {
+  min-width: 132px;
+  height: 42px;
+  padding-inline: var(--space-4);
+  font-weight: var(--weight-semibold);
+}
+.ntCreate:disabled {
+  background: var(--accent-tint) !important;
+  color: var(--accent-hover) !important;
+  opacity: 0.62 !important;
+}
+.ntCreate svg { flex-shrink: 0; }
+.ntCreate:disabled svg { stroke: currentColor; }
+.ntCreate svg[class*="lucide-loader"] { animation: ntCreateSpin 0.8s linear infinite; }
+@keyframes ntCreateSpin { to { transform: rotate(360deg); } }
 
 /* ---- task detail (redesigned rows + progress) ---- */
 .tdHead {

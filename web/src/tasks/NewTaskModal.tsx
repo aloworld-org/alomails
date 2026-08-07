@@ -4,7 +4,7 @@
 // line). "Create another" keeps it open and clears it for fast entry.
 import { useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { FolderClosed, HardDrive, Paperclip, Plus, SquareCheckBig, Trash2, Upload, User, X } from "lucide-react";
+import { FolderClosed, HardDrive, LoaderCircle, Paperclip, Plus, SquareCheckBig, Trash2, Upload, User, X } from "lucide-react";
 
 import { strings } from "../i18n";
 import { useJmapClient, type DriveNodeDto, type TaskPriority, type TaskProject } from "../jmap";
@@ -279,8 +279,13 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaul
             <button type="button" className={styles.ntCancel} onClick={onClose} disabled={busy}>
               {strings.taskCancel}
             </button>
-            <Button type="submit" disabled={busy || name.trim() === "" || projectId === ""}>
-              <Plus size={16} /> {strings.taskCreate}
+            <Button
+              type="submit"
+              className={styles.ntCreate}
+              disabled={busy || name.trim() === "" || projectId === ""}
+              icon={busy ? <LoaderCircle size={16} /> : <Plus size={16} />}
+            >
+              {busy ? strings.taskCreating : strings.taskCreate}
             </Button>
           </div>
         </div>

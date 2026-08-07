@@ -6,6 +6,7 @@
 import type { Catalog } from "./en";
 
 export const fr: Partial<Catalog> = {
+  taskCreating: "Création…",
   taskFilesAttachTo: "Joindre à la tâche",
   taskFilesDropHint: "Déposez des images ou fichiers ici, ou utilisez Ajouter une pièce jointe.",
   taskFilesNeedTask: "Créez d’abord une tâche, puis joignez-y des images et des fichiers.",
