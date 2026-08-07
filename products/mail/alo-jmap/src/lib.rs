@@ -14,6 +14,7 @@
 
 pub mod admin;
 pub mod agent;
+pub mod agent_billing;
 pub mod ai;
 pub mod api;
 pub mod autoconfig;
@@ -32,6 +33,7 @@ pub mod billing_pdf;
 pub mod billing_print;
 pub mod billing_products;
 pub mod billing_quotes;
+pub mod billing_reminder;
 pub mod billing_reports;
 pub mod billing_send;
 pub mod billing_settings;

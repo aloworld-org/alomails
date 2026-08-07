@@ -697,6 +697,43 @@ impl AccountStore {
         }))
     }
 
+    /// The id of the tenant's invoice **numbered** `number`, or `None`.
+    ///
+    /// The way a person names a document is its number ("INV-2026-00042"), and
+    /// that is all the billing agent (B1.25) is ever given: a model is told a
+    /// number the user said, never an opaque id, and this is where such a name
+    /// becomes something the store can act on. It answers an id rather than a
+    /// document so the caller then reads it through the ordinary
+    /// [`AccountStore::billing_invoice`] door — one loading path, not two.
+    ///
+    /// Matching is case-insensitive and ignores surrounding blanks (a number
+    /// arrives copied out of an email as often as typed), but is otherwise
+    /// exact: a prefix is not a document. Only **issued** documents have a
+    /// number at all, so a draft is unreachable by this route by construction.
+    /// Another tenant's number is `None`, exactly as their id is.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn billing_invoice_id_by_number(
+        &self,
+        number: &str,
+    ) -> Result<Option<BillingInvoiceId>> {
+        let wanted = number.trim();
+        if wanted.is_empty() {
+            return Ok(None);
+        }
+        let id: Option<String> = sqlx::query_scalar(
+            "SELECT id FROM billing_invoices \
+             WHERE tenant_id = $1 AND upper(number) = upper($2)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(wanted)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(id.map(BillingInvoiceId::new))
+    }
+
     /// Replaces the writable header of a **draft** invoice: customer,
     /// currency, terms, reference and note. Status, number and dates are not
     /// writable here — they move only through the lifecycle actions.

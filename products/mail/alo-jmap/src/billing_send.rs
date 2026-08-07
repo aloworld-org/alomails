@@ -211,7 +211,11 @@ fn sendable(status: InvoiceStatus) -> Result<(), Problem> {
 /// ([`alo_store::billing_customers`]); it is checked again here, against the
 /// same rule submission uses, because this is the point where the value
 /// becomes a header and a header is not a place to trust a stored string.
-fn recipient(document: &PrintDocument<'_>) -> Result<String, Problem> {
+///
+/// Shared with the reminder ([`crate::billing_reminder`]): both letters go to
+/// the party the document names, and there must be exactly one rule for which
+/// stored string may become an envelope.
+pub(crate) fn recipient(document: &PrintDocument<'_>) -> Result<String, Problem> {
     let address = document
         .customer
         .email

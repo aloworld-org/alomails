@@ -18,9 +18,12 @@ pub mod egress;
 use egress::{is_blocked_ip, split_authority};
 
 mod agent;
+pub mod agent_billing;
 pub use agent::{
-    agent_messages, parse_decision, run_agent, AgentDecision, ProposedAction, AGENT_TOOLS,
+    agent_messages, is_agent_tool, parse_decision, run_agent, system_prompt, AgentDecision,
+    ProposedAction, AGENT_TOOLS,
 };
+pub use agent_billing::BILLING_TOOLS;
 
 /// Per-tenant backend configuration (admin-set, ADR 0011).
 #[derive(Debug, Clone)]

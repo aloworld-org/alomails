@@ -9,11 +9,14 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{chat, render_sources, AiConfig, ChatMessage, InferenceError, WorkspaceSource};
+use crate::agent_billing::{BILLING_GUIDANCE, BILLING_TOOL_DOC, BILLING_TOOLS};
+use crate::{AiConfig, ChatMessage, InferenceError, WorkspaceSource, chat, render_sources};
 
-/// The tools the agent may propose, by name. The jmap layer validates a proposed
-/// (or approved) tool against this allowlist and owns the actual execution.
-/// First slice: create a task. Adding a tool → describe it in [`AGENT_SYSTEM`]
+/// The core (mail, tasks, calendar) tools the agent may propose, by name.
+///
+/// A **product** contributes its own list beside this one — billing's is
+/// [`BILLING_TOOLS`] — and [`is_agent_tool`] is the allowlist the execution
+/// boundary asks. Adding a core tool → describe it in [`AGENT_SYSTEM_TOOLS`]
 /// and wire its validation + execution in the jmap agent handler.
 pub const AGENT_TOOLS: &[&str] = &[
     "create_task",
@@ -53,11 +56,18 @@ pub enum AgentDecision {
     },
 }
 
-const AGENT_SYSTEM: &str = "You are alo, the assistant across the user's entire workspace. \
+/// The opening of the system prompt: what the agent is, and the two shapes its
+/// reply may take.
+const AGENT_SYSTEM_HEAD: &str = "You are alo, the assistant across the user's entire workspace. \
 For each request you do EXACTLY ONE of two things, and you reply with a SINGLE JSON object and nothing else:\n\
 1) ANSWER from the numbered sources below: {\"kind\":\"answer\",\"answer\":\"<text>\"}. Cite each source you use by its number in square brackets like [1]. Use ONLY the sources; if they do not contain the answer, say you could not find it — never invent files, people, or facts.\n\
 2) PROPOSE ONE ACTION for the user to approve: {\"kind\":\"action\",\"say\":\"<one short sentence describing what you will do>\",\"action\":{\"tool\":\"<tool>\",\"args\":{...}}}. You NEVER perform the action yourself — you only propose it; the user approves it.\n\
-Available tools:\n\
+Available tools:\n";
+
+/// The core tools, described. A **product's** tools are described in its own
+/// module and spliced in after these ([`system_prompt`]), so a module can gain a
+/// tool without this constant being touched.
+const AGENT_SYSTEM_TOOLS: &str = "\
 - create_task: create a to-do for the user. args: {\"title\": string (required), \"due\": string in \"YYYY-MM-DD\" (optional), \"notes\": string (optional)}.\n\
 - create_event: schedule a calendar event. args: {\"title\": string (required), \"start\": string RFC 3339 datetime e.g. \"2026-08-07T14:00:00Z\" (required), \"end\": string RFC 3339 (optional; defaults to one hour after start), \"location\": string (optional), \"notes\": string (optional)}.\n\
 - mark_read: mark an email read or unread. args: {\"source\": number, \"read\": boolean}.\n\
@@ -68,10 +78,35 @@ Available tools:\n\
 - draft_email: write a NEW email and save it to the user's Drafts for them to review and send — it is NEVER sent automatically. args: {\"to\": string email address (required), \"subject\": string (optional), \"body\": string (required)}. Compose the body from the request; do not invent facts. The sender is always the user's own address — never set it.\n\
 - draft_reply: write a reply to an email in the sources and save it to the user's Drafts — NEVER sent automatically. args: {\"source\": number (the email to reply to, required), \"body\": string (required)}. The reply goes to that email's sender and keeps its subject thread; compose the body from the request, do not invent facts.\n\
 - send_email: SEND a message that is ALREADY in the user's Drafts. This delivers it to its recipients and CANNOT be undone. args: {\"source\": number (a draft in the sources, required)}. Only propose this when the user clearly and explicitly asks to send, and only for a draft that already exists — if there is no draft yet, write one first with draft_email or draft_reply and let the user send it. The user still approves before anything is sent.\n\
-- move_to_folder: move an email into one of the user's own mail folders. args: {\"source\": number, \"folder\": string}. Set \"folder\" to EXACTLY one of the folder names listed under \"Folders\" below — never invent a folder. If the user names a folder that is not in that list, ANSWER instead and say that folder does not exist. Prefer the dedicated tools for Archive (archive_email) and Trash (trash_email).\n\
+- move_to_folder: move an email into one of the user's own mail folders. args: {\"source\": number, \"folder\": string}. Set \"folder\" to EXACTLY one of the folder names listed under \"Folders\" below — never invent a folder. If the user names a folder that is not in that list, ANSWER instead and say that folder does not exist. Prefer the dedicated tools for Archive (archive_email) and Trash (trash_email).\n";
+
+/// The rules that apply across every tool, and the output contract.
+const AGENT_SYSTEM_RULES: &str = "\
 For any tool that acts on an email, set \"source\" to the number [n] of that email in the numbered sources above; only propose it when the relevant email is present in the sources. \
 Resolve any relative date or time (today, tomorrow 3pm, next Friday) against the current date given below into an absolute value (YYYY-MM-DD for a task due, RFC 3339 UTC for an event). \
 If the request needs an action no tool covers, ANSWER instead and say you cannot do that yet. Write the answer/say text in the user's language. Output ONLY the JSON object — no markdown, no code fences, no preamble.";
+
+/// The whole system prompt: the core tools, then each product's, then the rules
+/// that hold across all of them.
+///
+/// Built rather than written out so a product agent (ADR 0034) is a tool list
+/// plus a paragraph in its own module — the seam every wave after B1 adds to.
+#[must_use]
+pub fn system_prompt() -> String {
+    format!(
+        "{AGENT_SYSTEM_HEAD}{AGENT_SYSTEM_TOOLS}{BILLING_TOOL_DOC}{BILLING_GUIDANCE}{AGENT_SYSTEM_RULES}"
+    )
+}
+
+/// Whether `tool` is a tool the agent may execute — the allowlist the execution
+/// boundary asks, across every product's set.
+///
+/// One question rather than one list per product, so a caller (the jmap execute
+/// route) cannot check some of them and forget another.
+#[must_use]
+pub fn is_agent_tool(tool: &str) -> bool {
+    AGENT_TOOLS.contains(&tool) || BILLING_TOOLS.contains(&tool)
+}
 
 /// The chat messages for one agent turn. Pure and exported so the prompt is
 /// testable without a backend. `today` is the caller's current date
@@ -100,7 +135,7 @@ pub fn agent_messages(
     vec![
         ChatMessage {
             role: "system".to_owned(),
-            content: AGENT_SYSTEM.to_owned(),
+            content: system_prompt(),
         },
         ChatMessage {
             role: "user".to_owned(),
@@ -170,7 +205,12 @@ pub async fn run_agent(
     today: &str,
     folders: &[String],
 ) -> Result<AgentDecision, InferenceError> {
-    let text = chat(config, &agent_messages(request, sources, today, folders), 0.2).await?;
+    let text = chat(
+        config,
+        &agent_messages(request, sources, today, folders),
+        0.2,
+    )
+    .await?;
     parse_decision(&text)
 }
 
@@ -210,7 +250,10 @@ mod tests {
     #[test]
     fn tolerates_code_fences_and_preamble() {
         let text = "Sure!\n```json\n{\"kind\":\"answer\",\"answer\":\"Hi\"}\n```";
-        assert_eq!(parse_decision(text).unwrap(), AgentDecision::Answer("Hi".to_owned()));
+        assert_eq!(
+            parse_decision(text).unwrap(),
+            AgentDecision::Answer("Hi".to_owned())
+        );
     }
 
     #[test]
@@ -244,5 +287,38 @@ mod tests {
     fn prompt_omits_the_folder_line_when_there_are_none() {
         let msgs = agent_messages("hi", &[], "2026-08-07", &[]);
         assert!(!msgs[1].content.contains("Folders (for move_to_folder)"));
+    }
+
+    #[test]
+    fn every_executable_tool_is_described_and_every_described_tool_is_executable() {
+        // The allowlist and the prompt are one surface: a tool the model is
+        // told about but the execute route refuses is a dead proposal, and a
+        // tool it is never told about is dead code.
+        let prompt = system_prompt();
+        for tool in AGENT_TOOLS.iter().chain(BILLING_TOOLS) {
+            assert!(prompt.contains(&format!("- {tool}:")), "{tool} undescribed");
+            assert!(is_agent_tool(tool), "{tool} is not allowed to execute");
+        }
+        assert_eq!(
+            prompt.matches("\n- ").count(),
+            AGENT_TOOLS.len() + BILLING_TOOLS.len(),
+            "the prompt describes exactly the tools that exist"
+        );
+        // A name from neither list is not executable, whatever it looks like.
+        for stranger in ["", "create_task ", "delete_invoice", "issue_invoice"] {
+            assert!(!is_agent_tool(stranger), "{stranger:?} must not be allowed");
+        }
+    }
+
+    #[test]
+    fn the_output_contract_stays_the_last_thing_the_model_reads() {
+        let prompt = system_prompt();
+        assert!(prompt.ends_with("no preamble."));
+        // A product's tools come after the core ones, and its guidance after
+        // its tools — the order the prompt is assembled in.
+        let at = |needle: &str| prompt.find(needle).unwrap_or(usize::MAX);
+        assert!(at("- create_task:") < at("- create_invoice_draft:"));
+        assert!(at("- draft_payment_reminder:") < at("never invent, complete or reformat"));
+        assert!(at("never invent, complete or reformat") < at("Output ONLY the JSON object"));
     }
 }

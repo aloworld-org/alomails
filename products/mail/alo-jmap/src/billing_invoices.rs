@@ -777,6 +777,17 @@ impl Printable {
         self.document.invoice.status
     }
 
+    /// What the document is worth, what has arrived against it, and what is
+    /// left ([`alo_store::billing_payments::Settlement`]).
+    ///
+    /// The figures a reminder is written from ([`crate::billing_reminder`]): a
+    /// document that is half paid is chased for the half, and one that is
+    /// settled is not chased at all. Beside [`Printable::status`] for the same
+    /// reason — a caller needs the fact, not the stored row.
+    pub(crate) fn settlement(&self) -> Settlement {
+        self.document.settlement()
+    }
+
     /// The document as an **e-invoice** (B1.22), or the refusal a state that
     /// has no e-invoice earns.
     ///

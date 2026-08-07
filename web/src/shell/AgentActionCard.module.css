@@ -70,6 +70,15 @@
   overflow-y: auto;
 }
 
+/* What approving actually does, for an action whose name sounds bigger than it
+   is (a billing draft) — a quiet statement, not a warning. */
+.note {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+
 /* Outward, irreversible action (send) — a quiet caution, not an error. */
 .caution {
   display: flex;

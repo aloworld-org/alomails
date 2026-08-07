@@ -17,6 +17,7 @@ use axum::{body::Bytes, Json};
 use serde_json::{json, Value};
 use time::format_description::well_known::Rfc3339;
 
+use crate::agent_billing as billing;
 use crate::ai::MAX_ASK_BYTES;
 use crate::error::Problem;
 use crate::state::{authenticate, Account, AppState};
@@ -145,7 +146,7 @@ pub async fn agent_execute(
     let req: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let tool = req.get("tool").and_then(Value::as_str).unwrap_or("").trim();
     let args = req.get("args").cloned().unwrap_or(Value::Null);
-    if !alo_ai::AGENT_TOOLS.contains(&tool) {
+    if !alo_ai::is_agent_tool(tool) {
         return Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool"));
     }
     match tool {
@@ -160,6 +161,14 @@ pub async fn agent_execute(
         "draft_reply" => execute_draft_reply(&account, &args, &state).await,
         "send_email" => execute_send(&account, &args, &state).await,
         "move_to_folder" => execute_move_to_folder(&account, &args).await,
+        // alo Billing's tools (B1.25). A product's executors live in that
+        // product's module, so this match stays a dispatcher and never becomes
+        // the place every module's argument rules pile up.
+        "create_invoice_draft" => billing::execute_create_invoice_draft(&account, &args).await,
+        "quote_to_invoice" => billing::execute_quote_to_invoice(&account, &args).await,
+        "draft_payment_reminder" => {
+            billing::execute_draft_payment_reminder(&account, &args, &state).await
+        }
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
     }

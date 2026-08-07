@@ -552,6 +552,32 @@ impl AccountStore {
         }))
     }
 
+    /// The id of the tenant's quote **numbered** `number`, or `None`.
+    ///
+    /// The counterpart of [`AccountStore::billing_invoice_id_by_number`], and
+    /// for the same reason: the billing agent (B1.25) is given the number a
+    /// person says ("QUO-2026-00001"), never an opaque id. Case-insensitive,
+    /// blanks trimmed, otherwise exact; a draft has no number and is therefore
+    /// unreachable here; another tenant's number is `None`.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn billing_quote_id_by_number(&self, number: &str) -> Result<Option<BillingQuoteId>> {
+        let wanted = number.trim();
+        if wanted.is_empty() {
+            return Ok(None);
+        }
+        let id: Option<String> = sqlx::query_scalar(
+            "SELECT id FROM billing_quotes WHERE tenant_id = $1 AND upper(number) = upper($2)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(wanted)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(id.map(BillingQuoteId::new))
+    }
+
     /// Replaces the writable header of a **draft** quote: customer, currency,
     /// validity, reference and note. Status, number and dates are not writable
     /// here — they move only through the lifecycle actions.
