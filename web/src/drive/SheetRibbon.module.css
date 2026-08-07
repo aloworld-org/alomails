@@ -4,22 +4,21 @@
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-primary) 4%, transparent);
 }
 /* Tab strip. */
 .tabs {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  min-height: 44px;
-  padding: 0 var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-5);
+  min-height: 48px;
+  padding: 0 24px;
+  border-bottom: 0;
 }
 .tab,
 .tabActive {
   position: relative;
   align-self: stretch;
-  padding: 0 7px;
+  padding: 0 2px;
   font-size: var(--text-sm);
   color: var(--text-secondary);
   border-radius: 0;
@@ -33,9 +32,9 @@
 }
 .tabActive::after {
   position: absolute;
-  right: 8px;
-  bottom: -1px;
-  left: 8px;
+  right: 0;
+  bottom: 0;
+  left: 0;
   height: 2px;
   border-radius: 2px 2px 0 0;
   background: var(--accent);
@@ -43,11 +42,14 @@
 }
 .othersGroups {
   display: flex;
-  width: 100%;
+  width: calc(100% - 28px);
   max-width: 100%;
   align-items: stretch;
-  min-height: 112px;
-  padding: 8px var(--space-3) 6px;
+  min-height: 132px;
+  margin: 0 14px 12px;
+  padding: 10px 8px 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
   overflow-x: auto;
   overflow-y: hidden;
   overscroll-behavior-inline: contain;
@@ -66,24 +68,32 @@
 /* Groups row. */
 .groups {
   display: flex;
-  width: 100%;
+  width: calc(100% - 28px);
   max-width: 100%;
   align-items: stretch;
   gap: 0;
-  min-height: 112px;
-  padding: 8px var(--space-3) 6px;
-  overflow: visible;
+  min-height: 132px;
+  margin: 0 14px 12px;
+  padding: 10px 8px 7px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  overscroll-behavior-inline: contain;
+  scrollbar-color: color-mix(in srgb, var(--accent) 70%, transparent) transparent;
+  scrollbar-width: thin;
 }
 .group {
   display: flex;
   flex-direction: column;
   align-items: center;
   min-width: max-content;
-  padding: 0 10px;
+  padding: 0 12px;
   border-right: 1px solid var(--border-subtle);
 }
 .group:first-child {
-  padding-left: 2px;
+  padding-left: 8px;
 }
 .group:last-child {
   border-right: none;
@@ -93,26 +103,26 @@
   flex: 1;
   align-items: center;
   justify-content: center;
-  min-height: 72px;
+  min-height: 88px;
 }
 .groupLabel {
   display: block;
   width: 100%;
-  padding-top: 4px;
+  padding-top: 7px;
   text-align: center;
-  font-size: 10px;
-  line-height: 1;
+  font-size: 11px;
+  line-height: 1.15;
   color: var(--text-tertiary);
 }
 .row {
   display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 3px;
 }
 .rowStack {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 .editingGrid {
   display: grid;
@@ -178,8 +188,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
@@ -191,7 +201,7 @@
 }
 .iconBtnLarge {
   width: 58px;
-  height: 60px;
+  height: 68px;
   flex-direction: column;
   gap: 5px;
 }
@@ -208,8 +218,8 @@
   text-align: center;
 }
 .iconBtn:not(.iconBtnLarge):has(.iconBtnLabel) {
-  width: 42px;
-  height: 60px;
+  width: 46px;
+  height: 68px;
   flex-direction: column;
   gap: 5px;
 }
@@ -637,8 +647,8 @@
     padding-left: 6px;
   }
   .group {
-    padding-right: 6px;
-    padding-left: 6px;
+    padding-right: 9px;
+    padding-left: 9px;
   }
   .fontSelect {
     width: 108px;
@@ -657,8 +667,8 @@
     padding-left: 8px;
   }
   .group {
-    padding-right: 4px;
-    padding-left: 4px;
+    padding-right: 8px;
+    padding-left: 8px;
   }
   .fontSelect {
     width: 94px;
@@ -951,4 +961,15 @@
   border-color: color-mix(in srgb, var(--accent) 45%, var(--border-default));
   background: color-mix(in srgb, var(--accent) 9%, var(--bg-surface));
   color: var(--accent);
+}
+
+/* Keep the visual rhythm consistent even where individual tools request a
+   smaller glyph. Large, labelled actions retain their own 22px treatment. */
+.iconBtn:not(.iconBtnLarge) svg,
+.commandBtn svg,
+.ribbonMenu > summary svg,
+.cellMore > summary svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.8;
 }
