@@ -328,16 +328,26 @@
 .findActions button:disabled { opacity: .45; }
 .pageSetupPanel { width: 220px; padding: 10px; }
 .pageSetupPanel label { display: grid; grid-template-columns: 1fr 104px; align-items: center; gap: 10px; color: var(--text-secondary); font-size: var(--text-xs); }
-.pageSetupPanel select { height: 32px; padding: 0 7px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-primary); }
+.pageSetupPanel select,
+.pageSetupPanel input[type="text"] { min-width: 0; height: 32px; padding: 0 7px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-primary); }
 .pageSetupPanel select:hover,
-.pageSetupPanel select:focus { border-color: var(--accent); outline: none; }
+.pageSetupPanel select:focus,
+.pageSetupPanel input:hover,
+.pageSetupPanel input:focus { border-color: var(--accent); outline: none; }
+.pageSetupPanel .pageNumberOption { display: flex; grid-column: 1 / -1; justify-content: flex-start; }
+.pageNumberOption input { accent-color: var(--accent); }
 .canvasMode {
   background: var(--bg-surface);
 }
 .pageMode {
+  position: relative;
   padding: 32px max(20px, 4vw) 64px;
   background: var(--bg-raised);
 }
+.pageFurniture { position: absolute; top: 32px; left: 50%; z-index: 2; width: min(var(--doc-page-width, 210mm), calc(100% - max(40px, 8vw))); height: var(--doc-page-height, 297mm); pointer-events: none; transform: translateX(-50%) scale(var(--doc-zoom, 1)); transform-origin: top center; color: var(--text-tertiary); font-size: 10px; }
+.pageHeader { position: absolute; top: 10mm; left: var(--doc-page-margin-x, 25.4mm); right: var(--doc-page-margin-x, 25.4mm); }
+.pageFooter { position: absolute; bottom: 10mm; left: var(--doc-page-margin-x, 25.4mm); right: var(--doc-page-margin-x, 25.4mm); }
+.pageNumber { position: absolute; right: var(--doc-page-margin-x, 25.4mm); bottom: 10mm; }
 .center {
   height: 100%;
   display: flex;
@@ -384,6 +394,7 @@
   .pageMode {
     padding: 12px 0 40px;
   }
+  .pageFurniture { top: 12px; width: 100%; }
   .pageMode :global(.bn-editor) {
     min-height: calc(100vh - 120px);
     padding: 36px 20px 80px;
@@ -404,6 +415,7 @@
   .aiDock { display: none !important; }
   .body,
   .pageMode { padding: 0; overflow: visible; background: #fff; }
+  .pageFurniture { top: 0; width: var(--doc-page-width, 210mm); transform: translateX(-50%); color: #555; }
   .pageMode :global(.bn-editor) { width: var(--doc-page-width, 210mm); min-height: var(--doc-page-height, 297mm); padding: var(--doc-page-margin-y, 25.4mm) var(--doc-page-margin-x, 25.4mm); border: 0; box-shadow: none; zoom: 1; }
 }
 

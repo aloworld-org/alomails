@@ -97,6 +97,9 @@ export function DocEditor({
     const stored = window.localStorage.getItem(`alo-doc-page-margins:${nodeId}`);
     return stored === "narrow" || stored === "wide" ? stored : "normal";
   });
+  const [pageHeader, setPageHeader] = useState(() => window.localStorage.getItem(`alo-doc-page-header:${nodeId}`) ?? "");
+  const [pageFooter, setPageFooter] = useState(() => window.localStorage.getItem(`alo-doc-page-footer:${nodeId}`) ?? "");
+  const [showPageNumber, setShowPageNumber] = useState(() => window.localStorage.getItem(`alo-doc-page-number:${nodeId}`) === "true");
   const [activeStyles, setActiveStyles] = useState<Record<string, boolean | string>>({});
   const [activeBlockType, setActiveBlockType] = useState("paragraph");
   const [counts, setCounts] = useState({ words: 0, characters: 0 });
@@ -146,7 +149,10 @@ export function DocEditor({
     window.localStorage.setItem(`alo-doc-page-size:${nodeId}`, pageSize);
     window.localStorage.setItem(`alo-doc-page-orientation:${nodeId}`, pageOrientation);
     window.localStorage.setItem(`alo-doc-page-margins:${nodeId}`, pageMargins);
-  }, [nodeId, pageMargins, pageOrientation, pageSize]);
+    window.localStorage.setItem(`alo-doc-page-header:${nodeId}`, pageHeader);
+    window.localStorage.setItem(`alo-doc-page-footer:${nodeId}`, pageFooter);
+    window.localStorage.setItem(`alo-doc-page-number:${nodeId}`, String(showPageNumber));
+  }, [nodeId, pageFooter, pageHeader, pageMargins, pageOrientation, pageSize, showPageNumber]);
 
   useEffect(() => editor.onSelectionChange(() => {
     setActiveStyles(editor.getActiveStyles() as Record<string, boolean | string>);
@@ -342,6 +348,9 @@ export function DocEditor({
             <label>{strings.docPageSize}<select value={pageSize} onChange={(event) => setPageSize(event.target.value as PageSize)}><option value="a4">A4</option><option value="letter">{strings.docPageLetter}</option></select></label>
             <label>{strings.docPageOrientation}<select value={pageOrientation} onChange={(event) => setPageOrientation(event.target.value as PageOrientation)}><option value="portrait">{strings.docPagePortrait}</option><option value="landscape">{strings.docPageLandscape}</option></select></label>
             <label>{strings.docPageMargins}<select value={pageMargins} onChange={(event) => setPageMargins(event.target.value as PageMargins)}><option value="normal">{strings.docMarginsNormal}</option><option value="narrow">{strings.docMarginsNarrow}</option><option value="wide">{strings.docMarginsWide}</option></select></label>
+            <label>{strings.docHeader}<input value={pageHeader} onChange={(event) => setPageHeader(event.target.value)} placeholder={strings.docHeaderPlaceholder} /></label>
+            <label>{strings.docFooter}<input value={pageFooter} onChange={(event) => setPageFooter(event.target.value)} placeholder={strings.docFooterPlaceholder} /></label>
+            <label className={styles.pageNumberOption}><input type="checkbox" checked={showPageNumber} onChange={(event) => setShowPageNumber(event.target.checked)} />{strings.docPageNumbers}</label>
           </div></details>
         </div>
         <div className={styles.commandDivider} />
@@ -405,6 +414,11 @@ export function DocEditor({
           "--doc-page-margin-y": pageMargins === "narrow" ? "12.7mm" : pageMargins === "wide" ? "31.7mm" : "25.4mm",
         } as CSSProperties}
       >
+        {viewMode === "page" && (pageHeader !== "" || pageFooter !== "" || showPageNumber) && <div className={styles.pageFurniture} aria-hidden="true">
+          <span className={styles.pageHeader}>{pageHeader}</span>
+          <span className={styles.pageFooter}>{pageFooter}</span>
+          {showPageNumber && <span className={styles.pageNumber}>1</span>}
+        </div>}
         {!ready ? (
           <div className={styles.center}>
             <Spinner size={22} />
