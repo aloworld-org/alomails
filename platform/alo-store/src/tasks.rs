@@ -150,6 +150,11 @@ pub struct TaskEdit {
     pub priority: String,
 }
 
+/// The most tasks one source record answers with
+/// ([`AccountStore::tasks_for_source`]). The caller — a deal drawer, an email —
+/// renders them whole, so the read is bounded rather than paged.
+pub const SOURCE_TASKS_MAX: i64 = 200;
+
 /// SQL predicate (tasks aliased `t`, viewer `$2`): the task's project is visible
 /// — a team project (shared tenant-wide, v1) or the viewer's own personal one.
 fn visible_projects() -> &'static str {
@@ -538,6 +543,43 @@ impl AccountStore {
             .bind(self.user.as_str())
             .bind(from)
             .bind(to)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows.into_iter().map(TaskRow::into_task).collect())
+    }
+
+    /// Active tasks that came from one source record, visible to the caller —
+    /// ADR 0021's source link read backwards, so the record a task came *from*
+    /// can show what is still to be done about it.
+    ///
+    /// Visibility is a task's own rule and is applied here rather than by the
+    /// caller: a task on a colleague's **personal** project is theirs, and it
+    /// appears for somebody else only when it is assigned to them. A source
+    /// record that is tenant-wide (a CRM deal) therefore shows each reader the
+    /// next steps that are actually theirs to see — never a list that leaks the
+    /// contents of a private board.
+    ///
+    /// Ordered as work is read: unfinished first, then by due date (undated
+    /// last), then oldest first. Bounded by [`SOURCE_TASKS_MAX`], because the
+    /// caller renders it whole.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn tasks_for_source(&self, kind: &str, source_id: &str) -> Result<Vec<Task>> {
+        let sql = format!(
+            "SELECT {TASK_COLS} FROM tasks t \
+             WHERE t.tenant_id = $1 AND t.state = 'active' \
+               AND t.source_kind = $3 AND t.source_id = $4 \
+               AND ({vis} OR t.assignee_user_id = $2) \
+             ORDER BY (t.completed_at IS NOT NULL), t.due_at NULLS LAST, t.created_at, t.id \
+             LIMIT {SOURCE_TASKS_MAX}",
+            vis = visible_projects(),
+        );
+        let rows = sqlx::query_as::<_, TaskRow>(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(kind)
+            .bind(source_id)
             .fetch_all(&self.pool)
             .await?;
         Ok(rows.into_iter().map(TaskRow::into_task).collect())

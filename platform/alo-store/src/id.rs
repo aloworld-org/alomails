@@ -263,6 +263,12 @@ opaque_id!(
     /// from where, to where, by whom and when.
     CrmEventId
 );
+opaque_id!(
+    /// One entry in a deal's log of what was said and done — a note, a call, a
+    /// meeting. A deal's *next step* has no id of this kind: it is a real task
+    /// (alo CRM, ADR 0035, wave B2).
+    CrmActivityId
+);
 
 #[cfg(test)]
 mod tests {

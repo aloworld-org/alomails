@@ -89,6 +89,21 @@ pub fn parse_iso_date(raw: &str) -> Option<Date> {
     Date::parse(raw, &Iso8601::DATE).ok()
 }
 
+/// Reads an **instant** a caller wrote as a full RFC 3339 timestamp, normalised
+/// to UTC — the mirror of [`iso`] — or `None` when the text is not one.
+///
+/// The counterpart of [`parse_iso_date`], and deliberately its opposite: a day
+/// must never be written as a timestamp, and an instant must never be written as
+/// a bare day. A call logged at 16:05 in Warsaw happened at one moment, so the
+/// zone is part of what the caller states; `2026-08-07` states no moment at all
+/// and is the caller's `422` rather than a silent midnight in whichever zone the
+/// server happens to run in.
+pub fn parse_rfc3339(raw: &str) -> Option<OffsetDateTime> {
+    OffsetDateTime::parse(raw.trim(), &Rfc3339)
+        .ok()
+        .map(|t| t.to_offset(time::UtcOffset::UTC))
+}
+
 /// Deserializes a field that may be absent, `null`, or a value, keeping the
 /// three cases apart: `None` = absent (a `PATCH` leaves the stored value
 /// alone), `Some(None)` = explicit `null` (clear it), `Some(Some(v))` = set it.

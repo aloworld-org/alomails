@@ -34,7 +34,11 @@ fn iso(t: OffsetDateTime) -> String {
 }
 
 /// A task as JSON. `emails` maps assignee user ids to display addresses.
-fn task_json(t: &Task, emails: &HashMap<String, String>) -> Value {
+///
+/// `pub(crate)` because a task is one shape everywhere it appears — including
+/// the next steps of a CRM deal (`crate::crm_next_steps`), which reads the same
+/// rows through ADR 0021's source link.
+pub(crate) fn task_json(t: &Task, emails: &HashMap<String, String>) -> Value {
     json!({
         "id": t.id.as_str(),
         "projectId": t.project_id.as_str(),
@@ -58,7 +62,7 @@ fn task_json(t: &Task, emails: &HashMap<String, String>) -> Value {
 }
 
 /// Resolve a set of user ids to their email addresses (deduped, best-effort).
-async fn resolve_emails(ts: &TenantStore, tasks: &[Task]) -> HashMap<String, String> {
+pub(crate) async fn resolve_emails(ts: &TenantStore, tasks: &[Task]) -> HashMap<String, String> {
     let mut ids: Vec<String> = tasks.iter().filter_map(|t| t.assignee.clone()).collect();
     ids.sort();
     ids.dedup();
@@ -222,7 +226,7 @@ struct TaskBody {
 }
 
 /// Resolves an assignee email/id to a user id in the caller's tenant, or `None`.
-async fn resolve_assignee(
+pub(crate) async fn resolve_assignee(
     state: &AppState,
     account: &Account,
     assignee: &Option<String>,

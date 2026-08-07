@@ -17,10 +17,11 @@ use crate::state::{AppState, Limits};
 use crate::{
     admin, agent, ai, api, autoconfig, base, billing_bills, billing_customers, billing_fx,
     billing_invoices, billing_payments, billing_products, billing_quotes, billing_reminder,
-    billing_reports, billing_send, billing_settings, blob, calendar, carddav, contacts, crm_deals,
-    crm_pipelines, crm_stages, crm_threads, delegates, docs, drive, filters, flagdue,
-    imap_import_route, push, reset_route, schedule, security, session, settings, share,
-    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    billing_reports, billing_send, billing_settings, blob, calendar, carddav, contacts,
+    crm_activities, crm_deals, crm_next_steps, crm_pipelines, crm_stages, crm_threads, delegates,
+    docs, drive, filters, flagdue, imap_import_route, push, reset_route, schedule, security,
+    session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
+    workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -498,6 +499,27 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/crm/deals/{id}/thread-suggestions",
             get(crm_threads::suggest_threads),
+        )
+        // What was said and done on a deal (B2.06). Written once, never
+        // edited — a correction is another note — and deleted only by the
+        // colleague who wrote it, which is the one `403` in CRM: the entry is
+        // readable tenant-wide, so hiding its existence would be theatre.
+        .route(
+            "/crm/deals/{id}/activities",
+            get(crm_activities::list_activities).post(crm_activities::add_activity),
+        )
+        .route(
+            "/crm/activities/{id}",
+            delete(crm_activities::delete_activity),
+        )
+        // And what happens next (B2.06), which is deliberately NOT a CRM
+        // record: a next step is a real task in the tasks module, carried by
+        // ADR 0021's source link and answered in the tasks module's own JSON.
+        // Two to-do lists in one workspace is how a CRM becomes the system
+        // nobody updates.
+        .route(
+            "/crm/deals/{id}/next-steps",
+            get(crm_next_steps::list_next_steps).post(crm_next_steps::add_next_step),
         )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))

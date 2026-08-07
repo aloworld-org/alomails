@@ -36,8 +36,10 @@ pub mod calendar;
 pub mod changes;
 pub mod contacts;
 pub mod control;
+pub mod crm_activities;
 pub mod crm_deal_threads;
 pub mod crm_deals;
+pub mod crm_next_steps;
 pub mod crm_pipelines;
 pub mod crm_stages;
 pub mod crm_thread_match;
@@ -104,8 +106,10 @@ pub use blob::{BlobStore, ShareStream};
 pub use changes::Changes;
 pub use contacts::AddressHeaders;
 pub use control::PLATFORM_TENANT_NAME;
+pub use crm_activities::{Activity, ActivityKind, NewActivity};
 pub use crm_deal_threads::{DealThread, ThreadSuggestion};
 pub use crm_deals::{Deal, DealFilter, DealState, NewDeal, StageEvent, StageMove};
+pub use crm_next_steps::DEAL_SOURCE_KIND;
 pub use crm_pipelines::{NewPipeline, Pipeline, PipelineSeed, StageSeed};
 pub use crm_stages::{NewStage, Stage};
 pub use crm_thread_match::MatchReason;
@@ -117,10 +121,10 @@ pub use error::{Result, StoreError};
 pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId,
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
-    BillingQuoteId, BlobId, CalendarId, CategoryId, CommentId, ContactId, CrmDealId, CrmEventId,
-    CrmPipelineId, CrmStageId, DriveNodeId, EventId, GroupId, LabelId, MailboxId, MessageId,
-    ProjectId, SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
-    UserId,
+    BillingQuoteId, BlobId, CalendarId, CategoryId, CommentId, ContactId, CrmActivityId, CrmDealId,
+    CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, GroupId, LabelId, MailboxId,
+    MessageId, ProjectId, SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId,
+    ThreadId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
