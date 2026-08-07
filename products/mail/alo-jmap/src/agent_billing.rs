@@ -12,9 +12,10 @@
 //! - **The model speaks names; the store speaks ids.** A proposal carries "the
 //!   customer Acme", "the product Consulting", "invoice INV-2026-00042" —
 //!   whatever the user said. Resolving a name to exactly one of the tenant's
-//!   records happens here, and an ambiguous name is a refusal that lists the
-//!   candidates, never a guess. This is the source resolution the mail tools do
-//!   with a source number, done for records a search does not return.
+//!   records is [`crate::agent_args`], shared with every other product agent,
+//!   and an ambiguous name is a refusal that lists the candidates, never a
+//!   guess. This is the source resolution the mail tools do with a source
+//!   number, done for records a search does not return.
 //! - **Money arrives as integers and is never recomputed.** Prices come in
 //!   whole cents and VAT rates in basis points; a quantity may be written
 //!   "1.5", and it is converted to milli-units by reading its digits, not by
@@ -30,13 +31,13 @@
 //! rules of a document to drift.
 
 use axum::Json;
-use axum::http::StatusCode;
 use serde_json::{Value, json};
 
 use alo_store::billing_invoices::NewInvoice;
 use alo_store::billing_line::QTY_MAX_MILLI;
 use alo_store::{BillingCustomerId, NewLine};
 
+use crate::agent_args::{integer, pick, pick_name, string_arg, unprocessable};
 use crate::billing::map_store_err;
 use crate::billing_document::today;
 use crate::billing_reminder::draft_reminder;
@@ -236,20 +237,6 @@ pub async fn execute_draft_payment_reminder(
     })))
 }
 
-/// A trimmed, non-empty string argument.
-fn string_arg(args: &Value, key: &str) -> Option<String> {
-    args.get(key)
-        .and_then(Value::as_str)
-        .map(str::trim)
-        .filter(|value| !value.is_empty())
-        .map(str::to_owned)
-}
-
-/// The `422` a proposal that cannot be carried out earns.
-fn unprocessable(detail: impl Into<String>) -> Problem {
-    Problem::with(StatusCode::UNPROCESSABLE_ENTITY, detail.into())
-}
-
 /// The refusal for a document number that is not the tenant's.
 ///
 /// A `422` rather than a `404`: the request is well-formed and the route
@@ -319,20 +306,6 @@ fn new_line(line: &Value, catalogue: &[alo_store::Product]) -> Result<NewLine, S
     }
 }
 
-/// A whole-number argument, or the reason it is not one. Absent is `None`;
-/// present but fractional, textual or out of range is an error, never a
-/// rounding — a price is not a thing to round on the way in.
-fn integer(value: Option<&Value>, key: &str) -> Result<Option<i64>, String> {
-    match value {
-        None | Some(Value::Null) => Ok(None),
-        Some(Value::Number(n)) => n
-            .as_i64()
-            .map(Some)
-            .ok_or_else(|| format!("{key} must be a whole number of cents, not {n}")),
-        Some(other) => Err(format!("{key} must be a whole number, not {other}")),
-    }
-}
-
 /// The approved quantity in milli-units; a line that states none is one unit.
 fn quantity_milli(value: Option<&Value>) -> Result<i64, String> {
     let text = match value {
@@ -394,50 +367,6 @@ fn milli_from_decimal(text: &str) -> Option<i64> {
     Some(if negative { -milli } else { milli })
 }
 
-/// Resolves a name the user said to exactly one of the tenant's records, or
-/// the `422` that says why it could not.
-fn pick<T>(wanted: &str, candidates: Vec<(&str, T)>, kind: &str) -> Result<T, Problem> {
-    pick_name(wanted, candidates, kind).map_err(unprocessable)
-}
-
-/// The same resolution, reporting plain text — the form a line's error takes.
-///
-/// An **exact** name (case- and blank-insensitive) always wins, so a customer
-/// literally called "Acme" is reachable even when "Acme Holding BV" exists.
-/// Failing that, a name that appears inside exactly one record's name is taken:
-/// people say "Acme", not "Acme Handelsgesellschaft mbH". Two matches are a
-/// refusal listing them — an agent that picked one would eventually invoice the
-/// wrong company, and there is no undoing a document sent to the wrong party.
-fn pick_name<T>(wanted: &str, candidates: Vec<(&str, T)>, kind: &str) -> Result<T, String> {
-    let needle = wanted.trim().to_lowercase();
-    if needle.is_empty() {
-        return Err(format!("which {kind} was meant is required"));
-    }
-    let mut exact = Vec::new();
-    let mut partial = Vec::new();
-    for (name, value) in candidates {
-        let hay = name.trim().to_lowercase();
-        if hay == needle {
-            exact.push((name, value));
-        } else if hay.contains(&needle) {
-            partial.push((name, value));
-        }
-    }
-    let mut found = if exact.is_empty() { partial } else { exact };
-    match found.len() {
-        0 => Err(format!("no {kind} of yours is called {wanted}")),
-        1 => Ok(found.remove(0).1),
-        _ => Err(format!(
-            "more than one {kind} matches {wanted}: {} — say which",
-            found
-                .iter()
-                .map(|(name, _)| *name)
-                .collect::<Vec<_>>()
-                .join(", ")
-        )),
-    }
-}
-
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
@@ -445,6 +374,7 @@ mod tests {
 
     use alo_store::BillingProductId;
     use alo_store::billing_products::Product;
+    use axum::http::StatusCode;
     use time::OffsetDateTime;
 
     fn product(name: &str, unit: &str, cents: i64, bp: i32) -> Product {
@@ -517,25 +447,6 @@ mod tests {
         assert!(quantity_milli(Some(&json!(0))).is_err());
         assert!(quantity_milli(Some(&json!(true))).is_err());
         assert!(quantity_milli(Some(&json!("lots"))).is_err());
-    }
-
-    #[test]
-    fn money_arrives_whole_or_not_at_all() {
-        assert_eq!(
-            integer(Some(&json!(12_000)), "unitPriceCents"),
-            Ok(Some(12_000))
-        );
-        assert_eq!(
-            integer(Some(&json!(-500)), "unitPriceCents"),
-            Ok(Some(-500))
-        );
-        assert_eq!(integer(None, "unitPriceCents"), Ok(None));
-        assert_eq!(integer(Some(&Value::Null), "unitPriceCents"), Ok(None));
-        // A price with a decimal point is a mistake about the unit, and the
-        // refusal says which unit we meant.
-        let why = integer(Some(&json!(119.99)), "unitPriceCents").unwrap_err();
-        assert!(why.contains("whole number of cents"), "{why}");
-        assert!(integer(Some(&json!("12000")), "unitPriceCents").is_err());
     }
 
     #[test]
@@ -613,39 +524,16 @@ mod tests {
     }
 
     #[test]
-    fn a_name_resolves_to_one_record_or_to_a_refusal_that_lists_them() {
-        let items = catalogue();
-        let named = || {
-            items
-                .iter()
-                .map(|p| (p.name.as_str(), p))
-                .collect::<Vec<_>>()
-        };
-        // Exact wins, whatever the case or the blanks.
-        assert_eq!(
-            pick_name("  CONSULTING ", named(), "product").unwrap().name,
-            "Consulting"
-        );
-        // A fragment that only one record contains is that record.
-        assert_eq!(
-            pick_name("retainer", named(), "product").unwrap().name,
-            "Consulting retainer"
-        );
-        // A fragment two records share is a question, not a guess — and it
-        // names them both.
-        let why = pick_name("consult", named(), "product").unwrap_err();
-        assert!(why.contains("more than one product"), "{why}");
+    fn a_product_name_resolves_through_the_shared_rule() {
+        // The rule itself is `agent_args`' (exact first, then a unique
+        // containment, an ambiguity listed); what this asserts is that a *line*
+        // resolves its product by it, and carries that record's own price.
+        let line = new_line(&json!({ "product": "retainer" }), &catalogue())
+            .expect("one product contains 'retainer'");
+        assert_eq!(line.description, "Consulting retainer");
+        assert_eq!(line.unit_price_cents, 250_000);
+        let why = new_line(&json!({ "product": "consult" }), &catalogue()).unwrap_err();
         assert!(why.contains("Consulting, Consulting retainer"), "{why}");
-        // Nothing at all is a refusal that repeats what was asked for.
-        let why = pick_name("Hovercraft", named(), "product").unwrap_err();
-        assert!(
-            why.contains("no product of yours is called Hovercraft"),
-            "{why}"
-        );
-        assert!(pick_name("   ", named(), "product").is_err());
-        // Two records with the same name are ambiguous even on an exact match.
-        let twins = vec![("Acme", 1), ("Acme", 2)];
-        assert!(pick_name("acme", twins, "customer").is_err());
     }
 
     #[test]

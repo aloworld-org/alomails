@@ -15,8 +15,10 @@ import {
   Flag,
   FlagOff,
   FolderInput,
+  Handshake,
   ListChecks,
   MailOpen,
+  MoveRight,
   PenLine,
   Reply,
   Send,
@@ -25,7 +27,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { strings } from "../i18n";
+import { formatAmount } from "../billing";
+import { getLocale, strings } from "../i18n";
 import { Spinner } from "../ds";
 import type { AgentActionDto } from "../jmap";
 import styles from "./AgentActionCard.module.css";
@@ -92,6 +95,18 @@ function proposedLines(args: Record<string, unknown>): string[] {
     const shown = typeof qty === "number" || typeof qty === "string" ? String(qty) : "1";
     return [`${shown} × ${what}`];
   });
+}
+
+/** What a proposed deal is worth, exactly as the proposal states it: whole cents,
+ *  in the currency it names — and with no currency at all when it names none,
+ *  rather than a symbol this card invented. Nothing is summed or converted; a
+ *  value that is not a whole number of cents is not shown, because the server
+ *  will refuse it rather than round it. */
+function proposedValue(args: Record<string, unknown>): string {
+  const cents = args["valueCents"];
+  if (typeof cents !== "number" || !Number.isInteger(cents)) return "";
+  const currency = str(args, "currency");
+  return formatAmount(cents, getLocale(), currency === "" ? undefined : currency);
 }
 
 /** Map a proposed action to its icon, title, and preview fields. Falls back to the
@@ -191,6 +206,48 @@ function describeAction(action: AgentActionDto): ActionView {
         fields: [{ label: strings.agentFieldInvoice, value: str(a, "invoice") }],
         body: str(a, "note"),
         note: strings.agentReminderNote,
+      };
+    // CRM tools (ADR 0035, B2.10). A deal is named, never numbered, so every
+    // one of these previews the title the user will be acting on.
+    case "create_deal": {
+      const fields: Field[] = [{ label: strings.agentFieldDeal, value: str(a, "title") }];
+      const company = str(a, "company");
+      if (company !== "") fields.push({ label: strings.agentFieldCompany, value: company });
+      const value = proposedValue(a);
+      if (value !== "") fields.push({ label: strings.agentFieldValue, value });
+      const stage = str(a, "stage");
+      if (stage !== "") fields.push({ label: strings.agentFieldStage, value: stage });
+      // The note is only there when the proposal carries an email: approving
+      // then links that conversation to the new deal, which is worth saying out
+      // loud. (The propose route rewrites the source number into a message id,
+      // so either shape means "raised from a conversation".)
+      const fromEmail = a["source"] !== undefined || a["message_id"] !== undefined;
+      return {
+        icon: Handshake,
+        title: strings.agentActCreateDeal,
+        fields,
+        ...(fromEmail ? { note: strings.agentDealFromEmailNote } : {}),
+      };
+    }
+    case "move_deal_stage": {
+      const fields: Field[] = [
+        { label: strings.agentFieldDeal, value: str(a, "deal") },
+        { label: strings.agentFieldStage, value: str(a, "stage") },
+      ];
+      const reason = str(a, "reason");
+      if (reason !== "") fields.push({ label: strings.agentFieldLostReason, value: reason });
+      return { icon: MoveRight, title: strings.agentActMoveDeal, fields };
+    }
+    case "draft_followup":
+      return {
+        icon: PenLine,
+        title: strings.agentActFollowup,
+        fields: [
+          { label: strings.agentFieldDeal, value: str(a, "deal") },
+          { label: strings.agentFieldSubject, value: str(a, "subject") || str(a, "deal") },
+        ],
+        body: str(a, "body"),
+        note: strings.agentFollowupNote,
       };
     case "create_event": {
       const fields: Field[] = [{ label: strings.agentFieldEvent, value: str(a, "title") }];

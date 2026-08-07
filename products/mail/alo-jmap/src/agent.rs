@@ -10,17 +10,18 @@
 //! can never act outside the caller's own permissions.
 
 use alo_ai::{AgentDecision, AiConfig, InferenceError, WorkspaceSource};
-use alo_store::{CalendarEvent, EventId, MailboxId, MessageId, NewTask, Page, MAX_PAGE};
+use alo_store::{CalendarEvent, EventId, MAX_PAGE, MailboxId, MessageId, NewTask, Page};
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
-use axum::{body::Bytes, Json};
-use serde_json::{json, Value};
+use axum::{Json, body::Bytes};
+use serde_json::{Value, json};
 use time::format_description::well_known::Rfc3339;
 
 use crate::agent_billing as billing;
+use crate::agent_crm as crm;
 use crate::ai::MAX_ASK_BYTES;
 use crate::error::Problem;
-use crate::state::{authenticate, Account, AppState};
+use crate::state::{Account, AppState, authenticate};
 
 /// How many retrieved items ground one agent turn (mirrors `/ai/ask`).
 const AGENT_SOURCES: i64 = 8;
@@ -41,7 +42,10 @@ pub async fn agent(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     if body.len() > MAX_ASK_BYTES {
-        return Err(Problem::with(StatusCode::PAYLOAD_TOO_LARGE, "request too large"));
+        return Err(Problem::with(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "request too large",
+        ));
     }
     let req: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let request = req
@@ -141,7 +145,10 @@ pub async fn agent_execute(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     if body.len() > MAX_ASK_BYTES {
-        return Err(Problem::with(StatusCode::PAYLOAD_TOO_LARGE, "request too large"));
+        return Err(Problem::with(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "request too large",
+        ));
     }
     let req: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let tool = req.get("tool").and_then(Value::as_str).unwrap_or("").trim();
@@ -169,6 +176,10 @@ pub async fn agent_execute(
         "draft_payment_reminder" => {
             billing::execute_draft_payment_reminder(&account, &args, &state).await
         }
+        // alo CRM's tools (B2.10), on the same seam.
+        "create_deal" => crm::execute_create_deal(&account, &args, &state).await,
+        "move_deal_stage" => crm::execute_move_deal_stage(&account, &args).await,
+        "draft_followup" => crm::execute_draft_followup(&account, &args, &state).await,
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
     }
@@ -203,7 +214,10 @@ fn message_id_arg(args: &Value) -> Result<MessageId, Problem> {
         .unwrap_or("")
         .trim();
     if id.is_empty() {
-        return Err(Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "message required"));
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "message required",
+        ));
     }
     Ok(MessageId::new(id.to_owned()))
 }
@@ -217,13 +231,23 @@ async fn execute_set_keyword(
 ) -> Result<Json<Value>, Problem> {
     let msg = message_id_arg(args)?;
     // Default the boolean to true ("mark read" / "flag" without an explicit value).
-    let on = args.get(flag_field).and_then(Value::as_bool).unwrap_or(true);
+    let on = args
+        .get(flag_field)
+        .and_then(Value::as_bool)
+        .unwrap_or(true);
     account
         .acc
         .set_keyword(&msg, keyword, on)
         .await
-        .map_err(|_| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "could not update the email"))?;
-    Ok(Json(json!({ "ok": true, "result": { "kind": "email", "id": msg.as_str() } })))
+        .map_err(|_| {
+            Problem::with(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "could not update the email",
+            )
+        })?;
+    Ok(Json(
+        json!({ "ok": true, "result": { "kind": "email", "id": msg.as_str() } }),
+    ))
 }
 
 /// Move an email into a standard role mailbox (Archive or Trash) and take it out
@@ -241,7 +265,9 @@ async fn execute_move_to_role(
     let msg = message_id_arg(args)?;
     let dest = crate::drafts::role_mailbox(account, role, name).await?;
     relocate_message(account, &msg, &dest).await?;
-    Ok(Json(json!({ "ok": true, "result": { "kind": "email", "id": msg.as_str() } })))
+    Ok(Json(
+        json!({ "ok": true, "result": { "kind": "email", "id": msg.as_str() } }),
+    ))
 }
 
 /// Move an email into one of the user's named folders. Unlike the role moves,
@@ -250,9 +276,16 @@ async fn execute_move_to_role(
 /// a new empty folder from a typo.
 async fn execute_move_to_folder(account: &Account, args: &Value) -> Result<Json<Value>, Problem> {
     let msg = message_id_arg(args)?;
-    let wanted = args.get("folder").and_then(Value::as_str).unwrap_or("").trim();
+    let wanted = args
+        .get("folder")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
     if wanted.is_empty() {
-        return Err(Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "a folder name is required"));
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "a folder name is required",
+        ));
     }
     let dest = movable_folders(account)
         .await?
@@ -261,7 +294,9 @@ async fn execute_move_to_folder(account: &Account, args: &Value) -> Result<Json<
         .map(|m| MailboxId::new(m.id.as_str()))
         .ok_or_else(|| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "no folder by that name"))?;
     relocate_message(account, &msg, &dest).await?;
-    Ok(Json(json!({ "ok": true, "result": { "kind": "email", "id": msg.as_str() } })))
+    Ok(Json(
+        json!({ "ok": true, "result": { "kind": "email", "id": msg.as_str() } }),
+    ))
 }
 
 /// Add `msg` to `dest`, then take it out of the "still visible" origins (Inbox,
@@ -269,7 +304,11 @@ async fn execute_move_to_folder(account: &Account, args: &Value) -> Result<Json<
 /// home. Skipping `dest` by id keeps a move *into* the Inbox or Archive from
 /// removing what it just added. Removals are best-effort: if the message was not
 /// in an origin, the move still stands.
-async fn relocate_message(account: &Account, msg: &MessageId, dest: &MailboxId) -> Result<(), Problem> {
+async fn relocate_message(
+    account: &Account,
+    msg: &MessageId,
+    dest: &MailboxId,
+) -> Result<(), Problem> {
     account
         .acc
         .add_to_mailbox(msg, dest)
@@ -320,7 +359,12 @@ async fn execute_snooze(account: &Account, args: &Value) -> Result<Json<Value>, 
         .get("until")
         .and_then(Value::as_str)
         .and_then(|s| parse_wake_time(s, time::OffsetDateTime::now_utc()))
-        .ok_or_else(|| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "a future RFC 3339 wake time is required"))?;
+        .ok_or_else(|| {
+            Problem::with(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "a future RFC 3339 wake time is required",
+            )
+        })?;
     // Snooze hides the message from the Inbox, so that is the mailbox to move it
     // out of; ensure it exists for the rare account that has none yet.
     let inbox = crate::drafts::role_mailbox(account, "inbox", "Inbox").await?;
@@ -328,8 +372,15 @@ async fn execute_snooze(account: &Account, args: &Value) -> Result<Json<Value>, 
         .acc
         .snooze(std::slice::from_ref(&msg), &inbox, epoch)
         .await
-        .map_err(|_| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "could not snooze the email"))?;
-    Ok(Json(json!({ "ok": true, "result": { "kind": "email", "id": msg.as_str() } })))
+        .map_err(|_| {
+            Problem::with(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "could not snooze the email",
+            )
+        })?;
+    Ok(Json(
+        json!({ "ok": true, "result": { "kind": "email", "id": msg.as_str() } }),
+    ))
 }
 
 /// Draft a NEW email from approved args and save it to the user's Drafts (marked
@@ -342,17 +393,32 @@ async fn execute_draft_email(
     args: &Value,
     state: &AppState,
 ) -> Result<Json<Value>, Problem> {
-    let to = args.get("to").and_then(Value::as_str).unwrap_or("").trim().to_owned();
+    let to = args
+        .get("to")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_owned();
     if !crate::submission::valid_addr(&to) {
-        return Err(Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "a valid recipient address is required"));
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "a valid recipient address is required",
+        ));
     }
     let body = draft_body_arg(args)?;
-    let subject = args.get("subject").and_then(Value::as_str).unwrap_or("").trim().to_owned();
+    let subject = args
+        .get("subject")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_owned();
 
     let from = crate::drafts::from_address(account, state).await?;
     let outgoing = compose(&from, vec![to], subject, body, Vec::new(), Vec::new());
     let id = crate::drafts::save(account, &outgoing).await?;
-    Ok(Json(json!({ "ok": true, "result": { "kind": "draft", "id": id.as_str() } })))
+    Ok(Json(
+        json!({ "ok": true, "result": { "kind": "draft", "id": id.as_str() } }),
+    ))
 }
 
 /// Draft a REPLY to an email in the sources and save it to Drafts (`$draft`),
@@ -369,14 +435,20 @@ async fn execute_draft_reply(
     let body = draft_body_arg(args)?;
     // The account door scopes this: a foreign or absent id is a clean not-found,
     // never another tenant's message.
-    let bytes = account
-        .acc
-        .message_bytes(&mid)
-        .await
-        .map_err(|_| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "the email to reply to was not found"))?;
+    let bytes = account.acc.message_bytes(&mid).await.map_err(|_| {
+        Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "the email to reply to was not found",
+        )
+    })?;
     let to = crate::submission::extract_from_addr(&bytes)
         .filter(|a| crate::submission::valid_addr(a))
-        .ok_or_else(|| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "the original email has no address to reply to"))?;
+        .ok_or_else(|| {
+            Problem::with(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "the original email has no address to reply to",
+            )
+        })?;
     let parsed = alo_store::message::parse(&bytes);
     let subject = reply_subject(&parsed.subject);
     let in_reply_to: Vec<String> = parsed
@@ -391,14 +463,24 @@ async fn execute_draft_reply(
     let from = crate::drafts::from_address(account, state).await?;
     let outgoing = compose(&from, vec![to], subject, body, in_reply_to, references);
     let id = crate::drafts::save(account, &outgoing).await?;
-    Ok(Json(json!({ "ok": true, "result": { "kind": "draft", "id": id.as_str() } })))
+    Ok(Json(
+        json!({ "ok": true, "result": { "kind": "draft", "id": id.as_str() } }),
+    ))
 }
 
 /// The required, non-empty `body` of a draft/reply.
 fn draft_body_arg(args: &Value) -> Result<String, Problem> {
-    let body = args.get("body").and_then(Value::as_str).unwrap_or("").trim().to_owned();
+    let body = args
+        .get("body")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim()
+        .to_owned();
     if body.is_empty() {
-        return Err(Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "the email body is required"));
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "the email body is required",
+        ));
     }
     Ok(body)
 }
@@ -415,7 +497,10 @@ fn compose(
     references: Vec<String>,
 ) -> crate::mime::Outgoing {
     crate::mime::Outgoing {
-        from: crate::mime::Addr { name: None, email: from.to_owned() },
+        from: crate::mime::Addr {
+            name: None,
+            email: from.to_owned(),
+        },
         to: to
             .into_iter()
             .map(|email| crate::mime::Addr { name: None, email })
@@ -449,11 +534,12 @@ async fn execute_send(
     // Build the send envelope from the draft's own recipients (To/Cc/Bcc), the
     // way a compose client does. The account door scopes this fetch: a foreign or
     // absent id is a clean not-found, never another tenant's message.
-    let bytes = account
-        .acc
-        .message_bytes(&mid)
-        .await
-        .map_err(|_| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "the draft to send was not found"))?;
+    let bytes = account.acc.message_bytes(&mid).await.map_err(|_| {
+        Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "the draft to send was not found",
+        )
+    })?;
     let parsed = alo_store::message::parse(&bytes);
     let mut rcpts: Vec<String> = Vec::new();
     for header in [&parsed.to_addrs, &parsed.cc_addrs, &parsed.bcc_addrs] {
@@ -464,7 +550,10 @@ async fn execute_send(
         }
     }
     if rcpts.is_empty() {
-        return Err(Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "the draft has no recipient to send to"));
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "the draft has no recipient to send to",
+        ));
     }
     let rcpt_to: Vec<Value> = rcpts.iter().map(|e| json!({ "email": e })).collect();
     let sub_args = json!({
@@ -475,8 +564,13 @@ async fn execute_send(
         .await
         .map_err(|_| Problem::server_error())?;
     if let Some(created) = res.get("created").and_then(|c| c.get("a")) {
-        let sent = created.get("emailId").and_then(Value::as_str).unwrap_or_else(|| mid.as_str());
-        return Ok(Json(json!({ "ok": true, "result": { "kind": "sent", "id": sent } })));
+        let sent = created
+            .get("emailId")
+            .and_then(Value::as_str)
+            .unwrap_or_else(|| mid.as_str());
+        return Ok(Json(
+            json!({ "ok": true, "result": { "kind": "sent", "id": sent } }),
+        ));
     }
     // notCreated carries the specific reason (not a draft, no send listener,
     // notFound, forbidden) — surface it, without any recipient/body detail.
@@ -513,7 +607,11 @@ fn addr_specs(header_value: &str) -> Vec<String> {
 /// Strip the surrounding angle brackets from a message-id, leaving the bare id
 /// the `mime` builder expects (it re-wraps in `<…>`).
 fn strip_brackets(raw: &str) -> String {
-    raw.trim().trim_start_matches('<').trim_end_matches('>').trim().to_owned()
+    raw.trim()
+        .trim_start_matches('<')
+        .trim_end_matches('>')
+        .trim()
+        .to_owned()
 }
 
 /// The subject for a reply: prefix `Re: ` unless one is already present
@@ -553,7 +651,10 @@ async fn execute_create_task(account: &Account, args: &Value) -> Result<Json<Val
         .trim()
         .to_owned();
     if title.is_empty() {
-        return Err(Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "title required"));
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "title required",
+        ));
     }
     let description = args
         .get("notes")
@@ -600,13 +701,21 @@ async fn execute_create_event(account: &Account, args: &Value) -> Result<Json<Va
         .trim()
         .to_owned();
     if title.is_empty() {
-        return Err(Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "title required"));
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "title required",
+        ));
     }
     let starts_at = args
         .get("start")
         .and_then(Value::as_str)
         .and_then(parse_rfc3339)
-        .ok_or_else(|| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "a valid RFC 3339 start is required"))?;
+        .ok_or_else(|| {
+            Problem::with(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "a valid RFC 3339 start is required",
+            )
+        })?;
     // End defaults to one hour after start; a given end before start is ignored.
     let ends_at = args
         .get("end")
@@ -777,7 +886,12 @@ mod tests {
         let now = parse_rfc3339("2026-08-06T12:00:00Z").unwrap();
         // A future time yields its epoch; the same instant or a past one is rejected.
         let future = parse_wake_time("2026-08-07T09:00:00Z", now).unwrap();
-        assert_eq!(future, parse_rfc3339("2026-08-07T09:00:00Z").unwrap().unix_timestamp());
+        assert_eq!(
+            future,
+            parse_rfc3339("2026-08-07T09:00:00Z")
+                .unwrap()
+                .unix_timestamp()
+        );
         assert!(parse_wake_time("2026-08-06T12:00:00Z", now).is_none()); // now, not future
         assert!(parse_wake_time("2026-08-05T09:00:00Z", now).is_none()); // in the past
         assert!(parse_wake_time("not-a-time", now).is_none()); // malformed

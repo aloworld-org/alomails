@@ -1465,6 +1465,18 @@ export const en = {
   agentInvoiceDraftNote: "Creates a draft — nothing is issued, numbered or sent.",
   agentQuoteToInvoiceNote: "Closes the quote as accepted and raises a draft invoice.",
   agentReminderNote: "Writes a reminder into your Drafts — nothing is sent.",
+  // CRM tools (ADR 0035, B2.10). A deal is named, not numbered, so each card
+  // shows the title being acted on.
+  agentActCreateDeal: "New deal",
+  agentActMoveDeal: "Move deal",
+  agentActFollowup: "Follow-up email",
+  agentFieldDeal: "Deal",
+  agentFieldCompany: "Company",
+  agentFieldValue: "Value",
+  agentFieldStage: "Stage",
+  agentFieldLostReason: "Lost because",
+  agentDealFromEmailNote: "Links this conversation to the new deal.",
+  agentFollowupNote: "Writes the email into your Drafts — nothing is sent.",
   agentSendButton: "Send",
   agentSendCaution: "This sends the email now — it can’t be undone.",
   agentFieldTo: "To",
