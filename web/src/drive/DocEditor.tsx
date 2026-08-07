@@ -267,6 +267,7 @@ export function DocEditor({
             editor={editorProp}
             onChange={onChange}
             slashMenu={false}
+            sideMenu={viewMode === "canvas"}
             theme={{
               borderRadius: 6,
               colors: {

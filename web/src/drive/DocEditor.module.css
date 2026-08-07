@@ -314,6 +314,12 @@
   background: var(--bg-surface);
   box-shadow: 0 3px 14px color-mix(in srgb, var(--text-primary) 8%, transparent);
 }
+.pageMode :global(.bn-side-menu) {
+  display: none;
+}
+.pageMode :global(.bn-block-content:has(.ProseMirror-trailingBreak:only-child)::after) {
+  display: none;
+}
 
 @media (max-width: 720px) {
   .save {
