@@ -194,6 +194,7 @@ pub fn app(state: AppState) -> Router {
         // next deploy (docs/design/sites.md). Static paths before /{id}.
         .route("/sites", get(sites::list_sites).post(sites::create_site))
         .route("/sites/subdomain-check", get(sites::check_subdomain))
+        .route("/sites/theme-presets", get(sites::list_theme_presets))
         .route(
             "/sites/{id}",
             get(sites::get_site)

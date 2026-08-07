@@ -27,6 +27,8 @@ import type {
   SitePage,
   SitePageDetail,
   SubdomainCheck,
+  ThemeEnvelope,
+  ThemePreset,
 } from "./types";
 
 type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -88,6 +90,23 @@ export class SitesApi {
   checkSubdomain(subdomain: string): Promise<SubdomainCheck> {
     return this.#read<SubdomainCheck>(
       `/sites/subdomain-check?subdomain=${encodeURIComponent(subdomain)}`,
+    );
+  }
+
+  /** The shipped theme presets, in picker order (the first is the default). */
+  themePresets(): Promise<ThemePreset[]> {
+    return this.#read<{ presets?: ThemePreset[] }>("/sites/theme-presets").then(
+      (r) => r.presets ?? [],
+    );
+  }
+
+  /** Stores the site's theme (the full envelope, through the server's theme
+   *  gate — an unknown preset or malformed blob ref is a 422 naming the rule). */
+  async setTheme(siteId: string, theme: ThemeEnvelope): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "PUT",
+      `/sites/${encodeURIComponent(siteId)}/theme`,
+      theme,
     );
   }
 

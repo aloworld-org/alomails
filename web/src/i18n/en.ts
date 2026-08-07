@@ -2162,7 +2162,7 @@ export const en = {
   sitesFieldImage: "Image",
   sitesFieldPhoto: "Photo",
   sitesFieldImageId: "Image ID",
-  sitesImageIdHint: "Paste a file ID from Drive for now — an image picker arrives with themes.",
+  sitesImageIdHint: "Upload a picture, or paste an image ID from an earlier upload.",
   sitesFieldImageAlt: "Image description",
   sitesImageAltHint: "Read aloud by screen readers; leave empty for a purely decorative image.",
   sitesFieldImageSide: "Picture side",
@@ -2186,6 +2186,24 @@ export const en = {
   sitesFieldFooterText: "Footer text",
   sitesContactFormHint:
     "The form already shows on the page; sending starts working when forms arrive.",
+  // Sites — theme (preset picker + logo/favicon upload).
+  sitesTheme: "Theme",
+  sitesThemeTitle: "Site theme",
+  sitesThemeSubtitle: "Pick a look; add your logo and favicon.",
+  sitesThemeApply: "Apply theme",
+  sitesThemeLoadFailed: "The theme options could not be loaded.",
+  sitesThemePresets: "Colors & type",
+  sitesThemeLogo: "Logo",
+  sitesThemeLogoHint: "Shown in the navigation bar instead of the site name.",
+  sitesThemeFavicon: "Favicon",
+  sitesThemeFaviconHint: "The little icon browsers show on the tab.",
+  sitesThemeUpload: "Upload image",
+  sitesThemeReplace: "Replace image",
+  sitesThemeRemove: "Remove image",
+  sitesThemeSet: "Image uploaded",
+  sitesThemeNotSet: "None yet",
+  sitesUploadFailed: "The image could not be uploaded.",
+  sitesUploadImage: "Upload picture",
 } as const;
 
 /** Every string key in the catalog. */

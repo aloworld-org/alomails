@@ -5,12 +5,13 @@
 // never a broken screen.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, FileText, Palette } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { NewPageDialog } from "./NewPageDialog";
+import { ThemeDialog } from "./ThemeDialog";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { SiteDetail, SitePage } from "./types";
 import styles from "./SitesModule.module.css";
@@ -23,6 +24,7 @@ export function SiteView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [theming, setTheming] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,9 +71,19 @@ export function SiteView() {
         <>
           <div className={styles.sectionBar}>
             <h2 className={styles.sectionTitle}>{strings.sitesPages}</h2>
-            <Button size="sm" onClick={() => setCreating(true)}>
-              {strings.sitesNewPage}
-            </Button>
+            <div className={styles.sectionBarActions}>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Palette size={14} />}
+                onClick={() => setTheming(true)}
+              >
+                {strings.sitesTheme}
+              </Button>
+              <Button size="sm" onClick={() => setCreating(true)}>
+                {strings.sitesNewPage}
+              </Button>
+            </div>
           </div>
 
           {pages.length === 0 && !loading ? (
@@ -109,6 +121,17 @@ export function SiteView() {
             </div>
           )}
         </>
+      )}
+
+      {theming && site !== null && (
+        <ThemeDialog
+          siteId={site.id}
+          onClose={() => setTheming(false)}
+          onApplied={() => {
+            setTheming(false);
+            void load();
+          }}
+        />
       )}
 
       {creating && site !== null && (

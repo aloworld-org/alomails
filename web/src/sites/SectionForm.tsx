@@ -4,11 +4,12 @@
 // SERVER rules on content (blank required text, bad hrefs, empty lists) and
 // its 422 sentence is shown here verbatim, so there is exactly one copy of
 // every rule.
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Blocks, Plus, Trash2 } from "lucide-react";
+import { Blocks, Plus, Trash2, Upload } from "lucide-react";
 
 import { strings } from "../i18n";
+import { useJmapClient } from "../jmap";
 import { Button, IconButton } from "../ds";
 import { kindDescription, kindLabel } from "./sectionInfo";
 import {
@@ -147,9 +148,9 @@ function LinkFields({
   );
 }
 
-/** An image's two inputs: the blob id (pasted from Drive until the picker
- *  arrives with themes) and its alt text. A blank id means "no image" for
- *  optional slots. */
+/** An image's inputs: an upload button (the picture goes through Drive and
+ *  the field takes its blob id), the id itself for pasting/clearing, and the
+ *  alt text. A blank id means "no image" for optional slots. */
 function ImageFields({
   legend,
   value,
@@ -159,19 +160,62 @@ function ImageFields({
   value: SectionImage;
   onChange: (patch: Partial<SectionImage>) => void;
 }) {
+  const jmap = useJmapClient();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  function upload(file: File) {
+    setUploading(true);
+    setUploadError(null);
+    jmap.driveUploadBlob(null, null, file).then(
+      ({ blobId }) => {
+        onChange({ blob_id: blobId });
+        setUploading(false);
+      },
+      () => {
+        setUploadError(strings.sitesUploadFailed);
+        setUploading(false);
+      },
+    );
+  }
+
   return (
     <fieldset className={styles.subGroup}>
       {legend !== undefined && <legend className={styles.subLegend}>{legend}</legend>}
       <Field label={strings.sitesFieldImageId} hint={strings.sitesImageIdHint}>
-        <input
-          className={`${styles.input} ${styles.mono}`}
-          value={value.blob_id}
-          onChange={(e) => onChange({ blob_id: e.target.value })}
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-        />
+        <div className={styles.uploadRow}>
+          <input
+            className={`${styles.input} ${styles.mono}`}
+            value={value.blob_id}
+            onChange={(e) => onChange({ blob_id: e.target.value })}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file !== undefined) upload(file);
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Upload size={14} />}
+            disabled={uploading}
+            onClick={() => fileInput.current?.click()}
+          >
+            {strings.sitesUploadImage}
+          </Button>
+        </div>
       </Field>
+      {uploadError !== null && <p className={styles.hint} role="alert">{uploadError}</p>}
       <Field label={strings.sitesFieldImageAlt} hint={strings.sitesImageAltHint}>
         <input
           className={styles.input}

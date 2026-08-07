@@ -568,3 +568,82 @@
   border-radius: var(--radius-sm);
   background: #fff;
 }
+
+/* ---- theme dialog (S1.14) ---- */
+
+.sectionBarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.presetGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.presetCard {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  text-align: left;
+}
+.presetCard:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.presetCardActive {
+  /* The preset's own border color is overridden by the selection ring. */
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.presetName {
+  font-size: var(--text-base);
+}
+.presetSwatches {
+  display: flex;
+  gap: var(--space-1);
+}
+.presetSwatch {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 1px solid rgb(0 0 0 / 12%);
+}
+.themeSlot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+.themeSlotText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.themeSlotActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.themeSlotState {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+.uploadRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.uploadRow > input[type="text"],
+.uploadRow > input:not([type]) {
+  flex: 1;
+}

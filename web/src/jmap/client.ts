@@ -1315,6 +1315,32 @@ export class JmapClient {
     return ((await res.json()) as { id: string }).id;
   }
 
+  /** Upload a file and register it in Drive (personal root when no location
+   * is given), returning the drive node id AND the underlying blob id — for
+   * surfaces that reference the blob directly (site themes, site images)
+   * while the Drive entry keeps the blob referenced and visible to the user. */
+  async driveUploadBlob(
+    space: string | null,
+    parent: string | null,
+    file: File,
+  ): Promise<{ id: string; blobId: string; size: number }> {
+    const { blobId, size } = await this.uploadFile(file);
+    const res = await this.#fetch(`${API_BASE}/drive/files`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        space,
+        parent,
+        name: file.name,
+        blobId,
+        size,
+        contentType: file.type.length > 0 ? file.type : null,
+      }),
+    });
+    if (!res.ok) throw new JmapError(`driveUploadBlob ${res.status}`);
+    return { id: ((await res.json()) as { id: string }).id, blobId, size };
+  }
+
   /** Rename a node. */
   async driveRename(id: string, name: string): Promise<void> {
     const res = await this.#fetch(`${API_BASE}/drive/nodes/${encodeURIComponent(id)}`, {

@@ -394,6 +394,32 @@ impl Section {
         }
     }
 
+    /// The tenant blobs this section's images reference, in document order.
+    /// This is the reference set renderers and the public image path work
+    /// from: everything a page can show is exactly what this returns (plus
+    /// the theme's logo/favicon). The match is deliberately exhaustive — a
+    /// new section variant fails to compile until it declares its images.
+    pub fn image_blob_ids(&self) -> Vec<&BlobId> {
+        match self {
+            Section::Hero(s) => s.image.iter().map(|i| &i.blob_id).collect(),
+            Section::TextImage(s) => vec![&s.image.blob_id],
+            Section::Gallery(s) => s.images.iter().map(|i| &i.blob_id).collect(),
+            Section::Team(s) => s
+                .members
+                .iter()
+                .filter_map(|m| m.photo.as_ref().map(|i| &i.blob_id))
+                .collect(),
+            Section::Nav(_)
+            | Section::Features(_)
+            | Section::Testimonials(_)
+            | Section::Pricing(_)
+            | Section::Faq(_)
+            | Section::Cta(_)
+            | Section::ContactForm(_)
+            | Section::Footer(_) => Vec::new(),
+        }
+    }
+
     /// Content-rule validation for this section (structural typing is already
     /// guaranteed by serde at parse time).
     fn validate(&self) -> Result<(), SectionSchemaError> {
@@ -891,6 +917,46 @@ mod tests {
         let value = before.to_value().unwrap();
         let after = SectionsEnvelope::from_value(value).unwrap();
         assert_eq!(before, after);
+    }
+
+    /// The image-reference collector over the full corpus: exactly the four
+    /// image-bearing variants (hero, text_image, gallery, team) declare
+    /// their blobs; every other variant declares none. The public image
+    /// path and the preview inliner both work from this set.
+    #[test]
+    fn image_blob_ids_cover_exactly_the_image_bearing_variants() {
+        let sections = full_sections();
+        let with_images: Vec<&'static str> = sections
+            .iter()
+            .filter(|section| !section.image_blob_ids().is_empty())
+            .map(Section::kind)
+            .collect();
+        assert_eq!(with_images, ["hero", "text_image", "gallery", "team"]);
+        for section in &sections {
+            for blob in section.image_blob_ids() {
+                assert_eq!(blob.as_str(), "9hK3vQ2mR8pT1xWz4bC5dg");
+            }
+        }
+        // A gallery declares every image it shows, in order.
+        let gallery = Section::Gallery(GallerySection {
+            heading: None,
+            images: vec![
+                SiteImage {
+                    blob_id: BlobId::new("first-blob"),
+                    alt: String::new(),
+                },
+                SiteImage {
+                    blob_id: BlobId::new("second-blob"),
+                    alt: String::new(),
+                },
+            ],
+        });
+        let ids: Vec<&str> = gallery
+            .image_blob_ids()
+            .into_iter()
+            .map(BlobId::as_str)
+            .collect();
+        assert_eq!(ids, ["first-blob", "second-blob"]);
     }
 
     #[test]

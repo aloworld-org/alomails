@@ -114,6 +114,7 @@ async fn every_route_family_requires_a_bearer_token() {
             "/sites/subdomain-check?subdomain=whatever".to_owned(),
             None,
         ),
+        ("GET", "/sites/theme-presets".to_owned(), None),
         ("PUT", "/sites/some-id/theme".to_owned(), Some(json!({}))),
         ("POST", "/sites/some-id/publish".to_owned(), Some(json!({}))),
         (
@@ -952,4 +953,123 @@ async fn preview_renders_the_draft_as_a_self_contained_document() {
     let (_, _, html) = get_text(&h.app, &h.token, &uri).await;
     assert!(html.contains("Now even fresher"));
     assert!(!html.contains("Coffee roasted the morning it ships"));
+}
+
+// ---- themes (S1.14) ----------------------------------------------------------
+
+/// The preset listing the theme picker renders: at least the six the queue
+/// requires, the default first, every palette token a hex color, every
+/// preset named — static product data behind the same auth as the rest of
+/// the edit surface.
+#[tokio::test]
+async fn theme_presets_list_the_shipped_palettes() {
+    let h = harness("sites-presets").await;
+    let (status, body) = get(&h.app, &h.token, "/sites/theme-presets").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let presets = body["presets"].as_array().expect("presets array");
+    assert!(presets.len() >= 6, "at least six shipped presets");
+    assert_eq!(presets[0]["id"], json!("north"), "the default leads");
+    for preset in presets {
+        assert!(!preset["name"].as_str().unwrap().is_empty());
+        for token in [
+            "background",
+            "surface",
+            "text",
+            "mutedText",
+            "primary",
+            "onPrimary",
+            "border",
+        ] {
+            let hex = preset["palette"][token].as_str().unwrap();
+            assert!(
+                hex.len() == 7 && hex.starts_with('#'),
+                "{}: palette.{token} = {hex}",
+                preset["id"]
+            );
+        }
+        assert!(
+            !preset["typography"]["headingFamily"]
+                .as_str()
+                .unwrap()
+                .is_empty()
+        );
+        assert!(preset["typography"]["headingWeight"].is_u64());
+    }
+}
+
+/// The preview inlines the theme logo and section images as `data:` URIs
+/// (the public image path does not resolve on the edit origin), while a
+/// referenced blob that is not an image falls back to the public path
+/// instead of inlining non-image bytes.
+#[tokio::test]
+async fn preview_inlines_theme_and_section_images() {
+    let h = harness("sites-imgprev").await;
+    let logo = h
+        .acc
+        .put_blob(
+            axum::body::Bytes::from_static(b"logo-bytes"),
+            Some("image/png"),
+        )
+        .await
+        .unwrap();
+    let not_an_image = h
+        .acc
+        .put_blob(
+            axum::body::Bytes::from_static(b"plain text"),
+            Some("text/plain"),
+        )
+        .await
+        .unwrap();
+
+    let claimed = sub("imgpv", &h);
+    let site = created_id(
+        "site",
+        post(
+            &h.app,
+            &h.token,
+            "/sites",
+            json!({ "name": "Image Preview Co", "subdomain": claimed }),
+        )
+        .await,
+    );
+    let (status, _) = put(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/theme"),
+        json!({ "schema_version": 1, "preset": "north", "logo": logo.as_str() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let page = created_id(
+        "page",
+        post(
+            &h.app,
+            &h.token,
+            &format!("/sites/{site}/pages"),
+            json!({ "title": "Home", "home": true }),
+        )
+        .await,
+    );
+    let (status, _) = put(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/pages/{page}/sections"),
+        json!({ "schema_version": 1, "sections": [
+            { "type": "nav", "links": [] },
+            { "type": "gallery", "images": [
+                { "blob_id": not_an_image.as_str(), "alt": "" }
+            ]}
+        ]}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let uri = format!("/sites/{site}/pages/{page}/preview");
+    let (status, _, html) = get_text(&h.app, &h.token, &uri).await;
+    assert_eq!(status, StatusCode::OK);
+    // The logo is inlined: its bytes as a data URI ("logo-bytes" base64).
+    assert!(html.contains("data:image/png;base64,bG9nby1ieXRlcw=="));
+    assert!(!html.contains(&format!("/assets/img/{}", logo.as_str())));
+    // The non-image blob is not inlined — public-path fallback.
+    assert!(html.contains(&format!("/assets/img/{}", not_an_image.as_str())));
 }

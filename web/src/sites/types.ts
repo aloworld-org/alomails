@@ -14,9 +14,51 @@ export interface Site {
   status: "draft" | "live";
 }
 
-/** One site with its current publish (`null` while unpublished). */
+/** One site with its current publish (`null` while unpublished) and its
+ *  stored theme envelope. */
 export interface SiteDetail extends Site {
   publish: { id: string; publishedAt: string } | null;
+  /** The stored theme. A site that never set one stores `{}`, so every
+   *  field reads as possibly absent; absent means the default. */
+  theme: StoredTheme;
+}
+
+/** The theme envelope as stored — `{}` until the first save. */
+export interface StoredTheme {
+  schema_version?: number | undefined;
+  preset?: string | undefined;
+  logo?: string | undefined;
+  favicon?: string | undefined;
+}
+
+/** What the theme form sends: always the full current-version envelope,
+ *  with absent logo/favicon spelled as absent keys (never null). */
+export interface ThemeEnvelope {
+  schema_version: number;
+  preset: string;
+  logo?: string | undefined;
+  favicon?: string | undefined;
+}
+
+/** One shipped theme preset as `/sites/theme-presets` answers it — the
+ *  tokens the picker renders its swatches and type sample from. */
+export interface ThemePreset {
+  id: string;
+  name: string;
+  palette: {
+    background: string;
+    surface: string;
+    text: string;
+    mutedText: string;
+    primary: string;
+    onPrimary: string;
+    border: string;
+  };
+  typography: {
+    headingFamily: string;
+    bodyFamily: string;
+    headingWeight: number;
+  };
 }
 
 /** A page as the per-site list answers it (lean: no sections envelope). */

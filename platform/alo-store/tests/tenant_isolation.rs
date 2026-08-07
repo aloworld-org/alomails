@@ -2064,6 +2064,7 @@ async fn public_resolver_scopes_by_subdomain_and_never_leaks_drafts() {
             .connect(&common::database_url())
             .await
             .expect("connect public pool"),
+        alo_store::BlobStore::in_memory(1024 * 1024),
     );
 
     let t1 = store.create_tenant("sp-t1").await.unwrap();
@@ -2178,4 +2179,118 @@ async fn public_resolver_scopes_by_subdomain_and_never_leaks_drafts() {
     a.unpublish_site(&site_a).await.unwrap();
     assert!(public.resolve_published(&sub_a).await.unwrap().is_none());
     assert!(public.resolve_published(&sub_b).await.unwrap().is_some());
+}
+
+/// Site image reads (S1.14): `AccountStore::site_image` serves a tenant's
+/// own image blobs only — a foreign tenant's blob id reads as absent, and a
+/// non-image content type is never served on an image path. The public
+/// door's `published_image` is scoped the same way through the resolved
+/// site's private tenant, so a Host lookup can never lead to another
+/// tenant's bytes even with a known blob id.
+#[tokio::test]
+async fn site_images_scope_by_tenant_and_refuse_non_images() {
+    use alo_store::SitePublicStore;
+    use bytes::Bytes;
+    use serde_json::json;
+
+    let (store, blobs) = common::test_store_with_blobs().await;
+    let public = SitePublicStore::new(
+        sqlx::postgres::PgPoolOptions::new()
+            .max_connections(4)
+            .connect(&common::database_url())
+            .await
+            .expect("connect public pool"),
+        blobs,
+    );
+
+    let t1 = store.create_tenant("simg-t1").await.unwrap();
+    let ua = store
+        .for_tenant(t1.clone())
+        .create_user("a@siteimage.test")
+        .await
+        .unwrap();
+    let a = store.for_account(t1, ua);
+    let t2 = store.create_tenant("simg-t2").await.unwrap();
+    let ub = store
+        .for_tenant(t2.clone())
+        .create_user("b@siteimage.test")
+        .await
+        .unwrap();
+    let b = store.for_account(t2, ub);
+
+    // Tenant A uploads a logo (image) and an HTML blob (never an image).
+    let png = a
+        .put_blob(Bytes::from_static(b"png-bytes-alpha"), Some("image/png"))
+        .await
+        .unwrap();
+    let html = a
+        .put_blob(
+            Bytes::from_static(b"<script>alert(1)</script>"),
+            Some("text/html"),
+        )
+        .await
+        .unwrap();
+
+    // Own tenant: the image serves with its allowlisted type; the HTML blob
+    // is indistinguishable from absent on the image path.
+    let served = a.site_image(&png).await.unwrap().expect("own image serves");
+    assert_eq!(served.content_type, "image/png");
+    assert_eq!(&served.bytes[..], b"png-bytes-alpha");
+    assert!(a.site_image(&html).await.unwrap().is_none());
+
+    // Wrong tenant: A's blob id resolves to nothing for B — clean absence,
+    // not an error and not bytes.
+    assert!(b.site_image(&png).await.unwrap().is_none());
+
+    // The public door: a live site of A's serves A's image through the
+    // resolved-site scope; the same id through B's resolved site is absent.
+    let unique = |tag: &str| {
+        format!(
+            "{tag}-{}x",
+            alo_store::SiteId::generate()
+                .as_str()
+                .to_lowercase()
+                .replace('_', "-")
+        )
+    };
+    let sub_a = unique("img-a");
+    let sub_b = unique("img-b");
+    let site_a = a.create_site("Alpha Studio", &sub_a).await.unwrap();
+    a.create_site_page(&site_a, "Home", "", true).await.unwrap();
+    a.set_site_theme(
+        &site_a,
+        json!({"schema_version": 1, "preset": "north", "logo": png.as_str()}),
+    )
+    .await
+    .unwrap();
+    a.publish_site(&site_a).await.unwrap();
+    let site_b = b.create_site("Beta Studio", &sub_b).await.unwrap();
+    b.create_site_page(&site_b, "Home", "", true).await.unwrap();
+    b.publish_site(&site_b).await.unwrap();
+
+    let resolved_a = public.resolve_published(&sub_a).await.unwrap().unwrap();
+    let resolved_b = public.resolve_published(&sub_b).await.unwrap().unwrap();
+    let public_img = public
+        .published_image(&resolved_a, png.as_str())
+        .await
+        .unwrap()
+        .expect("published image serves");
+    assert_eq!(public_img.content_type, "image/png");
+    assert_eq!(&public_img.bytes[..], b"png-bytes-alpha");
+    assert!(
+        public
+            .published_image(&resolved_b, png.as_str())
+            .await
+            .unwrap()
+            .is_none(),
+        "another tenant's resolved site must never reach the blob"
+    );
+    assert!(
+        public
+            .published_image(&resolved_a, html.as_str())
+            .await
+            .unwrap()
+            .is_none(),
+        "non-image content types never serve on the image path"
+    );
 }

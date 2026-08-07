@@ -31,10 +31,13 @@ use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
-use alo_sites::render::{EN, PageRenderContext, SiteRenderContext, render_page_preview};
+use alo_sites::render::{
+    EN, ImageSources, PageRenderContext, SiteRenderContext, render_page_preview, sections_lenient,
+};
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
-    Section, SectionsEnvelope, Site, SiteId, SitePage, SitePageId, SiteTheme, StoreError,
+    BlobId, Section, SectionsEnvelope, Site, SiteId, SitePage, SitePageId, SiteTheme, StoreError,
+    site_theme::THEME_PRESETS,
 };
 
 use crate::error::Problem;
@@ -257,6 +260,42 @@ pub async fn delete_site(
     Ok(Json(json!({ "status": "ok" })))
 }
 
+/// `GET /sites/theme-presets` → `{"presets":[...]}` — the shipped theme
+/// presets in picker order (the first is the default), with the palette and
+/// typography tokens the theme UI renders its swatches from. Static product
+/// data, but authenticated like every `/sites/*` route — the edit surface
+/// has no anonymous corners.
+pub async fn list_theme_presets(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    authenticate(&state, &headers).await?;
+    let presets: Vec<Value> = THEME_PRESETS
+        .iter()
+        .map(|preset| {
+            json!({
+                "id": preset.id,
+                "name": preset.name,
+                "palette": {
+                    "background": preset.palette.background,
+                    "surface": preset.palette.surface,
+                    "text": preset.palette.text,
+                    "mutedText": preset.palette.muted_text,
+                    "primary": preset.palette.primary,
+                    "onPrimary": preset.palette.on_primary,
+                    "border": preset.palette.border,
+                },
+                "typography": {
+                    "headingFamily": preset.typography.heading_family,
+                    "bodyFamily": preset.typography.body_family,
+                    "headingWeight": preset.typography.heading_weight,
+                },
+            })
+        })
+        .collect();
+    Ok(Json(json!({ "presets": presets })))
+}
+
 /// `PUT /sites/:id/theme` (body = the theme envelope) → `{status:"ok"}` —
 /// the theme gate: the body must parse as a current-version [`alo_store::SiteTheme`].
 pub async fn set_theme(
@@ -404,13 +443,65 @@ fn sites_domain() -> &'static str {
     })
 }
 
+/// The largest image the preview inlines as a `data:` URI. Beyond this the
+/// image falls back to its public path (unresolvable on the edit origin — a
+/// broken image in the preview only), keeping the preview document bounded.
+const PREVIEW_INLINE_IMAGE_MAX_BYTES: usize = 4 * 1024 * 1024;
+
+/// The draft page's images as `data:` URIs, keyed by blob id — theme
+/// logo/favicon plus every section image, read tenant-scoped through the
+/// account door. Ids that don't resolve, aren't images, or are oversized are
+/// simply absent (the renderer then falls back to the public path).
+async fn preview_image_map(
+    account: &Account,
+    theme: &SiteTheme,
+    sections: &Value,
+) -> std::collections::HashMap<String, String> {
+    use base64::Engine;
+
+    let mut ids: Vec<String> = [theme.logo.as_ref(), theme.favicon.as_ref()]
+        .into_iter()
+        .flatten()
+        .map(|blob| blob.as_str().to_owned())
+        .collect();
+    for section in sections_lenient(sections) {
+        ids.extend(
+            section
+                .image_blob_ids()
+                .into_iter()
+                .map(|blob| blob.as_str().to_owned()),
+        );
+    }
+    ids.sort_unstable();
+    ids.dedup();
+
+    let mut map = std::collections::HashMap::with_capacity(ids.len());
+    for id in ids {
+        match account.acc.site_image(&BlobId::new(id.clone())).await {
+            Ok(Some(image)) if image.bytes.len() <= PREVIEW_INLINE_IMAGE_MAX_BYTES => {
+                let uri = format!(
+                    "data:{};base64,{}",
+                    image.content_type,
+                    base64::engine::general_purpose::STANDARD.encode(&image.bytes)
+                );
+                map.insert(id, uri);
+            }
+            Ok(_) => {} // absent, non-image, or oversized: public-path fallback
+            Err(error) => {
+                tracing::warn!(%error, "preview image read failed; falling back to public path");
+            }
+        }
+    }
+    map
+}
+
 /// `GET /sites/:id/pages/:pid/preview` → the DRAFT page as one complete,
 /// self-contained HTML document (`text/html`), rendered by the same library
 /// the public service renders published snapshots with — the stylesheet is
-/// inlined because the public asset paths do not resolve on this origin.
-/// Authenticated like every edit route; the editor fetches this and shows it
-/// in a sandboxed iframe. `Cache-Control: no-store` — a draft has no cache
-/// life.
+/// inlined because the public asset paths do not resolve on this origin, and
+/// images are inlined as `data:` URIs for the same reason. Authenticated
+/// like every edit route; the editor fetches this and shows it in a
+/// sandboxed iframe. `Cache-Control: no-store` — a draft has no cache life.
 pub async fn preview_page(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -427,12 +518,14 @@ pub async fn preview_page(
         .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
 
     let theme = SiteTheme::from_stored(site.theme.clone());
+    let images = preview_image_map(&account, &theme, &page.sections).await;
     let base_url = format!("https://{}.{}", site.subdomain, sites_domain());
     let site_ctx = SiteRenderContext {
         name: &site.name,
         base_url: &base_url,
         theme: &theme,
         strings: &EN,
+        images: ImageSources::Inline(&images),
     };
     let path = if page.is_home {
         "/".to_owned()

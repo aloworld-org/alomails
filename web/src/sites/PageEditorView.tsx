@@ -13,6 +13,7 @@ import {
   GripVertical,
   Layers,
   Monitor,
+  Palette,
   Pencil,
   Smartphone,
   Trash2,
@@ -24,6 +25,7 @@ import { sitesMessage, useSitesApi } from "./api";
 import { kindLabel, sectionSummary } from "./sectionInfo";
 import { SectionFormDialog } from "./SectionForm";
 import { SectionPicker } from "./SectionPicker";
+import { ThemeDialog } from "./ThemeDialog";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 import type { SitePageDetail } from "./types";
@@ -56,6 +58,10 @@ export function PageEditorView() {
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewMobile, setPreviewMobile] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
+  // Bumped when the theme changes — the preview document depends on the
+  // site's theme, not only on this page's sections.
+  const [previewEpoch, setPreviewEpoch] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -96,7 +102,7 @@ export function PageEditorView() {
     return () => {
       stale = true;
     };
-  }, [api, siteId, pageId, page, sections]);
+  }, [api, siteId, pageId, page, sections, previewEpoch]);
 
   /** Runs one stack op and renders the envelope the server answered. */
   async function run(op: Promise<SectionsEnvelope>) {
@@ -168,9 +174,19 @@ export function PageEditorView() {
           <div className={styles.stackPane}>
             <div className={styles.sectionBar}>
               <h2 className={styles.sectionTitle}>{strings.sitesSections}</h2>
-              <Button size="sm" onClick={() => setPicking(true)} disabled={working}>
-                {strings.sitesAddSection}
-              </Button>
+              <div className={styles.sectionBarActions}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Palette size={14} />}
+                  onClick={() => setThemeOpen(true)}
+                >
+                  {strings.sitesTheme}
+                </Button>
+                <Button size="sm" onClick={() => setPicking(true)} disabled={working}>
+                  {strings.sitesAddSection}
+                </Button>
+              </div>
             </div>
 
             {empty && !loading ? (
@@ -305,6 +321,17 @@ export function PageEditorView() {
             </div>
           </aside>
         </div>
+      )}
+
+      {themeOpen && (
+        <ThemeDialog
+          siteId={siteId}
+          onClose={() => setThemeOpen(false)}
+          onApplied={() => {
+            setThemeOpen(false);
+            setPreviewEpoch((epoch) => epoch + 1);
+          }}
+        />
       )}
 
       {picking && (

@@ -16,8 +16,10 @@ use serde_json::Value;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
 
+use crate::blob::BlobStore;
 use crate::error::{Result, StoreError};
 use crate::id::{SiteId, SitePublishId, TenantId};
+use crate::site_assets::{SiteImageData, site_image_content_type};
 use crate::site_publish::{SitePageSnapshot, SitePageSnapshotRow};
 
 /// A site resolved for public serving: the current publish of a live site.
@@ -39,32 +41,37 @@ pub struct PublishedSite {
 }
 
 /// The read-only store handle of the public `alo-sites` service: a Postgres
-/// pool exposing published-snapshot reads and nothing else. Deliberately not
-/// [`crate::Store`] — the public service gets no system operations, no blob
-/// backend, and no way to open a tenant or account door.
+/// pool exposing published-snapshot reads, plus the blob backend those
+/// snapshots' images live in — and nothing else. Deliberately not
+/// [`crate::Store`] — the public service gets no system operations and no way
+/// to open a tenant or account door; the blob backend is reachable only
+/// through [`Self::published_image`], which takes a resolved
+/// [`PublishedSite`].
 #[derive(Clone)]
 pub struct SitePublicStore {
     pool: PgPool,
+    blobs: BlobStore,
 }
 
 impl SitePublicStore {
-    /// Connects a small pool to `database_url`.
+    /// Connects a small pool to `database_url`, serving image bytes from
+    /// `blobs` (the same backend the authenticated services write).
     ///
     /// # Errors
     /// [`StoreError::Db`] if the pool cannot connect.
-    pub async fn connect(database_url: &str) -> Result<Self> {
+    pub async fn connect(database_url: &str, blobs: BlobStore) -> Result<Self> {
         let pool = PgPoolOptions::new()
             .max_connections(8)
             .connect(database_url)
             .await
             .map_err(StoreError::Db)?;
-        Ok(Self { pool })
+        Ok(Self { pool, blobs })
     }
 
-    /// Wraps an existing pool (used by tests that share one).
+    /// Wraps an existing pool + blob backend (used by tests that share them).
     #[must_use]
-    pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+    pub fn new(pool: PgPool, blobs: BlobStore) -> Self {
+        Self { pool, blobs }
     }
 
     /// Resolves a subdomain to the site's current publish — the one indexed
@@ -112,6 +119,42 @@ impl SitePublicStore {
             .into_iter()
             .map(SitePageSnapshotRow::into_snapshot)
             .collect())
+    }
+
+    /// An image blob of a resolved site's tenant, for the public
+    /// `/assets/img/<blob_id>` path: `None` when the id does not resolve in
+    /// that tenant or the stored content type is not a servable image type.
+    /// Tenant scope comes from the resolved value's private tenant — a Host
+    /// can never lead to another tenant's bytes. The **caller** additionally
+    /// gates ids to the ones the served publish actually references (the
+    /// render layer knows that set); this read enforces the tenant boundary,
+    /// not the reference set.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`]/[`StoreError::Blob`] on backend failure.
+    pub async fn published_image(
+        &self,
+        site: &PublishedSite,
+        blob_id: &str,
+    ) -> Result<Option<SiteImageData>> {
+        let row: Option<(String, Option<String>)> =
+            sqlx::query_as("SELECT hash, content_type FROM blobs WHERE tenant_id = $1 AND id = $2")
+                .bind(site.tenant.as_str())
+                .bind(blob_id)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(StoreError::Db)?;
+        let Some((hash, stored_type)) = row else {
+            return Ok(None);
+        };
+        let Some(content_type) = site_image_content_type(stored_type.as_deref()) else {
+            return Ok(None);
+        };
+        let bytes = self.blobs.get(site.tenant.as_str(), &hash).await?;
+        Ok(Some(SiteImageData {
+            content_type,
+            bytes,
+        }))
     }
 }
 
