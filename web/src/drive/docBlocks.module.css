@@ -42,3 +42,20 @@
 .input::placeholder {
   color: var(--text-tertiary);
 }
+.comment {
+  width: 100%;
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-surface));
+  color: var(--text-primary);
+}
+.commentResolved { border-left-color: var(--success); opacity: .7; }
+.commentHead { display: flex; align-items: center; gap: 7px; margin-bottom: 6px; color: var(--accent); font-size: var(--text-xs); }
+.commentResolved .commentHead { color: var(--success); }
+.commentHead time { margin-left: auto; color: var(--text-tertiary); font-weight: 400; }
+.commentHead button { display: inline-flex; width: 26px; height: 26px; align-items: center; justify-content: center; border-radius: var(--radius-md); }
+.commentHead button:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.commentBody { min-height: 22px; outline: none; font-size: var(--text-sm); }
+.commentBody:empty::before { color: var(--text-tertiary); content: attr(data-placeholder); pointer-events: none; }

@@ -5,11 +5,13 @@
 // createReactBlockSpec's `render` is a real function component, so the hooks
 // inside it run in a valid component context.
 import { useState } from "react";
+import { Check, MessageSquareText, RotateCcw } from "lucide-react";
 import { BlockNoteSchema, defaultBlockSpecs } from "@blocknote/core";
 import { createReactBlockSpec } from "@blocknote/react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 
+import { strings } from "../i18n";
 import styles from "./docBlocks.module.css";
 
 /** A math-formula block: shows KaTeX-rendered output; click it to edit the
@@ -75,6 +77,37 @@ export const EquationBlock = createReactBlockSpec(
   },
 );
 
+/** A document-native review comment. Its text and resolved state are part of
+ * the same block tree as the document, so comments survive reloads and exports
+ * without requiring a separate collaboration service. */
+export const CommentBlock = createReactBlockSpec(
+  {
+    type: "comment",
+    propSchema: { resolved: { default: false }, createdAt: { default: "" } },
+    content: "inline",
+  },
+  {
+    render: ({ block, editor, contentRef }) => (
+      <aside className={`${styles.comment} ${block.props.resolved ? styles.commentResolved : ""}`}>
+        <div className={styles.commentHead} contentEditable={false}>
+          <MessageSquareText size={15} />
+          <strong>{strings.docComment}</strong>
+          {block.props.createdAt !== "" && <time>{block.props.createdAt}</time>}
+          <button
+            type="button"
+            onClick={() => editor.updateBlock(block, { props: { resolved: !block.props.resolved } })}
+            aria-label={block.props.resolved ? strings.docReopenComment : strings.docResolveComment}
+            title={block.props.resolved ? strings.docReopenComment : strings.docResolveComment}
+          >
+            {block.props.resolved ? <RotateCcw size={14} /> : <Check size={14} />}
+          </button>
+        </div>
+        <div ref={contentRef} className={styles.commentBody} data-placeholder={strings.docCommentPlaceholder} />
+      </aside>
+    ),
+  },
+);
+
 /** The alo Doc schema: every default block (paragraph, headings, lists, code,
  *  quote, table, …) plus the equation block.
  *
@@ -84,5 +117,5 @@ export const EquationBlock = createReactBlockSpec(
  *  a library-vs-tsconfig mismatch, not a defect in this object. The runtime shape
  *  is exactly right; the assertion is scoped to this one boundary. */
 export const docSchema = BlockNoteSchema.create({
-  blockSpecs: { ...defaultBlockSpecs, equation: EquationBlock() },
+  blockSpecs: { ...defaultBlockSpecs, equation: EquationBlock(), comment: CommentBlock() },
 } as Parameters<typeof BlockNoteSchema.create>[0]);
