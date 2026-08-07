@@ -19,7 +19,7 @@ use crate::{
     billing_payments, billing_products, billing_quotes, billing_reports, billing_send,
     billing_settings, blob, calendar, carddav, contacts, delegates, docs, drive, filters, flagdue,
     imap_import_route, push, reset_route, schedule, security, session, settings, share,
-    signup_route, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -185,6 +185,45 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/tasks/{id}/dependencies/{dep}",
             axum::routing::delete(tasks::remove_dependency),
+        )
+        // alo Sites (ADR 0036) — the authenticated edit surface; public
+        // serving is the separate alo-sites binary. `/sites` is a NEW
+        // top-level prefix: the production Caddyfile needs it added at the
+        // next deploy (docs/design/sites.md). Static paths before /{id}.
+        .route("/sites", get(sites::list_sites).post(sites::create_site))
+        .route("/sites/subdomain-check", get(sites::check_subdomain))
+        .route(
+            "/sites/{id}",
+            get(sites::get_site)
+                .put(sites::update_site)
+                .delete(sites::delete_site),
+        )
+        .route("/sites/{id}/theme", put(sites::set_theme))
+        .route("/sites/{id}/publish", post(sites::publish_site))
+        .route("/sites/{id}/unpublish", post(sites::unpublish_site))
+        .route(
+            "/sites/{id}/pages",
+            get(sites::list_pages).post(sites::create_page),
+        )
+        .route("/sites/{id}/pages/order", put(sites::reorder_pages))
+        .route(
+            "/sites/{id}/pages/{pid}",
+            get(sites::get_page)
+                .put(sites::update_page)
+                .delete(sites::delete_page),
+        )
+        .route("/sites/{id}/pages/{pid}/home", post(sites::set_home_page))
+        .route(
+            "/sites/{id}/pages/{pid}/sections",
+            put(sites::set_sections).post(sites::add_section),
+        )
+        .route(
+            "/sites/{id}/pages/{pid}/sections/{index}",
+            put(sites::update_section).delete(sites::remove_section),
+        )
+        .route(
+            "/sites/{id}/pages/{pid}/sections/{index}/move",
+            post(sites::move_section),
         )
         // Spaces — the membership spine (ADR 0026). Static paths before /{id}.
         .route(

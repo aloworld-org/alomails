@@ -1,0 +1,703 @@
+//! alo Sites edit surface (ADR 0036): the authenticated `/sites/*` routes —
+//! site CRUD, page CRUD, section operations, theme, and publish. This is the
+//! edit half of the two-service boundary in `docs/design/sites.md`; the
+//! public serving half is the separate `alo-sites` binary, which reads only
+//! published snapshots.
+//!
+//! Every handler resolves the caller with [`authenticate`] and reaches data
+//! only through the account door, so an id from another tenant simply does
+//! not resolve (`404`, indistinguishable from nonexistent). Rule violations —
+//! bad subdomain, reserved word, slug collision, section or theme JSON
+//! failing the typed schema, publish preconditions, and a subdomain taken by
+//! any tenant (taken/free is all the message says) — are `422` with the
+//! store's rule-naming message as detail, the contract the design note
+//! publishes. The sites store family spells all of those as
+//! [`StoreError::Conflict`], so this module maps `Conflict` to `422`, not
+//! `409`.
+//!
+//! Sections are addressed **by index** into the page's ordered envelope
+//! (`docs/design/sites.md`): they are entries of one JSON document with no
+//! identity of their own, and the AI edit ops (S1.27) speak the same index
+//! vocabulary. Section operations are read-modify-write through the store's
+//! schema write gate; the editor is single-writer per page by design, so no
+//! optimistic-concurrency header exists yet (recorded as an S2 seam).
+
+use axum::Json;
+use axum::extract::{Path, Query, State};
+use axum::http::{HeaderMap, StatusCode};
+use serde::Deserialize;
+use serde_json::{Value, json};
+use time::OffsetDateTime;
+use time::format_description::well_known::Rfc3339;
+
+use alo_store::{Section, SectionsEnvelope, Site, SiteId, SitePage, SitePageId, StoreError};
+
+use crate::error::Problem;
+use crate::state::{Account, AppState, authenticate};
+
+// ---- JSON shaping -----------------------------------------------------------
+
+fn iso(t: OffsetDateTime) -> String {
+    t.format(&Rfc3339).unwrap_or_default()
+}
+
+/// A site as JSON. `theme` is the stored envelope (or the pristine `{}` of a
+/// site that never set one) — always a value that passed the theme gate.
+fn site_json(s: &Site) -> Value {
+    json!({
+        "id": s.id.as_str(),
+        "name": s.name,
+        "subdomain": s.subdomain,
+        "status": s.status.as_str(),
+        "theme": s.theme,
+        "createdAt": iso(s.created_at),
+        "updatedAt": iso(s.updated_at),
+    })
+}
+
+/// A page as JSON. The sections envelope rides along only where the caller
+/// asked for one page (`with_sections`); the list stays lean.
+fn page_json(p: &SitePage, with_sections: bool) -> Value {
+    let mut j = json!({
+        "id": p.id.as_str(),
+        "slug": p.slug,
+        "title": p.title,
+        "seoTitle": p.seo_title,
+        "seoDescription": p.seo_description,
+        "navOrder": p.nav_order,
+        "home": p.is_home,
+        "createdAt": iso(p.created_at),
+        "updatedAt": iso(p.updated_at),
+    });
+    if with_sections && let Some(obj) = j.as_object_mut() {
+        obj.insert("sections".to_owned(), p.sections.clone());
+    }
+    j
+}
+
+/// The sites-module error map (`docs/design/sites.md` → Errors). The sites
+/// store spells every rule violation as `Conflict` with a message naming the
+/// violated rule and never echoing another tenant's data, and the design note
+/// publishes all of them — subdomain-taken included — as `422`.
+fn map_store_err(e: StoreError) -> Problem {
+    match e {
+        StoreError::NotFound => Problem::with(StatusCode::NOT_FOUND, "not found"),
+        StoreError::Forbidden => Problem::with(StatusCode::FORBIDDEN, "forbidden"),
+        StoreError::Conflict(msg) | StoreError::Validation(msg) => {
+            Problem::with(StatusCode::UNPROCESSABLE_ENTITY, msg)
+        }
+        _ => Problem::server_error(),
+    }
+}
+
+// ---- sites ------------------------------------------------------------------
+
+/// `GET /sites` → `{"sites":[...]}` — the tenant's sites.
+pub async fn list_sites(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let sites = account.acc.sites().await.map_err(map_store_err)?;
+    Ok(Json(
+        json!({ "sites": sites.iter().map(site_json).collect::<Vec<_>>() }),
+    ))
+}
+
+#[derive(Deserialize)]
+struct SiteBody {
+    name: String,
+    subdomain: String,
+}
+
+/// `POST /sites` `{name, subdomain}` → the created site (status `draft`,
+/// empty theme). The subdomain is claimed in the global namespace; a claim
+/// that collides answers taken/free only, never the owner.
+pub async fn create_site(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: SiteBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let id = account
+        .acc
+        .create_site(req.name.trim(), req.subdomain.trim())
+        .await
+        .map_err(map_store_err)?;
+    let site = account
+        .acc
+        .site(&id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(Problem::server_error)?;
+    Ok(Json(site_json(&site)))
+}
+
+#[derive(Deserialize)]
+pub struct SubdomainQuery {
+    subdomain: String,
+}
+
+/// `GET /sites/subdomain-check?subdomain=` → `{"subdomain","available"}` —
+/// the live claim check for the create form. Syntactically invalid or
+/// reserved labels are `422` naming the rule; a well-formed label answers
+/// taken/free only.
+pub async fn check_subdomain(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(q): Query<SubdomainQuery>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let subdomain = q.subdomain.trim().to_lowercase();
+    let available = account
+        .acc
+        .subdomain_available(&subdomain)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(
+        json!({ "subdomain": subdomain, "available": available }),
+    ))
+}
+
+/// `GET /sites/:id` → the site plus its current publish (`"publish"` is
+/// `null` while unpublished — the live/draft status chip's data).
+pub async fn get_site(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let sid = SiteId::new(id);
+    let site = account
+        .acc
+        .site(&sid)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such site"))?;
+    let publish = account
+        .acc
+        .current_site_publish(&sid)
+        .await
+        .map_err(map_store_err)?;
+    let mut j = site_json(&site);
+    if let Some(obj) = j.as_object_mut() {
+        obj.insert(
+            "publish".to_owned(),
+            publish.map_or(
+                Value::Null,
+                |p| json!({ "id": p.id.as_str(), "publishedAt": iso(p.published_at) }),
+            ),
+        );
+    }
+    Ok(Json(j))
+}
+
+#[derive(Deserialize)]
+struct SiteEditBody {
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    subdomain: Option<String>,
+}
+
+/// `PUT /sites/:id` `{name?, subdomain?}` → `{status:"ok"}` — rename and/or
+/// move to a new subdomain; fields absent from the body are untouched.
+pub async fn update_site(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: SiteEditBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    if req.name.is_none() && req.subdomain.is_none() {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "nothing to update: provide name and/or subdomain",
+        ));
+    }
+    let sid = SiteId::new(id);
+    if let Some(name) = &req.name {
+        account
+            .acc
+            .rename_site(&sid, name.trim())
+            .await
+            .map_err(map_store_err)?;
+    }
+    if let Some(subdomain) = &req.subdomain {
+        account
+            .acc
+            .set_site_subdomain(&sid, subdomain.trim())
+            .await
+            .map_err(map_store_err)?;
+    }
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `DELETE /sites/:id` → `{status:"ok"}` — deletes the site with its pages,
+/// publishes, and snapshots (the site goes off the air), releasing the
+/// subdomain.
+pub async fn delete_site(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .delete_site(&SiteId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `PUT /sites/:id/theme` (body = the theme envelope) → `{status:"ok"}` —
+/// the theme gate: the body must parse as a current-version [`alo_store::SiteTheme`].
+pub async fn set_theme(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let theme: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    account
+        .acc
+        .set_site_theme(&SiteId::new(id), theme)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `POST /sites/:id/publish` → `{"publishId","status":"live"}` — freezes the
+/// current pages + theme into immutable snapshots and points the public
+/// service at them. A site with no pages or no home page is refused (`422`).
+pub async fn publish_site(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let publish = account
+        .acc
+        .publish_site(&SiteId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(
+        json!({ "publishId": publish.as_str(), "status": "live" }),
+    ))
+}
+
+/// `POST /sites/:id/unpublish` → `{"status":"draft"}` — takes the site off
+/// the air (history is retained). Idempotent.
+pub async fn unpublish_site(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .unpublish_site(&SiteId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "draft" })))
+}
+
+// ---- pages ------------------------------------------------------------------
+
+/// Resolves the caller's site or answers `404` — used where the store read
+/// alone could not distinguish another tenant's site from an empty one.
+async fn require_site(account: &Account, site: &SiteId) -> Result<Site, Problem> {
+    account
+        .acc
+        .site(site)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such site"))
+}
+
+/// `GET /sites/:id/pages` → `{"pages":[...]}` in navigation order (lean:
+/// no sections — `GET` one page for its envelope).
+pub async fn list_pages(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let sid = SiteId::new(id);
+    require_site(&account, &sid).await?;
+    let pages = account.acc.site_pages(&sid).await.map_err(map_store_err)?;
+    Ok(Json(json!({
+        "pages": pages.iter().map(|p| page_json(p, false)).collect::<Vec<_>>(),
+    })))
+}
+
+#[derive(Deserialize)]
+struct PageBody {
+    title: String,
+    #[serde(default)]
+    slug: String,
+    #[serde(default)]
+    home: bool,
+}
+
+/// `POST /sites/:id/pages` `{title, slug?, home?}` → the created page (at the
+/// end of the nav order, empty sections). The empty slug is accepted only
+/// together with `home: true` — it is the home page's spelling.
+pub async fn create_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: PageBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let sid = SiteId::new(id);
+    let pid = account
+        .acc
+        .create_site_page(&sid, req.title.trim(), req.slug.trim(), req.home)
+        .await
+        .map_err(map_store_err)?;
+    let page = account
+        .acc
+        .site_page(&sid, &pid)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(Problem::server_error)?;
+    Ok(Json(page_json(&page, true)))
+}
+
+/// `GET /sites/:id/pages/:pid` → the page including its sections envelope.
+pub async fn get_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let page = account
+        .acc
+        .site_page(&SiteId::new(id), &SitePageId::new(pid))
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
+    Ok(Json(page_json(&page, true)))
+}
+
+#[derive(Deserialize)]
+struct PageEditBody {
+    #[serde(default)]
+    title: Option<String>,
+    #[serde(default)]
+    slug: Option<String>,
+    #[serde(default, rename = "seoTitle")]
+    seo_title: Option<String>,
+    #[serde(default, rename = "seoDescription")]
+    seo_description: Option<String>,
+}
+
+/// `PUT /sites/:id/pages/:pid` `{title?, slug?, seoTitle?, seoDescription?}`
+/// → `{status:"ok"}` — fields absent from the body are untouched; a blank
+/// SEO string clears the override.
+pub async fn update_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid)): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: PageEditBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    if req.title.is_none()
+        && req.slug.is_none()
+        && req.seo_title.is_none()
+        && req.seo_description.is_none()
+    {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "nothing to update: provide title, slug, seoTitle, and/or seoDescription",
+        ));
+    }
+    let sid = SiteId::new(id);
+    let page_id = SitePageId::new(pid);
+    if let Some(title) = &req.title {
+        account
+            .acc
+            .set_page_title(&sid, &page_id, title.trim())
+            .await
+            .map_err(map_store_err)?;
+    }
+    if let Some(slug) = &req.slug {
+        account
+            .acc
+            .set_page_slug(&sid, &page_id, slug.trim())
+            .await
+            .map_err(map_store_err)?;
+    }
+    if req.seo_title.is_some() || req.seo_description.is_some() {
+        // Partial update over the two-field setter: an absent field keeps
+        // its stored value, a present blank clears it (the store's rule).
+        let page = account
+            .acc
+            .site_page(&sid, &page_id)
+            .await
+            .map_err(map_store_err)?
+            .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
+        let seo_title = req.seo_title.as_deref().or(page.seo_title.as_deref());
+        let seo_description = req
+            .seo_description
+            .as_deref()
+            .or(page.seo_description.as_deref());
+        account
+            .acc
+            .set_page_seo(&sid, &page_id, seo_title, seo_description)
+            .await
+            .map_err(map_store_err)?;
+    }
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `DELETE /sites/:id/pages/:pid` → `{status:"ok"}` — published snapshots of
+/// the page survive by design (they belong to the publish, not the draft).
+pub async fn delete_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .delete_site_page(&SiteId::new(id), &SitePageId::new(pid))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `POST /sites/:id/pages/:pid/home` → `{status:"ok"}` — makes the page the
+/// site's home page, demoting the current one in the same transaction.
+pub async fn set_home_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .set_home_page(&SiteId::new(id), &SitePageId::new(pid))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+#[derive(Deserialize)]
+struct OrderBody {
+    order: Vec<String>,
+}
+
+/// `PUT /sites/:id/pages/order` `{order:[pageId,…]}` → `{status:"ok"}` — the
+/// full navigation permutation (every page exactly once).
+pub async fn reorder_pages(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: OrderBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let order: Vec<SitePageId> = req.order.into_iter().map(SitePageId::new).collect();
+    account
+        .acc
+        .reorder_site_pages(&SiteId::new(id), &order)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+// ---- sections ---------------------------------------------------------------
+
+/// Parses a stored or submitted envelope, mapping schema violations to `422`
+/// with the rule-naming message.
+fn parse_envelope(value: Value) -> Result<SectionsEnvelope, Problem> {
+    SectionsEnvelope::from_value(value)
+        .map_err(|e| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, e.to_string()))
+}
+
+/// Parses one submitted section against the closed v1 vocabulary.
+fn parse_section(value: Value) -> Result<Section, Problem> {
+    serde_json::from_value(value).map_err(|e| {
+        Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("invalid section: {e}"),
+        )
+    })
+}
+
+/// Loads the page's current envelope for a read-modify-write section op.
+async fn page_envelope(
+    account: &Account,
+    site: &SiteId,
+    page: &SitePageId,
+) -> Result<SectionsEnvelope, Problem> {
+    let p = account
+        .acc
+        .site_page(site, page)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
+    parse_envelope(p.sections)
+}
+
+/// Writes the envelope back through the store's schema gate (which re-checks
+/// the content rules) and answers `{"sections": <canonical envelope>}` so the
+/// editor renders exactly what was stored.
+async fn store_sections(
+    account: &Account,
+    site: &SiteId,
+    page: &SitePageId,
+    envelope: &SectionsEnvelope,
+) -> Result<Json<Value>, Problem> {
+    let canonical = envelope.to_value().map_err(|_| Problem::server_error())?;
+    account
+        .acc
+        .set_page_sections(site, page, canonical.clone())
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "sections": canonical })))
+}
+
+fn parse_index(raw: &str) -> Result<usize, Problem> {
+    raw.parse().map_err(|_| {
+        Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "section index must be a non-negative number",
+        )
+    })
+}
+
+fn index_in(len: usize, index: usize) -> Result<(), Problem> {
+    if index >= len {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("no section at index {index} (the page has {len})"),
+        ));
+    }
+    Ok(())
+}
+
+/// `PUT /sites/:id/pages/:pid/sections` (body = the sections envelope) →
+/// `{"sections":…}` — the editor's atomic save of the whole stack.
+pub async fn set_sections(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid)): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let value: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let envelope = parse_envelope(value)?;
+    store_sections(&account, &SiteId::new(id), &SitePageId::new(pid), &envelope).await
+}
+
+#[derive(Deserialize)]
+struct AddSectionBody {
+    section: Value,
+    /// Insert position; appends when absent.
+    #[serde(default)]
+    index: Option<usize>,
+}
+
+/// `POST /sites/:id/pages/:pid/sections` `{section, index?}` → the updated
+/// envelope — inserts at `index` (append when absent).
+pub async fn add_section(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid)): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: AddSectionBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let section = parse_section(req.section)?;
+    let sid = SiteId::new(id);
+    let page_id = SitePageId::new(pid);
+    let mut envelope = page_envelope(&account, &sid, &page_id).await?;
+    let index = req.index.unwrap_or(envelope.sections.len());
+    if index > envelope.sections.len() {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!(
+                "insert index {index} is past the end (the page has {})",
+                envelope.sections.len()
+            ),
+        ));
+    }
+    envelope.sections.insert(index, section);
+    store_sections(&account, &sid, &page_id, &envelope).await
+}
+
+#[derive(Deserialize)]
+struct SectionBody {
+    section: Value,
+}
+
+/// `PUT /sites/:id/pages/:pid/sections/:index` `{section}` → the updated
+/// envelope — replaces the section at `index`.
+pub async fn update_section(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid, index)): Path<(String, String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: SectionBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let section = parse_section(req.section)?;
+    let index = parse_index(&index)?;
+    let sid = SiteId::new(id);
+    let page_id = SitePageId::new(pid);
+    let mut envelope = page_envelope(&account, &sid, &page_id).await?;
+    index_in(envelope.sections.len(), index)?;
+    envelope.sections[index] = section;
+    store_sections(&account, &sid, &page_id, &envelope).await
+}
+
+#[derive(Deserialize)]
+struct MoveSectionBody {
+    to: usize,
+}
+
+/// `POST /sites/:id/pages/:pid/sections/:index/move` `{to}` → the updated
+/// envelope — moves the section from `index` to position `to`.
+pub async fn move_section(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid, index)): Path<(String, String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: MoveSectionBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let index = parse_index(&index)?;
+    let sid = SiteId::new(id);
+    let page_id = SitePageId::new(pid);
+    let mut envelope = page_envelope(&account, &sid, &page_id).await?;
+    index_in(envelope.sections.len(), index)?;
+    index_in(envelope.sections.len(), req.to)?;
+    let section = envelope.sections.remove(index);
+    envelope.sections.insert(req.to, section);
+    store_sections(&account, &sid, &page_id, &envelope).await
+}
+
+/// `DELETE /sites/:id/pages/:pid/sections/:index` → the updated envelope —
+/// removes the section at `index`.
+pub async fn remove_section(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid, index)): Path<(String, String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let index = parse_index(&index)?;
+    let sid = SiteId::new(id);
+    let page_id = SitePageId::new(pid);
+    let mut envelope = page_envelope(&account, &sid, &page_id).await?;
+    index_in(envelope.sections.len(), index)?;
+    envelope.sections.remove(index);
+    store_sections(&account, &sid, &page_id, &envelope).await
+}

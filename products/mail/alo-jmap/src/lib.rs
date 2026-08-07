@@ -59,6 +59,7 @@ pub mod settings;
 pub mod share;
 pub mod sieve;
 pub mod signup_route;
+pub mod sites;
 pub mod snooze;
 pub mod spaces;
 pub mod state;
