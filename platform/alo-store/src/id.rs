@@ -275,6 +275,16 @@ opaque_id!(
     /// (alo CRM, ADR 0035, wave B2).
     CrmActivityId
 );
+opaque_id!(
+    /// An Insights dashboard — one board a tenant reads its numbers from
+    /// (alo Insights, ADR 0037, wave BI-1).
+    InsightDashboardId
+);
+opaque_id!(
+    /// One tile pinned to an Insights dashboard. A tile holds the *question*
+    /// (its ChartSpec), never an answer: nothing computed is stored.
+    InsightTileId
+);
 
 #[cfg(test)]
 mod tests {

@@ -60,6 +60,10 @@ pub mod iban;
 pub mod ical;
 pub mod id;
 pub mod identity;
+pub mod insight_catalog;
+pub mod insight_dashboards;
+pub mod insight_spec;
+pub mod insight_tiles;
 pub mod maintenance;
 pub mod message;
 pub mod model;
@@ -143,13 +147,20 @@ pub use id::{
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
     BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId, CommentId, ContactId,
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, GroupId,
-    LabelId, MailboxId, MessageId, ProjectId, SiteId, SitePageId, SitePublishId, SpaceId,
-    SubtaskId, TaskId, TenantId, ThreadId, UserId,
+    InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId, SiteId,
+    SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
     RefreshTokenRow, SigningKeyRow, TotpRow,
 };
+pub use insight_catalog::{
+    Aggregate, Dataset, DatasetEntry, Dimension, DimensionEntry, DimensionKind, FilterEntry,
+    FilterField, FilterOp, Grain, Measure, MeasureEntry, Unit, ValueKind, Viz,
+};
+pub use insight_dashboards::{BUSINESS_OVERVIEW_KEY, Dashboard, NewDashboard};
+pub use insight_spec::{ChartSpec, DimensionRef, Filter, MeasureRef, Period, SpecError};
+pub use insight_tiles::{NewTile, Tile, TileSpec};
 pub use model::{
     AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, CalendarGrant, Category,
     Contact, ContactField, DkimKeyRow, DomainRow, EmailFilter, EmailQuery, GroupRow, MAX_PAGE,
