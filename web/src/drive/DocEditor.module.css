@@ -288,6 +288,18 @@
   color: var(--text-primary);
   font-size: var(--text-xs);
 }
+.fontSelect { width: 92px; }
+.fontSizeSelect { width: 54px; }
+.lineSpacingSelect { width: 58px; }
+.fontSelect,
+.fontSizeSelect,
+.lineSpacingSelect { height: 30px; padding: 0 6px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-primary); font-size: var(--text-xs); }
+.fontSelect:hover,
+.fontSizeSelect:hover,
+.lineSpacingSelect:hover,
+.fontSelect:focus,
+.fontSizeSelect:focus,
+.lineSpacingSelect:focus { border-color: var(--accent); outline: none; }
 .colorSelect:hover,
 .colorSelect:focus { border-color: var(--accent); outline: none; }
 .commandSpacer { flex: 1; }
@@ -360,6 +372,9 @@
   margin: 0 auto;
   padding: var(--space-6) var(--space-4) 40vh;
   zoom: var(--doc-zoom, 1);
+  font-family: var(--doc-font-family, Inter, sans-serif);
+  font-size: var(--doc-font-size, 14px);
+  line-height: var(--doc-line-spacing, 1.5);
 }
 .pageMode :global(.bn-editor) {
   width: min(var(--doc-page-width, 210mm), 100%);

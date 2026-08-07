@@ -35,6 +35,7 @@ type DocViewMode = "canvas" | "page";
 type PageSize = "a4" | "letter";
 type PageOrientation = "portrait" | "landscape";
 type PageMargins = "normal" | "narrow" | "wide";
+type DocFont = "inter" | "arial" | "georgia" | "garamond";
 
 /** Cap on the current-document context sent to the AI (characters). */
 const CONTEXT_CAP = 12000;
@@ -100,6 +101,12 @@ export function DocEditor({
   const [pageHeader, setPageHeader] = useState(() => window.localStorage.getItem(`alo-doc-page-header:${nodeId}`) ?? "");
   const [pageFooter, setPageFooter] = useState(() => window.localStorage.getItem(`alo-doc-page-footer:${nodeId}`) ?? "");
   const [showPageNumber, setShowPageNumber] = useState(() => window.localStorage.getItem(`alo-doc-page-number:${nodeId}`) === "true");
+  const [docFont, setDocFont] = useState<DocFont>(() => {
+    const stored = window.localStorage.getItem(`alo-doc-font:${nodeId}`);
+    return stored === "arial" || stored === "georgia" || stored === "garamond" ? stored : "inter";
+  });
+  const [docFontSize, setDocFontSize] = useState(() => Number(window.localStorage.getItem(`alo-doc-font-size:${nodeId}`)) || 14);
+  const [lineSpacing, setLineSpacing] = useState(() => Number(window.localStorage.getItem(`alo-doc-line-spacing:${nodeId}`)) || 1.5);
   const [activeStyles, setActiveStyles] = useState<Record<string, boolean | string>>({});
   const [activeBlockType, setActiveBlockType] = useState("paragraph");
   const [counts, setCounts] = useState({ words: 0, characters: 0 });
@@ -152,7 +159,10 @@ export function DocEditor({
     window.localStorage.setItem(`alo-doc-page-header:${nodeId}`, pageHeader);
     window.localStorage.setItem(`alo-doc-page-footer:${nodeId}`, pageFooter);
     window.localStorage.setItem(`alo-doc-page-number:${nodeId}`, String(showPageNumber));
-  }, [nodeId, pageFooter, pageHeader, pageMargins, pageOrientation, pageSize, showPageNumber]);
+    window.localStorage.setItem(`alo-doc-font:${nodeId}`, docFont);
+    window.localStorage.setItem(`alo-doc-font-size:${nodeId}`, String(docFontSize));
+    window.localStorage.setItem(`alo-doc-line-spacing:${nodeId}`, String(lineSpacing));
+  }, [docFont, docFontSize, lineSpacing, nodeId, pageFooter, pageHeader, pageMargins, pageOrientation, pageSize, showPageNumber]);
 
   useEffect(() => editor.onSelectionChange(() => {
     setActiveStyles(editor.getActiveStyles() as Record<string, boolean | string>);
@@ -363,6 +373,9 @@ export function DocEditor({
           <option value="numberedListItem">{strings.docStyleNumberedList}</option>
           <option value="checkListItem">{strings.docStyleChecklist}</option>
         </select>
+        <select className={styles.fontSelect} aria-label={strings.docFontFamily} value={docFont} onChange={(event) => setDocFont(event.target.value as DocFont)}><option value="inter">Inter</option><option value="arial">Arial</option><option value="georgia">Georgia</option><option value="garamond">Garamond</option></select>
+        <select className={styles.fontSizeSelect} aria-label={strings.docFontSize} value={docFontSize} onChange={(event) => setDocFontSize(Number(event.target.value))}>{[10, 11, 12, 14, 16, 18, 20, 24].map((size) => <option key={size} value={size}>{size}</option>)}</select>
+        <select className={styles.lineSpacingSelect} aria-label={strings.docLineSpacing} value={lineSpacing} onChange={(event) => setLineSpacing(Number(event.target.value))}><option value="1">1.0</option><option value="1.15">1.15</option><option value="1.5">1.5</option><option value="2">2.0</option></select>
         <select className={styles.colorSelect} aria-label={strings.docTextColor} value={typeof activeStyles.textColor === "string" ? activeStyles.textColor : "default"} onChange={(event) => setColorStyle("textColor", event.target.value)}>
           <option value="default">{strings.docColorDefault}</option><option value="red">{strings.docColorRed}</option><option value="orange">{strings.docColorOrange}</option><option value="green">{strings.docColorGreen}</option><option value="blue">{strings.docColorBlue}</option><option value="purple">{strings.docColorPurple}</option>
         </select>
@@ -412,6 +425,9 @@ export function DocEditor({
           "--doc-page-height": pageOrientation === "portrait" ? (pageSize === "a4" ? "297mm" : "279mm") : (pageSize === "a4" ? "210mm" : "216mm"),
           "--doc-page-margin-x": pageMargins === "narrow" ? "12.7mm" : pageMargins === "wide" ? "31.7mm" : "25.4mm",
           "--doc-page-margin-y": pageMargins === "narrow" ? "12.7mm" : pageMargins === "wide" ? "31.7mm" : "25.4mm",
+          "--doc-font-family": docFont === "arial" ? "Arial, sans-serif" : docFont === "georgia" ? "Georgia, serif" : docFont === "garamond" ? "EB Garamond, Garamond, serif" : "Inter, sans-serif",
+          "--doc-font-size": `${docFontSize}px`,
+          "--doc-line-spacing": lineSpacing,
         } as CSSProperties}
       >
         {viewMode === "page" && (pageHeader !== "" || pageFooter !== "" || showPageNumber) && <div className={styles.pageFurniture} aria-hidden="true">
