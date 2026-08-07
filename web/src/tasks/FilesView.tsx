@@ -2,11 +2,12 @@
 // /tasks/files roll-up. Click a name to open its task; download pulls the blob
 // through the same authenticated blob endpoint mail attachments use.
 import { useEffect, useRef, useState } from "react";
-import { Download, Paperclip, Upload } from "lucide-react";
+import { Download, HardDrive, Paperclip, Upload } from "lucide-react";
 
 import { strings } from "../i18n";
-import { useJmapClient, type ProjectFileDto, type Task } from "../jmap";
+import { useJmapClient, type DriveNodeDto, type ProjectFileDto, type Task } from "../jmap";
 import { Spinner } from "../ds";
+import { DriveAttachmentPicker } from "./DriveAttachmentPicker";
 import styles from "./TasksModule.module.css";
 
 function fileSize(bytes: number): string {
@@ -28,6 +29,7 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
   const [taskId, setTaskId] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(false);
+  const [driveOpen, setDriveOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -64,6 +66,22 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
     } finally {
       setUploading(false);
       if (fileRef.current !== null) fileRef.current.value = "";
+    }
+  }
+
+  async function attachDriveFiles(nodes: DriveNodeDto[]) {
+    if (taskId === "") return;
+    setUploadError(false);
+    try {
+      for (const node of nodes) {
+        if (node.blobId !== null) {
+          await client.addTaskAttachment(taskId, node.blobId, node.name, node.size);
+        }
+      }
+      setFiles(await client.projectFiles(projectId));
+      setDriveOpen(false);
+    } catch {
+      setUploadError(true);
     }
   }
 
@@ -138,6 +156,9 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
           <Upload size={17} />
           {uploading ? strings.taskUploading : strings.taskAddAttachment}
         </button>
+        <button type="button" className={styles.filesDriveButton} onClick={() => setDriveOpen(true)}>
+          <HardDrive size={17} /> {strings.taskChooseFromDrive}
+        </button>
       </div>
       {uploadError && <p className={styles.filesError}>{strings.taskFilesUploadError}</p>}
       {files.length === 0 && (
@@ -170,6 +191,7 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
           </button>
         </div>
       ))}
+      {driveOpen && <DriveAttachmentPicker onAttach={attachDriveFiles} onClose={() => setDriveOpen(false)} />}
     </div>
   );
 }

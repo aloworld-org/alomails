@@ -2166,6 +2166,21 @@
 }
 .filesUpload:hover:not(:disabled) { background: var(--accent-hover); }
 .filesUpload:disabled { opacity: 0.65; cursor: wait; }
+.filesDriveButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.filesDriveButton:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
 .filesDropEmpty {
   flex: 1;
   min-height: 320px;
@@ -2188,6 +2203,65 @@
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+.drivePickerBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: rgb(10 25 41 / 38%);
+  backdrop-filter: blur(2px);
+}
+.drivePicker {
+  width: min(680px, 100%);
+  height: min(640px, calc(100vh - 40px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+.drivePickerHead { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-5); border-bottom: 1px solid var(--border-subtle); }
+.drivePickerHead > div { flex: 1; min-width: 0; }
+.drivePickerHead h2 { margin: 0; color: var(--text-primary); font-size: var(--text-lg); }
+.drivePickerHead p { margin: 3px 0 0; color: var(--text-secondary); font-size: var(--text-sm); }
+.drivePickerHead > button { padding: var(--space-2); color: var(--text-secondary); border-radius: var(--radius-md); }
+.drivePickerHead > button:hover { color: var(--accent); background: var(--accent-tint); }
+.drivePickerMark { width: 40px; height: 40px; display: grid; place-items: center; border-radius: var(--radius-md); color: var(--accent); background: var(--accent-tint); }
+.drivePickerTools { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); }
+.drivePickerBack { width: 36px; height: 36px; display: grid; place-items: center; border-radius: var(--radius-md); color: var(--text-secondary); }
+.drivePickerBack:hover:not(:disabled) { background: var(--bg-raised); color: var(--accent); }
+.drivePickerBack:disabled { opacity: 0.35; }
+.drivePickerPath { flex: 1; min-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-secondary); font-size: var(--text-sm); }
+.drivePickerSearch { width: 230px; height: 36px; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); border: 1px solid var(--border-default); border-radius: var(--radius-md); color: var(--text-tertiary); }
+.drivePickerSearch:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-tint); }
+.drivePickerSearch input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-primary); font-size: var(--text-sm); }
+.drivePickerList { flex: 1; min-height: 0; overflow-y: auto; padding: var(--space-2); }
+.drivePickerStatus { min-height: 240px; display: grid; place-items: center; color: var(--text-tertiary); font-size: var(--text-sm); }
+.drivePickerRow { width: 100%; display: flex; align-items: center; gap: var(--space-3); padding: 9px var(--space-3); border-radius: var(--radius-md); color: var(--text-primary); text-align: left; }
+.drivePickerRow:hover { background: var(--bg-raised); }
+.drivePickerRowSelected { background: var(--accent-tint); color: var(--accent-hover); }
+.driveFolderIcon, .driveFileIcon { width: 34px; height: 34px; display: grid; place-items: center; flex: none; border-radius: var(--radius-md); }
+.driveFolderIcon { color: var(--accent); background: var(--accent-tint); }
+.driveFileIcon { color: var(--text-secondary); background: var(--bg-raised); }
+.drivePickerName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-sm); }
+.drivePickerCheck { width: 22px; height: 22px; display: grid; place-items: center; flex: none; border: 1px solid var(--border-default); border-radius: var(--radius-sm); }
+.drivePickerRowSelected .drivePickerCheck { border-color: var(--accent); color: var(--text-on-accent); background: var(--accent); }
+.drivePickerFoot { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4); border-top: 1px solid var(--border-subtle); color: var(--text-secondary); font-size: var(--text-sm); }
+.drivePickerFoot > span { margin-right: auto; }
+.drivePickerCancel { height: 40px; padding: 0 var(--space-4); border: 1px solid var(--border-default); border-radius: var(--radius-md); color: var(--text-primary); }
+.drivePickerCancel:hover { background: var(--bg-raised); }
+@media (max-width: 680px) {
+  .filesToolbar { align-items: stretch; flex-direction: column; }
+  .filesTaskPicker, .filesDriveButton, .filesUpload { max-width: none; width: 100%; }
+  .drivePickerTools { flex-wrap: wrap; }
+  .drivePickerPath { order: 1; }
+  .drivePickerSearch { order: 2; width: 100%; }
+  .drivePickerFoot { flex-wrap: wrap; }
 }
 .fileRow {
   display: flex;

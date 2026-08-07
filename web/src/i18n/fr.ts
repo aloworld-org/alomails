@@ -10,6 +10,13 @@ export const fr: Partial<Catalog> = {
   taskFilesDropHint: "Déposez des images ou fichiers ici, ou utilisez Ajouter une pièce jointe.",
   taskFilesNeedTask: "Créez d’abord une tâche, puis joignez-y des images et des fichiers.",
   taskFilesUploadError: "Impossible de joindre ces fichiers. Réessayez.",
+  taskChooseFromDrive: "Choisir dans Drive",
+  taskChooseFromDriveHint: "Joignez des fichiers existants sans les téléverser à nouveau.",
+  taskSearchDrive: "Rechercher dans ce dossier",
+  taskDriveBack: "Revenir au dossier précédent",
+  taskNoDriveFiles: "Aucun fichier dans ce dossier.",
+  taskAttachSelected: "Joindre la sélection",
+  taskFilesSelected: (count: number) => count === 1 ? "1 fichier sélectionné" : `${count} fichiers sélectionnés`,
   // brand
   appName: "alo",
   tagline: "L’espace de travail souverain et natif à l’IA pour l’Europe.",

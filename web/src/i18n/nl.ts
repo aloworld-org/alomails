@@ -10,6 +10,13 @@ export const nl: Partial<Catalog> = {
   taskFilesDropHint: "Sleep afbeeldingen of bestanden hierheen, of kies Bijlage toevoegen.",
   taskFilesNeedTask: "Maak eerst een taak en voeg er daarna afbeeldingen en bestanden aan toe.",
   taskFilesUploadError: "Deze bestanden konden niet worden toegevoegd. Probeer opnieuw.",
+  taskChooseFromDrive: "Kiezen uit Drive",
+  taskChooseFromDriveHint: "Voeg bestaande bestanden toe zonder ze opnieuw te uploaden.",
+  taskSearchDrive: "Zoeken in deze map",
+  taskDriveBack: "Terug naar de vorige map",
+  taskNoDriveFiles: "Geen bestanden in deze map.",
+  taskAttachSelected: "Selectie toevoegen",
+  taskFilesSelected: (count: number) => count === 1 ? "1 bestand geselecteerd" : `${count} bestanden geselecteerd`,
   // brand
   appName: "alo",
   tagline: "De soevereine, AI-native werkomgeving voor Europa.",
