@@ -82,6 +82,7 @@ pub mod site_forms;
 pub mod site_model;
 pub mod site_pages;
 pub mod site_public;
+pub mod site_public_forms;
 pub mod site_publish;
 pub mod site_theme;
 pub mod sites;

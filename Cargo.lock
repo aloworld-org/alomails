@@ -179,6 +179,7 @@ version = "0.0.1"
 dependencies = [
  "alo-store",
  "axum",
+ "serde",
  "serde_json",
  "sqlx",
  "thiserror",

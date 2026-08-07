@@ -74,6 +74,13 @@ impl SitePublicStore {
         Self { pool, blobs }
     }
 
+    /// The underlying pool, for the sibling module that implements this
+    /// door's one public write (`crate::site_public_forms`). Crate-internal:
+    /// the pool itself is never part of the public surface.
+    pub(crate) fn pool(&self) -> &PgPool {
+        &self.pool
+    }
+
     /// Resolves a subdomain to the site's current publish — the one indexed
     /// read that maps a Host header to a tenant scope. `None` for an unknown
     /// subdomain and for a site that is not live: the two are
