@@ -21,11 +21,29 @@ body {
   background: var(--bg-app);
   color: var(--text-primary);
   font-family: var(--font-ui);
-  font-size: var(--text-base);
+  font-size: var(--text-md);
   line-height: var(--leading-normal);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+/* Quietly tightened display type gives page and panel headings a deliberate,
+   editorial rhythm without changing compact controls, tables, or ribbons. */
+h1,
+h2,
+h3 {
+  color: var(--text-primary);
+  text-wrap: balance;
+}
+
+h1 {
+  letter-spacing: -0.025em;
+}
+
+h2,
+h3 {
+  letter-spacing: -0.015em;
 }
 
 h1,
