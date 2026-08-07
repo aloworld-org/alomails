@@ -12,6 +12,7 @@ use time::OffsetDateTime;
 use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
 use crate::id::SiteId;
+use crate::site_theme::SiteTheme;
 
 /// Subdomain length bounds (DNS label rules, tightened for a public product
 /// namespace: real DNS allows 63 octets, we cap at 40 for URL sanity).
@@ -140,8 +141,9 @@ pub struct Site {
     /// The site's label under the public sites domain (globally unique).
     pub subdomain: String,
     pub status: SiteStatus,
-    /// Theme tokens as stored; typed theme validation lives with the theme
-    /// model, the store treats it as opaque JSON.
+    /// The theme envelope as stored (see [`crate::site_theme`]) — always a
+    /// value that passed [`crate::site_theme::SiteTheme::from_value`], or the
+    /// pristine `{}` default of a site that never set one.
     pub theme: Value,
     pub created_by: String,
     pub created_at: OffsetDateTime,
@@ -310,6 +312,38 @@ impl AccountStore {
         .execute(&self.pool)
         .await
         .map_err(map_subdomain_unique)?;
+        if done.rows_affected() == 0 {
+            return Err(StoreError::NotFound);
+        }
+        Ok(())
+    }
+
+    /// Replaces a site's theme with `theme`, which must be a valid
+    /// current-version envelope pointing at a shipped preset — this is the
+    /// theme write gate. The stored value is the canonical serialization of
+    /// the parsed theme, so whatever is on disk always round-trips through
+    /// the typed model.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the site isn't the tenant's;
+    /// [`StoreError::Conflict`] carrying the schema violation (version,
+    /// shape, unknown preset, or malformed blob ref — see
+    /// [`crate::site_theme::ThemeSchemaError`]); [`StoreError::Db`].
+    pub async fn set_site_theme(&self, id: &SiteId, theme: Value) -> Result<()> {
+        let theme = SiteTheme::from_value(theme)
+            .map_err(|schema| StoreError::Conflict(schema.to_string()))?;
+        let canonical = theme
+            .to_value()
+            .map_err(|schema| StoreError::Conflict(schema.to_string()))?;
+        let done = sqlx::query(
+            "UPDATE sites SET theme = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(sqlx::types::Json(canonical))
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
         if done.rows_affected() == 0 {
             return Err(StoreError::NotFound);
         }

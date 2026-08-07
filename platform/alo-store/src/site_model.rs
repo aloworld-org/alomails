@@ -733,18 +733,23 @@ fn check_opt_image(
 }
 
 /// An opaque id token: non-empty, bounded, URL-safe base64 charset — the shape
-/// every store id has, safe to embed in URLs and HTML attributes.
+/// every store id has, safe to embed in URLs and HTML attributes. Shared with
+/// the theme model ([`crate::site_theme`]) so "a valid id" means one thing
+/// across the sites schema family.
+pub(crate) fn valid_id_token(token: &str) -> bool {
+    !token.is_empty()
+        && token.len() <= MAX_TOKEN_CHARS
+        && token
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+}
+
 fn check_token(
     section: &'static str,
     field: &'static str,
     token: &str,
 ) -> Result<(), SectionSchemaError> {
-    if token.is_empty()
-        || token.len() > MAX_TOKEN_CHARS
-        || !token
-            .bytes()
-            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
-    {
+    if !valid_id_token(token) {
         return Err(invalid(section, format!("{field} is not a valid id")));
     }
     Ok(())

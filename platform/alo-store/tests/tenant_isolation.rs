@@ -1104,9 +1104,48 @@ async fn sites_scope_by_tenant_and_subdomains_are_globally_unique() {
     assert!(b.sites().await.unwrap().is_empty());
     assert_not_found(b.rename_site(&site, "hijacked").await);
     assert_not_found(b.set_site_subdomain(&site, "stolen-subdomain").await);
+    assert_not_found(
+        b.set_site_theme(
+            &site,
+            serde_json::json!({"schema_version": 1, "preset": "ink"}),
+        )
+        .await,
+    );
     assert_not_found(b.delete_site(&site).await);
     // ... and nothing they tried changed A's row.
-    assert_eq!(a.site(&site).await.unwrap().unwrap().subdomain, sub);
+    let untouched = a.site(&site).await.unwrap().unwrap();
+    assert_eq!(untouched.subdomain, sub);
+    assert_eq!(untouched.theme, serde_json::json!({}));
+
+    // The theme write gate: a co-tenant user can set a valid theme (stored
+    // canonically), and off-schema values never reach the column.
+    c.set_site_theme(
+        &site,
+        serde_json::json!({"schema_version": 1, "preset": "terra"}),
+    )
+    .await
+    .unwrap();
+    let themed = a.site(&site).await.unwrap().unwrap();
+    assert_eq!(
+        alo_store::SiteTheme::from_stored(themed.theme.clone()).preset,
+        "terra"
+    );
+    for bad in [
+        serde_json::json!({"schema_version": 1, "preset": "vaporwave"}),
+        serde_json::json!({"schema_version": 9, "preset": "north"}),
+        serde_json::json!({"preset": "north"}),
+        serde_json::json!({"schema_version": 1, "preset": "north", "logo": "not/a/token"}),
+    ] {
+        match a.set_site_theme(&site, bad.clone()).await {
+            Err(StoreError::Conflict(_)) => {}
+            other => panic!("expected theme-gate Conflict for {bad}, got {other:?}"),
+        }
+    }
+    assert_eq!(
+        a.site(&site).await.unwrap().unwrap().theme,
+        themed.theme,
+        "a rejected theme write must not change the stored value"
+    );
 
     // The global namespace: B cannot claim A's subdomain, and the check
     // answers taken/free only.
