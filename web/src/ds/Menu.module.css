@@ -46,6 +46,7 @@
   box-shadow: var(--shadow-lg);
   padding: var(--space-2);
   z-index: var(--z-overlay);
+  max-width: calc(100vw - var(--space-4));
 }
 
 .end {
@@ -54,6 +55,10 @@
 
 .start {
   left: 0;
+}
+.up {
+  top: auto;
+  bottom: calc(100% + var(--space-1));
 }
 
 .item {

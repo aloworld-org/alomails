@@ -1,7 +1,7 @@
 // A dropdown menu: an icon-button trigger and a popover of actions. Closes on
 // outside click, Escape, or selecting an item. Used for the reading-pane
 // "Move to" and "More" menus; reusable anywhere a small action menu is needed.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 
@@ -35,7 +35,20 @@ interface MenuProps {
 
 export function Menu({ label, icon, items, align = "end", triggerLabel }: MenuProps) {
   const [open, setOpen] = useState(false);
+  const [placement, setPlacement] = useState<{ align: "start" | "end"; up: boolean }>({ align, up: false });
   const ref = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!open || ref.current === null) return;
+    const rect = ref.current.getBoundingClientRect();
+    const menuWidth = 216;
+    const resolvedAlign = align === "end" && rect.right < menuWidth + 8
+      ? "start"
+      : align === "start" && window.innerWidth - rect.left < menuWidth + 8
+        ? "end"
+        : align;
+    setPlacement({ align: resolvedAlign, up: window.innerHeight - rect.bottom < 340 && rect.top > 340 });
+  }, [align, open]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -77,7 +90,10 @@ export function Menu({ label, icon, items, align = "end", triggerLabel }: MenuPr
         />
       )}
       {open && (
-        <div className={cx(styles.menu, align === "start" ? styles.start : styles.end)} role="menu">
+        <div
+          className={cx(styles.menu, placement.align === "start" ? styles.start : styles.end, placement.up && styles.up)}
+          role="menu"
+        >
           {items.map((item) => (
             <div key={item.key} className={styles.itemWrap}>
               {item.divider === true && <div className={styles.divider} role="separator" />}

@@ -276,13 +276,13 @@ export function DriveModule() {
   }
 
   function renderRows(items: DriveNodeDto[], depth = 0): ReactNode[] {
-    return sortNodes(items).flatMap((n) => {
+    return sortNodes(items).map((n) => {
       const Icon = nodeIcon(n);
       const folder = n.kind === "folder";
       const expanded = folder && expandedFolders.has(n.id);
       const children = folderChildren.get(n.id);
       const row = (
-        <li key={n.id} className={`${styles.row} ${depth > 0 ? styles.nestedRow : ""}`}>
+        <div className={`${styles.row} ${depth > 0 ? styles.nestedRow : ""}`}>
           <button
             type="button"
             className={styles.rowMain}
@@ -308,28 +308,33 @@ export function DriveModule() {
           <span className={styles.colSize}>{folder ? "—" : fileSize(n.size)}</span>
           <span className={styles.colDate}>{new Date(n.updatedAt).toLocaleDateString()}</span>
           <span className={styles.colMenu}>
-            <Menu label={strings.driveActions} icon={<span aria-hidden>⋯</span>} items={rowMenu(n)} />
+            <Menu
+              label={strings.driveActions}
+              icon={<span aria-hidden>⋯</span>}
+              items={rowMenu(n)}
+              align={viewMode === "details" || viewMode === "content" ? "end" : "start"}
+            />
           </span>
+        </div>
+      );
+      return (
+        <li key={n.id} className={expanded ? styles.folderGroup : styles.nodeItem}>
+          {row}
+          {expanded && (
+            <ul className={styles.folderChildren}>
+              {children === null || children === undefined ? (
+                <li className={`${styles.row} ${styles.nestedStatus}`}>
+                  <span style={{ paddingLeft: (depth + 1) * 24 }}><Spinner size={16} /></span>
+                </li>
+              ) : children.length === 0 ? (
+                <li className={`${styles.row} ${styles.nestedStatus}`}>
+                  <span style={{ paddingLeft: (depth + 1) * 24 }}>{strings.driveFolderEmpty}</span>
+                </li>
+              ) : renderRows(children, depth + 1)}
+            </ul>
+          )}
         </li>
       );
-      if (!expanded) return [row];
-      if (children === null || children === undefined) {
-        return [
-          row,
-          <li key={`${n.id}-loading`} className={`${styles.row} ${styles.nestedStatus}`}>
-            <span style={{ paddingLeft: (depth + 1) * 24 }}><Spinner size={16} /></span>
-          </li>,
-        ];
-      }
-      if (children.length === 0) {
-        return [
-          row,
-          <li key={`${n.id}-empty`} className={`${styles.row} ${styles.nestedStatus}`}>
-            <span style={{ paddingLeft: (depth + 1) * 24 }}>{strings.driveFolderEmpty}</span>
-          </li>,
-        ];
-      }
-      return [row, ...renderRows(children, depth + 1)];
     });
   }
 

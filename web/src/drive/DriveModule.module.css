@@ -282,6 +282,18 @@
 .row:hover {
   background: var(--bg-raised);
 }
+.nodeItem {
+  display: contents;
+}
+.folderGroup {
+  display: block;
+  min-width: 0;
+}
+.folderChildren {
+  margin-left: 22px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-subtle);
+}
 .listCompact .row {
   padding-block: 0;
 }
@@ -302,6 +314,39 @@
   align-content: start;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
   gap: var(--space-3);
+}
+.view_extra-large > .folderGroup,
+.view_large > .folderGroup,
+.view_medium > .folderGroup,
+.view_small > .folderGroup,
+.view_tiles > .folderGroup {
+  grid-column: 1 / -1;
+  padding: var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--accent-tint) 34%, var(--bg-surface));
+}
+.view_extra-large .folderChildren,
+.view_large .folderChildren,
+.view_medium .folderChildren,
+.view_small .folderChildren,
+.view_tiles .folderChildren {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: var(--space-2) 0 0;
+  border-top: 1px solid var(--border-subtle);
+  border-left: 0;
+}
+.view_extra-large > .folderGroup > .row,
+.view_large > .folderGroup > .row,
+.view_medium > .folderGroup > .row,
+.view_small > .folderGroup > .row {
+  width: 160px;
+}
+.view_tiles > .folderGroup > .row {
+  width: min(280px, 100%);
 }
 .view_extra-large .listHead,
 .view_large .listHead,
