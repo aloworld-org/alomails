@@ -308,6 +308,12 @@ pub struct ChartSpec {
     pub dimension: Option<DimensionRef>,
     /// Over which slice of time.
     pub period: Period,
+    /// Which of the dataset's dates the period narrows on. Omitted means the
+    /// chart's own time breakdown when it has one, and otherwise the dataset's
+    /// declared default ([`insight_catalog::DatasetEntry::period`]) — see
+    /// [`ChartSpec::period_dimension`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub period_on: Option<Dimension>,
     /// Which rows are considered.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub filters: Vec<Filter>,
@@ -446,6 +452,28 @@ impl ChartSpec {
             }
         }
 
+        if let Some(on) = self.period_on {
+            let dim = entry.dimension(on).ok_or_else(|| {
+                invalid(
+                    "period_on",
+                    format!(
+                        "the {} dataset has no {} date",
+                        wire(&self.dataset),
+                        wire(&on)
+                    ),
+                )
+            })?;
+            if !matches!(dim.kind, DimensionKind::Time(_)) {
+                return Err(invalid(
+                    "period_on",
+                    format!(
+                        "{} is not a date, so a period cannot narrow on it",
+                        wire(&on)
+                    ),
+                ));
+            }
+        }
+
         self.check_period()?;
         self.check_filters()?;
 
@@ -466,6 +494,28 @@ impl ChartSpec {
         }
 
         self.check_viz()
+    }
+
+    /// Which of the dataset's dates [`Self::period`] narrows on.
+    ///
+    /// Three rules, in order, so a chart's period is never a surprise:
+    /// what `period_on` says; failing that the chart's **own** time breakdown
+    /// (revenue by month over the last year narrows on the month it draws);
+    /// and failing that the dataset's declared default — a document is dated
+    /// by its issue date, a receivable by its due date, a payment by the day
+    /// the money arrived, a deal by the day it was created.
+    ///
+    /// A chart that means another of the dataset's dates — "won this month" is
+    /// about the day a deal *closed*, not the day it was raised — says so, and
+    /// the gallery specs (BI1.06) do.
+    pub fn period_dimension(&self) -> Dimension {
+        if let Some(on) = self.period_on {
+            return on;
+        }
+        if let Some(DimensionRef { id, grain: Some(_) }) = self.dimension {
+            return id;
+        }
+        insight_catalog::dataset(self.dataset).period
     }
 
     /// The period's own rules, plus the bucket ceiling it implies together
@@ -976,6 +1026,60 @@ mod tests {
             value["limit"] = json!(bad);
             assert!(detail(ChartSpec::from_value(value)).contains("between 1"));
         }
+    }
+
+    #[test]
+    fn a_period_narrows_on_the_date_the_chart_actually_means() {
+        // The chart's own time breakdown, when it has one.
+        let spec =
+            ChartSpec::from_value(revenue_by_month()).unwrap_or_else(|e| panic!("rejected: {e}"));
+        assert_eq!(spec.period_dimension(), Dimension::IssueDate);
+
+        // No breakdown at all: the dataset's declared default.
+        let outstanding = ChartSpec::from_value(json!({
+            "schema_version": 1,
+            "dataset": "billing.receivables",
+            "measure": { "id": "outstanding", "agg": "sum" },
+            "period": { "kind": "all" },
+            "viz": "number"
+        }))
+        .unwrap_or_else(|e| panic!("rejected: {e}"));
+        assert_eq!(outstanding.period_dimension(), Dimension::DueDate);
+
+        // "Won this month" is about the day a deal closed, not the day it was
+        // raised — so it says so, and the default does not win.
+        let won = ChartSpec::from_value(json!({
+            "schema_version": 1,
+            "dataset": "crm.deals",
+            "measure": { "id": "value", "agg": "sum" },
+            "period": { "kind": "last_n", "n": 1, "grain": "month" },
+            "period_on": "closed_at",
+            "filters": [ { "id": "outcome", "op": "in", "values": ["won"] } ],
+            "viz": "number"
+        }))
+        .unwrap_or_else(|e| panic!("rejected: {e}"));
+        assert_eq!(won.period_dimension(), Dimension::ClosedAt);
+        // An explicit date beats the breakdown, not only the default.
+        let mut over_breakdown = revenue_by_month();
+        over_breakdown["dataset"] = json!("crm.deals");
+        over_breakdown["measure"] = json!({ "id": "value", "agg": "sum" });
+        over_breakdown["dimension"] = json!({ "id": "expected_close", "grain": "month" });
+        over_breakdown["period_on"] = json!("created_at");
+        over_breakdown["filters"] = json!([]);
+        let spec =
+            ChartSpec::from_value(over_breakdown).unwrap_or_else(|e| panic!("rejected: {e}"));
+        assert_eq!(spec.period_dimension(), Dimension::CreatedAt);
+    }
+
+    #[test]
+    fn a_period_cannot_narrow_on_something_that_is_not_the_datasets_date() {
+        let mut foreign = revenue_by_month();
+        foreign["period_on"] = json!("paid_on");
+        assert!(detail(ChartSpec::from_value(foreign)).contains("has no"));
+
+        let mut not_a_date = revenue_by_month();
+        not_a_date["period_on"] = json!("customer");
+        assert!(detail(ChartSpec::from_value(not_a_date)).contains("not a date"));
     }
 
     #[test]

@@ -55,7 +55,7 @@
 use time::Date;
 
 use crate::account::AccountStore;
-use crate::billing_fx::{FxSnapshot, convert_totals};
+use crate::billing_fx::{FxSnapshot, restated_into};
 use crate::billing_line::{FiguresRow, group_figures};
 use crate::billing_totals::{Totals, totals};
 use crate::error::{Result, StoreError};
@@ -177,11 +177,7 @@ impl PeriodDocument {
     /// its number against a different base would be arithmetic on two unrelated
     /// facts, and the report says "unconverted" instead.
     fn restated_in(&self, base: &str) -> Option<Totals> {
-        let fx = self.fx.as_ref()?;
-        if fx.base_currency != base {
-            return None;
-        }
-        convert_totals(&self.totals, fx.rate_micro)
+        restated_into(base, self.fx.as_ref(), &self.totals)
     }
 }
 

@@ -263,6 +263,15 @@ pub struct FilterEntry {
 pub struct DatasetEntry {
     /// Which dataset.
     pub dataset: Dataset,
+    /// The time dimension a period narrows on when the spec does not say —
+    /// the dataset's own date, the one a person means by "last quarter".
+    ///
+    /// Each dataset has exactly one obvious answer (a document is dated by
+    /// when it was issued, a receivable by when it falls due, a payment by
+    /// when the money arrived), except deals, which carry three dates and
+    /// default to when the deal was created. A chart that means another one
+    /// says so with `period_on` ([`crate::insight_spec::ChartSpec`]).
+    pub period: Dimension,
     /// Its measures.
     pub measures: &'static [MeasureEntry],
     /// Its dimensions.
@@ -355,6 +364,7 @@ const DOCUMENT_COUNT_DIMENSIONS: &[Dimension] = &[
 
 static BILLING_DOCUMENTS: DatasetEntry = DatasetEntry {
     dataset: Dataset::BillingDocuments,
+    period: Dimension::IssueDate,
     measures: &[
         MeasureEntry {
             measure: Measure::Net,
@@ -436,6 +446,7 @@ const RECEIVABLE_DIMENSIONS: &[Dimension] = &[
 
 static BILLING_RECEIVABLES: DatasetEntry = DatasetEntry {
     dataset: Dataset::BillingReceivables,
+    period: Dimension::DueDate,
     measures: &[
         MeasureEntry {
             measure: Measure::Outstanding,
@@ -491,6 +502,7 @@ const PAYMENT_DIMENSIONS: &[Dimension] = &[
 
 static BILLING_PAYMENTS: DatasetEntry = DatasetEntry {
     dataset: Dataset::BillingPayments,
+    period: Dimension::PaidOn,
     measures: &[
         MeasureEntry {
             measure: Measure::Amount,
@@ -565,6 +577,7 @@ const WIN_RATE_DIMENSIONS: &[Dimension] =
 
 static CRM_DEALS: DatasetEntry = DatasetEntry {
     dataset: Dataset::CrmDeals,
+    period: Dimension::CreatedAt,
     measures: &[
         MeasureEntry {
             measure: Measure::Value,
@@ -682,6 +695,27 @@ mod tests {
                     );
                 }
             }
+        }
+    }
+
+    /// The dataset's default period dimension has to be one of its own time
+    /// dimensions, or "last quarter" would narrow on a column the dataset has
+    /// not got.
+    #[test]
+    fn every_dataset_dates_itself_by_one_of_its_own_time_dimensions() {
+        for &d in DATASETS {
+            let entry = dataset(d);
+            let default = entry.dimension(entry.period).unwrap_or_else(|| {
+                panic!(
+                    "{d:?} dates itself by {:?}, which it has not got",
+                    entry.period
+                )
+            });
+            assert!(
+                matches!(default.kind, DimensionKind::Time(_)),
+                "{d:?} dates itself by {:?}, which is not a time dimension",
+                entry.period
+            );
         }
     }
 

@@ -294,6 +294,27 @@ pub fn restated(currency: &str, fx: Option<&FxSnapshot>, totals: &Totals) -> Opt
     convert_totals(totals, fx.rate_micro)
 }
 
+/// A document's money **as one set of books sees it**: its totals crossed into
+/// `base` at the rate frozen on it, or `None` when that cannot be done
+/// honestly — no snapshot at all, a snapshot taken against a different
+/// accounting currency, or an unusable rate.
+///
+/// The difference from [`restated`] is deliberate and is the difference between
+/// *printing* and *adding up*. A surface printing one document asks "is there a
+/// second figure to show?", so the identity answers `None`. A report adding many
+/// documents together asks "what is this worth in the currency I am summing in?",
+/// and for a document already in that currency the honest answer is itself —
+/// which is what this returns. Both the VAT summary and the Insights query
+/// engine sum through here, so a tile and a return can never disagree about
+/// which documents were converted.
+pub fn restated_into(base: &str, fx: Option<&FxSnapshot>, totals: &Totals) -> Option<Totals> {
+    let fx = fx?;
+    if fx.base_currency != base {
+        return None;
+    }
+    convert_totals(totals, fx.rate_micro)
+}
+
 /// The rate of `quote` against `base` when both are published against a third
 /// currency (the euro, in the reference-rate table): `1 base = ? quote`.
 ///

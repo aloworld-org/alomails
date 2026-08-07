@@ -62,6 +62,8 @@ pub mod id;
 pub mod identity;
 pub mod insight_catalog;
 pub mod insight_dashboards;
+pub mod insight_query;
+pub mod insight_series;
 pub mod insight_spec;
 pub mod insight_tiles;
 pub mod maintenance;
@@ -159,7 +161,11 @@ pub use insight_catalog::{
     FilterField, FilterOp, Grain, Measure, MeasureEntry, Unit, ValueKind, Viz,
 };
 pub use insight_dashboards::{BUSINESS_OVERVIEW_KEY, Dashboard, NewDashboard};
-pub use insight_spec::{ChartSpec, DimensionRef, Filter, MeasureRef, Period, SpecError};
+pub use insight_query::{MAX_GROUPS, MAX_SCANNED_ROWS};
+pub use insight_series::{Label, Note, Point, Series, SeriesGroup, SeriesUnit};
+pub use insight_spec::{
+    ChartSpec, DimensionRef, Filter, MeasureRef, Period, Sort, SortBy, SortDir, SpecError,
+};
 pub use insight_tiles::{NewTile, Tile, TileSpec};
 pub use model::{
     AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, CalendarGrant, Category,
