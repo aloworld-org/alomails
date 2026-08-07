@@ -86,7 +86,7 @@
 }
 
 .item.active {
-  background: var(--bg-rail-hover);
+  background: var(--bg-rail-active);
   color: var(--text-on-rail);
 }
 

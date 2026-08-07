@@ -69,8 +69,9 @@
   --bg-surface: #ffffff;               /* panels, cards, reading pane */
   --bg-raised: #f4efe8;                /* hover / input fills */
   --bg-sunken: var(--warm-50);         /* list backgrounds */
-  --bg-rail: var(--navy-600);          /* the module rail — navy */
-  --bg-rail-hover: var(--navy-500);    /* soft navy for hover/active on the rail */
+  --bg-rail: #1f2529;                  /* premium warm charcoal */
+  --bg-rail-hover: #2a3237;            /* graphite hover */
+  --bg-rail-active: #343d42;           /* lifted active surface */
   --bg-selected: var(--verdigris-100); /* selected list row — soft terracotta */
   --bg-overlay: rgba(16, 42, 67, 0.45);
 
@@ -79,8 +80,8 @@
   --text-secondary: #334155;           /* slate */
   --text-tertiary: var(--warm-500);
   --text-on-accent: #ffffff;
-  --text-on-rail: #f4f7fa;
-  --text-on-rail-muted: #93a3b5;
+  --text-on-rail: #f7f3ef;
+  --text-on-rail-muted: #aeb8be;
   --text-link: var(--verdigris-600);   /* links are terracotta */
 
   /* ---- semantic: borders ---- */
