@@ -20,9 +20,9 @@ use crate::{
     billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
     billing_settings, blob, calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff,
     crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
-    docs, drive, filters, flagdue, imap_import_route, insights, insights_eval, push, reset_route,
-    schedule, security, session, settings, share, signup_route, sites, snooze, spaces, tasks,
-    unsubscribe, wopi, workspace_search,
+    docs, drive, filters, flagdue, imap_import_route, insights, insights_eval, insights_gallery,
+    push, reset_route, schedule, security, session, settings, share, signup_route, sites, snooze,
+    spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -630,6 +630,11 @@ pub fn app(state: AppState) -> Router {
         // That separation is what keeps the ask (BI1.07) propose-then-approve —
         // a model can have a chart drawn, and only a person can pin one.
         .route("/insights/eval", post(insights_eval::eval))
+        // The prebuilt questions a tenant pins from (BI1.06). The specs it
+        // hands back are pinned through the ordinary tile route, so the gallery
+        // is a set of good defaults rather than a privileged path into the
+        // store — the same write gate validates them either way.
+        .route("/insights/gallery", get(insights_gallery::list_gallery))
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))

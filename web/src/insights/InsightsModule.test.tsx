@@ -128,20 +128,44 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
   });
 });
 
+/** The ready-made questions the server offers, in the shape it sends them: a
+ *  key the client translates, and the question itself — never a caption. */
+const GALLERY = {
+  entries: [
+    {
+      key: "outstanding",
+      module: "billing",
+      viz: "number",
+      span: 1,
+      spec: { schema_version: 1, dataset: "billing.receivables" },
+    },
+    {
+      key: "pipeline_by_stage",
+      module: "crm",
+      viz: "bar",
+      span: 2,
+      spec: { schema_version: 1, dataset: "crm.deals" },
+    },
+  ],
+  overview: ["outstanding"],
+};
+
 /** What a board reads before anything interesting happens. */
 function fallback(url: string, method: string): Reply {
   const body =
     method !== "GET"
       ? {}
-      : url.includes("/insights/tiles/tile-1/data")
-        ? OWED
-        : url.includes("/insights/tiles/tile-2/data")
-          ? BY_MONTH
-          : url.includes("/insights/dashboards/dash-1")
-            ? { dashboard: OVERVIEW, tiles: TILES }
-            : url.includes("/insights/dashboards/")
-              ? { dashboard: CASH, tiles: [] }
-              : { dashboards: [OVERVIEW, CASH] };
+      : url.includes("/insights/gallery")
+        ? GALLERY
+        : url.includes("/insights/tiles/tile-1/data")
+          ? OWED
+          : url.includes("/insights/tiles/tile-2/data")
+            ? BY_MONTH
+            : url.includes("/insights/dashboards/dash-1")
+              ? { dashboard: OVERVIEW, tiles: TILES }
+              : url.includes("/insights/dashboards/")
+                ? { dashboard: CASH, tiles: [] }
+                : { dashboards: [OVERVIEW, CASH] };
   return { match: () => true, status: 200, body };
 }
 
@@ -229,6 +253,85 @@ describe("the boards", () => {
     expect(created.body).toEqual({ name: "VAT" });
     // And the board that was asked for is the one now on screen.
     expect(await screen.findByRole("heading", { name: "VAT" })).toBeTruthy();
+  });
+});
+
+describe("the zero-setup board", () => {
+  test("is what a first visit lands on, and its language is asked for", async () => {
+    ui();
+
+    // The board that opens with no click is the seeded overview, and it is the
+    // server that seeded it: the read that lists boards carries the interface
+    // language, because that read is the one that writes the board.
+    expect(await screen.findByRole("heading", { name: OVERVIEW.name })).toBeTruthy();
+    const list = reads("/insights/dashboards?")[0] as Call;
+    expect(list.url).toContain("lang=");
+    // And the figures on it are the server's, with nothing asked of the user.
+    expect(await screen.findByText("€42,000.00")).toBeTruthy();
+  });
+});
+
+describe("the gallery", () => {
+  test("offers the server's questions in the reader's words, and pins the spec verbatim", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsAddChart }));
+    const dialog = within(await screen.findByRole("dialog"));
+    // The words are ours; the server sent keys. Both modules are grouped.
+    expect(dialog.getByText(strings.insightsGalleryOutstanding)).toBeTruthy();
+    expect(dialog.getByText(strings.insightsGalleryOutstandingBody)).toBeTruthy();
+    expect(dialog.getByText(strings.insightsGalleryPipelineByStage)).toBeTruthy();
+    expect(dialog.getByText(strings.moduleBilling)).toBeTruthy();
+    expect(dialog.getByText(strings.moduleCrm)).toBeTruthy();
+    expect(writes()).toEqual([]);
+
+    reply("/insights/dashboards/dash-1/tiles", "POST", { tile: OUTSTANDING });
+    fireEvent.click(dialog.getByText(strings.insightsGalleryPipelineByStage));
+
+    await waitFor(() => expect(writes().length).toBe(1));
+    const pinned = writes()[0] as Call;
+    expect(pinned.url).toContain("/insights/dashboards/dash-1/tiles");
+    // The question is the server's own envelope, unchanged; the caption is the
+    // one the reader was looking at; the width is what the entry asked for.
+    expect(pinned.body).toEqual({
+      title: strings.insightsGalleryPipelineByStage,
+      spec: GALLERY.entries[1]?.spec,
+      span: 2,
+    });
+    // And the board is re-read from the server rather than guessed at.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(reads("/insights/dashboards/dash-1").length).toBeGreaterThan(1);
+  });
+
+  test("closing it without picking pins nothing", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsAddChart }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: strings.insightsGalleryClose }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(writes()).toEqual([]);
+  });
+
+  test("a refusal to pin stays on screen and says why", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsAddChart }));
+    const dialog = within(await screen.findByRole("dialog"));
+    reply(
+      "/insights/dashboards/dash-1/tiles",
+      "POST",
+      { detail: "a dashboard may hold at most 40 tiles" },
+      422,
+    );
+    fireEvent.click(dialog.getByText(strings.insightsGalleryOutstanding));
+
+    expect(await screen.findByText("a dashboard may hold at most 40 tiles")).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 });
 

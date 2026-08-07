@@ -17,7 +17,9 @@
 //! race-free without a lock. From the moment it exists it is an ordinary
 //! board — renamable, with tiles addable and removable — because a dashboard
 //! nobody can edit is a second kind of dashboard, and the first request would
-//! be to change one tile on it.
+//! be to change one tile on it. That a seed *ran* is recorded separately, in
+//! the ledger [`crate::insight_overview`] keeps, so a tenant that throws the
+//! overview away is not handed a new one the next morning.
 
 use time::OffsetDateTime;
 
@@ -82,14 +84,14 @@ impl Dashboard {
 
 /// Validates and normalises a board's writable fields. Pure — no database, so
 /// the rules are unit-tested directly.
-fn normalize(input: &NewDashboard) -> Result<String> {
+pub(crate) fn normalize(input: &NewDashboard) -> Result<String> {
     required("name", &input.name, DASHBOARD_NAME_MAX_CHARS)
 }
 
 /// Checks a `system_key`. It is *our* input, never a caller's, so a bad one is
 /// a bug — and a bug that writes an unreachable seed marker is worse than one
 /// that refuses to write at all.
-fn normalize_key(key: &str) -> Result<String> {
+pub(crate) fn normalize_key(key: &str) -> Result<String> {
     let key = key.trim();
     if key.is_empty() || key.chars().count() > SYSTEM_KEY_MAX_CHARS {
         return Err(StoreError::Validation(format!(
@@ -109,13 +111,44 @@ fn normalize_key(key: &str) -> Result<String> {
 
 /// Turns the seeded-board uniqueness violation into the conflict the seed
 /// reads as "somebody else got there first".
-fn map_key_conflict(error: sqlx::Error) -> StoreError {
+pub(crate) fn map_key_conflict(error: sqlx::Error) -> StoreError {
     match error {
         sqlx::Error::Database(ref db) if db.code().as_deref() == Some("23505") => {
             StoreError::Conflict("this tenant already has that seeded dashboard".to_owned())
         }
         other => StoreError::Db(other),
     }
+}
+
+/// Writes one board inside `tx`. The single insert both the public create and
+/// the Business overview seed ([`crate::insight_overview`]) go through, so a
+/// seeded board and a typed one are the same row.
+///
+/// # Errors
+/// [`StoreError::Conflict`] when the tenant already holds a board with this
+/// `system_key` — which is what makes the seed idempotent without a lock;
+/// [`StoreError::Db`] on failure.
+pub(crate) async fn insert_dashboard(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tenant: &str,
+    id: &InsightDashboardId,
+    name: &str,
+    system_key: Option<&str>,
+    created_by: &str,
+) -> Result<()> {
+    sqlx::query(
+        "INSERT INTO insight_dashboards (tenant_id, id, name, system_key, created_by) \
+         VALUES ($1, $2, $3, $4, $5)",
+    )
+    .bind(tenant)
+    .bind(id.as_str())
+    .bind(name)
+    .bind(system_key)
+    .bind(created_by)
+    .execute(&mut **tx)
+    .await
+    .map_err(map_key_conflict)?;
+    Ok(())
 }
 
 impl AccountStore {
@@ -179,18 +212,15 @@ impl AccountStore {
                 "a tenant may hold at most {DASHBOARDS_PER_TENANT_MAX} dashboards"
             )));
         }
-        sqlx::query(
-            "INSERT INTO insight_dashboards (tenant_id, id, name, system_key, created_by) \
-             VALUES ($1, $2, $3, $4, $5)",
+        insert_dashboard(
+            &mut tx,
+            self.tenant.as_str(),
+            &id,
+            name,
+            system_key,
+            self.user.as_str(),
         )
-        .bind(self.tenant.as_str())
-        .bind(id.as_str())
-        .bind(name)
-        .bind(system_key)
-        .bind(self.user.as_str())
-        .execute(&mut *tx)
-        .await
-        .map_err(map_key_conflict)?;
+        .await?;
         tx.commit().await.map_err(StoreError::Db)?;
         Ok(id)
     }

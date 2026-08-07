@@ -22,9 +22,12 @@
 //!   § Errors). It is only when such a tile is *evaluated* or *edited without a
 //!   replacement spec* that the request is refused, because neither can be done
 //!   honestly with a question we cannot read.
-//! - **Listing boards writes nothing.** The Business overview seed (BI1.06) is
-//!   what will make a tenant's first read hand back a working board; until then
-//!   a tenant with no dashboards gets an empty list rather than an invented one.
+//! - **Listing boards is the one route that writes.** A tenant's first read is
+//!   handed the zero-setup Business overview (BI1.06) — one working board of
+//!   prebuilt questions, in the language of `?lang=`, written in a single
+//!   transaction. It is a first-use rule and not an every-read one: the seed
+//!   asks whether it has ever run for this tenant, so a board somebody threw
+//!   away is not handed back the next morning.
 //!
 //! Insights is deliberately **not** in the business audit trail
 //! ([`crate::audit_action`]): a dashboard is a view of records, never a record
@@ -32,7 +35,7 @@
 //! whose value is that everything in it matters.
 
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -43,6 +46,7 @@ use alo_store::{AccountStore, InsightDashboardId, InsightTileId};
 
 use crate::billing::{iso, map_store_err, parse_body};
 use crate::error::Problem;
+use crate::insights_gallery::overview_seed_for;
 use crate::state::{AppState, authenticate};
 
 /// A dashboard as JSON. Its tiles are not inlined in the list: the tab strip is
@@ -123,16 +127,33 @@ impl DashboardBody {
     }
 }
 
-/// `GET /insights/dashboards` → `{"dashboards":[…]}` — the tenant's boards,
-/// oldest first, so the seeded overview stays the first tab.
+/// Query string of the list route: the seed language.
+#[derive(Deserialize)]
+pub struct ListQuery {
+    /// `lang=fr` names the seeded overview and its tiles in French. Only ever
+    /// read on a tenant's **first** read of the module; after that the captions
+    /// are stored user data and this parameter does nothing.
+    #[serde(default)]
+    lang: Option<String>,
+}
+
+/// `GET /insights/dashboards[?lang=fr]` → `{"dashboards":[…]}` — the tenant's
+/// boards, oldest first, so the seeded overview stays the first tab.
+///
+/// **This is the route that seeds.** A tenant that has never opened Insights is
+/// given the Business overview — live numbers with no builder and no setup form
+/// — and two colleagues opening the module in the same instant still get
+/// exactly one board.
 pub async fn list_dashboards(
     State(state): State<AppState>,
     headers: HeaderMap,
+    Query(q): Query<ListQuery>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let seed = overview_seed_for(q.lang.as_deref().unwrap_or_default());
     let dashboards = account
         .acc
-        .insight_dashboards()
+        .insight_dashboards_or_seed(&seed)
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({

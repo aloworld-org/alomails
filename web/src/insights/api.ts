@@ -12,15 +12,24 @@
 // and the VAT return use (`docs/design/insights.md` § Where money may be added
 // up); this file moves JSON, and the screens format what came back.
 //
-// Only the calls this wave's screens actually make are here. Pinning a tile and
-// evaluating an ad-hoc spec are the builder's (BI1.06) and the ask's (BI1.07) —
-// a client method nothing calls is a contract nobody checks.
+// Only the calls this wave's screens actually make are here. Evaluating an
+// ad-hoc spec is the ask's (BI1.07) — a client method nothing calls is a
+// contract nobody checks.
 import { useMemo } from "react";
 
 import { useAuth } from "../auth";
+import { getLocale } from "../i18n";
 import { API_BASE } from "../platform/runtime";
 import { RestError, problemDetail, restMessage } from "../platform/rest";
-import type { Dashboard, Series, Tile, TileEdit } from "./types";
+import type {
+  Dashboard,
+  Gallery,
+  GalleryEntry,
+  Series,
+  Tile,
+  TileEdit,
+  TilePin,
+} from "./types";
 
 type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -53,11 +62,25 @@ export class InsightsApi {
   }
 
   /** The tenant's boards, oldest first — the order the tab strip shows them
-   *  in, so the seeded overview (BI1.06) stays the first tab. */
+   *  in, so the seeded Business overview stays the first tab.
+   *
+   *  This read is also what **seeds** that overview on a tenant's first visit,
+   *  which is why it carries the language: the server writes the board's name
+   *  and its captions once, in the language of whoever opened Insights first,
+   *  and they are the tenant's own words from that moment on. */
   dashboards(): Promise<Dashboard[]> {
-    return this.#read<{ dashboards?: Dashboard[] }>("/insights/dashboards").then(
-      (r) => r.dashboards ?? [],
-    );
+    return this.#read<{ dashboards?: Dashboard[] }>(
+      `/insights/dashboards?lang=${encodeURIComponent(getLocale())}`,
+    ).then((r) => r.dashboards ?? []);
+  }
+
+  /** The prebuilt questions a reader can pin, and which of them the Business
+   *  overview is built from. The entries carry no words: the client translates
+   *  each `key`, because English from a server is English for everybody. */
+  gallery(): Promise<Gallery> {
+    return this.#read<{ entries?: GalleryEntry[]; overview?: string[] }>(
+      "/insights/gallery",
+    ).then((r) => ({ entries: r.entries ?? [], overview: r.overview ?? [] }));
   }
 
   /** A new, empty board. */
@@ -88,6 +111,17 @@ export class InsightsApi {
     await this.#json<unknown>(
       await this.#send(`/insights/dashboards/${encodeURIComponent(id)}`, { method: "DELETE" }),
     );
+  }
+
+  /** Pins a question to a board, at the end of its layout. The spec is
+   *  validated by the server's write gate — the client never decides that a
+   *  chart is askable. */
+  createTile(dashboardId: string, pin: TilePin): Promise<Tile> {
+    return this.#write<{ tile: Tile }>(
+      "POST",
+      `/insights/dashboards/${encodeURIComponent(dashboardId)}/tiles`,
+      pin,
+    ).then((r) => r.tile);
   }
 
   /** Retitles or resizes a tile. It cannot move one: that is its own request,

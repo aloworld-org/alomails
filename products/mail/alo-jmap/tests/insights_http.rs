@@ -191,12 +191,12 @@ fn only_figure(body: &Value) -> i64 {
 async fn the_board_tile_and_answer_arc_runs_on_the_wire() {
     let h = harness("insights-arc").await;
 
-    // A tenant starts with no boards at all. Listing does not invent one —
-    // seeding the Business overview is BI1.06's, and a GET that writes is a
-    // decision made once, not by accident.
+    // A tenant's first read is handed the Business overview (BI1.06) and
+    // nothing else; the rest of this arc is about the boards a person makes.
     let (status, body) = get(&h.app, &h.token, "/insights/dashboards").await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    assert_eq!(body["dashboards"].as_array().map(Vec::len), Some(0));
+    assert_eq!(body["dashboards"].as_array().map(Vec::len), Some(1));
+    assert_eq!(body["dashboards"][0]["systemKey"], "business_overview");
 
     // --- a board -------------------------------------------------------------
     let (status, body) = post(
@@ -385,6 +385,149 @@ async fn the_board_tile_and_answer_arc_runs_on_the_wire() {
     assert_eq!(body["invoices"].as_array().map(Vec::len), Some(1));
 }
 
+// ---- the zero-setup overview and the gallery (BI1.06) ------------------------
+
+/// The item's done-when, end to end: a tenant with books opens Insights and
+/// sees live numbers without a single click — the board, its tiles and their
+/// figures, in the language of the client that asked.
+#[tokio::test]
+async fn a_first_visit_answers_with_the_business_overview_and_live_numbers() {
+    let h = harness("insights-seed").await;
+    let net = an_issued_invoice(&h.app, &h.token, "Acme GmbH", 12_500).await;
+
+    // --- one board, nobody asked for it, and it is in French ----------------
+    let (status, body) = get(&h.app, &h.token, "/insights/dashboards?lang=fr-BE").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let boards = body["dashboards"].as_array().unwrap();
+    assert_eq!(boards.len(), 1, "{body}");
+    assert_eq!(boards[0]["seeded"], true);
+    assert_eq!(boards[0]["systemKey"], "business_overview");
+    assert_eq!(boards[0]["name"], "Aperçu de l'activité");
+    let board = boards[0]["id"].as_str().unwrap().to_owned();
+
+    // --- the tiles, in layout order, each a question this build can read -----
+    let (status, body) = get(&h.app, &h.token, &format!("/insights/dashboards/{board}")).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let tiles = body["tiles"].as_array().unwrap().clone();
+    assert_eq!(tiles.len(), 7, "the whole overview: {body}");
+    assert_eq!(tiles[0]["title"], "Créances en cours");
+    assert_eq!(tiles[0]["viz"], "number");
+    assert!(
+        tiles.iter().all(|t| t["readable"] == json!(true)),
+        "a prebuilt question the build cannot read is a dead tile: {body}"
+    );
+    let positions: Vec<f64> = tiles
+        .iter()
+        .map(|t| t["position"].as_f64().unwrap_or_default())
+        .collect();
+    assert!(positions.windows(2).all(|w| w[0] < w[1]), "{positions:?}");
+
+    // --- every tile answers, and the revenue tile answers the document ------
+    let mut revenue_seen = false;
+    for tile in &tiles {
+        let id = tile["id"].as_str().unwrap();
+        let (status, figures) = get(&h.app, &h.token, &format!("/insights/tiles/{id}/data")).await;
+        assert_eq!(status, StatusCode::OK, "{} → {figures}", tile["title"]);
+        if tile["spec"]["measure"]["id"] == "net" {
+            revenue_seen = true;
+            let month = figures["series"][0]["points"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|p| p["bucket"] == this_month().as_str())
+                .unwrap_or_else(|| panic!("no bucket for {} in {figures}", this_month()));
+            assert_eq!(
+                month["value"].as_i64(),
+                Some(net),
+                "the seeded chart reports the invoice's own figure, to the cent"
+            );
+        }
+    }
+    assert!(revenue_seen, "the overview leads with the money");
+
+    // --- a second visit seeds nothing, in any language ----------------------
+    let (_, body) = get(&h.app, &h.token, "/insights/dashboards?lang=nl").await;
+    assert_eq!(body["dashboards"].as_array().map(Vec::len), Some(1));
+    assert_eq!(
+        body["dashboards"][0]["name"], "Aperçu de l'activité",
+        "the captions are the tenant's own data now, never re-translated"
+    );
+
+    // --- and a board thrown away does not come back -------------------------
+    let (status, _) = delete(&h.app, &h.token, &format!("/insights/dashboards/{board}")).await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, body) = get(&h.app, &h.token, "/insights/dashboards").await;
+    assert_eq!(
+        body["dashboards"].as_array().map(Vec::len),
+        Some(0),
+        "the seed asks whether it has ever run: {body}"
+    );
+}
+
+/// The gallery: the prebuilt questions a person pins from. Every one of them is
+/// evaluated on this tenant's own rows, and pinning one is the ordinary tile
+/// route with the ordinary write gate — never a privileged path.
+#[tokio::test]
+async fn the_gallery_offers_questions_that_answer_and_pin_like_any_other() {
+    let h = harness("insights-gallery").await;
+
+    let (status, body) = get(&h.app, &h.token, "/insights/gallery").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let entries = body["entries"].as_array().unwrap().clone();
+    assert!(entries.len() >= 7, "{body}");
+    assert!(
+        body["overview"]
+            .as_array()
+            .is_some_and(|keys| !keys.is_empty()),
+        "the client is told which entries the zero-setup board is built from"
+    );
+    for key in body["overview"].as_array().unwrap() {
+        assert!(
+            entries.iter().any(|e| e["key"] == *key),
+            "the overview names {key}, which the gallery does not offer"
+        );
+    }
+
+    let board = a_board(&h.app, &h.token, "Mine").await;
+    for entry in &entries {
+        let key = entry["key"].as_str().unwrap();
+        assert!(
+            entry.get("title").is_none() && entry.get("description").is_none(),
+            "no English crosses the wire from the gallery: {entry}"
+        );
+        assert!(
+            ["billing", "crm"].contains(&entry["module"].as_str().unwrap_or_default()),
+            "{entry}"
+        );
+
+        // It answers, ad hoc, on this tenant's rows.
+        let (status, figures) = post(
+            &h.app,
+            &h.token,
+            "/insights/eval",
+            json!({ "spec": entry["spec"] }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{key} → {figures}");
+
+        // And it pins through the same route, and the same gate, as any spec.
+        let (status, pinned) = post(
+            &h.app,
+            &h.token,
+            &format!("/insights/dashboards/{board}/tiles"),
+            json!({ "title": key, "spec": entry["spec"], "span": entry["span"] }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{key} → {pinned}");
+        assert_eq!(pinned["tile"]["readable"], true, "{key}");
+        assert_eq!(pinned["tile"]["viz"], entry["viz"], "{key}");
+        assert_eq!(
+            pinned["tile"]["spec"], entry["spec"],
+            "{key} is stored exactly as the gallery offered it"
+        );
+    }
+}
+
 // ---- the guards --------------------------------------------------------------
 
 #[tokio::test]
@@ -428,6 +571,7 @@ async fn every_insights_route_refuses_an_unauthenticated_caller() {
     ];
     for uri in [
         "/insights/dashboards".to_owned(),
+        "/insights/gallery".to_owned(),
         format!("/insights/dashboards/{board}"),
         format!("/insights/tiles/{tile}/data"),
     ] {
@@ -730,18 +874,19 @@ async fn another_tenants_board_tile_and_figures_are_out_of_reach_on_every_route(
     let b_board = a_board(&b.app, &b.token, "B's cash").await;
     let b_tile = a_tile(&b.app, &b.token, &b_board, "B's revenue", revenue_total()).await;
 
-    // A's own list never shows B's board.
+    // A's own list never shows B's board — only A's own, and the overview A's
+    // first read seeded for A alone.
     let a_board_id = a_board(&a.app, &a.token, "A's cash").await;
     let (_, body) = get(&a.app, &a.token, "/insights/dashboards").await;
-    assert_eq!(
-        body["dashboards"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|d| d["id"].as_str().unwrap_or_default().to_owned())
-            .collect::<Vec<_>>(),
-        vec![a_board_id.clone()]
-    );
+    let a_boards: Vec<String> = body["dashboards"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|d| d["id"].as_str().unwrap_or_default().to_owned())
+        .collect();
+    assert!(a_boards.contains(&a_board_id), "{body}");
+    assert!(!a_boards.contains(&b_board), "{body}");
+    assert_eq!(a_boards.len(), 2, "A's own board and A's own overview");
 
     // **A spec is not a capability.** The very same question, asked by each
     // tenant, answers that tenant's own books and nobody else's.

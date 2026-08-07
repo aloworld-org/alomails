@@ -178,13 +178,52 @@ fn check_position(position: f64) -> Result<()> {
 /// composite foreign key is what enforces it. A violation therefore means the
 /// board is not this tenant's (or does not exist) — the same clean denial a
 /// missing row gets, with no way to tell the two apart.
-fn map_dashboard_missing(error: sqlx::Error) -> StoreError {
+pub(crate) fn map_dashboard_missing(error: sqlx::Error) -> StoreError {
     match error {
         sqlx::Error::Database(ref db) if db.code().as_deref() == Some("23503") => {
             StoreError::NotFound
         }
         other => StoreError::Db(other),
     }
+}
+
+/// Writes one tile inside `tx`, at an explicit position, through the same write
+/// gate every tile goes through. The single insert both the public pin and the
+/// Business overview seed ([`crate::insight_overview`]) use, so a seeded tile
+/// and a pinned one are the same row — and a prebuilt spec is validated exactly
+/// as strictly as one a caller sent.
+///
+/// # Errors
+/// [`StoreError::Validation`] on a title, spec or span the gate refuses;
+/// [`StoreError::NotFound`] when the board isn't the tenant's;
+/// [`StoreError::Db`] on failure.
+pub(crate) async fn insert_tile(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tenant: &str,
+    dashboard: &InsightDashboardId,
+    input: &NewTile,
+    position: f64,
+) -> Result<InsightTileId> {
+    let tile = normalize(input)?;
+    check_position(position)?;
+    let id = InsightTileId::generate();
+    sqlx::query(
+        "INSERT INTO insight_tiles \
+         (tenant_id, id, dashboard_id, title, spec, viz, position, span) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+    )
+    .bind(tenant)
+    .bind(id.as_str())
+    .bind(dashboard.as_str())
+    .bind(&tile.title)
+    .bind(sqlx::types::Json(&tile.spec))
+    .bind(&tile.viz)
+    .bind(position)
+    .bind(tile.span)
+    .execute(&mut **tx)
+    .await
+    .map_err(map_dashboard_missing)?;
+    Ok(id)
 }
 
 impl AccountStore {
@@ -201,8 +240,6 @@ impl AccountStore {
         dashboard: &InsightDashboardId,
         input: &NewTile,
     ) -> Result<InsightTileId> {
-        let tile = normalize(input)?;
-        let id = InsightTileId::generate();
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         let held: i64 = sqlx::query_scalar(
             "SELECT count(*) FROM insight_tiles WHERE tenant_id = $1 AND dashboard_id = $2",
@@ -228,22 +265,7 @@ impl AccountStore {
         .fetch_one(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
-        sqlx::query(
-            "INSERT INTO insight_tiles \
-             (tenant_id, id, dashboard_id, title, spec, viz, position, span) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-        )
-        .bind(self.tenant.as_str())
-        .bind(id.as_str())
-        .bind(dashboard.as_str())
-        .bind(&tile.title)
-        .bind(sqlx::types::Json(&tile.spec))
-        .bind(&tile.viz)
-        .bind(position)
-        .bind(tile.span)
-        .execute(&mut *tx)
-        .await
-        .map_err(map_dashboard_missing)?;
+        let id = insert_tile(&mut tx, self.tenant.as_str(), dashboard, input, position).await?;
         tx.commit().await.map_err(StoreError::Db)?;
         Ok(id)
     }

@@ -13,16 +13,17 @@
 // untouched (the fractional-ordering shape ADR 0022 set for boards). No figure
 // on this screen is ever computed here.
 import { useCallback, useState } from "react";
-import { BarChart3, RefreshCw } from "lucide-react";
+import { BarChart3, Plus, RefreshCw } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { Button, IconButton, Spinner, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { insightsMessage, useInsightsApi } from "./api";
+import { GalleryDialog } from "./GalleryDialog";
 import { BoardBar, EmptyState, ErrorBanner } from "./parts";
 import { SPAN_MAX, SPAN_MIN, TileCard } from "./TileCard";
 import type { TileActions } from "./TileCard";
-import type { Tile } from "./types";
+import type { GalleryEntry, Tile } from "./types";
 import { useBoard } from "./useInsights";
 import styles from "./InsightsModule.module.css";
 
@@ -49,6 +50,11 @@ export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) 
    *  of the tenant's documents. */
   const [figures, setFigures] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  /** Whether the gallery of ready-made questions is open, and whether one of
+   *  them is being pinned right now. */
+  const [picking, setPicking] = useState(false);
+  const [pinning, setPinning] = useState(false);
+  const [pinError, setPinError] = useState<string | null>(null);
   const view = useBoard(dashboardId ?? null, revision);
   const tiles = view.board?.tiles ?? [];
 
@@ -105,6 +111,31 @@ export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) 
       })();
     },
   };
+
+  /** Pins a ready-made question to this board, with the caption the reader was
+   *  looking at when they picked it — their words from that moment on. The spec
+   *  is the server's own, sent straight back for the write gate to validate. */
+  function pin(entry: GalleryEntry, title: string) {
+    setPinning(true);
+    setPinError(null);
+    void (async () => {
+      try {
+        await api.createTile(dashboardId ?? "", { title, spec: entry.spec, span: entry.span });
+        setPicking(false);
+        setError(null);
+        bump();
+      } catch (err) {
+        setPinError(insightsMessage(err, strings.insightsSaveFailed));
+      } finally {
+        setPinning(false);
+      }
+    })();
+  }
+
+  function openGallery() {
+    setPinError(null);
+    setPicking(true);
+  }
 
   function renameBoard() {
     const board = view.board?.dashboard;
@@ -172,6 +203,10 @@ export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) 
           icon={<RefreshCw size={16} />}
           onClick={() => setFigures((f) => f + 1)}
         />
+        <Button variant="ghost" onClick={openGallery}>
+          <Plus size={15} />
+          {strings.insightsAddChart}
+        </Button>
         <Button variant="ghost" onClick={renameBoard}>
           {strings.insightsRenameBoard}
         </Button>
@@ -183,11 +218,22 @@ export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) 
       {error !== null && <ErrorBanner message={error} />}
       {view.error !== null && <ErrorBanner message={view.error} />}
 
+      {picking && (
+        <GalleryDialog
+          busy={pinning}
+          error={pinError}
+          onPick={pin}
+          onClose={() => setPicking(false)}
+        />
+      )}
+
       {tiles.length === 0 ? (
         <EmptyState
           Icon={BarChart3}
           title={strings.insightsNoTilesTitle}
           body={strings.insightsNoTilesBody}
+          cta={strings.insightsAddChart}
+          onCta={openGallery}
         />
       ) : (
         <div className={styles.grid}>

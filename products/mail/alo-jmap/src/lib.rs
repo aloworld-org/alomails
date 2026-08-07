@@ -75,6 +75,7 @@ pub mod imap_import;
 pub mod imap_import_route;
 pub mod insights;
 pub mod insights_eval;
+pub mod insights_gallery;
 pub mod jtypes;
 pub mod junk_learn;
 pub mod mime;

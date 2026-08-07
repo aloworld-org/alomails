@@ -18,7 +18,46 @@ import { useEffect, useState } from "react";
 import { strings } from "../i18n";
 import { insightsMessage, useInsightsApi } from "./api";
 import type { BoardContents } from "./api";
-import type { Dashboard, Series } from "./types";
+import type { Dashboard, Gallery, Series } from "./types";
+
+/** The prebuilt questions the gallery offers. */
+export interface GalleryList {
+  gallery: Gallery;
+  loading: boolean;
+  error: string | null;
+}
+
+/** The gallery, read only once it is wanted: it is the same answer for every
+ *  tenant, so a board that nobody opens the picker on never asks for it. */
+export function useGallery(open: boolean): GalleryList {
+  const api = useInsightsApi();
+  const [gallery, setGallery] = useState<Gallery>({ entries: [], overview: [] });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    setLoading(true);
+    void (async () => {
+      try {
+        const answer = await api.gallery();
+        if (!live) return;
+        setGallery(answer);
+        setError(null);
+      } catch (err) {
+        if (live) setError(insightsMessage(err, strings.insightsGalleryLoadFailed));
+      } finally {
+        if (live) setLoading(false);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [api, open]);
+
+  return { gallery, loading, error };
+}
 
 /** The tenant's boards. */
 export interface BoardList {
@@ -27,8 +66,11 @@ export interface BoardList {
   error: string | null;
 }
 
-/** Every board the tenant has, oldest first. A tenant with none has none: that
- *  is an empty state, not a failure (the seeded overview arrives with BI1.06). */
+/** Every board the tenant has, oldest first — and the read that hands a tenant
+ *  the seeded Business overview on its first visit, so a workspace opening
+ *  Insights for the first time lands on live numbers rather than an empty
+ *  state. A tenant that deleted every board has none, which is a state it
+ *  chose. */
 export function useBoards(revision: number): BoardList {
   const api = useInsightsApi();
   const [dashboards, setDashboards] = useState<Dashboard[]>([]);

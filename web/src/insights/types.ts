@@ -108,3 +108,35 @@ export interface TileEdit {
   title?: string;
   span?: number;
 }
+
+/** Which part of the business a prebuilt question reads. */
+export type GalleryModule = "billing" | "crm";
+
+/** One ready-made chart the gallery offers (BI1.06).
+ *
+ *  It carries **no words**: `key` is what the client translates a title and a
+ *  description from, because a server that sent English would be sending it to
+ *  every language. `spec` is the question itself, handed back so pinning it is
+ *  the ordinary tile request — the same write gate validates it either way. */
+export interface GalleryEntry {
+  key: string;
+  module: GalleryModule;
+  viz: Viz;
+  span: number;
+  spec: unknown;
+}
+
+/** The gallery, plus which of its entries the zero-setup Business overview is
+ *  built from — so a board can say what it already has. */
+export interface Gallery {
+  entries: GalleryEntry[];
+  overview: string[];
+}
+
+/** What pinning a question to a board sends: the caption the reader will see
+ *  (in their language, never the server's), the question, and the width. */
+export interface TilePin {
+  title: string;
+  spec: unknown;
+  span: number;
+}

@@ -2456,6 +2456,39 @@ export const en = {
     "A board holds the numbers you want at a glance — what you billed, what you are owed, what is in the pipeline.",
   insightsNoTilesTitle: "Nothing pinned to this board",
   insightsNoTilesBody: "Charts pinned to this board appear here.",
+  // The gallery of ready-made questions (BI1.06). The server sends a key per
+  // entry and never a caption, so these words — and only these — are what a
+  // reader sees, and what is stored as the tile's title when they pin one.
+  insightsAddChart: "Add a chart",
+  insightsGalleryTitle: "Ready-made charts",
+  insightsGallerySubtitle: "Pick one to pin it to this board. You can rename or remove it after.",
+  insightsGalleryClose: "Close",
+  insightsGalleryLoadFailed: "The ready-made charts could not be loaded.",
+  insightsGalleryRevenueByMonth: "Revenue by month",
+  insightsGalleryRevenueByMonthBody:
+    "What you invoiced, month by month, over the last year — excluding VAT.",
+  insightsGalleryOutstanding: "Outstanding",
+  insightsGalleryOutstandingBody:
+    "Everything still owed to you on issued invoices, as one figure.",
+  insightsGalleryOverdueAging: "Overdue by age",
+  insightsGalleryOverdueAgingBody:
+    "What is owed, grouped by how late it is: 0–30, 31–60, 61–90 and 90+ days.",
+  insightsGalleryVatByQuarter: "VAT by quarter",
+  insightsGalleryVatByQuarterBody: "VAT charged per quarter — the shape a return is filed in.",
+  insightsGalleryTopCustomers: "Top customers",
+  insightsGalleryTopCustomersBody: "Who this year's revenue came from, largest ten first.",
+  insightsGalleryPaymentsByMonth: "Payments received",
+  insightsGalleryPaymentsByMonthBody:
+    "Money that actually arrived, month by month, in the currency it arrived in.",
+  insightsGalleryPipelineByStage: "Pipeline by stage",
+  insightsGalleryPipelineByStageBody: "The value of open deals in each column of your funnel.",
+  insightsGalleryWonThisMonth: "Won this month",
+  insightsGalleryWonThisMonthBody: "The value of deals closed as won this month.",
+  insightsGalleryWinRateByQuarter: "Win rate by quarter",
+  insightsGalleryWinRateByQuarterBody:
+    "How often a decided deal was won, quarter by quarter.",
+  insightsGalleryWonByMonth: "Won by month",
+  insightsGalleryWonByMonthBody: "Deal value won, month by month over the last year.",
   insightsTileActions: (title: string) => `Options for ${title}`,
   insightsRenameTile: "Rename chart",
   insightsRenameTilePrompt: "What should this chart be called?",
