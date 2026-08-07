@@ -14,6 +14,7 @@
 import { useMemo } from "react";
 
 import { useAuth } from "../auth";
+import { getLocale } from "../i18n";
 import { API_BASE } from "../platform/runtime";
 import type {
   BillingCustomer,
@@ -76,6 +77,24 @@ export function billingMessage(error: unknown, fallback: string): string {
  *  refused there, so the rule lives in one place. */
 function period(from: string, to: string): string {
   return `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
+}
+
+/**
+ * `?lang=` for the routes the server writes prose in: the printable document,
+ * and the reminder letter it drafts (B1.27).
+ *
+ * Read at call time rather than captured, so switching language and printing
+ * again gives the other document — and it is the *interface* language, because
+ * the person clicking Print is the person who chose it. A per-customer
+ * document language is a real want and a different feature: it belongs on the
+ * customer record, not on the button.
+ *
+ * Every other route is left alone. They answer with data, and their refusals
+ * are the server's own sentences, which are not translated yet — sending a
+ * `lang` there would promise something the server does not do.
+ */
+function langQuery(): string {
+  return `?lang=${encodeURIComponent(getLocale())}`;
 }
 
 /** The tenant's billing records — customers, price list, invoices and quotes —
@@ -309,7 +328,7 @@ export class BillingApi {
   remindInvoice(id: string, note?: string): Promise<ReminderDraft> {
     return this.#write<{ draft: ReminderDraft }>(
       "POST",
-      `/billing/invoices/${encodeURIComponent(id)}/reminder`,
+      `/billing/invoices/${encodeURIComponent(id)}/reminder${langQuery()}`,
       note === undefined || note.trim() === "" ? {} : { note },
     ).then((r) => r.draft);
   }
@@ -484,7 +503,7 @@ export class BillingApi {
    * the HTML to `printSheet`.
    */
   documentHtml(kind: "invoices" | "quotes", id: string): Promise<string> {
-    return this.#text(`/billing/${kind}/${encodeURIComponent(id)}/print`);
+    return this.#text(`/billing/${kind}/${encodeURIComponent(id)}/print${langQuery()}`);
   }
 
   async #read<T>(path: string): Promise<T> {

@@ -11,7 +11,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { DialogProvider } from "../ds";
-import { strings } from "../i18n";
+import { getLocale, strings } from "../i18n";
 import { BillingModule } from "./BillingModule";
 import type { BillingCustomer, BillingInvoiceSummary } from "./types";
 
@@ -193,6 +193,9 @@ describe("chasing a late invoice from the list", () => {
     expect(write.method).toBe("POST");
     expect(write.url).toContain("/billing/invoices/inv-2/reminder");
     expect(write.body).toEqual({});
+    // The one thing the request DOES say: which language to write the letter
+    // in (B1.27). The letter is the server's prose, not the client's.
+    expect(write.url).toContain(`lang=${getLocale()}`);
 
     // €126.88 is the server's `outstandingCents`, not a browser subtraction of
     // the €100.00 received from the €226.88 total, and 23 days is its count.

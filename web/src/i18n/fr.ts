@@ -1223,4 +1223,397 @@ export const fr: Partial<Catalog> = {
   refTabSections: "Sections",
   refTabTables: "Tableaux",
   refTabFigures: "Figures",
+
+  // Outils de facturation de l’agent (ADR 0035, B1.25). Chacun produit un
+  // brouillon : approuver n’émet rien, ne numérote rien et n’envoie rien.
+  agentActInvoiceDraft: "Facture en brouillon",
+  agentActQuoteToInvoice: "Accepter le devis",
+  agentActPaymentReminder: "Relance de paiement",
+  agentFieldCustomer: "Client",
+  agentFieldLines: "Lignes",
+  agentFieldQuote: "Devis",
+  agentFieldInvoice: "Facture",
+  agentLineCount: (n: number): string => (n === 1 ? "1 ligne" : `${n} lignes`),
+  agentInvoiceDraftNote: "Crée un brouillon — rien n’est émis, numéroté ni envoyé.",
+  agentQuoteToInvoiceNote: "Clôture le devis comme accepté et crée une facture en brouillon.",
+  agentReminderNote: "Écrit une relance dans vos Brouillons — rien n’est envoyé.",
+
+  // alo Facturation (ADR 0035, vague B1) — clients et tarifs. Le module parle
+  // de documents (« établir une facture »), jamais de lignes de base de
+  // données, et n’énonce aucune règle de validation qui appartient au serveur :
+  // un refus est affiché dans les mots du serveur, pour que les deux ne
+  // puissent jamais se contredire.
+  moduleBilling: "Facturation",
+  billingCustomers: "Clients",
+  billingProducts: "Tarifs",
+  billingSearchCustomers: "Rechercher un client…",
+  billingSearchProducts: "Rechercher dans les tarifs…",
+  billingShowArchived: "Afficher les archivés",
+  billingArchived: "Archivé",
+  billingArchive: "Archiver",
+  billingRestore: "Restaurer",
+  billingNewCustomer: "Nouveau client",
+  billingNewProduct: "Nouvel article",
+  billingEditCustomer: "Modifier le client",
+  billingEditProduct: "Modifier l’article",
+  billingCustomerSubtitle: "La personne ou l’entreprise au nom de qui vos factures sont établies.",
+  billingProductSubtitle: "Un article que vous pouvez choisir en établissant un document.",
+  billingArchiveCustomerConfirm: (name: string) =>
+    `Archiver ${name} ? Ce client disparaît des listes de choix ; tous les documents déjà établis continuent de le nommer.`,
+  billingArchiveProductConfirm: (name: string) =>
+    `Archiver ${name} ? Cet article disparaît des listes de choix ; les documents déjà établis gardent le prix auquel ils ont été établis.`,
+  billingCreate: "Créer",
+  billingSave: "Enregistrer",
+  billingCancel: "Annuler",
+  billingLoadFailed: "Impossible de charger cette liste. Vérifiez votre connexion et réessayez.",
+  billingSaveFailed: "Impossible d’enregistrer. Vérifiez votre connexion et réessayez.",
+  billingNoMatches: "Aucun résultat pour cette recherche.",
+  billingNoCustomersTitle: "Aucun client pour l’instant",
+  billingNoCustomersBody:
+    "Un client porte l’adresse, le numéro de TVA et le délai de paiement dont part chaque facture que vous établissez pour lui.",
+  billingNoProductsTitle: "Vos tarifs sont vides",
+  billingNoProductsBody:
+    "Enregistrez une fois ce que vous vendez, puis choisissez-le en établissant un devis ou une facture.",
+  billingColName: "Nom",
+  billingColLocation: "Lieu",
+  billingColVatId: "Numéro de TVA",
+  billingColEmail: "Courriel",
+  billingColTerms: "Délai de paiement",
+  billingColCurrency: "Devise",
+  billingColUnit: "Unité",
+  billingColUnitPrice: "Prix unitaire",
+  billingColVatRate: "Taux de TVA",
+  billingColActions: "Actions",
+  billingTermsDays: (days: number) => (days === 1 ? "1 jour" : `${days} jours`),
+  billingFieldName: "Nom",
+  billingFieldEmail: "Courriel de facturation",
+  billingFieldAddress: "Adresse",
+  billingFieldAddress2: "Adresse, deuxième ligne",
+  billingFieldPostalCode: "Code postal",
+  billingFieldCity: "Ville",
+  billingFieldCountry: "Pays",
+  billingFieldVatId: "Numéro de TVA",
+  billingFieldTerms: "Délai de paiement (jours)",
+  billingFieldCurrency: "Devise",
+  billingFieldUnit: "Unité",
+  billingFieldUnitPrice: "Prix unitaire",
+  billingFieldVatRate: "Taux de TVA (%)",
+  billingEmailPlaceholder: "facturation@exemple.fr",
+  billingAddressPlaceholder: "Numéro et rue",
+  billingCountryPlaceholder: "FR",
+  billingCountryHint: "Code pays à deux lettres.",
+  billingCurrencyPlaceholder: "EUR",
+  billingVatIdPlaceholder: "FR40303265045",
+  billingVatIdHint: "Laissez vide pour un particulier.",
+  billingTermsPlaceholder: "30",
+  billingTermsHint: "Jours entre l’émission et l’échéance.",
+  billingUnitPlaceholder: "heure",
+  billingUnitHint: "Le nom d’une unité. Laissez vide pour un forfait.",
+  billingAmountPlaceholder: "0,00",
+  billingPriceHint: "Hors TVA.",
+  billingRatePlaceholder: "20",
+  billingRateHint: "0 pour un article exonéré.",
+  billingNotAnAmount: "Saisissez un montant, par exemple 1250,00.",
+  billingNotARate: "Saisissez un taux, par exemple 20.",
+
+  // Factures (B1.14) : la liste et l’éditeur de brouillon. Chaque chiffre lu
+  // ici est celui du serveur ; la formulation ne promet jamais un total
+  // calculé par le navigateur, et dit clairement quand un chiffre a une
+  // modification de retard.
+  billingInvoices: "Factures",
+  billingNewInvoice: "Nouvelle facture",
+  billingSearchInvoices: "Rechercher par numéro, client ou référence…",
+  billingFilterStatus: "Afficher",
+  billingFilterAll: "Tous les documents",
+  billingStatusDraft: "Brouillon",
+  billingStatusIssued: "Émise",
+  billingStatusPaid: "Réglée",
+  billingStatusVoid: "Annulée",
+  billingStatusOverdue: "En retard",
+  billingCreditNote: "Avoir",
+  billingCreditNotes: "Avoirs",
+  billingNoInvoicesTitle: "Aucune facture pour l’instant",
+  billingNoInvoicesBody:
+    "Établissez un brouillon pour un client, ajoutez ce que vous lui facturez, puis émettez-le quand il est juste.",
+  billingColNumber: "Numéro",
+  billingColCustomer: "Client",
+  billingColIssueDate: "Date d’émission",
+  billingColDueDate: "Échéance",
+  billingColStatus: "Statut",
+  billingColTotal: "Total",
+  billingColDescription: "Désignation",
+  billingColQty: "Quantité",
+  billingColNet: "Montant HT",
+  billingNotNumbered: "—",
+  billingNoDate: "—",
+  billingUnknownCustomer: "Client inconnu",
+  billingDraftInvoice: "Facture en brouillon",
+  billingBackToInvoices: "Toutes les factures",
+  billingInvoiceGone: "Ce document n’existe plus.",
+  billingFieldCustomer: "Client",
+  billingChooseCustomer: "Choisissez un client…",
+  billingCustomerFixedHint: "Sa devise et son délai de paiement sont recopiés sur le document.",
+  billingFieldReference: "Sa référence",
+  billingReferencePlaceholder: "BC-1234",
+  billingReferenceHint: "Le numéro de commande du client, imprimé sur le document.",
+  billingFieldNote: "Note",
+  billingNotePlaceholder: "Ce que le client doit lire sur le document.",
+  billingNoteHint: "Imprimée sous les lignes.",
+  billingFieldIssueDate: "Date d’émission",
+  billingFieldDueDate: "Échéance",
+  billingCreateDraft: "Créer le brouillon",
+  billingCreateDraftHint:
+    "Le brouillon est établi d’abord ; vous ajoutez ensuite ce que vous facturez.",
+  billingLines: "Lignes",
+  billingAddLine: "Ajouter une ligne",
+  billingRemoveLine: "Retirer cette ligne",
+  billingNoLines: "Rien sur ce document pour l’instant.",
+  billingPickProduct: "Depuis les tarifs…",
+  billingDescriptionPlaceholder: "Ce que vous facturez",
+  billingQtyPlaceholder: "1",
+  billingLineNeedsDescription:
+    "Une ligne a besoin d’une désignation avant que le brouillon puisse être enregistré.",
+  billingNotAQuantity: "Saisissez une quantité, par exemple 1,5.",
+  billingTotalsNet: "Total HT",
+  billingTotalsGross: "Total TTC",
+  billingVatAtRate: (rate: string) => `TVA à ${rate}`,
+  billingTotalsStale:
+    "Ce sont les derniers chiffres envoyés par le serveur ; ils sont mis à jour à l’enregistrement du brouillon.",
+  billingSaving: "Enregistrement…",
+  billingSaved: "Enregistré",
+  billingUnsaved: "Pas encore enregistré",
+  billingSaveNotDone: "Enregistrement impossible",
+  billingSaveNow: "Réessayer",
+  billingDeleteDraft: "Supprimer le brouillon",
+  billingDeleteDraftConfirm:
+    "Supprimer ce brouillon ? Il ne porte aucun numéro, donc il ne laisse rien derrière lui — et rien ne pourra être récupéré.",
+  billingFrozenNotice:
+    "Ce document porte un numéro et ne peut plus être modifié. Corrigez-le par un avoir.",
+
+  // Cycle de vie (B1.15). Chacune de ces actions est irréversible sur un
+  // document légal : la confirmation dit ce qu’elle VA FAIRE — consommer un
+  // numéro, figer les prix, clore l’offre — plutôt que de demander si l’on est
+  // sûr. Aucune ne promet de courriel.
+  billingActionFailed: "Cela n’a pas abouti. Vérifiez votre connexion et réessayez.",
+  billingActionsWaitForSave: "Ces actions attendent l’enregistrement de votre dernière modification.",
+  billingIssue: "Émettre",
+  billingIssueTitle: "Émettre cette facture ?",
+  billingIssueConfirm:
+    "L’émission consomme le numéro suivant de votre série, date le document et le fige. Il ne pourra plus jamais être modifié — une erreur se corrige ensuite par un avoir. Rien n’est envoyé par courriel au client.",
+  billingVoid: "Annuler",
+  billingVoidTitle: "Annuler cette facture ?",
+  billingVoidConfirm:
+    "Une facture annulée garde son numéro et reste lisible, mais ne vaut plus rien. N’annulez qu’un document que personne n’a vu ; si le client détient déjà celui-ci, établissez plutôt un avoir.",
+  billingVoidNotice: "Cette facture a été annulée. Elle garde son numéro et ne vaut plus rien.",
+  billingCreditNoteAction: "Avoir",
+  billingCreditNoteTitle: "Établir un avoir ?",
+  billingCreditNoteConfirm:
+    "Ceci crée un avoir en brouillon reprenant chaque ligne de cette facture, au négatif. Réduisez-le pour un avoir partiel, puis émettez-le comme tout autre document.",
+  billingCreditsInvoice: "La facture que cet avoir corrige",
+  billingFromQuote: "Le devis dont ce document est issu",
+
+  // Règlements (B1.19) : l’argent reçu contre une facture. Chaque chiffre est
+  // celui du serveur, et « partiellement réglée » n’est délibérément jamais
+  // appelé un statut : le document reste émis, reste dû, et reste en retard
+  // une fois sa date passée.
+  billingPayments: "Règlements",
+  billingRecordPayment: "Enregistrer un règlement",
+  billingRecordPaymentHint:
+    "De l’argent qui est arrivé. Rien n’est envoyé nulle part : ceci ne fait qu’enregistrer ce que votre banque montre déjà.",
+  billingRemovePayment: "Retirer",
+  billingNoPayments: "Rien n’a encore été reçu contre cette facture.",
+  billingPaidToDate: "Reçu",
+  billingOutstanding: "Reste dû",
+  billingOverpaidNote:
+    "Il a été reçu plus que cette facture ne vaut. La différence est à vous de rembourser ou de créditer sur la suivante.",
+  billingPaymentUnpaid: "Non réglée",
+  billingPaymentPartiallyPaid: "Partiellement réglée",
+  billingPaymentPaid: "Soldée",
+  billingColPaidOn: "Reçu le",
+  billingColMethod: "Moyen",
+  billingColPaymentReference: "Référence bancaire",
+  billingColAmount: "Montant",
+  billingFieldAmount: (currency: string) => `Montant (${currency})`,
+  billingFieldAmountHint: "Ce qui est réellement arrivé, qui peut être moins que la facture.",
+  billingFieldPaidOn: "Reçu le",
+  billingFieldPaidOnHint: "Le jour indiqué par votre banque. Laissez vide pour aujourd’hui.",
+  billingFieldMethod: "Comment il est arrivé",
+  billingFieldMethodHint: "Texte libre — le mot qu’emploie votre comptabilité.",
+  billingMethodPlaceholder: "Virement",
+  billingFieldPaymentReference: "Référence bancaire",
+  billingFieldPaymentRefHint:
+    "La référence de la ligne de relevé, pour pouvoir la rapprocher plus tard.",
+  billingFilterOverdue: "En retard",
+  billingColOutstanding: "Reste dû",
+
+  // Récapitulatif de TVA d’une période (B1.20) : les chiffres depuis lesquels
+  // une déclaration est recopiée. La formulation dit clairement quels
+  // documents sont comptés, parce qu’une personne répond légalement de ce
+  // qu’elle recopie depuis cet écran.
+  billingReports: "Récapitulatif de TVA",
+  billingReportFrom: "Du",
+  billingReportTo: "Au",
+  billingReportShow: "Afficher",
+  billingReportThisQuarter: "Ce trimestre",
+  billingReportLastQuarter: "Trimestre précédent",
+  billingReportDownloadCsv: "Télécharger le CSV",
+  billingReportDownloadFailed: "Le fichier n’a pas pu être préparé. Réessayez.",
+  billingReportBasis: (from: string, to: string) =>
+    `Documents émis et réglés, datés du ${from} au ${to}. Les avoirs sont soustraits ; les brouillons et les documents annulés ne sont pas comptés.`,
+  billingReportColVat: "TVA",
+  billingReportTotal: "Total",
+  billingReportGross: "TTC",
+  billingReportCaption: (currency: string) => `Récapitulatif de TVA en ${currency}`,
+  billingReportCounts: (invoices: number, creditNotes: number) =>
+    `À partir de ${invoices} facture${invoices === 1 ? "" : "s"} et ${creditNotes} avoir${
+      creditNotes === 1 ? "" : "s"
+    }.`,
+  billingReportEmptyTitle: "Rien n’a été émis sur cette période",
+  billingReportEmptyBody:
+    "Un document compte à partir du jour où il a été émis. Choisissez une autre période, ou émettez les brouillons qui appartiennent à celle-ci.",
+
+  // Devis (B1.15) : le même document qu’une facture jusqu’à ce que quelqu’un
+  // dise oui, et délibérément les mêmes mots partout où les deux écrans
+  // s’accordent.
+  billingQuotes: "Devis",
+  billingNewQuote: "Nouveau devis",
+  billingSearchQuotes: "Rechercher par numéro, client ou référence…",
+  billingNoQuotesTitle: "Aucun devis pour l’instant",
+  billingNoQuotesBody:
+    "Proposez un prix à un client. S’il accepte, le devis devient une facture en brouillon avec les mêmes lignes.",
+  billingQuoteStatusSent: "Envoyé",
+  billingQuoteStatusAccepted: "Accepté",
+  billingQuoteStatusDeclined: "Refusé",
+  billingQuoteStatusExpired: "Expiré",
+  billingQuoteLapsed: "Date dépassée",
+  billingColSentDate: "Envoyé le",
+  billingColValidUntil: "Valable jusqu’au",
+  billingDraftQuote: "Devis en brouillon",
+  billingBackToQuotes: "Tous les devis",
+  billingQuoteGone: "Ce devis n’existe plus.",
+  billingQuoteCustomerHint: "Sa devise est recopiée sur l’offre.",
+  billingCreateQuoteHint:
+    "Le brouillon est établi d’abord ; vous ajoutez ensuite ce que vous proposez.",
+  billingFieldSentDate: "Envoyé le",
+  billingFieldValidUntil: "Valable jusqu’au",
+  billingValidForDays: (days: number) =>
+    days === 1 ? "Valable 1 jour à compter de son envoi." : `Valable ${days} jours à compter de son envoi.`,
+  billingDeleteQuoteDraft: "Supprimer le brouillon",
+  billingDeleteQuoteDraftConfirm:
+    "Supprimer ce brouillon ? Il ne porte aucun numéro et n’a jamais été proposé à personne — et rien ne pourra être récupéré.",
+  billingQuoteSentNotice:
+    "Cette offre a été envoyée et ne peut plus être modifiée. Si le prix change, faites un nouveau devis.",
+  billingQuoteClosedNotice: "Cette offre est close et ne peut plus être modifiée.",
+  billingSendQuote: "Marquer comme envoyé",
+  billingSendQuoteTitle: "Envoyer ce devis ?",
+  billingSendQuoteConfirm:
+    "Ceci consomme le numéro de devis suivant, date l’offre et fige ses prix, pour que ce que détient le client ne puisse pas changer sous ses yeux. Rien n’est envoyé par courriel — envoyez-le vous-même et notez-le ici.",
+  billingAcceptQuote: "Accepté",
+  billingAcceptQuoteTitle: "Le client a accepté ?",
+  billingAcceptQuoteConfirm:
+    "Ceci clôt l’offre et établit une facture en brouillon avec les mêmes lignes aux mêmes prix. Rien n’est encore émis — vous arriverez sur le brouillon.",
+  billingDeclineQuote: "Refusé",
+  billingDeclineQuoteTitle: "Le client a refusé ?",
+  billingDeclineQuoteConfirm:
+    "L’offre se clôt définitivement et reste lisible. Un changement d’avis est un nouveau devis, pas une offre rouverte.",
+  billingExpireQuote: "Y renoncer",
+  billingExpireQuoteTitle: "Cesser de relancer cette offre ?",
+  billingExpireQuoteConfirm:
+    "L’offre se clôt comme expirée, avec la date du jour comme jour où vous avez cessé de la relancer. Elle ne pourra plus recevoir de réponse.",
+  billingQuoteInvoice: "La facture que ce devis est devenu",
+
+  // Impression, et l’identité de l’émetteur que porte chaque document imprimé
+  // (B1.16). Le document lui-même est rendu par le serveur et parle sa propre
+  // table de langue (`billing_print.rs`) ; voici les mots autour de lui.
+  billingPrint: "Imprimer",
+  billingPrintUnsaved:
+    "Ceci imprime le document enregistré : il attend donc votre dernière modification.",
+  billingPrintFailed: "Le document n’a pas pu être préparé pour l’impression. Réessayez.",
+  billingSettings: "Vos coordonnées",
+  billingSettingsIntro:
+    "Voici de qui viennent vos factures, avoirs et devis : le nom et les numéros en haut, et le compte sur lequel l’argent arrive.",
+  billingSettingsFirstRun:
+    "Remplissez ceci avant d’émettre quoi que ce soit. C’est ce qui apparaît en haut de chaque document que vous imprimez, et l’endroit où vos clients sont invités à payer.",
+  billingSettingsIdentity: "Au nom de qui vous facturez",
+  billingSettingsContact: "Comment vos clients vous joignent",
+  billingSettingsBank: "Où va l’argent",
+  billingSettingsFooter: "La ligne sous les totaux",
+  billingSettingsSaved: "Enregistré. Chaque document imprimé désormais porte ceci.",
+  billingSettingsLoadFailed: "Vos coordonnées de facturation n’ont pas pu être chargées.",
+  billingFieldLegalName: "Raison sociale",
+  billingLegalNameHint: "Le nom sous lequel vous exercez et facturez, tel qu’immatriculé.",
+  billingIssuerVatIdHint:
+    "Laissez vide si vous n’êtes pas assujetti à la TVA. Indiquez d’abord votre pays.",
+  billingFieldRegistrationNo: "Numéro d’immatriculation",
+  billingRegistrationHint:
+    "Tel que l’imprime votre registre — SIREN, KVK, HRB, Companies House.",
+  billingFieldPhone: "Téléphone",
+  billingFieldWebsite: "Site web",
+  billingFieldIban: "IBAN",
+  billingIbanHint:
+    "Vérifié contre la longueur de votre pays et ses chiffres de contrôle avant l’enregistrement.",
+  billingIbanPlaceholder: "FR14 2004 1010 0505 0001 3M02 606",
+  billingFieldBic: "BIC",
+  billingBicPlaceholder: "PSSTFRPP",
+  billingFieldBankName: "Banque",
+  billingFieldAccountHolder: "Titulaire du compte",
+  billingAccountHolderHint: "Uniquement si le compte n’est pas à votre raison sociale.",
+  billingFieldFooterNote: "Mention de pied de page",
+  billingFooterNoteHint:
+    "Imprimée sous les totaux de chaque document — réserve de propriété, pénalités de retard, un remerciement.",
+
+  // Multidevise (B1.21). La formulation est précise sur deux points dont une
+  // personne répond légalement : la devise dans laquelle les comptes sont
+  // tenus, et le fait qu’un total converti n’est complet que si chaque
+  // document qu’il contient a pu être converti.
+  billingSettingsAccounting: "La devise dans laquelle vous tenez vos comptes",
+  billingFieldBaseCurrency: "Devise comptable",
+  billingBaseCurrencyHint:
+    "Vous pouvez facturer dans n’importe quelle devise. Celle-ci est celle dans laquelle votre déclaration de TVA est déposée, et dans laquelle la TVA d’une facture en devise étrangère est également imprimée.",
+  billingFxRates: "Taux de change",
+  billingFxIntro:
+    "Facturer dans une autre devise demande le taux publié du jour de l’émission. Les taux sont les vôtres : rien n’est récupéré pour vous, donc le taux auquel vos comptes sont convertis vient d’un fichier que vous avez choisi.",
+  billingFxColDate: "Publié le",
+  billingFxColRate: "Taux pour un euro",
+  billingFxColSource: "Origine",
+  billingFxSourceEcb: "Fichier de référence",
+  billingFxSourceManual: "Saisi à la main",
+  billingFxAdd: "Ajouter un taux",
+  billingFxAddSaved: (currency: string, date: string) =>
+    `Taux ${currency} du ${date} enregistré.`,
+  billingFxRateHint:
+    "Tel que publié : unités de cette devise pour un euro, écrit 1,1626.",
+  billingFxImport: "Importer un fichier de taux",
+  billingFxImportHint:
+    "Collez le CSV eurofxref de la Banque centrale européenne, ou tout fichier de cette forme. Un fichier contenant une seule valeur incorrecte ne change rien.",
+  billingFxImportRun: "Importer",
+  billingFxImported: (rates: number, days: number) =>
+    `${rates} taux importés sur ${days} jours.`,
+  billingFxEmpty:
+    "Aucun taux pour l’instant. Vous n’en avez besoin que si vous facturez dans une autre devise.",
+  billingFxLoadFailed: "Les taux de change n’ont pas pu être chargés.",
+  billingDocumentFx: (rate: string, day: string) =>
+    `Converti à ${rate}, taux de référence publié le ${day}.`,
+  billingVatIn: (currency: string) => `TVA en ${currency}`,
+  billingReportBaseCaption: (currency: string) => `La période en ${currency}`,
+  billingReportBaseIntro: (currency: string) =>
+    `Chaque document ci-dessus, converti au taux figé sur lui à son émission. C’est depuis ceci qu’une déclaration en ${currency} est établie.`,
+  billingReportUnconverted: (count: number) =>
+    count === 1
+      ? "1 document n’est pas dans ces chiffres : aucun taux de change n’a été enregistré pour lui. Vérifiez-le avant de déclarer."
+      : `${count} documents ne sont pas dans ces chiffres : aucun taux de change n’a été enregistré pour eux. Vérifiez-les avant de déclarer.`,
+
+  // Relancer un impayé (B1.26). La formulation tient surtout à une chose :
+  // ceci écrit une lettre, elle ne l’envoie pas.
+  billingRemind: "Relancer",
+  billingRemindHint:
+    "Écrire une relance de paiement à ce client, et la laisser dans vos Brouillons.",
+  billingReminderDrafted: (invoice: string, outstanding: string, days: number) =>
+    days === 1
+      ? `Une relance pour ${invoice} — ${outstanding} restant dû, 1 jour après l’échéance — attend dans vos Brouillons. Rien n’a été envoyé : lisez-la, changez ce que vous voulez, et envoyez-la vous-même.`
+      : `Une relance pour ${invoice} — ${outstanding} restant dû, ${days} jours après l’échéance — attend dans vos Brouillons. Rien n’a été envoyé : lisez-la, changez ce que vous voulez, et envoyez-la vous-même.`,
+  billingReminderFailed:
+    "La relance n’a pas pu être écrite. Vérifiez votre connexion et réessayez.",
+  billingNothingOverdue:
+    "Rien n’est en retard. Chaque facture émise est soit soldée, soit encore dans les délais.",
 };

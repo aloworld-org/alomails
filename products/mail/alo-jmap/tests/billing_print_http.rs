@@ -556,9 +556,22 @@ async fn a_document_prints_as_what_it_actually_is() {
         "a quote showed the bank account"
     );
 
-    // An unknown language prints in the default rather than refusing: a
-    // display preference must never be why a document cannot be printed.
-    for lang in ["", "en", "en-GB", "fr", "xx-YY"] {
+    // A shipped language prints the document in it (B1.27), matched on the
+    // primary subtag; an unknown one prints in the default rather than
+    // refusing, because a display preference must never be why a document
+    // cannot be printed. The page's `lang` attribute and its heading always
+    // agree — a French document announcing itself as English is what breaks a
+    // screen reader and a PDF's text extraction alike.
+    for (lang, tag, heading) in [
+        ("", "en", "Invoice INV-"),
+        ("en", "en", "Invoice INV-"),
+        ("en-GB", "en", "Invoice INV-"),
+        ("fr", "fr", "Facture INV-"),
+        ("fr-BE", "fr", "Facture INV-"),
+        ("nl", "nl", "Factuur INV-"),
+        ("NL", "nl", "Factuur INV-"),
+        ("xx-YY", "en", "Invoice INV-"),
+    ] {
         let page = fetch_page(
             &h.app,
             Some(&h.token),
@@ -566,7 +579,14 @@ async fn a_document_prints_as_what_it_actually_is() {
         )
         .await;
         assert_eq!(page.status, StatusCode::OK, "?lang={lang}");
-        assert!(page.html.contains("<html lang=\"en\">"), "?lang={lang}");
+        assert!(
+            page.html.contains(&format!("<html lang=\"{tag}\">")),
+            "?lang={lang}"
+        );
+        assert!(
+            page.html.contains(&format!("<title>{heading}")),
+            "?lang={lang}"
+        );
     }
 }
 

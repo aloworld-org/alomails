@@ -12,7 +12,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { DialogProvider } from "../ds";
-import { strings } from "../i18n";
+import { getLocale, strings } from "../i18n";
 import { BillingModule } from "./BillingModule";
 import type { BillingCustomer, BillingInvoice, BillingSettings } from "./types";
 
@@ -256,9 +256,14 @@ describe("printing a document", () => {
       const button = await screen.findByRole("button", { name: strings.billingPrint });
       fireEvent.click(button);
 
-      // It asked the server for the page — the client renders no document.
+      // It asked the server for the page — the client renders no document —
+      // and said which language to write it in (B1.27): the server holds the
+      // document's own words, so the request carries the interface language
+      // rather than the client translating anything.
       await waitFor(() =>
-        expect(calls.some((c) => c.url.endsWith("/billing/invoices/inv-1/print"))).toBe(true),
+        expect(
+          calls.some((c) => c.url.endsWith(`/billing/invoices/inv-1/print?lang=${getLocale()}`)),
+        ).toBe(true),
       );
       // …through the authorized fetch, which is the whole reason it is not a
       // link: an anonymous tab would get a 401.

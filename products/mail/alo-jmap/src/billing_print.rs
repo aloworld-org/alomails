@@ -217,8 +217,10 @@ pub struct Strings {
     pub no_lines: &'static str,
 }
 
-/// The English document. The only table today; `fr`/`nl` land at B1.27, and
-/// [`strings_for`] is the seam they plug into.
+/// The English document, and the table every other one is checked against: a
+/// language is added by writing a `Strings` and naming it in [`strings_for`],
+/// and the struct makes a forgotten field a compile error rather than a blank
+/// on a customer's invoice.
 static EN: Strings = Strings {
     lang: "en",
     group_separator: "\u{202f}",
@@ -276,19 +278,149 @@ static EN: Strings = Strings {
     no_lines: "This document has no lines yet.",
 };
 
+/// The French document (B1.27).
+///
+/// Two conventions a French reader would otherwise trip over are in the table
+/// rather than in the renderer: amounts group with a narrow no-break space and
+/// take a comma for the decimal, and totals are labelled HT/TTC, which is what
+/// "net" and "gross" are actually called on a French invoice.
+static FR: Strings = Strings {
+    lang: "fr",
+    group_separator: "\u{202f}",
+    decimal_separator: ",",
+    invoice: "Facture",
+    credit_note: "Avoir",
+    quote: "Devis",
+    draft: "Brouillon",
+    void: "Annulée",
+    closed: "Clos",
+    bill_to: "Facturé à",
+    issue_date: "Date d’émission",
+    sent_date: "Envoyé le",
+    due_date: "Échéance",
+    valid_until: "Valable jusqu’au",
+    reference: "Votre référence",
+    customer_vat_id: "N° de TVA",
+    description: "Désignation",
+    quantity: "Qté",
+    unit_price: "Prix unitaire",
+    vat_rate: "TVA",
+    line_net: "Montant HT",
+    net_total: "Total HT",
+    vat_at: |rate| format!("TVA {rate}"),
+    gross_total: "Total TTC",
+    vat_in: |code| format!("TVA en {code}"),
+    converted_at: |rate, day| format!("TVA convertie à {rate}, taux de référence publié le {day}."),
+    payment: "Paiement",
+    payable_by: |date| {
+        format!(
+            "À régler avant le {date} sur le compte ci-dessous, en rappelant le numéro de facture."
+        )
+    },
+    payable_on_terms: |days| {
+        format!(
+            "À régler sous {days} jours à compter de la date d’émission sur le compte ci-dessous, en rappelant le numéro de facture."
+        )
+    },
+    credit_explanation: |number| {
+        format!(
+            "Le présent avoir corrige la facture {number}. Le montant indiqué vous est crédité ; rien n’est à payer sur ce document."
+        )
+    },
+    quote_validity: |date| {
+        format!(
+            "La présente offre est valable jusqu’au {date}. Ce n’est pas une facture et rien n’est à payer."
+        )
+    },
+    iban: "IBAN",
+    bic: "BIC",
+    account_holder: "Titulaire du compte",
+    vat_id: "N° de TVA",
+    registration_no: "N° d’immatriculation",
+    issuer_unstated: "Vos coordonnées de facturation n’ont pas encore été renseignées.",
+    no_lines: "Ce document ne comporte encore aucune ligne.",
+};
+
+/// The Dutch document (B1.27).
+///
+/// Dutch groups thousands with a point and takes a comma for the decimal, so
+/// this is the one table where the group separator is a character a reader of
+/// another language would read as a decimal point — which is exactly why the
+/// separators are per-language data and not a constant.
+static NL: Strings = Strings {
+    lang: "nl",
+    group_separator: ".",
+    decimal_separator: ",",
+    invoice: "Factuur",
+    credit_note: "Creditnota",
+    quote: "Offerte",
+    draft: "Concept",
+    void: "Geannuleerd",
+    closed: "Gesloten",
+    bill_to: "Factuuradres",
+    issue_date: "Uitgiftedatum",
+    sent_date: "Verstuurd op",
+    due_date: "Vervaldatum",
+    valid_until: "Geldig tot",
+    reference: "Uw referentie",
+    customer_vat_id: "Btw-nummer",
+    description: "Omschrijving",
+    quantity: "Aantal",
+    unit_price: "Stukprijs",
+    vat_rate: "Btw",
+    line_net: "Netto",
+    net_total: "Totaal netto",
+    vat_at: |rate| format!("Btw {rate}"),
+    gross_total: "Totaal",
+    vat_in: |code| format!("Btw in {code}"),
+    converted_at: |rate, day| {
+        format!("Btw omgerekend tegen {rate}, de referentiekoers gepubliceerd op {day}.")
+    },
+    payment: "Betaling",
+    payable_by: |date| {
+        format!(
+            "Te voldoen vóór {date} op onderstaande rekening, onder vermelding van het factuurnummer."
+        )
+    },
+    payable_on_terms: |days| {
+        format!(
+            "Te voldoen binnen {days} dagen na de uitgiftedatum op onderstaande rekening, onder vermelding van het factuurnummer."
+        )
+    },
+    credit_explanation: |number| {
+        format!(
+            "Deze creditnota corrigeert factuur {number}. Het getoonde bedrag wordt u gecrediteerd; op dit document is niets verschuldigd."
+        )
+    },
+    quote_validity: |date| {
+        format!(
+            "Deze offerte is geldig tot {date}. Het is geen factuur en er is niets op verschuldigd."
+        )
+    },
+    iban: "IBAN",
+    bic: "BIC",
+    account_holder: "Rekeninghouder",
+    vat_id: "Btw-nummer",
+    registration_no: "Registratienr.",
+    issuer_unstated: "Uw facturatiegegevens zijn nog niet ingevuld.",
+    no_lines: "Dit document heeft nog geen regels.",
+};
+
 /// The words for a language tag, falling back to English.
 ///
 /// Deliberately forgiving where the `status` filter is strict
 /// (`docs/design/billing.md`): a filter that silently widened would show a
 /// bookkeeper the wrong list, but a document that refuses to print because of
 /// a display preference is worse than one printed in English. Matching is on
-/// the primary subtag, so `en-GB` and `en` are the same document.
+/// the primary subtag, so `en-GB` and `en` are the same document, and `fr-BE`
+/// prints in French.
 pub fn strings_for(tag: &str) -> &'static Strings {
     let primary = tag.split(['-', '_']).next().unwrap_or_default();
     match primary.to_ascii_lowercase().as_str() {
-        "en" => &EN,
-        // fr/nl join here at B1.27 without touching a caller; until then
-        // (and for anything else) the default table prints the document.
+        "fr" => &FR,
+        "nl" => &NL,
+        // English is the default table, and anything we do not ship prints in
+        // it rather than refusing.
         _ => &EN,
     }
 }
@@ -1277,8 +1409,104 @@ mod tests {
     fn an_unknown_language_still_prints() {
         // A display preference must never be the reason a document cannot be
         // printed; the fallback is the default table.
-        for tag in ["", "en", "en-GB", "fr", "xx-YY", "🙂"] {
+        for tag in ["", "en", "en-GB", "xx-YY", "🙂"] {
             assert_eq!(strings_for(tag).lang, "en");
+        }
+    }
+
+    #[test]
+    fn a_shipped_language_is_picked_on_its_primary_subtag() {
+        for tag in ["fr", "FR", "fr-BE", "fr_CH"] {
+            assert_eq!(strings_for(tag).lang, "fr", "{tag}");
+        }
+        for tag in ["nl", "NL", "nl-BE", "nl_BE"] {
+            assert_eq!(strings_for(tag).lang, "nl", "{tag}");
+        }
+    }
+
+    #[test]
+    fn each_language_writes_money_the_way_its_readers_do() {
+        // The separators are per-language data precisely because Dutch groups
+        // with the character English reads as a decimal point: a document that
+        // borrowed another table's separators would print an amount a
+        // thousandfold wrong to the person holding it.
+        assert_eq!(
+            amount(123_456_789, strings_for("en")),
+            "1\u{202f}234\u{202f}567.89"
+        );
+        assert_eq!(
+            amount(123_456_789, strings_for("fr")),
+            "1\u{202f}234\u{202f}567,89"
+        );
+        assert_eq!(amount(123_456_789, strings_for("nl")), "1.234.567,89");
+        // A negative is signed once, at the front, in every language.
+        assert_eq!(amount(-150, strings_for("nl")), "\u{2212}1,50");
+        // Quantities and rates take the same decimal separator as amounts.
+        assert_eq!(quantity(1500, strings_for("fr")), "1,5");
+        assert_eq!(quantity(1500, strings_for("nl")), "1,5");
+        assert_eq!(rate(725, strings_for("nl")), "7,25%");
+    }
+
+    #[test]
+    fn no_table_leaves_a_word_blank() {
+        // The struct makes a *missing* field a compile error; an *empty* one it
+        // cannot catch, and a blank label on a customer's invoice is exactly
+        // the failure this table's shape exists to prevent.
+        for tag in ["en", "fr", "nl"] {
+            let s = strings_for(tag);
+            for (name, value) in [
+                ("lang", s.lang),
+                ("decimal_separator", s.decimal_separator),
+                ("invoice", s.invoice),
+                ("credit_note", s.credit_note),
+                ("quote", s.quote),
+                ("draft", s.draft),
+                ("void", s.void),
+                ("closed", s.closed),
+                ("bill_to", s.bill_to),
+                ("issue_date", s.issue_date),
+                ("sent_date", s.sent_date),
+                ("due_date", s.due_date),
+                ("valid_until", s.valid_until),
+                ("reference", s.reference),
+                ("customer_vat_id", s.customer_vat_id),
+                ("description", s.description),
+                ("quantity", s.quantity),
+                ("unit_price", s.unit_price),
+                ("vat_rate", s.vat_rate),
+                ("line_net", s.line_net),
+                ("net_total", s.net_total),
+                ("gross_total", s.gross_total),
+                ("payment", s.payment),
+                ("iban", s.iban),
+                ("bic", s.bic),
+                ("account_holder", s.account_holder),
+                ("vat_id", s.vat_id),
+                ("registration_no", s.registration_no),
+                ("issuer_unstated", s.issuer_unstated),
+                ("no_lines", s.no_lines),
+            ] {
+                assert!(!value.trim().is_empty(), "{tag}: {name} is blank");
+            }
+            // Not trimmed: two of the three tables group with a narrow no-break
+            // space, which is a real separator and would trim away to nothing.
+            assert!(!s.group_separator.is_empty(), "{tag}: group_separator");
+            // The sentences, too — each one must actually place what it was
+            // given, or a due date would silently vanish off a translated page.
+            assert!((s.vat_at)("21%").contains("21%"), "{tag}: vat_at");
+            assert!((s.vat_in)("EUR").contains("EUR"), "{tag}: vat_in");
+            let converted = (s.converted_at)("1,1626", "2026-08-07");
+            assert!(converted.contains("1,1626") && converted.contains("2026-08-07"));
+            assert!((s.payable_by)("2026-08-21").contains("2026-08-21"), "{tag}");
+            assert!((s.payable_on_terms)(14).contains("14"), "{tag}");
+            assert!(
+                (s.credit_explanation)("INV-2026-00001").contains("INV-2026-00001"),
+                "{tag}"
+            );
+            assert!(
+                (s.quote_validity)("2026-09-01").contains("2026-09-01"),
+                "{tag}"
+            );
         }
     }
 }

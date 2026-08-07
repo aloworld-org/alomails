@@ -96,16 +96,75 @@ static EN: MailStrings = MailStrings {
     regards: "Kind regards,",
 };
 
+/// The French covering note (B1.27).
+///
+/// Every sentence opens with the document's own heading ("Facture
+/// INV-2026-00001") rather than an article, because the heading's gender is
+/// not something a format string can know — `la facture` and `l'avoir` would
+/// otherwise need two sentences per case, and one of them would eventually be
+/// wrong.
+static FR: MailStrings = MailStrings {
+    lang: "fr",
+    subject: |heading, issuer| format!("{heading} \u{2014} {issuer}"),
+    greeting: |name| format!("Bonjour {name},"),
+    invoice_due: |heading, money, due| {
+        format!("{heading} de {money}, à régler avant le {due}. Le document est en pièce jointe.")
+    },
+    invoice_terms: |heading, money, days| {
+        format!(
+            "{heading} de {money}, à régler sous {days} jours. Le document est en pièce jointe."
+        )
+    },
+    credit_note: |heading, money, corrects| {
+        format!(
+            "{heading} de {money}, qui corrige la facture {corrects}. Le document est en pièce jointe."
+        )
+    },
+    document_plain: |heading, money| {
+        format!("{heading} de {money}. Le document est en pièce jointe.")
+    },
+    reference: |reference| format!("Votre référence : {reference}"),
+    regards: "Cordialement,",
+};
+
+/// The Dutch covering note (B1.27). Built the same way round as [`FR`], and for
+/// the same reason: `de factuur` / `het document` is a gender the heading
+/// carries and the sentence cannot.
+static NL: MailStrings = MailStrings {
+    lang: "nl",
+    subject: |heading, issuer| format!("{heading} \u{2014} {issuer}"),
+    greeting: |name| format!("Beste {name},"),
+    invoice_due: |heading, money, due| {
+        format!("{heading} van {money}, te voldoen vóór {due}. Het document vindt u in de bijlage.")
+    },
+    invoice_terms: |heading, money, days| {
+        format!(
+            "{heading} van {money}, te voldoen binnen {days} dagen. Het document vindt u in de bijlage."
+        )
+    },
+    credit_note: |heading, money, corrects| {
+        format!(
+            "{heading} van {money}, die factuur {corrects} corrigeert. Het document vindt u in de bijlage."
+        )
+    },
+    document_plain: |heading, money| {
+        format!("{heading} van {money}. Het document vindt u in de bijlage.")
+    },
+    reference: |reference| format!("Uw referentie: {reference}"),
+    regards: "Met vriendelijke groet,",
+};
+
 /// The words for a language tag, falling back to the default table.
 ///
-/// The same seam as [`crate::billing_print::strings_for`], and it moves at the
-/// same moment: fr/nl join at the wave review (B1.27) without touching a
-/// caller.
+/// The same seam as [`crate::billing_print::strings_for`], moving with it at
+/// the wave review (B1.27): one `?lang=` picks the document and the note it
+/// travels in, so a French invoice is never introduced in English.
 #[must_use]
 pub fn mail_strings_for(tag: &str) -> &'static MailStrings {
     let primary = tag.split(['-', '_']).next().unwrap_or_default();
     match primary.to_ascii_lowercase().as_str() {
-        "en" => &EN,
+        "fr" => &FR,
+        "nl" => &NL,
         _ => &EN,
     }
 }
@@ -585,8 +644,27 @@ mod tests {
     }
 
     #[test]
-    fn the_default_table_answers_for_every_tag_until_the_wave_review() {
-        for tag in ["en", "EN", "en-GB", "fr", "nl_BE", "", "zz"] {
+    fn the_note_and_the_document_it_carries_are_always_the_same_language() {
+        // One `?lang=` picks both tables, so a French invoice can never arrive
+        // under an English covering note.
+        for tag in ["en", "EN", "en-GB", "", "zz", "fr", "fr-BE", "nl", "nl_BE"] {
+            assert_eq!(
+                mail_strings_for(tag).lang,
+                strings_for(tag).lang,
+                "{tag}: the note and the document disagree"
+            );
+        }
+        for tag in ["fr", "FR", "fr-BE"] {
+            assert_eq!(mail_strings_for(tag).lang, "fr", "{tag}");
+        }
+        for tag in ["nl", "NL", "nl-BE"] {
+            assert_eq!(mail_strings_for(tag).lang, "nl", "{tag}");
+        }
+    }
+
+    #[test]
+    fn a_language_we_do_not_ship_still_writes_the_note() {
+        for tag in ["en", "EN", "en-GB", "", "zz", "🙂"] {
             assert_eq!(mail_strings_for(tag).lang, "en", "{tag}");
         }
     }

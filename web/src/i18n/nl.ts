@@ -1198,4 +1198,400 @@ export const nl: Partial<Catalog> = {
   refTabSections: "Secties",
   refTabTables: "Tabellen",
   refTabFigures: "Figuren",
+
+  // Facturatiegereedschap van de agent (ADR 0035, B1.25). Elk levert een
+  // concept op: goedkeuren geeft niets uit, nummert niets en verstuurt niets.
+  agentActInvoiceDraft: "Conceptfactuur",
+  agentActQuoteToInvoice: "Offerte accepteren",
+  agentActPaymentReminder: "Betalingsherinnering",
+  agentFieldCustomer: "Klant",
+  agentFieldLines: "Regels",
+  agentFieldQuote: "Offerte",
+  agentFieldInvoice: "Factuur",
+  agentLineCount: (n: number): string => (n === 1 ? "1 regel" : `${n} regels`),
+  agentInvoiceDraftNote: "Maakt een concept — er wordt niets uitgegeven, genummerd of verstuurd.",
+  agentQuoteToInvoiceNote: "Sluit de offerte als geaccepteerd en maakt een conceptfactuur.",
+  agentReminderNote: "Schrijft een herinnering in uw Concepten — er wordt niets verstuurd.",
+
+  // alo Facturatie (ADR 0035, golf B1) — klanten en de prijslijst. De module
+  // spreekt over documenten ("een factuur opmaken"), niet over rijen, en
+  // noemt nooit een validatieregel die van de server is: een weigering staat
+  // er in de woorden van de server, zodat de twee elkaar nooit kunnen
+  // tegenspreken.
+  moduleBilling: "Facturatie",
+  billingCustomers: "Klanten",
+  billingProducts: "Prijslijst",
+  billingSearchCustomers: "Klanten zoeken…",
+  billingSearchProducts: "In de prijslijst zoeken…",
+  billingShowArchived: "Gearchiveerde tonen",
+  billingArchived: "Gearchiveerd",
+  billingArchive: "Archiveren",
+  billingRestore: "Herstellen",
+  billingNewCustomer: "Nieuwe klant",
+  billingNewProduct: "Nieuw artikel",
+  billingEditCustomer: "Klant bewerken",
+  billingEditProduct: "Artikel bewerken",
+  billingCustomerSubtitle: "Aan wie uw facturen zijn gericht.",
+  billingProductSubtitle: "Een artikel dat u kunt kiezen wanneer u een document opmaakt.",
+  billingArchiveCustomerConfirm: (name: string) =>
+    `${name} archiveren? Ze verdwijnen uit de keuzelijsten; elk document dat al is opgemaakt blijft ze noemen.`,
+  billingArchiveProductConfirm: (name: string) =>
+    `${name} archiveren? Het verdwijnt uit de keuzelijsten; documenten die al zijn opgemaakt houden de prijs waarmee ze zijn opgemaakt.`,
+  billingCreate: "Aanmaken",
+  billingSave: "Opslaan",
+  billingCancel: "Annuleren",
+  billingLoadFailed: "Deze lijst kon niet worden geladen. Controleer uw verbinding en probeer opnieuw.",
+  billingSaveFailed: "Opslaan is niet gelukt. Controleer uw verbinding en probeer opnieuw.",
+  billingNoMatches: "Niets komt overeen met die zoekopdracht.",
+  billingNoCustomersTitle: "Nog geen klanten",
+  billingNoCustomersBody:
+    "Een klant draagt het adres, het btw-nummer en de betaaltermijn waarmee elke factuur die u voor hen opmaakt begint.",
+  billingNoProductsTitle: "Uw prijslijst is leeg",
+  billingNoProductsBody:
+    "Leg één keer vast wat u verkoopt en kies het daarna wanneer u een offerte of factuur opmaakt.",
+  billingColName: "Naam",
+  billingColLocation: "Plaats",
+  billingColVatId: "Btw-nummer",
+  billingColEmail: "E-mail",
+  billingColTerms: "Betaaltermijn",
+  billingColCurrency: "Valuta",
+  billingColUnit: "Eenheid",
+  billingColUnitPrice: "Stukprijs",
+  billingColVatRate: "Btw-tarief",
+  billingColActions: "Acties",
+  billingTermsDays: (days: number) => (days === 1 ? "1 dag" : `${days} dagen`),
+  billingFieldName: "Naam",
+  billingFieldEmail: "Factuur-e-mail",
+  billingFieldAddress: "Adres",
+  billingFieldAddress2: "Adres, tweede regel",
+  billingFieldPostalCode: "Postcode",
+  billingFieldCity: "Plaats",
+  billingFieldCountry: "Land",
+  billingFieldVatId: "Btw-nummer",
+  billingFieldTerms: "Betaaltermijn (dagen)",
+  billingFieldCurrency: "Valuta",
+  billingFieldUnit: "Eenheid",
+  billingFieldUnitPrice: "Stukprijs",
+  billingFieldVatRate: "Btw-tarief (%)",
+  billingEmailPlaceholder: "facturatie@voorbeeld.nl",
+  billingAddressPlaceholder: "Straat en huisnummer",
+  billingCountryPlaceholder: "NL",
+  billingCountryHint: "Landcode van twee letters.",
+  billingCurrencyPlaceholder: "EUR",
+  billingVatIdPlaceholder: "NL123456789B01",
+  billingVatIdHint: "Laat leeg voor een particuliere klant.",
+  billingTermsPlaceholder: "30",
+  billingTermsHint: "Dagen tussen uitgifte en vervaldatum.",
+  billingUnitPlaceholder: "uur",
+  billingUnitHint: "Hoe één ervan heet. Laat leeg voor een vast bedrag.",
+  billingAmountPlaceholder: "0,00",
+  billingPriceHint: "Exclusief btw.",
+  billingRatePlaceholder: "21",
+  billingRateHint: "0 voor een vrijgesteld artikel.",
+  billingNotAnAmount: "Voer een bedrag in zoals 1250,00.",
+  billingNotARate: "Voer een tarief in zoals 21.",
+
+  // Facturen (B1.14): de lijst en de conceptbewerker. Elk bedrag dat u hier
+  // leest is dat van de server — de tekst belooft nooit een totaal dat de
+  // browser heeft uitgerekend, en zegt het gewoon wanneer een bedrag één
+  // wijziging achterloopt.
+  billingInvoices: "Facturen",
+  billingNewInvoice: "Nieuwe factuur",
+  billingSearchInvoices: "Zoeken op nummer, klant of referentie…",
+  billingFilterStatus: "Tonen",
+  billingFilterAll: "Alle documenten",
+  billingStatusDraft: "Concept",
+  billingStatusIssued: "Uitgegeven",
+  billingStatusPaid: "Betaald",
+  billingStatusVoid: "Geannuleerd",
+  billingStatusOverdue: "Achterstallig",
+  billingCreditNote: "Creditnota",
+  billingCreditNotes: "Creditnota’s",
+  billingNoInvoicesTitle: "Nog geen facturen",
+  billingNoInvoicesBody:
+    "Maak een concept op voor een klant, zet erbij wat u in rekening brengt, en geef het uit wanneer het klopt.",
+  billingColNumber: "Nummer",
+  billingColCustomer: "Klant",
+  billingColIssueDate: "Uitgiftedatum",
+  billingColDueDate: "Vervaldatum",
+  billingColStatus: "Status",
+  billingColTotal: "Totaal",
+  billingColDescription: "Omschrijving",
+  billingColQty: "Aantal",
+  billingColNet: "Netto",
+  billingNotNumbered: "—",
+  billingNoDate: "—",
+  billingUnknownCustomer: "Onbekende klant",
+  billingDraftInvoice: "Conceptfactuur",
+  billingBackToInvoices: "Alle facturen",
+  billingInvoiceGone: "Dit document bestaat niet meer.",
+  billingFieldCustomer: "Klant",
+  billingChooseCustomer: "Kies een klant…",
+  billingCustomerFixedHint: "Hun valuta en betaaltermijn worden op het document overgenomen.",
+  billingFieldReference: "Hun referentie",
+  billingReferencePlaceholder: "PO-1234",
+  billingReferenceHint: "Het ordernummer van de klant zelf, gedrukt op het document.",
+  billingFieldNote: "Notitie",
+  billingNotePlaceholder: "Wat de klant op het document moet lezen.",
+  billingNoteHint: "Gedrukt onder de regels.",
+  billingFieldIssueDate: "Uitgiftedatum",
+  billingFieldDueDate: "Vervaldatum",
+  billingCreateDraft: "Concept aanmaken",
+  billingCreateDraftHint:
+    "Eerst wordt het concept opgemaakt; daarna zet u erbij wat u in rekening brengt.",
+  billingLines: "Regels",
+  billingAddLine: "Regel toevoegen",
+  billingRemoveLine: "Deze regel verwijderen",
+  billingNoLines: "Nog niets op dit document.",
+  billingPickProduct: "Uit de prijslijst…",
+  billingDescriptionPlaceholder: "Wat u in rekening brengt",
+  billingQtyPlaceholder: "1",
+  billingLineNeedsDescription:
+    "Een regel heeft een omschrijving nodig voordat het concept kan worden opgeslagen.",
+  billingNotAQuantity: "Voer een aantal in zoals 1,5.",
+  billingTotalsNet: "Netto",
+  billingTotalsGross: "Totaal",
+  billingVatAtRate: (rate: string) => `Btw ${rate}`,
+  billingTotalsStale:
+    "Dit zijn de laatste bedragen die de server stuurde; ze worden bijgewerkt zodra het concept is opgeslagen.",
+  billingSaving: "Opslaan…",
+  billingSaved: "Opgeslagen",
+  billingUnsaved: "Nog niet opgeslagen",
+  billingSaveNotDone: "Opslaan niet gelukt",
+  billingSaveNow: "Opnieuw proberen",
+  billingDeleteDraft: "Concept verwijderen",
+  billingDeleteDraftConfirm:
+    "Dit concept verwijderen? Het draagt geen nummer, dus er blijft niets achter — en er kan niets worden teruggehaald.",
+  billingFrozenNotice:
+    "Dit document draagt een nummer en kan niet meer worden gewijzigd. Corrigeer het met een creditnota.",
+
+  // Levensloop (B1.15). Elk van deze acties is onomkeerbaar op een juridisch
+  // document, dus de bevestiging zegt wat ze DOET — een nummer verbruiken, de
+  // prijzen vastzetten, de offerte sluiten — in plaats van te vragen of u het
+  // zeker weet. Geen ervan belooft een e-mail.
+  billingActionFailed: "Dat is niet gelukt. Controleer uw verbinding en probeer opnieuw.",
+  billingActionsWaitForSave: "Deze wachten tot uw laatste wijziging is opgeslagen.",
+  billingIssue: "Uitgeven",
+  billingIssueTitle: "Deze factuur uitgeven?",
+  billingIssueConfirm:
+    "Uitgeven neemt het volgende nummer uit uw reeks, dateert het document en zet het vast. Het kan daarna nooit meer worden gewijzigd — een fout wordt achteraf met een creditnota gecorrigeerd. Er wordt niets naar de klant gemaild.",
+  billingVoid: "Annuleren",
+  billingVoidTitle: "Deze factuur annuleren?",
+  billingVoidConfirm:
+    "Een geannuleerde factuur houdt haar nummer en blijft leesbaar, maar is niets meer waard. Annuleer er een die niemand heeft gezien; heeft de klant dit document al, maak dan een creditnota.",
+  billingVoidNotice: "Deze factuur is geannuleerd. Ze houdt haar nummer en is niets waard.",
+  billingCreditNoteAction: "Creditnota",
+  billingCreditNoteTitle: "Een creditnota opmaken?",
+  billingCreditNoteConfirm:
+    "Dit maakt een conceptcreditnota die elke regel van deze factuur spiegelt. Snoei hem terug voor een gedeeltelijke creditering en geef hem daarna uit als elk ander document.",
+  billingCreditsInvoice: "De factuur die dit crediteert",
+  billingFromQuote: "De offerte waar dit uit voortkomt",
+
+  // Betalingen (B1.19): het geld dat op een factuur is binnengekomen. Elk
+  // bedrag hier is dat van de server, en "deels betaald" wordt bewust nooit
+  // een status genoemd: het document is nog steeds uitgegeven, nog steeds
+  // verschuldigd, en nog steeds te laat zodra de datum verstrijkt.
+  billingPayments: "Betalingen",
+  billingRecordPayment: "Betaling vastleggen",
+  billingRecordPaymentHint:
+    "Geld dat is binnengekomen. Er wordt niets verstuurd — dit legt alleen vast wat uw bank al laat zien.",
+  billingRemovePayment: "Verwijderen",
+  billingNoPayments: "Er is nog niets op deze factuur binnengekomen.",
+  billingPaidToDate: "Ontvangen",
+  billingOutstanding: "Nog verschuldigd",
+  billingOverpaidNote:
+    "Er is meer ontvangen dan deze factuur waard is. Het verschil kunt u terugbetalen of verrekenen met de volgende.",
+  billingPaymentUnpaid: "Onbetaald",
+  billingPaymentPartiallyPaid: "Deels betaald",
+  billingPaymentPaid: "Voldaan",
+  billingColPaidOn: "Ontvangen op",
+  billingColMethod: "Hoe",
+  billingColPaymentReference: "Bankreferentie",
+  billingColAmount: "Bedrag",
+  billingFieldAmount: (currency: string) => `Bedrag (${currency})`,
+  billingFieldAmountHint: "Wat er werkelijk binnenkwam, wat minder kan zijn dan de factuur.",
+  billingFieldPaidOn: "Ontvangen op",
+  billingFieldPaidOnHint: "De dag die uw bank laat zien. Laat leeg voor vandaag.",
+  billingFieldMethod: "Hoe het binnenkwam",
+  billingFieldMethodHint: "Vrije tekst — hoe uw boekhouding het ook noemt.",
+  billingMethodPlaceholder: "Overboeking",
+  billingFieldPaymentReference: "Bankreferentie",
+  billingFieldPaymentRefHint:
+    "De referentie op de afschriftregel, zodat hij later kan worden afgeletterd.",
+  billingFilterOverdue: "Achterstallig",
+  billingColOutstanding: "Nog verschuldigd",
+
+  // Het btw-overzicht van een periode (B1.20): de bedragen waar een aangifte
+  // van wordt overgenomen. De tekst zegt duidelijk welke documenten wel en
+  // niet meetellen, omdat iemand juridisch verantwoordelijk is voor wat hij
+  // van dit scherm overneemt.
+  billingReports: "Btw-overzicht",
+  billingReportFrom: "Van",
+  billingReportTo: "Tot en met",
+  billingReportShow: "Tonen",
+  billingReportThisQuarter: "Dit kwartaal",
+  billingReportLastQuarter: "Vorig kwartaal",
+  billingReportDownloadCsv: "CSV downloaden",
+  billingReportDownloadFailed: "Het bestand kon niet worden klaargezet. Probeer opnieuw.",
+  billingReportBasis: (from: string, to: string) =>
+    `Uitgegeven en betaalde documenten gedateerd ${from} tot en met ${to}. Creditnota’s worden afgetrokken; concepten en geannuleerde documenten tellen niet mee.`,
+  billingReportColVat: "Btw",
+  billingReportTotal: "Totaal",
+  billingReportGross: "Inclusief btw",
+  billingReportCaption: (currency: string) => `Btw-overzicht in ${currency}`,
+  billingReportCounts: (invoices: number, creditNotes: number) =>
+    `Uit ${invoices} ${invoices === 1 ? "factuur" : "facturen"} en ${creditNotes} ${
+      creditNotes === 1 ? "creditnota" : "creditnota’s"
+    }.`,
+  billingReportEmptyTitle: "In deze periode is niets uitgegeven",
+  billingReportEmptyBody:
+    "Een document telt vanaf de dag dat het is uitgegeven. Kies een andere periode, of geef de concepten uit die in deze thuishoren.",
+
+  // Offertes (B1.15): hetzelfde document als een factuur totdat iemand ja
+  // zegt, en bewust dezelfde woorden overal waar de twee schermen het eens
+  // zijn.
+  billingQuotes: "Offertes",
+  billingNewQuote: "Nieuwe offerte",
+  billingSearchQuotes: "Zoeken op nummer, klant of referentie…",
+  billingNoQuotesTitle: "Nog geen offertes",
+  billingNoQuotesBody:
+    "Bied een klant een prijs. Accepteert hij, dan wordt de offerte een conceptfactuur met dezelfde regels.",
+  billingQuoteStatusSent: "Verstuurd",
+  billingQuoteStatusAccepted: "Geaccepteerd",
+  billingQuoteStatusDeclined: "Afgewezen",
+  billingQuoteStatusExpired: "Verlopen",
+  billingQuoteLapsed: "Datum verstreken",
+  billingColSentDate: "Verstuurd op",
+  billingColValidUntil: "Geldig tot",
+  billingDraftQuote: "Conceptofferte",
+  billingBackToQuotes: "Alle offertes",
+  billingQuoteGone: "Deze offerte bestaat niet meer.",
+  billingQuoteCustomerHint: "Hun valuta wordt op de offerte overgenomen.",
+  billingCreateQuoteHint:
+    "Eerst wordt het concept opgemaakt; daarna zet u erbij wat u aanbiedt.",
+  billingFieldSentDate: "Verstuurd op",
+  billingFieldValidUntil: "Geldig tot",
+  billingValidForDays: (days: number) =>
+    days === 1
+      ? "Staat 1 dag vanaf de dag dat hij wordt verstuurd."
+      : `Staat ${days} dagen vanaf de dag dat hij wordt verstuurd.`,
+  billingDeleteQuoteDraft: "Concept verwijderen",
+  billingDeleteQuoteDraftConfirm:
+    "Dit concept verwijderen? Het draagt geen nummer en is nooit aan iemand aangeboden — en er kan niets worden teruggehaald.",
+  billingQuoteSentNotice:
+    "Deze offerte is verstuurd en kan niet meer worden gewijzigd. Verandert de prijs, maak dan een nieuwe offerte.",
+  billingQuoteClosedNotice: "Deze offerte is gesloten en kan niet meer worden gewijzigd.",
+  billingSendQuote: "Als verstuurd markeren",
+  billingSendQuoteTitle: "Deze offerte versturen?",
+  billingSendQuoteConfirm:
+    "Dit neemt het volgende offertenummer, dateert de offerte en zet de prijzen vast, zodat wat de klant in handen heeft niet onder hem kan veranderen. Er wordt niets gemaild — verstuur hem zelf en leg het hier vast.",
+  billingAcceptQuote: "Geaccepteerd",
+  billingAcceptQuoteTitle: "Heeft de klant geaccepteerd?",
+  billingAcceptQuoteConfirm:
+    "Dit sluit de offerte en maakt een conceptfactuur met dezelfde regels tegen dezelfde prijzen. Er wordt nog niets uitgegeven — u komt op het concept uit.",
+  billingDeclineQuote: "Afgewezen",
+  billingDeclineQuoteTitle: "Heeft de klant afgewezen?",
+  billingDeclineQuoteConfirm:
+    "De offerte sluit definitief en blijft leesbaar. Van gedachten veranderen is een nieuwe offerte, geen heropende.",
+  billingExpireQuote: "Loslaten",
+  billingExpireQuoteTitle: "Stoppen met deze offerte?",
+  billingExpireQuoteConfirm:
+    "De offerte sluit als verlopen, met vandaag als de dag waarop u ermee stopte. Er kan daarna niet meer op worden geantwoord.",
+  billingQuoteInvoice: "De factuur die hieruit is voortgekomen",
+
+  // Afdrukken, en de identiteit van de uitgever die elk afgedrukt document
+  // draagt (B1.16). Het document zelf wordt door de server opgemaakt en
+  // spreekt zijn eigen taaltabel (`billing_print.rs`); dit zijn de woorden
+  // eromheen.
+  billingPrint: "Afdrukken",
+  billingPrintUnsaved:
+    "Dit drukt het opgeslagen document af en wacht dus op uw laatste wijziging.",
+  billingPrintFailed: "Het document kon niet worden klaargezet om af te drukken. Probeer opnieuw.",
+  billingSettings: "Uw gegevens",
+  billingSettingsIntro:
+    "Dit is van wie uw facturen, creditnota’s en offertes komen: de naam en nummers bovenaan, en de rekening waar het geld heen gaat.",
+  billingSettingsFirstRun:
+    "Vul dit in voordat u iets uitgeeft. Dit staat bovenaan elk document dat u afdrukt, en hier wordt uw klant gevraagd te betalen.",
+  billingSettingsIdentity: "Onder welke naam u factureert",
+  billingSettingsContact: "Hoe klanten u bereiken",
+  billingSettingsBank: "Waar het geld heen gaat",
+  billingSettingsFooter: "De regel onder de totalen",
+  billingSettingsSaved: "Opgeslagen. Elk document dat u vanaf nu afdrukt draagt dit.",
+  billingSettingsLoadFailed: "Uw facturatiegegevens konden niet worden geladen.",
+  billingFieldLegalName: "Statutaire naam",
+  billingLegalNameHint: "De naam waaronder u handelt en factureert, zoals ingeschreven.",
+  billingIssuerVatIdHint:
+    "Laat leeg als u niet btw-plichtig bent. Vul eerst uw land in.",
+  billingFieldRegistrationNo: "Registratienummer",
+  billingRegistrationHint:
+    "Zoals uw register het afdrukt — KVK, SIREN, HRB, Companies House.",
+  billingFieldPhone: "Telefoon",
+  billingFieldWebsite: "Website",
+  billingFieldIban: "IBAN",
+  billingIbanHint:
+    "Vóór het opslaan gecontroleerd op de lengte van uw land en de controlecijfers.",
+  billingIbanPlaceholder: "NL91 ABNA 0417 1643 00",
+  billingFieldBic: "BIC",
+  billingBicPlaceholder: "ABNANL2A",
+  billingFieldBankName: "Bank",
+  billingFieldAccountHolder: "Rekeninghouder",
+  billingAccountHolderHint: "Alleen als de rekening niet op uw statutaire naam staat.",
+  billingFieldFooterNote: "Voettekst",
+  billingFooterNoteHint:
+    "Onder de totalen van elk document afgedrukt — eigendomsvoorbehoud, betalingsvoorwaarden, een bedankje.",
+
+  // Meerdere valuta (B1.21). De tekst is nauwkeurig over twee dingen waar
+  // iemand juridisch verantwoordelijk voor is: in welke valuta de boeken
+  // worden gevoerd, en dat een omgerekend totaal alleen volledig is als elk
+  // document erin kon worden omgerekend.
+  billingSettingsAccounting: "De valuta waarin u boekhoudt",
+  billingFieldBaseCurrency: "Boekhoudvaluta",
+  billingBaseCurrencyHint:
+    "U kunt in elke valuta factureren. Dit is de valuta waarin uw btw-aangifte wordt gedaan, en waarin de btw op een factuur in vreemde valuta ook wordt afgedrukt.",
+  billingFxRates: "Wisselkoersen",
+  billingFxIntro:
+    "Factureren in een andere valuta vraagt de gepubliceerde koers van de dag van uitgifte. De koersen zijn van u: er wordt niets voor u opgehaald, dus waartegen uw boeken worden omgerekend komt uit een bestand dat u koos.",
+  billingFxColDate: "Gepubliceerd",
+  billingFxColRate: "Koers per euro",
+  billingFxColSource: "Bron",
+  billingFxSourceEcb: "Referentiebestand",
+  billingFxSourceManual: "Met de hand ingevoerd",
+  billingFxAdd: "Een koers toevoegen",
+  billingFxAddSaved: (currency: string, date: string) =>
+    `De ${currency}-koers voor ${date} is opgeslagen.`,
+  billingFxRateHint:
+    "Zoals gepubliceerd: eenheden van deze valuta voor één euro, geschreven als 1,1626.",
+  billingFxImport: "Een koersbestand importeren",
+  billingFxImportHint:
+    "Plak de eurofxref-CSV van de Europese Centrale Bank, of elk bestand in die vorm. Een bestand met één foute waarde verandert niets.",
+  billingFxImportRun: "Importeren",
+  billingFxImported: (rates: number, days: number) =>
+    `${rates} koersen over ${days} dagen geïmporteerd.`,
+  billingFxEmpty:
+    "Nog geen koersen. U hebt ze alleen nodig als u in een andere valuta factureert.",
+  billingFxLoadFailed: "De wisselkoersen konden niet worden geladen.",
+  billingDocumentFx: (rate: string, day: string) =>
+    `Omgerekend tegen ${rate}, de referentiekoers gepubliceerd op ${day}.`,
+  billingVatIn: (currency: string) => `Btw in ${currency}`,
+  billingReportBaseCaption: (currency: string) => `De periode in ${currency}`,
+  billingReportBaseIntro: (currency: string) =>
+    `Elk document hierboven, omgerekend tegen de koers die bij uitgifte erop is vastgezet. Hiervan wordt een aangifte in ${currency} gedaan.`,
+  billingReportUnconverted: (count: number) =>
+    count === 1
+      ? "1 document zit niet in deze bedragen: er is geen wisselkoers voor opgeslagen. Controleer het vóór de aangifte."
+      : `${count} documenten zitten niet in deze bedragen: er is geen wisselkoers voor opgeslagen. Controleer ze vóór de aangifte.`,
+
+  // Achterstallig geld nabellen (B1.26). De tekst let vooral op één ding: dit
+  // schrijft een brief, het verstuurt er geen.
+  billingRemind: "Herinneren",
+  billingRemindHint:
+    "Schrijf een betalingsherinnering aan deze klant en laat hem in uw Concepten staan.",
+  billingReminderDrafted: (invoice: string, outstanding: string, days: number) =>
+    days === 1
+      ? `Een herinnering voor ${invoice} — ${outstanding} nog verschuldigd, 1 dag over de datum — staat klaar in uw Concepten. Er is niets verstuurd: lees hem, wijzig wat u wilt, en verstuur hem zelf.`
+      : `Een herinnering voor ${invoice} — ${outstanding} nog verschuldigd, ${days} dagen over de datum — staat klaar in uw Concepten. Er is niets verstuurd: lees hem, wijzig wat u wilt, en verstuur hem zelf.`,
+  billingReminderFailed:
+    "De herinnering kon niet worden geschreven. Controleer uw verbinding en probeer opnieuw.",
+  billingNothingOverdue:
+    "Niets is achterstallig. Elke uitgegeven factuur is voldaan of nog op tijd.",
 };

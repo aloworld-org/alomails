@@ -347,7 +347,18 @@ async fn the_language_of_the_file_is_a_preference_and_never_a_refusal() {
     let h = harness("bill-pdf-lang").await;
     let customer = a_customer(&h.app, &h.token, "Kunde GmbH").await;
     let (invoice, _) = an_issued_invoice(&h, &customer, "Consulting").await;
-    for query in ["", "?lang=fr", "?lang=xx-YY", "?lang=%F0%9F%99%82"] {
+    // A language we ship writes the file in it; anything else — an unknown
+    // tag, a malformed one, an emoji — still produces a valid PDF, in English.
+    // A display preference must never be the reason a document cannot be made.
+    for (query, heading) in [
+        ("", "Invoice INV-"),
+        ("?lang=en-GB", "Invoice INV-"),
+        ("?lang=fr", "Facture INV-"),
+        ("?lang=fr-BE", "Facture INV-"),
+        ("?lang=nl", "Factuur INV-"),
+        ("?lang=xx-YY", "Invoice INV-"),
+        ("?lang=%F0%9F%99%82", "Invoice INV-"),
+    ] {
         let file = fetch(
             &h.app,
             Some(&h.token),
@@ -356,7 +367,7 @@ async fn the_language_of_the_file_is_a_preference_and_never_a_refusal() {
         .await;
         assert_eq!(file.status, StatusCode::OK, "lang {query:?}");
         assert!(file.bytes.starts_with(b"%PDF-1.7"));
-        assert!(file.text().contains("Invoice INV-"), "lang {query:?}");
+        assert!(file.text().contains(heading), "lang {query:?}");
     }
 }
 

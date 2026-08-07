@@ -162,14 +162,63 @@ static EN: ReminderStrings = ReminderStrings {
     regards: "Kind regards,",
 };
 
+/// The French reminder (B1.27).
+///
+/// A first reminder is a courtesy, not a threat: the wording states the facts
+/// and thanks a customer who has already paid. Nothing here mentions interest,
+/// recovery costs or a deadline — those belong to a formal *mise en demeure*,
+/// which is a decision a person takes, not a template.
+static FR: ReminderStrings = ReminderStrings {
+    lang: "fr",
+    subject: |heading| format!("Rappel : {heading}"),
+    subject_from: |heading, issuer| format!("Rappel : {heading} \u{2014} {issuer}"),
+    overdue: |heading, money, due, days| {
+        let day = if days == 1 { "jour" } else { "jours" };
+        format!(
+            "{heading} de {money} était à régler avant le {due} et accuse désormais {days} {day} de retard."
+        )
+    },
+    upcoming: |heading, money, due| format!("{heading} de {money} est à régler avant le {due}."),
+    part_paid: |received, outstanding| {
+        format!("{received} ont déjà été reçus, laissant {outstanding} à régler.")
+    },
+    reference: |reference| format!("Votre référence : {reference}"),
+    crossed_in_the_post: "Si vous avez déjà effectué le règlement, nous vous en remercions et vous prions de ne pas tenir compte de ce message.",
+    regards: "Cordialement,",
+};
+
+/// The Dutch reminder (B1.27), written with the same restraint as [`FR`].
+static NL: ReminderStrings = ReminderStrings {
+    lang: "nl",
+    subject: |heading| format!("Herinnering: {heading}"),
+    subject_from: |heading, issuer| format!("Herinnering: {heading} \u{2014} {issuer}"),
+    overdue: |heading, money, due, days| {
+        let day = if days == 1 { "dag" } else { "dagen" };
+        format!(
+            "{heading} van {money} moest vóór {due} zijn voldaan en is nu {days} {day} over de vervaldatum."
+        )
+    },
+    upcoming: |heading, money, due| {
+        format!("{heading} van {money} dient vóór {due} te zijn voldaan.")
+    },
+    part_paid: |received, outstanding| {
+        format!("Hiervan is {received} ontvangen, zodat {outstanding} openstaat.")
+    },
+    reference: |reference| format!("Uw referentie: {reference}"),
+    crossed_in_the_post: "Hebt u de betaling al gedaan, dan danken wij u daarvoor en kunt u dit bericht als niet verzonden beschouwen.",
+    regards: "Met vriendelijke groet,",
+};
+
 /// The words for a language tag, falling back to the default table — the same
-/// seam as [`crate::billing_print::strings_for`], moving at the same moment
-/// (B1.27).
+/// seam as [`crate::billing_print::strings_for`], moved at the same moment
+/// (B1.27), so one `?lang=` picks the document, the covering note and the
+/// reminder together.
 #[must_use]
 pub fn reminder_strings_for(tag: &str) -> &'static ReminderStrings {
     let primary = tag.split(['-', '_']).next().unwrap_or_default();
     match primary.to_ascii_lowercase().as_str() {
-        "en" => &EN,
+        "fr" => &FR,
+        "nl" => &NL,
         _ => &EN,
     }
 }
@@ -724,9 +773,66 @@ mod tests {
     }
 
     #[test]
-    fn the_default_table_answers_for_every_tag_until_the_wave_review() {
-        for tag in ["en", "EN", "en-GB", "fr", "nl_BE", "", "zz"] {
+    fn a_tag_picks_its_table_and_anything_else_falls_back() {
+        for tag in ["en", "EN", "en-GB", "", "zz", "🙂"] {
             assert_eq!(reminder_strings_for(tag).lang, "en", "{tag}");
+        }
+        for tag in ["fr", "FR", "fr-BE", "fr_CH"] {
+            assert_eq!(reminder_strings_for(tag).lang, "fr", "{tag}");
+        }
+        for tag in ["nl", "NL", "nl-BE", "nl_BE"] {
+            assert_eq!(reminder_strings_for(tag).lang, "nl", "{tag}");
+        }
+    }
+
+    #[test]
+    fn every_table_says_how_late_a_document_is_in_its_own_plural() {
+        // A reminder that says "1 days" reads as machinery, and the one that
+        // says "0 jour" would be a reminder about something not yet late — so
+        // the singular is pinned per language rather than left to the caller.
+        for (tag, one, many) in [
+            ("en", "1 day overdue", "14 days overdue"),
+            ("fr", "1 jour de retard", "14 jours de retard"),
+            ("nl", "1 dag over", "14 dagen over"),
+        ] {
+            let w = reminder_strings_for(tag);
+            let single = (w.overdue)("Invoice INV-2026-00001", "EUR 1 815,00", "2026-07-24", 1);
+            let plural = (w.overdue)("Invoice INV-2026-00001", "EUR 1 815,00", "2026-07-24", 14);
+            assert!(single.contains(one), "{tag}: {single}");
+            assert!(plural.contains(many), "{tag}: {plural}");
+        }
+    }
+
+    #[test]
+    fn no_reminder_threatens_anybody() {
+        // The letter states facts and thanks a customer who has already paid.
+        // Interest, recovery costs and formal notice are a human decision
+        // (`docs/design/billing.md`), never a template — asserted so a later
+        // "helpful" edit to one language has to face this test.
+        for tag in ["en", "fr", "nl"] {
+            let w = reminder_strings_for(tag);
+            let letter = format!(
+                "{} {} {} {}",
+                (w.subject)("Invoice INV-2026-00001"),
+                (w.overdue)("Invoice INV-2026-00001", "EUR 1 815,00", "2026-07-24", 14),
+                w.crossed_in_the_post,
+                w.regards,
+            )
+            .to_lowercase();
+            for word in [
+                "interest",
+                "intérêt",
+                "rente",
+                "legal",
+                "juridique",
+                "incasso",
+                "mise en demeure",
+                "court",
+                "tribunal",
+                "deurwaarder",
+            ] {
+                assert!(!letter.contains(word), "{tag} reminder mentions {word}");
+            }
         }
     }
 }
