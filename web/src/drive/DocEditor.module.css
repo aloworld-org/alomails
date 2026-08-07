@@ -374,7 +374,7 @@
 }
 .pageMode {
   position: relative;
-  padding: 32px max(20px, 4vw) 64px;
+  padding: 32px max(20px, 4vw) 0;
   background: var(--bg-raised);
 }
 .pageFurniture { position: absolute; top: 32px; left: 50%; z-index: 2; width: min(var(--doc-page-width, 210mm), calc(100% - max(40px, 8vw))); height: var(--doc-page-height, 297mm); pointer-events: none; transform: translateX(-50%) scale(var(--doc-zoom, 1)); transform-origin: top center; color: var(--text-tertiary); font-size: 10px; }
@@ -428,7 +428,7 @@
     display: none;
   }
   .pageMode {
-    padding: 12px 0 40px;
+    padding: 12px 0 0;
   }
   .pageFurniture { top: 12px; width: 100%; }
   .docMenus details:last-child .docMenuPanel {
