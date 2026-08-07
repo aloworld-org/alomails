@@ -124,26 +124,10 @@
   grid-template-columns: repeat(2, 28px);
   gap: 5px;
 }
-.labelGrid {
+.toolStrip {
   display: flex;
   align-items: center;
-  gap: 6px;
-}
-.labelGrid .iconBtn:has(.iconBtnLabel) {
-  width: 64px;
-  height: 58px;
   gap: 5px;
-}
-.labelGrid .iconBtn svg {
-  width: 20px;
-  height: 20px;
-}
-.labelGrid .iconBtnLabel {
-  width: 100%;
-  max-width: 64px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .othersGroups .row {
   gap: 4px;

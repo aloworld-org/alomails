@@ -42,6 +42,7 @@ import {
   MoreHorizontal,
   PaintBucket,
   Palette,
+  PanelRightOpen,
   Grid3X3,
   Radical,
   Redo2,
@@ -643,21 +644,21 @@ function DataTab({ actions, disabled }: { actions: SheetActions; disabled: boole
         <EditingControls actions={actions} disabled={disabled} />
       </Group>
       <Group label={strings.sheetGroupDataTools}>
-        <div className={styles.labelGrid}>
-          <IconBtn label={strings.sheetDataValidation} onClick={() => actions.exec(CMD_DATA_VALIDATION)} disabled={disabled} showLabel>
+        <div className={styles.toolStrip}>
+          <IconBtn label={strings.sheetDataValidation} onClick={() => actions.exec(CMD_DATA_VALIDATION)} disabled={disabled}>
             <ListChecks size={16} />
           </IconBtn>
-          <IconBtn label={strings.sheetTextToColumns} onClick={actions.splitTextToColumns} disabled={disabled} showLabel>
+          <IconBtn label={strings.sheetTextToColumns} onClick={actions.splitTextToColumns} disabled={disabled}>
             <Columns3 size={16} />
           </IconBtn>
-          <IconBtn label={strings.sheetNamedRanges} onClick={() => actions.exec(CMD_DEFINED_NAMES, { value: "open" })} disabled={disabled} showLabel>
+          <IconBtn label={strings.sheetNamedRanges} onClick={() => actions.exec(CMD_DEFINED_NAMES, { value: "open" })} disabled={disabled}>
             <Tags size={16} />
           </IconBtn>
         </div>
       </Group>
       <Group label={strings.sheetGroupStyles}>
-        <IconBtn label={strings.sheetConditionalFormatting} onClick={() => actions.exec(CMD_CONDITIONAL_FORMATTING)} disabled={disabled} large showLabel>
-          <Palette size={20} />
+        <IconBtn label={strings.sheetConditionalFormatting} onClick={() => actions.exec(CMD_CONDITIONAL_FORMATTING)} disabled={disabled}>
+          <Palette size={16} />
         </IconBtn>
       </Group>
     </div>
@@ -668,24 +669,26 @@ function ReviewTab({ actions, disabled }: { actions: SheetActions; disabled: boo
   return (
     <div className={styles.groups}>
       <Group label={strings.sheetGroupNotes}>
-        <IconBtn label={strings.sheetNote} onClick={() => actions.exec(CMD_NOTE)} disabled={disabled} large showLabel>
-          <StickyNote size={20} />
+        <IconBtn label={strings.sheetNote} onClick={() => actions.exec(CMD_NOTE)} disabled={disabled}>
+          <StickyNote size={16} />
         </IconBtn>
       </Group>
       <Group label={strings.sheetGroupComments}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetAddComment} onClick={() => actions.exec(CMD_COMMENT)} disabled={disabled} large showLabel>
-            <MessageSquare size={20} />
+          <IconBtn label={strings.sheetAddComment} onClick={() => actions.exec(CMD_COMMENT)} disabled={disabled}>
+            <MessageSquare size={16} />
           </IconBtn>
-          <TextBtn label={strings.sheetCommentsPanel} onClick={() => actions.exec(CMD_COMMENT_PANEL)} disabled={disabled} />
+          <IconBtn label={strings.sheetCommentsPanel} onClick={() => actions.exec(CMD_COMMENT_PANEL)} disabled={disabled}>
+            <PanelRightOpen size={16} />
+          </IconBtn>
         </div>
       </Group>
       <Group label={strings.sheetGroupProtection}>
-        <div className={styles.labelGrid}>
-          <IconBtn label={strings.sheetProtectRange} onClick={actions.protectRange} disabled={disabled} showLabel><LockKeyhole size={16} /></IconBtn>
-          <IconBtn label={strings.sheetUnprotectRange} onClick={actions.unprotectRange} disabled={disabled} showLabel><UnlockKeyhole size={16} /></IconBtn>
-          <IconBtn label={strings.sheetProtectSheet} onClick={actions.protectSheet} disabled={disabled} showLabel><LockKeyhole size={16} /></IconBtn>
-          <IconBtn label={strings.sheetUnprotectSheet} onClick={actions.unprotectSheet} disabled={disabled} showLabel><UnlockKeyhole size={16} /></IconBtn>
+        <div className={styles.layoutGrid}>
+          <IconBtn label={strings.sheetProtectRange} onClick={actions.protectRange} disabled={disabled}><LockKeyhole size={16} /></IconBtn>
+          <IconBtn label={strings.sheetUnprotectRange} onClick={actions.unprotectRange} disabled={disabled}><UnlockKeyhole size={16} /></IconBtn>
+          <IconBtn label={strings.sheetProtectSheet} onClick={actions.protectSheet} disabled={disabled}><LockKeyhole size={16} /></IconBtn>
+          <IconBtn label={strings.sheetUnprotectSheet} onClick={actions.unprotectSheet} disabled={disabled}><UnlockKeyhole size={16} /></IconBtn>
         </div>
       </Group>
     </div>
@@ -711,14 +714,14 @@ function PageLayoutTab({ actions, disabled }: { actions: SheetActions; disabled:
       </Group>
       <Group label={strings.sheetGroupSheetOptions}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetToggleGridlines} onClick={actions.toggleGridlines} disabled={disabled} large showLabel><Grid3X3 size={20} /></IconBtn>
+          <IconBtn label={strings.sheetToggleGridlines} onClick={actions.toggleGridlines} disabled={disabled}><Grid3X3 size={16} /></IconBtn>
           <ColorBtn label={strings.sheetGridlineColor} onPick={actions.setGridlineColor} disabled={disabled}><PaintBucket size={16} /></ColorBtn>
         </div>
       </Group>
       <Group label={strings.sheetGroupDirection}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetLeftToRight} onClick={() => actions.setSheetDirection("ltr")} disabled={disabled} large showLabel><AlignLeft size={20} /></IconBtn>
-          <IconBtn label={strings.sheetRightToLeft} onClick={() => actions.setSheetDirection("rtl")} disabled={disabled} large showLabel><AlignRight size={20} /></IconBtn>
+          <IconBtn label={strings.sheetLeftToRight} onClick={() => actions.setSheetDirection("ltr")} disabled={disabled}><AlignLeft size={16} /></IconBtn>
+          <IconBtn label={strings.sheetRightToLeft} onClick={() => actions.setSheetDirection("rtl")} disabled={disabled}><AlignRight size={16} /></IconBtn>
         </div>
       </Group>
     </div>
@@ -729,11 +732,11 @@ function ViewTab({ actions, disabled }: { actions: SheetActions; disabled: boole
   return (
     <div className={styles.groups}>
       <Group label={strings.sheetGroupFreeze}>
-        <div className={styles.labelGrid}>
-          <IconBtn label={strings.sheetFreezeTopRow} onClick={actions.freezeTopRow} disabled={disabled} showLabel><Rows3 size={16} /></IconBtn>
-          <IconBtn label={strings.sheetFreezeFirstColumn} onClick={actions.freezeFirstColumn} disabled={disabled} showLabel><Columns3 size={16} /></IconBtn>
-          <IconBtn label={strings.sheetFreeze} onClick={actions.freezeAtSelection} disabled={disabled} showLabel><Snowflake size={16} /></IconBtn>
-          <IconBtn label={strings.sheetUnfreeze} onClick={actions.unfreeze} disabled={disabled} showLabel><UnlockKeyhole size={16} /></IconBtn>
+        <div className={styles.layoutGrid}>
+          <IconBtn label={strings.sheetFreezeTopRow} onClick={actions.freezeTopRow} disabled={disabled}><Rows3 size={16} /></IconBtn>
+          <IconBtn label={strings.sheetFreezeFirstColumn} onClick={actions.freezeFirstColumn} disabled={disabled}><Columns3 size={16} /></IconBtn>
+          <IconBtn label={strings.sheetFreeze} onClick={actions.freezeAtSelection} disabled={disabled}><Snowflake size={16} /></IconBtn>
+          <IconBtn label={strings.sheetUnfreeze} onClick={actions.unfreeze} disabled={disabled}><UnlockKeyhole size={16} /></IconBtn>
         </div>
       </Group>
       <Group label={strings.sheetGroupZoom}>
