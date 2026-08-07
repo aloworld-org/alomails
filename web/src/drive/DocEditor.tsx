@@ -13,7 +13,7 @@ import {
   type ComponentProps,
   type CSSProperties,
 } from "react";
-import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, MessageSquarePlus, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, MessageSquarePlus, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -433,12 +433,8 @@ export function DocEditor({
         <select className={styles.fontSelect} aria-label={strings.docFontFamily} value={docFont} onChange={(event) => setDocFont(event.target.value as DocFont)}><option value="inter">Inter</option><option value="arial">Arial</option><option value="georgia">Georgia</option><option value="garamond">Garamond</option></select>
         <select className={styles.fontSizeSelect} aria-label={strings.docFontSize} value={docFontSize} onChange={(event) => setDocFontSize(Number(event.target.value))}>{[10, 11, 12, 14, 16, 18, 20, 24].map((size) => <option key={size} value={size}>{size}</option>)}</select>
         <select className={styles.lineSpacingSelect} aria-label={strings.docLineSpacing} value={lineSpacing} onChange={(event) => setLineSpacing(Number(event.target.value))}><option value="1">1.0</option><option value="1.15">1.15</option><option value="1.5">1.5</option><option value="2">2.0</option></select>
-        <select className={styles.colorSelect} aria-label={strings.docTextColor} value={typeof activeStyles.textColor === "string" ? activeStyles.textColor : "default"} onChange={(event) => setColorStyle("textColor", event.target.value)}>
-          <option value="default">{strings.docColorDefault}</option><option value="red">{strings.docColorRed}</option><option value="orange">{strings.docColorOrange}</option><option value="green">{strings.docColorGreen}</option><option value="blue">{strings.docColorBlue}</option><option value="purple">{strings.docColorPurple}</option>
-        </select>
-        <select className={styles.colorSelect} aria-label={strings.docHighlightColor} value={typeof activeStyles.backgroundColor === "string" ? activeStyles.backgroundColor : "default"} onChange={(event) => setColorStyle("backgroundColor", event.target.value)}>
-          <option value="default">{strings.docHighlightNone}</option><option value="red">{strings.docColorRed}</option><option value="orange">{strings.docColorOrange}</option><option value="yellow">{strings.docColorYellow}</option><option value="green">{strings.docColorGreen}</option><option value="blue">{strings.docColorBlue}</option>
-        </select>
+        <DocColorPicker label={strings.docTextColor} resetLabel={strings.docColorDefault} value={typeof activeStyles.textColor === "string" ? activeStyles.textColor : "default"} fallback="#102a43" variant="text" onPick={(value) => setColorStyle("textColor", value)} />
+        <DocColorPicker label={strings.docHighlightColor} resetLabel={strings.docHighlightNone} value={typeof activeStyles.backgroundColor === "string" ? activeStyles.backgroundColor : "default"} fallback="#ffffff" variant="highlight" onPick={(value) => setColorStyle("backgroundColor", value)} />
         <button type="button" className={styles.commandIcon} onClick={() => editor.undo()} aria-label={strings.sheetUndo} title={strings.sheetUndo}><Undo2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => editor.redo()} aria-label={strings.sheetRedo} title={strings.sheetRedo}><Redo2 size={17} /></button>
         <div className={styles.commandDivider} />
@@ -615,4 +611,32 @@ export function DocEditor({
       </div>
     </div>
   );
+}
+
+const NAMED_COLORS: Record<string, string> = {
+  red: "#e03131",
+  orange: "#eb6f4b",
+  yellow: "#f5c451",
+  green: "#2f9e66",
+  blue: "#3478f6",
+  purple: "#7950f2",
+};
+
+function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }: {
+  label: string;
+  resetLabel: string;
+  value: string;
+  fallback: string;
+  variant: "text" | "highlight";
+  onPick: (value: string) => void;
+}) {
+  const color = /^#[0-9a-f]{6}$/i.test(value) ? value : NAMED_COLORS[value] ?? fallback;
+  return <div className={styles.docColorPicker}>
+    <label className={styles.docColorMain} title={label} aria-label={label}>
+      {variant === "text" ? <span className={styles.textColorGlyph}>A</span> : <Highlighter className={styles.highlightColorGlyph} size={16} />}
+      <span className={styles.docColorSwatch} style={{ backgroundColor: color }} />
+      <input type="color" aria-label={label} value={color} onInput={(event) => onPick(event.currentTarget.value)} onChange={(event) => onPick(event.target.value)} />
+    </label>
+    {value !== "default" && <button type="button" className={styles.docColorReset} onClick={() => onPick("default")} aria-label={resetLabel} title={resetLabel}><X size={11} /></button>}
+  </div>;
 }
