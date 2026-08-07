@@ -320,11 +320,14 @@
 .docHueSlider::-moz-range-thumb,
 .docAlphaSlider::-moz-range-thumb { width: 13px; height: 13px; border: 3px solid #fff; border-radius: 50%; background: transparent; box-shadow: 0 0 0 1px rgb(0 0 0 / 30%); cursor: pointer; }
 .docColorChecker { width: 28px; height: 20px; border-radius: 5px; background: repeating-conic-gradient(#d8d8d8 0 25%, #fff 0 50%) 0 / 9px 9px; }
-.docColorFields { display: grid; grid-template-columns: 55px 1fr 64px; align-items: center; gap: 8px; }
+.docColorFields { display: grid; grid-template-columns: 55px 1fr 72px; align-items: center; gap: 8px; }
 .docColorFields > span { display: flex; height: 32px; align-items: center; justify-content: center; border: 1px solid var(--border-default); border-radius: var(--radius-md); color: var(--text-secondary); font-size: var(--text-xs); }
 .docColorFields label { display: flex; height: 32px; align-items: center; overflow: hidden; border: 1px solid var(--border-default); border-radius: var(--radius-md); padding-left: 8px; color: var(--text-tertiary); font-size: var(--text-xs); }
 .docColorFields input { width: 100%; min-width: 0; height: 30px; border: 0; outline: 0; padding: 0 5px; background: transparent; color: var(--text-primary); font: inherit; text-transform: uppercase; }
-.docColorFields input[type="number"] { text-align: right; }
+.docColorFields label:last-child { gap: 3px; padding: 0 9px; }
+.docColorFields input[type="number"] { appearance: textfield; padding: 0; text-align: right; }
+.docColorFields input[type="number"]::-webkit-inner-spin-button,
+.docColorFields input[type="number"]::-webkit-outer-spin-button { margin: 0; appearance: none; }
 .docColorFields label:focus-within { border-color: var(--accent); }
 .docBrandColorsHead { display: flex; min-height: 30px; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--border-subtle); padding-top: 9px; }
 .docBrandColorsHead strong { color: var(--text-secondary); font-size: var(--text-xs); font-weight: var(--weight-semibold); }
