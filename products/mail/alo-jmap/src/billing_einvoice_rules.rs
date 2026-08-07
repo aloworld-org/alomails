@@ -46,7 +46,12 @@ pub struct Violation {
 }
 
 impl Violation {
-    fn new(rule: &'static str, detail: impl Into<String>) -> Self {
+    /// A broken rule, cited by the identifier a receiving system quotes.
+    ///
+    /// Public because the national rule sets are their own modules — XRechnung
+    /// ([`crate::billing_xrechnung_rules`]) reports in exactly this shape, and
+    /// a route reports both lists as one.
+    pub fn new(rule: &'static str, detail: impl Into<String>) -> Self {
         Self {
             rule,
             detail: detail.into(),

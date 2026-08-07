@@ -40,11 +40,9 @@
 //! written here therefore describes **the attached XML** and never claims a
 //! PDF/A conformance level the file does not have.
 
-use axum::http::header;
-use axum::response::{IntoResponse, Response};
-
 use crate::billing_einvoice::{EInvoice, SPECIFICATION_ID, TypeCode};
-use crate::billing_print::{PrintDocument, Strings, file_stem};
+use crate::billing_print::{PrintDocument, Strings};
+use crate::billing_xml::{Xml, amount, esc, percent, quantity};
 
 /// The file name Factur-X mandates for the XML inside the PDF.
 ///
@@ -394,94 +392,19 @@ pub fn xmp(invoice: &EInvoice) -> String {
 
 // ---- the download ------------------------------------------------------------
 
-/// The name the XML is saved under when it is downloaded on its own.
-///
-/// The PDF's own name plus `-factur-x.xml`
-/// ([`crate::billing_print::file_stem`]), so an invoice's two renderings sort
-/// next to each other in the folder somebody archives them in — and never
-/// [`ATTACHMENT_NAME`], which is the name the file has *inside* the PDF and is
-/// the same for every document there is.
+/// The name the XML is saved under when it is downloaded on its own:
+/// [`crate::billing_xml::file_name`] with this syntax's suffix.
 #[must_use]
 pub fn file_name(doc: &PrintDocument<'_>, s: &Strings) -> String {
-    let stem = file_stem(doc, s);
-    if stem.is_empty() {
-        "document-factur-x.xml".to_owned()
-    } else {
-        format!("{stem}-factur-x.xml")
-    }
-}
-
-/// Serves the e-invoice as a file.
-///
-/// The same three headers the PDF is served with, for the same reasons
-/// ([`crate::billing_pdf::response`]): an **attachment**, never inline, so no
-/// XML document is ever opened inside our origin; `nosniff`, so nothing
-/// re-interprets the bytes; and `no-store`, because this is a customer's
-/// invoice rather than a cacheable asset.
-#[must_use]
-pub fn response(xml: String, file_name: &str) -> Response {
-    (
-        [
-            (
-                header::CONTENT_TYPE,
-                "application/xml; charset=utf-8".to_owned(),
-            ),
-            (
-                header::CONTENT_DISPOSITION,
-                format!("attachment; filename=\"{file_name}\""),
-            ),
-            (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_owned()),
-            (header::CACHE_CONTROL, "no-store".to_owned()),
-        ],
-        xml,
-    )
-        .into_response()
+    crate::billing_xml::file_name(doc, s, "factur-x")
 }
 
 // ---- formatting --------------------------------------------------------------
 
-/// Integer cents as the standard's decimal: always two places, the sign in
-/// front, and no grouping — this is a machine's number, not the paper's.
-fn amount(cents: i64) -> String {
-    let value = i128::from(cents);
-    let magnitude = value.unsigned_abs();
-    format!(
-        "{}{}.{:02}",
-        if value < 0 { "-" } else { "" },
-        magnitude / 100,
-        magnitude % 100
-    )
-}
-
-/// Milli-units as a decimal quantity, with no more decimals than it has.
-///
-/// `1.5`, not `1.500`: a quantity is not an amount, it has no fixed scale, and
-/// trailing zeros invite a reader to think they mean precision.
-fn quantity(qty_milli: i64) -> String {
-    let value = i128::from(qty_milli);
-    let magnitude = value.unsigned_abs();
-    let sign = if value < 0 { "-" } else { "" };
-    let units = magnitude / 1_000;
-    let thousandths = magnitude % 1_000;
-    if thousandths == 0 {
-        return format!("{sign}{units}");
-    }
-    let fraction = format!("{thousandths:03}");
-    format!("{sign}{units}.{}", fraction.trim_end_matches('0'))
-}
-
-/// Basis points as a percentage with two decimals — `2100` is `21.00`.
-fn percent(rate_bp: i32) -> String {
-    let magnitude = i64::from(rate_bp).unsigned_abs();
-    format!(
-        "{}{}.{:02}",
-        if rate_bp < 0 { "-" } else { "" },
-        magnitude / 100,
-        magnitude % 100
-    )
-}
-
 /// A date as UNTDID 2379 format 102: `YYYYMMDD`.
+///
+/// The one format CII and UBL do not share — an ISO date with hyphens is what
+/// the other one writes ([`crate::billing_ubl`]).
 fn date_102(value: time::Date) -> String {
     format!(
         "{:04}{:02}{:02}",
@@ -491,145 +414,10 @@ fn date_102(value: time::Date) -> String {
     )
 }
 
-/// Escapes text for XML.
-///
-/// All five, in element text as well as in attributes, for the same reason the
-/// HTML renderer escapes all five ([`crate::billing_print`]): one escaper that
-/// is safe everywhere beats two that have to be chosen between. Control
-/// characters that XML 1.0 cannot represent at all — a stray `\u{0}` from a
-/// paste — are dropped rather than encoded, because there is no encoding of
-/// them that a parser will accept.
-fn esc(value: &str) -> String {
-    let mut out = String::with_capacity(value.len());
-    for c in value.chars() {
-        match c {
-            '&' => out.push_str("&amp;"),
-            '<' => out.push_str("&lt;"),
-            '>' => out.push_str("&gt;"),
-            '"' => out.push_str("&quot;"),
-            '\'' => out.push_str("&apos;"),
-            '\t' | '\n' | '\r' => out.push(c),
-            c if (c as u32) < 0x20 => {}
-            c => out.push(c),
-        }
-    }
-    out
-}
-
-/// A tiny indented-XML emitter.
-///
-/// Not a general XML library: it writes elements in the order it is told to,
-/// and the schema's sequence is the caller's responsibility. What it *does*
-/// guarantee is that every element it opens is closed at the depth it was
-/// opened, and that no text reaches the document unescaped.
-struct Xml {
-    out: String,
-    depth: usize,
-}
-
-impl Xml {
-    fn new() -> Self {
-        Self {
-            out: String::with_capacity(4096),
-            depth: 0,
-        }
-    }
-
-    fn indent(&mut self) {
-        for _ in 0..self.depth {
-            self.out.push_str("  ");
-        }
-    }
-
-    fn raw(&mut self, text: &str) {
-        self.out.push_str(text);
-    }
-
-    fn open(&mut self, tag: &str) {
-        self.indent();
-        self.out.push('<');
-        self.out.push_str(tag);
-        self.out.push_str(">\n");
-        self.depth += 1;
-    }
-
-    fn open_with(&mut self, tag: &str, attributes: &str) {
-        self.indent();
-        self.out.push('<');
-        self.out.push_str(tag);
-        self.out.push(' ');
-        self.out.push_str(attributes);
-        self.out.push_str(">\n");
-        self.depth += 1;
-    }
-
-    fn close(&mut self, tag: &str) {
-        self.depth = self.depth.saturating_sub(1);
-        self.indent();
-        self.out.push_str("</");
-        self.out.push_str(tag);
-        self.out.push_str(">\n");
-    }
-
-    fn empty(&mut self, tag: &str) {
-        self.indent();
-        self.out.push('<');
-        self.out.push_str(tag);
-        self.out.push_str("/>\n");
-    }
-
-    fn leaf(&mut self, tag: &str, text: &str) {
-        self.indent();
-        self.out.push('<');
-        self.out.push_str(tag);
-        self.out.push('>');
-        self.out.push_str(&esc(text));
-        self.out.push_str("</");
-        self.out.push_str(tag);
-        self.out.push_str(">\n");
-    }
-
-    fn leaf_with(&mut self, tag: &str, attributes: &str, text: &str) {
-        self.indent();
-        self.out.push('<');
-        self.out.push_str(tag);
-        self.out.push(' ');
-        self.out.push_str(attributes);
-        self.out.push('>');
-        self.out.push_str(&esc(text));
-        self.out.push_str("</");
-        self.out.push_str(tag);
-        self.out.push_str(">\n");
-    }
-
-    fn finish(self) -> String {
-        self.out
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::billing_einvoice::{TaxCurrency, sample};
-
-    #[test]
-    fn a_number_is_written_the_way_the_standard_reads_it() {
-        assert_eq!(amount(0), "0.00");
-        assert_eq!(amount(5), "0.05");
-        assert_eq!(amount(22_688), "226.88");
-        assert_eq!(amount(-22_688), "-226.88");
-        assert_eq!(amount(i64::MIN), "-92233720368547758.08");
-
-        assert_eq!(quantity(1_500), "1.5");
-        assert_eq!(quantity(2_000), "2");
-        assert_eq!(quantity(1), "0.001");
-        assert_eq!(quantity(-1_250), "-1.25");
-        assert_eq!(quantity(0), "0");
-
-        assert_eq!(percent(2100), "21.00");
-        assert_eq!(percent(0), "0.00");
-        assert_eq!(percent(550), "5.50");
-    }
 
     #[test]
     fn every_string_in_the_document_is_escaped() {

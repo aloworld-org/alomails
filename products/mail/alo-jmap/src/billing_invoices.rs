@@ -55,11 +55,15 @@ use crate::billing_cii as cii;
 use crate::billing_document::{LineBody, today, totals_json, with_body, with_totals};
 use crate::billing_einvoice::EInvoice;
 use crate::billing_einvoice_rules as einvoice_rules;
+use crate::billing_einvoice_rules::Violation;
 use crate::billing_payments::settlement_json;
 use crate::billing_pdf as pdf;
 use crate::billing_print::{
     self as print, Banner, DocumentKind, PrintDocument, PrintQuery, Restated,
 };
+use crate::billing_ubl as ubl;
+use crate::billing_xml as xml;
+use crate::billing_xrechnung_rules as xrechnung_rules;
 use crate::error::Problem;
 use crate::state::{AppState, authenticate};
 
@@ -652,24 +656,72 @@ pub async fn facturx_invoice(
     let printable = printable(&account.acc, &BillingInvoiceId::new(id)).await?;
     let strings = query.strings();
     let einvoice = printable.einvoice(strings)?;
-    let violations = einvoice_rules::violations(&einvoice);
-    if !violations.is_empty() {
-        return Err(Problem::with(
-            StatusCode::UNPROCESSABLE_ENTITY,
-            format!(
-                "this document cannot be issued as an EN 16931 e-invoice: {}",
-                violations
-                    .iter()
-                    .map(|v| format!("{} ({})", v.rule, v.detail))
-                    .collect::<Vec<_>>()
-                    .join("; ")
-            ),
-        ));
-    }
+    unmet(
+        &einvoice_rules::violations(&einvoice),
+        "an EN 16931 e-invoice",
+    )?;
     let document = printable.as_document();
-    Ok(cii::response(
+    Ok(xml::response(
         cii::render(&einvoice),
         &cii::file_name(&document, strings),
+    ))
+}
+
+/// `GET /billing/invoices/{id}/xrechnung.xml[?lang=]` → the same e-invoice as
+/// OASIS UBL 2.1, in the German CIUS (B1.23).
+///
+/// The same document as [`facturx_invoice`] and the same refusals, in the other
+/// syntax European law recognises ([`crate::billing_ubl`]) — this is the file a
+/// German public authority must be invoiced with, and the one a Peppol access
+/// point moves.
+///
+/// It refuses **more often than Factur-X does**, and that is the point: an
+/// XRechnung has to satisfy the national rules on top of the European ones
+/// ([`crate::billing_xrechnung_rules`]), so a tenant with no telephone number in
+/// its billing details, or an invoice with no customer reference, is told
+/// `BR-DE-7` or `BR-DE-15` here rather than at an authority's gateway. Both rule
+/// sets are reported together, so the details are fixed once.
+pub async fn xrechnung_invoice(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<PrintQuery>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let printable = printable(&account.acc, &BillingInvoiceId::new(id)).await?;
+    let strings = query.strings();
+    let einvoice = printable.einvoice(strings)?;
+    let mut violations = einvoice_rules::violations(&einvoice);
+    violations.extend(xrechnung_rules::violations(&einvoice));
+    unmet(&violations, "an XRechnung")?;
+    let document = printable.as_document();
+    Ok(xml::response(
+        ubl::render(&einvoice),
+        &ubl::file_name(&document, strings),
+    ))
+}
+
+/// The `422` a document that breaks the standard's rules earns, naming every
+/// one of them.
+///
+/// The identifiers are the payload: `BR-09` is what a receiving system will
+/// quote back, so it is what we quote forward, and the detail beside each says
+/// where in the product to fix it. `what` names the document the caller asked
+/// for, article included — the two syntaxes take different ones.
+fn unmet(violations: &[Violation], what: &str) -> Result<(), Problem> {
+    if violations.is_empty() {
+        return Ok(());
+    }
+    Err(Problem::with(
+        StatusCode::UNPROCESSABLE_ENTITY,
+        format!(
+            "this document cannot be issued as {what}: {}",
+            violations
+                .iter()
+                .map(|v| format!("{} ({})", v.rule, v.detail))
+                .collect::<Vec<_>>()
+                .join("; ")
+        ),
     ))
 }
 

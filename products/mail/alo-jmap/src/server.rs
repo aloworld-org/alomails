@@ -315,6 +315,14 @@ pub fn app(state: AppState) -> Router {
             "/billing/invoices/{id}/facturx.xml",
             get(billing_invoices::facturx_invoice),
         )
+        // The same e-invoice in the other syntax law recognises (B1.23): UBL
+        // 2.1 in the German CIUS, which is what a public authority must be
+        // invoiced with. It refuses more often than the route above, because
+        // XRechnung requires terms EN 16931 leaves optional.
+        .route(
+            "/billing/invoices/{id}/xrechnung.xml",
+            get(billing_invoices::xrechnung_invoice),
+        )
         // Drafts a covering email to the customer with the PDF attached and
         // leaves it in Drafts (B1.18). It never sends, and never changes the
         // invoice — unlike the quote route of the same name, which is a

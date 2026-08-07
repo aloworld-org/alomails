@@ -129,6 +129,16 @@ pub struct Party {
     pub legal_id: String,
     /// Electronic address (BT-34 / BT-49) — an email address here.
     pub email: String,
+    /// Contact point (BT-41 / BT-56): the person or desk a question about the
+    /// document goes to. We hold no contact *person* for either party, so the
+    /// seller names itself — the company is the desk — and the buyer, of whom
+    /// no national rule asks a contact, states none.
+    pub contact_name: String,
+    /// Contact telephone (BT-42 / BT-57), blank when none is stated.
+    ///
+    /// Optional in EN 16931 and **mandatory in XRechnung** (BR-DE-7), which is
+    /// why a term the CII rendering never writes is on the model at all.
+    pub phone: String,
 }
 
 /// Where the money should go (BG-16 / BG-17), when the issuer has stated a bank
@@ -330,6 +340,10 @@ impl EInvoice {
                 vat_id: doc.issuer.vat_id.clone().unwrap_or_default(),
                 legal_id: doc.issuer.registration_no.clone(),
                 email: doc.issuer.email.clone(),
+                // The company is its own contact desk: the billing settings
+                // hold a billing address and telephone, not a named person.
+                contact_name: doc.issuer.legal_name.clone(),
+                phone: doc.issuer.phone.clone(),
             },
             buyer: Party {
                 name: doc.customer.name.clone(),
@@ -341,6 +355,8 @@ impl EInvoice {
                 vat_id: doc.customer.vat_id.clone().unwrap_or_default(),
                 legal_id: String::new(),
                 email: doc.customer.email.clone().unwrap_or_default(),
+                contact_name: String::new(),
+                phone: String::new(),
             },
             credit_transfer: doc.issuer.iban.as_ref().map(|iban| CreditTransfer {
                 iban: iban.clone(),
@@ -469,6 +485,8 @@ pub(crate) fn sample() -> EInvoice {
             vat_id: "NL812345678B01".to_owned(),
             legal_id: "KVK 90123456".to_owned(),
             email: "billing@alo.test".to_owned(),
+            contact_name: "Alo Werkplaats B.V.".to_owned(),
+            phone: "+31 20 123 4567".to_owned(),
         },
         buyer: Party {
             name: "Kunde & Söhne GmbH".to_owned(),
@@ -480,6 +498,8 @@ pub(crate) fn sample() -> EInvoice {
             vat_id: "DE811907980".to_owned(),
             legal_id: String::new(),
             email: "einkauf@kunde.test".to_owned(),
+            contact_name: String::new(),
+            phone: String::new(),
         },
         credit_transfer: Some(CreditTransfer {
             iban: "NL91ABNA0417164300".to_owned(),
@@ -558,6 +578,7 @@ mod tests {
             vat_id: Some("NL812345678B01".to_owned()),
             registration_no: "KVK 90123456".to_owned(),
             email: "billing@alo.test".to_owned(),
+            phone: "+31 20 123 4567".to_owned(),
             iban: Some("NL91ABNA0417164300".to_owned()),
             bic: Some("ABNANL2A".to_owned()),
             ..Default::default()
