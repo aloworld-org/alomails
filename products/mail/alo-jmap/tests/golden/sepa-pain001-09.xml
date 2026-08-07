@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>ALO20260807-A1B2C3D4E5F6</MsgId>
+      <CreDtTm>2026-08-07T09:15:00</CreDtTm>
+      <NbOfTxs>2</NbOfTxs>
+      <CtrlSum>1781.97</CtrlSum>
+      <InitgPty>
+        <Nm>Alo Werkplaats B.V.</Nm>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>ALO20260807-A1B2C3D4E5F6-1</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>true</BtchBookg>
+      <NbOfTxs>2</NbOfTxs>
+      <CtrlSum>1781.97</CtrlSum>
+      <PmtTpInf>
+        <SvcLvl>
+          <Cd>SEPA</Cd>
+        </SvcLvl>
+      </PmtTpInf>
+      <ReqdExctnDt>
+        <Dt>2026-08-10</Dt>
+      </ReqdExctnDt>
+      <Dbtr>
+        <Nm>Alo Werkplaats B.V.</Nm>
+        <PstlAdr>
+          <Ctry>NL</Ctry>
+        </PstlAdr>
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>NL91ABNA0417164300</IBAN>
+        </Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <BICFI>ABNANL2A</BICFI>
+        </FinInstnId>
+      </DbtrAgt>
+      <ChrgBr>SLEV</ChrgBr>
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>R-2026-77</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">1331.97</InstdAmt>
+        </Amt>
+        <Cdtr>
+          <Nm>Muller + Sohne GmbH</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>DE89370400440532013000</IBAN>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>R-2026-77</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>FV/2026/08/12</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">450.00</InstdAmt>
+        </Amt>
+        <Cdtr>
+          <Nm>Krakowski Dostawca Sp. z o.o.</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>PL61109010140000071219812874</IBAN>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>RF18 5390 0754 7034</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>

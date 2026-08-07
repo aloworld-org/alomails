@@ -57,13 +57,17 @@ pub const BILL_TEXT_MAX_CHARS: usize = 500;
 pub const BILL_MAX_CENTS: i64 = 1_000_000_000_000;
 
 /// The columns every read of a bill selects, in [`BillRow`] order.
-const BILL_COLS: &str = "id, source_syntax, source_sha256, type_code, status, supplier_name, \
+///
+/// `pub(crate)` for one sibling: the payment run ([`crate::billing_sepa`]) reads
+/// bills through its own `WHERE`, and a second column list would be a second
+/// place for a column to be forgotten.
+pub(crate) const BILL_COLS: &str = "id, source_syntax, source_sha256, type_code, status, supplier_name, \
      supplier_vat_id, supplier_legal_id, supplier_line1, supplier_line2, supplier_postal_code, \
      supplier_city, supplier_country, supplier_email, supplier_iban, number, issue_date, \
      due_date, currency, buyer_reference, note, payment_reference, line_total_cents, \
      allowance_total_cents, charge_total_cents, tax_exclusive_cents, tax_total_cents, \
      tax_inclusive_cents, prepaid_cents, payable_cents, imported_by, imported_at, decided_by, \
-     decided_at";
+     decided_at, exported_at, exported_by, export_message_id";
 
 /// Where a received bill stands.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -245,6 +249,14 @@ pub struct Bill {
     pub decided_by: Option<String>,
     /// When that decision was made.
     pub decided_at: Option<OffsetDateTime>,
+    /// When this bill was put into a SEPA payment file
+    /// ([`crate::billing_sepa`]), if it has been. **Not** a payment: a file is
+    /// an instruction to a bank, and the money moves when the bank says it did.
+    pub exported_at: Option<OffsetDateTime>,
+    /// Who instructed that payment.
+    pub exported_by: Option<String>,
+    /// The `MsgId` of the run it went into, which is what a bank quotes back.
+    pub export_message_id: Option<String>,
 }
 
 /// A bill with its lines and the totals **we** compute from them.
@@ -711,8 +723,10 @@ fn new_bill_from(invoice: &InboundInvoice, sha256: &str) -> NewBill {
 
 // ---- row types ----------------------------------------------------------------
 
+/// One row of `billing_bills`, in [`BILL_COLS`] order. `pub(crate)` for the
+/// same one sibling that shares the column list.
 #[derive(sqlx::FromRow)]
-struct BillRow {
+pub(crate) struct BillRow {
     id: String,
     source_syntax: String,
     source_sha256: String,
@@ -747,6 +761,9 @@ struct BillRow {
     imported_at: OffsetDateTime,
     decided_by: Option<String>,
     decided_at: Option<OffsetDateTime>,
+    exported_at: Option<OffsetDateTime>,
+    exported_by: Option<String>,
+    export_message_id: Option<String>,
 }
 
 impl BillRow {
@@ -756,7 +773,7 @@ impl BillRow {
     /// [`StoreError::Db`] when the row carries a status the code does not know
     /// — a decode failure rather than a guess, because guessing here would
     /// decide whether a liability is approved.
-    fn into_bill(self) -> Result<Bill> {
+    pub(crate) fn into_bill(self) -> Result<Bill> {
         let status = BillStatus::parse(&self.status).ok_or_else(|| {
             StoreError::Db(sqlx::Error::Decode(
                 "billing_bills.status is not a known status".into(),
@@ -801,6 +818,9 @@ impl BillRow {
             imported_at: self.imported_at,
             decided_by: self.decided_by,
             decided_at: self.decided_at,
+            exported_at: self.exported_at,
+            exported_by: self.exported_by,
+            export_message_id: self.export_message_id,
         })
     }
 }

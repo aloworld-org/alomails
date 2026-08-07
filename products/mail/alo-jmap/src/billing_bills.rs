@@ -8,7 +8,8 @@
 //!   inside it: what a user has is a file, and asking them to escape an XML
 //!   document into a JSON string first would be a worse surface for no gain.
 //! - `GET /billing/bills` — what has arrived, newest document first,
-//!   narrowable by status (the approval queue is `?status=received`).
+//!   narrowable by status (the approval queue is `?status=received`) or to what
+//!   a payment run may cover (`?payable=true`, B2.12).
 //! - `GET /billing/bills/{id}` — one bill with its lines and both sets of
 //!   figures.
 //! - `POST …/approve`, `POST …/reject` — the decision. Two routes rather than a
@@ -45,7 +46,7 @@ use alo_store::billing_bills::{Bill, BillDocument, BillStatus};
 use alo_store::billing_einvoice_import::{EInvoiceSyntax, MAX_EINVOICE_BYTES};
 use alo_store::{BillingBillId, Line, Totals};
 
-use crate::billing::{iso, iso_date, map_store_err};
+use crate::billing::{flag, iso, iso_date, map_store_err};
 use crate::error::Problem;
 use crate::state::{AppState, authenticate};
 
@@ -92,6 +93,12 @@ fn bill_json(bill: &Bill) -> Value {
         "importedAt": iso(bill.imported_at),
         "decidedBy": bill.decided_by,
         "decidedAt": bill.decided_at.map(iso),
+        // Whether this bill has been put into a SEPA payment file (B2.12), and
+        // which run. Not a payment: the file is an instruction to a bank, and
+        // the money moves when the bank says it moved.
+        "exportedAt": bill.exported_at.map(iso),
+        "exportedBy": bill.exported_by,
+        "exportMessageId": bill.export_message_id,
     })
 }
 
@@ -142,6 +149,12 @@ pub struct BillsQuery {
     /// `received`, `approved` or `rejected`; absent means every bill.
     #[serde(default)]
     status: Option<String>,
+    /// `payable=true` narrows to what a payment run may cover: approved and not
+    /// yet in a SEPA file, oldest liability first (B2.12). Its own flag rather
+    /// than a fourth status, because "already paid out" is not a decision
+    /// somebody made about the document — it is what has happened to it since.
+    #[serde(default)]
+    payable: Option<String>,
 }
 
 /// `POST /billing/bills/import` (the XML file as the body) → `{"bill":{…}}`.
@@ -186,6 +199,20 @@ pub async fn list_bills(
     Query(query): Query<BillsQuery>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    // The payment run's own read wins over the status filter, and says so: it
+    // *is* a status filter (approved) plus a fact about what has happened
+    // since, and answering "approved but already paid out" to `payable=true`
+    // would put a bill into a second payment file.
+    if flag(query.payable.as_deref()) {
+        let bills = account
+            .acc
+            .payable_billing_bills()
+            .await
+            .map_err(map_store_err)?;
+        return Ok(Json(json!({
+            "bills": bills.iter().map(bill_json).collect::<Vec<_>>(),
+        })));
+    }
     let status = match query
         .status
         .as_deref()
@@ -343,6 +370,9 @@ mod tests {
             imported_at: OffsetDateTime::UNIX_EPOCH,
             decided_by: None,
             decided_at: None,
+            exported_at: None,
+            exported_by: None,
+            export_message_id: None,
         }
     }
 

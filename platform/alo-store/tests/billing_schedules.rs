@@ -388,13 +388,34 @@ async fn one_run_is_bounded_and_the_rest_follows_on_the_next() {
         second.next_run_date > first.next_run_date,
         "the second run continued where the first stopped"
     );
+    // Both runs' documents are stored, and each occurrence appears once.
+    //
+    // Deliberately not an assertion that the arrangement has *exactly* two
+    // batches: this arrangement is a year overdue and therefore due, and the
+    // cross-tenant sweep the suite exercises next door
+    // (`the_background_sweep_runs_every_tenant_through_its_own_door`) runs
+    // concurrently over every tenant, so it may legitimately raise a third
+    // batch for it in between. What the bound is about is that *one run* never
+    // raises more than the cap — which the two assertions above state exactly.
+    let stored = account
+        .billing_invoices_from_schedule(&schedule)
+        .await
+        .unwrap();
+    for id in first.raised.iter().chain(second.raised.iter()) {
+        assert!(
+            stored.iter().any(|stored| stored.invoice.id == *id),
+            "a draft a run reported was not stored"
+        );
+    }
+    assert!(stored.len() >= SCHEDULE_MAX_PER_RUN * 2);
+    let occurrences: std::collections::HashSet<_> = stored
+        .iter()
+        .map(|stored| stored.invoice.schedule_due_date)
+        .collect();
     assert_eq!(
-        account
-            .billing_invoices_from_schedule(&schedule)
-            .await
-            .unwrap()
-            .len(),
-        SCHEDULE_MAX_PER_RUN * 2
+        occurrences.len(),
+        stored.len(),
+        "no period was billed twice, whatever raised it"
     );
 }
 

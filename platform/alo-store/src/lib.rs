@@ -27,6 +27,7 @@ pub mod billing_payments;
 pub mod billing_products;
 pub mod billing_quotes;
 pub mod billing_schedules;
+pub mod billing_sepa;
 pub mod billing_sequence;
 pub mod billing_settings;
 pub mod billing_totals;
@@ -104,6 +105,7 @@ pub use billing_quotes::{
 pub use billing_schedules::{
     NewSchedule, Schedule, ScheduleDocument, ScheduleEdit, ScheduleRun, ScheduleSummary,
 };
+pub use billing_sepa::{CreditTransfer, PaymentFile};
 pub use billing_sequence::{
     INVOICE_NUMBER_PREFIX, INVOICE_SEQUENCE_KIND, QUOTE_NUMBER_PREFIX, QUOTE_SEQUENCE_KIND,
     document_number,

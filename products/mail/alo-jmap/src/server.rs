@@ -17,11 +17,11 @@ use crate::state::{AppState, Limits};
 use crate::{
     admin, agent, ai, api, autoconfig, base, billing_bills, billing_customers, billing_fx,
     billing_invoices, billing_payments, billing_products, billing_quotes, billing_reminder,
-    billing_reports, billing_schedules, billing_send, billing_settings, blob, calendar, carddav,
-    contacts, crm_activities, crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines,
-    crm_reports, crm_stages, crm_threads, delegates, docs, drive, filters, flagdue,
-    imap_import_route, push, reset_route, schedule, security, session, settings, share,
-    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    billing_reports, billing_schedules, billing_send, billing_sepa, billing_settings, blob,
+    calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff, crm_imports,
+    crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates, docs, drive,
+    filters, flagdue, imap_import_route, push, reset_route, schedule, security, session, settings,
+    share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -374,6 +374,16 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/billing/bills/{id}/reject",
             post(billing_bills::reject_bill),
+        )
+        // Paying them (B2.12): the approved bills of a run become one SEPA
+        // credit-transfer file the tenant uploads to their bank. A POST that
+        // answers with a file, because giving the instruction and recording
+        // that it was given are one act (crate::billing_sepa). Registered
+        // before `{id}` would ever be consulted — a static segment wins — and
+        // under the existing `/billing` prefix, so the Caddyfile needs nothing.
+        .route(
+            "/billing/bills/sepa.xml",
+            post(billing_sepa::export_payment_file),
         )
         // Quotes (B1.12) — the offer that precedes an invoice, with the same
         // shape: draft CRUD, a strict status filter, and every transition its

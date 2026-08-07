@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>ALO20260807-99FFEE001122</MsgId>
+      <CreDtTm>2026-08-07T09:15:00</CreDtTm>
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>9999.99</CtrlSum>
+      <InitgPty>
+        <Nm>AEro Handvaerk + Co</Nm>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>ALO20260807-99FFEE001122-1</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>true</BtchBookg>
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>9999.99</CtrlSum>
+      <PmtTpInf>
+        <SvcLvl>
+          <Cd>SEPA</Cd>
+        </SvcLvl>
+      </PmtTpInf>
+      <ReqdExctnDt>2026-12-31</ReqdExctnDt>
+      <Dbtr>
+        <Nm>AEro Handvaerk + Co</Nm>
+      </Dbtr>
+      <DbtrAcct>
+        <Id>
+          <IBAN>BE68539007547034</IBAN>
+        </Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <Othr>
+            <Id>NOTPROVIDED</Id>
+          </Othr>
+        </FinInstnId>
+      </DbtrAgt>
+      <ChrgBr>SLEV</ChrgBr>
+      <CdtTrfTxInf>
+        <PmtId>
+          <EndToEndId>2026/08/ 441</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="EUR">9999.99</InstdAmt>
+        </Amt>
+        <Cdtr>
+          <Nm>Societe Generale d&apos;Equipement - Lyon</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <IBAN>FR1420041010050500013M02606</IBAN>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>Facture 2026/08/441 - livraison aout, depot Lyon Vaise, reference client 4471/A</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>
