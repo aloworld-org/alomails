@@ -1840,6 +1840,20 @@ export const en = {
       ? "1 document is not in these figures: no exchange rate was stored for it. Check it before filing."
       : `${count} documents are not in these figures: no exchange rate was stored for them. Check them before filing.`,
 
+  // Chasing late money (B1.26). The wording is careful about one thing above
+  // all: this writes a letter, it does not send one. A product that emailed a
+  // customer the moment somebody clicked "Remind" would be a product people
+  // stop clicking in, so the notice says where the letter went and who sends
+  // it. The figures in it are the server's own.
+  billingRemind: "Remind",
+  billingRemindHint: "Write a payment reminder to this customer, and leave it in your Drafts.",
+  billingReminderDrafted: (invoice: string, outstanding: string, days: number) =>
+    days === 1
+      ? `A reminder for ${invoice} — ${outstanding} still owed, 1 day past its date — is waiting in your Drafts. Nothing has been sent: read it, change what you like, and send it yourself.`
+      : `A reminder for ${invoice} — ${outstanding} still owed, ${days} days past its date — is waiting in your Drafts. Nothing has been sent: read it, change what you like, and send it yourself.`,
+  billingReminderFailed: "The reminder could not be written. Check your connection and try again.",
+  billingNothingOverdue: "Nothing is overdue. Every issued invoice is either settled or still in date.",
+
   // Sites (alo Sites, ADR 0036, wave S1). The rail says "Websites" — the
   // module is where a tenant's public sites are made, in the word a stranger
   // uses for them.

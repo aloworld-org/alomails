@@ -35,6 +35,7 @@ import type {
   ProductDraft,
   QuoteDraft,
   QuoteStatus,
+  ReminderDraft,
   SettingsDraft,
   VatReport,
 } from "./types";
@@ -289,6 +290,28 @@ export class BillingApi {
       ),
     );
     return answer.invoice;
+  }
+
+  /**
+   * Writes a payment reminder for one invoice into the sender's own Drafts and
+   * answers what it says (B1.26).
+   *
+   * **Nothing is sent**: the letter lands where the user reads it, changes a
+   * word and sends it themselves, which is the rule the whole module follows
+   * for mail. Calling it twice writes two drafts and changes no billing record,
+   * so the button needs no confirmation and no idempotency key.
+   *
+   * The request states nothing about the money: who it goes to, what is left
+   * and how late it is are read off the stored document by the server. `note`
+   * is the one thing a person may add, and the server bounds it (500 characters
+   * → `422`).
+   */
+  remindInvoice(id: string, note?: string): Promise<ReminderDraft> {
+    return this.#write<{ draft: ReminderDraft }>(
+      "POST",
+      `/billing/invoices/${encodeURIComponent(id)}/reminder`,
+      note === undefined || note.trim() === "" ? {} : { note },
+    ).then((r) => r.draft);
   }
 
   /** The tenant's quotes, newest first, each with its totals and computed

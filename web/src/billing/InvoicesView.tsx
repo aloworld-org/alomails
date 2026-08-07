@@ -10,6 +10,10 @@
 // The status filter is a server-side one (`?status=`), not a filter over a
 // loaded page: a bookkeeper asking for issued documents must get the tenant's
 // issued documents, not the issued ones out of the first screenful.
+//
+// The list is also where money is chased (B1.26): a late row carries the one
+// click that writes the reminder for it. The letter is the server's, and it
+// goes to the sender's own Drafts — this screen sends nothing, and says so.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText } from "lucide-react";
@@ -70,6 +74,11 @@ export function InvoicesView() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // The document a reminder is being written for, and what the last one said.
+  // Both are the page's, not a row's: only one reminder is written at a time,
+  // and its answer is reported once above the list rather than in a cell.
+  const [reminding, setReminding] = useState<string | null>(null);
+  const [reminded, setReminded] = useState<string | null>(null);
 
   // Archived customers are included: a document raised for a customer who has
   // since been archived still has to name them.
@@ -101,6 +110,31 @@ export function InvoicesView() {
     return invoices.filter((i) => matches(i, names.get(i.customerId) ?? "", needle));
   }, [invoices, names, search]);
 
+  /** Chase one late invoice: the server writes the letter from the stored
+   *  document and leaves it in the sender's Drafts. Nothing is sent, and the
+   *  invoice is untouched — so the click needs no confirmation, and the list
+   *  is not reloaded afterwards. A refusal (a settled document somebody else
+   *  just paid, a customer with no address) is shown in the server's words. */
+  async function remind(invoice: BillingInvoiceSummary) {
+    setReminding(invoice.id);
+    setReminded(null);
+    setError(null);
+    try {
+      const draft = await api.remindInvoice(invoice.id);
+      setReminded(
+        strings.billingReminderDrafted(
+          draft.invoice,
+          formatAmount(draft.outstandingCents, locale, invoice.currency),
+          draft.daysOverdue,
+        ),
+      );
+    } catch (err) {
+      setError(billingMessage(err, strings.billingReminderFailed));
+    } finally {
+      setReminding(null);
+    }
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.toolbar}>
@@ -131,8 +165,15 @@ export function InvoicesView() {
       </div>
 
       {error !== null && <ErrorBanner message={error} />}
+      {reminded !== null && (
+        <p className={styles.notice} role="status">
+          {reminded}
+        </p>
+      )}
 
-      {invoices.length === 0 && !loading && filter === "all" ? (
+      {invoices.length === 0 && !loading && filter === "overdue" ? (
+        <p className={styles.noMatches}>{strings.billingNothingOverdue}</p>
+      ) : invoices.length === 0 && !loading && filter === "all" ? (
         <EmptyState
           Icon={FileText}
           title={strings.billingNoInvoicesTitle}
@@ -157,6 +198,9 @@ export function InvoicesView() {
                 </th>
                 <th scope="col" className={styles.numeric}>
                   {strings.billingColOutstanding}
+                </th>
+                <th scope="col">
+                  <span className={styles.srOnly}>{strings.billingColActions}</span>
                 </th>
               </tr>
             </thead>
@@ -185,6 +229,23 @@ export function InvoicesView() {
                       left after the payments recorded against this document. */}
                   <td className={styles.numeric}>
                     {formatAmount(invoice.settlement.outstandingCents, locale, invoice.currency)}
+                  </td>
+                  {/* Only a late document is chased. A draft owes nothing yet,
+                      a settled one owes nothing any more, and the server
+                      refuses both — so the button is not offered for them
+                      rather than shown and then refused. */}
+                  <td className={styles.rowActions}>
+                    {invoice.overdue && (
+                      <button
+                        type="button"
+                        className={styles.linkAction}
+                        disabled={reminding !== null}
+                        title={strings.billingRemindHint}
+                        onClick={() => void remind(invoice)}
+                      >
+                        {strings.billingRemind}
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}

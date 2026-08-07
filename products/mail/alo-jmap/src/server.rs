@@ -16,10 +16,11 @@ use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
     admin, agent, ai, api, autoconfig, base, billing_bills, billing_customers, billing_fx,
-    billing_invoices, billing_payments, billing_products, billing_quotes, billing_reports,
-    billing_send, billing_settings, blob, calendar, carddav, contacts, delegates, docs, drive,
-    filters, flagdue, imap_import_route, push, reset_route, schedule, security, session, settings,
-    share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    billing_invoices, billing_payments, billing_products, billing_quotes, billing_reminder,
+    billing_reports, billing_send, billing_settings, blob, calendar, carddav, contacts, delegates,
+    docs, drive, filters, flagdue, imap_import_route, push, reset_route, schedule, security,
+    session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
+    workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -330,6 +331,14 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/billing/invoices/{id}/send",
             post(billing_send::send_invoice),
+        )
+        // Chasing one late invoice (B1.26): the same drafts-only rule as
+        // `/send`, for the letter that asks for money instead of presenting the
+        // document. It reads how late and how much is left off the stored
+        // invoice, so the request cannot state either.
+        .route(
+            "/billing/invoices/{id}/reminder",
+            post(billing_reminder::remind_invoice),
         )
         // Payments (B1.19) — money received, under the document it settles:
         // a payment does not exist on its own, and addressing it through its

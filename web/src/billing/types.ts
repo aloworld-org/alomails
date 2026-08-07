@@ -487,3 +487,24 @@ export interface FxRateDraft {
   date: string;
   rate: string;
 }
+
+/**
+ * The reminder the dunning click wrote into Drafts (B1.26).
+ *
+ * Every figure in it is the server's, read off the stored invoice: how late the
+ * document is, and what is still owed after the payments recorded against it.
+ * The browser neither counts days nor sums money — it repeats what came back.
+ */
+export interface ReminderDraft {
+  /** The message id of the draft, in the sender's own Drafts folder. */
+  id: string;
+  /** The number of the invoice the letter is about. */
+  invoice: string;
+  /** The customer address it is addressed to. */
+  to: string;
+  subject: string;
+  /** Whole days past the due date; `0` when it is not late yet. */
+  daysOverdue: number;
+  /** What is still owed, in integer cents of the document's currency. */
+  outstandingCents: number;
+}

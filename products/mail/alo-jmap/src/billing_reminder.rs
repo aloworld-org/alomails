@@ -1,5 +1,5 @@
-//! The payment reminder (alo Billing, ADR 0035, wave B1.25 — and the template
-//! the manual dunning view of B1.26 will send through).
+//! The payment reminder (alo Billing, ADR 0035, waves B1.25 and B1.26) — the
+//! letter, and the route the overdue view chases one invoice from.
 //!
 //! Chasing money is the part of billing a small business does badly, and the
 //! reason is never that the figures are hard: it is that writing the note is
@@ -17,23 +17,35 @@
 //! **money someone owes us now**: a draft was never issued, a void invoice was
 //! cancelled, a settled one is settled, and a credit note is money owed to the
 //! *customer* — chasing any of them would be worse than writing nothing.
+//!
+//! Two doors reach the same letter. `POST /billing/invoices/{id}/reminder` is
+//! the one a person clicks in the overdue view (B1.26); the agent's
+//! `draft_payment_reminder` tool (B1.25, [`crate::agent_billing`]) resolves an
+//! invoice *number* and then walks through here too. Neither may say who the
+//! letter goes to, what it is worth, or how late it is — all three are read off
+//! the stored document, so a reminder and the invoice it chases cannot disagree.
 
+use serde::Deserialize;
+use serde_json::{Value, json};
 use time::Date;
 
 use alo_store::BillingInvoiceId;
 use alo_store::billing_invoices::InvoiceStatus;
 use alo_store::billing_payments::Settlement;
-use axum::http::StatusCode;
+use axum::Json;
+use axum::extract::{Path, Query, State};
+use axum::http::{HeaderMap, StatusCode};
 
+use crate::billing_document::today;
 use crate::billing_invoices::printable;
 use crate::billing_print::{
-    DocumentKind, PrintDocument, Strings, amount, date, document_heading, strings_for,
+    DocumentKind, PrintDocument, PrintQuery, Strings, amount, date, document_heading, strings_for,
 };
 use crate::billing_send::mail_strings_for;
 use crate::drafts;
 use crate::error::Problem;
 use crate::mime::{Addr, Outgoing};
-use crate::state::{Account, AppState};
+use crate::state::{Account, AppState, authenticate};
 
 /// The longest extra sentence a caller may add to the letter.
 ///
@@ -41,6 +53,69 @@ use crate::state::{Account, AppState};
 /// email, and an unbounded string reaching a mail body from a model's proposal
 /// is not a thing to leave unbounded.
 pub const NOTE_MAX_CHARS: usize = 500;
+
+/// What a caller may say about a reminder, which is one sentence and nothing
+/// else.
+///
+/// Everything that matters about the letter — who it goes to, what it is worth,
+/// how late it is, what has already been paid — is read off the stored document
+/// rather than accepted from the request, so a body cannot chase the wrong
+/// person for the wrong money. The whole body is optional: the ordinary click
+/// sends none at all.
+#[derive(Debug, Default, Deserialize)]
+pub struct ReminderRequest {
+    /// An extra paragraph, dropped in above the sign-off. Trimmed, and bounded
+    /// by [`NOTE_MAX_CHARS`].
+    #[serde(default)]
+    pub note: Option<String>,
+}
+
+/// `POST /billing/invoices/{id}/reminder[?lang=]` →
+/// `{"draft":{"id","invoice","to","subject","daysOverdue","outstandingCents"}}`.
+///
+/// The dunning click of the overdue view: write the reminder for this invoice
+/// into the caller's own Drafts and answer what it says. **Nothing is sent**,
+/// and the invoice is not touched — clicking twice writes two drafts and
+/// changes no billing record, which is what a user who closed the compose
+/// window without sending expects.
+///
+/// The optional JSON body carries a `note`; a request with no body at all is
+/// the ordinary case and is not an error.
+///
+/// # Errors
+/// `401` unauthenticated; `404` for an id that is not this tenant's; `409` for
+/// a document that owes nothing (a draft, a void one, a settled one, a credit
+/// note); `422` when the customer has no usable address or the note is too
+/// long.
+pub async fn remind_invoice(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<PrintQuery>,
+    body: Option<Json<ReminderRequest>>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let note = body.and_then(|Json(request)| request.note);
+    let reminder = draft_reminder(
+        &account,
+        &state,
+        &BillingInvoiceId::new(id),
+        query.lang.as_deref().unwrap_or_default(),
+        note.as_deref(),
+        today(),
+    )
+    .await?;
+    Ok(Json(json!({
+        "draft": {
+            "id": reminder.message_id,
+            "invoice": reminder.number,
+            "to": reminder.to,
+            "subject": reminder.subject,
+            "daysOverdue": reminder.days_overdue,
+            "outstandingCents": reminder.outstanding_cents,
+        }
+    })))
+}
 
 /// The words of a reminder.
 ///
@@ -430,6 +505,24 @@ mod tests {
             restated: None,
             issuer,
         }
+    }
+
+    #[test]
+    fn a_request_may_add_a_sentence_and_nothing_else() {
+        let empty: ReminderRequest = serde_json::from_str("{}").expect("an empty body is the norm");
+        assert_eq!(empty.note, None);
+        let stated: ReminderRequest =
+            serde_json::from_str(r#"{"note":"As agreed on the phone."}"#).expect("a note");
+        assert_eq!(stated.note.as_deref(), Some("As agreed on the phone."));
+        // Nothing about the money is a caller's to state. A body that tried to
+        // name the recipient, the sum owed or the lateness is accepted as the
+        // empty request it is — those three are read off the stored document,
+        // so there is no field here for a request to reach them through.
+        let hostile: ReminderRequest = serde_json::from_str(
+            r#"{"to":"thief@evil.test","outstandingCents":1,"daysOverdue":99}"#,
+        )
+        .expect("unknown fields are not the request");
+        assert_eq!(hostile.note, None);
     }
 
     #[test]
