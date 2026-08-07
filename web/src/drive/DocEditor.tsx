@@ -36,6 +36,22 @@ type DocViewMode = "canvas" | "page";
 /** Cap on the current-document context sent to the AI (characters). */
 const CONTEXT_CAP = 12000;
 
+function documentText(value: unknown): string {
+  if (Array.isArray(value)) return value.map(documentText).join(" ");
+  if (typeof value !== "object" || value === null) return "";
+  const record = value as Record<string, unknown>;
+  if (record.type === "text" && typeof record.text === "string") return record.text;
+  return `${documentText(record.content)} ${documentText(record.children)}`.trim();
+}
+
+function documentCounts(blocks: unknown[]): { words: number; characters: number } {
+  const text = documentText(blocks).replace(/\s+/g, " ").trim();
+  return {
+    words: text === "" ? 0 : text.split(" ").length,
+    characters: text.replace(/\s/g, "").length,
+  };
+}
+
 export function DocEditor({
   nodeId,
   name,
@@ -55,6 +71,7 @@ export function DocEditor({
   const [zoom, setZoom] = useState(100);
   const [activeStyles, setActiveStyles] = useState<Record<string, boolean | string>>({});
   const [activeBlockType, setActiveBlockType] = useState("paragraph");
+  const [counts, setCounts] = useState({ words: 0, characters: 0 });
   const pending = useRef<unknown[] | null>(null);
   const timer = useRef<number | null>(null);
   const loaded = useRef(false);
@@ -80,6 +97,7 @@ export function DocEditor({
             blocks as Parameters<typeof editor.replaceBlocks>[1],
           );
         }
+        setCounts(documentCounts(blocks));
         setReady(true);
       })
       .catch(() => live && setReady(true));
@@ -154,6 +172,7 @@ export function DocEditor({
 
   const onChange = useCallback(() => {
     const blocks = editor.document;
+    setCounts(documentCounts(blocks as unknown[]));
     pending.current = blocks;
     setSaveState("saving");
     if (timer.current !== null) window.clearTimeout(timer.current);
@@ -289,6 +308,7 @@ export function DocEditor({
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("table")} aria-label={strings.sheetInsertTable}><Table2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("divider")} aria-label={strings.docInsertDivider}><List size={17} /></button>
         <div className={styles.commandSpacer} />
+        <span className={styles.wordCount} title={`${counts.characters} ${strings.docCharacters}`}>{counts.words} {strings.docWords}</span>
         <div className={styles.zoomControl} aria-label={strings.docZoom}>
           <button type="button" onClick={() => setZoom((value) => Math.max(50, value - 10))} aria-label={strings.docZoomOut}><Minus size={15} /></button>
           <button type="button" onClick={() => setZoom(100)}>{zoom}%</button>

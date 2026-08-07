@@ -291,6 +291,13 @@
 .colorSelect:hover,
 .colorSelect:focus { border-color: var(--accent); outline: none; }
 .commandSpacer { flex: 1; }
+.wordCount {
+  flex: 0 0 auto;
+  padding: 0 6px;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
 .commandIcon,
 .commandIconActive {
   display: inline-flex;

@@ -1065,6 +1065,8 @@ export const en = {
   docColorPurple: "Purple",
   docIndent: "Increase indent",
   docOutdent: "Decrease indent",
+  docWords: "words",
+  docCharacters: "characters",
   docAiPlaceholder: "Tell the AI what to write or change…",
   docAiPropose: "Draft",
   docAiProposalLabel: "Proposed — review before adding",

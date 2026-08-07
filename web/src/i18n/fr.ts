@@ -1001,6 +1001,8 @@ export const fr: Partial<Catalog> = {
   docColorPurple: "Violet",
   docIndent: "Augmenter le retrait",
   docOutdent: "Diminuer le retrait",
+  docWords: "mots",
+  docCharacters: "caractères",
   docAiPlaceholder: "Dites à l’IA quoi écrire ou modifier…",
   docAiPropose: "Rédiger",
   docAiProposalLabel: "Proposition — à vérifier avant d’ajouter",

@@ -988,6 +988,8 @@ export const nl: Partial<Catalog> = {
   docColorPurple: "Paars",
   docIndent: "Inspringing vergroten",
   docOutdent: "Inspringing verkleinen",
+  docWords: "woorden",
+  docCharacters: "tekens",
   docAiPlaceholder: "Vertel de AI wat te schrijven of wijzigen…",
   docAiPropose: "Opstellen",
   docAiProposalLabel: "Voorstel — controleer voor je het toevoegt",
