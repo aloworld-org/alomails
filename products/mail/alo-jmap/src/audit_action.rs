@@ -39,10 +39,14 @@ pub struct AuditEvent {
     pub action: String,
 }
 
-/// The two module prefixes whose mutations are audited. Everything else on this
+/// The module prefixes whose mutations are audited. Everything else on this
 /// service (mail, calendar, drive) has its own record of change and is out of
 /// scope for the business audit trail.
-const AUDITED_MODULES: [&str; 2] = ["billing", "crm"];
+///
+/// `projects` joined at B3.04 (`docs/design/projects.md` § Audit): "who
+/// approved my week, and when" is a question an employee is entitled to have
+/// answered, and a timer somebody else stopped is the same kind of question.
+const AUDITED_MODULES: [&str; 3] = ["billing", "crm", "projects"];
 
 /// `POST` routes that mutate nothing — a dry run whose whole point is to answer
 /// "what *would* this do". Auditing them would file a paper trail for looking.

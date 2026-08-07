@@ -1,11 +1,12 @@
 //! Coverage of the business audit trail over the router's own source (B2.13).
 //!
 //! The item's promise is "every mutating billing/CRM route writes exactly one
-//! entry". `audit_http.rs` proves the *writing* on a live service, one route at
-//! a time; what cannot be proved that way is **every**. axum's router does not
-//! hand back the routes it holds, so this suite reads the source that registers
-//! them — `server.rs` — and asserts that each mutating `/billing` or `/crm`
-//! route resolves to an audit action.
+//! entry" — and, since B3.04, every mutating `/projects` route too.
+//! `audit_http.rs` proves the *writing* on a live service, one route at a time;
+//! what cannot be proved that way is **every**. axum's router does not hand back
+//! the routes it holds, so this suite reads the source that registers them —
+//! `server.rs` — and asserts that each mutating route under an audited module
+//! resolves to an audit action.
 //!
 //! Reading source in a test is unusual enough to say why: the alternative is a
 //! hand-maintained list of routes, which is the very thing that goes stale and
@@ -13,9 +14,9 @@
 //! only place a route is declared, so it is the only honest input.
 //!
 //! The second assertion here is the **vocabulary**: the full list of actions
-//! the log can contain, spelled out. It is meant to fail when a billing or CRM
-//! route is added — that failure is the review, and the fix is to read the new
-//! line and paste it in (or, if it reads wrong, to fix the derivation).
+//! the log can contain, spelled out. It is meant to fail when an audited route
+//! is added — that failure is the review, and the fix is to read the new line
+//! and paste it in (or, if it reads wrong, to fix the derivation).
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
@@ -96,12 +97,22 @@ fn methods_of(call: &str) -> Vec<String> {
     found
 }
 
-/// Every `(method, template)` the router registers under `/billing` or `/crm`.
+/// The route prefixes this suite holds to the audit promise — the modules in
+/// `audit_action::AUDITED_MODULES`, spelled out here rather than imported so
+/// adding a module to that list without deciding what its trail says fails
+/// loudly instead of quietly widening the promise.
+const AUDITED_PREFIXES: [&str; 3] = ["/billing/", "/crm/", "/projects/"];
+
+/// Every `(method, template)` the router registers under an audited module.
 fn business_routes() -> Vec<(String, String)> {
     let mut routes: Vec<(String, String)> = route_calls(SERVER_SOURCE)
         .into_iter()
         .filter_map(|call| template_of(call).map(|template| (template, call)))
-        .filter(|(template, _)| template.starts_with("/billing/") || template.starts_with("/crm/"))
+        .filter(|(template, _)| {
+            AUDITED_PREFIXES
+                .iter()
+                .any(|prefix| template.starts_with(prefix))
+        })
         .flat_map(|(template, call)| {
             methods_of(call)
                 .into_iter()
@@ -118,7 +129,7 @@ fn the_router_source_parses_into_the_routes_it_registers() {
     let routes = business_routes();
     assert!(
         routes.len() > 40,
-        "the parser found only {} billing/CRM routes — it is broken, not the router",
+        "the parser found only {} audited routes — it is broken, not the router",
         routes.len()
     );
     assert!(
@@ -206,6 +217,7 @@ DELETE /crm/activities/{id} -> crm.activity.delete
 DELETE /crm/deals/{id} -> crm.deal.delete
 DELETE /crm/deals/{id}/threads/{threadId} -> crm.deal.thread.delete
 DELETE /crm/stages/{id} -> crm.stage.delete
+DELETE /projects/time/{id} -> projects.time.delete
 PATCH /billing/customers/{id} -> billing.customer.update
 PATCH /billing/invoices/{id} -> billing.invoice.update
 PATCH /billing/products/{id} -> billing.product.update
@@ -215,6 +227,7 @@ PATCH /billing/settings -> billing.setting.update
 PATCH /crm/deals/{id} -> crm.deal.update
 PATCH /crm/pipelines/{id} -> crm.pipeline.update
 PATCH /crm/stages/{id} -> crm.stage.update
+PATCH /projects/time/{id} -> projects.time.update
 POST /billing/bills/import -> billing.bill.import
 POST /billing/bills/sepa.xml -> billing.bill.sepa_xml
 POST /billing/bills/{id}/approve -> billing.bill.approve
@@ -253,5 +266,8 @@ POST /crm/pipelines/{id}/archive -> crm.pipeline.archive
 POST /crm/pipelines/{id}/stages -> crm.pipeline.stage.create
 POST /crm/stages/{id}/archive -> crm.stage.archive
 POST /crm/stages/{id}/move -> crm.stage.move
+POST /projects/time -> projects.time.create
+POST /projects/timer/start -> projects.timer.start
+POST /projects/timer/stop -> projects.timer.stop
 PUT /billing/fx/rates -> billing.fx.rates.update
 "#;

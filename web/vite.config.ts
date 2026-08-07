@@ -46,7 +46,7 @@ const API_PATHS = [
   "/calendar", "/tasks", "/spaces", "/drive", "/search", "/contacts",
   "/import", "/signup", "/reset", "/autodiscover", "/Autodiscover", "/dav",
   "/filters", "/share", "/oauth", "/.well-known", "/auth", "/billing", "/crm",
-  "/audit", "/insights",
+  "/audit", "/insights", "/projects",
   "/sites",
 ];
 // Collabora paths are loaded by the editor itself (and its server), never a

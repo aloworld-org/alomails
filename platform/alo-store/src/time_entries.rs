@@ -41,14 +41,21 @@
 //! Correcting an entry ([`AccountStore::edit_time_entry`]) therefore does not
 //! touch the rate. Repricing an hour is not a correction of what happened.
 //!
-//! # Scope of this slice (B3.03)
+//! # Scope of this slice (B3.03, extended at B3.04)
 //!
 //! Create, read, list, correct, delete, and the proposal verbs. The **week
 //! lock** — that an entry in a submitted or approved week refuses to move — is
 //! B3.05's, and arrives with the table that holds a week's status; the guard
 //! that an entry already carried onto a document cannot be edited or deleted is
 //! here already, because `invoice_id` is representable from this migration on.
+//!
+//! B3.04 added two things and no new rules: [`week_totals`], the minute fold a
+//! week grid puts at the bottom of its column, and [`insert_entry`] — the one
+//! place an hour is written, lifted out of [`AccountStore::log_time`] so that
+//! [`crate::time_timer`]'s stop can write inside the same transaction that
+//! clears the running clock.
 
+use sqlx::PgConnection;
 use time::{Date, OffsetDateTime};
 
 use crate::account::AccountStore;
@@ -230,6 +237,46 @@ impl TimeEntry {
     }
 }
 
+/// What a period of entries adds up to, in minutes — the figure a week grid
+/// puts at the bottom of its column.
+///
+/// Minutes, never money: an hour with no rate is still an hour, and pricing a
+/// timesheet is [`crate::billing_line`]'s job at the handoff. Nothing here is a
+/// float.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct TimeTotals {
+    /// Every real (non-proposed) minute in the period, billable or not.
+    pub minutes: i64,
+    /// The subset of [`Self::minutes`] that is chargeable to a customer.
+    pub billable_minutes: i64,
+    /// Minutes still only suggested by an agent, in **no** other total here —
+    /// counted separately so a screen can say "and 90 more minutes awaiting
+    /// your confirmation" without a suggestion silently joining the week.
+    pub proposed_minutes: i64,
+}
+
+/// Folds a period's entries into its totals.
+///
+/// Pure and total: `i64` saturating addition, so a corrupted row could at worst
+/// pin a displayed total at the ceiling rather than panic a release build or
+/// wrap a week's hours negative. The real bound is the column's own — 1440
+/// minutes an entry.
+#[must_use]
+pub fn week_totals(entries: &[TimeEntry]) -> TimeTotals {
+    let mut totals = TimeTotals::default();
+    for entry in entries {
+        if entry.is_proposed() {
+            totals.proposed_minutes = totals.proposed_minutes.saturating_add(entry.minutes);
+            continue;
+        }
+        totals.minutes = totals.minutes.saturating_add(entry.minutes);
+        if entry.billable {
+            totals.billable_minutes = totals.billable_minutes.saturating_add(entry.minutes);
+        }
+    }
+    totals
+}
+
 /// The engagement facts a write needs from the entry's project: what it would
 /// be priced at, and in what currency.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -282,6 +329,114 @@ pub(crate) fn snapshot_rate(
     Ok((Some(rate), Some(currency)))
 }
 
+/// Validates a piece of work, prices it, and writes the row — **the one place
+/// an hour is inserted**.
+///
+/// A free function over a connection rather than a method, because the two
+/// callers need different transaction scopes: [`AccountStore::log_time`] writes
+/// on its own, and the timer's stop
+/// ([`crate::time_timer::AccountStore::stop_timer`]) writes inside the same
+/// transaction that clears the running row, so the hour and the clearing stand
+/// or fall together. Both get the same validation, the same rate snapshot and
+/// the same columns because they call the same function.
+///
+/// Visibility is **not** checked here: it is a rule about which board a person
+/// may start work on, and the two callers answer it at the moments it applies —
+/// `log_time` before writing, `stop_timer` when the clock was started. An hour
+/// already worked is not un-worked by the board being archived since.
+///
+/// # Errors
+/// [`StoreError::NotFound`] never — the caller has already resolved the
+/// project; [`StoreError::Validation`] when the duration, the note, the source
+/// or the rate breaks its rule; [`StoreError::Db`] on failure.
+pub(crate) async fn insert_entry(
+    conn: &mut PgConnection,
+    tenant: &str,
+    user: &str,
+    new: &NewTimeEntry,
+    project: &ProjectRate,
+) -> Result<TimeEntry> {
+    let minutes = minutes(new.minutes)?;
+    let note = bounded("note", &new.note, NOTE_MAX)?;
+    let source_kind = optional_bounded("source kind", new.source_kind.as_deref(), SOURCE_KIND_MAX)?;
+    let source_id = optional_bounded("source id", new.source_id.as_deref(), SOURCE_ID_MAX)?;
+    // A proposal carries no rate: the price is resolved at acceptance, because
+    // until then nobody has agreed that the work happened.
+    let (rate_cents, currency) = if new.proposed {
+        (None, None)
+    } else {
+        snapshot_rate(new.rate_cents, new.currency.as_deref(), project)?
+    };
+    let state = if new.proposed {
+        STATE_PROPOSED
+    } else {
+        STATE_ACTIVE
+    };
+
+    let id = TimeEntryId::generate();
+    let row = sqlx::query_as::<_, EntryRow>(&format!(
+        "INSERT INTO time_entries (tenant_id, id, user_id, project_id, task_id, work_date, \
+             started_at, minutes, billable, rate_cents, currency, note, state, source_kind, \
+             source_id, created_by) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $3) \
+         RETURNING {ENTRY_COLS}"
+    ))
+    .bind(tenant)
+    .bind(id.as_str())
+    .bind(user)
+    .bind(new.project_id.as_str())
+    .bind(new.task_id.as_ref().map(TaskId::as_str))
+    .bind(new.work_date)
+    .bind(new.started_at)
+    .bind(minutes)
+    .bind(new.billable)
+    .bind(rate_cents)
+    .bind(currency)
+    .bind(note)
+    .bind(state)
+    .bind(source_kind)
+    .bind(source_id)
+    .fetch_one(conn)
+    .await
+    .map_err(StoreError::Db)?;
+    Ok(row.into_entry())
+}
+
+/// The engagement's price facts for a project this tenant owns, **without the
+/// visibility check** — the read a stop makes inside its own transaction.
+///
+/// [`AccountStore::writable_project`] answers "may this person start work
+/// here?", which is a question about a board somebody can open. This answers
+/// "what is an hour here worth?", which is a question about the engagement and
+/// stays answerable after the board is archived — otherwise a clock left
+/// running over an archiving would lose the hour it had already counted.
+///
+/// # Errors
+/// [`StoreError::NotFound`] when the project is not this tenant's;
+/// [`StoreError::Db`] on failure.
+pub(crate) async fn project_rate(
+    conn: &mut PgConnection,
+    tenant: &str,
+    project: &ProjectId,
+) -> Result<ProjectRate> {
+    let row = sqlx::query_as::<_, (Option<i64>, Option<String>)>(
+        "SELECT c.rate_cents, c.currency FROM task_projects p \
+         LEFT JOIN project_clients c \
+           ON c.tenant_id = p.tenant_id AND c.project_id = p.id \
+         WHERE p.tenant_id = $1 AND p.id = $2",
+    )
+    .bind(tenant)
+    .bind(project.as_str())
+    .fetch_optional(conn)
+    .await
+    .map_err(StoreError::Db)?;
+    let (rate_cents, currency) = row.ok_or(StoreError::NotFound)?;
+    Ok(ProjectRate {
+        rate_cents,
+        currency,
+    })
+}
+
 impl AccountStore {
     /// Records a piece of work the caller did.
     ///
@@ -300,51 +455,15 @@ impl AccountStore {
         let project = self.writable_project(&new.project_id).await?;
         self.require_task_on_project(new.task_id.as_ref(), &new.project_id)
             .await?;
-        let minutes = minutes(new.minutes)?;
-        let note = bounded("note", &new.note, NOTE_MAX)?;
-        let source_kind =
-            optional_bounded("source kind", new.source_kind.as_deref(), SOURCE_KIND_MAX)?;
-        let source_id = optional_bounded("source id", new.source_id.as_deref(), SOURCE_ID_MAX)?;
-        // A proposal carries no rate: the price is resolved at acceptance,
-        // because until then nobody has agreed that the work happened.
-        let (rate_cents, currency) = if new.proposed {
-            (None, None)
-        } else {
-            snapshot_rate(new.rate_cents, new.currency.as_deref(), &project)?
-        };
-        let state = if new.proposed {
-            STATE_PROPOSED
-        } else {
-            STATE_ACTIVE
-        };
-
-        let id = TimeEntryId::generate();
-        let row = sqlx::query_as::<_, EntryRow>(&format!(
-            "INSERT INTO time_entries (tenant_id, id, user_id, project_id, task_id, work_date, \
-                 started_at, minutes, billable, rate_cents, currency, note, state, source_kind, \
-                 source_id, created_by) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $3) \
-             RETURNING {ENTRY_COLS}"
-        ))
-        .bind(self.tenant.as_str())
-        .bind(id.as_str())
-        .bind(self.user.as_str())
-        .bind(new.project_id.as_str())
-        .bind(new.task_id.as_ref().map(TaskId::as_str))
-        .bind(new.work_date)
-        .bind(new.started_at)
-        .bind(minutes)
-        .bind(new.billable)
-        .bind(rate_cents)
-        .bind(currency)
-        .bind(note)
-        .bind(state)
-        .bind(source_kind)
-        .bind(source_id)
-        .fetch_one(&self.pool)
+        let mut conn = self.pool.acquire().await.map_err(StoreError::Db)?;
+        insert_entry(
+            &mut conn,
+            self.tenant.as_str(),
+            self.user.as_str(),
+            new,
+            &project,
+        )
         .await
-        .map_err(StoreError::Db)?;
-        Ok(row.into_entry())
     }
 
     /// One of the caller's **own** entries, or `None`.
@@ -571,7 +690,7 @@ impl AccountStore {
     /// archived — because an hour is logged against a board somebody can open.
     /// A board they cannot see reads as absent, never as a refusal that would
     /// confirm it exists.
-    async fn writable_project(&self, project: &ProjectId) -> Result<ProjectRate> {
+    pub(crate) async fn writable_project(&self, project: &ProjectId) -> Result<ProjectRate> {
         let row = sqlx::query_as::<_, (Option<i64>, Option<String>)>(
             "SELECT c.rate_cents, c.currency FROM task_projects p \
              LEFT JOIN project_clients c \
@@ -594,7 +713,7 @@ impl AccountStore {
 
     /// Confirms a named task is one the caller can see and lives on the
     /// entry's project. `None` is always fine — a task is optional detail.
-    async fn require_task_on_project(
+    pub(crate) async fn require_task_on_project(
         &self,
         task: Option<&TaskId>,
         project: &ProjectId,
@@ -880,5 +999,62 @@ mod tests {
             require_unbilled(&billed),
             Err(StoreError::Conflict(_))
         ));
+    }
+
+    /// One entry of `minutes`, in the state the argument names.
+    fn entry(minutes: i64, billable: bool, proposed: bool) -> TimeEntry {
+        TimeEntry {
+            id: TimeEntryId::new("e"),
+            user_id: UserId::new("u"),
+            project_id: ProjectId::new("p"),
+            task_id: None,
+            work_date: Date::from_calendar_date(2026, time::Month::August, 3).unwrap_or(Date::MIN),
+            started_at: None,
+            minutes,
+            billable,
+            rate_cents: None,
+            currency: None,
+            note: String::new(),
+            state: if proposed {
+                STATE_PROPOSED
+            } else {
+                STATE_ACTIVE
+            }
+            .to_owned(),
+            source_kind: None,
+            source_id: None,
+            invoice_id: None,
+            billed_at: None,
+            created_at: OffsetDateTime::UNIX_EPOCH,
+            updated_at: OffsetDateTime::UNIX_EPOCH,
+        }
+    }
+
+    #[test]
+    fn a_period_with_no_hours_totals_nothing() {
+        assert_eq!(week_totals(&[]), TimeTotals::default());
+    }
+
+    #[test]
+    fn a_suggestion_is_counted_apart_and_never_inside_the_week() {
+        let totals = week_totals(&[
+            entry(60, true, false),
+            entry(30, false, false),
+            entry(90, true, true),
+        ]);
+        assert_eq!(totals.minutes, 90, "the two real entries, billable or not");
+        assert_eq!(totals.billable_minutes, 60);
+        assert_eq!(
+            totals.proposed_minutes, 90,
+            "a suggestion is visible as a suggestion and in no other total"
+        );
+    }
+
+    #[test]
+    fn a_weeks_total_never_wraps() {
+        let huge = [entry(i64::MAX, true, false), entry(1_440, true, false)];
+        let totals = week_totals(&huge);
+        assert_eq!(totals.minutes, i64::MAX, "saturating, never wrapped");
+        assert_eq!(totals.billable_minutes, i64::MAX);
     }
 }

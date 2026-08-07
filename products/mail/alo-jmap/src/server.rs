@@ -21,7 +21,7 @@ use crate::{
     billing_settings, blob, calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff,
     crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
     docs, drive, filters, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, push, reset_route, schedule, security, session, settings, share,
+    insights_gallery, projects_time, push, reset_route, schedule, security, session, settings, share,
     signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
@@ -640,6 +640,38 @@ pub fn app(state: AppState) -> Router {
         // ordinary tile route, so a model can only ever offer a chart and a
         // person is what puts one on a board (ADR 0034).
         .route("/insights/ask", post(insights_ask::ask))
+        // alo Projects (ADR 0035, wave B3.04) — a person's own hours: the
+        // running clock, the manual entry, and the week they read back.
+        // `/projects` is a NEW top-level prefix: the production Caddyfile needs
+        // it added at the next deploy, the standing human action `/billing`,
+        // `/crm`, `/audit` and `/insights` already carry
+        // (docs/design/projects.md § Routes).
+        //
+        // Nothing on this surface names a user. A person's hours are personal
+        // data, the account door binds `user_id` on every statement, and the
+        // cross-user reads — the approvals inbox, another person's week — are
+        // the admin door's and arrive at B3.05.
+        //
+        // `timer` and `time` are distinct literal segments, registered before
+        // `/projects/time/{id}` so a record id can never shadow one.
+        .route("/projects/timer", get(projects_time::get_timer))
+        .route("/projects/timer/start", post(projects_time::start_timer))
+        // Stopping is what writes the hour, so it is a POST of its own rather
+        // than a DELETE of the timer: a delete promises the thing is gone, and
+        // this one leaves an entry behind. Starting while one runs is a 409
+        // carrying the running timer, never an implicit stop — the UI's one
+        // button makes two calls, and both are audited.
+        .route("/projects/timer/stop", post(projects_time::stop_timer))
+        .route(
+            "/projects/time",
+            get(projects_time::list_time).post(projects_time::create_time),
+        )
+        .route(
+            "/projects/time/{id}",
+            get(projects_time::get_time)
+                .patch(projects_time::update_time)
+                .delete(projects_time::delete_time),
+        )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))
