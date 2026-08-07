@@ -253,7 +253,11 @@ fn map_contact_fk(error: sqlx::Error) -> StoreError {
 impl AccountStore {
     /// Confirms a linked contact is **this tenant's**, so a guessed id from
     /// another tenant is a `NotFound` rather than a cross-tenant link.
-    async fn require_tenant_contact(&self, contact_id: Option<&String>) -> Result<()> {
+    ///
+    /// Shared with [`crate::crm_deals`], which carries the same optional
+    /// address-book pointer under the same asymmetry (contacts are per user, a
+    /// deal is tenant-wide), so both doors hold it to one rule.
+    pub(crate) async fn require_tenant_contact(&self, contact_id: Option<&String>) -> Result<()> {
         let Some(contact_id) = contact_id else {
             return Ok(());
         };

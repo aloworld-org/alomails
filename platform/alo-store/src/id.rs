@@ -253,6 +253,16 @@ opaque_id!(
     /// make a column mean "closed" (alo CRM, ADR 0035, wave B2).
     CrmStageId
 );
+opaque_id!(
+    /// A CRM deal — one opportunity moving across a board (alo CRM, ADR 0035,
+    /// wave B2).
+    CrmDealId
+);
+opaque_id!(
+    /// One row of a deal's append-only stage history: the record that it moved,
+    /// from where, to where, by whom and when.
+    CrmEventId
+);
 
 #[cfg(test)]
 mod tests {

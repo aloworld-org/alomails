@@ -23,6 +23,7 @@ use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::billing_field::{bounded, required};
+use crate::crm_deals::open_deals_in_pipeline;
 use crate::crm_stages::{STAGES_PER_PIPELINE_MAX, insert_stage};
 use crate::error::{Result, StoreError};
 use crate::id::CrmPipelineId;
@@ -335,19 +336,34 @@ impl AccountStore {
     /// exactly where they are in the data, so every closed deal keeps pointing
     /// at the column it closed in.
     ///
-    /// The guard that refuses to archive a board still holding **open deals**
-    /// arrives with the deals table (B2.03): there is nothing to count yet,
-    /// and a guard written against a table that does not exist is a guess.
+    /// Archiving is refused while the board still holds **open deals** (as
+    /// built, B2.03): a board that disappears from the tabs with live work on
+    /// it takes the work with it. Closed deals do not block — a board full of
+    /// won and lost deals is exactly the board a tenant retires.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] when the board isn't the tenant's;
-    /// [`StoreError::Conflict`] when restoring would collide with an active
-    /// board of the same name; [`StoreError::Db`] on failure.
+    /// [`StoreError::Conflict`] when it still holds open deals, or when
+    /// restoring would collide with an active board of the same name;
+    /// [`StoreError::Db`] on failure.
     pub async fn set_crm_pipeline_archived(
         &self,
         id: &CrmPipelineId,
         archived: bool,
     ) -> Result<()> {
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        // The exclusive board lock every shape change takes, which a
+        // concurrent card move holds shared — so no deal can arrive on the
+        // board between the count and the archive.
+        self.lock_crm_pipeline(&mut tx, id).await?;
+        if archived {
+            let open = open_deals_in_pipeline(&mut tx, self.tenant.as_str(), id.as_str()).await?;
+            if open > 0 {
+                return Err(StoreError::Conflict(format!(
+                    "this pipeline still holds {open} open deal(s); move or close them first"
+                )));
+            }
+        }
         let done = sqlx::query(
             "UPDATE crm_pipelines \
              SET archived_at = CASE WHEN $3 THEN COALESCE(archived_at, now()) ELSE NULL END, \
@@ -357,13 +373,13 @@ impl AccountStore {
         .bind(self.tenant.as_str())
         .bind(id.as_str())
         .bind(archived)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(map_name_conflict)?;
         if done.rows_affected() == 0 {
             return Err(StoreError::NotFound);
         }
-        Ok(())
+        tx.commit().await.map_err(StoreError::Db)
     }
 }
 

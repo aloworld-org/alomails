@@ -24,6 +24,7 @@ use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::billing_field::required;
+use crate::crm_deals::{open_deals_in_stage, stage_is_spoken_for};
 use crate::error::{Result, StoreError};
 use crate::id::{CrmPipelineId, CrmStageId};
 
@@ -360,13 +361,30 @@ impl AccountStore {
     /// column no new deal can be dropped into, not a column that never
     /// existed.
     ///
-    /// The guard that refuses to archive a column still holding **open deals**
-    /// arrives with the deals table (B2.03); there is nothing to count yet.
+    /// Archiving is refused while the column still holds **open deals**
+    /// (as built, B2.03): hiding a column that work is standing in would hide
+    /// the work with it. Closed deals do not block — archiving a column says
+    /// "no new work lands here", not "this never happened". The refusal is
+    /// atomic against a concurrent move, which holds the same board row
+    /// [shared](AccountStore::share_crm_pipeline).
     ///
     /// # Errors
     /// [`StoreError::NotFound`] when the column isn't the tenant's;
+    /// [`StoreError::Conflict`] when it still holds open deals;
     /// [`StoreError::Db`] on failure.
     pub async fn set_crm_stage_archived(&self, id: &CrmStageId, archived: bool) -> Result<()> {
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let pipeline = self.stage_pipeline(&mut tx, id).await?;
+        self.lock_crm_pipeline(&mut tx, &CrmPipelineId::new(pipeline))
+            .await?;
+        if archived {
+            let open = open_deals_in_stage(&mut tx, self.tenant.as_str(), id.as_str()).await?;
+            if open > 0 {
+                return Err(StoreError::Conflict(format!(
+                    "this stage still holds {open} open deal(s); move or close them first"
+                )));
+            }
+        }
         let done = sqlx::query(
             "UPDATE crm_stages \
              SET archived_at = CASE WHEN $3 THEN COALESCE(archived_at, now()) ELSE NULL END, \
@@ -376,42 +394,41 @@ impl AccountStore {
         .bind(self.tenant.as_str())
         .bind(id.as_str())
         .bind(archived)
-        .execute(&self.pool)
+        .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
         if done.rows_affected() == 0 {
             return Err(StoreError::NotFound);
         }
-        Ok(())
+        tx.commit().await.map_err(StoreError::Db)
     }
 
     /// Deletes a column outright — the escape hatch for one created by
     /// mistake. A board must keep at least one column, so the last one is
     /// refused; everything else is an archive.
     ///
-    /// Refusing a column that a deal or a history row has ever named arrives
-    /// with those tables (B2.03), where the foreign keys that make the check
-    /// possible are written.
+    /// A column any deal stands in, or any history row has ever named, is
+    /// refused too (as built, B2.03): the past named it, so it is archived
+    /// rather than deleted. Both foreign keys are `RESTRICT`, so the database
+    /// refuses it as well; this check is what turns that refusal into a
+    /// sentence a user can act on.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] when the column isn't the tenant's;
-    /// [`StoreError::Conflict`] when it is its board's last column;
-    /// [`StoreError::Db`] on failure.
+    /// [`StoreError::Conflict`] when it is its board's last column, or a deal
+    /// or a history row names it; [`StoreError::Db`] on failure.
     pub async fn delete_crm_stage(&self, id: &CrmStageId) -> Result<()> {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
-        let pipeline: String = sqlx::query_scalar(
-            "SELECT pipeline_id FROM crm_stages WHERE tenant_id = $1 AND id = $2",
-        )
-        .bind(self.tenant.as_str())
-        .bind(id.as_str())
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(StoreError::Db)?
-        .ok_or(StoreError::NotFound)?;
+        let pipeline = self.stage_pipeline(&mut tx, id).await?;
         // Lock the board so a concurrent delete of the other last-but-one
         // column cannot leave it with none.
         self.lock_crm_pipeline(&mut tx, &CrmPipelineId::new(pipeline.clone()))
             .await?;
+        if stage_is_spoken_for(&mut tx, self.tenant.as_str(), id.as_str()).await? {
+            return Err(StoreError::Conflict(
+                "a deal has stood in this stage; archive it instead of deleting it".to_owned(),
+            ));
+        }
         let count: i64 = sqlx::query_scalar(
             "SELECT count(*) FROM crm_stages WHERE tenant_id = $1 AND pipeline_id = $2",
         )
@@ -437,16 +454,63 @@ impl AccountStore {
         tx.commit().await.map_err(StoreError::Db)
     }
 
-    /// Takes the board's row lock inside `tx`, proving in the same breath that
-    /// it is this tenant's. A foreign or absent id is the same `NotFound`.
-    async fn lock_crm_pipeline(
+    /// The board one column belongs to, read inside `tx`. A foreign or absent
+    /// column id is the same `NotFound`.
+    async fn stage_pipeline(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        id: &CrmStageId,
+    ) -> Result<String> {
+        sqlx::query_scalar::<_, String>(
+            "SELECT pipeline_id FROM crm_stages WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .fetch_optional(&mut **tx)
+        .await
+        .map_err(StoreError::Db)?
+        .ok_or(StoreError::NotFound)
+    }
+
+    /// Takes the board's **exclusive** row lock inside `tx`, proving in the
+    /// same breath that it is this tenant's. A foreign or absent id is the same
+    /// `NotFound`.
+    ///
+    /// The board row is the module's one coordination point: everything that
+    /// changes the *shape* of a board — adding, deleting or archiving a column,
+    /// archiving the board — takes it exclusively, and everything that moves a
+    /// card takes it [shared](AccountStore::share_crm_pipeline). Card moves
+    /// therefore never block each other, and none of them can slip past a
+    /// column being archived.
+    pub(crate) async fn lock_crm_pipeline(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         pipeline: &CrmPipelineId,
     ) -> Result<()> {
-        sqlx::query_scalar::<_, String>(
-            "SELECT id FROM crm_pipelines WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
-        )
+        self.hold_crm_pipeline(tx, pipeline, "FOR UPDATE").await
+    }
+
+    /// Takes the board's **shared** row lock inside `tx` — what creating or
+    /// moving a deal holds while it writes ([`crate::crm_deals`]).
+    pub(crate) async fn share_crm_pipeline(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        pipeline: &CrmPipelineId,
+    ) -> Result<()> {
+        self.hold_crm_pipeline(tx, pipeline, "FOR SHARE").await
+    }
+
+    /// The one statement behind both locks. `mode` is a literal from this
+    /// module and never caller input — no request value reaches this string.
+    async fn hold_crm_pipeline(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        pipeline: &CrmPipelineId,
+        mode: &'static str,
+    ) -> Result<()> {
+        sqlx::query_scalar::<_, String>(&format!(
+            "SELECT id FROM crm_pipelines WHERE tenant_id = $1 AND id = $2 {mode}"
+        ))
         .bind(self.tenant.as_str())
         .bind(pipeline.as_str())
         .fetch_optional(&mut **tx)
