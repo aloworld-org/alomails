@@ -294,6 +294,12 @@ opaque_id!(
     /// (its ChartSpec), never an answer: nothing computed is stored.
     InsightTileId
 );
+opaque_id!(
+    /// One recorded piece of work — a person, a day, a duration (alo Projects,
+    /// ADR 0035, wave B3). The row a timesheet, an approval and eventually an
+    /// invoice line are all folds over.
+    TimeEntryId
+);
 
 #[cfg(test)]
 mod tests {

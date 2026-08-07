@@ -93,6 +93,7 @@ pub mod spaces;
 pub mod store;
 pub mod tasks;
 pub mod thread;
+pub mod time_entries;
 pub mod vat_id;
 pub mod vcard;
 
@@ -156,7 +157,7 @@ pub use id::{
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, GroupId,
     InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId, SiteFormId,
     SiteFormSubmissionId, SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId,
-    ThreadId, UserId,
+    ThreadId, TimeEntryId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -209,4 +210,7 @@ pub use spaces::{Space, SpaceMember, SpaceRole};
 pub use store::{CATEGORY_KEYWORD_PREFIX, SEEN, Store, TenantStore, category_keyword};
 pub use tasks::{
     NewTask, Subtask, Task, TaskActivity, TaskComment, TaskDepRef, TaskEdit, TaskLabel, TaskProject,
+};
+pub use time_entries::{
+    MINUTES_MAX, MINUTES_MIN, NOTE_MAX as TIME_NOTE_MAX, NewTimeEntry, TimeEntry, TimeEntryEdit,
 };
