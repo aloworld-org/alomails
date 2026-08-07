@@ -376,7 +376,15 @@ export function TasksModule() {
 function ProposalsInbox({ proposals, onDone }: { proposals: Task[]; onDone: () => void }) {
   const client = useJmapClient();
   if (proposals.length === 0) {
-    return <div className={styles.empty}>{strings.taskNoProposals}</div>;
+    return (
+      <div className={`${styles.emptyState} ${styles.proposalEmpty}`}>
+        <span className={styles.emptyArt}>
+          <Sparkles size={38} />
+        </span>
+        <h2 className={styles.emptyTitle}>{strings.taskNoProposalsTitle}</h2>
+        <p className={styles.emptyBody}>{strings.taskNoProposals}</p>
+      </div>
+    );
   }
   return (
     <div style={{ padding: "var(--space-4)", maxWidth: 640 }}>

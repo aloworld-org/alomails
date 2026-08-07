@@ -501,6 +501,13 @@
 }
 
 /* ---- proposals inbox ---- */
+.proposalEmpty {
+  min-height: min(560px, calc(100vh - 190px));
+  justify-content: center;
+}
+.proposalEmpty .emptyArt {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+}
 .proposal {
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
