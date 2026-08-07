@@ -1005,6 +1005,7 @@ export const fr: Partial<Catalog> = {
   docCharacters: "caractères",
   docInsertLink: "Insérer un lien",
   docLinkPrompt: "Saisissez l’adresse web du texte sélectionné",
+  docInsertImage: "Insérer une image",
   docAiPlaceholder: "Dites à l’IA quoi écrire ou modifier…",
   docAiPropose: "Rédiger",
   docAiProposalLabel: "Proposition — à vérifier avant d’ajouter",

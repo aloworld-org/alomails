@@ -13,7 +13,7 @@ import {
   type ComponentProps,
   type CSSProperties,
 } from "react";
-import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, Minus, Plus, Printer, Redo2, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, Minus, Plus, Printer, Redo2, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -52,6 +52,15 @@ function documentCounts(blocks: unknown[]): { words: number; characters: number 
   };
 }
 
+function fileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Invalid image"));
+    reader.onerror = () => reject(reader.error ?? new Error("Image read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function DocEditor({
   nodeId,
   name,
@@ -62,7 +71,7 @@ export function DocEditor({
   onClose: () => void;
 }) {
   const client = useJmapClient();
-  const editor = useCreateBlockNote({ schema: docSchema });
+  const editor = useCreateBlockNote({ schema: docSchema, uploadFile: fileAsDataUrl });
   const [ready, setReady] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [viewMode, setViewMode] = useState<DocViewMode>(() =>
@@ -75,6 +84,7 @@ export function DocEditor({
   const pending = useRef<unknown[] | null>(null);
   const timer = useRef<number | null>(null);
   const loaded = useRef(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
 
   // AI propose-then-approve state.
   const [aiOpen, setAiOpen] = useState(false);
@@ -135,6 +145,17 @@ export function DocEditor({
     const url = window.prompt(strings.docLinkPrompt, editor.getSelectedLinkUrl() ?? "https://");
     if (url === null || url.trim() === "") return;
     editor.createLink(url.trim());
+    onChange();
+  };
+
+  const insertImage = async (file: File) => {
+    const url = await fileAsDataUrl(file);
+    const anchor = editor.getTextCursorPosition().block;
+    editor.insertBlocks(
+      [{ type: "image", props: { url, name: file.name } }] as Parameters<typeof editor.insertBlocks>[0],
+      anchor,
+      "after",
+    );
     onChange();
   };
 
@@ -280,7 +301,7 @@ export function DocEditor({
         <div className={styles.docMenus}>
           <details><summary>{strings.docMenuFile}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => window.print()}><Printer size={15} />{strings.docPrint}</button></div></details>
           <details><summary>{strings.docMenuEdit}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => editor.undo()}><Undo2 size={15} />{strings.sheetUndo}</button><button type="button" onClick={() => editor.redo()}><Redo2 size={15} />{strings.sheetRedo}</button></div></details>
-          <details><summary>{strings.docMenuInsert}</summary><div className={styles.docMenuPanel}><button type="button" onClick={createLink}><Link2 size={15} />{strings.docInsertLink}</button><button type="button" onClick={() => insertBlock("table")}><Table2 size={15} />{strings.sheetInsertTable}</button><button type="button" onClick={() => insertBlock("equation")}><Sigma size={15} />{strings.docEquation}</button><button type="button" onClick={() => insertBlock("divider")}><Minus size={15} />{strings.docInsertDivider}</button><button type="button" onClick={() => insertBlock("pageBreak")}><FileText size={15} />{strings.docInsertPageBreak}</button></div></details>
+          <details><summary>{strings.docMenuInsert}</summary><div className={styles.docMenuPanel}><button type="button" onClick={createLink}><Link2 size={15} />{strings.docInsertLink}</button><button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={15} />{strings.docInsertImage}</button><button type="button" onClick={() => insertBlock("table")}><Table2 size={15} />{strings.sheetInsertTable}</button><button type="button" onClick={() => insertBlock("equation")}><Sigma size={15} />{strings.docEquation}</button><button type="button" onClick={() => insertBlock("divider")}><Minus size={15} />{strings.docInsertDivider}</button><button type="button" onClick={() => insertBlock("pageBreak")}><FileText size={15} />{strings.docInsertPageBreak}</button></div></details>
           <details><summary>{strings.docMenuFormat}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => toggleStyle("bold")}><Bold size={15} />{strings.sheetBold}</button><button type="button" onClick={() => toggleStyle("italic")}><Italic size={15} />{strings.sheetItalic}</button><button type="button" onClick={() => toggleStyle("underline")}><Underline size={15} />{strings.sheetUnderline}</button></div></details>
         </div>
         <div className={styles.commandDivider} />
@@ -313,6 +334,7 @@ export function DocEditor({
         <button type="button" className={styles.commandIcon} onClick={() => changeIndent("out")} aria-label={strings.docOutdent}><IndentDecrease size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => changeIndent("in")} aria-label={strings.docIndent}><IndentIncrease size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={createLink} aria-label={strings.docInsertLink}><Link2 size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={() => imageInputRef.current?.click()} aria-label={strings.docInsertImage}><ImagePlus size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("table")} aria-label={strings.sheetInsertTable}><Table2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("equation")} aria-label={strings.docEquation}><Sigma size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("divider")} aria-label={strings.docInsertDivider}><List size={17} /></button>
@@ -324,6 +346,7 @@ export function DocEditor({
           <button type="button" onClick={() => setZoom((value) => Math.min(200, value + 10))} aria-label={strings.docZoomIn}><Plus size={15} /></button>
         </div>
         <button type="button" className={styles.printButton} onClick={() => window.print()}><Printer size={16} /><span>{strings.docPrint}</span></button>
+        <input ref={imageInputRef} className={styles.hiddenFileInput} type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void insertImage(file); event.target.value = ""; }} />
       </div>}
       <div
         className={`${styles.body} ${viewMode === "page" ? styles.pageMode : styles.canvasMode}`}
