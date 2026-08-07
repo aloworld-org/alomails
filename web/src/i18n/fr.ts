@@ -6,6 +6,11 @@
 import type { Catalog } from "./en";
 
 export const fr: Partial<Catalog> = {
+  driveEmpty: "Ce dossier est vide. Téléversez un fichier ou créez un dossier.",
+  driveEmptyTitle: "Rien ici pour l’instant",
+  driveEmptyReadOnly: "Cet espace ne contient encore aucun fichier.",
+  driveEmptyTrashTitle: "La corbeille est vide",
+  driveEmptyTrash: "Les éléments supprimés apparaîtront ici.",
   driveFolderEmpty: "Ce dossier est vide",
   driveSort: "Trier",
   driveSortNameAsc: "Nom (A–Z)",

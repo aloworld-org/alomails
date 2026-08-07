@@ -14,6 +14,7 @@ import {
   Download,
   FileText,
   FileType,
+  FolderOpen,
   FolderPlus,
   Presentation,
   Sheet,
@@ -713,8 +714,26 @@ export function DriveModule() {
             <Spinner size={22} />
           </div>
         ) : nodes.length === 0 ? (
-          <div className={styles.empty}>
-            {trashView ? strings.driveEmptyTrash : strings.driveEmpty}
+          <div className={styles.emptyState}>
+            <span className={styles.emptyArt}>
+              {trashView ? <Trash2 size={38} /> : <FolderOpen size={38} />}
+            </span>
+            <h2 className={styles.emptyTitle}>
+              {trashView ? strings.driveEmptyTrashTitle : strings.driveEmptyTitle}
+            </h2>
+            <p className={styles.emptyBody}>
+              {trashView ? strings.driveEmptyTrash : canWrite ? strings.driveEmpty : strings.driveEmptyReadOnly}
+            </p>
+            {canWrite && !trashView && (
+              <div className={styles.emptyActions}>
+                <button type="button" className={styles.emptyPrimary} onClick={() => fileRef.current?.click()}>
+                  <Upload size={17} /> {strings.driveUpload}
+                </button>
+                <button type="button" className={styles.emptySecondary} onClick={() => void newFolder()}>
+                  <FolderPlus size={17} /> {strings.driveNewFolder}
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <ul className={`${styles.list} ${styles[`view_${viewMode}`] ?? ""} ${compactView ? styles.listCompact : ""}`}>

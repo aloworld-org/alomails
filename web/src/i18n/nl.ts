@@ -6,6 +6,11 @@
 import type { Catalog } from "./en";
 
 export const nl: Partial<Catalog> = {
+  driveEmpty: "Deze map is leeg. Upload een bestand of maak een map.",
+  driveEmptyTitle: "Hier staat nog niets",
+  driveEmptyReadOnly: "Deze ruimte bevat nog geen bestanden.",
+  driveEmptyTrashTitle: "De prullenbak is leeg",
+  driveEmptyTrash: "Verwijderde items verschijnen hier.",
   driveFolderEmpty: "Deze map is leeg",
   driveSort: "Sorteren",
   driveSortNameAsc: "Naam (A–Z)",
