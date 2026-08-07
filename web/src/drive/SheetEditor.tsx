@@ -686,48 +686,52 @@ export function SheetEditor({
         <button type="button" className={styles.back} onClick={close} aria-label={strings.close} title={strings.close}>
           <ChevronLeft size={18} />
         </button>
-        <input
-          ref={nameRef}
-          className={styles.nameInput}
-          value={sheetName}
-          aria-label={strings.sheetName}
-          onChange={(e) => setSheetName(e.target.value)}
-          onBlur={commitName}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") e.currentTarget.blur();
-            else if (e.key === "Escape") {
-              setSheetName(name);
-              e.currentTarget.blur();
-            }
-          }}
-        />
-        <span className={styles.saved} aria-live="polite">
-          {saveState === "saving" ? (
-            <>
-              <Spinner size={12} /> {strings.docSaving}
-            </>
-          ) : (
-            <>
-              <Check size={14} className={styles.savedIcon} /> {strings.sheetSaved}
-            </>
-          )}
-        </span>
+        <div className={styles.documentIdentity}>
+          <input
+            ref={nameRef}
+            className={styles.nameInput}
+            style={{ inlineSize: `${Math.min(Math.max(sheetName.length + 1, 8), 40)}ch` }}
+            value={sheetName}
+            aria-label={strings.sheetName}
+            onChange={(e) => setSheetName(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+              else if (e.key === "Escape") {
+                setSheetName(name);
+                e.currentTarget.blur();
+              }
+            }}
+          />
+          <span className={styles.saved} aria-live="polite">
+            {saveState === "saving" ? (
+              <>
+                <Spinner size={12} /> {strings.docSaving}
+              </>
+            ) : (
+              <>
+                <Check size={14} className={styles.savedIcon} /> {strings.sheetSaved}
+              </>
+            )}
+          </span>
+        </div>
         <div className={styles.grow} />
-        <button
-          type="button"
-          className={styles.export}
-          onClick={downloadXlsx}
-          disabled={!ready}
-          title={strings.sheetDownloadXlsx}
-        >
-          <Download size={16} />
-          <span>{strings.sheetExport}</span>
-        </button>
-        <Menu
-          label={strings.sheetMore}
-          icon={<MoreHorizontal size={18} />}
-          align="end"
-          items={[
+        <div className={styles.headActions}>
+          <button
+            type="button"
+            className={styles.export}
+            onClick={downloadXlsx}
+            disabled={!ready}
+            title={strings.sheetDownloadXlsx}
+          >
+            <Download size={16} />
+            <span>{strings.sheetExport}</span>
+          </button>
+          <Menu
+            label={strings.sheetMore}
+            icon={<MoreHorizontal size={18} />}
+            align="end"
+            items={[
             {
               key: "rename",
               label: strings.driveRename,
@@ -750,8 +754,9 @@ export function SheetEditor({
               onClick: close,
               divider: true,
             },
-          ]}
-        />
+            ]}
+          />
+        </div>
       </header>
       <SheetRibbon actions={actions} disabled={!ready} formulaCategories={FORMULA_CATEGORIES} activeBorder={activeBorder} selectionFormatting={selectionFormatting} />
       <div className={styles.body}>

@@ -9,11 +9,17 @@
 .head {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  min-height: 76px;
+  gap: var(--space-2);
+  min-height: 68px;
   padding: 0 24px;
   border-bottom: 1px solid var(--border-subtle);
   flex-shrink: 0;
+}
+.documentIdentity {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--space-3);
 }
 .back {
   display: inline-flex;
@@ -29,12 +35,12 @@
 .nameInput {
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
-  font-size: 20px;
+  font-size: 18px;
   border: 1px solid transparent;
   border-radius: 6px;
   padding: 6px 8px;
   background: transparent;
-  max-width: 40ch;
+  max-width: min(40ch, 42vw);
   min-width: 8ch;
   font-family: inherit;
 }
@@ -53,6 +59,7 @@
   gap: 5px;
   font-size: var(--text-sm);
   color: var(--text-tertiary);
+  white-space: nowrap;
 }
 .savedIcon {
   color: var(--success, #16a34a);
@@ -60,6 +67,11 @@
 /* Pushes the right-hand controls to the far edge. */
 .grow {
   flex: 1;
+}
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 /* Export button — a clean bordered action. */
 .export {
@@ -74,7 +86,6 @@
   color: var(--text-primary);
   border: 1px solid var(--border-default);
   background: var(--bg-surface);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-primary) 5%, transparent);
 }
 .export:hover {
   background: var(--bg-raised);
@@ -123,6 +134,9 @@
     padding-right: 4px;
     padding-left: 4px;
     font-size: var(--text-base);
+  }
+  .documentIdentity {
+    gap: var(--space-1);
   }
   .saved {
     max-width: 72px;
