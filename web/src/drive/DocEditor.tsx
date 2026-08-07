@@ -225,7 +225,7 @@ export function DocEditor({
           </button>
         </div>
       </header>
-      <div className={styles.docCommands} aria-label={strings.docFormattingToolbar}>
+      {viewMode === "page" && <div className={styles.docCommands} aria-label={strings.docFormattingToolbar}>
         <div className={styles.docMenus}>
           <details><summary>{strings.docMenuFile}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => window.print()}><Printer size={15} />{strings.docPrint}</button></div></details>
           <details><summary>{strings.docMenuEdit}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => editor.undo()}><Undo2 size={15} />{strings.sheetUndo}</button><button type="button" onClick={() => editor.redo()}><Redo2 size={15} />{strings.sheetRedo}</button></div></details>
@@ -253,10 +253,10 @@ export function DocEditor({
           <button type="button" onClick={() => setZoom((value) => Math.min(200, value + 10))} aria-label={strings.docZoomIn}><Plus size={15} /></button>
         </div>
         <button type="button" className={styles.printButton} onClick={() => window.print()}><Printer size={16} /><span>{strings.docPrint}</span></button>
-      </div>
+      </div>}
       <div
         className={`${styles.body} ${viewMode === "page" ? styles.pageMode : styles.canvasMode}`}
-        style={{ "--doc-zoom": zoom / 100 } as CSSProperties}
+        style={{ "--doc-zoom": viewMode === "page" ? zoom / 100 : 1 } as CSSProperties}
       >
         {!ready ? (
           <div className={styles.center}>
