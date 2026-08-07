@@ -19,13 +19,16 @@ import type {
   BillingCustomer,
   BillingInvoice,
   BillingInvoiceSummary,
+  BillingPayment,
   BillingProduct,
   BillingQuote,
   BillingQuoteSummary,
   BillingSettings,
   CustomerDraft,
+  DocumentSettlement,
   InvoiceDraft,
   InvoiceStatus,
+  PaymentDraft,
   ProductDraft,
   QuoteDraft,
   QuoteStatus,
@@ -140,9 +143,10 @@ export class BillingApi {
     ).then((r) => r.product);
   }
 
-  /** The tenant's invoices, newest first, each with its totals and computed
-   *  `overdue` flag but without its lines. `status` narrows the list on the
-   *  server — an unknown value is a `422` there, never a silently wider list. */
+  /** The tenant's invoices, newest first, each with its totals, settlement and
+   *  computed `overdue` flag but without its lines. `status` narrows the list on
+   *  the server — an unknown value is a `422` there, never a silently wider
+   *  list. */
   invoices(status?: InvoiceStatus): Promise<BillingInvoiceSummary[]> {
     const query = status === undefined ? "" : `?status=${encodeURIComponent(status)}`;
     return this.#read<{ invoices?: BillingInvoiceSummary[] }>(`/billing/invoices${query}`).then(
@@ -150,12 +154,33 @@ export class BillingApi {
     );
   }
 
+  /** What is still owed past its date: issued, not settled, and judged against
+   *  the **server's** date — so a browser with a wrong clock can neither clear
+   *  nor invent a late invoice. A separate call rather than a `status` value,
+   *  because overdue is a view over the issued ones, not a fifth state. */
+  overdueInvoices(): Promise<BillingInvoiceSummary[]> {
+    return this.#read<{ invoices?: BillingInvoiceSummary[] }>("/billing/invoices?overdue=1").then(
+      (r) => r.invoices ?? [],
+    );
+  }
+
   /** One whole document — header, lines, totals — with the credit notes raised
-   *  against it (empty for an uncredited document, and for a credit note). */
-  invoice(id: string): Promise<{ invoice: BillingInvoice; creditNotes: BillingInvoiceSummary[] }> {
-    return this.#read<{ invoice: BillingInvoice; creditNotes?: BillingInvoiceSummary[] }>(
-      `/billing/invoices/${encodeURIComponent(id)}`,
-    ).then((r) => ({ invoice: r.invoice, creditNotes: r.creditNotes ?? [] }));
+   *  against it (empty for an uncredited document, and for a credit note) and
+   *  the payments received against it, newest first. */
+  invoice(id: string): Promise<{
+    invoice: BillingInvoice;
+    creditNotes: BillingInvoiceSummary[];
+    payments: BillingPayment[];
+  }> {
+    return this.#read<{
+      invoice: BillingInvoice;
+      creditNotes?: BillingInvoiceSummary[];
+      payments?: BillingPayment[];
+    }>(`/billing/invoices/${encodeURIComponent(id)}`).then((r) => ({
+      invoice: r.invoice,
+      creditNotes: r.creditNotes ?? [],
+      payments: r.payments ?? [],
+    }));
   }
 
   /** Raises a **draft**. Only `customerId` is required; an absent currency or
@@ -212,6 +237,47 @@ export class BillingApi {
     return this.#act<{ invoice: BillingInvoice }>(
       `/billing/invoices/${encodeURIComponent(id)}/credit-note`,
     ).then((r) => r.invoice);
+  }
+
+  /** The payments recorded against one document, newest first, and what they
+   *  add up to. The settlement is the server's — the browser never sums money. */
+  payments(id: string): Promise<{ payments: BillingPayment[]; settlement: DocumentSettlement }> {
+    return this.#read<{ payments?: BillingPayment[]; settlement: DocumentSettlement }>(
+      `/billing/invoices/${encodeURIComponent(id)}/payments`,
+    ).then((r) => ({ payments: r.payments ?? [], settlement: r.settlement }));
+  }
+
+  /**
+   * Records money received against an issued invoice, and answers the document
+   * **after** the ledger changed — so a caller that has just posted the last
+   * instalment learns in the same response that the invoice is now `paid`.
+   *
+   * The store refuses a document that cannot carry money (a draft, a void one,
+   * a credit note) with a `409`, and an amount that is not positive, or a date
+   * in the future, with a `422`.
+   */
+  recordPayment(
+    id: string,
+    draft: PaymentDraft,
+  ): Promise<{ payment: BillingPayment; invoice: BillingInvoice }> {
+    return this.#write<{ payment: BillingPayment; invoice: BillingInvoice }>(
+      "POST",
+      `/billing/invoices/${encodeURIComponent(id)}/payments`,
+      draft,
+    );
+  }
+
+  /** Removes a payment recorded wrongly — the correction path, and the only
+   *  one: a payment is a fact that happened, so it is re-entered rather than
+   *  edited. Answers the document the removal left behind. */
+  async deletePayment(id: string, paymentId: string): Promise<BillingInvoice> {
+    const answer = await this.#json<{ invoice: BillingInvoice }>(
+      await this.#send(
+        `/billing/invoices/${encodeURIComponent(id)}/payments/${encodeURIComponent(paymentId)}`,
+        { method: "DELETE" },
+      ),
+    );
+    return answer.invoice;
   }
 
   /** The tenant's quotes, newest first, each with its totals and computed

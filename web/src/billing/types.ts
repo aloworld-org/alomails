@@ -115,6 +115,54 @@ export interface DocumentTotals {
   vatByRate: VatSubtotal[];
 }
 
+/**
+ * Where a document stands against the money that has arrived for it
+ * (`platform/alo-store/src/billing_payments.rs`).
+ *
+ * `partiallyPaid` is not a status: the document is still `issued`, still owed
+ * and still overdue when its date passes. It is a fact about money.
+ */
+export type PaymentState = "unpaid" | "partiallyPaid" | "paid";
+
+/** What a document is worth, what has arrived, and what is left — all integer
+ *  cents, all the server's. `outstandingCents` is negative on an overpayment,
+ *  which is the figure a refund starts from. */
+export interface DocumentSettlement {
+  grossCents: number;
+  paidCents: number;
+  outstandingCents: number;
+  state: PaymentState;
+}
+
+/** One payment received against an invoice. A fact that happened: it is
+ *  removed and re-entered, never edited, so there is no payment draft type for
+ *  an update. */
+export interface BillingPayment {
+  id: string;
+  invoiceId: string;
+  /** `YYYY-MM-DD`, the day the money arrived as the bank states it — not the
+   *  day it was keyed in, which is `createdAt`. */
+  paidOn: string;
+  /** Integer cents, always positive. */
+  amountCents: number;
+  /** How it arrived: free text ("bank transfer", "SEPA direct debit", …). */
+  method: string;
+  /** The bank's own reference for the movement. */
+  reference: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+/** A payment as sent to the server. An absent `paidOn` means today according
+ *  to the **server**, which is the only date a form that has not asked should
+ *  imply. */
+export interface PaymentDraft {
+  paidOn?: string;
+  amountCents: number;
+  method?: string;
+  reference?: string;
+}
+
 /** An invoice as a list entry: the header and what it is worth, no lines. */
 export interface BillingInvoiceSummary {
   id: string;
@@ -140,6 +188,9 @@ export interface BillingInvoiceSummary {
   createdAt: string;
   updatedAt: string;
   totals: DocumentTotals;
+  /** Computed on every read from the lines and the payment rows; stored
+   *  nowhere, so a list entry and the document can never disagree. */
+  settlement: DocumentSettlement;
 }
 
 /** A whole invoice: the header, its lines in print order, and its totals. */

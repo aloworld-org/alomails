@@ -24,10 +24,16 @@ import { DocumentChips } from "./status";
 import type { BillingCustomer, BillingInvoiceSummary, InvoiceStatus } from "./types";
 import styles from "./BillingModule.module.css";
 
-/** The filter's choices, in the order a document moves through them. `all` is
- *  the absence of a filter, not a fifth status. */
+/** The filter's choices, in the order a document moves through them.
+ *
+ *  `all` is the absence of a filter, not a fifth status — and `overdue` is not
+ *  one either: it is a **view** over the issued documents (issued, past its
+ *  date, not settled), which the server answers on its own route because it is
+ *  judged against the server's date. Both sit in one control because that is
+ *  the one question a bookkeeper is asking. */
 const FILTERS = [
   { value: "all", label: () => strings.billingFilterAll },
+  { value: "overdue", label: () => strings.billingFilterOverdue },
   { value: "draft", label: () => strings.billingStatusDraft },
   { value: "issued", label: () => strings.billingStatusIssued },
   { value: "paid", label: () => strings.billingStatusPaid },
@@ -35,6 +41,14 @@ const FILTERS = [
 ] as const;
 
 type Filter = (typeof FILTERS)[number]["value"];
+
+/** The list read one filter choice asks for. Keeps the two server surfaces —
+ *  the status filter and the overdue view — behind one call site, so the page
+ *  never has to hold both in its head. */
+function listFor(api: ReturnType<typeof useBillingApi>, filter: Filter) {
+  if (filter === "overdue") return api.overdueInvoices();
+  return api.invoices(filter === "all" ? undefined : (filter satisfies InvoiceStatus));
+}
 
 /** Whether a document answers the search box: its number, its customer's name
  *  or the customer's own reference. */
@@ -62,10 +76,7 @@ export function InvoicesView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [list, people] = await Promise.all([
-        api.invoices(filter === "all" ? undefined : (filter satisfies InvoiceStatus)),
-        api.customers(true),
-      ]);
+      const [list, people] = await Promise.all([listFor(api, filter), api.customers(true)]);
       setInvoices(list);
       setCustomers(people);
       setError(null);
@@ -144,6 +155,9 @@ export function InvoicesView() {
                 <th scope="col" className={styles.numeric}>
                   {strings.billingColTotal}
                 </th>
+                <th scope="col" className={styles.numeric}>
+                  {strings.billingColOutstanding}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -166,6 +180,11 @@ export function InvoicesView() {
                   </td>
                   <td className={styles.numeric}>
                     {formatAmount(invoice.totals.grossCents, locale, invoice.currency)}
+                  </td>
+                  {/* The server's figure, like every other one here: what is
+                      left after the payments recorded against this document. */}
+                  <td className={styles.numeric}>
+                    {formatAmount(invoice.settlement.outstandingCents, locale, invoice.currency)}
                   </td>
                 </tr>
               ))}

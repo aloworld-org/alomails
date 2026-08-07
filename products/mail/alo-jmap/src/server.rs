@@ -7,7 +7,7 @@ use std::sync::Arc;
 use alo_identity::Identity;
 use alo_store::Store;
 use axum::extract::{DefaultBodyLimit, State};
-use axum::routing::{any, get, post, put};
+use axum::routing::{any, delete, get, post, put};
 use axum::{Json, Router};
 use serde_json::{Value, json};
 
@@ -15,11 +15,11 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, agent, ai, api, autoconfig, base, billing_customers, billing_invoices, billing_products,
-    billing_quotes, billing_send, billing_settings, blob, calendar, carddav, contacts, delegates,
-    docs, drive, filters, flagdue, imap_import_route, push, reset_route, schedule, security,
-    session, settings, share, signup_route, snooze, spaces, tasks, unsubscribe, wopi,
-    workspace_search,
+    admin, agent, ai, api, autoconfig, base, billing_customers, billing_invoices, billing_payments,
+    billing_products, billing_quotes, billing_send, billing_settings, blob, calendar, carddav,
+    contacts, delegates, docs, drive, filters, flagdue, imap_import_route, push, reset_route,
+    schedule, security, session, settings, share, signup_route, snooze, spaces, tasks, unsubscribe,
+    wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -276,6 +276,19 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/billing/invoices/{id}/send",
             post(billing_send::send_invoice),
+        )
+        // Payments (B1.19) — money received, under the document it settles:
+        // a payment does not exist on its own, and addressing it through its
+        // invoice is what makes an id from another document a plain 404. The
+        // invoice's `paid` status is a projection of this ledger, recomputed
+        // by the store inside the transaction that changes it.
+        .route(
+            "/billing/invoices/{id}/payments",
+            get(billing_payments::list_payments).post(billing_payments::create_payment),
+        )
+        .route(
+            "/billing/invoices/{id}/payments/{payment_id}",
+            delete(billing_payments::delete_payment),
         )
         // Quotes (B1.12) — the offer that precedes an invoice, with the same
         // shape: draft CRUD, a strict status filter, and every transition its

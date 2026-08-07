@@ -32,9 +32,22 @@ const calls: Call[] = [];
 /** Answers queued for specific requests; the first match wins and is spent. */
 let replies: Reply[] = [];
 
-/** Queues one answer for the next request whose URL contains `urlPart`. */
+/** Queues one answer for the next request whose URL contains `urlPart`.
+ *
+ *  A document's URL is a prefix of its payment ledger's
+ *  (`…/invoices/inv-2` and `…/invoices/inv-2/payments`), so a matcher written
+ *  for the document deliberately does **not** swallow the ledger read the
+ *  payments panel makes — otherwise the document's own answer would be spent on
+ *  the wrong request and the screen would load nothing. */
 function reply(urlPart: string, method: string, body: unknown, status = 200) {
-  replies.push({ match: (url, m) => url.includes(urlPart) && m === method, status, body });
+  replies.push({
+    match: (url, m) =>
+      url.includes(urlPart) &&
+      m === method &&
+      (urlPart.includes("/payments") || !url.includes("/payments")),
+    status,
+    body,
+  });
 }
 
 const CUSTOMER: BillingCustomer = {
@@ -105,6 +118,14 @@ const DRAFT: BillingInvoice = {
     grossCents: 22688,
     vatByRate: [{ rateBp: 2100, netCents: 18750, vatCents: 3938 }],
   },
+  // Nothing received: the settlement the server sends for a document nobody
+  // has paid anything against.
+  settlement: {
+    grossCents: 22688,
+    paidCents: 0,
+    outstandingCents: 22688,
+    state: "unpaid",
+  },
 };
 
 const ISSUED: BillingInvoice = {
@@ -115,6 +136,14 @@ const ISSUED: BillingInvoice = {
   issueDate: "2026-07-01",
   dueDate: "2026-07-15",
   overdue: true,
+  // €100.00 of €226.88 received: still issued, still overdue, and still owed
+  // for the rest — which is what "partly paid is not a status" means.
+  settlement: {
+    grossCents: 22688,
+    paidCents: 10000,
+    outstandingCents: 12688,
+    state: "partiallyPaid",
+  },
 };
 
 const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
@@ -137,11 +166,13 @@ function fallback(url: string, method: string): Reply {
   const body =
     method !== "GET"
       ? {}
-      : url.includes("/billing/customers")
-        ? { customers: [CUSTOMER] }
-        : url.includes("/billing/products")
-          ? { products: [PRODUCT] }
-          : { invoices: [] };
+      : url.includes("/payments")
+        ? { payments: [], settlement: DRAFT.settlement }
+        : url.includes("/billing/customers")
+          ? { customers: [CUSTOMER] }
+          : url.includes("/billing/products")
+            ? { products: [PRODUCT] }
+            : { invoices: [] };
   return { match: () => true, status: 200, body };
 }
 
@@ -191,8 +222,10 @@ describe("the invoice list", () => {
     expect(await screen.findByText("INV-2026-00007")).toBeTruthy();
     const row = within(screen.getByRole("table"));
     expect(row.getByText("Acme GmbH")).toBeTruthy();
-    // €226.88 is the server's gross; nothing here adds up the lines.
+    // €226.88 is the server's gross and €126.88 what is still owed after the
+    // payments recorded against it; nothing here adds up or subtracts anything.
     expect(row.getByText("€226.88")).toBeTruthy();
+    expect(row.getByText("€126.88")).toBeTruthy();
     // The chips, not the filter's options, which carry the same words.
     expect(row.getByText(strings.billingStatusIssued)).toBeTruthy();
     expect(row.getByText(strings.billingStatusOverdue)).toBeTruthy();

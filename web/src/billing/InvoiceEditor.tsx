@@ -24,6 +24,7 @@ import { DocumentEditor } from "./DocumentEditor";
 import type { DocumentHeader, DocumentPatch } from "./documentDraft";
 import { useDocumentDraft } from "./documentDraft";
 import { Field } from "./parts";
+import { PaymentsPanel } from "./PaymentsPanel";
 import { usePickers } from "./pickers";
 import { DocumentChips } from "./status";
 import type { BillingInvoice, BillingInvoiceSummary } from "./types";
@@ -46,6 +47,9 @@ export function InvoiceEditor() {
     },
     [api],
   );
+  // The payment ledger is the panel's own read (`PaymentsPanel`), not part of
+  // the draft: it changes for its own reasons — recording money never edits the
+  // document — and loading it here would make every autosave refetch it.
   const create = useCallback(
     (header: Partial<DocumentHeader>) => api.createInvoice(header),
     [api],
@@ -173,6 +177,20 @@ export function InvoiceEditor() {
                 </button>
               </p>
             )}
+            {/* Money is only ever received against a document the customer
+                holds and owes. A credit note is the other direction, and a
+                draft is owed by nobody — the store refuses both, and the panel
+                is not offered on them rather than showing a button that 409s. */}
+            {!invoice.creditNote &&
+              (invoice.status === "issued" || invoice.status === "paid") &&
+              id !== undefined && (
+                <PaymentsPanel
+                  invoiceId={id}
+                  currency={invoice.currency}
+                  settlement={invoice.settlement}
+                  onInvoiceChanged={draft.adopt}
+                />
+              )}
             {creditNotes.length > 0 && (
               <section className={styles.lines}>
                 <h2 className={styles.sectionTitle}>{strings.billingCreditNotes}</h2>

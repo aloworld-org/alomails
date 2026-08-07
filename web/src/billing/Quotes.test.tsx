@@ -138,6 +138,12 @@ const FROM_QUOTE: BillingInvoice = {
   updatedAt: "2026-08-07T10:00:00Z",
   lines: DRAFT.lines,
   totals: DRAFT.totals,
+  settlement: {
+    grossCents: DRAFT.totals.grossCents,
+    paidCents: 0,
+    outstandingCents: DRAFT.totals.grossCents,
+    state: "unpaid",
+  },
 };
 
 const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {

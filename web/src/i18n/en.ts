@@ -1646,6 +1646,39 @@ export const en = {
   billingCreditsInvoice: "The invoice this credits",
   billingFromQuote: "The quote this came from",
 
+  // Payments (B1.19): the money received against an invoice. Every figure here
+  // is the server's — the wording never promises a total the browser summed —
+  // and "partly paid" is deliberately never called a status: the document is
+  // still issued, still owed, and still late when its date passes.
+  billingPayments: "Payments",
+  billingRecordPayment: "Record payment",
+  billingRecordPaymentHint:
+    "Money that has arrived. It is not sent anywhere — this only records what your bank already shows.",
+  billingRemovePayment: "Remove",
+  billingNoPayments: "Nothing has been received against this invoice yet.",
+  billingPaidToDate: "Received",
+  billingOutstanding: "Still owed",
+  billingOverpaidNote:
+    "More has been received than this invoice is worth. The difference is yours to refund or to credit against the next one.",
+  billingPaymentUnpaid: "Unpaid",
+  billingPaymentPartiallyPaid: "Partly paid",
+  billingPaymentPaid: "Settled",
+  billingColPaidOn: "Received on",
+  billingColMethod: "How",
+  billingColPaymentReference: "Bank reference",
+  billingColAmount: "Amount",
+  billingFieldAmount: (currency: string) => `Amount (${currency})`,
+  billingFieldAmountHint: "What actually arrived, which may be less than the invoice.",
+  billingFieldPaidOn: "Received on",
+  billingFieldPaidOnHint: "The day your bank shows it. Leave it empty for today.",
+  billingFieldMethod: "How it arrived",
+  billingFieldMethodHint: "Free text — whatever your bookkeeping calls it.",
+  billingMethodPlaceholder: "Bank transfer",
+  billingFieldPaymentReference: "Bank reference",
+  billingFieldPaymentRefHint: "The reference on the statement line, so it can be matched later.",
+  billingFilterOverdue: "Overdue",
+  billingColOutstanding: "Still owed",
+
   // Quotes (B1.15): the same document as an invoice until somebody says yes,
   // and deliberately the same words wherever the two screens agree.
   billingQuotes: "Quotes",

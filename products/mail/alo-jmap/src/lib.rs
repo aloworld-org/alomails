@@ -22,6 +22,7 @@ pub mod billing;
 pub mod billing_customers;
 pub mod billing_document;
 pub mod billing_invoices;
+pub mod billing_payments;
 pub mod billing_pdf;
 pub mod billing_print;
 pub mod billing_products;

@@ -96,6 +96,14 @@ const ISSUED: BillingInvoice = {
     grossCents: 22688,
     vatByRate: [{ rateBp: 2100, netCents: 18750, vatCents: 3938 }],
   },
+  // Nothing received: the settlement the server sends for a document nobody
+  // has paid anything against.
+  settlement: {
+    grossCents: 22688,
+    paidCents: 0,
+    outstandingCents: 22688,
+    state: "unpaid",
+  },
 };
 
 /** A tenant that has never saved: the blanks, and `stated: false`. */

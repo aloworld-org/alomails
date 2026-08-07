@@ -226,6 +226,11 @@ opaque_id!(
     /// model (`crate::billing_line`), so they share its id type.
     BillingLineId
 );
+opaque_id!(
+    /// One payment received against a billing invoice — money that arrived,
+    /// not a state of the document (alo Billing, ADR 0035).
+    BillingPaymentId
+);
 
 #[cfg(test)]
 mod tests {

@@ -42,13 +42,15 @@ use time::{Date, OffsetDateTime};
 use alo_store::billing_invoices::{
     Invoice, InvoiceDocument, InvoiceStatus, InvoiceSummary, NewInvoice,
 };
+use alo_store::billing_payments::Settlement;
 use alo_store::billing_settings::BillingSettings;
 use alo_store::{
     AccountStore, BillingCustomerId, BillingInvoiceId, BillingQuoteId, Customer, NewLine,
 };
 
-use crate::billing::{iso, iso_date, map_store_err, parse_body};
+use crate::billing::{flag, iso, iso_date, map_store_err, parse_body};
 use crate::billing_document::{LineBody, today, with_body, with_totals};
+use crate::billing_payments::settlement_json;
 use crate::billing_pdf as pdf;
 use crate::billing_print::{self as print, Banner, DocumentKind, PrintDocument, PrintQuery};
 use crate::error::Problem;
@@ -81,18 +83,37 @@ fn invoice_json(i: &Invoice, today: Date) -> Value {
     })
 }
 
-/// A whole document: header, lines in print order, totals.
+/// A whole document: header, lines in print order, totals, and where it stands
+/// against the money received for it.
 ///
 /// `pub(crate)` because accepting a quote answers with the invoice it raised
-/// ([`crate::billing_quotes`]), and that invoice must read exactly as it does
-/// on its own routes.
+/// ([`crate::billing_quotes`]), and recording a payment answers with the
+/// document the payment changed ([`crate::billing_payments`]); all three must
+/// read exactly as this document's own routes do.
 pub(crate) fn document_json(d: &InvoiceDocument, today: Date) -> Value {
-    with_body(invoice_json(&d.invoice, today), &d.lines, &d.totals)
+    with_settlement(
+        with_body(invoice_json(&d.invoice, today), &d.lines, &d.totals),
+        &d.settlement(),
+    )
 }
 
-/// A list entry: the header and what it is worth, without the lines.
+/// A list entry: the header, what it is worth and what is left on it, without
+/// the lines.
 fn summary_json(s: &InvoiceSummary, today: Date) -> Value {
-    with_totals(invoice_json(&s.invoice, today), &s.totals)
+    with_settlement(
+        with_totals(invoice_json(&s.invoice, today), &s.totals),
+        &s.settlement(),
+    )
+}
+
+/// Adds a document's `settlement` to its object — computed from the lines and
+/// the payment rows on every read, never stored, so a list entry and the
+/// document it summarises can never disagree about what is still owed.
+fn with_settlement(mut value: Value, settlement: &Settlement) -> Value {
+    if let Some(object) = value.as_object_mut() {
+        object.insert("settlement".to_owned(), settlement_json(settlement));
+    }
+    value
 }
 
 /// The stored header as writable input — the base a `PATCH` merges onto.
@@ -194,6 +215,12 @@ pub struct ListQuery {
     /// `status=draft|issued|paid|void`; absent lists everything.
     #[serde(default)]
     status: Option<String>,
+    /// `overdue=1` narrows the list to what is still owed past its due date —
+    /// the collections view. Read with the forgiving [`flag`] (unlike
+    /// `status`): it is a view a UI toggles, not a filter whose silent
+    /// widening would mislead a bookkeeper about which documents exist.
+    #[serde(default)]
+    overdue: Option<String>,
 }
 
 /// Reads the status filter, refusing a value that is not one of the four.
@@ -215,21 +242,37 @@ fn status_filter(raw: Option<&str>) -> Result<Option<InvoiceStatus>, Problem> {
         })
 }
 
-/// `GET /billing/invoices[?status=issued]` → `{"invoices":[…]}` — the tenant's
-/// documents, newest first, each with its computed totals and `overdue` flag
-/// but without its lines.
+/// `GET /billing/invoices[?status=issued][&overdue=1]` → `{"invoices":[…]}` —
+/// the tenant's documents, newest first, each with its computed totals,
+/// settlement and `overdue` flag, but without its lines.
+///
+/// `overdue=1` is the collections view: issued, past the due date it was
+/// stamped with, and not settled — judged against the **server's** date inside
+/// the store's own statement, so a browser with a wrong clock cannot clear its
+/// own overdue list. It outranks `status`, which would otherwise be able to ask
+/// for the overdue drafts (of which there are none, by construction).
 pub async fn list_invoices(
     State(state): State<AppState>,
     headers: HeaderMap,
     Query(q): Query<ListQuery>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    // Parsed even when the overdue view wins, so a misspelled status is still
+    // a `422` rather than being silently swallowed by a second parameter.
     let status = status_filter(q.status.as_deref())?;
-    let invoices = account
-        .acc
-        .billing_invoices(status)
-        .await
-        .map_err(map_store_err)?;
+    let invoices = if flag(q.overdue.as_deref()) {
+        account
+            .acc
+            .billing_overdue_invoices()
+            .await
+            .map_err(map_store_err)?
+    } else {
+        account
+            .acc
+            .billing_invoices(status)
+            .await
+            .map_err(map_store_err)?
+    };
     let today = today();
     Ok(Json(json!({
         "invoices": invoices.iter().map(|s| summary_json(s, today)).collect::<Vec<_>>(),
@@ -294,13 +337,20 @@ pub async fn create_invoice(
     ))
 }
 
-/// `GET /billing/invoices/{id}` → `{"invoice":{…},"creditNotes":[…]}` — the
-/// whole document with its lines and totals.
+/// `GET /billing/invoices/{id}` →
+/// `{"invoice":{…},"creditNotes":[…],"payments":[…]}` — the whole document with
+/// its lines, totals, settlement, and the two ledgers that explain what is
+/// still owed on it.
 ///
 /// `creditNotes` is the ledger of a corrected invoice: what has been raised
 /// against this document, drafts included, each with its own (negative)
 /// totals. Empty for a document nobody has credited, and for a credit note
 /// itself — a credit note is never credited.
+///
+/// `payments` is the ledger of money received, newest first — the rows the
+/// `settlement` on the invoice adds up. Answered here so the document's screen
+/// is one read; the same list is also its own route
+/// ([`crate::billing_payments`]) for a caller that wants only the ledger.
 pub async fn get_invoice(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -314,10 +364,16 @@ pub async fn get_invoice(
         .billing_credit_notes(&id)
         .await
         .map_err(map_store_err)?;
+    let payments = account
+        .acc
+        .billing_payments(&id)
+        .await
+        .map_err(map_store_err)?;
     let today = today();
     Ok(Json(json!({
         "invoice": document_json(&document, today),
         "creditNotes": credits.iter().map(|s| summary_json(s, today)).collect::<Vec<_>>(),
+        "payments": payments.iter().map(crate::billing_payments::payment_json).collect::<Vec<_>>(),
     })))
 }
 
@@ -536,7 +592,10 @@ pub(crate) struct Printable {
 
 /// Loads one of the tenant's invoices and both parties to it, or fails with
 /// the `404` an id from another tenant gets.
-pub(crate) async fn printable(acc: &AccountStore, id: &BillingInvoiceId) -> Result<Printable, Problem> {
+pub(crate) async fn printable(
+    acc: &AccountStore,
+    id: &BillingInvoiceId,
+) -> Result<Printable, Problem> {
     let document = load(acc, id).await?;
     let (customer, issuer) = print::parties(acc, &document.invoice.customer_id).await?;
     // What this credits is read separately: the store holds the id, and the

@@ -64,6 +64,31 @@ pub fn iso_date(d: Date) -> String {
     d.format(&Iso8601::DATE).unwrap_or_default()
 }
 
+/// Reads a billing date written `YYYY-MM-DD` — the mirror of [`iso_date`] —
+/// or `None` when the text is not exactly that.
+///
+/// The shape is checked before parsing because `Iso8601::DATE` on its own is
+/// **too forgiving for money**: it accepts `2026-08-07T10:00:00Z` and quietly
+/// keeps the day, so a client sending its own local midnight would have a
+/// payment silently dated to whichever side of it their zone falls. It also
+/// accepts `20260807`, a second spelling of a value that appears on documents
+/// and in exports. One spelling in, one spelling out, and anything else is the
+/// caller's `422`.
+pub fn parse_iso_date(raw: &str) -> Option<Date> {
+    let bytes = raw.as_bytes();
+    if bytes.len() != 10 || bytes[4] != b'-' || bytes[7] != b'-' {
+        return None;
+    }
+    if !bytes
+        .iter()
+        .enumerate()
+        .all(|(i, b)| matches!(i, 4 | 7) || b.is_ascii_digit())
+    {
+        return None;
+    }
+    Date::parse(raw, &Iso8601::DATE).ok()
+}
+
 /// Deserializes a field that may be absent, `null`, or a value, keeping the
 /// three cases apart: `None` = absent (a `PATCH` leaves the stored value
 /// alone), `Some(None)` = explicit `null` (clear it), `Some(Some(v))` = set it.
@@ -122,6 +147,28 @@ mod tests {
             panic!("{e}");
         });
         assert_eq!(iso_date(d), "2026-01-09");
+        assert_eq!(parse_iso_date("2026-01-09"), Some(d), "and back again");
+    }
+
+    #[test]
+    fn a_date_that_is_not_a_plain_day_is_refused_never_truncated() {
+        // The timestamp is the one that matters: `Iso8601::DATE` would accept
+        // it and keep the day, so a client's local midnight would silently land
+        // a payment on the wrong side of it.
+        for bad in [
+            "2026-08-07T10:00:00Z",
+            "2026-08-07 ",
+            "20260807",
+            "2026-8-7",
+            "07/08/2026",
+            "2026-13-01",
+            "2026-02-30",
+            "yesterday",
+            "",
+            "202X-08-07",
+        ] {
+            assert_eq!(parse_iso_date(bad), None, "{bad:?}");
+        }
     }
 
     #[test]

@@ -16,6 +16,7 @@ pub mod billing_customers;
 pub mod billing_field;
 pub mod billing_invoices;
 pub mod billing_line;
+pub mod billing_payments;
 pub mod billing_products;
 pub mod billing_quotes;
 pub mod billing_sequence;
@@ -65,6 +66,7 @@ pub use base::{Base, BaseField, BaseRecord, BaseTable, BaseView};
 pub use billing_customers::{Customer, NewCustomer};
 pub use billing_invoices::{Invoice, InvoiceDocument, InvoiceStatus, InvoiceSummary, NewInvoice};
 pub use billing_line::{Line, NewLine};
+pub use billing_payments::{NewPayment, Payment, PaymentState, Settlement};
 pub use billing_products::{NewProduct, Product};
 pub use billing_quotes::{
     NewQuote, Quote, QuoteAcceptance, QuoteDocument, QuoteStatus, QuoteSummary,
@@ -88,9 +90,10 @@ pub use drive::{DriveLocation, DriveNode, DriveVersion, NewDriveFile};
 pub use error::{Result, StoreError};
 pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingCustomerId,
-    BillingInvoiceId, BillingLineId, BillingProductId, BillingQuoteId, BlobId, CalendarId,
-    CategoryId, CommentId, ContactId, DriveNodeId, EventId, GroupId, LabelId, MailboxId, MessageId,
-    ProjectId, SiteId, SitePageId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, UserId,
+    BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId, BillingQuoteId, BlobId,
+    CalendarId, CategoryId, CommentId, ContactId, DriveNodeId, EventId, GroupId, LabelId,
+    MailboxId, MessageId, ProjectId, SiteId, SitePageId, SpaceId, SubtaskId, TaskId, TenantId,
+    ThreadId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

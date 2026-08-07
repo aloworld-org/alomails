@@ -54,6 +54,8 @@
 //! cross-tenant link), and the database backs that with a composite foreign
 //! key on `(tenant_id, customer_id)`.
 
+use std::collections::HashMap;
+
 use time::{Date, Duration, OffsetDateTime};
 
 use crate::account::AccountStore;
@@ -61,6 +63,7 @@ use crate::billing_field::{bounded, currency, payment_terms_days};
 use crate::billing_line::{
     FiguresRow, INVOICE_LINES, Line, NewLine, NormalizedLine, group_figures, normalize_lines,
 };
+use crate::billing_payments::Settlement;
 use crate::billing_sequence::{
     INVOICE_NUMBER_PREFIX, INVOICE_SEQUENCE_KIND, document_number, draw_next,
 };
@@ -320,12 +323,18 @@ impl Invoice {
     /// (B1.26) all answer from one definition.
     ///
     /// A `draft` has no due date, a `void` one is owed by nobody, and a `paid`
-    /// one is settled; none of them is ever overdue. Partial payments arrive
-    /// with B1.19 and will narrow `Issued` further — a partially-paid document
-    /// past its date is still overdue for the remainder, so this predicate
-    /// keeps its shape.
+    /// one is settled; none of them is ever overdue. A **credit note** is not
+    /// either, in any state: it is money owed to the customer, so a date passing
+    /// on it makes nobody late.
+    ///
+    /// A **partially paid** document still is. It stays `issued` until the whole
+    /// gross has arrived ([`crate::billing_payments`]), and it is overdue for
+    /// the remainder — which is why partial payment is a fact about money and
+    /// not a fifth status this predicate would have had to learn.
     pub fn is_overdue(&self, today: Date) -> bool {
-        matches!(self.status, InvoiceStatus::Issued) && self.due_date.is_some_and(|due| due < today)
+        matches!(self.status, InvoiceStatus::Issued)
+            && !self.is_credit_note
+            && self.due_date.is_some_and(|due| due < today)
     }
 }
 
@@ -337,6 +346,16 @@ pub struct InvoiceSummary {
     pub invoice: Invoice,
     /// Net, VAT breakdown and gross, derived from the lines.
     pub totals: Totals,
+    /// The sum of the payments recorded against this document, in cents
+    /// ([`crate::billing_payments`]).
+    pub paid_cents: i64,
+}
+
+impl InvoiceSummary {
+    /// What is worth, what has arrived, and what is left.
+    pub fn settlement(&self) -> Settlement {
+        Settlement::of(self.totals.gross_cents, self.paid_cents)
+    }
 }
 
 /// A whole document: header, lines in print order, and the totals derived
@@ -349,6 +368,16 @@ pub struct InvoiceDocument {
     pub lines: Vec<Line>,
     /// Net, VAT breakdown and gross, derived from `lines`.
     pub totals: Totals,
+    /// The sum of the payments recorded against this document, in cents
+    /// ([`crate::billing_payments`]).
+    pub paid_cents: i64,
+}
+
+impl InvoiceDocument {
+    /// What it is worth, what has arrived, and what is left.
+    pub fn settlement(&self) -> Settlement {
+        Settlement::of(self.totals.gross_cents, self.paid_cents)
+    }
 }
 
 /// The header, validated and with the customer's defaults resolved.
@@ -483,11 +512,12 @@ impl AccountStore {
         Ok(id)
     }
 
-    /// The tenant's invoices, newest first, each with its computed totals.
-    /// `status` filters; `None` lists everything.
+    /// The tenant's invoices, newest first, each with its computed totals and
+    /// the money received against it. `status` filters; `None` lists
+    /// everything.
     ///
-    /// The lines of every listed document are fetched in one further
-    /// statement, not one per document.
+    /// The lines and the payments of every listed document are fetched in one
+    /// further statement each, not one per document.
     ///
     /// # Errors
     /// [`StoreError::Db`] on failure.
@@ -495,10 +525,49 @@ impl AccountStore {
         &self,
         status: Option<InvoiceStatus>,
     ) -> Result<Vec<InvoiceSummary>> {
+        self.list_billing_invoices(status, false).await
+    }
+
+    /// The tenant's **overdue** invoices, newest first: issued, past the due
+    /// date they were stamped with, and not settled.
+    ///
+    /// It is the same list read behind one predicate, so the `overdue` flag a
+    /// caller sees on an entry and its presence in this list can never
+    /// disagree ([`Invoice::is_overdue`]). Judged against the **database's**
+    /// date, inside the same statement, never a date a caller sends.
+    ///
+    /// "Not settled" is the status column doing its one job: a document stays
+    /// `issued` until the whole gross has arrived, so a partially paid one is
+    /// here — overdue for the remainder — and a fully paid one is not. Credit
+    /// notes are excluded: money owed to the customer makes nobody late.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn billing_overdue_invoices(&self) -> Result<Vec<InvoiceSummary>> {
+        self.list_billing_invoices(None, true).await
+    }
+
+    /// The one list read behind both surfaces above: headers, then every
+    /// listed document's lines, then every listed document's payments — three
+    /// statements whatever the length of the list.
+    async fn list_billing_invoices(
+        &self,
+        status: Option<InvoiceStatus>,
+        overdue_only: bool,
+    ) -> Result<Vec<InvoiceSummary>> {
         let status = status.map(InvoiceStatus::as_str);
+        // Both branches state `$2` so the two reads below take the same
+        // parameters whichever surface asked; the overdue view simply binds no
+        // status of its own.
+        let scope = if overdue_only {
+            "($2::text IS NULL OR status = $2) AND status = 'issued' \
+             AND is_credit_note = false AND due_date < CURRENT_DATE"
+        } else {
+            "($2::text IS NULL OR status = $2)"
+        };
         let rows = sqlx::query_as::<_, InvoiceRow>(&format!(
             "SELECT {INVOICE_COLS} FROM billing_invoices \
-             WHERE tenant_id = $1 AND ($2::text IS NULL OR status = $2) \
+             WHERE tenant_id = $1 AND {scope} \
              ORDER BY created_at DESC, id"
         ))
         .bind(self.tenant.as_str())
@@ -507,13 +576,12 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
 
-        let figures = sqlx::query_as::<_, FiguresRow>(
+        let figures = sqlx::query_as::<_, FiguresRow>(&format!(
             "SELECT invoice_id AS doc_id, qty_milli, unit_price_cents, vat_rate_bp \
              FROM billing_invoice_lines \
              WHERE tenant_id = $1 AND invoice_id IN ( \
-                 SELECT id FROM billing_invoices \
-                 WHERE tenant_id = $1 AND ($2::text IS NULL OR status = $2))",
-        )
+                 SELECT id FROM billing_invoices WHERE tenant_id = $1 AND {scope})"
+        ))
         .bind(self.tenant.as_str())
         .bind(status)
         .fetch_all(&self.pool)
@@ -521,12 +589,30 @@ impl AccountStore {
         .map_err(StoreError::Db)?;
         let mut by_invoice = group_figures(figures);
 
+        let paid: Vec<(String, Option<i64>)> = sqlx::query_as(&format!(
+            "SELECT invoice_id, sum(amount_cents)::bigint FROM billing_payments \
+             WHERE tenant_id = $1 AND invoice_id IN ( \
+                 SELECT id FROM billing_invoices WHERE tenant_id = $1 AND {scope}) \
+             GROUP BY invoice_id"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(status)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let mut by_paid: HashMap<String, i64> = paid
+            .into_iter()
+            .map(|(id, sum)| (id, sum.unwrap_or(0)))
+            .collect();
+
         rows.into_iter()
             .map(|row| {
                 let lines = by_invoice.remove(&row.id).unwrap_or_default();
+                let paid_cents = by_paid.remove(&row.id).unwrap_or(0);
                 Ok(InvoiceSummary {
                     invoice: row.into_invoice()?,
                     totals: totals(&lines),
+                    paid_cents,
                 })
             })
             .collect()
@@ -554,10 +640,24 @@ impl AccountStore {
             .read(&self.pool, self.tenant.as_str(), id.as_str())
             .await?;
         let figures: Vec<LineFigures> = lines.iter().map(Line::figures).collect();
+        // The money received, read here rather than by a second call: every
+        // reader of a document (the screen, the print view, the covering mail)
+        // then sees the same settlement, and none of them has to know that
+        // payments are a separate table.
+        let paid_cents: Option<i64> = sqlx::query_scalar(
+            "SELECT sum(amount_cents)::bigint FROM billing_payments \
+             WHERE tenant_id = $1 AND invoice_id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .fetch_one(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
         Ok(Some(InvoiceDocument {
             invoice: row.into_invoice()?,
             lines,
             totals: totals(&figures),
+            paid_cents: paid_cents.unwrap_or(0),
         }))
     }
 
@@ -804,16 +904,43 @@ impl AccountStore {
     /// both parties' copies still reconcile; the store cannot know which case
     /// it is looking at, so it allows the transition and says so here.
     ///
+    /// **Except when money has arrived.** A document with any recorded payment
+    /// is refused: cancelling it would leave received money attached to a
+    /// document that says nothing is owed, which is a hole in the ledger rather
+    /// than a correction. That case is a credit note too — the payment then
+    /// settles a debt the credit note has reduced, and both movements stay
+    /// visible. (A fully paid document is already refused by
+    /// [`InvoiceStatus::ensure_voidable`]; this catches the partially paid one,
+    /// which is still `issued`.)
+    ///
     /// # Errors
     /// [`StoreError::NotFound`] when the invoice is absent or another
     /// tenant's; [`StoreError::Conflict`] when it is not issued (a draft is
-    /// deleted, a paid document is credited); [`StoreError::Db`] on failure.
+    /// deleted, a paid document is credited) or when payments have been
+    /// recorded against it; [`StoreError::Db`] on failure.
     pub async fn void_billing_invoice(&self, id: &BillingInvoiceId) -> Result<InvoiceDocument> {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         self.lock_invoice(&mut tx, id)
             .await?
             .status
             .ensure_voidable()?;
+        // Read under the same lock as the write, so a payment that raced this
+        // void either lands first (and the void is refused) or waits.
+        let payments: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM billing_payments WHERE tenant_id = $1 AND invoice_id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        if payments > 0 {
+            return Err(StoreError::Conflict(
+                "money has been received against this invoice; correct it with a credit note \
+                 instead of voiding it"
+                    .to_owned(),
+            ));
+        }
         sqlx::query(
             "UPDATE billing_invoices SET status = 'void', updated_at = now() \
              WHERE tenant_id = $1 AND id = $2",
@@ -973,6 +1100,11 @@ impl AccountStore {
                 Ok(InvoiceSummary {
                     invoice: row.into_invoice()?,
                     totals: totals(&lines),
+                    // A credit note cannot carry payments at all: money owed
+                    // *to* the customer is not settled by them paying us, and
+                    // [`crate::billing_payments`] refuses one. This is a fact
+                    // about the document, not a column left unread.
+                    paid_cents: 0,
                 })
             })
             .collect()
@@ -1320,6 +1452,37 @@ mod tests {
                 "{other:?} is not owed and cannot be overdue"
             );
         }
+
+        // A credit note is money owed *to* the customer: a date passing on it
+        // makes nobody late, so it is never overdue in any state.
+        let mut credit = dated(InvoiceStatus::Issued, Some(day_before));
+        credit.is_credit_note = true;
+        credit.credits_invoice_id = Some(BillingInvoiceId::new("original"));
+        assert!(!credit.is_overdue(today));
+    }
+
+    #[test]
+    fn a_documents_settlement_reads_from_its_totals_and_its_payments() {
+        // The one place the two facts meet: nothing here is stored, so a
+        // summary and the document it summarises cannot disagree.
+        let summary = InvoiceSummary {
+            invoice: dated(InvoiceStatus::Issued, None),
+            totals: Totals {
+                net_cents: 100_000,
+                vat_cents: 21_000,
+                gross_cents: 121_000,
+                vat_by_rate: Vec::new(),
+            },
+            paid_cents: 21_000,
+        };
+        let settlement = summary.settlement();
+        assert_eq!(settlement.gross_cents, 121_000);
+        assert_eq!(settlement.paid_cents, 21_000);
+        assert_eq!(settlement.outstanding_cents, 100_000);
+        assert_eq!(
+            settlement.state,
+            crate::billing_payments::PaymentState::PartiallyPaid
+        );
     }
 
     #[test]
