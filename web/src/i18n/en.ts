@@ -1201,6 +1201,7 @@ export const en = {
   driveMembers: "Members",
   driveActions: "Actions",
   driveEmpty: "This folder is empty. Upload a file or create a folder.",
+  driveFolderEmpty: "This folder is empty",
   driveEmptyTrash: "Trash is empty.",
   driveColName: "Name",
   driveColSize: "Size",

@@ -274,6 +274,18 @@
 .row:hover {
   background: var(--bg-raised);
 }
+.nestedRow {
+  position: relative;
+}
+.nestedRow::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 28px;
+  width: 1px;
+  background: var(--border-subtle);
+}
 .rowMain {
   display: flex;
   align-items: center;
@@ -281,6 +293,25 @@
   padding: 8px 0;
   min-width: 0;
   text-align: left;
+}
+.folderChevron {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: transform var(--transition-fast), color var(--transition-fast);
+}
+.folderChevronOpen {
+  color: var(--accent);
+  transform: rotate(90deg);
+}
+.nestedStatus {
+  min-height: 38px;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+.nestedStatus > span {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
 }
 .rowName {
   overflow: hidden;

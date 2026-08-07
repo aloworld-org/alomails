@@ -3,7 +3,7 @@
 // and per-item actions. Every file lives in one location; its access is that
 // location's access (ADR 0027), so there is no per-file sharing here — sharing
 // is membership of the Space it lives in, always visible via "Members".
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ChevronRight,
@@ -93,6 +93,8 @@ export function DriveModule() {
   const [trashView, setTrashView] = useState(false);
   const [path, setPath] = useState<Crumb[]>([]);
   const [nodes, setNodes] = useState<DriveNodeDto[] | null>(null);
+  const [expandedFolders, setExpandedFolders] = useState<ReadonlySet<string>>(new Set());
+  const [folderChildren, setFolderChildren] = useState<ReadonlyMap<string, DriveNodeDto[] | null>>(new Map());
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
 
@@ -156,6 +158,8 @@ export function DriveModule() {
   }, [client]);
 
   const load = useCallback(async () => {
+    setExpandedFolders(new Set());
+    setFolderChildren(new Map());
     try {
       const list = trashView
         ? await client.driveTrash(location)
@@ -214,12 +218,87 @@ export function DriveModule() {
   }
 
   function openNode(n: DriveNodeDto) {
-    if (n.kind === "folder") setPath((p) => [...p, { id: n.id, name: n.name }]);
-    else if (n.kind === "doc") showEditor("doc", n.id, n.name);
+    if (n.kind === "doc") showEditor("doc", n.id, n.name);
     else if (n.kind === "sheet") showEditor("sheet", n.id, n.name);
     else if (n.kind === "file" && SPREADSHEET_IMPORT.test(n.name)) void importSpreadsheet(n.id, n.name);
     else if (n.kind === "file" && OFFICE_EXT.test(n.name)) showEditor("office", n.id, n.name);
     else void download(n);
+  }
+
+  function toggleFolder(folder: DriveNodeDto) {
+    if (trashView) return;
+    const isExpanded = expandedFolders.has(folder.id);
+    setExpandedFolders((current) => {
+      const next = new Set(current);
+      if (isExpanded) next.delete(folder.id);
+      else next.add(folder.id);
+      return next;
+    });
+    if (isExpanded || folderChildren.has(folder.id)) return;
+    setFolderChildren((current) => new Map(current).set(folder.id, null));
+    void client.driveList(location, folder.id).then((children) => {
+      setFolderChildren((current) => new Map(current).set(folder.id, children));
+    }).catch(() => {
+      setFolderChildren((current) => new Map(current).set(folder.id, []));
+    });
+  }
+
+  function renderRows(items: DriveNodeDto[], depth = 0): ReactNode[] {
+    return items.flatMap((n) => {
+      const Icon = nodeIcon(n);
+      const folder = n.kind === "folder";
+      const expanded = folder && expandedFolders.has(n.id);
+      const children = folderChildren.get(n.id);
+      const row = (
+        <li key={n.id} className={`${styles.row} ${depth > 0 ? styles.nestedRow : ""}`}>
+          <button
+            type="button"
+            className={styles.rowMain}
+            style={{ paddingLeft: depth * 24 }}
+            onPointerEnter={() => {
+              if (n.kind === "sheet") void loadSheetEditor();
+            }}
+            onFocus={() => {
+              if (n.kind === "sheet") void loadSheetEditor();
+            }}
+            onClick={() => folder ? toggleFolder(n) : openNode(n)}
+            aria-expanded={folder ? expanded : undefined}
+          >
+            {folder && (
+              <ChevronRight
+                size={15}
+                className={`${styles.folderChevron} ${expanded ? styles.folderChevronOpen : ""}`}
+              />
+            )}
+            <Icon size={18} className={folder ? styles.folderIcon : styles.fileIcon} />
+            <span className={styles.rowName}>{n.name}</span>
+          </button>
+          <span className={styles.colSize}>{folder ? "—" : fileSize(n.size)}</span>
+          <span className={styles.colDate}>{new Date(n.updatedAt).toLocaleDateString()}</span>
+          <span className={styles.colMenu}>
+            <Menu label={strings.driveActions} icon={<span aria-hidden>⋯</span>} items={rowMenu(n)} />
+          </span>
+        </li>
+      );
+      if (!expanded) return [row];
+      if (children === null || children === undefined) {
+        return [
+          row,
+          <li key={`${n.id}-loading`} className={`${styles.row} ${styles.nestedStatus}`}>
+            <span style={{ paddingLeft: (depth + 1) * 24 }}><Spinner size={16} /></span>
+          </li>,
+        ];
+      }
+      if (children.length === 0) {
+        return [
+          row,
+          <li key={`${n.id}-empty`} className={`${styles.row} ${styles.nestedStatus}`}>
+            <span style={{ paddingLeft: (depth + 1) * 24 }}>{strings.driveFolderEmpty}</span>
+          </li>,
+        ];
+      }
+      return [row, ...renderRows(children, depth + 1)];
+    });
   }
 
   async function newDoc() {
@@ -542,33 +621,7 @@ export function DriveModule() {
               <span className={styles.colDate}>{strings.driveColModified}</span>
               <span className={styles.colMenu} />
             </li>
-            {nodes.map((n) => {
-              const Icon = nodeIcon(n);
-              return (
-                <li key={n.id} className={styles.row}>
-                  <button
-                    type="button"
-                    className={styles.rowMain}
-                    onPointerEnter={() => {
-                      if (n.kind === "sheet") void loadSheetEditor();
-                    }}
-                    onFocus={() => {
-                      if (n.kind === "sheet") void loadSheetEditor();
-                    }}
-                    onClick={() => openNode(n)}
-                    onDoubleClick={() => openNode(n)}
-                  >
-                    <Icon size={18} className={n.kind === "folder" ? styles.folderIcon : styles.fileIcon} />
-                    <span className={styles.rowName}>{n.name}</span>
-                  </button>
-                  <span className={styles.colSize}>{n.kind === "folder" ? "—" : fileSize(n.size)}</span>
-                  <span className={styles.colDate}>{new Date(n.updatedAt).toLocaleDateString()}</span>
-                  <span className={styles.colMenu}>
-                    <Menu label={strings.driveActions} icon={<span aria-hidden>⋯</span>} items={rowMenu(n)} />
-                  </span>
-                </li>
-              );
-            })}
+            {renderRows(nodes)}
           </ul>
         )}
       </section>

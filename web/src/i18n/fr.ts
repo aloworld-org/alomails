@@ -6,6 +6,7 @@
 import type { Catalog } from "./en";
 
 export const fr: Partial<Catalog> = {
+  driveFolderEmpty: "Ce dossier est vide",
   taskCreating: "Création…",
   taskFilesAttachTo: "Joindre à la tâche",
   taskFilesDropHint: "Déposez des images ou fichiers ici, ou utilisez Ajouter une pièce jointe.",

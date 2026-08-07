@@ -6,6 +6,7 @@
 import type { Catalog } from "./en";
 
 export const nl: Partial<Catalog> = {
+  driveFolderEmpty: "Deze map is leeg",
   taskCreating: "Aanmaken…",
   taskFilesAttachTo: "Toevoegen aan taak",
   taskFilesDropHint: "Sleep afbeeldingen of bestanden hierheen, of kies Bijlage toevoegen.",
