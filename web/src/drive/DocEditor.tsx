@@ -13,7 +13,7 @@ import {
   type ComponentProps,
   type CSSProperties,
 } from "react";
-import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, List, Minus, Plus, Printer, Redo2, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, Minus, Plus, Printer, Redo2, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -125,9 +125,16 @@ export function DocEditor({
     onChange();
   };
 
-  const insertBlock = (type: "table" | "divider" | "pageBreak") => {
+  const insertBlock = (type: "table" | "divider" | "pageBreak" | "equation") => {
     const anchor = editor.getTextCursorPosition().block;
     editor.insertBlocks([{ type }] as Parameters<typeof editor.insertBlocks>[0], anchor, "after");
+    onChange();
+  };
+
+  const createLink = () => {
+    const url = window.prompt(strings.docLinkPrompt, editor.getSelectedLinkUrl() ?? "https://");
+    if (url === null || url.trim() === "") return;
+    editor.createLink(url.trim());
     onChange();
   };
 
@@ -273,7 +280,7 @@ export function DocEditor({
         <div className={styles.docMenus}>
           <details><summary>{strings.docMenuFile}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => window.print()}><Printer size={15} />{strings.docPrint}</button></div></details>
           <details><summary>{strings.docMenuEdit}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => editor.undo()}><Undo2 size={15} />{strings.sheetUndo}</button><button type="button" onClick={() => editor.redo()}><Redo2 size={15} />{strings.sheetRedo}</button></div></details>
-          <details><summary>{strings.docMenuInsert}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => insertBlock("table")}><Table2 size={15} />{strings.sheetInsertTable}</button><button type="button" onClick={() => insertBlock("divider")}><Minus size={15} />{strings.docInsertDivider}</button><button type="button" onClick={() => insertBlock("pageBreak")}><FileText size={15} />{strings.docInsertPageBreak}</button></div></details>
+          <details><summary>{strings.docMenuInsert}</summary><div className={styles.docMenuPanel}><button type="button" onClick={createLink}><Link2 size={15} />{strings.docInsertLink}</button><button type="button" onClick={() => insertBlock("table")}><Table2 size={15} />{strings.sheetInsertTable}</button><button type="button" onClick={() => insertBlock("equation")}><Sigma size={15} />{strings.docEquation}</button><button type="button" onClick={() => insertBlock("divider")}><Minus size={15} />{strings.docInsertDivider}</button><button type="button" onClick={() => insertBlock("pageBreak")}><FileText size={15} />{strings.docInsertPageBreak}</button></div></details>
           <details><summary>{strings.docMenuFormat}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => toggleStyle("bold")}><Bold size={15} />{strings.sheetBold}</button><button type="button" onClick={() => toggleStyle("italic")}><Italic size={15} />{strings.sheetItalic}</button><button type="button" onClick={() => toggleStyle("underline")}><Underline size={15} />{strings.sheetUnderline}</button></div></details>
         </div>
         <div className={styles.commandDivider} />
@@ -305,7 +312,9 @@ export function DocEditor({
         <button type="button" className={styles.commandIcon} onClick={() => align("right")} aria-label={strings.sheetAlignRight}><AlignRight size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => changeIndent("out")} aria-label={strings.docOutdent}><IndentDecrease size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => changeIndent("in")} aria-label={strings.docIndent}><IndentIncrease size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={createLink} aria-label={strings.docInsertLink}><Link2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("table")} aria-label={strings.sheetInsertTable}><Table2 size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={() => insertBlock("equation")} aria-label={strings.docEquation}><Sigma size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("divider")} aria-label={strings.docInsertDivider}><List size={17} /></button>
         <div className={styles.commandSpacer} />
         <span className={styles.wordCount} title={`${counts.characters} ${strings.docCharacters}`}>{counts.words} {strings.docWords}</span>

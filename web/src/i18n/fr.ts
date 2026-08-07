@@ -1003,6 +1003,8 @@ export const fr: Partial<Catalog> = {
   docOutdent: "Diminuer le retrait",
   docWords: "mots",
   docCharacters: "caractères",
+  docInsertLink: "Insérer un lien",
+  docLinkPrompt: "Saisissez l’adresse web du texte sélectionné",
   docAiPlaceholder: "Dites à l’IA quoi écrire ou modifier…",
   docAiPropose: "Rédiger",
   docAiProposalLabel: "Proposition — à vérifier avant d’ajouter",

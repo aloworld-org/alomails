@@ -990,6 +990,8 @@ export const nl: Partial<Catalog> = {
   docOutdent: "Inspringing verkleinen",
   docWords: "woorden",
   docCharacters: "tekens",
+  docInsertLink: "Link invoegen",
+  docLinkPrompt: "Voer het webadres voor de geselecteerde tekst in",
   docAiPlaceholder: "Vertel de AI wat te schrijven of wijzigen…",
   docAiPropose: "Opstellen",
   docAiProposalLabel: "Voorstel — controleer voor je het toevoegt",

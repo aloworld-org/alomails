@@ -1067,6 +1067,8 @@ export const en = {
   docOutdent: "Decrease indent",
   docWords: "words",
   docCharacters: "characters",
+  docInsertLink: "Insert link",
+  docLinkPrompt: "Enter the web address for the selected text",
   docAiPlaceholder: "Tell the AI what to write or change…",
   docAiPropose: "Draft",
   docAiProposalLabel: "Proposed — review before adding",
