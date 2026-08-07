@@ -176,7 +176,31 @@ export function DocEditor({
             <Spinner size={22} />
           </div>
         ) : (
-          <BlockNoteView editor={editorProp} onChange={onChange} slashMenu={false}>
+          <BlockNoteView
+            editor={editorProp}
+            onChange={onChange}
+            slashMenu={false}
+            theme={{
+              borderRadius: 6,
+              colors: {
+                editor: { background: "var(--bg-surface)", text: "var(--text-primary)" },
+                menu: { background: "var(--bg-surface)", text: "var(--text-primary)" },
+                hovered: {
+                  background: "color-mix(in srgb, var(--accent) 10%, var(--bg-surface))",
+                  text: "var(--accent)",
+                },
+                selected: { background: "var(--accent)", text: "var(--on-accent, #fff)" },
+                tooltip: {
+                  background: "color-mix(in srgb, var(--accent) 12%, var(--bg-surface))",
+                  text: "var(--accent)",
+                },
+                disabled: { background: "var(--bg-raised)", text: "var(--text-tertiary)" },
+                border: "var(--border-default)",
+                shadow: "var(--shadow-lg)",
+                sideMenu: "var(--text-tertiary)",
+              },
+            }}
+          >
             <SuggestionMenuController
               triggerCharacter="/"
               getItems={async (query) =>

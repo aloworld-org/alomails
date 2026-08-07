@@ -193,3 +193,33 @@
   margin: 0 auto;
   padding: var(--space-6) var(--space-4) 40vh;
 }
+
+/* Carry alo's interaction language into BlockNote's portalled toolbars and
+   command menus. The theme above owns state colours; these details replace
+   the library's neutral icon tiles and shortcut pills. */
+:global(.bn-mantine .bn-toolbar) {
+  border-color: var(--border-subtle);
+}
+:global(.bn-mantine .bn-suggestion-menu-label) {
+  color: var(--accent);
+}
+:global(.bn-mantine .bn-mt-suggestion-menu-item-section[data-position="left"]) {
+  min-width: 42px;
+  min-height: 42px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-surface));
+  color: var(--accent);
+}
+:global(.bn-mantine .bn-mt-suggestion-menu-item-section[data-position="right"]) {
+  color: var(--text-tertiary);
+}
+:global(.bn-mantine .bn-suggestion-menu-item[aria-selected="true"] .bn-mt-suggestion-menu-item-section[data-position="left"]),
+:global(.bn-mantine .bn-suggestion-menu-item:hover .bn-mt-suggestion-menu-item-section[data-position="left"]) {
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-surface));
+  color: var(--accent);
+}
+:global(.bn-mantine .mantine-Kbd-root) {
+  border: 0;
+  background: color-mix(in srgb, var(--accent) 9%, var(--bg-surface));
+  color: var(--accent);
+}
