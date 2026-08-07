@@ -3,6 +3,7 @@
 // the active one highlighted. Bottom: ✦AI and the account menu. It never
 // scrolls and never changes between modules; only the panel to its right does.
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, Grid3X3, GripVertical, Pencil, Plus, Sparkles, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
@@ -40,12 +41,14 @@ export function Rail({ onAskAi }: RailProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(favorites);
   const draggedRef = useRef<string | null>(null);
-  const launcherRef = useRef<HTMLLIElement>(null);
+  const launcherTriggerRef = useRef<HTMLLIElement>(null);
+  const launcherPanelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     const close = (event: PointerEvent) => {
-      if (!launcherRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (!launcherTriggerRef.current?.contains(target) && !launcherPanelRef.current?.contains(target)) {
         setOpen(false);
         setEditing(false);
       }
@@ -116,12 +119,12 @@ export function Rail({ onAskAi }: RailProps) {
             <span className={styles.label}>{home.label}</span>
           </NavLink>
         </li>}
-        <li ref={launcherRef} className={styles.launcherAnchor}>
+        <li ref={launcherTriggerRef} className={styles.launcherAnchor}>
           <button type="button" className={cx(styles.item, open && styles.active)} onClick={() => { setOpen((current) => !current); setEditing(false); }} aria-expanded={open} aria-haspopup="dialog" title={strings.appLauncher}>
             <Grid3X3 strokeWidth={1.75} />
             <span className={styles.label}>{strings.appLauncher}</span>
           </button>
-          {open && <div className={styles.launcher} role="dialog" aria-label={strings.appLauncher}>
+          {open && createPortal(<div ref={launcherPanelRef} className={styles.launcher} role="dialog" aria-label={strings.appLauncher}>
             <div className={styles.launcherHead}>
               {editing ? <>
                 <button type="button" className={styles.launcherSecondary} onClick={() => { setDraft(favorites); setEditing(false); }}>{strings.appLauncherCancel}</button>
@@ -166,7 +169,7 @@ export function Rail({ onAskAi }: RailProps) {
                 ))}
               </div>
             </div>
-          </div>}
+          </div>, document.body)}
         </li>
         {favoriteModules.map((m) => (
           <li key={m.id}>

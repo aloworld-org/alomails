@@ -119,7 +119,7 @@
   position: fixed;
   top: 76px;
   left: calc(var(--rail-width) + 10px);
-  z-index: calc(var(--z-rail) + 5);
+  z-index: 1000;
   display: flex;
   width: min(390px, calc(100vw - var(--rail-width) - 28px));
   max-height: calc(100dvh - 92px);
