@@ -11,8 +11,9 @@ import {
   useRef,
   useState,
   type ComponentProps,
+  type CSSProperties,
 } from "react";
-import { FileText, LayoutTemplate, Sparkles, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, Italic, LayoutTemplate, List, Minus, Plus, Printer, Redo2, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -51,6 +52,8 @@ export function DocEditor({
   const [viewMode, setViewMode] = useState<DocViewMode>(() =>
     window.localStorage.getItem(`alo-doc-view:${nodeId}`) === "page" ? "page" : "canvas",
   );
+  const [zoom, setZoom] = useState(100);
+  const [activeStyles, setActiveStyles] = useState<Record<string, boolean | string>>({});
   const pending = useRef<unknown[] | null>(null);
   const timer = useRef<number | null>(null);
   const loaded = useRef(false);
@@ -87,6 +90,28 @@ export function DocEditor({
   useEffect(() => {
     window.localStorage.setItem(`alo-doc-view:${nodeId}`, viewMode);
   }, [nodeId, viewMode]);
+
+  useEffect(() => editor.onSelectionChange(() => {
+    setActiveStyles(editor.getActiveStyles() as Record<string, boolean | string>);
+  }), [editor]);
+
+  const insertBlock = (type: "table" | "divider" | "pageBreak") => {
+    const anchor = editor.getTextCursorPosition().block;
+    editor.insertBlocks([{ type }] as Parameters<typeof editor.insertBlocks>[0], anchor, "after");
+    onChange();
+  };
+
+  const align = (textAlignment: "left" | "center" | "right") => {
+    const block = editor.getTextCursorPosition().block;
+    editor.updateBlock(block, { props: { textAlignment } } as Parameters<typeof editor.updateBlock>[1]);
+    onChange();
+  };
+
+  const toggleStyle = (style: "bold" | "italic" | "underline" | "strike") => {
+    editor.toggleStyles({ [style]: true });
+    setActiveStyles(editor.getActiveStyles() as Record<string, boolean | string>);
+    onChange();
+  };
 
   const save = useCallback(
     async (blocks: unknown[]) => {
@@ -200,7 +225,39 @@ export function DocEditor({
           </button>
         </div>
       </header>
-      <div className={`${styles.body} ${viewMode === "page" ? styles.pageMode : styles.canvasMode}`}>
+      <div className={styles.docCommands} aria-label={strings.docFormattingToolbar}>
+        <div className={styles.docMenus}>
+          <details><summary>{strings.docMenuFile}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => window.print()}><Printer size={15} />{strings.docPrint}</button></div></details>
+          <details><summary>{strings.docMenuEdit}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => editor.undo()}><Undo2 size={15} />{strings.sheetUndo}</button><button type="button" onClick={() => editor.redo()}><Redo2 size={15} />{strings.sheetRedo}</button></div></details>
+          <details><summary>{strings.docMenuInsert}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => insertBlock("table")}><Table2 size={15} />{strings.sheetInsertTable}</button><button type="button" onClick={() => insertBlock("divider")}><Minus size={15} />{strings.docInsertDivider}</button><button type="button" onClick={() => insertBlock("pageBreak")}><FileText size={15} />{strings.docInsertPageBreak}</button></div></details>
+          <details><summary>{strings.docMenuFormat}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => toggleStyle("bold")}><Bold size={15} />{strings.sheetBold}</button><button type="button" onClick={() => toggleStyle("italic")}><Italic size={15} />{strings.sheetItalic}</button><button type="button" onClick={() => toggleStyle("underline")}><Underline size={15} />{strings.sheetUnderline}</button></div></details>
+        </div>
+        <div className={styles.commandDivider} />
+        <button type="button" className={styles.commandIcon} onClick={() => editor.undo()} aria-label={strings.sheetUndo} title={strings.sheetUndo}><Undo2 size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={() => editor.redo()} aria-label={strings.sheetRedo} title={strings.sheetRedo}><Redo2 size={17} /></button>
+        <div className={styles.commandDivider} />
+        <button type="button" className={activeStyles.bold ? styles.commandIconActive : styles.commandIcon} onClick={() => toggleStyle("bold")} aria-label={strings.sheetBold}><Bold size={17} /></button>
+        <button type="button" className={activeStyles.italic ? styles.commandIconActive : styles.commandIcon} onClick={() => toggleStyle("italic")} aria-label={strings.sheetItalic}><Italic size={17} /></button>
+        <button type="button" className={activeStyles.underline ? styles.commandIconActive : styles.commandIcon} onClick={() => toggleStyle("underline")} aria-label={strings.sheetUnderline}><Underline size={17} /></button>
+        <button type="button" className={activeStyles.strike ? styles.commandIconActive : styles.commandIcon} onClick={() => toggleStyle("strike")} aria-label={strings.strikethrough}><Strikethrough size={17} /></button>
+        <div className={styles.commandDivider} />
+        <button type="button" className={styles.commandIcon} onClick={() => align("left")} aria-label={strings.sheetAlignLeft}><AlignLeft size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={() => align("center")} aria-label={strings.sheetAlignCenter}><AlignCenter size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={() => align("right")} aria-label={strings.sheetAlignRight}><AlignRight size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={() => insertBlock("table")} aria-label={strings.sheetInsertTable}><Table2 size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={() => insertBlock("divider")} aria-label={strings.docInsertDivider}><List size={17} /></button>
+        <div className={styles.commandSpacer} />
+        <div className={styles.zoomControl} aria-label={strings.docZoom}>
+          <button type="button" onClick={() => setZoom((value) => Math.max(50, value - 10))} aria-label={strings.docZoomOut}><Minus size={15} /></button>
+          <button type="button" onClick={() => setZoom(100)}>{zoom}%</button>
+          <button type="button" onClick={() => setZoom((value) => Math.min(200, value + 10))} aria-label={strings.docZoomIn}><Plus size={15} /></button>
+        </div>
+        <button type="button" className={styles.printButton} onClick={() => window.print()}><Printer size={16} /><span>{strings.docPrint}</span></button>
+      </div>
+      <div
+        className={`${styles.body} ${viewMode === "page" ? styles.pageMode : styles.canvasMode}`}
+        style={{ "--doc-zoom": zoom / 100 } as CSSProperties}
+      >
         {!ready ? (
           <div className={styles.center}>
             <Spinner size={22} />
