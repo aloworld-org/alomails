@@ -140,3 +140,19 @@ export interface TilePin {
   spec: unknown;
   span: number;
 }
+
+/** A chart the assistant proposed from a question (BI1.07), and the figures it
+ *  would show right now.
+ *
+ *  Nothing about it is stored: it exists in the browser until the reader pins
+ *  it, which is the ordinary `TilePin` request with `spec` and `span` handed
+ *  back unchanged. `repaired` says the model's first attempt was refused by the
+ *  server and corrected — worth showing, because it is the honest account of
+ *  how the chart on screen came about. */
+export interface AskProposal {
+  spec: unknown;
+  viz: Viz;
+  span: number;
+  series: Series;
+  repaired: boolean;
+}

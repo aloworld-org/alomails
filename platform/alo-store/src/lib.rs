@@ -63,6 +63,7 @@ pub mod identity;
 pub mod insight_catalog;
 pub mod insight_dashboards;
 pub mod insight_overview;
+pub mod insight_prompt;
 pub mod insight_query;
 pub mod insight_series;
 pub mod insight_spec;
@@ -169,6 +170,7 @@ pub use insight_overview::{
     BUSINESS_OVERVIEW, GALLERY, GalleryEntry, GalleryModule, OverviewCaption, OverviewSeed,
     gallery_entry,
 };
+pub use insight_prompt::catalog_prompt;
 pub use insight_query::{MAX_GROUPS, MAX_SCANNED_ROWS};
 pub use insight_series::{Label, Note, Point, Series, SeriesGroup, SeriesUnit};
 pub use insight_spec::{

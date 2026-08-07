@@ -62,14 +62,16 @@ fn read_spec(raw: Value) -> Result<ChartSpec, Problem> {
         .map_err(|error| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, error.to_string()))
 }
 
-/// Evaluates a spec against the tenant's rows and answers the series.
+/// Evaluates a spec against the tenant's rows and answers the series, as the
+/// JSON body its callers send — the two routes here, and the ask (BI1.07),
+/// which previews a proposed spec through exactly this path.
 ///
 /// The one place either route computes anything, so the instrumentation lives
 /// here too — and carries **catalog ids and integers only**: which dataset,
 /// which measure, how many buckets came back, how long it took. Filter values
 /// (customer ids, the tenant's own words) and every figure are deliberately
 /// absent: our logs are held to the promise we sell.
-async fn evaluate(acc: &AccountStore, spec: &ChartSpec) -> Result<Json<Value>, Problem> {
+pub(crate) async fn evaluate(acc: &AccountStore, spec: &ChartSpec) -> Result<Value, Problem> {
     let started = Instant::now();
     let series = acc.insight_evaluate(spec).await.map_err(map_store_err)?;
     tracing::debug!(
@@ -81,8 +83,7 @@ async fn evaluate(acc: &AccountStore, spec: &ChartSpec) -> Result<Json<Value>, P
         ms = started.elapsed().as_millis(),
         "insights eval"
     );
-    let body = serde_json::to_value(&series).map_err(|_| Problem::server_error())?;
-    Ok(Json(body))
+    serde_json::to_value(&series).map_err(|_| Problem::server_error())
 }
 
 /// A catalog enum's wire word, read back through serde so a log line can never
@@ -118,7 +119,7 @@ pub async fn eval(
         )
     })?;
     let spec = read_spec(raw)?;
-    evaluate(&account.acc, &spec).await
+    Ok(Json(evaluate(&account.acc, &spec).await?))
 }
 
 /// `GET /insights/tiles/{id}/data` → the series for a stored tile.
@@ -140,7 +141,7 @@ pub async fn tile_data(
     let account = authenticate(&state, &headers).await?;
     let tile = load_tile(&account.acc, &InsightTileId::new(id)).await?;
     match &tile.spec {
-        TileSpec::Readable(spec) => evaluate(&account.acc, spec).await,
+        TileSpec::Readable(spec) => Ok(Json(evaluate(&account.acc, spec).await?)),
         TileSpec::Unreadable { reason, .. } => Err(Problem::with(
             StatusCode::UNPROCESSABLE_ENTITY,
             format!("this tile's stored chart spec cannot be read by this version: {reason}"),

@@ -12,9 +12,10 @@
 // and the VAT return use (`docs/design/insights.md` § Where money may be added
 // up); this file moves JSON, and the screens format what came back.
 //
-// Only the calls this wave's screens actually make are here. Evaluating an
-// ad-hoc spec is the ask's (BI1.07) — a client method nothing calls is a
-// contract nobody checks.
+// Only the calls this wave's screens actually make are here — a client method
+// nothing calls is a contract nobody checks. Evaluating a bare ad-hoc spec
+// (`POST /insights/eval`) is still absent for that reason: the ask has its own
+// route, and the builder that would need `eval` is not built.
 import { useMemo } from "react";
 
 import { useAuth } from "../auth";
@@ -22,6 +23,7 @@ import { getLocale } from "../i18n";
 import { API_BASE } from "../platform/runtime";
 import { RestError, problemDetail, restMessage } from "../platform/rest";
 import type {
+  AskProposal,
   Dashboard,
   Gallery,
   GalleryEntry,
@@ -153,6 +155,17 @@ export class InsightsApi {
    *  every read — nothing computed is cached anywhere, deliberately. */
   tileData(id: string): Promise<Series> {
     return this.#read<Series>(`/insights/tiles/${encodeURIComponent(id)}/data`);
+  }
+
+  /** Asks the assistant for a chart (BI1.07). The answer is a **proposal**: the
+   *  server stores nothing, and the chart becomes a tile only if the reader
+   *  pins it — with `spec` handed back exactly as it came, so the write gate
+   *  validates the same question that was previewed.
+   *
+   *  A workspace with no model configured fails with `503`; the caller says so
+   *  and the rest of Insights carries on. */
+  ask(question: string): Promise<AskProposal> {
+    return this.#write<AskProposal>("POST", "/insights/ask", { q: question });
   }
 
   async #read<T>(path: string): Promise<T> {

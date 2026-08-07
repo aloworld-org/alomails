@@ -13,17 +13,18 @@
 // untouched (the fractional-ordering shape ADR 0022 set for boards). No figure
 // on this screen is ever computed here.
 import { useCallback, useState } from "react";
-import { BarChart3, Plus, RefreshCw } from "lucide-react";
+import { BarChart3, Plus, RefreshCw, Sparkles } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { Button, IconButton, Spinner, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { insightsMessage, useInsightsApi } from "./api";
+import { AskDialog } from "./AskDialog";
 import { GalleryDialog } from "./GalleryDialog";
 import { BoardBar, EmptyState, ErrorBanner } from "./parts";
 import { SPAN_MAX, SPAN_MIN, TileCard } from "./TileCard";
 import type { TileActions } from "./TileCard";
-import type { GalleryEntry, Tile } from "./types";
+import type { AskProposal, GalleryEntry, Tile } from "./types";
 import { useBoard } from "./useInsights";
 import styles from "./InsightsModule.module.css";
 
@@ -55,6 +56,10 @@ export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) 
   const [picking, setPicking] = useState(false);
   const [pinning, setPinning] = useState(false);
   const [pinError, setPinError] = useState<string | null>(null);
+  /** Whether the ask (BI1.07) is open. It shares `pinning`/`pinError` with the
+   *  gallery: both end in the same one request, and only one of them can be
+   *  open at a time. */
+  const [asking, setAsking] = useState(false);
   const view = useBoard(dashboardId ?? null, revision);
   const tiles = view.board?.tiles ?? [];
 
@@ -132,9 +137,39 @@ export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) 
     })();
   }
 
+  /** Pins the chart the assistant proposed, captioned with the reader's own
+   *  question. The spec is the server's own answer, handed straight back for
+   *  the write gate to validate — the client never edits a question it did not
+   *  write. */
+  function pinProposal(proposal: AskProposal, question: string) {
+    setPinning(true);
+    setPinError(null);
+    void (async () => {
+      try {
+        await api.createTile(dashboardId ?? "", {
+          title: question,
+          spec: proposal.spec,
+          span: proposal.span,
+        });
+        setAsking(false);
+        setError(null);
+        bump();
+      } catch (err) {
+        setPinError(insightsMessage(err, strings.insightsSaveFailed));
+      } finally {
+        setPinning(false);
+      }
+    })();
+  }
+
   function openGallery() {
     setPinError(null);
     setPicking(true);
+  }
+
+  function openAsk() {
+    setPinError(null);
+    setAsking(true);
   }
 
   function renameBoard() {
@@ -207,6 +242,10 @@ export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) 
           <Plus size={15} />
           {strings.insightsAddChart}
         </Button>
+        <Button variant="ghost" onClick={openAsk}>
+          <Sparkles size={15} />
+          {strings.insightsAsk}
+        </Button>
         <Button variant="ghost" onClick={renameBoard}>
           {strings.insightsRenameBoard}
         </Button>
@@ -224,6 +263,15 @@ export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) 
           error={pinError}
           onPick={pin}
           onClose={() => setPicking(false)}
+        />
+      )}
+
+      {asking && (
+        <AskDialog
+          busy={pinning}
+          pinError={pinError}
+          onPin={pinProposal}
+          onClose={() => setAsking(false)}
         />
       )}
 

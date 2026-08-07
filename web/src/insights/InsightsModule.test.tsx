@@ -335,6 +335,130 @@ describe("the gallery", () => {
   });
 });
 
+describe("the ask", () => {
+  /** What the server proposes for "what did we bill?": a spec it validated, the
+   *  drawing, the width, and the figures it evaluated — all in one answer. */
+  const PROPOSAL = {
+    spec: { schema_version: 1, dataset: "billing.documents", measure: { id: "net", agg: "sum" } },
+    viz: "number",
+    span: 1,
+    series: OWED,
+    repaired: false,
+  };
+
+  /** Types a question into the open dialog and asks it. */
+  function askFor(question: string) {
+    fireEvent.change(screen.getByLabelText(strings.insightsAskLabel), {
+      target: { value: question },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsAskSubmit }));
+  }
+
+  test("previews the server's chart, and pins nothing until the reader says so", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsAsk }));
+    await screen.findByRole("dialog");
+
+    reply("/insights/ask", "POST", PROPOSAL);
+    askFor("  what did we bill?  ");
+
+    // The question crossed trimmed, and nothing else was sent with it.
+    await waitFor(() => expect(writes().length).toBe(1));
+    const asked = writes()[0] as Call;
+    expect(asked.url).toContain("/insights/ask");
+    expect(asked.body).toEqual({ q: "what did we bill?" });
+
+    // The preview is on screen, captioned with the reader's own question, and
+    // showing the figure the server computed.
+    const preview = within(await screen.findByRole("region", { name: strings.insightsAskPreview }));
+    expect(preview.getByText("what did we bill?")).toBeTruthy();
+    expect(preview.getByText("€42,000.00")).toBeTruthy();
+    // Asking pinned nothing: the only write so far is the ask itself.
+    expect(writes().length).toBe(1);
+
+    reply("/insights/dashboards/dash-1/tiles", "POST", { tile: OUTSTANDING });
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsAskPin }));
+
+    await waitFor(() => expect(writes().length).toBe(2));
+    const pinned = writes()[1] as Call;
+    expect(pinned.url).toContain("/insights/dashboards/dash-1/tiles");
+    // The spec is the server's own envelope, unedited; the caption is the
+    // reader's question; the width is the one the server proposed.
+    expect(pinned.body).toEqual({
+      title: "what did we bill?",
+      spec: PROPOSAL.spec,
+      span: 1,
+    });
+    // And the board is re-read from the server rather than guessed at.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(reads("/insights/dashboards/dash-1").length).toBeGreaterThan(1);
+  });
+
+  test("discarding a proposal pins nothing", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsAsk }));
+    await screen.findByRole("dialog");
+    reply("/insights/ask", "POST", PROPOSAL);
+    askFor("what did we bill?");
+    await screen.findByRole("region", { name: strings.insightsAskPreview });
+
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsAskDiscard }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    // The ask itself, and nothing after it.
+    expect(writes().length).toBe(1);
+    expect((writes()[0] as Call).url).toContain("/insights/ask");
+  });
+
+  test("a question that could not be charted says so, with nothing drawn", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsAsk }));
+    await screen.findByRole("dialog");
+    reply(
+      "/insights/ask",
+      "POST",
+      { detail: "no chart could be built from that question: I cannot chart the weather." },
+      422,
+    );
+    askFor("what is the weather tomorrow?");
+
+    expect(await screen.findByText(/I cannot chart the weather/)).toBeTruthy();
+    expect(screen.queryByRole("region", { name: strings.insightsAskPreview })).toBeNull();
+    expect(screen.queryByRole("button", { name: strings.insightsAskPin })).toBeNull();
+  });
+
+  test("a workspace with no assistant is told in our words, not the server's code", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsAsk }));
+    await screen.findByRole("dialog");
+    reply("/insights/ask", "POST", { detail: "ai-unavailable" }, 503);
+    askFor("what did we bill?");
+
+    expect(await screen.findByText(strings.insightsAskUnavailable)).toBeTruthy();
+    expect(screen.queryByText("ai-unavailable")).toBeNull();
+  });
+
+  test("a corrected proposal says so on the preview", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsAsk }));
+    await screen.findByRole("dialog");
+    reply("/insights/ask", "POST", { ...PROPOSAL, repaired: true });
+    askFor("what did we bill?");
+
+    expect(await screen.findByText(strings.insightsAskRepaired)).toBeTruthy();
+  });
+});
+
 describe("a tile", () => {
   test("shows the figure the server computed, in the currency the server stated", async () => {
     ui();

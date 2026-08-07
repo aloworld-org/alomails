@@ -32,7 +32,7 @@ pub const MAX_IMPROVE_BYTES: usize = 64 * 1024;
 pub const MAX_SUMMARIZE_BYTES: usize = 256 * 1024;
 
 /// Load the tenant's default AI backend config, or a 503 problem if none is set.
-async fn tenant_ai_config(account: &crate::state::Account) -> Result<AiConfig, Problem> {
+pub(crate) async fn tenant_ai_config(account: &crate::state::Account) -> Result<AiConfig, Problem> {
     let row = account
         .acc
         .default_ai_config()
@@ -292,7 +292,7 @@ pub async fn compose(
 }
 
 /// Map an inference error to a client problem with a coarse, safe code.
-fn ai_problem(err: &InferenceError) -> Problem {
+pub(crate) fn ai_problem(err: &InferenceError) -> Problem {
     match err {
         InferenceError::Disabled | InferenceError::NotConfigured => {
             Problem::with(StatusCode::SERVICE_UNAVAILABLE, "ai-unavailable")

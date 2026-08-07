@@ -74,6 +74,7 @@ pub mod flagdue;
 pub mod imap_import;
 pub mod imap_import_route;
 pub mod insights;
+pub mod insights_ask;
 pub mod insights_eval;
 pub mod insights_gallery;
 pub mod jtypes;

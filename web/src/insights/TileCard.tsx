@@ -18,12 +18,9 @@ import { ChevronLeft, ChevronRight, Maximize2, Minimize2, MoreHorizontal, Pencil
 import { Menu, Spinner, cx } from "../ds";
 import type { MenuItem } from "../ds";
 import { strings } from "../i18n";
-import { ChartFigure } from "./ChartFigure";
-import type { DrawnViz } from "./ChartFigure";
-import { hasFigures, noteText } from "./format";
-import { NumberFigure } from "./NumberFigure";
-import { TableFigure } from "./TableFigure";
-import type { Series, Tile } from "./types";
+import { Figures } from "./Figures";
+import { noteText } from "./format";
+import type { Tile } from "./types";
 import { useTileFigures } from "./useInsights";
 import styles from "./InsightsModule.module.css";
 
@@ -42,17 +39,6 @@ export interface TileActions {
   resize: (tile: Tile, span: number) => void;
   move: (tile: Tile, direction: -1 | 1) => void;
   remove: (tile: Tile) => void;
-}
-
-/** Draws the answer with the renderer the tile's own viz names. A readable tile
- *  always has one; a bar is what anything else is drawn as, because a chart
- *  nobody can see is a worse answer than a plain one. */
-function Figures({ series, tile }: { series: Series; tile: Tile }) {
-  if (!hasFigures(series)) return <p className={styles.quiet}>{strings.insightsNoFigures}</p>;
-  if (tile.viz === "number") return <NumberFigure series={series} />;
-  if (tile.viz === "table") return <TableFigure series={series} />;
-  const drawn: DrawnViz = tile.viz === "line" ? "line" : tile.viz === "pie" ? "pie" : "bar";
-  return <ChartFigure series={series} viz={drawn} title={tile.title} />;
 }
 
 /** The grid class for a tile's stored width, clamped to the columns the grid
@@ -147,7 +133,7 @@ export function TileCard({
           </p>
         )}
         {tile.readable && figures.error === null && figures.series !== null && (
-          <Figures series={figures.series} tile={tile} />
+          <Figures series={figures.series} viz={tile.viz} title={tile.title} />
         )}
       </div>
       {figures.series !== null && (

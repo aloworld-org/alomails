@@ -147,8 +147,9 @@ pub fn agent_messages(
 }
 
 /// Slice the JSON object out of the model's text, so a stray code fence or one
-/// line of preamble does not break parsing.
-fn extract_json(text: &str) -> Option<&str> {
+/// line of preamble does not break parsing. Shared with [`crate::insights`],
+/// which reads a different envelope out of the same kind of reply.
+pub(crate) fn extract_json(text: &str) -> Option<&str> {
     let start = text.find('{')?;
     let end = text.rfind('}')?;
     (end > start).then(|| &text[start..=end])

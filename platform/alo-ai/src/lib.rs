@@ -20,12 +20,14 @@ use egress::{is_blocked_ip, split_authority};
 mod agent;
 pub mod agent_billing;
 pub mod agent_crm;
+pub mod insights;
 pub use agent::{
     AGENT_TOOLS, AgentDecision, ProposedAction, agent_messages, is_agent_tool, parse_decision,
     run_agent, system_prompt,
 };
 pub use agent_billing::BILLING_TOOLS;
 pub use agent_crm::CRM_TOOLS;
+pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, repair_messages};
 
 /// Per-tenant backend configuration (admin-set, ADR 0011).
 #[derive(Debug, Clone)]
