@@ -15,7 +15,7 @@ import {
   type SyntheticEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { AlignCenter, AlignLeft, AlignRight, Bold, Check, ChevronDown, Code2, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, MessageSquarePlus, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, ChevronDown, Code2, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, MessageSquarePlus, Minus, Pipette, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -647,12 +647,40 @@ const NAMED_COLORS: Record<string, string> = {
   purple: "#7950f2",
 };
 
-const DOC_COLORS = [
-  "#102a43", "#475569", "#94a3b8", "#ffffff", "#000000", "#7f1d1d",
-  "#eb6f4b", "#f59e0b", "#facc15", "#2f9e66", "#14b8a6", "#3478f6",
-  "#4f46e5", "#7950f2", "#c026d3", "#e03131", "#fee2e2", "#ffedd5",
-  "#fef3c7", "#dcfce7", "#ccfbf1", "#dbeafe", "#ede9fe", "#fce7f3",
-] as const;
+type Hsva = { h: number; s: number; v: number; a: number };
+
+function rgbToHsva(r: number, g: number, b: number, a = 1): Hsva {
+  const rn = r / 255; const gn = g / 255; const bn = b / 255;
+  const max = Math.max(rn, gn, bn); const min = Math.min(rn, gn, bn); const delta = max - min;
+  let h = 0;
+  if (delta !== 0) {
+    if (max === rn) h = 60 * (((gn - bn) / delta) % 6);
+    else if (max === gn) h = 60 * ((bn - rn) / delta + 2);
+    else h = 60 * ((rn - gn) / delta + 4);
+  }
+  return { h: h < 0 ? h + 360 : h, s: max === 0 ? 0 : delta / max, v: max, a };
+}
+
+function hsvaToRgb({ h, s, v }: Hsva) {
+  const c = v * s; const x = c * (1 - Math.abs(((h / 60) % 2) - 1)); const m = v - c;
+  const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+  return { r: Math.round((r + m) * 255), g: Math.round((g + m) * 255), b: Math.round((b + m) * 255) };
+}
+
+function colorToHsva(color: string, fallback: string): Hsva {
+  const source = color === "default" ? fallback : NAMED_COLORS[color] ?? color;
+  const hex = source.match(/^#([0-9a-f]{6})([0-9a-f]{2})?$/i);
+  if (hex?.[1]) return rgbToHsva(Number.parseInt(hex[1].slice(0, 2), 16), Number.parseInt(hex[1].slice(2, 4), 16), Number.parseInt(hex[1].slice(4, 6), 16), hex[2] ? Number.parseInt(hex[2], 16) / 255 : 1);
+  const rgba = source.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)$/i);
+  if (rgba?.[1] && rgba[2] && rgba[3]) return rgbToHsva(Number(rgba[1]), Number(rgba[2]), Number(rgba[3]), rgba[4] === undefined ? 1 : Number(rgba[4]));
+  return colorToHsva(fallback, "#102a43");
+}
+
+function hsvaToValue(hsva: Hsva) {
+  const { r, g, b } = hsvaToRgb(hsva);
+  const hex = `#${[r, g, b].map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+  return hsva.a >= .995 ? hex : `${hex}${Math.round(hsva.a * 255).toString(16).padStart(2, "0")}`;
+}
 
 function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }: {
   label: string;
@@ -664,9 +692,13 @@ function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }:
 }) {
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0 });
+  const [hsva, setHsva] = useState(() => colorToHsva(value, fallback));
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const color = /^#[0-9a-f]{6}$/i.test(value) ? value : NAMED_COLORS[value] ?? fallback;
+  const svRef = useRef<HTMLDivElement>(null);
+  const color = hsvaToValue(hsva);
+
+  useEffect(() => setHsva(colorToHsva(value, fallback)), [fallback, value]);
 
   useEffect(() => {
     if (!open) return;
@@ -687,9 +719,34 @@ function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }:
 
   const toggle = () => {
     const rect = triggerRef.current?.getBoundingClientRect();
-    if (rect) setPosition({ left: Math.min(rect.left, window.innerWidth - 236), top: rect.bottom + 6 });
+    if (rect) setPosition({ left: Math.max(8, Math.min(rect.left, window.innerWidth - 296)), top: rect.bottom + 6 });
     setOpen((current) => !current);
   };
+
+  const update = (next: Hsva) => {
+    setHsva(next);
+    onPick(hsvaToValue(next));
+  };
+
+  const updateSv = (clientX: number, clientY: number) => {
+    const rect = svRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    update({ ...hsva, s: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)), v: Math.max(0, Math.min(1, 1 - (clientY - rect.top) / rect.height)) });
+  };
+
+  const pickScreenColor = async () => {
+    const EyeDropper = (window as unknown as { EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> } }).EyeDropper;
+    if (!EyeDropper) return;
+    try {
+      const result = await new EyeDropper().open();
+      update({ ...colorToHsva(result.sRGBHex, fallback), a: hsva.a });
+    } catch {
+      // Cancelling the browser eyedropper is not an error for the user.
+    }
+  };
+
+  const rgb = hsvaToRgb(hsva);
+  const hex = [rgb.r, rgb.g, rgb.b].map((channel) => channel.toString(16).padStart(2, "0")).join("").toUpperCase();
 
   return <div className={styles.docColorPicker}>
     <button ref={triggerRef} type="button" className={styles.docColorMain} title={label} aria-label={label} aria-expanded={open} onClick={toggle}>
@@ -698,11 +755,22 @@ function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }:
       <ChevronDown className={styles.docColorChevron} size={12} />
     </button>
     {open && createPortal(<div ref={popoverRef} className={styles.docColorPopover} style={position} role="dialog" aria-label={label}>
-      <strong>{label}</strong>
-      <div className={styles.docColorGrid} role="listbox" aria-label={label}>
-        {DOC_COLORS.map((option) => <button key={option} type="button" role="option" aria-label={option} aria-selected={option.toLowerCase() === color.toLowerCase()} className={styles.docColorOption} style={{ backgroundColor: option }} onClick={() => { onPick(option); setOpen(false); }}>
-          {option.toLowerCase() === color.toLowerCase() && <Check size={13} />}
-        </button>)}
+      <div ref={svRef} className={styles.docColorSpectrum} style={{ backgroundColor: `hsl(${hsva.h} 100% 50%)` }} onPointerDown={(event) => { event.currentTarget.setPointerCapture(event.pointerId); updateSv(event.clientX, event.clientY); }} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) updateSv(event.clientX, event.clientY); }}>
+        <span className={styles.docColorSpectrumCursor} style={{ left: `${hsva.s * 100}%`, top: `${(1 - hsva.v) * 100}%` }} />
+      </div>
+      <div className={styles.docColorSliderRow}>
+        <button type="button" className={styles.docEyedropper} onClick={() => void pickScreenColor()} aria-label={strings.docColorEyedropper} title={strings.docColorEyedropper}><Pipette size={17} /></button>
+        <span className={styles.docColorPreview} style={{ backgroundColor: color }} />
+        <input className={styles.docHueSlider} type="range" min="0" max="360" value={Math.round(hsva.h)} aria-label={label} onChange={(event) => update({ ...hsva, h: Number(event.target.value) })} />
+      </div>
+      <div className={styles.docColorSliderRow}>
+        <span className={styles.docColorChecker} />
+        <input className={styles.docAlphaSlider} style={{ "--picker-color": `rgb(${rgb.r} ${rgb.g} ${rgb.b})` } as CSSProperties} type="range" min="0" max="100" value={Math.round(hsva.a * 100)} aria-label={strings.docColorOpacity} onChange={(event) => update({ ...hsva, a: Number(event.target.value) / 100 })} />
+      </div>
+      <div className={styles.docColorFields}>
+        <span>{strings.docColorHex}</span>
+        <label>#<input key={hex} defaultValue={hex} maxLength={6} aria-label={strings.docColorHex} onChange={(event) => { const next = event.target.value.replace(/[^0-9a-f]/gi, "").slice(0, 6); if (next.length === 6) update({ ...colorToHsva(`#${next}`, fallback), a: hsva.a }); }} /></label>
+        <label><input type="number" min="0" max="100" value={Math.round(hsva.a * 100)} aria-label={strings.docColorOpacity} onChange={(event) => update({ ...hsva, a: Math.max(0, Math.min(100, Number(event.target.value))) / 100 })} />%</label>
       </div>
       <button type="button" className={styles.docColorDefault} onClick={() => { onPick("default"); setOpen(false); }}><X size={13} />{resetLabel}</button>
     </div>, document.body)}
