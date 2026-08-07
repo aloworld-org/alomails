@@ -12,6 +12,7 @@ import {
   useState,
   type ComponentProps,
   type CSSProperties,
+  type SyntheticEvent,
 } from "react";
 import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, MessageSquarePlus, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
@@ -122,6 +123,7 @@ export function DocEditor({
   const timer = useRef<number | null>(null);
   const loaded = useRef(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const menuBarRef = useRef<HTMLDivElement>(null);
 
   // AI propose-then-approve state.
   const [aiOpen, setAiOpen] = useState(false);
@@ -129,6 +131,27 @@ export function DocEditor({
   const [proposing, setProposing] = useState(false);
   const [proposal, setProposal] = useState<string | null>(null);
   const [aiError, setAiError] = useState(false);
+
+  const closeMenus = useCallback(() => {
+    menuBarRef.current?.querySelectorAll("details[open]").forEach((menu) => {
+      menu.removeAttribute("open");
+    });
+  }, []);
+
+  const handleMenuToggle = useCallback((event: SyntheticEvent<HTMLDetailsElement>) => {
+    if (!event.currentTarget.open) return;
+    menuBarRef.current?.querySelectorAll("details[open]").forEach((menu) => {
+      if (menu !== event.currentTarget) menu.removeAttribute("open");
+    });
+  }, []);
+
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => {
+      if (!menuBarRef.current?.contains(event.target as Node)) closeMenus();
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [closeMenus]);
 
   useEffect(() => {
     let live = true;
@@ -405,12 +428,12 @@ export function DocEditor({
         </div>
       </header>
       {viewMode === "page" && <div className={styles.docCommands} aria-label={strings.docFormattingToolbar}>
-        <div className={styles.docMenus}>
-          <details><summary>{strings.docMenuFile}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => window.print()}><Printer size={15} />{strings.docPrint}</button><button type="button" onClick={() => window.print()}><FileText size={15} />{strings.docSavePdf}</button></div></details>
-          <details><summary>{strings.docMenuEdit}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => editor.undo()}><Undo2 size={15} />{strings.sheetUndo}</button><button type="button" onClick={() => editor.redo()}><Redo2 size={15} />{strings.sheetRedo}</button></div></details>
-          <details><summary>{strings.docMenuInsert}</summary><div className={styles.docMenuPanel}><button type="button" onClick={createLink}><Link2 size={15} />{strings.docInsertLink}</button><button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={15} />{strings.docInsertImage}</button><button type="button" onClick={() => insertBlock("table")}><Table2 size={15} />{strings.sheetInsertTable}</button><button type="button" onClick={() => insertBlock("equation")}><Sigma size={15} />{strings.docEquation}</button><button type="button" onClick={insertComment}><MessageSquarePlus size={15} />{strings.docAddComment}</button><button type="button" onClick={() => insertBlock("divider")}><Minus size={15} />{strings.docInsertDivider}</button><button type="button" onClick={() => insertBlock("pageBreak")}><FileText size={15} />{strings.docInsertPageBreak}</button></div></details>
-          <details><summary>{strings.docMenuFormat}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => toggleStyle("bold")}><Bold size={15} />{strings.sheetBold}</button><button type="button" onClick={() => toggleStyle("italic")}><Italic size={15} />{strings.sheetItalic}</button><button type="button" onClick={() => toggleStyle("underline")}><Underline size={15} />{strings.sheetUnderline}</button></div></details>
-          <details><summary>{strings.docPageSetup}</summary><div className={`${styles.docMenuPanel} ${styles.pageSetupPanel}`}>
+        <div ref={menuBarRef} className={styles.docMenus} onClick={(event) => { if ((event.target as HTMLElement).closest("button") !== null) closeMenus(); }}>
+          <details onToggle={handleMenuToggle}><summary>{strings.docMenuFile}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => window.print()}><Printer size={15} />{strings.docPrint}</button><button type="button" onClick={() => window.print()}><FileText size={15} />{strings.docSavePdf}</button></div></details>
+          <details onToggle={handleMenuToggle}><summary>{strings.docMenuEdit}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => editor.undo()}><Undo2 size={15} />{strings.sheetUndo}</button><button type="button" onClick={() => editor.redo()}><Redo2 size={15} />{strings.sheetRedo}</button></div></details>
+          <details onToggle={handleMenuToggle}><summary>{strings.docMenuInsert}</summary><div className={styles.docMenuPanel}><button type="button" onClick={createLink}><Link2 size={15} />{strings.docInsertLink}</button><button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={15} />{strings.docInsertImage}</button><button type="button" onClick={() => insertBlock("table")}><Table2 size={15} />{strings.sheetInsertTable}</button><button type="button" onClick={() => insertBlock("equation")}><Sigma size={15} />{strings.docEquation}</button><button type="button" onClick={insertComment}><MessageSquarePlus size={15} />{strings.docAddComment}</button><button type="button" onClick={() => insertBlock("divider")}><Minus size={15} />{strings.docInsertDivider}</button><button type="button" onClick={() => insertBlock("pageBreak")}><FileText size={15} />{strings.docInsertPageBreak}</button></div></details>
+          <details onToggle={handleMenuToggle}><summary>{strings.docMenuFormat}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => toggleStyle("bold")}><Bold size={15} />{strings.sheetBold}</button><button type="button" onClick={() => toggleStyle("italic")}><Italic size={15} />{strings.sheetItalic}</button><button type="button" onClick={() => toggleStyle("underline")}><Underline size={15} />{strings.sheetUnderline}</button></div></details>
+          <details onToggle={handleMenuToggle}><summary>{strings.docPageSetup}</summary><div className={`${styles.docMenuPanel} ${styles.pageSetupPanel}`}>
             <label>{strings.docPageSize}<select value={pageSize} onChange={(event) => setPageSize(event.target.value as PageSize)}><option value="a4">A4</option><option value="letter">{strings.docPageLetter}</option></select></label>
             <label>{strings.docPageOrientation}<select value={pageOrientation} onChange={(event) => setPageOrientation(event.target.value as PageOrientation)}><option value="portrait">{strings.docPagePortrait}</option><option value="landscape">{strings.docPageLandscape}</option></select></label>
             <label>{strings.docPageMargins}<select value={pageMargins} onChange={(event) => setPageMargins(event.target.value as PageMargins)}><option value="normal">{strings.docMarginsNormal}</option><option value="narrow">{strings.docMarginsNarrow}</option><option value="wide">{strings.docMarginsWide}</option></select></label>
