@@ -648,6 +648,18 @@ const NAMED_COLORS: Record<string, string> = {
 };
 
 type Hsva = { h: number; s: number; v: number; a: number };
+const BRAND_COLORS_KEY = "alo-document-brand-colors";
+const BRAND_COLORS_EVENT = "alo-brand-colors-change";
+
+function readBrandColors() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(BRAND_COLORS_KEY) ?? "[]") as unknown;
+    if (Array.isArray(saved)) return saved.filter((color): color is string => typeof color === "string" && /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(color)).slice(0, 16);
+  } catch {
+    // Invalid local preferences fall back to an empty brand palette.
+  }
+  return [];
+}
 
 function rgbToHsva(r: number, g: number, b: number, a = 1): Hsva {
   const rn = r / 255; const gn = g / 255; const bn = b / 255;
@@ -693,12 +705,23 @@ function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }:
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0 });
   const [hsva, setHsva] = useState(() => colorToHsva(value, fallback));
+  const [brandColors, setBrandColors] = useState(readBrandColors);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
   const svRef = useRef<HTMLDivElement>(null);
   const color = hsvaToValue(hsva);
 
   useEffect(() => setHsva(colorToHsva(value, fallback)), [fallback, value]);
+
+  useEffect(() => {
+    const sync = () => setBrandColors(readBrandColors());
+    window.addEventListener(BRAND_COLORS_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(BRAND_COLORS_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -719,13 +742,24 @@ function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }:
 
   const toggle = () => {
     const rect = triggerRef.current?.getBoundingClientRect();
-    if (rect) setPosition({ left: Math.max(8, Math.min(rect.left, window.innerWidth - 296)), top: rect.bottom + 6 });
+    if (rect) setPosition({ left: Math.max(8, Math.min(rect.left, window.innerWidth - 296)), top: Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - 500)) });
     setOpen((current) => !current);
   };
 
   const update = (next: Hsva) => {
     setHsva(next);
     onPick(hsvaToValue(next));
+  };
+
+  const storeBrandColors = (colors: string[]) => {
+    window.localStorage.setItem(BRAND_COLORS_KEY, JSON.stringify(colors));
+    setBrandColors(colors);
+    window.dispatchEvent(new Event(BRAND_COLORS_EVENT));
+  };
+
+  const saveBrandColor = () => {
+    const saved = color.toUpperCase();
+    storeBrandColors([saved, ...brandColors.filter((item) => item.toUpperCase() !== saved)].slice(0, 16));
   };
 
   const updateSv = (clientX: number, clientY: number) => {
@@ -772,6 +806,16 @@ function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }:
         <label>#<input key={hex} defaultValue={hex} maxLength={6} aria-label={strings.docColorHex} onChange={(event) => { const next = event.target.value.replace(/[^0-9a-f]/gi, "").slice(0, 6); if (next.length === 6) update({ ...colorToHsva(`#${next}`, fallback), a: hsva.a }); }} /></label>
         <label><input type="number" min="0" max="100" value={Math.round(hsva.a * 100)} aria-label={strings.docColorOpacity} onChange={(event) => update({ ...hsva, a: Math.max(0, Math.min(100, Number(event.target.value))) / 100 })} />%</label>
       </div>
+      <div className={styles.docBrandColorsHead}>
+        <strong>{strings.docBrandColors}</strong>
+        <button type="button" onClick={saveBrandColor} aria-label={strings.docSaveBrandColor} title={strings.docSaveBrandColor}><Plus size={15} />{strings.docSaveBrandColor}</button>
+      </div>
+      {brandColors.length > 0 && <div className={styles.docBrandColors}>
+        {brandColors.map((brandColor) => <span key={brandColor} className={styles.docBrandColor}>
+          <button type="button" className={styles.docBrandColorPick} style={{ backgroundColor: brandColor }} aria-label={brandColor} title={brandColor} onClick={() => update(colorToHsva(brandColor, fallback))} />
+          <button type="button" className={styles.docBrandColorRemove} onClick={() => storeBrandColors(brandColors.filter((item) => item !== brandColor))} aria-label={`${strings.docRemoveBrandColor}: ${brandColor}`} title={strings.docRemoveBrandColor}><X size={10} /></button>
+        </span>)}
+      </div>}
       <button type="button" className={styles.docColorDefault} onClick={() => { onPick("default"); setOpen(false); }}><X size={13} />{resetLabel}</button>
     </div>, document.body)}
   </div>;
