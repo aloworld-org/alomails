@@ -17,6 +17,7 @@ export const nl: Partial<Catalog> = {
   taskNoDriveFiles: "Geen bestanden in deze map.",
   taskAttachSelected: "Selectie toevoegen",
   taskFilesSelected: (count: number) => count === 1 ? "1 bestand geselecteerd" : `${count} bestanden geselecteerd`,
+  taskCreateOnDate: (date: string) => `Taak maken met vervaldatum ${date}`,
   // brand
   appName: "alo",
   tagline: "De soevereine, AI-native werkomgeving voor Europa.",

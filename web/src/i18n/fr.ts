@@ -17,6 +17,7 @@ export const fr: Partial<Catalog> = {
   taskNoDriveFiles: "Aucun fichier dans ce dossier.",
   taskAttachSelected: "Joindre la sélection",
   taskFilesSelected: (count: number) => count === 1 ? "1 fichier sélectionné" : `${count} fichiers sélectionnés`,
+  taskCreateOnDate: (date: string) => `Créer une tâche pour le ${date}`,
   // brand
   appName: "alo",
   tagline: "L’espace de travail souverain et natif à l’IA pour l’Europe.",

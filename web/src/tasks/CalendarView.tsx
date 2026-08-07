@@ -14,6 +14,7 @@ const MAX = 3;
 interface Props {
   tasks: Task[];
   onOpen: (id: string) => void;
+  onAdd: (day: Date) => void;
 }
 
 function prioClass(t: Task): string {
@@ -24,7 +25,7 @@ function prioClass(t: Task): string {
   return "";
 }
 
-export function CalendarView({ tasks, onOpen }: Props) {
+export function CalendarView({ tasks, onOpen, onAdd }: Props) {
   const locale = getLocale();
   const today = useMemo(() => startOfDay(new Date()), []);
   const [anchor, setAnchor] = useState<Date>(today);
@@ -65,7 +66,20 @@ export function CalendarView({ tasks, onOpen }: Props) {
           const isToday = sameDay(day, today);
           const otherMonth = day.getMonth() !== month;
           return (
-            <div key={day.toISOString()} className={`${styles.tcalCell} ${otherMonth ? styles.tcalOther : ""}`}>
+            <div
+              key={day.toISOString()}
+              className={`${styles.tcalCell} ${otherMonth ? styles.tcalOther : ""}`}
+              role="button"
+              tabIndex={0}
+              aria-label={strings.taskCreateOnDate(day.toLocaleDateString(locale))}
+              onClick={() => onAdd(day)}
+              onKeyDown={(event) => {
+                if (event.target !== event.currentTarget) return;
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                onAdd(day);
+              }}
+            >
               <div className={styles.tcalNumRow}>
                 <span className={`${styles.tcalNum} ${isToday ? styles.tcalTodayNum : ""}`}>{day.getDate()}</span>
               </div>
@@ -75,7 +89,10 @@ export function CalendarView({ tasks, onOpen }: Props) {
                     key={t.id}
                     type="button"
                     className={`${styles.tcalTask} ${t.status === "done" ? styles.tcalTaskDone : ""}`}
-                    onClick={() => onOpen(t.id)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpen(t.id);
+                    }}
                     title={t.title}
                   >
                     <span className={`${styles.tcalDot} ${prioClass(t)}`} aria-hidden />

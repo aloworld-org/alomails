@@ -65,7 +65,7 @@ export function TasksModule() {
     setSelected(id);
   }, [searchParams, setSearchParams]);
   const [search, setSearch] = useState("");
-  const [creating, setCreating] = useState<{ status?: string } | null>(null);
+  const [creating, setCreating] = useState<{ status?: string; dueDate?: string } | null>(null);
 
   const projectName = useCallback(
     (id: string) => projects.find((p) => p.id === id)?.name ?? "",
@@ -78,8 +78,18 @@ export function TasksModule() {
     return (projects.find((p) => p.kind === "personal") ?? projects[0])?.id;
   }
 
-  function openCreate(status?: string) {
-    setCreating(status !== undefined ? { status } : {});
+  function openCreate(status?: string, dueDate?: string) {
+    const next: { status?: string; dueDate?: string } = {};
+    if (status !== undefined) next.status = status;
+    if (dueDate !== undefined) next.dueDate = dueDate;
+    setCreating(next);
+  }
+
+  function localDateValue(day: Date): string {
+    const year = day.getFullYear();
+    const month = String(day.getMonth() + 1).padStart(2, "0");
+    const date = String(day.getDate()).padStart(2, "0");
+    return `${year}-${month}-${date}`;
   }
 
   const loadProjects = useCallback(async () => {
@@ -305,7 +315,11 @@ export function TasksModule() {
           ) : view === "timeline" ? (
             <TimelineView tasks={filterTasks(tasks, config, identity?.email)} edges={edges} onOpen={setSelected} />
           ) : view === "calendar" ? (
-            <CalendarView tasks={filterTasks(tasks, config, identity?.email)} onOpen={setSelected} />
+            <CalendarView
+              tasks={filterTasks(tasks, config, identity?.email)}
+              onOpen={setSelected}
+              onAdd={(day) => openCreate(undefined, localDateValue(day))}
+            />
           ) : view === "files" ? (
             <FilesView
               projectId={targetProject() ?? ""}
@@ -347,6 +361,7 @@ export function TasksModule() {
           projects={projects}
           defaultProjectId={targetProject()}
           defaultStatus={creating.status}
+          defaultDueDate={creating.dueDate}
           onClose={() => setCreating(null)}
           onCreated={() => {
             void reload();

@@ -372,6 +372,7 @@ export const en = {
   taskNoDriveFiles: "No files in this folder.",
   taskAttachSelected: "Attach selected",
   taskFilesSelected: (count: number) => count === 1 ? "1 file selected" : `${count} files selected`,
+  taskCreateOnDate: (date: string) => `Create a task due ${date}`,
   taskLabelsTitle: "Labels",
   taskAddLabel: "Add label",
   taskNewLabelPlaceholder: "New label…",
