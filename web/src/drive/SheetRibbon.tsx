@@ -1021,14 +1021,24 @@ function ColorBtn({
   formatKey?: string;
   selectedColor?: string;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const normalizedColor = /^#[0-9a-f]{6}$/i.test(selectedColor) ? selectedColor : "#000000";
+
+  useEffect(() => {
+    if (inputRef.current !== null && inputRef.current.value.toLowerCase() !== normalizedColor.toLowerCase()) {
+      inputRef.current.value = normalizedColor;
+    }
+  }, [normalizedColor]);
+
   return (
     <label className={styles.colorBtn} data-format-key={formatKey} title={label} aria-label={label}>
       {children}
       <input
+        ref={inputRef}
         type="color"
         className={styles.colorInput}
         disabled={disabled}
-        value={/^#[0-9a-f]{6}$/i.test(selectedColor) ? selectedColor : "#000000"}
+        defaultValue={normalizedColor}
         onChange={(e) => onPick(e.target.value)}
       />
     </label>
