@@ -6,6 +6,10 @@
 import type { Catalog } from "./en";
 
 export const fr: Partial<Catalog> = {
+  taskFilesAttachTo: "Joindre à la tâche",
+  taskFilesDropHint: "Déposez des images ou fichiers ici, ou utilisez Ajouter une pièce jointe.",
+  taskFilesNeedTask: "Créez d’abord une tâche, puis joignez-y des images et des fichiers.",
+  taskFilesUploadError: "Impossible de joindre ces fichiers. Réessayez.",
   // brand
   appName: "alo",
   tagline: "L’espace de travail souverain et natif à l’IA pour l’Europe.",

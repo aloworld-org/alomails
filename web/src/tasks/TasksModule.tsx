@@ -307,7 +307,11 @@ export function TasksModule() {
           ) : view === "calendar" ? (
             <CalendarView tasks={filterTasks(tasks, config, identity?.email)} onOpen={setSelected} />
           ) : view === "files" ? (
-            <FilesView projectId={targetProject() ?? ""} onOpen={setSelected} />
+            <FilesView
+              projectId={targetProject() ?? ""}
+              onOpen={setSelected}
+              onCreate={() => openCreate()}
+            />
           ) : (
             <ListView
               tasks={tasks}

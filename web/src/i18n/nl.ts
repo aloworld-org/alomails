@@ -6,6 +6,10 @@
 import type { Catalog } from "./en";
 
 export const nl: Partial<Catalog> = {
+  taskFilesAttachTo: "Toevoegen aan taak",
+  taskFilesDropHint: "Sleep afbeeldingen of bestanden hierheen, of kies Bijlage toevoegen.",
+  taskFilesNeedTask: "Maak eerst een taak en voeg er daarna afbeeldingen en bestanden aan toe.",
+  taskFilesUploadError: "Deze bestanden konden niet worden toegevoegd. Probeer opnieuw.",
   // brand
   appName: "alo",
   tagline: "De soevereine, AI-native werkomgeving voor Europa.",
