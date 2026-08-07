@@ -17,6 +17,15 @@ pub struct Problem {
     pub type_uri: &'static str,
     /// Optional human detail (never internal error text).
     pub detail: Option<String>,
+    /// Optional machine-readable context, merged into the problem body.
+    ///
+    /// For the refusal a client has to *act* on rather than merely show: the
+    /// first caller is the lead import (B2.09), whose `422` carries the
+    /// per-row report naming which line broke which rule — a refusal a person
+    /// cannot act on is the one thing an importer must never answer. It is
+    /// server-authored context, never an echo of the request, and it is
+    /// deliberately not part of the JMAP envelope's own error shapes.
+    pub extra: Option<Value>,
 }
 
 impl Problem {
@@ -25,6 +34,7 @@ impl Problem {
             status,
             type_uri,
             detail: None,
+            extra: None,
         }
     }
 
@@ -90,11 +100,28 @@ impl Problem {
     pub fn with(status: StatusCode, detail: impl Into<String>) -> Self {
         Self::new(status, "about:blank").detail(detail)
     }
+
+    /// With machine-readable context merged into the problem body.
+    ///
+    /// Only the members of a JSON **object** are merged, and never over the
+    /// problem's own `type`, `status` or `detail`: context added to a refusal
+    /// must not be able to change what the refusal says.
+    pub fn with_extra(mut self, extra: Value) -> Self {
+        self.extra = Some(extra);
+        self
+    }
 }
 
 impl IntoResponse for Problem {
     fn into_response(self) -> Response {
         let mut body = json!({ "type": self.type_uri, "status": self.status.as_u16() });
+        if let Some(Value::Object(extra)) = self.extra {
+            for (key, value) in extra {
+                if !matches!(key.as_str(), "type" | "status" | "detail") {
+                    body[key] = value;
+                }
+            }
+        }
         if let Some(detail) = &self.detail {
             body["detail"] = json!(detail);
         }

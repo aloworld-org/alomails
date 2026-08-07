@@ -306,8 +306,14 @@ pub struct DealFilter {
 }
 
 /// A validated, normalised deal ready to be bound into a statement.
+///
+/// Visible to the crate because the lead import (B2.09) validates a whole file
+/// **before** it opens the transaction it writes in: normalising resolves a
+/// customer, a contact and an owner against the pool, and doing that while
+/// holding a transaction would have a writer waiting on a second connection
+/// it might not get.
 #[derive(Debug)]
-struct Normalized {
+pub(crate) struct Normalized {
     title: String,
     customer_id: Option<String>,
     contact_id: Option<String>,
@@ -397,8 +403,8 @@ fn parse_outcome(stored: Option<&str>) -> Result<Option<DealState>> {
 }
 
 /// The stage a move resolved to, with the two facts the move decides against.
-struct TargetStage {
-    id: String,
+pub(crate) struct TargetStage {
+    pub(crate) id: String,
     is_won: bool,
     is_lost: bool,
 }
@@ -424,14 +430,42 @@ impl AccountStore {
         stage: &CrmStageId,
         input: &NewDeal,
     ) -> Result<CrmDealId> {
+        // Normalised before the transaction, never inside it: see `Normalized`.
         let d = self.normalize_deal(input).await?;
-        let id = CrmDealId::generate();
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         // Share the board with every other writer moving a card on it, and
         // exclude the archive/delete paths that need it to hold still.
         self.share_crm_pipeline(&mut tx, pipeline).await?;
-        let target = self.resolve_target_stage(&mut tx, pipeline, stage).await?;
-        let position = next_position(&mut tx, self.tenant.as_str(), &target.id).await?;
+        let id = self
+            .insert_crm_deal_in(&mut tx, pipeline, stage, &d)
+            .await?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(id)
+    }
+
+    /// The write half of [`AccountStore::create_crm_deal`], inside a
+    /// transaction the caller owns and under a board lock the caller has
+    /// already taken.
+    ///
+    /// It exists for the lead import (B2.09), which writes a whole file of
+    /// deals or none of them and therefore cannot use one transaction per
+    /// card. Everything a created deal *is* — the appended position, the first
+    /// history row — happens here, so an imported deal and a typed one are the
+    /// same record made the same way. The validation is the caller's, done
+    /// before the transaction was opened ([`AccountStore::normalize_deal`]).
+    ///
+    /// # Errors
+    /// As [`AccountStore::create_crm_deal`].
+    pub(crate) async fn insert_crm_deal_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        pipeline: &CrmPipelineId,
+        stage: &CrmStageId,
+        d: &Normalized,
+    ) -> Result<CrmDealId> {
+        let id = CrmDealId::generate();
+        let target = self.resolve_target_stage(tx, pipeline, stage).await?;
+        let position = next_position(tx, self.tenant.as_str(), &target.id).await?;
         sqlx::query(
             "INSERT INTO crm_deals (tenant_id, id, pipeline_id, stage_id, title, customer_id, \
              contact_id, company_name, contact_name, contact_email, value_cents, currency, \
@@ -455,12 +489,10 @@ impl AccountStore {
         .bind(&d.source)
         .bind(position)
         .bind(self.user.as_str())
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .map_err(map_contact_fk)?;
-        self.append_stage_event(&mut tx, &id, None, &target.id)
-            .await?;
-        tx.commit().await.map_err(StoreError::Db)?;
+        self.append_stage_event(tx, &id, None, &target.id).await?;
         Ok(id)
     }
 
@@ -691,7 +723,7 @@ impl AccountStore {
     /// tenant**: the customer must be one of ours and not archived, the
     /// contact one of ours, the owner a user of ours. A guessed id from another
     /// tenant is a `NotFound`, never a cross-tenant link.
-    async fn normalize_deal(&self, input: &NewDeal) -> Result<Normalized> {
+    pub(crate) async fn normalize_deal(&self, input: &NewDeal) -> Result<Normalized> {
         let customer_id = match &input.customer_id {
             Some(id) => {
                 let customer = self
@@ -778,7 +810,7 @@ impl AccountStore {
     /// A column of another board is a `Validation` rather than a `NotFound` —
     /// it is a real column of the tenant, and naming the rule ("that stage is
     /// not on this deal's pipeline") is the answer a user can act on.
-    async fn resolve_target_stage(
+    pub(crate) async fn resolve_target_stage(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
         pipeline: &CrmPipelineId,

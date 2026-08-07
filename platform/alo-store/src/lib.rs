@@ -40,11 +40,13 @@ pub mod crm_activities;
 pub mod crm_deal_threads;
 pub mod crm_deals;
 pub mod crm_handoff;
+pub mod crm_lead_import;
 pub mod crm_next_steps;
 pub mod crm_pipelines;
 pub mod crm_report;
 pub mod crm_stages;
 pub mod crm_thread_match;
+pub mod csv_read;
 pub mod dkim;
 pub mod dmarc_reports;
 pub mod document;
@@ -113,11 +115,16 @@ pub use crm_activities::{Activity, ActivityKind, NewActivity};
 pub use crm_deal_threads::{DealThread, ThreadSuggestion};
 pub use crm_deals::{Deal, DealFilter, DealState, NewDeal, StageEvent, StageMove};
 pub use crm_handoff::DealHandoff;
+pub use crm_lead_import::{
+    DuplicateReason, DuplicateRow, DuplicateSource, LeadImportReport, LeadImportRequest,
+    LeadMapping, LeadRow, RowError,
+};
 pub use crm_next_steps::DEAL_SOURCE_KIND;
 pub use crm_pipelines::{NewPipeline, Pipeline, PipelineSeed, StageSeed};
 pub use crm_report::{PipelineCurrency, PipelineReport, PipelineStageRow, PipelineTally};
 pub use crm_stages::{NewStage, Stage};
 pub use crm_thread_match::MatchReason;
+pub use csv_read::{CsvEncoding, CsvRow, CsvTable};
 pub use dkim::DkimSigningMaterial;
 pub use dmarc_reports::{DmarcAggregateRow, DmarcEventRecord};
 pub use document::{Document, DocumentSummary};

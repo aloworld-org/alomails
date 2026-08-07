@@ -18,10 +18,10 @@ use crate::{
     admin, agent, ai, api, autoconfig, base, billing_bills, billing_customers, billing_fx,
     billing_invoices, billing_payments, billing_products, billing_quotes, billing_reminder,
     billing_reports, billing_send, billing_settings, blob, calendar, carddav, contacts,
-    crm_activities, crm_deals, crm_handoff, crm_next_steps, crm_pipelines, crm_reports, crm_stages,
-    crm_threads, delegates, docs, drive, filters, flagdue, imap_import_route, push, reset_route,
-    schedule, security, session, settings, share, signup_route, sites, snooze, spaces, tasks,
-    unsubscribe, wopi, workspace_search,
+    crm_activities, crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines,
+    crm_reports, crm_stages, crm_threads, delegates, docs, drive, filters, flagdue,
+    imap_import_route, push, reset_route, schedule, security, session, settings, share,
+    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -535,6 +535,21 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/crm/reports/pipeline.csv",
             get(crm_reports::pipeline_report_csv),
+        )
+        // A lead list from a spreadsheet (B2.09): the preview writes nothing,
+        // the commit is all-or-nothing. The file is the body — so both carry
+        // the import's own body limit rather than the JMAP request limit.
+        .route(
+            "/crm/imports/leads/preview",
+            post(crm_imports::preview_leads).layer(DefaultBodyLimit::max(
+                alo_store::crm_lead_import::MAX_IMPORT_BYTES,
+            )),
+        )
+        .route(
+            "/crm/imports/leads",
+            post(crm_imports::import_leads).layer(DefaultBodyLimit::max(
+                alo_store::crm_lead_import::MAX_IMPORT_BYTES,
+            )),
         )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))

@@ -48,6 +48,7 @@ pub mod crm;
 pub mod crm_activities;
 pub mod crm_deals;
 pub mod crm_handoff;
+pub mod crm_imports;
 pub mod crm_next_steps;
 pub mod crm_pipelines;
 pub mod crm_reports;

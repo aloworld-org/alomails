@@ -1,0 +1,8 @@
+Company;Contact;E-mail;Amount;Currency;Expected close;Source
+Acme GmbH;Ada Lovelace;ada@acme.example;12.500,00;EUR;2026-09-30;trade fair
+Beta BV;Bob de Vries;bob@beta.example;900;EUR;;referral
+Gamma SA;Chloé Martin;chloe@gamma.example;7 500,50;CHF;2026-11-15;website
+
+Delta Oy;Dan Virtanen;dan@delta.example;0;;;cold call
+Acme GmbH;Ada Lovelace;ada@acme.example;12.500,00;EUR;2026-09-30;trade fair
+Acme GmbH;Second contact;sales@acme.example;1000;EUR;;trade fair
