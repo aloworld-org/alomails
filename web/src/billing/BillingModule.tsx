@@ -17,6 +17,7 @@ import { InvoicesView } from "./InvoicesView";
 import { ProductsView } from "./ProductsView";
 import { QuoteEditor } from "./QuoteEditor";
 import { QuotesView } from "./QuotesView";
+import { VatReportView } from "./VatReportView";
 import { SettingsView } from "./SettingsView";
 import styles from "./BillingModule.module.css";
 
@@ -29,6 +30,10 @@ const TABS = [
   { path: "quotes", label: () => strings.billingQuotes },
   { path: "customers", label: () => strings.billingCustomers },
   { path: "products", label: () => strings.billingProducts },
+  // The figures a VAT return is copied from (B1.20). After the records it is
+  // computed from, because it is a read over them rather than a thing a tenant
+  // keeps.
+  { path: "reports", label: () => strings.billingReports },
   // Last, and deliberately not first: it is filled in once and then printed on
   // every document, so it belongs beside the records rather than in front of
   // them. What it holds is who the tenant invoices AS (B1.16).
@@ -67,6 +72,7 @@ export function BillingModule() {
         </Route>
         <Route path="customers" element={<CustomersView />} />
         <Route path="products" element={<ProductsView />} />
+        <Route path="reports" element={<VatReportView />} />
         <Route path="settings" element={<SettingsView />} />
         {/* An unknown billing path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to="invoices" replace />} />

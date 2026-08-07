@@ -16,10 +16,10 @@ use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
     admin, agent, ai, api, autoconfig, base, billing_customers, billing_invoices, billing_payments,
-    billing_products, billing_quotes, billing_send, billing_settings, blob, calendar, carddav,
-    contacts, delegates, docs, drive, filters, flagdue, imap_import_route, push, reset_route,
-    schedule, security, session, settings, share, signup_route, snooze, spaces, tasks, unsubscribe,
-    wopi, workspace_search,
+    billing_products, billing_quotes, billing_reports, billing_send, billing_settings, blob,
+    calendar, carddav, contacts, delegates, docs, drive, filters, flagdue, imap_import_route, push,
+    reset_route, schedule, security, session, settings, share, signup_route, snooze, spaces, tasks,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -329,6 +329,14 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/billing/settings",
             get(billing_settings::get_settings).patch(billing_settings::update_settings),
+        )
+        // The VAT summary of a period (B1.20) — one read, two
+        // representations: JSON for the screen and CSV for the accountant,
+        // named by their own paths exactly as /print and /pdf are.
+        .route("/billing/reports/vat", get(billing_reports::vat_report))
+        .route(
+            "/billing/reports/vat.csv",
+            get(billing_reports::vat_report_csv),
         )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))

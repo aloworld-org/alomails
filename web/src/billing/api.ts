@@ -33,6 +33,7 @@ import type {
   QuoteDraft,
   QuoteStatus,
   SettingsDraft,
+  VatReport,
 } from "./types";
 
 type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -64,6 +65,13 @@ export class BillingError extends Error {
  */
 export function billingMessage(error: unknown, fallback: string): string {
   return error instanceof BillingError && error.detail !== null ? error.detail : fallback;
+}
+
+/** The query string naming a reporting period. The two days are sent exactly
+ *  as the server spells them (`YYYY-MM-DD`); a blank one is sent as a blank and
+ *  refused there, so the rule lives in one place. */
+function period(from: string, to: string): string {
+  return `from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`;
 }
 
 /** The tenant's billing records — customers, price list, invoices and quotes —
@@ -366,6 +374,33 @@ export class BillingApi {
     return this.#write<{ settings: BillingSettings }>("PATCH", "/billing/settings", draft).then(
       (r) => r.settings,
     );
+  }
+
+  /**
+   * What was billed at each VAT rate between two days, both included — the
+   * figures a VAT return is copied from (B1.20).
+   *
+   * Both days are required by the server (`422` otherwise): a summary that
+   * quietly defaulted to a period would put a figure under a heading nobody
+   * asked for. Every figure comes back in integer cents, per currency; the
+   * browser sums nothing.
+   */
+  vatReport(from: string, to: string): Promise<VatReport> {
+    return this.#read<{ report: VatReport }>(`/billing/reports/vat?${period(from, to)}`).then(
+      (r) => r.report,
+    );
+  }
+
+  /**
+   * The same summary as a CSV file, rendered by the server from the same read
+   * — so what an accountant opens and what the tenant is looking at cannot
+   * disagree about a cent.
+   *
+   * Fetched rather than linked, like the print view: the route is
+   * authenticated, and a plain `<a href>` would download a `401`.
+   */
+  vatReportCsv(from: string, to: string): Promise<string> {
+    return this.#text(`/billing/reports/vat.csv?${period(from, to)}`);
   }
 
   /**

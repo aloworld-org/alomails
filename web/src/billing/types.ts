@@ -341,3 +341,44 @@ export interface QuoteDraft {
   note?: string;
   lines?: LineDraft[];
 }
+
+/**
+ * What was billed at one VAT rate in a period (B1.20). The same shape as a
+ * document's own [`VatSubtotal`], because it is the sum of those subtotals —
+ * a client reads one thing in both places.
+ */
+export type VatReportRate = VatSubtotal;
+
+/** A period's figures in one currency. Currencies are never added together:
+ *  a document is worth what it says in the currency it was raised in, and the
+ *  rate snapshots that would let us convert arrive with B1.21. */
+export interface VatReportCurrency {
+  /** ISO 4217 code the documents in this group were raised in. */
+  currency: string;
+  /** How many ordinary invoices contributed. */
+  invoiceCount: number;
+  /** How many credit notes contributed — the corrections, which subtract. */
+  creditNoteCount: number;
+  netCents: number;
+  vatCents: number;
+  grossCents: number;
+  /** One row per rate that appears, ascending. */
+  byRate: VatReportRate[];
+}
+
+/**
+ * The VAT summary of a period: what was billed at each rate between two days,
+ * both included.
+ *
+ * Every figure is the server's, computed from the documents themselves on each
+ * call — only those that stand (`issued` and `paid`), judged on the issue date
+ * frozen on them, with credit notes subtracting.
+ */
+export interface VatReport {
+  /** `YYYY-MM-DD`, echoed by the server: a figure copied onto a return has to
+   *  say which days it covers. */
+  from: string;
+  to: string;
+  /** One group per currency present; empty when the period holds nothing. */
+  currencies: VatReportCurrency[];
+}

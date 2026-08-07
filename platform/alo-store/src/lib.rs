@@ -22,6 +22,7 @@ pub mod billing_quotes;
 pub mod billing_sequence;
 pub mod billing_settings;
 pub mod billing_totals;
+pub mod billing_vat_report;
 pub mod blob;
 pub mod calendar;
 pub mod changes;
@@ -77,6 +78,7 @@ pub use billing_sequence::{
 };
 pub use billing_settings::{BillingSettings, NewBillingSettings};
 pub use billing_totals::{LineFigures, Totals, VatSubtotal};
+pub use billing_vat_report::{VatPeriod, VatPeriodCurrency, VatPeriodRate};
 #[cfg(feature = "garage")]
 pub use blob::GarageConfig;
 pub use blob::{BlobStore, ShareStream};

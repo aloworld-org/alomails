@@ -62,7 +62,14 @@ export function ErrorBanner({ message }: { message: string }) {
   );
 }
 
-/** The first-run state of a list, with the action that ends it. */
+/**
+ * The first-run state of a list, with the action that ends it.
+ *
+ * The action is optional, because not every empty screen has one: a list a
+ * user fills is empty until they create something, but a *report* over those
+ * records is empty because the period holds nothing — and offering a button
+ * there would invent an action that does not exist.
+ */
 export function EmptyState({
   Icon,
   title,
@@ -73,8 +80,8 @@ export function EmptyState({
   Icon: LucideIcon;
   title: string;
   body: string;
-  cta: string;
-  onCta: () => void;
+  cta?: string;
+  onCta?: () => void;
 }) {
   return (
     <div className={styles.empty}>
@@ -83,7 +90,7 @@ export function EmptyState({
       </span>
       <h2 className={styles.emptyTitle}>{title}</h2>
       <p className={styles.emptyBody}>{body}</p>
-      <Button onClick={onCta}>{cta}</Button>
+      {cta !== undefined && onCta !== undefined && <Button onClick={onCta}>{cta}</Button>}
     </div>
   );
 }

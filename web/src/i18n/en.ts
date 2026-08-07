@@ -1679,6 +1679,29 @@ export const en = {
   billingFilterOverdue: "Overdue",
   billingColOutstanding: "Still owed",
 
+  // The VAT summary of a period (B1.20): the figures a return is copied from.
+  // The wording says plainly which documents are counted and which are not,
+  // because a person is legally answerable for what they copy off this screen.
+  billingReports: "VAT report",
+  billingReportFrom: "From",
+  billingReportTo: "To",
+  billingReportShow: "Show",
+  billingReportThisQuarter: "This quarter",
+  billingReportLastQuarter: "Last quarter",
+  billingReportDownloadCsv: "Download CSV",
+  billingReportDownloadFailed: "The file could not be prepared. Try again.",
+  billingReportBasis: (from: string, to: string) =>
+    `Issued and paid documents dated ${from} to ${to}. Credit notes are subtracted; drafts and cancelled documents are not counted.`,
+  billingReportColVat: "VAT",
+  billingReportTotal: "Total",
+  billingReportGross: "Including VAT",
+  billingReportCaption: (currency: string) => `VAT summary in ${currency}`,
+  billingReportCounts: (invoices: number, creditNotes: number) =>
+    `From ${invoices} invoices and ${creditNotes} credit notes.`,
+  billingReportEmptyTitle: "Nothing was issued in this period",
+  billingReportEmptyBody:
+    "A document counts from the day it was issued. Pick a different period, or issue the drafts that belong in this one.",
+
   // Quotes (B1.15): the same document as an invoice until somebody says yes,
   // and deliberately the same words wherever the two screens agree.
   billingQuotes: "Quotes",

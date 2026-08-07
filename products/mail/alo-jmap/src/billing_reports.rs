@@ -1,0 +1,463 @@
+//! Billing reports HTTP surface (alo Billing, ADR 0035, wave B1.20) — the VAT
+//! summary of a period, over [`alo_store::billing_vat_report`].
+//!
+//! Two representations of one read: `GET /billing/reports/vat` answers JSON for
+//! the screen, and `GET /billing/reports/vat.csv` answers the same figures as a
+//! file for the accountant. They are separate paths rather than one route with
+//! a `?format=`, exactly as `/print` and `/pdf` are: a URL that names its
+//! representation is the one a browser can save under a sensible name and a
+//! script can quote without a query string.
+//!
+//! It shares the conventions of [`crate::billing_invoices`] — authenticated and
+//! tenant-scoped through the account door, `Problem` errors, no validation
+//! duplicated from the store — and adds three of its own.
+//!
+//! - **The period is stated, never guessed.** Both `from` and `to` are
+//!   required, both are plain days (`YYYY-MM-DD`), and a missing or malformed
+//!   one is a `422`. A report that quietly defaulted to "this quarter" would
+//!   put a figure under a heading the caller never asked for, which is the one
+//!   thing a document copied onto a tax return must not do.
+//! - **The CSV columns are a contract, in English.** They are read by scripts
+//!   and by an accountant's own tooling, so they do not move with the user's
+//!   interface language; what a *person* reads is the screen, which is
+//!   translated. The amounts are plain decimals with a `.` separator and no
+//!   grouping, for the same reason.
+//! - **The file carries no customer data at all** — currencies, rates,
+//!   amounts and counts, and nothing that names anybody. A summary that leaked
+//!   a customer list into an emailed spreadsheet would be a promise broken for
+//!   no gain.
+
+use axum::Json;
+use axum::extract::{Query, State};
+use axum::http::{HeaderMap, StatusCode, header};
+use axum::response::{IntoResponse, Response};
+use serde::Deserialize;
+use serde_json::{Value, json};
+use time::Date;
+
+use alo_store::billing_vat_report::{VatPeriod, VatPeriodCurrency};
+
+use crate::billing::{iso_date, map_store_err, parse_iso_date};
+use crate::csv;
+use crate::error::Problem;
+use crate::state::{AppState, authenticate};
+
+/// The period a report is asked for. Both ends are required and inclusive.
+#[derive(Deserialize)]
+pub struct PeriodQuery {
+    #[serde(default)]
+    from: Option<String>,
+    #[serde(default)]
+    to: Option<String>,
+}
+
+impl PeriodQuery {
+    /// The two days this query names, or the `422` that says which end is
+    /// wrong.
+    ///
+    /// The store owns the one rule about the *pair* (a period may not end
+    /// before it starts); what is checked here is only what a query string can
+    /// get wrong on its own — an end that is absent, blank, or not a plain day.
+    fn days(&self) -> Result<(Date, Date), Problem> {
+        Ok((
+            day("from", self.from.as_deref())?,
+            day("to", self.to.as_deref())?,
+        ))
+    }
+}
+
+/// Reads one end of the period, naming it in every refusal so a caller with
+/// both wrong learns which one it is looking at.
+fn day(name: &str, raw: Option<&str>) -> Result<Date, Problem> {
+    let raw = raw
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .ok_or_else(|| {
+            Problem::with(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                format!("{name} is required: a VAT summary is always for a stated period"),
+            )
+        })?;
+    parse_iso_date(raw).ok_or_else(|| {
+        Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("{name} must be a date of the form YYYY-MM-DD"),
+        )
+    })
+}
+
+/// One currency group as JSON.
+fn currency_json(c: &VatPeriodCurrency) -> Value {
+    json!({
+        "currency": c.currency,
+        "invoiceCount": c.invoice_count,
+        "creditNoteCount": c.credit_note_count,
+        "netCents": c.net_cents,
+        "vatCents": c.vat_cents,
+        "grossCents": c.gross_cents,
+        // Named as a document's own breakdown is (`totals.vatByRate`), and in
+        // the same shape, so a client reads one thing in both places.
+        "byRate": c.by_rate.iter().map(|r| json!({
+            "rateBp": r.rate_bp,
+            "netCents": r.net_cents,
+            "vatCents": r.vat_cents,
+        })).collect::<Vec<_>>(),
+    })
+}
+
+/// The whole report as JSON, the period included: a figure a human copies onto
+/// a return has to say which days it covers.
+fn report_json(period: &VatPeriod) -> Value {
+    json!({
+        "from": iso_date(period.from),
+        "to": iso_date(period.to),
+        "currencies": period.currencies.iter().map(currency_json).collect::<Vec<_>>(),
+    })
+}
+
+/// An integer-cents amount as the decimal a spreadsheet reads: two decimals, a
+/// `.` separator, no grouping, and a leading `-` when it is negative.
+///
+/// Integer-only, like every other conversion of money in alo: the cents are
+/// split into whole units and hundredths and printed, never divided by 100.0.
+/// The absolute value is taken in `i128` so `i64::MIN` — which has no `i64`
+/// absolute value — prints rather than panicking.
+fn amount(cents: i64) -> String {
+    let sign = if cents < 0 { "-" } else { "" };
+    let abs = i128::from(cents).abs();
+    format!("{sign}{}.{:02}", abs / 100, abs % 100)
+}
+
+/// A rate in basis points as the percentage a reader expects (2100 → `21.00`).
+fn percent(rate_bp: i32) -> String {
+    let sign = if rate_bp < 0 { "-" } else { "" };
+    let abs = i64::from(rate_bp).abs();
+    format!("{sign}{}.{:02}", abs / 100, abs % 100)
+}
+
+/// The CSV column names — a contract, deliberately not translated.
+const COLUMNS: [&str; 10] = [
+    // `rate` for a per-rate subtotal, `total` for the currency's own line: one
+    // table, and a column that says which kind of row you are reading, rather
+    // than two files or a total a consumer has to know to skip.
+    "row",
+    "periodFrom",
+    "periodTo",
+    "currency",
+    "vatRatePercent",
+    "net",
+    "vat",
+    "gross",
+    "invoices",
+    "creditNotes",
+];
+
+/// The whole report as one CSV table: a `rate` row per VAT rate in each
+/// currency, then that currency's `total` row.
+///
+/// The period is repeated on every row on purpose — a row lifted out of the
+/// file into another sheet still says which days it covers — and the counts
+/// appear only on the `total` row, because a document is counted once whatever
+/// how many rates it used.
+fn report_csv(period: &VatPeriod) -> String {
+    let from = iso_date(period.from);
+    let to = iso_date(period.to);
+    let mut out = csv::row(&COLUMNS);
+    for c in &period.currencies {
+        for r in &c.by_rate {
+            out.push_str(&csv::row(&[
+                "rate",
+                &from,
+                &to,
+                &c.currency,
+                &percent(r.rate_bp),
+                &amount(r.net_cents),
+                &amount(r.vat_cents),
+                &amount(r.net_cents.saturating_add(r.vat_cents)),
+                "",
+                "",
+            ]));
+        }
+        out.push_str(&csv::row(&[
+            "total",
+            &from,
+            &to,
+            &c.currency,
+            "",
+            &amount(c.net_cents),
+            &amount(c.vat_cents),
+            &amount(c.gross_cents),
+            &c.invoice_count.to_string(),
+            &c.credit_note_count.to_string(),
+        ]));
+    }
+    out
+}
+
+/// The file name a saved summary lands under: the report and the days it
+/// covers, in ASCII, so nothing has to be escaped in the header or on a file
+/// system.
+fn file_name(period: &VatPeriod) -> String {
+    format!(
+        "vat-{}-to-{}.csv",
+        iso_date(period.from),
+        iso_date(period.to)
+    )
+}
+
+/// Serves the summary as a file.
+///
+/// The same three headers the PDF carries, for the same reasons
+/// ([`crate::billing_pdf::response`]): **`attachment`**, because this exists to
+/// be saved and handed to an accountant rather than rendered in our origin;
+/// **`nosniff`**, so nothing re-interprets the bytes; and **`no-store`**,
+/// because a tenant's turnover is not a cacheable asset. The charset is stated
+/// because a CSV without one is guessed at.
+fn csv_response(body: String, file_name: &str) -> Response {
+    (
+        [
+            (header::CONTENT_TYPE, "text/csv; charset=utf-8".to_owned()),
+            (
+                header::CONTENT_DISPOSITION,
+                format!("attachment; filename=\"{file_name}\""),
+            ),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_owned()),
+            (header::CACHE_CONTROL, "no-store".to_owned()),
+        ],
+        body,
+    )
+        .into_response()
+}
+
+/// `GET /billing/reports/vat?from&to` → `{"report":{…}}` — what was billed at
+/// each VAT rate between two days, both included.
+///
+/// Computed from the documents themselves on every call: only those that stand
+/// (`issued` and `paid`), judged on the issue date frozen on them, with credit
+/// notes subtracting and each currency kept apart
+/// (`docs/design/billing.md` § VAT summary).
+pub async fn vat_report(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<PeriodQuery>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let (from, to) = query.days()?;
+    let period = account
+        .acc
+        .billing_vat_period(from, to)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "report": report_json(&period) })))
+}
+
+/// `GET /billing/reports/vat.csv?from&to` → the same summary as a CSV file.
+///
+/// The same store read behind both routes, so the file an accountant opens and
+/// the table the tenant is looking at cannot disagree about a cent.
+pub async fn vat_report_csv(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<PeriodQuery>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let (from, to) = query.days()?;
+    let period = account
+        .acc
+        .billing_vat_period(from, to)
+        .await
+        .map_err(map_store_err)?;
+    Ok(csv_response(report_csv(&period), &file_name(&period)))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alo_store::billing_vat_report::{VatPeriodCurrency, VatPeriodRate};
+    use time::Month;
+
+    fn on(year: i32, month: Month, day: u8) -> Date {
+        Date::from_calendar_date(year, month, day).unwrap_or_else(|e| panic!("{e}"))
+    }
+
+    fn query(from: Option<&str>, to: Option<&str>) -> PeriodQuery {
+        PeriodQuery {
+            from: from.map(str::to_owned),
+            to: to.map(str::to_owned),
+        }
+    }
+
+    /// The quarter the store test seeds, with its hand-computed figures.
+    fn quarter() -> VatPeriod {
+        VatPeriod {
+            from: on(2025, Month::July, 1),
+            to: on(2025, Month::September, 30),
+            currencies: vec![VatPeriodCurrency {
+                currency: "EUR".to_owned(),
+                invoice_count: 5,
+                credit_note_count: 1,
+                net_cents: 127_997,
+                vat_cents: 23_880,
+                gross_cents: 151_877,
+                by_rate: vec![
+                    VatPeriodRate {
+                        rate_bp: 900,
+                        net_cents: 25_000,
+                        vat_cents: 2_250,
+                    },
+                    VatPeriodRate {
+                        rate_bp: 2100,
+                        net_cents: 102_997,
+                        vat_cents: 21_630,
+                    },
+                ],
+            }],
+        }
+    }
+
+    #[test]
+    fn both_ends_of_the_period_are_required() {
+        for (from, to, expected) in [
+            (None, Some("2025-09-30"), "from"),
+            (Some("2025-07-01"), None, "to"),
+            (Some(""), Some("2025-09-30"), "from"),
+            (Some("2025-07-01"), Some("   "), "to"),
+        ] {
+            let problem = query(from, to)
+                .days()
+                .err()
+                .unwrap_or_else(|| panic!("{from:?}/{to:?} should have been refused"));
+            assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY);
+            let detail = problem.detail.unwrap_or_default();
+            assert!(detail.starts_with(expected), "{detail}");
+            assert!(detail.contains("required"), "{detail}");
+        }
+    }
+
+    #[test]
+    fn an_end_that_is_not_a_plain_day_is_refused_never_guessed_at() {
+        for bad in ["01/07/2025", "2025-13-01", "2025-07-01T00:00:00Z", "July"] {
+            let problem = query(Some(bad), Some("2025-09-30"))
+                .days()
+                .err()
+                .unwrap_or_else(|| panic!("{bad:?} should have been refused"));
+            assert_eq!(problem.status, StatusCode::UNPROCESSABLE_ENTITY, "{bad:?}");
+            assert_eq!(
+                problem.detail.as_deref(),
+                Some("from must be a date of the form YYYY-MM-DD")
+            );
+        }
+    }
+
+    #[test]
+    fn a_well_formed_period_is_read_as_two_plain_days() {
+        let (from, to) = query(Some("2025-07-01"), Some(" 2025-09-30 "))
+            .days()
+            .unwrap_or_else(|e| panic!("{e:?}"));
+        assert_eq!(from, on(2025, Month::July, 1));
+        assert_eq!(to, on(2025, Month::September, 30));
+        // A backwards period is the store's refusal, not this layer's: it is a
+        // rule about the pair, and one place must own it.
+        assert!(query(Some("2025-09-30"), Some("2025-07-01")).days().is_ok());
+    }
+
+    #[test]
+    fn cents_print_as_the_decimal_a_spreadsheet_reads() {
+        assert_eq!(amount(0), "0.00");
+        assert_eq!(amount(5), "0.05");
+        assert_eq!(amount(127_997), "1279.97");
+        assert_eq!(amount(-10_500), "-105.00");
+        assert_eq!(amount(-7), "-0.07");
+        // Total, for a caller that ignores the store's bounds: no panic, no
+        // wrapped sign.
+        assert_eq!(amount(i64::MIN), "-92233720368547758.08");
+    }
+
+    #[test]
+    fn a_rate_prints_as_a_percentage() {
+        assert_eq!(percent(0), "0.00");
+        assert_eq!(percent(900), "9.00");
+        assert_eq!(percent(2100), "21.00");
+        assert_eq!(percent(2_150), "21.50");
+        assert_eq!(percent(10_000), "100.00");
+    }
+
+    #[test]
+    fn the_json_report_states_its_period_and_every_figure_in_cents() {
+        let value = report_json(&quarter());
+        assert_eq!(value["from"], "2025-07-01");
+        assert_eq!(value["to"], "2025-09-30");
+        let eur = &value["currencies"][0];
+        assert_eq!(eur["currency"], "EUR");
+        assert_eq!(eur["invoiceCount"], 5);
+        assert_eq!(eur["creditNoteCount"], 1);
+        assert_eq!(eur["netCents"], 127_997);
+        assert_eq!(eur["vatCents"], 23_880);
+        assert_eq!(eur["grossCents"], 151_877);
+        assert_eq!(
+            eur["byRate"],
+            json!([
+                { "rateBp": 900, "netCents": 25_000, "vatCents": 2_250 },
+                { "rateBp": 2100, "netCents": 102_997, "vatCents": 21_630 },
+            ])
+        );
+    }
+
+    #[test]
+    fn the_csv_is_one_table_of_rate_rows_and_a_total_row() {
+        let body = report_csv(&quarter());
+        let lines: Vec<&str> = body.split("\r\n").filter(|l| !l.is_empty()).collect();
+        assert_eq!(
+            lines[0],
+            "row,periodFrom,periodTo,currency,vatRatePercent,net,vat,gross,invoices,creditNotes"
+        );
+        assert_eq!(
+            lines[1],
+            "rate,2025-07-01,2025-09-30,EUR,9.00,250.00,22.50,272.50,,"
+        );
+        assert_eq!(
+            lines[2],
+            "rate,2025-07-01,2025-09-30,EUR,21.00,1029.97,216.30,1246.27,,"
+        );
+        assert_eq!(
+            lines[3], "total,2025-07-01,2025-09-30,EUR,,1279.97,238.80,1518.77,5,1",
+            "the counts are on the total row, where a document is counted once"
+        );
+        assert_eq!(lines.len(), 4, "no other rows: {body:?}");
+    }
+
+    #[test]
+    fn an_empty_period_still_answers_a_file_with_its_header() {
+        let empty = VatPeriod {
+            from: on(2026, Month::January, 1),
+            to: on(2026, Month::March, 31),
+            currencies: Vec::new(),
+        };
+        assert_eq!(report_csv(&empty), csv::row(&COLUMNS));
+        assert_eq!(file_name(&empty), "vat-2026-01-01-to-2026-03-31.csv");
+    }
+
+    #[test]
+    fn the_file_is_served_as_an_attachment_that_is_never_cached() {
+        let response = csv_response(report_csv(&quarter()), &file_name(&quarter()));
+        let headers = response.headers();
+        assert_eq!(
+            headers
+                .get(header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok()),
+            Some("text/csv; charset=utf-8")
+        );
+        assert_eq!(
+            headers
+                .get(header::CONTENT_DISPOSITION)
+                .and_then(|v| v.to_str().ok()),
+            Some("attachment; filename=\"vat-2025-07-01-to-2025-09-30.csv\"")
+        );
+        assert_eq!(
+            headers
+                .get(header::CACHE_CONTROL)
+                .and_then(|v| v.to_str().ok()),
+            Some("no-store")
+        );
+    }
+}
