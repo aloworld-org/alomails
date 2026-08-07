@@ -965,6 +965,11 @@ export const fr: Partial<Catalog> = {
   // Docs
   docTitle: "Offre T3 — Proceq",
   docSaved: "Enregistré dans les fichiers · toutes les modifications sont enregistrées",
+  docViewMode: "Affichage du document",
+  docCanvasView: "Canevas",
+  docCanvasViewHint: "Affichage flexible en canevas",
+  docPageView: "Page",
+  docPageViewHint: "Affichage de page pour l’impression",
   docAiPlaceholder: "Dites à l’IA quoi écrire ou modifier…",
   docAiPropose: "Rédiger",
   docAiProposalLabel: "Proposition — à vérifier avant d’ajouter",

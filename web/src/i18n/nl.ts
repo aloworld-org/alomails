@@ -952,6 +952,11 @@ export const nl: Partial<Catalog> = {
   // Docs
   docTitle: "Q3 Offerte — Proceq",
   docSaved: "Opgeslagen in Drive · alle wijzigingen opgeslagen",
+  docViewMode: "Documentweergave",
+  docCanvasView: "Canvas",
+  docCanvasViewHint: "Flexibele canvasweergave",
+  docPageView: "Pagina",
+  docPageViewHint: "Afdrukweergave als pagina",
   docAiPlaceholder: "Vertel de AI wat te schrijven of wijzigen…",
   docAiPropose: "Opstellen",
   docAiProposalLabel: "Voorstel — controleer voor je het toevoegt",

@@ -12,7 +12,7 @@ import {
   useState,
   type ComponentProps,
 } from "react";
-import { Sparkles, X } from "lucide-react";
+import { FileText, LayoutTemplate, Sparkles, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -30,6 +30,7 @@ import { docSchema } from "./docBlocks";
 import styles from "./DocEditor.module.css";
 
 type SaveState = "idle" | "saving" | "saved";
+type DocViewMode = "canvas" | "page";
 
 /** Cap on the current-document context sent to the AI (characters). */
 const CONTEXT_CAP = 12000;
@@ -47,6 +48,9 @@ export function DocEditor({
   const editor = useCreateBlockNote({ schema: docSchema });
   const [ready, setReady] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [viewMode, setViewMode] = useState<DocViewMode>(() =>
+    window.localStorage.getItem(`alo-doc-view:${nodeId}`) === "page" ? "page" : "canvas",
+  );
   const pending = useRef<unknown[] | null>(null);
   const timer = useRef<number | null>(null);
   const loaded = useRef(false);
@@ -79,6 +83,10 @@ export function DocEditor({
       live = false;
     };
   }, [client, nodeId, editor]);
+
+  useEffect(() => {
+    window.localStorage.setItem(`alo-doc-view:${nodeId}`, viewMode);
+  }, [nodeId, viewMode]);
 
   const save = useCallback(
     async (blocks: unknown[]) => {
@@ -169,8 +177,30 @@ export function DocEditor({
         <span className={styles.save}>
           {saveState === "saving" ? strings.docSaving : saveState === "saved" ? strings.docSaved : ""}
         </span>
+        <div className={styles.viewSwitch} role="group" aria-label={strings.docViewMode}>
+          <button
+            type="button"
+            className={viewMode === "canvas" ? styles.viewOptionActive : styles.viewOption}
+            aria-pressed={viewMode === "canvas"}
+            onClick={() => setViewMode("canvas")}
+            title={strings.docCanvasViewHint}
+          >
+            <LayoutTemplate size={15} />
+            <span>{strings.docCanvasView}</span>
+          </button>
+          <button
+            type="button"
+            className={viewMode === "page" ? styles.viewOptionActive : styles.viewOption}
+            aria-pressed={viewMode === "page"}
+            onClick={() => setViewMode("page")}
+            title={strings.docPageViewHint}
+          >
+            <FileText size={15} />
+            <span>{strings.docPageView}</span>
+          </button>
+        </div>
       </header>
-      <div className={styles.body}>
+      <div className={`${styles.body} ${viewMode === "page" ? styles.pageMode : styles.canvasMode}`}>
         {!ready ? (
           <div className={styles.center}>
             <Spinner size={22} />

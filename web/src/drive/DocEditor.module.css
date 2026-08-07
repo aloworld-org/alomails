@@ -36,6 +36,33 @@
   min-width: 60px;
   text-align: right;
 }
+.viewSwitch {
+  display: inline-flex;
+  padding: 3px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-raised);
+}
+.viewOption,
+.viewOptionActive {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+.viewOption:hover {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.viewOptionActive {
+  color: var(--accent);
+  background: var(--bg-surface);
+  font-weight: var(--weight-semibold);
+}
 /* AI: a floating dock — centred, half-width, at the bottom of the editor. */
 .aiDock {
   position: absolute;
@@ -181,6 +208,13 @@
   overflow-y: auto;
   min-height: 0;
 }
+.canvasMode {
+  background: var(--bg-surface);
+}
+.pageMode {
+  padding: 32px max(20px, 4vw) 64px;
+  background: var(--bg-raised);
+}
 .center {
   height: 100%;
   display: flex;
@@ -192,6 +226,41 @@
   max-width: 780px;
   margin: 0 auto;
   padding: var(--space-6) var(--space-4) 40vh;
+}
+.pageMode :global(.bn-editor) {
+  width: min(816px, 100%);
+  min-height: 1056px;
+  padding: 72px clamp(32px, 7vw, 80px) 120px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 2px;
+  background: var(--bg-surface);
+  box-shadow: 0 3px 14px color-mix(in srgb, var(--text-primary) 8%, transparent);
+}
+
+@media (max-width: 720px) {
+  .save {
+    display: none;
+  }
+  .viewOption,
+  .viewOptionActive {
+    width: 32px;
+    justify-content: center;
+    padding: 0;
+  }
+  .viewOption span,
+  .viewOptionActive span {
+    display: none;
+  }
+  .pageMode {
+    padding: 12px 0 40px;
+  }
+  .pageMode :global(.bn-editor) {
+    min-height: calc(100vh - 120px);
+    padding: 36px 20px 80px;
+    border-right: 0;
+    border-left: 0;
+    box-shadow: none;
+  }
 }
 
 /* Carry alo's interaction language into BlockNote's portalled toolbars and
