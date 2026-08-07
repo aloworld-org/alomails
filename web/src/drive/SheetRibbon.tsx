@@ -574,6 +574,17 @@ function HomeTab({ actions, disabled, selectionFormatting }: { actions: SheetAct
       <Group label={strings.sheetGroupEditing}>
         <EditingControls actions={actions} disabled={disabled} />
       </Group>
+
+      <Group label={strings.sheetInsert}>
+        <div className={styles.row}>
+          <IconBtn label={strings.sheetInsertTable} onClick={() => actions.exec(CMD_TABLE)} disabled={disabled} large showLabel>
+            <Table2 size={20} />
+          </IconBtn>
+          <IconBtn label={strings.sheetInsertLink} onClick={() => actions.exec(CMD_HYPERLINK)} disabled={disabled} large showLabel>
+            <Link size={20} />
+          </IconBtn>
+        </div>
+      </Group>
     </div>
   );
 }
