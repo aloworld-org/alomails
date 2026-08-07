@@ -184,7 +184,7 @@ export function SheetEditor({
   const [ready, setReady] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [activeBorder, setActiveBorder] = useState<BorderKind | null>(null);
-  const [selectionFormatting, setSelectionFormatting] = useState<SheetSelectionFormatting>({ activeKeys: [], fontFamily: null, fontSize: null, numberPattern: null });
+  const [selectionFormatting, setSelectionFormatting] = useState<SheetSelectionFormatting>({ activeKeys: [], fontFamily: null, fontSize: null, numberPattern: null, fontColor: "#000000", fillColor: "#ffffff" });
   // Editable sheet name (persisted via driveRename); the grid filename tracks it.
   const [sheetName, setSheetName] = useState(name);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -264,8 +264,8 @@ export function SheetEditor({
       if (selected === null || sheet === null) {
         setActiveBorder((current) => current === null ? current : null);
         setSelectionFormatting((current) => {
-          if (current.activeKeys.length === 0 && current.fontFamily === null && current.fontSize === null && current.numberPattern === null) return current;
-          return { activeKeys: [], fontFamily: null, fontSize: null, numberPattern: null };
+          if (current.activeKeys.length === 0 && current.fontFamily === null && current.fontSize === null && current.numberPattern === null && current.fontColor === "#000000" && current.fillColor === "#ffffff") return current;
+          return { activeKeys: [], fontFamily: null, fontSize: null, numberPattern: null, fontColor: "#000000", fillColor: "#ffffff" };
         });
         return;
       }
@@ -297,6 +297,8 @@ export function SheetEditor({
       const preset = STYLE_STATE_PRESETS.find((candidate) => candidate.size === fontSize && candidate.bold === (style.bl === 1));
       if (preset !== undefined) activeKeys.push(`style-${preset.key}`);
       const pattern = style.n?.pattern ?? null;
+      const fontColor = style.cl?.rgb ?? "#000000";
+      const fillColor = style.bg?.rgb ?? "#ffffff";
       if (pattern === "0.00%") activeKeys.push("number-percent");
       if (pattern === "€ #,##0.00") activeKeys.push("number-currency");
       if (pattern === "#,##0") activeKeys.push("number-comma");
@@ -328,8 +330,8 @@ export function SheetEditor({
       if (sheet.getZoom() === 1) activeKeys.push("zoom-100");
       setSelectionFormatting((current) => {
         const sameKeys = current.activeKeys.length === activeKeys.length && current.activeKeys.every((key, index) => key === activeKeys[index]);
-        if (sameKeys && current.fontFamily === fontFamily && current.fontSize === fontSize && current.numberPattern === pattern) return current;
-        return { activeKeys, fontFamily, fontSize, numberPattern: pattern };
+        if (sameKeys && current.fontFamily === fontFamily && current.fontSize === fontSize && current.numberPattern === pattern && current.fontColor === fontColor && current.fillColor === fillColor) return current;
+        return { activeKeys, fontFamily, fontSize, numberPattern: pattern, fontColor, fillColor };
       });
     };
     let formattingFrame: number | null = null;

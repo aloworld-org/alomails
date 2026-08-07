@@ -137,6 +137,8 @@ export interface SheetSelectionFormatting {
   fontFamily: string | null;
   fontSize: number | null;
   numberPattern: string | null;
+  fontColor: string;
+  fillColor: string;
 }
 
 export type BorderKind = "all" | "outer" | "inside" | "top" | "bottom" | "left" | "right" | "horizontal" | "vertical" | "none" | "diag-down" | "diag-up" | "diag-down-center" | "diag-down-both" | "diag-up-center";
@@ -432,10 +434,10 @@ function HomeTab({ actions, disabled, selectionFormatting }: { actions: SheetAct
             <IconBtn label={strings.sheetStrike} onClick={() => actions.exec(CMD_STRIKE)} disabled={disabled} formatKey="strike">
               <Strikethrough size={16} />
             </IconBtn>
-            <ColorBtn label={strings.sheetFontColor} onPick={actions.setFontColor} disabled={disabled} formatKey="font-color">
+            <ColorBtn label={strings.sheetFontColor} onPick={actions.setFontColor} disabled={disabled} formatKey="font-color" selectedColor={selectionFormatting.fontColor}>
               <Baseline size={16} />
             </ColorBtn>
-            <ColorBtn label={strings.sheetFillColor} onPick={actions.setFillColor} disabled={disabled} formatKey="fill-color">
+            <ColorBtn label={strings.sheetFillColor} onPick={actions.setFillColor} disabled={disabled} formatKey="fill-color" selectedColor={selectionFormatting.fillColor}>
               <PaintBucket size={16} />
             </ColorBtn>
           </div>
@@ -1010,12 +1012,14 @@ function ColorBtn({
   disabled,
   children,
   formatKey,
+  selectedColor = "#000000",
 }: {
   label: string;
   onPick: (hex: string) => void;
   disabled: boolean;
   children: React.ReactNode;
   formatKey?: string;
+  selectedColor?: string;
 }) {
   return (
     <label className={styles.colorBtn} data-format-key={formatKey} title={label} aria-label={label}>
@@ -1024,7 +1028,7 @@ function ColorBtn({
         type="color"
         className={styles.colorInput}
         disabled={disabled}
-        defaultValue="#000000"
+        value={/^#[0-9a-f]{6}$/i.test(selectedColor) ? selectedColor : "#000000"}
         onChange={(e) => onPick(e.target.value)}
       />
     </label>
