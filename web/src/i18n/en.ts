@@ -2418,6 +2418,67 @@ export const en = {
   auditActionThreadCreate: "Conversation linked",
   auditActionThreadDelete: "Conversation unlinked",
   auditActionLeadCreate: "Leads imported",
+
+  // Insights (alo Insights, ADR 0037, wave BI-1). The rail says "Insights" —
+  // the module is where a business reads its own numbers, and no chart on it
+  // is a figure the browser worked out.
+  moduleInsights: "Insights",
+  insightsBoards: "Boards",
+  insightsLoadFailed: "Your boards could not be loaded.",
+  insightsBoardLoadFailed: "This board could not be loaded.",
+  insightsFiguresFailed: "These figures could not be read.",
+  insightsSaveFailed: "The change could not be saved.",
+  insightsDeleteFailed: "That could not be removed.",
+  insightsNewBoard: "New board",
+  insightsBoardNamePrompt: "What should this board be called?",
+  insightsBoardNamePlaceholder: "Cash",
+  insightsRenameBoard: "Rename",
+  insightsDeleteBoard: "Delete board",
+  insightsDeleteBoardConfirm: (name: string) =>
+    `Delete the board “${name}”? Its charts go with it — the invoices and deals behind them stay.`,
+  insightsRefresh: "Refresh the figures",
+  insightsNoBoardsTitle: "No boards yet",
+  insightsNoBoardsBody:
+    "A board holds the numbers you want at a glance — what you billed, what you are owed, what is in the pipeline.",
+  insightsNoTilesTitle: "Nothing pinned to this board",
+  insightsNoTilesBody: "Charts pinned to this board appear here.",
+  insightsTileActions: (title: string) => `Options for ${title}`,
+  insightsRenameTile: "Rename chart",
+  insightsRenameTilePrompt: "What should this chart be called?",
+  insightsRemoveTile: "Remove chart",
+  insightsRemoveTileConfirm: (title: string) =>
+    `Remove “${title}” from this board? The records it counts are untouched.`,
+  insightsWiden: "Make wider",
+  insightsNarrow: "Make narrower",
+  insightsMoveLeft: "Move earlier",
+  insightsMoveRight: "Move later",
+  insightsUnreadableTitle: "Made by a newer version of alo",
+  insightsUnreadableBody: "This chart's question cannot be read here, so its figures are not shown.",
+  insightsNoFigures: "Nothing to show for this period.",
+  insightsTruncated: "Only the largest categories are shown; the rest are grouped as “Other”.",
+  insightsNoteUnconverted: (count: number) =>
+    count === 1
+      ? "1 document could not be restated in your accounting currency and is not counted."
+      : `${count} documents could not be restated in your accounting currency and are not counted.`,
+  insightsColBucket: "Bucket",
+  insightsColValue: "Value",
+  insightsBucketTotal: "Total",
+  insightsBucketOther: "Other",
+  insightsGroupAll: "All",
+  insightsValueNone: "None",
+  insightsValueUnknown: "Unknown",
+  insightsStatusIssued: "Issued",
+  insightsStatusPaid: "Paid",
+  insightsOutcomeWon: "Won",
+  insightsOutcomeLost: "Lost",
+  insightsOutcomeOpen: "Open",
+  insightsAgeNotDue: "Not due",
+  insightsAge0To30: "0–30 days",
+  insightsAge31To60: "31–60 days",
+  insightsAge61To90: "61–90 days",
+  insightsAge90Plus: "90+ days",
+  insightsQuarter: (quarter: number, year: number) => `Q${quarter} ${year}`,
+  insightsWeek: (week: number, year: number) => `W${week} ${year}`,
 } as const;
 
 /** Every string key in the catalog. */

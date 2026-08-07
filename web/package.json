@@ -21,6 +21,7 @@
     "@tauri-apps/plugin-process": "^2.3.1",
     "@tauri-apps/plugin-updater": "^2.10.1",
     "@univerjs/presets": "^0.25.1",
+    "echarts": "^6.1.0",
     "fflate": "^0.8.3",
     "katex": "^0.18.1",
     "lucide-react": "^0.468.0",

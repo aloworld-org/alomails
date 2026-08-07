@@ -1,0 +1,360 @@
+// What the Insights screens promise, proven against a recorded network: that a
+// board is the tiles the server sent, that every figure on screen is one the
+// server computed (in the currency it stated, and never summed here), that a
+// chart's numbers are also in the document for a reader who cannot see the
+// canvas, that a tile pinned by a newer version of alo still renders and is
+// never asked for figures it cannot answer, and that rearranging a board is one
+// request that moves one tile.
+//
+// Only the network and the chart engine are fake. The real router, the real
+// module routes, the real client, the real grid and the real dialogs all run:
+// the point of the item is that these screens agree with the API, and a test
+// against stubs could not tell.
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { DialogProvider } from "../ds";
+import { strings } from "../i18n";
+import { InsightsModule } from "./InsightsModule";
+import type { Dashboard, Series, Tile } from "./types";
+
+interface Call {
+  url: string;
+  method: string;
+  body: unknown;
+}
+
+interface Reply {
+  match: (url: string, method: string) => boolean;
+  status: number;
+  body: unknown;
+}
+
+const calls: Call[] = [];
+let replies: Reply[] = [];
+
+/** Queues one answer for the next request whose URL contains `urlPart`. */
+function reply(urlPart: string, method: string, body: unknown, status = 200) {
+  replies.push({ match: (url, m) => url.includes(urlPart) && m === method, status, body });
+}
+
+function board(id: string, name: string, systemKey: string | null = null): Dashboard {
+  return {
+    id,
+    name,
+    systemKey,
+    seeded: systemKey !== null,
+    createdBy: "u-1",
+    createdAt: "2026-08-07T09:00:00Z",
+    updatedAt: "2026-08-07T09:00:00Z",
+  };
+}
+
+const OVERVIEW = board("dash-1", "Business overview", "business_overview");
+const CASH = board("dash-2", "Cash");
+
+function tile(id: string, title: string, viz: Tile["viz"], position: number, span = 1): Tile {
+  return {
+    id,
+    dashboardId: OVERVIEW.id,
+    title,
+    spec: { schema_version: 1 },
+    readable: true,
+    specError: null,
+    viz,
+    position,
+    span,
+    createdAt: "2026-08-07T09:00:00Z",
+    updatedAt: "2026-08-07T09:00:00Z",
+  };
+}
+
+const OUTSTANDING = tile("tile-1", "Outstanding", "number", 1);
+const REVENUE = tile("tile-2", "Revenue by month", "bar", 2, 2);
+/** A tile this build cannot read: pinned by a newer alo. */
+const FUTURE: Tile = {
+  ...tile("tile-3", "Later", null, 3),
+  spec: { schema_version: 2 },
+  readable: false,
+  specError: "unsupported chart schema_version 2",
+};
+const TILES = [OUTSTANDING, REVENUE, FUTURE];
+
+/** One figure, in euro — what is owed right now. */
+const OWED: Series = {
+  unit: { kind: "money", currency: "EUR" },
+  series: [
+    {
+      key: "EUR",
+      label: { kind: "raw", text: "EUR" },
+      points: [{ bucket: "total", value: 4_200_000 }],
+    },
+  ],
+  notes: [],
+  truncated: false,
+};
+
+/** Three months of billing, the middle one quiet. */
+const BY_MONTH: Series = {
+  unit: { kind: "money", currency: "EUR" },
+  series: [
+    {
+      key: "EUR",
+      label: { kind: "raw", text: "EUR" },
+      points: [
+        { bucket: "2026-06", value: 1_000_000 },
+        { bucket: "2026-07", value: 0 },
+        { bucket: "2026-08", value: 2_500_000 },
+      ],
+    },
+  ],
+  notes: [{ code: "unconverted_documents", count: 2 }],
+  truncated: false,
+};
+
+const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
+  const method = init?.method ?? "GET";
+  calls.push({
+    url,
+    method,
+    body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+  });
+  const index = replies.findIndex((r) => r.match(url, method));
+  const answer = index === -1 ? fallback(url, method) : (replies.splice(index, 1)[0] as Reply);
+  return new Response(JSON.stringify(answer.body), {
+    status: answer.status,
+    headers: { "content-type": "application/json" },
+  });
+});
+
+/** What a board reads before anything interesting happens. */
+function fallback(url: string, method: string): Reply {
+  const body =
+    method !== "GET"
+      ? {}
+      : url.includes("/insights/tiles/tile-1/data")
+        ? OWED
+        : url.includes("/insights/tiles/tile-2/data")
+          ? BY_MONTH
+          : url.includes("/insights/dashboards/dash-1")
+            ? { dashboard: OVERVIEW, tiles: TILES }
+            : url.includes("/insights/dashboards/")
+              ? { dashboard: CASH, tiles: [] }
+              : { dashboards: [OVERVIEW, CASH] };
+  return { match: () => true, status: 200, body };
+}
+
+vi.mock("../auth", () => ({
+  useAuth: () => ({ authorizedFetch: fakeFetch, identity: { sub: "u-1", email: "", name: "" } }),
+}));
+
+// The chart engine is a canvas, and jsdom has none. The wrapper is mocked so
+// the *module* is what these tests exercise; the drawable model behind it is
+// pure and tested on its own (`chart/model.test.ts`).
+vi.mock("./chart", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./chart")>();
+  return {
+    ...actual,
+    Chart: ({ label }: { label: string }) => <div data-testid="chart">{label}</div>,
+  };
+});
+
+/** The module as it is really mounted: at `/insights/*`, routing itself. */
+function ui(path = "/insights") {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <DialogProvider>
+        <Routes>
+          <Route path="/insights/*" element={<InsightsModule />} />
+        </Routes>
+      </DialogProvider>
+    </MemoryRouter>,
+  );
+}
+
+function writes(): Call[] {
+  return calls.filter((c) => c.method !== "GET");
+}
+
+function reads(part: string): Call[] {
+  return calls.filter((c) => c.method === "GET" && c.url.includes(part));
+}
+
+/** Opens a tile's action menu. */
+function openMenu(title: string) {
+  fireEvent.click(screen.getByRole("button", { name: strings.insightsTileActions(title) }));
+}
+
+beforeEach(() => {
+  calls.length = 0;
+  replies = [];
+  fakeFetch.mockClear();
+});
+
+afterEach(cleanup);
+
+describe("the boards", () => {
+  test("are the tab strip, and the first one opens without a click", async () => {
+    ui();
+
+    expect(await screen.findByRole("heading", { name: OVERVIEW.name })).toBeTruthy();
+    const strip = within(screen.getByRole("navigation", { name: strings.insightsBoards }));
+    expect(strip.getByText(OVERVIEW.name)).toBeTruthy();
+    expect(strip.getByText(CASH.name)).toBeTruthy();
+    // The board that opened is the first one, and it was read once.
+    await waitFor(() => expect(reads("/insights/dashboards/dash-1").length).toBe(1));
+  });
+
+  test("a new one is created and opened, and nothing is invented before the server answers", async () => {
+    ui();
+    await screen.findByRole("heading", { name: OVERVIEW.name });
+
+    const made = board("dash-3", "VAT");
+    reply("/insights/dashboards", "POST", { dashboard: made });
+    replies.push({
+      match: (url, m) => url.includes("/insights/dashboards") && m === "GET" && !url.includes("dash-"),
+      status: 200,
+      body: { dashboards: [OVERVIEW, CASH, made] },
+    });
+    reply("/insights/dashboards/dash-3", "GET", { dashboard: made, tiles: [] });
+
+    fireEvent.click(screen.getByRole("button", { name: strings.insightsNewBoard }));
+    fireEvent.change(await screen.findByRole("textbox"), { target: { value: " VAT " } });
+    fireEvent.click(screen.getByRole("button", { name: strings.dialogConfirm }));
+
+    await waitFor(() => expect(writes().length).toBe(1));
+    const created = writes()[0] as Call;
+    expect(created.url).toContain("/insights/dashboards");
+    expect(created.body).toEqual({ name: "VAT" });
+    // And the board that was asked for is the one now on screen.
+    expect(await screen.findByRole("heading", { name: "VAT" })).toBeTruthy();
+  });
+});
+
+describe("a tile", () => {
+  test("shows the figure the server computed, in the currency the server stated", async () => {
+    ui();
+
+    expect(await screen.findByText("€42,000.00")).toBeTruthy();
+    // Each tile asked for its own figures, on its own route.
+    await waitFor(() => expect(reads("/insights/tiles/tile-1/data").length).toBe(1));
+  });
+
+  test("money in two currencies is two figures, never one total", async () => {
+    reply("/insights/tiles/tile-1/data", "GET", {
+      unit: { kind: "money" },
+      series: [
+        {
+          key: "EUR",
+          label: { kind: "raw", text: "EUR" },
+          points: [{ bucket: "total", value: 4_200_000 }],
+        },
+        {
+          key: "USD",
+          label: { kind: "raw", text: "USD" },
+          points: [{ bucket: "total", value: 1_000_000 }],
+        },
+      ],
+      notes: [],
+      truncated: false,
+    });
+    ui();
+
+    expect(await screen.findByText("€42,000.00")).toBeTruthy();
+    expect(screen.getByText("$10,000.00")).toBeTruthy();
+    // Nothing added the two together — 52 000 is a number nobody stated.
+    expect(screen.queryByText("€52,000.00")).toBeNull();
+  });
+
+  test("draws a chart and puts the same figures in the document", async () => {
+    ui();
+    await screen.findByTestId("chart");
+
+    // The drawn chart, and the same answer as rows for a reader who cannot see
+    // it: the months the server bucketed, its figures, and its note.
+    const table = within(screen.getByRole("table"));
+    expect(table.getByText("Jun 2026")).toBeTruthy();
+    expect(table.getByText("Jul 2026")).toBeTruthy();
+    expect(table.getByText("€25,000.00")).toBeTruthy();
+    expect(screen.getByText(strings.insightsNoteUnconverted(2))).toBeTruthy();
+  });
+
+  test("from a newer version renders its reason, and is never asked for figures", async () => {
+    ui();
+    await screen.findByText(FUTURE.specError as string);
+
+    expect(screen.getByText(strings.insightsUnreadableTitle)).toBeTruthy();
+    expect(reads("/insights/tiles/tile-3/data")).toEqual([]);
+  });
+
+  test("whose figures fail says so, and the rest of the board still renders", async () => {
+    reply("/insights/tiles/tile-1/data", "GET", { detail: "period: this chart would read too much" }, 422);
+    ui();
+
+    expect(await screen.findByText("period: this chart would read too much")).toBeTruthy();
+    expect(screen.getByTestId("chart")).toBeTruthy();
+  });
+});
+
+describe("rearranging a board", () => {
+  test("is one move request, landing between the two tiles it now sits between", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    reply("/insights/tiles/tile-1/move", "POST", { tile: { ...OUTSTANDING, position: 2.5 } });
+    openMenu(OUTSTANDING.title);
+    fireEvent.click(screen.getByRole("menuitem", { name: strings.insightsMoveRight }));
+
+    await waitFor(() => expect(writes().length).toBe(1));
+    const move = writes()[0] as Call;
+    expect(move.url).toContain("/insights/tiles/tile-1/move");
+    // Halfway between the tiles it lands between — one row changes, no other
+    // tile is rewritten, and nothing about the tile itself is touched.
+    expect(move.body).toEqual({ position: 2.5 });
+  });
+
+  test("cannot move the first tile earlier", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    openMenu(OUTSTANDING.title);
+    expect(
+      screen.getByRole("menuitem", { name: strings.insightsMoveLeft }).hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
+  test("resizing sends the width and nothing else", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    reply("/insights/tiles/tile-1", "PATCH", { tile: { ...OUTSTANDING, span: 2 } });
+    openMenu(OUTSTANDING.title);
+    fireEvent.click(screen.getByRole("menuitem", { name: strings.insightsWiden }));
+
+    await waitFor(() => expect(writes().length).toBe(1));
+    const patch = writes()[0] as Call;
+    expect(patch.method).toBe("PATCH");
+    expect(patch.body).toEqual({ span: 2 });
+  });
+
+  test("removing a tile asks first, and a refusal to confirm sends nothing", async () => {
+    ui();
+    await screen.findByText("€42,000.00");
+
+    openMenu(OUTSTANDING.title);
+    fireEvent.click(screen.getByRole("menuitem", { name: strings.insightsRemoveTile }));
+    fireEvent.click(await screen.findByRole("button", { name: strings.dialogCancel }));
+    expect(writes()).toEqual([]);
+
+    openMenu(OUTSTANDING.title);
+    fireEvent.click(screen.getByRole("menuitem", { name: strings.insightsRemoveTile }));
+    reply("/insights/tiles/tile-1", "DELETE", { deleted: true });
+    fireEvent.click(await screen.findByRole("button", { name: strings.insightsRemoveTile }));
+
+    await waitFor(() => expect(writes().length).toBe(1));
+    const removed = writes()[0] as Call;
+    expect(removed.method).toBe("DELETE");
+    expect(removed.url).toContain("/insights/tiles/tile-1");
+  });
+});

@@ -1,0 +1,208 @@
+// One board: the tiles pinned to it, in the order the server keeps them, and
+// the handful of things a reader may do to a board from the board itself (ADR
+// 0037, wave BI1.05).
+//
+// Every change here is a request, and the board is re-read from the answer —
+// nothing is moved, renamed or resized optimistically. A refusal therefore
+// leaves the grid exactly as it was and says why, which is the only way a
+// screen and a server cannot end up disagreeing about what is pinned where.
+//
+// The one arithmetic in this file is a **position**, and it is an ordering
+// rather than a quantity: a tile moving one place lands halfway between its new
+// neighbours, so exactly one row changes and the rest of the board is
+// untouched (the fractional-ordering shape ADR 0022 set for boards). No figure
+// on this screen is ever computed here.
+import { useCallback, useState } from "react";
+import { BarChart3, RefreshCw } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+
+import { Button, IconButton, Spinner, useDialogs } from "../ds";
+import { strings } from "../i18n";
+import { insightsMessage, useInsightsApi } from "./api";
+import { BoardBar, EmptyState, ErrorBanner } from "./parts";
+import { SPAN_MAX, SPAN_MIN, TileCard } from "./TileCard";
+import type { TileActions } from "./TileCard";
+import type { Tile } from "./types";
+import { useBoard } from "./useInsights";
+import styles from "./InsightsModule.module.css";
+
+/** Where a tile lands when it moves one place in `direction`: halfway between
+ *  the two tiles it ends up between, or one step past the end of the row.
+ *  `null` when there is nowhere to go. */
+export function positionAfterMove(tiles: Tile[], index: number, direction: -1 | 1): number | null {
+  const neighbour = tiles[index + direction];
+  if (neighbour === undefined) return null;
+  const beyond = tiles[index + 2 * direction];
+  if (beyond === undefined) return neighbour.position + direction;
+  return (neighbour.position + beyond.position) / 2;
+}
+
+export function BoardGrid({ onBoardsChanged }: { onBoardsChanged: () => void }) {
+  const { dashboardId } = useParams();
+  const api = useInsightsApi();
+  const dialogs = useDialogs();
+  const navigate = useNavigate();
+  /** Bumped by anything that changed what is pinned here. */
+  const [revision, setRevision] = useState(0);
+  /** Bumped by an explicit refresh: the figures are re-read, the layout is not
+   *  disturbed. Nothing computed is cached anywhere, so this is a real re-ask
+   *  of the tenant's documents. */
+  const [figures, setFigures] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const view = useBoard(dashboardId ?? null, revision);
+  const tiles = view.board?.tiles ?? [];
+
+  const bump = useCallback(() => setRevision((r) => r + 1), []);
+
+  /** Runs one change against the server and re-reads the board from the
+   *  answer. A refusal is shown as the server's own sentence. */
+  const commit = useCallback(
+    async (change: () => Promise<unknown>, fallback: string) => {
+      try {
+        await change();
+        setError(null);
+        bump();
+      } catch (err) {
+        setError(insightsMessage(err, fallback));
+      }
+    },
+    [bump],
+  );
+
+  const actions: TileActions = {
+    rename: (tile) => {
+      void (async () => {
+        const name = (
+          await dialogs.prompt({
+            title: strings.insightsRenameTile,
+            message: strings.insightsRenameTilePrompt,
+            defaultValue: tile.title,
+          })
+        )?.trim();
+        if (name === undefined || name === "" || name === tile.title) return;
+        await commit(() => api.updateTile(tile.id, { title: name }), strings.insightsSaveFailed);
+      })();
+    },
+    resize: (tile, span) => {
+      if (span < SPAN_MIN || span > SPAN_MAX) return;
+      void commit(() => api.updateTile(tile.id, { span }), strings.insightsSaveFailed);
+    },
+    move: (tile, direction) => {
+      const position = positionAfterMove(tiles, tiles.indexOf(tile), direction);
+      if (position === null) return;
+      void commit(() => api.moveTile(tile.id, position), strings.insightsSaveFailed);
+    },
+    remove: (tile) => {
+      void (async () => {
+        const sure = await dialogs.confirm({
+          title: strings.insightsRemoveTile,
+          message: strings.insightsRemoveTileConfirm(tile.title),
+          confirmLabel: strings.insightsRemoveTile,
+          danger: true,
+        });
+        if (!sure) return;
+        await commit(() => api.deleteTile(tile.id), strings.insightsDeleteFailed);
+      })();
+    },
+  };
+
+  function renameBoard() {
+    const board = view.board?.dashboard;
+    if (board === undefined) return;
+    void (async () => {
+      const name = (
+        await dialogs.prompt({
+          title: strings.insightsRenameBoard,
+          message: strings.insightsBoardNamePrompt,
+          defaultValue: board.name,
+        })
+      )?.trim();
+      if (name === undefined || name === "" || name === board.name) return;
+      await commit(async () => {
+        await api.renameDashboard(board.id, name);
+        onBoardsChanged();
+      }, strings.insightsSaveFailed);
+    })();
+  }
+
+  function deleteBoard() {
+    const board = view.board?.dashboard;
+    if (board === undefined) return;
+    void (async () => {
+      const sure = await dialogs.confirm({
+        title: strings.insightsDeleteBoard,
+        message: strings.insightsDeleteBoardConfirm(board.name),
+        confirmLabel: strings.insightsDeleteBoard,
+        danger: true,
+      });
+      if (!sure) return;
+      try {
+        await api.deleteDashboard(board.id);
+        onBoardsChanged();
+        // Back to the module, which opens whichever board is now first.
+        navigate("/insights", { replace: true });
+      } catch (err) {
+        setError(insightsMessage(err, strings.insightsDeleteFailed));
+      }
+    })();
+  }
+
+  if (view.loading && view.board === null) {
+    return (
+      <div className={styles.page}>
+        <Spinner size={20} />
+      </div>
+    );
+  }
+
+  if (view.board === null) {
+    return (
+      <div className={styles.page}>
+        {view.error !== null && <ErrorBanner message={view.error} />}
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.page}>
+      <BoardBar>
+        <h2 className={styles.boardName}>{view.board.dashboard.name}</h2>
+        <IconButton
+          label={strings.insightsRefresh}
+          icon={<RefreshCw size={16} />}
+          onClick={() => setFigures((f) => f + 1)}
+        />
+        <Button variant="ghost" onClick={renameBoard}>
+          {strings.insightsRenameBoard}
+        </Button>
+        <Button variant="ghost" onClick={deleteBoard}>
+          {strings.insightsDeleteBoard}
+        </Button>
+      </BoardBar>
+
+      {error !== null && <ErrorBanner message={error} />}
+      {view.error !== null && <ErrorBanner message={view.error} />}
+
+      {tiles.length === 0 ? (
+        <EmptyState
+          Icon={BarChart3}
+          title={strings.insightsNoTilesTitle}
+          body={strings.insightsNoTilesBody}
+        />
+      ) : (
+        <div className={styles.grid}>
+          {tiles.map((tile, index) => (
+            <TileCard
+              key={tile.id}
+              tile={tile}
+              actions={actions}
+              canMoveLeft={index > 0}
+              canMoveRight={index < tiles.length - 1}
+              revision={figures}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
