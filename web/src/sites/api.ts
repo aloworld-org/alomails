@@ -1,0 +1,137 @@
+// The client for the authenticated `/sites/*` HTTP surface (alo Sites,
+// ADR 0036, wave S1) — the edit half of the two-service boundary in
+// `docs/design/sites.md`.
+//
+// Its own small client rather than more methods on `JmapClient`, for the same
+// reason billing's is: a plain REST surface with none of JMAP's envelope, and
+// it changes for different reasons than mail does. It uses the same
+// authenticated fetch (bearer + refresh handled by the auth layer), so there
+// is one session, not two.
+//
+// It holds NO validation. Subdomain syntax, reserved words, slug rules and
+// the home-page invariant are all ruled on by the store; a second, weaker
+// copy of those rules here is how two doors end up disagreeing. The form's
+// job is to send what was typed and show what came back. Methods are added
+// with their consumers — the section, theme, and publish calls land with the
+// screens that make them (S1.12+), never speculatively.
+import { useMemo } from "react";
+
+import { useAuth } from "../auth";
+import { API_BASE } from "../platform/runtime";
+import type { PageDraft, Site, SiteDetail, SiteDraft, SitePage, SubdomainCheck } from "./types";
+
+type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
+
+/**
+ * A failed sites request. `detail` is the server's own sentence when it sent
+ * one — the store authors those messages to name the rule that was broken
+ * (never another tenant's data), so they are safe to put in front of a user.
+ * `status` lets a caller tell "that breaks a rule" (422) from "that record is
+ * gone" (404) without parsing prose.
+ */
+export class SitesError extends Error {
+  readonly status: number;
+  readonly detail: string | null;
+
+  constructor(status: number, detail: string | null) {
+    super(detail ?? `sites request failed (${status})`);
+    this.name = "SitesError";
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
+/** What to show a user about a failed request: the server's own sentence when
+ *  it sent one, and `fallback` otherwise (a dropped connection, or a failure
+ *  whose reason is not the user's business). */
+export function sitesMessage(error: unknown, fallback: string): string {
+  return error instanceof SitesError && error.detail !== null ? error.detail : fallback;
+}
+
+/** The tenant's websites and their pages — the S1.11 slice of the edit API.
+ *  One instance per auth context. */
+export class SitesApi {
+  readonly #fetch: AuthorizedFetch;
+
+  constructor(authorizedFetch: AuthorizedFetch) {
+    this.#fetch = authorizedFetch;
+  }
+
+  /** The tenant's sites. */
+  sites(): Promise<Site[]> {
+    return this.#read<{ sites?: Site[] }>("/sites").then((r) => r.sites ?? []);
+  }
+
+  /** Creates a site, claiming the subdomain in the global namespace; answers
+   *  the STORED record. A claim that collides is a `422` saying taken/free
+   *  only, never who holds it. */
+  createSite(draft: SiteDraft): Promise<Site> {
+    return this.#write<Site>("POST", "/sites", draft);
+  }
+
+  /** One site with its current publish (`null` while unpublished). */
+  site(id: string): Promise<SiteDetail> {
+    return this.#read<SiteDetail>(`/sites/${encodeURIComponent(id)}`);
+  }
+
+  /** The live taken/free answer for a well-formed label; a syntactically
+   *  invalid or reserved one is a `422` naming the rule. */
+  checkSubdomain(subdomain: string): Promise<SubdomainCheck> {
+    return this.#read<SubdomainCheck>(
+      `/sites/subdomain-check?subdomain=${encodeURIComponent(subdomain)}`,
+    );
+  }
+
+  /** The site's pages in navigation order. */
+  pages(siteId: string): Promise<SitePage[]> {
+    return this.#read<{ pages?: SitePage[] }>(
+      `/sites/${encodeURIComponent(siteId)}/pages`,
+    ).then((r) => r.pages ?? []);
+  }
+
+  /** Creates a page at the end of the navigation order, with an empty section
+   *  stack; answers the stored page. */
+  createPage(siteId: string, draft: PageDraft): Promise<SitePage> {
+    return this.#write<SitePage>("POST", `/sites/${encodeURIComponent(siteId)}/pages`, draft);
+  }
+
+  async #read<T>(path: string): Promise<T> {
+    return this.#json<T>(await this.#send(path, { method: "GET" }));
+  }
+
+  async #write<T>(method: string, path: string, body: unknown): Promise<T> {
+    return this.#json<T>(
+      await this.#send(path, {
+        method,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      }),
+    );
+  }
+
+  async #send(path: string, init: RequestInit): Promise<Response> {
+    try {
+      return await this.#fetch(`${API_BASE}${path}`, init);
+    } catch {
+      // A dropped connection is not a status code; give it one the UI can
+      // treat like any other failure rather than an unhandled rejection.
+      throw new SitesError(0, null);
+    }
+  }
+
+  async #json<T>(res: Response): Promise<T> {
+    if (!res.ok) {
+      const problem = (await res.json().catch(() => ({}))) as { detail?: unknown };
+      const detail = typeof problem.detail === "string" ? problem.detail : null;
+      throw new SitesError(res.status, detail);
+    }
+    return (await res.json()) as T;
+  }
+}
+
+/** The sites client bound to the current session. Memoized per auth context,
+ *  so a re-render never re-creates it and effects keyed on it do not loop. */
+export function useSitesApi(): SitesApi {
+  const { authorizedFetch } = useAuth();
+  return useMemo(() => new SitesApi(authorizedFetch), [authorizedFetch]);
+}

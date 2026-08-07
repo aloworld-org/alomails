@@ -1,0 +1,321 @@
+// The wiring the type checker cannot see: that the list really renders what
+// the API answered, that the create form really asks the server about the
+// typed address and sends exactly what was typed, and that a refusal from the
+// server is shown to the user instead of swallowed.
+//
+// The auth layer is stubbed down to one recording `fetch`, so the REAL
+// client and the real views run — only the network is fake.
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { strings } from "../i18n";
+import { SitesModule } from "./SitesModule";
+import type { Site, SitePage } from "./types";
+
+interface Call {
+  url: string;
+  method: string;
+  body: unknown;
+}
+
+interface Reply {
+  match: (url: string, method: string) => boolean;
+  status: number;
+  body: unknown;
+}
+
+const calls: Call[] = [];
+let replies: Reply[] = [];
+
+const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
+  const method = init?.method ?? "GET";
+  calls.push({
+    url,
+    method,
+    body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+  });
+  const index = replies.findIndex((r) => r.match(url, method));
+  const answer = index === -1 ? fallback(url) : (replies.splice(index, 1)[0] as Reply);
+  return new Response(JSON.stringify(answer.body), {
+    status: answer.status,
+    headers: { "content-type": "application/json" },
+  });
+});
+
+/** The lists a screen loads before anything interesting happens. */
+function fallback(url: string): Reply {
+  const body = url.includes("/pages")
+    ? { pages: [] }
+    : url.endsWith("/sites")
+      ? { sites: [] }
+      : {};
+  return { match: () => true, status: 200, body };
+}
+
+vi.mock("../auth", () => ({
+  useAuth: () => ({ authorizedFetch: fakeFetch }),
+}));
+
+const ALPHA: Site = { id: "site-1", name: "Alpha Bakery", subdomain: "alpha", status: "live" };
+const BETA: Site = { id: "site-2", name: "Beta Atelier", subdomain: "beta", status: "draft" };
+const HOME: SitePage = { id: "page-1", slug: "", title: "Welcome", home: true };
+const ABOUT: SitePage = { id: "page-2", slug: "about", title: "About us", home: false };
+
+/** The module as it is really mounted: at `/sites/*`, routing itself. */
+function ui(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <Routes>
+        <Route path="/sites/*" element={<SitesModule />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+/** The last write the client made, if it made one. */
+function lastWrite(): Call | undefined {
+  return calls.filter((c) => c.method !== "GET").at(-1);
+}
+
+beforeEach(() => {
+  calls.length = 0;
+  replies = [];
+  fakeFetch.mockClear();
+});
+
+afterEach(cleanup);
+
+describe("the site list", () => {
+  test("renders what the API answered, with the live/draft state", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites"),
+        status: 200,
+        body: { sites: [ALPHA, BETA] },
+      },
+    ];
+    ui("/sites");
+    expect(await screen.findByText("Alpha Bakery")).toBeTruthy();
+    expect(screen.getByText("alpha")).toBeTruthy();
+    expect(screen.getByText(strings.sitesStatusLive)).toBeTruthy();
+    expect(screen.getByText("Beta Atelier")).toBeTruthy();
+    expect(screen.getByText(strings.sitesStatusDraft)).toBeTruthy();
+  });
+
+  test("an empty tenant sees the empty state, not a bare table", async () => {
+    ui("/sites");
+    expect(await screen.findByText(strings.sitesNoSitesTitle)).toBeTruthy();
+  });
+
+  test("a failure to load is shown, never swallowed", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites"),
+        status: 500,
+        body: {},
+      },
+    ];
+    ui("/sites");
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.getByText(strings.sitesLoadFailed)).toBeTruthy();
+  });
+});
+
+describe("creating a site", () => {
+  test("the typed address is checked live against the server", async () => {
+    ui("/sites");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeTruthy();
+
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        status: 200,
+        body: { subdomain: "acme", available: true },
+      },
+    ];
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
+      target: { value: "acme" },
+    });
+    await waitFor(
+      () => expect(screen.getByText(strings.sitesSubdomainAvailable("acme"))).toBeTruthy(),
+      { timeout: 3000 },
+    );
+    const check = calls.find((c) => c.url.includes("/sites/subdomain-check"));
+    expect(check?.url).toContain("subdomain=acme");
+  });
+
+  test("a taken address, and a rule the server names, are both shown", async () => {
+    ui("/sites");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        status: 200,
+        body: { subdomain: "taken", available: false },
+      },
+    ];
+    const address = screen.getByLabelText(strings.sitesFieldSubdomain);
+    fireEvent.change(address, { target: { value: "taken" } });
+    await waitFor(() => expect(screen.getByText(strings.sitesSubdomainTaken("taken"))).toBeTruthy(), {
+      timeout: 3000,
+    });
+
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        status: 422,
+        body: { detail: "subdomain is reserved" },
+      },
+    ];
+    fireEvent.change(address, { target: { value: "mail" } });
+    await waitFor(() => expect(screen.getByText("subdomain is reserved")).toBeTruthy(), {
+      timeout: 3000,
+    });
+  });
+
+  test("submitting sends what was typed and opens the new site", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites"),
+        status: 200,
+        body: { ...ALPHA, id: "site-9", name: "Acme", subdomain: "acme", status: "draft" },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-9"),
+        status: 200,
+        body: { id: "site-9", name: "Acme", subdomain: "acme", status: "draft", publish: null },
+      },
+    ];
+    ui("/sites");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
+      target: { value: "Acme" },
+    });
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
+      target: { value: "acme" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
+
+    // The write carried exactly what was typed…
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()).toMatchObject({
+      method: "POST",
+      body: { name: "Acme", subdomain: "acme" },
+    });
+    // …and the module navigated into the created site.
+    expect(await screen.findByText(strings.sitesNoPagesTitle)).toBeTruthy();
+  });
+
+  test("the server's refusal is shown in the dialog, which stays open", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites"),
+        status: 422,
+        body: { detail: "subdomain is already taken" },
+      },
+    ];
+    ui("/sites");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
+      target: { value: "Acme" },
+    });
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
+      target: { value: "acme" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
+    expect(await screen.findByText("subdomain is already taken")).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+});
+
+describe("one site", () => {
+  test("shows the site and its pages in order, the home page marked", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: { ...ALPHA, publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" } },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: { pages: [HOME, ABOUT] },
+      },
+    ];
+    ui("/sites/site-1");
+    expect(await screen.findByText("Alpha Bakery")).toBeTruthy();
+    expect(screen.getByText(strings.sitesStatusLive)).toBeTruthy();
+    expect(screen.getByText("Welcome")).toBeTruthy();
+    expect(screen.getByText(strings.sitesHomeBadge)).toBeTruthy();
+    expect(screen.getByText("About us")).toBeTruthy();
+    expect(screen.getByText("/about")).toBeTruthy();
+  });
+
+  test("a foreign or stale id reads as not-found with the way back", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/other"),
+        status: 404,
+        body: { detail: "no such site" },
+      },
+    ];
+    ui("/sites/other");
+    expect(await screen.findByText("no such site")).toBeTruthy();
+    expect(screen.getByText(strings.sitesBack)).toBeTruthy();
+  });
+
+  test("adding a page sends title, path and the home flag", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2"),
+        status: 200,
+        body: { ...BETA, publish: null },
+      },
+      // The initial load: no pages yet (replies are consumed in order, so the
+      // reload below answers the second pages request, not this one).
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2/pages"),
+        status: 200,
+        body: { pages: [] },
+      },
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites/site-2/pages"),
+        status: 200,
+        body: { id: "page-9", slug: "", title: "Welcome", home: true },
+      },
+      // The reload after creating.
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2"),
+        status: 200,
+        body: { ...BETA, publish: null },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2/pages"),
+        status: 200,
+        body: { pages: [{ id: "page-9", slug: "", title: "Welcome", home: true }] },
+      },
+    ];
+    ui("/sites/site-2");
+    // The site has no pages, so the empty state's CTA opens the dialog and the
+    // home flag defaults to on — the first page IS the home page.
+    fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesNewPage }))[0]!);
+    const homeToggle = screen.getByLabelText(strings.sitesFieldHome) as HTMLInputElement;
+    expect(homeToggle.checked).toBe(true);
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldPageTitle), {
+      target: { value: "Welcome" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesCreatePage }));
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()).toMatchObject({
+      method: "POST",
+      body: { title: "Welcome", slug: "", home: true },
+    });
+    // The list reloaded with the created page.
+    expect(await screen.findByText("Welcome")).toBeTruthy();
+  });
+});

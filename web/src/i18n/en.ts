@@ -1826,6 +1826,49 @@ export const en = {
     count === 1
       ? "1 document is not in these figures: no exchange rate was stored for it. Check it before filing."
       : `${count} documents are not in these figures: no exchange rate was stored for them. Check them before filing.`,
+
+  // Sites (alo Sites, ADR 0036, wave S1). The rail says "Websites" — the
+  // module is where a tenant's public sites are made, in the word a stranger
+  // uses for them.
+  moduleSites: "Websites",
+  sitesLoadFailed: "Your websites could not be loaded.",
+  sitesSiteLoadFailed: "This website could not be loaded.",
+  sitesSaveFailed: "The change could not be saved.",
+  sitesCheckFailed: "The address could not be checked.",
+  sitesNewSite: "New website",
+  sitesNoSitesTitle: "No websites yet",
+  sitesNoSitesBody: "Build a site for your business and publish it under its own address.",
+  sitesColName: "Name",
+  sitesColAddress: "Address",
+  sitesColStatus: "Status",
+  sitesStatusDraft: "Draft",
+  sitesStatusLive: "Live",
+  sitesNewSiteTitle: "New website",
+  sitesNewSiteSubtitle: "Pick a name, and claim the address it will live at.",
+  sitesFieldName: "Site name",
+  sitesFieldSubdomain: "Address",
+  sitesSubdomainHint:
+    "Lowercase letters, digits and hyphens, 3–40 characters — this becomes the site's web address.",
+  sitesSubdomainChecking: "Checking availability…",
+  sitesSubdomainAvailable: (subdomain: string) => `“${subdomain}” is free.`,
+  sitesSubdomainTaken: (subdomain: string) => `“${subdomain}” is already taken.`,
+  sitesCreateSite: "Create website",
+  sitesCancel: "Cancel",
+  sitesBack: "All websites",
+  sitesPages: "Pages",
+  sitesNewPage: "New page",
+  sitesNoPagesTitle: "No pages yet",
+  sitesNoPagesBody: "Every site starts with a home page. Add one to start building.",
+  sitesColPage: "Page",
+  sitesColPath: "Path",
+  sitesHomeBadge: "Home",
+  sitesNewPageTitle: "New page",
+  sitesNewPageSubtitle: "A page holds the sections you stack on it.",
+  sitesFieldPageTitle: "Title",
+  sitesFieldSlug: "Path",
+  sitesSlugHint: "Lowercase letters, digits and hyphens. The home page leaves this empty.",
+  sitesFieldHome: "This is the home page",
+  sitesCreatePage: "Create page",
 } as const;
 
 /** Every string key in the catalog. */
