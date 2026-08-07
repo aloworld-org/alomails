@@ -54,6 +54,7 @@ export function DocEditor({
   );
   const [zoom, setZoom] = useState(100);
   const [activeStyles, setActiveStyles] = useState<Record<string, boolean | string>>({});
+  const [activeBlockType, setActiveBlockType] = useState("paragraph");
   const pending = useRef<unknown[] | null>(null);
   const timer = useRef<number | null>(null);
   const loaded = useRef(false);
@@ -93,7 +94,18 @@ export function DocEditor({
 
   useEffect(() => editor.onSelectionChange(() => {
     setActiveStyles(editor.getActiveStyles() as Record<string, boolean | string>);
+    setActiveBlockType(editor.getTextCursorPosition().block.type);
   }), [editor]);
+
+  const changeBlockType = (type: string) => {
+    const block = editor.getTextCursorPosition().block;
+    const update = type.startsWith("heading-")
+      ? { type: "heading", props: { level: Number(type.slice(-1)) } }
+      : { type };
+    editor.updateBlock(block, update as Parameters<typeof editor.updateBlock>[1]);
+    setActiveBlockType(type);
+    onChange();
+  };
 
   const insertBlock = (type: "table" | "divider" | "pageBreak") => {
     const anchor = editor.getTextCursorPosition().block;
@@ -233,6 +245,15 @@ export function DocEditor({
           <details><summary>{strings.docMenuFormat}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => toggleStyle("bold")}><Bold size={15} />{strings.sheetBold}</button><button type="button" onClick={() => toggleStyle("italic")}><Italic size={15} />{strings.sheetItalic}</button><button type="button" onClick={() => toggleStyle("underline")}><Underline size={15} />{strings.sheetUnderline}</button></div></details>
         </div>
         <div className={styles.commandDivider} />
+        <select className={styles.blockTypeSelect} aria-label={strings.docParagraphStyle} value={activeBlockType === "heading" ? "heading-1" : activeBlockType} onChange={(event) => changeBlockType(event.target.value)}>
+          <option value="paragraph">{strings.docStyleParagraph}</option>
+          <option value="heading-1">{strings.docStyleHeading1}</option>
+          <option value="heading-2">{strings.docStyleHeading2}</option>
+          <option value="heading-3">{strings.docStyleHeading3}</option>
+          <option value="bulletListItem">{strings.docStyleBulletList}</option>
+          <option value="numberedListItem">{strings.docStyleNumberedList}</option>
+          <option value="checkListItem">{strings.docStyleChecklist}</option>
+        </select>
         <button type="button" className={styles.commandIcon} onClick={() => editor.undo()} aria-label={strings.sheetUndo} title={strings.sheetUndo}><Undo2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => editor.redo()} aria-label={strings.sheetRedo} title={strings.sheetRedo}><Redo2 size={17} /></button>
         <div className={styles.commandDivider} />
