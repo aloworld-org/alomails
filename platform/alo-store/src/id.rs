@@ -207,6 +207,15 @@ opaque_id!(
     SitePublishId
 );
 opaque_id!(
+    /// A contact form on an alo Sites website — the object a `contact_form`
+    /// section references by id.
+    SiteFormId
+);
+opaque_id!(
+    /// One visitor submission posted to a site contact form.
+    SiteFormSubmissionId
+);
+opaque_id!(
     /// A billing customer — the company or person a tenant invoices
     /// (alo Billing, ADR 0035).
     BillingCustomerId

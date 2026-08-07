@@ -1390,6 +1390,174 @@ async fn site_pages_scope_by_tenant_and_site_with_slug_and_home_rules() {
     assert!(a.site_page(&site, &about).await.unwrap().is_none());
 }
 
+/// Site forms and submissions (ADR 0036): both scope by (tenant, site) — an
+/// outsider tenant gets the clean denial on every path, a form cannot be
+/// addressed through another site of the same tenant, the submission write
+/// gate rejects malformed fields, and deleting a form or its site cascades
+/// the submissions away.
+#[tokio::test]
+async fn site_forms_and_submissions_scope_by_tenant_and_site() {
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("forms-t1").await.unwrap();
+    let ua = store
+        .for_tenant(t1.clone())
+        .create_user("a@forms.test")
+        .await
+        .unwrap();
+    let a = store.for_account(t1, ua);
+    let t2 = store.create_tenant("forms-t2").await.unwrap();
+    let ub = store
+        .for_tenant(t2.clone())
+        .create_user("b@forms.test")
+        .await
+        .unwrap();
+    let b = store.for_account(t2, ub);
+
+    // Unique per test run: the compose Postgres is shared across runs and the
+    // subdomain namespace is global by design.
+    let unique = |tag: &str| {
+        format!(
+            "{tag}-{}x",
+            alo_store::SiteId::generate()
+                .as_str()
+                .to_lowercase()
+                .replace('_', "-")
+        )
+    };
+    let site = a.create_site("Acme", &unique("fm")).await.unwrap();
+    let site2 = a.create_site("Beta", &unique("fm")).await.unwrap();
+
+    // ---- form CRUD on the owner's own site ----------------------------------
+    let form = a.create_site_form(&site, "  Contact  ").await.unwrap();
+    let got = a.site_form(&site, &form).await.unwrap().unwrap();
+    assert_eq!(got.name, "Contact");
+    assert_eq!(a.site_forms(&site).await.unwrap().len(), 1);
+    a.rename_site_form(&site, &form, "Sales").await.unwrap();
+    assert_eq!(
+        a.site_form(&site, &form).await.unwrap().unwrap().name,
+        "Sales"
+    );
+    match a.create_site_form(&site, "   ").await {
+        Err(StoreError::Validation(_)) => {}
+        other => panic!("expected Validation on a blank name, got {other:?}"),
+    }
+
+    // Creating on a foreign site is the clean denial, not a stray row.
+    assert_not_found(b.create_site_form(&site, "Intruder").await);
+
+    // ---- submissions: write gate, then newest-first reads -------------------
+    let first = a
+        .add_site_form_submission(&site, &form, "Ada", "ada@example.test", "First message")
+        .await
+        .unwrap();
+    let second = a
+        .add_site_form_submission(
+            &site,
+            &form,
+            "Grace",
+            "grace@example.test",
+            "Second message",
+        )
+        .await
+        .unwrap();
+    let listed = a.site_form_submissions(&site, &form).await.unwrap();
+    assert_eq!(listed.len(), 2);
+    assert_eq!(listed[0].sender_name, "Grace"); // newest first
+    assert!(!listed[0].handled);
+    for (name, email, message) in [
+        ("", "ada@example.test", "hi"),
+        ("Ada", "not-an-email", "hi"),
+        ("Ada", "ada@example.test", "   "),
+    ] {
+        match a
+            .add_site_form_submission(&site, &form, name, email, message)
+            .await
+        {
+            Err(StoreError::Validation(_)) => {}
+            other => {
+                panic!("expected Validation for {name:?}/{email:?}/{message:?}, got {other:?}")
+            }
+        }
+    }
+    a.set_form_submission_handled(&site, &form, &first, true)
+        .await
+        .unwrap();
+    let listed = a.site_form_submissions(&site, &form).await.unwrap();
+    assert!(listed.iter().any(|s| s.id == first && s.handled));
+    assert!(listed.iter().any(|s| s.id == second && !s.handled));
+
+    // ---- the outsider tenant: clean denial on every path --------------------
+    assert!(b.site_form(&site, &form).await.unwrap().is_none());
+    assert!(b.site_forms(&site).await.unwrap().is_empty());
+    assert_not_found(b.rename_site_form(&site, &form, "hijacked").await);
+    assert_not_found(b.delete_site_form(&site, &form).await);
+    assert_not_found(
+        b.add_site_form_submission(&site, &form, "Eve", "eve@example.test", "intrusion")
+            .await,
+    );
+    assert!(
+        b.site_form_submissions(&site, &form)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert_not_found(
+        b.set_form_submission_handled(&site, &form, &second, true)
+            .await,
+    );
+    assert_not_found(b.delete_form_submission(&site, &form, &second).await);
+    // ... and nothing they tried changed A's rows.
+    assert_eq!(
+        a.site_form(&site, &form).await.unwrap().unwrap().name,
+        "Sales"
+    );
+    assert_eq!(
+        a.site_form_submissions(&site, &form).await.unwrap().len(),
+        2
+    );
+
+    // ---- forms also scope by site within the same tenant --------------------
+    assert!(a.site_form(&site2, &form).await.unwrap().is_none());
+    assert!(a.site_forms(&site2).await.unwrap().is_empty());
+    assert_not_found(a.rename_site_form(&site2, &form, "cross-site").await);
+    assert_not_found(
+        a.add_site_form_submission(&site2, &form, "Ada", "ada@example.test", "cross-site")
+            .await,
+    );
+    assert!(
+        a.site_form_submissions(&site2, &form)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert_not_found(
+        a.set_form_submission_handled(&site2, &form, &second, true)
+            .await,
+    );
+    assert_not_found(a.delete_form_submission(&site2, &form, &second).await);
+
+    // ---- deletes cascade ----------------------------------------------------
+    a.delete_form_submission(&site, &form, &second)
+        .await
+        .unwrap();
+    assert_eq!(
+        a.site_form_submissions(&site, &form).await.unwrap().len(),
+        1
+    );
+    a.delete_site_form(&site, &form).await.unwrap();
+    assert!(a.site_form(&site, &form).await.unwrap().is_none());
+    assert!(
+        a.site_form_submissions(&site, &form)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    let survivor = a.create_site_form(&site, "Contact").await.unwrap();
+    a.delete_site(&site).await.unwrap();
+    assert!(a.site_form(&site, &survivor).await.unwrap().is_none());
+    assert!(a.site_forms(&site).await.unwrap().is_empty());
+}
+
 /// Site publishing (ADR 0036): a publish freezes the pages and theme into
 /// immutable snapshots and flips the site live atomically; editing, adding,
 /// or deleting draft pages afterwards never changes the published set — only
