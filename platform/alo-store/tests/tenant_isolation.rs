@@ -1390,6 +1390,194 @@ async fn site_pages_scope_by_tenant_and_site_with_slug_and_home_rules() {
     assert!(a.site_page(&site, &about).await.unwrap().is_none());
 }
 
+/// Site publishing (ADR 0036): a publish freezes the pages and theme into
+/// immutable snapshots and flips the site live atomically; editing, adding,
+/// or deleting draft pages afterwards never changes the published set — only
+/// a republish does, and it creates a NEW set while the old one survives.
+/// An outsider tenant gets the clean denial on every path, and a publish
+/// cannot be addressed through another site of the same tenant.
+#[tokio::test]
+async fn site_publishes_freeze_immutable_snapshots_and_scope_by_tenant() {
+    use serde_json::json;
+
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("publish-t1").await.unwrap();
+    let ua = store
+        .for_tenant(t1.clone())
+        .create_user("a@publish.test")
+        .await
+        .unwrap();
+    let ua_id = ua.as_str().to_owned();
+    let a = store.for_account(t1, ua);
+    let t2 = store.create_tenant("publish-t2").await.unwrap();
+    let ub = store
+        .for_tenant(t2.clone())
+        .create_user("b@publish.test")
+        .await
+        .unwrap();
+    let b = store.for_account(t2, ub);
+
+    // Unique per test run: the compose Postgres is shared across runs and the
+    // subdomain namespace is global by design.
+    let unique = |tag: &str| {
+        format!(
+            "{tag}-{}x",
+            alo_store::SiteId::generate()
+                .as_str()
+                .to_lowercase()
+                .replace('_', "-")
+        )
+    };
+    let site = a.create_site("Acme", &unique("pub")).await.unwrap();
+
+    // An empty site must not go live; neither may one without a home page.
+    let conflict = |result: Result<alo_store::SitePublishId, StoreError>| match result {
+        Err(StoreError::Conflict(_)) => {}
+        other => panic!("expected publish Conflict, got {other:?}"),
+    };
+    conflict(a.publish_site(&site).await);
+    let about = a
+        .create_site_page(&site, "About", "about", false)
+        .await
+        .unwrap();
+    conflict(a.publish_site(&site).await);
+
+    // With a home page (and a theme) the site publishes and goes live.
+    let home = a.create_site_page(&site, "Home", "", true).await.unwrap();
+    let hero = json!({
+        "schema_version": 1,
+        "sections": [{"type": "hero", "heading": "Welcome"}]
+    });
+    a.set_page_sections(&site, &home, hero.clone())
+        .await
+        .unwrap();
+    let terra = json!({"schema_version": 1, "preset": "terra"});
+    a.set_site_theme(&site, terra.clone()).await.unwrap();
+    let p1 = a.publish_site(&site).await.unwrap();
+    assert_eq!(
+        a.site(&site).await.unwrap().unwrap().status,
+        alo_store::SiteStatus::Live
+    );
+    let current = a.current_site_publish(&site).await.unwrap().unwrap();
+    assert_eq!(current.id, p1);
+    assert_eq!(current.published_by, ua_id);
+    assert_eq!(current.theme, terra);
+    let frozen = a.site_publish_snapshots(&site, &p1).await.unwrap();
+    assert_eq!(frozen.len(), 2);
+    // Nav order: About was created first (0), Home second (1).
+    assert_eq!(frozen[0].page_id, about);
+    assert_eq!(frozen[0].slug, "about");
+    assert!(!frozen[0].is_home);
+    assert_eq!(frozen[1].page_id, home);
+    assert_eq!(frozen[1].slug, "");
+    assert!(frozen[1].is_home);
+    assert_eq!(frozen[1].sections, hero);
+
+    // Drafts never leak: edit, add, delete, and retheme AFTER publishing —
+    // the published set must not move by a single byte.
+    a.set_page_sections(
+        &site,
+        &home,
+        json!({
+            "schema_version": 1,
+            "sections": [{
+                "type": "cta",
+                "heading": "Buy now",
+                "button": {"label": "Buy", "href": "/pricing"}
+            }]
+        }),
+    )
+    .await
+    .unwrap();
+    a.set_page_title(&site, &about, "Team").await.unwrap();
+    a.create_site_page(&site, "Pricing", "pricing", false)
+        .await
+        .unwrap();
+    a.delete_site_page(&site, &about).await.unwrap();
+    a.set_site_theme(&site, json!({"schema_version": 1, "preset": "ink"}))
+        .await
+        .unwrap();
+    assert_eq!(a.current_site_publish(&site).await.unwrap().unwrap().id, p1);
+    let still = a.site_publish_snapshots(&site, &p1).await.unwrap();
+    assert_eq!(still.len(), 2);
+    assert_eq!(still[0].title, "About", "snapshot must survive the retitle");
+    assert_eq!(
+        still[0].page_id, about,
+        "snapshot must survive the page deletion"
+    );
+    assert_eq!(
+        still[1].sections, hero,
+        "snapshot must not follow draft edits"
+    );
+    assert_eq!(
+        a.current_site_publish(&site).await.unwrap().unwrap().theme,
+        terra,
+        "the published theme is the one frozen at publish time"
+    );
+
+    // Republish: a NEW set reflecting today's draft; the old set survives
+    // untouched (immutable history).
+    let p2 = a.publish_site(&site).await.unwrap();
+    assert_ne!(p2, p1);
+    assert_eq!(a.current_site_publish(&site).await.unwrap().unwrap().id, p2);
+    let republished = a.site_publish_snapshots(&site, &p2).await.unwrap();
+    assert_eq!(republished.len(), 2);
+    assert!(
+        republished.iter().all(|s| s.page_id != about),
+        "the deleted page must not be in the new set"
+    );
+    assert!(republished.iter().any(|s| s.slug == "pricing"));
+    let old = a.site_publish_snapshots(&site, &p1).await.unwrap();
+    assert_eq!(old.len(), 2);
+    assert_eq!(old[1].sections, hero);
+
+    // An outsider tenant gets the clean denial on every path — never data,
+    // never an internal error — and A's published state is untouched.
+    assert_not_found(b.publish_site(&site).await);
+    assert_not_found(b.unpublish_site(&site).await);
+    assert!(b.current_site_publish(&site).await.unwrap().is_none());
+    assert!(
+        b.site_publish_snapshots(&site, &p2)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    assert_eq!(a.current_site_publish(&site).await.unwrap().unwrap().id, p2);
+
+    // A publish also scopes by site within the tenant: another site of A's
+    // cannot address it.
+    let site2 = a.create_site("Beta", &unique("pub")).await.unwrap();
+    assert!(
+        a.site_publish_snapshots(&site2, &p2)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+
+    // Unpublish hides the site but erases nothing; republishing works again.
+    a.unpublish_site(&site).await.unwrap();
+    assert_eq!(
+        a.site(&site).await.unwrap().unwrap().status,
+        alo_store::SiteStatus::Draft
+    );
+    assert!(a.current_site_publish(&site).await.unwrap().is_none());
+    assert_eq!(a.site_publish_snapshots(&site, &p1).await.unwrap().len(), 2);
+    assert_eq!(a.site_publish_snapshots(&site, &p2).await.unwrap().len(), 2);
+    let p3 = a.publish_site(&site).await.unwrap();
+    assert_eq!(a.current_site_publish(&site).await.unwrap().unwrap().id, p3);
+
+    // Deleting the site cascades its publishes and snapshots (and the
+    // published-set pointer goes with the row).
+    a.delete_site(&site).await.unwrap();
+    assert!(a.current_site_publish(&site).await.unwrap().is_none());
+    assert!(
+        a.site_publish_snapshots(&site, &p3)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
 /// Drive (ADR 0027): a node's access follows its location. Personal files are
 /// private to their owner; Space files are readable by members and writable by
 /// editors+; moving a file re-scopes its access; and nothing — a node, its

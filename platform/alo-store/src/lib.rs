@@ -50,6 +50,7 @@ pub mod share;
 pub mod signup;
 pub mod site_model;
 pub mod site_pages;
+pub mod site_publish;
 pub mod site_theme;
 pub mod sites;
 pub mod snooze;
@@ -94,8 +95,8 @@ pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingCustomerId,
     BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId, BillingQuoteId, BlobId,
     CalendarId, CategoryId, CommentId, ContactId, DriveNodeId, EventId, GroupId, LabelId,
-    MailboxId, MessageId, ProjectId, SiteId, SitePageId, SpaceId, SubtaskId, TaskId, TenantId,
-    ThreadId, UserId,
+    MailboxId, MessageId, ProjectId, SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId,
+    TenantId, ThreadId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -114,6 +115,7 @@ pub use share::{ShareCreated, ShareTarget};
 pub use signup::PendingSignup;
 pub use site_model::{SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope};
 pub use site_pages::{SitePage, validate_page_slug};
+pub use site_publish::{SitePageSnapshot, SitePublish};
 pub use site_theme::{
     DEFAULT_THEME_PRESET, SiteTheme, THEME_PRESETS, THEME_SCHEMA_VERSION, ThemePreset,
     ThemeSchemaError, theme_preset,

@@ -202,6 +202,11 @@ opaque_id!(
     SitePageId
 );
 opaque_id!(
+    /// One publish of an alo Sites website — an immutable record of the
+    /// snapshot set the public service serves.
+    SitePublishId
+);
+opaque_id!(
     /// A billing customer — the company or person a tenant invoices
     /// (alo Billing, ADR 0035).
     BillingCustomerId
