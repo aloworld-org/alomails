@@ -137,3 +137,78 @@ export interface DealFilter {
   ownerUserId?: string;
   state?: DealState;
 }
+
+/** What a caller adds to a deal to make it a billing document (B2.08).
+ *
+ *  Both are optional here because the *server* decides when each is required: a
+ *  deal worth nothing needs no rate, and a deal that already names a customer
+ *  needs no country. The screen asks for what the deal makes necessary and
+ *  lets the server refuse the rest. */
+export interface DealHandoff {
+  /** VAT rate in basis points (2100 = 21 %) for the single line the deal's
+   *  value becomes. Never a percentage, never a float. */
+  vatRateBp?: number;
+  /** ISO 3166-1 alpha-2 country of the customer created from a lead. */
+  country?: string;
+}
+
+/** Which billing document a deal is being turned into. */
+export type DocumentKind = "quote" | "invoice";
+
+/** The document a handoff raised, as much of it as CRM reads.
+ *
+ *  Deliberately narrow: the whole billing document comes back on the wire, and
+ *  CRM looks at the four fields it can honestly show — what it is, what it is
+ *  worth, and where to open it. Billing owns the rest, and a CRM screen that
+ *  re-rendered a document would be a second implementation of one. */
+export interface RaisedDocument {
+  id: string;
+  /** `draft`, always — the handoff issues nothing. */
+  status: string;
+  currency: string;
+  totals: { grossCents: number };
+}
+
+/** A count of deals and what they are worth, in one currency of the report. */
+export interface PipelineTally {
+  dealCount: number;
+  valueCents: number;
+}
+
+/** One column's row of the report: the open deals standing in it. */
+export interface PipelineStageRow {
+  stageId: string;
+  name: string;
+  isWon: boolean;
+  isLost: boolean;
+  open: PipelineTally;
+}
+
+/** One currency's whole answer. Currencies are never converted into one
+ *  another — a mixed-currency board reads as two tables, by design. */
+export interface PipelineCurrency {
+  currency: string;
+  stages: PipelineStageRow[];
+  open: PipelineTally;
+  won: PipelineTally;
+  lost: PipelineTally;
+  /** The share of the period's closed deals that were won, in basis points, or
+   *  `null` when nothing closed: a win rate over no deals is unanswered, and
+   *  drawing it as 0 would say "we lost everything". */
+  winRateBp: number | null;
+}
+
+/** Value by stage and win/loss for one board (B2.08).
+ *
+ *  The two halves are answered differently and the field names say so: the
+ *  stage rows are the **open board as it stands** (`openAsOf`), while `won` and
+ *  `lost` are the deals that closed between `from` and `to`. */
+export interface PipelineReport {
+  pipelineId: string;
+  pipelineName: string;
+  from: string;
+  to: string;
+  /** RFC 3339 instant the open rows were counted at. */
+  openAsOf: string;
+  currencies: PipelineCurrency[];
+}

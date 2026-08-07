@@ -15,30 +15,34 @@ import { useState } from "react";
 import { Handshake } from "lucide-react";
 import { NavLink, Navigate, Route, Routes, useSearchParams } from "react-router-dom";
 
-import { Spinner, useDialogs } from "../ds";
+import { Spinner } from "../ds";
 import { strings } from "../i18n";
 import { crmMessage, useCrmApi } from "./api";
 import { BoardView } from "./BoardView";
 import { DealDialog } from "./DealDialog";
 import { DealDrawer } from "./DealDrawer";
 import { ListView } from "./ListView";
+import { useLostReason } from "./LostReasonDialog";
 import { moveDeal } from "./moveDeal";
 import { EmptyState, ErrorBanner } from "./parts";
+import { ReportView } from "./ReportView";
 import { useBoardContext, useDealList } from "./useCrmData";
 import type { CrmStage } from "./types";
 import styles from "./CrmModule.module.css";
 
 /** The tabs: the board first — it is what a sales team opens CRM to look at —
  *  then the same deals as a list, for the questions a board cannot answer
- *  ("everything I own that is still open, by value"). */
+ *  ("everything I own that is still open, by value"), then the report, which is
+ *  the only screen here that shows a total. */
 const TABS = [
   { path: "board", label: () => strings.crmBoard },
   { path: "list", label: () => strings.crmList },
+  { path: "report", label: () => strings.crmReport },
 ] as const;
 
 export function CrmModule() {
   const api = useCrmApi();
-  const dialogs = useDialogs();
+  const lost = useLostReason();
   const board = useBoardContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const [revision, setRevision] = useState(0);
@@ -66,7 +70,7 @@ export function CrmModule() {
    *  from the server's answer, never from an optimistic guess. */
   async function commitMove(id: string, stage: CrmStage, position: number) {
     try {
-      const moved = await moveDeal(api, dialogs, id, stage, position);
+      const moved = await moveDeal(api, lost.ask, id, stage, position);
       if (moved !== null) bump();
     } catch (err) {
       setError(crmMessage(err, strings.crmSaveFailed));
@@ -144,6 +148,10 @@ export function CrmModule() {
               />
             }
           />
+          <Route
+            path="report"
+            element={<ReportView pipelineId={board.pipelineId} revision={revision} />}
+          />
           {/* An unknown CRM path is a stale link, not an error page. */}
           <Route path="*" element={<Navigate to="board" replace />} />
         </Routes>
@@ -171,6 +179,10 @@ export function CrmModule() {
           }}
         />
       )}
+
+      {/* The question a losing column asks, rendered once for the board and the
+          list behind it — the move that needs it awaits this. */}
+      {lost.dialog}
     </div>
   );
 }

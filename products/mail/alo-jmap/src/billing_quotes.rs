@@ -74,7 +74,7 @@ fn quote_json(q: &Quote, today: Date) -> Value {
 }
 
 /// A whole offer: header, lines in print order, totals.
-fn document_json(d: &QuoteDocument, today: Date) -> Value {
+pub(crate) fn document_json(d: &QuoteDocument, today: Date) -> Value {
     with_body(quote_json(&d.quote, today), &d.lines, &d.totals)
 }
 

@@ -212,6 +212,37 @@ impl Deal {
     pub fn is_closed(&self) -> bool {
         self.state().is_closed()
     }
+
+    /// The blank a fresh card carries, for the pure tests of this crate's CRM
+    /// modules — the only way a sibling module can build a `Deal` at all, since
+    /// `outcome` is private so that [`Deal::state`] is the one way to read it.
+    /// Tests state the fields they care about and leave the rest alone.
+    #[cfg(test)]
+    pub(crate) fn blank(id: &str) -> Self {
+        Self {
+            id: CrmDealId::new(id),
+            pipeline_id: CrmPipelineId::new("pip_test"),
+            stage_id: CrmStageId::new("stg_test"),
+            title: String::new(),
+            customer_id: None,
+            contact_id: None,
+            company_name: String::new(),
+            contact_name: String::new(),
+            contact_email: String::new(),
+            value_cents: 0,
+            currency: crate::billing_field::DEFAULT_CURRENCY.to_owned(),
+            expected_close: None,
+            owner_user_id: "usr_test".to_owned(),
+            source: String::new(),
+            position: 1.0,
+            lost_reason: None,
+            closed_at: None,
+            created_by: "usr_test".to_owned(),
+            created_at: OffsetDateTime::UNIX_EPOCH,
+            updated_at: OffsetDateTime::UNIX_EPOCH,
+            outcome: None,
+        }
+    }
 }
 
 /// One move a deal made, appended in the transaction that made it.

@@ -8,10 +8,16 @@
 // move is decided here — which columns are losing ones is the server's `isLost`
 // flag, and the history row and closing snapshot are written in its own
 // transaction.
-import type { Dialogs } from "../ds";
-import { strings } from "../i18n";
+//
+// **How** the reason is asked is the caller's (`useLostReason`, B2.08): a
+// screen renders the picker, this function only knows that a losing column has
+// a question attached to it.
 import type { CrmApi } from "./api";
 import type { CrmDeal, CrmStage } from "./types";
+
+/** Asks the user why a deal moving into `stage` was lost. Resolves with the
+ *  reason, or `null` when they backed out. */
+export type AskLostReason = (stage: CrmStage) => Promise<string | null>;
 
 /**
  * Moves `dealId` into `stage`, asking for a lost reason first when the column
@@ -23,19 +29,14 @@ import type { CrmDeal, CrmStage } from "./types";
  */
 export async function moveDeal(
   api: CrmApi,
-  dialogs: Dialogs,
+  ask: AskLostReason,
   dealId: string,
   stage: CrmStage,
   position?: number,
 ): Promise<CrmDeal | null> {
   let lostReason: string | undefined;
   if (stage.isLost) {
-    const answer = await dialogs.prompt({
-      title: strings.crmLostTitle,
-      message: strings.crmLostMessage(stage.name),
-      placeholder: strings.crmLostPlaceholder,
-      confirmLabel: strings.crmLostConfirm,
-    });
+    const answer = await ask(stage);
     // Cancelled, or nothing typed: the deal stays where it is. A reason that is
     // optional is a reason nobody enters, which is why the server refuses a
     // blank one too.

@@ -36,7 +36,7 @@ use crate::state::{AppState, authenticate};
 /// `state` is **derived on read** from the deal's own snapshot, in the same
 /// spirit as an invoice's `overdue`: the client is told where the deal stands
 /// rather than being left to join it to the board's flags and get it wrong.
-fn deal_json(d: &Deal) -> Value {
+pub(crate) fn deal_json(d: &Deal) -> Value {
     json!({
         "id": d.id.as_str(),
         "pipelineId": d.pipeline_id.as_str(),

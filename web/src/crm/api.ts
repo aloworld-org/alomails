@@ -27,7 +27,10 @@ import type {
   DealActivity,
   DealDraft,
   DealFilter,
+  DealHandoff,
   DealThread,
+  PipelineReport,
+  RaisedDocument,
   ThreadSuggestion,
 } from "./types";
 
@@ -44,6 +47,13 @@ export class CrmError extends RestError {
  *  sent one, `fallback` otherwise. */
 export function crmMessage(error: unknown, fallback: string): string {
   return restMessage(error, fallback);
+}
+
+/** The query string a report asks with. All three are required by the server: a
+ *  report that quietly defaulted to a period would put a figure under a heading
+ *  nobody asked for. */
+function reportQuery(pipelineId: string, from: string, to: string): string {
+  return new URLSearchParams({ pipelineId, from, to }).toString();
 }
 
 /** A move: where the card lands, and — for a losing column only — why. */
@@ -239,8 +249,61 @@ export class CrmApi {
     );
   }
 
+  /**
+   * Raises a **draft** quote for a deal (B2.08), and answers it together with
+   * the deal — which the server may have changed, because a lead with no
+   * customer row gets one and it is written back onto the card.
+   *
+   * Nothing is issued and nothing is sent. What the document needs that a deal
+   * does not carry — the VAT rate of its line, the country of a customer being
+   * created — is `handoff`, and which of those is required is the server's
+   * rule, answered as a `422` naming it.
+   */
+  raiseQuote(
+    dealId: string,
+    handoff: DealHandoff,
+  ): Promise<{ quote: RaisedDocument; deal: CrmDeal }> {
+    return this.#write(`POST`, `/crm/deals/${encodeURIComponent(dealId)}/quote`, handoff);
+  }
+
+  /** Raises a **draft** invoice for a deal. As [`raiseQuote`], and equally a
+   *  draft: it consumes no number from the tenant's gapless sequence. */
+  raiseInvoice(
+    dealId: string,
+    handoff: DealHandoff,
+  ): Promise<{ invoice: RaisedDocument; deal: CrmDeal }> {
+    return this.#write(`POST`, `/crm/deals/${encodeURIComponent(dealId)}/invoice`, handoff);
+  }
+
+  /**
+   * Value by stage and win/loss for one board (B2.08).
+   *
+   * Every figure in it is the server's. The two halves are answered
+   * differently and the screen says so: the stage rows are the open board as it
+   * stands, the outcomes are what closed between the two days.
+   */
+  pipelineReport(pipelineId: string, from: string, to: string): Promise<PipelineReport> {
+    return this.#read<{ report: PipelineReport }>(
+      `/crm/reports/pipeline?${reportQuery(pipelineId, from, to)}`,
+    ).then((r) => r.report);
+  }
+
+  /** The same figures as a CSV file. Fetched rather than linked, because the
+   *  route is authenticated: a plain `<a href>` would save a `401` page. */
+  pipelineReportCsv(pipelineId: string, from: string, to: string): Promise<string> {
+    return this.#text(`/crm/reports/pipeline.csv?${reportQuery(pipelineId, from, to)}`);
+  }
+
   async #read<T>(path: string): Promise<T> {
     return this.#json<T>(await this.#send(path, { method: "GET" }));
+  }
+
+  /** A `GET` whose body is not JSON. A failure still carries the server's
+   *  `Problem` detail, which is JSON — the same error shape as everywhere. */
+  async #text(path: string): Promise<string> {
+    const res = await this.#send(path, { method: "GET" });
+    if (!res.ok) throw new CrmError(res.status, await problemDetail(res));
+    return res.text();
   }
 
   async #write<T>(method: string, path: string, body: unknown): Promise<T> {

@@ -18,10 +18,10 @@ use crate::{
     admin, agent, ai, api, autoconfig, base, billing_bills, billing_customers, billing_fx,
     billing_invoices, billing_payments, billing_products, billing_quotes, billing_reminder,
     billing_reports, billing_send, billing_settings, blob, calendar, carddav, contacts,
-    crm_activities, crm_deals, crm_next_steps, crm_pipelines, crm_stages, crm_threads, delegates,
-    docs, drive, filters, flagdue, imap_import_route, push, reset_route, schedule, security,
-    session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
-    workspace_search,
+    crm_activities, crm_deals, crm_handoff, crm_next_steps, crm_pipelines, crm_reports, crm_stages,
+    crm_threads, delegates, docs, drive, filters, flagdue, imap_import_route, push, reset_route,
+    schedule, security, session, settings, share, signup_route, sites, snooze, spaces, tasks,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -483,6 +483,12 @@ pub fn app(state: AppState) -> Router {
         )
         .route("/crm/deals/{id}/stage", post(crm_deals::move_deal))
         .route("/crm/deals/{id}/history", get(crm_deals::deal_history))
+        // The won-deal handoff to billing (B2.08): a DRAFT quote or invoice for
+        // the deal's customer — created from the lead and linked back to the
+        // card when there was not one yet. A draft, always: nothing is issued,
+        // nothing is sent, and no number is consumed from the gapless sequence.
+        .route("/crm/deals/{id}/quote", post(crm_handoff::deal_quote))
+        .route("/crm/deals/{id}/invoice", post(crm_handoff::deal_invoice))
         // The conversations a deal belongs to (B2.05) — the module's reason to
         // exist, and the one boundary inside the tenant that CRM has to defend:
         // a deal is tenant-wide, a mailbox is not. Suggestions PROPOSE over the
@@ -520,6 +526,14 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/crm/deals/{id}/next-steps",
             get(crm_next_steps::list_next_steps).post(crm_next_steps::add_next_step),
+        )
+        // Value by stage and win/loss for a board (B2.08). Two paths for one
+        // read, as the VAT summary settled: a URL that names its representation
+        // is the one a browser saves and a script quotes.
+        .route("/crm/reports/pipeline", get(crm_reports::pipeline_report))
+        .route(
+            "/crm/reports/pipeline.csv",
+            get(crm_reports::pipeline_report_csv),
         )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))

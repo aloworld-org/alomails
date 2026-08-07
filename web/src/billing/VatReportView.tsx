@@ -26,7 +26,7 @@ import { Button, Spinner } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
-import { saveTextFile } from "./download";
+import { saveTextFile } from "../platform/download";
 import { formatAmount, formatRate } from "./money";
 import { EmptyState, ErrorBanner } from "./parts";
 import { previousQuarterOf, quarterOf, type Period } from "./period";

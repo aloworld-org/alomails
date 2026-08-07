@@ -1963,6 +1963,57 @@ export const en = {
     `Moving this deal to “${stage}” closes it as lost. Say why, so the reason shows in your win/loss report.`,
   crmLostPlaceholder: "Price, timing, went to a competitor…",
   crmLostConfirm: "Mark as lost",
+  crmLostReasonLabel: "Reason",
+  crmLostReasonPrice: "Price",
+  crmLostReasonTiming: "Timing",
+  crmLostReasonCompetitor: "Chose a competitor",
+  crmLostReasonBudget: "No budget",
+  crmLostReasonNoDecision: "No decision",
+  crmLostReasonNotAFit: "Not a fit",
+
+  // Winning a deal: the handoff to billing. Both raise a DRAFT — nothing is
+  // issued, nothing is sent, and no invoice number is used up.
+  crmRaiseQuote: "Quote",
+  crmRaiseInvoice: "Invoice",
+  crmDocumentDraft: (kind: string) => (kind === "invoice" ? "draft invoice" : "draft quote"),
+  crmRaiseTitle: (document: string) => `Raise a ${document}`,
+  crmRaiseSubtitle:
+    "It lands in Billing as a draft for you to check and complete. Nothing is issued and nothing is sent.",
+  crmRaiseFrom: (deal: string, value: string) => `From “${deal}”, worth ${value}.`,
+  crmRaiseConfirm: "Raise it",
+  crmRaiseFailed: "The document could not be raised.",
+  crmFieldVatRate: "VAT rate",
+  crmVatRateHint: "The rate this line is billed at, as a percentage — e.g. 21.",
+  crmFieldCountry: "Customer country",
+  crmCountryHint:
+    "Two letters. This deal is still a lead, so a customer is created from it — and the country decides VAT treatment.",
+  crmRaisedTitle: (document: string) => `Your ${document} is ready`,
+  crmRaisedSubtitle: "Open it in Billing to check the lines, the address and the VAT.",
+  crmRaisedWorth: (gross: string) => `${gross} including VAT.`,
+  crmOpenInBilling: "Open in Billing",
+
+  // The report: value by stage, and what was won and lost in a period. Every
+  // figure is the server's, and currencies are never added together.
+  crmReport: "Report",
+  crmReportFrom: "From",
+  crmReportTo: "To",
+  crmReportShow: "Show",
+  crmReportThisQuarter: "This quarter",
+  crmReportLastQuarter: "Last quarter",
+  crmReportDownloadCsv: "Download CSV",
+  crmReportDownloadFailed: "The report could not be downloaded.",
+  crmReportBasis: (from: string, to: string) => `Won and lost between ${from} and ${to}.`,
+  crmReportOpenAsOf: (at: string) => `The open pipeline is as it stands at ${at}.`,
+  crmReportOpenCaption: (currency: string) => `Open pipeline by stage (${currency})`,
+  crmReportClosedCaption: (currency: string) => `Closed in the period (${currency})`,
+  crmReportColDeals: "Deals",
+  crmReportOpenTotal: "Open total",
+  crmReportWinRate: (rate: string, won: number, closed: number) =>
+    `Win rate ${rate} — ${won} of ${closed} closed deals.`,
+  crmReportNoWinRate: "No deal closed in this period, so there is no win rate to show.",
+  crmReportEmptyTitle: "Nothing to report yet",
+  crmReportEmptyBody:
+    "This board holds no deals. Raise one and it will appear here, by stage and by currency.",
 
   // The log
   crmActivityTitle: "Log",

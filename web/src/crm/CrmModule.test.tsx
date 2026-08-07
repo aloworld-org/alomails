@@ -5,6 +5,13 @@
 // shows a deal's log, its next steps and the conversations it belongs to —
 // offering to open only the ones this reader actually holds.
 //
+// Since B2.08 it also covers closing a deal: the lost-reason picker (which
+// fills a free-text field rather than replacing it, and refuses a blank), the
+// handoff that raises a draft quote or invoice in billing (asking only what the
+// deal cannot answer, and sending a rate as basis points), and the report —
+// where every figure on screen is the server's and the open board and the
+// period's outcomes are kept visibly apart.
+//
 // Only the network is fake. The real router, the real module routes, the real
 // client, the real drawer and the real dialogs all run: the point of the item
 // is that these screens agree with the API, and a test against stubs could not
@@ -17,7 +24,15 @@ import { DialogProvider } from "../ds";
 import { strings } from "../i18n";
 import type { Task } from "../jmap";
 import { CrmModule } from "./CrmModule";
-import type { CrmDeal, CrmPipeline, CrmStage, DealActivity, DealThread } from "./types";
+import type {
+  CrmDeal,
+  CrmPipeline,
+  CrmStage,
+  DealActivity,
+  DealThread,
+  PipelineReport,
+  PipelineTally,
+} from "./types";
 
 interface Call {
   url: string;
@@ -145,6 +160,34 @@ const STEP: Task = {
   createdAt: "2026-08-07T09:00:00Z",
 };
 
+/** A quarter of the board: 25 000 open in New, one deal won and one lost. Every
+ *  figure is the server's — the screen must not add up a column of its own. */
+const REPORT: PipelineReport = {
+  pipelineId: PIPELINE.id,
+  pipelineName: "Sales",
+  from: "2026-07-01",
+  to: "2026-09-30",
+  openAsOf: "2026-08-07T09:00:00Z",
+  currencies: [
+    {
+      currency: "EUR",
+      stages: [
+        { stageId: NEW.id, name: "New", isWon: false, isLost: false, open: tally(1, 2_500_000) },
+        { stageId: QUALIFIED.id, name: "Qualified", isWon: false, isLost: false, open: tally(0, 0) },
+        { stageId: LOST.id, name: "Lost", isWon: false, isLost: true, open: tally(0, 0) },
+      ],
+      open: tally(1, 2_500_000),
+      won: tally(1, 900_000),
+      lost: tally(1, 50_000),
+      winRateBp: 5_000,
+    },
+  ],
+};
+
+function tally(dealCount: number, valueCents: number): PipelineTally {
+  return { dealCount, valueCents };
+}
+
 const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
   const method = init?.method ?? "GET";
   calls.push({
@@ -177,9 +220,11 @@ function fallback(url: string, method: string): Reply {
                 ? { suggestions: [] }
                 : url.includes("/threads")
                   ? { threads: [] }
-                  : url.includes("/crm/deals/")
-                    ? { deal: DEAL }
-                    : { deals: [DEAL] };
+                  : url.includes("/crm/reports/pipeline")
+                    ? { report: REPORT }
+                    : url.includes("/crm/deals/")
+                      ? { deal: DEAL }
+                      : { deals: [DEAL] };
   return { match: () => true, status: 200, body };
 }
 
@@ -282,8 +327,10 @@ describe("the board", () => {
 
     fireEvent.dragStart(screen.getByText(DEAL.title).closest("[draggable]") as HTMLElement);
     fireEvent.drop(screen.getByRole("list", { name: "Lost" }));
-    await screen.findByRole("dialog", { name: strings.crmLostTitle });
-    fireEvent.click(screen.getByRole("button", { name: strings.dialogCancel }));
+    const asked = await screen.findByRole("dialog", { name: strings.crmLostTitle });
+    // The footer's Cancel — the header's close button carries the same label.
+    const backOut = within(asked).getAllByRole("button", { name: strings.crmCancel });
+    fireEvent.click(backOut[backOut.length - 1] as HTMLElement);
 
     await waitFor(() =>
       expect(within(screen.getByRole("list", { name: "New" })).getByText(DEAL.title)).toBeTruthy(),
@@ -425,5 +472,192 @@ describe("the deal drawer", () => {
     await waitFor(() => expect(reads(`/crm/deals/${DEAL.id}`).length).toBe(1));
     expect(await screen.findByText("€25,000.00")).toBeTruthy();
     expect(screen.getByText(strings.crmStateOpen)).toBeTruthy();
+  });
+});
+
+// ---- closing a deal (B2.08) ---------------------------------------------------
+
+describe("the lost reason", () => {
+  test("is a picker that fills the field, and the field is what is sent", async () => {
+    ui("/crm/board");
+    await screen.findByText(DEAL.title);
+
+    reply("/crm/deals/deal-1/stage", "POST", {
+      deal: { ...DEAL, stageId: LOST.id, state: "lost", lostReason: "Timing" },
+    });
+    fireEvent.dragStart(screen.getByText(DEAL.title).closest("[draggable]") as HTMLElement);
+    fireEvent.drop(screen.getByRole("list", { name: "Lost" }));
+    const asked = await screen.findByRole("dialog", { name: strings.crmLostTitle });
+
+    // A suggestion is one click, and it lands in the text field rather than
+    // replacing it: the stored reason is free text the whole way.
+    fireEvent.click(within(asked).getByRole("button", { name: strings.crmLostReasonTiming }));
+    expect((within(asked).getByRole("textbox") as HTMLInputElement).value).toBe(
+      strings.crmLostReasonTiming,
+    );
+    // It can still be typed over.
+    fireEvent.change(within(asked).getByRole("textbox"), { target: { value: "  Timing  " } });
+    fireEvent.click(screen.getByRole("button", { name: strings.crmLostConfirm }));
+
+    await waitFor(() => expect(writes().length).toBe(1));
+    expect((writes()[0] as Call).body).toEqual({
+      stageId: LOST.id,
+      position: 1,
+      lostReason: "Timing",
+    });
+  });
+
+  test("cannot be submitted blank, because a blank reason is not a reason", async () => {
+    ui("/crm/board");
+    await screen.findByText(DEAL.title);
+    fireEvent.dragStart(screen.getByText(DEAL.title).closest("[draggable]") as HTMLElement);
+    fireEvent.drop(screen.getByRole("list", { name: "Lost" }));
+    const asked = await screen.findByRole("dialog", { name: strings.crmLostTitle });
+
+    expect(screen.getByRole("button", { name: strings.crmLostConfirm }).hasAttribute("disabled")).toBe(
+      true,
+    );
+    fireEvent.change(within(asked).getByRole("textbox"), { target: { value: "   " } });
+    expect(screen.getByRole("button", { name: strings.crmLostConfirm }).hasAttribute("disabled")).toBe(
+      true,
+    );
+    expect(writes()).toEqual([]);
+  });
+});
+
+describe("the handoff to billing", () => {
+  test("asks only for what the deal cannot answer, and sends basis points", async () => {
+    ui(`/crm/board?deal=${DEAL.id}`);
+    await screen.findByText("€25,000.00");
+
+    fireEvent.click(screen.getByRole("button", { name: strings.crmRaiseInvoice }));
+    const form = await screen.findByRole("dialog", {
+      name: strings.crmRaiseTitle(strings.crmDocumentDraft("invoice")),
+    });
+    // This deal is priced and is still a lead, so both questions are asked.
+    // `exact: false` because a Field's label element also carries its hint.
+    const rate = within(form).getByLabelText(strings.crmFieldVatRate, { exact: false });
+    const country = within(form).getByLabelText(strings.crmFieldCountry, { exact: false });
+    // Nothing is sent until both are answerable.
+    expect(screen.getByRole("button", { name: strings.crmRaiseConfirm }).hasAttribute("disabled")).toBe(
+      true,
+    );
+
+    fireEvent.change(rate, { target: { value: "19" } });
+    fireEvent.change(country, { target: { value: "de" } });
+    reply("/crm/deals/deal-1/invoice", "POST", {
+      invoice: {
+        id: "inv-1",
+        status: "draft",
+        currency: "EUR",
+        totals: { grossCents: 2_975_000 },
+      },
+      deal: { ...DEAL, customerId: "cus-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.crmRaiseConfirm }));
+
+    await waitFor(() => expect(writes().length).toBe(1));
+    const written = writes()[0] as Call;
+    expect(written.url).toContain(`/crm/deals/${DEAL.id}/invoice`);
+    // 19 % is 1900 basis points — a rate never crosses the wire as a float, and
+    // the country is upper-cased by the field the user typed into.
+    expect(written.body).toEqual({ vatRateBp: 1900, country: "DE" });
+
+    // The answer says what was raised, at the server's own total, and offers to
+    // open it in Billing rather than re-rendering a document here.
+    expect(
+      await screen.findByText(strings.crmRaisedWorth("€29,750.00"), { exact: false }),
+    ).toBeTruthy();
+    expect(screen.getByRole("link", { name: strings.crmOpenInBilling }).getAttribute("href")).toBe(
+      "/billing/invoices/inv-1",
+    );
+  });
+
+  test("does not ask for a country when the deal already names a customer", async () => {
+    reply(`/crm/deals/${DEAL.id}`, "GET", { deal: { ...DEAL, customerId: "cus-1" } });
+    ui(`/crm/board?deal=${DEAL.id}`);
+    await screen.findByText("€25,000.00");
+
+    fireEvent.click(screen.getByRole("button", { name: strings.crmRaiseQuote }));
+    const form = await screen.findByRole("dialog", {
+      name: strings.crmRaiseTitle(strings.crmDocumentDraft("quote")),
+    });
+    expect(within(form).queryByLabelText(strings.crmFieldCountry, { exact: false })).toBeNull();
+
+    fireEvent.change(within(form).getByLabelText(strings.crmFieldVatRate, { exact: false }), {
+      target: { value: "21" },
+    });
+    reply("/crm/deals/deal-1/quote", "POST", {
+      quote: { id: "quo-1", status: "draft", currency: "EUR", totals: { grossCents: 3_025_000 } },
+      deal: { ...DEAL, customerId: "cus-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.crmRaiseConfirm }));
+
+    await waitFor(() => expect(writes().length).toBe(1));
+    expect((writes()[0] as Call).body).toEqual({ vatRateBp: 2100 });
+  });
+
+  test("is not offered on a lost deal, which the server would refuse anyway", async () => {
+    reply(`/crm/deals/${DEAL.id}`, "GET", {
+      deal: { ...DEAL, state: "lost", closed: true, lostReason: "Price" },
+    });
+    ui(`/crm/board?deal=${DEAL.id}`);
+    await screen.findByText(strings.crmLostBecause("Price"));
+
+    expect(screen.queryByRole("button", { name: strings.crmRaiseInvoice })).toBeNull();
+    expect(screen.queryByRole("button", { name: strings.crmRaiseQuote })).toBeNull();
+  });
+});
+
+describe("the report", () => {
+  test("shows the server's figures, keeps the two questions apart, and never sums", async () => {
+    ui("/crm/report");
+
+    await waitFor(() => expect(reads("/crm/reports/pipeline").length).toBe(1));
+    // The board and both ends of the period are always asked for.
+    const asked = reads("/crm/reports/pipeline")[0] as Call;
+    expect(asked.url).toContain(`pipelineId=${PIPELINE.id}`);
+    expect(asked.url).toMatch(/from=\d{4}-\d{2}-\d{2}/);
+    expect(asked.url).toMatch(/to=\d{4}-\d{2}-\d{2}/);
+
+    const open = await screen.findByRole("table", {
+      name: strings.crmReportOpenCaption("EUR"),
+    });
+    // The stage rows are the open board: the server's cents, formatted, never
+    // re-added here.
+    // Twice: the New row, and the footer's open total — which is the server's
+    // own sum, not one this table added up.
+    expect(within(open).getAllByText("€25,000.00").length).toBe(2);
+    const closed = screen.getByRole("table", { name: strings.crmReportClosedCaption("EUR") });
+    expect(within(closed).getByText("€9,000.00")).toBeTruthy();
+    expect(within(closed).getByText("€500.00")).toBeTruthy();
+    // And the win rate is the server's basis points, read as a percentage.
+    expect(screen.getByText(strings.crmReportWinRate("50%", 1, 2))).toBeTruthy();
+    // The report is a read: nothing is written by looking at it.
+    expect(writes()).toEqual([]);
+  });
+
+  test("says nothing closed rather than drawing a zero win rate", async () => {
+    reply("/crm/reports/pipeline", "GET", {
+      report: {
+        ...REPORT,
+        currencies: [
+          {
+            ...REPORT.currencies[0],
+            won: tally(0, 0),
+            lost: tally(0, 0),
+            winRateBp: null,
+          },
+        ],
+      },
+    });
+    ui("/crm/report");
+    expect(await screen.findByText(strings.crmReportNoWinRate)).toBeTruthy();
+  });
+
+  test("a board with nothing on it says so", async () => {
+    reply("/crm/reports/pipeline", "GET", { report: { ...REPORT, currencies: [] } });
+    ui("/crm/report");
+    expect(await screen.findByText(strings.crmReportEmptyTitle)).toBeTruthy();
   });
 });

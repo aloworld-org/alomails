@@ -1,5 +1,9 @@
-// Saving a server-rendered billing export to the user's machine (alo Billing,
-// ADR 0035, wave B1.20).
+// Saving a server-rendered export to the user's machine (alo Billing, ADR 0035,
+// wave B1.20; alo CRM, B2.08).
+//
+// It lives in `platform` because it is a browser mechanism, not a module's
+// rule: the VAT summary and the pipeline report save a file the same way, and
+// the second caller is what moved it out of billing rather than copying it.
 //
 // The export itself comes from the server, already complete: this file's whole
 // job is to put the text the API answered into a file the browser saves,

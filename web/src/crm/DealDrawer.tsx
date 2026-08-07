@@ -7,7 +7,7 @@
 // board is holding: a move, an edit or a colleague's change must show the
 // STORED record, which is the same contract every CRM write holds.
 import { useCallback, useEffect, useState } from "react";
-import { Pencil, Trash2, X } from "lucide-react";
+import { FileText, Pencil, Receipt, Trash2, X } from "lucide-react";
 
 import { useDialogs } from "../ds";
 import { strings } from "../i18n";
@@ -16,10 +16,12 @@ import { crmMessage, useCrmApi } from "./api";
 import { DealDialog } from "./DealDialog";
 import { dayLabel, dealValue } from "./format";
 import { LinkedThreads } from "./LinkedThreads";
+import { useLostReason } from "./LostReasonDialog";
 import { moveDeal } from "./moveDeal";
 import { NextSteps } from "./NextSteps";
 import { ErrorBanner, StateChip } from "./parts";
-import type { CrmDeal, CrmStage } from "./types";
+import { RaiseDocumentDialog } from "./RaiseDocumentDialog";
+import type { CrmDeal, CrmStage, DocumentKind } from "./types";
 import styles from "./CrmModule.module.css";
 
 interface Props {
@@ -34,9 +36,12 @@ interface Props {
 export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
   const api = useCrmApi();
   const dialogs = useDialogs();
+  const lost = useLostReason();
   const [deal, setDeal] = useState<CrmDeal | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  /** `null` = closed; a kind = raising that document from this deal (B2.08). */
+  const [raising, setRaising] = useState<DocumentKind | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -57,7 +62,7 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
     const stage = stages.find((s) => s.id === stageId);
     if (stage === undefined) return;
     try {
-      const moved = await moveDeal(api, dialogs, dealId, stage);
+      const moved = await moveDeal(api, lost.ask, dealId, stage);
       if (moved === null) return;
       setDeal(moved);
       onChanged();
@@ -144,6 +149,27 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
                 </select>
               </label>
               <span className={styles.cardSpacer} />
+              {/* The handoff to billing (B2.08). Offered on any deal that has
+                  not been lost, because quoting an open deal is how it is won —
+                  and both raise a DRAFT the tenant then edits in billing. */}
+              {deal.state !== "lost" && (
+                <>
+                  <button
+                    type="button"
+                    className={styles.linkAction}
+                    onClick={() => setRaising("quote")}
+                  >
+                    <FileText size={13} /> {strings.crmRaiseQuote}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.linkAction}
+                    onClick={() => setRaising("invoice")}
+                  >
+                    <Receipt size={13} /> {strings.crmRaiseInvoice}
+                  </button>
+                </>
+              )}
               <button type="button" className={styles.linkAction} onClick={() => setEditing(true)}>
                 <Pencil size={13} /> {strings.crmEdit}
               </button>
@@ -178,6 +204,22 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
           }}
         />
       )}
+
+      {raising !== null && deal !== null && (
+        <RaiseDocumentDialog
+          deal={deal}
+          kind={raising}
+          onClose={() => setRaising(null)}
+          onRaised={(raised) => {
+            // Raising a document can give a lead a customer, so the drawer
+            // redraws from the server's answer rather than from what it held.
+            setDeal(raised);
+            onChanged();
+          }}
+        />
+      )}
+
+      {lost.dialog}
     </aside>
   );
 }
