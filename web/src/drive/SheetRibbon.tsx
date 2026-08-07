@@ -223,9 +223,7 @@ const BORDER_GLYPHS: Record<string, string> = {
 };
 
 const PRIMARY_TABS = ["home", "formulas", "others"] as const;
-const OTHER_TABS = ["layout", "data", "review", "view"] as const;
 type PrimaryTab = (typeof PRIMARY_TABS)[number];
-type OtherTab = (typeof OTHER_TABS)[number];
 // Tabs whose tools need Univer plugins we haven't wired yet — honest placeholder.
 
 function primaryTabLabel(tab: PrimaryTab): string {
@@ -239,22 +237,8 @@ function primaryTabLabel(tab: PrimaryTab): string {
   }
 }
 
-function otherTabLabel(tab: OtherTab): string {
-  switch (tab) {
-    case "layout":
-      return strings.sheetTabLayout;
-    case "data":
-      return strings.sheetTabData;
-    case "review":
-      return strings.sheetTabReview;
-    case "view":
-      return strings.sheetTabView;
-  }
-}
-
 export function SheetRibbon({ actions, disabled, formulaCategories, activeBorder, selectionFormatting }: { actions: SheetActions; disabled: boolean; formulaCategories: FormulaCategory[]; activeBorder: BorderKind | null; selectionFormatting: SheetSelectionFormatting }) {
   const [tab, setTab] = useState<PrimaryTab>("home");
-  const [otherTab, setOtherTab] = useState<OtherTab>("layout");
   const activeToolRef = useRef<HTMLElement | null>(null);
   const ribbonRef = useRef<HTMLDivElement>(null);
 
@@ -335,26 +319,12 @@ export function SheetRibbon({ actions, disabled, formulaCategories, activeBorder
       {tab === "home" && <HomeTab actions={actions} disabled={disabled} selectionFormatting={selectionFormatting} />}
       {tab === "formulas" && <FormulasTab actions={actions} disabled={disabled} categories={formulaCategories} />}
       {tab === "others" && (
-        <>
-          <div className={styles.subTabs} role="tablist" aria-label={strings.sheetTabOthers}>
-            {OTHER_TABS.map((t) => (
-              <button
-                key={t}
-                type="button"
-                role="tab"
-                aria-selected={t === otherTab}
-                className={t === otherTab ? styles.subTabActive : styles.subTab}
-                onClick={() => setOtherTab(t)}
-              >
-                {otherTabLabel(t)}
-              </button>
-            ))}
-          </div>
-          {otherTab === "layout" && <PageLayoutTab actions={actions} disabled={disabled} />}
-          {otherTab === "data" && <DataTab actions={actions} disabled={disabled} />}
-          {otherTab === "review" && <ReviewTab actions={actions} disabled={disabled} />}
-          {otherTab === "view" && <ViewTab actions={actions} disabled={disabled} />}
-        </>
+        <div className={styles.othersGroups} aria-label={strings.sheetTabOthers}>
+          <PageLayoutTab actions={actions} disabled={disabled} />
+          <DataTab actions={actions} disabled={disabled} />
+          <ReviewTab actions={actions} disabled={disabled} />
+          <ViewTab actions={actions} disabled={disabled} />
+        </div>
       )}
     </div>
   );
