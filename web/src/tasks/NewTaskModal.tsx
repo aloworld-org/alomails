@@ -2,19 +2,21 @@
 // project, assignee, due date, priority, description, subtasks). Everything it
 // sets is persisted in one createTask call (plus a subtask call per checklist
 // line). "Create another" keeps it open and clears it for fast entry.
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { FolderClosed, Plus, SquareCheckBig, Trash2, User, X } from "lucide-react";
+import { FolderClosed, HardDrive, Paperclip, Plus, SquareCheckBig, Trash2, Upload, User, X } from "lucide-react";
 
 import { strings } from "../i18n";
-import { useJmapClient, type TaskPriority, type TaskProject } from "../jmap";
+import { useJmapClient, type DriveNodeDto, type TaskPriority, type TaskProject } from "../jmap";
 import { Button, DatePicker } from "../ds";
+import { DriveAttachmentPicker } from "./DriveAttachmentPicker";
 import styles from "./TasksModule.module.css";
 
 interface Props {
   projects: TaskProject[];
   defaultProjectId?: string | undefined;
   defaultStatus?: string | undefined;
+  defaultDueDate?: string | undefined;
   onClose: () => void;
   onCreated: () => void;
 }
@@ -25,18 +27,22 @@ const PRIOS: { key: TaskPriority; label: string; cls: string }[] = [
   { key: "high", label: "", cls: "prioDotHigh" },
 ];
 
-export function NewTaskModal({ projects, defaultProjectId, defaultStatus, onClose, onCreated }: Props) {
+export function NewTaskModal({ projects, defaultProjectId, defaultStatus, defaultDueDate, onClose, onCreated }: Props) {
   const client = useJmapClient();
   const personal = projects.find((p) => p.kind === "personal") ?? projects[0];
   const [name, setName] = useState("");
   const [projectId, setProjectId] = useState(defaultProjectId ?? personal?.id ?? "");
   const [assignee, setAssignee] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState(defaultDueDate ?? "");
   const [priority, setPriority] = useState<TaskPriority>("none");
   const [description, setDescription] = useState("");
   const [subtasks, setSubtasks] = useState<string[]>([]);
   const [createAnother, setCreateAnother] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [deviceFiles, setDeviceFiles] = useState<File[]>([]);
+  const [driveFiles, setDriveFiles] = useState<DriveNodeDto[]>([]);
+  const [driveOpen, setDriveOpen] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const prioLabel = (k: TaskPriority) =>
     k === "low"
@@ -52,6 +58,8 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, onClos
     setPriority("none");
     setDescription("");
     setSubtasks([]);
+    setDeviceFiles([]);
+    setDriveFiles([]);
   }
 
   async function submit(e: FormEvent) {
@@ -69,6 +77,15 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, onClos
       const created = await client.createTask(input);
       for (const st of subtasks.map((s) => s.trim()).filter((s) => s !== "")) {
         await client.addSubtask(created.id, st);
+      }
+      for (const file of deviceFiles) {
+        const { blobId, size } = await client.uploadFile(file);
+        await client.addTaskAttachment(created.id, blobId, file.name, size);
+      }
+      for (const file of driveFiles) {
+        if (file.blobId !== null) {
+          await client.addTaskAttachment(created.id, file.blobId, file.name, file.size);
+        }
       }
       onCreated();
       if (createAnother) reset();
@@ -207,6 +224,46 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, onClos
               <Plus size={16} /> {strings.taskAddSubtask}
             </button>
           </div>
+
+          <div className={styles.ntField}>
+            <span className={styles.ntLabel}>{strings.taskAttachments}</span>
+            <div className={styles.ntAttachmentActions}>
+              <input
+                ref={fileRef}
+                className={styles.visuallyHidden}
+                type="file"
+                multiple
+                onChange={(event) => {
+                  if (event.target.files !== null) {
+                    setDeviceFiles((current) => [...current, ...Array.from(event.target.files ?? [])]);
+                  }
+                  event.target.value = "";
+                }}
+              />
+              <button type="button" className={styles.ntAttachmentButton} onClick={() => fileRef.current?.click()}>
+                <Upload size={16} /> {strings.taskAddAttachment}
+              </button>
+              <button type="button" className={styles.ntAttachmentButton} onClick={() => setDriveOpen(true)}>
+                <HardDrive size={16} /> {strings.taskChooseFromDrive}
+              </button>
+            </div>
+            {(deviceFiles.length > 0 || driveFiles.length > 0) && (
+              <div className={styles.ntAttachmentList}>
+                {deviceFiles.map((file, index) => (
+                  <span key={`${file.name}-${index}`} className={styles.ntAttachmentChip}>
+                    <Paperclip size={14} /><span>{file.name}</span>
+                    <button type="button" onClick={() => setDeviceFiles((current) => current.filter((_, i) => i !== index))} aria-label={strings.taskDelete}><X size={13} /></button>
+                  </span>
+                ))}
+                {driveFiles.map((file) => (
+                  <span key={file.id} className={styles.ntAttachmentChip}>
+                    <HardDrive size={14} /><span>{file.name}</span>
+                    <button type="button" onClick={() => setDriveFiles((current) => current.filter((item) => item.id !== file.id))} aria-label={strings.taskDelete}><X size={13} /></button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className={styles.ntFooter}>
@@ -228,6 +285,19 @@ export function NewTaskModal({ projects, defaultProjectId, defaultStatus, onClos
           </div>
         </div>
       </form>
+      {driveOpen && (
+        <DriveAttachmentPicker
+          onClose={() => setDriveOpen(false)}
+          onAttach={async (nodes) => {
+            setDriveFiles((current) => {
+              const merged = new Map(current.map((node) => [node.id, node]));
+              for (const node of nodes) merged.set(node.id, node);
+              return Array.from(merged.values());
+            });
+            setDriveOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
