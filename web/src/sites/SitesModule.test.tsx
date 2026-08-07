@@ -232,6 +232,117 @@ describe("creating a site", () => {
   });
 });
 
+describe("publishing a site", () => {
+  const config: Reply = {
+    match: (url, method) => method === "GET" && url.endsWith("/sites/config"),
+    status: 200,
+    body: { domain: "alosites.com" },
+  };
+
+  test("a draft offers Publish with the goes-live address; publishing flips it live", async () => {
+    replies = [
+      config,
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2"),
+        status: 200,
+        body: { ...BETA, publish: null },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2/pages"),
+        status: 200,
+        body: { pages: [HOME] },
+      },
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites/site-2/publish"),
+        status: 200,
+        body: { publishId: "pub-9", status: "live" },
+      },
+      // The reload after publishing.
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2"),
+        status: 200,
+        body: {
+          ...BETA,
+          status: "live",
+          publish: { id: "pub-9", publishedAt: "2026-08-07T12:00:00Z" },
+        },
+      },
+    ];
+    ui("/sites/site-2");
+    // The copy names the real address the site will serve at.
+    expect(await screen.findByText(strings.sitesGoesLiveAt("beta.alosites.com"))).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesPublish }));
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()?.method).toBe("POST");
+    expect(lastWrite()?.url.endsWith("/sites/site-2/publish")).toBe(true);
+    // The reload shows the live state, the address now a real link.
+    expect(await screen.findByText(strings.sitesStatusLive)).toBeTruthy();
+    const link = screen.getByRole("link", { name: "beta.alosites.com" }) as HTMLAnchorElement;
+    expect(link.href).toBe("https://beta.alosites.com/");
+  });
+
+  test("a refused publish shows the server's own sentence and stays draft", async () => {
+    replies = [
+      config,
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-2"),
+        status: 200,
+        body: { ...BETA, publish: null },
+      },
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites/site-2/publish"),
+        status: 422,
+        body: { detail: "site has no home page" },
+      },
+    ];
+    ui("/sites/site-2");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesPublish }));
+    expect(await screen.findByText("site has no home page")).toBeTruthy();
+    expect(screen.getByText(strings.sitesStatusDraft)).toBeTruthy();
+  });
+
+  test("taking a live site offline needs the second click", async () => {
+    replies = [
+      config,
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: { ...ALPHA, publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" } },
+      },
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites/site-1/unpublish"),
+        status: 200,
+        body: { status: "draft" },
+      },
+      // The reload after unpublishing.
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: { ...ALPHA, status: "draft", publish: null },
+      },
+    ];
+    ui("/sites/site-1");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesUnpublish }));
+    // Armed, not fired: nothing was written, the button now asks to confirm.
+    expect(lastWrite()).toBeUndefined();
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesConfirmUnpublish }));
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()?.url.endsWith("/sites/site-1/unpublish")).toBe(true);
+    expect(await screen.findByText(strings.sitesStatusDraft)).toBeTruthy();
+  });
+
+  test("the create form previews the full address once the domain is known", async () => {
+    replies = [config];
+    ui("/sites");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
+      target: { value: "Acme" },
+    });
+    // The preview composes the typed label (lowercased) with the domain.
+    expect(await screen.findByText(strings.sitesAddressPreview("acme.alosites.com"))).toBeTruthy();
+  });
+});
+
 describe("one site", () => {
   test("shows the site and its pages in order, the home page marked", async () => {
     replies = [

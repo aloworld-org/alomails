@@ -26,6 +26,7 @@ import type {
   SiteDraft,
   SitePage,
   SitePageDetail,
+  SitesConfig,
   SubdomainCheck,
   ThemeEnvelope,
   ThemePreset,
@@ -90,6 +91,34 @@ export class SitesApi {
   checkSubdomain(subdomain: string): Promise<SubdomainCheck> {
     return this.#read<SubdomainCheck>(
       `/sites/subdomain-check?subdomain=${encodeURIComponent(subdomain)}`,
+    );
+  }
+
+  /** The deployment-wide sites config (the domain published sites serve
+   *  under). Callers treat a failure as "domain unknown" and degrade — the
+   *  copy that needs it simply stays off. */
+  config(): Promise<SitesConfig> {
+    return this.#read<SitesConfig>("/sites/config");
+  }
+
+  /** Freezes the current pages + theme into an immutable published set and
+   *  puts the site live. A site with no pages or no home page is a `422`
+   *  naming the precondition. */
+  async publishSite(siteId: string): Promise<void> {
+    await this.#write<{ publishId?: string }>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/publish`,
+      {},
+    );
+  }
+
+  /** Takes the site off the air (history is retained on the server).
+   *  Idempotent. */
+  async unpublishSite(siteId: string): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/unpublish`,
+      {},
     );
   }
 

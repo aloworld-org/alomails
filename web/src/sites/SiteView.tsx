@@ -1,8 +1,8 @@
-// One site: its name, address and live/draft state, and the list of its
-// pages in navigation order. This is the site's home surface — the section
-// editor (S1.12), theme (S1.14) and publish action (S1.15) all mount here as
-// they land. A stale or foreign id reads as "not found" with the way back,
-// never a broken screen.
+// One site: its name, address and live/draft state, the publish switch, and
+// the list of its pages in navigation order. This is the site's home surface
+// — the section editor (S1.12), theme (S1.14) and publish (S1.15) all mount
+// here. A stale or foreign id reads as "not found" with the way back, never
+// a broken screen.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, FileText, Palette } from "lucide-react";
@@ -25,6 +25,14 @@ export function SiteView() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [theming, setTheming] = useState(false);
+  // The deployment-wide sites domain; null while unknown (loading, or the
+  // config fetch failed) — the copy that needs it simply stays off.
+  const [domain, setDomain] = useState<string | null>(null);
+  const [publishBusy, setPublishBusy] = useState(false);
+  const [publishError, setPublishError] = useState<string | null>(null);
+  // Taking a live site off the air asks for a second click, like deleting a
+  // section does: the first click arms, the second one acts.
+  const [confirmingOffline, setConfirmingOffline] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -44,7 +52,55 @@ export function SiteView() {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    let cancelled = false;
+    api.config().then(
+      (c) => {
+        if (!cancelled && typeof c.domain === "string" && c.domain !== "") setDomain(c.domain);
+      },
+      () => {
+        // Domain unknown: publishing still works, the address copy stays off.
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
+
   const live = site?.status === "live";
+  const host = site !== null && domain !== null ? `${site.subdomain}.${domain}` : null;
+
+  async function publish() {
+    setPublishBusy(true);
+    setPublishError(null);
+    try {
+      await api.publishSite(siteId);
+      await load();
+    } catch (err) {
+      setPublishError(sitesMessage(err, strings.sitesPublishFailed));
+    } finally {
+      setPublishBusy(false);
+      setConfirmingOffline(false);
+    }
+  }
+
+  async function unpublish() {
+    if (!confirmingOffline) {
+      setConfirmingOffline(true);
+      return;
+    }
+    setPublishBusy(true);
+    setPublishError(null);
+    try {
+      await api.unpublishSite(siteId);
+      await load();
+    } catch (err) {
+      setPublishError(sitesMessage(err, strings.sitesUnpublishFailed));
+    } finally {
+      setPublishBusy(false);
+      setConfirmingOffline(false);
+    }
+  }
 
   return (
     <div className={styles.page}>
@@ -69,6 +125,45 @@ export function SiteView() {
 
       {site !== null && (
         <>
+          <div className={styles.publishBar}>
+            <div className={styles.publishCopy}>
+              {live && host !== null && (
+                <>
+                  <span>{strings.sitesLiveAtLabel}</span>
+                  <a
+                    href={`https://${host}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={styles.liveLink}
+                  >
+                    {host}
+                  </a>
+                </>
+              )}
+              {!live && host !== null && <span>{strings.sitesGoesLiveAt(host)}</span>}
+              {publishError !== null && (
+                <span className={styles.publishError} role="alert">
+                  {publishError}
+                </span>
+              )}
+            </div>
+            <div className={styles.publishActions}>
+              {live && (
+                <Button
+                  variant={confirmingOffline ? "danger" : "ghost"}
+                  size="sm"
+                  disabled={publishBusy}
+                  onClick={() => void unpublish()}
+                >
+                  {confirmingOffline ? strings.sitesConfirmUnpublish : strings.sitesUnpublish}
+                </Button>
+              )}
+              <Button size="sm" disabled={publishBusy} onClick={() => void publish()}>
+                {live ? strings.sitesPublishChanges : strings.sitesPublish}
+              </Button>
+            </div>
+          </div>
+
           <div className={styles.sectionBar}>
             <h2 className={styles.sectionTitle}>{strings.sitesPages}</h2>
             <div className={styles.sectionBarActions}>

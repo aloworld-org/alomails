@@ -2204,6 +2204,15 @@ export const en = {
   sitesThemeNotSet: "None yet",
   sitesUploadFailed: "The image could not be uploaded.",
   sitesUploadImage: "Upload picture",
+  sitesPublish: "Publish",
+  sitesPublishChanges: "Publish changes",
+  sitesUnpublish: "Take offline",
+  sitesConfirmUnpublish: "Really take offline?",
+  sitesLiveAtLabel: "Your site is live at",
+  sitesGoesLiveAt: (address: string) => `Publishing puts this site live at ${address}.`,
+  sitesAddressPreview: (address: string) => `Your site will live at ${address}.`,
+  sitesPublishFailed: "The site could not be published.",
+  sitesUnpublishFailed: "The site could not be taken offline.",
 } as const;
 
 /** Every string key in the catalog. */

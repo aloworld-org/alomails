@@ -502,6 +502,50 @@
   color: var(--text-tertiary);
 }
 
+/* ---- publish (S1.15) ---- */
+.publishBar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  padding: var(--space-3) var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-sunken);
+}
+.publishCopy {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.liveLink {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--accent);
+  text-decoration: none;
+}
+.liveLink:hover {
+  text-decoration: underline;
+}
+.publishActions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--space-2);
+}
+.publishError {
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+.addressPreview {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
 /* ---- the live address check ---- */
 .checkLine {
   margin: calc(-1 * var(--space-3)) 0 0;

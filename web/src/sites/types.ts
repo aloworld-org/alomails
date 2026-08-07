@@ -75,6 +75,13 @@ export interface SitePageDetail extends SitePage {
   sections: SectionsEnvelope;
 }
 
+/** The deployment-wide sites config: published sites serve at
+ *  `<subdomain>.<domain>`. The UI composes "goes live at" copy and live
+ *  links from it — the domain is the server's to know, never hardcoded. */
+export interface SitesConfig {
+  domain: string;
+}
+
 /** The live taken/free answer for the create form. */
 export interface SubdomainCheck {
   subdomain: string;

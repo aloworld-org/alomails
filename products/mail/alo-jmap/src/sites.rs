@@ -296,6 +296,20 @@ pub async fn list_theme_presets(
     Ok(Json(json!({ "presets": presets })))
 }
 
+/// `GET /sites/config` → `{"domain": <SITES_DOMAIN>}` — the deployment-wide
+/// apex under which published sites serve (`<subdomain>.<domain>`, the same
+/// contract the public `alo-sites` service is configured with). The web
+/// composes the "goes live at" copy and live links from it instead of
+/// hardcoding a domain. Static deployment data, but authenticated like every
+/// `/sites/*` route — the edit surface has no anonymous corners.
+pub async fn sites_config(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    authenticate(&state, &headers).await?;
+    Ok(Json(json!({ "domain": sites_domain() })))
+}
+
 /// `PUT /sites/:id/theme` (body = the theme envelope) → `{status:"ok"}` —
 /// the theme gate: the body must parse as a current-version [`alo_store::SiteTheme`].
 pub async fn set_theme(

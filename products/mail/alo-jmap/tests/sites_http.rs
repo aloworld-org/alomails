@@ -115,6 +115,7 @@ async fn every_route_family_requires_a_bearer_token() {
             None,
         ),
         ("GET", "/sites/theme-presets".to_owned(), None),
+        ("GET", "/sites/config".to_owned(), None),
         ("PUT", "/sites/some-id/theme".to_owned(), Some(json!({}))),
         ("POST", "/sites/some-id/publish".to_owned(), Some(json!({}))),
         (
@@ -995,6 +996,17 @@ async fn theme_presets_list_the_shipped_palettes() {
         );
         assert!(preset["typography"]["headingWeight"].is_u64());
     }
+}
+
+/// The config the publish UI composes its "goes live at" copy and live links
+/// from: the deployment-wide sites domain. The suite (like the preview test
+/// above) runs against the product default, `alosites.com`.
+#[tokio::test]
+async fn config_names_the_sites_domain() {
+    let h = harness("sites-config").await;
+    let (status, body) = get(&h.app, &h.token, "/sites/config").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["domain"], json!("alosites.com"));
 }
 
 /// The preview inlines the theme logo and section images as `data:` URIs

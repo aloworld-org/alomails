@@ -64,8 +64,27 @@ export function NewSiteDialog({
   const [check, setCheck] = useState<Check>({ kind: "idle" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The deployment-wide sites domain, for the "will live at" preview; null
+  // while unknown (loading, or the config fetch failed) — the preview simply
+  // stays off, the form works regardless.
+  const [domain, setDomain] = useState<string | null>(null);
   // Answers can arrive out of order; only the newest question's answer counts.
   const checkSeq = useRef(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.config().then(
+      (c) => {
+        if (!cancelled && typeof c.domain === "string" && c.domain !== "") setDomain(c.domain);
+      },
+      () => {
+        // Domain unknown: no preview line.
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [api]);
 
   useEffect(() => {
     const value = subdomain.trim().toLowerCase();
@@ -135,6 +154,11 @@ export function NewSiteDialog({
         />
       </Field>
       <CheckLine check={check} />
+      {domain !== null && subdomain.trim() !== "" && (
+        <p className={styles.addressPreview}>
+          {strings.sitesAddressPreview(`${subdomain.trim().toLowerCase()}.${domain}`)}
+        </p>
+      )}
     </DialogFrame>
   );
 }

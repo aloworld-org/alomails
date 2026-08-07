@@ -195,6 +195,7 @@ pub fn app(state: AppState) -> Router {
         .route("/sites", get(sites::list_sites).post(sites::create_site))
         .route("/sites/subdomain-check", get(sites::check_subdomain))
         .route("/sites/theme-presets", get(sites::list_theme_presets))
+        .route("/sites/config", get(sites::sites_config))
         .route(
             "/sites/{id}",
             get(sites::get_site)
