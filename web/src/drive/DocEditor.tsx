@@ -13,7 +13,7 @@ import {
   type ComponentProps,
   type CSSProperties,
 } from "react";
-import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, Italic, LayoutTemplate, List, Minus, Plus, Printer, Redo2, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, List, Minus, Plus, Printer, Redo2, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -122,6 +122,19 @@ export function DocEditor({
   const toggleStyle = (style: "bold" | "italic" | "underline" | "strike") => {
     editor.toggleStyles({ [style]: true });
     setActiveStyles(editor.getActiveStyles() as Record<string, boolean | string>);
+    onChange();
+  };
+
+  const setColorStyle = (style: "textColor" | "backgroundColor", value: string) => {
+    if (value === "default") editor.removeStyles({ [style]: activeStyles[style] ?? "default" });
+    else editor.addStyles({ [style]: value });
+    setActiveStyles(editor.getActiveStyles() as Record<string, boolean | string>);
+    onChange();
+  };
+
+  const changeIndent = (direction: "in" | "out") => {
+    if (direction === "in" && editor.canNestBlock()) editor.nestBlock();
+    else if (direction === "out" && editor.canUnnestBlock()) editor.unnestBlock();
     onChange();
   };
 
@@ -254,6 +267,12 @@ export function DocEditor({
           <option value="numberedListItem">{strings.docStyleNumberedList}</option>
           <option value="checkListItem">{strings.docStyleChecklist}</option>
         </select>
+        <select className={styles.colorSelect} aria-label={strings.docTextColor} value={typeof activeStyles.textColor === "string" ? activeStyles.textColor : "default"} onChange={(event) => setColorStyle("textColor", event.target.value)}>
+          <option value="default">{strings.docColorDefault}</option><option value="red">{strings.docColorRed}</option><option value="orange">{strings.docColorOrange}</option><option value="green">{strings.docColorGreen}</option><option value="blue">{strings.docColorBlue}</option><option value="purple">{strings.docColorPurple}</option>
+        </select>
+        <select className={styles.colorSelect} aria-label={strings.docHighlightColor} value={typeof activeStyles.backgroundColor === "string" ? activeStyles.backgroundColor : "default"} onChange={(event) => setColorStyle("backgroundColor", event.target.value)}>
+          <option value="default">{strings.docHighlightNone}</option><option value="red">{strings.docColorRed}</option><option value="orange">{strings.docColorOrange}</option><option value="yellow">{strings.docColorYellow}</option><option value="green">{strings.docColorGreen}</option><option value="blue">{strings.docColorBlue}</option>
+        </select>
         <button type="button" className={styles.commandIcon} onClick={() => editor.undo()} aria-label={strings.sheetUndo} title={strings.sheetUndo}><Undo2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => editor.redo()} aria-label={strings.sheetRedo} title={strings.sheetRedo}><Redo2 size={17} /></button>
         <div className={styles.commandDivider} />
@@ -265,6 +284,8 @@ export function DocEditor({
         <button type="button" className={styles.commandIcon} onClick={() => align("left")} aria-label={strings.sheetAlignLeft}><AlignLeft size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => align("center")} aria-label={strings.sheetAlignCenter}><AlignCenter size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => align("right")} aria-label={strings.sheetAlignRight}><AlignRight size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={() => changeIndent("out")} aria-label={strings.docOutdent}><IndentDecrease size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={() => changeIndent("in")} aria-label={strings.docIndent}><IndentIncrease size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("table")} aria-label={strings.sheetInsertTable}><Table2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("divider")} aria-label={strings.docInsertDivider}><List size={17} /></button>
         <div className={styles.commandSpacer} />
