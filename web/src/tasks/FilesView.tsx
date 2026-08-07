@@ -2,7 +2,7 @@
 // /tasks/files roll-up. Click a name to open its task; download pulls the blob
 // through the same authenticated blob endpoint mail attachments use.
 import { useEffect, useRef, useState } from "react";
-import { Download, HardDrive, Paperclip, Upload } from "lucide-react";
+import { Check, ChevronDown, Download, HardDrive, Paperclip, Upload } from "lucide-react";
 
 import { strings } from "../i18n";
 import { useJmapClient, type DriveNodeDto, type ProjectFileDto, type Task } from "../jmap";
@@ -30,7 +30,9 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(false);
   const [driveOpen, setDriveOpen] = useState(false);
+  const [taskMenuOpen, setTaskMenuOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const taskPickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let live = true;
@@ -50,6 +52,14 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
       live = false;
     };
   }, [client, projectId]);
+
+  useEffect(() => {
+    function closeTaskMenu(event: MouseEvent) {
+      if (taskPickerRef.current?.contains(event.target as Node) === false) setTaskMenuOpen(false);
+    }
+    document.addEventListener("mousedown", closeTaskMenu);
+    return () => document.removeEventListener("mousedown", closeTaskMenu);
+  }, []);
 
   async function upload(selected: FileList | File[]) {
     if (taskId === "" || selected.length === 0) return;
@@ -130,14 +140,39 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
       }}
     >
       <div className={styles.filesToolbar}>
-        <label className={styles.filesTaskPicker}>
+        <div className={styles.filesTaskPicker} ref={taskPickerRef}>
           <span>{strings.taskFilesAttachTo}</span>
-          <select value={taskId} onChange={(event) => setTaskId(event.target.value)}>
-            {tasks.map((task) => (
-              <option key={task.id} value={task.id}>{task.title}</option>
-            ))}
-          </select>
-        </label>
+          <button
+            type="button"
+            className={`${styles.filesTaskTrigger} ${taskMenuOpen ? styles.filesTaskTriggerOpen : ""}`}
+            onClick={() => setTaskMenuOpen((open) => !open)}
+            aria-haspopup="listbox"
+            aria-expanded={taskMenuOpen}
+          >
+            <span>{tasks.find((task) => task.id === taskId)?.title ?? strings.taskFilesAttachTo}</span>
+            <ChevronDown size={16} />
+          </button>
+          {taskMenuOpen && (
+            <div className={styles.filesTaskMenu} role="listbox">
+              {tasks.map((task) => (
+                <button
+                  key={task.id}
+                  type="button"
+                  role="option"
+                  aria-selected={task.id === taskId}
+                  className={task.id === taskId ? styles.filesTaskOptionSelected : ""}
+                  onClick={() => {
+                    setTaskId(task.id);
+                    setTaskMenuOpen(false);
+                  }}
+                >
+                  <span>{task.title}</span>
+                  {task.id === taskId && <Check size={16} />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <input
           ref={fileRef}
           className={styles.visuallyHidden}
