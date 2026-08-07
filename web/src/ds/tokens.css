@@ -15,7 +15,7 @@
  */
 :root {
   /* ---- brand ---- */
-  --cream: #faf7f2;
+  --cream: #f8f6f2;
   --navy: #102a43;
   --terracotta: #e76f51;
   --ink: #102a43; /* primary text is navy */
@@ -52,10 +52,10 @@
 
   /* ---- neutrals: cream ground → cool grays (historical name: warm) ---- */
   --warm-0: #ffffff;
-  --warm-50: #faf7f2; /* cream */
-  --warm-100: #f4efe8;
-  --warm-150: #ede7dd;
-  --warm-200: #e4ddd0;
+  --warm-50: #f8f6f2; /* warm porcelain */
+  --warm-100: #f3f0ea;
+  --warm-150: #ece8e1;
+  --warm-200: #e3ddd4;
   --warm-300: #d4ccbe; /* scrollbar / spinner track */
   --warm-400: #b3a48f;
   --warm-500: #6b7280; /* metadata / tertiary text */
@@ -65,10 +65,10 @@
   --warm-900: #102a43;
 
   /* ---- semantic: backgrounds ---- */
-  --bg-app: var(--cream);              /* the workspace canvas */
-  --bg-surface: #ffffff;               /* panels, cards, reading pane */
-  --bg-raised: #f4efe8;                /* hover / input fills */
-  --bg-sunken: var(--warm-50);         /* list backgrounds */
+  --bg-app: #f8f6f2;                   /* warm porcelain workspace canvas */
+  --bg-surface: #fffefc;               /* soft ivory panels and reading panes */
+  --bg-raised: #ece8e1;                /* controls and hover fills */
+  --bg-sunken: #f3f0ea;                /* warm-stone sidebars and lists */
   --bg-rail: #1f2529;                  /* premium warm charcoal */
   --bg-rail-hover: #2a3237;            /* graphite hover */
   --bg-rail-active: #343d42;           /* lifted active surface */
@@ -77,7 +77,7 @@
 
   /* ---- semantic: text ---- */
   --text-primary: var(--ink);          /* navy */
-  --text-secondary: #334155;           /* slate */
+  --text-secondary: #475569;           /* softened slate */
   --text-tertiary: var(--warm-500);
   --text-on-accent: #ffffff;
   --text-on-rail: #f7f3ef;
@@ -85,8 +85,8 @@
   --text-link: var(--verdigris-600);   /* links are terracotta */
 
   /* ---- semantic: borders ---- */
-  --border-subtle: #ece6dc;
-  --border-default: #ded8cd;
+  --border-subtle: #ebe6de;
+  --border-default: #e3ddd4;
   --border-strong: #cbd5e1; /* stone */
 
   /* ---- semantic: accents & states ---- */
