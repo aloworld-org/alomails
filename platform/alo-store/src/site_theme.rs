@@ -437,6 +437,10 @@ mod tests {
                 (p.muted_text, p.background, "muted_text/background"),
                 (p.muted_text, p.surface, "muted_text/surface"),
                 (p.on_primary, p.primary, "on_primary/primary"),
+                // The stylesheet colors links and secondary buttons
+                // `primary` on both page and card backgrounds.
+                (p.primary, p.background, "primary/background"),
+                (p.primary, p.surface, "primary/surface"),
             ] {
                 let ratio = contrast(fg, bg);
                 assert!(
