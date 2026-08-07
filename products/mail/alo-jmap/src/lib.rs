@@ -48,6 +48,7 @@ pub mod crm;
 pub mod crm_deals;
 pub mod crm_pipelines;
 pub mod crm_stages;
+pub mod crm_threads;
 pub mod csv;
 pub mod delegates;
 pub mod docs;

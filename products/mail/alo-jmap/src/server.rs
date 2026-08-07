@@ -18,9 +18,9 @@ use crate::{
     admin, agent, ai, api, autoconfig, base, billing_bills, billing_customers, billing_fx,
     billing_invoices, billing_payments, billing_products, billing_quotes, billing_reminder,
     billing_reports, billing_send, billing_settings, blob, calendar, carddav, contacts, crm_deals,
-    crm_pipelines, crm_stages, delegates, docs, drive, filters, flagdue, imap_import_route, push,
-    reset_route, schedule, security, session, settings, share, signup_route, sites, snooze, spaces,
-    tasks, unsubscribe, wopi, workspace_search,
+    crm_pipelines, crm_stages, crm_threads, delegates, docs, drive, filters, flagdue,
+    imap_import_route, push, reset_route, schedule, security, session, settings, share,
+    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -482,6 +482,23 @@ pub fn app(state: AppState) -> Router {
         )
         .route("/crm/deals/{id}/stage", post(crm_deals::move_deal))
         .route("/crm/deals/{id}/history", get(crm_deals::deal_history))
+        // The conversations a deal belongs to (B2.05) — the module's reason to
+        // exist, and the one boundary inside the tenant that CRM has to defend:
+        // a deal is tenant-wide, a mailbox is not. Suggestions PROPOSE over the
+        // caller's own recent mail and write nothing; only the POST links, and
+        // only a conversation the caller can already see.
+        .route(
+            "/crm/deals/{id}/threads",
+            get(crm_threads::list_threads).post(crm_threads::link_thread),
+        )
+        .route(
+            "/crm/deals/{id}/threads/{threadId}",
+            delete(crm_threads::unlink_thread),
+        )
+        .route(
+            "/crm/deals/{id}/thread-suggestions",
+            get(crm_threads::suggest_threads),
+        )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))
