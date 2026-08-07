@@ -75,6 +75,11 @@ function replaceText(value: unknown, search: string, replacement: string): unkno
   return Object.fromEntries(Object.entries(record).map(([key, item]) => [key, replaceText(item, search, replacement)]));
 }
 
+function documentSettings(blocks: unknown[]): Record<string, unknown> | undefined {
+  const settings = blocks.find((block) => typeof block === "object" && block !== null && (block as Record<string, unknown>).type === "docSettings") as Record<string, unknown> | undefined;
+  return settings?.props as Record<string, unknown> | undefined;
+}
+
 export function DocEditor({
   nodeId,
   name,
@@ -132,6 +137,18 @@ export function DocEditor({
       .then((c) => {
         if (!live) return;
         const blocks = c as unknown[];
+        const settings = documentSettings(blocks);
+        if (settings !== undefined) {
+          if (settings.pageSize === "a4" || settings.pageSize === "letter") setPageSize(settings.pageSize);
+          if (settings.orientation === "portrait" || settings.orientation === "landscape") setPageOrientation(settings.orientation);
+          if (settings.margins === "normal" || settings.margins === "narrow" || settings.margins === "wide") setPageMargins(settings.margins);
+          if (typeof settings.header === "string") setPageHeader(settings.header);
+          if (typeof settings.footer === "string") setPageFooter(settings.footer);
+          if (typeof settings.pageNumber === "boolean") setShowPageNumber(settings.pageNumber);
+          if (settings.font === "inter" || settings.font === "arial" || settings.font === "georgia" || settings.font === "garamond") setDocFont(settings.font);
+          if (typeof settings.fontSize === "number") setDocFontSize(settings.fontSize);
+          if (typeof settings.lineSpacing === "number") setLineSpacing(settings.lineSpacing);
+        }
         if (!loaded.current && blocks.length > 0) {
           loaded.current = true;
           editor.replaceBlocks(
@@ -269,6 +286,35 @@ export function DocEditor({
       if (pending.current) void save(pending.current);
     }, 1200);
   }, [editor, save]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const props = {
+      pageSize,
+      orientation: pageOrientation,
+      margins: pageMargins,
+      header: pageHeader,
+      footer: pageFooter,
+      pageNumber: showPageNumber,
+      font: docFont,
+      fontSize: docFontSize,
+      lineSpacing,
+    };
+    const settingsBlock = (editor.document as unknown as Array<Record<string, unknown>>).find((block) => block.type === "docSettings");
+    if (settingsBlock === undefined) {
+      const first = editor.document[0];
+      if (first !== undefined) {
+        editor.insertBlocks([{ type: "docSettings", props }] as unknown as Parameters<typeof editor.insertBlocks>[0], first, "before");
+        onChange();
+      }
+      return;
+    }
+    const current = settingsBlock.props as Record<string, unknown> | undefined;
+    if (Object.entries(props).some(([key, value]) => current?.[key] !== value)) {
+      editor.updateBlock(settingsBlock as unknown as Parameters<typeof editor.updateBlock>[0], { props } as Parameters<typeof editor.updateBlock>[1]);
+      onChange();
+    }
+  }, [docFont, docFontSize, editor, lineSpacing, onChange, pageFooter, pageHeader, pageMargins, pageOrientation, pageSize, ready, showPageNumber]);
 
   async function close() {
     if (timer.current !== null) window.clearTimeout(timer.current);

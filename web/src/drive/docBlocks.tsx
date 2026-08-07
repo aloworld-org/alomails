@@ -108,6 +108,28 @@ export const CommentBlock = createReactBlockSpec(
   },
 );
 
+/** Hidden document metadata persisted inside the Drive block tree. Keeping
+ * page settings in the document makes layout portable across browsers and
+ * devices instead of treating it as a local view preference. */
+export const DocSettingsBlock = createReactBlockSpec(
+  {
+    type: "docSettings",
+    propSchema: {
+      pageSize: { default: "a4" },
+      orientation: { default: "portrait" },
+      margins: { default: "normal" },
+      header: { default: "" },
+      footer: { default: "" },
+      pageNumber: { default: false },
+      font: { default: "inter" },
+      fontSize: { default: 14 },
+      lineSpacing: { default: 1.5 },
+    },
+    content: "none",
+  },
+  { render: () => <span className={styles.settings} aria-hidden="true" /> },
+);
+
 /** The alo Doc schema: every default block (paragraph, headings, lists, code,
  *  quote, table, …) plus the equation block.
  *
@@ -117,5 +139,5 @@ export const CommentBlock = createReactBlockSpec(
  *  a library-vs-tsconfig mismatch, not a defect in this object. The runtime shape
  *  is exactly right; the assertion is scoped to this one boundary. */
 export const docSchema = BlockNoteSchema.create({
-  blockSpecs: { ...defaultBlockSpecs, equation: EquationBlock(), comment: CommentBlock() },
+  blockSpecs: { ...defaultBlockSpecs, equation: EquationBlock(), comment: CommentBlock(), docSettings: DocSettingsBlock() },
 } as Parameters<typeof BlockNoteSchema.create>[0]);
