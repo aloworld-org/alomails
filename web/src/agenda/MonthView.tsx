@@ -57,6 +57,14 @@ export function MonthView({
               key={day.toISOString()}
               className={`${styles.dayCell} ${otherMonth ? styles.otherMonth : ""} ${isSelected ? styles.daySelected : ""}`}
               onClick={() => onDayClick(day)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                onDayClick(day);
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`${strings.agendaNewEvent}: ${day.toLocaleDateString(locale)}`}
             >
               <div className={styles.dayNumRow}>
                 <span className={`${styles.dayNum} ${isToday ? styles.todayNum : ""}`}>

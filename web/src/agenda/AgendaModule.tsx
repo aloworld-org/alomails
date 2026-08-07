@@ -174,6 +174,11 @@ export function AgendaModule() {
     setEditing({ event: null, initialStart: at });
   }
 
+  function createOnDay(day: Date) {
+    pickDay(day);
+    openNew(dayAtNine(day));
+  }
+
   async function openEvent(e: CalendarEvent) {
     if (e.recurrence !== null) {
       try {
@@ -340,7 +345,7 @@ export function AgendaModule() {
               selectedDay={selectedDay}
               events={visibleEvents}
               colorOf={colorOf}
-              onDayClick={pickDay}
+              onDayClick={createOnDay}
               onEventClick={(e) => void openEvent(e)}
             />
           ) : view === "week" ? (

@@ -286,7 +286,9 @@
 .viewport {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
   display: flex;
   flex-direction: column;
 }
@@ -295,8 +297,8 @@
 .month {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 0;
+  flex: 1 0 auto;
+  min-height: 100%;
 }
 .monthHead {
   display: grid;
@@ -315,7 +317,7 @@
 .monthGrid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  grid-template-rows: repeat(6, minmax(90px, 1fr));
+  grid-template-rows: repeat(6, minmax(120px, 1fr));
   flex: 1;
 }
 .dayCell {
@@ -331,6 +333,10 @@
 }
 .dayCell:hover {
   background: var(--bg-raised);
+}
+.dayCell:focus-visible {
+  outline: 2px solid var(--terracotta);
+  outline-offset: -2px;
 }
 .otherMonth {
   background: var(--bg-app);
