@@ -7,6 +7,16 @@ import type { Catalog } from "./en";
 
 export const fr: Partial<Catalog> = {
   driveFolderEmpty: "Ce dossier est vide",
+  driveSort: "Trier",
+  driveSortNameAsc: "Nom (A–Z)",
+  driveSortNameDesc: "Nom (Z–A)",
+  driveSortNewest: "Plus récents",
+  driveSortOldest: "Plus anciens",
+  driveSortLargest: "Plus volumineux",
+  driveSortSmallest: "Plus petits",
+  driveView: "Affichage",
+  driveViewComfortable: "Confortable",
+  driveViewCompact: "Compact",
   taskCreating: "Création…",
   taskFilesAttachTo: "Joindre à la tâche",
   taskFilesDropHint: "Déposez des images ou fichiers ici, ou utilisez Ajouter une pièce jointe.",

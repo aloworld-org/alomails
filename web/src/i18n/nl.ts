@@ -7,6 +7,16 @@ import type { Catalog } from "./en";
 
 export const nl: Partial<Catalog> = {
   driveFolderEmpty: "Deze map is leeg",
+  driveSort: "Sorteren",
+  driveSortNameAsc: "Naam (A–Z)",
+  driveSortNameDesc: "Naam (Z–A)",
+  driveSortNewest: "Nieuwste eerst",
+  driveSortOldest: "Oudste eerst",
+  driveSortLargest: "Grootste eerst",
+  driveSortSmallest: "Kleinste eerst",
+  driveView: "Weergave",
+  driveViewComfortable: "Comfortabel",
+  driveViewCompact: "Compact",
   taskCreating: "Aanmaken…",
   taskFilesAttachTo: "Toevoegen aan taak",
   taskFilesDropHint: "Sleep afbeeldingen of bestanden hierheen, of kies Bijlage toevoegen.",

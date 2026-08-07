@@ -6,6 +6,8 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
+  ArrowUpDown,
+  Check,
   ChevronRight,
   Copy,
   Download,
@@ -20,6 +22,7 @@ import {
   Pencil,
   Plus,
   RotateCcw,
+  Rows3,
   Trash2,
   Upload,
   Users,
@@ -51,6 +54,8 @@ import styles from "./DriveModule.module.css";
 
 type Crumb = { id: string; name: string };
 type EditorKind = "doc" | "sheet" | "office";
+type SortMode = "name-asc" | "name-desc" | "newest" | "oldest" | "largest" | "smallest";
+type ListDensity = "comfortable" | "compact";
 
 function fileSlug(name: string): string {
   const slug = name
@@ -97,6 +102,8 @@ export function DriveModule() {
   const [folderChildren, setFolderChildren] = useState<ReadonlyMap<string, DriveNodeDto[] | null>>(new Map());
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>("name-asc");
+  const [listDensity, setListDensity] = useState<ListDensity>("comfortable");
 
   const [moveNode, setMoveNode] = useState<{ id: string; mode: "move" | "copy" } | null>(null);
   const [versionsNode, setVersionsNode] = useState<string | null>(null);
@@ -243,8 +250,21 @@ export function DriveModule() {
     });
   }
 
+  function sortNodes(items: DriveNodeDto[]): DriveNodeDto[] {
+    return [...items].sort((a, b) => {
+      if (a.kind === "folder" && b.kind !== "folder") return -1;
+      if (a.kind !== "folder" && b.kind === "folder") return 1;
+      if (sortMode === "name-asc") return a.name.localeCompare(b.name);
+      if (sortMode === "name-desc") return b.name.localeCompare(a.name);
+      if (sortMode === "newest") return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+      if (sortMode === "oldest") return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+      if (sortMode === "largest") return b.size - a.size;
+      return a.size - b.size;
+    });
+  }
+
   function renderRows(items: DriveNodeDto[], depth = 0): ReactNode[] {
-    return items.flatMap((n) => {
+    return sortNodes(items).flatMap((n) => {
       const Icon = nodeIcon(n);
       const folder = n.kind === "folder";
       const expanded = folder && expandedFolders.has(n.id);
@@ -564,6 +584,45 @@ export function DriveModule() {
             ))}
           </nav>
           <div className={styles.actions}>
+            {!trashView && (
+              <>
+                <Menu
+                  triggerLabel={strings.driveSort}
+                  label={strings.driveSort}
+                  icon={<ArrowUpDown size={15} />}
+                  align="end"
+                  items={([
+                    ["name-asc", strings.driveSortNameAsc],
+                    ["name-desc", strings.driveSortNameDesc],
+                    ["newest", strings.driveSortNewest],
+                    ["oldest", strings.driveSortOldest],
+                    ["largest", strings.driveSortLargest],
+                    ["smallest", strings.driveSortSmallest],
+                  ] as const).map(([key, label], index) => ({
+                    key,
+                    label,
+                    icon: sortMode === key ? <Check size={15} /> : <span className={styles.menuIconSpace} />,
+                    divider: index === 2 || index === 4,
+                    onClick: () => setSortMode(key),
+                  }))}
+                />
+                <Menu
+                  triggerLabel={strings.driveView}
+                  label={strings.driveView}
+                  icon={<Rows3 size={15} />}
+                  align="end"
+                  items={([
+                    ["comfortable", strings.driveViewComfortable],
+                    ["compact", strings.driveViewCompact],
+                  ] as const).map(([key, label]) => ({
+                    key,
+                    label,
+                    icon: listDensity === key ? <Check size={15} /> : <span className={styles.menuIconSpace} />,
+                    onClick: () => setListDensity(key),
+                  }))}
+                />
+              </>
+            )}
             {currentSpace !== null && !trashView && (
               <button type="button" className={styles.ghostBtn} onClick={() => setShowMembers(true)}>
                 <Users size={15} /> {strings.driveMembers}
@@ -614,7 +673,7 @@ export function DriveModule() {
             {trashView ? strings.driveEmptyTrash : strings.driveEmpty}
           </div>
         ) : (
-          <ul className={styles.list}>
+          <ul className={`${styles.list} ${listDensity === "compact" ? styles.listCompact : ""}`}>
             <li className={styles.listHead}>
               <span className={styles.colName}>{strings.driveColName}</span>
               <span className={styles.colSize}>{strings.driveColSize}</span>
