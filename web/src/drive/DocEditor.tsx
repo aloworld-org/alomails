@@ -14,7 +14,8 @@ import {
   type CSSProperties,
   type SyntheticEvent,
 } from "react";
-import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, MessageSquarePlus, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { createPortal } from "react-dom";
+import { AlignCenter, AlignLeft, AlignRight, Bold, Check, ChevronDown, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, MessageSquarePlus, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -645,6 +646,13 @@ const NAMED_COLORS: Record<string, string> = {
   purple: "#7950f2",
 };
 
+const DOC_COLORS = [
+  "#102a43", "#475569", "#94a3b8", "#ffffff", "#000000", "#7f1d1d",
+  "#eb6f4b", "#f59e0b", "#facc15", "#2f9e66", "#14b8a6", "#3478f6",
+  "#4f46e5", "#7950f2", "#c026d3", "#e03131", "#fee2e2", "#ffedd5",
+  "#fef3c7", "#dcfce7", "#ccfbf1", "#dbeafe", "#ede9fe", "#fce7f3",
+] as const;
+
 function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }: {
   label: string;
   resetLabel: string;
@@ -653,13 +661,49 @@ function DocColorPicker({ label, resetLabel, value, fallback, variant, onPick }:
   variant: "text" | "highlight";
   onPick: (value: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ left: 0, top: 0 });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const color = /^#[0-9a-f]{6}$/i.test(value) ? value : NAMED_COLORS[value] ?? fallback;
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!triggerRef.current?.contains(target) && !popoverRef.current?.contains(target)) setOpen(false);
+    };
+    const dismiss = () => setOpen(false);
+    document.addEventListener("pointerdown", close);
+    window.addEventListener("resize", dismiss);
+    window.addEventListener("scroll", dismiss, true);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      window.removeEventListener("resize", dismiss);
+      window.removeEventListener("scroll", dismiss, true);
+    };
+  }, [open]);
+
+  const toggle = () => {
+    const rect = triggerRef.current?.getBoundingClientRect();
+    if (rect) setPosition({ left: Math.min(rect.left, window.innerWidth - 236), top: rect.bottom + 6 });
+    setOpen((current) => !current);
+  };
+
   return <div className={styles.docColorPicker}>
-    <label className={styles.docColorMain} title={label} aria-label={label}>
+    <button ref={triggerRef} type="button" className={styles.docColorMain} title={label} aria-label={label} aria-expanded={open} onClick={toggle}>
       {variant === "text" ? <span className={styles.textColorGlyph}>A</span> : <Highlighter className={styles.highlightColorGlyph} size={16} />}
       <span className={styles.docColorSwatch} style={{ backgroundColor: color }} />
-      <input type="color" aria-label={label} value={color} onInput={(event) => onPick(event.currentTarget.value)} onChange={(event) => onPick(event.target.value)} />
-    </label>
-    {value !== "default" && <button type="button" className={styles.docColorReset} onClick={() => onPick("default")} aria-label={resetLabel} title={resetLabel}><X size={11} /></button>}
+      <ChevronDown className={styles.docColorChevron} size={12} />
+    </button>
+    {open && createPortal(<div ref={popoverRef} className={styles.docColorPopover} style={position} role="dialog" aria-label={label}>
+      <strong>{label}</strong>
+      <div className={styles.docColorGrid} role="listbox" aria-label={label}>
+        {DOC_COLORS.map((option) => <button key={option} type="button" role="option" aria-label={option} aria-selected={option.toLowerCase() === color.toLowerCase()} className={styles.docColorOption} style={{ backgroundColor: option }} onClick={() => { onPick(option); setOpen(false); }}>
+          {option.toLowerCase() === color.toLowerCase() && <Check size={13} />}
+        </button>)}
+      </div>
+      <button type="button" className={styles.docColorDefault} onClick={() => { onPick("default"); setOpen(false); }}><X size={13} />{resetLabel}</button>
+    </div>, document.body)}
   </div>;
 }
