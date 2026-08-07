@@ -534,8 +534,44 @@ export function SheetEditor({
           sheet.setFrozenColumns(r.getColumn());
         }
       },
+      freezeTopRow: () => {
+        ws()?.setFrozenRows(1);
+      },
+      freezeFirstColumn: () => {
+        ws()?.setFrozenColumns(1);
+      },
       unfreeze: () => {
         ws()?.cancelFreeze();
+      },
+      splitTextToColumns: () => {
+        range()?.splitTextToColumns(true);
+      },
+      protectRange: () => {
+        const selected = range();
+        if (selected !== null && !selected.getRangePermission().isProtected()) {
+          void selected.getRangePermission().protect({ name: strings.sheetProtectedRangeName });
+        }
+      },
+      unprotectRange: () => {
+        const selected = range();
+        if (selected !== null) void selected.getRangePermission().unprotect();
+      },
+      protectSheet: () => {
+        const sheet = ws();
+        if (sheet !== null && !sheet.getWorksheetPermission().isProtected()) {
+          void sheet.getWorksheetPermission().protect({ name: strings.sheetProtectedSheetName });
+        }
+      },
+      unprotectSheet: () => {
+        const sheet = ws();
+        if (sheet !== null) void sheet.getWorksheetPermission().unprotect();
+      },
+      adjustZoom: (delta) => {
+        const sheet = ws();
+        if (sheet !== null) sheet.zoom(Math.min(4, Math.max(0.1, Math.round((sheet.getZoom() + delta) * 10) / 10)));
+      },
+      resetZoom: () => {
+        ws()?.zoom(1);
       },
       stylePreset: ({ size, bold, color }) => {
         const r = range();

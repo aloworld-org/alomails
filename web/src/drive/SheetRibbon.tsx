@@ -36,6 +36,7 @@ import {
   Link,
   ListChecks,
   ListTree,
+  LockKeyhole,
   Maximize2,
   MessageSquare,
   MoreHorizontal,
@@ -60,10 +61,14 @@ import {
   TableColumnsSplit,
   TableRowsSplit,
   Table2,
+  Tags,
   Columns3,
+  UnlockKeyhole,
   Underline,
   Undo2,
   WrapText,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 
 import { strings } from "../i18n";
@@ -104,7 +109,16 @@ export interface SheetActions {
   clearContents: () => void;
   clearFormats: () => void;
   freezeAtSelection: () => void;
+  freezeTopRow: () => void;
+  freezeFirstColumn: () => void;
   unfreeze: () => void;
+  splitTextToColumns: () => void;
+  protectRange: () => void;
+  unprotectRange: () => void;
+  protectSheet: () => void;
+  unprotectSheet: () => void;
+  adjustZoom: (delta: number) => void;
+  resetZoom: () => void;
   /** Apply a named cell style (font size + weight + optional colour). */
   stylePreset: (p: { size: number; bold: boolean; color?: string }) => void;
   undo: () => void;
@@ -138,6 +152,7 @@ const CMD_PASTE = "sheet.command.paste";
 const CMD_SORT_ASC = "sheet.command.sort-range-asc";
 const CMD_SORT_DESC = "sheet.command.sort-range-desc";
 const CMD_FILTER = "sheet.command.smart-toggle-filter";
+const CMD_DEFINED_NAMES = "sidebar.operation.defined-name";
 const CMD_FIND = "ui.operation.open-find-dialog";
 const CMD_CONDITIONAL_FORMATTING = "sheet.operation.open";
 const CMD_DATA_VALIDATION = "data-validation.operation.toggle-validation-panel";
@@ -630,9 +645,17 @@ function DataTab({ actions, disabled }: { actions: SheetActions; disabled: boole
         <EditingControls actions={actions} disabled={disabled} />
       </Group>
       <Group label={strings.sheetGroupDataTools}>
-        <IconBtn label={strings.sheetDataValidation} onClick={() => actions.exec(CMD_DATA_VALIDATION)} disabled={disabled} large showLabel>
-          <ListChecks size={20} />
-        </IconBtn>
+        <div className={styles.layoutGrid}>
+          <IconBtn label={strings.sheetDataValidation} onClick={() => actions.exec(CMD_DATA_VALIDATION)} disabled={disabled} showLabel>
+            <ListChecks size={16} />
+          </IconBtn>
+          <IconBtn label={strings.sheetTextToColumns} onClick={actions.splitTextToColumns} disabled={disabled} showLabel>
+            <Columns3 size={16} />
+          </IconBtn>
+          <IconBtn label={strings.sheetNamedRanges} onClick={() => actions.exec(CMD_DEFINED_NAMES, { value: "open" })} disabled={disabled} showLabel>
+            <Tags size={16} />
+          </IconBtn>
+        </div>
       </Group>
       <Group label={strings.sheetGroupStyles}>
         <IconBtn label={strings.sheetConditionalFormatting} onClick={() => actions.exec(CMD_CONDITIONAL_FORMATTING)} disabled={disabled} large showLabel>
@@ -657,6 +680,14 @@ function ReviewTab({ actions, disabled }: { actions: SheetActions; disabled: boo
             <MessageSquare size={20} />
           </IconBtn>
           <TextBtn label={strings.sheetCommentsPanel} onClick={() => actions.exec(CMD_COMMENT_PANEL)} disabled={disabled} />
+        </div>
+      </Group>
+      <Group label={strings.sheetGroupProtection}>
+        <div className={styles.layoutGrid}>
+          <IconBtn label={strings.sheetProtectRange} onClick={actions.protectRange} disabled={disabled} showLabel><LockKeyhole size={16} /></IconBtn>
+          <IconBtn label={strings.sheetUnprotectRange} onClick={actions.unprotectRange} disabled={disabled} showLabel><UnlockKeyhole size={16} /></IconBtn>
+          <IconBtn label={strings.sheetProtectSheet} onClick={actions.protectSheet} disabled={disabled} showLabel><LockKeyhole size={16} /></IconBtn>
+          <IconBtn label={strings.sheetUnprotectSheet} onClick={actions.unprotectSheet} disabled={disabled} showLabel><UnlockKeyhole size={16} /></IconBtn>
         </div>
       </Group>
     </div>
@@ -699,12 +730,19 @@ function PageLayoutTab({ actions, disabled }: { actions: SheetActions; disabled:
 function ViewTab({ actions, disabled }: { actions: SheetActions; disabled: boolean }) {
   return (
     <div className={styles.groups}>
-      <Group label={strings.sheetGroupView}>
+      <Group label={strings.sheetGroupFreeze}>
+        <div className={styles.layoutGrid}>
+          <IconBtn label={strings.sheetFreezeTopRow} onClick={actions.freezeTopRow} disabled={disabled} showLabel><Rows3 size={16} /></IconBtn>
+          <IconBtn label={strings.sheetFreezeFirstColumn} onClick={actions.freezeFirstColumn} disabled={disabled} showLabel><Columns3 size={16} /></IconBtn>
+          <IconBtn label={strings.sheetFreeze} onClick={actions.freezeAtSelection} disabled={disabled} showLabel><Snowflake size={16} /></IconBtn>
+          <IconBtn label={strings.sheetUnfreeze} onClick={actions.unfreeze} disabled={disabled} showLabel><UnlockKeyhole size={16} /></IconBtn>
+        </div>
+      </Group>
+      <Group label={strings.sheetGroupZoom}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetFreeze} onClick={actions.freezeAtSelection} disabled={disabled}>
-            <Snowflake size={16} />
-          </IconBtn>
-          <TextBtn label={strings.sheetUnfreeze} onClick={actions.unfreeze} disabled={disabled} />
+          <IconBtn label={strings.sheetZoomOut} onClick={() => actions.adjustZoom(-0.1)} disabled={disabled} showLabel><ZoomOut size={16} /></IconBtn>
+          <TextBtn label={strings.sheetZoomReset} onClick={actions.resetZoom} disabled={disabled} />
+          <IconBtn label={strings.sheetZoomIn} onClick={() => actions.adjustZoom(0.1)} disabled={disabled} showLabel><ZoomIn size={16} /></IconBtn>
         </div>
       </Group>
     </div>
