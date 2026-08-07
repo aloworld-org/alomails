@@ -7,6 +7,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowUpDown,
+  AlignJustify,
   Check,
   ChevronRight,
   Copy,
@@ -18,6 +19,8 @@ import {
   Sheet,
   HardDrive,
   History,
+  Grid2X2,
+  List,
   MoveRight,
   Pencil,
   Plus,
@@ -55,7 +58,7 @@ import styles from "./DriveModule.module.css";
 type Crumb = { id: string; name: string };
 type EditorKind = "doc" | "sheet" | "office";
 type SortMode = "name-asc" | "name-desc" | "newest" | "oldest" | "largest" | "smallest";
-type ListDensity = "comfortable" | "compact";
+type ViewMode = "extra-large" | "large" | "medium" | "small" | "list" | "details" | "tiles" | "content";
 
 function fileSlug(name: string): string {
   const slug = name
@@ -103,7 +106,10 @@ export function DriveModule() {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("name-asc");
-  const [listDensity, setListDensity] = useState<ListDensity>("comfortable");
+  const [viewMode, setViewMode] = useState<ViewMode>("details");
+  const [compactView, setCompactView] = useState(false);
+  const [navigationPane, setNavigationPane] = useState(true);
+  const [showExtensions, setShowExtensions] = useState(true);
 
   const [moveNode, setMoveNode] = useState<{ id: string; mode: "move" | "copy" } | null>(null);
   const [versionsNode, setVersionsNode] = useState<string | null>(null);
@@ -263,6 +269,12 @@ export function DriveModule() {
     });
   }
 
+  function displayName(node: DriveNodeDto): string {
+    if (showExtensions || node.kind === "folder") return node.name;
+    const dot = node.name.lastIndexOf(".");
+    return dot > 0 ? node.name.slice(0, dot) : node.name;
+  }
+
   function renderRows(items: DriveNodeDto[], depth = 0): ReactNode[] {
     return sortNodes(items).flatMap((n) => {
       const Icon = nodeIcon(n);
@@ -291,7 +303,7 @@ export function DriveModule() {
               />
             )}
             <Icon size={18} className={folder ? styles.folderIcon : styles.fileIcon} />
-            <span className={styles.rowName}>{n.name}</span>
+            <span className={styles.rowName}>{displayName(n)}</span>
           </button>
           <span className={styles.colSize}>{folder ? "—" : fileSize(n.size)}</span>
           <span className={styles.colDate}>{new Date(n.updatedAt).toLocaleDateString()}</span>
@@ -505,7 +517,7 @@ export function DriveModule() {
 
   return (
     <div className={styles.drive}>
-      <aside className={styles.sidebar}>
+      <aside className={`${styles.sidebar} ${navigationPane ? "" : styles.sidebarHidden}`}>
         <div className={styles.sideGroup}>
           <button
             type="button"
@@ -611,15 +623,42 @@ export function DriveModule() {
                   label={strings.driveView}
                   icon={<Rows3 size={15} />}
                   align="end"
-                  items={([
-                    ["comfortable", strings.driveViewComfortable],
-                    ["compact", strings.driveViewCompact],
-                  ] as const).map(([key, label]) => ({
+                  items={[...([
+                    ["extra-large", strings.driveViewExtraLarge, <Grid2X2 size={18} />],
+                    ["large", strings.driveViewLarge, <Grid2X2 size={17} />],
+                    ["medium", strings.driveViewMedium, <Grid2X2 size={16} />],
+                    ["small", strings.driveViewSmall, <Grid2X2 size={14} />],
+                    ["list", strings.driveViewList, <List size={15} />],
+                    ["details", strings.driveViewDetails, <Rows3 size={15} />],
+                    ["tiles", strings.driveViewTiles, <Grid2X2 size={15} />],
+                    ["content", strings.driveViewContent, <AlignJustify size={15} />],
+                  ] as const).map(([key, label, layoutIcon], index) => ({
                     key,
                     label,
-                    icon: listDensity === key ? <Check size={15} /> : <span className={styles.menuIconSpace} />,
-                    onClick: () => setListDensity(key),
-                  }))}
+                    icon: viewMode === key ? <Check size={15} /> : layoutIcon,
+                    divider: index === 4,
+                    onClick: () => setViewMode(key),
+                  })),
+                    {
+                      key: "navigation-pane",
+                      label: strings.driveViewNavigationPane,
+                      icon: navigationPane ? <Check size={15} /> : <span className={styles.menuIconSpace} />,
+                      divider: true,
+                      onClick: () => setNavigationPane((visible) => !visible),
+                    },
+                    {
+                      key: "compact-view",
+                      label: strings.driveViewCompact,
+                      icon: compactView ? <Check size={15} /> : <span className={styles.menuIconSpace} />,
+                      onClick: () => setCompactView((compact) => !compact),
+                    },
+                    {
+                      key: "extensions",
+                      label: strings.driveViewExtensions,
+                      icon: showExtensions ? <Check size={15} /> : <span className={styles.menuIconSpace} />,
+                      onClick: () => setShowExtensions((visible) => !visible),
+                    },
+                  ]}
                 />
               </>
             )}
@@ -673,7 +712,7 @@ export function DriveModule() {
             {trashView ? strings.driveEmptyTrash : strings.driveEmpty}
           </div>
         ) : (
-          <ul className={`${styles.list} ${listDensity === "compact" ? styles.listCompact : ""}`}>
+          <ul className={`${styles.list} ${styles[`view_${viewMode}`] ?? ""} ${compactView ? styles.listCompact : ""}`}>
             <li className={styles.listHead}>
               <span className={styles.colName}>{strings.driveColName}</span>
               <span className={styles.colSize}>{strings.driveColSize}</span>
