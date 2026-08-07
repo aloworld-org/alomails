@@ -41,6 +41,13 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
     index === -1
       ? { status: 200, body: {} }
       : (replies.splice(index, 1)[0] as Reply);
+  // A string body is a document (the draft preview), not JSON.
+  if (typeof answer.body === "string") {
+    return new Response(answer.body, {
+      status: answer.status,
+      headers: { "content-type": "text/html; charset=utf-8" },
+    });
+  }
   return new Response(JSON.stringify(answer.body), {
     status: answer.status,
     headers: { "content-type": "application/json" },
@@ -335,5 +342,98 @@ describe("reordering and deleting", () => {
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()!.method).toBe("DELETE");
     await waitFor(() => expect(screen.queryByText(strings.sitesSectionFaq)).toBeNull());
+  });
+});
+
+describe("the live preview", () => {
+  /** The server-rendered draft document the pane fetches. */
+  function previewReply(html: string): Reply {
+    return {
+      match: (url, method) =>
+        method === "GET" && url.endsWith("/sites/site-1/pages/page-1/preview"),
+      status: 200,
+      body: html,
+    };
+  }
+
+  function previewCalls(): number {
+    return calls.filter((c) => c.method === "GET" && c.url.endsWith("/preview")).length;
+  }
+
+  function frame(): HTMLIFrameElement {
+    return screen.getByTitle(strings.sitesPreviewTitle) as HTMLIFrameElement;
+  }
+
+  test("the pane shows the server-rendered draft in a sandboxed frame", async () => {
+    replies = [pageReply([HERO]), previewReply("<!doctype html>\n<p>draft one</p>")];
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+    await waitFor(() => expect(frame().getAttribute("srcdoc")).toContain("draft one"));
+    // The draft document may run its menu script but never touches this
+    // origin or navigates the app.
+    expect(frame().getAttribute("sandbox")).toBe("allow-scripts");
+  });
+
+  test("a successful save refreshes the preview; a refused one does not", async () => {
+    replies = [pageReply([HERO, FAQ]), previewReply("<!doctype html>\n<p>before</p>")];
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+    await waitFor(() => expect(frame().getAttribute("srcdoc")).toContain("before"));
+
+    replies = [
+      {
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections/0/move"),
+        status: 200,
+        body: { sections: env([FAQ, HERO]) },
+      },
+      previewReply("<!doctype html>\n<p>after</p>"),
+    ];
+    fireEvent.click(screen.getAllByLabelText(strings.sitesMoveDown)[0]!);
+    await waitFor(() => expect(frame().getAttribute("srcdoc")).toContain("after"));
+
+    // A refused gesture leaves the sections untouched — and the pane still.
+    const fetched = previewCalls();
+    replies = [
+      {
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections/0/move"),
+        status: 422,
+        body: { detail: "no section at index 9 (the page has 2)" },
+      },
+    ];
+    fireEvent.click(screen.getAllByLabelText(strings.sitesMoveDown)[0]!);
+    await screen.findByText("no section at index 9 (the page has 2)");
+    expect(previewCalls()).toBe(fetched);
+  });
+
+  test("the width toggle flips between desktop and phone", async () => {
+    replies = [pageReply([HERO]), previewReply("<!doctype html>\n<p>ok</p>")];
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+
+    const desktop = screen.getByLabelText(strings.sitesPreviewDesktop);
+    const phone = screen.getByLabelText(strings.sitesPreviewMobile);
+    expect(desktop.getAttribute("aria-pressed")).toBe("true");
+    expect(phone.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(phone);
+    expect(desktop.getAttribute("aria-pressed")).toBe("false");
+    expect(phone.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  test("a failed preview shows its own error while the editor keeps working", async () => {
+    replies = [
+      pageReply([HERO]),
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/preview"),
+        status: 500,
+        body: {},
+      },
+    ];
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+    expect(await screen.findByText(strings.sitesPreviewFailed)).toBeTruthy();
+    // The stack is intact — the preview failing never blocks editing.
+    expect(screen.getByText("Fresh bread daily")).toBeTruthy();
   });
 });

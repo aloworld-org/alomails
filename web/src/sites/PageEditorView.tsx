@@ -6,7 +6,17 @@
 // exact gesture that broke the rule.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ChevronDown, ChevronUp, GripVertical, Layers, Pencil, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  ChevronUp,
+  GripVertical,
+  Layers,
+  Monitor,
+  Pencil,
+  Smartphone,
+  Trash2,
+} from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button, IconButton, Spinner } from "../ds";
@@ -43,6 +53,10 @@ export function PageEditorView() {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewMobile, setPreviewMobile] = useState(false);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -60,6 +74,29 @@ export function PageEditorView() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // The live preview: the server renders the draft with the exact renderer
+  // publishing uses. `sections` is always the envelope the last op answered,
+  // so keying on it refreshes the pane after every successful save — and
+  // not after a refused one.
+  useEffect(() => {
+    if (page === null) return undefined;
+    let stale = false;
+    api.pagePreview(siteId, pageId).then(
+      (html) => {
+        if (!stale) {
+          setPreviewHtml(html);
+          setPreviewError(null);
+        }
+      },
+      (err: unknown) => {
+        if (!stale) setPreviewError(sitesMessage(err, strings.sitesPreviewFailed));
+      },
+    );
+    return () => {
+      stale = true;
+    };
+  }, [api, siteId, pageId, page, sections]);
 
   /** Runs one stack op and renders the envelope the server answered. */
   async function run(op: Promise<SectionsEnvelope>) {
@@ -127,108 +164,147 @@ export function PageEditorView() {
       {error !== null && <ErrorBanner message={error} />}
 
       {page !== null && (
-        <>
-          <div className={styles.sectionBar}>
-            <h2 className={styles.sectionTitle}>{strings.sitesSections}</h2>
-            <Button size="sm" onClick={() => setPicking(true)} disabled={working}>
-              {strings.sitesAddSection}
-            </Button>
-          </div>
+        <div className={styles.editorLayout}>
+          <div className={styles.stackPane}>
+            <div className={styles.sectionBar}>
+              <h2 className={styles.sectionTitle}>{strings.sitesSections}</h2>
+              <Button size="sm" onClick={() => setPicking(true)} disabled={working}>
+                {strings.sitesAddSection}
+              </Button>
+            </div>
 
-          {empty && !loading ? (
-            <EmptyState
-              Icon={Layers}
-              title={strings.sitesNoSectionsTitle}
-              body={strings.sitesNoSectionsBody}
-              cta={strings.sitesAddSection}
-              onCta={() => setPicking(true)}
-            />
-          ) : (
-            <ol className={styles.stack}>
-              {sections.map((section, i) => {
-                const summary = sectionSummary(section);
-                const cardClass =
-                  dragOver === i && dragFrom !== null && dragFrom !== i
-                    ? `${styles.card} ${styles.cardDropTarget}`
-                    : styles.card;
-                return (
-                  // Sections have no identity — the position is the key.
-                  <li
-                    key={`${section.type}-${i}`}
-                    className={cardClass}
-                    draggable
-                    onDragStart={() => setDragFrom(i)}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragOver(i);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (dragFrom !== null) move(dragFrom, i);
-                      setDragFrom(null);
-                      setDragOver(null);
-                    }}
-                    onDragEnd={() => {
-                      setDragFrom(null);
-                      setDragOver(null);
-                    }}
-                  >
-                    <span className={styles.dragHandle} aria-hidden="true">
-                      <GripVertical size={16} />
-                    </span>
-                    <div className={styles.cardMeta}>
-                      <span className={styles.cardKind}>{kindLabel(section.type)}</span>
-                      {summary !== "" && <span className={styles.cardSummary}>{summary}</span>}
-                    </div>
-                    <div className={styles.cardActions}>
-                      <IconButton
-                        size="sm"
-                        label={strings.sitesMoveUp}
-                        icon={<ChevronUp size={15} />}
-                        disabled={working || i === 0}
-                        onClick={() => move(i, i - 1)}
-                      />
-                      <IconButton
-                        size="sm"
-                        label={strings.sitesMoveDown}
-                        icon={<ChevronDown size={15} />}
-                        disabled={working || i === sections.length - 1}
-                        onClick={() => move(i, i + 1)}
-                      />
-                      <IconButton
-                        size="sm"
-                        label={strings.sitesEditSection}
-                        icon={<Pencil size={15} />}
-                        disabled={working}
-                        onClick={() => openForm({ kind: section.type, index: i })}
-                      />
-                      {confirmDelete === i ? (
-                        // The second, armed step of deleting: one more click
-                        // removes the section; anything else disarms.
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          disabled={working}
-                          onClick={() => void run(api.removeSection(siteId, pageId, i))}
-                        >
-                          {strings.sitesConfirmDelete}
-                        </Button>
-                      ) : (
+            {empty && !loading ? (
+              <EmptyState
+                Icon={Layers}
+                title={strings.sitesNoSectionsTitle}
+                body={strings.sitesNoSectionsBody}
+                cta={strings.sitesAddSection}
+                onCta={() => setPicking(true)}
+              />
+            ) : (
+              <ol className={styles.stack}>
+                {sections.map((section, i) => {
+                  const summary = sectionSummary(section);
+                  const cardClass =
+                    dragOver === i && dragFrom !== null && dragFrom !== i
+                      ? `${styles.card} ${styles.cardDropTarget}`
+                      : styles.card;
+                  return (
+                    // Sections have no identity — the position is the key.
+                    <li
+                      key={`${section.type}-${i}`}
+                      className={cardClass}
+                      draggable
+                      onDragStart={() => setDragFrom(i)}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOver(i);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragFrom !== null) move(dragFrom, i);
+                        setDragFrom(null);
+                        setDragOver(null);
+                      }}
+                      onDragEnd={() => {
+                        setDragFrom(null);
+                        setDragOver(null);
+                      }}
+                    >
+                      <span className={styles.dragHandle} aria-hidden="true">
+                        <GripVertical size={16} />
+                      </span>
+                      <div className={styles.cardMeta}>
+                        <span className={styles.cardKind}>{kindLabel(section.type)}</span>
+                        {summary !== "" && <span className={styles.cardSummary}>{summary}</span>}
+                      </div>
+                      <div className={styles.cardActions}>
                         <IconButton
                           size="sm"
-                          label={strings.sitesDeleteSection}
-                          icon={<Trash2 size={15} />}
-                          disabled={working}
-                          onClick={() => setConfirmDelete(i)}
+                          label={strings.sitesMoveUp}
+                          icon={<ChevronUp size={15} />}
+                          disabled={working || i === 0}
+                          onClick={() => move(i, i - 1)}
                         />
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </>
+                        <IconButton
+                          size="sm"
+                          label={strings.sitesMoveDown}
+                          icon={<ChevronDown size={15} />}
+                          disabled={working || i === sections.length - 1}
+                          onClick={() => move(i, i + 1)}
+                        />
+                        <IconButton
+                          size="sm"
+                          label={strings.sitesEditSection}
+                          icon={<Pencil size={15} />}
+                          disabled={working}
+                          onClick={() => openForm({ kind: section.type, index: i })}
+                        />
+                        {confirmDelete === i ? (
+                          // The second, armed step of deleting: one more click
+                          // removes the section; anything else disarms.
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            disabled={working}
+                            onClick={() => void run(api.removeSection(siteId, pageId, i))}
+                          >
+                            {strings.sitesConfirmDelete}
+                          </Button>
+                        ) : (
+                          <IconButton
+                            size="sm"
+                            label={strings.sitesDeleteSection}
+                            icon={<Trash2 size={15} />}
+                            disabled={working}
+                            onClick={() => setConfirmDelete(i)}
+                          />
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </div>
+
+          <aside className={styles.previewPane} aria-label={strings.sitesPreview}>
+            <div className={styles.previewBar}>
+              <h2 className={styles.sectionTitle}>{strings.sitesPreview}</h2>
+              <div className={styles.previewToggle}>
+                <IconButton
+                  size="sm"
+                  label={strings.sitesPreviewDesktop}
+                  icon={<Monitor size={15} />}
+                  active={!previewMobile}
+                  onClick={() => setPreviewMobile(false)}
+                />
+                <IconButton
+                  size="sm"
+                  label={strings.sitesPreviewMobile}
+                  icon={<Smartphone size={15} />}
+                  active={previewMobile}
+                  onClick={() => setPreviewMobile(true)}
+                />
+              </div>
+            </div>
+            {previewError !== null && <ErrorBanner message={previewError} />}
+            <div
+              className={
+                previewMobile ? styles.previewViewportMobile : styles.previewViewport
+              }
+            >
+              {/* Sandboxed: scripts may run (the menu toggle), but the draft
+                  document never touches this origin or navigates the app. */}
+              <iframe
+                className={styles.previewFrame}
+                title={strings.sitesPreviewTitle}
+                sandbox="allow-scripts"
+                srcDoc={previewHtml ?? ""}
+              />
+            </div>
+          </aside>
+        </div>
       )}
 
       {picking && (

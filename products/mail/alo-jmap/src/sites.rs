@@ -24,13 +24,18 @@
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{HeaderMap, StatusCode, header};
+use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
-use alo_store::{Section, SectionsEnvelope, Site, SiteId, SitePage, SitePageId, StoreError};
+use alo_sites::render::{EN, PageRenderContext, SiteRenderContext, render_page_preview};
+use alo_sites::stylesheet::stylesheet;
+use alo_store::{
+    Section, SectionsEnvelope, Site, SiteId, SitePage, SitePageId, SiteTheme, StoreError,
+};
 
 use crate::error::Problem;
 use crate::state::{Account, AppState, authenticate};
@@ -383,6 +388,73 @@ pub async fn get_page(
         .map_err(map_store_err)?
         .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
     Ok(Json(page_json(&page, true)))
+}
+
+/// The apex domain draft previews advertise in canonical/OG URLs — the same
+/// `SITES_DOMAIN` contract the public `alo-sites` service is configured
+/// with (`docs/design/sites.md`). Optional here because for a preview those
+/// URLs are head metadata only; the default is the product's sites domain.
+fn sites_domain() -> &'static str {
+    static DOMAIN: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    DOMAIN.get_or_init(|| {
+        std::env::var("SITES_DOMAIN")
+            .ok()
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| "alosites.com".to_owned())
+    })
+}
+
+/// `GET /sites/:id/pages/:pid/preview` → the DRAFT page as one complete,
+/// self-contained HTML document (`text/html`), rendered by the same library
+/// the public service renders published snapshots with — the stylesheet is
+/// inlined because the public asset paths do not resolve on this origin.
+/// Authenticated like every edit route; the editor fetches this and shows it
+/// in a sandboxed iframe. `Cache-Control: no-store` — a draft has no cache
+/// life.
+pub async fn preview_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid)): Path<(String, String)>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let sid = SiteId::new(id);
+    let site = require_site(&account, &sid).await?;
+    let page = account
+        .acc
+        .site_page(&sid, &SitePageId::new(pid))
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
+
+    let theme = SiteTheme::from_stored(site.theme.clone());
+    let base_url = format!("https://{}.{}", site.subdomain, sites_domain());
+    let site_ctx = SiteRenderContext {
+        name: &site.name,
+        base_url: &base_url,
+        theme: &theme,
+        strings: &EN,
+    };
+    let path = if page.is_home {
+        "/".to_owned()
+    } else {
+        format!("/{}", page.slug)
+    };
+    let page_ctx = PageRenderContext {
+        path: &path,
+        title: &page.title,
+        seo_title: page.seo_title.as_deref(),
+        seo_description: page.seo_description.as_deref(),
+        sections: &page.sections,
+    };
+    let html = render_page_preview(&site_ctx, &page_ctx, &stylesheet(&theme));
+    Ok((
+        [
+            (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-store"),
+        ],
+        html,
+    )
+        .into_response())
 }
 
 #[derive(Deserialize)]

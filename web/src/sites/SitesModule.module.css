@@ -516,3 +516,55 @@
 .checkBad {
   color: var(--danger);
 }
+
+/* ---- the live preview pane ---- */
+.editorLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (max-width: 64rem) {
+  .editorLayout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.stackPane {
+  min-width: 0;
+}
+.previewPane {
+  min-width: 0;
+  position: sticky;
+  top: var(--space-4);
+}
+.previewBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+.previewToggle {
+  display: flex;
+  gap: var(--space-1);
+}
+.previewViewport,
+.previewViewportMobile {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  padding: var(--space-2);
+}
+.previewViewportMobile {
+  /* A phone-width viewport: the document lays out at 375px inside the
+     centered frame, whatever the pane's own width. */
+  max-width: calc(375px + 2 * var(--space-2));
+  margin: 0 auto;
+}
+.previewFrame {
+  display: block;
+  width: 100%;
+  height: min(70vh, 48rem);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: #fff;
+}

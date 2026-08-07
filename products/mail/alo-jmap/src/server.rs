@@ -214,6 +214,7 @@ pub fn app(state: AppState) -> Router {
                 .delete(sites::delete_page),
         )
         .route("/sites/{id}/pages/{pid}/home", post(sites::set_home_page))
+        .route("/sites/{id}/pages/{pid}/preview", get(sites::preview_page))
         .route(
             "/sites/{id}/pages/{pid}/sections",
             put(sites::set_sections).post(sites::add_section),

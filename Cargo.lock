@@ -130,6 +130,7 @@ dependencies = [
  "alo-identity",
  "alo-pdf",
  "alo-sieve",
+ "alo-sites",
  "alo-smtp-client",
  "alo-store",
  "axum",

@@ -109,6 +109,15 @@ export class SitesApi {
     return this.#read<SitePageDetail>(this.#pagePath(siteId, pageId));
   }
 
+  /** The draft page rendered by the server as one complete, self-contained
+   *  HTML document — the editor's preview. Answers text, not JSON; the
+   *  caller puts it in a sandboxed iframe via `srcdoc`. */
+  async pagePreview(siteId: string, pageId: string): Promise<string> {
+    const res = await this.#send(`${this.#pagePath(siteId, pageId)}/preview`, { method: "GET" });
+    await SitesApi.#rejectFailed(res);
+    return res.text();
+  }
+
   /** Inserts a section at `index` (appends when absent); answers the stored
    *  envelope, canonical as the schema gate wrote it. */
   addSection(
@@ -188,12 +197,17 @@ export class SitesApi {
   }
 
   async #json<T>(res: Response): Promise<T> {
+    await SitesApi.#rejectFailed(res);
+    return (await res.json()) as T;
+  }
+
+  /** Turns a non-2xx answer into the shaped [`SitesError`]. */
+  static async #rejectFailed(res: Response): Promise<void> {
     if (!res.ok) {
       const problem = (await res.json().catch(() => ({}))) as { detail?: unknown };
       const detail = typeof problem.detail === "string" ? problem.detail : null;
       throw new SitesError(res.status, detail);
     }
-    return (await res.json()) as T;
   }
 }
 

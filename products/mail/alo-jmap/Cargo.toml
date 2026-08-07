@@ -19,6 +19,10 @@ alo-pdf = { path = "../../../platform/alo-pdf" }
 alo-smtp-client = { path = "../alo-smtp-client" }
 # The AI inference layer (ADR 0011) — the /ai/improve route bridges to it.
 alo-ai = { path = "../../../platform/alo-ai" }
+# The Sites render library (ADR 0036): the authenticated draft preview is
+# rendered by the exact renderer the public alo-sites service serves, so
+# preview and production HTML cannot drift.
+alo-sites = { path = "../../sites/alo-sites" }
 # Per-domain DKIM key generation when a domain is verified (ADR 0014).
 alo-auth-mail = { path = "../../../platform/alo-auth-mail" }
 # Live DNS checks for the admin Security & trust page (SPF/DMARC/DKIM/MX/PTR).

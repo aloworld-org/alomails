@@ -126,6 +126,7 @@ async fn every_route_family_requires_a_bearer_token() {
             "/sites/some-id/pages/p/sections/0".to_owned(),
             Some(json!({ "section": {} })),
         ),
+        ("GET", "/sites/some-id/pages/p/preview".to_owned(), None),
     ];
     for (method, uri, body) in attempts {
         let req = match body {
@@ -797,6 +798,11 @@ async fn another_tenants_site_is_invisible_on_every_route() {
         ),
         ("GET", format!("/sites/{b_site}/pages/{b_page}"), json!({})),
         (
+            "GET",
+            format!("/sites/{b_site}/pages/{b_page}/preview"),
+            json!({}),
+        ),
+        (
             "PUT",
             format!("/sites/{b_site}/pages/{b_page}"),
             json!({ "title": "Defaced" }),
@@ -852,4 +858,98 @@ async fn another_tenants_site_is_invisible_on_every_route() {
     assert_eq!(body["name"], json!("B Marketing"));
     let (_, body) = get(&b.app, &b.token, &format!("/sites/{b_site}/pages/{b_page}")).await;
     assert_eq!(body["title"], json!("B Home"));
+}
+
+// ---- the draft preview (S1.13) -----------------------------------------------
+
+/// GETs a route that answers a raw document rather than JSON.
+async fn get_text(
+    app: &Router,
+    token: &str,
+    uri: &str,
+) -> (StatusCode, axum::http::HeaderMap, String) {
+    use tower::ServiceExt;
+    let req = Request::builder()
+        .method("GET")
+        .uri(uri)
+        .header("authorization", format!("Bearer {token}"))
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    let status = resp.status();
+    let headers = resp.headers().clone();
+    let bytes = axum::body::to_bytes(resp.into_body(), 8 * 1024 * 1024)
+        .await
+        .unwrap();
+    (status, headers, String::from_utf8(bytes.to_vec()).unwrap())
+}
+
+/// The preview answers the DRAFT as one self-contained HTML document: the
+/// same renderer as public serving with the stylesheet inlined, following
+/// every edit immediately — no publish involved.
+#[tokio::test]
+async fn preview_renders_the_draft_as_a_self_contained_document() {
+    let h = harness("sites-preview").await;
+    let claimed = sub("pv", &h);
+    let site = created_id(
+        "site",
+        post(
+            &h.app,
+            &h.token,
+            "/sites",
+            json!({ "name": "Preview Roastery", "subdomain": claimed }),
+        )
+        .await,
+    );
+    let page = created_id(
+        "page",
+        post(
+            &h.app,
+            &h.token,
+            &format!("/sites/{site}/pages"),
+            json!({ "title": "Home", "home": true }),
+        )
+        .await,
+    );
+    let (status, _) = post(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/pages/{page}/sections"),
+        json!({ "section": hero() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let uri = format!("/sites/{site}/pages/{page}/preview");
+    let (status, headers, html) = get_text(&h.app, &h.token, &uri).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        headers.get("content-type").unwrap(),
+        "text/html; charset=utf-8"
+    );
+    // A draft has no cache life.
+    assert_eq!(headers.get("cache-control").unwrap(), "no-store");
+    assert!(html.starts_with("<!doctype html>"));
+    assert!(html.contains("Coffee roasted the morning it ships"));
+    // Self-contained: the stylesheet is inlined; the public asset path (which
+    // does not resolve on this origin) is referenced nowhere.
+    assert!(html.contains("<style>"));
+    assert!(!html.contains("/assets/site.css"));
+    // Canonical/OG advertise the site's future public origin.
+    assert!(html.contains(&format!("https://{claimed}.alosites.com/")));
+
+    // The preview follows the draft: an edit shows on the next fetch.
+    let mut edited = hero();
+    edited["heading"] = json!("Now even fresher");
+    let (status, _) = put(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/pages/{page}/sections/0"),
+        json!({ "section": edited }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let (_, _, html) = get_text(&h.app, &h.token, &uri).await;
+    assert!(html.contains("Now even fresher"));
+    assert!(!html.contains("Coffee roasted the morning it ships"));
 }
