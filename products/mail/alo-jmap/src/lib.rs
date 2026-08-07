@@ -19,6 +19,7 @@ pub mod api;
 pub mod autoconfig;
 pub mod base;
 pub mod billing;
+pub mod billing_bills;
 pub mod billing_cii;
 pub mod billing_customers;
 pub mod billing_document;

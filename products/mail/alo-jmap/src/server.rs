@@ -15,11 +15,11 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, agent, ai, api, autoconfig, base, billing_customers, billing_fx, billing_invoices,
-    billing_payments, billing_products, billing_quotes, billing_reports, billing_send,
-    billing_settings, blob, calendar, carddav, contacts, delegates, docs, drive, filters, flagdue,
-    imap_import_route, push, reset_route, schedule, security, session, settings, share,
-    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    admin, agent, ai, api, autoconfig, base, billing_bills, billing_customers, billing_fx,
+    billing_invoices, billing_payments, billing_products, billing_quotes, billing_reports,
+    billing_send, billing_settings, blob, calendar, carddav, contacts, delegates, docs, drive,
+    filters, flagdue, imap_import_route, push, reset_route, schedule, security, session, settings,
+    share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -343,6 +343,24 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/billing/invoices/{id}/payments/{payment_id}",
             delete(billing_payments::delete_payment),
+        )
+        // Bills (B1.24) — the other direction: a supplier's Factur-X or
+        // XRechnung file read into a record waiting for approval. The upload
+        // carries the XML as its own body (a file is a file, not a JSON
+        // string), and a decision is its own POST because it is final.
+        .route("/billing/bills/import", post(billing_bills::import_bill))
+        .route("/billing/bills", get(billing_bills::list_bills))
+        .route(
+            "/billing/bills/{id}",
+            get(billing_bills::get_bill).delete(billing_bills::delete_bill),
+        )
+        .route(
+            "/billing/bills/{id}/approve",
+            post(billing_bills::approve_bill),
+        )
+        .route(
+            "/billing/bills/{id}/reject",
+            post(billing_bills::reject_bill),
         )
         // Quotes (B1.12) — the offer that precedes an invoice, with the same
         // shape: draft CRUD, a strict status filter, and every transition its

@@ -236,6 +236,13 @@ opaque_id!(
     /// not a state of the document (alo Billing, ADR 0035).
     BillingPaymentId
 );
+opaque_id!(
+    /// A bill — a supplier's invoice, read from the e-invoice file they sent
+    /// and waiting to be approved. The mirror of [`BillingInvoiceId`]: that one
+    /// is a document we raise, this one a document we receive
+    /// (alo Billing, ADR 0035).
+    BillingBillId
+);
 
 #[cfg(test)]
 mod tests {

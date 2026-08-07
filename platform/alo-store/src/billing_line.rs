@@ -214,6 +214,19 @@ pub(crate) const QUOTE_LINES: LineTable = LineTable {
     doc_column: "quote_id",
 };
 
+/// The lines of a received bill ([`crate::billing_bills`]) — a supplier's
+/// invoice line, read out of their e-invoice.
+///
+/// It is the same line model on purpose: their line and ours describe the same
+/// thing (a quantity of something at a price at a rate), so the totals
+/// arithmetic that checks their document is literally the one that computes
+/// ours. Where the two differ is ownership, not shape, and that lives in
+/// [`crate::billing_bills`].
+pub(crate) const BILL_LINES: LineTable = LineTable {
+    table: "billing_bill_lines",
+    doc_column: "bill_id",
+};
+
 impl LineTable {
     /// The lines of one document of `tenant`, in print order.
     ///
