@@ -2095,7 +2095,11 @@ export const en = {
   // issued, nothing is sent, and no invoice number is used up.
   crmRaiseQuote: "Quote",
   crmRaiseInvoice: "Invoice",
-  crmDocumentDraft: (kind: string) => (kind === "invoice" ? "draft invoice" : "draft quote"),
+  // Annotated `: string` — the catalog is `as const`, so an un-annotated
+  // return of two literals types the key as *those two English words*, which
+  // no translation could ever satisfy (B2.14).
+  crmDocumentDraft: (kind: string): string =>
+    kind === "invoice" ? "draft invoice" : "draft quote",
   crmRaiseTitle: (document: string) => `Raise a ${document}`,
   crmRaiseSubtitle:
     "It lands in Billing as a draft for you to check and complete. Nothing is issued and nothing is sent.",

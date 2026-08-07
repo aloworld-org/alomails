@@ -1707,4 +1707,297 @@ export const fr: Partial<Catalog> = {
     "La relance n’a pas pu être écrite. Vérifiez votre connexion et réessayez.",
   billingNothingOverdue:
     "Rien n’est en retard. Chaque facture émise est soit soldée, soit encore dans les délais.",
+
+  // Factures récurrentes (B2.11). Le mot qui compte partout ici : brouillon.
+  // Une échéance produit un document à vérifier, jamais une facture émise.
+  billingRecurring: "Récurrent",
+  billingRecurringTitle: "Factures récurrentes",
+  billingRecurringChip: "Récurrente",
+  billingRecurringChipHint: "Une facture récurrente a produit ce brouillon.",
+  billingNoSchedulesTitle: "Aucune facture récurrente",
+  billingNoSchedulesBody:
+    "Créez-en une pour tout ce que vous facturez à intervalle régulier — un forfait, un abonnement, un hébergement. À chaque échéance, alo prépare un brouillon que vous vérifiez et émettez vous-même.",
+  billingNewSchedule: "Nouvelle facture récurrente",
+  billingScheduleFrom: "Répéter cette facture",
+  billingScheduleFromHint:
+    "Créez une facture récurrente qui refacturera ces lignes à intervalle régulier. Chaque occurrence apparaît en brouillon — rien n’est jamais émis à votre place.",
+  billingScheduleName: "Nom",
+  billingScheduleNameHint:
+    "Le nom que vous lui donnez. Jamais imprimé sur la facture.",
+  billingScheduleCadence: "Fréquence",
+  billingCadenceWeekly: "Chaque semaine",
+  billingCadenceMonthly: "Chaque mois",
+  billingCadenceQuarterly: "Chaque trimestre",
+  billingCadenceYearly: "Chaque année",
+  billingScheduleStart: "Première le",
+  billingScheduleEnd: "Jusqu’au",
+  billingScheduleEndNever: "Sans date de fin",
+  billingScheduleNext: "Prochaine",
+  billingScheduleLast: "Dernière produite",
+  billingScheduleRaised: "Produite",
+  billingScheduleEach: "À chaque fois",
+  billingScheduleStatusActive: "En cours",
+  billingScheduleStatusPaused: "En pause",
+  billingScheduleStatusEnded: "Terminée",
+  billingScheduleStatusDue: "À échéance",
+  billingSchedulePause: "Mettre en pause",
+  billingScheduleResume: "Reprendre",
+  billingScheduleDelete: "Supprimer",
+  billingScheduleDeleteTitle: "Supprimer cette facture récurrente ?",
+  billingScheduleDeleteMessage:
+    "Elle cessera de facturer et disparaîtra de cette liste. Seule une facture récurrente n’ayant jamais produit de brouillon peut être supprimée — mettez en pause celle qui en a produit.",
+  billingScheduleRunDue: "Produire ce qui est dû",
+  billingScheduleRunHint:
+    "alo le fait tout seul chaque heure. Ceci n’est là que si vous préférez ne pas attendre.",
+  billingScheduleRunNone:
+    "Rien n’était dû. Toutes vos factures récurrentes sont à jour.",
+  billingScheduleRunDrafted: (count: number) =>
+    count === 1
+      ? "1 brouillon a été produit et attend dans vos factures. Rien n’a été émis : lisez-le, changez ce que vous voulez, et émettez-le vous-même."
+      : `${count} brouillons ont été produits et attendent dans vos factures. Rien n’a été émis : lisez-les, changez ce que vous voulez, et émettez-les vous-même.`,
+  billingScheduleSaved: (name: string) =>
+    `« ${name} » est en place. À chaque échéance, alo produira un brouillon que vous pourrez vérifier.`,
+  billingScheduleAnchorHint: (day: number) =>
+    day > 28
+      ? `Calée sur le ${day} : dans un mois plus court, elle facture le dernier jour, puis de nouveau le ${day} au mois suivant assez long.`
+      : `Calée sur le ${day === 1 ? "1er" : day} du mois.`,
+
+  // alo CRM (B2). Le vocabulaire commercial français : une « affaire »
+  // (deal) avance par « étapes » (stages) sur un « tableau » (board), et se
+  // clôt gagnée ou perdue. « Pipeline » est passé dans l’usage : il reste.
+  moduleCrm: "Ventes",
+  crmBoard: "Tableau",
+  crmList: "Liste",
+  crmPipeline: "Pipeline",
+  crmDeal: "Affaire",
+  crmStage: "Étape",
+  crmStageArchived: "Colonne archivée",
+  crmLoadFailed: "Vos affaires n’ont pas pu être chargées.",
+  crmSaveFailed: "La modification n’a pas pu être enregistrée.",
+  crmDeleteFailed: "Cet élément n’a pas pu être supprimé.",
+  crmSuggestFailed:
+    "Aucune conversation n’a pu être proposée pour le moment.",
+  crmNoBoardTitle: "Aucun pipeline",
+  crmNoBoardBody:
+    "Tous vos tableaux ont été archivés. Restaurez-en un pour travailler à nouveau vos affaires.",
+  crmNoDealsTitle: "Aucune affaire",
+  crmNoDealsBody:
+    "Créez la première opportunité et faites-la avancer sur le tableau.",
+  crmNoMatches: "Aucune affaire ne correspond à votre recherche.",
+
+  // Le formulaire d’affaire
+  crmNewDeal: "Nouvelle affaire",
+  crmEditDeal: "Modifier l’affaire",
+  crmEdit: "Modifier",
+  crmCreate: "Créer",
+  crmSave: "Enregistrer",
+  crmCancel: "Annuler",
+  crmClose: "Fermer",
+  crmDealSubtitle:
+    "Ce qu’est l’opportunité, avec qui elle se joue, et ce qu’elle vaut.",
+  crmFieldTitle: "Affaire",
+  crmFieldCompany: "Société",
+  crmCompanyHint: "La société telle que toute votre équipe doit la voir.",
+  crmFieldContactName: "Contact",
+  crmFieldContactEmail: "E-mail du contact",
+  crmContactEmailHint:
+    "Sert à proposer les conversations auxquelles cette affaire se rattache.",
+  crmFieldValue: "Montant",
+  crmValueHint: "Ce que vaut l’affaire, hors TVA.",
+  crmFieldCurrency: "Devise",
+  crmCurrencyHint: "Trois lettres, par exemple EUR.",
+  crmFieldExpectedClose: "Clôture prévue",
+  crmFieldSource: "Origine",
+  crmSourceHint:
+    "D’où vient l’opportunité — une recommandation, une campagne, un appel.",
+  crmNotAnAmount: "Ce n’est pas un montant.",
+  crmDeleteDeal: "Supprimer",
+  crmDeleteDealConfirm:
+    "Ceci supprime l’affaire et tout ce qui y est consigné. Les tâches qui en sont issues restent dans les listes de leurs responsables. C’est irréversible.",
+
+  // La liste
+  crmSearchDeals: "Rechercher une affaire",
+  crmFilterStage: "Filtrer par étape",
+  crmFilterAnyStage: "Toutes les étapes",
+  crmFilterState: "Filtrer par état",
+  crmFilterAnyState: "Tous les états",
+  crmFilterMine: "Seulement les miennes",
+  crmColDeal: "Affaire",
+  crmColCompany: "Société",
+  crmColStage: "Étape",
+  crmColValue: "Montant",
+  crmColExpectedClose: "Clôture prévue",
+  crmColState: "État",
+  crmStateOpen: "En cours",
+  crmStateWon: "Gagnée",
+  crmStateLost: "Perdue",
+  crmExpectedClose: (day: string) => `Prévue le ${day}`,
+  crmLostBecause: (reason: string) => `Perdue : ${reason}`,
+
+  // Perdre une affaire demande pourquoi : une raison facultative est une
+  // raison que personne ne saisit — et le rapport gagné/perdu en vit.
+  crmLostTitle: "Pourquoi a-t-elle été perdue ?",
+  crmLostMessage: (stage: string) =>
+    `Déplacer cette affaire vers « ${stage} » la clôt comme perdue. Dites pourquoi, afin que la raison figure dans votre rapport gagné/perdu.`,
+  crmLostPlaceholder: "Prix, calendrier, partie chez un concurrent…",
+  crmLostConfirm: "Marquer comme perdue",
+  crmLostReasonLabel: "Raison",
+  crmLostReasonPrice: "Prix",
+  crmLostReasonTiming: "Calendrier",
+  crmLostReasonCompetitor: "A choisi un concurrent",
+  crmLostReasonBudget: "Pas de budget",
+  crmLostReasonNoDecision: "Pas de décision",
+  crmLostReasonNotAFit: "Pas adaptée",
+
+  // Gagner une affaire : le passage à la facturation. Les deux créent un
+  // BROUILLON — rien n’est émis, rien n’est envoyé, aucun numéro consommé.
+  // « brouillon de facture / de devis » est masculin dans les deux cas :
+  // les phrases qui l’interpolent restent grammaticales.
+  crmRaiseQuote: "Devis",
+  crmRaiseInvoice: "Facture",
+  crmDocumentDraft: (kind: string): string =>
+    kind === "invoice" ? "brouillon de facture" : "brouillon de devis",
+  crmRaiseTitle: (document: string) => `Créer un ${document}`,
+  crmRaiseSubtitle:
+    "Il arrive dans Facturation en brouillon, à vérifier et à compléter. Rien n’est émis et rien n’est envoyé.",
+  crmRaiseFrom: (deal: string, value: string) =>
+    `Depuis « ${deal} », d’un montant de ${value}.`,
+  crmRaiseConfirm: "Créer",
+  crmRaiseFailed: "Le document n’a pas pu être créé.",
+  crmFieldVatRate: "Taux de TVA",
+  crmVatRateHint:
+    "Le taux auquel cette ligne est facturée, en pourcentage — par exemple 21.",
+  crmFieldCountry: "Pays du client",
+  crmCountryHint:
+    "Deux lettres. Cette affaire est encore un prospect : un client en est créé, et le pays détermine le traitement de la TVA.",
+  crmRaisedTitle: (document: string) => `Votre ${document} est prêt`,
+  crmRaisedSubtitle:
+    "Ouvrez-le dans Facturation pour vérifier les lignes, l’adresse et la TVA.",
+  crmRaisedWorth: (gross: string) => `${gross} TTC.`,
+  crmOpenInBilling: "Ouvrir dans Facturation",
+
+  // Le rapport : le montant par étape, et ce qui a été gagné ou perdu sur
+  // une période. Chaque chiffre vient du serveur, et deux devises ne
+  // s’additionnent jamais.
+  crmReport: "Rapport",
+  crmReportFrom: "Du",
+  crmReportTo: "Au",
+  crmReportShow: "Afficher",
+  crmReportThisQuarter: "Ce trimestre",
+  crmReportLastQuarter: "Trimestre précédent",
+  crmReportDownloadCsv: "Télécharger le CSV",
+  crmReportDownloadFailed: "Le rapport n’a pas pu être téléchargé.",
+  crmReportBasis: (from: string, to: string) =>
+    `Gagné et perdu entre le ${from} et le ${to}.`,
+  crmReportOpenAsOf: (at: string) =>
+    `Le pipeline en cours est celui du ${at}.`,
+  crmReportOpenCaption: (currency: string) =>
+    `Pipeline en cours par étape (${currency})`,
+  crmReportClosedCaption: (currency: string) =>
+    `Clôturé sur la période (${currency})`,
+  crmReportColDeals: "Affaires",
+  crmReportOpenTotal: "Total en cours",
+  crmReportWinRate: (rate: string, won: number, closed: number) =>
+    `Taux de réussite ${rate} — ${won} sur ${closed} affaires clôturées.`,
+  crmReportNoWinRate:
+    "Aucune affaire n’a été clôturée sur cette période : il n’y a pas de taux de réussite à afficher.",
+  crmReportEmptyTitle: "Rien à présenter pour l’instant",
+  crmReportEmptyBody:
+    "Ce tableau ne contient aucune affaire. Créez-en une et elle apparaîtra ici, par étape et par devise.",
+
+  // Le journal
+  crmActivityTitle: "Journal",
+  crmActivityKind: "Type d’entrée",
+  crmActivityPlaceholder: "Ce qui a été dit ou convenu…",
+  crmActivityAdd: "Consigner",
+  crmActivityDelete: "Supprimer l’entrée",
+  crmActivityEmpty: "Rien n’est encore consigné.",
+  crmKindNote: "Note",
+  crmKindCall: "Appel",
+  crmKindMeeting: "Rendez-vous",
+
+  // Les prochaines étapes sont de vraies tâches, dans la liste que leur
+  // responsable ouvre déjà.
+  crmNextStepsTitle: "Prochaines étapes",
+  crmNextStepPlaceholder: "Ce qui se passe ensuite…",
+  crmNextStepDue: "Échéance",
+  crmNextStepAdd: "Ajouter",
+  crmNextStepsEmpty: "Aucune prochaine étape convenue.",
+  crmOpenInTasks: "Ouvrir dans Tâches",
+
+  // Conversations liées. Le courrier reste dans le courrier : le lien est un
+  // renvoi, et seul un collègue qui a déjà la conversation peut l’ouvrir.
+  crmThreadsTitle: "Conversations",
+  crmThreadsEmpty: "Aucune conversation liée.",
+  crmThreadSuggest: "Proposer des conversations",
+  crmThreadLink: "Lier",
+  crmThreadUnlink: "Délier",
+  crmThreadOpenInMail: "Ouvrir dans Courrier",
+  crmThreadNotYours:
+    "Cette conversation n’est pas dans votre boîte — demandez au collègue qui l’a liée.",
+  crmThreadLinkedBy: (who: string, when: string) => `Lié par ${who} · ${when}`,
+  crmSuggestionsEmpty:
+    "Rien dans votre courrier récent ne correspond aux adresses de cette affaire.",
+  crmSuggestionAddress: (address: string) => `Correspond à ${address}`,
+  crmSuggestionDomain: (address: string) => `Même société que ${address}`,
+
+  // Les propositions de l’agent (ADR 0034) : le cadre commun, puis les
+  // actions CRM (B2.10). Rien n’est fait avant l’approbation.
+  agentProposedAction: "alo souhaite effectuer ceci — approuvez pour continuer.",
+  agentApprove: "Approuver",
+  agentDiscard: "Écarter",
+  agentDone: "C’est fait.",
+  agentFailed: "Cette action n’a pas pu être effectuée.",
+  agentActCreateDeal: "Nouvelle affaire",
+  agentActMoveDeal: "Déplacer l’affaire",
+  agentActFollowup: "E-mail de relance",
+  agentFieldDeal: "Affaire",
+  agentFieldCompany: "Société",
+  agentFieldValue: "Montant",
+  agentFieldStage: "Étape",
+  agentFieldLostReason: "Perdue car",
+  agentDealFromEmailNote: "Lie cette conversation à la nouvelle affaire.",
+  agentFollowupNote:
+    "Écrit l’e-mail dans vos Brouillons — rien n’est envoyé.",
+
+  // L’historique d’un enregistrement (B2.13). L’anglais emploie des
+  // participes (« Issued ») ; en français, un participe s’accorde avec un
+  // sujet que la ligne ne nomme pas. Ces libellés sont donc des noms
+  // d’action — invariables, et lisibles sur n’importe quel enregistrement.
+  auditHistoryTitle: "Historique",
+  auditHistoryEmpty: "Rien n’est encore arrivé à cet enregistrement.",
+  auditLoadFailed: "L’historique n’a pas pu être chargé.",
+  auditActionCreate: "Création",
+  auditActionUpdate: "Modification",
+  auditActionDelete: "Suppression",
+  auditActionArchive: "Archivage",
+  auditActionIssue: "Émission",
+  auditActionVoid: "Annulation",
+  auditActionCreditNote: "Création d’un avoir",
+  auditActionSend: "Rédaction d’un e-mail",
+  auditActionReminder: "Rédaction d’une relance",
+  auditActionPaymentCreate: "Enregistrement d’un paiement",
+  auditActionPaymentDelete: "Suppression d’un paiement",
+  auditActionImport: "Import",
+  auditActionSepaXml: "Ajout à un fichier de paiement",
+  auditActionApprove: "Approbation",
+  auditActionReject: "Rejet",
+  auditActionAccept: "Acceptation",
+  auditActionDecline: "Refus",
+  auditActionExpire: "Passage en expiré",
+  auditActionRun: "Exécution",
+  auditActionPause: "Mise en pause",
+  auditActionResume: "Reprise",
+  auditActionRatesUpdate: "Enregistrement d’un taux de change",
+  auditActionRatesImport: "Import de taux de change",
+  auditActionStageMove: "Changement de colonne",
+  auditActionStageCreate: "Ajout d’une colonne",
+  auditActionMove: "Déplacement",
+  auditActionQuoteRaised: "Création d’un devis",
+  auditActionInvoiceRaised: "Création d’une facture",
+  auditActionActivityCreate: "Ajout d’une note",
+  auditActionNextStepCreate: "Ajout d’une prochaine étape",
+  auditActionThreadCreate: "Liaison d’une conversation",
+  auditActionThreadDelete: "Retrait d’une conversation",
+  auditActionLeadCreate: "Import de prospects",
 };

@@ -1685,4 +1685,293 @@ export const nl: Partial<Catalog> = {
     "De herinnering kon niet worden geschreven. Controleer uw verbinding en probeer opnieuw.",
   billingNothingOverdue:
     "Niets is achterstallig. Elke uitgegeven factuur is voldaan of nog op tijd.",
+
+  // Terugkerende facturen (B2.11). Het woord dat hier overal telt: concept.
+  // Een vervaldag maakt een document om te controleren, nooit een uitgegeven
+  // factuur.
+  billingRecurring: "Terugkerend",
+  billingRecurringTitle: "Terugkerende facturen",
+  billingRecurringChip: "Terugkerend",
+  billingRecurringChipHint: "Een terugkerende factuur heeft dit concept aangemaakt.",
+  billingNoSchedulesTitle: "Nog geen terugkerende facturen",
+  billingNoSchedulesBody:
+    "Stel er een in voor alles wat u met een vaste regelmaat factureert — een abonnement, een vast maandbedrag, hosting. Telkens als het zover is, maakt alo een concept dat u zelf controleert en uitgeeft.",
+  billingNewSchedule: "Nieuwe terugkerende factuur",
+  billingScheduleFrom: "Deze factuur herhalen",
+  billingScheduleFromHint:
+    "Stel een terugkerende factuur in die deze regels met een vaste regelmaat opnieuw factureert. Elke keer verschijnt als concept — er wordt nooit iets voor u uitgegeven.",
+  billingScheduleName: "Naam",
+  billingScheduleNameHint: "Hoe u deze afspraak noemt. Staat nooit op de factuur.",
+  billingScheduleCadence: "Frequentie",
+  billingCadenceWeekly: "Elke week",
+  billingCadenceMonthly: "Elke maand",
+  billingCadenceQuarterly: "Elk kwartaal",
+  billingCadenceYearly: "Elk jaar",
+  billingScheduleStart: "Eerste op",
+  billingScheduleEnd: "Tot",
+  billingScheduleEndNever: "Geen einddatum",
+  billingScheduleNext: "Volgende",
+  billingScheduleLast: "Laatst aangemaakt",
+  billingScheduleRaised: "Aangemaakt",
+  billingScheduleEach: "Elke keer",
+  billingScheduleStatusActive: "Loopt",
+  billingScheduleStatusPaused: "Gepauzeerd",
+  billingScheduleStatusEnded: "Afgelopen",
+  billingScheduleStatusDue: "Aan de beurt",
+  billingSchedulePause: "Pauzeren",
+  billingScheduleResume: "Hervatten",
+  billingScheduleDelete: "Verwijderen",
+  billingScheduleDeleteTitle: "Deze terugkerende factuur verwijderen?",
+  billingScheduleDeleteMessage:
+    "Ze stopt met factureren en verdwijnt uit deze lijst. Alleen een afspraak die nog nooit een concept heeft aangemaakt kan worden verwijderd — pauzeer er een die dat wel deed.",
+  billingScheduleRunDue: "Maak aan wat aan de beurt is",
+  billingScheduleRunHint:
+    "alo doet dit elk uur vanzelf. Dit is er alleen voor als u liever niet wacht.",
+  billingScheduleRunNone:
+    "Er was niets aan de beurt. Elke terugkerende factuur is bij.",
+  billingScheduleRunDrafted: (count: number) =>
+    count === 1
+      ? "Er is 1 concept aangemaakt en het wacht bij uw facturen. Er is niets uitgegeven: lees het, wijzig wat u wilt, en geef het zelf uit."
+      : `Er zijn ${count} concepten aangemaakt en ze wachten bij uw facturen. Er is niets uitgegeven: lees ze, wijzig wat u wilt, en geef ze zelf uit.`,
+  billingScheduleSaved: (name: string) =>
+    `„${name}” staat klaar. Telkens als het zover is, maakt alo een concept dat u kunt controleren.`,
+  billingScheduleAnchorHint: (day: number) =>
+    day > 28
+      ? `Vastgezet op dag ${day}: in een kortere maand factureert ze op de laatste dag, en in de volgende lange maand weer op dag ${day}.`
+      : `Vastgezet op dag ${day} van de maand.`,
+
+  // alo CRM (B2). Een „deal” heet in het Nederlandse zakenleven ook zo; hij
+  // schuift per „fase” over een „bord” en sluit gewonnen of verloren.
+  moduleCrm: "Verkoop",
+  crmBoard: "Bord",
+  crmList: "Lijst",
+  crmPipeline: "Pijplijn",
+  crmDeal: "Deal",
+  crmStage: "Fase",
+  crmStageArchived: "Gearchiveerde kolom",
+  crmLoadFailed: "Uw deals konden niet worden geladen.",
+  crmSaveFailed: "De wijziging kon niet worden opgeslagen.",
+  crmDeleteFailed: "Dat kon niet worden verwijderd.",
+  crmSuggestFailed: "Er konden nu geen gesprekken worden voorgesteld.",
+  crmNoBoardTitle: "Nog geen pijplijn",
+  crmNoBoardBody:
+    "Al uw borden zijn gearchiveerd. Zet er een terug om weer aan deals te werken.",
+  crmNoDealsTitle: "Nog geen deals",
+  crmNoDealsBody:
+    "Maak de eerste kans aan en schuif hem over het bord naarmate hij vordert.",
+  crmNoMatches: "Geen enkele deal komt overeen met wat u typte.",
+
+  // Het dealformulier
+  crmNewDeal: "Nieuwe deal",
+  crmEditDeal: "Deal bewerken",
+  crmEdit: "Bewerken",
+  crmCreate: "Aanmaken",
+  crmSave: "Opslaan",
+  crmCancel: "Annuleren",
+  crmClose: "Sluiten",
+  crmDealSubtitle: "Wat de kans is, met wie hij loopt, en wat hij waard is.",
+  crmFieldTitle: "Deal",
+  crmFieldCompany: "Bedrijf",
+  crmCompanyHint: "Het bedrijf zoals uw hele team het hoort te zien.",
+  crmFieldContactName: "Contactpersoon",
+  crmFieldContactEmail: "E-mail contactpersoon",
+  crmContactEmailHint:
+    "Wordt gebruikt om de gesprekken voor te stellen waar deze deal bij hoort.",
+  crmFieldValue: "Waarde",
+  crmValueHint: "Wat de deal waard is, exclusief btw.",
+  crmFieldCurrency: "Valuta",
+  crmCurrencyHint: "Drie letters, bijvoorbeeld EUR.",
+  crmFieldExpectedClose: "Verwachte afsluiting",
+  crmFieldSource: "Herkomst",
+  crmSourceHint:
+    "Waar de kans vandaan kwam — een aanbeveling, een campagne, een telefoontje.",
+  crmNotAnAmount: "Dat is geen bedrag.",
+  crmDeleteDeal: "Verwijderen",
+  crmDeleteDealConfirm:
+    "Dit verwijdert de deal en alles wat erop is vastgelegd. Taken die eruit zijn ontstaan blijven in de lijst van hun eigenaar staan. Dit kan niet ongedaan worden gemaakt.",
+
+  // De lijst
+  crmSearchDeals: "Deals zoeken",
+  crmFilterStage: "Filteren op fase",
+  crmFilterAnyStage: "Alle fasen",
+  crmFilterState: "Filteren op status",
+  crmFilterAnyState: "Alle statussen",
+  crmFilterMine: "Alleen die van mij",
+  crmColDeal: "Deal",
+  crmColCompany: "Bedrijf",
+  crmColStage: "Fase",
+  crmColValue: "Waarde",
+  crmColExpectedClose: "Verwachte afsluiting",
+  crmColState: "Status",
+  crmStateOpen: "Open",
+  crmStateWon: "Gewonnen",
+  crmStateLost: "Verloren",
+  crmExpectedClose: (day: string) => `Verwacht ${day}`,
+  crmLostBecause: (reason: string) => `Verloren: ${reason}`,
+
+  // Een deal verliezen vraagt waarom: een reden die optioneel is, is een
+  // reden die niemand invult — en het gewonnen/verloren-rapport leeft ervan.
+  crmLostTitle: "Waarom is hij verloren?",
+  crmLostMessage: (stage: string) =>
+    `Deze deal naar „${stage}” verplaatsen sluit hem als verloren. Zeg waarom, dan staat de reden in uw gewonnen/verloren-rapport.`,
+  crmLostPlaceholder: "Prijs, timing, naar een concurrent…",
+  crmLostConfirm: "Als verloren markeren",
+  crmLostReasonLabel: "Reden",
+  crmLostReasonPrice: "Prijs",
+  crmLostReasonTiming: "Timing",
+  crmLostReasonCompetitor: "Koos een concurrent",
+  crmLostReasonBudget: "Geen budget",
+  crmLostReasonNoDecision: "Geen beslissing",
+  crmLostReasonNotAFit: "Geen match",
+
+  // Een deal winnen: de overgang naar de facturatie. Beide maken een
+  // CONCEPT — er wordt niets uitgegeven, niets verstuurd, en geen
+  // factuurnummer opgebruikt.
+  crmRaiseQuote: "Offerte",
+  crmRaiseInvoice: "Factuur",
+  crmDocumentDraft: (kind: string): string =>
+    kind === "invoice" ? "conceptfactuur" : "conceptofferte",
+  crmRaiseTitle: (document: string) => `Een ${document} aanmaken`,
+  crmRaiseSubtitle:
+    "Hij komt als concept in Facturatie te staan, om te controleren en aan te vullen. Er wordt niets uitgegeven en niets verstuurd.",
+  crmRaiseFrom: (deal: string, value: string) =>
+    `Uit „${deal}”, ter waarde van ${value}.`,
+  crmRaiseConfirm: "Aanmaken",
+  crmRaiseFailed: "Het document kon niet worden aangemaakt.",
+  crmFieldVatRate: "Btw-tarief",
+  crmVatRateHint:
+    "Het tarief waartegen deze regel wordt gefactureerd, in procenten — bijvoorbeeld 21.",
+  crmFieldCountry: "Land van de klant",
+  crmCountryHint:
+    "Twee letters. Deze deal is nog een lead, dus er wordt een klant van gemaakt — en het land bepaalt de btw-behandeling.",
+  crmRaisedTitle: (document: string) => `Uw ${document} staat klaar`,
+  crmRaisedSubtitle:
+    "Open hem in Facturatie om de regels, het adres en de btw te controleren.",
+  crmRaisedWorth: (gross: string) => `${gross} inclusief btw.`,
+  crmOpenInBilling: "Openen in Facturatie",
+
+  // Het rapport: waarde per fase, en wat er in een periode is gewonnen en
+  // verloren. Elk bedrag komt van de server, en twee valuta's worden nooit
+  // bij elkaar opgeteld.
+  crmReport: "Rapport",
+  crmReportFrom: "Van",
+  crmReportTo: "Tot",
+  crmReportShow: "Tonen",
+  crmReportThisQuarter: "Dit kwartaal",
+  crmReportLastQuarter: "Vorig kwartaal",
+  crmReportDownloadCsv: "CSV downloaden",
+  crmReportDownloadFailed: "Het rapport kon niet worden gedownload.",
+  crmReportBasis: (from: string, to: string) =>
+    `Gewonnen en verloren tussen ${from} en ${to}.`,
+  crmReportOpenAsOf: (at: string) =>
+    `De open pijplijn is zoals hij ervoor staat op ${at}.`,
+  crmReportOpenCaption: (currency: string) =>
+    `Open pijplijn per fase (${currency})`,
+  crmReportClosedCaption: (currency: string) =>
+    `Afgesloten in de periode (${currency})`,
+  crmReportColDeals: "Deals",
+  crmReportOpenTotal: "Open totaal",
+  crmReportWinRate: (rate: string, won: number, closed: number) =>
+    `Winstpercentage ${rate} — ${won} van ${closed} afgesloten deals.`,
+  crmReportNoWinRate:
+    "Er is in deze periode geen deal afgesloten, dus er is geen winstpercentage te tonen.",
+  crmReportEmptyTitle: "Nog niets te rapporteren",
+  crmReportEmptyBody:
+    "Op dit bord staan geen deals. Maak er een aan en hij verschijnt hier, per fase en per valuta.",
+
+  // Het logboek
+  crmActivityTitle: "Logboek",
+  crmActivityKind: "Soort notitie",
+  crmActivityPlaceholder: "Wat er is gezegd of afgesproken…",
+  crmActivityAdd: "Vastleggen",
+  crmActivityDelete: "Notitie verwijderen",
+  crmActivityEmpty: "Er is nog niets vastgelegd.",
+  crmKindNote: "Notitie",
+  crmKindCall: "Telefoontje",
+  crmKindMeeting: "Afspraak",
+
+  // Volgende stappen zijn echte taken, in de lijst die hun eigenaar toch al
+  // opent.
+  crmNextStepsTitle: "Volgende stappen",
+  crmNextStepPlaceholder: "Wat er hierna gebeurt…",
+  crmNextStepDue: "Deadline",
+  crmNextStepAdd: "Toevoegen",
+  crmNextStepsEmpty: "Er is nog geen volgende stap afgesproken.",
+  crmOpenInTasks: "Openen in Taken",
+
+  // Gekoppelde gesprekken. E-mail blijft in e-mail: de koppeling is een
+  // verwijzing, en alleen een collega die het gesprek al heeft, opent het.
+  crmThreadsTitle: "Gesprekken",
+  crmThreadsEmpty: "Er is nog geen gesprek gekoppeld.",
+  crmThreadSuggest: "Gesprekken voorstellen",
+  crmThreadLink: "Koppelen",
+  crmThreadUnlink: "Ontkoppelen",
+  crmThreadOpenInMail: "Openen in E-mail",
+  crmThreadNotYours:
+    "Dit gesprek zit niet in uw postvak — vraag de collega die het koppelde.",
+  crmThreadLinkedBy: (who: string, when: string) =>
+    `Gekoppeld door ${who} · ${when}`,
+  crmSuggestionsEmpty:
+    "Niets in uw recente e-mail komt overeen met de adressen van deze deal.",
+  crmSuggestionAddress: (address: string) => `Komt overeen met ${address}`,
+  crmSuggestionDomain: (address: string) => `Zelfde bedrijf als ${address}`,
+
+  // De voorstellen van de agent (ADR 0034): eerst het gedeelde kader, dan de
+  // CRM-acties (B2.10). Er gebeurt niets vóór de goedkeuring.
+  agentProposedAction: "alo wil dit doen — keur het goed om door te gaan.",
+  agentApprove: "Goedkeuren",
+  agentDiscard: "Verwerpen",
+  agentDone: "Klaar.",
+  agentFailed: "Die actie kon niet worden uitgevoerd.",
+  agentActCreateDeal: "Nieuwe deal",
+  agentActMoveDeal: "Deal verplaatsen",
+  agentActFollowup: "Opvolgmail",
+  agentFieldDeal: "Deal",
+  agentFieldCompany: "Bedrijf",
+  agentFieldValue: "Waarde",
+  agentFieldStage: "Fase",
+  agentFieldLostReason: "Verloren omdat",
+  agentDealFromEmailNote: "Koppelt dit gesprek aan de nieuwe deal.",
+  agentFollowupNote:
+    "Schrijft de e-mail in uw Concepten — er wordt niets verstuurd.",
+
+  // De geschiedenis van een record (B2.13). Zoals in het Engels: voltooide
+  // deelwoorden, want elke regel is iets dat gebeurd is — en de soort record
+  // is de pagina die de lezer al open heeft.
+  auditHistoryTitle: "Geschiedenis",
+  auditHistoryEmpty: "Er is nog niets met dit record gebeurd.",
+  auditLoadFailed: "De geschiedenis kon niet worden geladen.",
+  auditActionCreate: "Aangemaakt",
+  auditActionUpdate: "Bewerkt",
+  auditActionDelete: "Verwijderd",
+  auditActionArchive: "Gearchiveerd",
+  auditActionIssue: "Uitgegeven",
+  auditActionVoid: "Geannuleerd",
+  auditActionCreditNote: "Creditnota aangemaakt",
+  auditActionSend: "E-mail opgesteld",
+  auditActionReminder: "Herinnering opgesteld",
+  auditActionPaymentCreate: "Betaling vastgelegd",
+  auditActionPaymentDelete: "Betaling verwijderd",
+  auditActionImport: "Geïmporteerd",
+  auditActionSepaXml: "Aan een betaalbestand toegevoegd",
+  auditActionApprove: "Goedgekeurd",
+  auditActionReject: "Afgekeurd",
+  auditActionAccept: "Geaccepteerd",
+  auditActionDecline: "Afgewezen",
+  auditActionExpire: "Als verlopen gemarkeerd",
+  auditActionRun: "Uitgevoerd",
+  auditActionPause: "Gepauzeerd",
+  auditActionResume: "Hervat",
+  auditActionRatesUpdate: "Wisselkoers ingesteld",
+  auditActionRatesImport: "Wisselkoersen geïmporteerd",
+  auditActionStageMove: "Naar een andere kolom verplaatst",
+  auditActionStageCreate: "Kolom toegevoegd",
+  auditActionMove: "Verplaatst",
+  auditActionQuoteRaised: "Offerte aangemaakt",
+  auditActionInvoiceRaised: "Factuur aangemaakt",
+  auditActionActivityCreate: "Notitie toegevoegd",
+  auditActionNextStepCreate: "Volgende stap toegevoegd",
+  auditActionThreadCreate: "Gesprek gekoppeld",
+  auditActionThreadDelete: "Gesprek ontkoppeld",
+  auditActionLeadCreate: "Leads geïmporteerd",
 };
