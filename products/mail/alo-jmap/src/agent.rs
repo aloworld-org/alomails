@@ -230,7 +230,7 @@ async fn execute_move_to_role(
     name: &str,
 ) -> Result<Json<Value>, Problem> {
     let msg = message_id_arg(args)?;
-    let dest = ensure_role_mailbox(account, role, name).await?;
+    let dest = crate::drafts::role_mailbox(account, role, name).await?;
     relocate_message(account, &msg, &dest).await?;
     Ok(Json(json!({ "ok": true, "result": { "kind": "email", "id": msg.as_str() } })))
 }
@@ -314,31 +314,13 @@ async fn execute_snooze(account: &Account, args: &Value) -> Result<Json<Value>, 
         .ok_or_else(|| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "a future RFC 3339 wake time is required"))?;
     // Snooze hides the message from the Inbox, so that is the mailbox to move it
     // out of; ensure it exists for the rare account that has none yet.
-    let inbox = ensure_role_mailbox(account, "inbox", "Inbox").await?;
+    let inbox = crate::drafts::role_mailbox(account, "inbox", "Inbox").await?;
     account
         .acc
         .snooze(std::slice::from_ref(&msg), &inbox, epoch)
         .await
         .map_err(|_| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "could not snooze the email"))?;
     Ok(Json(json!({ "ok": true, "result": { "kind": "email", "id": msg.as_str() } })))
-}
-
-/// Get-or-create the account's mailbox for a standard `role` (creating it with
-/// `name` on first use). Every standard role is provisioned on demand.
-async fn ensure_role_mailbox(account: &Account, role: &str, name: &str) -> Result<MailboxId, Problem> {
-    if let Some(id) = account
-        .acc
-        .mailbox_by_role(role)
-        .await
-        .map_err(|_| Problem::server_error())?
-    {
-        return Ok(id);
-    }
-    account
-        .acc
-        .create_mailbox(None, name, Some(role))
-        .await
-        .map_err(|_| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "could not move the email"))
 }
 
 /// Draft a NEW email from approved args and save it to the user's Drafts (marked
@@ -358,9 +340,9 @@ async fn execute_draft_email(
     let body = draft_body_arg(args)?;
     let subject = args.get("subject").and_then(Value::as_str).unwrap_or("").trim().to_owned();
 
-    let from = caller_from_address(account, state).await?;
+    let from = crate::drafts::from_address(account, state).await?;
     let outgoing = compose(&from, vec![to], subject, body, Vec::new(), Vec::new());
-    let id = save_draft(account, &outgoing).await?;
+    let id = crate::drafts::save(account, &outgoing).await?;
     Ok(Json(json!({ "ok": true, "result": { "kind": "draft", "id": id.as_str() } })))
 }
 
@@ -397,9 +379,9 @@ async fn execute_draft_reply(
         .collect();
     let references = reply_references(&parsed.referenced_ids, parsed.message_id.as_deref());
 
-    let from = caller_from_address(account, state).await?;
+    let from = crate::drafts::from_address(account, state).await?;
     let outgoing = compose(&from, vec![to], subject, body, in_reply_to, references);
-    let id = save_draft(account, &outgoing).await?;
+    let id = crate::drafts::save(account, &outgoing).await?;
     Ok(Json(json!({ "ok": true, "result": { "kind": "draft", "id": id.as_str() } })))
 }
 
@@ -410,18 +392,6 @@ fn draft_body_arg(args: &Value) -> Result<String, Problem> {
         return Err(Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "the email body is required"));
     }
     Ok(body)
-}
-
-/// The caller's own canonical send-from address. Resolved server-side so the
-/// model can never choose the author of a draft.
-async fn caller_from_address(account: &Account, state: &AppState) -> Result<String, Problem> {
-    state
-        .store
-        .for_tenant(account.tenant.clone())
-        .email_of(&account.user)
-        .await
-        .map_err(|_| Problem::server_error())?
-        .ok_or_else(|| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "this account has no send address"))
 }
 
 /// Assemble a plain-text outgoing message. The `mime` builder CR/LF-sanitizes
@@ -452,25 +422,6 @@ fn compose(
         message_id_domain: crate::api::domain_of(from),
         message_id_token: crate::api::new_message_token(),
     }
-}
-
-/// Build the message and save it into Drafts (created on first use) with the
-/// `$draft` keyword — the same path the JMAP `Email/set` create uses. The user
-/// reviews it and sends it through the normal submission path; this never sends.
-async fn save_draft(account: &Account, outgoing: &crate::mime::Outgoing) -> Result<MessageId, Problem> {
-    let raw = crate::mime::build(outgoing);
-    let drafts = ensure_role_mailbox(account, "drafts", "Drafts").await?;
-    let id = account
-        .acc
-        .ingest(&drafts, &raw)
-        .await
-        .map_err(|_| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, "could not save the draft"))?;
-    account
-        .acc
-        .set_keyword(&id, "$draft", true)
-        .await
-        .map_err(|_| Problem::server_error())?;
-    Ok(id)
 }
 
 /// SEND a draft the user already has. This is the one agent action that leaves

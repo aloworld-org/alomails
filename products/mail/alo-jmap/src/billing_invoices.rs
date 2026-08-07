@@ -520,8 +520,10 @@ pub async fn pdf_invoice(
 ///
 /// Both renderings are built from this — the page by [`print_invoice`], the
 /// file by [`pdf_invoice`] — so the paper a customer holds and the file they
-/// save cannot disagree about a figure, a date, or what the document is.
-struct Printable {
+/// save cannot disagree about a figure, a date, or what the document is. The
+/// covering email ([`crate::billing_send`]) is a third reader of the same
+/// value, for the same reason.
+pub(crate) struct Printable {
     /// The document itself, with its lines and the store's totals.
     document: InvoiceDocument,
     /// Who it is to, re-read through the account door.
@@ -534,7 +536,7 @@ struct Printable {
 
 /// Loads one of the tenant's invoices and both parties to it, or fails with
 /// the `404` an id from another tenant gets.
-async fn printable(acc: &AccountStore, id: &BillingInvoiceId) -> Result<Printable, Problem> {
+pub(crate) async fn printable(acc: &AccountStore, id: &BillingInvoiceId) -> Result<Printable, Problem> {
     let document = load(acc, id).await?;
     let (customer, issuer) = print::parties(acc, &document.invoice.customer_id).await?;
     // What this credits is read separately: the store holds the id, and the
@@ -556,12 +558,19 @@ async fn printable(acc: &AccountStore, id: &BillingInvoiceId) -> Result<Printabl
 }
 
 impl Printable {
+    /// Where the document stands, which decides whether it may be sent to the
+    /// customer at all ([`crate::billing_send`]). A status rather than the
+    /// whole record: nothing outside this module needs the stored row.
+    pub(crate) fn status(&self) -> InvoiceStatus {
+        self.document.invoice.status
+    }
+
     /// The document as the renderers see it.
     ///
     /// What it says about itself comes from its own stored state, never from
     /// the request: a draft prints as a draft and without a number, a void
     /// invoice prints as void, and a credit note is titled as one.
-    fn as_document(&self) -> PrintDocument<'_> {
+    pub(crate) fn as_document(&self) -> PrintDocument<'_> {
         let invoice = &self.document.invoice;
         PrintDocument {
             kind: if invoice.is_credit_note {

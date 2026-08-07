@@ -16,9 +16,10 @@ use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
     admin, agent, ai, api, autoconfig, base, billing_customers, billing_invoices, billing_products,
-    billing_quotes, billing_settings, blob, calendar, carddav, contacts, delegates, docs, drive,
-    filters, flagdue, imap_import_route, push, reset_route, schedule, security, session, settings,
-    share, signup_route, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    billing_quotes, billing_send, billing_settings, blob, calendar, carddav, contacts, delegates,
+    docs, drive, filters, flagdue, imap_import_route, push, reset_route, schedule, security,
+    session, settings, share, signup_route, snooze, spaces, tasks, unsubscribe, wopi,
+    workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -267,6 +268,14 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/billing/invoices/{id}/pdf",
             get(billing_invoices::pdf_invoice),
+        )
+        // Drafts a covering email to the customer with the PDF attached and
+        // leaves it in Drafts (B1.18). It never sends, and never changes the
+        // invoice — unlike the quote route of the same name, which is a
+        // lifecycle transition.
+        .route(
+            "/billing/invoices/{id}/send",
+            post(billing_send::send_invoice),
         )
         // Quotes (B1.12) — the offer that precedes an invoice, with the same
         // shape: draft CRUD, a strict status filter, and every transition its
