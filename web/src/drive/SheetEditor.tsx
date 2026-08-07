@@ -444,6 +444,54 @@ export function SheetEditor({
       setNumberFormat: (pattern) => {
         range()?.setNumberFormat(pattern);
       },
+      setRowHeight: (height) => {
+        const r = range();
+        const sheet = ws();
+        if (r !== null && sheet !== null) sheet.setRowHeight(r.getRow(), height);
+      },
+      setColumnWidth: (width) => {
+        const r = range();
+        const sheet = ws();
+        if (r !== null && sheet !== null) sheet.setColumnWidth(r.getColumn(), width);
+      },
+      autoFitRow: () => {
+        const r = range();
+        const sheet = ws();
+        if (r !== null && sheet !== null) sheet.autoResizeRows(r.getRow(), 1);
+      },
+      autoFitColumn: () => {
+        const r = range();
+        const sheet = ws();
+        if (r !== null && sheet !== null) sheet.autoResizeColumns(r.getColumn(), 1);
+      },
+      hideRow: () => {
+        const r = range();
+        const sheet = ws();
+        if (r !== null && sheet !== null) sheet.hideRows(r.getRow(), 1);
+      },
+      showRows: () => {
+        const sheet = ws();
+        if (sheet !== null) sheet.showRows(0, sheet.getMaxRows());
+      },
+      hideColumn: () => {
+        const r = range();
+        const sheet = ws();
+        if (r !== null && sheet !== null) sheet.hideColumns(r.getColumn(), 1);
+      },
+      showColumns: () => {
+        const sheet = ws();
+        if (sheet !== null) sheet.showColumns(0, sheet.getMaxColumns());
+      },
+      toggleGridlines: () => {
+        const sheet = ws();
+        if (sheet !== null) sheet.setHiddenGridlines(!sheet.hasHiddenGridLines());
+      },
+      setGridlineColor: (hex) => {
+        ws()?.setGridLinesColor(hex);
+      },
+      setSheetDirection: (direction) => {
+        void apiRef.current?.executeCommand("sheet.command.set-worksheet-right-to-left", { rightToLeft: direction === "rtl" ? 1 : 0 });
+      },
       insertRow: (where) => {
         const r = range();
         const sheet = ws();

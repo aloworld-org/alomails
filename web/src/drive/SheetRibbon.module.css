@@ -97,6 +97,53 @@
   grid-template-columns: repeat(2, 28px);
   gap: 4px 5px;
 }
+.layoutGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 28px);
+  gap: 5px;
+}
+.sizeControl {
+  display: grid;
+  grid-template-columns: 18px minmax(74px, auto) 52px 18px 28px;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+.sizeControl input {
+  width: 52px;
+  height: 26px;
+  padding: 0 5px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+}
+.sizeControl input:hover:not(:disabled),
+.sizeControl input:focus-visible {
+  border-color: var(--accent);
+  outline: none;
+}
+.sizeUnit {
+  color: var(--text-tertiary);
+}
+.sizeAuto {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+}
+.sizeAuto:hover:not(:disabled) {
+  border-color: var(--border-subtle);
+  background: var(--bg-raised);
+  color: var(--accent);
+}
 .iconBtn {
   display: inline-flex;
   align-items: center;

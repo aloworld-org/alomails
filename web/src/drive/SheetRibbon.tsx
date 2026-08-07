@@ -26,6 +26,8 @@ import {
   DollarSign,
   Copy,
   Eraser,
+  Eye,
+  EyeOff,
   Filter,
   Globe2,
   Italic,
@@ -34,10 +36,12 @@ import {
   Link,
   ListChecks,
   ListTree,
+  Maximize2,
   MessageSquare,
   MoreHorizontal,
   PaintBucket,
   Palette,
+  Grid3X3,
   Radical,
   Redo2,
   RotateCcw,
@@ -82,6 +86,17 @@ export interface SheetActions {
   setWrapMode: (mode: "overflow" | "wrap" | "clip") => void;
   mergeCells: (mode: "all" | "across" | "vertical" | "unmerge") => void;
   setNumberFormat: (pattern: string) => void;
+  setRowHeight: (height: number) => void;
+  setColumnWidth: (width: number) => void;
+  autoFitRow: () => void;
+  autoFitColumn: () => void;
+  hideRow: () => void;
+  showRows: () => void;
+  hideColumn: () => void;
+  showColumns: () => void;
+  toggleGridlines: () => void;
+  setGridlineColor: (hex: string) => void;
+  setSheetDirection: (direction: "ltr" | "rtl") => void;
   insertRow: (where: "before" | "after") => void;
   insertColumn: (where: "before" | "after") => void;
   deleteRow: () => void;
@@ -195,7 +210,6 @@ const BORDER_GLYPHS: Record<string, string> = {
 const TABS = ["home", "layout", "formulas", "data", "review", "view"] as const;
 type Tab = (typeof TABS)[number];
 // Tabs whose tools need Univer plugins we haven't wired yet — honest placeholder.
-const SOON: Tab[] = ["layout"];
 
 function tabLabel(tab: Tab): string {
   switch (tab) {
@@ -294,11 +308,11 @@ export function SheetRibbon({ actions, disabled, formulaCategories, activeBorder
       </div>
 
       {tab === "home" && <HomeTab actions={actions} disabled={disabled} selectionFormatting={selectionFormatting} />}
+      {tab === "layout" && <PageLayoutTab actions={actions} disabled={disabled} />}
       {tab === "formulas" && <FormulasTab actions={actions} disabled={disabled} categories={formulaCategories} />}
       {tab === "data" && <DataTab actions={actions} disabled={disabled} />}
       {tab === "review" && <ReviewTab actions={actions} disabled={disabled} />}
       {tab === "view" && <ViewTab actions={actions} disabled={disabled} />}
-      {SOON.includes(tab) && <div className={styles.soon}>{strings.sheetTabSoon(tabLabel(tab))}</div>}
     </div>
   );
 }
@@ -649,6 +663,39 @@ function ReviewTab({ actions, disabled }: { actions: SheetActions; disabled: boo
   );
 }
 
+function PageLayoutTab({ actions, disabled }: { actions: SheetActions; disabled: boolean }) {
+  return (
+    <div className={styles.groups}>
+      <Group label={strings.sheetGroupCellSize}>
+        <div className={styles.rowStack}>
+          <SizeControl label={strings.sheetRowHeight} autoLabel={strings.sheetAutoFitRow} defaultValue={20} onCommit={actions.setRowHeight} onAutoFit={actions.autoFitRow} disabled={disabled}><Rows3 size={16} /></SizeControl>
+          <SizeControl label={strings.sheetColumnWidth} autoLabel={strings.sheetAutoFitColumn} defaultValue={100} onCommit={actions.setColumnWidth} onAutoFit={actions.autoFitColumn} disabled={disabled}><Columns3 size={16} /></SizeControl>
+        </div>
+      </Group>
+      <Group label={strings.sheetGroupVisibility}>
+        <div className={styles.layoutGrid}>
+          <IconBtn label={strings.sheetHideRow} onClick={actions.hideRow} disabled={disabled}><EyeOff size={16} /></IconBtn>
+          <IconBtn label={strings.sheetShowRows} onClick={actions.showRows} disabled={disabled}><Eye size={16} /></IconBtn>
+          <IconBtn label={strings.sheetHideColumn} onClick={actions.hideColumn} disabled={disabled}><EyeOff size={16} /></IconBtn>
+          <IconBtn label={strings.sheetShowColumns} onClick={actions.showColumns} disabled={disabled}><Eye size={16} /></IconBtn>
+        </div>
+      </Group>
+      <Group label={strings.sheetGroupSheetOptions}>
+        <div className={styles.row}>
+          <IconBtn label={strings.sheetToggleGridlines} onClick={actions.toggleGridlines} disabled={disabled} showLabel><Grid3X3 size={16} /></IconBtn>
+          <ColorBtn label={strings.sheetGridlineColor} onPick={actions.setGridlineColor} disabled={disabled}><PaintBucket size={16} /></ColorBtn>
+        </div>
+      </Group>
+      <Group label={strings.sheetGroupDirection}>
+        <div className={styles.row}>
+          <IconBtn label={strings.sheetLeftToRight} onClick={() => actions.setSheetDirection("ltr")} disabled={disabled} showLabel><AlignLeft size={16} /></IconBtn>
+          <IconBtn label={strings.sheetRightToLeft} onClick={() => actions.setSheetDirection("rtl")} disabled={disabled} showLabel><AlignRight size={16} /></IconBtn>
+        </div>
+      </Group>
+    </div>
+  );
+}
+
 function ViewTab({ actions, disabled }: { actions: SheetActions; disabled: boolean }) {
   return (
     <div className={styles.groups}>
@@ -703,6 +750,36 @@ function IconBtn({
       {children}
       {showLabel && <span className={styles.iconBtnLabel}>{label}</span>}
     </button>
+  );
+}
+
+function SizeControl({ label, autoLabel, defaultValue, onCommit, onAutoFit, disabled, children }: { label: string; autoLabel: string; defaultValue: number; onCommit: (value: number) => void; onAutoFit: () => void; disabled: boolean; children: React.ReactNode }) {
+  const commit = (input: HTMLInputElement) => {
+    const value = Number(input.value);
+    if (Number.isFinite(value) && value >= 8 && value <= 500) onCommit(value);
+  };
+  return (
+    <div className={styles.sizeControl} title={label}>
+      {children}
+      <span>{label}</span>
+      <input
+        type="number"
+        min={8}
+        max={500}
+        defaultValue={defaultValue}
+        disabled={disabled}
+        aria-label={label}
+        onBlur={(event) => commit(event.currentTarget)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            commit(event.currentTarget);
+            event.currentTarget.blur();
+          }
+        }}
+      />
+      <span className={styles.sizeUnit}>px</span>
+      <button type="button" className={styles.sizeAuto} onClick={onAutoFit} disabled={disabled} aria-label={autoLabel} title={autoLabel}><Maximize2 size={14} /></button>
+    </div>
   );
 }
 
