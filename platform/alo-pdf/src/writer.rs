@@ -5,12 +5,23 @@
 //! concatenation — every object has to be counted as it is written — and it is
 //! the whole content of this module.
 //!
-//! What is produced is **PDF 1.7, uncompressed, 7-bit clean**: an invoice is a
-//! few kilobytes of text either way, and a file a human can read in an editor
-//! is a file whose bugs can be seen. Compression, and the PDF/A-3 structure
-//! Factur-X needs (embedded font, XMP metadata, output intent, an attached
-//! CII invoice), are additive and land with B1.22.
+//! What is produced is **PDF 1.7, uncompressed**: an invoice is a few
+//! kilobytes of text either way, and a file a human can read in an editor is a
+//! file whose bugs can be seen. The page content stays 7-bit clean; an
+//! attachment ([`crate::attachment`]) is carried byte for byte, because the
+//! bytes of an e-invoice are the caller's and re-encoding them would change
+//! the document a receiving system parses.
+//!
+//! **Not yet PDF/A-3.** Factur-X asks for that conformance level, and two of
+//! its requirements are not this crate's to decide — an embedded font file and
+//! an output-intent ICC profile are binaries that need a human's licence
+//! choice (`docs/design/billing.md`, B1.17). What is here is everything else
+//! the hybrid document needs: the attachment, its `/AFRelationship`, the
+//! `/AF` array on the catalogue, the embedded-files name tree, and an XMP
+//! metadata stream. Nothing written here *claims* PDF/A conformance, so the
+//! file is honest about what it is.
 
+use crate::attachment::Attachment;
 use crate::canvas::Canvas;
 use crate::font::Font;
 use crate::metrics::{FIRST_CHAR, LAST_CHAR};
@@ -62,7 +73,7 @@ impl PdfDate {
 
     /// The `D:YYYYMMDDHHmmSS` form with an explicit UTC offset (PDF 1.7
     /// §7.9.4). Everything this crate produces is stamped in UTC.
-    fn as_pdf(self) -> String {
+    pub(crate) fn as_pdf(self) -> String {
         format!(
             "D:{:04}{:02}{:02}{:02}{:02}{:02}Z00'00'",
             self.year, self.month, self.day, self.hour, self.minute, self.second
@@ -79,6 +90,10 @@ pub struct Pdf {
     created: PdfDate,
     /// The pages, in order.
     pages: Vec<Canvas>,
+    /// The files carried inside the document, in the order they were attached.
+    attachments: Vec<Attachment>,
+    /// The XMP packet describing the document, when the caller supplied one.
+    metadata: Option<String>,
 }
 
 impl Pdf {
@@ -89,6 +104,8 @@ impl Pdf {
             title: title.into(),
             created,
             pages: Vec::new(),
+            attachments: Vec::new(),
+            metadata: None,
         }
     }
 
@@ -103,6 +120,27 @@ impl Pdf {
         self.pages.len()
     }
 
+    /// Carries a file inside the document ([`Attachment`]).
+    ///
+    /// The order attachments are added is the order the document's `/AF` array
+    /// holds them in, and a name is never made unique by this crate: a caller that attaches
+    /// two files called the same thing has a bug in the caller, and silently
+    /// renaming one would hide it from the receiving system that looks the
+    /// file up by name.
+    pub fn attach(&mut self, attachment: Attachment) {
+        self.attachments.push(attachment);
+    }
+
+    /// Sets the XMP metadata packet (ISO 16684-1) describing the document.
+    ///
+    /// Passed in as a string rather than built here: XMP is a vocabulary
+    /// question — what a *billing* document says about itself is billing's to
+    /// state — and this crate's job is to carry the packet in a stream a
+    /// reader will find.
+    pub fn set_metadata(&mut self, xmp: impl Into<String>) {
+        self.metadata = Some(xmp.into());
+    }
+
     /// Serialises the document.
     ///
     /// A document with no pages still produces a **valid** file — an empty
@@ -115,7 +153,12 @@ impl Pdf {
         // file is not text (PDF 1.7 §7.5.2).
         out.extend_from_slice(b"%PDF-1.7\n%\xE2\xE3\xCF\xD3\n");
 
-        let object_count = FIRST_PAGE_OBJECT + self.pages.len() * 2;
+        // Everything after the pages, numbered before anything is written: the
+        // catalogue is object 1 and has to name objects that do not exist yet.
+        let after_pages = FIRST_PAGE_OBJECT + self.pages.len() * 2;
+        let metadata_object = self.metadata.as_ref().map(|_| after_pages);
+        let first_attachment = after_pages + usize::from(self.metadata.is_some());
+        let object_count = first_attachment + self.attachments.len() * 2;
         let mut offsets = vec![0usize; object_count];
 
         let kids: String = (0..self.pages.len())
@@ -125,7 +168,11 @@ impl Pdf {
             &mut out,
             &mut offsets,
             CATALOG,
-            &format!("<< /Type /Catalog /Pages {PAGES} 0 R >>"),
+            &format!(
+                "<< /Type /Catalog /Pages {PAGES} 0 R{}{} >>",
+                metadata_object.map_or_else(String::new, |n| format!(" /Metadata {n} 0 R")),
+                attachment_entries(&self.attachments, first_attachment),
+            ),
         );
         push_object(
             &mut out,
@@ -189,6 +236,33 @@ impl Pdf {
             push_stream(&mut out, &mut offsets, content_object, page.content());
         }
 
+        if let (Some(number), Some(xmp)) = (metadata_object, self.metadata.as_ref()) {
+            push_binary_stream(
+                &mut out,
+                &mut offsets,
+                number,
+                "/Type /Metadata /Subtype /XML",
+                xmp.as_bytes(),
+            );
+        }
+        for (index, attachment) in self.attachments.iter().enumerate() {
+            let spec_object = first_attachment + index * 2;
+            let stream_object = spec_object + 1;
+            push_object(
+                &mut out,
+                &mut offsets,
+                spec_object,
+                &attachment.file_spec(stream_object),
+            );
+            push_binary_stream(
+                &mut out,
+                &mut offsets,
+                stream_object,
+                &attachment.stream_dictionary(),
+                attachment.bytes(),
+            );
+        }
+
         let start_xref = out.len();
         let id = file_id(&out);
         out.extend_from_slice(format!("xref\n0 {object_count}\n").as_bytes());
@@ -218,16 +292,74 @@ fn push_object(out: &mut Vec<u8>, offsets: &mut [usize], number: usize, body: &s
 /// Writes one stream object — a dictionary carrying the byte length, then the
 /// bytes.
 fn push_stream(out: &mut Vec<u8>, offsets: &mut [usize], number: usize, content: &str) {
+    push_binary_stream(out, offsets, number, "", content.as_bytes());
+}
+
+/// Writes one stream object of arbitrary bytes, with `dictionary` prepended to
+/// the `/Length` the bytes are counted into.
+///
+/// Byte for byte: an attached e-invoice is parsed by somebody else's system,
+/// and a producer that re-encoded it would be changing a document it does not
+/// own.
+fn push_binary_stream(
+    out: &mut Vec<u8>,
+    offsets: &mut [usize],
+    number: usize,
+    dictionary: &str,
+    content: &[u8],
+) {
     if let Some(slot) = offsets.get_mut(number) {
         *slot = out.len();
     }
+    let separator = if dictionary.is_empty() { "" } else { " " };
     out.extend_from_slice(
         format!(
-            "{number} 0 obj\n<< /Length {} >>\nstream\n{content}endstream\nendobj\n",
+            "{number} 0 obj\n<< {dictionary}{separator}/Length {} >>\nstream\n",
             content.len()
         )
         .as_bytes(),
     );
+    out.extend_from_slice(content);
+    out.extend_from_slice(b"endstream\nendobj\n");
+}
+
+/// The catalogue entries that make attached files findable, or nothing at all
+/// when the document carries none.
+///
+/// Two entries, and a reader needs **both**: `/Names /EmbeddedFiles` is the
+/// name tree an "attachments" pane lists and a receiving system looks
+/// `factur-x.xml` up in, while `/AF` is the associated-files array that says
+/// the attachments belong to the document as a whole rather than to a page.
+/// A file in only one of them is a file half the world cannot find.
+///
+/// The name tree is written **sorted by name**, which PDF 1.7 §7.9.6 requires
+/// of every name tree — a reader is allowed to binary-search it — while `/AF`
+/// keeps the order the caller attached in. So a document with two attachments
+/// lists them in the caller's order and still resolves a name lookup.
+fn attachment_entries(attachments: &[Attachment], first: usize) -> String {
+    if attachments.is_empty() {
+        return String::new();
+    }
+    let mut sorted: Vec<(usize, &Attachment)> = attachments.iter().enumerate().collect();
+    sorted.sort_by(|(_, a), (_, b)| a.name().cmp(b.name()));
+    let names: String = sorted
+        .into_iter()
+        .map(|(index, a)| {
+            format!(
+                "{} {} 0 R ",
+                crate::encoding::pdf_string(a.name()),
+                first + index * 2
+            )
+        })
+        .collect();
+    let array: String = (0..attachments.len())
+        .map(|index| format!("{} 0 R ", first + index * 2))
+        .collect();
+    format!(
+        " /AF [{}] /Names << /EmbeddedFiles << /Names [{}] >> >>",
+        array.trim_end(),
+        names.trim_end(),
+    )
 }
 
 /// The font dictionary for one face.
@@ -457,6 +589,97 @@ mod tests {
             bytes[14..].is_ascii(),
             "the file must stay 7-bit past its header"
         );
+    }
+
+    /// A one-page document carrying an XML attachment and an XMP packet — the
+    /// hybrid invoice's shape.
+    fn with_attachment(xml: &[u8]) -> Vec<u8> {
+        let mut pdf = Pdf::new("Invoice INV-2026-00001", date());
+        pdf.add_page(Canvas::a4());
+        pdf.set_metadata("<?xpacket begin=\"\"?><x:xmpmeta/><?xpacket end=\"w\"?>");
+        pdf.attach(
+            Attachment::new(
+                "factur-x.xml",
+                "text/xml",
+                crate::attachment::Relationship::Alternative,
+                xml.to_vec(),
+                date(),
+            )
+            .described("Factur-X invoice"),
+        );
+        pdf.finish()
+    }
+
+    #[test]
+    fn an_attached_file_is_findable_by_name_and_by_the_document() {
+        let bytes = with_attachment(b"<Invoice/>");
+        let text = String::from_utf8_lossy(&bytes);
+        // One page (objects 8, 9), then the metadata (10), then the file
+        // specification (11) and the bytes (12).
+        assert!(text.contains("/Metadata 10 0 R"));
+        assert!(text.contains("/AF [11 0 R]"));
+        assert!(text.contains("/Names << /EmbeddedFiles << /Names [(factur-x.xml) 11 0 R] >> >>"));
+        assert!(text.contains("/Type /Filespec"));
+        assert!(text.contains("/EF << /F 12 0 R >>"));
+        assert!(text.contains("/Type /Metadata /Subtype /XML /Length 51"));
+        // Every offset still points at the object it claims — the one
+        // structural invariant, now over four more objects.
+        for (index, offset) in xref_offsets(&bytes).iter().enumerate() {
+            let expected = format!("{} 0 obj", index + 1);
+            assert!(
+                bytes[*offset..].starts_with(expected.as_bytes()),
+                "object {} is not at {offset}",
+                index + 1
+            );
+        }
+        assert_eq!(xref_offsets(&bytes).len(), 12);
+    }
+
+    #[test]
+    fn the_attached_bytes_are_carried_exactly_as_given() {
+        // A receiving system parses these bytes and checks them against a
+        // schema; a producer that re-encoded them would be rewriting somebody
+        // else's document.
+        let xml = "<Invoice><Name>Émile Zola &amp; Cie</Name></Invoice>".as_bytes();
+        let bytes = with_attachment(xml);
+        assert!(
+            bytes.windows(xml.len()).any(|w| w == xml),
+            "the attached bytes are not in the file verbatim"
+        );
+        assert!(String::from_utf8_lossy(&bytes).contains(&format!("/Size {}", xml.len())));
+        // …and the declared length is the byte length, not the character count.
+        assert!(String::from_utf8_lossy(&bytes).contains(&format!("/Length {}", xml.len())));
+        assert_eq!(with_attachment(xml), bytes, "still deterministic");
+    }
+
+    #[test]
+    fn a_document_carrying_nothing_is_written_exactly_as_before() {
+        // The attachment machinery must be invisible to a plain document: no
+        // /AF, no /Names, no /Metadata, and the same object count.
+        let text = String::from_utf8_lossy(&one_page()).into_owned();
+        assert!(text.contains("<< /Type /Catalog /Pages 2 0 R >>"));
+        assert!(!text.contains("/AF ["));
+        assert!(!text.contains("/Metadata"));
+    }
+
+    #[test]
+    fn the_embedded_file_name_tree_is_sorted_even_when_the_caller_is_not() {
+        // A name tree a reader may binary-search has to be in name order,
+        // while /AF keeps the order the caller attached in.
+        let mut pdf = Pdf::new("Two", date());
+        pdf.add_page(Canvas::a4());
+        for name in ["zeta.xml", "alpha.xml"] {
+            pdf.attach(Attachment::new(
+                name,
+                "text/xml",
+                crate::attachment::Relationship::Supplement,
+                b"<x/>".to_vec(),
+                date(),
+            ));
+        }
+        let text = String::from_utf8_lossy(&pdf.finish()).into_owned();
+        assert!(text.contains("/AF [10 0 R 12 0 R]"));
+        assert!(text.contains("/Names [(alpha.xml) 12 0 R (zeta.xml) 10 0 R]"));
     }
 
     #[test]

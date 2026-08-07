@@ -28,8 +28,16 @@
 //!
 //! Every string is encoded to **WinAnsi** (cp1252) because that is what the
 //! standard-14 fonts can address. Characters outside it are folded to their
-//! base Latin form rather than dropped ([`encoding`]), and a font file — which
-//! removes the limit entirely — lands with PDF/A-3 at B1.22.
+//! base Latin form rather than dropped ([`encoding`]). A font file — which
+//! removes the limit entirely, and which PDF/A-3 requires — is a licensed
+//! binary and a human's choice, recorded as open in `docs/design/billing.md`.
+//!
+//! ## Attachments
+//!
+//! A document can carry files inside it ([`attachment`]): the bytes, the name
+//! a receiving system looks them up by, and the relationship that says what
+//! they are. Factur-X (B1.22) is the first caller — one document that is both
+//! the page a human reads and the invoice a bookkeeping system imports.
 //!
 //! ```
 //! use alo_pdf::{Align, Color, Canvas, Font, Pdf, PdfDate, TextStyle, mm};
@@ -49,6 +57,7 @@
 //! # let _ = (Color::BLACK, mm(1.0));
 //! ```
 
+pub mod attachment;
 pub mod canvas;
 pub mod color;
 pub mod encoding;
@@ -57,6 +66,7 @@ pub mod metrics;
 pub mod text;
 pub mod writer;
 
+pub use attachment::{Attachment, Relationship};
 pub use canvas::{Canvas, Rect};
 pub use color::Color;
 pub use font::Font;

@@ -19,11 +19,15 @@
 //! screen and every printer, an attachment for a mail draft (B1.18), and the
 //! carrier PDF/A-3 turns into a Factur-X e-invoice (B1.22).
 
-use alo_pdf::{Align, Canvas, Color, Font, Pdf, PdfDate, Rect, TextStyle, mm};
+use alo_pdf::{
+    Align, Attachment, Canvas, Color, Font, Pdf, PdfDate, Rect, Relationship, TextStyle, mm,
+};
 use axum::http::header;
 use axum::response::{IntoResponse, Response};
 use time::{OffsetDateTime, UtcOffset};
 
+use crate::billing_cii as cii;
+use crate::billing_einvoice::EInvoice;
 use crate::billing_print::{
     DocumentKind, PrintDocument, Strings, amount, date, document_heading, monogram, quantity, rate,
     rate_sentence,
@@ -158,11 +162,33 @@ impl Sheet {
     /// a two-page invoice is the difference between a customer who can tell a
     /// page is missing and one who cannot. A one-page document says nothing,
     /// because there is nothing to say.
-    fn finish(mut self, title: &str, created: PdfDate) -> Vec<u8> {
+    fn finish_with(
+        mut self,
+        title: &str,
+        created: PdfDate,
+        einvoice: Option<&EInvoice>,
+    ) -> Vec<u8> {
         self.done.push(self.page);
         let total = self.done.len();
         let style = TextStyle::new(Font::Regular, SMALL).inked(FAINT);
         let mut pdf = Pdf::new(title, created);
+        if let Some(einvoice) = einvoice {
+            // The XML is attached, not appended: `/AFRelationship
+            // /Alternative` is the statement that these bytes are the *same
+            // invoice* in another form, which is precisely what a receiving
+            // system checks before trusting them over the page.
+            pdf.set_metadata(cii::xmp(einvoice));
+            pdf.attach(
+                Attachment::new(
+                    cii::ATTACHMENT_NAME,
+                    cii::ATTACHMENT_MIME,
+                    Relationship::Alternative,
+                    cii::render(einvoice).into_bytes(),
+                    created,
+                )
+                .described("Factur-X invoice (EN 16931)"),
+            );
+        }
         for (index, mut page) in self.done.into_iter().enumerate() {
             if total > 1 {
                 page.text(
@@ -189,6 +215,30 @@ impl Sheet {
 /// identical to the file the customer already holds.
 #[must_use]
 pub fn render(doc: &PrintDocument<'_>, s: &Strings, created: PdfDate) -> Vec<u8> {
+    render_hybrid(doc, s, created, None)
+}
+
+/// Renders the document as a PDF that also **carries the e-invoice** inside it
+/// (B1.22), when one could be produced.
+///
+/// This is what Factur-X is: not a PDF and an XML file sent together, but one
+/// file that both a person and a bookkeeping system can read, which is why the
+/// two can never be separated in transit or disagree in an archive.
+///
+/// `einvoice` is `None` when the document has no valid e-invoice — a draft, a
+/// quote, or an issuer who has not filled in the details EN 16931 requires —
+/// and the answer to that is a perfectly ordinary PDF. **A document must
+/// always print**: an invoice that would not render because its XML could not
+/// be built would be a worse failure than one that renders without it, and the
+/// route that offers the XML on its own ([`crate::billing_invoices`]) is where
+/// a tenant is told which rule is unmet.
+#[must_use]
+pub fn render_hybrid(
+    doc: &PrintDocument<'_>,
+    s: &Strings,
+    created: PdfDate,
+    einvoice: Option<&EInvoice>,
+) -> Vec<u8> {
     let heading = document_heading(doc, s);
     let mut layout = Layout {
         doc,
@@ -203,7 +253,7 @@ pub fn render(doc: &PrintDocument<'_>, s: &Strings, created: PdfDate) -> Vec<u8>
     layout.payment();
     layout.note();
     layout.footer();
-    layout.sheet.finish(&heading, created)
+    layout.sheet.finish_with(&heading, created, einvoice)
 }
 
 /// The document-metadata date for an instant, in UTC.
@@ -233,19 +283,11 @@ pub fn stamp(at: OffsetDateTime) -> PdfDate {
 /// and a table is not a place to trust that nobody ever typed a quote mark.
 #[must_use]
 pub fn file_name(doc: &PrintDocument<'_>, s: &Strings) -> String {
-    let ascii: String = document_heading(doc, s)
-        .chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
-        .collect();
-    let name = ascii
-        .split('-')
-        .filter(|part| !part.is_empty())
-        .collect::<Vec<_>>()
-        .join("-");
-    if name.is_empty() {
+    let stem = crate::billing_print::file_stem(doc, s);
+    if stem.is_empty() {
         "document.pdf".to_owned()
     } else {
-        format!("{name}.pdf")
+        format!("{stem}.pdf")
     }
 }
 

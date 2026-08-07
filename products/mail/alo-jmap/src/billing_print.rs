@@ -516,6 +516,32 @@ pub fn document_heading(doc: &PrintDocument<'_>, s: &Strings) -> String {
     }
 }
 
+/// The document's name reduced to a **file name stem** — what every rendering
+/// of it is saved as, before its extension.
+///
+/// Built from the heading, so the file on a customer's disk is called what the
+/// paper inside it is called, and reduced to ASCII alphanumerics and single
+/// hyphens: a file name has to survive a `Content-Disposition` header, three
+/// operating systems and a mail client, and the document's *kind* comes from a
+/// translation table, which is not a place to trust that nobody ever typed a
+/// quote mark. Empty only if the heading had no alphanumeric character at all,
+/// which every caller replaces with a name of its own.
+///
+/// One function for every rendering ([`crate::billing_pdf`],
+/// [`crate::billing_cii`]) so the PDF and the e-invoice a customer downloads
+/// are named the same thing with two extensions.
+pub fn file_stem(doc: &PrintDocument<'_>, s: &Strings) -> String {
+    let ascii: String = document_heading(doc, s)
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect();
+    ascii
+        .split('-')
+        .filter(|part| !part.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
 pub fn render(doc: &PrintDocument<'_>, s: &Strings) -> String {
     let heading = document_heading(doc, s);
 

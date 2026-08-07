@@ -308,6 +308,13 @@ pub fn app(state: AppState) -> Router {
             "/billing/invoices/{id}/pdf",
             get(billing_invoices::pdf_invoice),
         )
+        // The e-invoice on its own (B1.22): the same EN 16931 document the
+        // hybrid PDF carries inside it, for a customer whose system takes a
+        // file rather than extracting one.
+        .route(
+            "/billing/invoices/{id}/facturx.xml",
+            get(billing_invoices::facturx_invoice),
+        )
         // Drafts a covering email to the customer with the PDF attached and
         // leaves it in Drafts (B1.18). It never sends, and never changes the
         // invoice — unlike the quote route of the same name, which is a

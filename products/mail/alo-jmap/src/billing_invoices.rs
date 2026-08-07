@@ -51,7 +51,10 @@ use alo_store::{
 };
 
 use crate::billing::{flag, iso, iso_date, map_store_err, parse_body};
+use crate::billing_cii as cii;
 use crate::billing_document::{LineBody, today, totals_json, with_body, with_totals};
+use crate::billing_einvoice::EInvoice;
+use crate::billing_einvoice_rules as einvoice_rules;
 use crate::billing_payments::settlement_json;
 use crate::billing_pdf as pdf;
 use crate::billing_print::{
@@ -603,8 +606,71 @@ pub async fn pdf_invoice(
     let printable = printable(&account.acc, &BillingInvoiceId::new(id)).await?;
     let document = printable.as_document();
     let strings = query.strings();
-    let bytes = pdf::render(&document, strings, pdf::stamp(OffsetDateTime::now_utc()));
+    // Factur-X (B1.22): an issued document that satisfies EN 16931 carries its
+    // own e-invoice inside the file. A draft, a void document or an issuer
+    // whose details are incomplete gets an ordinary PDF — a document must
+    // always print, and `facturx_invoice` is where the tenant is told which
+    // rule is unmet.
+    let einvoice = printable
+        .einvoice(strings)
+        .ok()
+        .filter(|invoice| einvoice_rules::violations(invoice).is_empty());
+    let bytes = pdf::render_hybrid(
+        &document,
+        strings,
+        pdf::stamp(OffsetDateTime::now_utc()),
+        einvoice.as_ref(),
+    );
     Ok(pdf::response(bytes, &pdf::file_name(&document, strings)))
+}
+
+/// `GET /billing/invoices/{id}/facturx.xml[?lang=]` → the EN 16931 e-invoice
+/// for an issued document, as UN/CEFACT CII XML (B1.22).
+///
+/// The **same** XML the hybrid PDF carries ([`pdf_invoice`]), served on its own
+/// for a customer whose system takes the invoice as a file rather than
+/// extracting it from the PDF, and for anyone who wants to see what we send.
+///
+/// Its refusals are the useful part:
+///
+/// - a **draft** (`409`) has no number and no issue date, so there is nothing
+///   to send; issue it first;
+/// - a **void** document (`409`) has been cancelled, and there is no such
+///   thing as a cancelled e-invoice — a mistake is corrected with a credit
+///   note, which has an e-invoice of its own;
+/// - a document that breaks the standard's own rules (`422`) is answered with
+///   **the rule identifiers**, e.g. `BR-09`, so a tenant is told exactly what
+///   to fill in rather than discovering it from a customer's rejection weeks
+///   later.
+pub async fn facturx_invoice(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<PrintQuery>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let printable = printable(&account.acc, &BillingInvoiceId::new(id)).await?;
+    let strings = query.strings();
+    let einvoice = printable.einvoice(strings)?;
+    let violations = einvoice_rules::violations(&einvoice);
+    if !violations.is_empty() {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!(
+                "this document cannot be issued as an EN 16931 e-invoice: {}",
+                violations
+                    .iter()
+                    .map(|v| format!("{} ({})", v.rule, v.detail))
+                    .collect::<Vec<_>>()
+                    .join("; ")
+            ),
+        ));
+    }
+    let document = printable.as_document();
+    Ok(cii::response(
+        cii::render(&einvoice),
+        &cii::file_name(&document, strings),
+    ))
 }
 
 /// Everything a rendering of one invoice needs, read once.
@@ -657,6 +723,32 @@ impl Printable {
     /// whole record: nothing outside this module needs the stored row.
     pub(crate) fn status(&self) -> InvoiceStatus {
         self.document.invoice.status
+    }
+
+    /// The document as an **e-invoice** (B1.22), or the refusal a state that
+    /// has no e-invoice earns.
+    ///
+    /// Only the two state refusals live here; whether the document *satisfies*
+    /// EN 16931 is [`crate::billing_einvoice_rules`]'s question, and the two
+    /// callers answer it differently — the XML route reports the rules, the
+    /// PDF route quietly prints without the attachment.
+    pub(crate) fn einvoice(&self, s: &'static print::Strings) -> Result<EInvoice, Problem> {
+        match self.document.invoice.status {
+            InvoiceStatus::Draft => {
+                return Err(Problem::with(
+                    StatusCode::CONFLICT,
+                    "a draft has no e-invoice: issue it first, which is what assigns the number and the dates the standard requires",
+                ));
+            }
+            InvoiceStatus::Void => {
+                return Err(Problem::with(
+                    StatusCode::CONFLICT,
+                    "a void document has been cancelled and has no e-invoice: correct an issued invoice with a credit note, which carries one of its own",
+                ));
+            }
+            InvoiceStatus::Issued | InvoiceStatus::Paid => {}
+        }
+        EInvoice::from_document(&self.as_document(), s).ok_or_else(Problem::server_error)
     }
 
     /// The document as the renderers see it.
