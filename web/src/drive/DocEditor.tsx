@@ -13,7 +13,7 @@ import {
   type ComponentProps,
   type CSSProperties,
 } from "react";
-import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, Minus, Plus, Printer, Redo2, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, FileText, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -61,6 +61,16 @@ function fileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+function replaceText(value: unknown, search: string, replacement: string): unknown {
+  if (Array.isArray(value)) return value.map((item) => replaceText(item, search, replacement));
+  if (typeof value !== "object" || value === null) return value;
+  const record = value as Record<string, unknown>;
+  if (record.type === "text" && typeof record.text === "string") {
+    return { ...record, text: record.text.split(search).join(replacement) };
+  }
+  return Object.fromEntries(Object.entries(record).map(([key, item]) => [key, replaceText(item, search, replacement)]));
+}
+
 export function DocEditor({
   nodeId,
   name,
@@ -81,6 +91,9 @@ export function DocEditor({
   const [activeStyles, setActiveStyles] = useState<Record<string, boolean | string>>({});
   const [activeBlockType, setActiveBlockType] = useState("paragraph");
   const [counts, setCounts] = useState({ words: 0, characters: 0 });
+  const [findOpen, setFindOpen] = useState(false);
+  const [findText, setFindText] = useState("");
+  const [replaceWith, setReplaceWith] = useState("");
   const pending = useRef<unknown[] | null>(null);
   const timer = useRef<number | null>(null);
   const loaded = useRef(false);
@@ -156,6 +169,13 @@ export function DocEditor({
       anchor,
       "after",
     );
+    onChange();
+  };
+
+  const replaceAll = () => {
+    if (findText === "") return;
+    const blocks = replaceText(editor.document, findText, replaceWith) as Parameters<typeof editor.replaceBlocks>[1];
+    editor.replaceBlocks(editor.document, blocks);
     onChange();
   };
 
@@ -339,6 +359,7 @@ export function DocEditor({
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("equation")} aria-label={strings.docEquation}><Sigma size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("divider")} aria-label={strings.docInsertDivider}><List size={17} /></button>
         <div className={styles.commandSpacer} />
+        <button type="button" className={styles.commandIcon} onClick={() => setFindOpen((open) => !open)} aria-label={strings.docFindReplace}><Search size={17} /></button>
         <span className={styles.wordCount} title={`${counts.characters} ${strings.docCharacters}`}>{counts.words} {strings.docWords}</span>
         <div className={styles.zoomControl} aria-label={strings.docZoom}>
           <button type="button" onClick={() => setZoom((value) => Math.max(50, value - 10))} aria-label={strings.docZoomOut}><Minus size={15} /></button>
@@ -347,6 +368,12 @@ export function DocEditor({
         </div>
         <button type="button" className={styles.printButton} onClick={() => window.print()}><Printer size={16} /><span>{strings.docPrint}</span></button>
         <input ref={imageInputRef} className={styles.hiddenFileInput} type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void insertImage(file); event.target.value = ""; }} />
+      </div>}
+      {viewMode === "page" && findOpen && <div className={styles.findPanel}>
+        <div className={styles.findPanelHead}><strong>{strings.docFindReplace}</strong><button type="button" onClick={() => setFindOpen(false)} aria-label={strings.close}><X size={16} /></button></div>
+        <label>{strings.docFind}<input value={findText} onChange={(event) => setFindText(event.target.value)} autoFocus /></label>
+        <label>{strings.docReplaceWith}<input value={replaceWith} onChange={(event) => setReplaceWith(event.target.value)} /></label>
+        <div className={styles.findActions}><button type="button" onClick={() => { if (findText !== "") (window as Window & { find?: (text: string) => boolean }).find?.(findText); }}>{strings.docFindNext}</button><button type="button" onClick={replaceAll} disabled={findText === ""}>{strings.docReplaceAll}</button></div>
       </div>}
       <div
         className={`${styles.body} ${viewMode === "page" ? styles.pageMode : styles.canvasMode}`}
