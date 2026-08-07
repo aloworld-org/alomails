@@ -18,7 +18,16 @@ import { useMemo } from "react";
 
 import { useAuth } from "../auth";
 import { API_BASE } from "../platform/runtime";
-import type { PageDraft, Site, SiteDetail, SiteDraft, SitePage, SubdomainCheck } from "./types";
+import type { Section, SectionsEnvelope } from "./sections";
+import type {
+  PageDraft,
+  Site,
+  SiteDetail,
+  SiteDraft,
+  SitePage,
+  SitePageDetail,
+  SubdomainCheck,
+} from "./types";
 
 type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -48,7 +57,7 @@ export function sitesMessage(error: unknown, fallback: string): string {
   return error instanceof SitesError && error.detail !== null ? error.detail : fallback;
 }
 
-/** The tenant's websites and their pages — the S1.11 slice of the edit API.
+/** The tenant's websites, their pages, and each page's section stack.
  *  One instance per auth context. */
 export class SitesApi {
   readonly #fetch: AuthorizedFetch;
@@ -93,6 +102,65 @@ export class SitesApi {
    *  stack; answers the stored page. */
   createPage(siteId: string, draft: PageDraft): Promise<SitePage> {
     return this.#write<SitePage>("POST", `/sites/${encodeURIComponent(siteId)}/pages`, draft);
+  }
+
+  /** One page with its sections envelope — the editor's load. */
+  page(siteId: string, pageId: string): Promise<SitePageDetail> {
+    return this.#read<SitePageDetail>(this.#pagePath(siteId, pageId));
+  }
+
+  /** Inserts a section at `index` (appends when absent); answers the stored
+   *  envelope, canonical as the schema gate wrote it. */
+  addSection(
+    siteId: string,
+    pageId: string,
+    section: Section,
+    index?: number,
+  ): Promise<SectionsEnvelope> {
+    return this.#sections(
+      this.#write("POST", `${this.#pagePath(siteId, pageId)}/sections`, { section, index }),
+    );
+  }
+
+  /** Replaces the section at `index`; answers the stored envelope. */
+  updateSection(
+    siteId: string,
+    pageId: string,
+    index: number,
+    section: Section,
+  ): Promise<SectionsEnvelope> {
+    return this.#sections(
+      this.#write("PUT", `${this.#pagePath(siteId, pageId)}/sections/${index}`, { section }),
+    );
+  }
+
+  /** Moves the section at `index` to position `to`; answers the stored
+   *  envelope. */
+  moveSection(
+    siteId: string,
+    pageId: string,
+    index: number,
+    to: number,
+  ): Promise<SectionsEnvelope> {
+    return this.#sections(
+      this.#write("POST", `${this.#pagePath(siteId, pageId)}/sections/${index}/move`, { to }),
+    );
+  }
+
+  /** Removes the section at `index`; answers the stored envelope. */
+  removeSection(siteId: string, pageId: string, index: number): Promise<SectionsEnvelope> {
+    return this.#sections(
+      this.#write("DELETE", `${this.#pagePath(siteId, pageId)}/sections/${index}`, undefined),
+    );
+  }
+
+  #pagePath(siteId: string, pageId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/pages/${encodeURIComponent(pageId)}`;
+  }
+
+  /** Every section op answers `{"sections": <envelope>}` — unwraps it. */
+  async #sections(answer: Promise<{ sections: SectionsEnvelope }>): Promise<SectionsEnvelope> {
+    return (await answer).sections;
   }
 
   async #read<T>(path: string): Promise<T> {

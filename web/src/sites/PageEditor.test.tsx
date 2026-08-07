@@ -1,0 +1,339 @@
+// The page editor's wiring: that the stack renders exactly what the server
+// stored, that every gesture (add via the picker, edit, reorder, delete)
+// sends the precise section op the wire-verified API expects, that props the
+// forms do not offer (a contact form's form_id, a hero's untouched
+// subheading) survive an edit untouched, and that a refusal is shown in the
+// dialog instead of swallowed. Same harness as SitesModule.test.tsx: the
+// REAL client and views run, only the network is fake.
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
+import { strings } from "../i18n";
+import { SitesModule } from "./SitesModule";
+import { SECTIONS_SCHEMA_VERSION } from "./sections";
+import type { Section, SectionsEnvelope } from "./sections";
+
+interface Call {
+  url: string;
+  method: string;
+  body: unknown;
+}
+
+interface Reply {
+  match: (url: string, method: string) => boolean;
+  status: number;
+  body: unknown;
+}
+
+const calls: Call[] = [];
+let replies: Reply[] = [];
+
+const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
+  const method = init?.method ?? "GET";
+  calls.push({
+    url,
+    method,
+    body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
+  });
+  const index = replies.findIndex((r) => r.match(url, method));
+  const answer =
+    index === -1
+      ? { status: 200, body: {} }
+      : (replies.splice(index, 1)[0] as Reply);
+  return new Response(JSON.stringify(answer.body), {
+    status: answer.status,
+    headers: { "content-type": "application/json" },
+  });
+});
+
+vi.mock("../auth", () => ({
+  useAuth: () => ({ authorizedFetch: fakeFetch }),
+}));
+
+function env(sections: Section[]): SectionsEnvelope {
+  return { schema_version: SECTIONS_SCHEMA_VERSION, sections };
+}
+
+const HERO: Section = { type: "hero", heading: "Fresh bread daily", subheading: "Since 1962" };
+const CONTACT: Section = { type: "contact_form", heading: "Write to us", form_id: "f-1" };
+const FAQ: Section = { type: "faq", items: [{ question: "When?", answer: "Every day." }] };
+
+/** The page GET the editor loads first. */
+function pageReply(sections: Section[]): Reply {
+  return {
+    match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages/page-1"),
+    status: 200,
+    body: { id: "page-1", slug: "", title: "Welcome", home: true, sections: env(sections) },
+  };
+}
+
+function ui() {
+  return render(
+    <MemoryRouter initialEntries={["/sites/site-1/pages/page-1"]}>
+      <Routes>
+        <Route path="/sites/*" element={<SitesModule />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+}
+
+/** The last write the client made, if it made one. */
+function lastWrite(): Call | undefined {
+  return calls.filter((c) => c.method !== "GET").at(-1);
+}
+
+beforeEach(() => {
+  calls.length = 0;
+  replies = [];
+  fakeFetch.mockClear();
+});
+
+afterEach(cleanup);
+
+describe("the section stack", () => {
+  test("renders the stored sections in order, each with its type and words", async () => {
+    replies = [pageReply([HERO, CONTACT, FAQ])];
+    ui();
+    expect(await screen.findByText("Welcome")).toBeTruthy();
+    expect(screen.getByText(strings.sitesSectionHero)).toBeTruthy();
+    expect(screen.getByText("Fresh bread daily")).toBeTruthy();
+    expect(screen.getByText(strings.sitesSectionContactForm)).toBeTruthy();
+    expect(screen.getByText(strings.sitesSectionFaq)).toBeTruthy();
+    // The FAQ has no heading, so its card counts its entries.
+    expect(screen.getByText(strings.sitesCountEntries(1))).toBeTruthy();
+  });
+
+  test("a foreign or stale page reads as an error with the way back", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages/page-1"),
+        status: 404,
+        body: { detail: "no such page" },
+      },
+    ];
+    ui();
+    expect(await screen.findByText("no such page")).toBeTruthy();
+    expect(screen.getByText(strings.sitesBackToSite)).toBeTruthy();
+  });
+});
+
+describe("adding a section", () => {
+  test("the picker offers all twelve types; saving the form POSTs exactly the typed section", async () => {
+    replies = [pageReply([])];
+    ui();
+    // Empty page → empty state; its CTA opens the picker.
+    fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesAddSection }))[0]!);
+
+    for (const label of [
+      strings.sitesSectionNav,
+      strings.sitesSectionHero,
+      strings.sitesSectionFeatures,
+      strings.sitesSectionTextImage,
+      strings.sitesSectionGallery,
+      strings.sitesSectionTestimonials,
+      strings.sitesSectionPricing,
+      strings.sitesSectionTeam,
+      strings.sitesSectionFaq,
+      strings.sitesSectionCta,
+      strings.sitesSectionContactForm,
+      strings.sitesSectionFooter,
+    ]) {
+      expect(screen.getByText(label)).toBeTruthy();
+    }
+
+    replies = [
+      {
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections"),
+        status: 200,
+        body: {
+          sections: env([{ type: "hero", heading: "Big and warm" }]),
+        },
+      },
+    ];
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `${strings.sitesSectionHero} ${strings.sitesSectionHeroDesc}`,
+      }),
+    );
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldHeading), {
+      target: { value: "  Big and warm " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    // Exactly the typed section: trimmed, untouched optionals ABSENT — the
+    // stored JSON never grows blank keys.
+    expect(lastWrite()!.body).toEqual({ section: { type: "hero", heading: "Big and warm" } });
+    // The stack renders the envelope the server answered.
+    expect(await screen.findByText("Big and warm")).toBeTruthy();
+  });
+
+  test("a list section sends every entry the user added", async () => {
+    replies = [pageReply([])];
+    ui();
+    fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesAddSection }))[0]!);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `${strings.sitesSectionFaq} ${strings.sitesSectionFaqDesc}`,
+      }),
+    );
+    // The form starts with one blank entry; fill it, add a second.
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldQuestion), {
+      target: { value: "When?" },
+    });
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldAnswer), {
+      target: { value: "Every day." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesAddQuestion }));
+    fireEvent.change(screen.getAllByLabelText(strings.sitesFieldQuestion)[1]!, {
+      target: { value: "Where?" },
+    });
+    fireEvent.change(screen.getAllByLabelText(strings.sitesFieldAnswer)[1]!, {
+      target: { value: "At the harbour." },
+    });
+
+    replies = [
+      {
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections"),
+        status: 200,
+        body: { sections: env([FAQ]) },
+      },
+    ];
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()!.body).toEqual({
+      section: {
+        type: "faq",
+        items: [
+          { question: "When?", answer: "Every day." },
+          { question: "Where?", answer: "At the harbour." },
+        ],
+      },
+    });
+  });
+
+  test("the server's refusal is shown in the form, which stays open", async () => {
+    replies = [pageReply([])];
+    ui();
+    fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesAddSection }))[0]!);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `${strings.sitesSectionCta} ${strings.sitesSectionCtaDesc}`,
+      }),
+    );
+    replies = [
+      {
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections"),
+        status: 422,
+        body: { detail: "cta section: heading must not be blank" },
+      },
+    ];
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+    expect(await screen.findByText("cta section: heading must not be blank")).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+});
+
+describe("editing a section", () => {
+  test("the form opens prefilled and PUTs to the section's index", async () => {
+    replies = [pageReply([HERO, CONTACT])];
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+    fireEvent.click(screen.getAllByLabelText(strings.sitesEditSection)[0]!);
+    const heading = screen.getByLabelText(strings.sitesFieldHeading) as HTMLInputElement;
+    expect(heading.value).toBe("Fresh bread daily");
+
+    replies = [
+      {
+        match: (url, method) =>
+          method === "PUT" && url.endsWith("/sites/site-1/pages/page-1/sections/0"),
+        status: 200,
+        body: {
+          sections: env([{ ...HERO, heading: "Warm bread daily" }, CONTACT]),
+        },
+      },
+    ];
+    fireEvent.change(heading, { target: { value: "Warm bread daily" } });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    // The untouched subheading rode along — an edit never strips what the
+    // user did not change.
+    expect(lastWrite()!.body).toEqual({
+      section: { type: "hero", heading: "Warm bread daily", subheading: "Since 1962" },
+    });
+    expect(await screen.findByText("Warm bread daily")).toBeTruthy();
+  });
+
+  test("props the form does not offer (form_id) survive an edit untouched", async () => {
+    replies = [pageReply([CONTACT])];
+    ui();
+    await screen.findByText(strings.sitesSectionContactForm);
+    fireEvent.click(screen.getByLabelText(strings.sitesEditSection));
+
+    replies = [
+      {
+        match: (url, method) =>
+          method === "PUT" && url.endsWith("/sites/site-1/pages/page-1/sections/0"),
+        status: 200,
+        body: { sections: env([{ ...CONTACT, heading: "Talk to us" }]) },
+      },
+    ];
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldHeading), {
+      target: { value: "Talk to us" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()!.body).toEqual({
+      section: { type: "contact_form", heading: "Talk to us", form_id: "f-1" },
+    });
+  });
+});
+
+describe("reordering and deleting", () => {
+  test("the move-down button asks the server to move the section", async () => {
+    replies = [pageReply([HERO, FAQ])];
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+
+    replies = [
+      {
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/pages/page-1/sections/0/move"),
+        status: 200,
+        body: { sections: env([FAQ, HERO]) },
+      },
+    ];
+    fireEvent.click(screen.getAllByLabelText(strings.sitesMoveDown)[0]!);
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()!.body).toEqual({ to: 1 });
+  });
+
+  test("deleting takes two clicks; one alone changes nothing", async () => {
+    replies = [pageReply([HERO, FAQ])];
+    ui();
+    await screen.findByText(strings.sitesSectionFaq);
+
+    // The first click only arms the confirmation.
+    fireEvent.click(screen.getAllByLabelText(strings.sitesDeleteSection)[1]!);
+    expect(lastWrite()).toBeUndefined();
+
+    replies = [
+      {
+        match: (url, method) =>
+          method === "DELETE" && url.endsWith("/sites/site-1/pages/page-1/sections/1"),
+        status: 200,
+        body: { sections: env([HERO]) },
+      },
+    ];
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesConfirmDelete }));
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()!.method).toBe("DELETE");
+    await waitFor(() => expect(screen.queryByText(strings.sitesSectionFaq)).toBeNull());
+  });
+});

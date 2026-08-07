@@ -3,6 +3,7 @@
 // (theme envelopes, SEO fields, timestamps the UI does not show yet) never
 // forces a change here. The server is the authority on every rule; these
 // types carry its answers, they do not re-state its validation.
+import type { SectionsEnvelope } from "./sections";
 
 /** A site as the list answers it. */
 export interface Site {
@@ -25,6 +26,11 @@ export interface SitePage {
   slug: string;
   title: string;
   home: boolean;
+}
+
+/** One page with its sections envelope — what the editor loads and edits. */
+export interface SitePageDetail extends SitePage {
+  sections: SectionsEnvelope;
 }
 
 /** The live taken/free answer for the create form. */

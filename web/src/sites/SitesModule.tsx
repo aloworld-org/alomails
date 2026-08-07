@@ -4,6 +4,7 @@
 // and a deep link (`/sites/{id}`) survives a page reload.
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { PageEditorView } from "./PageEditorView";
 import { SiteView } from "./SiteView";
 import { SitesListView } from "./SitesListView";
 import styles from "./SitesModule.module.css";
@@ -14,6 +15,7 @@ export function SitesModule() {
       <Routes>
         <Route index element={<SitesListView />} />
         <Route path=":siteId" element={<SiteView />} />
+        <Route path=":siteId/pages/:pageId" element={<PageEditorView />} />
         {/* An unknown deeper path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to="/sites" replace />} />
       </Routes>

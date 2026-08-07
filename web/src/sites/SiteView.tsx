@@ -95,7 +95,10 @@ export function SiteView() {
                   {pages.map((p) => (
                     <tr key={p.id}>
                       <td>
-                        <span className={styles.pageTitle}>{p.title}</span>
+                        {/* Opens the page's section editor. */}
+                        <Link to={`pages/${p.id}`} className={styles.pageLink}>
+                          {p.title}
+                        </Link>
                         {p.home && <span className={styles.badge}>{strings.sitesHomeBadge}</span>}
                       </td>
                       <td className={styles.mono}>/{p.slug}</td>

@@ -129,10 +129,16 @@
   color: var(--accent);
   text-decoration: underline;
 }
-.pageTitle {
+.pageLink {
   font-size: var(--text-base);
   font-weight: var(--weight-medium);
   color: var(--text-primary);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+}
+.pageLink:hover {
+  color: var(--accent);
+  text-decoration: underline;
 }
 .badge {
   display: inline-block;
@@ -327,6 +333,173 @@
   gap: var(--space-2);
   font-size: var(--text-sm);
   color: var(--text-secondary);
+}
+
+/* ---- the section stack (page editor) ---- */
+.stack {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--space-6) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 720px;
+}
+.card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.card:hover {
+  background: var(--bg-raised);
+}
+.cardDropTarget {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.dragHandle {
+  display: inline-flex;
+  color: var(--text-tertiary);
+  cursor: grab;
+  flex-shrink: 0;
+}
+.cardMeta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.cardKind {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.cardSummary {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-shrink: 0;
+}
+
+/* ---- the section picker ---- */
+.pickerModal {
+  width: min(680px, 100%);
+}
+.pickerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3);
+}
+.pickerTile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  text-align: left;
+  cursor: pointer;
+}
+.pickerTile:hover {
+  border-color: var(--accent);
+  background: var(--bg-raised);
+}
+.pickerThumb {
+  width: 100%;
+  height: auto;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  box-sizing: border-box;
+}
+.pickerThumb rect,
+.pickerThumb circle,
+.pickerThumb path {
+  fill: currentColor;
+}
+.pickerTileName {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.pickerTileDesc {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* ---- the prop forms ---- */
+.textarea {
+  resize: vertical;
+  min-height: 84px;
+  font-family: inherit;
+}
+.fieldRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+.subGroup {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.subLegend {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  padding: 0 var(--space-1);
+}
+.itemsEditor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.itemGroup {
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  background: var(--bg-sunken);
+}
+.itemGroupHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.itemGroupName {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-tertiary);
 }
 
 /* ---- the live address check ---- */
