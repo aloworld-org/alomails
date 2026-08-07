@@ -622,18 +622,6 @@ function DataTab({ actions, disabled }: { actions: SheetActions; disabled: boole
 function InsertTab({ actions, disabled }: { actions: SheetActions; disabled: boolean }) {
   return (
     <div className={styles.groups}>
-      <Group label={strings.sheetGroupRows}>
-        <div className={styles.rowStack}>
-          <TextBtn label={strings.sheetInsertRowAbove} onClick={() => actions.insertRow("before")} disabled={disabled} />
-          <TextBtn label={strings.sheetInsertRowBelow} onClick={() => actions.insertRow("after")} disabled={disabled} />
-        </div>
-      </Group>
-      <Group label={strings.sheetGroupColumns}>
-        <div className={styles.rowStack}>
-          <TextBtn label={strings.sheetInsertColLeft} onClick={() => actions.insertColumn("before")} disabled={disabled} />
-          <TextBtn label={strings.sheetInsertColRight} onClick={() => actions.insertColumn("after")} disabled={disabled} />
-        </div>
-      </Group>
       <Group label={strings.sheetGroupInsertObjects}>
         <div className={styles.row}>
           <IconBtn label={strings.sheetInsertTable} onClick={() => actions.exec(CMD_TABLE)} disabled={disabled} large showLabel>
