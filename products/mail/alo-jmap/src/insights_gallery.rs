@@ -60,11 +60,11 @@ static EN: SeedWords = SeedWords {
 /// The French board.
 static FR: SeedWords = SeedWords {
     lang: "fr",
-    board: "Aperçu de l'activité",
+    board: "Aperçu de l’activité",
     captions: &[
         ("outstanding", "Créances en cours"),
         ("won_this_month", "Gagné ce mois-ci"),
-        ("revenue_by_month", "Chiffre d'affaires par mois"),
+        ("revenue_by_month", "Chiffre d’affaires par mois"),
         ("overdue_aging", "Retards par ancienneté"),
         ("pipeline_by_stage", "Pipeline par étape"),
         ("vat_by_quarter", "TVA par trimestre"),
@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn the_seed_the_store_receives_is_the_layout_it_asks_for() {
         let seed = overview_seed_for("fr");
-        assert_eq!(seed.name, "Aperçu de l'activité");
+        assert_eq!(seed.name, "Aperçu de l’activité");
         assert_eq!(seed.captions.len(), BUSINESS_OVERVIEW.len());
         for key in BUSINESS_OVERVIEW {
             assert!(

@@ -402,7 +402,7 @@ async fn a_first_visit_answers_with_the_business_overview_and_live_numbers() {
     assert_eq!(boards.len(), 1, "{body}");
     assert_eq!(boards[0]["seeded"], true);
     assert_eq!(boards[0]["systemKey"], "business_overview");
-    assert_eq!(boards[0]["name"], "Aperçu de l'activité");
+    assert_eq!(boards[0]["name"], "Aperçu de l’activité");
     let board = boards[0]["id"].as_str().unwrap().to_owned();
 
     // --- the tiles, in layout order, each a question this build can read -----
@@ -449,7 +449,7 @@ async fn a_first_visit_answers_with_the_business_overview_and_live_numbers() {
     let (_, body) = get(&h.app, &h.token, "/insights/dashboards?lang=nl").await;
     assert_eq!(body["dashboards"].as_array().map(Vec::len), Some(1));
     assert_eq!(
-        body["dashboards"][0]["name"], "Aperçu de l'activité",
+        body["dashboards"][0]["name"], "Aperçu de l’activité",
         "the captions are the tenant's own data now, never re-translated"
     );
 

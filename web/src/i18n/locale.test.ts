@@ -193,6 +193,88 @@ describe("alo CRM and the record history are fully translated (B2.14)", () => {
   });
 });
 
+describe("alo Insights is fully translated (BI1.08)", () => {
+  /** The BI-1 surface: the Insights tab, its boards and tiles, the gallery of
+   *  ready-made charts, the ask-to-chart dialog, and every label a chart draws
+   *  with — axis buckets, table headers, statuses and age brackets. Same rule
+   *  as billing and CRM above: a figure a business acts on must not come with
+   *  half its words in English. */
+  const insightsKeys = Object.keys(en).filter(
+    (key) => key.startsWith("insights") || key === "moduleInsights",
+  );
+
+  test("the key list is the real Insights surface, not an empty filter", () => {
+    expect(insightsKeys.length).toBeGreaterThan(80);
+    expect(en).toHaveProperty("moduleInsights");
+  });
+
+  test.each([
+    ["fr", fr],
+    ["nl", nl],
+  ])("%s translates every Insights string", (_locale, catalog) => {
+    const missing = insightsKeys.filter((key) => !(key in catalog));
+    expect(missing).toEqual([]);
+  });
+
+  test.each([
+    ["fr", fr],
+    ["nl", nl],
+  ])("%s keeps every interpolation a function of the same shape", (locale, catalog) => {
+    for (const key of insightsKeys) {
+      const source = (en as Record<string, unknown>)[key];
+      const translated = (catalog as Record<string, unknown>)[key];
+      expect(typeof translated).toBe(typeof source);
+      if (typeof source === "function" && typeof translated === "function") {
+        expect(translated.length).toBe(source.length);
+      } else {
+        expect(String(translated).trim()).not.toBe("");
+      }
+    }
+    expect(locale).toMatch(/^(fr|nl)$/);
+  });
+
+  test("the translated strings really are different words", () => {
+    expect(buildCatalog("fr").moduleInsights).toBe("Analyses");
+    expect(buildCatalog("nl").moduleInsights).toBe("Inzichten");
+    expect(buildCatalog("fr").insightsAddChart).toBe("Ajouter un graphique");
+    expect(buildCatalog("nl").insightsAddChart).toBe("Grafiek toevoegen");
+    // A period abbreviation is a translation too: an axis reading "Q1" in
+    // French, or "W03" in Dutch, is English leaking onto a chart.
+    expect(buildCatalog("fr").insightsQuarter(1, 2026)).toBe("T1 2026");
+    expect(buildCatalog("nl").insightsQuarter(1, 2026)).toBe("K1 2026");
+    expect(buildCatalog("fr").insightsWeek(3, 2026)).toBe("S3 2026");
+    // …and the plural branch of the unconverted-documents note, which the
+    // English catalog builds from two separate sentences.
+    expect(buildCatalog("fr").insightsNoteUnconverted(1)).toContain("1 document n’a pas pu");
+    expect(buildCatalog("fr").insightsNoteUnconverted(3)).toContain("3 documents n’ont pas pu");
+    expect(buildCatalog("nl").insightsNoteUnconverted(1)).toContain("1 document kon niet");
+    expect(buildCatalog("nl").insightsNoteUnconverted(3)).toContain("3 documenten konden niet");
+  });
+
+  test("the overview's chart titles match the words the server seeds", () => {
+    // The Business overview is written by `insights_gallery.rs` in the
+    // reader's language, and the gallery offers the same seven charts from
+    // this catalog. If the two disagree, pinning a chart a tenant already has
+    // looks like a different chart. Keep this list in step with SeedWords.
+    expect(buildCatalog("fr").insightsGalleryOutstanding).toBe("Créances en cours");
+    expect(buildCatalog("fr").insightsGalleryWonThisMonth).toBe("Gagné ce mois-ci");
+    expect(buildCatalog("fr").insightsGalleryRevenueByMonth).toBe("Chiffre d’affaires par mois");
+    expect(buildCatalog("fr").insightsGalleryOverdueAging).toBe("Retards par ancienneté");
+    expect(buildCatalog("fr").insightsGalleryPipelineByStage).toBe("Pipeline par étape");
+    expect(buildCatalog("fr").insightsGalleryVatByQuarter).toBe("TVA par trimestre");
+    expect(buildCatalog("fr").insightsGalleryWinRateByQuarter).toBe(
+      "Taux de réussite par trimestre",
+    );
+    expect(buildCatalog("nl").insightsGalleryOutstanding).toBe("Openstaand");
+    expect(buildCatalog("nl").insightsGalleryWonThisMonth).toBe("Gewonnen deze maand");
+    expect(buildCatalog("nl").insightsGalleryRevenueByMonth).toBe("Omzet per maand");
+    expect(buildCatalog("nl").insightsGalleryOverdueAging).toBe("Achterstand per ouderdom");
+    expect(buildCatalog("nl").insightsGalleryPipelineByStage).toBe("Pipeline per fase");
+    expect(buildCatalog("nl").insightsGalleryVatByQuarter).toBe("Btw per kwartaal");
+    expect(buildCatalog("nl").insightsGalleryWinRateByQuarter).toBe("Winstpercentage per kwartaal");
+  });
+});
+
 describe("runtime switching", () => {
   test("strings proxy reflects the active locale live", () => {
     expect(getLocale()).toBe("en");

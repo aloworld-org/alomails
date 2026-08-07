@@ -2043,4 +2043,118 @@ export const nl: Partial<Catalog> = {
   auditActionThreadCreate: "Gesprek gekoppeld",
   auditActionThreadDelete: "Gesprek ontkoppeld",
   auditActionLeadCreate: "Leads geïmporteerd",
+
+  // alo Inzichten (ADR 0037, golf BI-1). Een „board” heet hier een dashboard —
+  // het woord „bord” is in dit product al bezet door het kanbanbord van Taken
+  // en CRM. De zeven vragen van het overzicht dragen exact de titels die de
+  // server zaait (`insights_gallery.rs`): dezelfde grafiek heet niet anders
+  // omdat ze uit de galerij komt.
+  moduleInsights: "Inzichten",
+  insightsBoards: "Dashboards",
+  insightsLoadFailed: "Uw dashboards konden niet worden geladen.",
+  insightsBoardLoadFailed: "Dit dashboard kon niet worden geladen.",
+  insightsFiguresFailed: "Deze cijfers konden niet worden gelezen.",
+  insightsSaveFailed: "De wijziging kon niet worden opgeslagen.",
+  insightsDeleteFailed: "Dat kon niet worden verwijderd.",
+  insightsNewBoard: "Nieuw dashboard",
+  insightsBoardNamePrompt: "Hoe moet dit dashboard heten?",
+  insightsBoardNamePlaceholder: "Kasstroom",
+  insightsRenameBoard: "Naam wijzigen",
+  insightsDeleteBoard: "Dashboard verwijderen",
+  insightsDeleteBoardConfirm: (name: string) =>
+    `Het dashboard „${name}” verwijderen? De grafieken gaan mee — de facturen en deals erachter blijven staan.`,
+  insightsRefresh: "Cijfers vernieuwen",
+  insightsNoBoardsTitle: "Nog geen dashboards",
+  insightsNoBoardsBody:
+    "Een dashboard bundelt de cijfers die u in één oogopslag wilt zien: wat u factureerde, wat u nog krijgt, wat er in de pipeline zit.",
+  insightsNoTilesTitle: "Niets op dit dashboard vastgezet",
+  insightsNoTilesBody: "Grafieken die u op dit dashboard vastzet, verschijnen hier.",
+  insightsAddChart: "Grafiek toevoegen",
+  insightsGalleryTitle: "Kant-en-klare grafieken",
+  insightsGallerySubtitle:
+    "Kies er een om ze op dit dashboard vast te zetten. U kunt ze daarna hernoemen of verwijderen.",
+  insightsGalleryClose: "Sluiten",
+  insightsGalleryLoadFailed: "De kant-en-klare grafieken konden niet worden geladen.",
+  insightsGalleryRevenueByMonth: "Omzet per maand",
+  insightsGalleryRevenueByMonthBody:
+    "Wat u factureerde, maand na maand over het afgelopen jaar — exclusief btw.",
+  insightsGalleryOutstanding: "Openstaand",
+  insightsGalleryOutstandingBody:
+    "Alles wat u nog tegoed hebt op uitgegeven facturen, als één cijfer.",
+  insightsGalleryOverdueAging: "Achterstand per ouderdom",
+  insightsGalleryOverdueAgingBody:
+    "Wat u tegoed hebt, gegroepeerd naar hoe laat het is: 0–30, 31–60, 61–90 en 90+ dagen.",
+  insightsGalleryVatByQuarter: "Btw per kwartaal",
+  insightsGalleryVatByQuarterBody:
+    "De btw die u per kwartaal in rekening bracht — de vorm waarin een aangifte wordt ingediend.",
+  insightsGalleryTopCustomers: "Grootste klanten",
+  insightsGalleryTopCustomersBody:
+    "Waar de omzet van dit jaar vandaan kwam, de tien grootste eerst.",
+  insightsGalleryPaymentsByMonth: "Ontvangen betalingen",
+  insightsGalleryPaymentsByMonthBody:
+    "Geld dat werkelijk binnenkwam, maand na maand, in de valuta waarin het binnenkwam.",
+  insightsGalleryPipelineByStage: "Pipeline per fase",
+  insightsGalleryPipelineByStageBody: "De waarde van open deals in elke kolom van uw trechter.",
+  insightsGalleryWonThisMonth: "Gewonnen deze maand",
+  insightsGalleryWonThisMonthBody: "De waarde van de deals die deze maand als gewonnen sloten.",
+  insightsGalleryWinRateByQuarter: "Winstpercentage per kwartaal",
+  insightsGalleryWinRateByQuarterBody:
+    "Hoe vaak een besliste deal werd gewonnen, kwartaal na kwartaal.",
+  insightsGalleryWonByMonth: "Gewonnen per maand",
+  insightsGalleryWonByMonthBody:
+    "De gewonnen dealwaarde, maand na maand over het afgelopen jaar.",
+  insightsAsk: "Vraag om een grafiek",
+  insightsAskSubtitle:
+    "Beschrijf wat u wilt zien. U krijgt de grafiek eerst te zien — er komt niets op dit dashboard tot u ze vastzet.",
+  insightsAskLabel: "Uw vraag",
+  insightsAskPlaceholder: "Hoeveel factureerden we elke maand dit jaar?",
+  insightsAskSubmit: "Vragen",
+  insightsAskClose: "Sluiten",
+  insightsAskPreview: "De voorgestelde grafiek",
+  insightsAskPin: "Op dit dashboard vastzetten",
+  insightsAskDiscard: "Verwerpen",
+  insightsAskRepaired:
+    "De eerste poging paste niet bij de gegevens en werd gecorrigeerd voor het tekenen.",
+  insightsAskFailed: "Uit die vraag kon geen grafiek worden gebouwd.",
+  insightsAskUnavailable: "De assistent staat niet aan voor deze werkruimte.",
+  insightsTileActions: (title: string) => `Opties voor ${title}`,
+  insightsRenameTile: "Grafiek hernoemen",
+  insightsRenameTilePrompt: "Hoe moet deze grafiek heten?",
+  insightsRemoveTile: "Grafiek verwijderen",
+  insightsRemoveTileConfirm: (title: string) =>
+    `„${title}” van dit dashboard verwijderen? De records die ze telt, blijven ongemoeid.`,
+  insightsWiden: "Breder maken",
+  insightsNarrow: "Smaller maken",
+  insightsMoveLeft: "Naar voren verplaatsen",
+  insightsMoveRight: "Naar achteren verplaatsen",
+  insightsUnreadableTitle: "Gemaakt door een nieuwere versie van alo",
+  insightsUnreadableBody:
+    "De vraag achter deze grafiek is hier niet leesbaar, dus haar cijfers worden niet getoond.",
+  insightsNoFigures: "Niets te tonen voor deze periode.",
+  insightsTruncated:
+    "Alleen de grootste categorieën worden getoond; de rest staat samen onder „Overige”.",
+  insightsNoteUnconverted: (count: number) =>
+    count === 1
+      ? "1 document kon niet in uw boekhoudvaluta worden uitgedrukt en telt niet mee."
+      : `${count} documenten konden niet in uw boekhoudvaluta worden uitgedrukt en tellen niet mee.`,
+  insightsColBucket: "Categorie",
+  insightsColValue: "Waarde",
+  insightsBucketTotal: "Totaal",
+  insightsBucketOther: "Overige",
+  insightsGroupAll: "Alles",
+  insightsValueNone: "Geen",
+  insightsValueUnknown: "Onbekend",
+  insightsStatusIssued: "Uitgegeven",
+  insightsStatusPaid: "Betaald",
+  insightsOutcomeWon: "Gewonnen",
+  insightsOutcomeLost: "Verloren",
+  insightsOutcomeOpen: "Open",
+  insightsAgeNotDue: "Nog niet vervallen",
+  insightsAge0To30: "0–30 dagen",
+  insightsAge31To60: "31–60 dagen",
+  insightsAge61To90: "61–90 dagen",
+  insightsAge90Plus: "90+ dagen",
+  // De Nederlandse afkortingen: kwartaal en week, geen Q en W.
+  insightsQuarter: (quarter: number, year: number) => `K${quarter} ${year}`,
+  insightsWeek: (week: number, year: number) => `W${week} ${year}`,
 };

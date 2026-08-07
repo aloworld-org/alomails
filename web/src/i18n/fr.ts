@@ -2069,4 +2069,120 @@ export const fr: Partial<Catalog> = {
   auditActionThreadCreate: "Liaison d’une conversation",
   auditActionThreadDelete: "Retrait d’une conversation",
   auditActionLeadCreate: "Import de prospects",
+
+  // alo Analyses (ADR 0037, vague BI-1). Un « board » est ici un tableau de
+  // bord, jamais un tableau tout court : le mot doit rester le même de la
+  // liste des onglets au dialogue de suppression. Les sept questions de
+  // l’aperçu reprennent mot pour mot les titres semés par le serveur
+  // (`insights_gallery.rs`) — un graphique ne change pas de nom selon qu’il
+  // vient de l’aperçu ou de la galerie.
+  moduleInsights: "Analyses",
+  insightsBoards: "Tableaux de bord",
+  insightsLoadFailed: "Vos tableaux de bord n’ont pas pu être chargés.",
+  insightsBoardLoadFailed: "Ce tableau de bord n’a pas pu être chargé.",
+  insightsFiguresFailed: "Ces chiffres n’ont pas pu être lus.",
+  insightsSaveFailed: "La modification n’a pas pu être enregistrée.",
+  insightsDeleteFailed: "Cet élément n’a pas pu être retiré.",
+  insightsNewBoard: "Nouveau tableau de bord",
+  insightsBoardNamePrompt: "Comment ce tableau de bord doit-il s’appeler ?",
+  insightsBoardNamePlaceholder: "Trésorerie",
+  insightsRenameBoard: "Renommer",
+  insightsDeleteBoard: "Supprimer le tableau de bord",
+  insightsDeleteBoardConfirm: (name: string) =>
+    `Supprimer le tableau de bord « ${name} » ? Ses graphiques partent avec lui — les factures et les affaires qu’ils comptent restent.`,
+  insightsRefresh: "Actualiser les chiffres",
+  insightsNoBoardsTitle: "Aucun tableau de bord",
+  insightsNoBoardsBody:
+    "Un tableau de bord réunit les chiffres que vous voulez voir d’un coup d’œil : ce que vous avez facturé, ce qu’on vous doit, ce qu’il y a dans le pipeline.",
+  insightsNoTilesTitle: "Rien d’épinglé sur ce tableau de bord",
+  insightsNoTilesBody: "Les graphiques épinglés sur ce tableau de bord apparaissent ici.",
+  insightsAddChart: "Ajouter un graphique",
+  insightsGalleryTitle: "Graphiques prêts à l’emploi",
+  insightsGallerySubtitle:
+    "Choisissez-en un pour l’épingler à ce tableau de bord. Vous pourrez le renommer ou le retirer ensuite.",
+  insightsGalleryClose: "Fermer",
+  insightsGalleryLoadFailed: "Les graphiques prêts à l’emploi n’ont pas pu être chargés.",
+  insightsGalleryRevenueByMonth: "Chiffre d’affaires par mois",
+  insightsGalleryRevenueByMonthBody:
+    "Ce que vous avez facturé, mois par mois, sur l’année écoulée — hors TVA.",
+  insightsGalleryOutstanding: "Créances en cours",
+  insightsGalleryOutstandingBody:
+    "Tout ce qui vous est encore dû sur les factures émises, en un seul chiffre.",
+  insightsGalleryOverdueAging: "Retards par ancienneté",
+  insightsGalleryOverdueAgingBody:
+    "Ce qui vous est dû, groupé selon le retard : 0–30, 31–60, 61–90 et plus de 90 jours.",
+  insightsGalleryVatByQuarter: "TVA par trimestre",
+  insightsGalleryVatByQuarterBody:
+    "La TVA facturée par trimestre — la forme dans laquelle une déclaration se dépose.",
+  insightsGalleryTopCustomers: "Meilleurs clients",
+  insightsGalleryTopCustomersBody:
+    "D’où vient le chiffre d’affaires de l’année, les dix premiers d’abord.",
+  insightsGalleryPaymentsByMonth: "Paiements reçus",
+  insightsGalleryPaymentsByMonthBody:
+    "L’argent réellement arrivé, mois par mois, dans la devise dans laquelle il est arrivé.",
+  insightsGalleryPipelineByStage: "Pipeline par étape",
+  insightsGalleryPipelineByStageBody:
+    "La valeur des affaires en cours dans chaque colonne de votre pipeline.",
+  insightsGalleryWonThisMonth: "Gagné ce mois-ci",
+  insightsGalleryWonThisMonthBody: "La valeur des affaires conclues comme gagnées ce mois-ci.",
+  insightsGalleryWinRateByQuarter: "Taux de réussite par trimestre",
+  insightsGalleryWinRateByQuarterBody:
+    "À quelle fréquence une affaire tranchée a été gagnée, trimestre par trimestre.",
+  insightsGalleryWonByMonth: "Gagné par mois",
+  insightsGalleryWonByMonthBody:
+    "La valeur des affaires gagnées, mois par mois sur l’année écoulée.",
+  insightsAsk: "Demander un graphique",
+  insightsAskSubtitle:
+    "Décrivez ce que vous voulez voir. Vous obtenez d’abord le graphique à regarder — rien n’est ajouté à ce tableau de bord tant que vous ne l’épinglez pas.",
+  insightsAskLabel: "Votre question",
+  insightsAskPlaceholder: "Combien avons-nous facturé chaque mois cette année ?",
+  insightsAskSubmit: "Demander",
+  insightsAskClose: "Fermer",
+  insightsAskPreview: "Le graphique proposé",
+  insightsAskPin: "Épingler à ce tableau de bord",
+  insightsAskDiscard: "Abandonner",
+  insightsAskRepaired:
+    "La première tentative ne correspondait pas aux données ; elle a été corrigée avant le tracé.",
+  insightsAskFailed: "Aucun graphique n’a pu être construit à partir de cette question.",
+  insightsAskUnavailable: "L’assistant n’est pas activé pour cet espace de travail.",
+  insightsTileActions: (title: string) => `Options pour ${title}`,
+  insightsRenameTile: "Renommer le graphique",
+  insightsRenameTilePrompt: "Comment ce graphique doit-il s’appeler ?",
+  insightsRemoveTile: "Retirer le graphique",
+  insightsRemoveTileConfirm: (title: string) =>
+    `Retirer « ${title} » de ce tableau de bord ? Les enregistrements qu’il compte ne sont pas touchés.`,
+  insightsWiden: "Élargir",
+  insightsNarrow: "Rétrécir",
+  insightsMoveLeft: "Déplacer avant",
+  insightsMoveRight: "Déplacer après",
+  insightsUnreadableTitle: "Créé par une version plus récente d’alo",
+  insightsUnreadableBody:
+    "La question de ce graphique ne peut pas être lue ici, ses chiffres ne sont donc pas affichés.",
+  insightsNoFigures: "Rien à afficher pour cette période.",
+  insightsTruncated:
+    "Seules les plus grandes catégories sont affichées ; le reste est regroupé sous « Autres ».",
+  insightsNoteUnconverted: (count: number) =>
+    count === 1
+      ? "1 document n’a pas pu être converti dans votre devise comptable et n’est pas compté."
+      : `${count} documents n’ont pas pu être convertis dans votre devise comptable et ne sont pas comptés.`,
+  insightsColBucket: "Catégorie",
+  insightsColValue: "Valeur",
+  insightsBucketTotal: "Total",
+  insightsBucketOther: "Autres",
+  insightsGroupAll: "Tout",
+  insightsValueNone: "Aucun",
+  insightsValueUnknown: "Inconnu",
+  insightsStatusIssued: "Émise",
+  insightsStatusPaid: "Réglée",
+  insightsOutcomeWon: "Gagnée",
+  insightsOutcomeLost: "Perdue",
+  insightsOutcomeOpen: "En cours",
+  insightsAgeNotDue: "Non échu",
+  insightsAge0To30: "0–30 jours",
+  insightsAge31To60: "31–60 jours",
+  insightsAge61To90: "61–90 jours",
+  insightsAge90Plus: "Plus de 90 jours",
+  // Les abréviations françaises : trimestre et semaine, pas Q et W.
+  insightsQuarter: (quarter: number, year: number) => `T${quarter} ${year}`,
+  insightsWeek: (week: number, year: number) => `S${week} ${year}`,
 };
