@@ -7,7 +7,7 @@ use std::sync::Arc;
 use alo_identity::Identity;
 use alo_store::Store;
 use axum::extract::{DefaultBodyLimit, State};
-use axum::routing::{any, delete, get, post, put};
+use axum::routing::{any, delete, get, patch, post, put};
 use axum::{Json, Router};
 use serde_json::{Value, json};
 
@@ -20,9 +20,9 @@ use crate::{
     billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
     billing_settings, blob, calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff,
     crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
-    docs, drive, filters, flagdue, imap_import_route, push, reset_route, schedule, security,
-    session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
-    workspace_search,
+    docs, drive, filters, flagdue, imap_import_route, insights, insights_eval, push, reset_route,
+    schedule, security, session, settings, share, signup_route, sites, snooze, spaces, tasks,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -592,6 +592,44 @@ pub fn app(state: AppState) -> Router {
                 alo_store::crm_lead_import::MAX_IMPORT_BYTES,
             )),
         )
+        // alo Insights (ADR 0037, wave BI1.04) — the boards a tenant reads its
+        // numbers from, and the two routes that answer a question with figures.
+        // `/insights` is a NEW top-level prefix: the production Caddyfile needs
+        // it added at the next deploy, the standing human action `/billing`,
+        // `/crm` and `/audit` already carry (docs/design/insights.md § Routes).
+        //
+        // A board and its tiles come back in one read, and each tile's numbers
+        // are fetched on its own — so a grid draws immediately and fills in as
+        // the answers arrive, rather than waiting on the slowest chart.
+        .route(
+            "/insights/dashboards",
+            get(insights::list_dashboards).post(insights::create_dashboard),
+        )
+        .route(
+            "/insights/dashboards/{id}",
+            get(insights::get_dashboard)
+                .patch(insights::update_dashboard)
+                .delete(insights::delete_dashboard),
+        )
+        .route(
+            "/insights/dashboards/{id}/tiles",
+            post(insights::create_tile),
+        )
+        // A tile is created under its board and addressed on its own after
+        // that — `/billing/invoices/{id}/payments`' shape, for its reason. The
+        // move is its own POST, the mirror of `/crm/stages/{id}/move`: a grid
+        // drag must not be able to retitle a chart, and saving an edit form
+        // must not be able to rearrange the board.
+        .route(
+            "/insights/tiles/{id}",
+            patch(insights::update_tile).delete(insights::delete_tile),
+        )
+        .route("/insights/tiles/{id}/move", post(insights::move_tile))
+        .route("/insights/tiles/{id}/data", get(insights_eval::tile_data))
+        // The builder's live preview: a spec in, a series out, nothing stored.
+        // That separation is what keeps the ask (BI1.07) propose-then-approve —
+        // a model can have a chart drawn, and only a person can pin one.
+        .route("/insights/eval", post(insights_eval::eval))
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))
