@@ -1027,6 +1027,8 @@ pub async fn list_audit(
                 "action": e.action,
                 "target": e.target,
                 "detail": e.detail,
+                "entityType": e.entity_type,
+                "entityId": e.entity_id,
                 "at": utc_date(e.created_at),
             })
         })

@@ -78,6 +78,12 @@ pub struct AuditEntry {
     pub action: String,
     pub target: Option<String>,
     pub detail: Option<String>,
+    /// The kind of business record this entry is about (`billing.invoice`,
+    /// `crm.deal`), or `None` for an administrative action whose subject is
+    /// the `target` label instead.
+    pub entity_type: Option<String>,
+    /// The record's own id within the tenant, paired with `entity_type`.
+    pub entity_id: Option<String>,
     pub created_at: OffsetDateTime,
 }
 

@@ -16,6 +16,7 @@
 import { useCallback, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { RecordHistory } from "../audit";
 import { strings, useLocale } from "../i18n";
 import { useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
@@ -250,6 +251,11 @@ export function InvoiceEditor() {
                 </ul>
               </section>
             )}
+            {/* Who did what to this invoice, and when (B2.13). Below the
+                document rather than beside it: a bookkeeper reads the numbers
+                first and the history only when something looks wrong. A draft
+                that was never saved has no id and therefore no history. */}
+            {id !== undefined && <RecordHistory entityType="billing.invoice" entityId={id} />}
           </>
         )
       }

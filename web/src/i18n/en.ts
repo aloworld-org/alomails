@@ -2332,6 +2332,48 @@ export const en = {
   sitesAddressPreview: (address: string) => `Your site will live at ${address}.`,
   sitesPublishFailed: "The site could not be published.",
   sitesUnpublishFailed: "The site could not be taken offline.",
+
+  // Audit trail — a record's own history (B2.13). The labels are VERBS, not
+  // sentences: the record kind is the page the reader is already on, so an
+  // invoice's history says "Issued" rather than "Invoice issued". Keep them
+  // that way in every language, and keep them past tense — each line is a
+  // thing that happened.
+  auditHistoryTitle: "History",
+  auditHistoryEmpty: "Nothing has happened to this record yet.",
+  auditLoadFailed: "The history could not be loaded.",
+  auditActionCreate: "Created",
+  auditActionUpdate: "Edited",
+  auditActionDelete: "Deleted",
+  auditActionArchive: "Archived",
+  auditActionIssue: "Issued",
+  auditActionVoid: "Voided",
+  auditActionCreditNote: "Credit note raised",
+  auditActionSend: "Email drafted",
+  auditActionReminder: "Reminder drafted",
+  auditActionPaymentCreate: "Payment recorded",
+  auditActionPaymentDelete: "Payment removed",
+  auditActionImport: "Imported",
+  auditActionSepaXml: "Added to a payment file",
+  auditActionApprove: "Approved",
+  auditActionReject: "Rejected",
+  auditActionAccept: "Accepted",
+  auditActionDecline: "Declined",
+  auditActionExpire: "Marked expired",
+  auditActionRun: "Run",
+  auditActionPause: "Paused",
+  auditActionResume: "Resumed",
+  auditActionRatesUpdate: "Exchange rate set",
+  auditActionRatesImport: "Exchange rates imported",
+  auditActionStageMove: "Moved to another column",
+  auditActionStageCreate: "Column added",
+  auditActionMove: "Moved",
+  auditActionQuoteRaised: "Quote raised",
+  auditActionInvoiceRaised: "Invoice raised",
+  auditActionActivityCreate: "Note added",
+  auditActionNextStepCreate: "Next step added",
+  auditActionThreadCreate: "Conversation linked",
+  auditActionThreadDelete: "Conversation unlinked",
+  auditActionLeadCreate: "Leads imported",
 } as const;
 
 /** Every string key in the catalog. */

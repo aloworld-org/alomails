@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { FileText, Pencil, Receipt, Trash2, X } from "lucide-react";
 
+import { RecordHistory } from "../audit";
 import { useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { ActivityLog } from "./ActivityLog";
@@ -188,6 +189,9 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
           <ActivityLog dealId={deal.id} />
           <NextSteps dealId={deal.id} />
           <LinkedThreads dealId={deal.id} />
+          {/* Who changed this deal, and when (B2.13). Last in the drawer: it is
+              the question asked after the ones above, never instead of them. */}
+          <RecordHistory entityType="crm.deal" entityId={deal.id} />
         </div>
       )}
 

@@ -15,13 +15,14 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, agent, ai, api, autoconfig, base, billing_bills, billing_customers, billing_fx,
-    billing_invoices, billing_payments, billing_products, billing_quotes, billing_reminder,
-    billing_reports, billing_schedules, billing_send, billing_sepa, billing_settings, blob,
-    calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff, crm_imports,
-    crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates, docs, drive,
-    filters, flagdue, imap_import_route, push, reset_route, schedule, security, session, settings,
-    share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    admin, agent, ai, api, audit, audit_record, autoconfig, base, billing_bills, billing_customers,
+    billing_fx, billing_invoices, billing_payments, billing_products, billing_quotes,
+    billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
+    billing_settings, blob, calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff,
+    crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
+    docs, drive, filters, flagdue, imap_import_route, push, reset_route, schedule, security,
+    session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
+    workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -768,12 +769,27 @@ pub fn app(state: AppState) -> Router {
         .route("/admin/security/checks", get(security::checks))
         // Admin console: audit log (this tenant's administrative actions).
         .route("/admin/audit", get(admin::list_audit))
+        // One business record's history (B2.13) — the same log, read from the
+        // record instead of the console, so it is open to any member of the
+        // tenant rather than admins. `/audit` is a NEW top-level prefix: the
+        // production Caddyfile needs it added at the next deploy, and the vite
+        // dev proxy already has it.
+        .route("/audit", get(audit::list_entity_audit))
         // Mail settings: the user's signature + the tenant footer.
         .route("/settings/mail", get(settings::mail_settings))
         .route("/settings/signature", post(settings::set_signature))
         .route("/settings/out-of-office", post(settings::set_out_of_office))
         .route("/admin/org-footer", post(settings::set_org_footer))
         .layer(DefaultBodyLimit::max(upload_limit))
+        // The business audit trail (B2.13). Applied to the routes rather than
+        // around the router, so it runs *after* routing and can read the
+        // matched template — `/billing/invoices/{id}/issue` is what says which
+        // segment is a record id. It short circuits for every method and prefix
+        // it does not audit, which is nearly all traffic.
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            audit_record::audit_business_mutations,
+        ))
         .with_state(state);
     jmap.merge(identity_routes)
 }

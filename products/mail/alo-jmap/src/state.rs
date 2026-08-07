@@ -309,7 +309,10 @@ async fn expand_folder_grant(acc: &AccountStore, granted: Vec<String>) -> HashSe
     allowed
 }
 
-fn bearer_token(headers: &HeaderMap) -> Option<String> {
+/// The raw bearer token from an `Authorization` header, if there is one.
+/// `pub(crate)` for the audit layer (B2.13), which resolves the actor of a
+/// mutation it did not itself authenticate.
+pub(crate) fn bearer_token(headers: &HeaderMap) -> Option<String> {
     let value = headers.get(AUTHORIZATION)?.to_str().ok()?;
     value
         .strip_prefix("Bearer ")

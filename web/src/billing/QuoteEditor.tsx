@@ -18,6 +18,7 @@
 import { useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import { RecordHistory } from "../audit";
 import { strings, useLocale } from "../i18n";
 import { useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
@@ -164,16 +165,23 @@ export function QuoteEditor() {
       }
       actions={actions}
       footer={
-        quote === null || invoiceId === null ? null : (
-          <p className={styles.relation}>
-            <button
-              type="button"
-              className={styles.linkAction}
-              onClick={() => void openInvoice(invoiceId)}
-            >
-              {strings.billingQuoteInvoice}
-            </button>
-          </p>
+        quote === null ? null : (
+          <>
+            {invoiceId !== null && (
+              <p className={styles.relation}>
+                <button
+                  type="button"
+                  className={styles.linkAction}
+                  onClick={() => void openInvoice(invoiceId)}
+                >
+                  {strings.billingQuoteInvoice}
+                </button>
+              </p>
+            )}
+            {/* Who did what to this quote, and when (B2.13). A quote that was
+                never saved has no id and therefore no history. */}
+            {id !== undefined && <RecordHistory entityType="billing.quote" entityId={id} />}
+          </>
         )
       }
       onBack={() => void navigate("..")}
