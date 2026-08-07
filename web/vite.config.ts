@@ -95,6 +95,14 @@ export default defineConfig(({ command }) => ({
     alias: {
       "@product": fileURLToPath(new URL(`./src/product/${product}.tsx`, import.meta.url)),
     },
+    // Univer and BlockNote both declare React as a peer dependency. During
+    // repeated local restarts Vite can otherwise retain optimized chunks that
+    // resolve those peers through different module identities, producing an
+    // intermittent "Invalid hook call" before AuthProvider can render.
+    dedupe: ["react", "react-dom"],
+  },
+  optimizeDeps: {
+    include: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
   server: {
     proxy: devProxy,

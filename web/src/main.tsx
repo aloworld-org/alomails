@@ -6,7 +6,6 @@ import "@fontsource-variable/eb-garamond";
 import "./ds/tokens.css";
 import "./ds/global.css";
 
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import { App } from "./App";
@@ -26,11 +25,11 @@ if (inTauri) {
   document.documentElement.classList.add("desktop");
 }
 
-createRoot(container).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+// Univer owns a large imperative canvas tree. React development Strict Mode
+// intentionally mounts effects twice, which initializes and disposes that tree
+// twice and makes local sheet opening needlessly slow. TypeScript, ESLint and
+// component tests provide the safety checks without double-starting the editor.
+createRoot(container).render(<App />);
 
 // Desktop app only: keep itself current. No-op in the browser.
 void checkForUpdatesInBackground();
