@@ -22,12 +22,14 @@ import type {
   BillingProduct,
   BillingQuote,
   BillingQuoteSummary,
+  BillingSettings,
   CustomerDraft,
   InvoiceDraft,
   InvoiceStatus,
   ProductDraft,
   QuoteDraft,
   QuoteStatus,
+  SettingsDraft,
 } from "./types";
 
 type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -285,8 +287,46 @@ export class BillingApi {
     ).then((r) => r.quote);
   }
 
+  /** Who the tenant invoices as. Never a `404` — an identity that has never
+   *  been saved reads as the blanks with `stated: false`. */
+  settings(): Promise<BillingSettings> {
+    return this.#read<{ settings: BillingSettings }>("/billing/settings").then((r) => r.settings);
+  }
+
+  /** Saves the issuer identity. Absent fields keep their stored value; `null`
+   *  clears a nullable one. The legal name is required by the server, so the
+   *  first save must carry one. */
+  saveSettings(draft: SettingsDraft): Promise<BillingSettings> {
+    return this.#write<{ settings: BillingSettings }>("PATCH", "/billing/settings", draft).then(
+      (r) => r.settings,
+    );
+  }
+
+  /**
+   * The printable document as one self-contained HTML page — the page the
+   * customer receives, rendered by the server (`docs/design/billing.md`).
+   *
+   * Deliberately fetched rather than linked: the route is authenticated, and a
+   * plain `<a href>` would open a tab with no bearer token. The caller hands
+   * the HTML to `printSheet`.
+   */
+  documentHtml(kind: "invoices" | "quotes", id: string): Promise<string> {
+    return this.#text(`/billing/${kind}/${encodeURIComponent(id)}/print`);
+  }
+
   async #read<T>(path: string): Promise<T> {
     return this.#json<T>(await this.#send(path, { method: "GET" }));
+  }
+
+  /** A `GET` whose body is not JSON. A failure still carries the server's
+   *  `Problem` detail, which is JSON — the same error shape as everywhere. */
+  async #text(path: string): Promise<string> {
+    const res = await this.#send(path, { method: "GET" });
+    if (!res.ok) {
+      const problem = (await res.json().catch(() => ({}))) as { detail?: unknown };
+      throw new BillingError(res.status, typeof problem.detail === "string" ? problem.detail : null);
+    }
+    return res.text();
   }
 
   /** A lifecycle transition: a `POST` that carries no input at all. What the

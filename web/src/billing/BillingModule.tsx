@@ -17,6 +17,7 @@ import { InvoicesView } from "./InvoicesView";
 import { ProductsView } from "./ProductsView";
 import { QuoteEditor } from "./QuoteEditor";
 import { QuotesView } from "./QuotesView";
+import { SettingsView } from "./SettingsView";
 import styles from "./BillingModule.module.css";
 
 /** The tabs: the documents that are the point of the module, then the offers
@@ -28,6 +29,10 @@ const TABS = [
   { path: "quotes", label: () => strings.billingQuotes },
   { path: "customers", label: () => strings.billingCustomers },
   { path: "products", label: () => strings.billingProducts },
+  // Last, and deliberately not first: it is filled in once and then printed on
+  // every document, so it belongs beside the records rather than in front of
+  // them. What it holds is who the tenant invoices AS (B1.16).
+  { path: "settings", label: () => strings.billingSettings },
 ] as const;
 
 export function BillingModule() {
@@ -62,6 +67,7 @@ export function BillingModule() {
         </Route>
         <Route path="customers" element={<CustomersView />} />
         <Route path="products" element={<ProductsView />} />
+        <Route path="settings" element={<SettingsView />} />
         {/* An unknown billing path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to="invoices" replace />} />
       </Routes>

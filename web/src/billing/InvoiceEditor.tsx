@@ -201,6 +201,7 @@ export function InvoiceEditor() {
         // form for a document that now exists.
         void navigate(`../${created.id}`, { replace: true });
       }}
+      onPrint={id === undefined ? undefined : () => api.documentHtml("invoices", id)}
       onDiscard={async () => {
         if (id === undefined) return;
         await api.deleteInvoice(id);

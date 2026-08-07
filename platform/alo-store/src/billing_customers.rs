@@ -21,7 +21,9 @@
 use time::OffsetDateTime;
 
 use crate::account::AccountStore;
-use crate::billing_field::{bounded, currency, payment_terms_days, required};
+use crate::billing_field::{
+    bounded, country as validate_country, currency, payment_terms_days, required,
+};
 use crate::error::{Result, StoreError};
 use crate::id::{BillingCustomerId, ContactId};
 use crate::vat_id;
@@ -157,22 +159,6 @@ struct Normalized {
     payment_terms_days: i32,
     currency: String,
     contact_id: Option<String>,
-}
-
-/// Validates an ISO 3166-1 alpha-2 country code, returning it uppercased.
-///
-/// Shape only: two ASCII letters. The store deliberately does not carry a
-/// list of assigned codes — that list changes under us and a rejected valid
-/// code blocks a real customer, while a two-letter typo is caught by the VAT
-/// rules (B1.03) the moment it matters.
-fn validate_country(country: &str) -> Result<String> {
-    let country = country.trim();
-    if country.len() != 2 || !country.bytes().all(|b| b.is_ascii_alphabetic()) {
-        return Err(StoreError::Validation(
-            "country must be a two-letter ISO 3166-1 code".to_owned(),
-        ));
-    }
-    Ok(country.to_ascii_uppercase())
 }
 
 /// Validates an optional invoice email address: one `@`, non-empty local and
@@ -548,13 +534,18 @@ mod tests {
     }
 
     #[test]
-    fn country_must_be_two_letters() {
-        for ok in ["de", "DE", "Fr", " nl "] {
-            assert!(validate_country(ok).is_ok(), "expected valid: {ok:?}");
-        }
-        for bad in ["", "D", "DEU", "D1", "12", "d€"] {
+    fn country_is_required_on_a_customer() {
+        // The shape rule itself is `billing_field::country`'s (and is tested
+        // there); what is this record's own is that a customer must state a
+        // country at all — it decides their VAT treatment.
+        for bad in ["", "D", "DEU", "D1"] {
+            let input = NewCustomer {
+                country: bad.to_owned(),
+                vat_id: None,
+                ..valid()
+            };
             assert!(
-                matches!(validate_country(bad), Err(StoreError::Validation(_))),
+                invalid(normalize(&input)).contains("country"),
                 "expected rejection: {bad:?}"
             );
         }

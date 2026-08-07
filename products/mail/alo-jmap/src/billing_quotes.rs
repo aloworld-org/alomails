@@ -33,6 +33,7 @@
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
+use axum::response::Response;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::Date;
@@ -42,6 +43,7 @@ use alo_store::{AccountStore, BillingCustomerId, BillingQuoteId, NewLine};
 
 use crate::billing::{iso, iso_date, map_store_err, parse_body};
 use crate::billing_document::{LineBody, today, with_body, with_totals};
+use crate::billing_print::{self as print, Banner, DocumentKind, PrintDocument, PrintQuery};
 use crate::error::Problem;
 use crate::state::{AppState, authenticate};
 
@@ -462,6 +464,55 @@ pub async fn expire_quote(
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "quote": document_json(&document, today()) })))
+}
+
+/// `GET /billing/quotes/{id}/print[?lang=]` → the printable offer as one
+/// self-contained HTML page ([`crate::billing_print`]).
+///
+/// The same page an invoice prints on, with an offer's words: its two dates
+/// are the day it was made and the day it stands until, and it says plainly
+/// that nothing is payable on it — a document that merely omitted the bank
+/// details would read as one that forgot them.
+///
+/// **"Past its date" is not "closed".** The banner is driven by the offer's
+/// *status*, never by [`Quote::is_expired`]: a lapsed offer that nobody has
+/// answered is still open, and the store will still accept it
+/// (`docs/design/billing.md`). The validity date is on the page for the
+/// customer to read.
+pub async fn print_quote(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<PrintQuery>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let document = load(&account.acc, &BillingQuoteId::new(id)).await?;
+    let quote = &document.quote;
+    let (customer, issuer) = print::parties(&account.acc, &quote.customer_id).await?;
+
+    let printed = PrintDocument {
+        kind: DocumentKind::Quote,
+        banner: match quote.status {
+            QuoteStatus::Draft => Some(Banner::Draft),
+            QuoteStatus::Declined | QuoteStatus::Expired => Some(Banner::Closed),
+            // An accepted offer is a record of what was agreed, not a spent
+            // document: it prints as it was sent.
+            QuoteStatus::Sent | QuoteStatus::Accepted => None,
+        },
+        number: quote.number.as_deref(),
+        primary_date: quote.sent_date,
+        secondary_date: quote.valid_until,
+        reference: &quote.reference,
+        note: &quote.note,
+        currency: &quote.currency,
+        payment_terms_days: None,
+        credits_number: None,
+        customer: &customer,
+        lines: &document.lines,
+        totals: &document.totals,
+        issuer: &issuer,
+    };
+    Ok(print::response(print::render(&printed, query.strings())))
 }
 
 #[cfg(test)]

@@ -219,6 +219,64 @@ export interface BillingQuote extends BillingQuoteSummary {
 }
 
 /**
+ * Who the tenant invoices *as* — the issuer side of every printed document.
+ *
+ * One record per tenant, so it has no id. A tenant that has never saved reads
+ * the blanks with `stated: false` rather than a `404`: the record always
+ * conceptually exists (`docs/design/billing.md`).
+ */
+export interface BillingSettings {
+  /** `false` until the tenant has saved once; every blank below is then "not
+   *  yet said" rather than "deliberately empty". */
+  stated: boolean;
+  legalName: string;
+  addressLine1: string;
+  addressLine2: string;
+  postalCode: string;
+  city: string;
+  /** ISO 3166-1 alpha-2, uppercase; blank while unstated. */
+  country: string;
+  /** Canonical prefixed form; `null` for a tenant not VAT-registered. */
+  vatId: string | null;
+  /** Company-register number as printed (KVK, SIREN, HRB, …). */
+  registrationNo: string;
+  email: string;
+  phone: string;
+  website: string;
+  /** Compacted and uppercase, checked against its country length and mod-97. */
+  iban: string | null;
+  bic: string | null;
+  bankName: string;
+  /** Printed when the account is not held in the legal name. */
+  accountHolder: string;
+  /** A line under the totals of every document. */
+  footerNote: string;
+  updatedBy: string | null;
+  updatedAt: string | null;
+}
+
+/** The writable fields of the issuer identity; absent means "leave as it is",
+ *  and `null` clears a nullable one. */
+export interface SettingsDraft {
+  legalName?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  postalCode?: string;
+  city?: string;
+  country?: string;
+  vatId?: string | null;
+  registrationNo?: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  iban?: string | null;
+  bic?: string | null;
+  bankName?: string;
+  accountHolder?: string;
+  footerNote?: string;
+}
+
+/**
  * The writable parts of a quote; absent means "leave as it is".
  *
  * As on an invoice there is no `status`, `number`, `sentDate`, `validUntil` or

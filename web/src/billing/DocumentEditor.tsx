@@ -12,17 +12,20 @@
 // record shows about its relations (`footer`). What does not vary lives here:
 // the header fields, the line grid, the totals panel, the save indicator, the
 // create bar, and the read-only rendering of a document that carries a number.
+import { useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Printer } from "lucide-react";
 
 import { Button, Spinner, cx, useDialogs } from "../ds";
 import { strings } from "../i18n";
+import { billingMessage } from "./api";
 import { DocumentActions } from "./DocumentActions";
 import type { DocumentAction } from "./DocumentActions";
 import { DocumentLines } from "./DocumentLines";
 import type { DocumentDraft, StoredDocument } from "./documentDraft";
 import { ErrorBanner, Field } from "./parts";
 import type { Pickers } from "./pickers";
+import { printSheet } from "./printSheet";
 import { TotalsPanel } from "./TotalsPanel";
 import styles from "./BillingModule.module.css";
 
@@ -65,6 +68,9 @@ interface Props<T extends StoredDocument, A> {
   onCreated: (document: T) => void;
   /** Discards the draft. Only ever offered while the document is editable. */
   onDiscard: () => Promise<void>;
+  /** Fetches this document's printable page from the server. `undefined`
+   *  before the document exists — there is nothing to print. */
+  onPrint: (() => Promise<string>) | undefined;
 }
 
 export function DocumentEditor<T extends StoredDocument, A>({
@@ -78,8 +84,10 @@ export function DocumentEditor<T extends StoredDocument, A>({
   onBack,
   onCreated,
   onDiscard,
+  onPrint,
 }: Props<T, A>) {
   const { confirm } = useDialogs();
+  const [printing, setPrinting] = useState(false);
   const { document, header, rows, readOnly } = draft;
 
   // An archived customer is still offered on the document already raised for
@@ -114,6 +122,22 @@ export function DocumentEditor<T extends StoredDocument, A>({
   async function create() {
     const created = await draft.create();
     if (created !== null) onCreated(created);
+  }
+
+  // Printing shows the STORED document, which is what the server renders, so a
+  // draft holding unsaved edits would print without them. Rather than refuse,
+  // the button waits for the save the editor is already doing — the same rule
+  // the lifecycle actions follow, for the same reason.
+  async function print() {
+    if (onPrint === undefined) return;
+    setPrinting(true);
+    try {
+      printSheet(await onPrint());
+    } catch (err) {
+      draft.fail(billingMessage(err, strings.billingPrintFailed));
+    } finally {
+      setPrinting(false);
+    }
   }
 
   async function discard() {
@@ -162,6 +186,17 @@ export function DocumentEditor<T extends StoredDocument, A>({
         {draft.saveState === "failed" && (
           <button type="button" className={styles.linkAction} onClick={draft.saveNow}>
             {strings.billingSaveNow}
+          </button>
+        )}
+        {document !== null && onPrint !== undefined && (
+          <button
+            type="button"
+            className={styles.linkAction}
+            onClick={() => void print()}
+            disabled={printing || !saved}
+            title={saved ? undefined : strings.billingPrintUnsaved}
+          >
+            <Printer size={14} aria-hidden="true" /> {strings.billingPrint}
           </button>
         )}
         {document !== null && !readOnly && (

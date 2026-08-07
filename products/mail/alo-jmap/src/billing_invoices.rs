@@ -34,6 +34,7 @@
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
+use axum::response::Response;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::Date;
@@ -45,6 +46,7 @@ use alo_store::{AccountStore, BillingCustomerId, BillingInvoiceId, BillingQuoteI
 
 use crate::billing::{iso, iso_date, map_store_err, parse_body};
 use crate::billing_document::{LineBody, today, with_body, with_totals};
+use crate::billing_print::{self as print, Banner, DocumentKind, PrintDocument, PrintQuery};
 use crate::error::Problem;
 use crate::state::{AppState, authenticate};
 
@@ -457,6 +459,67 @@ pub async fn create_credit_note(
     Ok(Json(
         json!({ "invoice": document_json(&document, today()) }),
     ))
+}
+
+/// `GET /billing/invoices/{id}/print[?lang=]` → the printable document as one
+/// self-contained HTML page ([`crate::billing_print`]).
+///
+/// The same page is the source of the PDF (B1.17) and of the mail attachment
+/// (B1.18), which is why it is rendered here and not in the browser
+/// (`docs/design/billing.md`).
+///
+/// What the page says about itself comes from the document's own state, never
+/// from the request: a draft prints as a draft and without a number, a void
+/// invoice prints as void, and a credit note is titled as one and names the
+/// invoice it corrects.
+pub async fn print_invoice(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<PrintQuery>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let document = load(&account.acc, &BillingInvoiceId::new(id)).await?;
+    let invoice = &document.invoice;
+    let (customer, issuer) = print::parties(&account.acc, &invoice.customer_id).await?;
+
+    // The number of what this credits is read separately: the store holds the
+    // id, and the paper has to name the document the customer already has.
+    let credited = match invoice.credits_invoice_id.as_ref() {
+        Some(original) => account
+            .acc
+            .billing_invoice(original)
+            .await
+            .map_err(map_store_err)?
+            .and_then(|d| d.invoice.number),
+        None => None,
+    };
+
+    let printed = PrintDocument {
+        kind: if invoice.is_credit_note {
+            DocumentKind::CreditNote
+        } else {
+            DocumentKind::Invoice
+        },
+        banner: match invoice.status {
+            InvoiceStatus::Draft => Some(Banner::Draft),
+            InvoiceStatus::Void => Some(Banner::Void),
+            InvoiceStatus::Issued | InvoiceStatus::Paid => None,
+        },
+        number: invoice.number.as_deref(),
+        primary_date: invoice.issue_date,
+        secondary_date: invoice.due_date,
+        reference: &invoice.reference,
+        note: &invoice.note,
+        currency: &invoice.currency,
+        payment_terms_days: Some(invoice.payment_terms_days),
+        credits_number: credited.as_deref(),
+        customer: &customer,
+        lines: &document.lines,
+        totals: &document.totals,
+        issuer: &issuer,
+    };
+    Ok(print::response(print::render(&printed, query.strings())))
 }
 
 #[cfg(test)]

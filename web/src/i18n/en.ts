@@ -1697,6 +1697,42 @@ export const en = {
   billingExpireQuoteConfirm:
     "The offer closes as expired, with today as the day you stopped chasing it. It cannot be answered afterwards.",
   billingQuoteInvoice: "The invoice this became",
+
+  // Printing, and the issuer identity every printed document carries (B1.16).
+  // The document itself is rendered by the server and speaks its own language
+  // table (`billing_print.rs`); these are the words around it.
+  billingPrint: "Print",
+  billingPrintUnsaved: "This prints the saved document, so it waits for your last change.",
+  billingPrintFailed: "The document could not be prepared for printing. Try again.",
+  billingSettings: "Your details",
+  billingSettingsIntro:
+    "This is who your invoices, credit notes and quotes are from: the name and numbers at the top, and the account the money goes to.",
+  billingSettingsFirstRun:
+    "Fill this in before you issue anything. It is what appears at the top of every document you print, and where your customers are asked to pay.",
+  billingSettingsIdentity: "Who you invoice as",
+  billingSettingsContact: "How customers reach you",
+  billingSettingsBank: "Where the money goes",
+  billingSettingsFooter: "The line under the totals",
+  billingSettingsSaved: "Saved. Every document you print from now on carries this.",
+  billingSettingsLoadFailed: "Your billing details could not be loaded.",
+  billingFieldLegalName: "Legal name",
+  billingLegalNameHint: "The name you trade and invoice under, as registered.",
+  billingIssuerVatIdHint: "Leave empty if you are not VAT-registered. State your country first.",
+  billingFieldRegistrationNo: "Company number",
+  billingRegistrationHint: "As your register prints it — KVK, SIREN, HRB, Companies House.",
+  billingFieldPhone: "Phone",
+  billingFieldWebsite: "Website",
+  billingFieldIban: "IBAN",
+  billingIbanHint: "Checked against your country's length and its check digits before it is saved.",
+  billingIbanPlaceholder: "NL91 ABNA 0417 1643 00",
+  billingFieldBic: "BIC",
+  billingBicPlaceholder: "ABNANL2A",
+  billingFieldBankName: "Bank",
+  billingFieldAccountHolder: "Account holder",
+  billingAccountHolderHint: "Only if the account is not in your legal name.",
+  billingFieldFooterNote: "Footer note",
+  billingFooterNoteHint:
+    "Printed under the totals of every document — retention of title, late-payment terms, a thank-you.",
 } as const;
 
 /** Every string key in the catalog. */

@@ -16,9 +16,9 @@ use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
     admin, agent, ai, api, autoconfig, base, billing_customers, billing_invoices, billing_products,
-    billing_quotes, blob, calendar, carddav, contacts, delegates, docs, drive, filters, flagdue,
-    imap_import_route, push, reset_route, schedule, security, session, settings, share,
-    signup_route, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    billing_quotes, billing_settings, blob, calendar, carddav, contacts, delegates, docs, drive,
+    filters, flagdue, imap_import_route, push, reset_route, schedule, security, session, settings,
+    share, signup_route, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -256,6 +256,12 @@ pub fn app(state: AppState) -> Router {
             "/billing/invoices/{id}/credit-note",
             post(billing_invoices::create_credit_note),
         )
+        // The printable document (B1.16): self-contained HTML, and the source
+        // the PDF (B1.17) and the mail attachment (B1.18) are made from.
+        .route(
+            "/billing/invoices/{id}/print",
+            get(billing_invoices::print_invoice),
+        )
         // Quotes (B1.12) — the offer that precedes an invoice, with the same
         // shape: draft CRUD, a strict status filter, and every transition its
         // own POST. Accepting is the one that answers two documents: it closes
@@ -285,6 +291,16 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/billing/quotes/{id}/expire",
             post(billing_quotes::expire_quote),
+        )
+        .route(
+            "/billing/quotes/{id}/print",
+            get(billing_quotes::print_quote),
+        )
+        // The issuer identity every printed document carries (B1.16): one row
+        // per tenant, so the resource has no id and no list.
+        .route(
+            "/billing/settings",
+            get(billing_settings::get_settings).patch(billing_settings::update_settings),
         )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))

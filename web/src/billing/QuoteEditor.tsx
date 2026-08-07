@@ -180,6 +180,7 @@ export function QuoteEditor() {
       onCreated={(created) => {
         void navigate(`../${created.id}`, { replace: true });
       }}
+      onPrint={id === undefined ? undefined : () => api.documentHtml("quotes", id)}
       onDiscard={async () => {
         if (id === undefined) return;
         await api.deleteQuote(id);

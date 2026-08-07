@@ -19,6 +19,7 @@ pub mod billing_line;
 pub mod billing_products;
 pub mod billing_quotes;
 pub mod billing_sequence;
+pub mod billing_settings;
 pub mod billing_totals;
 pub mod blob;
 pub mod calendar;
@@ -31,6 +32,7 @@ pub mod document;
 pub mod drive;
 pub mod error;
 pub mod extract;
+pub mod iban;
 pub mod ical;
 pub mod id;
 pub mod identity;
@@ -70,6 +72,7 @@ pub use billing_sequence::{
     INVOICE_NUMBER_PREFIX, INVOICE_SEQUENCE_KIND, QUOTE_NUMBER_PREFIX, QUOTE_SEQUENCE_KIND,
     document_number,
 };
+pub use billing_settings::{BillingSettings, NewBillingSettings};
 pub use billing_totals::{LineFigures, Totals, VatSubtotal};
 #[cfg(feature = "garage")]
 pub use blob::GarageConfig;

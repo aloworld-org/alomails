@@ -102,6 +102,26 @@ pub(crate) fn currency(value: &str) -> Result<String> {
     Ok(value.to_ascii_uppercase())
 }
 
+/// Validates an ISO 3166-1 alpha-2 country code, returning it uppercased.
+///
+/// Shape only: two ASCII letters. The store deliberately does not carry a
+/// list of assigned codes — that list changes under us and a rejected valid
+/// code blocks a real customer, while a two-letter typo is caught by the VAT
+/// rules ([`crate::vat_id`]) the moment it matters.
+///
+/// Blank is refused here. A field where "unstated" is legitimate (the
+/// issuer's own country, [`crate::billing_settings`]) checks for blank first;
+/// on a customer, the country decides VAT treatment and is required.
+pub(crate) fn country(value: &str) -> Result<String> {
+    let value = value.trim();
+    if value.len() != 2 || !value.bytes().all(|b| b.is_ascii_alphabetic()) {
+        return Err(StoreError::Validation(
+            "country must be a two-letter ISO 3166-1 code".to_owned(),
+        ));
+    }
+    Ok(value.to_ascii_uppercase())
+}
+
 /// Validates payment terms in days: how long after issue an invoice is due.
 /// Zero is valid — "due on receipt".
 pub(crate) fn payment_terms_days(value: i32) -> Result<i32> {
@@ -181,6 +201,22 @@ mod tests {
         for bad in ["", "EU", "EURO", "EU1", "€"] {
             assert!(
                 matches!(currency(bad), Err(StoreError::Validation(_))),
+                "expected rejection: {bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn country_must_be_two_letters() {
+        for ok in ["de", "DE", "Fr", " nl "] {
+            assert!(country(ok).is_ok(), "expected valid: {ok:?}");
+        }
+        assert_eq!(country("be").unwrap_or_default(), "BE");
+        // Blank is refused here: a field where "unstated" is legitimate
+        // checks for it before calling.
+        for bad in ["", "   ", "D", "DEU", "D1", "12", "d€"] {
+            assert!(
+                matches!(country(bad), Err(StoreError::Validation(_))),
                 "expected rejection: {bad:?}"
             );
         }
