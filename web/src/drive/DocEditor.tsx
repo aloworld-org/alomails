@@ -15,7 +15,7 @@ import {
   type SyntheticEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { AlignCenter, AlignLeft, AlignRight, Bold, Check, ChevronDown, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, MessageSquarePlus, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, Check, ChevronDown, Code2, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, MessageSquarePlus, Minus, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -220,7 +220,7 @@ export function DocEditor({
     onChange();
   };
 
-  const insertBlock = (type: "table" | "divider" | "pageBreak" | "equation") => {
+  const insertBlock = (type: "table" | "divider" | "pageBreak" | "equation" | "aloCode") => {
     const anchor = editor.getTextCursorPosition().block;
     editor.insertBlocks([{ type }] as Parameters<typeof editor.insertBlocks>[0], anchor, "after");
     onChange();
@@ -432,7 +432,7 @@ export function DocEditor({
         <div ref={menuBarRef} className={styles.docMenus} onClick={(event) => { if ((event.target as HTMLElement).closest("button") !== null) closeMenus(); }}>
           <details onToggle={handleMenuToggle}><summary>{strings.docMenuFile}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => window.print()}><Printer size={15} />{strings.docPrint}</button><button type="button" onClick={() => window.print()}><FileText size={15} />{strings.docSavePdf}</button></div></details>
           <details onToggle={handleMenuToggle}><summary>{strings.docMenuEdit}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => editor.undo()}><Undo2 size={15} />{strings.sheetUndo}</button><button type="button" onClick={() => editor.redo()}><Redo2 size={15} />{strings.sheetRedo}</button></div></details>
-          <details onToggle={handleMenuToggle}><summary>{strings.docMenuInsert}</summary><div className={styles.docMenuPanel}><button type="button" onClick={createLink}><Link2 size={15} />{strings.docInsertLink}</button><button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={15} />{strings.docInsertImage}</button><button type="button" onClick={() => insertBlock("table")}><Table2 size={15} />{strings.sheetInsertTable}</button><button type="button" onClick={() => insertBlock("equation")}><Sigma size={15} />{strings.docEquation}</button><button type="button" onClick={insertComment}><MessageSquarePlus size={15} />{strings.docAddComment}</button><button type="button" onClick={() => insertBlock("divider")}><Minus size={15} />{strings.docInsertDivider}</button><button type="button" onClick={() => insertBlock("pageBreak")}><FileText size={15} />{strings.docInsertPageBreak}</button></div></details>
+          <details onToggle={handleMenuToggle}><summary>{strings.docMenuInsert}</summary><div className={styles.docMenuPanel}><button type="button" onClick={createLink}><Link2 size={15} />{strings.docInsertLink}</button><button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={15} />{strings.docInsertImage}</button><button type="button" onClick={() => insertBlock("table")}><Table2 size={15} />{strings.sheetInsertTable}</button><button type="button" onClick={() => insertBlock("aloCode")}><Code2 size={15} />{strings.composeInsertCode}</button><button type="button" onClick={() => insertBlock("equation")}><Sigma size={15} />{strings.docEquation}</button><button type="button" onClick={insertComment}><MessageSquarePlus size={15} />{strings.docAddComment}</button><button type="button" onClick={() => insertBlock("divider")}><Minus size={15} />{strings.docInsertDivider}</button><button type="button" onClick={() => insertBlock("pageBreak")}><FileText size={15} />{strings.docInsertPageBreak}</button></div></details>
           <details onToggle={handleMenuToggle}><summary>{strings.docMenuFormat}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => toggleStyle("bold")}><Bold size={15} />{strings.sheetBold}</button><button type="button" onClick={() => toggleStyle("italic")}><Italic size={15} />{strings.sheetItalic}</button><button type="button" onClick={() => toggleStyle("underline")}><Underline size={15} />{strings.sheetUnderline}</button></div></details>
           <details onToggle={handleMenuToggle}><summary>{strings.docPageSetup}</summary><div className={`${styles.docMenuPanel} ${styles.pageSetupPanel}`}>
             <label>{strings.docPageSize}<select value={pageSize} onChange={(event) => setPageSize(event.target.value as PageSize)}><option value="a4">A4</option><option value="letter">{strings.docPageLetter}</option></select></label>
@@ -475,6 +475,7 @@ export function DocEditor({
         <button type="button" className={styles.commandIcon} onClick={createLink} aria-label={strings.docInsertLink}><Link2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => imageInputRef.current?.click()} aria-label={strings.docInsertImage}><ImagePlus size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("table")} aria-label={strings.sheetInsertTable}><Table2 size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={() => insertBlock("aloCode")} aria-label={strings.composeInsertCode}><Code2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("equation")} aria-label={strings.docEquation}><Sigma size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={insertComment} aria-label={strings.docAddComment}><MessageSquarePlus size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("divider")} aria-label={strings.docInsertDivider}><List size={17} /></button>

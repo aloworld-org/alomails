@@ -11,6 +11,8 @@ import { createReactBlockSpec } from "@blocknote/react";
 import katex from "katex";
 import "katex/dist/katex.min.css";
 
+import { CodeBlock } from "../authoring/CodeBlock";
+import { EquationEditor } from "../authoring/EquationEditor";
 import { strings } from "../i18n";
 import styles from "./docBlocks.module.css";
 
@@ -30,25 +32,9 @@ export const EquationBlock = createReactBlockSpec(
       }
 
       if (editing) {
-        return (
-          <div className={styles.edit} contentEditable={false}>
-            <span className={styles.tag}>Σ</span>
-            <input
-              className={styles.input}
-              autoFocus
-              value={draft}
-              placeholder="LaTeX — e.g. E = mc^2  or  \frac{a}{b}"
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={commit}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  commit();
-                }
-              }}
-            />
-          </div>
-        );
+        return <div contentEditable={false}>
+          <EquationEditor value={draft} display onChange={setDraft} onInsert={commit} onClose={() => setEditing(false)} />
+        </div>;
       }
 
       let html: string;
@@ -74,6 +60,25 @@ export const EquationBlock = createReactBlockSpec(
         />
       );
     },
+  },
+);
+
+/** The mail composer's syntax-highlighted editor, persisted as a native Doc block. */
+export const AloCodeBlock = createReactBlockSpec(
+  {
+    type: "aloCode",
+    propSchema: { code: { default: "" }, language: { default: "plaintext" } },
+    content: "none",
+  },
+  {
+    render: ({ block, editor }) => <div className={styles.code} contentEditable={false}>
+      <CodeBlock
+        code={block.props.code}
+        language={block.props.language}
+        onChange={(code) => editor.updateBlock(block, { props: { code } })}
+        onLanguageChange={(language) => editor.updateBlock(block, { props: { language } })}
+      />
+    </div>,
   },
 );
 
@@ -139,5 +144,5 @@ export const DocSettingsBlock = createReactBlockSpec(
  *  a library-vs-tsconfig mismatch, not a defect in this object. The runtime shape
  *  is exactly right; the assertion is scoped to this one boundary. */
 export const docSchema = BlockNoteSchema.create({
-  blockSpecs: { ...defaultBlockSpecs, equation: EquationBlock(), comment: CommentBlock(), docSettings: DocSettingsBlock() },
+  blockSpecs: { ...defaultBlockSpecs, equation: EquationBlock(), aloCode: AloCodeBlock(), comment: CommentBlock(), docSettings: DocSettingsBlock() },
 } as Parameters<typeof BlockNoteSchema.create>[0]);

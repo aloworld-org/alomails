@@ -42,6 +42,7 @@
 .input::placeholder {
   color: var(--text-tertiary);
 }
+.code { width: 100%; margin: 8px 0; }
 .comment {
   width: 100%;
   margin: 8px 0;
