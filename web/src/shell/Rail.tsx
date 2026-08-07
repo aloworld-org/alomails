@@ -4,7 +4,7 @@
 // scrolls and never changes between modules; only the panel to its right does.
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, Grid3X3, GripVertical, Pencil, Plus, Sparkles, X } from "lucide-react";
+import { Check, Grip, GripVertical, Pencil, Plus, Sparkles, X } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { strings } from "../i18n";
@@ -121,7 +121,7 @@ export function Rail({ onAskAi }: RailProps) {
         </li>}
         <li ref={launcherTriggerRef} className={styles.launcherAnchor}>
           <button type="button" className={cx(styles.item, open && styles.active)} onClick={() => { setOpen((current) => !current); setEditing(false); }} aria-expanded={open} aria-haspopup="dialog" title={strings.appLauncher}>
-            <Grid3X3 strokeWidth={1.75} />
+            <Grip strokeWidth={2} />
             <span className={styles.label}>{strings.appLauncher}</span>
           </button>
           {open && createPortal(<div ref={launcherPanelRef} className={styles.launcher} role="dialog" aria-label={strings.appLauncher}>
