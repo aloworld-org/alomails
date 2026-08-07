@@ -62,8 +62,24 @@ function fileSlug(name: string): string {
   return slug || "untitled";
 }
 
+const EDITOR_ROUTE_KEY = "alo.drive.editor-route";
+
 function editorPath(kind: EditorKind, id: string, name: string): string {
-  return `/drive/${kind}/${encodeURIComponent(id)}/${fileSlug(name)}`;
+  const slug = fileSlug(name);
+  try {
+    window.localStorage.setItem(`${EDITOR_ROUTE_KEY}:${kind}:${slug}`, id);
+  } catch {
+    // A clean URL still works for this navigation even when storage is blocked.
+  }
+  return `/drive/${kind}/${slug}`;
+}
+
+function storedEditorId(kind: EditorKind, slug: string): string | null {
+  try {
+    return window.localStorage.getItem(`${EDITOR_ROUTE_KEY}:${kind}:${slug}`);
+  } catch {
+    return null;
+  }
 }
 
 export function DriveModule() {
@@ -107,14 +123,18 @@ export function DriveModule() {
   // Editor state is URL-backed. A direct visit or browser refresh restores the
   // exact Drive file instead of falling back to the file list.
   useEffect(() => {
-    const match = /^\/drive\/(doc|sheet|office)\/([^/]+)(?:\/[^/]*)?$/.exec(route.pathname);
+    const legacyMatch = /^\/drive\/(doc|sheet|office)\/([^/]+)\/([^/]*)$/.exec(route.pathname);
+    const cleanMatch = /^\/drive\/(doc|sheet|office)\/([^/]+)$/.exec(route.pathname);
+    const match = legacyMatch ?? cleanMatch;
     if (match === null) {
       setOpenDoc(null);
       setOpenSheet(null);
       setOpenOffice(null);
       return;
     }
-    const id = decodeURIComponent(match[2] ?? "");
+    const kind = match[1] as EditorKind;
+    const routeValue = decodeURIComponent(match[2] ?? "");
+    const id = legacyMatch !== null ? routeValue : (storedEditorId(kind, routeValue) ?? "");
     if (id === "") return;
     void client.driveNode(id).then((node) => {
       if (node === null) {

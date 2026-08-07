@@ -9,7 +9,7 @@ import { Check, ChevronLeft, Download, MoreHorizontal, Pencil, X } from "lucide-
 // Univer's own UI + engine. Framework-agnostic: it mounts into a plain DOM
 // container we hand it, so we drive it from an effect rather than as JSX.
 import { createUniver, LocaleType, merge, defaultTheme } from "@univerjs/presets";
-import type { IBorderData, IRange, IStyleData } from "@univerjs/core";
+import { CommandType, type IBorderData, type IRange, type IStyleData } from "@univerjs/core";
 import {
   ALL_IMPLEMENTED_FUNCTIONS_SET,
   FUNCTION_NAMES_ARRAY,
@@ -178,6 +178,8 @@ export function SheetEditor({
   const apiRef = useRef<ReturnType<typeof createUniver>["univerAPI"] | null>(null);
   const disposeRef = useRef<(() => void) | null>(null);
   const lastSaved = useRef<string>("");
+  const dirtyRef = useRef(false);
+  const savingRef = useRef(false);
   const [initial, setInitial] = useState<Snapshot | null>(null);
   const [ready, setReady] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
@@ -260,11 +262,15 @@ export function SheetEditor({
       const selected = workbook.getActiveRange();
       const sheet = workbook.getActiveSheet();
       if (selected === null || sheet === null) {
-        setActiveBorder(null);
-        setSelectionFormatting({ activeKeys: [], fontFamily: null, fontSize: null, numberPattern: null });
+        setActiveBorder((current) => current === null ? current : null);
+        setSelectionFormatting((current) => {
+          if (current.activeKeys.length === 0 && current.fontFamily === null && current.fontSize === null && current.numberPattern === null) return current;
+          return { activeKeys: [], fontFamily: null, fontSize: null, numberPattern: null };
+        });
         return;
       }
-      setActiveBorder(detectBorderKind(selected, sheet));
+      const nextBorder = detectBorderKind(selected, sheet);
+      setActiveBorder((current) => current === nextBorder ? current : nextBorder);
       const selectedRange = selected.getRange();
       const style = sheet.getRange(selectedRange.startRow, selectedRange.startColumn).getCellStyleData("cell") ?? {};
       const activeKeys: string[] = [];
@@ -294,10 +300,25 @@ export function SheetEditor({
       if (pattern === "0.00%") activeKeys.push("number-percent");
       if (pattern === "€ #,##0.00") activeKeys.push("number-currency");
       if (pattern === "#,##0") activeKeys.push("number-comma");
-      setSelectionFormatting({ activeKeys, fontFamily, fontSize, numberPattern: pattern });
+      setSelectionFormatting((current) => {
+        const sameKeys = current.activeKeys.length === activeKeys.length && current.activeKeys.every((key, index) => key === activeKeys[index]);
+        if (sameKeys && current.fontFamily === fontFamily && current.fontSize === fontSize && current.numberPattern === pattern) return current;
+        return { activeKeys, fontFamily, fontSize, numberPattern: pattern };
+      });
     };
-    const selectionSubscription = workbook.onSelectionChange(updateSelectionFormatting);
-    const commandSubscription = workbook.onCommandExecuted(updateSelectionFormatting);
+    let formattingFrame: number | null = null;
+    const scheduleFormattingUpdate = () => {
+      if (formattingFrame !== null) return;
+      formattingFrame = window.requestAnimationFrame(() => {
+        formattingFrame = null;
+        updateSelectionFormatting();
+      });
+    };
+    const selectionSubscription = workbook.onSelectionChange(scheduleFormattingUpdate);
+    const commandSubscription = workbook.onCommandExecuted((command) => {
+      if (command.type === CommandType.MUTATION) dirtyRef.current = true;
+      scheduleFormattingUpdate();
+    });
     updateSelectionFormatting();
     lastSaved.current = snapshotJson(univerAPI);
     disposeRef.current = () => univerAPI.dispose();
@@ -305,6 +326,7 @@ export function SheetEditor({
     return () => {
       selectionSubscription.dispose();
       commandSubscription.dispose();
+      if (formattingFrame !== null) window.cancelAnimationFrame(formattingFrame);
       disposeRef.current?.();
       apiRef.current = null;
       disposeRef.current = null;
@@ -316,16 +338,30 @@ export function SheetEditor({
   useEffect(() => {
     if (!ready) return undefined;
     const timer = window.setInterval(() => {
+      if (!dirtyRef.current || savingRef.current) return;
       const api = apiRef.current;
       if (api === null) return;
       const json = snapshotJson(api);
-      if (json === "" || json === lastSaved.current) return;
-      lastSaved.current = json;
+      if (json === "") return;
+      if (json === lastSaved.current) {
+        dirtyRef.current = false;
+        return;
+      }
+      dirtyRef.current = false;
+      savingRef.current = true;
       setSaveState("saving");
       void client
         .driveSaveSheet(nodeId, JSON.parse(json) as Snapshot)
-        .then(() => setSaveState("saved"))
-        .catch(() => setSaveState("idle"));
+        .then(() => {
+          lastSaved.current = json;
+          savingRef.current = false;
+          setSaveState("saved");
+        })
+        .catch(() => {
+          savingRef.current = false;
+          dirtyRef.current = true;
+          setSaveState("idle");
+        });
     }, 2500);
     return () => window.clearInterval(timer);
   }, [ready, client, nodeId]);
