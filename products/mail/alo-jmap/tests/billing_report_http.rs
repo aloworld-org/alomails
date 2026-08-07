@@ -293,13 +293,14 @@ async fn a_periods_summary_answers_the_same_figures_as_json_and_as_a_file() {
     let lines = rows(&csv);
     assert_eq!(
         lines[0],
-        "row,periodFrom,periodTo,currency,vatRatePercent,net,vat,gross,invoices,creditNotes",
+        "row,periodFrom,periodTo,currency,vatRatePercent,net,vat,gross,invoices,creditNotes,\
+         unconverted",
         "the columns are a contract, in English, whatever the UI language"
     );
     assert_eq!(
         lines[1],
         format!(
-            "rate,{},{},EUR,9.00,250.00,22.50,272.50,,",
+            "rate,{},{},EUR,9.00,250.00,22.50,272.50,,,",
             today(),
             today()
         )
@@ -307,7 +308,7 @@ async fn a_periods_summary_answers_the_same_figures_as_json_and_as_a_file() {
     assert_eq!(
         lines[2],
         format!(
-            "rate,{},{},EUR,21.00,500.00,105.00,605.00,,",
+            "rate,{},{},EUR,21.00,500.00,105.00,605.00,,,",
             today(),
             today()
         )
@@ -315,13 +316,40 @@ async fn a_periods_summary_answers_the_same_figures_as_json_and_as_a_file() {
     assert_eq!(
         lines[3],
         format!(
-            "total,{},{},EUR,,750.00,127.50,877.50,2,1",
+            "total,{},{},EUR,,750.00,127.50,877.50,2,1,0",
             today(),
             today()
         ),
         "the same figures as the JSON, as decimals"
     );
-    assert_eq!(lines.len(), 4, "{csv}");
+    // Then the same period once more in the currency the books are kept in —
+    // here the same figures, since the tenant bills in it (B1.21).
+    assert_eq!(
+        lines[4],
+        format!(
+            "baseRate,{},{},EUR,9.00,250.00,22.50,272.50,,,",
+            today(),
+            today()
+        )
+    );
+    assert_eq!(
+        lines[5],
+        format!(
+            "baseRate,{},{},EUR,21.00,500.00,105.00,605.00,,,",
+            today(),
+            today()
+        )
+    );
+    assert_eq!(
+        lines[6],
+        format!(
+            "baseTotal,{},{},EUR,,750.00,127.50,877.50,,,0",
+            today(),
+            today()
+        ),
+        "the figure a return is filed from, and nothing missing from it"
+    );
+    assert_eq!(lines.len(), 7, "{csv}");
     // Nothing that names anybody: a summary emailed to an accountant carries
     // no customer list.
     assert!(!csv.contains("Acme"), "{csv}");
@@ -346,7 +374,14 @@ async fn a_periods_summary_answers_the_same_figures_as_json_and_as_a_file() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(rows(&csv).len(), 1, "the header row alone: {csv:?}");
+    // The header, and the `baseTotal` row that says the nothing is nothing in
+    // euro — a file that does not name its currency is a question (B1.21).
+    let empty = rows(&csv);
+    assert_eq!(empty.len(), 2, "{csv:?}");
+    assert_eq!(
+        empty[1],
+        format!("baseTotal,{},{},EUR,,0.00,0.00,0.00,,,0", day(-30), day(-2))
+    );
 }
 
 // ---- the refusals -----------------------------------------------------------
@@ -435,7 +470,13 @@ async fn another_tenants_turnover_never_appears_in_a_report() {
     )
     .await;
     assert_eq!(status, StatusCode::OK);
-    assert_eq!(rows(&csv).len(), 1, "the header row alone: {csv:?}");
+    let empty = rows(&csv);
+    assert_eq!(empty.len(), 2, "the header and an empty total: {csv:?}");
+    assert_eq!(
+        empty[1],
+        format!("baseTotal,{},{},EUR,,0.00,0.00,0.00,,,0", today(), today()),
+        "zero, in A's own accounting currency — never a figure of B's"
+    );
 
     // A now bills something of its own: A's report is A's, not B's minus
     // something.

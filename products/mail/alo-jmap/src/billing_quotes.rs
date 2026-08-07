@@ -510,6 +510,10 @@ pub async fn print_quote(
         customer: &customer,
         lines: &document.lines,
         totals: &document.totals,
+        // An offer is not a tax point: nothing is chargeable on it, so there is
+        // no rate to freeze and nothing to restate (B1.21). It is converted, if
+        // at all, on the invoice the acceptance raises.
+        restated: None,
         issuer: &issuer,
     };
     Ok(print::response(print::render(&printed, query.strings())))

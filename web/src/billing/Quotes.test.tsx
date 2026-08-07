@@ -138,6 +138,7 @@ const FROM_QUOTE: BillingInvoice = {
   updatedAt: "2026-08-07T10:00:00Z",
   lines: DRAFT.lines,
   totals: DRAFT.totals,
+  fx: null,
   settlement: {
     grossCents: DRAFT.totals.grossCents,
     paidCents: 0,

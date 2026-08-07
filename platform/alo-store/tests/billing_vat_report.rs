@@ -74,6 +74,15 @@ async fn raw_pool() -> PgPool {
         .unwrap()
 }
 
+/// The database's own current date — the day the store issues on, and therefore
+/// the day a rate has to be published for.
+async fn today_of(pool: &PgPool) -> Date {
+    sqlx::query_scalar("SELECT CURRENT_DATE")
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
 /// `units` whole units at `price_cents`, taxed at `rate_bp`.
 fn item(units: i64, price_cents: i64, rate_bp: i32) -> NewLine {
     NewLine {
@@ -313,7 +322,7 @@ async fn a_seeded_quarter_reproduces_the_hand_computed_totals() {
 }
 
 #[tokio::test]
-async fn each_currency_is_summarised_on_its_own() {
+async fn each_currency_is_summarised_on_its_own_and_then_once_in_the_accounting_currency() {
     let store = common::test_store().await;
     let pool = raw_pool().await;
     let (a, tenant, customer) = tenant_with_customer(&store, "currencies").await;
@@ -327,8 +336,10 @@ async fn each_currency_is_summarised_on_its_own() {
         day(Month::July, 10),
     )
     .await;
-    // The same customer billed in dollars: the currency is stated on the
-    // document, and B1.21 is what will one day convert it.
+
+    // The same customer billed in dollars. Issuing it needs a published rate:
+    // without one the document could not state its VAT in the tenant's own
+    // currency, so the store refuses (B1.21) rather than inventing a rate.
     let usd = a
         .create_billing_invoice(&NewInvoice {
             currency: Some("USD".to_owned()),
@@ -339,7 +350,35 @@ async fn each_currency_is_summarised_on_its_own() {
     a.set_billing_invoice_lines(&usd, &[item(1, 20_000, 0)])
         .await
         .unwrap();
-    a.issue_billing_invoice(&usd).await.unwrap();
+    match a.issue_billing_invoice(&usd).await {
+        Err(StoreError::Validation(message)) => {
+            assert!(message.contains("no exchange rate for USD"), "{message}");
+            assert!(message.contains("import the reference rates"), "{message}");
+        }
+        other => panic!("expected a refusal without a rate, got: {other:?}"),
+    }
+
+    // 1 EUR = 1.1626 USD, published today (the day the store will issue on).
+    let today = today_of(&pool).await;
+    a.save_billing_fx_rate("USD", today, 1_162_600)
+        .await
+        .unwrap();
+    let issued = a.issue_billing_invoice(&usd).await.unwrap();
+    let fx = issued
+        .invoice
+        .fx
+        .as_ref()
+        .expect("a snapshot was frozen on it");
+    assert_eq!(fx.base_currency, "EUR");
+    assert_eq!(fx.rate_micro, 1_162_600);
+    assert_eq!(fx.rate_date, today);
+    // The document also knows what it is worth in the tenant's books:
+    // 200.00 USD / 1.1626 = 172.0282… → 172.03.
+    assert_eq!(
+        issued.base_totals().map(|t| t.net_cents),
+        Some(17_203),
+        "the figure a foreign-currency invoice has to print to state its VAT"
+    );
     backdate(&pool, &tenant, &usd, day(Month::July, 11)).await;
 
     let period = a.billing_vat_period(q3_start(), q3_end()).await.unwrap();
@@ -350,12 +389,31 @@ async fn each_currency_is_summarised_on_its_own() {
             .map(|c| c.currency.as_str())
             .collect::<Vec<_>>(),
         vec!["EUR", "USD"],
-        "never added together, and ascending by code"
+        "never added together in their own groups, and ascending by code"
     );
     assert_eq!(period.currencies[0].net_cents, 10_000);
     assert_eq!(period.currencies[0].vat_cents, 2_100);
     assert_eq!(period.currencies[1].net_cents, 20_000);
     assert_eq!(period.currencies[1].vat_cents, 0);
+    // Each group also says what it contributes to the books, at the rate frozen
+    // on its own documents.
+    assert_eq!(
+        period.currencies[0].base_net_cents, 10_000,
+        "already in euro"
+    );
+    assert_eq!(period.currencies[1].base_net_cents, 17_203);
+    assert_eq!(period.currencies[1].unconverted_count, 0);
+    // And then, once, the figure a return is filed from.
+    assert_eq!(period.base.currency, "EUR");
+    assert_eq!(period.base.net_cents, 10_000 + 17_203);
+    assert_eq!(period.base.vat_cents, 2_100);
+    assert_eq!(period.base.gross_cents, 10_000 + 17_203 + 2_100);
+    assert_eq!(period.base.unconverted_count, 0);
+    assert_eq!(
+        period.base.net_cents,
+        period.base.by_rate.iter().map(|r| r.net_cents).sum::<i64>(),
+        "the base rows add up to the base total"
+    );
 }
 
 #[tokio::test]

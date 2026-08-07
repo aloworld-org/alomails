@@ -60,6 +60,8 @@ use time::{Date, Duration, OffsetDateTime};
 
 use crate::account::AccountStore;
 use crate::billing_field::{bounded, currency, payment_terms_days};
+use crate::billing_fx::{FxSnapshot, restated};
+use crate::billing_fx_rates::snapshot_at;
 use crate::billing_line::{
     FiguresRow, INVOICE_LINES, Line, NewLine, NormalizedLine, group_figures, normalize_lines,
 };
@@ -67,6 +69,7 @@ use crate::billing_payments::Settlement;
 use crate::billing_sequence::{
     INVOICE_NUMBER_PREFIX, INVOICE_SEQUENCE_KIND, document_number, draw_next,
 };
+use crate::billing_settings::base_currency_in;
 use crate::billing_totals::{LineFigures, Totals, totals};
 use crate::error::{Result, StoreError};
 use crate::id::{BillingCustomerId, BillingInvoiceId, BillingQuoteId};
@@ -81,7 +84,7 @@ pub const INVOICE_NOTE_MAX_CHARS: usize = 2_000;
 /// The columns every read of an invoice selects, in `InvoiceRow` order.
 const INVOICE_COLS: &str = "id, customer_id, status, currency, number, issue_date, due_date, \
      payment_terms_days, is_credit_note, credits_invoice_id, quote_id, reference, note, \
-     created_by, created_at, updated_at";
+     fx_base_currency, fx_rate_micro, fx_rate_date, created_by, created_at, updated_at";
 
 /// Where a document is in its life.
 ///
@@ -303,6 +306,15 @@ pub struct Invoice {
     pub reference: String,
     /// Free-text note.
     pub note: String,
+    /// The exchange rate frozen on the document when it was issued (B1.21):
+    /// what its amounts are restated into for the tenant's own books, at which
+    /// rate, published on which day.
+    ///
+    /// `None` on a draft — the rate belongs to the moment the document became a
+    /// document — and on a document issued before the snapshot existed in a
+    /// currency other than the tenant's own, which is reported as unconverted
+    /// rather than being assigned a rate nobody applied.
+    pub fx: Option<FxSnapshot>,
     /// The user who created the document.
     pub created_by: String,
     /// Creation time.
@@ -356,6 +368,16 @@ impl InvoiceSummary {
     pub fn settlement(&self) -> Settlement {
         Settlement::of(self.totals.gross_cents, self.paid_cents)
     }
+
+    /// The document's money in the tenant's accounting currency, or `None` when
+    /// there is nothing to restate ([`crate::billing_fx::restated`]).
+    pub fn base_totals(&self) -> Option<Totals> {
+        restated(
+            &self.invoice.currency,
+            self.invoice.fx.as_ref(),
+            &self.totals,
+        )
+    }
 }
 
 /// A whole document: header, lines in print order, and the totals derived
@@ -377,6 +399,18 @@ impl InvoiceDocument {
     /// What it is worth, what has arrived, and what is left.
     pub fn settlement(&self) -> Settlement {
         Settlement::of(self.totals.gross_cents, self.paid_cents)
+    }
+
+    /// The document's money in the tenant's accounting currency, or `None` when
+    /// there is nothing to restate ([`crate::billing_fx::restated`]) — the
+    /// figure a foreign-currency invoice must print to state its VAT in the
+    /// member state's own currency.
+    pub fn base_totals(&self) -> Option<Totals> {
+        restated(
+            &self.invoice.currency,
+            self.invoice.fx.as_ref(),
+            &self.totals,
+        )
     }
 }
 
@@ -443,7 +477,8 @@ impl AccountStore {
         id: &BillingInvoiceId,
     ) -> Result<LockedInvoice> {
         let row: Option<LockedRow> = sqlx::query_as(
-            "SELECT status, is_credit_note, customer_id, currency, payment_terms_days, reference \
+            "SELECT status, is_credit_note, credits_invoice_id, customer_id, currency, \
+                 payment_terms_days, reference \
              FROM billing_invoices WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
         )
         .bind(self.tenant.as_str())
@@ -455,6 +490,7 @@ impl AccountStore {
         Ok(LockedInvoice {
             status: parse_stored_status(&row.status)?,
             is_credit_note: row.is_credit_note,
+            credits_invoice_id: row.credits_invoice_id,
             customer_id: row.customer_id,
             currency: row.currency,
             payment_terms_days: row.payment_terms_days,
@@ -824,11 +860,18 @@ impl AccountStore {
     /// document that says nothing — a mistake worth reporting rather than
     /// obeying.
     ///
+    /// Issuing also **freezes the exchange rate** the document's money is
+    /// restated at for the tenant's own books (`issue_fx_snapshot`). A
+    /// document raised in the accounting currency takes the identity rate; a
+    /// foreign-currency one is refused when no reference rate has been imported
+    /// for its currency, because an invoice that cannot state its VAT in the
+    /// member state's currency is legally incomplete.
+    ///
     /// # Errors
     /// [`StoreError::NotFound`] when the invoice is absent or another
     /// tenant's; [`StoreError::Conflict`] when it is not a draft;
-    /// [`StoreError::Validation`] when it has no lines;
-    /// [`StoreError::Db`] on failure.
+    /// [`StoreError::Validation`] when it has no lines, or when no exchange rate
+    /// is available for its currency; [`StoreError::Db`] on failure.
     pub async fn issue_billing_invoice(&self, id: &BillingInvoiceId) -> Result<InvoiceDocument> {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         // The lock also hands back the terms this document was raised with —
@@ -866,6 +909,15 @@ impl AccountStore {
                     "the payment terms put the due date outside the supported range".to_owned(),
                 )
             })?;
+        // The rate is frozen in the same step as the number and the dates: EU
+        // VAT Directive art. 91 fixes it at the tax point, so it is a fact about
+        // the document rather than something a later read re-derives. A credit
+        // note inherits its original's rate (see `issue_fx_snapshot`).
+        let base = base_currency_in(&mut tx, self.tenant.as_str()).await?;
+        let fx = self
+            .issue_fx_snapshot(&mut tx, &locked, &base, today)
+            .await?;
+
         let drawn = draw_next(
             &mut tx,
             self.tenant.as_str(),
@@ -878,6 +930,7 @@ impl AccountStore {
         sqlx::query(
             "UPDATE billing_invoices \
                 SET status = 'issued', number = $3, issue_date = $4, due_date = $5, \
+                    fx_base_currency = $6, fx_rate_micro = $7, fx_rate_date = $8, \
                     updated_at = now() \
              WHERE tenant_id = $1 AND id = $2",
         )
@@ -886,12 +939,71 @@ impl AccountStore {
         .bind(&number)
         .bind(today)
         .bind(due)
+        .bind(&fx.base_currency)
+        .bind(fx.rate_micro)
+        .bind(fx.rate_date)
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
         tx.commit().await.map_err(StoreError::Db)?;
 
         self.billing_invoice(id).await?.ok_or(StoreError::NotFound)
+    }
+
+    /// The exchange-rate snapshot the document being issued is frozen with.
+    ///
+    /// A document raised in the tenant's own accounting currency — nearly all of
+    /// them — takes the identity rate and needs no rate table at all. A
+    /// foreign-currency one takes the last rate published at or before today
+    /// ([`crate::billing_fx_rates::snapshot_at`]), and is **refused** when there
+    /// is none: without a rate the document cannot state its VAT in the member
+    /// state's currency (art. 230), so issuing it would produce an invoice that
+    /// is legally incomplete.
+    ///
+    /// **A credit note inherits its original's rate**, not today's. The
+    /// correction relates to the supply the original invoiced, so both documents
+    /// have to convert identically or the pair would not sum to zero in the
+    /// books — the same reason the credit note mirrors the original's lines
+    /// exactly. Only when the original carries no snapshot (a document issued
+    /// before B1.21) does the credit note resolve its own; that is flagged in
+    /// `docs/design/billing.md` for human review.
+    async fn issue_fx_snapshot(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        locked: &LockedInvoice,
+        base_currency: &str,
+        today: Date,
+    ) -> Result<FxSnapshot> {
+        if let Some(original_id) = locked
+            .credits_invoice_id
+            .as_deref()
+            .filter(|_| locked.is_credit_note)
+        {
+            let inherited: Option<(Option<String>, Option<i64>, Option<Date>)> = sqlx::query_as(
+                "SELECT fx_base_currency, fx_rate_micro, fx_rate_date FROM billing_invoices \
+                 WHERE tenant_id = $1 AND id = $2",
+            )
+            .bind(self.tenant.as_str())
+            .bind(original_id)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(StoreError::Db)?;
+            if let Some((Some(base_currency), Some(rate_micro), Some(rate_date))) = inherited {
+                return Ok(FxSnapshot {
+                    base_currency,
+                    rate_micro,
+                    rate_date,
+                });
+            }
+        }
+        snapshot_at(
+            tx,
+            self.tenant.as_str(),
+            base_currency,
+            &locked.currency,
+            today,
+        )
+        .await
     }
 
     /// Voids an **issued** invoice: it keeps its number, its dates and its
@@ -1239,6 +1351,7 @@ pub(crate) struct InvoiceFromQuote<'a> {
 struct LockedInvoice {
     status: InvoiceStatus,
     is_credit_note: bool,
+    credits_invoice_id: Option<String>,
     customer_id: String,
     currency: String,
     payment_terms_days: i32,
@@ -1249,6 +1362,7 @@ struct LockedInvoice {
 struct LockedRow {
     status: String,
     is_credit_note: bool,
+    credits_invoice_id: Option<String>,
     customer_id: String,
     currency: String,
     payment_terms_days: i32,
@@ -1270,14 +1384,30 @@ struct InvoiceRow {
     quote_id: Option<String>,
     reference: String,
     note: String,
+    fx_base_currency: Option<String>,
+    fx_rate_micro: Option<i64>,
+    fx_rate_date: Option<Date>,
     created_by: String,
     created_at: OffsetDateTime,
     updated_at: OffsetDateTime,
 }
 
 impl InvoiceRow {
+    /// The rate snapshot, which exists only when all three of its columns do —
+    /// a rate without the currency it converts into, or without the day it was
+    /// published, is not something an auditor can recompute from, and the table
+    /// constrains the three to move together.
+    fn fx(&self) -> Option<FxSnapshot> {
+        Some(FxSnapshot {
+            base_currency: self.fx_base_currency.clone()?,
+            rate_micro: self.fx_rate_micro?,
+            rate_date: self.fx_rate_date?,
+        })
+    }
+
     fn into_invoice(self) -> Result<Invoice> {
         let status = parse_stored_status(&self.status)?;
+        let fx = self.fx();
         Ok(Invoice {
             id: BillingInvoiceId::new(self.id),
             customer_id: BillingCustomerId::new(self.customer_id),
@@ -1292,6 +1422,7 @@ impl InvoiceRow {
             quote_id: self.quote_id.map(BillingQuoteId::new),
             reference: self.reference,
             note: self.note,
+            fx,
             created_by: self.created_by,
             created_at: self.created_at,
             updated_at: self.updated_at,
@@ -1419,6 +1550,7 @@ mod tests {
             quote_id: None,
             reference: String::new(),
             note: String::new(),
+            fx: due.map(|day| FxSnapshot::identity("EUR", day)),
             created_by: "u".to_owned(),
             created_at: OffsetDateTime::UNIX_EPOCH,
             updated_at: OffsetDateTime::UNIX_EPOCH,

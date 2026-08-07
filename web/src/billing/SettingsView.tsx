@@ -17,6 +17,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
+import { FxRatesPanel } from "./FxRatesPanel";
 import { ErrorBanner, Field } from "./parts";
 import type { BillingSettings, SettingsDraft } from "./types";
 import styles from "./BillingModule.module.css";
@@ -38,7 +39,8 @@ type TextKey =
   | "website"
   | "bankName"
   | "accountHolder"
-  | "footerNote";
+  | "footerNote"
+  | "baseCurrency";
 
 /** The fields the server stores as nullable: blank means `null`. */
 type NullableKey = "vatId" | "iban" | "bic";
@@ -57,6 +59,7 @@ const TEXT_KEYS: TextKey[] = [
   "bankName",
   "accountHolder",
   "footerNote",
+  "baseCurrency",
 ];
 
 const NULLABLE_KEYS: NullableKey[] = ["vatId", "iban", "bic"];
@@ -75,6 +78,7 @@ const BLANK: FormState = {
   bankName: "",
   accountHolder: "",
   footerNote: "",
+  baseCurrency: "",
   vatId: "",
   iban: "",
   bic: "",
@@ -278,6 +282,25 @@ export function SettingsView() {
             <input {...text("accountHolder")} />
           </Field>
         </div>
+      </section>
+
+      <section className={styles.lines}>
+        <h2 className={styles.sectionTitle}>{strings.billingSettingsAccounting}</h2>
+        <div className={styles.row}>
+          <Field label={strings.billingFieldBaseCurrency} hint={strings.billingBaseCurrencyHint}>
+            <input
+              {...text("baseCurrency")}
+              maxLength={3}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </Field>
+        </div>
+        {/* The rates themselves: only needed by a tenant that invoices in
+            another currency, so they sit under the currency that decides it
+            rather than on a page of their own. */}
+        <FxRatesPanel />
       </section>
 
       <section className={styles.lines}>

@@ -96,6 +96,9 @@ const ISSUED: BillingInvoice = {
     grossCents: 22688,
     vatByRate: [{ rateBp: 2100, netCents: 18750, vatCents: 3938 }],
   },
+  // Issued in the tenant's own currency, so the identity rate and nothing to
+  // restate on the paper.
+  fx: { baseCurrency: "EUR", rateMicro: 1_000_000, rate: "1.0", rateDate: "2026-08-06" },
   // Nothing received: the settlement the server sends for a document nobody
   // has paid anything against.
   settlement: {
@@ -109,6 +112,8 @@ const ISSUED: BillingInvoice = {
 /** A tenant that has never saved: the blanks, and `stated: false`. */
 const UNSTATED: BillingSettings = {
   stated: false,
+  // Never blank, even unstated: a tenant keeps books in something.
+  baseCurrency: "EUR",
   legalName: "",
   addressLine1: "",
   addressLine2: "",
@@ -175,9 +180,11 @@ function fallback(url: string, method: string): Reply {
         ? { customers: [CUSTOMER] }
         : url.includes("/billing/products")
           ? { products: [] }
-          : url.includes("/billing/settings")
-            ? { settings: UNSTATED }
-            : { invoices: [] };
+          : url.includes("/billing/fx/rates")
+            ? { rates: [] }
+            : url.includes("/billing/settings")
+              ? { settings: UNSTATED }
+              : { invoices: [] };
   return { match: () => true, status: 200, body };
 }
 

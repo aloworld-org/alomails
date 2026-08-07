@@ -41,6 +41,7 @@ fn dutch_issuer() -> NewBillingSettings {
         bank_name: "ABN AMRO".to_owned(),
         account_holder: "Alo Werkplaats".to_owned(),
         footer_note: "Payable within the stated terms.".to_owned(),
+        base_currency: "eur".to_owned(),
     }
 }
 

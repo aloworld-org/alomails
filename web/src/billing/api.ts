@@ -26,6 +26,9 @@ import type {
   BillingSettings,
   CustomerDraft,
   DocumentSettlement,
+  FxImport,
+  FxRate,
+  FxRateDraft,
   InvoiceDraft,
   InvoiceStatus,
   PaymentDraft,
@@ -401,6 +404,52 @@ export class BillingApi {
    */
   vatReportCsv(from: string, to: string): Promise<string> {
     return this.#text(`/billing/reports/vat.csv?${period(from, to)}`);
+  }
+
+  /**
+   * The exchange rates this tenant has, newest publication day first (B1.21).
+   *
+   * `currency` narrows to one code; `from`/`to` to a period. Everything is
+   * optional — a rate list with no period is "everything I have", and the server
+   * caps the answer.
+   */
+  fxRates(filter: { currency?: string; from?: string; to?: string } = {}): Promise<FxRate[]> {
+    const query = new URLSearchParams();
+    if (filter.currency !== undefined && filter.currency !== "") {
+      query.set("currency", filter.currency);
+    }
+    if (filter.from !== undefined && filter.from !== "") query.set("from", filter.from);
+    if (filter.to !== undefined && filter.to !== "") query.set("to", filter.to);
+    const suffix = query.toString() === "" ? "" : `?${query.toString()}`;
+    return this.#read<{ rates: FxRate[] }>(`/billing/fx/rates${suffix}`).then((r) => r.rates);
+  }
+
+  /**
+   * Writes one rate by hand. Sending the same currency and day again replaces
+   * it — that is how a typo, or a published correction, is fixed.
+   *
+   * Documents already issued are unaffected: each carries its own frozen rate,
+   * so correcting the table can never restate a document a customer holds.
+   */
+  saveFxRate(draft: FxRateDraft): Promise<FxRate> {
+    return this.#write<{ rate: FxRate }>("PUT", "/billing/fx/rates", draft).then((r) => r.rate);
+  }
+
+  /**
+   * Imports a published euro reference-rate file — the ECB's `eurofxref` CSV, or
+   * any file in that shape.
+   *
+   * All or nothing: a file with one bad cell changes nothing and comes back as a
+   * `422` naming the row and the column. The text is sent as `text/csv`, because
+   * what a user has is a file, not JSON.
+   */
+  async importFxRates(csv: string): Promise<FxImport> {
+    const res = await this.#send("/billing/fx/rates/import", {
+      method: "POST",
+      headers: { "content-type": "text/csv; charset=utf-8" },
+      body: csv,
+    });
+    return (await this.#json<{ import: FxImport }>(res)).import;
   }
 
   /**

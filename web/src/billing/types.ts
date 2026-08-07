@@ -163,6 +163,26 @@ export interface PaymentDraft {
   reference?: string;
 }
 
+/**
+ * The exchange rate frozen on a document when it was issued (B1.21).
+ *
+ * `null` on a draft: the rate belongs to the moment the document became a
+ * document. It is the rate that was *applied* — EU VAT Directive art. 91 fixes
+ * it at the tax point — so a document reprinted next year still shows the rate
+ * it was converted at, whatever the table says today.
+ */
+export interface DocumentFx {
+  /** ISO 4217 the tenant keeps books in — what the amounts are restated into. */
+  baseCurrency: string;
+  /** Units of the document's currency per one unit of `baseCurrency`, x 10^6.
+   *  An integer: a rate that multiplies money never passes through a float. */
+  rateMicro: number;
+  /** The same rate as the decimal it was published as ("1.1626"), for reading. */
+  rate: string;
+  /** `YYYY-MM-DD`, the day that rate was published. */
+  rateDate: string;
+}
+
 /** An invoice as a list entry: the header and what it is worth, no lines. */
 export interface BillingInvoiceSummary {
   id: string;
@@ -188,6 +208,13 @@ export interface BillingInvoiceSummary {
   createdAt: string;
   updatedAt: string;
   totals: DocumentTotals;
+  /** The rate frozen at issue, `null` while the document is a draft. */
+  fx: DocumentFx | null;
+  /** The same money in the tenant's accounting currency, present only when
+   *  there is something to restate — a document raised in another currency,
+   *  already issued. The server's figures, converted at `fx.rateMicro`; the
+   *  browser never converts money. */
+  baseTotals?: DocumentTotals;
   /** Computed on every read from the lines and the payment rows; stored
    *  nowhere, so a list entry and the document can never disagree. */
   settlement: DocumentSettlement;
@@ -302,6 +329,11 @@ export interface BillingSettings {
   accountHolder: string;
   /** A line under the totals of every document. */
   footerNote: string;
+  /** ISO 4217 the tenant keeps books in (B1.21). Documents may be raised in any
+   *  currency; this is the one the VAT summary and the VAT total printed on a
+   *  foreign-currency document are expressed in. Never blank — a tenant that has
+   *  said nothing keeps books in euro. */
+  baseCurrency: string;
   updatedBy: string | null;
   updatedAt: string | null;
 }
@@ -325,6 +357,7 @@ export interface SettingsDraft {
   bankName?: string;
   accountHolder?: string;
   footerNote?: string;
+  baseCurrency?: string;
 }
 
 /**
@@ -349,9 +382,9 @@ export interface QuoteDraft {
  */
 export type VatReportRate = VatSubtotal;
 
-/** A period's figures in one currency. Currencies are never added together:
- *  a document is worth what it says in the currency it was raised in, and the
- *  rate snapshots that would let us convert arrive with B1.21. */
+/** A period's figures in one currency. Currency groups are never added
+ *  together: a document is worth what it says in the currency it was raised in.
+ *  What *is* added up, once, is `VatReport.base` (B1.21). */
 export interface VatReportCurrency {
   /** ISO 4217 code the documents in this group were raised in. */
   currency: string;
@@ -364,6 +397,34 @@ export interface VatReportCurrency {
   grossCents: number;
   /** One row per rate that appears, ascending. */
   byRate: VatReportRate[];
+  /** What this group contributes to `VatReport.base`, each of its documents
+   *  converted at the rate frozen on it. Equal to the figures above when the
+   *  group is already in the accounting currency. */
+  baseNetCents: number;
+  baseVatCents: number;
+  baseGrossCents: number;
+  /** How many documents of this group are in **none** of the base figures
+   *  because their rate could not be applied. */
+  unconvertedCount: number;
+}
+
+/**
+ * The whole period in the currency the tenant keeps books in — the figure a VAT
+ * return is copied from, each document converted at the rate frozen on it.
+ *
+ * `unconvertedCount` above zero means the totals here are **incomplete**, and a
+ * screen must say so rather than print them plain: a tax figure that is quietly
+ * missing a document is the one thing this report must never be.
+ */
+export interface VatReportBase {
+  /** ISO 4217 the tenant keeps books in. */
+  currency: string;
+  netCents: number;
+  vatCents: number;
+  grossCents: number;
+  /** The per-rate boxes of a return, across every currency, ascending. */
+  byRate: VatReportRate[];
+  unconvertedCount: number;
 }
 
 /**
@@ -381,4 +442,48 @@ export interface VatReport {
   to: string;
   /** One group per currency present; empty when the period holds nothing. */
   currencies: VatReportCurrency[];
+  /** The same period in the accounting currency — stated even when the period
+   *  is empty, so a report always says what its nothing is nothing in. */
+  base: VatReportBase;
+}
+
+/**
+ * One stored exchange rate: on this day, one euro bought this much of this
+ * currency (B1.21).
+ *
+ * Held per tenant, because a tenant is audited against the file *it* imported.
+ * The euro is what the published table quotes against, so it never appears here.
+ */
+export interface FxRate {
+  /** ISO 4217 of the quoted currency, uppercase. */
+  currency: string;
+  /** `YYYY-MM-DD`, the day it was published — not the day it was imported. */
+  date: string;
+  /** Micro-units of `currency` per one euro. An integer, never a float. */
+  rateMicro: number;
+  /** The same rate as the decimal it was published as ("1.1626"). */
+  rate: string;
+  /** `ecb` for a parsed reference-rate file, `manual` for one entered by hand. */
+  source: "ecb" | "manual";
+  updatedBy: string;
+  updatedAt: string;
+}
+
+/** What an import of a published rate file did. `from`/`to` are `null` for a
+ *  file with no data rows. */
+export interface FxImport {
+  rates: number;
+  days: number;
+  currencies: number;
+  from: string | null;
+  to: string | null;
+}
+
+/** One rate as written by hand. The rate is a **string**, the decimal as
+ *  published: a number would be a float, and a float is what makes 1.1626
+ *  sometimes 1.16259999. */
+export interface FxRateDraft {
+  currency: string;
+  date: string;
+  rate: string;
 }

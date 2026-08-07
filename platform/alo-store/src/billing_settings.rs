@@ -28,7 +28,9 @@
 use time::OffsetDateTime;
 
 use crate::account::AccountStore;
-use crate::billing_field::{bounded, country as country_code, required};
+use crate::billing_field::{
+    DEFAULT_CURRENCY, bounded, country as country_code, currency as currency_code, required,
+};
 use crate::error::{Result, StoreError};
 use crate::{iban, vat_id};
 
@@ -50,7 +52,7 @@ pub const FOOTER_NOTE_MAX_CHARS: usize = 500;
 /// The columns every read selects, in `SettingsRow` order.
 const SETTINGS_COLS: &str = "legal_name, address_line1, address_line2, postal_code, city, \
      country, vat_id, registration_no, email, phone, website, iban, bic, bank_name, \
-     account_holder, footer_note, updated_by, updated_at";
+     account_holder, footer_note, base_currency, updated_by, updated_at";
 
 /// The writable shape of the issuer identity. A save is a **full replace** —
 /// the route layer merges a partial `PATCH` onto the stored record first, the
@@ -94,11 +96,16 @@ pub struct NewBillingSettings {
     pub account_holder: String,
     /// A line under the totals: retention of title, late-payment terms.
     pub footer_note: String,
+    /// ISO 4217 code the tenant keeps books in, or blank for the default
+    /// ([`crate::billing_field::DEFAULT_CURRENCY`]). Documents may be raised in
+    /// any currency; this is the one the VAT summary and the VAT total printed
+    /// on a foreign-currency document are expressed in (B1.21).
+    pub base_currency: String,
 }
 
 /// The stored issuer identity. Every field is the canonical form: country and
 /// VAT id uppercase and prefixed, IBAN and BIC compacted and uppercase.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BillingSettings {
     /// The legal name the tenant invoices under; blank only when unstated.
     pub legal_name: String,
@@ -132,10 +139,45 @@ pub struct BillingSettings {
     pub account_holder: String,
     /// The line printed under the totals of every document.
     pub footer_note: String,
+    /// ISO 4217 code the tenant keeps books in, uppercase — never blank, since
+    /// a tenant keeps books in *something* even before it says so (B1.21).
+    pub base_currency: String,
     /// The user who last saved, or `None` while the identity is unstated.
     pub updated_by: Option<String>,
     /// When it was last saved, or `None` while unstated.
     pub updated_at: Option<OffsetDateTime>,
+}
+
+impl Default for BillingSettings {
+    /// The **unstated** identity a tenant reads before it has ever saved: every
+    /// printed field blank — and the books kept in
+    /// [`crate::billing_field::DEFAULT_CURRENCY`], because a tenant that has not
+    /// said otherwise still keeps them in something, and a blank accounting
+    /// currency would make a VAT summary say what it converted into by omitting
+    /// it. Written out rather than derived for exactly that one field.
+    fn default() -> Self {
+        Self {
+            legal_name: String::new(),
+            address_line1: String::new(),
+            address_line2: String::new(),
+            postal_code: String::new(),
+            city: String::new(),
+            country: String::new(),
+            vat_id: None,
+            registration_no: String::new(),
+            email: String::new(),
+            phone: String::new(),
+            website: String::new(),
+            iban: None,
+            bic: None,
+            bank_name: String::new(),
+            account_holder: String::new(),
+            footer_note: String::new(),
+            base_currency: DEFAULT_CURRENCY.to_owned(),
+            updated_by: None,
+            updated_at: None,
+        }
+    }
 }
 
 impl BillingSettings {
@@ -179,6 +221,22 @@ struct Normalized {
     bank_name: String,
     account_holder: String,
     footer_note: String,
+    base_currency: String,
+}
+
+/// Validates the currency the tenant keeps books in, where blank means "the
+/// default" rather than "none".
+///
+/// A tenant keeps books in something whether or not it has said so, so an
+/// unstated accounting currency resolves to
+/// [`crate::billing_field::DEFAULT_CURRENCY`] instead of being refused — unlike
+/// a customer's country, where the blank would decide a VAT treatment nobody
+/// chose.
+fn accounting_currency(value: &str) -> Result<String> {
+    if value.trim().is_empty() {
+        return Ok(DEFAULT_CURRENCY.to_owned());
+    }
+    currency_code(value)
 }
 
 /// Validates the issuer's own country, where blank is legitimate.
@@ -289,6 +347,7 @@ fn normalize(input: &NewBillingSettings) -> Result<Normalized> {
             LEGAL_NAME_MAX_CHARS,
         )?,
         footer_note: bounded("footer note", &input.footer_note, FOOTER_NOTE_MAX_CHARS)?,
+        base_currency: accounting_currency(&input.base_currency)?,
     })
 }
 
@@ -313,6 +372,7 @@ struct SettingsRow {
     bank_name: String,
     account_holder: String,
     footer_note: String,
+    base_currency: String,
     updated_by: String,
     updated_at: OffsetDateTime,
 }
@@ -339,6 +399,7 @@ impl SettingsRow {
             bank_name: self.bank_name,
             account_holder: self.account_holder,
             footer_note: self.footer_note,
+            base_currency: self.base_currency,
             updated_by: Some(self.updated_by),
             updated_at: Some(self.updated_at),
         }
@@ -379,9 +440,9 @@ impl AccountStore {
         let row: SettingsRow = sqlx::query_as(&format!(
             "INSERT INTO billing_settings (tenant_id, legal_name, address_line1, address_line2, \
                  postal_code, city, country, vat_id, registration_no, email, phone, website, \
-                 iban, bic, bank_name, account_holder, footer_note, updated_by) \
+                 iban, bic, bank_name, account_holder, footer_note, base_currency, updated_by) \
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, \
-                 $17, $18) \
+                 $17, $18, $19) \
              ON CONFLICT (tenant_id) DO UPDATE SET \
                  legal_name = EXCLUDED.legal_name, \
                  address_line1 = EXCLUDED.address_line1, \
@@ -399,6 +460,7 @@ impl AccountStore {
                  bank_name = EXCLUDED.bank_name, \
                  account_holder = EXCLUDED.account_holder, \
                  footer_note = EXCLUDED.footer_note, \
+                 base_currency = EXCLUDED.base_currency, \
                  updated_by = EXCLUDED.updated_by, \
                  updated_at = now() \
              RETURNING {SETTINGS_COLS}"
@@ -420,12 +482,49 @@ impl AccountStore {
         .bind(&s.bank_name)
         .bind(&s.account_holder)
         .bind(&s.footer_note)
+        .bind(&s.base_currency)
         .bind(self.user.as_str())
         .fetch_one(&self.pool)
         .await
         .map_err(StoreError::Db)?;
         Ok(row.into_settings())
     }
+
+    /// The currency this tenant keeps books in — the one figure of the issuer
+    /// record that a *reading* surface needs on its own (the VAT summary, which
+    /// has no other reason to load an address and a bank account).
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure. Never `NotFound`: a tenant that has never
+    /// saved keeps books in [`DEFAULT_CURRENCY`].
+    pub async fn billing_base_currency(&self) -> Result<String> {
+        let stored: Option<String> =
+            sqlx::query_scalar("SELECT base_currency FROM billing_settings WHERE tenant_id = $1")
+                .bind(self.tenant.as_str())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(StoreError::Db)?;
+        Ok(stored.unwrap_or_else(|| DEFAULT_CURRENCY.to_owned()))
+    }
+}
+
+/// The tenant's accounting currency, read **inside** a transaction.
+///
+/// Issuing a document freezes the rate it was converted at, so the base currency
+/// has to be read in the same atomic step as the number and the dates — a save
+/// of the settings racing an issue must land either wholly before it (and be the
+/// currency on the document) or wholly after.
+pub(crate) async fn base_currency_in(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tenant: &str,
+) -> Result<String> {
+    let stored: Option<String> =
+        sqlx::query_scalar("SELECT base_currency FROM billing_settings WHERE tenant_id = $1")
+            .bind(tenant)
+            .fetch_optional(&mut **tx)
+            .await
+            .map_err(StoreError::Db)?;
+    Ok(stored.unwrap_or_else(|| DEFAULT_CURRENCY.to_owned()))
 }
 
 #[cfg(test)]
@@ -627,5 +726,37 @@ mod tests {
             ..stated
         };
         assert_eq!(factored.effective_account_holder(), "Alo Trading");
+        // Every printed field is blank, but the books are kept in something:
+        // a VAT summary has to be able to say what it converted into.
+        assert_eq!(blank.base_currency, DEFAULT_CURRENCY);
+    }
+
+    #[test]
+    fn the_accounting_currency_defaults_rather_than_being_refused() {
+        for unstated in ["", "   ", "\t"] {
+            assert_eq!(
+                accounting_currency(unstated).unwrap_or_default(),
+                DEFAULT_CURRENCY,
+                "{unstated:?}"
+            );
+        }
+        assert_eq!(accounting_currency(" chf ").unwrap_or_default(), "CHF");
+        // Stated and wrong is still wrong: this is the currency every converted
+        // figure on a return is expressed in.
+        for bad in ["EU", "EURO", "€", "12"] {
+            assert!(
+                matches!(accounting_currency(bad), Err(StoreError::Validation(_))),
+                "expected rejection: {bad:?}"
+            );
+        }
+        assert_eq!(
+            normalize(&NewBillingSettings {
+                base_currency: "chf".to_owned(),
+                ..valid()
+            })
+            .map(|s| s.base_currency)
+            .unwrap_or_default(),
+            "CHF"
+        );
     }
 }

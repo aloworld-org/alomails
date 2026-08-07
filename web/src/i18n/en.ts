@@ -1789,6 +1789,43 @@ export const en = {
   billingFieldFooterNote: "Footer note",
   billingFooterNoteHint:
     "Printed under the totals of every document — retention of title, late-payment terms, a thank-you.",
+
+  // Multi-currency (B1.21). The wording is careful about two things a person is
+  // legally answerable for: which currency the books are kept in, and that a
+  // converted total is only complete if every document in it could be converted.
+  billingSettingsAccounting: "The currency you keep books in",
+  billingFieldBaseCurrency: "Accounting currency",
+  billingBaseCurrencyHint:
+    "You can invoice in any currency. This is the one your VAT return is filed in, and the one the VAT on a foreign-currency invoice is also printed in.",
+  billingFxRates: "Exchange rates",
+  billingFxIntro:
+    "Invoicing in another currency needs the published rate of the day you issue on. Rates are yours: nothing is fetched for you, so what your books are converted at is a file you chose.",
+  billingFxColDate: "Published",
+  billingFxColRate: "Rate per euro",
+  billingFxColSource: "From",
+  billingFxSourceEcb: "Reference file",
+  billingFxSourceManual: "Entered by hand",
+  billingFxAdd: "Add a rate",
+  billingFxAddSaved: (currency: string, date: string) => `Saved the ${currency} rate for ${date}.`,
+  billingFxRateHint: "As published: units of this currency for one euro, written 1.1626.",
+  billingFxImport: "Import a rate file",
+  billingFxImportHint:
+    "Paste the European Central Bank's eurofxref CSV, or any file in that shape. A file with one bad value changes nothing.",
+  billingFxImportRun: "Import",
+  billingFxImported: (rates: number, days: number) =>
+    `Imported ${rates} rates over ${days} days.`,
+  billingFxEmpty: "No rates yet. You only need them if you invoice in another currency.",
+  billingFxLoadFailed: "The exchange rates could not be loaded.",
+  billingDocumentFx: (rate: string, day: string) =>
+    `Converted at ${rate}, the reference rate published on ${day}.`,
+  billingVatIn: (currency: string) => `VAT in ${currency}`,
+  billingReportBaseCaption: (currency: string) => `The period in ${currency}`,
+  billingReportBaseIntro: (currency: string) =>
+    `Every document above, converted at the rate frozen on it when it was issued. This is what a return in ${currency} is filed from.`,
+  billingReportUnconverted: (count: number) =>
+    count === 1
+      ? "1 document is not in these figures: no exchange rate was stored for it. Check it before filing."
+      : `${count} documents are not in these figures: no exchange rate was stored for them. Check them before filing.`,
 } as const;
 
 /** Every string key in the catalog. */

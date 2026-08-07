@@ -385,6 +385,7 @@ mod tests {
             customer,
             lines,
             totals,
+            restated: None,
             issuer,
         }
     }

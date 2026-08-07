@@ -26,6 +26,7 @@ use time::{OffsetDateTime, UtcOffset};
 
 use crate::billing_print::{
     DocumentKind, PrintDocument, Strings, amount, date, document_heading, monogram, quantity, rate,
+    rate_sentence,
 };
 
 // ---- the palette, quoted from the print stylesheet ---------------------------
@@ -598,10 +599,22 @@ impl Layout<'_> {
         }
         let gross = amount(self.doc.totals.gross_cents, self.s);
         let grand_label = self.s.gross_total;
+        // The restatement follows the grand total, as on the printed page: the
+        // VAT in the issuer's own currency, then the rate it was converted at
+        // (`crate::billing_print::Restated` — required on a foreign-currency
+        // document, not decoration).
+        let restated = self.doc.restated.as_ref().map(|r| {
+            (
+                (self.s.vat_in)(&r.currency),
+                format!("{} {}", r.currency, amount(r.vat_cents, self.s)),
+                (self.s.converted_at)(&rate_sentence(r, self.doc.currency), &date(r.rate_date)),
+            )
+        });
 
         let block = self.sheet.right() - mm(78.0);
         let (left, right) = (block + mm(2.0), self.sheet.right() - mm(2.0));
-        let height = (rows.len() + 1) as f64 * (LEADING + mm(2.4)) + mm(6.0);
+        let extra = if restated.is_some() { 2 } else { 0 };
+        let height = (rows.len() + 1 + extra) as f64 * (LEADING + mm(2.4)) + mm(6.0);
         self.sheet.y += mm(4.0);
         self.sheet.ensure(height);
 
@@ -635,6 +648,22 @@ impl Layout<'_> {
             &format!("{currency} {gross}"),
         );
         self.sheet.y = y + 11.0 * 1.45;
+
+        if let Some((label, value, sentence)) = restated {
+            let y = self.sheet.y + mm(1.2);
+            self.sheet.page.text(left, y, Align::Left, &muted, &label);
+            self.sheet.page.text(right, y, Align::Right, &body, &value);
+            self.sheet.y = y + LEADING + mm(1.2);
+            // The rate itself, small and right-aligned under the block, exactly
+            // where the HTML page puts it.
+            let small = TextStyle::new(Font::Regular, 8.0).inked(MUTED);
+            for line in small.wrap(&sentence, mm(78.0) - mm(4.0)) {
+                self.sheet
+                    .page
+                    .text(right, self.sheet.y, Align::Right, &small, &line);
+                self.sheet.y += SMALL_LEADING;
+            }
+        }
     }
 
     /// What happens about the money, and where it goes.
@@ -946,6 +975,7 @@ mod tests {
             customer,
             lines,
             totals,
+            restated: None,
             issuer,
         }
     }

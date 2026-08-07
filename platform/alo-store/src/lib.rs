@@ -14,6 +14,9 @@ pub mod audit;
 pub mod base;
 pub mod billing_customers;
 pub mod billing_field;
+pub mod billing_fx;
+pub mod billing_fx_ecb;
+pub mod billing_fx_rates;
 pub mod billing_invoices;
 pub mod billing_line;
 pub mod billing_payments;
@@ -67,6 +70,8 @@ pub use account_imap::{ImapEntry, ImapMailbox, ImapSearchRow};
 pub use account_sieve::{OutboundAction, SieveDelivery, SieveScriptMeta};
 pub use base::{Base, BaseField, BaseRecord, BaseTable, BaseView};
 pub use billing_customers::{Customer, NewCustomer};
+pub use billing_fx::FxSnapshot;
+pub use billing_fx_rates::{FxImport, FxRate, FxRateSource};
 pub use billing_invoices::{Invoice, InvoiceDocument, InvoiceStatus, InvoiceSummary, NewInvoice};
 pub use billing_line::{Line, NewLine};
 pub use billing_payments::{NewPayment, Payment, PaymentState, Settlement};
@@ -80,7 +85,7 @@ pub use billing_sequence::{
 };
 pub use billing_settings::{BillingSettings, NewBillingSettings};
 pub use billing_totals::{LineFigures, Totals, VatSubtotal};
-pub use billing_vat_report::{VatPeriod, VatPeriodCurrency, VatPeriodRate};
+pub use billing_vat_report::{VatPeriod, VatPeriodBase, VatPeriodCurrency, VatPeriodRate};
 #[cfg(feature = "garage")]
 pub use blob::GarageConfig;
 pub use blob::{BlobStore, ShareStream};

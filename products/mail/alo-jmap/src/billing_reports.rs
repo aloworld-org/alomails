@@ -26,6 +26,12 @@
 //!   amounts and counts, and nothing that names anybody. A summary that leaked
 //!   a customer list into an emailed spreadsheet would be a promise broken for
 //!   no gain.
+//!
+//! Since B1.21 both representations also carry the period **in the tenant's
+//! accounting currency** — the figure a return is actually filed from, each
+//! document converted at the rate frozen on it. Where any document could not be
+//! converted, the count of those says so beside the total: a total that is
+//! quietly missing a document is the one thing a tax figure must never be.
 
 use axum::Json;
 use axum::extract::{Query, State};
@@ -35,7 +41,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use time::Date;
 
-use alo_store::billing_vat_report::{VatPeriod, VatPeriodCurrency};
+use alo_store::billing_vat_report::{VatPeriod, VatPeriodBase, VatPeriodCurrency, VatPeriodRate};
 
 use crate::billing::{iso_date, map_store_err, parse_iso_date};
 use crate::csv;
@@ -97,11 +103,36 @@ fn currency_json(c: &VatPeriodCurrency) -> Value {
         "grossCents": c.gross_cents,
         // Named as a document's own breakdown is (`totals.vatByRate`), and in
         // the same shape, so a client reads one thing in both places.
-        "byRate": c.by_rate.iter().map(|r| json!({
-            "rateBp": r.rate_bp,
-            "netCents": r.net_cents,
-            "vatCents": r.vat_cents,
-        })).collect::<Vec<_>>(),
+        "byRate": c.by_rate.iter().map(rate_json).collect::<Vec<_>>(),
+        // What this group contributes to the accounting-currency total, at the
+        // rate frozen on each of its own documents.
+        "baseNetCents": c.base_net_cents,
+        "baseVatCents": c.base_vat_cents,
+        "baseGrossCents": c.base_gross_cents,
+        "unconvertedCount": c.unconverted_count,
+    })
+}
+
+/// One rate's row of a breakdown — the same shape wherever a breakdown appears,
+/// so a client reads one thing in a currency group and in the base total.
+fn rate_json(r: &VatPeriodRate) -> Value {
+    json!({
+        "rateBp": r.rate_bp,
+        "netCents": r.net_cents,
+        "vatCents": r.vat_cents,
+    })
+}
+
+/// The whole period in the accounting currency: the figure a VAT return is
+/// copied from, and how many documents are missing from it.
+fn base_json(b: &VatPeriodBase) -> Value {
+    json!({
+        "currency": b.currency,
+        "netCents": b.net_cents,
+        "vatCents": b.vat_cents,
+        "grossCents": b.gross_cents,
+        "byRate": b.by_rate.iter().map(rate_json).collect::<Vec<_>>(),
+        "unconvertedCount": b.unconverted_count,
     })
 }
 
@@ -112,6 +143,7 @@ fn report_json(period: &VatPeriod) -> Value {
         "from": iso_date(period.from),
         "to": iso_date(period.to),
         "currencies": period.currencies.iter().map(currency_json).collect::<Vec<_>>(),
+        "base": base_json(&period.base),
     })
 }
 
@@ -136,10 +168,19 @@ fn percent(rate_bp: i32) -> String {
 }
 
 /// The CSV column names — a contract, deliberately not translated.
-const COLUMNS: [&str; 10] = [
-    // `rate` for a per-rate subtotal, `total` for the currency's own line: one
-    // table, and a column that says which kind of row you are reading, rather
-    // than two files or a total a consumer has to know to skip.
+///
+/// Grown additively at B1.21: `unconverted` is appended (a new column at the
+/// end, never a reordering), and two new `row` kinds appear. A consumer reading
+/// by column name is unaffected; one reading positionally still finds every
+/// column it knew where it was.
+const COLUMNS: [&str; 11] = [
+    // Which kind of row you are reading — one table rather than four files:
+    //   `rate`      a VAT rate's subtotal in the currency it was billed in
+    //   `total`     that currency's own line
+    //   `baseRate`  a VAT rate's subtotal across every currency, in the
+    //               tenant's accounting currency
+    //   `baseTotal` the period's total in that currency — the figure a VAT
+    //               return is copied from
     "row",
     "periodFrom",
     "periodTo",
@@ -150,15 +191,24 @@ const COLUMNS: [&str; 10] = [
     "gross",
     "invoices",
     "creditNotes",
+    // How many documents are NOT in this row's figures because their exchange
+    // rate could not be applied. Empty on a row where the question does not
+    // arise; `0` — or a number — on the rows that are converted totals.
+    "unconverted",
 ];
 
 /// The whole report as one CSV table: a `rate` row per VAT rate in each
-/// currency, then that currency's `total` row.
+/// currency, then that currency's `total` row, and finally the same period in
+/// the accounting currency as `baseRate` rows and one `baseTotal` — the figure a
+/// return is copied from.
 ///
 /// The period is repeated on every row on purpose — a row lifted out of the
 /// file into another sheet still says which days it covers — and the counts
 /// appear only on the `total` row, because a document is counted once whatever
 /// how many rates it used.
+///
+/// The `baseTotal` row is written even for an empty period: a file that does not
+/// say which currency it was summarised in is a question rather than an answer.
 fn report_csv(period: &VatPeriod) -> String {
     let from = iso_date(period.from);
     let to = iso_date(period.to);
@@ -176,6 +226,7 @@ fn report_csv(period: &VatPeriod) -> String {
                 &amount(r.net_cents.saturating_add(r.vat_cents)),
                 "",
                 "",
+                "",
             ]));
         }
         out.push_str(&csv::row(&[
@@ -189,8 +240,41 @@ fn report_csv(period: &VatPeriod) -> String {
             &amount(c.gross_cents),
             &c.invoice_count.to_string(),
             &c.credit_note_count.to_string(),
+            &c.unconverted_count.to_string(),
         ]));
     }
+    // Then the same period once more, in the currency the books are kept in:
+    // every document at the rate frozen on it, which is the figure that goes on
+    // the return. It is emitted even for an empty period, so a file always says
+    // which currency it was summarised in.
+    for r in &period.base.by_rate {
+        out.push_str(&csv::row(&[
+            "baseRate",
+            &from,
+            &to,
+            &period.base.currency,
+            &percent(r.rate_bp),
+            &amount(r.net_cents),
+            &amount(r.vat_cents),
+            &amount(r.net_cents.saturating_add(r.vat_cents)),
+            "",
+            "",
+            "",
+        ]));
+    }
+    out.push_str(&csv::row(&[
+        "baseTotal",
+        &from,
+        &to,
+        &period.base.currency,
+        "",
+        &amount(period.base.net_cents),
+        &amount(period.base.vat_cents),
+        &amount(period.base.gross_cents),
+        "",
+        "",
+        &period.base.unconverted_count.to_string(),
+    ]));
     out
 }
 
@@ -273,7 +357,7 @@ pub async fn vat_report_csv(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alo_store::billing_vat_report::{VatPeriodCurrency, VatPeriodRate};
+    use alo_store::billing_vat_report::{VatPeriodBase, VatPeriodCurrency, VatPeriodRate};
     use time::Month;
 
     fn on(year: i32, month: Month, day: u8) -> Date {
@@ -287,8 +371,21 @@ mod tests {
         }
     }
 
-    /// The quarter the store test seeds, with its hand-computed figures.
+    /// The quarter the store test seeds, with its hand-computed figures. A
+    /// single-currency tenant, so its base side is its own figures unmoved.
     fn quarter() -> VatPeriod {
+        let by_rate = vec![
+            VatPeriodRate {
+                rate_bp: 900,
+                net_cents: 25_000,
+                vat_cents: 2_250,
+            },
+            VatPeriodRate {
+                rate_bp: 2100,
+                net_cents: 102_997,
+                vat_cents: 21_630,
+            },
+        ];
         VatPeriod {
             from: on(2025, Month::July, 1),
             to: on(2025, Month::September, 30),
@@ -299,20 +396,56 @@ mod tests {
                 net_cents: 127_997,
                 vat_cents: 23_880,
                 gross_cents: 151_877,
-                by_rate: vec![
-                    VatPeriodRate {
-                        rate_bp: 900,
-                        net_cents: 25_000,
-                        vat_cents: 2_250,
-                    },
-                    VatPeriodRate {
-                        rate_bp: 2100,
-                        net_cents: 102_997,
-                        vat_cents: 21_630,
-                    },
-                ],
+                by_rate: by_rate.clone(),
+                base_net_cents: 127_997,
+                base_vat_cents: 23_880,
+                base_gross_cents: 151_877,
+                unconverted_count: 0,
             }],
+            base: VatPeriodBase {
+                currency: "EUR".to_owned(),
+                net_cents: 127_997,
+                vat_cents: 23_880,
+                gross_cents: 151_877,
+                by_rate,
+                unconverted_count: 0,
+            },
         }
+    }
+
+    /// The same quarter with a dollar group whose documents are converted at
+    /// 1 EUR = 1.1626 USD, and one that could not be converted at all.
+    fn two_currencies() -> VatPeriod {
+        let mut period = quarter();
+        period.currencies.push(VatPeriodCurrency {
+            currency: "USD".to_owned(),
+            invoice_count: 2,
+            credit_note_count: 0,
+            net_cents: 70_000,
+            vat_cents: 0,
+            gross_cents: 70_000,
+            by_rate: vec![VatPeriodRate {
+                rate_bp: 0,
+                net_cents: 70_000,
+                vat_cents: 0,
+            }],
+            base_net_cents: 43_007,
+            base_vat_cents: 0,
+            base_gross_cents: 43_007,
+            unconverted_count: 1,
+        });
+        period.base.net_cents += 43_007;
+        period.base.gross_cents += 43_007;
+        period.base.by_rate.insert(
+            0,
+            VatPeriodRate {
+                rate_bp: 0,
+                net_cents: 43_007,
+                vat_cents: 0,
+            },
+        );
+        period.base.unconverted_count = 1;
+        period
     }
 
     #[test]
@@ -401,6 +534,31 @@ mod tests {
                 { "rateBp": 2100, "netCents": 102_997, "vatCents": 21_630 },
             ])
         );
+        // And the figure the return is filed from, in the currency the books are
+        // kept in — here the same figure, because the tenant bills in it.
+        assert_eq!(value["base"]["currency"], "EUR");
+        assert_eq!(value["base"]["netCents"], 127_997);
+        assert_eq!(value["base"]["vatCents"], 23_880);
+        assert_eq!(value["base"]["grossCents"], 151_877);
+        assert_eq!(value["base"]["unconvertedCount"], 0);
+        assert_eq!(value["base"]["byRate"], eur["byRate"]);
+        assert_eq!(eur["baseNetCents"], 127_997);
+        assert_eq!(eur["unconvertedCount"], 0);
+    }
+
+    #[test]
+    fn a_second_currency_reports_its_own_figures_and_what_it_contributes() {
+        let value = report_json(&two_currencies());
+        let usd = &value["currencies"][1];
+        assert_eq!(usd["currency"], "USD");
+        assert_eq!(usd["netCents"], 70_000, "in dollars, as billed");
+        assert_eq!(usd["baseNetCents"], 43_007, "in euro, as booked");
+        assert_eq!(
+            usd["unconvertedCount"], 1,
+            "and one document that is in neither figure, said out loud"
+        );
+        assert_eq!(value["base"]["netCents"], 127_997 + 43_007);
+        assert_eq!(value["base"]["unconvertedCount"], 1);
     }
 
     #[test]
@@ -409,21 +567,53 @@ mod tests {
         let lines: Vec<&str> = body.split("\r\n").filter(|l| !l.is_empty()).collect();
         assert_eq!(
             lines[0],
-            "row,periodFrom,periodTo,currency,vatRatePercent,net,vat,gross,invoices,creditNotes"
+            "row,periodFrom,periodTo,currency,vatRatePercent,net,vat,gross,invoices,creditNotes,\
+             unconverted"
         );
         assert_eq!(
             lines[1],
-            "rate,2025-07-01,2025-09-30,EUR,9.00,250.00,22.50,272.50,,"
+            "rate,2025-07-01,2025-09-30,EUR,9.00,250.00,22.50,272.50,,,"
         );
         assert_eq!(
             lines[2],
-            "rate,2025-07-01,2025-09-30,EUR,21.00,1029.97,216.30,1246.27,,"
+            "rate,2025-07-01,2025-09-30,EUR,21.00,1029.97,216.30,1246.27,,,"
         );
         assert_eq!(
-            lines[3], "total,2025-07-01,2025-09-30,EUR,,1279.97,238.80,1518.77,5,1",
+            lines[3], "total,2025-07-01,2025-09-30,EUR,,1279.97,238.80,1518.77,5,1,0",
             "the counts are on the total row, where a document is counted once"
         );
-        assert_eq!(lines.len(), 4, "no other rows: {body:?}");
+        // Then the same period in the accounting currency: the return's figures.
+        assert_eq!(
+            lines[4],
+            "baseRate,2025-07-01,2025-09-30,EUR,9.00,250.00,22.50,272.50,,,"
+        );
+        assert_eq!(
+            lines[5],
+            "baseRate,2025-07-01,2025-09-30,EUR,21.00,1029.97,216.30,1246.27,,,"
+        );
+        assert_eq!(
+            lines[6],
+            "baseTotal,2025-07-01,2025-09-30,EUR,,1279.97,238.80,1518.77,,,0"
+        );
+        assert_eq!(lines.len(), 7, "no other rows: {body:?}");
+    }
+
+    #[test]
+    fn the_csv_says_how_many_documents_are_missing_from_a_converted_total() {
+        let body = report_csv(&two_currencies());
+        let lines: Vec<&str> = body.split("\r\n").filter(|l| !l.is_empty()).collect();
+        assert_eq!(
+            lines[5], "total,2025-07-01,2025-09-30,USD,,700.00,0.00,700.00,2,0,1",
+            "the dollar group carries its own unconverted count"
+        );
+        let base_total = lines
+            .iter()
+            .find(|l| l.starts_with("baseTotal"))
+            .unwrap_or_else(|| panic!("{body}"));
+        assert_eq!(
+            *base_total, "baseTotal,2025-07-01,2025-09-30,EUR,,1710.04,238.80,1948.84,,,1",
+            "a total that is missing a document says so on the same row"
+        );
     }
 
     #[test]
@@ -432,8 +622,32 @@ mod tests {
             from: on(2026, Month::January, 1),
             to: on(2026, Month::March, 31),
             currencies: Vec::new(),
+            base: VatPeriodBase {
+                currency: "EUR".to_owned(),
+                ..VatPeriodBase::default()
+            },
         };
-        assert_eq!(report_csv(&empty), csv::row(&COLUMNS));
+        // The header, and the one row that says what the nothing is nothing in.
+        assert_eq!(
+            report_csv(&empty),
+            format!(
+                "{}{}",
+                csv::row(&COLUMNS),
+                csv::row(&[
+                    "baseTotal",
+                    "2026-01-01",
+                    "2026-03-31",
+                    "EUR",
+                    "",
+                    "0.00",
+                    "0.00",
+                    "0.00",
+                    "",
+                    "",
+                    "0",
+                ])
+            )
+        );
         assert_eq!(file_name(&empty), "vat-2026-01-01-to-2026-03-31.csv");
     }
 

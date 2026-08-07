@@ -118,6 +118,8 @@ const DRAFT: BillingInvoice = {
     grossCents: 22688,
     vatByRate: [{ rateBp: 2100, netCents: 18750, vatCents: 3938 }],
   },
+  // A draft carries no exchange rate: the rate is frozen when it is issued.
+  fx: null,
   // Nothing received: the settlement the server sends for a document nobody
   // has paid anything against.
   settlement: {

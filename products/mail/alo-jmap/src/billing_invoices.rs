@@ -39,20 +39,24 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use time::{Date, OffsetDateTime};
 
+use alo_store::billing_fx::format_rate;
 use alo_store::billing_invoices::{
     Invoice, InvoiceDocument, InvoiceStatus, InvoiceSummary, NewInvoice,
 };
 use alo_store::billing_payments::Settlement;
 use alo_store::billing_settings::BillingSettings;
+use alo_store::billing_totals::Totals;
 use alo_store::{
     AccountStore, BillingCustomerId, BillingInvoiceId, BillingQuoteId, Customer, NewLine,
 };
 
 use crate::billing::{flag, iso, iso_date, map_store_err, parse_body};
-use crate::billing_document::{LineBody, today, with_body, with_totals};
+use crate::billing_document::{LineBody, today, totals_json, with_body, with_totals};
 use crate::billing_payments::settlement_json;
 use crate::billing_pdf as pdf;
-use crate::billing_print::{self as print, Banner, DocumentKind, PrintDocument, PrintQuery};
+use crate::billing_print::{
+    self as print, Banner, DocumentKind, PrintDocument, PrintQuery, Restated,
+};
 use crate::error::Problem;
 use crate::state::{AppState, authenticate};
 
@@ -77,6 +81,16 @@ fn invoice_json(i: &Invoice, today: Date) -> Value {
         "quoteId": i.quote_id.as_ref().map(BillingQuoteId::as_str),
         "reference": i.reference,
         "note": i.note,
+        // The exchange rate frozen on the document when it was issued (B1.21),
+        // `null` on a draft: what its money is restated into for the tenant's
+        // books, at which rate, published on which day. Both forms of the rate,
+        // like `/billing/fx/rates`, so no client divides one into the other.
+        "fx": i.fx.as_ref().map(|fx| json!({
+            "baseCurrency": fx.base_currency,
+            "rateMicro": fx.rate_micro,
+            "rate": format_rate(fx.rate_micro),
+            "rateDate": iso_date(fx.rate_date),
+        })),
         "createdBy": i.created_by,
         "createdAt": iso(i.created_at),
         "updatedAt": iso(i.updated_at),
@@ -92,7 +106,10 @@ fn invoice_json(i: &Invoice, today: Date) -> Value {
 /// read exactly as this document's own routes do.
 pub(crate) fn document_json(d: &InvoiceDocument, today: Date) -> Value {
     with_settlement(
-        with_body(invoice_json(&d.invoice, today), &d.lines, &d.totals),
+        with_base(
+            with_body(invoice_json(&d.invoice, today), &d.lines, &d.totals),
+            d.base_totals().as_ref(),
+        ),
         &d.settlement(),
     )
 }
@@ -101,9 +118,27 @@ pub(crate) fn document_json(d: &InvoiceDocument, today: Date) -> Value {
 /// the lines.
 fn summary_json(s: &InvoiceSummary, today: Date) -> Value {
     with_settlement(
-        with_totals(invoice_json(&s.invoice, today), &s.totals),
+        with_base(
+            with_totals(invoice_json(&s.invoice, today), &s.totals),
+            s.base_totals().as_ref(),
+        ),
         &s.settlement(),
     )
+}
+
+/// Adds `baseTotals` — the document's money in the tenant's accounting currency
+/// — to a document or list entry, or leaves the object untouched when there is
+/// nothing to restate (the document is already in that currency, or it carries
+/// no rate at all).
+///
+/// The same figures the paper and the PDF print, from the same store code, so
+/// the screen and the document a customer holds cannot disagree about the VAT
+/// the tenant owes on it.
+fn with_base(mut value: Value, base: Option<&Totals>) -> Value {
+    if let (Some(object), Some(base)) = (value.as_object_mut(), base) {
+        object.insert("baseTotals".to_owned(), totals_json(base));
+    }
+    value
 }
 
 /// Adds a document's `settlement` to its object — computed from the lines and
@@ -653,6 +688,18 @@ impl Printable {
             customer: &self.customer,
             lines: &self.document.lines,
             totals: &self.document.totals,
+            // The VAT restated in the issuer's own currency, when the document
+            // was raised in another one — art. 230 requires it on the paper.
+            restated: self
+                .document
+                .base_totals()
+                .zip(invoice.fx.as_ref())
+                .map(|(base, fx)| Restated {
+                    currency: fx.base_currency.clone(),
+                    vat_cents: base.vat_cents,
+                    rate_micro: fx.rate_micro,
+                    rate_date: fx.rate_date,
+                }),
             issuer: &self.issuer,
         }
     }

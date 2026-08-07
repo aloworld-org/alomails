@@ -44,6 +44,11 @@ const REPORT: VatReport = {
         { rateBp: 900, netCents: 25000, vatCents: 2250 },
         { rateBp: 2100, netCents: 102997, vatCents: 21630 },
       ],
+      // Already the accounting currency, so it contributes itself unmoved.
+      baseNetCents: 127997,
+      baseVatCents: 23880,
+      baseGrossCents: 151877,
+      unconvertedCount: 0,
     },
     {
       currency: "USD",
@@ -53,9 +58,29 @@ const REPORT: VatReport = {
       vatCents: 0,
       grossCents: 20000,
       byRate: [{ rateBp: 0, netCents: 20000, vatCents: 0 }],
+      // $200.00 at 1 EUR = 1.1626 USD → €172.03, the server's figure.
+      baseNetCents: 17203,
+      baseVatCents: 0,
+      baseGrossCents: 17203,
+      unconvertedCount: 0,
     },
   ],
+  base: {
+    currency: "EUR",
+    netCents: 127997 + 17203,
+    vatCents: 23880,
+    grossCents: 151877 + 17203,
+    byRate: [
+      { rateBp: 0, netCents: 17203, vatCents: 0 },
+      { rateBp: 900, netCents: 25000, vatCents: 2250 },
+      { rateBp: 2100, netCents: 102997, vatCents: 21630 },
+    ],
+    unconvertedCount: 0,
+  },
 };
+
+/** The report the fake server answers with; a test may swap it. */
+let report: VatReport = REPORT;
 
 const CSV = "row,periodFrom,periodTo,currency,vatRatePercent,net,vat,gross,invoices,creditNotes\r\n";
 
@@ -66,7 +91,7 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
     return new Response(CSV, { status: 200, headers: { "content-type": "text/csv" } });
   }
   if (url.includes("/billing/reports/vat")) {
-    return new Response(JSON.stringify({ report: REPORT }), {
+    return new Response(JSON.stringify({ report }), {
       status: 200,
       headers: { "content-type": "application/json" },
     });
@@ -114,10 +139,11 @@ describe("the VAT report", () => {
     await waitFor(() => expect(reportCalls().length).toBe(1));
     expect(reportCalls()[0]).toContain(`from=${THIS_QUARTER.from}&to=${THIS_QUARTER.to}`);
 
-    // Two currencies, two tables: nothing on this screen adds a dollar to a
-    // euro, because the API never offered a figure that did.
+    // Two currencies, two tables — nothing on this screen adds a dollar to a
+    // euro — and then a third for the period in the accounting currency, which
+    // the server converted document by document (B1.21).
     const tables = await screen.findAllByRole("table");
-    expect(tables.length).toBe(2);
+    expect(tables.length).toBe(3);
     const euro = within(tables[0] as HTMLElement);
     // The rate rows are the server's, formatted but not recomputed.
     expect(euro.getByText("9%")).toBeTruthy();
@@ -141,6 +167,38 @@ describe("the VAT report", () => {
     // Twice: no VAT at a zero rate, on the rate row and on the total.
     expect(dollars.getAllByText("$0.00").length).toBe(2);
     expect(dollars.queryByText(/€/)).toBeNull();
+
+    // The last table is the return's own figures: the dollars restated at the
+    // rate frozen on the document, added to the euros — the server's numbers,
+    // never a conversion done here.
+    const books = within(tables[2] as HTMLElement);
+    expect(books.getByText("€172.03")).toBeTruthy();
+    expect(books.getByText("€1,452.00")).toBeTruthy();
+    expect(books.getByText("€238.80")).toBeTruthy();
+    expect(books.getByText("€1,690.80")).toBeTruthy();
+    expect(screen.getByText(strings.billingReportBaseIntro("EUR"))).toBeTruthy();
+    // Nothing was left out, so nothing warns that something was.
+    expect(screen.queryByText(strings.billingReportUnconverted(1))).toBeNull();
+  });
+
+  test("says out loud when a document could not be converted into the books", async () => {
+    // A period whose dollar group holds a document with no stored rate: the
+    // total below it is incomplete, and a tax figure that is quietly missing a
+    // document is exactly what must never be printed plain.
+    const incomplete: VatReport = {
+      ...REPORT,
+      currencies: [
+        { ...REPORT.currencies[1]!, baseNetCents: 0, baseGrossCents: 0, unconvertedCount: 1 },
+      ],
+      base: { ...REPORT.base, netCents: 0, vatCents: 0, grossCents: 0, unconvertedCount: 1 },
+    };
+    report = incomplete;
+    ui();
+
+    expect(
+      await screen.findByText(strings.billingReportUnconverted(1)),
+    ).toBeTruthy();
+    report = REPORT;
   });
 
   test("a chosen period is what is asked for, and what the screen says it shows", async () => {

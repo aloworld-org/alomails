@@ -56,6 +56,9 @@ fn settings_json(s: &BillingSettings) -> Value {
         "bankName": s.bank_name,
         "accountHolder": s.account_holder,
         "footerNote": s.footer_note,
+        // The currency the tenant keeps books in (B1.21). Never blank, even
+        // unstated: a VAT summary has to be able to say what it converted into.
+        "baseCurrency": s.base_currency,
         "updatedBy": s.updated_by,
         "updatedAt": s.updated_at.map(iso),
     })
@@ -80,6 +83,7 @@ fn editable(s: &BillingSettings) -> NewBillingSettings {
         bank_name: s.bank_name.clone(),
         account_holder: s.account_holder.clone(),
         footer_note: s.footer_note.clone(),
+        base_currency: s.base_currency.clone(),
     }
 }
 
@@ -123,6 +127,8 @@ struct SettingsBody {
     account_holder: Option<String>,
     #[serde(default)]
     footer_note: Option<String>,
+    #[serde(default)]
+    base_currency: Option<String>,
 }
 
 impl SettingsBody {
@@ -145,6 +151,7 @@ impl SettingsBody {
             bank_name: self.bank_name.unwrap_or(base.bank_name),
             account_holder: self.account_holder.unwrap_or(base.account_holder),
             footer_note: self.footer_note.unwrap_or(base.footer_note),
+            base_currency: self.base_currency.unwrap_or(base.base_currency),
         }
     }
 }

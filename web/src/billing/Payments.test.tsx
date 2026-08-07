@@ -105,6 +105,7 @@ const PART_PAID: BillingInvoice = {
     grossCents: 22688,
     vatByRate: [{ rateBp: 2100, netCents: 18750, vatCents: 3938 }],
   },
+  fx: { baseCurrency: "EUR", rateMicro: 1_000_000, rate: "1.0", rateDate: "2026-08-06" },
   settlement: {
     grossCents: 22688,
     paidCents: 10000,

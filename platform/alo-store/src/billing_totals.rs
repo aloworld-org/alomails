@@ -132,7 +132,11 @@ pub fn totals(lines: &[LineFigures]) -> Totals {
 
 /// `numer / denom` rounded half **away from zero**, for a strictly positive
 /// `denom`. Integer-only: no float ever touches an amount of money.
-fn div_round_half_away(numer: i128, denom: i128) -> i128 {
+///
+/// Shared with [`crate::billing_fx`] rather than restated there: the convention
+/// is what keeps a credit note the exact mirror of its original, and two
+/// spellings of it could drift apart by a cent.
+pub(crate) fn div_round_half_away(numer: i128, denom: i128) -> i128 {
     debug_assert!(denom > 0, "divisor must be positive");
     let quotient = numer / denom;
     let remainder = numer % denom;
@@ -150,7 +154,7 @@ fn div_round_half_away(numer: i128, denom: i128) -> i128 {
 /// A validated document cannot come near the boundary (see the module docs),
 /// so saturating here is unreachable in practice — but it is total: no
 /// wrapping into a plausible wrong number, and no panic.
-fn to_i64(value: i128) -> i64 {
+pub(crate) fn to_i64(value: i128) -> i64 {
     i64::try_from(value).unwrap_or(if value < 0 { i64::MIN } else { i64::MAX })
 }
 

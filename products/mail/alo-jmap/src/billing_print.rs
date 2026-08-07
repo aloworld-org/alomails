@@ -71,6 +71,30 @@ pub enum Banner {
     Closed,
 }
 
+/// The document's VAT restated in the issuer's accounting currency, when it was
+/// raised in another one (B1.21).
+///
+/// A foreign-currency invoice **must** print this: art. 230 of the VAT Directive
+/// allows any currency on the document provided the VAT payable is also
+/// expressed in the member state's own, converted at the art. 91 rate. The rate
+/// and the day it was published are printed alongside it, so the customer — and
+/// an auditor — can recompute the figure from the paper alone.
+///
+/// Owned rather than borrowed, unlike everything else here: it is derived from
+/// the document's frozen rate rather than stored, and it is four small fields.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Restated {
+    /// ISO 4217 code the issuer keeps books in.
+    pub currency: String,
+    /// The document's whole VAT in that currency, in cents.
+    pub vat_cents: i64,
+    /// Units of the document's currency per one unit of `currency`
+    /// ([`alo_store::billing_fx`]).
+    pub rate_micro: i64,
+    /// The day that rate was published.
+    pub rate_date: Date,
+}
+
 /// Everything the page prints, gathered by the route from the store.
 ///
 /// Borrowed throughout: rendering never owns the document, and never mutates
@@ -102,6 +126,9 @@ pub struct PrintDocument<'a> {
     pub lines: &'a [Line],
     /// What it comes to — the server's figures, never recomputed here.
     pub totals: &'a Totals,
+    /// The same VAT in the issuer's accounting currency, when the document was
+    /// raised in another one; `None` when there is nothing to restate.
+    pub restated: Option<Restated>,
     /// Who the document is from.
     pub issuer: &'a BillingSettings,
 }
@@ -159,6 +186,11 @@ pub struct Strings {
     pub vat_at: fn(&str) -> String,
     /// Total including VAT.
     pub gross_total: &'static str,
+    /// Label of the VAT total restated in the issuer's own currency, given that
+    /// currency's code.
+    pub vat_in: fn(&str) -> String,
+    /// The sentence under the totals that states the rate the restatement used.
+    pub converted_at: fn(&str, &str) -> String,
     /// Heading over the payment instructions.
     pub payment: &'static str,
     /// The sentence that asks for the money, given the due date.
@@ -212,6 +244,10 @@ static EN: Strings = Strings {
     net_total: "Net total",
     vat_at: |rate| format!("VAT {rate}"),
     gross_total: "Total",
+    vat_in: |code| format!("VAT in {code}"),
+    converted_at: |rate, day| {
+        format!("VAT converted at {rate}, the reference rate published on {day}.")
+    },
     payment: "Payment",
     payable_by: |date| {
         format!("Payable by {date} to the account below, quoting the invoice number.")
@@ -451,6 +487,7 @@ table.lines tbody tr { page-break-inside: avoid; }
 .bank div span { display: block; }
 .bank .k { font-size: 8pt; text-transform: uppercase; letter-spacing: .5pt; color: #6b7280; }
 .bank .v { font-variant-numeric: tabular-nums; }
+.fx { width: 78mm; margin: 1.5mm 0 0 auto; text-align: right; font-size: 8pt; color: #4a4f58; }
 .note { margin-top: 6mm; white-space: pre-wrap; }
 .foot {
   margin-top: 9mm; padding-top: 3mm; border-top: .2mm solid #dcdfe5;
@@ -604,6 +641,27 @@ pub fn render(doc: &PrintDocument<'_>, s: &Strings) -> String {
         currency,
         esc(&amount(doc.totals.gross_cents, s))
     ));
+    // The VAT in the issuer's own currency, on a document raised in another one
+    // — required, not decorative (see `Restated`), and stated with the rate that
+    // produced it so the figure can be recomputed from the paper.
+    let restated = match doc.restated.as_ref() {
+        Some(r) => {
+            totals.push_str(&format!(
+                "<tr><th>{}</th><td>{} {}</td></tr>",
+                esc(&(s.vat_in)(&r.currency)),
+                esc(&r.currency),
+                esc(&amount(r.vat_cents, s))
+            ));
+            format!(
+                "<p class=\"fx\">{}</p>",
+                esc(&(s.converted_at)(
+                    &rate_sentence(r, doc.currency),
+                    &date(r.rate_date)
+                ))
+            )
+        }
+        None => String::new(),
+    };
 
     let payment = render_payment(doc, s);
 
@@ -654,6 +712,7 @@ pub fn render(doc: &PrintDocument<'_>, s: &Strings) -> String {
          <th class=\"num\">{c_price}</th><th class=\"num\">{c_vat}</th>\
          <th class=\"num\">{c_net}</th></tr></thead><tbody>{lines}</tbody></table>\n\
          <table class=\"totals\"><tbody>{totals}</tbody></table>\n\
+         {restated}\n\
          {payment}{note}\n\
          <footer class=\"foot\">{footer}</footer>\n\
          </main>\n</body>\n</html>\n",
@@ -665,6 +724,21 @@ pub fn render(doc: &PrintDocument<'_>, s: &Strings) -> String {
         c_price = esc(s.unit_price),
         c_vat = esc(s.vat_rate),
         c_net = esc(s.line_net),
+    )
+}
+
+/// The rate as it is printed: `1 EUR = 1.1626 USD`, the direction the reference
+/// rates are published in, so the number on the page is the number that was
+/// applied rather than its reciprocal.
+///
+/// Shared with the PDF renderer ([`crate::billing_pdf`]) so the paper and the
+/// file cannot state the conversion differently.
+pub(crate) fn rate_sentence(restated: &Restated, document_currency: &str) -> String {
+    format!(
+        "1 {} = {} {}",
+        restated.currency,
+        alo_store::billing_fx::format_rate(restated.rate_micro),
+        document_currency
     )
 }
 
@@ -910,6 +984,7 @@ mod tests {
             customer,
             lines,
             totals,
+            restated: None,
             issuer,
         }
     }
