@@ -232,9 +232,9 @@ export function SheetEditor({
           toolbar: false,
           sheets: {
             scrollConfig: {
-              barSize: 6,
+              barSize: 3,
               barBorder: 0,
-              thumbMargin: 1,
+              thumbMargin: 0,
               thumbBackgroundColor: "rgba(231, 111, 81, 0.78)",
               thumbHoverBackgroundColor: "#e76f51",
               thumbActiveBackgroundColor: "#d65d3f",
