@@ -282,7 +282,7 @@ fn esc(value: &str) -> String {
 /// The only arithmetic in this module, and it is presentation: split into
 /// units and hundredths, group the units in threes. Uses `i128` so
 /// `i64::MIN` has no special case, and the sign is placed once, at the front.
-fn amount(cents: i64, s: &Strings) -> String {
+pub(crate) fn amount(cents: i64, s: &Strings) -> String {
     let value = i128::from(cents);
     let negative = value < 0;
     let magnitude = value.unsigned_abs();
@@ -304,7 +304,7 @@ fn amount(cents: i64, s: &Strings) -> String {
 /// Formats a quantity in milli-units: `1500` → `1.5`, `2000` → `2`, and a
 /// discount's `-500` → `−0.5`. Trailing zeros are dropped, because "2 hours"
 /// reads better than "2.000 hours" and no precision is lost.
-fn quantity(qty_milli: i64, s: &Strings) -> String {
+pub(crate) fn quantity(qty_milli: i64, s: &Strings) -> String {
     let value = i128::from(qty_milli);
     let negative = value < 0;
     let magnitude = value.unsigned_abs();
@@ -321,7 +321,7 @@ fn quantity(qty_milli: i64, s: &Strings) -> String {
 
 /// Formats a VAT rate in basis points as a percentage: `2100` → `21%`,
 /// `725` → `7.25%`, `0` → `0%`.
-fn rate(bp: i32, s: &Strings) -> String {
+pub(crate) fn rate(bp: i32, s: &Strings) -> String {
     let whole = bp / 100;
     let hundredths = (bp % 100).abs();
     if hundredths == 0 {
@@ -334,14 +334,14 @@ fn rate(bp: i32, s: &Strings) -> String {
 
 /// Formats a date the one way that means the same thing in every member
 /// state. See the module docs for why this is not localised.
-fn date(value: Date) -> String {
+pub(crate) fn date(value: Date) -> String {
     value.format(&Iso8601::DATE).unwrap_or_default()
 }
 
 /// The initials drawn in place of a logo — up to two, from the first words of
 /// the issuer's legal name. A real logo is a Drive file and an upload surface
 /// (its own item); a blank rectangle on every invoice is worse than initials.
-fn monogram(legal_name: &str) -> String {
+pub(crate) fn monogram(legal_name: &str) -> String {
     legal_name
         .split_whitespace()
         .filter_map(|word| word.chars().find(|c| c.is_alphanumeric()))
@@ -371,7 +371,7 @@ fn meta_row(label: &str, value: &str) -> String {
 
 impl DocumentKind {
     /// The document's title in `s`.
-    fn title(self, s: &Strings) -> &'static str {
+    pub(crate) fn title(self, s: &Strings) -> &'static str {
         match self {
             Self::Invoice => s.invoice,
             Self::CreditNote => s.credit_note,
@@ -382,7 +382,7 @@ impl DocumentKind {
 
 impl Banner {
     /// The word shouted across the page in `s`.
-    fn word(self, s: &Strings) -> &'static str {
+    pub(crate) fn word(self, s: &Strings) -> &'static str {
         match self {
             Self::Draft => s.draft,
             Self::Void => s.void,
@@ -466,12 +466,21 @@ table.lines tbody tr { page-break-inside: avoid; }
 /// stylesheet inline and no external reference of any kind, so it renders
 /// identically in a print dialog, in headless chromium (B1.17) and as a mail
 /// attachment (B1.18).
-pub fn render(doc: &PrintDocument<'_>, s: &Strings) -> String {
+/// What the document calls itself: its kind, and its number once it has one.
+///
+/// Shared with the PDF renderer ([`crate::billing_pdf`]) so the paper, the
+/// screen and the file name a customer saves cannot disagree about what the
+/// document is.
+pub fn document_heading(doc: &PrintDocument<'_>, s: &Strings) -> String {
     let title = doc.kind.title(s);
-    let heading = match doc.number {
+    match doc.number {
         Some(number) => format!("{title} {number}"),
         None => title.to_owned(),
-    };
+    }
+}
+
+pub fn render(doc: &PrintDocument<'_>, s: &Strings) -> String {
+    let heading = document_heading(doc, s);
 
     // The number is in the heading, so it is deliberately NOT repeated in the
     // grid below it: a document that states its own number twice makes a

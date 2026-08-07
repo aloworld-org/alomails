@@ -10,6 +10,9 @@ publish.workspace = true
 alo-store = { path = "../../../platform/alo-store" }
 alo-sieve = { path = "../../../platform/alo-sieve" }
 alo-identity = { path = "../../../platform/alo-identity" }
+# The PDF writer behind GET /billing/{invoices,quotes}/{id}/pdf (B1.17): the
+# printed document rendered a second way, from the same document model.
+alo-pdf = { path = "../../../platform/alo-pdf" }
 # The shared outbound SMTP client — EmailSubmission/set sends through the
 # trusted internal submission listener using the same production client the
 # SMTP delivery path uses.
@@ -48,6 +51,9 @@ webpki-roots = "0.26"
 mail-parser = { workspace = true }
 
 [dev-dependencies]
+# Reads our own PDF output back with an independent parser, so a rendering
+# test asserts what a reader sees rather than what we wrote (B1.17).
+pdf-extract = { workspace = true }
 tokio = { workspace = true }
 # In-process HTTP testing (drive the router without a socket) + a small
 # test pool.

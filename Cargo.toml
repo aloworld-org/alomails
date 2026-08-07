@@ -6,6 +6,7 @@ members = [
     "platform/alo-auth-mail",
     "platform/alo-sieve",
     "platform/alo-ai",
+    "platform/alo-pdf",
     "products/mail/alo-smtp",
     "products/mail/alo-smtp-client",
     "products/mail/alo-imap",

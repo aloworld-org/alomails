@@ -1,0 +1,17 @@
+[package]
+name = "alo-pdf"
+description = "alo PDF writer: a minimal PDF 1.7 producer (pages, text, rules, the standard-14 fonts) with no dependencies"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# Deliberately empty. A PDF file is a byte format with a table of offsets at
+# the end of it; producing one needs no crate, and the invoice path is not a
+# place to inherit somebody else's dependency tree.
+[dependencies]
+
+[dev-dependencies]
+
+[lints]
+workspace = true

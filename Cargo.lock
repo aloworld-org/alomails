@@ -128,6 +128,7 @@ dependencies = [
  "alo-ai",
  "alo-auth-mail",
  "alo-identity",
+ "alo-pdf",
  "alo-sieve",
  "alo-smtp-client",
  "alo-store",
@@ -138,6 +139,7 @@ dependencies = [
  "hickory-resolver",
  "hmac",
  "mail-parser",
+ "pdf-extract",
  "reqwest",
  "rustls",
  "rustls-pki-types",
@@ -157,6 +159,10 @@ dependencies = [
 
 [[package]]
 name = "alo-migrate"
+version = "0.0.1"
+
+[[package]]
+name = "alo-pdf"
 version = "0.0.1"
 
 [[package]]

@@ -262,6 +262,12 @@ pub fn app(state: AppState) -> Router {
             "/billing/invoices/{id}/print",
             get(billing_invoices::print_invoice),
         )
+        // The same document as a file (B1.17): laid out a second way from the
+        // same model, never converted from the page above.
+        .route(
+            "/billing/invoices/{id}/pdf",
+            get(billing_invoices::pdf_invoice),
+        )
         // Quotes (B1.12) — the offer that precedes an invoice, with the same
         // shape: draft CRUD, a strict status filter, and every transition its
         // own POST. Accepting is the one that answers two documents: it closes

@@ -37,15 +37,19 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
 use serde::Deserialize;
 use serde_json::{Value, json};
-use time::Date;
+use time::{Date, OffsetDateTime};
 
 use alo_store::billing_invoices::{
     Invoice, InvoiceDocument, InvoiceStatus, InvoiceSummary, NewInvoice,
 };
-use alo_store::{AccountStore, BillingCustomerId, BillingInvoiceId, BillingQuoteId, NewLine};
+use alo_store::billing_settings::BillingSettings;
+use alo_store::{
+    AccountStore, BillingCustomerId, BillingInvoiceId, BillingQuoteId, Customer, NewLine,
+};
 
 use crate::billing::{iso, iso_date, map_store_err, parse_body};
 use crate::billing_document::{LineBody, today, with_body, with_totals};
+use crate::billing_pdf as pdf;
 use crate::billing_print::{self as print, Banner, DocumentKind, PrintDocument, PrintQuery};
 use crate::error::Problem;
 use crate::state::{AppState, authenticate};
@@ -479,47 +483,111 @@ pub async fn print_invoice(
     Query(query): Query<PrintQuery>,
 ) -> Result<Response, Problem> {
     let account = authenticate(&state, &headers).await?;
-    let document = load(&account.acc, &BillingInvoiceId::new(id)).await?;
-    let invoice = &document.invoice;
-    let (customer, issuer) = print::parties(&account.acc, &invoice.customer_id).await?;
+    let printable = printable(&account.acc, &BillingInvoiceId::new(id)).await?;
+    Ok(print::response(print::render(
+        &printable.as_document(),
+        query.strings(),
+    )))
+}
 
-    // The number of what this credits is read separately: the store holds the
-    // id, and the paper has to name the document the customer already has.
-    let credited = match invoice.credits_invoice_id.as_ref() {
-        Some(original) => account
-            .acc
+/// `GET /billing/invoices/{id}/pdf[?lang=]` → the same document as a PDF file
+/// ([`crate::billing_pdf`]).
+///
+/// The **same** [`PrintDocument`] the page is rendered from, laid out a second
+/// way rather than converted — `docs/design/billing.md` (B1.17) records why we
+/// do not run a browser to produce it, and what that costs.
+///
+/// It is served as an **attachment**, never inline: a PDF rendered inside our
+/// own origin is a document context we do not control, and this one exists to
+/// be saved, mailed and archived. `Content-Disposition` therefore carries a
+/// name built from the document's own heading, reduced to characters that are
+/// safe in a header and in a file name on every platform.
+pub async fn pdf_invoice(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<PrintQuery>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let printable = printable(&account.acc, &BillingInvoiceId::new(id)).await?;
+    let document = printable.as_document();
+    let strings = query.strings();
+    let bytes = pdf::render(&document, strings, pdf::stamp(OffsetDateTime::now_utc()));
+    Ok(pdf::response(bytes, &pdf::file_name(&document, strings)))
+}
+
+/// Everything a rendering of one invoice needs, read once.
+///
+/// Both renderings are built from this — the page by [`print_invoice`], the
+/// file by [`pdf_invoice`] — so the paper a customer holds and the file they
+/// save cannot disagree about a figure, a date, or what the document is.
+struct Printable {
+    /// The document itself, with its lines and the store's totals.
+    document: InvoiceDocument,
+    /// Who it is to, re-read through the account door.
+    customer: Customer,
+    /// Who it is from: the tenant's own identity, blank if never saved.
+    issuer: BillingSettings,
+    /// The number of the invoice this one credits, when it credits one.
+    credited: Option<String>,
+}
+
+/// Loads one of the tenant's invoices and both parties to it, or fails with
+/// the `404` an id from another tenant gets.
+async fn printable(acc: &AccountStore, id: &BillingInvoiceId) -> Result<Printable, Problem> {
+    let document = load(acc, id).await?;
+    let (customer, issuer) = print::parties(acc, &document.invoice.customer_id).await?;
+    // What this credits is read separately: the store holds the id, and the
+    // paper has to name the document the customer already has.
+    let credited = match document.invoice.credits_invoice_id.as_ref() {
+        Some(original) => acc
             .billing_invoice(original)
             .await
             .map_err(map_store_err)?
             .and_then(|d| d.invoice.number),
         None => None,
     };
+    Ok(Printable {
+        document,
+        customer,
+        issuer,
+        credited,
+    })
+}
 
-    let printed = PrintDocument {
-        kind: if invoice.is_credit_note {
-            DocumentKind::CreditNote
-        } else {
-            DocumentKind::Invoice
-        },
-        banner: match invoice.status {
-            InvoiceStatus::Draft => Some(Banner::Draft),
-            InvoiceStatus::Void => Some(Banner::Void),
-            InvoiceStatus::Issued | InvoiceStatus::Paid => None,
-        },
-        number: invoice.number.as_deref(),
-        primary_date: invoice.issue_date,
-        secondary_date: invoice.due_date,
-        reference: &invoice.reference,
-        note: &invoice.note,
-        currency: &invoice.currency,
-        payment_terms_days: Some(invoice.payment_terms_days),
-        credits_number: credited.as_deref(),
-        customer: &customer,
-        lines: &document.lines,
-        totals: &document.totals,
-        issuer: &issuer,
-    };
-    Ok(print::response(print::render(&printed, query.strings())))
+impl Printable {
+    /// The document as the renderers see it.
+    ///
+    /// What it says about itself comes from its own stored state, never from
+    /// the request: a draft prints as a draft and without a number, a void
+    /// invoice prints as void, and a credit note is titled as one.
+    fn as_document(&self) -> PrintDocument<'_> {
+        let invoice = &self.document.invoice;
+        PrintDocument {
+            kind: if invoice.is_credit_note {
+                DocumentKind::CreditNote
+            } else {
+                DocumentKind::Invoice
+            },
+            banner: match invoice.status {
+                InvoiceStatus::Draft => Some(Banner::Draft),
+                InvoiceStatus::Void => Some(Banner::Void),
+                InvoiceStatus::Issued | InvoiceStatus::Paid => None,
+            },
+            number: invoice.number.as_deref(),
+            primary_date: invoice.issue_date,
+            secondary_date: invoice.due_date,
+            reference: &invoice.reference,
+            note: &invoice.note,
+            currency: &invoice.currency,
+            payment_terms_days: Some(invoice.payment_terms_days),
+            credits_number: self.credited.as_deref(),
+            customer: &self.customer,
+            lines: &self.document.lines,
+            totals: &self.document.totals,
+            issuer: &self.issuer,
+        }
+    }
 }
 
 #[cfg(test)]
