@@ -1,5 +1,7 @@
 .shell {
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
   display: grid;
   grid-template-columns: var(--rail-width) 1fr auto;
   grid-template-areas: "rail main panel";
@@ -8,6 +10,7 @@
 .main {
   grid-area: main;
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
   background: var(--bg-app);
 }
