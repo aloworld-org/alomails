@@ -1016,6 +1016,7 @@ export const fr: Partial<Catalog> = {
   sheetInsert: "Insérer",
   sheetDelete: "Supprimer",
   sheetFormat: "Format",
+  sheetMoreCellOptions: "Plus d’options de cellule",
   sheetSortFilter: "Trier et filtrer",
   sheetGroupClear: "Effacer",
   sheetGroupRows: "Lignes",
@@ -1223,6 +1224,7 @@ export const fr: Partial<Catalog> = {
   refTabSections: "Sections",
   refTabTables: "Tableaux",
   refTabFigures: "Figures",
+  driveLoadingFile: (name: string) => `Ouverture de ${name}…`,
 
   // Outils de facturation de l’agent (ADR 0035, B1.25). Chacun produit un
   // brouillon : approuver n’émet rien, ne numérote rien et n’envoie rien.

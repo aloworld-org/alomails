@@ -14,8 +14,9 @@ import {
   AlignVerticalJustifyEnd,
   AlignVerticalJustifyStart,
   ArrowRightFromLine,
+  ArrowDownAZ,
+  ArrowDownZA,
   Baseline,
-  BetweenHorizontalStart,
   Bold,
   ClipboardPaste,
   CalendarDays,
@@ -24,6 +25,7 @@ import {
   Database,
   DollarSign,
   Copy,
+  Eraser,
   Filter,
   Globe2,
   Italic,
@@ -33,6 +35,7 @@ import {
   ListChecks,
   ListTree,
   MessageSquare,
+  MoreHorizontal,
   PaintBucket,
   Palette,
   Radical,
@@ -538,20 +541,33 @@ function HomeTab({ actions, disabled, selectionFormatting }: { actions: SheetAct
 
       <Group label={strings.sheetGroupCells}>
         <div className={styles.cellControls}>
-          <RibbonMenu label={strings.sheetInsert} disabled={disabled} icon={<BetweenHorizontalStart size={17} />} variant="row">
-            <TextBtn label={strings.sheetInsertRowAbove} onClick={() => actions.insertRow("before")} disabled={disabled} />
+          <IconBtn label={strings.sheetInsertRowAbove} onClick={() => actions.insertRow("before")} disabled={disabled}>
+            <CellActionGlyph action="add"><Rows3 size={16} /></CellActionGlyph>
+          </IconBtn>
+          <IconBtn label={strings.sheetInsertColLeft} onClick={() => actions.insertColumn("before")} disabled={disabled}>
+            <CellActionGlyph action="add"><Columns3 size={16} /></CellActionGlyph>
+          </IconBtn>
+          <IconBtn label={strings.sheetDeleteRow} onClick={actions.deleteRow} disabled={disabled}>
+            <CellActionGlyph action="remove"><Rows3 size={16} /></CellActionGlyph>
+          </IconBtn>
+          <IconBtn label={strings.sheetDeleteColumn} onClick={actions.deleteColumn} disabled={disabled}>
+            <CellActionGlyph action="remove"><Columns3 size={16} /></CellActionGlyph>
+          </IconBtn>
+          <IconBtn label={strings.sheetClearFormats} onClick={actions.clearFormats} disabled={disabled}>
+            <Eraser size={16} />
+          </IconBtn>
+          <IconBtn label={strings.sheetClearContents} onClick={actions.clearContents} disabled={disabled}>
+            <ScissorsLineDashed size={16} />
+          </IconBtn>
+          <details className={styles.cellMore} data-ribbon-menu onToggle={handleRibbonMenuToggle}>
+            <summary className={disabled ? styles.cellMoreDisabled : undefined} aria-label={strings.sheetMoreCellOptions} title={strings.sheetMoreCellOptions}>
+              <MoreHorizontal size={16} />
+            </summary>
+            <div className={styles.ribbonMenuPanel} data-ribbon-floating-panel>
             <TextBtn label={strings.sheetInsertRowBelow} onClick={() => actions.insertRow("after")} disabled={disabled} />
-            <TextBtn label={strings.sheetInsertColLeft} onClick={() => actions.insertColumn("before")} disabled={disabled} />
             <TextBtn label={strings.sheetInsertColRight} onClick={() => actions.insertColumn("after")} disabled={disabled} />
-          </RibbonMenu>
-          <RibbonMenu label={strings.sheetDelete} disabled={disabled} icon={<Rows3 size={17} />} variant="row">
-            <TextBtn label={strings.sheetDeleteRow} onClick={actions.deleteRow} disabled={disabled} />
-            <TextBtn label={strings.sheetDeleteColumn} onClick={actions.deleteColumn} disabled={disabled} />
-          </RibbonMenu>
-          <RibbonMenu label={strings.sheetFormat} disabled={disabled} icon={<Columns3 size={17} />} variant="row">
-            <TextBtn label={strings.sheetClearFormats} onClick={actions.clearFormats} disabled={disabled} />
-            <TextBtn label={strings.sheetClearContents} onClick={actions.clearContents} disabled={disabled} />
-          </RibbonMenu>
+            </div>
+          </details>
         </div>
       </Group>
 
@@ -566,14 +582,18 @@ function HomeTab({ actions, disabled, selectionFormatting }: { actions: SheetAct
  *  (powered by the sort, filter, and find-replace presets). */
 function EditingControls({ actions, disabled }: { actions: SheetActions; disabled: boolean }) {
   return (
-    <div className={styles.row}>
-      <RibbonMenu label={strings.sheetSortFilter} disabled={disabled} icon={<Filter size={20} />} variant="wide">
-        <TextBtn label={strings.sheetSortAsc} onClick={() => actions.exec(CMD_SORT_ASC)} disabled={disabled} />
-        <TextBtn label={strings.sheetSortDesc} onClick={() => actions.exec(CMD_SORT_DESC)} disabled={disabled} />
-        <TextBtn label={strings.sheetFilter} onClick={() => actions.exec(CMD_FILTER)} disabled={disabled} />
-      </RibbonMenu>
-      <IconBtn label={strings.sheetFindReplace} onClick={() => actions.exec(CMD_FIND)} disabled={disabled} large showLabel>
-        <Search size={20} />
+    <div className={styles.editingGrid}>
+      <IconBtn label={strings.sheetSortAsc} onClick={() => actions.exec(CMD_SORT_ASC)} disabled={disabled}>
+        <ArrowDownAZ size={16} />
+      </IconBtn>
+      <IconBtn label={strings.sheetSortDesc} onClick={() => actions.exec(CMD_SORT_DESC)} disabled={disabled}>
+        <ArrowDownZA size={16} />
+      </IconBtn>
+      <IconBtn label={strings.sheetFilter} onClick={() => actions.exec(CMD_FILTER)} disabled={disabled}>
+        <Filter size={16} />
+      </IconBtn>
+      <IconBtn label={strings.sheetFindReplace} onClick={() => actions.exec(CMD_FIND)} disabled={disabled}>
+        <Search size={16} />
       </IconBtn>
     </div>
   );
@@ -717,6 +737,10 @@ function IconBtn({
   );
 }
 
+function CellActionGlyph({ action, children }: { action: "add" | "remove"; children: React.ReactNode }) {
+  return <span className={styles.cellActionGlyph}>{children}<span aria-hidden="true">{action === "add" ? "+" : "−"}</span></span>;
+}
+
 function TextBtn({ label, onClick, disabled }: { label: string; onClick: () => void; disabled: boolean }) {
   return (
     <button
@@ -776,16 +800,11 @@ function StyleGallery({ actions, disabled }: { actions: SheetActions; disabled: 
       <div className={styles.styleFeatured}>
         {STYLE_PRESETS.filter((preset) => featuredKeys.has(preset.key)).map((preset) => button(preset))}
       </div>
-      <details className={styles.styleMore} data-ribbon-menu onToggle={(event) => {
-        if (!event.currentTarget.open) return;
-        document.querySelectorAll<HTMLDetailsElement>("details[data-ribbon-menu][open]").forEach((menu) => {
-          if (menu !== event.currentTarget) menu.removeAttribute("open");
-        });
-      }}>
+      <details className={styles.styleMore} data-ribbon-menu onToggle={handleRibbonMenuToggle}>
         <summary className={disabled ? styles.styleMoreDisabled : undefined} aria-label={strings.sheetMoreStyles} title={strings.sheetMoreStyles}>
           <ChevronDown size={16} />
         </summary>
-        <div className={styles.styleMorePanel}>
+        <div className={styles.styleMorePanel} data-ribbon-floating-panel>
           <div className={styles.styleMoreHeading}>{strings.sheetCellStyles}</div>
           <div className={styles.styleMoreGrid}>
             {STYLE_PRESETS.map((preset) => button(preset, true))}
@@ -822,6 +841,31 @@ function AdvancedBorderMenu({ actions, disabled }: { actions: SheetActions; disa
   );
 }
 
+function handleRibbonMenuToggle(event: React.SyntheticEvent<HTMLDetailsElement>) {
+  const menu = event.currentTarget;
+  if (!menu.open) return;
+  document.querySelectorAll<HTMLDetailsElement>("details[data-ribbon-menu][open]").forEach((candidate) => {
+    if (candidate !== menu) candidate.removeAttribute("open");
+  });
+  window.requestAnimationFrame(() => {
+    const summary = menu.querySelector<HTMLElement>(":scope > summary");
+    const panel = menu.querySelector<HTMLElement>("[data-ribbon-floating-panel]");
+    if (summary === null || panel === null) return;
+    const trigger = summary.getBoundingClientRect();
+    const panelRect = panel.getBoundingClientRect();
+    const gutter = 8;
+    const left = Math.max(gutter, Math.min(trigger.left, window.innerWidth - panelRect.width - gutter));
+    const below = trigger.bottom + 5;
+    const top = below + panelRect.height <= window.innerHeight - gutter
+      ? below
+      : Math.max(gutter, trigger.top - panelRect.height - 5);
+    panel.style.position = "fixed";
+    panel.style.left = `${left}px`;
+    panel.style.top = `${top}px`;
+    panel.style.right = "auto";
+  });
+}
+
 function BrandedSelect({ className, label, disabled, defaultValue, selectedValue, options, onSelect }: { className: string | undefined; label: string; disabled: boolean; defaultValue: string; selectedValue?: string | null; options: { value: string; label: string; preview?: string }[]; onSelect: (value: string) => void }) {
   const [value, setValue] = useState(defaultValue);
   useEffect(() => {
@@ -829,16 +873,11 @@ function BrandedSelect({ className, label, disabled, defaultValue, selectedValue
   }, [selectedValue]);
   const selected = options.find((option) => option.value === value)?.label ?? value;
   return (
-    <details className={`${styles.brandedSelect} ${className ?? ""}`} data-ribbon-menu onToggle={(event) => {
-      if (!event.currentTarget.open) return;
-      document.querySelectorAll<HTMLDetailsElement>("details[data-ribbon-menu][open]").forEach((menu) => {
-        if (menu !== event.currentTarget) menu.removeAttribute("open");
-      });
-    }}>
+    <details className={`${styles.brandedSelect} ${className ?? ""}`} data-ribbon-menu onToggle={handleRibbonMenuToggle}>
       <summary className={disabled ? styles.brandedSelectDisabled : undefined} aria-label={label} title={label}>
         <span>{selected}</span><ChevronDown size={14} />
       </summary>
-      <div className={styles.brandedSelectPanel}>
+      <div className={styles.brandedSelectPanel} data-ribbon-floating-panel>
         {options.map((option) => (
           <button key={option.value} type="button" className={option.value === value ? styles.brandedOptionActive : styles.brandedOption} onClick={(event) => {
             setValue(option.value);
@@ -863,12 +902,7 @@ function RibbonMenu({ label, icon, disabled, children, variant = "standard" }: {
     <details
       className={`${styles.ribbonMenu} ${variantClass}`}
       data-ribbon-menu
-      onToggle={(event) => {
-        if (!event.currentTarget.open) return;
-        document.querySelectorAll<HTMLDetailsElement>("details[data-ribbon-menu][open]").forEach((menu) => {
-          if (menu !== event.currentTarget) menu.removeAttribute("open");
-        });
-      }}
+      onToggle={handleRibbonMenuToggle}
     >
       <summary className={disabled ? styles.ribbonMenuDisabled : undefined} aria-label={label}>
         {icon}
@@ -878,7 +912,7 @@ function RibbonMenu({ label, icon, disabled, children, variant = "standard" }: {
           <span className={styles.menuCaption}>{label}<ChevronDown size={11} /></span>
         )}
       </summary>
-      <div className={styles.ribbonMenuPanel}>{children}</div>
+      <div className={styles.ribbonMenuPanel} data-ribbon-floating-panel>{children}</div>
     </details>
   );
 }

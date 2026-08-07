@@ -4,7 +4,7 @@
 // location's access (ADR 0027), so there is no per-file sharing here — sharing
 // is membership of the Space it lives in, always visible via "Members".
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ChevronRight,
   Copy,
@@ -34,7 +34,8 @@ import { blankOfficeFile, type OfficeExt } from "./blankTemplates";
 // BlockNote is heavy and only needed when a doc opens — code-split it out.
 const DocEditor = lazy(() => import("./DocEditor").then((m) => ({ default: m.DocEditor })));
 // Univer is heavy; the native Sheet editor only loads when a sheet is opened.
-const SheetEditor = lazy(() => import("./SheetEditor").then((m) => ({ default: m.SheetEditor })));
+const loadSheetEditor = () => import("./SheetEditor").then((m) => ({ default: m.SheetEditor }));
+const SheetEditor = lazy(loadSheetEditor);
 const OfficeEditor = lazy(() => import("./OfficeEditor").then((m) => ({ default: m.OfficeEditor })));
 
 /** Real Office files open in Collabora; kept here so it doesn't pull the editor
@@ -49,10 +50,27 @@ import { xlsxToUniverSnapshot } from "./importOffice";
 import styles from "./DriveModule.module.css";
 
 type Crumb = { id: string; name: string };
+type EditorKind = "doc" | "sheet" | "office";
+
+function fileSlug(name: string): string {
+  const slug = name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "untitled";
+}
+
+function editorPath(kind: EditorKind, id: string, name: string): string {
+  return `/drive/${kind}/${encodeURIComponent(id)}/${fileSlug(name)}`;
+}
 
 export function DriveModule() {
   const client = useJmapClient();
   const { prompt, confirm } = useDialogs();
+  const route = useLocation();
+  const navigate = useNavigate();
 
   const [spaces, setSpaces] = useState<SpaceDto[]>([]);
   const [location, setLocation] = useState<string | null>(null); // null = My Files
@@ -76,6 +94,42 @@ export function DriveModule() {
   const parent = path.length > 0 ? (path[path.length - 1]?.id ?? null) : null;
   const currentSpace = useMemo(() => spaces.find((s) => s.id === location) ?? null, [spaces, location]);
   const canWrite = location === null || (currentSpace !== null && currentSpace.myRole !== "viewer");
+  const editorRouteActive = /^\/drive\/(doc|sheet|office)\//.test(route.pathname);
+
+  const showEditor = useCallback((kind: EditorKind, id: string, name: string, replace = false) => {
+    const value = { id, name };
+    setOpenDoc(kind === "doc" ? value : null);
+    setOpenSheet(kind === "sheet" ? value : null);
+    setOpenOffice(kind === "office" ? value : null);
+    navigate(editorPath(kind, id, name), { replace });
+  }, [navigate]);
+
+  // Editor state is URL-backed. A direct visit or browser refresh restores the
+  // exact Drive file instead of falling back to the file list.
+  useEffect(() => {
+    const match = /^\/drive\/(doc|sheet|office)\/([^/]+)(?:\/[^/]*)?$/.exec(route.pathname);
+    if (match === null) {
+      setOpenDoc(null);
+      setOpenSheet(null);
+      setOpenOffice(null);
+      return;
+    }
+    const id = decodeURIComponent(match[2] ?? "");
+    if (id === "") return;
+    void client.driveNode(id).then((node) => {
+      if (node === null) {
+        navigate("/drive", { replace: true });
+        return;
+      }
+      const canonicalKind: EditorKind = node.kind === "doc" ? "doc" : node.kind === "sheet" ? "sheet" : "office";
+      const canonicalPath = editorPath(canonicalKind, node.id, node.name);
+      const value = { id: node.id, name: node.name };
+      setOpenDoc(canonicalKind === "doc" ? value : null);
+      setOpenSheet(canonicalKind === "sheet" ? value : null);
+      setOpenOffice(canonicalKind === "office" ? value : null);
+      if (route.pathname !== canonicalPath) navigate(canonicalPath, { replace: true });
+    }).catch(() => navigate("/drive", { replace: true }));
+  }, [client, navigate, route.pathname]);
 
   const loadSpaces = useCallback(() => {
     void client.spaces().then(setSpaces).catch(() => setSpaces([]));
@@ -92,11 +146,22 @@ export function DriveModule() {
     }
   }, [client, location, parent, trashView]);
 
-  useEffect(loadSpaces, [loadSpaces]);
   useEffect(() => {
+    if (!editorRouteActive) loadSpaces();
+  }, [editorRouteActive, loadSpaces]);
+  useEffect(() => {
+    if (editorRouteActive) return;
     setNodes(null);
     void load();
-  }, [load]);
+  }, [editorRouteActive, load]);
+
+  // Univer is the largest Drive editor bundle. Fetch it after the file list is
+  // usable, so a subsequent sheet click does not start from a cold download.
+  useEffect(() => {
+    if (nodes === null || editorRouteActive) return undefined;
+    const timer = window.setTimeout(() => void loadSheetEditor(), 600);
+    return () => window.clearTimeout(timer);
+  }, [editorRouteActive, nodes]);
 
   // Open a node arrived at from workspace search (?open=<id>&space=<id>).
   const [searchParams, setSearchParams] = useSearchParams();
@@ -114,13 +179,13 @@ export function DriveModule() {
     void client.driveNode(id).then((node) => {
       if (node === null) return;
       if (node.kind === "folder") setPath([{ id: node.id, name: node.name }]);
-      else if (node.kind === "doc") setOpenDoc({ id, name: node.name });
-      else if (node.kind === "sheet") setOpenSheet({ id, name: node.name });
+      else if (node.kind === "doc") showEditor("doc", id, node.name);
+      else if (node.kind === "sheet") showEditor("sheet", id, node.name);
       else if (node.kind === "file" && SPREADSHEET_IMPORT.test(node.name))
         void importSpreadsheet(id, node.name);
-      else if (node.kind === "file" && OFFICE_EXT.test(node.name)) setOpenOffice({ id, name: node.name });
+      else if (node.kind === "file" && OFFICE_EXT.test(node.name)) showEditor("office", id, node.name);
     });
-  }, [searchParams, setSearchParams, client]);
+  }, [searchParams, setSearchParams, client, showEditor]);
 
   function selectLocation(space: string | null) {
     setLocation(space);
@@ -130,10 +195,10 @@ export function DriveModule() {
 
   function openNode(n: DriveNodeDto) {
     if (n.kind === "folder") setPath((p) => [...p, { id: n.id, name: n.name }]);
-    else if (n.kind === "doc") setOpenDoc({ id: n.id, name: n.name });
-    else if (n.kind === "sheet") setOpenSheet({ id: n.id, name: n.name });
+    else if (n.kind === "doc") showEditor("doc", n.id, n.name);
+    else if (n.kind === "sheet") showEditor("sheet", n.id, n.name);
     else if (n.kind === "file" && SPREADSHEET_IMPORT.test(n.name)) void importSpreadsheet(n.id, n.name);
-    else if (n.kind === "file" && OFFICE_EXT.test(n.name)) setOpenOffice({ id: n.id, name: n.name });
+    else if (n.kind === "file" && OFFICE_EXT.test(n.name)) showEditor("office", n.id, n.name);
     else void download(n);
   }
 
@@ -143,7 +208,7 @@ export function DriveModule() {
     try {
       const id = await client.driveCreateDoc(location, parent, name);
       await load();
-      setOpenDoc({ id, name });
+      showEditor("doc", id, name);
     } catch {
       /* ignore */
     }
@@ -155,7 +220,7 @@ export function DriveModule() {
     try {
       const id = await client.driveCreateSheet(location, parent, name);
       await load();
-      setOpenSheet({ id, name });
+      showEditor("sheet", id, name);
     } catch {
       /* ignore */
     }
@@ -174,7 +239,7 @@ export function DriveModule() {
       const id = await client.driveCreateSheet(location, parent, base);
       await client.driveSaveSheet(id, snapshot);
       await load();
-      setOpenSheet({ id, name: base });
+      showEditor("sheet", id, base);
     } catch {
       setImportFailed(fileName);
     } finally {
@@ -193,7 +258,7 @@ export function DriveModule() {
       const file = blankOfficeFile(ext, name);
       const id = await client.driveUpload(location, parent, file);
       await load();
-      setOpenOffice({ id, name: file.name });
+      showEditor("office", id, file.name);
     } catch {
       /* ignore */
     }
@@ -464,6 +529,12 @@ export function DriveModule() {
                   <button
                     type="button"
                     className={styles.rowMain}
+                    onPointerEnter={() => {
+                      if (n.kind === "sheet") void loadSheetEditor();
+                    }}
+                    onFocus={() => {
+                      if (n.kind === "sheet") void loadSheetEditor();
+                    }}
                     onClick={() => openNode(n)}
                     onDoubleClick={() => openNode(n)}
                   >
@@ -497,36 +568,37 @@ export function DriveModule() {
         <MembersDialog space={currentSpace} onClose={() => setShowMembers(false)} />
       )}
       {openDoc !== null && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<EditorLoading name={openDoc.name} />}>
           <DocEditor
             nodeId={openDoc.id}
             name={openDoc.name}
             onClose={() => {
-              setOpenDoc(null);
+              navigate("/drive", { replace: true });
               void load();
             }}
           />
         </Suspense>
       )}
       {openSheet !== null && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<EditorLoading name={openSheet.name} />}>
           <SheetEditor
             nodeId={openSheet.id}
             name={openSheet.name}
+            onNameChange={(nextName) => showEditor("sheet", openSheet.id, nextName, true)}
             onClose={() => {
-              setOpenSheet(null);
+              navigate("/drive", { replace: true });
               void load();
             }}
           />
         </Suspense>
       )}
       {openOffice !== null && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<EditorLoading name={openOffice.name} />}>
           <OfficeEditor
             nodeId={openOffice.id}
             name={openOffice.name}
             onClose={() => {
-              setOpenOffice(null);
+              navigate("/drive", { replace: true });
               void load();
             }}
           />
@@ -552,6 +624,15 @@ export function DriveModule() {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function EditorLoading({ name }: { name: string }) {
+  return (
+    <div className={styles.editorLoading} role="status" aria-label={strings.driveLoadingFile(name)}>
+      <Spinner size={24} />
+      <span>{strings.driveLoadingFile(name)}</span>
     </div>
   );
 }

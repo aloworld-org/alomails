@@ -165,10 +165,12 @@ type Snapshot = Record<string, unknown>;
 export function SheetEditor({
   nodeId,
   name,
+  onNameChange,
   onClose,
 }: {
   nodeId: string;
   name: string;
+  onNameChange: (name: string) => void;
   onClose: () => void;
 }) {
   const client = useJmapClient();
@@ -223,7 +225,22 @@ export function SheetEditor({
       // it. Keep the formula bar and grid. Extra presets power the ribbon's
       // Data/Editing tools (sort, filter, find & replace).
       presets: [
-        UniverSheetsCorePreset({ container: containerRef.current, toolbar: false }),
+        UniverSheetsCorePreset({
+          container: containerRef.current,
+          toolbar: false,
+          sheets: {
+            scrollConfig: {
+              barSize: 6,
+              barBorder: 0,
+              thumbMargin: 1,
+              thumbBackgroundColor: "rgba(231, 111, 81, 0.78)",
+              thumbHoverBackgroundColor: "#e76f51",
+              thumbActiveBackgroundColor: "#d65d3f",
+              trackBackgroundColor: "transparent",
+              trackBorderColor: "transparent",
+            },
+          },
+        }),
         UniverSheetsSortPreset(),
         UniverSheetsFilterPreset(),
         UniverSheetsFindReplacePreset(),
@@ -496,7 +513,9 @@ export function SheetEditor({
       return;
     }
     if (trimmed !== name) {
-      void client.driveRename(nodeId, trimmed).catch(() => setSheetName(name));
+      void client.driveRename(nodeId, trimmed)
+        .then(() => onNameChange(trimmed))
+        .catch(() => setSheetName(name));
     }
   }
 

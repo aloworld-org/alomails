@@ -83,27 +83,31 @@ svg {
   outline-offset: 2px;
 }
 
-/* Warm, unobtrusive scrollbars that match the paper ground. */
+/* Slim, brand-coloured scrollbars across the web app. */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--warm-300) transparent;
+  scrollbar-color: var(--accent) transparent;
 }
 
 *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--warm-300);
+  min-width: 28px;
+  min-height: 28px;
+  background: color-mix(in srgb, var(--accent) 78%, transparent);
   border-radius: var(--radius-full);
-  border: 2px solid transparent;
-  background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--warm-400);
-  background-clip: padding-box;
+  background: var(--accent);
+}
+
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

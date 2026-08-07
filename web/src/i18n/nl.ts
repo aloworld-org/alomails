@@ -1003,6 +1003,7 @@ export const nl: Partial<Catalog> = {
   sheetInsert: "Invoegen",
   sheetDelete: "Verwijderen",
   sheetFormat: "Opmaak",
+  sheetMoreCellOptions: "Meer celopties",
   sheetSortFilter: "Sorteren en filteren",
   sheetGroupClear: "Wissen",
   sheetGroupRows: "Rijen",
@@ -1198,6 +1199,7 @@ export const nl: Partial<Catalog> = {
   refTabSections: "Secties",
   refTabTables: "Tabellen",
   refTabFigures: "Figuren",
+  driveLoadingFile: (name: string) => `${name} openen…`,
 
   // Facturatiegereedschap van de agent (ADR 0035, B1.25). Elk levert een
   // concept op: goedkeuren geeft niets uit, nummert niets en verstuurt niets.

@@ -1,4 +1,6 @@
 .ribbon {
+  container-name: sheet-ribbon;
+  container-type: inline-size;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface);
@@ -42,6 +44,8 @@
 /* Groups row. */
 .groups {
   display: flex;
+  width: 100%;
+  max-width: 100%;
   align-items: stretch;
   gap: 0;
   min-height: 112px;
@@ -87,6 +91,11 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+.editingGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 28px);
+  gap: 4px 5px;
 }
 .iconBtn {
   display: inline-flex;
@@ -541,6 +550,91 @@
   color: var(--accent) !important;
   box-shadow: none !important;
 }
+
+/* Responsive density: preserve every tool while progressively reclaiming
+   horizontal space. On narrow screens the group strip becomes swipeable; an
+   opened flyout temporarily releases overflow so its panel is never clipped. */
+@container sheet-ribbon (max-width: 1900px) {
+  .groups {
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+  .group {
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+  .fontSelect {
+    width: 108px;
+  }
+  .commandBtn {
+    min-width: 56px;
+    padding-right: 5px;
+    padding-left: 5px;
+  }
+}
+
+@container sheet-ribbon (max-width: 1550px) {
+  .tabs {
+    gap: 3px;
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+  .group {
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+  .fontSelect {
+    width: 94px;
+  }
+  .numberSelect {
+    width: 106px;
+  }
+  .commandBtn {
+    min-width: 48px;
+    gap: 4px;
+    padding-right: 3px;
+    padding-left: 3px;
+  }
+  .iconBtnLarge {
+    width: 46px;
+  }
+}
+
+@container sheet-ribbon (max-width: 1550px) {
+  .tabs {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    white-space: nowrap;
+  }
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .groups {
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scrollbar-color: var(--accent) transparent;
+    scrollbar-width: thin;
+  }
+}
+
+@container sheet-ribbon (max-width: 720px) {
+  .tabs {
+    min-height: 40px;
+  }
+  .groups {
+    min-height: 102px;
+    padding-top: 5px;
+    padding-bottom: 4px;
+  }
+  .groupBody {
+    min-height: 66px;
+  }
+  .groupLabel {
+    font-size: 9px;
+  }
+}
 .toolActive svg,
 .toolActive span {
   color: inherit !important;
@@ -583,14 +677,54 @@
 }
 .cellControls {
   display: grid;
-  grid-template-columns: repeat(2, 74px);
-  gap: 3px 2px;
+  grid-template-columns: repeat(4, 28px);
+  gap: 4px 3px;
 }
-.cellControls .ribbonMenu:last-child {
-  grid-column: 1 / -1;
+.cellActionGlyph {
+  position: relative;
+  display: inline-flex;
 }
-.cellControls .ribbonMenu:last-child > summary {
-  width: 150px;
+.cellActionGlyph > span {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  display: grid;
+  width: 11px;
+  height: 11px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg-surface);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+.cellMore {
+  position: relative;
+}
+.cellMore > summary {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  list-style: none;
+}
+.cellMore > summary::-webkit-details-marker {
+  display: none;
+}
+.cellMore > summary:hover,
+.cellMore[open] > summary {
+  border-color: var(--border-subtle);
+  background: var(--bg-raised);
+  color: var(--accent);
+}
+.cellMoreDisabled {
+  pointer-events: none;
+  opacity: 0.4;
 }
 .menuCaption {
   display: inline-flex;
@@ -659,7 +793,7 @@
   width: 340px;
   max-height: min(520px, calc(100vh - 220px));
   overflow-y: auto;
-  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-color: var(--accent) transparent;
 }
 .formulaFunctionList .textBtn {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
