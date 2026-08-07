@@ -70,6 +70,15 @@ export const en = {
 
   // shell
   newButton: "New",
+  appLauncher: "Apps",
+  appLauncherFavorites: "Your favorites",
+  appLauncherAll: "All apps",
+  appLauncherEdit: "Edit favorites",
+  appLauncherDone: "Done",
+  appLauncherCancel: "Cancel",
+  appLauncherDragHint: "Drag and drop your six favorite apps",
+  appLauncherAddFavorite: "Add to favorites",
+  appLauncherRemoveFavorite: "Remove from favorites",
   userMenu: "Account",
   language: "Language",
   signOut: "Sign out",

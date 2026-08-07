@@ -114,6 +114,15 @@ export const nl: Partial<Catalog> = {
 
   // shell
   newButton: "Nieuw",
+  appLauncher: "Apps",
+  appLauncherFavorites: "Je favorieten",
+  appLauncherAll: "Alle apps",
+  appLauncherEdit: "Favorieten bewerken",
+  appLauncherDone: "Klaar",
+  appLauncherCancel: "Annuleren",
+  appLauncherDragHint: "Sleep je zes favoriete apps naar de gewenste plek",
+  appLauncherAddFavorite: "Toevoegen aan favorieten",
+  appLauncherRemoveFavorite: "Verwijderen uit favorieten",
   userMenu: "Account",
   language: "Taal",
   signOut: "Afmelden",

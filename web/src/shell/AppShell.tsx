@@ -31,7 +31,7 @@ export function AppShell() {
 
   return (
     <div className={styles.shell}>
-      <Rail onAskAi={() => setAiOpen(true)} onSearch={() => setSearchOpen(true)} />
+      <Rail onAskAi={() => setAiOpen(true)} />
 
       <main className={styles.main}>
         <Outlet />

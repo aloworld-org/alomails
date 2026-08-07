@@ -114,6 +114,15 @@ export const fr: Partial<Catalog> = {
 
   // shell
   newButton: "Nouveau",
+  appLauncher: "Applications",
+  appLauncherFavorites: "Vos favoris",
+  appLauncherAll: "Toutes les applications",
+  appLauncherEdit: "Modifier les favoris",
+  appLauncherDone: "Terminé",
+  appLauncherCancel: "Annuler",
+  appLauncherDragHint: "Glissez-déposez vos six applications favorites",
+  appLauncherAddFavorite: "Ajouter aux favoris",
+  appLauncherRemoveFavorite: "Retirer des favoris",
   userMenu: "Compte",
   language: "Langue",
   signOut: "Se déconnecter",
