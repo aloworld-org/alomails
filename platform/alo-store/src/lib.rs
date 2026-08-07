@@ -13,6 +13,7 @@ pub mod account_sieve;
 pub mod audit;
 pub mod base;
 pub mod billing_bills;
+pub mod billing_cadence;
 pub mod billing_cii_read;
 pub mod billing_customers;
 pub mod billing_einvoice_import;
@@ -25,6 +26,7 @@ pub mod billing_line;
 pub mod billing_payments;
 pub mod billing_products;
 pub mod billing_quotes;
+pub mod billing_schedules;
 pub mod billing_sequence;
 pub mod billing_settings;
 pub mod billing_totals;
@@ -87,6 +89,7 @@ pub use account_imap::{ImapEntry, ImapMailbox, ImapSearchRow};
 pub use account_sieve::{OutboundAction, SieveDelivery, SieveScriptMeta};
 pub use base::{Base, BaseField, BaseRecord, BaseTable, BaseView};
 pub use billing_bills::{Bill, BillDocument, BillStatus, BillTotals, NewBill, Supplier};
+pub use billing_cadence::{Cadence, next_occurrence};
 pub use billing_customers::{Customer, NewCustomer};
 pub use billing_einvoice_import::{EInvoiceSyntax, InboundInvoice, parse_einvoice};
 pub use billing_fx::FxSnapshot;
@@ -97,6 +100,9 @@ pub use billing_payments::{NewPayment, Payment, PaymentState, Settlement};
 pub use billing_products::{NewProduct, Product};
 pub use billing_quotes::{
     NewQuote, Quote, QuoteAcceptance, QuoteDocument, QuoteStatus, QuoteSummary,
+};
+pub use billing_schedules::{
+    NewSchedule, Schedule, ScheduleDocument, ScheduleEdit, ScheduleRun, ScheduleSummary,
 };
 pub use billing_sequence::{
     INVOICE_NUMBER_PREFIX, INVOICE_SEQUENCE_KIND, QUOTE_NUMBER_PREFIX, QUOTE_SEQUENCE_KIND,
@@ -133,10 +139,10 @@ pub use error::{Result, StoreError};
 pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId,
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
-    BillingQuoteId, BlobId, CalendarId, CategoryId, CommentId, ContactId, CrmActivityId, CrmDealId,
-    CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, GroupId, LabelId, MailboxId,
-    MessageId, ProjectId, SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId,
-    ThreadId, UserId,
+    BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId, CommentId, ContactId,
+    CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, GroupId,
+    LabelId, MailboxId, MessageId, ProjectId, SiteId, SitePageId, SitePublishId, SpaceId,
+    SubtaskId, TaskId, TenantId, ThreadId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

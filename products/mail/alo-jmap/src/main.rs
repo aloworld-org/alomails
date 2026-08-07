@@ -144,6 +144,29 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Background recurring-invoice run (alo Billing B2.11): raise the DRAFT
+    // every standing arrangement has come due for. Hourly rather than by the
+    // minute — an arrangement bills on a day, not at an hour, so an hour's
+    // latency is invisible and a run that finds nothing is the common case. It
+    // raises drafts only; nothing here ever issues a document.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(3600));
+            loop {
+                tick.tick().await;
+                // The server's own date, passed in rather than read inside the
+                // store: the same call a tenant's own "run now" makes.
+                let today = time::OffsetDateTime::now_utc().date();
+                match store.sweep_billing_schedules(today).await {
+                    Ok(n) if n > 0 => tracing::info!(drafted = n, "recurring invoice run"),
+                    Ok(_) => {}
+                    Err(error) => tracing::warn!(%error, "recurring invoice run failed"),
+                }
+            }
+        });
+    }
+
     // Start from the issuer default, then layer any env overrides (notably the
     // resource-server introspection secret) so a standalone product — Drive —
     // can exchange a bearer token for its principal over the wire (RFC 7662).

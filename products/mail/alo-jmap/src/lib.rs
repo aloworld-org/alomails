@@ -37,6 +37,7 @@ pub mod billing_products;
 pub mod billing_quotes;
 pub mod billing_reminder;
 pub mod billing_reports;
+pub mod billing_schedules;
 pub mod billing_send;
 pub mod billing_settings;
 pub mod billing_ubl;

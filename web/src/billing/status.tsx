@@ -60,6 +60,14 @@ export function DocumentChips({ invoice }: { invoice: BillingInvoiceSummary }) {
       {invoice.creditNote && <StatusChip tone="warn" label={strings.billingCreditNote} />}
       <StatusChip tone={statusTone(invoice.status)} label={statusLabel(invoice.status)} />
       {invoice.overdue && <StatusChip tone="warn" label={strings.billingStatusOverdue} />}
+      {/* Where the document came from, when a standing arrangement raised it
+          (B2.11). Quiet on purpose — it is provenance, not a state — but it is
+          the one thing that explains why a draft nobody typed is sitting in the
+          list, and the reason it reads "Recurring" rather than "Automatic" is
+          that nothing about it was: it still has to be issued by a person. */}
+      {invoice.scheduleId !== null && (
+        <StatusChip tone="info" label={strings.billingRecurringChip} />
+      )}
     </>
   );
 }

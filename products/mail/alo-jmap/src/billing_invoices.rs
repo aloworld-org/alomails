@@ -47,7 +47,8 @@ use alo_store::billing_payments::Settlement;
 use alo_store::billing_settings::BillingSettings;
 use alo_store::billing_totals::Totals;
 use alo_store::{
-    AccountStore, BillingCustomerId, BillingInvoiceId, BillingQuoteId, Customer, NewLine,
+    AccountStore, BillingCustomerId, BillingInvoiceId, BillingQuoteId, BillingScheduleId, Customer,
+    NewLine,
 };
 
 use crate::billing::{flag, iso, iso_date, map_store_err, parse_body};
@@ -86,6 +87,12 @@ fn invoice_json(i: &Invoice, today: Date) -> Value {
         "creditNote": i.is_credit_note,
         "creditsInvoiceId": i.credits_invoice_id.as_ref().map(BillingInvoiceId::as_str),
         "quoteId": i.quote_id.as_ref().map(BillingQuoteId::as_str),
+        // Where a draft came from, when a standing arrangement raised it
+        // (B2.11): which arrangement, and which of its occurrences. Both `null`
+        // on a document a colleague typed, which is how a list tells the two
+        // apart without a second read.
+        "scheduleId": i.schedule_id.as_ref().map(BillingScheduleId::as_str),
+        "scheduleDueDate": i.schedule_due_date.map(iso_date),
         "reference": i.reference,
         "note": i.note,
         // The exchange rate frozen on the document when it was issued (B1.21),
@@ -123,7 +130,11 @@ pub(crate) fn document_json(d: &InvoiceDocument, today: Date) -> Value {
 
 /// A list entry: the header, what it is worth and what is left on it, without
 /// the lines.
-fn summary_json(s: &InvoiceSummary, today: Date) -> Value {
+///
+/// `pub(crate)` because a recurring arrangement lists the drafts it raised
+/// ([`crate::billing_schedules`]), which must read exactly as this list's
+/// entries do.
+pub(crate) fn summary_json(s: &InvoiceSummary, today: Date) -> Value {
     with_settlement(
         with_base(
             with_totals(invoice_json(&s.invoice, today), &s.totals),

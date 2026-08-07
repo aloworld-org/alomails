@@ -131,6 +131,8 @@ const FROM_QUOTE: BillingInvoice = {
   creditNote: false,
   creditsInvoiceId: null,
   quoteId: "quo-2",
+  scheduleId: null,
+  scheduleDueDate: null,
   reference: "RFQ-77",
   note: "",
   createdBy: "u-1",

@@ -17,6 +17,7 @@ import { InvoicesView } from "./InvoicesView";
 import { ProductsView } from "./ProductsView";
 import { QuoteEditor } from "./QuoteEditor";
 import { QuotesView } from "./QuotesView";
+import { SchedulesView } from "./SchedulesView";
 import { VatReportView } from "./VatReportView";
 import { SettingsView } from "./SettingsView";
 import styles from "./BillingModule.module.css";
@@ -28,6 +29,10 @@ import styles from "./BillingModule.module.css";
 const TABS = [
   { path: "invoices", label: () => strings.billingInvoices },
   { path: "quotes", label: () => strings.billingQuotes },
+  // What bills itself again on a rhythm (B2.11). After the documents it
+  // raises, because that is what it produces — a reader looks for the invoice
+  // first and the arrangement behind it second.
+  { path: "recurring", label: () => strings.billingRecurring },
   { path: "customers", label: () => strings.billingCustomers },
   { path: "products", label: () => strings.billingProducts },
   // The figures a VAT return is copied from (B1.20). After the records it is
@@ -70,6 +75,7 @@ export function BillingModule() {
           <Route path="new" element={<QuoteEditor />} />
           <Route path=":id" element={<QuoteEditor />} />
         </Route>
+        <Route path="recurring" element={<SchedulesView />} />
         <Route path="customers" element={<CustomersView />} />
         <Route path="products" element={<ProductsView />} />
         <Route path="reports" element={<VatReportView />} />

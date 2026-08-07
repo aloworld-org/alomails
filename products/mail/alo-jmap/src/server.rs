@@ -17,8 +17,8 @@ use crate::state::{AppState, Limits};
 use crate::{
     admin, agent, ai, api, autoconfig, base, billing_bills, billing_customers, billing_fx,
     billing_invoices, billing_payments, billing_products, billing_quotes, billing_reminder,
-    billing_reports, billing_send, billing_settings, blob, calendar, carddav, contacts,
-    crm_activities, crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines,
+    billing_reports, billing_schedules, billing_send, billing_settings, blob, calendar, carddav,
+    contacts, crm_activities, crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines,
     crm_reports, crm_stages, crm_threads, delegates, docs, drive, filters, flagdue,
     imap_import_route, push, reset_route, schedule, security, session, settings, share,
     signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
@@ -408,6 +408,35 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/billing/quotes/{id}/print",
             get(billing_quotes::print_quote),
+        )
+        // Recurring invoices (B2.11): the standing arrangements that raise the
+        // same invoice again every month, and the run that raises the drafts
+        // they have come due for. `/run` is a plural act on the collection —
+        // "raise everything due" — so it sits beside the collection rather than
+        // on any one arrangement; a schedule is never run off its own rhythm.
+        // Under the existing `/billing` prefix, so the Caddyfile needs nothing
+        // new.
+        .route(
+            "/billing/schedules/run",
+            post(billing_schedules::run_schedules),
+        )
+        .route(
+            "/billing/schedules",
+            get(billing_schedules::list_schedules).post(billing_schedules::create_schedule),
+        )
+        .route(
+            "/billing/schedules/{id}",
+            get(billing_schedules::get_schedule)
+                .patch(billing_schedules::update_schedule)
+                .delete(billing_schedules::delete_schedule),
+        )
+        .route(
+            "/billing/schedules/{id}/pause",
+            post(billing_schedules::pause_schedule),
+        )
+        .route(
+            "/billing/schedules/{id}/resume",
+            post(billing_schedules::resume_schedule),
         )
         // The issuer identity every printed document carries (B1.16): one row
         // per tenant, so the resource has no id and no list.

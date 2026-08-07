@@ -25,6 +25,8 @@ import type {
   BillingProduct,
   BillingQuote,
   BillingQuoteSummary,
+  BillingSchedule,
+  BillingScheduleSummary,
   BillingSettings,
   CustomerDraft,
   DocumentSettlement,
@@ -37,6 +39,7 @@ import type {
   ProductDraft,
   QuoteDraft,
   QuoteStatus,
+  ScheduleDraft,
   ReminderDraft,
   SettingsDraft,
   VatReport,
@@ -403,6 +406,70 @@ export class BillingApi {
     return this.#act<{ quote: BillingQuote }>(
       `/billing/quotes/${encodeURIComponent(id)}/expire`,
     ).then((r) => r.quote);
+  }
+
+  /** The tenant's recurring arrangements, newest first, each with what ONE
+   *  occurrence is worth, how many drafts it has raised, and whether a run now
+   *  would raise something (all computed by the server). */
+  schedules(): Promise<BillingScheduleSummary[]> {
+    return this.#read<{ schedules?: BillingScheduleSummary[] }>("/billing/schedules").then(
+      (r) => r.schedules ?? [],
+    );
+  }
+
+  /** One arrangement with its template lines, and the drafts it has raised —
+   *  one read, because that is one question. */
+  schedule(id: string): Promise<{ schedule: BillingSchedule; invoices: BillingInvoiceSummary[] }> {
+    return this.#read<{ schedule: BillingSchedule; invoices?: BillingInvoiceSummary[] }>(
+      `/billing/schedules/${encodeURIComponent(id)}`,
+    ).then((r) => ({ schedule: r.schedule, invoices: r.invoices ?? [] }));
+  }
+
+  /** Sets up an arrangement. `customerId`, `cadence`, `startDate` and a
+   *  non-empty `lines` are required — the server refuses anything less, since
+   *  an arrangement with nothing to bill is not an arrangement. */
+  createSchedule(draft: ScheduleDraft): Promise<BillingSchedule> {
+    return this.#write<{ schedule: BillingSchedule }>("POST", "/billing/schedules", draft).then(
+      (r) => r.schedule,
+    );
+  }
+
+  /** Edits what stays editable: name, cadence, end date, reference, note and
+   *  the template. The customer, currency, terms and start date are not among
+   *  them, and the server ignores them here. */
+  updateSchedule(id: string, draft: ScheduleDraft): Promise<BillingSchedule> {
+    return this.#write<{ schedule: BillingSchedule }>(
+      "PATCH",
+      `/billing/schedules/${encodeURIComponent(id)}`,
+      draft,
+    ).then((r) => r.schedule);
+  }
+
+  /** Pauses or resumes an arrangement. A paused one keeps every date and
+   *  resumes where it left off — the months it missed were still months the
+   *  customer was under contract for. */
+  setScheduleActive(id: string, active: boolean): Promise<BillingSchedule> {
+    return this.#act<{ schedule: BillingSchedule }>(
+      `/billing/schedules/${encodeURIComponent(id)}/${active ? "resume" : "pause"}`,
+    ).then((r) => r.schedule);
+  }
+
+  /** Deletes an arrangement that has never raised anything. One that has is a
+   *  `409` telling you to pause it instead — its documents point back at it. */
+  async deleteSchedule(id: string): Promise<void> {
+    await this.#json<unknown>(
+      await this.#send(`/billing/schedules/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    );
+  }
+
+  /** Raises the drafts every due arrangement has come due for, as of the
+   *  SERVER's date, and answers the documents themselves. Safe to click twice:
+   *  an occurrence is billed once. The same call the hourly background run
+   *  makes — this is only "do not make me wait for it". */
+  runSchedules(): Promise<BillingInvoice[]> {
+    return this.#act<{ invoices?: BillingInvoice[] }>("/billing/schedules/run").then(
+      (r) => r.invoices ?? [],
+    );
   }
 
   /** Who the tenant invoices as. Never a `404` — an identity that has never

@@ -214,6 +214,17 @@ pub(crate) const QUOTE_LINES: LineTable = LineTable {
     doc_column: "quote_id",
 };
 
+/// The template lines of a recurring arrangement
+/// ([`crate::billing_schedules`], B2.11) — what next month's draft will say.
+///
+/// The same line model again, and for the sharpest version of the reason: what
+/// a due run does is copy these onto an invoice, and a copy between two shapes
+/// would be a place for a price or a rate to change on the way.
+pub(crate) const SCHEDULE_LINES: LineTable = LineTable {
+    table: "billing_schedule_lines",
+    doc_column: "schedule_id",
+};
+
 /// The lines of a received bill ([`crate::billing_bills`]) — a supplier's
 /// invoice line, read out of their e-invoice.
 ///

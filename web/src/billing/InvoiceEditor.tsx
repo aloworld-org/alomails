@@ -13,7 +13,7 @@
 // None of the three is decided here. Each is a `POST` the store rules on under
 // the document's row lock, and what comes back — the frozen document, or the
 // new draft — is what the screen then shows.
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { strings, useLocale } from "../i18n";
@@ -26,6 +26,7 @@ import { useDocumentDraft } from "./documentDraft";
 import { Field } from "./parts";
 import { PaymentsPanel } from "./PaymentsPanel";
 import { usePickers } from "./pickers";
+import { ScheduleDialog } from "./ScheduleDialog";
 import { DocumentChips } from "./status";
 import type { BillingInvoice, BillingInvoiceSummary } from "./types";
 import styles from "./BillingModule.module.css";
@@ -59,6 +60,12 @@ export function InvoiceEditor() {
     [api],
   );
   const editable = useCallback((invoice: BillingInvoice) => invoice.status === "draft", []);
+
+  // Whether the "repeat this invoice" form is open. The arrangement it sets up
+  // takes its customer, currency, terms and lines from THIS document, which is
+  // why the entry point lives on the document rather than on the recurring
+  // list — there is no second line editor to keep in step.
+  const [repeating, setRepeating] = useState(false);
 
   const draft = useDocumentDraft<BillingInvoice, BillingInvoiceSummary[]>({
     id,
@@ -165,6 +172,39 @@ export function InvoiceEditor() {
                   {strings.billingFromQuote}
                 </button>
               </p>
+            )}
+            {/* Offered on a document that says something and is settled in
+                what it is: a draft with no lines has nothing to repeat, and a
+                credit note is a correction, not an arrangement. The document a
+                colleague points at is the template, so the button sits with the
+                document rather than on the recurring list. */}
+            {!invoice.creditNote && invoice.lines.length > 0 && (
+              <p className={styles.relation}>
+                <button
+                  type="button"
+                  className={styles.linkAction}
+                  title={strings.billingScheduleFromHint}
+                  onClick={() => setRepeating(true)}
+                >
+                  {strings.billingScheduleFrom}
+                </button>
+              </p>
+            )}
+            {repeating && (
+              <ScheduleDialog
+                schedule={null}
+                from={invoice}
+                {...(invoice.reference !== ""
+                  ? { suggestedName: invoice.reference }
+                  : invoice.number !== null
+                    ? { suggestedName: invoice.number }
+                    : {})}
+                onClose={() => setRepeating(false)}
+                onSaved={() => {
+                  setRepeating(false);
+                  void navigate("../../recurring");
+                }}
+              />
             )}
             {invoice.creditsInvoiceId !== null && (
               <p className={styles.relation}>

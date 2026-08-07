@@ -201,6 +201,11 @@ export interface BillingInvoiceSummary {
   creditNote: boolean;
   creditsInvoiceId: string | null;
   quoteId: string | null;
+  /** The recurring arrangement whose due run raised this draft (B2.11), and
+   *  which of its occurrences it is for. Both `null` on a document a colleague
+   *  typed, which is how the list tells the two apart without a second read. */
+  scheduleId: string | null;
+  scheduleDueDate: string | null;
   /** The customer's own reference (their PO number); empty when none. */
   reference: string;
   note: string;
@@ -507,4 +512,78 @@ export interface ReminderDraft {
   daysOverdue: number;
   /** What is still owed, in integer cents of the document's currency. */
   outstandingCents: number;
+}
+
+/**
+ * How often a recurring arrangement bills (B2.11).
+ *
+ * Four rhythms, not a general "every N units" rule: these are the ones a
+ * business actually bills on, and each is a word a tenant can read.
+ */
+export type ScheduleCadence = "weekly" | "monthly" | "quarterly" | "yearly";
+
+/** A recurring arrangement as a list entry: the header and what ONE occurrence
+ *  of it is worth. It never issues anything — every run raises drafts. */
+export interface BillingScheduleSummary {
+  id: string;
+  customerId: string;
+  name: string;
+  cadence: ScheduleCadence;
+  /** The day of the month it is anchored to (1–31); unused by `weekly`. */
+  anchorDay: number;
+  /** `YYYY-MM-DD`. The first date it bills on, and the day it is anchored to. */
+  startDate: string;
+  /** The last date it may bill on, or `null` for "until somebody stops it". */
+  endDate: string | null;
+  /** The next date a run will raise a draft for. Moved only by a run. */
+  nextRunDate: string;
+  lastRunDate: string | null;
+  /** Paused arrangements keep their dates and resume where they left off. */
+  active: boolean;
+  /** Computed by the server: it has an end date and has passed it. Not the
+   *  same as paused — a reader must be able to tell "finished" from
+   *  "stopped". */
+  ended: boolean;
+  /** Computed by the server against its own date: a run now would raise
+   *  something. */
+  due: boolean;
+  currency: string;
+  paymentTermsDays: number;
+  reference: string;
+  note: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  /** What one occurrence is worth — the server's figures, from the template. */
+  totals: DocumentTotals;
+  /** How many drafts it has raised so far. */
+  raisedCount: number;
+}
+
+/** A whole arrangement: the header and the template lines it bills. */
+export interface BillingSchedule extends BillingScheduleSummary {
+  lines: DocumentLine[];
+}
+
+/**
+ * The writable parts of an arrangement; absent means "leave as it is".
+ *
+ * `customerId`, `currency`, `paymentTermsDays` and `startDate` are read only
+ * when it is created: an arrangement IS those, and changing one would leave the
+ * drafts it already raised explained by a schedule that no longer matches them.
+ * `nextRunDate` and `active` are not writable at all — the first moves only by
+ * a run, and pausing has its own route.
+ */
+export interface ScheduleDraft {
+  customerId?: string;
+  name?: string;
+  cadence?: ScheduleCadence;
+  startDate?: string;
+  /** `null` clears the end date ("keep going"); absent leaves it as it is. */
+  endDate?: string | null;
+  currency?: string;
+  paymentTermsDays?: number;
+  reference?: string;
+  note?: string;
+  lines?: LineDraft[];
 }

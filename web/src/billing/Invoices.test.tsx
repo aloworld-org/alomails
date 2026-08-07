@@ -96,6 +96,8 @@ const DRAFT: BillingInvoice = {
   creditNote: false,
   creditsInvoiceId: null,
   quoteId: null,
+  scheduleId: null,
+  scheduleDueDate: null,
   reference: "PO-77",
   note: "",
   createdBy: "u-1",

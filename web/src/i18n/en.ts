@@ -1915,6 +1915,60 @@ export const en = {
   billingReminderFailed: "The reminder could not be written. Check your connection and try again.",
   billingNothingOverdue: "Nothing is overdue. Every issued invoice is either settled or still in date.",
 
+  // Recurring invoices (B2.11). The words here carry one promise above all:
+  // this raises DRAFTS. A product that issued numbered invoices on a timer
+  // without anyone reading them would be a product nobody trusts with their
+  // ledger, so every string that mentions a run says what appears and where.
+  billingRecurring: "Recurring",
+  billingRecurringTitle: "Recurring invoices",
+  billingRecurringChip: "Recurring",
+  billingRecurringChipHint: "A recurring invoice raised this draft.",
+  billingNoSchedulesTitle: "No recurring invoices yet",
+  billingNoSchedulesBody:
+    "Set one up for anything you bill on a rhythm — a retainer, a subscription, a hosting fee. Each time it comes due, alo raises a draft for you to check and issue.",
+  billingNewSchedule: "New recurring invoice",
+  billingScheduleFrom: "Repeat this invoice",
+  billingScheduleFromHint:
+    "Set up a recurring invoice that bills these lines again on a rhythm. Each occurrence appears as a draft — nothing is ever issued for you.",
+  billingScheduleName: "Name",
+  billingScheduleNameHint: "What you call this arrangement. Never printed on the invoice.",
+  billingScheduleCadence: "Bills",
+  billingCadenceWeekly: "Every week",
+  billingCadenceMonthly: "Every month",
+  billingCadenceQuarterly: "Every quarter",
+  billingCadenceYearly: "Every year",
+  billingScheduleStart: "First on",
+  billingScheduleEnd: "Until",
+  billingScheduleEndNever: "No end date",
+  billingScheduleNext: "Next",
+  billingScheduleLast: "Last raised",
+  billingScheduleRaised: "Raised",
+  billingScheduleEach: "Each time",
+  billingScheduleStatusActive: "Running",
+  billingScheduleStatusPaused: "Paused",
+  billingScheduleStatusEnded: "Finished",
+  billingScheduleStatusDue: "Due",
+  billingSchedulePause: "Pause",
+  billingScheduleResume: "Resume",
+  billingScheduleDelete: "Delete",
+  billingScheduleDeleteTitle: "Delete this recurring invoice?",
+  billingScheduleDeleteMessage:
+    "It will stop billing and disappear from this list. Only an arrangement that has never raised a draft can be deleted — pause one that has.",
+  billingScheduleRunDue: "Raise what is due",
+  billingScheduleRunHint:
+    "alo does this on its own every hour. This is only for when you would rather not wait.",
+  billingScheduleRunNone: "Nothing was due. Every recurring invoice is up to date.",
+  billingScheduleRunDrafted: (count: number) =>
+    count === 1
+      ? "1 draft was raised and is waiting in your invoices. Nothing has been issued: read it, change what you like, and issue it yourself."
+      : `${count} drafts were raised and are waiting in your invoices. Nothing has been issued: read them, change what you like, and issue them yourself.`,
+  billingScheduleSaved: (name: string) =>
+    `“${name}” is set up. Each time it comes due, alo will raise a draft for you to check.`,
+  billingScheduleAnchorHint: (day: number) =>
+    day > 28
+      ? `Anchored to day ${day}: in a shorter month it bills on the last day, and on day ${day} again in the next long one.`
+      : `Anchored to day ${day} of the month.`,
+
   // CRM (alo CRM, ADR 0035, wave B2). The words of a sales record: a board of
   // opportunities, what each is worth, what was said about it, what happens
   // next, and the conversation it came from.

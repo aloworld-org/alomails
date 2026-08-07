@@ -72,7 +72,7 @@ use crate::billing_sequence::{
 use crate::billing_settings::base_currency_in;
 use crate::billing_totals::{LineFigures, Totals, totals};
 use crate::error::{Result, StoreError};
-use crate::id::{BillingCustomerId, BillingInvoiceId, BillingQuoteId};
+use crate::id::{BillingCustomerId, BillingInvoiceId, BillingQuoteId, BillingScheduleId};
 
 /// The customer's own reference (a PO number, a cost centre) printed on the
 /// document.
@@ -83,8 +83,9 @@ pub const INVOICE_NOTE_MAX_CHARS: usize = 2_000;
 
 /// The columns every read of an invoice selects, in `InvoiceRow` order.
 const INVOICE_COLS: &str = "id, customer_id, status, currency, number, issue_date, due_date, \
-     payment_terms_days, is_credit_note, credits_invoice_id, quote_id, reference, note, \
-     fx_base_currency, fx_rate_micro, fx_rate_date, created_by, created_at, updated_at";
+     payment_terms_days, is_credit_note, credits_invoice_id, quote_id, schedule_id, \
+     schedule_due_date, reference, note, fx_base_currency, fx_rate_micro, fx_rate_date, \
+     created_by, created_at, updated_at";
 
 /// Where a document is in its life.
 ///
@@ -302,6 +303,17 @@ pub struct Invoice {
     /// from one. Never writable from a request: it is stamped by the
     /// acceptance itself and stays for the life of the document.
     pub quote_id: Option<BillingQuoteId>,
+    /// The recurring arrangement whose due run raised this draft (B2.11), when
+    /// one did. Stamped by the run and never writable from a request, like
+    /// `quote_id` — and, like it, it stays for the life of the document, so a
+    /// bookkeeper can always see that a draft appeared because of a standing
+    /// instruction rather than because a colleague typed it.
+    pub schedule_id: Option<BillingScheduleId>,
+    /// **Which** occurrence of that arrangement this document is for — the date
+    /// the schedule was due on, not the day the run happened to notice. It is
+    /// the pair `(schedule_id, schedule_due_date)` that the database holds
+    /// unique, which is what makes a period impossible to bill twice.
+    pub schedule_due_date: Option<Date>,
     /// The customer's own reference.
     pub reference: String,
     /// Free-text note.
@@ -1322,6 +1334,127 @@ impl AccountStore {
         Ok(id)
     }
 
+    /// Raises the **draft** invoice one occurrence of a recurring arrangement
+    /// produces (B2.11), inside the transaction that runs the schedule
+    /// ([`AccountStore::run_billing_schedule`]).
+    ///
+    /// Like [`AccountStore::insert_invoice_from_quote`], it writes only the
+    /// header and lives here because `billing_invoices` is the one file that
+    /// writes this table; the caller copies the template's lines onto it under
+    /// the same transaction, so a run either leaves a whole draft or leaves
+    /// nothing at all.
+    ///
+    /// **Everything is copied from the arrangement, nothing re-resolved.** The
+    /// customer, currency, terms, reference and note are the ones the schedule
+    /// was set up with — a price list edited since must not change what a
+    /// standing arrangement bills — and the customer is copied rather than
+    /// re-checked, so an arrangement for a customer archived meanwhile still
+    /// raises its draft and is visible to be dealt with, instead of failing
+    /// silently in a background sweep nobody is watching.
+    ///
+    /// `created_by` is the schedule's owner, not whoever happened to trigger
+    /// the run: it was their standing instruction that raised the document.
+    ///
+    /// The `due_date` the occurrence is *for* is stamped on the row and held
+    /// unique per schedule by the database, so no period can be billed twice
+    /// even if two runs raced past the row lock.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure, including the unique violation a second
+    /// draft for the same occurrence would be.
+    pub(crate) async fn insert_invoice_from_schedule(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        source: &InvoiceFromSchedule<'_>,
+    ) -> Result<BillingInvoiceId> {
+        let id = BillingInvoiceId::generate();
+        sqlx::query(
+            "INSERT INTO billing_invoices (tenant_id, id, customer_id, status, currency, \
+                 payment_terms_days, schedule_id, schedule_due_date, reference, note, created_by) \
+             VALUES ($1, $2, $3, 'draft', $4, $5, $6, $7, $8, $9, $10)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(source.customer_id)
+        .bind(source.currency)
+        .bind(source.payment_terms_days)
+        .bind(source.schedule_id)
+        .bind(source.due_date)
+        .bind(source.reference)
+        .bind(source.note)
+        .bind(source.created_by)
+        .execute(&mut **tx)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(id)
+    }
+
+    /// The drafts one of this tenant's arrangements has raised, newest
+    /// occurrence first, each with its computed totals — the read behind "what
+    /// has this schedule billed?".
+    ///
+    /// A schedule id that is absent or another tenant's yields an empty list,
+    /// like every other list read here — never an existence oracle.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn billing_invoices_from_schedule(
+        &self,
+        schedule_id: &BillingScheduleId,
+    ) -> Result<Vec<InvoiceSummary>> {
+        let rows = sqlx::query_as::<_, InvoiceRow>(&format!(
+            "SELECT {INVOICE_COLS} FROM billing_invoices \
+             WHERE tenant_id = $1 AND schedule_id = $2 \
+             ORDER BY schedule_due_date DESC, id"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(schedule_id.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+
+        let figures = sqlx::query_as::<_, FiguresRow>(
+            "SELECT l.invoice_id AS doc_id, l.qty_milli, l.unit_price_cents, l.vat_rate_bp \
+             FROM billing_invoice_lines l \
+             JOIN billing_invoices i ON i.tenant_id = l.tenant_id AND i.id = l.invoice_id \
+             WHERE l.tenant_id = $1 AND i.schedule_id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(schedule_id.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let mut by_invoice = group_figures(figures);
+
+        let paid: Vec<(String, Option<i64>)> = sqlx::query_as(
+            "SELECT p.invoice_id, sum(p.amount_cents)::bigint FROM billing_payments p \
+             JOIN billing_invoices i ON i.tenant_id = p.tenant_id AND i.id = p.invoice_id \
+             WHERE p.tenant_id = $1 AND i.schedule_id = $2 \
+             GROUP BY p.invoice_id",
+        )
+        .bind(self.tenant.as_str())
+        .bind(schedule_id.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let mut by_paid: HashMap<String, i64> = paid
+            .into_iter()
+            .map(|(id, sum)| (id, sum.unwrap_or(0)))
+            .collect();
+
+        rows.into_iter()
+            .map(|row| {
+                let lines = by_invoice.remove(&row.id).unwrap_or_default();
+                let paid_cents = by_paid.remove(&row.id).unwrap_or(0);
+                Ok(InvoiceSummary {
+                    invoice: row.into_invoice()?,
+                    totals: totals(&lines),
+                    paid_cents,
+                })
+            })
+            .collect()
+    }
+
     /// The invoice raised from one of this tenant's quotes, or `None` — the
     /// read behind "was this offer billed?", and the link a quote's screen
     /// follows to the draft its acceptance produced.
@@ -1382,6 +1515,33 @@ pub(crate) struct InvoiceFromQuote<'a> {
     pub(crate) reference: &'a str,
 }
 
+/// The facts one occurrence of a recurring arrangement hands its draft
+/// ([`AccountStore::insert_invoice_from_schedule`]).
+///
+/// Borrowed rather than owned: every field is read from the schedule's own
+/// locked row inside the running transaction and outlives the call.
+#[derive(Debug)]
+pub(crate) struct InvoiceFromSchedule<'a> {
+    /// The arrangement that raised this draft, which it points back to.
+    pub(crate) schedule_id: &'a str,
+    /// The occurrence it is for — the date the arrangement was due on.
+    pub(crate) due_date: Date,
+    /// The party billed, copied so an archived customer's standing arrangement
+    /// still raises a draft somebody can look at.
+    pub(crate) customer_id: &'a str,
+    /// The currency the arrangement was set up in.
+    pub(crate) currency: &'a str,
+    /// The terms it was set up with, snapshotted onto the document like any
+    /// other invoice's.
+    pub(crate) payment_terms_days: i32,
+    /// The customer's own reference, as the arrangement carries it.
+    pub(crate) reference: &'a str,
+    /// The note printed under the lines, as the arrangement carries it.
+    pub(crate) note: &'a str,
+    /// The colleague whose standing instruction this is.
+    pub(crate) created_by: &'a str,
+}
+
 /// What a locking read hands back: the stored facts a write decides against,
 /// with the status already parsed.
 #[derive(Debug)]
@@ -1419,6 +1579,8 @@ struct InvoiceRow {
     is_credit_note: bool,
     credits_invoice_id: Option<String>,
     quote_id: Option<String>,
+    schedule_id: Option<String>,
+    schedule_due_date: Option<Date>,
     reference: String,
     note: String,
     fx_base_currency: Option<String>,
@@ -1457,6 +1619,8 @@ impl InvoiceRow {
             is_credit_note: self.is_credit_note,
             credits_invoice_id: self.credits_invoice_id.map(BillingInvoiceId::new),
             quote_id: self.quote_id.map(BillingQuoteId::new),
+            schedule_id: self.schedule_id.map(BillingScheduleId::new),
+            schedule_due_date: self.schedule_due_date,
             reference: self.reference,
             note: self.note,
             fx,
@@ -1585,6 +1749,8 @@ mod tests {
             is_credit_note: false,
             credits_invoice_id: None,
             quote_id: None,
+            schedule_id: None,
+            schedule_due_date: None,
             reference: String::new(),
             note: String::new(),
             fx: due.map(|day| FxSnapshot::identity("EUR", day)),

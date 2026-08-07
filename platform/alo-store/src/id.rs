@@ -227,6 +227,12 @@ opaque_id!(
     BillingQuoteId
 );
 opaque_id!(
+    /// A billing schedule — a standing arrangement that raises the same invoice
+    /// again every month, quarter or year (alo Billing, ADR 0035, wave B2).
+    /// What it raises is always a **draft**: the schedule never issues anything.
+    BillingScheduleId
+);
+opaque_id!(
     /// One line of a billing document. Invoices and quotes share the line
     /// model (`crate::billing_line`), so they share its id type.
     BillingLineId
