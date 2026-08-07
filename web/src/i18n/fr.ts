@@ -1034,6 +1034,7 @@ export const fr: Partial<Catalog> = {
   docCommentPlaceholder: "Écrire un commentaire…",
   docResolveComment: "Résoudre le commentaire",
   docReopenComment: "Rouvrir le commentaire",
+  docSavePdf: "Enregistrer en PDF",
   docAiPlaceholder: "Dites à l’IA quoi écrire ou modifier…",
   docAiPropose: "Rédiger",
   docAiProposalLabel: "Proposition — à vérifier avant d’ajouter",

@@ -1021,6 +1021,7 @@ export const nl: Partial<Catalog> = {
   docCommentPlaceholder: "Schrijf een opmerking…",
   docResolveComment: "Opmerking oplossen",
   docReopenComment: "Opmerking heropenen",
+  docSavePdf: "Opslaan als PDF",
   docAiPlaceholder: "Vertel de AI wat te schrijven of wijzigen…",
   docAiPropose: "Opstellen",
   docAiProposalLabel: "Voorstel — controleer voor je het toevoegt",

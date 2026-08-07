@@ -1098,6 +1098,7 @@ export const en = {
   docCommentPlaceholder: "Write a comment…",
   docResolveComment: "Resolve comment",
   docReopenComment: "Reopen comment",
+  docSavePdf: "Save as PDF",
   docAiPlaceholder: "Tell the AI what to write or change…",
   docAiPropose: "Draft",
   docAiProposalLabel: "Proposed — review before adding",
