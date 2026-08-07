@@ -32,6 +32,9 @@ import styles from "./DocEditor.module.css";
 
 type SaveState = "idle" | "saving" | "saved";
 type DocViewMode = "canvas" | "page";
+type PageSize = "a4" | "letter";
+type PageOrientation = "portrait" | "landscape";
+type PageMargins = "normal" | "narrow" | "wide";
 
 /** Cap on the current-document context sent to the AI (characters). */
 const CONTEXT_CAP = 12000;
@@ -88,6 +91,12 @@ export function DocEditor({
     window.localStorage.getItem(`alo-doc-view:${nodeId}`) === "page" ? "page" : "canvas",
   );
   const [zoom, setZoom] = useState(100);
+  const [pageSize, setPageSize] = useState<PageSize>(() => window.localStorage.getItem(`alo-doc-page-size:${nodeId}`) === "letter" ? "letter" : "a4");
+  const [pageOrientation, setPageOrientation] = useState<PageOrientation>(() => window.localStorage.getItem(`alo-doc-page-orientation:${nodeId}`) === "landscape" ? "landscape" : "portrait");
+  const [pageMargins, setPageMargins] = useState<PageMargins>(() => {
+    const stored = window.localStorage.getItem(`alo-doc-page-margins:${nodeId}`);
+    return stored === "narrow" || stored === "wide" ? stored : "normal";
+  });
   const [activeStyles, setActiveStyles] = useState<Record<string, boolean | string>>({});
   const [activeBlockType, setActiveBlockType] = useState("paragraph");
   const [counts, setCounts] = useState({ words: 0, characters: 0 });
@@ -132,6 +141,12 @@ export function DocEditor({
   useEffect(() => {
     window.localStorage.setItem(`alo-doc-view:${nodeId}`, viewMode);
   }, [nodeId, viewMode]);
+
+  useEffect(() => {
+    window.localStorage.setItem(`alo-doc-page-size:${nodeId}`, pageSize);
+    window.localStorage.setItem(`alo-doc-page-orientation:${nodeId}`, pageOrientation);
+    window.localStorage.setItem(`alo-doc-page-margins:${nodeId}`, pageMargins);
+  }, [nodeId, pageMargins, pageOrientation, pageSize]);
 
   useEffect(() => editor.onSelectionChange(() => {
     setActiveStyles(editor.getActiveStyles() as Record<string, boolean | string>);
@@ -323,6 +338,11 @@ export function DocEditor({
           <details><summary>{strings.docMenuEdit}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => editor.undo()}><Undo2 size={15} />{strings.sheetUndo}</button><button type="button" onClick={() => editor.redo()}><Redo2 size={15} />{strings.sheetRedo}</button></div></details>
           <details><summary>{strings.docMenuInsert}</summary><div className={styles.docMenuPanel}><button type="button" onClick={createLink}><Link2 size={15} />{strings.docInsertLink}</button><button type="button" onClick={() => imageInputRef.current?.click()}><ImagePlus size={15} />{strings.docInsertImage}</button><button type="button" onClick={() => insertBlock("table")}><Table2 size={15} />{strings.sheetInsertTable}</button><button type="button" onClick={() => insertBlock("equation")}><Sigma size={15} />{strings.docEquation}</button><button type="button" onClick={() => insertBlock("divider")}><Minus size={15} />{strings.docInsertDivider}</button><button type="button" onClick={() => insertBlock("pageBreak")}><FileText size={15} />{strings.docInsertPageBreak}</button></div></details>
           <details><summary>{strings.docMenuFormat}</summary><div className={styles.docMenuPanel}><button type="button" onClick={() => toggleStyle("bold")}><Bold size={15} />{strings.sheetBold}</button><button type="button" onClick={() => toggleStyle("italic")}><Italic size={15} />{strings.sheetItalic}</button><button type="button" onClick={() => toggleStyle("underline")}><Underline size={15} />{strings.sheetUnderline}</button></div></details>
+          <details><summary>{strings.docPageSetup}</summary><div className={`${styles.docMenuPanel} ${styles.pageSetupPanel}`}>
+            <label>{strings.docPageSize}<select value={pageSize} onChange={(event) => setPageSize(event.target.value as PageSize)}><option value="a4">A4</option><option value="letter">{strings.docPageLetter}</option></select></label>
+            <label>{strings.docPageOrientation}<select value={pageOrientation} onChange={(event) => setPageOrientation(event.target.value as PageOrientation)}><option value="portrait">{strings.docPagePortrait}</option><option value="landscape">{strings.docPageLandscape}</option></select></label>
+            <label>{strings.docPageMargins}<select value={pageMargins} onChange={(event) => setPageMargins(event.target.value as PageMargins)}><option value="normal">{strings.docMarginsNormal}</option><option value="narrow">{strings.docMarginsNarrow}</option><option value="wide">{strings.docMarginsWide}</option></select></label>
+          </div></details>
         </div>
         <div className={styles.commandDivider} />
         <select className={styles.blockTypeSelect} aria-label={strings.docParagraphStyle} value={activeBlockType === "heading" ? "heading-1" : activeBlockType} onChange={(event) => changeBlockType(event.target.value)}>
@@ -377,7 +397,13 @@ export function DocEditor({
       </div>}
       <div
         className={`${styles.body} ${viewMode === "page" ? styles.pageMode : styles.canvasMode}`}
-        style={{ "--doc-zoom": viewMode === "page" ? zoom / 100 : 1 } as CSSProperties}
+        style={{
+          "--doc-zoom": viewMode === "page" ? zoom / 100 : 1,
+          "--doc-page-width": pageOrientation === "portrait" ? (pageSize === "a4" ? "210mm" : "216mm") : (pageSize === "a4" ? "297mm" : "279mm"),
+          "--doc-page-height": pageOrientation === "portrait" ? (pageSize === "a4" ? "297mm" : "279mm") : (pageSize === "a4" ? "210mm" : "216mm"),
+          "--doc-page-margin-x": pageMargins === "narrow" ? "12.7mm" : pageMargins === "wide" ? "31.7mm" : "25.4mm",
+          "--doc-page-margin-y": pageMargins === "narrow" ? "12.7mm" : pageMargins === "wide" ? "31.7mm" : "25.4mm",
+        } as CSSProperties}
       >
         {!ready ? (
           <div className={styles.center}>
