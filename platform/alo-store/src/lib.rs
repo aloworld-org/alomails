@@ -71,6 +71,7 @@ pub mod insight_tiles;
 pub mod maintenance;
 pub mod message;
 pub mod model;
+pub mod project_clients;
 pub mod reset;
 pub mod rfc2047;
 pub mod schedule;
@@ -182,6 +183,9 @@ pub use model::{
     Contact, ContactField, DkimKeyRow, DomainRow, EmailFilter, EmailQuery, GroupRow, MAX_PAGE,
     Mailbox, Message, MessageSummary, OccurrenceOverride, Page, SortDirection, TenantSummary,
     UserRow,
+};
+pub use project_clients::{
+    BUDGET_CENTS_MAX, BUDGET_MINUTES_MAX, NewProjectClient, ProjectClient,
 };
 pub use reset::PendingReset;
 pub use schedule::DueSend;
