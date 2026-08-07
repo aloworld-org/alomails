@@ -300,6 +300,32 @@ export function SheetEditor({
       if (pattern === "0.00%") activeKeys.push("number-percent");
       if (pattern === "€ #,##0.00") activeKeys.push("number-currency");
       if (pattern === "#,##0") activeKeys.push("number-comma");
+      const formula = selected.getFormula();
+      const formulaName = /^=\s*([A-Z][A-Z0-9._]*)\s*\(/i.exec(formula)?.[1]?.toUpperCase() ?? null;
+      if (formulaName !== null) {
+        activeKeys.push(`formula-${formulaName}`);
+        const category = FORMULA_CATEGORIES.find((candidate) => candidate.functions.includes(formulaName));
+        if (category !== undefined) activeKeys.push(`formula-category-${category.key}`);
+      }
+      const row = selectedRange.startRow;
+      const column = selectedRange.startColumn;
+      const rawSheet = sheet.getSheet();
+      if (!rawSheet.getRowRawVisible(row)) activeKeys.push("hidden-row");
+      if (!rawSheet.getColVisible(column)) activeKeys.push("hidden-column");
+      if (!sheet.hasHiddenGridLines()) activeKeys.push("gridlines");
+      activeKeys.push(rawSheet.isRightToLeft() === 1 ? "direction-rtl" : "direction-ltr");
+      if (selected.getDataValidation() !== null) activeKeys.push("data-validation");
+      if (selected.getConditionalFormattingRules().length > 0) activeKeys.push("conditional-formatting");
+      if (selected.getNote() !== null) activeKeys.push("note");
+      if (selected.getComment() !== null) activeKeys.push("comment");
+      if (selected.getRangePermission().isProtected()) activeKeys.push("protected-range");
+      if (sheet.getWorksheetPermission().isProtected()) activeKeys.push("protected-sheet");
+      const frozenRows = sheet.getFrozenRows();
+      const frozenColumns = sheet.getFrozenColumns();
+      if (frozenRows === 1) activeKeys.push("freeze-top-row");
+      if (frozenColumns === 1) activeKeys.push("freeze-first-column");
+      if (frozenRows > 0 || frozenColumns > 0) activeKeys.push("freeze-panes");
+      if (sheet.getZoom() === 1) activeKeys.push("zoom-100");
       setSelectionFormatting((current) => {
         const sameKeys = current.activeKeys.length === activeKeys.length && current.activeKeys.every((key, index) => key === activeKeys[index]);
         if (sameKeys && current.fontFamily === fontFamily && current.fontSize === fontSize && current.numberPattern === pattern) return current;

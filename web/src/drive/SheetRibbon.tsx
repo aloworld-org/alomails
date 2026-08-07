@@ -353,19 +353,19 @@ function FormulasTab({ actions, disabled, categories = [] }: { actions: SheetAct
     <div className={styles.groups}>
       <Group label={strings.sheetGroupFunctionLibrary}>
         <div className={`${styles.row} ${styles.formulaLibrary}`}>
-          <IconBtn label={strings.sheetAutoSum} onClick={() => insert("SUM")} disabled={disabled} showLabel>
+          <IconBtn label={strings.sheetAutoSum} onClick={() => insert("SUM")} disabled={disabled} showLabel formatKey="formula-SUM">
             <Sigma size={18} />
           </IconBtn>
-          <CommandBtn label={strings.sheetAverage} onClick={() => insert("AVERAGE")} disabled={disabled}><span>fx</span></CommandBtn>
-          <CommandBtn label={strings.sheetCount} onClick={() => insert("COUNT")} disabled={disabled}><span>fx</span></CommandBtn>
-          <CommandBtn label={strings.sheetMinimum} onClick={() => insert("MIN")} disabled={disabled}><span>fx</span></CommandBtn>
-          <CommandBtn label={strings.sheetMaximum} onClick={() => insert("MAX")} disabled={disabled}><span>fx</span></CommandBtn>
+          <CommandBtn label={strings.sheetAverage} onClick={() => insert("AVERAGE")} disabled={disabled} formatKey="formula-AVERAGE"><span>fx</span></CommandBtn>
+          <CommandBtn label={strings.sheetCount} onClick={() => insert("COUNT")} disabled={disabled} formatKey="formula-COUNT"><span>fx</span></CommandBtn>
+          <CommandBtn label={strings.sheetMinimum} onClick={() => insert("MIN")} disabled={disabled} formatKey="formula-MIN"><span>fx</span></CommandBtn>
+          <CommandBtn label={strings.sheetMaximum} onClick={() => insert("MAX")} disabled={disabled} formatKey="formula-MAX"><span>fx</span></CommandBtn>
         </div>
       </Group>
       <Group label={strings.sheetGroupFunctionCategories}>
         <div className={styles.formulaCategories}>
           {categories.map((category) => (
-            <RibbonMenu key={category.key} label={category.label} icon={<FormulaCategoryIcon category={category.key} />} disabled={disabled} variant="wide">
+            <RibbonMenu key={category.key} label={category.label} icon={<FormulaCategoryIcon category={category.key} />} disabled={disabled} variant="wide" formatKey={`formula-category-${category.key}`}>
               <div className={styles.formulaFunctionList}>
                 {category.functions.map((name) => <TextBtn key={name} label={name} onClick={() => insert(name)} disabled={disabled} />)}
               </div>
@@ -645,7 +645,7 @@ function DataTab({ actions, disabled }: { actions: SheetActions; disabled: boole
       </Group>
       <Group label={strings.sheetGroupDataTools}>
         <div className={styles.toolStrip}>
-          <IconBtn label={strings.sheetDataValidation} onClick={() => actions.exec(CMD_DATA_VALIDATION)} disabled={disabled}>
+          <IconBtn label={strings.sheetDataValidation} onClick={() => actions.exec(CMD_DATA_VALIDATION)} disabled={disabled} formatKey="data-validation">
             <ListChecks size={16} />
           </IconBtn>
           <IconBtn label={strings.sheetTextToColumns} onClick={actions.splitTextToColumns} disabled={disabled}>
@@ -657,7 +657,7 @@ function DataTab({ actions, disabled }: { actions: SheetActions; disabled: boole
         </div>
       </Group>
       <Group label={strings.sheetGroupStyles}>
-        <IconBtn label={strings.sheetConditionalFormatting} onClick={() => actions.exec(CMD_CONDITIONAL_FORMATTING)} disabled={disabled}>
+        <IconBtn label={strings.sheetConditionalFormatting} onClick={() => actions.exec(CMD_CONDITIONAL_FORMATTING)} disabled={disabled} formatKey="conditional-formatting">
           <Palette size={16} />
         </IconBtn>
       </Group>
@@ -669,13 +669,13 @@ function ReviewTab({ actions, disabled }: { actions: SheetActions; disabled: boo
   return (
     <div className={styles.groups}>
       <Group label={strings.sheetGroupNotes}>
-        <IconBtn label={strings.sheetNote} onClick={() => actions.exec(CMD_NOTE)} disabled={disabled}>
+        <IconBtn label={strings.sheetNote} onClick={() => actions.exec(CMD_NOTE)} disabled={disabled} formatKey="note">
           <StickyNote size={16} />
         </IconBtn>
       </Group>
       <Group label={strings.sheetGroupComments}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetAddComment} onClick={() => actions.exec(CMD_COMMENT)} disabled={disabled}>
+          <IconBtn label={strings.sheetAddComment} onClick={() => actions.exec(CMD_COMMENT)} disabled={disabled} formatKey="comment">
             <MessageSquare size={16} />
           </IconBtn>
           <IconBtn label={strings.sheetCommentsPanel} onClick={() => actions.exec(CMD_COMMENT_PANEL)} disabled={disabled}>
@@ -685,9 +685,9 @@ function ReviewTab({ actions, disabled }: { actions: SheetActions; disabled: boo
       </Group>
       <Group label={strings.sheetGroupProtection}>
         <div className={styles.layoutGrid}>
-          <IconBtn label={strings.sheetProtectRange} onClick={actions.protectRange} disabled={disabled}><LockKeyhole size={16} /></IconBtn>
+          <IconBtn label={strings.sheetProtectRange} onClick={actions.protectRange} disabled={disabled} formatKey="protected-range"><LockKeyhole size={16} /></IconBtn>
           <IconBtn label={strings.sheetUnprotectRange} onClick={actions.unprotectRange} disabled={disabled}><UnlockKeyhole size={16} /></IconBtn>
-          <IconBtn label={strings.sheetProtectSheet} onClick={actions.protectSheet} disabled={disabled}><LockKeyhole size={16} /></IconBtn>
+          <IconBtn label={strings.sheetProtectSheet} onClick={actions.protectSheet} disabled={disabled} formatKey="protected-sheet"><LockKeyhole size={16} /></IconBtn>
           <IconBtn label={strings.sheetUnprotectSheet} onClick={actions.unprotectSheet} disabled={disabled}><UnlockKeyhole size={16} /></IconBtn>
         </div>
       </Group>
@@ -706,22 +706,22 @@ function PageLayoutTab({ actions, disabled }: { actions: SheetActions; disabled:
       </Group>
       <Group label={strings.sheetGroupVisibility}>
         <div className={styles.layoutGrid}>
-          <IconBtn label={strings.sheetHideRow} onClick={actions.hideRow} disabled={disabled}><EyeOff size={16} /></IconBtn>
+          <IconBtn label={strings.sheetHideRow} onClick={actions.hideRow} disabled={disabled} formatKey="hidden-row"><EyeOff size={16} /></IconBtn>
           <IconBtn label={strings.sheetShowRows} onClick={actions.showRows} disabled={disabled}><Eye size={16} /></IconBtn>
-          <IconBtn label={strings.sheetHideColumn} onClick={actions.hideColumn} disabled={disabled}><EyeOff size={16} /></IconBtn>
+          <IconBtn label={strings.sheetHideColumn} onClick={actions.hideColumn} disabled={disabled} formatKey="hidden-column"><EyeOff size={16} /></IconBtn>
           <IconBtn label={strings.sheetShowColumns} onClick={actions.showColumns} disabled={disabled}><Eye size={16} /></IconBtn>
         </div>
       </Group>
       <Group label={strings.sheetGroupSheetOptions}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetToggleGridlines} onClick={actions.toggleGridlines} disabled={disabled}><Grid3X3 size={16} /></IconBtn>
+          <IconBtn label={strings.sheetToggleGridlines} onClick={actions.toggleGridlines} disabled={disabled} formatKey="gridlines"><Grid3X3 size={16} /></IconBtn>
           <ColorBtn label={strings.sheetGridlineColor} onPick={actions.setGridlineColor} disabled={disabled}><PaintBucket size={16} /></ColorBtn>
         </div>
       </Group>
       <Group label={strings.sheetGroupDirection}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetLeftToRight} onClick={() => actions.setSheetDirection("ltr")} disabled={disabled}><AlignLeft size={16} /></IconBtn>
-          <IconBtn label={strings.sheetRightToLeft} onClick={() => actions.setSheetDirection("rtl")} disabled={disabled}><AlignRight size={16} /></IconBtn>
+          <IconBtn label={strings.sheetLeftToRight} onClick={() => actions.setSheetDirection("ltr")} disabled={disabled} formatKey="direction-ltr"><AlignLeft size={16} /></IconBtn>
+          <IconBtn label={strings.sheetRightToLeft} onClick={() => actions.setSheetDirection("rtl")} disabled={disabled} formatKey="direction-rtl"><AlignRight size={16} /></IconBtn>
         </div>
       </Group>
     </div>
@@ -733,16 +733,16 @@ function ViewTab({ actions, disabled }: { actions: SheetActions; disabled: boole
     <div className={styles.groups}>
       <Group label={strings.sheetGroupFreeze}>
         <div className={styles.layoutGrid}>
-          <IconBtn label={strings.sheetFreezeTopRow} onClick={actions.freezeTopRow} disabled={disabled}><Rows3 size={16} /></IconBtn>
-          <IconBtn label={strings.sheetFreezeFirstColumn} onClick={actions.freezeFirstColumn} disabled={disabled}><Columns3 size={16} /></IconBtn>
-          <IconBtn label={strings.sheetFreeze} onClick={actions.freezeAtSelection} disabled={disabled}><Snowflake size={16} /></IconBtn>
+          <IconBtn label={strings.sheetFreezeTopRow} onClick={actions.freezeTopRow} disabled={disabled} formatKey="freeze-top-row"><Rows3 size={16} /></IconBtn>
+          <IconBtn label={strings.sheetFreezeFirstColumn} onClick={actions.freezeFirstColumn} disabled={disabled} formatKey="freeze-first-column"><Columns3 size={16} /></IconBtn>
+          <IconBtn label={strings.sheetFreeze} onClick={actions.freezeAtSelection} disabled={disabled} formatKey="freeze-panes"><Snowflake size={16} /></IconBtn>
           <IconBtn label={strings.sheetUnfreeze} onClick={actions.unfreeze} disabled={disabled}><UnlockKeyhole size={16} /></IconBtn>
         </div>
       </Group>
       <Group label={strings.sheetGroupZoom}>
         <div className={styles.row}>
           <IconBtn label={strings.sheetZoomOut} onClick={() => actions.adjustZoom(-0.1)} disabled={disabled}><ZoomOut size={16} /></IconBtn>
-          <TextBtn label={strings.sheetZoomReset} onClick={actions.resetZoom} disabled={disabled} />
+          <TextBtn label={strings.sheetZoomReset} onClick={actions.resetZoom} disabled={disabled} formatKey="zoom-100" />
           <IconBtn label={strings.sheetZoomIn} onClick={() => actions.adjustZoom(0.1)} disabled={disabled}><ZoomIn size={16} /></IconBtn>
         </div>
       </Group>
@@ -826,11 +826,12 @@ function CellActionGlyph({ action, children }: { action: "add" | "remove"; child
   return <span className={styles.cellActionGlyph}>{children}<span aria-hidden="true">{action === "add" ? "+" : "−"}</span></span>;
 }
 
-function TextBtn({ label, onClick, disabled }: { label: string; onClick: () => void; disabled: boolean }) {
+function TextBtn({ label, onClick, disabled, formatKey }: { label: string; onClick: () => void; disabled: boolean; formatKey?: string }) {
   return (
     <button
       type="button"
       className={styles.textBtn}
+      data-format-key={formatKey}
       onClick={(event) => {
         onClick();
         event.currentTarget.closest("details")?.removeAttribute("open");
@@ -843,8 +844,8 @@ function TextBtn({ label, onClick, disabled }: { label: string; onClick: () => v
   );
 }
 
-function CommandBtn({ label, onClick, disabled, children }: { label: string; onClick: () => void; disabled: boolean; children: React.ReactNode }) {
-  return <button type="button" className={styles.commandBtn} onClick={onClick} disabled={disabled}>{children}<span>{label}</span></button>;
+function CommandBtn({ label, onClick, disabled, children, formatKey }: { label: string; onClick: () => void; disabled: boolean; children: React.ReactNode; formatKey?: string }) {
+  return <button type="button" className={styles.commandBtn} data-format-key={formatKey} onClick={onClick} disabled={disabled}>{children}<span>{label}</span></button>;
 }
 
 function NumberBtn({ label, onClick, disabled, children, compact = false, formatKey }: { label: string; onClick: () => void; disabled: boolean; children: React.ReactNode; compact?: boolean; formatKey?: string }) {
@@ -981,7 +982,7 @@ function BrandedSelect({ className, label, disabled, defaultValue, selectedValue
   );
 }
 
-function RibbonMenu({ label, icon, disabled, children, variant = "standard" }: { label: string; icon: React.ReactNode; disabled: boolean; children: React.ReactNode; variant?: "icon" | "row" | "standard" | "wide" }) {
+function RibbonMenu({ label, icon, disabled, children, variant = "standard", formatKey }: { label: string; icon: React.ReactNode; disabled: boolean; children: React.ReactNode; variant?: "icon" | "row" | "standard" | "wide"; formatKey?: string }) {
   const variantClass = variant === "icon" ? styles.ribbonMenuIcon : variant === "row" ? styles.ribbonMenuRow : variant === "wide" ? styles.ribbonMenuWide : styles.ribbonMenuStandard;
   return (
     <details
@@ -989,7 +990,7 @@ function RibbonMenu({ label, icon, disabled, children, variant = "standard" }: {
       data-ribbon-menu
       onToggle={handleRibbonMenuToggle}
     >
-      <summary className={disabled ? styles.ribbonMenuDisabled : undefined} aria-label={label}>
+      <summary className={disabled ? styles.ribbonMenuDisabled : undefined} data-format-key={formatKey} aria-label={label}>
         {icon}
         {variant === "icon" ? (
           <ChevronDown className={styles.menuIconChevron} size={12} />
