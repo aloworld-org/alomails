@@ -755,7 +755,10 @@
   padding: 0 7px;
 }
 .ribbonMenuWide > summary {
-  width: 78px;
+  width: max-content;
+  min-width: 82px;
+  padding-right: 10px;
+  padding-left: 10px;
 }
 .cellControls {
   display: grid;
@@ -812,7 +815,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 4px;
   color: var(--text-primary);
   line-height: 1;
 }
@@ -867,7 +870,10 @@
 .formulaCategories {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 6px;
+}
+.formulaLibrary {
+  gap: 4px;
 }
 .formulaFunctionList {
   display: grid;

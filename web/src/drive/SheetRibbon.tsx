@@ -352,7 +352,7 @@ function FormulasTab({ actions, disabled, categories = [] }: { actions: SheetAct
   return (
     <div className={styles.groups}>
       <Group label={strings.sheetGroupFunctionLibrary}>
-        <div className={styles.row}>
+        <div className={`${styles.row} ${styles.formulaLibrary}`}>
           <IconBtn label={strings.sheetAutoSum} onClick={() => insert("SUM")} disabled={disabled} showLabel>
             <Sigma size={18} />
           </IconBtn>
