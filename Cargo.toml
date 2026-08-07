@@ -101,6 +101,9 @@ argon2 = "0.5"
 # `futures` for the SSE stream.
 axum = "0.8"
 futures = "0.3"
+# alo-sites tests: drive the router in-process (`ServiceExt::oneshot`) so
+# Host-isolation is proven against the real service without a socket.
+tower = { version = "0.5", default-features = false, features = ["util"] }
 
 # CLAUDE.md law 2 enforced by the compiler: stubs and swallowed panics
 # cannot merge because they cannot compile under `clippy -D warnings`.

@@ -2045,3 +2045,137 @@ async fn workspace_search_terms_matches_question_keywords() {
             .is_empty()
     );
 }
+
+/// The public serving door (ADR 0036): `SitePublicStore` resolves a subdomain
+/// to exactly its own tenant's current publish — unknown, unpublished, and
+/// unpublished-again subdomains are indistinguishable `None`; drafts edited
+/// after a publish never surface until a republish; and the pages read is
+/// scoped by the resolved value, so one host's lookup can never return
+/// another site's content (the store half of the Host-isolation guarantee).
+#[tokio::test]
+async fn public_resolver_scopes_by_subdomain_and_never_leaks_drafts() {
+    use alo_store::SitePublicStore;
+    use serde_json::json;
+
+    let store = common::test_store().await;
+    let public = SitePublicStore::new(
+        sqlx::postgres::PgPoolOptions::new()
+            .max_connections(4)
+            .connect(&common::database_url())
+            .await
+            .expect("connect public pool"),
+    );
+
+    let t1 = store.create_tenant("sp-t1").await.unwrap();
+    let ua = store
+        .for_tenant(t1.clone())
+        .create_user("a@sitepublic.test")
+        .await
+        .unwrap();
+    let a = store.for_account(t1, ua);
+    let t2 = store.create_tenant("sp-t2").await.unwrap();
+    let ub = store
+        .for_tenant(t2.clone())
+        .create_user("b@sitepublic.test")
+        .await
+        .unwrap();
+    let b = store.for_account(t2, ub);
+
+    // Unique per run: the compose Postgres is shared and subdomains are global.
+    let unique = |tag: &str| {
+        format!(
+            "{tag}-{}x",
+            alo_store::SiteId::generate()
+                .as_str()
+                .to_lowercase()
+                .replace('_', "-")
+        )
+    };
+    let sub_a = unique("pub-a");
+    let sub_b = unique("pub-b");
+
+    // Unknown subdomain and a created-but-never-published site read the same.
+    assert!(
+        public
+            .resolve_published("no-such-site")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    let site_a = a.create_site("Alpha Works", &sub_a).await.unwrap();
+    let home_a = a.create_site_page(&site_a, "Home", "", true).await.unwrap();
+    let hero_a = json!({
+        "schema_version": 1,
+        "sections": [{"type": "hero", "heading": "ALPHA-MARKER"}]
+    });
+    a.set_page_sections(&site_a, &home_a, hero_a.clone())
+        .await
+        .unwrap();
+    assert!(public.resolve_published(&sub_a).await.unwrap().is_none());
+
+    // Publishing makes the resolver see exactly the frozen set.
+    let terra = json!({"schema_version": 1, "preset": "terra"});
+    a.set_site_theme(&site_a, terra.clone()).await.unwrap();
+    let p1 = a.publish_site(&site_a).await.unwrap();
+    let resolved = public.resolve_published(&sub_a).await.unwrap().unwrap();
+    assert_eq!(resolved.site, site_a);
+    assert_eq!(resolved.name, "Alpha Works");
+    assert_eq!(resolved.publish, p1);
+    assert_eq!(resolved.theme, terra);
+    let pages = public.published_pages(&resolved).await.unwrap();
+    assert_eq!(pages.len(), 1);
+    assert_eq!(pages[0].slug, "");
+    assert!(pages[0].is_home);
+    assert_eq!(pages[0].sections, hero_a);
+
+    // A second tenant's live site: each subdomain resolves to its own tenant's
+    // content only, and neither pages read contains the other's marker.
+    let site_b = b.create_site("Beta Books", &sub_b).await.unwrap();
+    let home_b = b.create_site_page(&site_b, "Home", "", true).await.unwrap();
+    b.set_page_sections(
+        &site_b,
+        &home_b,
+        json!({
+            "schema_version": 1,
+            "sections": [{"type": "hero", "heading": "BETA-MARKER"}]
+        }),
+    )
+    .await
+    .unwrap();
+    b.publish_site(&site_b).await.unwrap();
+    let resolved_a = public.resolve_published(&sub_a).await.unwrap().unwrap();
+    let resolved_b = public.resolve_published(&sub_b).await.unwrap().unwrap();
+    assert_eq!(resolved_a.name, "Alpha Works");
+    assert_eq!(resolved_b.name, "Beta Books");
+    let body_a = format!("{:?}", public.published_pages(&resolved_a).await.unwrap());
+    let body_b = format!("{:?}", public.published_pages(&resolved_b).await.unwrap());
+    assert!(body_a.contains("ALPHA-MARKER") && !body_a.contains("BETA-MARKER"));
+    assert!(body_b.contains("BETA-MARKER") && !body_b.contains("ALPHA-MARKER"));
+
+    // Draft edits after the publish never surface through the public door
+    // until a republish flips the pointer to a new frozen set.
+    a.set_page_sections(
+        &site_a,
+        &home_a,
+        json!({
+            "schema_version": 1,
+            "sections": [{"type": "hero", "heading": "DRAFT-ONLY"}]
+        }),
+    )
+    .await
+    .unwrap();
+    let still = public.resolve_published(&sub_a).await.unwrap().unwrap();
+    assert_eq!(still.publish, p1);
+    let frozen = format!("{:?}", public.published_pages(&still).await.unwrap());
+    assert!(frozen.contains("ALPHA-MARKER") && !frozen.contains("DRAFT-ONLY"));
+    let p2 = a.publish_site(&site_a).await.unwrap();
+    let republished = public.resolve_published(&sub_a).await.unwrap().unwrap();
+    assert_eq!(republished.publish, p2);
+    let fresh = format!("{:?}", public.published_pages(&republished).await.unwrap());
+    assert!(fresh.contains("DRAFT-ONLY") && !fresh.contains("ALPHA-MARKER"));
+
+    // Unpublishing takes the subdomain back to the indistinguishable None.
+    a.unpublish_site(&site_a).await.unwrap();
+    assert!(public.resolve_published(&sub_a).await.unwrap().is_none());
+    assert!(public.resolve_published(&sub_b).await.unwrap().is_some());
+}

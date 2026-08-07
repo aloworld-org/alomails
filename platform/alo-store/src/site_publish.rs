@@ -234,7 +234,7 @@ impl SitePublishRow {
 }
 
 #[derive(sqlx::FromRow)]
-struct SitePageSnapshotRow {
+pub(crate) struct SitePageSnapshotRow {
     page_id: String,
     slug: String,
     title: String,
@@ -245,7 +245,7 @@ struct SitePageSnapshotRow {
     is_home: bool,
 }
 impl SitePageSnapshotRow {
-    fn into_snapshot(self) -> SitePageSnapshot {
+    pub(crate) fn into_snapshot(self) -> SitePageSnapshot {
         SitePageSnapshot {
             page_id: SitePageId::new(self.page_id),
             slug: self.slug,

@@ -177,8 +177,14 @@ name = "alo-sites"
 version = "0.0.1"
 dependencies = [
  "alo-store",
+ "axum",
  "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tower",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
