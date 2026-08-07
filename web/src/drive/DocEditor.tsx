@@ -419,6 +419,7 @@ export function DocEditor({
             <label className={styles.pageNumberOption}><input type="checkbox" checked={showPageNumber} onChange={(event) => setShowPageNumber(event.target.checked)} />{strings.docPageNumbers}</label>
           </div></details>
         </div>
+        <div className={styles.formattingRow}>
         <div className={styles.commandDivider} />
         <select className={styles.blockTypeSelect} aria-label={strings.docParagraphStyle} value={activeBlockType === "heading" ? "heading-1" : activeBlockType} onChange={(event) => changeBlockType(event.target.value)}>
           <option value="paragraph">{strings.docStyleParagraph}</option>
@@ -466,6 +467,7 @@ export function DocEditor({
           <button type="button" onClick={() => setZoom((value) => Math.min(200, value + 10))} aria-label={strings.docZoomIn}><Plus size={15} /></button>
         </div>
         <button type="button" className={styles.printButton} onClick={() => window.print()}><Printer size={16} /><span>{strings.docPrint}</span></button>
+        </div>
         <input ref={imageInputRef} className={styles.hiddenFileInput} type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void insertImage(file); event.target.value = ""; }} />
       </div>}
       {viewMode === "page" && findOpen && <div className={styles.findPanel}>

@@ -210,18 +210,28 @@
 }
 .docCommands {
   display: flex;
-  min-height: 44px;
-  align-items: center;
-  gap: 3px;
-  padding: 5px 12px;
+  min-height: 82px;
+  flex-direction: column;
+  align-items: stretch;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface);
-  overflow-x: auto;
 }
 .docMenus {
   display: flex;
+  min-height: 34px;
   align-items: center;
   gap: 2px;
+  padding: 2px 12px 1px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.formattingRow {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .docMenus details {
   position: relative;
@@ -410,6 +420,10 @@
     padding: 12px 0 40px;
   }
   .pageFurniture { top: 12px; width: 100%; }
+  .docMenus details:last-child .docMenuPanel {
+    right: 0;
+    left: auto;
+  }
   .pageMode :global(.bn-editor) {
     min-height: calc(100vh - 120px);
     padding: 36px 20px 80px;
