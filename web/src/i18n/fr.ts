@@ -967,7 +967,7 @@ export const fr: Partial<Catalog> = {
   sheetHideColumn: "Masquer la colonne sélectionnée",
   sheetShowColumns: "Afficher toutes les colonnes",
   sheetGroupSheetOptions: "Options de feuille",
-  sheetToggleGridlines: "Afficher ou masquer le quadrillage",
+  sheetToggleGridlines: "Quadrillage",
   sheetGridlineColor: "Couleur du quadrillage",
   sheetGroupDirection: "Direction",
   sheetLeftToRight: "De gauche à droite",

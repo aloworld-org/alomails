@@ -954,7 +954,7 @@ export const nl: Partial<Catalog> = {
   sheetHideColumn: "Geselecteerde kolom verbergen",
   sheetShowColumns: "Alle kolommen weergeven",
   sheetGroupSheetOptions: "Bladopties",
-  sheetToggleGridlines: "Rasterlijnen tonen of verbergen",
+  sheetToggleGridlines: "Rasterlijnen",
   sheetGridlineColor: "Kleur rasterlijnen",
   sheetGroupDirection: "Richting",
   sheetLeftToRight: "Links naar rechts",

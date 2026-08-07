@@ -643,7 +643,7 @@ function DataTab({ actions, disabled }: { actions: SheetActions; disabled: boole
         <EditingControls actions={actions} disabled={disabled} />
       </Group>
       <Group label={strings.sheetGroupDataTools}>
-        <div className={styles.layoutGrid}>
+        <div className={styles.labelGrid}>
           <IconBtn label={strings.sheetDataValidation} onClick={() => actions.exec(CMD_DATA_VALIDATION)} disabled={disabled} showLabel>
             <ListChecks size={16} />
           </IconBtn>
@@ -681,7 +681,7 @@ function ReviewTab({ actions, disabled }: { actions: SheetActions; disabled: boo
         </div>
       </Group>
       <Group label={strings.sheetGroupProtection}>
-        <div className={styles.layoutGrid}>
+        <div className={styles.labelGrid}>
           <IconBtn label={strings.sheetProtectRange} onClick={actions.protectRange} disabled={disabled} showLabel><LockKeyhole size={16} /></IconBtn>
           <IconBtn label={strings.sheetUnprotectRange} onClick={actions.unprotectRange} disabled={disabled} showLabel><UnlockKeyhole size={16} /></IconBtn>
           <IconBtn label={strings.sheetProtectSheet} onClick={actions.protectSheet} disabled={disabled} showLabel><LockKeyhole size={16} /></IconBtn>
@@ -711,14 +711,14 @@ function PageLayoutTab({ actions, disabled }: { actions: SheetActions; disabled:
       </Group>
       <Group label={strings.sheetGroupSheetOptions}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetToggleGridlines} onClick={actions.toggleGridlines} disabled={disabled} showLabel><Grid3X3 size={16} /></IconBtn>
+          <IconBtn label={strings.sheetToggleGridlines} onClick={actions.toggleGridlines} disabled={disabled} large showLabel><Grid3X3 size={20} /></IconBtn>
           <ColorBtn label={strings.sheetGridlineColor} onPick={actions.setGridlineColor} disabled={disabled}><PaintBucket size={16} /></ColorBtn>
         </div>
       </Group>
       <Group label={strings.sheetGroupDirection}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetLeftToRight} onClick={() => actions.setSheetDirection("ltr")} disabled={disabled} showLabel><AlignLeft size={16} /></IconBtn>
-          <IconBtn label={strings.sheetRightToLeft} onClick={() => actions.setSheetDirection("rtl")} disabled={disabled} showLabel><AlignRight size={16} /></IconBtn>
+          <IconBtn label={strings.sheetLeftToRight} onClick={() => actions.setSheetDirection("ltr")} disabled={disabled} large showLabel><AlignLeft size={20} /></IconBtn>
+          <IconBtn label={strings.sheetRightToLeft} onClick={() => actions.setSheetDirection("rtl")} disabled={disabled} large showLabel><AlignRight size={20} /></IconBtn>
         </div>
       </Group>
     </div>
@@ -729,7 +729,7 @@ function ViewTab({ actions, disabled }: { actions: SheetActions; disabled: boole
   return (
     <div className={styles.groups}>
       <Group label={strings.sheetGroupFreeze}>
-        <div className={styles.layoutGrid}>
+        <div className={styles.labelGrid}>
           <IconBtn label={strings.sheetFreezeTopRow} onClick={actions.freezeTopRow} disabled={disabled} showLabel><Rows3 size={16} /></IconBtn>
           <IconBtn label={strings.sheetFreezeFirstColumn} onClick={actions.freezeFirstColumn} disabled={disabled} showLabel><Columns3 size={16} /></IconBtn>
           <IconBtn label={strings.sheetFreeze} onClick={actions.freezeAtSelection} disabled={disabled} showLabel><Snowflake size={16} /></IconBtn>
@@ -738,9 +738,9 @@ function ViewTab({ actions, disabled }: { actions: SheetActions; disabled: boole
       </Group>
       <Group label={strings.sheetGroupZoom}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetZoomOut} onClick={() => actions.adjustZoom(-0.1)} disabled={disabled} showLabel><ZoomOut size={16} /></IconBtn>
+          <IconBtn label={strings.sheetZoomOut} onClick={() => actions.adjustZoom(-0.1)} disabled={disabled}><ZoomOut size={16} /></IconBtn>
           <TextBtn label={strings.sheetZoomReset} onClick={actions.resetZoom} disabled={disabled} />
-          <IconBtn label={strings.sheetZoomIn} onClick={() => actions.adjustZoom(0.1)} disabled={disabled} showLabel><ZoomIn size={16} /></IconBtn>
+          <IconBtn label={strings.sheetZoomIn} onClick={() => actions.adjustZoom(0.1)} disabled={disabled}><ZoomIn size={16} /></IconBtn>
         </div>
       </Group>
     </div>

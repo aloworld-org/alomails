@@ -1251,7 +1251,7 @@ export const en = {
   sheetHideColumn: "Hide selected column",
   sheetShowColumns: "Show all columns",
   sheetGroupSheetOptions: "Sheet Options",
-  sheetToggleGridlines: "Show or hide gridlines",
+  sheetToggleGridlines: "Gridlines",
   sheetGridlineColor: "Gridline colour",
   sheetGroupDirection: "Direction",
   sheetLeftToRight: "Left to right",
