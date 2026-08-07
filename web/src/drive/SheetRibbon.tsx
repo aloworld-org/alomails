@@ -222,18 +222,27 @@ const BORDER_GLYPHS: Record<string, string> = {
   "diag-up-center": "╱┼",
 };
 
-const TABS = ["home", "layout", "formulas", "data", "review", "view"] as const;
-type Tab = (typeof TABS)[number];
+const PRIMARY_TABS = ["home", "formulas", "others"] as const;
+const OTHER_TABS = ["layout", "data", "review", "view"] as const;
+type PrimaryTab = (typeof PRIMARY_TABS)[number];
+type OtherTab = (typeof OTHER_TABS)[number];
 // Tabs whose tools need Univer plugins we haven't wired yet — honest placeholder.
 
-function tabLabel(tab: Tab): string {
+function primaryTabLabel(tab: PrimaryTab): string {
   switch (tab) {
     case "home":
       return strings.sheetTabHome;
-    case "layout":
-      return strings.sheetTabLayout;
     case "formulas":
       return strings.sheetTabFormulas;
+    case "others":
+      return strings.sheetTabOthers;
+  }
+}
+
+function otherTabLabel(tab: OtherTab): string {
+  switch (tab) {
+    case "layout":
+      return strings.sheetTabLayout;
     case "data":
       return strings.sheetTabData;
     case "review":
@@ -244,7 +253,8 @@ function tabLabel(tab: Tab): string {
 }
 
 export function SheetRibbon({ actions, disabled, formulaCategories, activeBorder, selectionFormatting }: { actions: SheetActions; disabled: boolean; formulaCategories: FormulaCategory[]; activeBorder: BorderKind | null; selectionFormatting: SheetSelectionFormatting }) {
-  const [tab, setTab] = useState<Tab>("home");
+  const [tab, setTab] = useState<PrimaryTab>("home");
+  const [otherTab, setOtherTab] = useState<OtherTab>("layout");
   const activeToolRef = useRef<HTMLElement | null>(null);
   const ribbonRef = useRef<HTMLDivElement>(null);
 
@@ -308,7 +318,7 @@ export function SheetRibbon({ actions, disabled, formulaCategories, activeBorder
   return (
     <div ref={ribbonRef} className={styles.ribbon} role="toolbar" aria-label={strings.sheetRibbon} onClickCapture={markActiveTool}>
       <div className={styles.tabs} role="tablist">
-        {TABS.map((t) => (
+        {PRIMARY_TABS.map((t) => (
           <button
             key={t}
             type="button"
@@ -317,17 +327,35 @@ export function SheetRibbon({ actions, disabled, formulaCategories, activeBorder
             className={t === tab ? styles.tabActive : styles.tab}
             onClick={() => setTab(t)}
           >
-            {tabLabel(t)}
+            {primaryTabLabel(t)}
           </button>
         ))}
       </div>
 
       {tab === "home" && <HomeTab actions={actions} disabled={disabled} selectionFormatting={selectionFormatting} />}
-      {tab === "layout" && <PageLayoutTab actions={actions} disabled={disabled} />}
       {tab === "formulas" && <FormulasTab actions={actions} disabled={disabled} categories={formulaCategories} />}
-      {tab === "data" && <DataTab actions={actions} disabled={disabled} />}
-      {tab === "review" && <ReviewTab actions={actions} disabled={disabled} />}
-      {tab === "view" && <ViewTab actions={actions} disabled={disabled} />}
+      {tab === "others" && (
+        <>
+          <div className={styles.subTabs} role="tablist" aria-label={strings.sheetTabOthers}>
+            {OTHER_TABS.map((t) => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={t === otherTab}
+                className={t === otherTab ? styles.subTabActive : styles.subTab}
+                onClick={() => setOtherTab(t)}
+              >
+                {otherTabLabel(t)}
+              </button>
+            ))}
+          </div>
+          {otherTab === "layout" && <PageLayoutTab actions={actions} disabled={disabled} />}
+          {otherTab === "data" && <DataTab actions={actions} disabled={disabled} />}
+          {otherTab === "review" && <ReviewTab actions={actions} disabled={disabled} />}
+          {otherTab === "view" && <ViewTab actions={actions} disabled={disabled} />}
+        </>
+      )}
     </div>
   );
 }

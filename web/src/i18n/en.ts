@@ -1231,6 +1231,7 @@ export const en = {
   sheetMore: "More actions",
   sheetRibbon: "Formatting",
   sheetTabHome: "Home",
+  sheetTabOthers: "Others",
   sheetTabInsert: "Insert",
   sheetTabDraw: "Draw",
   sheetTabLayout: "Page Layout",

@@ -934,6 +934,7 @@ export const nl: Partial<Catalog> = {
   sheetMore: "Meer acties",
   sheetRibbon: "Opmaak",
   sheetTabHome: "Start",
+  sheetTabOthers: "Overig",
   sheetTabInsert: "Invoegen",
   sheetTabDraw: "Tekenen",
   sheetTabLayout: "Pagina-indeling",

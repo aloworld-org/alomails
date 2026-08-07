@@ -947,6 +947,7 @@ export const fr: Partial<Catalog> = {
   sheetMore: "Plus d’actions",
   sheetRibbon: "Mise en forme",
   sheetTabHome: "Accueil",
+  sheetTabOthers: "Autres",
   sheetTabInsert: "Insertion",
   sheetTabDraw: "Dessin",
   sheetTabLayout: "Mise en page",
