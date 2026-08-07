@@ -1352,6 +1352,7 @@ export const en = {
   sheetConditionalFormatting: "Conditional formatting",
   sheetInsertTable: "Table",
   sheetInsertLink: "Link",
+  sheetInsertImage: "Image",
   sheetDrawingPanel: "Images and drawing",
   sheetNote: "Add or edit note",
   sheetAddComment: "New comment",

@@ -1055,6 +1055,7 @@ export const nl: Partial<Catalog> = {
   sheetConditionalFormatting: "Voorwaardelijke opmaak",
   sheetInsertTable: "Tabel",
   sheetInsertLink: "Koppeling",
+  sheetInsertImage: "Afbeelding",
   sheetDrawingPanel: "Afbeeldingen en tekenen",
   sheetNote: "Notitie toevoegen of bewerken",
   sheetAddComment: "Nieuwe opmerking",

@@ -1068,6 +1068,7 @@ export const fr: Partial<Catalog> = {
   sheetConditionalFormatting: "Mise en forme conditionnelle",
   sheetInsertTable: "Tableau",
   sheetInsertLink: "Lien",
+  sheetInsertImage: "Image",
   sheetDrawingPanel: "Images et dessin",
   sheetNote: "Ajouter ou modifier une note",
   sheetAddComment: "Nouveau commentaire",

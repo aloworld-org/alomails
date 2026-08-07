@@ -190,7 +190,7 @@ const BORDER_GLYPHS: Record<string, string> = {
   "diag-up-center": "╱┼",
 };
 
-const TABS = ["home", "insert", "draw", "layout", "formulas", "data", "review", "view"] as const;
+const TABS = ["home", "insert", "layout", "formulas", "data", "review", "view"] as const;
 type Tab = (typeof TABS)[number];
 // Tabs whose tools need Univer plugins we haven't wired yet — honest placeholder.
 const SOON: Tab[] = ["layout"];
@@ -201,8 +201,6 @@ function tabLabel(tab: Tab): string {
       return strings.sheetTabHome;
     case "insert":
       return strings.sheetTabInsert;
-    case "draw":
-      return strings.sheetTabDraw;
     case "layout":
       return strings.sheetTabLayout;
     case "formulas":
@@ -297,7 +295,6 @@ export function SheetRibbon({ actions, disabled, formulaCategories, activeBorder
 
       {tab === "home" && <HomeTab actions={actions} disabled={disabled} selectionFormatting={selectionFormatting} />}
       {tab === "insert" && <InsertTab actions={actions} disabled={disabled} />}
-      {tab === "draw" && <DrawTab actions={actions} disabled={disabled} />}
       {tab === "formulas" && <FormulasTab actions={actions} disabled={disabled} categories={formulaCategories} />}
       {tab === "data" && <DataTab actions={actions} disabled={disabled} />}
       {tab === "review" && <ReviewTab actions={actions} disabled={disabled} />}
@@ -583,7 +580,7 @@ function HomeTab({ actions, disabled, selectionFormatting }: { actions: SheetAct
           <IconBtn label={strings.sheetInsertLink} onClick={() => actions.exec(CMD_HYPERLINK)} disabled={disabled} showLabel>
             <Link size={16} />
           </IconBtn>
-          <IconBtn label={strings.sheetDrawingPanel} onClick={() => actions.exec(CMD_DRAWING_PANEL)} disabled={disabled} showLabel>
+          <IconBtn label={strings.sheetInsertImage} onClick={() => actions.exec(CMD_DRAWING_PANEL)} disabled={disabled} showLabel>
             <Image size={16} />
           </IconBtn>
         </div>
@@ -644,22 +641,10 @@ function InsertTab({ actions, disabled }: { actions: SheetActions; disabled: boo
           <IconBtn label={strings.sheetInsertLink} onClick={() => actions.exec(CMD_HYPERLINK)} disabled={disabled} showLabel>
             <Link size={16} />
           </IconBtn>
-          <IconBtn label={strings.sheetDrawingPanel} onClick={() => actions.exec(CMD_DRAWING_PANEL)} disabled={disabled} showLabel>
+          <IconBtn label={strings.sheetInsertImage} onClick={() => actions.exec(CMD_DRAWING_PANEL)} disabled={disabled} showLabel>
             <Image size={16} />
           </IconBtn>
         </div>
-      </Group>
-    </div>
-  );
-}
-
-function DrawTab({ actions, disabled }: { actions: SheetActions; disabled: boolean }) {
-  return (
-    <div className={styles.groups}>
-      <Group label={strings.sheetGroupDrawing}>
-        <IconBtn label={strings.sheetDrawingPanel} onClick={() => actions.exec(CMD_DRAWING_PANEL)} disabled={disabled} large showLabel>
-          <Image size={20} />
-        </IconBtn>
       </Group>
     </div>
   );
