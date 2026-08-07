@@ -243,6 +243,16 @@ opaque_id!(
     /// (alo Billing, ADR 0035).
     BillingBillId
 );
+opaque_id!(
+    /// A CRM pipeline — one board a tenant's deals move across (alo CRM,
+    /// ADR 0035, wave B2).
+    CrmPipelineId
+);
+opaque_id!(
+    /// One column of a CRM pipeline. Its `is_won`/`is_lost` flags are what
+    /// make a column mean "closed" (alo CRM, ADR 0035, wave B2).
+    CrmStageId
+);
 
 #[cfg(test)]
 mod tests {

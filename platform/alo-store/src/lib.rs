@@ -36,6 +36,8 @@ pub mod calendar;
 pub mod changes;
 pub mod contacts;
 pub mod control;
+pub mod crm_pipelines;
+pub mod crm_stages;
 pub mod dkim;
 pub mod dmarc_reports;
 pub mod document;
@@ -99,6 +101,8 @@ pub use blob::{BlobStore, ShareStream};
 pub use changes::Changes;
 pub use contacts::AddressHeaders;
 pub use control::PLATFORM_TENANT_NAME;
+pub use crm_pipelines::{NewPipeline, Pipeline, PipelineSeed, StageSeed};
+pub use crm_stages::{NewStage, Stage};
 pub use dkim::DkimSigningMaterial;
 pub use dmarc_reports::{DmarcAggregateRow, DmarcEventRecord};
 pub use document::{Document, DocumentSummary};
@@ -108,7 +112,8 @@ pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId,
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
     BillingQuoteId, BlobId,
-    CalendarId, CategoryId, CommentId, ContactId, DriveNodeId, EventId, GroupId, LabelId,
+    CalendarId, CategoryId, CommentId, ContactId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
+    GroupId, LabelId,
     MailboxId, MessageId, ProjectId, SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId,
     TenantId, ThreadId, UserId,
 };
