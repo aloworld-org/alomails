@@ -577,11 +577,14 @@ function HomeTab({ actions, disabled, selectionFormatting }: { actions: SheetAct
 
       <Group label={strings.sheetInsert}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetInsertTable} onClick={() => actions.exec(CMD_TABLE)} disabled={disabled} large showLabel>
-            <Table2 size={20} />
+          <IconBtn label={strings.sheetInsertTable} onClick={() => actions.exec(CMD_TABLE)} disabled={disabled} showLabel>
+            <Table2 size={16} />
           </IconBtn>
-          <IconBtn label={strings.sheetInsertLink} onClick={() => actions.exec(CMD_HYPERLINK)} disabled={disabled} large showLabel>
-            <Link size={20} />
+          <IconBtn label={strings.sheetInsertLink} onClick={() => actions.exec(CMD_HYPERLINK)} disabled={disabled} showLabel>
+            <Link size={16} />
+          </IconBtn>
+          <IconBtn label={strings.sheetDrawingPanel} onClick={() => actions.exec(CMD_DRAWING_PANEL)} disabled={disabled} showLabel>
+            <Image size={16} />
           </IconBtn>
         </div>
       </Group>
@@ -635,11 +638,14 @@ function InsertTab({ actions, disabled }: { actions: SheetActions; disabled: boo
     <div className={styles.groups}>
       <Group label={strings.sheetGroupInsertObjects}>
         <div className={styles.row}>
-          <IconBtn label={strings.sheetInsertTable} onClick={() => actions.exec(CMD_TABLE)} disabled={disabled} large showLabel>
-            <Table2 size={20} />
+          <IconBtn label={strings.sheetInsertTable} onClick={() => actions.exec(CMD_TABLE)} disabled={disabled} showLabel>
+            <Table2 size={16} />
           </IconBtn>
-          <IconBtn label={strings.sheetInsertLink} onClick={() => actions.exec(CMD_HYPERLINK)} disabled={disabled} large showLabel>
-            <Link size={20} />
+          <IconBtn label={strings.sheetInsertLink} onClick={() => actions.exec(CMD_HYPERLINK)} disabled={disabled} showLabel>
+            <Link size={16} />
+          </IconBtn>
+          <IconBtn label={strings.sheetDrawingPanel} onClick={() => actions.exec(CMD_DRAWING_PANEL)} disabled={disabled} showLabel>
+            <Image size={16} />
           </IconBtn>
         </div>
       </Group>
