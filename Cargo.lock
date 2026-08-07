@@ -173,6 +173,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "alo-sites"
+version = "0.0.1"
+dependencies = [
+ "alo-store",
+ "serde_json",
+ "tracing",
+]
+
+[[package]]
 name = "alo-smtp"
 version = "0.0.1"
 dependencies = [
