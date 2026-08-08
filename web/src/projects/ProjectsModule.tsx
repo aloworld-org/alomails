@@ -1,0 +1,189 @@
+// The Projects module (alo Projects, ADR 0035, wave B3) — the workspace surface
+// over the `/projects` API: the engagements a business works, the week one
+// person fills in, and the weeks a manager decides about.
+//
+// It is mounted at `/projects/*` by the product surface, so every path below is
+// relative and a deep link survives a page reload — including the running
+// timer's own link, which is what the rail widget points at.
+//
+// The engagement list is loaded here, with the module, because every screen
+// needs it: the week grid's rows are projects, the timer starts on one, and the
+// list itself is the module's home. One `revision` counter ties them together —
+// an hour written anywhere bumps it and whatever is on screen re-reads.
+//
+// **Approvals is hidden, not disabled, for a non-admin.** Per-user hours are
+// visible to their owner and to a tenant admin and to nobody else
+// (`docs/design/projects.md`), so a tab that exists only to refuse would be
+// advertising a door this person does not have.
+//
+// A naming honesty note, from the design: this rail entry reads "Projects"
+// while Tasks also calls its boards projects. They are the same rows, which is
+// the point — so the copy here says *client project* wherever the distinction
+// carries weight, and the Tasks module's own strings are left alone.
+import { useCallback, useEffect, useState } from "react";
+import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+
+import { useCustomers } from "../billing";
+import { Spinner } from "../ds";
+import { strings } from "../i18n";
+import { useJmapClient } from "../jmap";
+import { ApprovalsView } from "./ApprovalsView";
+import { ClientDialog } from "./ClientDialog";
+import { projectsMessage, useProjectsApi } from "./api";
+import { ErrorBanner } from "./parts";
+import { ProjectsView } from "./ProjectsView";
+import { announceTimerChanged } from "./timerBus";
+import { WeekView } from "./WeekView";
+import type { Project } from "./types";
+import styles from "./ProjectsModule.module.css";
+
+export function ProjectsModule() {
+  const api = useProjectsApi();
+  const client = useJmapClient();
+  // Archived customers included: a project attached to one before it was
+  // archived still has to say whose work it is. The engagement form's picker
+  // asks the other way round.
+  const { customers } = useCustomers(true);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [editing, setEditing] = useState<Project | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [revision, setRevision] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const bump = useCallback(() => setRevision((r) => r + 1), []);
+
+  useEffect(() => {
+    let live = true;
+    setLoading(true);
+    void (async () => {
+      try {
+        const list = await api.projects();
+        if (live) {
+          setProjects(list);
+          setError(null);
+        }
+      } catch (err) {
+        if (live) setError(projectsMessage(err, strings.projectsLoadFailed));
+      } finally {
+        if (live) setLoading(false);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [api, revision]);
+
+  useEffect(() => {
+    let live = true;
+    void client
+      .isAdmin()
+      .then((ok) => {
+        if (live) setIsAdmin(ok);
+      })
+      .catch(() => {
+        // Not an admin, or the check is unavailable → the tab stays hidden,
+        // which is the same thing a refusal would mean.
+      });
+    return () => {
+      live = false;
+    };
+  }, [client]);
+
+  /** A customer's own name for an id. `null` when the list has not loaded or
+   *  the customer is not one this reader can see — the screen says "unknown"
+   *  rather than printing a raw id at somebody. */
+  const customerName = useCallback(
+    (customerId: string) => customers.find((c) => c.id === customerId)?.name ?? null,
+    [customers],
+  );
+
+  /** Starts the clock on a project. A timer already running is the server's
+   *  `409` — shown as its own sentence, never turned into a silent stop of the
+   *  one that is running. */
+  async function startTimer(project: Project) {
+    try {
+      await api.startTimer({ projectId: project.id });
+      setError(null);
+      announceTimerChanged();
+    } catch (err) {
+      setError(projectsMessage(err, strings.projectsStartFailed));
+    }
+  }
+
+  return (
+    <div className={styles.projects}>
+      <header className={styles.header}>
+        <h1 className={styles.title}>{strings.moduleProjects}</h1>
+        <nav className={styles.tabs}>
+          <NavLink
+            to="list"
+            className={({ isActive }) =>
+              isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+            }
+          >
+            {strings.projectsTabList}
+          </NavLink>
+          <NavLink
+            to="week"
+            className={({ isActive }) =>
+              isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+            }
+          >
+            {strings.projectsTabWeek}
+          </NavLink>
+          {isAdmin && (
+            <NavLink
+              to="approvals"
+              className={({ isActive }) =>
+                isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+              }
+            >
+              {strings.projectsTabApprovals}
+            </NavLink>
+          )}
+        </nav>
+        {loading && <Spinner size={16} />}
+      </header>
+
+      {error !== null && <ErrorBanner message={error} />}
+
+      <Routes>
+        <Route index element={<Navigate to="list" replace />} />
+        <Route
+          path="list"
+          element={
+            <ProjectsView
+              projects={projects}
+              loading={loading}
+              customerName={customerName}
+              onEditClient={setEditing}
+              onStartTimer={(project) => void startTimer(project)}
+            />
+          }
+        />
+        <Route
+          path="week"
+          element={<WeekView projects={projects} revision={revision} onChanged={bump} />}
+        />
+        {/* The admin tab is a route too, so a manager's bookmark works — and a
+            non-admin who follows one gets the server's own `403` on the read
+            rather than a page that pretends the inbox is empty. */}
+        <Route path="approvals" element={<ApprovalsView onDecided={bump} />} />
+        {/* An unknown Projects path is a stale link, not an error page. */}
+        <Route path="*" element={<Navigate to="list" replace />} />
+      </Routes>
+
+      {editing !== null && (
+        <ClientDialog
+          project={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            bump();
+          }}
+        />
+      )}
+    </div>
+  );
+}

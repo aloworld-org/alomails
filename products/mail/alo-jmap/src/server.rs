@@ -21,9 +21,9 @@ use crate::{
     billing_settings, blob, calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff,
     crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
     docs, drive, filters, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, projects_invoices, projects_time, projects_weeks, push, reset_route,
-    schedule, security, session, settings, share, signup_route, sites, snooze, spaces, tasks,
-    unsubscribe, wopi, workspace_search,
+    insights_gallery, projects_clients, projects_invoices, projects_time, projects_weeks, push,
+    reset_route, schedule, security, session, settings, share, signup_route, sites, snooze, spaces,
+    tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -653,6 +653,24 @@ pub fn app(state: AppState) -> Router {
         // cross-user reads — the approvals inbox, another person's week — are
         // the admin door's and arrive at B3.05.
         //
+        // The engagement list and the client facts that make a board client
+        // work (B3.07) — the module's front door, and what the timer's hours
+        // become worth something against. A project is a `task_projects` row
+        // plus, when it is client work, a `project_clients` row beside it; this
+        // surface zips them, so an internal project reads with `client: null`
+        // rather than not at all.
+        //
+        // The facts are addressed as `/projects/clients/{id}` rather than the
+        // design note's `/projects/{id}/client`, because the audit derivation
+        // reads the matched template mechanically and needs the collection in
+        // the second segment — the record it files against is still the
+        // project (`projects_clients`'s module note has the trade in full).
+        .route("/projects", get(projects_clients::list_projects))
+        .route(
+            "/projects/clients/{id}",
+            put(projects_clients::set_project_client)
+                .delete(projects_clients::clear_project_client),
+        )
         // `timer` and `time` are distinct literal segments, registered before
         // `/projects/time/{id}` so a record id can never shadow one.
         .route("/projects/timer", get(projects_time::get_timer))
@@ -721,6 +739,12 @@ pub fn app(state: AppState) -> Router {
             "/projects/invoices",
             post(projects_invoices::create_invoice),
         )
+        // One engagement, registered last so the file reads in the order
+        // matchit resolves: every literal segment above (`time`, `timer`,
+        // `weeks`, `approvals`, `clients`, `unbilled`, `invoices`) wins over
+        // this capture, and an id — a base64url'd 16-byte token — can never
+        // spell one of them anyway.
+        .route("/projects/{id}", get(projects_clients::get_project))
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))

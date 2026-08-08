@@ -1,0 +1,168 @@
+// Approvals — the manager's inbox: every week somebody has handed in, oldest
+// first, with the person, the period, the hours and the decision.
+//
+// This is the one screen in Projects that names a person, and the only one
+// reached through the admin door. `docs/design/projects.md` § "The hours of a
+// person are personal data" is why: per-user hours are visible to their owner
+// and to a tenant admin, and to nobody else. The tab is **hidden entirely** for
+// a caller who is not an admin rather than shown disabled — a control that
+// exists only to refuse is a control that teaches nothing.
+//
+// A rejection carries a note, and it is asked for rather than optional in
+// spirit: the person whose week comes back is going to read it, and "rejected"
+// with no sentence is a manager making somebody guess. The server accepts an
+// empty one; this screen prompts for it.
+import { useEffect, useState } from "react";
+import { Inbox } from "lucide-react";
+
+import { Button, Spinner, useDialogs } from "../ds";
+import { strings } from "../i18n";
+import { projectsMessage, useProjectsApi } from "./api";
+import { dayLabel, durationLabel, momentLabel } from "./format";
+import { EmptyState, ErrorBanner } from "./parts";
+import type { PendingWeek } from "./types";
+import styles from "./ProjectsModule.module.css";
+
+export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
+  const api = useProjectsApi();
+  const dialogs = useDialogs();
+  const [weeks, setWeeks] = useState<PendingWeek[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
+
+  useEffect(() => {
+    let live = true;
+    setLoading(true);
+    void (async () => {
+      try {
+        const pending = await api.approvals();
+        if (live) {
+          setWeeks(pending);
+          setError(null);
+        }
+      } catch (err) {
+        if (live) setError(projectsMessage(err, strings.projectsLoadFailed));
+      } finally {
+        if (live) setLoading(false);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [api, reload]);
+
+  async function approve(week: PendingWeek) {
+    setBusy(week.id);
+    setError(null);
+    try {
+      await api.approveWeek(week.id);
+      setReload((r) => r + 1);
+      onDecided();
+    } catch (err) {
+      setError(projectsMessage(err, strings.projectsSaveFailed));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function reject(week: PendingWeek) {
+    const note = await dialogs.prompt({
+      title: strings.projectsRejectTitle,
+      message: strings.projectsRejectBody(week.userEmail),
+      confirmLabel: strings.projectsReject,
+      placeholder: strings.projectsRejectPlaceholder,
+    });
+    // `null` is a cancelled prompt — not an empty note.
+    if (note === null) return;
+    setBusy(week.id);
+    setError(null);
+    try {
+      await api.rejectWeek(week.id, note);
+      setReload((r) => r + 1);
+      onDecided();
+    } catch (err) {
+      setError(projectsMessage(err, strings.projectsSaveFailed));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  if (loading && weeks.length === 0) {
+    return (
+      <div className={styles.page}>
+        <Spinner size={20} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.page}>
+      {error !== null && <ErrorBanner message={error} />}
+      {weeks.length === 0 ? (
+        <EmptyState
+          Icon={Inbox}
+          title={strings.projectsApprovalsEmptyTitle}
+          body={strings.projectsApprovalsEmptyBody}
+        />
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th scope="col">{strings.projectsPerson}</th>
+                <th scope="col">{strings.projectsWeek}</th>
+                <th scope="col" className={styles.numeric}>
+                  {strings.projectsHoursLogged}
+                </th>
+                <th scope="col" className={styles.numeric}>
+                  {strings.projectsBillableHours}
+                </th>
+                <th scope="col">{strings.projectsSubmittedAt}</th>
+                <th scope="col" aria-label={strings.projectsActions} />
+              </tr>
+            </thead>
+            <tbody>
+              {weeks.map((week) => (
+                <tr key={week.id}>
+                  <td>{week.userEmail}</td>
+                  <td>
+                    {strings.projectsWeekOf(
+                      dayLabel(week.weekStart, { day: "numeric", month: "short" }),
+                      dayLabel(week.weekEnd),
+                    )}
+                  </td>
+                  <td className={styles.numeric}>{durationLabel(week.minutes)}</td>
+                  <td className={styles.numeric}>{durationLabel(week.billableMinutes)}</td>
+                  <td className={styles.muted}>
+                    {week.submittedAt === null ? "" : momentLabel(week.submittedAt)}
+                  </td>
+                  <td>
+                    <div className={styles.rowActions}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy !== null}
+                        onClick={() => void reject(week)}
+                      >
+                        {strings.projectsReject}
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={busy !== null}
+                        onClick={() => void approve(week)}
+                      >
+                        {strings.projectsApprove}
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

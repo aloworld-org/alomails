@@ -8,6 +8,7 @@ export type {
   ComposeInsert,
   ProductConsole,
   ProductModule,
+  ProductRailWidget,
   ProductSurface,
 } from "./types";
 export { surface } from "@product";

@@ -49,3 +49,43 @@ export function usePickers(): Pickers {
 
   return { customers, products, error };
 }
+
+/**
+ * Who a tenant bills, for a screen outside Billing that has to name one — the
+ * engagement list and the engagement form in Projects (B3.07).
+ *
+ * `includeArchived` is the same split `usePickers` makes and for the same
+ * reason: a **picker** must not offer an archived customer, because attaching
+ * new work to one is a refusal on the server and offering a choice that always
+ * fails is worse than not offering it. A **list** must include them, because a
+ * project attached to a customer who has since been archived still has to say
+ * whose work it is.
+ */
+export function useCustomers(includeArchived = false): {
+  customers: BillingCustomer[];
+  error: string | null;
+} {
+  const api = useBillingApi();
+  const [customers, setCustomers] = useState<BillingCustomer[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      try {
+        const people = await api.customers(includeArchived);
+        if (live) {
+          setCustomers(people);
+          setError(null);
+        }
+      } catch (err) {
+        if (live) setError(billingMessage(err, strings.billingLoadFailed));
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [api, includeArchived]);
+
+  return { customers, error };
+}

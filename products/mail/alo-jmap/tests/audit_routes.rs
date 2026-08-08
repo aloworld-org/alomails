@@ -217,6 +217,7 @@ DELETE /crm/activities/{id} -> crm.activity.delete
 DELETE /crm/deals/{id} -> crm.deal.delete
 DELETE /crm/deals/{id}/threads/{threadId} -> crm.deal.thread.delete
 DELETE /crm/stages/{id} -> crm.stage.delete
+DELETE /projects/clients/{id} -> projects.client.delete
 DELETE /projects/time/{id} -> projects.time.delete
 PATCH /billing/customers/{id} -> billing.customer.update
 PATCH /billing/invoices/{id} -> billing.invoice.update
@@ -276,4 +277,5 @@ POST /projects/timer/stop -> projects.timer.stop
 POST /projects/weeks/{monday}/submit -> projects.week.submit
 POST /projects/weeks/{monday}/withdraw -> projects.week.withdraw
 PUT /billing/fx/rates -> billing.fx.rates.update
+PUT /projects/clients/{id} -> projects.client.update
 "#;

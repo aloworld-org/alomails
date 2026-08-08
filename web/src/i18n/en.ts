@@ -2555,6 +2555,133 @@ export const en = {
   insightsAge90Plus: "90+ days",
   insightsQuarter: (quarter: number, year: number) => `Q${quarter} ${year}`,
   insightsWeek: (week: number, year: number) => `W${week} ${year}`,
+
+  // Projects (alo Projects, ADR 0035, wave B3). The words of client work: an
+  // engagement, the hours worked on it, the week they are handed in as, and the
+  // decision somebody makes about that week.
+  //
+  // The rail reads "Projects" while Tasks also calls its boards projects —
+  // they ARE the same rows, which is the point (docs/design/projects.md, "One
+  // project list, extended"). So the copy here says "client project" wherever
+  // the distinction carries weight and leaves the Tasks strings alone.
+  //
+  // Durations are written as a person says them ("7h 30m"), never as decimal
+  // hours: "1.75" on one screen beside "1h 45m" on another is two numbers
+  // somebody has to reconcile.
+  moduleProjects: "Projects",
+  projectsTabList: "Projects",
+  projectsTabWeek: "My week",
+  projectsTabApprovals: "Approvals",
+  projectsLoadFailed: "Your projects could not be loaded.",
+  projectsSaveFailed: "The change could not be saved.",
+  projectsStartFailed: "The timer could not be started.",
+  projectsStopFailed: "The timer could not be stopped.",
+  projectsCancel: "Cancel",
+  projectsSave: "Save",
+  projectsEdit: "Edit",
+  projectsActions: "Actions",
+
+  // Durations and rates. `projectsNoTime` is the dash an empty cell shows: a
+  // blank cell reads as broken, a zero reads as work that took no time.
+  projectsNoTime: "—",
+  projectsHoursShort: (hours: number) => `${hours}h`,
+  projectsMinutesShort: (minutes: number) => `${minutes}m`,
+  projectsPerHour: (amount: string) => `${amount}/h`,
+  projectsPercent: (percent: number) => `${percent}%`,
+  projectsUnpriced: "Not priced",
+
+  // The engagement list.
+  projectsProject: "Project",
+  projectsCustomer: "Customer",
+  projectsCustomerHint: "The customer this project's hours are billed to.",
+  projectsCustomerPick: "Choose a customer…",
+  projectsCustomerUnknown: "Unknown customer",
+  projectsInternal: "Internal",
+  projectsRate: "Hourly rate",
+  projectsRateHint: "Left blank, the hours are counted but not priced.",
+  projectsRateInvalid: "Write the rate as an amount, for example 95.00.",
+  projectsHoursLogged: "Hours",
+  projectsBillableHours: "Billable",
+  projectsOfWhichBillable: (duration: string) => `${duration} billable`,
+  projectsBudget: "Budget",
+  projectsBudgetUsed: "Budget used",
+  projectsBudgetHours: "Budget (hours)",
+  projectsBudgetAmount: "Budget (amount)",
+  projectsBudgetHint: "Advisory. Nothing stops an hour logged past it.",
+  projectsBudgetHoursInvalid: "Write the budget as a whole number of hours.",
+  projectsBudgetAmountInvalid: "Write the budget as an amount, for example 7600.00.",
+  projectsLastWorked: "Last worked",
+  projectsNeverWorked: "Never",
+  projectsStartsOn: "Starts on",
+  projectsMakeClientWork: "Make client work",
+  projectsStartTimerOn: (project: string) => `Start the timer on ${project}`,
+  projectsEmptyTitle: "No projects yet",
+  projectsEmptyBody:
+    "A project here is a board from Tasks, seen as client work. Create one in Tasks, then say who it is worked for.",
+
+  // The engagement form.
+  projectsClientSubtitle: "Who this project is worked for, and what an hour on it is worth.",
+  projectsPersonalBoard:
+    "This is a personal board. Only a team project can be client work — its hours are approved by somebody else and billed to a customer.",
+  projectsDetach: "Make internal",
+  projectsDetachTitle: "Make this internal work?",
+  projectsDetachBody:
+    "The hours stay exactly as they are. What goes is the claim that they are billable to a customer — and hours already on an invoice keep that invoice.",
+
+  // The week grid.
+  projectsPreviousWeek: "Previous",
+  projectsNextWeek: "Next",
+  projectsThisWeek: "This week",
+  projectsWeekOf: (from: string, to: string) => `${from} – ${to}`,
+  projectsWeek: "Week",
+  projectsDay: "Day",
+  projectsDuration: "Duration",
+  projectsDurationHint: "90, 1:30 and 1,5 all mean an hour and a half. 2h means two hours.",
+  projectsDurationInvalid: "Write a duration like 90, 1:30, 1,5 or 2h — up to one day.",
+  projectsTotal: "Total",
+  projectsAddRow: "Add a project row…",
+  projectsBillable: "Billable to the customer",
+  projectsNotBillable: "not billable",
+  projectsNote: "Note",
+  projectsNoNote: "No note",
+  projectsNoteHint: "What you were doing. Nobody outside this workspace reads it.",
+  projectsProposedEntry: "suggested",
+  projectsBilledEntry: "on an invoice",
+  projectsCellLabel: (project: string, day: string, duration: string) =>
+    `${project}, ${day}: ${duration}`,
+  projectsDeleteEntry: "Delete",
+  projectsDeleteEntryTitle: "Delete these hours?",
+  projectsDeleteEntryBody: "The entry goes for good. Its week has to be open for that.",
+  projectsWeekEmptyTitle: "Nothing logged this week",
+  projectsWeekEmptyBody:
+    "Start the timer on a project, or add a row below and write the hours straight into a day.",
+  projectsBillableOfWeek: (duration: string) => `${duration} billable`,
+  projectsProposedInWeek: (duration: string) => `${duration} suggested, not yet accepted`,
+  projectsSubmitWeek: "Submit week",
+  projectsWithdrawWeek: "Take it back",
+  projectsRejectedBecause: (note: string) => `Sent back: ${note}`,
+
+  // Where a week stands. The server's word, never re-derived in the browser.
+  projectsWeekOpen: "Open",
+  projectsWeekSubmitted: "Submitted",
+  projectsWeekApproved: "Approved",
+  projectsWeekRejected: "Sent back",
+
+  // The approvals inbox — the one screen here that names a person.
+  projectsPerson: "Person",
+  projectsSubmittedAt: "Handed in",
+  projectsApprove: "Approve",
+  projectsReject: "Send back",
+  projectsRejectTitle: "Send this week back?",
+  projectsRejectBody: (person: string) => `${person} will read what you write here.`,
+  projectsRejectPlaceholder: "What needs correcting",
+  projectsApprovalsEmptyTitle: "Nothing to approve",
+  projectsApprovalsEmptyBody: "Weeks people hand in land here, oldest first.",
+
+  // The running-timer widget in the rail.
+  projectsTimerRunning: "Timer running",
+  projectsStopTimer: "Stop the timer",
+  projectsStop: "Stop",
 } as const;
 
 /** Every string key in the catalog. */

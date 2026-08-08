@@ -14,3 +14,10 @@ export { formatAmount, formatRate, hundredthsToInput, parseHundredths } from "./
 // days as the VAT summary — so the second caller reads these rather than
 // growing a second definition of "last quarter" that disagrees at a boundary.
 export { previousQuarterOf, quarterOf, type Period } from "./period";
+
+// Who a tenant bills. A module outside Billing that has to name a customer —
+// the engagement form in Projects (B3.07) — reads the list from here rather
+// than growing a second client for `/billing/customers` with its own idea of
+// whether archived ones are on offer.
+export { useCustomers } from "./pickers";
+export type { BillingCustomer } from "./types";

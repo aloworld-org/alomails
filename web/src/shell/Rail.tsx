@@ -186,6 +186,12 @@ export function Rail({ onAskAi }: RailProps) {
       </ul>
 
       <div className={styles.bottom}>
+        {/* Whatever this product says must be visible from every module — the
+            running timer, in the workspace. Each renders nothing when it has
+            nothing to say; the rail knows what none of them are about. */}
+        {(surface.railWidgets ?? []).map((widget) => (
+          <widget.Widget key={widget.id} />
+        ))}
         <button type="button" className={styles.item} onClick={onAskAi}>
           <Sparkles strokeWidth={1.75} />
           <span className={styles.label}>{strings.moduleAi}</span>

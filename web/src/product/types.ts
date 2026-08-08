@@ -64,11 +64,28 @@ export interface ProductLogin {
   emailPlaceholder: () => string;
 }
 
+/**
+ * A small always-mounted component in the rail's footer — state a user has to
+ * be able to see from every module, not just from the one that owns it.
+ *
+ * Declared by the product rather than imported by the shell, for the reason the
+ * modules are: the rail is shared, and a widget that named a module directly
+ * would make every product depend on it. A widget renders `null` when it has
+ * nothing to say, which is its ordinary state.
+ */
+export interface ProductRailWidget {
+  /** Stable key. */
+  id: string;
+  Widget: ComponentType;
+}
+
 /** The complete definition of a product. */
 export interface ProductSurface {
   modules: ProductModule[];
   consoles: ProductConsole[];
   composeInserts: ComposeInsert[];
+  /** Rail-footer widgets, in the order they are shown. Absent means none. */
+  railWidgets?: ProductRailWidget[];
   /** Where a bare `/` (and post-login) should land. */
   defaultPath: string;
   /** Brand copy for the login screen. */
