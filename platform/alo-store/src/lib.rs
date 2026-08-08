@@ -57,8 +57,10 @@ pub mod drive;
 pub mod error;
 pub mod extract;
 pub mod fin_accounts;
+pub mod fin_booking;
 pub mod fin_journal;
 pub mod fin_ledger;
+pub mod fin_rules;
 pub mod iban;
 pub mod ical;
 pub mod id;
@@ -175,6 +177,7 @@ pub use fin_ledger::{
     AccountBalance, AccountLedger, DimensionBalance, DimensionBalances, LEDGER_GROUPS_MAX,
     LEDGER_PAGE_MAX, LedgerDimension, LedgerLine, LedgerScope, TrialBalance,
 };
+pub use fin_rules::{InvoiceAccounts, invoice_issue_entry};
 pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId,
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
