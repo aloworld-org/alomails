@@ -36,8 +36,8 @@ use alo_sites::render::{
 };
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
-    BlobId, Section, SectionsEnvelope, Site, SiteId, SitePage, SitePageId, SiteTheme, StoreError,
-    site_theme::THEME_PRESETS,
+    BlobId, Section, SectionsEnvelope, Site, SiteFormId, SiteId, SitePage, SitePageId, SiteTheme,
+    StoreError, site_theme::THEME_PRESETS,
 };
 
 use crate::error::Problem;
@@ -785,6 +785,10 @@ struct AddSectionBody {
     index: Option<usize>,
 }
 
+/// The forms store's owner-facing name cap. Section headings may be longer,
+/// so auto-created names are shortened by characters (never raw UTF-8 bytes).
+const AUTO_FORM_NAME_MAX_CHARS: usize = 100;
+
 /// `POST /sites/:id/pages/:pid/sections` `{section, index?}` → the updated
 /// envelope — inserts at `index` (append when absent).
 pub async fn add_section(
@@ -795,7 +799,7 @@ pub async fn add_section(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let req: AddSectionBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
-    let section = parse_section(req.section)?;
+    let mut section = parse_section(req.section)?;
     let sid = SiteId::new(id);
     let page_id = SitePageId::new(pid);
     let mut envelope = page_envelope(&account, &sid, &page_id).await?;
@@ -809,8 +813,52 @@ pub async fn add_section(
             ),
         ));
     }
+    let created_form = match &mut section {
+        Section::ContactForm(contact) => match contact.form_id.as_deref() {
+            Some(raw) => {
+                let form = SiteFormId::new(raw);
+                if account
+                    .acc
+                    .site_form(&sid, &form)
+                    .await
+                    .map_err(map_store_err)?
+                    .is_none()
+                {
+                    return Err(Problem::with(StatusCode::NOT_FOUND, "no such form"));
+                }
+                None
+            }
+            None => {
+                let name: String = contact
+                    .heading
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|heading| !heading.is_empty())
+                    .unwrap_or("Contact form")
+                    .chars()
+                    .take(AUTO_FORM_NAME_MAX_CHARS)
+                    .collect();
+                let form = account
+                    .acc
+                    .create_site_form(&sid, &name)
+                    .await
+                    .map_err(map_store_err)?;
+                contact.form_id = Some(form.to_string());
+                Some(form)
+            }
+        },
+        _ => None,
+    };
     envelope.sections.insert(index, section);
-    store_sections(&account, &sid, &page_id, &envelope).await
+    match store_sections(&account, &sid, &page_id, &envelope).await {
+        Ok(response) => Ok(response),
+        Err(error) => {
+            if let Some(form) = created_form {
+                let _ = account.acc.delete_site_form(&sid, &form).await;
+            }
+            Err(error)
+        }
+    }
 }
 
 #[derive(Deserialize)]

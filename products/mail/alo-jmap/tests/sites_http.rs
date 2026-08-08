@@ -13,6 +13,7 @@
 
 mod common;
 
+use alo_store::SiteId;
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -477,6 +478,106 @@ async fn section_ops_add_update_move_remove_and_full_set() {
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
 }
 
+#[tokio::test]
+async fn adding_a_contact_section_creates_and_links_its_form() {
+    let owner = harness("sites-contact-section").await;
+    let outsider = harness("sites-contact-outsider").await;
+    let site = created_id(
+        "site",
+        post(
+            &owner.app,
+            &owner.token,
+            "/sites",
+            json!({ "name": "Contact Co", "subdomain": sub("cf", &owner) }),
+        )
+        .await,
+    );
+    let page = created_id(
+        "page",
+        post(
+            &owner.app,
+            &owner.token,
+            &format!("/sites/{site}/pages"),
+            json!({ "title": "Home", "home": true }),
+        )
+        .await,
+    );
+    let sections = format!("/sites/{site}/pages/{page}/sections");
+
+    let (status, body) = post(
+        &owner.app,
+        &owner.token,
+        &sections,
+        json!({ "section": {
+            "type": "contact_form",
+            "heading": "Talk to our team",
+            "body": "We reply within one working day."
+        }}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "add contact section: {body}");
+    let linked = body["sections"]["sections"][0]["form_id"]
+        .as_str()
+        .expect("server-linked form id")
+        .to_owned();
+    let stored = owner.acc.site_forms(&SiteId::new(&site)).await.unwrap();
+    assert_eq!(stored.len(), 1);
+    assert_eq!(stored[0].id.as_str(), linked);
+    assert_eq!(stored[0].name, "Talk to our team");
+
+    // Section headings have a wider content cap than owner-facing form
+    // names. A valid long Unicode heading is shortened by characters and
+    // still produces a working linked form.
+    let long_heading = "é".repeat(120);
+    let (status, body) = post(
+        &owner.app,
+        &owner.token,
+        &sections,
+        json!({ "section": {
+            "type": "contact_form",
+            "heading": long_heading
+        }}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "add long-heading form: {body}");
+    let stored = owner.acc.site_forms(&SiteId::new(&site)).await.unwrap();
+    assert_eq!(stored.len(), 2);
+    assert_eq!(stored[1].name.chars().count(), 100);
+    assert!(stored[1].name.chars().all(|character| character == 'é'));
+
+    // A form id is never a cross-tenant capability: even if an outsider's
+    // valid id is supplied, the owner's page refuses it and keeps its stack.
+    let foreign_site = outsider
+        .acc
+        .create_site("Outside", &sub("cfo", &outsider))
+        .await
+        .unwrap();
+    let foreign_form = outsider
+        .acc
+        .create_site_form(&foreign_site, "Outside form")
+        .await
+        .unwrap();
+    let (status, _) = post(
+        &owner.app,
+        &owner.token,
+        &sections,
+        json!({ "section": {
+            "type": "contact_form",
+            "form_id": foreign_form.as_str()
+        }}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let (_, body) = get(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/pages/{page}"),
+    )
+    .await;
+    assert_eq!(body["sections"]["sections"].as_array().unwrap().len(), 2);
+    assert_eq!(body["sections"]["sections"][0]["form_id"], json!(linked));
+}
+
 // ---- publish + theme ---------------------------------------------------------
 
 #[tokio::test]
@@ -860,6 +961,14 @@ async fn another_tenants_site_is_invisible_on_every_route() {
     assert_eq!(body["name"], json!("B Marketing"));
     let (_, body) = get(&b.app, &b.token, &format!("/sites/{b_site}/pages/{b_page}")).await;
     assert_eq!(body["title"], json!("B Home"));
+    assert!(
+        b.acc
+            .site_forms(&SiteId::new(&b_site))
+            .await
+            .unwrap()
+            .is_empty(),
+        "a foreign add-section request must not create a form"
+    );
 }
 
 // ---- the draft preview (S1.13) -----------------------------------------------
