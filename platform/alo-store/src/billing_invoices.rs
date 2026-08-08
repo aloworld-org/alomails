@@ -58,7 +58,10 @@ use std::collections::HashMap;
 
 use time::{Date, Duration, OffsetDateTime};
 
+use sqlx::PgConnection;
+
 use crate::account::AccountStore;
+use crate::billing_customers::customer_read;
 use crate::billing_field::{bounded, currency, payment_terms_days};
 use crate::billing_fx::{FxSnapshot, restated};
 use crate::billing_fx_rates::snapshot_at;
@@ -73,6 +76,7 @@ use crate::billing_settings::base_currency_in;
 use crate::billing_totals::{LineFigures, Totals, totals};
 use crate::error::{Result, StoreError};
 use crate::id::{BillingCustomerId, BillingInvoiceId, BillingQuoteId, BillingScheduleId};
+use crate::time_invoice::release_billed_hours;
 
 /// The customer's own reference (a PO number, a cost centre) printed on the
 /// document.
@@ -427,13 +431,21 @@ impl InvoiceDocument {
 }
 
 /// The header, validated and with the customer's defaults resolved.
+/// A validated invoice header, ready to be written.
+///
+/// `pub(crate)` because the timesheet handoff ([`crate::time_invoice`]) resolves
+/// a header and writes it inside its own transaction, rather than raising a
+/// document first and hoping the rest of the call succeeds.
 #[derive(Debug)]
-struct NormalizedInvoice {
-    customer_id: String,
-    currency: String,
-    payment_terms_days: i32,
-    reference: String,
-    note: String,
+pub(crate) struct NormalizedInvoice {
+    pub(crate) customer_id: String,
+    /// The currency the document is denominated in — the caller's, or the
+    /// customer's own when they did not state one. Every amount that reaches
+    /// the document has to be expressed in it.
+    pub(crate) currency: String,
+    pub(crate) payment_terms_days: i32,
+    pub(crate) reference: String,
+    pub(crate) note: String,
 }
 
 impl AccountStore {
@@ -443,8 +455,19 @@ impl AccountStore {
     /// longer bill them", so raising a new document for one is a mistake
     /// worth reporting rather than obeying.
     async fn normalize_invoice(&self, input: &NewInvoice) -> Result<NormalizedInvoice> {
-        let customer = self
-            .billing_customer(&input.customer_id)
+        let mut conn = self.pool.acquire().await.map_err(StoreError::Db)?;
+        self.normalize_invoice_in(&mut conn, input).await
+    }
+
+    /// [`AccountStore::normalize_invoice`] on a caller's connection, so a
+    /// document raised inside a transaction resolves its customer under the same
+    /// transaction that writes it.
+    pub(crate) async fn normalize_invoice_in(
+        &self,
+        conn: &mut PgConnection,
+        input: &NewInvoice,
+    ) -> Result<NormalizedInvoice> {
+        let customer = customer_read(&mut *conn, self.tenant.as_str(), &input.customer_id)
             .await?
             .ok_or(StoreError::NotFound)?;
         if customer.is_archived() {
@@ -539,7 +562,23 @@ impl AccountStore {
     /// [`StoreError::Validation`] when the customer is archived or a header
     /// field breaks its rule; [`StoreError::Db`] on failure.
     pub async fn create_billing_invoice(&self, input: &NewInvoice) -> Result<BillingInvoiceId> {
-        let header = self.normalize_invoice(input).await?;
+        let mut conn = self.pool.acquire().await.map_err(StoreError::Db)?;
+        let header = self.normalize_invoice_in(&mut conn, input).await?;
+        self.insert_draft_invoice(&mut conn, &header).await
+    }
+
+    /// Writes a draft invoice row on the caller's connection and answers its id
+    /// — **the one place a draft invoice is inserted**, lifted out so the
+    /// timesheet handoff ([`crate::time_invoice`]) can raise the document, write
+    /// its lines and stamp the hours it carries in a single transaction.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn insert_draft_invoice(
+        &self,
+        conn: &mut PgConnection,
+        header: &NormalizedInvoice,
+    ) -> Result<BillingInvoiceId> {
         let id = BillingInvoiceId::generate();
         sqlx::query(
             "INSERT INTO billing_invoices (tenant_id, id, customer_id, status, currency, \
@@ -554,7 +593,7 @@ impl AccountStore {
         .bind(&header.reference)
         .bind(&header.note)
         .bind(self.user.as_str())
-        .execute(&self.pool)
+        .execute(conn)
         .await
         .map_err(StoreError::Db)?;
         Ok(id)
@@ -874,6 +913,7 @@ impl AccountStore {
             .await?
             .status
             .ensure_editable()?;
+        release_billed_hours(&mut tx, self.tenant.as_str(), id).await?;
         sqlx::query("DELETE FROM billing_invoices WHERE tenant_id = $1 AND id = $2")
             .bind(self.tenant.as_str())
             .bind(id.as_str())
@@ -1102,6 +1142,7 @@ impl AccountStore {
                     .to_owned(),
             ));
         }
+        release_billed_hours(&mut tx, self.tenant.as_str(), id).await?;
         sqlx::query(
             "UPDATE billing_invoices SET status = 'void', updated_at = now() \
              WHERE tenant_id = $1 AND id = $2",

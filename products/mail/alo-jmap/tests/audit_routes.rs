@@ -269,6 +269,7 @@ POST /crm/stages/{id}/move -> crm.stage.move
 POST /projects/approvals/{id}/approve -> projects.approval.approve
 POST /projects/approvals/{id}/reject -> projects.approval.reject
 POST /projects/approvals/{id}/reopen -> projects.approval.reopen
+POST /projects/invoices -> projects.invoice.create
 POST /projects/time -> projects.time.create
 POST /projects/timer/start -> projects.timer.start
 POST /projects/timer/stop -> projects.timer.stop

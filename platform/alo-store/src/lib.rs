@@ -94,6 +94,8 @@ pub mod store;
 pub mod tasks;
 pub mod thread;
 pub mod time_entries;
+pub mod time_hours;
+pub mod time_invoice;
 pub mod time_timer;
 pub mod time_weeks;
 pub mod vat_id;
@@ -216,6 +218,11 @@ pub use tasks::{
 pub use time_entries::{
     MINUTES_MAX, MINUTES_MIN, NOTE_MAX as TIME_NOTE_MAX, NewTimeEntry, TimeEntry, TimeEntryEdit,
     TimeTotals, week_totals,
+};
+pub use time_hours::{hours_net_cents, qty_milli_hours};
+pub use time_invoice::{
+    MAX_HANDOFF_ENTRIES, TimeBilling, TimeInvoiceDraft, UnbilledCurrencyTotal, UnbilledGroup,
+    UnbilledTotals, unbilled_totals,
 };
 pub use time_timer::{RunningTimer, StartTimer, StoppedTimer};
 pub use time_weeks::{

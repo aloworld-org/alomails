@@ -21,9 +21,9 @@ use crate::{
     billing_settings, blob, calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff,
     crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
     docs, drive, filters, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, projects_time, projects_weeks, push, reset_route, schedule, security,
-    session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
-    workspace_search,
+    insights_gallery, projects_invoices, projects_time, projects_weeks, push, reset_route,
+    schedule, security, session, settings, share, signup_route, sites, snooze, spaces, tasks,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -705,6 +705,21 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/projects/approvals/{id}/reopen",
             post(projects_weeks::reopen_week),
+        )
+        // The billable handoff (B3.06) — approved hours become a DRAFT invoice
+        // in billing, and never anything more: it issues nothing and sends
+        // nothing, the one-way, one-shot rule the won-deal handoff holds.
+        //
+        // The unbilled view is a tenant-wide AGGREGATE on the account door — an
+        // invoice carries the team's hours, not the caller's — and it answers
+        // with projects, minutes and money, never with who worked when. The
+        // handoff is audited as `projects.invoice.create` against the document
+        // it raised, so which hours went onto an invoice, and who sent them
+        // there, is answerable from the record.
+        .route("/projects/unbilled", get(projects_invoices::list_unbilled))
+        .route(
+            "/projects/invoices",
+            post(projects_invoices::create_invoice),
         )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))

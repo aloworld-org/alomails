@@ -250,6 +250,36 @@ fn map_contact_fk(error: sqlx::Error) -> StoreError {
     error.into()
 }
 
+/// Reads one customer of `tenant`, or `None` — **the one place a customer is
+/// read by id**.
+///
+/// Takes any executor so the same read serves the ordinary pool call
+/// ([`AccountStore::billing_customer`]) and a read inside a transaction that
+/// must not see a customer archived a moment later — which is what the
+/// timesheet handoff ([`crate::time_invoice`]) needs when it resolves the
+/// document's header and its lines in one transaction.
+///
+/// # Errors
+/// [`StoreError::Db`] on failure.
+pub(crate) async fn customer_read<'e, E>(
+    executor: E,
+    tenant: &str,
+    id: &BillingCustomerId,
+) -> Result<Option<Customer>>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
+    let row = sqlx::query_as::<_, CustomerRow>(&format!(
+        "SELECT {CUSTOMER_COLS} FROM billing_customers WHERE tenant_id = $1 AND id = $2"
+    ))
+    .bind(tenant)
+    .bind(id.as_str())
+    .fetch_optional(executor)
+    .await
+    .map_err(StoreError::Db)?;
+    Ok(row.map(CustomerRow::into_customer))
+}
+
 impl AccountStore {
     /// Confirms a linked contact is **this tenant's**, so a guessed id from
     /// another tenant is a `NotFound` rather than a cross-tenant link.
@@ -337,15 +367,7 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn billing_customer(&self, id: &BillingCustomerId) -> Result<Option<Customer>> {
-        let row = sqlx::query_as::<_, CustomerRow>(&format!(
-            "SELECT {CUSTOMER_COLS} FROM billing_customers WHERE tenant_id = $1 AND id = $2"
-        ))
-        .bind(self.tenant.as_str())
-        .bind(id.as_str())
-        .fetch_optional(&self.pool)
-        .await
-        .map_err(StoreError::Db)?;
-        Ok(row.map(CustomerRow::into_customer))
+        customer_read(&self.pool, self.tenant.as_str(), id).await
     }
 
     /// Replaces every writable field of a customer. Archiving is a separate

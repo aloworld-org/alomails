@@ -81,6 +81,8 @@ pub mod jtypes;
 pub mod junk_learn;
 pub mod mime;
 pub mod mime_read;
+pub mod projects;
+pub mod projects_invoices;
 pub mod projects_time;
 pub mod projects_weeks;
 pub mod push;
