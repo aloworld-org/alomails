@@ -196,6 +196,7 @@
   /* ---- motion ---- */
   --transition-fast: 120ms ease;
   --transition-base: 180ms ease;
+  --animation-skeleton: 1.2s ease-in-out infinite;
 
   /* ---- layout ---- */
   --rail-width: 72px;
