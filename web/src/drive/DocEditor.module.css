@@ -220,7 +220,7 @@
 }
 .docMenus {
   display: flex;
-  min-height: 34px;
+  min-height: var(--control-height);
   align-items: center;
   gap: 2px;
   padding: 2px 12px 1px;
@@ -239,7 +239,10 @@
   position: relative;
 }
 .docMenus summary {
-  padding: 6px 8px;
+  display: inline-flex;
+  min-height: var(--control-height);
+  align-items: center;
+  padding: 0 8px;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: var(--text-xs);
@@ -267,7 +270,7 @@
 }
 .docMenuPanel button {
   display: flex;
-  min-height: 34px;
+  min-height: var(--control-height);
   align-items: center;
   gap: 9px;
   padding: 0 9px;
@@ -280,7 +283,7 @@
 .commandDivider { width: 1px; height: 24px; margin: 0 4px; background: var(--border-subtle); flex: 0 0 auto; }
 .blockTypeSelect {
   width: 132px;
-  height: 30px;
+  height: var(--control-height);
   padding: 0 8px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
@@ -290,10 +293,10 @@
 }
 .blockTypeSelect:hover,
 .blockTypeSelect:focus { border-color: var(--accent); outline: none; }
-.docColorPicker { display: inline-flex; height: 30px; flex: 0 0 auto; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--bg-surface); }
+.docColorPicker { display: inline-flex; height: var(--control-height); flex: 0 0 auto; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--bg-surface); }
 .docColorPicker:hover,
 .docColorPicker:focus-within { border-color: var(--accent); }
-.docColorMain { position: relative; display: inline-flex; width: 43px; height: 28px; align-items: center; justify-content: flex-start; padding: 0 17px 0 8px; border-radius: calc(var(--radius-md) - 1px); cursor: pointer; }
+.docColorMain { position: relative; display: inline-flex; width: 43px; height: 100%; align-items: center; justify-content: flex-start; padding: 0 17px 0 8px; border-radius: calc(var(--radius-md) - 1px); cursor: pointer; }
 .docColorMain:hover,
 .docColorMain[aria-expanded="true"] { color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--bg-surface)); }
 .textColorGlyph,
@@ -348,7 +351,7 @@
 .lineSpacingSelect { width: 58px; }
 .fontSelect,
 .fontSizeSelect,
-.lineSpacingSelect { height: 30px; padding: 0 6px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-primary); font-size: var(--text-xs); }
+.lineSpacingSelect { height: var(--control-height); padding: 0 6px; border: 1px solid var(--border-default); border-radius: var(--radius-md); background: var(--bg-surface); color: var(--text-primary); font-size: var(--text-xs); }
 .fontSelect:hover,
 .fontSizeSelect:hover,
 .lineSpacingSelect:hover,
@@ -366,20 +369,23 @@
 .commandIcon,
 .commandIconActive {
   display: inline-flex;
-  width: 30px;
-  height: 30px;
+  width: var(--control-height);
+  height: var(--control-height);
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
 }
+.commandIcon > svg,
+.commandIconActive > svg { width: var(--icon-size-control); height: var(--icon-size-control); }
 .commandIcon:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--bg-surface)); }
 .commandIconActive { color: var(--on-accent, #fff); background: var(--accent); }
 .zoomControl { display: flex; align-items: center; border: 1px solid var(--border-default); border-radius: var(--radius-md); overflow: hidden; flex: 0 0 auto; }
-.zoomControl button { min-width: 30px; height: 28px; padding: 0 7px; color: var(--text-secondary); font-size: var(--text-xs); }
+.zoomControl button { min-width: var(--control-height); height: var(--control-height); padding: 0 7px; color: var(--text-secondary); font-size: var(--text-xs); }
 .zoomControl button:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--bg-surface)); }
-.printButton { display: inline-flex; min-height: 30px; align-items: center; gap: 6px; padding: 0 10px; border-radius: var(--radius-md); color: var(--text-secondary); font-size: var(--text-xs); }
+.printButton { display: inline-flex; min-height: var(--control-height); align-items: center; gap: 6px; padding: 0 10px; border-radius: var(--radius-md); color: var(--text-secondary); font-size: var(--text-xs); }
+.printButton > svg { width: var(--icon-size-control); height: var(--icon-size-control); }
 .printButton:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--bg-surface)); }
 .hiddenFileInput { display: none; }
 .findPanel { position: absolute; top: 112px; right: 20px; z-index: 30; display: grid; gap: 10px; width: 300px; padding: 14px; border: 1px solid var(--border-default); border-radius: var(--radius-lg); background: var(--bg-surface); box-shadow: var(--shadow-lg); }
