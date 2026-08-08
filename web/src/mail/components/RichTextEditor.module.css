@@ -4,7 +4,7 @@
   flex-direction: column;
   min-height: 0;
   padding: var(--space-3) var(--space-4) 0;
-  border-top: 1px solid var(--border-subtle);
+  border-top: var(--border-width) solid var(--border-subtle);
 }
 
 /* Grey icons, thin dividers, subtle rounded hover; wraps to a second row so
@@ -13,16 +13,16 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 1px;
+  gap: var(--border-width);
   row-gap: var(--space-1);
-  padding: 2px var(--space-1) var(--space-2);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--border-width-strong) var(--space-1) var(--space-2);
+  border-bottom: var(--border-width) solid var(--border-subtle);
 }
 
 /* text-style dropdown (Gmail's font/style select) */
 .select {
   flex-shrink: 0;
-  height: 30px;
+  height: var(--control-height);
   padding: 0 var(--space-2);
   border: none;
   border-radius: var(--radius-md);
@@ -38,7 +38,7 @@
 
 .selectSize {
   flex-shrink: 0;
-  height: 30px;
+  height: var(--control-height);
   padding: 0 var(--space-1);
   border: none;
   border-radius: var(--radius-md);
@@ -58,8 +58,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: var(--control-height);
+  height: var(--control-height);
   flex-shrink: 0;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
@@ -91,8 +91,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: var(--control-height);
+  height: var(--control-height);
   flex-shrink: 0;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
@@ -107,8 +107,8 @@
 }
 
 .divider {
-  width: 1px;
-  height: 20px;
+  width: var(--border-width);
+  height: var(--icon-size-control);
   flex-shrink: 0;
   margin: 0 var(--space-2);
   background: var(--border-subtle);
@@ -116,7 +116,7 @@
 
 .editor {
   flex: 1;
-  min-height: 180px;
+  min-height: var(--content-height-sm);
   padding: var(--space-3) 0;
   overflow-y: auto;
   color: var(--text-primary);
@@ -144,24 +144,24 @@
 }
 
 .editor li {
-  margin: 2px 0;
+  margin: var(--border-width-strong) 0;
 }
 
 .editor blockquote {
   margin: var(--space-3) 0;
   padding-left: var(--space-4);
-  border-left: 3px solid var(--border-strong);
+  border-left: var(--border-width-strong) solid var(--border-strong);
   color: var(--text-secondary);
 }
 
 .editor h1 {
-  font-size: 1.5rem;
+  font-size: var(--text-2xl);
   font-weight: var(--weight-semibold);
   margin: var(--space-3) 0 var(--space-1);
 }
 
 .editor h2 {
-  font-size: 1.2rem;
+  font-size: var(--text-xl);
   font-weight: var(--weight-semibold);
   margin: var(--space-3) 0 var(--space-1);
 }
@@ -175,6 +175,6 @@
 
 .editor hr {
   border: none;
-  border-top: 1px solid var(--border-subtle);
+  border-top: var(--border-width) solid var(--border-subtle);
   margin: var(--space-3) 0;
 }

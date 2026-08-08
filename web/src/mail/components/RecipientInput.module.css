@@ -3,13 +3,13 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-1);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: var(--border-width) solid var(--border-subtle);
 }
 
 .label {
   flex-shrink: 0;
-  padding-top: 7px;
-  width: 34px;
+  padding-top: var(--space-2);
+  width: var(--control-height);
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
@@ -33,11 +33,11 @@
   top: calc(100% + var(--space-1));
   left: 0;
   right: 0;
-  z-index: 30;
-  max-height: 260px;
+  z-index: var(--z-overlay);
+  max-height: var(--scroll-region-md);
   overflow-y: auto;
   padding: var(--space-1);
-  border: 1px solid var(--border-subtle);
+  border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
   box-shadow: var(--shadow-lg);
@@ -49,6 +49,7 @@
   align-items: center;
   gap: var(--space-2);
   width: 100%;
+  min-height: var(--control-height);
   padding: var(--space-2);
   border-radius: var(--radius-md);
   text-align: left;
@@ -86,8 +87,8 @@
   align-items: center;
   gap: var(--space-2);
   max-width: 100%;
-  height: 30px;
-  padding: 0 var(--space-1) 0 3px;
+  min-height: var(--control-height);
+  padding: 0 var(--space-1) 0 var(--space-1);
   border-radius: var(--radius-full);
   background: var(--bg-raised);
 }
@@ -104,8 +105,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: var(--control-height);
+  height: var(--control-height);
   border-radius: var(--radius-full);
   color: var(--text-tertiary);
   flex-shrink: 0;
@@ -121,8 +122,8 @@
 
 .input {
   flex: 1;
-  min-width: 120px;
-  height: 30px;
+  min-width: calc(var(--control-width-medium) + var(--space-6));
+  height: var(--control-height);
   border: none;
   background: none;
   color: var(--text-primary);
@@ -138,5 +139,5 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  padding-top: 3px;
+  padding-top: var(--space-1);
 }
