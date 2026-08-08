@@ -146,8 +146,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: var(--control-height);
+  height: var(--control-height);
   margin-right: var(--space-2);
   border-radius: var(--radius-md);
   color: var(--text-tertiary);
@@ -165,7 +165,7 @@
 .rename {
   flex: 1;
   min-width: 0;
-  height: 24px;
+  height: var(--control-height);
   padding: 0 var(--space-2);
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
@@ -206,8 +206,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: var(--control-height);
+  height: var(--control-height);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   background: var(--bg-raised);
@@ -223,6 +223,11 @@
 .rowWrap:hover .kebab,
 .rowWrap:focus-within .kebab {
   opacity: 1;
+}
+
+@media (hover: none) {
+  .kebab { opacity: 1; }
+  .rowWrap .count { visibility: hidden; }
 }
 
 .rowWrap:hover .count,

@@ -41,8 +41,8 @@
 
 .searchInput {
   width: 100%;
-  height: 38px;
-  padding: 0 var(--space-3) 0 calc(var(--space-3) * 2 + 16px);
+  height: var(--control-height);
+  padding: 0 var(--space-3) 0 calc(var(--space-3) * 2 + var(--icon-size-inline));
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--bg-raised);
@@ -94,8 +94,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 24px;
+  width: var(--control-height);
+  height: var(--control-height);
   flex-shrink: 0;
   border-radius: var(--radius-sm);
 }
@@ -125,8 +125,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 24px;
+  width: var(--control-height);
+  height: var(--control-height);
   flex-shrink: 0;
   border-radius: var(--radius-sm);
   color: var(--text-tertiary);
@@ -137,15 +137,13 @@
 }
 
 .star {
-  width: 16px;
-  height: 16px;
-  opacity: 0;
+  width: var(--icon-size-inline);
+  height: var(--icon-size-inline);
+  opacity: 0.45;
   transition: opacity var(--transition-fast);
 }
 
-.row:hover .star {
-  opacity: 0.5;
-}
+.row:hover .star { opacity: 0.75; }
 
 .starOn {
   opacity: 1 !important;
@@ -160,7 +158,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 0 82px 0 var(--space-1);
+  padding: 0 calc(var(--control-height) * 3 + var(--space-2)) 0 var(--space-1);
   text-align: left;
 }
 
@@ -257,22 +255,24 @@
 
 .actions {
   position: absolute;
-  top: -5px;
+  top: 0;
   right: 0;
   display: none;
   align-items: center;
-  gap: 2px;
-  padding: 2px;
+  gap: var(--space-1);
+  padding: var(--space-1);
   border-radius: var(--radius-md);
   background: var(--bg-surface);
   box-shadow: var(--shadow-sm);
 }
 
-.row:hover .time {
+.row:hover .time,
+.row:focus-within .time {
   visibility: hidden;
 }
 
-.row:hover .actions {
+.row:hover .actions,
+.row:focus-within .actions {
   display: flex;
 }
 
@@ -280,8 +280,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: var(--control-height);
+  height: var(--control-height);
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
 }
@@ -307,8 +307,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: var(--control-height);
+  height: var(--control-height);
   border-radius: var(--radius-sm);
 }
 
@@ -395,4 +395,9 @@
 .retry {
   color: var(--text-link);
   font-weight: var(--weight-medium);
+}
+
+@media (hover: none) {
+  .time { visibility: hidden; }
+  .actions { display: flex; }
 }
