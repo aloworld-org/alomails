@@ -3,7 +3,7 @@
    are compact rows; the expanded one flows inline. */
 .message {
   position: relative;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: var(--border-width) solid var(--border-subtle);
 }
 
 .message:last-child {
@@ -27,7 +27,7 @@
 
 .message:not(.expanded) .head:hover {
   background: var(--bg-sunken);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .expanded .head {
@@ -66,8 +66,8 @@
 }
 
 .clip {
-  width: 13px;
-  height: 13px;
+  width: var(--icon-size-inline);
+  height: var(--icon-size-inline);
   color: var(--text-tertiary);
   flex-shrink: 0;
 }
@@ -114,9 +114,9 @@
 .verified {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--space-1);
   flex-shrink: 0;
-  padding: 1px var(--space-2);
+  padding: var(--border-width) var(--space-2);
   border-radius: var(--radius-full);
   background: var(--verdigris-50);
   color: var(--verdigris-600);
@@ -126,8 +126,8 @@
 }
 
 .verifiedIcon {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-size-inline);
+  height: var(--icon-size-inline);
 }
 
 /* The expanded To / Cc / Bcc block: one label + names per line. */
@@ -142,14 +142,14 @@
 .recipients {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--space-1);
 }
 
 /* Gmail "to me ▾" compact recipient line + caret */
 .recipSummary {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--space-1);
   font-size: var(--text-sm);
   color: var(--text-secondary);
   cursor: pointer;
@@ -171,10 +171,10 @@
 .recipDetail {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--space-1);
   margin-top: var(--space-1);
   padding-left: var(--space-2);
-  border-left: 2px solid var(--border-subtle);
+  border-left: var(--border-width-strong) solid var(--border-subtle);
 }
 
 .recipientRow {
@@ -200,7 +200,7 @@
 
 /* Body aligns under the sender name (past the avatar), Gmail-style. */
 .body {
-  padding: var(--space-2) var(--space-3) var(--space-5) calc(40px + var(--space-3) * 2);
+  padding: var(--space-2) var(--space-3) var(--space-5) calc(var(--control-height) + var(--space-3) * 2);
 }
 
 .text {
@@ -217,7 +217,7 @@
   width: 100%;
   min-height: 40vh;
   border: none;
-  background: #fff;
+  background: var(--warm-0);
   border-radius: var(--radius-md);
 }
 
@@ -235,8 +235,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 18px;
+  width: var(--control-height);
+  height: var(--control-height);
   border-radius: var(--radius-full);
   background: var(--bg-raised);
   color: var(--text-secondary);
@@ -254,7 +254,7 @@
 .quotedText {
   margin-top: var(--space-3);
   padding-left: var(--space-3);
-  border-left: 2px solid var(--border-subtle);
+  border-left: var(--border-width-strong) solid var(--border-subtle);
   color: var(--text-secondary);
 }
 
@@ -270,10 +270,10 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-3);
-  width: 264px;
+  width: var(--overlay-width-md);
   max-width: 100%;
   padding: var(--space-3);
-  border: 1px solid var(--border-default);
+  border: var(--border-width) solid var(--border-default);
   border-radius: var(--radius-md);
   background: var(--bg-surface);
   color: var(--text-primary);
@@ -300,8 +300,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: var(--control-height);
+  height: var(--control-height);
   flex-shrink: 0;
   border-radius: var(--radius-sm);
   background: var(--accent-soft);
@@ -314,8 +314,8 @@
 }
 
 .attachIcon {
-  width: 20px;
-  height: 20px;
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
 }
 
 .attachMeta {
@@ -323,7 +323,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--space-1);
 }
 
 .attachName {
@@ -340,8 +340,8 @@
 }
 
 .attachDownload {
-  width: 18px;
-  height: 18px;
+  width: var(--icon-size-inline);
+  height: var(--icon-size-inline);
   flex-shrink: 0;
   color: var(--text-tertiary);
 }

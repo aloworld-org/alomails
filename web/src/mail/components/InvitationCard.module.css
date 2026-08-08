@@ -1,5 +1,5 @@
 .card {
-  border: 1px solid var(--border-default);
+  border: var(--border-width) solid var(--border-default);
   border-radius: var(--radius-lg);
   background: var(--bg-raised);
   padding: var(--space-3);
@@ -18,13 +18,15 @@
 .icon {
   color: var(--terracotta);
   flex-shrink: 0;
-  margin-top: 2px;
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
+  margin-top: var(--space-1);
 }
 
 .info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-1);
   min-width: 0;
 }
 
@@ -53,11 +55,12 @@
 .actions button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  padding: 0 var(--space-4);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-default);
-  background: var(--bg-base);
+  border: var(--border-width) solid var(--border-default);
+  background: var(--bg-surface);
   color: var(--text-primary);
   font: inherit;
   font-weight: var(--weight-medium);
@@ -72,7 +75,7 @@
 .accept {
   border-color: var(--terracotta) !important;
   background: var(--terracotta) !important;
-  color: #fff !important;
+  color: var(--text-on-accent) !important;
 }
 
 .responded {
@@ -82,5 +85,5 @@
 
 .error {
   font-size: var(--text-sm);
-  color: var(--danger, #c0392b);
+  color: var(--danger);
 }

@@ -4,17 +4,17 @@
   gap: var(--space-3);
   margin-bottom: var(--space-4);
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--danger);
+  border: var(--border-width) solid var(--danger);
   border-radius: var(--radius-lg);
   background: var(--danger-tint);
   color: var(--danger);
 }
 
 .icon {
-  width: 20px;
-  height: 20px;
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
   flex-shrink: 0;
-  margin-top: 1px;
+  margin-top: var(--border-width);
 }
 
 .body {
@@ -59,8 +59,9 @@
 .action {
   flex-shrink: 0;
   align-self: center;
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--danger);
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border: var(--border-width) solid var(--danger);
   border-radius: var(--radius-md);
   background: var(--bg-surface);
   color: var(--danger);
