@@ -149,10 +149,10 @@ pub struct ChatMember {
 }
 
 /// The columns every channel read selects, in [`row_to_channel`]'s order.
-const CHANNEL_COLUMNS: &str =
+pub(crate) const CHANNEL_COLUMNS: &str =
     "id, kind, name, topic, visibility, created_by, created_at, archived_at";
 
-type ChannelRow = (
+pub(crate) type ChannelRow = (
     String,
     String,
     Option<String>,
@@ -163,7 +163,7 @@ type ChannelRow = (
     Option<OffsetDateTime>,
 );
 
-fn row_to_channel(row: ChannelRow) -> Result<ChatChannel> {
+pub(crate) fn row_to_channel(row: ChannelRow) -> Result<ChatChannel> {
     Ok(ChatChannel {
         id: ChatChannelId::new(row.0),
         kind: ChannelKind::parse(&row.1)?,

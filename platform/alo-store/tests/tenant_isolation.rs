@@ -2581,3 +2581,155 @@ async fn chat_rooms_are_membership_scoped_and_never_leave_their_tenant() {
         .await
         .unwrap();
 }
+
+/// alo Chat phase 3: what is said in a room stays in it. Proves the sequence
+/// is the room's own clock, that reading a public room never makes you a
+/// participant in it, and that read state can move neither backwards nor past
+/// the end.
+#[tokio::test]
+async fn chat_messages_are_room_scoped_and_ordered_by_their_own_sequence() {
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("chatmsg-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@chatmsg.test").await.unwrap();
+    let uc = ts1.create_user("c@chatmsg.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua.clone());
+    let c = store.for_account(t1, uc.clone());
+    let t2 = store.create_tenant("chatmsg-t2").await.unwrap();
+    let ub = store
+        .for_tenant(t2.clone())
+        .create_user("b@chatmsg.test")
+        .await
+        .unwrap();
+    let b = store.for_account(t2, ub);
+
+    let room = a
+        .create_channel("standup", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
+    let other = a
+        .create_channel("design", None, ChannelVisibility::Private)
+        .await
+        .unwrap();
+
+    // The sequence is per room and starts at 1.
+    let first = a.post_message(&room, "morning", None).await.unwrap();
+    let second = a
+        .post_message(&room, "two things today", None)
+        .await
+        .unwrap();
+    assert_eq!((first.seq, second.seq), (1, 2));
+    assert_eq!(
+        a.post_message(&other, "elsewhere", None).await.unwrap().seq,
+        1
+    );
+
+    // Another tenant cannot see, post, or address any of it.
+    assert_not_found(b.messages(&room, None, 50).await);
+    assert_not_found(b.post_message(&room, "hello?", None).await);
+    assert_not_found(b.chat_message(&first.id).await);
+    assert_not_found(b.mark_read(&room, 1).await);
+
+    // A co-tenant may READ a live public room without being in it — but
+    // reading is not joining: posting still needs membership.
+    assert_eq!(c.messages(&room, None, 50).await.unwrap().len(), 2);
+    assert_not_found(c.post_message(&room, "may I?", None).await);
+    assert_not_found(c.messages(&other, None, 50).await);
+    // ...and a message of a room they cannot see is not theirs to address.
+    let hidden = a.post_message(&other, "private note", None).await.unwrap();
+    assert_not_found(c.chat_message(&hidden.id).await);
+    assert_eq!(c.chat_message(&first.id).await.unwrap().seq, 1);
+
+    // History is newest-first and walks back by cursor.
+    for n in 3..=6 {
+        a.post_message(&room, &format!("line {n}"), None)
+            .await
+            .unwrap();
+    }
+    let page = a.messages(&room, None, 3).await.unwrap();
+    assert_eq!(
+        page.iter().map(|m| m.seq).collect::<Vec<_>>(),
+        vec![6, 5, 4]
+    );
+    let older = a.messages(&room, Some(4), 3).await.unwrap();
+    assert_eq!(
+        older.iter().map(|m| m.seq).collect::<Vec<_>>(),
+        vec![3, 2, 1]
+    );
+
+    // A reply hangs under a root; a thread never grows a thread.
+    let reply = a
+        .post_message(&room, "on that", Some(first.seq))
+        .await
+        .unwrap();
+    assert_eq!(reply.thread_root_seq, Some(1));
+    assert_eq!(a.thread_replies(&room, first.seq).await.unwrap().len(), 1);
+    assert!(
+        a.post_message(&room, "nested", Some(reply.seq))
+            .await
+            .is_err()
+    );
+    assert!(a.post_message(&room, "ghost", Some(9_999)).await.is_err());
+
+    // Edits and withdrawals are the author's alone, and the sequence survives
+    // a withdrawal as a tombstone with no words left in it.
+    c.join_channel(&room).await.unwrap();
+    assert_forbidden(c.edit_message(&second.id, "not mine").await);
+    assert_forbidden(c.delete_message(&second.id).await);
+    let edited = a
+        .edit_message(&second.id, "three things today")
+        .await
+        .unwrap();
+    assert_eq!(edited.body, "three things today");
+    assert!(edited.edited_at.is_some());
+    assert_eq!(edited.seq, second.seq);
+    a.delete_message(&second.id).await.unwrap();
+    let gone = a.chat_message(&second.id).await.unwrap();
+    assert!(gone.deleted_at.is_some());
+    assert!(gone.body.is_empty(), "a withdrawn message keeps no words");
+    assert!(a.edit_message(&second.id, "back again").await.is_err());
+    a.delete_message(&second.id).await.unwrap(); // twice is not an error
+
+    // Read state: mine never counts, it never moves backwards, and it cannot
+    // run past what the room has actually said.
+    let mine = a
+        .channel_summaries()
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|s| s.channel.id.as_str() == room.as_str())
+        .unwrap();
+    assert_eq!(mine.unread, 0, "my own messages are never unread to me");
+    assert_eq!(mine.last_seq, Some(7));
+
+    let theirs = |summaries: Vec<alo_store::ChatChannelSummary>| {
+        summaries
+            .into_iter()
+            .find(|s| s.channel.id.as_str() == room.as_str())
+            .unwrap()
+    };
+    let before = theirs(c.channel_summaries().await.unwrap());
+    assert_eq!(before.last_read_seq, 0);
+    assert_eq!(before.unread, 6, "seven said, one withdrawn");
+
+    c.mark_read(&room, 4).await.unwrap();
+    assert_eq!(theirs(c.channel_summaries().await.unwrap()).unread, 3);
+    c.mark_read(&room, 2).await.unwrap();
+    assert_eq!(
+        theirs(c.channel_summaries().await.unwrap()).last_read_seq,
+        4,
+        "a read cursor never moves backwards"
+    );
+    c.mark_read(&room, 9_999).await.unwrap();
+    assert_eq!(
+        theirs(c.channel_summaries().await.unwrap()).last_read_seq,
+        7,
+        "a read cursor never runs past the end"
+    );
+    assert_eq!(theirs(c.channel_summaries().await.unwrap()).unread, 0);
+
+    // An archived room keeps its history and takes no new words.
+    a.archive_channel(&room).await.unwrap();
+    assert!(a.post_message(&room, "after the end", None).await.is_err());
+    assert_eq!(a.messages(&room, None, 50).await.unwrap().len(), 7);
+}

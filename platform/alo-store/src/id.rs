@@ -313,6 +313,11 @@ opaque_id!(
     FinAccountId
 );
 opaque_id!(
+    /// One thing said in a room (alo Chat, ADR 0038). Edits and withdrawals
+    /// address a message by this id; ORDER is the room's own `seq`, never this.
+    ChatMessageId
+);
+opaque_id!(
     /// One chat room — a named channel or a DM (alo Chat, ADR 0038). Rooms are
     /// never addressable across tenants; membership is the permission that
     /// makes one visible at all.
