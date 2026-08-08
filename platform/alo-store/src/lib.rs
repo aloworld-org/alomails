@@ -188,12 +188,12 @@ pub use fin_rules::{
 pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId,
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
-    BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId, ChatChannelId, CommentId,
-    ContactId, CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId,
-    EventId, FinAccountId, FinEntryId, FinPostingId, GroupId, InsightDashboardId, InsightTileId,
-    LabelId, MailboxId, MessageId, ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId,
-    SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId,
-    TimeWeekId, UserId,
+    BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId, ChatChannelId,
+    ChatMessageId, CommentId, ContactId, CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId,
+    CrmStageId, DriveNodeId, EventId, FinAccountId, FinEntryId, FinPostingId, GroupId,
+    InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId,
+    ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePublishId,
+    SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

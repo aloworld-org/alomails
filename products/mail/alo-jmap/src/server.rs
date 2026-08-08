@@ -18,13 +18,13 @@ use crate::{
     admin, agent, ai, api, audit, audit_record, autoconfig, base, billing_bills, billing_customers,
     billing_fx, billing_invoices, billing_payments, billing_products, billing_quotes,
     billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
-    billing_settings, blob, calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff,
-    crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
-    docs, drive, filters, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, projects_clients, projects_invoices, projects_plan, projects_reports,
-    projects_templates, projects_time, projects_weeks, push,
-    reset_route, schedule, security, session, settings, share, signup_route, sites, snooze, spaces,
-    tasks, unsubscribe, wopi, workspace_search,
+    billing_settings, blob, calendar, carddav, chat, contacts, crm_activities, crm_deals,
+    crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
+    delegates, docs, drive, filters, flagdue, imap_import_route, insights, insights_ask,
+    insights_eval, insights_gallery, projects_clients, projects_invoices, projects_plan,
+    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
+    schedule, security, session, settings, share, signup_route, sites, snooze, spaces, tasks,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -195,6 +195,35 @@ pub fn app(state: AppState) -> Router {
         // serving is the separate alo-sites binary. `/sites` is a NEW
         // top-level prefix: the production Caddyfile needs it added at the
         // next deploy (docs/design/sites.md). Static paths before /{id}.
+        // alo Chat (ADR 0038): rooms, membership, messages, read state. Also a
+        // new top-level prefix — the production Caddyfile needs /chat/* added
+        // at the next deploy. Static paths before /{id}, as above.
+        .route(
+            "/chat/channels",
+            get(chat::list_channels).post(chat::create_channel),
+        )
+        .route("/chat/channels/joinable", get(chat::list_joinable))
+        .route(
+            "/chat/channels/{id}",
+            get(chat::get_channel).patch(chat::patch_channel),
+        )
+        .route("/chat/channels/{id}/archive", post(chat::archive_channel))
+        .route("/chat/channels/{id}/join", post(chat::join_channel))
+        .route("/chat/channels/{id}/members", post(chat::add_member))
+        .route(
+            "/chat/channels/{id}/members/{user}",
+            delete(chat::remove_member),
+        )
+        .route(
+            "/chat/channels/{id}/messages",
+            get(chat::list_messages).post(chat::post_message),
+        )
+        .route("/chat/channels/{id}/threads/{seq}", get(chat::list_thread))
+        .route("/chat/channels/{id}/read", post(chat::mark_read))
+        .route(
+            "/chat/messages/{id}",
+            patch(chat::edit_message).delete(chat::delete_message),
+        )
         .route("/sites", get(sites::list_sites).post(sites::create_site))
         .route("/sites/subdomain-check", get(sites::check_subdomain))
         .route("/sites/theme-presets", get(sites::list_theme_presets))

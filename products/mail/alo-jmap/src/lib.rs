@@ -54,6 +54,7 @@ pub mod billing_xrechnung_rules;
 pub mod blob;
 pub mod calendar;
 pub mod carddav;
+pub mod chat;
 pub mod contacts;
 pub mod crm;
 pub mod crm_activities;
