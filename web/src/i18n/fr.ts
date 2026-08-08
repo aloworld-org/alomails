@@ -2213,4 +2213,7 @@ export const fr: Partial<Catalog> = {
   drivePurgeManyConfirm: (count: number) => `Supprimer définitivement ${count} éléments ? Cette action est irréversible.`,
   driveVersionsLoadFailed: (reason: string) => `L’historique des versions ne s’est pas chargé. Réessayez. Serveur : ${reason}`,
   driveMembersLoadFailed: (reason: string) => `Les membres ne se sont pas chargés. Réessayez. Serveur : ${reason}`,
+  baseCalendarPreviousMonth: "Mois précédent",
+  baseCalendarNextMonth: "Mois suivant",
+  baseCalendarAddOnDate: (date: string) => `Ajouter un enregistrement le ${date}`,
 };

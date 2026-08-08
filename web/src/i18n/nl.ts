@@ -2185,4 +2185,7 @@ export const nl: Partial<Catalog> = {
   drivePurgeManyConfirm: (count: number) => `${count} items permanent verwijderen? Dit kan niet ongedaan worden gemaakt.`,
   driveVersionsLoadFailed: (reason: string) => `De versiegeschiedenis is niet geladen. Probeer het opnieuw. Server: ${reason}`,
   driveMembersLoadFailed: (reason: string) => `De leden zijn niet geladen. Probeer het opnieuw. Server: ${reason}`,
+  baseCalendarPreviousMonth: "Vorige maand",
+  baseCalendarNextMonth: "Volgende maand",
+  baseCalendarAddOnDate: (date: string) => `Een record toevoegen op ${date}`,
 };

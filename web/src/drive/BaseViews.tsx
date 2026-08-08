@@ -117,7 +117,7 @@ export function GalleryView({ table, tables, onAddRow }: ViewProps) {
 
 // ---- calendar ---------------------------------------------------------------
 
-export function CalendarView({ table, config }: ViewProps) {
+export function CalendarView({ table, config, onAddRow }: ViewProps) {
   const dateId = typeof config.dateFieldId === "string" ? config.dateFieldId : "";
   const field = table.fields.find((f) => f.id === dateId);
   const [monthStart, setMonthStart] = useState(() => {
@@ -153,11 +153,11 @@ export function CalendarView({ table, config }: ViewProps) {
   return (
     <div className={styles.calWrap}>
       <div className={styles.calNav}>
-        <button type="button" onClick={() => setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1))} aria-label="prev">
+        <button type="button" onClick={() => setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() - 1, 1))} aria-label={strings.baseCalendarPreviousMonth}>
           <ChevronLeft size={16} />
         </button>
         <span className={styles.calMonth}>{monthLabel}</span>
-        <button type="button" onClick={() => setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1))} aria-label="next">
+        <button type="button" onClick={() => setMonthStart(new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 1))} aria-label={strings.baseCalendarNextMonth}>
           <ChevronRight size={16} />
         </button>
       </div>
@@ -165,15 +165,23 @@ export function CalendarView({ table, config }: ViewProps) {
         {grid.map((d, i) => {
           const inMonth = d.getMonth() === monthStart.getMonth();
           const recs = byDay.get(iso(d)) ?? [];
+          const fullDate = new Intl.DateTimeFormat(undefined, { dateStyle: "full" }).format(d);
           return (
-            <div key={i} className={inMonth ? styles.calDay : `${styles.calDay} ${styles.calDayOut}`}>
+            <button
+              key={i}
+              type="button"
+              className={inMonth ? styles.calDay : `${styles.calDay} ${styles.calDayOut}`}
+              onClick={() => onAddRow({ [field.id]: iso(d) })}
+              aria-label={strings.baseCalendarAddOnDate(fullDate)}
+              title={strings.baseCalendarAddOnDate(fullDate)}
+            >
               <span className={styles.calDayNum}>{d.getDate()}</span>
               {recs.map((r) => (
                 <span key={r.id} className={styles.calChip}>
                   {r.label}
                 </span>
               ))}
-            </div>
+            </button>
           );
         })}
       </div>

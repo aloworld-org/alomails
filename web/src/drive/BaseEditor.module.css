@@ -552,9 +552,11 @@
   margin-bottom: var(--space-3);
 }
 .calNav button {
-  display: inline-flex;
-  padding: 5px;
-  border-radius: 6px;
+  width: var(--control-height);
+  height: var(--control-height);
+  display: inline-grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
 }
 .calNav button:hover {
@@ -571,14 +573,19 @@
   border-left: 1px solid var(--border-subtle);
 }
 .calDay {
-  min-height: 92px;
+  min-height: calc(var(--control-height) * 2);
   border-right: 1px solid var(--border-subtle);
   border-bottom: 1px solid var(--border-subtle);
-  padding: 4px 6px;
+  padding: var(--space-1) var(--space-2);
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-1);
+  text-align: left;
+  color: var(--text-primary);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
 }
+.calDay:hover { background: var(--accent-tint); }
+.calDay:focus-visible { z-index: 1; box-shadow: inset 0 0 0 2px var(--accent); }
 .calDayOut {
   background: var(--bg-raised);
 }
@@ -588,8 +595,8 @@
 }
 .calChip {
   font-size: var(--text-xs);
-  padding: 2px 6px;
-  border-radius: 5px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   color: var(--accent);
   white-space: nowrap;
