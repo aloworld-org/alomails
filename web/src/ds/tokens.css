@@ -156,8 +156,16 @@
 
   /* ---- surface geometry ---- */
   --border-width: 1px;
+  --border-width-strong: 2px;
   --overlay-width-sm: 12rem;
   --overlay-width-md: 18rem;
+
+  /* ---- color control geometry ---- */
+  --color-spectrum-height: 13rem;
+  --color-swatch-size: 1.5rem;
+  --color-swatch-remove-size: 1rem;
+  --color-slider-height: 0.75rem;
+  --color-thumb-size: 1rem;
 
   /* ---- radius ---- */
   --radius-sm: 4px;
