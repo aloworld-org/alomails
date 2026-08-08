@@ -64,7 +64,7 @@ import "@univerjs/presets/lib/styles/preset-sheets-thread-comment.css";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { Menu, Spinner } from "../ds";
-import { saveBlob } from "./parts";
+import { driveErrorReason, saveBlob } from "./parts";
 import { univerSnapshotToXlsx } from "./exportOffice";
 import { SheetRibbon, type BorderKind, type FormulaCategory, type SheetActions, type SheetSelectionFormatting } from "./SheetRibbon";
 import styles from "./SheetEditor.module.css";
@@ -181,6 +181,9 @@ export function SheetEditor({
   const dirtyRef = useRef(false);
   const savingRef = useRef(false);
   const [initial, setInitial] = useState<Snapshot | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [actionError, setActionError] = useState("");
   const [ready, setReady] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [activeBorder, setActiveBorder] = useState<BorderKind | null>(null);
@@ -192,14 +195,19 @@ export function SheetEditor({
   // Load the stored snapshot (or an empty workbook) before mounting Univer.
   useEffect(() => {
     let live = true;
+    setInitial(null);
+    setReady(false);
+    setLoadError(null);
     void client
       .driveSheetContent(nodeId)
       .then((data) => live && setInitial((data as Snapshot | null) ?? {}))
-      .catch(() => live && setInitial({}));
+      .catch((error: unknown) => {
+        if (live) setLoadError(driveErrorReason(error) ?? strings.driveUnknownError);
+      });
     return () => {
       live = false;
     };
-  }, [client, nodeId]);
+  }, [client, loadAttempt, nodeId]);
 
   // Mount Univer once the container exists and the snapshot has loaded.
   useEffect(() => {
@@ -385,10 +393,11 @@ export function SheetEditor({
           savingRef.current = false;
           setSaveState("saved");
         })
-        .catch(() => {
+        .catch((error: unknown) => {
           savingRef.current = false;
           dirtyRef.current = true;
           setSaveState("idle");
+          setActionError(strings.sheetSaveFailed(driveErrorReason(error) ?? strings.driveUnknownError));
         });
     }, 2500);
     return () => window.clearInterval(timer);
@@ -663,7 +672,10 @@ export function SheetEditor({
     if (trimmed !== name) {
       void client.driveRename(nodeId, trimmed)
         .then(() => onNameChange(trimmed))
-        .catch(() => setSheetName(name));
+        .catch((error: unknown) => {
+          setSheetName(name);
+          setActionError(strings.driveActionFailed(strings.driveRename, driveErrorReason(error) ?? strings.driveUnknownError));
+        });
     }
   }
 
@@ -760,13 +772,32 @@ export function SheetEditor({
       </header>
       <SheetRibbon actions={actions} disabled={!ready} formulaCategories={FORMULA_CATEGORIES} activeBorder={activeBorder} selectionFormatting={selectionFormatting} />
       <div className={styles.body}>
-        {!ready && (
-          <div className={styles.center}>
-            <Spinner size={22} />
+        {loadError !== null ? (
+          <div className={styles.sheetLoadError} role="alert">
+            <h2>{strings.sheetLoadFailedTitle}</h2>
+            <p>{strings.driveLoadFailed(loadError)}</p>
+            <button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>{strings.driveRetry}</button>
+          </div>
+        ) : !ready ? (
+          <SheetSkeleton />
+        ) : null}
+        {actionError !== "" && (
+          <div className={styles.sheetActionError} role="alert">
+            <span>{actionError}</span>
+            <button type="button" onClick={() => setActionError("")} aria-label={strings.close}><X size={16} /></button>
           </div>
         )}
         <div ref={containerRef} className={styles.univer} />
       </div>
+    </div>
+  );
+}
+
+function SheetSkeleton() {
+  return (
+    <div className={styles.sheetSkeleton} role="status" aria-label={strings.sheetLoading} aria-busy="true">
+      <span className={styles.sheetSkeletonFormula} />
+      <span className={styles.sheetSkeletonGrid} />
     </div>
   );
 }

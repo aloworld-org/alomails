@@ -2198,4 +2198,7 @@ export const nl: Partial<Catalog> = {
   officeLoading: "De Office-editor wordt geopend…",
   officeDiscoveryMissing: "De Office-editor heeft geen editoradres gepubliceerd.",
   officeLoadFailed: (reason: string) => `Probeer het opnieuw. Server: ${reason}`,
+  sheetLoading: "Uw sheet wordt geladen…",
+  sheetLoadFailedTitle: "Deze sheet is niet geladen",
+  sheetSaveFailed: (reason: string) => `Uw laatste wijzigingen zijn nog niet opgeslagen. We blijven het proberen. Server: ${reason}`,
 };

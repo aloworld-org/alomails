@@ -2226,4 +2226,7 @@ export const fr: Partial<Catalog> = {
   officeLoading: "Ouverture de l’éditeur Office…",
   officeDiscoveryMissing: "L’éditeur Office n’a pas publié d’adresse d’éditeur.",
   officeLoadFailed: (reason: string) => `Réessayez. Serveur : ${reason}`,
+  sheetLoading: "Chargement de votre feuille…",
+  sheetLoadFailedTitle: "Cette feuille ne s’est pas chargée",
+  sheetSaveFailed: (reason: string) => `Vos dernières modifications ne sont pas encore enregistrées. Nous continuerons d’essayer. Serveur : ${reason}`,
 };
