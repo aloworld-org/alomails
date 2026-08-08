@@ -118,7 +118,8 @@ export function DriveModule() {
   const [navigationPane, setNavigationPane] = useState(true);
   const [showExtensions, setShowExtensions] = useState(true);
 
-  const [moveNode, setMoveNode] = useState<{ id: string; mode: "move" | "copy" } | null>(null);
+  const [moveNodes, setMoveNodes] = useState<{ nodes: DriveNodeDto[]; mode: "move" | "copy" } | null>(null);
+  const [selectedNodes, setSelectedNodes] = useState<ReadonlyMap<string, DriveNodeDto>>(new Map());
   const [versionsNode, setVersionsNode] = useState<string | null>(null);
   const [openDoc, setOpenDoc] = useState<{ id: string; name: string } | null>(null);
   const [openSheet, setOpenSheet] = useState<{ id: string; name: string } | null>(null);
@@ -134,6 +135,7 @@ export function DriveModule() {
   const currentSpace = useMemo(() => spaces.find((s) => s.id === location) ?? null, [spaces, location]);
   const canWrite = location === null || (currentSpace !== null && currentSpace.myRole !== "viewer");
   const editorRouteActive = /^\/drive\/(doc|sheet|office)\//.test(route.pathname);
+  const selected = useMemo(() => Array.from(selectedNodes.values()), [selectedNodes]);
 
   const showEditor = useCallback((kind: EditorKind, id: string, name: string, replace = false) => {
     const value = { id, name };
@@ -181,6 +183,7 @@ export function DriveModule() {
   const load = useCallback(async () => {
     setExpandedFolders(new Set());
     setFolderChildren(new Map());
+    setSelectedNodes(new Map());
     setLoadError(null);
     try {
       const list = trashView
@@ -290,6 +293,27 @@ export function DriveModule() {
     setNotice({ kind: "error", message: strings.driveActionFailed(action, reason), action: null });
   }
 
+  function toggleSelected(node: DriveNodeDto, checked: boolean) {
+    setSelectedNodes((current) => {
+      const next = new Map(current);
+      if (checked) next.set(node.id, node);
+      else next.delete(node.id);
+      return next;
+    });
+  }
+
+  function selectableNodes(items: DriveNodeDto[]): DriveNodeDto[] {
+    const result: DriveNodeDto[] = [];
+    for (const node of items) {
+      result.push(node);
+      if (expandedFolders.has(node.id)) {
+        const children = folderChildren.get(node.id);
+        if (children) result.push(...selectableNodes(children));
+      }
+    }
+    return result;
+  }
+
   function renderRows(items: DriveNodeDto[], depth = 0): ReactNode[] {
     return sortNodes(items).map((n) => {
       const Icon = nodeIcon(n);
@@ -297,7 +321,15 @@ export function DriveModule() {
       const expanded = folder && expandedFolders.has(n.id);
       const children = folderChildren.get(n.id);
       const row = (
-        <div className={`${styles.row} ${depth > 0 ? styles.nestedRow : ""}`}>
+        <div className={`${styles.row} ${selectedNodes.has(n.id) ? styles.rowSelected : ""} ${depth > 0 ? styles.nestedRow : ""}`}>
+          <label className={styles.rowSelect}>
+            <input
+              type="checkbox"
+              checked={selectedNodes.has(n.id)}
+              onChange={(event) => toggleSelected(n, event.target.checked)}
+              aria-label={strings.driveSelectItem(n.name)}
+            />
+          </label>
           <button
             type="button"
             className={styles.rowMain}
@@ -339,11 +371,11 @@ export function DriveModule() {
             <ul className={styles.folderChildren}>
               {children === null || children === undefined ? (
                 <li className={`${styles.row} ${styles.nestedStatus}`}>
-                  <span style={{ paddingLeft: (depth + 1) * 24 }}><Spinner size={16} /></span>
+                  <span className={styles.nestedStatusContent}><Spinner size={16} /></span>
                 </li>
               ) : children.length === 0 ? (
                 <li className={`${styles.row} ${styles.nestedStatus}`}>
-                  <span style={{ paddingLeft: (depth + 1) * 24 }}>{strings.driveFolderEmpty}</span>
+                  <span className={styles.nestedStatusContent}>{strings.driveFolderEmpty}</span>
                 </li>
               ) : renderRows(children, depth + 1)}
             </ul>
@@ -473,17 +505,18 @@ export function DriveModule() {
     }
   }
 
-  async function trash(n: DriveNodeDto) {
+  async function trashNodes(items: DriveNodeDto[]) {
+    if (items.length === 0) return;
     try {
-      await client.driveTrashNode(n.id);
+      for (const item of items) await client.driveTrashNode(item.id);
       await load();
       setNotice({
         kind: "success",
-        message: strings.driveMovedToTrash(n.name),
+        message: items.length === 1 ? strings.driveMovedToTrash(items[0]?.name ?? "") : strings.driveItemsMovedToTrash(items.length),
         action: {
           label: strings.driveUndo,
           run: () => {
-            void restore(n, true);
+            void restoreNodes(items, true);
           },
         },
       });
@@ -492,22 +525,31 @@ export function DriveModule() {
     }
   }
 
-  async function restore(n: DriveNodeDto, fromUndo = false) {
+  async function restoreNodes(items: DriveNodeDto[], fromUndo = false) {
+    if (items.length === 0) return;
     try {
-      await client.driveRestoreNode(n.id);
+      for (const item of items) await client.driveRestoreNode(item.id);
       await load();
       if (fromUndo) {
-        setNotice({ kind: "success", message: strings.driveRestoredFromTrash(n.name), action: null });
+        setNotice({
+          kind: "success",
+          message: items.length === 1 ? strings.driveRestoredFromTrash(items[0]?.name ?? "") : strings.driveItemsRestored(items.length),
+          action: null,
+        });
       }
     } catch (error) {
       reportFailure(strings.driveRestore, error);
     }
   }
 
-  async function purge(n: DriveNodeDto) {
-    if (!(await confirm({ message: strings.drivePurgeConfirm(n.name), danger: true }))) return;
+  async function purgeNodes(items: DriveNodeDto[]) {
+    if (items.length === 0) return;
+    const message = items.length === 1
+      ? strings.drivePurgeConfirm(items[0]?.name ?? "")
+      : strings.drivePurgeManyConfirm(items.length);
+    if (!(await confirm({ message, danger: true }))) return;
     try {
-      await client.drivePurge(n.id);
+      for (const item of items) await client.drivePurge(item.id);
       await load();
     } catch (error) {
       reportFailure(strings.driveDeleteForever, error);
@@ -515,12 +557,14 @@ export function DriveModule() {
   }
 
   async function pickedDestination(space: string | null) {
-    const target = moveNode;
-    setMoveNode(null);
+    const target = moveNodes;
+    setMoveNodes(null);
     if (target === null) return;
     try {
-      if (target.mode === "move") await client.driveMove(target.id, space, null);
-      else await client.driveCopy(target.id, space, null);
+      for (const node of target.nodes) {
+        if (target.mode === "move") await client.driveMove(node.id, space, null);
+        else await client.driveCopy(node.id, space, null);
+      }
       await load();
     } catch (error) {
       reportFailure(target.mode === "move" ? strings.driveMove : strings.driveCopy, error);
@@ -530,8 +574,8 @@ export function DriveModule() {
   function rowMenu(n: DriveNodeDto): MenuItem[] {
     if (trashView) {
       return [
-        { key: "restore", label: strings.driveRestore, icon: <RotateCcw size={15} />, onClick: () => void restore(n) },
-        { key: "purge", label: strings.driveDeleteForever, icon: <Trash2 size={15} />, danger: true, onClick: () => void purge(n) },
+        { key: "restore", label: strings.driveRestore, icon: <RotateCcw size={15} />, onClick: () => void restoreNodes([n]) },
+        { key: "purge", label: strings.driveDeleteForever, icon: <Trash2 size={15} />, danger: true, onClick: () => void purgeNodes([n]) },
       ];
     }
     const items: MenuItem[] = [];
@@ -541,9 +585,9 @@ export function DriveModule() {
     }
     if (canWrite) {
       items.push({ key: "rename", label: strings.driveRename, icon: <Pencil size={15} />, onClick: () => void rename(n) });
-      items.push({ key: "move", label: strings.driveMove, icon: <MoveRight size={15} />, onClick: () => setMoveNode({ id: n.id, mode: "move" }) });
-      items.push({ key: "copy", label: strings.driveCopy, icon: <Copy size={15} />, onClick: () => setMoveNode({ id: n.id, mode: "copy" }) });
-      items.push({ key: "trash", label: strings.driveTrashAction, icon: <Trash2 size={15} />, danger: true, onClick: () => void trash(n) });
+      items.push({ key: "move", label: strings.driveMove, icon: <MoveRight size={15} />, onClick: () => setMoveNodes({ nodes: [n], mode: "move" }) });
+      items.push({ key: "copy", label: strings.driveCopy, icon: <Copy size={15} />, onClick: () => setMoveNodes({ nodes: [n], mode: "copy" }) });
+      items.push({ key: "trash", label: strings.driveTrashAction, icon: <Trash2 size={15} />, danger: true, onClick: () => void trashNodes([n]) });
     }
     return items;
   }
@@ -629,7 +673,50 @@ export function DriveModule() {
             ))}
           </nav>
           <div className={styles.actions}>
-            {!trashView && (
+            {selected.length > 0 ? (
+              <div className={styles.selectionBar} role="toolbar" aria-label={strings.driveSelectionActions}>
+                <button type="button" className={styles.selectionClear} onClick={() => setSelectedNodes(new Map())} aria-label={strings.driveClearSelection}>
+                  <X size={17} />
+                </button>
+                <strong>{strings.driveSelected(selected.length)}</strong>
+                {trashView ? (
+                  <>
+                    <button type="button" className={styles.selectionAction} onClick={() => void restoreNodes(selected)}>
+                      <RotateCcw size={17} /> {strings.driveRestore}
+                    </button>
+                    <button type="button" className={`${styles.selectionAction} ${styles.selectionDanger}`} onClick={() => void purgeNodes(selected)}>
+                      <Trash2 size={17} /> {strings.driveDeleteForever}
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {selected.length === 1 && selected[0]?.kind !== "folder" && (
+                      <button type="button" className={styles.selectionAction} onClick={() => void download(selected[0] as DriveNodeDto)}>
+                        <Download size={17} /> {strings.driveDownload}
+                      </button>
+                    )}
+                    {canWrite && (
+                      <>
+                        {selected.length === 1 && (
+                          <button type="button" className={styles.selectionAction} onClick={() => void rename(selected[0] as DriveNodeDto)}>
+                            <Pencil size={17} /> {strings.driveRename}
+                          </button>
+                        )}
+                        <button type="button" className={styles.selectionAction} onClick={() => setMoveNodes({ nodes: selected, mode: "move" })}>
+                          <MoveRight size={17} /> {strings.driveMove}
+                        </button>
+                        <button type="button" className={styles.selectionAction} onClick={() => setMoveNodes({ nodes: selected, mode: "copy" })}>
+                          <Copy size={17} /> {strings.driveCopy}
+                        </button>
+                        <button type="button" className={`${styles.selectionAction} ${styles.selectionDanger}`} onClick={() => void trashNodes(selected)}>
+                          <Trash2 size={17} /> {strings.driveTrashAction}
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            ) : !trashView && (
               <>
                 <Menu
                   triggerLabel={strings.driveSort}
@@ -772,6 +859,17 @@ export function DriveModule() {
         ) : (
           <ul className={`${styles.list} ${styles[`view_${viewMode}`] ?? ""} ${compactView ? styles.listCompact : ""}`}>
             <li className={styles.listHead}>
+              <label className={styles.selectAll}>
+                <input
+                  type="checkbox"
+                  checked={selectableNodes(nodes).length > 0 && selected.length === selectableNodes(nodes).length}
+                  onChange={(event) => {
+                    const visible = selectableNodes(nodes);
+                    setSelectedNodes(event.target.checked ? new Map(visible.map((node) => [node.id, node])) : new Map());
+                  }}
+                  aria-label={strings.driveSelectAll}
+                />
+              </label>
               <span className={styles.colName}>{strings.driveColName}</span>
               <span className={styles.colSize}>{strings.driveColSize}</span>
               <span className={styles.colDate}>{strings.driveColModified}</span>
@@ -782,12 +880,12 @@ export function DriveModule() {
         )}
       </section>
 
-      {moveNode !== null && (
+      {moveNodes !== null && (
         <DestinationDialog
           spaces={spaces}
-          mode={moveNode.mode}
+          mode={moveNodes.mode}
           onPick={(s) => void pickedDestination(s)}
-          onClose={() => setMoveNode(null)}
+          onClose={() => setMoveNodes(null)}
         />
       )}
       {versionsNode !== null && (
