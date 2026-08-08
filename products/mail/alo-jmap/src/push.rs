@@ -25,6 +25,44 @@ use crate::state::{AppState, authenticate};
 /// re-lists shared mailboxes, so a new grant goes live with no refresh.
 pub const TYPE_DELEGATION: &str = "Delegation";
 
+/// The signal that something in alo Chat changed — a message arrived, words
+/// were changed or withdrawn, a room appeared, or membership moved.
+///
+/// One type is deliberately enough (`docs/design/chat.md`): the client
+/// refetches `/chat/channels`, which carries every room's unread count and
+/// last sequence, and pulls messages only for the room it has open. Chat needs
+/// no second transport — it rides the stream the workspace already keeps open
+/// for mail (ADR 0038).
+pub const TYPE_CHAT: &str = "Chat";
+
+/// Publishes a [`TYPE_CHAT`] signal to each of `users`, on their own streams.
+///
+/// Best-effort by design: a chat write never fails because a notification
+/// could not be delivered — the client would refetch on its next poll anyway.
+pub async fn notify_chat(state: &AppState, tenant: &TenantId, users: &[UserId]) {
+    let mut seen: Vec<&str> = Vec::with_capacity(users.len());
+    for user in users {
+        if seen.contains(&user.as_str()) {
+            continue;
+        }
+        seen.push(user.as_str());
+        let account_state = state
+            .store
+            .for_account(tenant.clone(), user.clone())
+            .state()
+            .await
+            .unwrap_or_default();
+        state.push.publish(
+            tenant.as_str(),
+            StateChangeMsg {
+                account_id: user.as_str().to_owned(),
+                types: vec![TYPE_CHAT],
+                state: account_state,
+            },
+        );
+    }
+}
+
 /// Publishes a [`TYPE_DELEGATION`] signal to `delegate_id`'s own stream after
 /// their grants change, so it takes effect immediately (ADR 0017).
 pub async fn notify_delegation_change(state: &AppState, tenant: &TenantId, delegate_id: &str) {

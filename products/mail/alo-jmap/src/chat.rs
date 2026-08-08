@@ -30,7 +30,8 @@ use alo_store::{
 };
 
 use crate::error::Problem;
-use crate::state::{AppState, authenticate};
+use crate::push;
+use crate::state::{Account, AppState, authenticate};
 
 /// The store's vocabulary on the wire: not-found stays not-found (a room the
 /// caller may not see), forbidden stays forbidden (a room they see without the
@@ -45,6 +46,27 @@ fn map_store_err(e: StoreError) -> Problem {
         }
         _ => Problem::server_error(),
     }
+}
+
+/// Tell everyone in a room that chat changed, plus anyone named in `also` (the
+/// person just removed, who must see the room leave their sidebar).
+///
+/// Best-effort throughout: a write that succeeded is never reported as failed
+/// because a live notification could not be sent.
+async fn notify_room(
+    state: &AppState,
+    account: &Account,
+    channel: &ChatChannelId,
+    also: &[UserId],
+) {
+    let mut users: Vec<UserId> = account
+        .acc
+        .channel_members(channel)
+        .await
+        .map(|members| members.into_iter().map(|m| m.user).collect())
+        .unwrap_or_default();
+    users.extend(also.iter().cloned());
+    push::notify_chat(state, &account.tenant, &users).await;
 }
 
 fn iso(at: OffsetDateTime) -> String {
@@ -199,6 +221,7 @@ pub async fn create_channel(
             .map_err(map_store_err)?
     };
     let channel = account.acc.channel(&id).await.map_err(map_store_err)?;
+    notify_room(&state, &account, &id, &[]).await;
     Ok(Json(channel_json(&channel)))
 }
 
@@ -258,6 +281,7 @@ pub async fn patch_channel(
         .rename_channel(&id, body.name.as_deref(), body.topic.as_deref())
         .await
         .map_err(map_store_err)?;
+    notify_room(&state, &account, &id, &[]).await;
     let channel = account.acc.channel(&id).await.map_err(map_store_err)?;
     Ok(Json(channel_json(&channel)))
 }
@@ -279,6 +303,7 @@ pub async fn archive_channel(
         .archive_channel(&id)
         .await
         .map_err(map_store_err)?;
+    notify_room(&state, &account, &id, &[]).await;
     let channel = account.acc.channel(&id).await.map_err(map_store_err)?;
     Ok(Json(channel_json(&channel)))
 }
@@ -297,6 +322,7 @@ pub async fn join_channel(
     let account = authenticate(&state, &headers).await?;
     let id = ChatChannelId::new(id);
     account.acc.join_channel(&id).await.map_err(map_store_err)?;
+    notify_room(&state, &account, &id, &[]).await;
     let channel = account.acc.channel(&id).await.map_err(map_store_err)?;
     Ok(Json(channel_json(&channel)))
 }
@@ -326,6 +352,7 @@ pub async fn add_member(
         .add_member(&id, &UserId::new(body.user))
         .await
         .map_err(map_store_err)?;
+    notify_room(&state, &account, &id, &[]).await;
     let members = account
         .acc
         .channel_members(&id)
@@ -348,11 +375,21 @@ pub async fn remove_member(
     Path((id, user)): Path<(String, String)>,
 ) -> Result<StatusCode, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let id = ChatChannelId::new(id);
+    // Read the room's people first: if the caller is the one leaving, the room
+    // stops being theirs to look at the moment they are out of it.
+    let before: Vec<UserId> = account
+        .acc
+        .channel_members(&id)
+        .await
+        .map(|members| members.into_iter().map(|m| m.user).collect())
+        .unwrap_or_default();
     account
         .acc
-        .remove_member(&ChatChannelId::new(id), &UserId::new(user))
+        .remove_member(&id, &UserId::new(user))
         .await
         .map_err(map_store_err)?;
+    push::notify_chat(&state, &account.tenant, &before).await;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -417,6 +454,7 @@ pub async fn post_message(
         .post_message(&ChatChannelId::new(id), &body.body, body.thread_root_seq)
         .await
         .map_err(map_store_err)?;
+    notify_room(&state, &account, &message.channel, &[]).await;
     Ok(Json(message_json(&message)))
 }
 
@@ -465,6 +503,7 @@ pub async fn edit_message(
         .edit_message(&ChatMessageId::new(id), &body.body)
         .await
         .map_err(map_store_err)?;
+    notify_room(&state, &account, &message.channel, &[]).await;
     Ok(Json(message_json(&message)))
 }
 
@@ -479,11 +518,14 @@ pub async fn delete_message(
     Path(id): Path<String>,
 ) -> Result<StatusCode, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let id = ChatMessageId::new(id);
+    let message = account.acc.chat_message(&id).await.map_err(map_store_err)?;
     account
         .acc
-        .delete_message(&ChatMessageId::new(id))
+        .delete_message(&id)
         .await
         .map_err(map_store_err)?;
+    notify_room(&state, &account, &message.channel, &[]).await;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -510,5 +552,7 @@ pub async fn mark_read(
         .mark_read(&ChatChannelId::new(id), body.seq)
         .await
         .map_err(map_store_err)?;
+    // A read cursor is personal: only this person's other devices need it.
+    push::notify_chat(&state, &account.tenant, std::slice::from_ref(&account.user)).await;
     Ok(StatusCode::NO_CONTENT)
 }
