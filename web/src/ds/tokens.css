@@ -167,6 +167,13 @@
   --color-slider-height: 0.75rem;
   --color-thumb-size: 1rem;
 
+  /* ---- color control primitives ---- */
+  --color-picker-spectrum-light: #ffffff;
+  --color-picker-spectrum-dark: #000000;
+  --color-picker-checker: #d8d8d8;
+  --color-picker-hue-gradient: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+  --color-picker-checker-gradient: repeating-conic-gradient(var(--color-picker-checker) 0 25%, var(--color-picker-spectrum-light) 0 50%);
+
   /* ---- radius ---- */
   --radius-sm: 4px;
   --radius-md: 8px;
