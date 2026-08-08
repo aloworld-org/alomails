@@ -31,9 +31,9 @@ import {
   type BaseTableDto,
   type BaseViewKind,
 } from "../jmap";
-import { Spinner } from "../ds";
 import { Cell } from "./BaseCell";
 import { BoardView, CalendarView, GalleryView } from "./BaseViews";
+import { driveErrorReason } from "./parts";
 import styles from "./BaseEditor.module.css";
 
 const FIELD_TYPES: { type: BaseFieldType; label: () => string }[] = [
@@ -81,6 +81,8 @@ export function BaseEditor({
   const [activeTable, setActiveTable] = useState(0);
   const [activeView, setActiveView] = useState(0);
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
 
   const [fieldMenu, setFieldMenu] = useState(false);
   const [fName, setFName] = useState("");
@@ -95,10 +97,12 @@ export function BaseEditor({
   const viewRef = useRef<HTMLDivElement>(null);
 
   const reload = useCallback(async () => {
+    setLoadError(null);
     try {
       setBase(await client.base(nodeId));
-    } catch {
-      setBase({ nodeId, tables: [] });
+    } catch (error) {
+      setBase(null);
+      setLoadError(driveErrorReason(error) ?? strings.driveUnknownError);
     }
   }, [client, nodeId]);
   useEffect(() => {
@@ -135,8 +139,9 @@ export function BaseEditor({
     try {
       await client.baseUpdateRecord(record.id, cells);
       setSaveState("saved");
-    } catch {
+    } catch (error) {
       setSaveState("idle");
+      setActionError(strings.driveActionFailed(strings.baseSaveChanges, driveErrorReason(error) ?? strings.driveUnknownError));
       void reload();
     }
   }
@@ -146,8 +151,8 @@ export function BaseEditor({
     try {
       await client.baseAddRecord(table.id, preset);
       await reload();
-    } catch {
-      /* ignore */
+    } catch (error) {
+      setActionError(strings.driveActionFailed(strings.baseNewRow, driveErrorReason(error) ?? strings.driveUnknownError));
     }
   }
 
@@ -167,8 +172,8 @@ export function BaseEditor({
       setFLinkTable("");
       setFieldMenu(false);
       await reload();
-    } catch {
-      /* ignore */
+    } catch (error) {
+      setActionError(strings.driveActionFailed(strings.baseAddField, driveErrorReason(error) ?? strings.driveUnknownError));
     }
   }
 
@@ -176,12 +181,12 @@ export function BaseEditor({
     if (!base) return;
     const idx = base.tables.length;
     try {
-      await client.baseAddTable(nodeId, `Table ${idx + 1}`);
+      await client.baseAddTable(nodeId, strings.baseDefaultTableName(idx + 1));
       await reload();
       setActiveTable(idx);
       setActiveView(0);
-    } catch {
-      /* ignore */
+    } catch (error) {
+      setActionError(strings.driveActionFailed(strings.baseNewTable, driveErrorReason(error) ?? strings.driveUnknownError));
     }
   }
 
@@ -190,14 +195,14 @@ export function BaseEditor({
     const config: Record<string, unknown> = {};
     if (vKind === "board") config.groupFieldId = vField;
     if (vKind === "calendar") config.dateFieldId = vField;
-    const label = VIEW_KINDS.find((v) => v.kind === vKind)?.label() ?? "View";
+    const label = VIEW_KINDS.find((v) => v.kind === vKind)?.label() ?? strings.baseView;
     try {
       await client.baseAddView(table.id, vKind, label, config);
       setViewMenu(false);
       await reload();
       setActiveView(table.views.length); // the new one
-    } catch {
-      /* ignore */
+    } catch (error) {
+      setActionError(strings.driveActionFailed(strings.baseAddView, driveErrorReason(error) ?? strings.driveUnknownError));
     }
   }
 
@@ -219,9 +224,21 @@ export function BaseEditor({
         </span>
       </header>
 
-      {base === null ? (
-        <div className={styles.center}>
-          <Spinner size={22} />
+      {loadError !== null ? (
+        <div className={styles.baseError} role="alert">
+          <Table2 size={38} />
+          <h2>{strings.baseLoadFailedTitle}</h2>
+          <p>{strings.driveLoadFailed(loadError)}</p>
+          <button type="button" onClick={() => void reload()}>{strings.driveRetry}</button>
+        </div>
+      ) : base === null ? (
+        <BaseSkeleton />
+      ) : base.tables.length === 0 ? (
+        <div className={styles.baseEmpty}>
+          <Table2 size={38} />
+          <h2>{strings.baseEmptyTitle}</h2>
+          <p>{strings.baseEmptyBody}</p>
+          <button type="button" onClick={() => void addTable()}><Plus size={17} /> {strings.baseNewTable}</button>
         </div>
       ) : (
         <>
@@ -392,6 +409,22 @@ export function BaseEditor({
           )}
         </>
       )}
+      {actionError !== "" && (
+        <div className={styles.baseActionError} role="alert">
+          <span>{actionError}</span>
+          <button type="button" onClick={() => setActionError("")} aria-label={strings.close}><X size={16} /></button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BaseSkeleton() {
+  return (
+    <div className={styles.baseSkeleton} role="status" aria-label={strings.baseLoading} aria-busy="true">
+      <span className={styles.baseSkeletonTabs} />
+      <span className={styles.baseSkeletonViews} />
+      {Array.from({ length: 7 }, (_, index) => <span key={index} className={styles.baseSkeletonRow} />)}
     </div>
   );
 }

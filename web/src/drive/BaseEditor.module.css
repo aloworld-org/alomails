@@ -41,6 +41,92 @@
   align-items: center;
   justify-content: center;
 }
+.baseSkeleton {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+}
+.baseSkeletonTabs,
+.baseSkeletonViews,
+.baseSkeletonRow {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--bg-raised), var(--bg-sunken), var(--bg-raised));
+  background-size: 200% 100%;
+  animation: baseSkeletonPulse var(--animation-skeleton);
+}
+.baseSkeletonTabs { width: 32%; height: var(--control-height); }
+.baseSkeletonViews { width: 48%; height: var(--control-height); }
+.baseSkeletonRow { width: 100%; height: var(--control-height); }
+.baseError,
+.baseEmpty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--text-secondary);
+}
+.baseError > svg,
+.baseEmpty > svg { color: var(--accent); }
+.baseError h2,
+.baseEmpty h2 { margin: 0; color: var(--text-primary); font-size: var(--text-xl); }
+.baseError p,
+.baseEmpty p { max-width: var(--overlay-width-lg); margin: 0; line-height: var(--leading-relaxed); }
+.baseError > button,
+.baseEmpty > button {
+  min-height: var(--control-height);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-weight: var(--weight-semibold);
+}
+.baseActionError {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-5);
+  z-index: var(--z-toast);
+  transform: translateX(-50%);
+  max-width: min(var(--overlay-width-xl), calc(100% - var(--space-8)));
+  min-height: var(--control-height);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+.baseActionError button {
+  width: var(--control-height);
+  height: var(--control-height);
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+}
+.baseActionError button:hover { background: var(--bg-raised); color: var(--text-primary); }
+@keyframes baseSkeletonPulse {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .baseSkeletonTabs,
+  .baseSkeletonViews,
+  .baseSkeletonRow { animation: none; }
+}
 
 /* table tabs — Airtable-style bottom tabs on a navy-tinted bar */
 .tabs {

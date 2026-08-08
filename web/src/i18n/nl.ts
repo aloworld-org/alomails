@@ -2188,4 +2188,11 @@ export const nl: Partial<Catalog> = {
   baseCalendarPreviousMonth: "Vorige maand",
   baseCalendarNextMonth: "Volgende maand",
   baseCalendarAddOnDate: (date: string) => `Een record toevoegen op ${date}`,
+  baseLoading: "Uw base wordt geladen…",
+  baseLoadFailedTitle: "Deze base is niet geladen",
+  baseEmptyTitle: "Begin met uw eerste tabel",
+  baseEmptyBody: "Tabellen houden verwante records bij elkaar. Maak er een om velden en records toe te voegen.",
+  baseDefaultTableName: (number: number) => `Tabel ${number}`,
+  baseView: "Weergave",
+  baseSaveChanges: "Wijzigingen opslaan",
 };

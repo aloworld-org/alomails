@@ -2216,4 +2216,11 @@ export const fr: Partial<Catalog> = {
   baseCalendarPreviousMonth: "Mois précédent",
   baseCalendarNextMonth: "Mois suivant",
   baseCalendarAddOnDate: (date: string) => `Ajouter un enregistrement le ${date}`,
+  baseLoading: "Chargement de votre base…",
+  baseLoadFailedTitle: "Cette base ne s’est pas chargée",
+  baseEmptyTitle: "Commencez par votre première table",
+  baseEmptyBody: "Les tables regroupent les enregistrements associés. Créez-en une pour ajouter des champs et des enregistrements.",
+  baseDefaultTableName: (number: number) => `Table ${number}`,
+  baseView: "Vue",
+  baseSaveChanges: "Enregistrer les modifications",
 };
