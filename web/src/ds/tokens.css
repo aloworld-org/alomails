@@ -145,6 +145,12 @@
   --space-12: 3rem;
   --space-16: 4rem;
 
+  /* ---- interaction roles ---- */
+  --control-height: 2.5rem; /* 40px minimum pointer and touch target */
+  --icon-size-inline: 1rem;
+  --icon-size-control: 1.25rem;
+  --icon-size-rail-hero: 1.5rem;
+
   /* ---- radius ---- */
   --radius-sm: 4px;
   --radius-md: 8px;
