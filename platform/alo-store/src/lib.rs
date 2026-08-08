@@ -37,6 +37,7 @@ pub mod billing_xml_tree;
 pub mod blob;
 pub mod calendar;
 pub mod changes;
+pub mod chat;
 pub mod contacts;
 pub mod control;
 pub mod crm_activities;
@@ -143,6 +144,7 @@ pub use billing_vat_report::{VatPeriod, VatPeriodBase, VatPeriodCurrency, VatPer
 pub use blob::GarageConfig;
 pub use blob::{BlobStore, ShareStream};
 pub use changes::Changes;
+pub use chat::{ChannelKind, ChannelVisibility, ChatChannel, ChatMember, MemberRole};
 pub use contacts::AddressHeaders;
 pub use control::PLATFORM_TENANT_NAME;
 pub use crm_activities::{Activity, ActivityKind, NewActivity};
@@ -181,11 +183,11 @@ pub use fin_rules::{InvoiceAccounts, invoice_issue_entry};
 pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId,
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
-    BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId, CommentId, ContactId,
-    CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
-    FinAccountId, FinEntryId, FinPostingId, GroupId, InsightDashboardId, InsightTileId, LabelId,
-    MailboxId, MessageId, ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId,
-    SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId,
+    BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId, ChatChannelId, CommentId,
+    ContactId, CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId,
+    EventId, FinAccountId, FinEntryId, FinPostingId, GroupId, InsightDashboardId, InsightTileId,
+    LabelId, MailboxId, MessageId, ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId,
+    SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId,
     TimeWeekId, UserId,
 };
 pub use identity::{

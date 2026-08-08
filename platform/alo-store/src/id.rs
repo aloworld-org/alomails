@@ -313,6 +313,12 @@ opaque_id!(
     FinAccountId
 );
 opaque_id!(
+    /// One chat room — a named channel or a DM (alo Chat, ADR 0038). Rooms are
+    /// never addressable across tenants; membership is the permission that
+    /// makes one visible at all.
+    ChatChannelId
+);
+opaque_id!(
     /// One journal entry — everything one document event did to the books, in
     /// one transaction (alo Finance, ADR 0035, wave B4). An entry is written
     /// whole and never edited: a correction is another entry pointing back at

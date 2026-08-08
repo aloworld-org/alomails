@@ -11,7 +11,8 @@
 mod common;
 
 use alo_store::{
-    AccountStore, BlobId, MailboxId, Message, MessageId, Page, SEEN, StoreError, ThreadId,
+    AccountStore, BlobId, ChannelVisibility, MailboxId, MemberRole, Message, MessageId, Page, SEEN,
+    StoreError, ThreadId,
 };
 
 /// Asserts a result is the clean not-found denial — never data, never an
@@ -2461,4 +2462,122 @@ async fn site_images_scope_by_tenant_and_refuse_non_images() {
             .is_none(),
         "non-image content types never serve on the image path"
     );
+}
+
+/// alo Chat (ADR 0038): **membership is the permission**, and no room is ever
+/// reachable from another tenant. Walks the whole visibility ladder — public,
+/// private, DM — plus the owner-only room controls and DM idempotency.
+#[tokio::test]
+async fn chat_rooms_are_membership_scoped_and_never_leave_their_tenant() {
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("chat-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@chat.test").await.unwrap();
+    let uc = ts1.create_user("c@chat.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua.clone());
+    let c = store.for_account(t1, uc.clone());
+
+    let t2 = store.create_tenant("chat-t2").await.unwrap();
+    let ub = store
+        .for_tenant(t2.clone())
+        .create_user("b@chat.test")
+        .await
+        .unwrap();
+    let b = store.for_account(t2, ub.clone());
+
+    let private = a
+        .create_channel("plans", Some("what we ship"), ChannelVisibility::Private)
+        .await
+        .unwrap();
+    let public = a
+        .create_channel("general", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
+
+    // The other tenant sees nothing on any path, and can change nothing.
+    assert_not_found(b.channel(&private).await);
+    assert_not_found(b.channel(&public).await);
+    assert_not_found(b.channel_members(&public).await);
+    assert_not_found(b.join_channel(&public).await);
+    assert_not_found(b.add_member(&public, &ub).await);
+    assert_not_found(b.archive_channel(&public).await);
+    assert!(b.channels().await.unwrap().is_empty());
+    assert!(b.joinable_channels().await.unwrap().is_empty());
+    // Names are per tenant: the same `#plans` is free next door.
+    b.create_channel("plans", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
+
+    // A co-tenant who is not a member: the private room does not exist for
+    // them; the public one does, and is joinable.
+    assert_not_found(c.channel(&private).await);
+    assert_not_found(c.channel_members(&private).await);
+    assert_not_found(c.join_channel(&private).await);
+    assert_eq!(
+        c.channel(&public).await.unwrap().id.as_str(),
+        public.as_str()
+    );
+    assert_eq!(c.joinable_channels().await.unwrap().len(), 1);
+    assert!(c.channels().await.unwrap().is_empty());
+
+    // Joining is idempotent and lands a plain member.
+    c.join_channel(&public).await.unwrap();
+    c.join_channel(&public).await.unwrap();
+    assert_eq!(c.channels().await.unwrap().len(), 1);
+    assert!(c.joinable_channels().await.unwrap().is_empty());
+    assert_eq!(
+        c.channel_role(&public).await.unwrap(),
+        Some(MemberRole::Member)
+    );
+    assert_eq!(a.channel_members(&public).await.unwrap().len(), 2);
+
+    // A plain member may not rename or archive the room; its owner may.
+    assert_forbidden(c.rename_channel(&public, Some("lounge"), None).await);
+    assert_forbidden(c.archive_channel(&public).await);
+    a.rename_channel(&public, Some("lounge"), Some("chat"))
+        .await
+        .unwrap();
+    assert_eq!(
+        a.channel(&public).await.unwrap().name.as_deref(),
+        Some("lounge")
+    );
+
+    // A live name is unique inside the tenant.
+    assert!(
+        a.create_channel("plans", None, ChannelVisibility::Public)
+            .await
+            .is_err(),
+        "a live channel name is claimed once per tenant"
+    );
+
+    // Anyone may leave; only an owner may remove someone else.
+    c.remove_member(&public, &uc).await.unwrap();
+    assert!(c.channels().await.unwrap().is_empty());
+    a.add_member(&public, &uc).await.unwrap();
+    assert_eq!(a.channel_members(&public).await.unwrap().len(), 2);
+    a.remove_member(&public, &uc).await.unwrap();
+    assert_eq!(a.channel_members(&public).await.unwrap().len(), 1);
+    // Someone from another tenant can never be added.
+    assert_not_found(a.add_member(&public, &ub).await);
+
+    // A DM is one room from either side, however often it is opened.
+    let dm = a.open_dm(&uc).await.unwrap();
+    assert_eq!(a.open_dm(&uc).await.unwrap().as_str(), dm.as_str());
+    assert_eq!(c.open_dm(&ua).await.unwrap().as_str(), dm.as_str());
+    assert_not_found(b.channel(&dm).await);
+    // ...and it keeps exactly its two people, with no name to change.
+    assert!(a.add_member(&dm, &uc).await.is_err());
+    assert!(a.remove_member(&dm, &uc).await.is_err());
+    assert!(a.rename_channel(&dm, Some("us"), None).await.is_err());
+    assert!(a.open_dm(&ua).await.is_err(), "no DM with oneself");
+    assert_not_found(a.open_dm(&ub).await);
+
+    // Archiving keeps history for members, hides the room from everyone else,
+    // and frees the name.
+    a.archive_channel(&public).await.unwrap();
+    assert!(a.channel(&public).await.unwrap().archived_at.is_some());
+    assert_not_found(c.channel(&public).await);
+    a.create_channel("lounge", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
 }
