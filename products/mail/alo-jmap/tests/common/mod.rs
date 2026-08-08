@@ -47,6 +47,13 @@ pub async fn harness(tag: &str) -> Harness {
         .expect("connect to test postgres");
     let store = Arc::new(Store::new(pool, BlobStore::in_memory(50 * 1024 * 1024)));
     store.migrate().await.unwrap();
+    harness_on(store, tag).await
+}
+
+/// A fresh tenant + logged-in user on an EXISTING store handle — for tests
+/// that need two tenants sharing one process-wide store (e.g. cross-tenant
+/// sweeps), the way production runs.
+pub async fn harness_on(store: Arc<Store>, tag: &str) -> Harness {
     let tenant = store.create_tenant(&format!("jmap-{tag}")).await.unwrap();
     // The username has a global unique index; include the random tenant id
     // so reruns against the shared database never collide.

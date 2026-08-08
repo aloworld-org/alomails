@@ -447,7 +447,7 @@ pub async fn get_page(
 /// `SITES_DOMAIN` contract the public `alo-sites` service is configured
 /// with (`docs/design/sites.md`). Optional here because for a preview those
 /// URLs are head metadata only; the default is the product's sites domain.
-fn sites_domain() -> &'static str {
+pub(crate) fn sites_domain() -> &'static str {
     static DOMAIN: std::sync::OnceLock<String> = std::sync::OnceLock::new();
     DOMAIN.get_or_init(|| {
         std::env::var("SITES_DOMAIN")

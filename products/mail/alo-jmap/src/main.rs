@@ -127,6 +127,22 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Background site-form notifier (alo Sites, ADR 0036): deliver each new
+    // contact-form submission to the site owner's inbox as an internal message.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(30));
+            loop {
+                tick.tick().await;
+                let delivered = alo_jmap::site_notify::run_due(&store).await;
+                if delivered > 0 {
+                    tracing::info!(delivered, "site-form notification sweep");
+                }
+            }
+        });
+    }
+
     // Background share-expiry sweeper (alo Transfer): drop expired share links
     // and reclaim any blob no live share still holds.
     {

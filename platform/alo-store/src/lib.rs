@@ -82,6 +82,7 @@ pub mod settings;
 pub mod share;
 pub mod signup;
 pub mod site_assets;
+pub mod site_form_notify;
 pub mod site_forms;
 pub mod site_model;
 pub mod site_pages;
@@ -162,10 +163,9 @@ pub use id::{
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
     BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId, CommentId, ContactId,
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, GroupId,
-    InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId, ProjectMilestoneId,
-    SiteFormId,
-    SiteFormSubmissionId, SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId,
-    ThreadId, TimeEntryId, TimeWeekId, UserId,
+    InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId,
+    ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePublishId,
+    SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -205,6 +205,7 @@ pub use search::SearchHit;
 pub use share::{ShareCreated, ShareTarget};
 pub use signup::PendingSignup;
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
+pub use site_form_notify::FormNotification;
 pub use site_forms::{
     MAX_FORMS_PER_SITE, SiteForm, SiteFormSubmission, SubmissionContent, normalize_submission,
 };

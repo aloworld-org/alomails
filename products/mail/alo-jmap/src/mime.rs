@@ -250,7 +250,7 @@ fn angle(id: &str) -> String {
 
 /// An address as a header token: `email`, `"Display Name" <email>`, or with an
 /// RFC 2047 encoded phrase when the name is non-ASCII.
-fn format_addr(a: &Addr) -> String {
+pub(crate) fn format_addr(a: &Addr) -> String {
     let email = sanitize(&a.email);
     match &a.name {
         Some(name) if !name.trim().is_empty() => {

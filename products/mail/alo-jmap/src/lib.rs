@@ -98,6 +98,7 @@ pub mod settings;
 pub mod share;
 pub mod sieve;
 pub mod signup_route;
+pub mod site_notify;
 pub mod sites;
 pub mod snooze;
 pub mod spaces;
