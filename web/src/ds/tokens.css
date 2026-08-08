@@ -147,9 +147,17 @@
 
   /* ---- interaction roles ---- */
   --control-height: 2.5rem; /* 40px minimum pointer and touch target */
+  --control-width-compact: 3.5rem;
+  --control-width-medium: 6rem;
+  --control-width-wide: 8.5rem;
   --icon-size-inline: 1rem;
   --icon-size-control: 1.25rem;
   --icon-size-rail-hero: 1.5rem;
+
+  /* ---- surface geometry ---- */
+  --border-width: 1px;
+  --overlay-width-sm: 12rem;
+  --overlay-width-md: 18rem;
 
   /* ---- radius ---- */
   --radius-sm: 4px;
