@@ -12,8 +12,8 @@ import {
   type SpaceDetailDto,
   type SpaceRole,
 } from "../jmap";
-import { Avatar, Spinner, useDialogs } from "../ds";
-import { fileSize } from "./parts";
+import { Avatar, useDialogs } from "../ds";
+import { driveErrorReason, fileSize } from "./parts";
 import styles from "./DriveModule.module.css";
 
 /** Pick a destination location (My Files or a writable Space) for move/copy. */
@@ -60,15 +60,29 @@ export function DestinationDialog({
 export function VersionsDialog({ nodeId, onChanged, onClose }: { nodeId: string; onChanged: () => void; onClose: () => void }) {
   const client = useJmapClient();
   const [versions, setVersions] = useState<DriveVersionDto[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const load = () => {
     let live = true;
+    setVersions(null);
+    setLoadError(null);
     void client
       .driveVersions(nodeId)
       .then((v) => live && setVersions(v))
-      .catch(() => live && setVersions([]));
+      .catch((error: unknown) => {
+        if (!live) return;
+        setVersions([]);
+        setLoadError(driveErrorReason(error) ?? strings.driveUnknownError);
+      });
     return () => {
       live = false;
+    };
+  };
+
+  useEffect(() => {
+    const cancel = load();
+    return () => {
+      cancel();
     };
   }, [client, nodeId]);
 
@@ -92,8 +106,11 @@ export function VersionsDialog({ nodeId, onChanged, onClose }: { nodeId: string;
           </button>
         </div>
         {versions === null ? (
-          <div className={styles.center}>
-            <Spinner size={20} />
+          <DialogSkeleton />
+        ) : loadError !== null ? (
+          <div className={styles.dialogError} role="alert">
+            <p>{strings.driveVersionsLoadFailed(loadError)}</p>
+            <button type="button" className={styles.versionRestore} onClick={load}>{strings.driveRetry}</button>
           </div>
         ) : versions.length === 0 ? (
           <p className={styles.destHint}>{strings.driveNoVersions}</p>
@@ -126,11 +143,18 @@ export function MembersDialog({ space, onClose }: { space: SpaceDto; onClose: ()
   const client = useJmapClient();
   const { confirm } = useDialogs();
   const [detail, setDetail] = useState<SpaceDetailDto | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<SpaceRole>("editor");
   const [error, setError] = useState("");
 
-  const load = () => void client.spaceDetail(space.id).then(setDetail).catch(() => setDetail(null));
+  const load = () => {
+    setDetail(null);
+    setLoadError(null);
+    void client.spaceDetail(space.id).then(setDetail).catch((caught: unknown) => {
+      setLoadError(driveErrorReason(caught) ?? strings.driveUnknownError);
+    });
+  };
   useEffect(load, [client, space.id]);
 
   const canManage = space.myRole === "manager";
@@ -167,11 +191,14 @@ export function MembersDialog({ space, onClose }: { space: SpaceDto; onClose: ()
             <X size={18} />
           </button>
         </div>
-        {detail === null ? (
-          <div className={styles.center}>
-            <Spinner size={20} />
+        {detail === null && loadError === null ? (
+          <DialogSkeleton />
+        ) : loadError !== null ? (
+          <div className={styles.dialogError} role="alert">
+            <p>{strings.driveMembersLoadFailed(loadError)}</p>
+            <button type="button" className={styles.versionRestore} onClick={load}>{strings.driveRetry}</button>
           </div>
-        ) : (
+        ) : detail !== null ? (
           <>
             <ul className={styles.memberList}>
               {detail.members.map((m) => (
@@ -219,8 +246,16 @@ export function MembersDialog({ space, onClose }: { space: SpaceDto; onClose: ()
             )}
             {error !== "" && <p className={styles.memberErr}>{error}</p>}
           </>
-        )}
+        ) : null}
       </div>
+    </div>
+  );
+}
+
+function DialogSkeleton() {
+  return (
+    <div className={styles.dialogSkeleton} role="status" aria-label={strings.driveLoading} aria-busy="true">
+      {Array.from({ length: 4 }, (_, index) => <span key={index} />)}
     </div>
   );
 }

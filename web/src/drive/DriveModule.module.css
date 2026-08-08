@@ -178,6 +178,57 @@
   font-size: var(--text-sm);
   padding: var(--space-8);
 }
+.driveSkeleton {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+}
+.driveSkeletonHead,
+.driveSkeletonIcon,
+.driveSkeletonName,
+.driveSkeletonMeta,
+.dialogSkeleton > span {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--bg-raised), var(--bg-sunken), var(--bg-raised));
+  background-size: 200% 100%;
+  animation: driveSkeletonPulse var(--animation-skeleton);
+}
+.driveSkeletonHead {
+  width: 36%;
+  height: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+.driveSkeletonRow {
+  min-height: var(--control-height);
+  display: grid;
+  grid-template-columns: var(--icon-size-control) minmax(0, 1fr) 18%;
+  align-items: center;
+  gap: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.driveSkeletonIcon {
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
+}
+.driveSkeletonName { width: 48%; height: var(--space-3); }
+.driveSkeletonMeta { width: 100%; height: var(--space-2); }
+.loadError {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8);
+  text-align: center;
+  color: var(--text-secondary);
+}
+.loadError > svg { color: var(--accent); }
+.loadError h2 { margin: 0; color: var(--text-primary); font-size: var(--text-xl); }
+.loadError p { max-width: var(--overlay-width-lg); margin: 0; line-height: var(--leading-relaxed); }
 .emptyState {
   flex: 1;
   min-height: 420px;
@@ -604,6 +655,32 @@
   margin-top: var(--space-3);
   font-size: var(--text-xs);
   color: var(--text-tertiary);
+}
+.dialogSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.dialogSkeleton > span { height: var(--control-height); }
+.dialogError {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  color: var(--text-secondary);
+  line-height: var(--leading-relaxed);
+}
+.dialogError p { margin: 0; }
+@keyframes driveSkeletonPulse {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .driveSkeletonHead,
+  .driveSkeletonIcon,
+  .driveSkeletonName,
+  .driveSkeletonMeta,
+  .dialogSkeleton > span { animation: none; }
 }
 
 .versionList,

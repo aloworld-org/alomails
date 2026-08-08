@@ -2166,4 +2166,11 @@ export const nl: Partial<Catalog> = {
     `Uw bericht is niet verzonden. Het blijft in Concepten staan zodat u het kunt openen en opnieuw kunt proberen. Server: ${reason}`,
   mailScheduleErrorDetail: (reason: string) =>
     `Uw bericht is niet gepland. Het blijft in Concepten staan zodat u het kunt openen en opnieuw kunt proberen. Server: ${reason}`,
+  driveLoading: "Uw bestanden worden geladen…",
+  driveRetry: "Opnieuw proberen",
+  driveUnknownError: "De server gaf geen reden op.",
+  driveLoadFailedTitle: "Uw bestanden zijn niet geladen",
+  driveLoadFailed: (reason: string) => `Probeer het opnieuw. Server: ${reason}`,
+  driveVersionsLoadFailed: (reason: string) => `De versiegeschiedenis is niet geladen. Probeer het opnieuw. Server: ${reason}`,
+  driveMembersLoadFailed: (reason: string) => `De leden zijn niet geladen. Probeer het opnieuw. Server: ${reason}`,
 };

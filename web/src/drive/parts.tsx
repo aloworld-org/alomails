@@ -13,6 +13,13 @@ import {
 
 import type { DriveNodeDto } from "../jmap";
 
+/** Preserve a useful backend reason for Drive recovery messages. */
+export function driveErrorReason(error: unknown): string | null {
+  if (error instanceof Error && error.message.trim().length > 0) return error.message.trim();
+  if (typeof error === "string" && error.trim().length > 0) return error.trim();
+  return null;
+}
+
 /** The icon for a node, by kind and (for plain files) content type. */
 export function nodeIcon(n: DriveNodeDto): LucideIcon {
   switch (n.kind) {

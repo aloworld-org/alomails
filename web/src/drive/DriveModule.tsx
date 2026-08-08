@@ -52,7 +52,7 @@ const OFFICE_EXT = /\.(docx?|xlsx?|pptx?|odt|ods|odp|rtf|csv)$/i;
 // (ADR 0033, stage 1). `.xlsx`/`.xlsm` are OOXML; `.xls` (old binary) and `.ods`
 // are not covered yet and still fall through to the Office path.
 const SPREADSHEET_IMPORT = /\.xls[mx]$/i;
-import { fileSize, nodeIcon, saveBlob } from "./parts";
+import { driveErrorReason, fileSize, nodeIcon, saveBlob } from "./parts";
 import { xlsxToUniverSnapshot } from "./importOffice";
 import styles from "./DriveModule.module.css";
 
@@ -102,6 +102,7 @@ export function DriveModule() {
   const [trashView, setTrashView] = useState(false);
   const [path, setPath] = useState<Crumb[]>([]);
   const [nodes, setNodes] = useState<DriveNodeDto[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<ReadonlySet<string>>(new Set());
   const [folderChildren, setFolderChildren] = useState<ReadonlyMap<string, DriveNodeDto[] | null>>(new Map());
   const [uploading, setUploading] = useState(false);
@@ -174,13 +175,15 @@ export function DriveModule() {
   const load = useCallback(async () => {
     setExpandedFolders(new Set());
     setFolderChildren(new Map());
+    setLoadError(null);
     try {
       const list = trashView
         ? await client.driveTrash(location)
         : await client.driveList(location, parent);
       setNodes(list);
-    } catch {
+    } catch (error) {
       setNodes([]);
+      setLoadError(driveErrorReason(error) ?? strings.driveUnknownError);
     }
   }, [client, location, parent, trashView]);
 
@@ -710,8 +713,15 @@ export function DriveModule() {
         </header>
 
         {nodes === null ? (
-          <div className={styles.center}>
-            <Spinner size={22} />
+          <DriveSkeleton />
+        ) : loadError !== null ? (
+          <div className={styles.loadError} role="alert">
+            <FolderOpen size={38} />
+            <h2>{strings.driveLoadFailedTitle}</h2>
+            <p>{strings.driveLoadFailed(loadError)}</p>
+            <button type="button" className={styles.emptyPrimary} onClick={() => void load()}>
+              {strings.driveRetry}
+            </button>
           </div>
         ) : nodes.length === 0 ? (
           <div className={styles.emptyState}>
@@ -828,6 +838,21 @@ function EditorLoading({ name }: { name: string }) {
     <div className={styles.editorLoading} role="status" aria-label={strings.driveLoadingFile(name)}>
       <Spinner size={24} />
       <span>{strings.driveLoadingFile(name)}</span>
+    </div>
+  );
+}
+
+function DriveSkeleton() {
+  return (
+    <div className={styles.driveSkeleton} role="status" aria-label={strings.driveLoading} aria-busy="true">
+      <span className={styles.driveSkeletonHead} />
+      {Array.from({ length: 7 }, (_, index) => (
+        <span key={index} className={styles.driveSkeletonRow}>
+          <span className={styles.driveSkeletonIcon} />
+          <span className={styles.driveSkeletonName} />
+          <span className={styles.driveSkeletonMeta} />
+        </span>
+      ))}
     </div>
   );
 }

@@ -2194,4 +2194,11 @@ export const fr: Partial<Catalog> = {
     `Votre message n’a pas été envoyé. Il reste dans les Brouillons afin que vous puissiez le rouvrir et réessayer. Serveur : ${reason}`,
   mailScheduleErrorDetail: (reason: string) =>
     `Votre message n’a pas été programmé. Il reste dans les Brouillons afin que vous puissiez le rouvrir et réessayer. Serveur : ${reason}`,
+  driveLoading: "Chargement de vos fichiers…",
+  driveRetry: "Réessayer",
+  driveUnknownError: "Le serveur n’a fourni aucune raison.",
+  driveLoadFailedTitle: "Vos fichiers ne se sont pas chargés",
+  driveLoadFailed: (reason: string) => `Réessayez. Serveur : ${reason}`,
+  driveVersionsLoadFailed: (reason: string) => `L’historique des versions ne s’est pas chargé. Réessayez. Serveur : ${reason}`,
+  driveMembersLoadFailed: (reason: string) => `Les membres ne se sont pas chargés. Réessayez. Serveur : ${reason}`,
 };
