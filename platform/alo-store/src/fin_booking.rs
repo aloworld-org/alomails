@@ -24,7 +24,11 @@
 //!   would rather look than catch.
 //!
 //! **What is deliberately not here yet:** the call from
-//! [`AccountStore::issue_billing_invoice`] itself. The note is explicit that a
+//! [`AccountStore::issue_billing_invoice`] and
+//! [`AccountStore::record_billing_payment`] themselves, and the *un*-booking
+//! that [`AccountStore::delete_billing_payment`] will need (a booked payment
+//! that is removed has to be reversed, not forgotten — a reversal entry, which
+//! `fin_journal` already supports). The note is explicit that a
 //! document and its entry share one transaction, and that a posting failure
 //! fails the document — which means issuing an invoice starts to depend on the
 //! tenant having a chart and on the day their books opened (B4.10's periods and
@@ -34,11 +38,16 @@
 //! function the issue path will call inside its own transaction.
 
 use crate::account::AccountStore;
+use crate::billing_fx::FxSnapshot;
+use crate::billing_payments::Payment;
 use crate::error::{Result, StoreError};
 use crate::fin_accounts::AccountRole;
 use crate::fin_journal::{EntrySource, SourceEvent, SourceKind};
-use crate::fin_rules::{InvoiceAccounts, invoice_issue_entry};
-use crate::id::{BillingInvoiceId, FinAccountId, FinEntryId};
+use crate::fin_rules::{
+    InvoiceAccounts, PaymentAccounts, invoice_issue_entry, payment_settle_entry,
+    payment_settlement_role, settlement_needs_exchange_account,
+};
+use crate::id::{BillingInvoiceId, BillingPaymentId, FinAccountId, FinEntryId};
 
 impl AccountStore {
     /// The account this tenant's chart gives a role, or a refusal naming the
@@ -107,5 +116,162 @@ impl AccountStore {
             event: SourceEvent::Issue,
         })
         .await
+    }
+
+    /// **Books a recorded payment**: the money where it landed, against the
+    /// receivable it relieves ([`crate::fin_rules::payment_settle_entry`]).
+    ///
+    /// The path: read the document and its payments under this tenant's handle,
+    /// establish where this payment sits in that sequence, take the rate the
+    /// accounting currency actually received the money at, resolve the accounts
+    /// by role — `bank` or `cash` by the method, `ar`, and `fx_diff` when the
+    /// document is in a foreign currency — apply the rule and post it.
+    ///
+    /// **The invoice must be in the books first.** Relieving a receivable that
+    /// was never booked would leave the customer's ledger negative and every
+    /// aged-debtors report wrong, so an unbooked invoice is a
+    /// [`StoreError::Conflict`] naming what to do rather than a posting nobody
+    /// can explain. Booking the same payment twice is a `Conflict` too, from
+    /// the journal's own idempotency key.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the invoice or the payment is absent or
+    /// another tenant's; [`StoreError::Conflict`] when the invoice is not
+    /// booked, is a draft, void or a credit note, or the payment is already
+    /// posted; [`StoreError::Validation`] when the chart is missing a role, or
+    /// no reference rate covers the day the money arrived;
+    /// [`StoreError::Db`] on failure.
+    pub async fn post_payment_settle(
+        &self,
+        invoice_id: &BillingInvoiceId,
+        payment_id: &BillingPaymentId,
+    ) -> Result<FinEntryId> {
+        let document = self
+            .billing_invoice(invoice_id)
+            .await?
+            .ok_or(StoreError::NotFound)?;
+        let (payment, paid_before_cents) = self.payment_in_sequence(invoice_id, payment_id).await?;
+        if self.fin_invoice_entry(invoice_id).await?.is_none() {
+            return Err(StoreError::Conflict(
+                "the invoice this payment settles is not in the books yet; book the invoice \
+                 before its payments"
+                    .to_owned(),
+            ));
+        }
+
+        let base_currency = self.billing_base_currency().await?;
+        let settled_at = self
+            .settlement_rate(&document.invoice.currency, &base_currency, payment.paid_on)
+            .await?;
+        let accounts = PaymentAccounts {
+            settled_into: self
+                .fin_account_required(payment_settlement_role(&payment.method))
+                .await?,
+            ar: self.fin_account_required(AccountRole::Ar).await?,
+            // Required exactly when a difference can arise: a chart without an
+            // `fx_diff` account must not refuse an ordinary euro payment over a
+            // role that payment's rule will never reach for.
+            fx_diff: if settlement_needs_exchange_account(&document, &base_currency) {
+                Some(self.fin_account_required(AccountRole::FxDiff).await?)
+            } else {
+                None
+            },
+        };
+        let entry = payment_settle_entry(
+            &payment,
+            &document,
+            paid_before_cents,
+            &base_currency,
+            &settled_at,
+            &accounts,
+        )?;
+        self.post_fin_entry(&entry).await
+    }
+
+    /// The entry a payment already produced, or `None`.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn fin_payment_entry(&self, id: &BillingPaymentId) -> Result<Option<FinEntryId>> {
+        self.fin_entry_for_source(&EntrySource {
+            kind: SourceKind::Payment,
+            id: id.as_str().to_owned(),
+            event: SourceEvent::Settle,
+        })
+        .await
+    }
+
+    /// One of a document's payments, with the sum of the payments that come
+    /// before it.
+    ///
+    /// The order is [`AccountStore::billing_payments`]' own, read back to
+    /// front. What the settlement rule needs from it is not a particular
+    /// sequence but a **stable** one: the reliefs telescope to the booked
+    /// receivable as long as every payment of a document agrees about which
+    /// ones precede it, whatever order they are actually booked in.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the payment is not one of this document's
+    /// — including when the document is another tenant's, which reads as an
+    /// empty list; [`StoreError::Db`] on failure.
+    async fn payment_in_sequence(
+        &self,
+        invoice_id: &BillingInvoiceId,
+        payment_id: &BillingPaymentId,
+    ) -> Result<(Payment, i64)> {
+        let mut paid_before_cents: i64 = 0;
+        for payment in self.billing_payments(invoice_id).await?.into_iter().rev() {
+            if payment.id == *payment_id {
+                return Ok((payment, paid_before_cents));
+            }
+            paid_before_cents = paid_before_cents
+                .checked_add(payment.amount_cents)
+                .ok_or_else(|| {
+                    StoreError::Validation(
+                        "this document's payments are too large to add up".to_owned(),
+                    )
+                })?;
+        }
+        Err(StoreError::NotFound)
+    }
+
+    /// The rate the accounting currency received a payment at: the reference
+    /// rate published for the day the money arrived, or the identity when the
+    /// document is already in the currency the books are kept in.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] when no usable rate has been imported for
+    /// that day — the payment is refused rather than booked at a guessed rate,
+    /// exactly as issuing a document is; [`StoreError::Db`] on failure.
+    async fn settlement_rate(
+        &self,
+        currency: &str,
+        base_currency: &str,
+        on: time::Date,
+    ) -> Result<FxSnapshot> {
+        if currency == base_currency {
+            return Ok(FxSnapshot::identity(base_currency, on));
+        }
+        // A read-only transaction, because the rate lookup is written to run
+        // inside the transaction that freezes a rate onto a document; nothing
+        // here freezes anything, so it is opened and rolled back.
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let snapshot = crate::billing_fx_rates::snapshot_at(
+            &mut tx,
+            self.tenant.as_str(),
+            base_currency,
+            currency,
+            on,
+        )
+        .await
+        .map_err(|error| match error {
+            StoreError::Validation(_) => StoreError::Validation(format!(
+                "no reference rate covers {on} for {currency}; import the rates for that day \
+                 before booking this payment"
+            )),
+            other => other,
+        });
+        tx.rollback().await.map_err(StoreError::Db)?;
+        snapshot
     }
 }

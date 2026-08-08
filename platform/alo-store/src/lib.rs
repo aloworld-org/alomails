@@ -179,7 +179,10 @@ pub use fin_ledger::{
     AccountBalance, AccountLedger, DimensionBalance, DimensionBalances, LEDGER_GROUPS_MAX,
     LEDGER_PAGE_MAX, LedgerDimension, LedgerLine, LedgerScope, TrialBalance,
 };
-pub use fin_rules::{InvoiceAccounts, invoice_issue_entry};
+pub use fin_rules::{
+    InvoiceAccounts, PaymentAccounts, invoice_issue_entry, payment_settle_entry,
+    payment_settlement_role, settlement_needs_exchange_account,
+};
 pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId,
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
