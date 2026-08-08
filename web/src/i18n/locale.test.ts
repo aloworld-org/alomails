@@ -275,6 +275,144 @@ describe("alo Insights is fully translated (BI1.08)", () => {
   });
 });
 
+describe("alo Projects is fully translated (B3.11)", () => {
+  /** The B3 surface: the Projects tab and its four views, the week grid a
+   *  person fills in, the approvals inbox somebody else decides in, the
+   *  profitability report, and the agent cards that propose hours. Same rule as
+   *  billing, CRM and Insights above — a timesheet an employee is answerable
+   *  for, and a manager approves, must not be half in English. */
+  const PROJECTS_AGENT_KEYS = [
+    "agentActLogTime",
+    "agentActProjectStatus",
+    "agentActDraftTimesheet",
+    "agentFieldProject",
+    "agentFieldDay",
+    "agentFieldDuration",
+    "agentLogTimeNote",
+    "agentProjectStatusNote",
+    "agentDraftTimesheetNote",
+    "agentTimeLogged",
+    "agentStatusHours",
+    "agentStatusBillable",
+    "agentStatusBudget",
+    "agentStatusBudgetUsed",
+    "agentStatusNoBudget",
+    "agentStatusInternal",
+    "agentStatusCustomer",
+    "agentStatusMilestones",
+    "agentStatusMilestonesDone",
+    "agentStatusMilestonesLate",
+    "agentStatusNoMilestones",
+    "agentStatusNext",
+    "agentStatusTasks",
+    "agentStatusTasksOpen",
+    "agentStatusTasksOverdue",
+    "agentStatusLastWorked",
+    "agentStatusNeverWorked",
+    "agentDraftedCount",
+    "agentDraftedNone",
+    "agentDraftedRange",
+    "agentDraftedTotal",
+    "agentDraftedOverlap",
+    "agentDraftedOverlaps",
+    "agentDraftedNote",
+    "agentDraftedLeftOut",
+    "agentDraftedReason",
+  ];
+  const projectsKeys = Object.keys(en).filter(
+    (key) =>
+      key.startsWith("projects") ||
+      key === "moduleProjects" ||
+      PROJECTS_AGENT_KEYS.includes(key),
+  );
+
+  test("the key list is the real Projects surface, not an empty filter", () => {
+    expect(projectsKeys.length).toBeGreaterThan(190);
+    for (const key of PROJECTS_AGENT_KEYS) expect(en).toHaveProperty(key);
+  });
+
+  test.each([
+    ["fr", fr],
+    ["nl", nl],
+  ])("%s translates every Projects string", (_locale, catalog) => {
+    const missing = projectsKeys.filter((key) => !(key in catalog));
+    expect(missing).toEqual([]);
+  });
+
+  test.each([
+    ["fr", fr],
+    ["nl", nl],
+  ])("%s keeps every interpolation a function of the same shape", (locale, catalog) => {
+    for (const key of projectsKeys) {
+      const source = (en as Record<string, unknown>)[key];
+      const translated = (catalog as Record<string, unknown>)[key];
+      expect(typeof translated).toBe(typeof source);
+      if (typeof source === "function" && typeof translated === "function") {
+        expect(translated.length).toBe(source.length);
+      } else {
+        expect(String(translated).trim()).not.toBe("");
+      }
+    }
+    expect(locale).toMatch(/^(fr|nl)$/);
+  });
+
+  test("the translated strings really are different words", () => {
+    expect(buildCatalog("fr").moduleProjects).toBe("Projets");
+    expect(buildCatalog("nl").moduleProjects).toBe("Projecten");
+    expect(buildCatalog("fr").projectsMilestoneReached).toBe("Atteint");
+    expect(buildCatalog("nl").projectsMilestoneReached).toBe("Bereikt");
+    expect(buildCatalog("fr").projectsWeekRejected).toBe("Renvoyée");
+    expect(buildCatalog("nl").projectsWeekRejected).toBe("Teruggestuurd");
+    // …including the ones built by a function, and both branches of a plural.
+    expect(buildCatalog("fr").projectsSuggestionsWaiting(1)).toContain("1 proposition");
+    expect(buildCatalog("fr").projectsSuggestionsWaiting(3)).toContain("3 propositions");
+    expect(buildCatalog("nl").projectsSuggestionsWaiting(1)).toContain("1 voorstel wacht");
+    expect(buildCatalog("nl").projectsSuggestionsWaiting(3)).toContain("3 voorstellen wachten");
+  });
+
+  test("a duration is written in the reader's own units", () => {
+    // The hour and minute letters are the easiest thing on this surface to
+    // leave in English: they look like punctuation. "7h 30m" on a French
+    // timesheet is English leaking onto the one number an employee signs for.
+    expect(buildCatalog("fr").projectsHoursShort(7)).toBe("7 h");
+    expect(buildCatalog("fr").projectsMinutesShort(30)).toBe("30 min");
+    expect(buildCatalog("nl").projectsHoursShort(7)).toBe("7 u");
+    expect(buildCatalog("nl").projectsMinutesShort(30)).toBe("30 min");
+    // French puts a space before the percent sign; Dutch does not.
+    expect(buildCatalog("fr").projectsPercent(60)).toBe("60 %");
+    expect(buildCatalog("nl").projectsPercent(60)).toBe("60%");
+  });
+
+  test("every reason a meeting was left out has words in each language", () => {
+    // The server sends reason codes, so an untranslated branch here is a
+    // French card that explains itself in English. The default branch matters
+    // most: a newer server's reason must still read as "left out".
+    const codes = [
+      "allDay",
+      "alreadyDrafted",
+      "noDuration",
+      "tooLong",
+      "weekLocked",
+      "limitReached",
+      "outsideRange",
+      "somethingNewerServersKnow",
+    ];
+    for (const locale of ["fr", "nl"] as const) {
+      const say = buildCatalog(locale).agentDraftedReason;
+      for (const code of codes) {
+        expect(say(code)).not.toBe(en.agentDraftedReason(code));
+        expect(say(code).trim()).not.toBe("");
+      }
+    }
+    expect(buildCatalog("fr").agentDraftedReason("weekLocked")).toBe(
+      "cette semaine est soumise",
+    );
+    expect(buildCatalog("nl").agentDraftedReason("weekLocked")).toBe(
+      "die week is ingediend",
+    );
+  });
+});
+
 describe("runtime switching", () => {
   test("strings proxy reflects the active locale live", () => {
     expect(getLocale()).toBe("en");

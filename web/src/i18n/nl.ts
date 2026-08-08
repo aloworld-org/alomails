@@ -2011,6 +2011,84 @@ export const nl: Partial<Catalog> = {
   agentFollowupNote:
     "Schrijft de e-mail in uw Concepten — er wordt niets verstuurd.",
 
+  // De Projecten-acties (B3.10a, B3.10b). Voorgestelde uren zijn pas uren
+  // wanneer degene van wie de urenstaat is ze accepteert: het woord
+  // "voorgesteld" staat daarom in elke zin, en de projectstatus zegt met zoveel
+  // woorden dat hij alleen leest.
+  agentActLogTime: "Uren registreren",
+  agentActProjectStatus: "Projectstatus",
+  agentFieldProject: "Project",
+  agentFieldDay: "Dag",
+  agentFieldDuration: "Duur",
+  agentLogTimeNote:
+    "Stelt een regel voor in uw urenstaat — die telt zodra u hem daar accepteert.",
+  agentProjectStatusNote: "Leest alleen het project — er wordt niets gewijzigd.",
+  // De cijfers van de projectstatus. De server stuurt getallen, nooit een zin:
+  // elk woord dat een lezer ziet, staat hier.
+  agentTimeLogged: (project: string): string =>
+    `Voorgesteld in uw urenstaat op ${project} — accepteer het in Projecten om het te laten meetellen.`,
+  agentStatusHours: "Geregistreerde uren",
+  agentStatusBillable: (formatted: string): string => `waarvan ${formatted} factureerbaar`,
+  agentStatusBudget: "Budget",
+  agentStatusBudgetUsed: (percent: string): string => `${percent} verbruikt`,
+  agentStatusNoBudget: "Geen urenbudget ingesteld",
+  agentStatusInternal: "Intern project — geen klant, geen budget.",
+  agentStatusCustomer: "Klant",
+  agentStatusMilestones: "Mijlpalen",
+  agentStatusMilestonesDone: (done: number, total: number): string =>
+    `${done} van ${total} bereikt`,
+  agentStatusMilestonesLate: (late: number): string =>
+    late === 1 ? "1 te laat" : `${late} te laat`,
+  agentStatusNoMilestones: "Geen gepland",
+  agentStatusNext: "Volgende",
+  agentStatusTasks: "Taken",
+  agentStatusTasksOpen: (open: number): string =>
+    open === 1 ? "1 open" : `${open} open`,
+  agentStatusTasksOverdue: (overdue: number): string => `${overdue} over de datum`,
+  agentStatusLastWorked: "Laatst gewerkt",
+  agentStatusNeverWorked: "Nog geen uren",
+  // Het concept uit de agenda (B3.10b). Een reeks voorstellen, plus wat eruit
+  // is gelaten — de server stuurt redencodes, en elk woord ervoor staat hier.
+  agentActDraftTimesheet: "Urenstaat uit uw agenda",
+  agentDraftTimesheetNote:
+    "Stelt één regel voor per afspraak in uw agenda op die dagen — elke regel telt zodra u hem in Projecten accepteert.",
+  agentDraftedCount: (count: number): string =>
+    count === 1 ? "1 regel voorgesteld" : `${count} regels voorgesteld`,
+  agentDraftedNone: "Niets voor te stellen",
+  agentDraftedRange: (from: string, to: string): string =>
+    from === to ? from : `${from} – ${to}`,
+  agentDraftedTotal: "Totaal",
+  agentDraftedOverlap: "overlapt de vorige",
+  agentDraftedOverlaps: (count: number): string =>
+    count === 1
+      ? "1 ervan overlapt een andere afspraak — kijk na welke het werk was."
+      : `${count} ervan overlappen andere afspraken — kijk na welke het werk waren.`,
+  agentDraftedNote: (project: string): string =>
+    `Voorgesteld in uw urenstaat op ${project} — accepteer elke regel in Projecten om hem te laten meetellen.`,
+  agentDraftedLeftOut: "Eruit gelaten",
+  agentDraftedReason: (reason: string): string => {
+    switch (reason) {
+      case "allDay":
+        return "hele dag — geen gewerkte uren";
+      case "alreadyDrafted":
+        return "staat al in uw urenstaat";
+      case "noDuration":
+        return "zonder duur";
+      case "tooLong":
+        return "langer dan een dag";
+      case "weekLocked":
+        return "die week is ingediend";
+      case "limitReached":
+        return "boven de reeksgrens — vraag opnieuw voor de resterende dagen";
+      case "outsideRange":
+        return "begint buiten die dagen";
+      default:
+        // Een reden die een nieuwere server kent en deze client niet: zeg dat
+        // hij eruit is gelaten in plaats van te doen alsof hij is voorgesteld.
+        return "eruit gelaten";
+    }
+  },
+
   // De geschiedenis van een record (B2.13). Zoals in het Engels: voltooide
   // deelwoorden, want elke regel is iets dat gebeurd is — en de soort record
   // is de pagina die de lezer al open heeft.
@@ -2164,6 +2242,253 @@ export const nl: Partial<Catalog> = {
   // De Nederlandse afkortingen: kwartaal en week, geen Q en W.
   insightsQuarter: (quarter: number, year: number) => `K${quarter} ${year}`,
   insightsWeek: (week: number, year: number) => `W${week} ${year}`,
+
+  // alo Projecten (ADR 0035, golf B3). De woorden van klantwerk: een project
+  // dat voor een klant wordt gedaan, de uren die eraan opgaan, de week waarin
+  // ze worden ingediend, en de beslissing die iemand over die week neemt.
+  //
+  // Twee woorden liggen hier vast. Het document dat iemand invult heet een
+  // „urenstaat” — niet timesheet, niet urenregistratie, en overal hetzelfde.
+  // En het bord van Taken heet ook hier een bord: het ZIJN dezelfde rijen,
+  // en dat is precies de bedoeling.
+  //
+  // Duren staan zoals iemand ze zegt — „7 u 30 min” — nooit als decimale uren:
+  // „1,75” op het ene scherm naast „1 u 45 min” op het andere zijn twee
+  // getallen die iemand met elkaar moet rijmen.
+  moduleProjects: "Projecten",
+  projectsTabList: "Projecten",
+  projectsTabWeek: "Mijn week",
+  projectsTabApprovals: "Goedkeuringen",
+  projectsTabReports: "Rapporten",
+  projectsTabPlan: "Planning",
+  projectsLoadFailed: "Uw projecten zijn niet geladen.",
+  projectsSaveFailed: "De wijziging kon niet worden opgeslagen.",
+  projectsStartFailed: "De timer kon niet worden gestart.",
+  projectsStopFailed: "De timer kon niet worden gestopt.",
+  projectsCancel: "Annuleren",
+  projectsSave: "Opslaan",
+  projectsEdit: "Bewerken",
+  projectsActions: "Acties",
+
+  // Duren en tarieven. `projectsNoTime` is het streepje in een lege cel: een
+  // blanco cel leest als kapot, een nul als werk dat geen tijd kostte.
+  projectsNoTime: "—",
+  projectsHoursShort: (hours: number) => `${hours} u`,
+  projectsMinutesShort: (minutes: number) => `${minutes} min`,
+  projectsPerHour: (amount: string) => `${amount}/u`,
+  projectsPercent: (percent: number) => `${percent}%`,
+  projectsUnpriced: "Geen tarief",
+
+  // De projectenlijst.
+  projectsProject: "Project",
+  projectsCustomer: "Klant",
+  projectsCustomerHint: "De klant aan wie de uren van dit project worden gefactureerd.",
+  projectsCustomerPick: "Kies een klant…",
+  projectsCustomerUnknown: "Onbekende klant",
+  projectsInternal: "Intern",
+  projectsRate: "Uurtarief",
+  projectsRateHint:
+    "Laat u dit leeg, dan tellen de uren wel mee maar krijgen ze geen waarde.",
+  projectsRateInvalid: "Schrijf het tarief als bedrag, bijvoorbeeld 95,00.",
+  projectsHoursLogged: "Uren",
+  projectsBillableHours: "Factureerbaar",
+  projectsOfWhichBillable: (duration: string) => `waarvan ${duration} factureerbaar`,
+  projectsBudget: "Budget",
+  projectsBudgetUsed: "Budget verbruikt",
+  projectsBudgetHours: "Budget (uren)",
+  projectsBudgetAmount: "Budget (bedrag)",
+  projectsBudgetHint: "Richtinggevend. Niets houdt een uur erboven tegen.",
+  projectsBudgetHoursInvalid: "Schrijf het budget als een heel aantal uren.",
+  projectsBudgetAmountInvalid: "Schrijf het budget als bedrag, bijvoorbeeld 7600,00.",
+  projectsLastWorked: "Laatst gewerkt",
+  projectsNeverWorked: "Nooit",
+  projectsStartsOn: "Start op",
+  projectsMakeClientWork: "Klantwerk maken",
+  projectsStartTimerOn: (project: string) => `Start de timer op ${project}`,
+  projectsEmptyTitle: "Nog geen projecten",
+  projectsEmptyBody:
+    "Een project is hier een bord uit Taken, gezien als klantwerk. Maak er een in Taken en zeg daarna voor wie het wordt gedaan.",
+
+  // Het projectformulier.
+  projectsClientSubtitle:
+    "Voor wie dit project wordt gedaan, en wat een uur eraan waard is.",
+  projectsPersonalBoard:
+    "Dit is een persoonlijk bord. Alleen een teamproject kan klantwerk zijn — de uren ervan worden door iemand anders goedgekeurd en aan een klant gefactureerd.",
+  projectsDetach: "Intern maken",
+  projectsDetachTitle: "Hier intern werk van maken?",
+  projectsDetachBody:
+    "De uren blijven precies zoals ze zijn. Wat vervalt, is de aanspraak dat ze aan een klant factureerbaar zijn — en uren die al op een factuur staan, blijven op die factuur.",
+
+  // Het weekraster.
+  projectsPreviousWeek: "Vorige",
+  projectsNextWeek: "Volgende",
+  projectsThisWeek: "Deze week",
+  projectsWeekOf: (from: string, to: string) => `${from} – ${to}`,
+  projectsWeek: "Week",
+  projectsDay: "Dag",
+  projectsDuration: "Duur",
+  projectsDurationHint:
+    "90, 1:30 en 1,5 betekenen alle drie anderhalf uur. 2h betekent twee uur.",
+  projectsDurationInvalid:
+    "Schrijf een duur als 90, 1:30, 1,5 of 2h — hoogstens één dag.",
+  projectsTotal: "Totaal",
+  projectsAddRow: "Projectregel toevoegen…",
+  projectsBillable: "Factureerbaar aan de klant",
+  projectsNotBillable: "niet factureerbaar",
+  projectsNote: "Notitie",
+  projectsNoNote: "Geen notitie",
+  projectsNoteHint:
+    "Waar u mee bezig was. Niemand buiten deze werkruimte leest het.",
+  projectsProposedEntry: "voorgesteld",
+  projectsBilledEntry: "op een factuur",
+  projectsCellLabel: (project: string, day: string, duration: string) =>
+    `${project}, ${day}: ${duration}`,
+  projectsDeleteEntry: "Verwijderen",
+  projectsDeleteEntryTitle: "Deze uren verwijderen?",
+  projectsDeleteEntryBody:
+    "De regel verdwijnt voorgoed. Daarvoor moet de week openstaan.",
+  projectsWeekEmptyTitle: "Deze week nog niets geregistreerd",
+  projectsWeekEmptyBody:
+    "Start de timer op een project, of voeg hieronder een regel toe en schrijf de uren rechtstreeks in een dag.",
+  projectsBillableOfWeek: (duration: string) => `waarvan ${duration} factureerbaar`,
+  projectsProposedInWeek: (duration: string) =>
+    `${duration} voorgesteld, nog niet geaccepteerd`,
+  // Beslissen over een voorstel (B3.10b). Pas door te accepteren wordt het een
+  // uur — de tekst zegt dat, wat „OK” niet zou doen.
+  projectsAcceptEntry: "Accepteren",
+  projectsRejectEntry: "Verwerpen",
+  projectsAcceptEntryLabel: (project: string, duration: string) =>
+    `Accepteer de voorgestelde ${duration} op ${project}`,
+  projectsRejectEntryLabel: (project: string, duration: string) =>
+    `Verwerp de voorgestelde ${duration} op ${project}`,
+  projectsSuggestionsWaiting: (count: number) =>
+    count === 1
+      ? "1 voorstel wacht deze week op u."
+      : `${count} voorstellen wachten deze week op u.`,
+  projectsSubmitWeek: "Week indienen",
+  projectsWithdrawWeek: "Terugnemen",
+  projectsRejectedBecause: (note: string) => `Teruggestuurd: ${note}`,
+
+  // De planning — mijlpalen op een tijdlijn, boven het bord dat er al is.
+  // „Bereikt” is met opzet een woord van een mens en niet „klaar”: een mijlpaal
+  // is bereikt wanneer iemand zegt dat het werk is aanvaard, nooit wanneer de
+  // laatste taak eronder is afgesloten.
+  projectsPlanLoadFailed: "De planning kon niet worden geladen.",
+  projectsMilestoneAdd: "Mijlpaal toevoegen",
+  projectsMilestoneNew: "Nieuwe mijlpaal",
+  projectsMilestoneName: "Mijlpaal",
+  projectsMilestoneNameHint:
+    "Waar de datum voor staat — „Ontwerp goedgekeurd”, „Bèta bij de pilotklant”.",
+  projectsMilestoneDue: "Datum",
+  projectsMilestoneDueHint:
+    "De dag waarop het af moet zijn. Hem later zetten is doodgewoon; er wordt niets door tegengehouden.",
+  projectsMilestoneReach: "Markeren als bereikt",
+  projectsMilestoneReopen: "Nog niet bereikt",
+  projectsMilestoneReached: "Bereikt",
+  projectsMilestoneLate: "Te laat",
+  projectsMilestoneNoTasks: "Nog geen taken eronder",
+  projectsMilestoneTasksClosed: (done: number, total: number) =>
+    `${done} van ${total} taken afgesloten`,
+  projectsMilestoneDelete: "Verwijderen",
+  projectsMilestoneDeleteTitle: "Deze mijlpaal verwijderen?",
+  projectsMilestoneDeleteBody:
+    "De datum verdwijnt; de taken eronder blijven precies staan waar ze op het bord staan.",
+  projectsPlanUnplaced: "Niet in de planning",
+  projectsPlanPlace: "Zetten onder…",
+  projectsPlanPlaceTask: (task: string) => `Zet ${task} onder een mijlpaal`,
+  projectsPlanRemove: "Eruit halen",
+  projectsPlanEmptyTitle: "Nog geen planning",
+  projectsPlanEmptyBody:
+    "Een mijlpaal is een datum met een naam op dit project — de data waar een klant naar vraagt. Voeg de eerste toe en zet daarna de taken van het bord eronder.",
+
+  // Sjablonen: een bord dat herbruikbaar is gemarkeerd, en de kopie die eruit
+  // begint.
+  projectsTemplateNew: "Nieuw uit sjabloon",
+  projectsTemplateNewTitle: "Beginnen vanuit een sjabloon",
+  projectsTemplateNewSubtitle: "De vorm van het werk, op nieuwe data",
+  projectsTemplateCreate: "Project maken",
+  projectsTemplateWhich: "Sjabloon",
+  projectsTemplateWhichHint:
+    "De kaarten, hun kolommen, checklists en labels gaan mee — geen toegewezen personen, opmerkingen, uren of afgeronde kaarten.",
+  projectsTemplateOption: (name: string, tasks: number, milestones: number) =>
+    `${name} — ${tasks} ${tasks === 1 ? "kaart" : "kaarten"}, ${milestones} ${
+      milestones === 1 ? "mijlpaal" : "mijlpalen"
+    }`,
+  projectsTemplateName: "Naam van het nieuwe project",
+  projectsTemplateNameHint: "Hoe dit project op het bord heet.",
+  projectsTemplateStarts: "Start op",
+  projectsTemplateStartsHint:
+    "De eerste mijlpaal van het sjabloon valt op deze dag; alle andere data houden hun onderlinge afstand.",
+  projectsTemplateCustomerHint:
+    "Een sjabloon is een vorm, geen klant. Laat het leeg voor intern werk; het tarief en het budget gaan hoe dan ook mee.",
+  projectsTemplateNoCustomer: "Intern werk",
+  projectsTemplateNoPlan:
+    "Dit sjabloon heeft geen mijlpalen, dus zijn data worden precies zo gekopieerd.",
+  projectsTemplateMarkOn: (project: string) => `Maak van ${project} een sjabloon`,
+  projectsTemplateUnmarkOn: (project: string) =>
+    `${project} is een sjabloon — markering weghalen`,
+  projectsTemplateEmptyTitle: "Nog geen sjablonen",
+  projectsTemplateEmptyBody:
+    "Open een project dat u nog eens op dezelfde manier zou doen en druk op de ster ernaast. Het blijft een gewoon bord — het kan alleen worden gekopieerd.",
+  projectsTemplateFailed: "Dat kon niet worden gedaan.",
+  projectsTemplatesLoadFailed: "De sjablonen konden niet worden geladen.",
+
+  // Waar een week staat. Het woord van de server, nooit opnieuw afgeleid in de
+  // browser.
+  projectsWeekOpen: "Open",
+  projectsWeekSubmitted: "Ingediend",
+  projectsWeekApproved: "Goedgekeurd",
+  projectsWeekRejected: "Teruggestuurd",
+
+  // De goedkeuringenlijst — het enige scherm hier dat een persoon noemt.
+  projectsPerson: "Persoon",
+  projectsSubmittedAt: "Ingediend op",
+  projectsApprove: "Goedkeuren",
+  projectsReject: "Terugsturen",
+  projectsRejectTitle: "Deze week terugsturen?",
+  projectsRejectBody: (person: string) => `${person} leest wat u hier schrijft.`,
+  projectsRejectPlaceholder: "Wat er moet worden verbeterd",
+  projectsApprovalsEmptyTitle: "Niets goed te keuren",
+  projectsApprovalsEmptyBody:
+    "Weken die mensen indienen komen hier terecht, de oudste eerst.",
+
+  // Het rentabiliteitsrapport — uren maal tarief, tegenover een budget. Het
+  // woord is „waarde” en nooit „marge”: dit is de opbrengstenkant, en wat een
+  // uur ons kost vraagt om een grootboek en een personeelsdossier die er geen
+  // van beide zijn.
+  projectsReportTitle: "Rentabiliteit",
+  projectsReportFrom: "Van",
+  projectsReportTo: "Tot",
+  projectsReportShow: "Tonen",
+  projectsReportThisQuarter: "Dit kwartaal",
+  projectsReportLastQuarter: "Vorig kwartaal",
+  projectsReportDownloadCsv: "CSV downloaden",
+  projectsReportDownloadFailed: "Het rapport kon niet worden gedownload.",
+  projectsReportBasis: (from: string, to: string) =>
+    `Uren gewerkt tussen ${from} en ${to}.`,
+  projectsReportBudgetBasis: (to: string) =>
+    `Budgetten tellen alles tot en met ${to}, niet alleen deze periode.`,
+  projectsReportColValue: "Waarde",
+  projectsReportColInvoiced: "Gefactureerd",
+  projectsReportColToInvoice: "Te factureren",
+  projectsReportColToDate: "Uren tot nu toe",
+  projectsReportColBudget: "Budget verbruikt",
+  projectsReportTotals: "Alle projecten",
+  projectsReportUnrated: (duration: string) => `${duration} zonder tarief`,
+  projectsReportUnratedHint:
+    "Factureerbare uren zonder tarief. Ze tellen hier mee en krijgen nergens een waarde — geef het project een tarief en registreer ze daarna.",
+  projectsReportNoValue: "Nog geen waarde",
+  projectsReportBudgetLeft: (amount: string) => `${amount} over`,
+  projectsReportBudgetOver: (amount: string) => `${amount} overschreden`,
+  projectsReportNoBudget: "Geen budget ingesteld",
+  projectsReportEmptyTitle: "Nog geen klantprojecten",
+  projectsReportEmptyBody:
+    "Rentabiliteit is uren tegenover een tarief en een budget, dus begint het bij een klantproject. Geef een project een klant en een tarief, en dit vult zich.",
+
+  // De lopende timer in de zijbalk.
+  projectsTimerRunning: "Timer loopt",
+  projectsStopTimer: "Stop de timer",
+  projectsStop: "Stoppen",
   mailAttachmentErrorDetail: (reason: string) =>
     `Dat bestand is niet bijgevoegd. Probeer het opnieuw toe te voegen. Server: ${reason}`,
   mailDraftCreateErrorDetail: (reason: string) =>

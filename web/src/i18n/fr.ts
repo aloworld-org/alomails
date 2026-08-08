@@ -2036,6 +2036,84 @@ export const fr: Partial<Catalog> = {
   agentFollowupNote:
     "Écrit l’e-mail dans vos Brouillons — rien n’est envoyé.",
 
+  // Les actions Projets (B3.10a, B3.10b). Une heure proposée n’est une heure
+  // que le jour où la personne concernée l’accepte dans sa feuille de temps :
+  // le mot « proposé » revient donc dans chaque phrase, et le point de
+  // situation dit qu’il ne fait que lire.
+  agentActLogTime: "Saisir des heures",
+  agentActProjectStatus: "Point sur le projet",
+  agentFieldProject: "Projet",
+  agentFieldDay: "Jour",
+  agentFieldDuration: "Durée",
+  agentLogTimeNote:
+    "Propose une saisie dans votre feuille de temps — elle compte une fois que vous l’y acceptez.",
+  agentProjectStatusNote: "Lit seulement le projet — rien n’est modifié.",
+  // Les chiffres du point de situation. Le serveur envoie des nombres, jamais
+  // une phrase : chaque mot lu ici est écrit là.
+  agentTimeLogged: (project: string): string =>
+    `Proposé dans votre feuille de temps sur ${project} — acceptez-le dans Projets pour qu’il compte.`,
+  agentStatusHours: "Heures saisies",
+  agentStatusBillable: (formatted: string): string => `dont ${formatted} facturables`,
+  agentStatusBudget: "Budget",
+  agentStatusBudgetUsed: (percent: string): string => `${percent} consommé`,
+  agentStatusNoBudget: "Aucun budget d’heures défini",
+  agentStatusInternal: "Projet interne — ni client, ni budget.",
+  agentStatusCustomer: "Client",
+  agentStatusMilestones: "Jalons",
+  agentStatusMilestonesDone: (done: number, total: number): string =>
+    `${done} atteints sur ${total}`,
+  agentStatusMilestonesLate: (late: number): string =>
+    late === 1 ? "1 en retard" : `${late} en retard`,
+  agentStatusNoMilestones: "Aucun de prévu",
+  agentStatusNext: "Prochain",
+  agentStatusTasks: "Tâches",
+  agentStatusTasksOpen: (open: number): string =>
+    open === 1 ? "1 ouverte" : `${open} ouvertes`,
+  agentStatusTasksOverdue: (overdue: number): string => `${overdue} en retard`,
+  agentStatusLastWorked: "Dernier travail",
+  agentStatusNeverWorked: "Aucune heure",
+  // Le brouillon d’agenda (B3.10b). Un lot de propositions, et ce qui en a été
+  // écarté — le serveur envoie des codes de motif, et chaque mot est écrit ici.
+  agentActDraftTimesheet: "Feuille de temps depuis votre agenda",
+  agentDraftTimesheetNote:
+    "Propose une saisie par réunion inscrite à votre agenda ces jours-là — chacune compte une fois acceptée dans Projets.",
+  agentDraftedCount: (count: number): string =>
+    count === 1 ? "1 saisie proposée" : `${count} saisies proposées`,
+  agentDraftedNone: "Rien à proposer",
+  agentDraftedRange: (from: string, to: string): string =>
+    from === to ? from : `${from} – ${to}`,
+  agentDraftedTotal: "Total",
+  agentDraftedOverlap: "chevauche la précédente",
+  agentDraftedOverlaps: (count: number): string =>
+    count === 1
+      ? "1 d’entre elles en chevauche une autre — vérifiez laquelle était le travail."
+      : `${count} d’entre elles en chevauchent d’autres — vérifiez lesquelles étaient le travail.`,
+  agentDraftedNote: (project: string): string =>
+    `Proposé dans votre feuille de temps sur ${project} — acceptez chaque saisie dans Projets pour qu’elle compte.`,
+  agentDraftedLeftOut: "Écarté",
+  agentDraftedReason: (reason: string): string => {
+    switch (reason) {
+      case "allDay":
+        return "journée entière — pas des heures travaillées";
+      case "alreadyDrafted":
+        return "déjà dans votre feuille de temps";
+      case "noDuration":
+        return "sans durée";
+      case "tooLong":
+        return "plus longue qu’une journée";
+      case "weekLocked":
+        return "cette semaine est soumise";
+      case "limitReached":
+        return "au-delà du lot — redemandez pour les jours restants";
+      case "outsideRange":
+        return "commence en dehors de ces jours";
+      default:
+        // Un motif qu’un serveur plus récent connaît et pas ce client : dire
+        // qu’il a été écarté plutôt que de faire croire qu’il a été proposé.
+        return "écarté";
+    }
+  },
+
   // L’historique d’un enregistrement (B2.13). L’anglais emploie des
   // participes (« Issued ») ; en français, un participe s’accorde avec un
   // sujet que la ligne ne nomme pas. Ces libellés sont donc des noms
@@ -2192,6 +2270,252 @@ export const fr: Partial<Catalog> = {
   // Les abréviations françaises : trimestre et semaine, pas Q et W.
   insightsQuarter: (quarter: number, year: number) => `T${quarter} ${year}`,
   insightsWeek: (week: number, year: number) => `S${week} ${year}`,
+
+  // alo Projets (ADR 0035, vague B3). Le vocabulaire du travail client : un
+  // projet réalisé pour un client, les heures qui y passent, la semaine sous
+  // laquelle elles sont remises, et la décision prise sur cette semaine.
+  //
+  // Deux mots sont fixés une fois pour toutes ici. Une « feuille de temps »
+  // est le document que l’on remplit — jamais un « timesheet », jamais un
+  // « relevé ». Et une semaine est « validée » ou « renvoyée » : « approuvée »
+  // parlerait d’un accord, alors qu’il s’agit d’un contrôle.
+  //
+  // Les durées s’écrivent comme on les dit — « 7 h 30 » — et jamais en heures
+  // décimales : « 1,75 » sur un écran à côté de « 1 h 45 » sur un autre, ce
+  // sont deux nombres que quelqu’un doit rapprocher.
+  moduleProjects: "Projets",
+  projectsTabList: "Projets",
+  projectsTabWeek: "Ma semaine",
+  projectsTabApprovals: "Validations",
+  projectsTabReports: "Rapports",
+  projectsTabPlan: "Planning",
+  projectsLoadFailed: "Vos projets n’ont pas pu être chargés.",
+  projectsSaveFailed: "La modification n’a pas pu être enregistrée.",
+  projectsStartFailed: "Le chronomètre n’a pas pu être démarré.",
+  projectsStopFailed: "Le chronomètre n’a pas pu être arrêté.",
+  projectsCancel: "Annuler",
+  projectsSave: "Enregistrer",
+  projectsEdit: "Modifier",
+  projectsActions: "Actions",
+
+  // Durées et taux. `projectsNoTime` est le tiret d’une case vide : une case
+  // blanche se lit comme une panne, un zéro comme un travail sans durée.
+  projectsNoTime: "—",
+  projectsHoursShort: (hours: number) => `${hours} h`,
+  projectsMinutesShort: (minutes: number) => `${minutes} min`,
+  projectsPerHour: (amount: string) => `${amount}/h`,
+  projectsPercent: (percent: number) => `${percent} %`,
+  projectsUnpriced: "Non tarifé",
+
+  // La liste des projets.
+  projectsProject: "Projet",
+  projectsCustomer: "Client",
+  projectsCustomerHint: "Le client à qui les heures de ce projet sont facturées.",
+  projectsCustomerPick: "Choisissez un client…",
+  projectsCustomerUnknown: "Client inconnu",
+  projectsInternal: "Interne",
+  projectsRate: "Taux horaire",
+  projectsRateHint: "Laissé vide, les heures sont comptées mais non valorisées.",
+  projectsRateInvalid: "Écrivez le taux sous forme de montant, par exemple 95,00.",
+  projectsHoursLogged: "Heures",
+  projectsBillableHours: "Facturables",
+  projectsOfWhichBillable: (duration: string) => `dont ${duration} facturables`,
+  projectsBudget: "Budget",
+  projectsBudgetUsed: "Budget consommé",
+  projectsBudgetHours: "Budget (heures)",
+  projectsBudgetAmount: "Budget (montant)",
+  projectsBudgetHint: "Indicatif. Rien n’empêche de saisir une heure au-delà.",
+  projectsBudgetHoursInvalid: "Écrivez le budget en nombre entier d’heures.",
+  projectsBudgetAmountInvalid:
+    "Écrivez le budget sous forme de montant, par exemple 7600,00.",
+  projectsLastWorked: "Dernier travail",
+  projectsNeverWorked: "Jamais",
+  projectsStartsOn: "Commence le",
+  projectsMakeClientWork: "Passer en travail client",
+  projectsStartTimerOn: (project: string) => `Démarrer le chronomètre sur ${project}`,
+  projectsEmptyTitle: "Aucun projet pour l’instant",
+  projectsEmptyBody:
+    "Un projet, ici, est un tableau de Tâches vu comme du travail client. Créez-en un dans Tâches, puis dites pour qui il est réalisé.",
+
+  // Le formulaire du projet.
+  projectsClientSubtitle:
+    "Pour qui ce projet est réalisé, et ce que vaut une heure passée dessus.",
+  projectsPersonalBoard:
+    "Ceci est un tableau personnel. Seul un projet d’équipe peut être du travail client — ses heures sont validées par quelqu’un d’autre et facturées à un client.",
+  projectsDetach: "Passer en interne",
+  projectsDetachTitle: "Passer ce projet en travail interne ?",
+  projectsDetachBody:
+    "Les heures restent exactement telles quelles. Ce qui disparaît, c’est le fait qu’elles soient facturables à un client — et les heures déjà portées sur une facture y restent.",
+
+  // La grille de la semaine.
+  projectsPreviousWeek: "Précédente",
+  projectsNextWeek: "Suivante",
+  projectsThisWeek: "Cette semaine",
+  projectsWeekOf: (from: string, to: string) => `${from} – ${to}`,
+  projectsWeek: "Semaine",
+  projectsDay: "Jour",
+  projectsDuration: "Durée",
+  projectsDurationHint:
+    "90, 1:30 et 1,5 signifient tous une heure et demie. 2h signifie deux heures.",
+  projectsDurationInvalid:
+    "Écrivez une durée comme 90, 1:30, 1,5 ou 2h — une journée au maximum.",
+  projectsTotal: "Total",
+  projectsAddRow: "Ajouter une ligne de projet…",
+  projectsBillable: "Facturable au client",
+  projectsNotBillable: "non facturable",
+  projectsNote: "Note",
+  projectsNoNote: "Aucune note",
+  projectsNoteHint:
+    "Ce que vous faisiez. Personne en dehors de cet espace de travail ne la lit.",
+  projectsProposedEntry: "proposée",
+  projectsBilledEntry: "sur une facture",
+  projectsCellLabel: (project: string, day: string, duration: string) =>
+    `${project}, ${day} : ${duration}`,
+  projectsDeleteEntry: "Supprimer",
+  projectsDeleteEntryTitle: "Supprimer ces heures ?",
+  projectsDeleteEntryBody:
+    "La saisie disparaît définitivement. Sa semaine doit être ouverte pour cela.",
+  projectsWeekEmptyTitle: "Rien de saisi cette semaine",
+  projectsWeekEmptyBody:
+    "Démarrez le chronomètre sur un projet, ou ajoutez une ligne ci-dessous et écrivez les heures directement dans un jour.",
+  projectsBillableOfWeek: (duration: string) => `dont ${duration} facturables`,
+  projectsProposedInWeek: (duration: string) =>
+    `${duration} proposées, pas encore acceptées`,
+  // Décider d’une proposition (B3.10b). C’est l’acceptation qui en fait une
+  // heure — la formulation le dit, ce que « OK » ne ferait pas.
+  projectsAcceptEntry: "Accepter",
+  projectsRejectEntry: "Écarter",
+  projectsAcceptEntryLabel: (project: string, duration: string) =>
+    `Accepter les ${duration} proposées sur ${project}`,
+  projectsRejectEntryLabel: (project: string, duration: string) =>
+    `Écarter les ${duration} proposées sur ${project}`,
+  projectsSuggestionsWaiting: (count: number) =>
+    count === 1
+      ? "1 proposition vous attend cette semaine."
+      : `${count} propositions vous attendent cette semaine.`,
+  projectsSubmitWeek: "Soumettre la semaine",
+  projectsWithdrawWeek: "Reprendre",
+  projectsRejectedBecause: (note: string) => `Renvoyée : ${note}`,
+
+  // Le planning — des jalons sur un axe de dates, au-dessus du tableau qui
+  // existe déjà. « Atteint » est délibérément un mot de personne et non
+  // « terminé » : un jalon est atteint quand quelqu’un dit que le livrable a
+  // été accepté, jamais quand la dernière tâche en dessous a été fermée.
+  projectsPlanLoadFailed: "Le planning n’a pas pu être chargé.",
+  projectsMilestoneAdd: "Ajouter un jalon",
+  projectsMilestoneNew: "Nouveau jalon",
+  projectsMilestoneName: "Jalon",
+  projectsMilestoneNameHint:
+    "Ce à quoi la date correspond — « Design validé », « Bêta chez le pilote ».",
+  projectsMilestoneDue: "Date",
+  projectsMilestoneDueHint:
+    "Le jour prévu. La repousser est ordinaire ; rien n’en est bloqué.",
+  projectsMilestoneReach: "Marquer atteint",
+  projectsMilestoneReopen: "Pas encore atteint",
+  projectsMilestoneReached: "Atteint",
+  projectsMilestoneLate: "En retard",
+  projectsMilestoneNoTasks: "Aucune tâche en dessous pour l’instant",
+  projectsMilestoneTasksClosed: (done: number, total: number) =>
+    `${done} tâches fermées sur ${total}`,
+  projectsMilestoneDelete: "Supprimer",
+  projectsMilestoneDeleteTitle: "Supprimer ce jalon ?",
+  projectsMilestoneDeleteBody:
+    "La date disparaît ; les tâches en dessous restent exactement où elles sont sur le tableau.",
+  projectsPlanUnplaced: "Hors planning",
+  projectsPlanPlace: "Placer sous…",
+  projectsPlanPlaceTask: (task: string) => `Placer ${task} sous un jalon`,
+  projectsPlanRemove: "Retirer",
+  projectsPlanEmptyTitle: "Aucun planning pour l’instant",
+  projectsPlanEmptyBody:
+    "Un jalon est une date nommée sur ce projet — les dates dont un client vous parle. Ajoutez la première, puis placez les tâches du tableau en dessous.",
+
+  // Les modèles : un tableau marqué réutilisable, et la copie qu’on en tire.
+  projectsTemplateNew: "Nouveau depuis un modèle",
+  projectsTemplateNewTitle: "Partir d’un modèle",
+  projectsTemplateNewSubtitle: "La forme du travail, sur de nouvelles dates",
+  projectsTemplateCreate: "Créer le projet",
+  projectsTemplateWhich: "Modèle",
+  projectsTemplateWhichHint:
+    "Les cartes, leurs colonnes, les listes de contrôle et les étiquettes suivent — pas les responsables, les commentaires, les heures ni les cartes terminées.",
+  projectsTemplateOption: (name: string, tasks: number, milestones: number) =>
+    `${name} — ${tasks} ${tasks === 1 ? "carte" : "cartes"}, ${milestones} ${
+      milestones === 1 ? "jalon" : "jalons"
+    }`,
+  projectsTemplateName: "Nom du nouveau projet",
+  projectsTemplateNameHint: "Le nom qu’il portera sur le tableau.",
+  projectsTemplateStarts: "Commence le",
+  projectsTemplateStartsHint:
+    "Le premier jalon du modèle tombe à cette date ; toutes les autres gardent leur écart.",
+  projectsTemplateCustomerHint:
+    "Un modèle est une forme, pas un client. Laissez vide pour du travail interne ; le taux et le budget suivent dans les deux cas.",
+  projectsTemplateNoCustomer: "Travail interne",
+  projectsTemplateNoPlan:
+    "Ce modèle n’a aucun jalon : ses dates sont donc copiées telles quelles.",
+  projectsTemplateMarkOn: (project: string) => `Faire de ${project} un modèle`,
+  projectsTemplateUnmarkOn: (project: string) =>
+    `${project} est un modèle — retirer la marque`,
+  projectsTemplateEmptyTitle: "Aucun modèle pour l’instant",
+  projectsTemplateEmptyBody:
+    "Ouvrez un projet que vous mèneriez de la même façon une deuxième fois et appuyez sur l’étoile à côté. Il reste un tableau ordinaire — il peut simplement être copié.",
+  projectsTemplateFailed: "Cela n’a pas pu être fait.",
+  projectsTemplatesLoadFailed: "Les modèles n’ont pas pu être chargés.",
+
+  // Où en est une semaine. Le mot du serveur, jamais redéduit dans le
+  // navigateur.
+  projectsWeekOpen: "Ouverte",
+  projectsWeekSubmitted: "Soumise",
+  projectsWeekApproved: "Validée",
+  projectsWeekRejected: "Renvoyée",
+
+  // La boîte des validations — le seul écran d’ici qui nomme une personne.
+  projectsPerson: "Personne",
+  projectsSubmittedAt: "Remise le",
+  projectsApprove: "Valider",
+  projectsReject: "Renvoyer",
+  projectsRejectTitle: "Renvoyer cette semaine ?",
+  projectsRejectBody: (person: string) => `${person} lira ce que vous écrivez ici.`,
+  projectsRejectPlaceholder: "Ce qui est à corriger",
+  projectsApprovalsEmptyTitle: "Rien à valider",
+  projectsApprovalsEmptyBody:
+    "Les semaines remises par vos collègues arrivent ici, les plus anciennes d’abord.",
+
+  // Le rapport de rentabilité — les heures multipliées par les taux, face à un
+  // budget. Le mot est « valeur » et jamais « marge » : c’est le côté recettes,
+  // et ce qu’une heure nous coûte demande une comptabilité et un dossier
+  // salarié qui n’existent ni l’une ni l’autre.
+  projectsReportTitle: "Rentabilité",
+  projectsReportFrom: "Du",
+  projectsReportTo: "Au",
+  projectsReportShow: "Afficher",
+  projectsReportThisQuarter: "Ce trimestre",
+  projectsReportLastQuarter: "Trimestre précédent",
+  projectsReportDownloadCsv: "Télécharger le CSV",
+  projectsReportDownloadFailed: "Le rapport n’a pas pu être téléchargé.",
+  projectsReportBasis: (from: string, to: string) =>
+    `Heures travaillées entre le ${from} et le ${to}.`,
+  projectsReportBudgetBasis: (to: string) =>
+    `Les budgets comptent tout jusqu’au ${to}, et pas seulement cette période.`,
+  projectsReportColValue: "Valeur",
+  projectsReportColInvoiced: "Facturé",
+  projectsReportColToInvoice: "À facturer",
+  projectsReportColToDate: "Heures à ce jour",
+  projectsReportColBudget: "Budget consommé",
+  projectsReportTotals: "Tous les projets",
+  projectsReportUnrated: (duration: string) => `${duration} non tarifées`,
+  projectsReportUnratedHint:
+    "Des heures facturables sans taux. Elles sont comptées ici et valorisées nulle part — tarifez le projet, puis saisissez-les.",
+  projectsReportNoValue: "Aucune valeur pour l’instant",
+  projectsReportBudgetLeft: (amount: string) => `${amount} restants`,
+  projectsReportBudgetOver: (amount: string) => `${amount} de dépassement`,
+  projectsReportNoBudget: "Aucun budget défini",
+  projectsReportEmptyTitle: "Aucun projet client pour l’instant",
+  projectsReportEmptyBody:
+    "La rentabilité, ce sont des heures face à un taux et à un budget : elle commence donc par un projet client. Donnez un client et un taux à un projet, et ceci se remplit.",
+
+  // Le chronomètre en marche, dans la barre latérale.
+  projectsTimerRunning: "Chronomètre en marche",
+  projectsStopTimer: "Arrêter le chronomètre",
+  projectsStop: "Arrêter",
   mailAttachmentErrorDetail: (reason: string) =>
     `Ce fichier n’a pas été joint. Essayez de l’ajouter à nouveau. Serveur : ${reason}`,
   mailDraftCreateErrorDetail: (reason: string) =>
