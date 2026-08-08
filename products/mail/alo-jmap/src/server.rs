@@ -22,7 +22,7 @@ use crate::{
     crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
     docs, drive, filters, flagdue, imap_import_route, insights, insights_ask, insights_eval,
     insights_gallery, projects_clients, projects_invoices, projects_plan, projects_reports,
-    projects_time, projects_weeks, push,
+    projects_templates, projects_time, projects_weeks, push,
     reset_route, schedule, security, session, settings, share, signup_route, sites, snooze, spaces,
     tasks, unsubscribe, wopi, workspace_search,
 };
@@ -788,10 +788,26 @@ pub fn app(state: AppState) -> Router {
             "/projects/tasks/{task_id}/milestone",
             put(projects_plan::place_task).delete(projects_plan::unplace_task),
         )
+        // Templates (B3.09) — the boards a tenant has marked reusable, and the
+        // copy that starts a new engagement from one. A template IS a project,
+        // so it is addressed by the board's own id: there is no second record
+        // to go stale when the board is edited.
+        .route(
+            "/projects/templates",
+            get(projects_templates::list_templates).post(projects_templates::mark_template),
+        )
+        .route(
+            "/projects/templates/{id}",
+            delete(projects_templates::unmark_template),
+        )
+        .route(
+            "/projects/templates/{id}/instantiate",
+            post(projects_templates::instantiate_template),
+        )
         // One engagement, registered last so the file reads in the order
         // matchit resolves: every literal segment above (`time`, `timer`,
         // `weeks`, `approvals`, `clients`, `unbilled`, `invoices`, `reports`,
-        // `milestones`, `tasks`)
+        // `milestones`, `tasks`, `templates`)
         // wins over this capture, and an id — a base64url'd 16-byte token —
         // can never spell one of them anyway.
         .route("/projects/{id}", get(projects_clients::get_project))

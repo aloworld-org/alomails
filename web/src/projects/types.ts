@@ -256,3 +256,40 @@ export interface MilestoneDraft {
   /** `YYYY-MM-DD`. */
   dueOn: string;
 }
+
+/** A board somebody marked reusable. A template IS a project, so it is named by
+ *  the board's own id — there is no second record to keep in step. */
+export interface ProjectTemplate {
+  projectId: string;
+  name: string;
+  color: string | null;
+  /** Whether the board itself has been archived. Archiving a template is an
+   *  ordinary way to keep a shape without keeping it in the board list, so it
+   *  is still listed and still usable. */
+  archived: boolean;
+  /** How many cards a copy would carry — open work only, so the number here is
+   *  the number that will appear on the new board. */
+  taskCount: number;
+  milestoneCount: number;
+  createdBy: string;
+  createdAt: string;
+}
+
+/** What the create-from-template form states. */
+export interface TemplateInstanceDraft {
+  name: string;
+  /** `YYYY-MM-DD`, or `null` to copy every date as it stands. The template's
+   *  earliest milestone lands on this day and the rest keep their spacing. */
+  startsOn: string | null;
+  /** The customer the new engagement is for, or `null` for internal work. The
+   *  template's own customer is never copied — a template is a shape, not a
+   *  client. */
+  customerId: string | null;
+}
+
+/** What one copy produced: the new board, and what landed on it. */
+export interface TemplateCopy {
+  projectId: string;
+  taskCount: number;
+  milestoneCount: number;
+}

@@ -2751,6 +2751,38 @@ export const en = {
   projectsPlanEmptyBody:
     "A milestone is a named date on this project \u2014 the dates a client asks about. Add the first one, then put the board\u2019s tasks under it.",
 
+  // Templates: a board marked reusable, and the copy started from it. The copy
+  // says what travels and what does not, because a person about to start a
+  // client's project needs to know before the board opens, not after.
+  projectsTemplateNew: "New from template",
+  projectsTemplateNewTitle: "Start from a template",
+  projectsTemplateNewSubtitle: "The shape of the work, on new dates",
+  projectsTemplateCreate: "Create project",
+  projectsTemplateWhich: "Template",
+  projectsTemplateWhichHint:
+    "The cards, their columns, checklists and labels come along — not assignees, comments, hours or finished cards.",
+  projectsTemplateOption: (name: string, tasks: number, milestones: number) =>
+    `${name} — ${tasks} ${tasks === 1 ? "card" : "cards"}, ${milestones} ${
+      milestones === 1 ? "milestone" : "milestones"
+    }`,
+  projectsTemplateName: "New project name",
+  projectsTemplateNameHint: "What this one is called on the board.",
+  projectsTemplateStarts: "Starts on",
+  projectsTemplateStartsHint:
+    "The template’s first milestone lands here; every other date keeps its spacing.",
+  projectsTemplateCustomerHint:
+    "A template is a shape, not a client. Leave it blank for internal work; the rate and budget come along either way.",
+  projectsTemplateNoCustomer: "Internal work",
+  projectsTemplateNoPlan:
+    "This template has no milestones, so its dates are copied exactly as they are.",
+  projectsTemplateMarkOn: (project: string) => `Make ${project} a template`,
+  projectsTemplateUnmarkOn: (project: string) => `${project} is a template — remove the mark`,
+  projectsTemplateEmptyTitle: "No templates yet",
+  projectsTemplateEmptyBody:
+    "Open a project you would run the same way again and press the star beside it. It stays an ordinary board — it can just be copied.",
+  projectsTemplateFailed: "That could not be done.",
+  projectsTemplatesLoadFailed: "The templates could not be loaded.",
+
   // Where a week stands. The server's word, never re-derived in the browser.
   projectsWeekOpen: "Open",
   projectsWeekSubmitted: "Submitted",

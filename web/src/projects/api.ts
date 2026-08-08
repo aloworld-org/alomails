@@ -33,7 +33,10 @@ import type {
   ProjectClient,
   ProjectClientDraft,
   ProjectPlan,
+  ProjectTemplate,
   RunningTimer,
+  TemplateCopy,
+  TemplateInstanceDraft,
   TimeEntry,
   TimeEntryDraft,
   TimeTotals,
@@ -188,6 +191,46 @@ export class ProjectsApi {
         method: "DELETE",
       }),
     );
+  }
+
+  // ---- templates ---------------------------------------------------------
+
+  /** The boards this workspace has marked reusable, in the order they were
+   *  marked. Only shared boards can be marked, so this list never names
+   *  somebody's private work. */
+  templates(): Promise<ProjectTemplate[]> {
+    return this.#read<{ templates: ProjectTemplate[] }>("/projects/templates").then(
+      (r) => r.templates,
+    );
+  }
+
+  /** Marks a board reusable. Idempotent — marking twice leaves one template
+   *  and keeps the first mark's date. */
+  markTemplate(projectId: string): Promise<ProjectTemplate> {
+    return this.#write<{ template: ProjectTemplate }>("POST", "/projects/templates", {
+      projectId,
+    }).then((r) => r.template);
+  }
+
+  /** Takes the mark off a board. The board, its cards and its plan are
+   *  untouched: what is removed is the claim that it is reusable. */
+  async unmarkTemplate(projectId: string): Promise<void> {
+    await this.#json<unknown>(
+      await this.#send(`/projects/templates/${encodeURIComponent(projectId)}`, {
+        method: "DELETE",
+      }),
+    );
+  }
+
+  /** Starts a new project from a template, and says what it copied. Every date
+   *  is shifted by the server so the template's first milestone lands on
+   *  `startsOn`; nothing here computes a date. */
+  instantiateTemplate(projectId: string, draft: TemplateInstanceDraft): Promise<TemplateCopy> {
+    return this.#write<{ copy: TemplateCopy }>(
+      "POST",
+      `/projects/templates/${encodeURIComponent(projectId)}/instantiate`,
+      draft,
+    ).then((r) => r.copy);
   }
 
   // ---- the clock ---------------------------------------------------------

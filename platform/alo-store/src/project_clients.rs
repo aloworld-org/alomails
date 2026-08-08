@@ -137,13 +137,17 @@ impl ProjectClient {
 
 /// A validated, normalised set of client facts ready to be bound into a
 /// statement.
+///
+/// Readable across the crate because [`crate::project_templates`] writes the
+/// same row inside its own transaction (a copy lands whole or not at all), and
+/// it must write facts validated by these rules rather than by a second set.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Normalized {
-    currency: String,
-    rate_cents: Option<i64>,
-    budget_minutes: Option<i64>,
-    budget_cents: Option<i64>,
-    starts_on: Option<Date>,
+    pub(crate) currency: String,
+    pub(crate) rate_cents: Option<i64>,
+    pub(crate) budget_minutes: Option<i64>,
+    pub(crate) budget_cents: Option<i64>,
+    pub(crate) starts_on: Option<Date>,
 }
 
 /// Validates a budget in minutes: non-negative and bounded, or absent.

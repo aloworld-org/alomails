@@ -220,6 +220,7 @@ DELETE /crm/stages/{id} -> crm.stage.delete
 DELETE /projects/clients/{id} -> projects.client.delete
 DELETE /projects/milestones/{id} -> projects.milestone.delete
 DELETE /projects/tasks/{task_id}/milestone -> projects.task.milestone.delete
+DELETE /projects/templates/{id} -> projects.template.delete
 DELETE /projects/time/{id} -> projects.time.delete
 PATCH /billing/customers/{id} -> billing.customer.update
 PATCH /billing/invoices/{id} -> billing.invoice.update
@@ -276,6 +277,8 @@ POST /projects/approvals/{id}/reopen -> projects.approval.reopen
 POST /projects/invoices -> projects.invoice.create
 POST /projects/milestones -> projects.milestone.create
 POST /projects/milestones/{id}/done -> projects.milestone.done
+POST /projects/templates -> projects.template.create
+POST /projects/templates/{id}/instantiate -> projects.template.instantiate
 POST /projects/time -> projects.time.create
 POST /projects/timer/start -> projects.timer.start
 POST /projects/timer/stop -> projects.timer.stop

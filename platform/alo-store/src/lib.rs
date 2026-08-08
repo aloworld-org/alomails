@@ -74,6 +74,7 @@ pub mod model;
 pub mod project_clients;
 pub mod project_hours;
 pub mod project_milestones;
+pub mod project_templates;
 pub mod reset;
 pub mod rfc2047;
 pub mod schedule;
@@ -198,6 +199,9 @@ pub use project_hours::ProjectHours;
 pub use project_milestones::{
     MILESTONES_MAX, Milestone, MilestoneEdit, NAME_MAX as MILESTONE_NAME_MAX, NewMilestone,
     TaskPlacement,
+};
+pub use project_templates::{
+    PROJECT_NAME_MAX, ProjectTemplate, TEMPLATE_TASKS_MAX, TemplateCopy, TemplateInstance,
 };
 pub use reset::PendingReset;
 pub use schedule::DueSend;

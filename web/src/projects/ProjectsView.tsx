@@ -11,7 +11,7 @@
 // Every figure is the server's. The hours are the project's aggregate — nobody
 // is named, here or in the API — and the budget bar is drawn from basis points
 // the server computed, so two people looking at one engagement see one bar.
-import { Briefcase, Play } from "lucide-react";
+import { Briefcase, CopyPlus, Play, Star } from "lucide-react";
 
 import { Button, IconButton, Spinner } from "../ds";
 import { strings } from "../i18n";
@@ -24,8 +24,11 @@ export function ProjectsView({
   projects,
   loading,
   customerName,
+  isTemplate,
   onEditClient,
   onStartTimer,
+  onToggleTemplate,
+  onNewFromTemplate,
 }: {
   projects: Project[];
   loading: boolean;
@@ -33,8 +36,14 @@ export function ProjectsView({
    *  when the customer is one this reader cannot see. Resolved by the caller,
    *  which owns the billing read. */
   customerName: (customerId: string) => string | null;
+  /** Whether this board is already marked reusable. */
+  isTemplate: (projectId: string) => boolean;
   onEditClient: (project: Project) => void;
   onStartTimer: (project: Project) => void;
+  /** Marks the board reusable, or takes the mark off — the same control, because
+   *  a board either is a template or is not. */
+  onToggleTemplate: (project: Project) => void;
+  onNewFromTemplate: () => void;
 }) {
   if (projects.length === 0) {
     return loading ? (
@@ -54,6 +63,13 @@ export function ProjectsView({
 
   return (
     <div className={styles.page}>
+      <div className={styles.toolbar}>
+        <span className={styles.toolbarSpacer} />
+        <Button variant="ghost" size="sm" onClick={onNewFromTemplate}>
+          <CopyPlus size={15} />
+          {strings.projectsTemplateNew}
+        </Button>
+      </div>
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
@@ -128,6 +144,27 @@ export function ProjectsView({
                         size="sm"
                         onClick={() => onStartTimer(project)}
                       />
+                      {/* A personal board cannot be a template — the list of
+                          templates is the whole workspace's — so the control is
+                          absent there rather than offered and refused. */}
+                      {project.kind === "team" && (
+                        <IconButton
+                          label={
+                            isTemplate(project.id)
+                              ? strings.projectsTemplateUnmarkOn(project.name)
+                              : strings.projectsTemplateMarkOn(project.name)
+                          }
+                          icon={
+                            <Star
+                              size={16}
+                              fill={isTemplate(project.id) ? "currentColor" : "none"}
+                            />
+                          }
+                          size="sm"
+                          active={isTemplate(project.id)}
+                          onClick={() => onToggleTemplate(project)}
+                        />
+                      )}
                       <Button variant="ghost" size="sm" onClick={() => onEditClient(project)}>
                         {client === null ? strings.projectsMakeClientWork : strings.projectsEdit}
                       </Button>

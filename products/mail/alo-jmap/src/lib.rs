@@ -86,6 +86,7 @@ pub mod projects_clients;
 pub mod projects_invoices;
 pub mod projects_plan;
 pub mod projects_reports;
+pub mod projects_templates;
 pub mod projects_time;
 pub mod projects_weeks;
 pub mod push;

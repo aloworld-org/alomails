@@ -34,10 +34,21 @@ import { ErrorBanner } from "./parts";
 import { PlanView } from "./PlanView";
 import { ProjectsView } from "./ProjectsView";
 import { ReportView } from "./ReportView";
+import { TemplateDialog } from "./TemplateDialog";
 import { announceTimerChanged } from "./timerBus";
 import { WeekView } from "./WeekView";
-import type { Project } from "./types";
+import type { Project, ProjectTemplate } from "./types";
 import styles from "./ProjectsModule.module.css";
+
+/** Today as `YYYY-MM-DD` in the reader's own zone — the day a new project
+ *  starts on unless they say otherwise. Local, not UTC: "today" is a fact about
+ *  where the person is. */
+function today(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
 
 export function ProjectsModule() {
   const api = useProjectsApi();
@@ -47,7 +58,9 @@ export function ProjectsModule() {
   // asks the other way round.
   const { customers } = useCustomers(true);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
   const [editing, setEditing] = useState<Project | null>(null);
+  const [startingFromTemplate, setStartingFromTemplate] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
@@ -69,6 +82,23 @@ export function ProjectsModule() {
         if (live) setError(projectsMessage(err, strings.projectsLoadFailed));
       } finally {
         if (live) setLoading(false);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [api, revision]);
+
+  // The templates ride the same revision counter, because marking one, copying
+  // one, or archiving a board all change what this list says.
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      try {
+        const list = await api.templates();
+        if (live) setTemplates(list);
+      } catch (err) {
+        if (live) setError(projectsMessage(err, strings.projectsTemplatesLoadFailed));
       }
     })();
     return () => {
@@ -110,6 +140,22 @@ export function ProjectsModule() {
       announceTimerChanged();
     } catch (err) {
       setError(projectsMessage(err, strings.projectsStartFailed));
+    }
+  }
+
+  /** Marks a board reusable, or takes the mark off. One control, because a board
+   *  either is a template or is not — and undoing it is the same click again,
+   *  which is why nothing here asks for a confirmation: the mark is a claim, not
+   *  work, and taking it off destroys neither. */
+  async function toggleTemplate(project: Project) {
+    const marked = templates.some((t) => t.projectId === project.id);
+    try {
+      if (marked) await api.unmarkTemplate(project.id);
+      else await api.markTemplate(project.id);
+      setError(null);
+      bump();
+    } catch (err) {
+      setError(projectsMessage(err, strings.projectsTemplateFailed));
     }
   }
 
@@ -175,8 +221,11 @@ export function ProjectsModule() {
               projects={projects}
               loading={loading}
               customerName={customerName}
+              isTemplate={(projectId) => templates.some((t) => t.projectId === projectId)}
               onEditClient={setEditing}
               onStartTimer={(project) => void startTimer(project)}
+              onToggleTemplate={(project) => void toggleTemplate(project)}
+              onNewFromTemplate={() => setStartingFromTemplate(true)}
             />
           }
         />
@@ -206,6 +255,18 @@ export function ProjectsModule() {
         {/* An unknown Projects path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to="list" replace />} />
       </Routes>
+
+      {startingFromTemplate && (
+        <TemplateDialog
+          templates={templates}
+          defaultDay={today()}
+          onClose={() => setStartingFromTemplate(false)}
+          onCreated={() => {
+            setStartingFromTemplate(false);
+            bump();
+          }}
+        />
+      )}
 
       {editing !== null && (
         <ClientDialog
