@@ -241,6 +241,30 @@
   font-size: var(--text-base);
 }
 
+.readingSkeleton {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  align-content: start;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  background: var(--bg-surface);
+}
+
+.readingSkeletonToolbar,
+.readingSkeletonSubject,
+.readingSkeletonMeta,
+.readingSkeletonBody {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+}
+
+.readingSkeletonToolbar { height: var(--control-height); width: 60%; }
+.readingSkeletonSubject { height: var(--space-6); width: 48%; margin-top: var(--space-2); }
+.readingSkeletonMeta { height: var(--space-3); width: 32%; }
+.readingSkeletonBody { height: var(--space-16); width: 100%; }
+
 .emptyState {
   flex: 1;
   display: flex;

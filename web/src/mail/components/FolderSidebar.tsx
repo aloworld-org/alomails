@@ -28,7 +28,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 
 import { strings } from "../../i18n";
-import { Spinner, cx } from "../../ds";
+import { cx } from "../../ds";
 import type { Mailbox } from "../../jmap";
 import type { Async } from "../state/useAsync";
 import { DRAG_EMAIL_MIME } from "../dnd";
@@ -316,8 +316,8 @@ export function FolderSidebar({
       </button>
 
       {mailboxes.status === "loading" && (
-        <div className={styles.state}>
-          <Spinner size={18} />
+        <div className={styles.folderSkeleton} role="status" aria-label={strings.mailLoading} aria-busy="true">
+          {Array.from({ length: 6 }, (_, index) => <span key={index} className={styles.folderSkeletonRow} />)}
         </div>
       )}
 

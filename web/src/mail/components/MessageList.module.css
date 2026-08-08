@@ -370,6 +370,28 @@
   padding: var(--space-8);
 }
 
+.listSkeleton {
+  display: grid;
+  overflow: hidden;
+}
+
+.listSkeletonRow {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
+.listSkeletonSender,
+.listSkeletonSubject {
+  height: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+}
+
+.listSkeletonSender { width: 40%; }
+.listSkeletonSubject { width: 72%; }
+
 .retry {
   color: var(--text-link);
   font-weight: var(--weight-medium);

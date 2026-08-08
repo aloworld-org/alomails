@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 import { strings } from "../../i18n";
-import { IconButton, Spinner, cx } from "../../ds";
+import { IconButton, cx } from "../../ds";
 import { useJmapClient } from "../../jmap";
 import type { Category, EmailHeaders } from "../../jmap";
 import type { Async } from "../state/useAsync";
@@ -249,9 +249,13 @@ export function MessageList({
       )}
 
       {loading && (
-        <div className={styles.state}>
-          <Spinner size={22} />
-          <p>{isSearch ? strings.mailSearching : strings.mailLoading}</p>
+        <div className={styles.listSkeleton} role="status" aria-label={isSearch ? strings.mailSearching : strings.mailLoading} aria-busy="true">
+          {Array.from({ length: 7 }, (_, index) => (
+            <span key={index} className={styles.listSkeletonRow}>
+              <span className={styles.listSkeletonSender} />
+              <span className={styles.listSkeletonSubject} />
+            </span>
+          ))}
         </div>
       )}
 
