@@ -466,6 +466,7 @@ export function ReadingPane({
           activeIds={activeCategoryIds}
           onToggle={onToggleCategory}
         />
+        <IconButton size="sm" label={strings.markUnread} icon={<MailOpen />} onClick={onMarkUnread} />
         <IconButton size="sm" label={strings.delete} icon={<Trash2 />} onClick={onDelete} />
         <Menu label={strings.moreActions} icon={<MoreHorizontal />} items={moreItems} />
       </div>
