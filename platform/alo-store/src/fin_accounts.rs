@@ -448,9 +448,10 @@ fn map_chart_conflict(error: sqlx::Error) -> StoreError {
         sqlx::Error::Database(ref db) if db.code().as_deref() == Some("23505") => {
             db.constraint().unwrap_or_default().to_owned()
         }
-        // A posting referencing the account (B4.03's `fin_postings`, whose
-        // foreign key is `ON DELETE RESTRICT`) is what makes a delete fail
-        // with 23503. The chart is history, not a preference.
+        // A posting referencing the account (B4.03a's `fin_postings`, whose
+        // foreign key restricts at the end of the statement — `NO ACTION`, so a
+        // whole tenant can still be dropped) is what makes a delete fail with
+        // 23503. The chart is history, not a preference.
         sqlx::Error::Database(ref db) if db.code().as_deref() == Some("23503") => {
             return StoreError::Conflict(
                 "an account that carries postings cannot be deleted".to_owned(),
@@ -742,9 +743,8 @@ impl AccountStore {
     /// posting rules resolve through it, and deactivating is what a tenant who
     /// does not use one actually wants), and an account that **carries a
     /// posting** is history rather than a preference — the database enforces
-    /// that second rule through `fin_postings`' restricting foreign key
-    /// (B4.03), so it holds against a concurrent posting rather than only
-    /// against a slow one.
+    /// that second rule through `fin_postings`' foreign key (B4.03a), so it
+    /// holds against a concurrent posting rather than only against a slow one.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] when the account isn't the tenant's;

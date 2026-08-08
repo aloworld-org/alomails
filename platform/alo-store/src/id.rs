@@ -313,6 +313,19 @@ opaque_id!(
     FinAccountId
 );
 opaque_id!(
+    /// One journal entry — everything one document event did to the books, in
+    /// one transaction (alo Finance, ADR 0035, wave B4). An entry is written
+    /// whole and never edited: a correction is another entry pointing back at
+    /// this id.
+    FinEntryId
+);
+opaque_id!(
+    /// One posting — a single line of a journal entry, moving one signed amount
+    /// on one account (alo Finance, ADR 0035, wave B4). Addressed by id only so
+    /// a row can be pointed at; nothing in the module ever updates one.
+    FinPostingId
+);
+opaque_id!(
     /// One person's week, once it has a status — the row that submit, approve
     /// and reject decide, and that every hour in that week is locked by (alo
     /// Projects, ADR 0035, wave B3). A week nobody has submitted has no row and
