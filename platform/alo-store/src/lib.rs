@@ -60,6 +60,8 @@ pub mod error;
 pub mod extract;
 pub mod fin_accounts;
 pub mod fin_booking;
+pub mod fin_categories;
+pub mod fin_expenses;
 pub mod fin_journal;
 pub mod fin_ledger;
 pub mod fin_rules;
@@ -172,6 +174,11 @@ pub use fin_accounts::{
     ACCOUNT_CODE_MAX_CHARS, ACCOUNT_NAME_MAX_CHARS, Account, AccountRole, AccountType, CHART,
     CHART_SEED_KEY, ChartAccount, ChartName, ChartSeed, NewAccount,
 };
+pub use fin_categories::{CATEGORY_NAME_MAX_CHARS, ExpenseCategory, NewExpenseCategory};
+pub use fin_expenses::{
+    EXPENSE_DECISION_NOTE_MAX, EXPENSE_DESCRIPTION_MAX, Expense, ExpenseMethod, ExpenseStatus,
+    GROSS_MIN_CENTS, MERCHANT_MAX, NewExpense,
+};
 pub use fin_journal::{
     DIMENSION_MAX_CHARS, ENTRY_POSTINGS_MAX, Entry, EntryKind, EntrySource, JOURNAL_PAGE_MAX,
     JournalEntry, MEMO_MAX_CHARS, NewEntry, NewPosting, POSTING_AMOUNT_MAX_CENTS, Posting,
@@ -190,10 +197,10 @@ pub use id::{
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
     BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId, ChatChannelId,
     ChatMessageId, CommentId, ContactId, CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId,
-    CrmStageId, DriveNodeId, EventId, FinAccountId, FinEntryId, FinPostingId, GroupId,
-    InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId,
-    ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePublishId,
-    SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    CrmStageId, DriveNodeId, EventId, FinAccountId, FinCategoryId, FinEntryId, FinExpenseId,
+    FinPostingId, GroupId, InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId,
+    ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId,
+    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

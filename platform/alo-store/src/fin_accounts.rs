@@ -448,14 +448,22 @@ fn map_chart_conflict(error: sqlx::Error) -> StoreError {
         sqlx::Error::Database(ref db) if db.code().as_deref() == Some("23505") => {
             db.constraint().unwrap_or_default().to_owned()
         }
-        // A posting referencing the account (B4.03a's `fin_postings`, whose
-        // foreign key restricts at the end of the statement — `NO ACTION`, so a
-        // whole tenant can still be dropped) is what makes a delete fail with
-        // 23503. The chart is history, not a preference.
+        // Something referencing the account is what makes a delete fail with
+        // 23503, and the message names which thing: a posting (B4.03a's
+        // `fin_postings`) or an expense category pointing at it (B4.05a's
+        // `fin_categories`). Both foreign keys restrict at the end of the
+        // statement — `NO ACTION`, so a whole tenant can still be dropped — and
+        // both refusals are `409`s: the chart is history and configuration, not
+        // a preference.
         sqlx::Error::Database(ref db) if db.code().as_deref() == Some("23503") => {
-            return StoreError::Conflict(
-                "an account that carries postings cannot be deleted".to_owned(),
-            );
+            return match db.constraint().unwrap_or_default() {
+                "fin_categories_account_fk" => StoreError::Conflict(
+                    "an account an expense category books to cannot be deleted".to_owned(),
+                ),
+                _ => StoreError::Conflict(
+                    "an account that carries postings cannot be deleted".to_owned(),
+                ),
+            };
         }
         other => return StoreError::Db(other),
     };

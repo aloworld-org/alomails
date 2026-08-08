@@ -343,6 +343,19 @@ opaque_id!(
     /// therefore no id: on the personal door a week is addressed by its Monday.
     TimeWeekId
 );
+opaque_id!(
+    /// One expense category — a word a person picks on a claim form, and the
+    /// account it books to (alo Finance, ADR 0035, wave B4). Tenant-wide
+    /// configuration, like the chart it points into.
+    FinCategoryId
+);
+opaque_id!(
+    /// One expense claim — what a person spent, on what day, out of whose
+    /// pocket (alo Finance, ADR 0035, wave B4). A claim is personal data about
+    /// an employee: on the personal door it is only ever reachable by the
+    /// person who made it.
+    FinExpenseId
+);
 
 #[cfg(test)]
 mod tests {
