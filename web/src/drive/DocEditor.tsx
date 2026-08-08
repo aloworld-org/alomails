@@ -15,7 +15,7 @@ import {
   type SyntheticEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { AlignCenter, AlignLeft, AlignRight, Bold, ChevronDown, Code2, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, MessageSquarePlus, Minus, Pipette, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
+import { AlignCenter, AlignLeft, AlignRight, Bold, ChevronDown, Code2, FileText, Highlighter, ImagePlus, IndentDecrease, IndentIncrease, Italic, LayoutTemplate, Link2, List, ListChecks, ListOrdered, MessageSquarePlus, Minus, Pipette, Plus, Printer, Redo2, Search, Sigma, Sparkles, Strikethrough, Table2, Underline, Undo2, X } from "lucide-react";
 import {
   useCreateBlockNote,
   SuggestionMenuController,
@@ -472,13 +472,16 @@ export function DocEditor({
         <button type="button" className={styles.commandIcon} onClick={() => align("right")} aria-label={strings.sheetAlignRight}><AlignRight size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => changeIndent("out")} aria-label={strings.docOutdent}><IndentDecrease size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => changeIndent("in")} aria-label={strings.docIndent}><IndentIncrease size={17} /></button>
+        <button type="button" className={activeBlockType === "bulletListItem" ? styles.commandIconActive : styles.commandIcon} onClick={() => changeBlockType("bulletListItem")} aria-label={strings.docStyleBulletList} title={strings.docStyleBulletList}><List size={17} /></button>
+        <button type="button" className={activeBlockType === "numberedListItem" ? styles.commandIconActive : styles.commandIcon} onClick={() => changeBlockType("numberedListItem")} aria-label={strings.docStyleNumberedList} title={strings.docStyleNumberedList}><ListOrdered size={17} /></button>
+        <button type="button" className={activeBlockType === "checkListItem" ? styles.commandIconActive : styles.commandIcon} onClick={() => changeBlockType("checkListItem")} aria-label={strings.docStyleChecklist} title={strings.docStyleChecklist}><ListChecks size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={createLink} aria-label={strings.docInsertLink}><Link2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => imageInputRef.current?.click()} aria-label={strings.docInsertImage}><ImagePlus size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("table")} aria-label={strings.sheetInsertTable}><Table2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("aloCode")} aria-label={strings.composeInsertCode}><Code2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("equation")} aria-label={strings.docEquation}><Sigma size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={insertComment} aria-label={strings.docAddComment}><MessageSquarePlus size={17} /></button>
-        <button type="button" className={styles.commandIcon} onClick={() => insertBlock("divider")} aria-label={strings.docInsertDivider}><List size={17} /></button>
+        <button type="button" className={styles.commandIcon} onClick={() => insertBlock("divider")} aria-label={strings.docInsertDivider}><Minus size={17} /></button>
         <div className={styles.commandSpacer} />
         <button type="button" className={styles.commandIcon} onClick={() => setFindOpen((open) => !open)} aria-label={strings.docFindReplace}><Search size={17} /></button>
         <span className={styles.wordCount} title={`${counts.characters} ${strings.docCharacters}`}>{counts.words} {strings.docWords}</span>
