@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::agent_billing::{BILLING_GUIDANCE, BILLING_TOOL_DOC, BILLING_TOOLS};
 use crate::agent_crm::{CRM_GUIDANCE, CRM_TOOL_DOC, CRM_TOOLS};
+use crate::agent_projects::{PROJECTS_GUIDANCE, PROJECTS_TOOL_DOC, PROJECTS_TOOLS};
 use crate::{AiConfig, ChatMessage, InferenceError, WorkspaceSource, chat, render_sources};
 
 /// The core (mail, tasks, calendar) tools the agent may propose, by name.
@@ -95,8 +96,8 @@ If the request needs an action no tool covers, ANSWER instead and say you cannot
 #[must_use]
 pub fn system_prompt() -> String {
     format!(
-        "{AGENT_SYSTEM_HEAD}{AGENT_SYSTEM_TOOLS}{BILLING_TOOL_DOC}{CRM_TOOL_DOC}\
-         {BILLING_GUIDANCE}{CRM_GUIDANCE}{AGENT_SYSTEM_RULES}"
+        "{AGENT_SYSTEM_HEAD}{AGENT_SYSTEM_TOOLS}{BILLING_TOOL_DOC}{CRM_TOOL_DOC}{PROJECTS_TOOL_DOC}\
+         {BILLING_GUIDANCE}{CRM_GUIDANCE}{PROJECTS_GUIDANCE}{AGENT_SYSTEM_RULES}"
     )
 }
 
@@ -107,7 +108,10 @@ pub fn system_prompt() -> String {
 /// route) cannot check some of them and forget another.
 #[must_use]
 pub fn is_agent_tool(tool: &str) -> bool {
-    AGENT_TOOLS.contains(&tool) || BILLING_TOOLS.contains(&tool) || CRM_TOOLS.contains(&tool)
+    AGENT_TOOLS.contains(&tool)
+        || BILLING_TOOLS.contains(&tool)
+        || CRM_TOOLS.contains(&tool)
+        || PROJECTS_TOOLS.contains(&tool)
 }
 
 /// The chat messages for one agent turn. Pure and exported so the prompt is
@@ -298,13 +302,18 @@ mod tests {
         // told about but the execute route refuses is a dead proposal, and a
         // tool it is never told about is dead code.
         let prompt = system_prompt();
-        for tool in AGENT_TOOLS.iter().chain(BILLING_TOOLS).chain(CRM_TOOLS) {
+        for tool in AGENT_TOOLS
+            .iter()
+            .chain(BILLING_TOOLS)
+            .chain(CRM_TOOLS)
+            .chain(PROJECTS_TOOLS)
+        {
             assert!(prompt.contains(&format!("- {tool}:")), "{tool} undescribed");
             assert!(is_agent_tool(tool), "{tool} is not allowed to execute");
         }
         assert_eq!(
             prompt.matches("\n- ").count(),
-            AGENT_TOOLS.len() + BILLING_TOOLS.len() + CRM_TOOLS.len(),
+            AGENT_TOOLS.len() + BILLING_TOOLS.len() + CRM_TOOLS.len() + PROJECTS_TOOLS.len(),
             "the prompt describes exactly the tools that exist"
         );
         // A name from neither list is not executable, whatever it looks like.
@@ -322,10 +331,12 @@ mod tests {
         let at = |needle: &str| prompt.find(needle).unwrap_or(usize::MAX);
         assert!(at("- create_task:") < at("- create_invoice_draft:"));
         assert!(at("- create_invoice_draft:") < at("- create_deal:"));
+        assert!(at("- create_deal:") < at("- log_time:"));
         // Every tool line comes before every product's guidance, so a model
         // reads the whole menu before it reads how to fill an order from it.
-        assert!(at("- draft_followup:") < at("For a billing tool"));
+        assert!(at("- project_status_summary:") < at("For a billing tool"));
         assert!(at("For a billing tool") < at("For a CRM tool"));
-        assert!(at("For a CRM tool") < at("Output ONLY the JSON object"));
+        assert!(at("For a CRM tool") < at("For a projects tool"));
+        assert!(at("For a projects tool") < at("Output ONLY the JSON object"));
     }
 }

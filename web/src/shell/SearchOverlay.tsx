@@ -19,10 +19,16 @@ import {
 } from "lucide-react";
 
 import { strings } from "../i18n";
-import { useJmapClient, type AgentAnswerDto, type SearchHitDto } from "../jmap";
+import {
+  useJmapClient,
+  type AgentAnswerDto,
+  type AgentResultDto,
+  type SearchHitDto,
+} from "../jmap";
 import { surface } from "../product";
 import { Spinner } from "../ds";
 import { AgentActionCard } from "./AgentActionCard";
+import { AgentResultCard } from "./AgentResultCard";
 import styles from "./SearchOverlay.module.css";
 
 type ExecState = "idle" | "running" | "done" | "error";
@@ -75,12 +81,17 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
   const [answer, setAnswer] = useState<AgentAnswerDto | null>(null);
   const [asking, setAsking] = useState(false);
   const [exec, setExec] = useState<ExecState>("idle");
+  // What the executed action produced. Kept because two tools (B3.10a) answer
+  // with something worth reading — a suggested timesheet entry, a project's
+  // figures — and "Done." would throw it away.
+  const [outcome, setOutcome] = useState<AgentResultDto | null>(null);
   const timer = useRef<number | null>(null);
 
   useEffect(() => {
     // A new query invalidates any prior AI answer/proposed action.
     setAnswer(null);
     setExec("idle");
+    setOutcome(null);
     if (q.trim() === "") {
       setHits(null);
       setLoading(false);
@@ -108,6 +119,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
     setAsking(true);
     setAnswer(null);
     setExec("idle");
+    setOutcome(null);
     void client
       .askAgent(question)
       .then((a) => setAnswer({ ...a, sources: openable(a.sources) }))
@@ -126,8 +138,9 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
     setExec("running");
     void client
       .executeAgentAction(action.tool, action.args)
-      .then(() => {
+      .then((done) => {
         setExec("done");
+        setOutcome(done.result);
         setAnswer((a) => (a ? { ...a, action: null } : a));
       })
       .catch(() => setExec("error"));
@@ -136,6 +149,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
   function discard() {
     setAnswer((a) => (a ? { ...a, action: null } : a));
     setExec("idle");
+    setOutcome(null);
   }
 
   useEffect(() => {
@@ -200,7 +214,12 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
                 onDiscard={discard}
               />
             )}
-            {exec === "done" && <p className={styles.actionDone}>{strings.agentDone}</p>}
+            {exec === "done" &&
+              (outcome === null ? (
+                <p className={styles.actionDone}>{strings.agentDone}</p>
+              ) : (
+                <AgentResultCard result={outcome} />
+              ))}
             {exec === "error" && <p className={styles.answerNote}>{strings.agentFailed}</p>}
             {answer.answer === null && answer.action === null && (
               <p className={styles.answerNote}>

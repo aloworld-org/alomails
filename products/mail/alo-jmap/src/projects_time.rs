@@ -519,6 +519,85 @@ pub async fn delete_time(
     Ok(Json(json!({ "deleted": true })))
 }
 
+/// `GET /projects/time/proposals` → `{"entries": [ … ]}` — the caller's own
+/// pending suggestions (ADR 0023), newest first.
+///
+/// A separate read from the week grid rather than a filter on it, because it
+/// answers a different question: the grid asks "what did I do that week", and
+/// this asks "what is waiting for me to say yes or no", which has no period at
+/// all. Proposals still appear in the grid's own period, flagged and counted
+/// only in `totals.proposedMinutes` — see [`list_time`].
+///
+/// # Errors
+/// `401` without a valid bearer token; `500` on a store failure.
+pub async fn list_proposals(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let entries = account
+        .acc
+        .time_entry_proposals()
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "entries": entries.iter().map(entry_json).collect::<Vec<_>>(),
+    })))
+}
+
+/// `POST /projects/time/{id}/accept` → `{"entry": {…}}` — the human "yes" that
+/// turns one of the caller's own suggestions into real work.
+///
+/// Accepting is what puts the hour into the week's totals, so it is a write
+/// like any other: **the rate is resolved now**, from the engagement's facts as
+/// they stand today, and the week lock applies. The answer carries the stored
+/// entry, so the client sees the price it just acquired rather than an echo.
+///
+/// # Errors
+/// `401` without a valid bearer token; `404` when the entry is not the caller's
+/// own pending proposal — an already-accepted one included, so a double accept
+/// can never reprice an hour; `409` when its week is submitted or approved;
+/// `422` when the engagement's rate can no longer be expressed.
+pub async fn accept_time(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let entry = account
+        .acc
+        .accept_time_entry(&TimeEntryId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "entry": entry_json(&entry) })))
+}
+
+/// `POST /projects/time/{id}/reject` → `{"rejected": true}` — the human "no",
+/// which discards the suggestion.
+///
+/// A suggestion nobody accepted is not a record of anything, so it is deleted
+/// rather than kept as a rejected row. The week lock deliberately does not
+/// apply (the store's own reasoning): a proposal is in no total, so discarding
+/// one changes nothing an approver ever saw, and refusing it would strand a
+/// draft the lock arrived after.
+///
+/// # Errors
+/// `401` without a valid bearer token; `404` when the entry is not the caller's
+/// own pending proposal.
+pub async fn reject_time(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .reject_time_entry(&TimeEntryId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "rejected": true })))
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {

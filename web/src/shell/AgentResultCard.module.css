@@ -1,0 +1,58 @@
+/* What an executed agent action produced (ADR 0034, B3.10a). Deliberately
+   quieter than the approval card beside it: the decision is already made, and
+   this is the receipt. Tokens only, so it inherits light/dark. */
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.header svg {
+  flex: none;
+  color: var(--accent);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.row {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.label {
+  flex: none;
+  min-width: 96px;
+  color: var(--text-tertiary);
+}
+.value {
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+/* A second fact on the same line — "3 open · 1 past due". */
+.aside {
+  color: var(--text-tertiary);
+}
+
+.note {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}

@@ -1651,6 +1651,40 @@ export const en = {
   agentFieldTask: "Task",
   agentFieldEvent: "Event",
   agentNoSubject: "(no subject)",
+  // Projects tools (ADR 0035, B3.10a). Logged time is a suggestion until the
+  // person whose timesheet it is accepts it; the status summary only reads.
+  agentActLogTime: "Log time",
+  agentActProjectStatus: "Project status",
+  agentFieldProject: "Project",
+  agentFieldDay: "Day",
+  agentFieldDuration: "Duration",
+  agentLogTimeNote:
+    "Suggests an entry in your timesheet — it counts once you accept it there.",
+  agentProjectStatusNote: "Only reads the project — nothing is changed.",
+  // The summary's own figures. The server sends numbers, never a sentence, so
+  // every word a reader sees is written here.
+  agentTimeLogged: (project: string): string =>
+    `Suggested in your timesheet on ${project} — accept it in Projects to count it.`,
+  agentStatusHours: "Hours logged",
+  agentStatusBillable: (formatted: string): string => `${formatted} billable`,
+  agentStatusBudget: "Budget",
+  agentStatusBudgetUsed: (percent: string): string => `${percent} used`,
+  agentStatusNoBudget: "No hours budget set",
+  agentStatusInternal: "Internal project — no client, no budget.",
+  agentStatusCustomer: "Client",
+  agentStatusMilestones: "Milestones",
+  agentStatusMilestonesDone: (done: number, total: number): string =>
+    `${done} of ${total} reached`,
+  agentStatusMilestonesLate: (late: number): string =>
+    late === 1 ? "1 overdue" : `${late} overdue`,
+  agentStatusNoMilestones: "None planned",
+  agentStatusNext: "Next",
+  agentStatusTasks: "Tasks",
+  agentStatusTasksOpen: (open: number): string =>
+    open === 1 ? "1 open" : `${open} open`,
+  agentStatusTasksOverdue: (overdue: number): string => `${overdue} past due`,
+  agentStatusLastWorked: "Last worked",
+  agentStatusNeverWorked: "No hours yet",
   searchKind: (kind: string): string =>
     kind === "task"
       ? "Task"

@@ -15,6 +15,7 @@ import {
   Flag,
   FlagOff,
   FolderInput,
+  Gauge,
   Handshake,
   ListChecks,
   MailOpen,
@@ -29,6 +30,7 @@ import {
 
 import { formatAmount } from "../billing";
 import { getLocale, strings } from "../i18n";
+import { durationLabel } from "../projects/format";
 import { Spinner } from "../ds";
 import type { AgentActionDto } from "../jmap";
 import styles from "./AgentActionCard.module.css";
@@ -248,6 +250,32 @@ function describeAction(action: AgentActionDto): ActionView {
         ],
         body: str(a, "body"),
         note: strings.agentFollowupNote,
+      };
+    // Projects tools (ADR 0035, B3.10a). A project is named, not numbered, and
+    // a logged hour is a suggestion the timesheet accepts — both are said out
+    // loud on the card, because approving is where the user decides.
+    case "log_time": {
+      const fields: Field[] = [{ label: strings.agentFieldProject, value: str(a, "project") }];
+      const day = dayOf(str(a, "date"));
+      if (day !== "") fields.push({ label: strings.agentFieldDay, value: day });
+      const minutes = a["minutes"];
+      if (typeof minutes === "number" && Number.isInteger(minutes)) {
+        fields.push({ label: strings.agentFieldDuration, value: durationLabel(minutes) });
+      }
+      return {
+        icon: Clock,
+        title: strings.agentActLogTime,
+        fields,
+        body: str(a, "note"),
+        note: strings.agentLogTimeNote,
+      };
+    }
+    case "project_status_summary":
+      return {
+        icon: Gauge,
+        title: strings.agentActProjectStatus,
+        fields: [{ label: strings.agentFieldProject, value: str(a, "project") }],
+        note: strings.agentProjectStatusNote,
       };
     case "create_event": {
       const fields: Field[] = [{ label: strings.agentFieldEvent, value: str(a, "title") }];

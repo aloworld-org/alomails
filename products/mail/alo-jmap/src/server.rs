@@ -686,11 +686,29 @@ pub fn app(state: AppState) -> Router {
             "/projects/time",
             get(projects_time::list_time).post(projects_time::create_time),
         )
+        // The agent's drafted entries and the two answers a human gives them
+        // (B3.10a): `proposals` is a literal segment beside `{id}`, the same
+        // shape `timer` has, and an entry id can never be one.
+        .route(
+            "/projects/time/proposals",
+            get(projects_time::list_proposals),
+        )
         .route(
             "/projects/time/{id}",
             get(projects_time::get_time)
                 .patch(projects_time::update_time)
                 .delete(projects_time::delete_time),
+        )
+        // Accepting is a write that prices the hour, so it is audited as
+        // `projects.time.accept`; rejecting discards a suggestion that was in no
+        // total, and is audited as `projects.time.reject`.
+        .route(
+            "/projects/time/{id}/accept",
+            post(projects_time::accept_time),
+        )
+        .route(
+            "/projects/time/{id}/reject",
+            post(projects_time::reject_time),
         )
         // The week (B3.05) — two doors onto the same row, and the shape of each
         // URL is the reason it is a different door.

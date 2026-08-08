@@ -19,6 +19,7 @@ use time::format_description::well_known::Rfc3339;
 
 use crate::agent_billing as billing;
 use crate::agent_crm as crm;
+use crate::agent_projects as projects;
 use crate::ai::MAX_ASK_BYTES;
 use crate::error::Problem;
 use crate::state::{Account, AppState, authenticate};
@@ -180,6 +181,11 @@ pub async fn agent_execute(
         "create_deal" => crm::execute_create_deal(&account, &args, &state).await,
         "move_deal_stage" => crm::execute_move_deal_stage(&account, &args).await,
         "draft_followup" => crm::execute_draft_followup(&account, &args, &state).await,
+        // alo Projects' tools (B3.10a), on the same seam. `log_time` writes a
+        // *proposed* entry the user accepts in their own timesheet; the summary
+        // writes nothing at all.
+        "log_time" => projects::execute_log_time(&account, &args).await,
+        "project_status_summary" => projects::execute_project_status_summary(&account, &args).await,
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
     }

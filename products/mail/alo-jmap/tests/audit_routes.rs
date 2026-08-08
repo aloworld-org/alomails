@@ -280,6 +280,8 @@ POST /projects/milestones/{id}/done -> projects.milestone.done
 POST /projects/templates -> projects.template.create
 POST /projects/templates/{id}/instantiate -> projects.template.instantiate
 POST /projects/time -> projects.time.create
+POST /projects/time/{id}/accept -> projects.time.accept
+POST /projects/time/{id}/reject -> projects.time.reject
 POST /projects/timer/start -> projects.timer.start
 POST /projects/timer/stop -> projects.timer.stop
 POST /projects/weeks/{monday}/submit -> projects.week.submit

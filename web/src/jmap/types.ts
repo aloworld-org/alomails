@@ -726,8 +726,60 @@ export interface AgentAnswerDto {
   sources: SearchHitDto[];
 }
 
-/** Result of executing an approved agent action. */
+/** Result of executing an approved agent action. Most tools answer only the
+ *  record they touched; the two Projects tools (B3.10a) answer more, and their
+ *  shapes are spelled out below so the UI can render them without guessing. */
 export interface AgentExecuteResultDto {
   ok: boolean;
-  result: { kind: string; id: string; title?: string };
+  result: AgentResultDto;
+}
+
+/** The record an executed tool produced. `kind` is open — a tool the client does
+ *  not recognise still confirms cleanly — so the two rich shapes are narrowed by
+ *  the guards in `AgentResultCard`, never by the type alone. */
+export interface AgentResultDto {
+  kind: string;
+  id: string;
+  title?: string;
+}
+
+/** What `log_time` wrote: a *proposed* timesheet entry (ADR 0023). It is in no
+ *  total until the person whose timesheet it is accepts it in Projects. */
+export interface TimeEntryResultDto extends AgentResultDto {
+  workDate: string;
+  minutes: number;
+  billable: boolean;
+  note: string;
+  proposed: boolean;
+}
+
+/** What `project_status_summary` read: figures only. The server composes no
+ *  sentence — every label around these numbers comes from the UI's own
+ *  catalogue, so the summary is in the reader's language. */
+export interface ProjectStatusResultDto extends AgentResultDto {
+  hours: {
+    minutes: number;
+    billableMinutes: number;
+    billedMinutes: number;
+    lastWorkedOn: string | null;
+  };
+  budget: {
+    isClientWork: boolean;
+    customer?: string | null;
+    currency?: string;
+    rateCents?: number | null;
+    budgetMinutes?: number | null;
+    budgetCents?: number | null;
+    /** Consumption in basis points (10 000 = the whole budget), uncapped: a
+     *  project past its budget reports over 10 000, which is the case the
+     *  figure exists to show. */
+    consumptionBp?: number | null;
+  };
+  milestones: {
+    total: number;
+    done: number;
+    late: number;
+    next: { name: string; dueOn: string; late: boolean } | null;
+  };
+  tasks: { total: number; open: number; overdue: number; done: number };
 }
