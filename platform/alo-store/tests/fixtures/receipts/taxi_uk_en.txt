@@ -1,0 +1,14 @@
+CITY CABS LIMITED
+Unit 4, Riverside Way
+Leeds LS1 4AP
+
+VAT Registration No. GB 123 4567 89
+Receipt
+Date: 2026-03-11
+Journey: Leeds Station to Headingley
+
+Fare                        27.10
+Booking fee                  1.00
+Total                      £28.10
+
+VAT 20% included             4.68

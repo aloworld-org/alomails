@@ -64,6 +64,7 @@ pub mod fin_categories;
 pub mod fin_expenses;
 pub mod fin_journal;
 pub mod fin_ledger;
+pub mod fin_receipt;
 pub mod fin_rules;
 pub mod iban;
 pub mod ical;
@@ -80,6 +81,7 @@ pub mod insight_tiles;
 pub mod maintenance;
 pub mod message;
 pub mod model;
+pub mod money_text;
 pub mod project_clients;
 pub mod project_hours;
 pub mod project_milestones;
@@ -187,6 +189,10 @@ pub use fin_journal::{
 pub use fin_ledger::{
     AccountBalance, AccountLedger, DimensionBalance, DimensionBalances, LEDGER_GROUPS_MAX,
     LEDGER_PAGE_MAX, LedgerDimension, LedgerLine, LedgerScope, TrialBalance,
+};
+pub use fin_receipt::{
+    AMOUNT_MAX_CENTS, Confidence, Evidence, Found, ParsedReceipt, PatternExtractor,
+    RECEIPT_LINES_MAX, ReceiptExtractor, ReceiptInput, default_extractor,
 };
 pub use fin_rules::{
     InvoiceAccounts, PaymentAccounts, credit_note_entry, credit_note_original, invoice_issue_entry,

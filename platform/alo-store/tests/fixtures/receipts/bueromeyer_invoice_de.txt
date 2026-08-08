@@ -1,0 +1,19 @@
+Bürobedarf Meyer GmbH & Co. KG
+Industriestraße 44
+50733 Köln
+
+Rechnung
+Rechnungsnummer: RE-2026-0117
+Rechnungsdatum: 2026-03-02
+Lieferdatum: 28.02.2026
+
+Pos  Artikel                Menge   Einzelpreis   Gesamt
+1    Druckerpapier A4          10          4,49    44,90
+2    Toner HP 26X               2         98,00   196,00
+3    Ordner breit              20          2,19    43,80
+
+Zwischensumme netto                             284,70
+zzgl. 19,00% USt                                 54,09
+Rechnungsbetrag EUR                             338,79
+
+Zahlbar innerhalb von 14 Tagen ohne Abzug.

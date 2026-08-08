@@ -52,6 +52,7 @@ use crate::crm_thread_match::{domain_of, is_free_mail_domain};
 use crate::csv_read::{CsvRow, CsvTable, parse as parse_csv};
 use crate::error::{Result, StoreError};
 use crate::id::{CrmDealId, CrmPipelineId, CrmStageId};
+use crate::money_text::{AmountText, parse_amount_cents};
 
 /// The most bytes an uploaded lead list may be: 2 MiB, which is tens of
 /// thousands of rows of text and far more than [`MAX_IMPORT_ROWS`] allows.
@@ -709,140 +710,58 @@ fn parse_day(raw: &str) -> Result<Option<Date>> {
 
 /// An amount in the deal's currency, as integer cents.
 ///
-/// What it accepts, and why each is unambiguous:
+/// The grammar — every way Europe writes an amount, and the one shape
+/// (`1.234`) that is refused rather than guessed — lives in
+/// [`crate::money_text`], shared with the receipt extractor so the two cannot
+/// come to different answers about the same characters. What this function
+/// adds is the *column's* rules and the sentences a person importing a
+/// spreadsheet should read:
 ///
-/// - `1234`, `€ 1 234`, `1 234,00 €` — no decimal separator, or a plain one.
-///   Spaces (including the non-breaking and thin ones a spreadsheet writes),
-///   the Swiss apostrophe, and the three currency symbols a European price
-///   list uses are stripped.
-/// - `1234.56` and `1234,56` — a single separator with one or two digits after
-///   it is a decimal separator, in either country's convention.
-/// - `1.234.567` and `1 234 567` — a repeated separator is a thousands
-///   separator, and its groups must be three digits.
-/// - `1.234,56` and `1,234.56` — both present: the **last** one is the decimal
-///   separator and the other is grouping, which is true in every locale that
-///   uses either.
+/// - an empty cell is an **unpriced lead**, worth nothing rather than wrong;
+/// - a negative value is not a discount, it is a typo;
+/// - the deal ceiling ([`DEAL_VALUE_MAX_CENTS`]) applies here too, so a stray
+///   column of phone numbers cannot import as a billion-euro pipeline.
 ///
-/// What it refuses:
+/// # Errors
 ///
-/// - `1.234` — a single separator before exactly three digits. It is 1234 in
-///   Berlin and 1.23 in London, and money is never guessed (CLAUDE.md law 2;
-///   `docs/autonomy/LOOP.md` on compliance-adjacent ambiguity).
-/// - anything negative — a deal value is not a discount, it is a typo.
-/// - anything that is not a number at all, or is above the deal ceiling.
+/// [`StoreError::Validation`] naming the rule the cell broke.
 pub fn parse_value_cents(raw: &str) -> Result<i64> {
-    let cleaned: String = raw
-        .chars()
-        .filter(|c| {
-            !matches!(
-                c,
-                ' ' | '\u{a0}' | '\u{202f}' | '\u{2009}' | '€' | '$' | '£' | '\''
-            )
-        })
-        .collect();
-    if cleaned.is_empty() {
-        return Ok(0);
-    }
-    if cleaned.starts_with('-') {
-        return Err(StoreError::Validation(
-            "a deal value must not be negative".to_owned(),
-        ));
-    }
-    let not_a_number =
-        || StoreError::Validation("the value column does not hold an amount".to_owned());
-    if !cleaned
-        .chars()
-        .all(|c| c.is_ascii_digit() || c == '.' || c == ',')
-    {
-        return Err(not_a_number());
-    }
-    let dots = cleaned.matches('.').count();
-    let commas = cleaned.matches(',').count();
-    let (whole, cents) = match (dots, commas) {
-        (0, 0) => (cleaned.clone(), String::new()),
-        // One kind of separator, more than once: it groups thousands.
-        (_, 0) if dots > 1 => (check_groups(&cleaned, '.')?, String::new()),
-        (0, _) if commas > 1 => (check_groups(&cleaned, ',')?, String::new()),
-        // One kind of separator, once: decimal, or the one ambiguous shape.
-        (1, 0) => split_single(&cleaned, '.')?,
-        (0, 1) => split_single(&cleaned, ',')?,
-        _ => {
-            // Both are present: the later one is the decimal separator, which
-            // is true in every locale that uses either.
-            let decimal = if cleaned.rfind('.') > cleaned.rfind(',') {
-                '.'
-            } else {
-                ','
-            };
-            let grouping = if decimal == '.' { ',' } else { '.' };
-            let (int, frac) = cleaned.rsplit_once(decimal).ok_or_else(not_a_number)?;
-            if frac.contains(grouping) || !(1..=2).contains(&frac.len()) {
-                return Err(not_a_number());
-            }
-            (check_groups(int, grouping)?, frac.to_owned())
-        }
-    };
-    let units: i64 = whole.parse().map_err(|_| not_a_number())?;
-    let cents: i64 = if cents.is_empty() {
-        0
-    } else if cents.len() == 1 {
-        cents.parse::<i64>().map_err(|_| not_a_number())? * 10
-    } else {
-        cents.parse().map_err(|_| not_a_number())?
-    };
-    let total = units
-        .checked_mul(100)
-        .and_then(|units| units.checked_add(cents))
-        .ok_or_else(|| {
-            StoreError::Validation(format!(
-                "a deal value must be between 0 and {DEAL_VALUE_MAX_CENTS} cents"
-            ))
-        })?;
-    if total > DEAL_VALUE_MAX_CENTS {
-        return Err(StoreError::Validation(format!(
+    let too_large = || {
+        StoreError::Validation(format!(
             "a deal value must be between 0 and {DEAL_VALUE_MAX_CENTS} cents"
-        )));
+        ))
+    };
+    let total = match parse_amount_cents(raw) {
+        Ok(total) => total,
+        Err(AmountText::Empty) => return Ok(0),
+        Err(AmountText::Negative) => {
+            return Err(StoreError::Validation(
+                "a deal value must not be negative".to_owned(),
+            ));
+        }
+        Err(AmountText::Ambiguous) => {
+            return Err(StoreError::Validation(
+                "a value like 1.234 is a thousand in one country and one and a bit in another; \
+                 write it with two decimals, or with no separator at all"
+                    .to_owned(),
+            ));
+        }
+        Err(AmountText::Grouping) => {
+            return Err(StoreError::Validation(
+                "the value column's thousands separators are not in groups of three".to_owned(),
+            ));
+        }
+        Err(AmountText::NotANumber) => {
+            return Err(StoreError::Validation(
+                "the value column does not hold an amount".to_owned(),
+            ));
+        }
+        Err(AmountText::TooLarge) => return Err(too_large()),
+    };
+    if total > DEAL_VALUE_MAX_CENTS {
+        return Err(too_large());
     }
     Ok(total)
-}
-
-/// A number with exactly one separator: decimal when one or two digits follow,
-/// **ambiguous** when three do, refused otherwise.
-fn split_single(value: &str, separator: char) -> Result<(String, String)> {
-    let Some((int, frac)) = value.split_once(separator) else {
-        return Ok((value.to_owned(), String::new()));
-    };
-    match frac.len() {
-        1 | 2 => Ok((int.to_owned(), frac.to_owned())),
-        3 => Err(StoreError::Validation(
-            "a value like 1.234 is a thousand in one country and one and a bit in another; write \
-             it with two decimals, or with no separator at all"
-                .to_owned(),
-        )),
-        _ => Err(StoreError::Validation(
-            "the value column does not hold an amount".to_owned(),
-        )),
-    }
-}
-
-/// Validates thousands groups and returns the number without them.
-fn check_groups(value: &str, separator: char) -> Result<String> {
-    let parts: Vec<&str> = value.split(separator).collect();
-    let malformed = || {
-        StoreError::Validation(
-            "the value column's thousands separators are not in groups of three".to_owned(),
-        )
-    };
-    let Some((first, rest)) = parts.split_first() else {
-        return Err(malformed());
-    };
-    if first.is_empty() || first.len() > 3 {
-        return Err(malformed());
-    }
-    if rest.iter().any(|group| group.len() != 3) {
-        return Err(malformed());
-    }
-    Ok(parts.concat())
 }
 
 #[cfg(test)]
