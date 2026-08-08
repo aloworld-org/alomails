@@ -396,12 +396,33 @@
   overflow: auto;
   min-height: 0;
 }
-.viewMsg {
+.viewEmpty {
+  min-height: var(--content-height-md);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
   padding: var(--space-8);
   text-align: center;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--text-sm);
 }
+.viewEmpty > svg { color: var(--accent); }
+.viewEmpty h2 { margin: 0; color: var(--text-primary); font-size: var(--text-xl); }
+.viewEmpty p { max-width: var(--overlay-width-lg); margin: 0; line-height: var(--leading-relaxed); }
+.viewEmpty button {
+  min-height: var(--control-height);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-4);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-weight: var(--weight-semibold);
+}
+.viewEmpty button:hover { background: var(--accent-hover); }
 
 /* ---- chips ---- */
 .chip {

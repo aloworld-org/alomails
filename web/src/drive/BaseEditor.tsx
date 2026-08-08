@@ -177,6 +177,20 @@ export function BaseEditor({
     }
   }
 
+  async function addRequiredField(type: "select" | "date") {
+    if (!table) return;
+    const name = type === "select" ? strings.baseStatusField : strings.baseDateField;
+    const options = type === "select"
+      ? { choices: [strings.baseStatusTodo, strings.baseStatusInProgress, strings.baseStatusDone] }
+      : {};
+    try {
+      await client.baseAddField(table.id, name, type, options);
+      await reload();
+    } catch (error) {
+      setActionError(strings.driveActionFailed(strings.baseAddField, driveErrorReason(error) ?? strings.driveUnknownError));
+    }
+  }
+
   async function addTable() {
     if (!base) return;
     const idx = base.tables.length;
@@ -320,17 +334,17 @@ export function BaseEditor({
 
           {table && view && view.kind === "board" && (
             <div className={styles.viewBody}>
-              <BoardView table={table} tables={tables} config={view.config} onSetCell={(id, fid, v) => void setCellById(id, fid, v)} onAddRow={(p) => void addRow(p)} />
+              <BoardView table={table} tables={tables} config={view.config} onSetCell={(id, fid, v) => void setCellById(id, fid, v)} onAddRow={(p) => void addRow(p)} onAddRequiredField={(type) => void addRequiredField(type)} />
             </div>
           )}
           {table && view && view.kind === "calendar" && (
             <div className={styles.viewBody}>
-              <CalendarView table={table} tables={tables} config={view.config} onSetCell={(id, fid, v) => void setCellById(id, fid, v)} onAddRow={(p) => void addRow(p)} />
+              <CalendarView table={table} tables={tables} config={view.config} onSetCell={(id, fid, v) => void setCellById(id, fid, v)} onAddRow={(p) => void addRow(p)} onAddRequiredField={(type) => void addRequiredField(type)} />
             </div>
           )}
           {table && view && view.kind === "gallery" && (
             <div className={styles.viewBody}>
-              <GalleryView table={table} tables={tables} config={view.config} onSetCell={(id, fid, v) => void setCellById(id, fid, v)} onAddRow={(p) => void addRow(p)} />
+              <GalleryView table={table} tables={tables} config={view.config} onSetCell={(id, fid, v) => void setCellById(id, fid, v)} onAddRow={(p) => void addRow(p)} onAddRequiredField={(type) => void addRequiredField(type)} />
             </div>
           )}
           {table && view && view.kind === "grid" && (

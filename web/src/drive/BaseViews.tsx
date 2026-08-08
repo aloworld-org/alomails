@@ -3,7 +3,7 @@
 // board groups by a select field (drag a card to change it); the calendar places
 // records by a date field; the gallery is a card wall.
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, Trello } from "lucide-react";
 
 import { strings } from "../i18n";
 import type { BaseFieldDto, BaseTableDto } from "../jmap";
@@ -17,6 +17,7 @@ interface ViewProps {
   config: Record<string, unknown>;
   onSetCell: (recordId: string, fieldId: string, value: unknown) => void;
   onAddRow: (preset?: Record<string, unknown>) => void;
+  onAddRequiredField: (type: "select" | "date") => void;
 }
 
 function secondaryFields(table: BaseTableDto): BaseFieldDto[] {
@@ -25,11 +26,19 @@ function secondaryFields(table: BaseTableDto): BaseFieldDto[] {
 
 // ---- board ------------------------------------------------------------------
 
-export function BoardView({ table, tables, config, onSetCell, onAddRow }: ViewProps) {
+export function BoardView({ table, tables, config, onSetCell, onAddRow, onAddRequiredField }: ViewProps) {
   const groupId = typeof config.groupFieldId === "string" ? config.groupFieldId : "";
-  const field = table.fields.find((f) => f.id === groupId);
+  const field = table.fields.find((f) => f.id === groupId && (f.type === "select" || f.type === "multiselect"))
+    ?? table.fields.find((f) => f.type === "select" || f.type === "multiselect");
   if (!field || (field.type !== "select" && field.type !== "multiselect")) {
-    return <div className={styles.viewMsg}>{strings.baseBoardNeedsSelect}</div>;
+    return (
+      <div className={styles.viewEmpty}>
+        <Trello size={38} />
+        <h2>{strings.baseBoardEmptyTitle}</h2>
+        <p>{strings.baseBoardEmptyBody}</p>
+        <button type="button" onClick={() => onAddRequiredField("select")}><Plus size={17} /> {strings.baseAddStatusField}</button>
+      </div>
+    );
   }
   const choices = Array.isArray(field.options.choices)
     ? field.options.choices.filter((c): c is string => typeof c === "string")
@@ -117,9 +126,10 @@ export function GalleryView({ table, tables, onAddRow }: ViewProps) {
 
 // ---- calendar ---------------------------------------------------------------
 
-export function CalendarView({ table, config, onAddRow }: ViewProps) {
+export function CalendarView({ table, config, onAddRow, onAddRequiredField }: ViewProps) {
   const dateId = typeof config.dateFieldId === "string" ? config.dateFieldId : "";
-  const field = table.fields.find((f) => f.id === dateId);
+  const field = table.fields.find((f) => f.id === dateId && f.type === "date")
+    ?? table.fields.find((f) => f.type === "date");
   const [monthStart, setMonthStart] = useState(() => {
     const now = startOfDay(new Date());
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -134,7 +144,14 @@ export function CalendarView({ table, config, onAddRow }: ViewProps) {
   }, [monthStart]);
 
   if (!field || field.type !== "date") {
-    return <div className={styles.viewMsg}>{strings.baseCalendarNeedsDate}</div>;
+    return (
+      <div className={styles.viewEmpty}>
+        <CalendarDays size={38} />
+        <h2>{strings.baseCalendarEmptyTitle}</h2>
+        <p>{strings.baseCalendarEmptyBody}</p>
+        <button type="button" onClick={() => onAddRequiredField("date")}><Plus size={17} /> {strings.baseAddDateField}</button>
+      </div>
+    );
   }
 
   const byDay = new Map<string, { id: string; label: string }[]>();
