@@ -182,8 +182,8 @@ pub use fin_ledger::{
     LEDGER_PAGE_MAX, LedgerDimension, LedgerLine, LedgerScope, TrialBalance,
 };
 pub use fin_rules::{
-    InvoiceAccounts, PaymentAccounts, invoice_issue_entry, payment_settle_entry,
-    payment_settlement_role, settlement_needs_exchange_account,
+    InvoiceAccounts, PaymentAccounts, credit_note_entry, credit_note_original, invoice_issue_entry,
+    payment_settle_entry, payment_settlement_role, settlement_needs_exchange_account,
 };
 pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId,

@@ -41,6 +41,12 @@
 //! disagreed with the paper by a cent per invoice would be discovered a year
 //! later by somebody reconciling both.
 //!
+//! The credit-note rule (B4.04c) inherits all of that by **being** the invoice
+//! rule ([`sales_entry`], applied to a document whose quantities are negative
+//! and whose rate is the original's), which is what makes a document and its
+//! full credit note sum to zero posting for posting in both columns rather than
+//! only in aggregate.
+//!
 //! The settlement rule (B4.04b) is the one whose two money postings are crossed
 //! at **different** rates — the invoice's and the payment day's — and every
 //! cent of that difference is an exchange difference with `fx_diff` as its
@@ -54,7 +60,7 @@ use crate::billing_payments::Payment;
 use crate::error::{Result, StoreError};
 use crate::fin_accounts::AccountRole;
 use crate::fin_journal::{EntryKind, EntrySource, NewEntry, NewPosting, SourceEvent, SourceKind};
-use crate::id::FinAccountId;
+use crate::id::{BillingInvoiceId, FinAccountId, FinEntryId};
 
 /// The accounts an invoice's rule needs, resolved by role before it is called.
 ///
@@ -104,7 +110,7 @@ pub struct InvoiceAccounts {
 /// # Errors
 /// [`StoreError::Conflict`] when the document is not one that books at issue —
 /// a draft is an intention, a void one is booked by its reversal, and a credit
-/// note has its own rule (B4.04c). [`StoreError::Validation`] when the
+/// note has its own rule ([`credit_note_entry`]). [`StoreError::Validation`] when the
 /// document cannot be expressed in the books: no issue date, no exchange-rate
 /// snapshot for a foreign-currency document, a snapshot taken against a
 /// different accounting currency, an amount that cannot be crossed, or a
@@ -114,33 +120,132 @@ pub fn invoice_issue_entry(
     base_currency: &str,
     accounts: &InvoiceAccounts,
 ) -> Result<NewEntry> {
-    let invoice = &document.invoice;
-    if invoice.is_credit_note {
+    if document.invoice.is_credit_note {
         return Err(StoreError::Conflict(
             "a credit note is booked by the credit-note rule, not as an invoice".to_owned(),
         ));
     }
+    sales_entry(document, base_currency, accounts, EntryKind::Invoice, None)
+}
+
+/// The invoice a **credit note** corrects, or the refusal that says why this
+/// document is not a credit note at all.
+///
+/// The booking layer asks this before the rule below, because finding the
+/// original's entry is a database read and the rule is pure: it is the same
+/// question in the two places that need it, answered once.
+///
+/// # Errors
+/// [`StoreError::Conflict`] when the document is an ordinary invoice — which
+/// the invoice rule owns; [`StoreError::Validation`] when it is a credit note
+/// that names no original, which [`crate::AccountStore::create_billing_credit_note`]
+/// cannot produce but which the type still allows.
+pub fn credit_note_original(document: &InvoiceDocument) -> Result<&BillingInvoiceId> {
+    if !document.invoice.is_credit_note {
+        return Err(StoreError::Conflict(
+            "an invoice is booked by the invoice rule, not as a credit note".to_owned(),
+        ));
+    }
+    document.invoice.credits_invoice_id.as_ref().ok_or_else(|| {
+        StoreError::Validation(
+            "this credit note names no invoice, so there is no entry for it to correct".to_owned(),
+        )
+    })
+}
+
+/// The entry an **issued credit note** books: the exact mirror of the document
+/// it corrects.
+///
+/// ```text
+/// credit  ar        gross         dimension: customer
+/// debit   revenue   net per rate  dimension: vat rate
+/// debit   vat_output tax per rate dimension: vat rate
+/// ```
+///
+/// **It is the invoice rule, applied to the credit note's own document** —
+/// [`sales_entry`] with a different [`EntryKind`] and the original's entry named
+/// as the one it corrects. That is not a shortcut, it is the reason the pair
+/// provably sums to zero:
+///
+/// - a credit note's lines are the original's with the **quantity negated**, and
+///   [`crate::billing_totals`] rounds half away from zero precisely so that
+///   `totals(−lines) == −totals(lines)`, per rate and not only in the gross;
+/// - a credit note **inherits its original's exchange rate** rather than taking
+///   today's (`billing_invoices::issue_fx_snapshot`), and
+///   [`crate::billing_fx::convert_cents`] rounds half away from zero too, so
+///   `cross(−x) == −cross(x)`;
+/// - so every posting of the mirror is the negation of the original's posting on
+///   the same account with the same dimensions, in **both** money columns.
+///
+/// *Rejected: negating the original's entry.* It reads like the shorter route
+/// and is wrong for the case that actually matters — a **partial** credit note,
+/// whose lines were edited before issue and are the negation of nothing. Booking
+/// the credit note's own document is right for both, and it is the only version
+/// in which the ledger books what billing computed (P3) for a credit note too.
+///
+/// # Errors
+/// [`StoreError::Conflict`] when the document is an ordinary invoice, or is a
+/// draft or void credit note; [`StoreError::Validation`] when it names no
+/// original, carries no issue date, cannot be restated into the accounting
+/// currency, or credits nothing at all.
+pub fn credit_note_entry(
+    document: &InvoiceDocument,
+    base_currency: &str,
+    accounts: &InvoiceAccounts,
+    reverses_entry_id: &FinEntryId,
+) -> Result<NewEntry> {
+    credit_note_original(document)?;
+    sales_entry(
+        document,
+        base_currency,
+        accounts,
+        EntryKind::CreditNote,
+        Some(reverses_entry_id.clone()),
+    )
+}
+
+/// What an issued sales document does to the books, for the two documents that
+/// do the same thing with opposite signs.
+///
+/// The caller has already established *which* document this is (an invoice or a
+/// credit note) and what it therefore books; everything below — the status gate,
+/// the per-rate postings, the receivable as the sum of the crossed parts — is
+/// one arithmetic, and a credit note is that arithmetic applied to lines whose
+/// quantities are negative.
+fn sales_entry(
+    document: &InvoiceDocument,
+    base_currency: &str,
+    accounts: &InvoiceAccounts,
+    kind: EntryKind,
+    reverses_entry_id: Option<FinEntryId>,
+) -> Result<NewEntry> {
+    let invoice = &document.invoice;
+    // What the refusals below call this document, so a person reading a `422`
+    // is told about the document they are looking at.
+    let noun = if invoice.is_credit_note {
+        "credit note"
+    } else {
+        "invoice"
+    };
     match invoice.status {
         // `paid` is bookable: it was issued first, and a backfill meets
         // documents that have since been settled.
         InvoiceStatus::Issued | InvoiceStatus::Paid => {}
         InvoiceStatus::Draft => {
-            return Err(StoreError::Conflict(
-                "a draft invoice is an intention, not an event; issue it before booking it"
-                    .to_owned(),
-            ));
+            return Err(StoreError::Conflict(format!(
+                "a draft {noun} is an intention, not an event; issue it before booking it"
+            )));
         }
         InvoiceStatus::Void => {
-            return Err(StoreError::Conflict(
-                "a void invoice is booked by its issue entry and reversed by its void entry"
-                    .to_owned(),
-            ));
+            return Err(StoreError::Conflict(format!(
+                "a void {noun} is booked by its issue entry and reversed by its void entry"
+            )));
         }
     }
     let entry_date = invoice.issue_date.ok_or_else(|| {
-        StoreError::Validation(
-            "an issued invoice must carry an issue date before it can be booked".to_owned(),
-        )
+        StoreError::Validation(format!(
+            "an issued {noun} must carry an issue date before it can be booked"
+        ))
     })?;
 
     let fx = booking_rate(document, base_currency, entry_date)?;
@@ -186,14 +291,14 @@ pub fn invoice_issue_entry(
         );
     }
     if postings.len() < 2 {
-        return Err(StoreError::Validation(
-            "an invoice whose lines cancel out has nothing to book".to_owned(),
-        ));
+        return Err(StoreError::Validation(format!(
+            "a {noun} whose lines cancel out has nothing to book"
+        )));
     }
 
     Ok(NewEntry {
         entry_date,
-        kind: EntryKind::Invoice,
+        kind,
         source: Some(EntrySource {
             kind: SourceKind::Invoice,
             id: invoice.id.as_str().to_owned(),
@@ -202,7 +307,7 @@ pub fn invoice_issue_entry(
         // The number, and nothing a human typed: a memo is read on a journal
         // screen and printed in a CSV, and a customer's name is theirs.
         memo: invoice.number.clone().unwrap_or_default(),
-        reverses_entry_id: None,
+        reverses_entry_id,
         attachment_node_id: None,
         currency: invoice.currency.clone(),
         fx,
@@ -1294,6 +1399,272 @@ mod tests {
                 &payment_accounts(),
             ))
             .contains("no exchange rate")
+        );
+    }
+
+    // ---------------------------------------------------------------------
+    // The credit-note rule (B4.04c)
+    // ---------------------------------------------------------------------
+
+    /// The entry the original was booked with, named as the one a credit note
+    /// corrects. The pure rule never resolves it — the booking layer reads it —
+    /// so any id stands in here.
+    fn original_entry() -> FinEntryId {
+        FinEntryId::new("entry-original")
+    }
+
+    /// A credit note as [`crate::AccountStore::create_billing_credit_note`]
+    /// raises and [`crate::AccountStore::issue_billing_invoice`] freezes it: the
+    /// original's customer, currency and **exchange rate**, its own id and
+    /// number from the same series, and the lines the caller gives it — the full
+    /// mirror by default, an edited subset for a partial credit.
+    fn credit_note_of(original: &InvoiceDocument, lines: Vec<Line>) -> InvoiceDocument {
+        let figures: Vec<LineFigures> = lines.iter().map(Line::figures).collect();
+        InvoiceDocument {
+            invoice: Invoice {
+                id: BillingInvoiceId::new("cn-1"),
+                number: Some("INV-2026-00008".to_owned()),
+                issue_date: Some(day(9)),
+                due_date: Some(day(30)),
+                is_credit_note: true,
+                credits_invoice_id: Some(original.invoice.id.clone()),
+                ..original.invoice.clone()
+            },
+            totals: totals(&figures),
+            lines,
+            paid_cents: 0,
+        }
+    }
+
+    /// The mirror of every line of a document — what the store writes when a
+    /// credit note is raised (`billing_line::Line::negated`).
+    fn negated(lines: &[Line]) -> Vec<Line> {
+        lines
+            .iter()
+            .map(|source| Line {
+                qty_milli: -source.qty_milli,
+                ..source.clone()
+            })
+            .collect()
+    }
+
+    fn rows_of(entry: &NewEntry) -> Vec<Row<'_>> {
+        entry
+            .postings
+            .iter()
+            .map(|posting| {
+                (
+                    posting.account_id.as_str(),
+                    posting.amount_cents,
+                    posting.base_cents,
+                    posting.vat_rate_bp,
+                    posting.customer_id.as_deref(),
+                )
+            })
+            .collect()
+    }
+
+    /// **The golden**, the invoice golden read from right to left:
+    ///
+    /// ```text
+    /// credit  ar          1 307.00   customer cust-1
+    /// debit   revenue       200.00   rate  900
+    /// debit   vat_output     18.00   rate  900
+    /// debit   revenue       900.00   rate 2100
+    /// debit   vat_output    189.00   rate 2100
+    /// ```
+    #[test]
+    fn a_credit_note_books_the_mirror() {
+        let original = two_rate_document();
+        let credit = credit_note_of(&original, negated(&original.lines));
+        let entry = credit_note_entry(&credit, "EUR", &accounts(), &original_entry())
+            .unwrap_or_else(|err| panic!("refused: {err}"));
+
+        assert_eq!(entry.kind, EntryKind::CreditNote, "not an invoice entry");
+        assert_eq!(entry.entry_date, day(9), "the credit note's own issue date");
+        assert_eq!(entry.memo, "INV-2026-00008", "its own number, one series");
+        assert_eq!(
+            entry.reverses_entry_id.as_ref(),
+            Some(&original_entry()),
+            "and it names the entry it corrects"
+        );
+        let source = entry.source.as_ref().unwrap_or_else(|| panic!("a source"));
+        assert_eq!(source.kind, SourceKind::Invoice);
+        assert_eq!(
+            source.id, "cn-1",
+            "keyed on the credit note, not the original"
+        );
+        assert_eq!(source.event, SourceEvent::Issue);
+
+        assert_eq!(
+            rows_of(&entry),
+            vec![
+                ("acc-ar", -130_700, -130_700, None, Some("cust-1")),
+                ("acc-revenue", 20_000, 20_000, Some(900), None),
+                ("acc-vat", 1_800, 1_800, Some(900), None),
+                ("acc-revenue", 90_000, 90_000, Some(2100), None),
+                ("acc-vat", 18_900, 18_900, Some(2100), None),
+            ]
+        );
+    }
+
+    /// **P4, in the pure rule.** A document and its full credit note sum to zero
+    /// per account and per dimension, in both money columns — including at a
+    /// rate where crossing the whole and crossing the parts disagree, because a
+    /// credit note inherits the original's rate and both round half away from
+    /// zero.
+    #[test]
+    fn a_document_and_its_full_credit_note_sum_to_zero() {
+        for fx in [
+            FxSnapshot::identity("EUR", day(4)),
+            FxSnapshot {
+                base_currency: "EUR".to_owned(),
+                rate_micro: 1_088_000,
+                rate_date: day(3),
+            },
+        ] {
+            let foreign = fx.rate_micro != 1_000_000;
+            let mut original = two_rate_document();
+            if foreign {
+                original.invoice.currency = "USD".to_owned();
+            }
+            original.invoice.fx = Some(fx.clone());
+            let credit = credit_note_of(&original, negated(&original.lines));
+
+            let issued = invoice_issue_entry(&original, "EUR", &accounts())
+                .unwrap_or_else(|err| panic!("refused: {err}"));
+            let mirrored = credit_note_entry(&credit, "EUR", &accounts(), &original_entry())
+                .unwrap_or_else(|err| panic!("refused: {err}"));
+
+            // Row for row, on the same account with the same dimensions.
+            assert_eq!(issued.postings.len(), mirrored.postings.len());
+            for (booked, taken_back) in issued.postings.iter().zip(&mirrored.postings) {
+                assert_eq!(booked.account_id, taken_back.account_id);
+                assert_eq!(booked.vat_rate_bp, taken_back.vat_rate_bp);
+                assert_eq!(booked.customer_id, taken_back.customer_id);
+                assert_eq!(
+                    booked.amount_cents + taken_back.amount_cents,
+                    0,
+                    "the pair moves no money on {}",
+                    booked.account_id.as_str()
+                );
+                assert_eq!(
+                    booked.base_cents + taken_back.base_cents,
+                    0,
+                    "and none in the accounting currency either"
+                );
+            }
+            // The receivable the pair leaves is zero even though the crossed
+            // gross and the sum of crossed parts differ by a cent here — the
+            // example that makes the assertion above mean something.
+            if foreign {
+                assert_eq!(issued.postings[0].base_cents, 120_128);
+                assert_eq!(
+                    convert_cents(130_700, fx.rate_micro),
+                    Some(120_129),
+                    "the whole crossed is not the parts crossed"
+                );
+            }
+        }
+    }
+
+    /// A **partial** credit note books what it credits and nothing else: the
+    /// rule reads the credit note's own lines, so a document that is the
+    /// negation of nothing still books correctly.
+    #[test]
+    fn a_partial_credit_note_books_only_what_it_credits() {
+        let original = two_rate_document();
+        // Only the 9 % line given back: 4 × €50.00 = €200.00 net, €18.00 VAT.
+        let credit = credit_note_of(&original, vec![line(0, -4_000, 5_000, 900)]);
+        let entry = credit_note_entry(&credit, "EUR", &accounts(), &original_entry())
+            .unwrap_or_else(|err| panic!("refused: {err}"));
+
+        assert_eq!(
+            rows_of(&entry),
+            vec![
+                ("acc-ar", -21_800, -21_800, None, Some("cust-1")),
+                ("acc-revenue", 20_000, 20_000, Some(900), None),
+                ("acc-vat", 1_800, 1_800, Some(900), None),
+            ]
+        );
+        // What the customer still owes after it: the original's gross less the
+        // credit's, which is exactly the 21 % part with its tax.
+        let issued = invoice_issue_entry(&original, "EUR", &accounts())
+            .unwrap_or_else(|err| panic!("refused: {err}"));
+        assert_eq!(
+            issued.postings[0].amount_cents + entry.postings[0].amount_cents,
+            108_900
+        );
+    }
+
+    /// The refusals: an ordinary invoice is not this rule's document, a credit
+    /// note that names no original has no entry to correct, and a draft or void
+    /// one is not an event — each message naming the document a person is
+    /// actually looking at.
+    #[test]
+    fn the_credit_note_rule_refuses_what_it_does_not_own() {
+        let original = two_rate_document();
+        let credit = credit_note_of(&original, negated(&original.lines));
+
+        assert!(
+            conflict(credit_note_entry(
+                &original,
+                "EUR",
+                &accounts(),
+                &original_entry()
+            ))
+            .contains("invoice rule")
+        );
+
+        let mut orphan = credit.clone();
+        orphan.invoice.credits_invoice_id = None;
+        assert!(
+            invalid(credit_note_entry(
+                &orphan,
+                "EUR",
+                &accounts(),
+                &original_entry()
+            ))
+            .contains("names no invoice")
+        );
+
+        let mut draft = credit.clone();
+        draft.invoice.status = InvoiceStatus::Draft;
+        let refusal = conflict(credit_note_entry(
+            &draft,
+            "EUR",
+            &accounts(),
+            &original_entry(),
+        ));
+        assert!(refusal.contains("draft credit note"), "{refusal}");
+
+        let mut void = credit.clone();
+        void.invoice.status = InvoiceStatus::Void;
+        assert!(
+            conflict(credit_note_entry(
+                &void,
+                "EUR",
+                &accounts(),
+                &original_entry()
+            ))
+            .contains("void credit note")
+        );
+
+        let mut undated = credit.clone();
+        undated.invoice.issue_date = None;
+        assert!(
+            invalid(credit_note_entry(
+                &undated,
+                "EUR",
+                &accounts(),
+                &original_entry()
+            ))
+            .contains("issued credit note")
+        );
+
+        // The invoice rule's own refusal still names the rule that owns it.
+        assert!(
+            conflict(invoice_issue_entry(&credit, "EUR", &accounts())).contains("credit-note rule")
         );
     }
 }

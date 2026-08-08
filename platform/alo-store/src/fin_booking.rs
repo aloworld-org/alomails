@@ -24,7 +24,7 @@
 //!   would rather look than catch.
 //!
 //! **What is deliberately not here yet:** the call from
-//! [`AccountStore::issue_billing_invoice`] and
+//! [`AccountStore::issue_billing_invoice`] (which issues credit notes too) and
 //! [`AccountStore::record_billing_payment`] themselves, and the *un*-booking
 //! that [`AccountStore::delete_billing_payment`] will need (a booked payment
 //! that is removed has to be reversed, not forgotten — a reversal entry, which
@@ -44,8 +44,8 @@ use crate::error::{Result, StoreError};
 use crate::fin_accounts::AccountRole;
 use crate::fin_journal::{EntrySource, SourceEvent, SourceKind};
 use crate::fin_rules::{
-    InvoiceAccounts, PaymentAccounts, invoice_issue_entry, payment_settle_entry,
-    payment_settlement_role, settlement_needs_exchange_account,
+    InvoiceAccounts, PaymentAccounts, credit_note_entry, credit_note_original, invoice_issue_entry,
+    payment_settle_entry, payment_settlement_role, settlement_needs_exchange_account,
 };
 use crate::id::{BillingInvoiceId, BillingPaymentId, FinAccountId, FinEntryId};
 
@@ -104,8 +104,58 @@ impl AccountStore {
         self.post_fin_entry(&entry).await
     }
 
+    /// **Books an issued credit note**: the exact mirror of the document it
+    /// corrects ([`crate::fin_rules::credit_note_entry`]).
+    ///
+    /// The path is the invoice's, with one read in front of it: the original's
+    /// entry, which the credit note's own entry names as the one it corrects
+    /// (`fin_entries.reverses_entry_id`, so a journal reader walks from a
+    /// correction to what it corrected without guessing from the memo).
+    ///
+    /// **The original must be in the books first.** Mirroring a receivable that
+    /// was never booked leaves the customer owing a negative amount and every
+    /// aged-debtors report wrong, so an unbooked original is a
+    /// [`StoreError::Conflict`] naming what to do — the same rule, for the same
+    /// reason, as a payment refusing to settle an unbooked invoice.
+    ///
+    /// The entry is read back with [`AccountStore::fin_invoice_entry`] like any
+    /// other document's: a credit note is an invoice row, and its entry is
+    /// keyed on its own id.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the credit note is not this tenant's;
+    /// [`StoreError::Conflict`] when the document is an ordinary invoice, is a
+    /// draft or void, is already booked, or its original is not booked;
+    /// [`StoreError::Validation`] when the chart is missing a role, or the
+    /// document cannot be restated into the accounting currency;
+    /// [`StoreError::Db`] on failure.
+    pub async fn post_credit_note_issue(&self, id: &BillingInvoiceId) -> Result<FinEntryId> {
+        let document = self
+            .billing_invoice(id)
+            .await?
+            .ok_or(StoreError::NotFound)?;
+        let original_id = credit_note_original(&document)?;
+        let reverses = self.fin_invoice_entry(original_id).await?.ok_or_else(|| {
+            StoreError::Conflict(
+                "the invoice this credit note corrects is not in the books yet; book the \
+                     invoice before its credit notes"
+                    .to_owned(),
+            )
+        })?;
+
+        let base_currency = self.billing_base_currency().await?;
+        let accounts = InvoiceAccounts {
+            ar: self.fin_account_required(AccountRole::Ar).await?,
+            revenue: self.fin_account_required(AccountRole::Revenue).await?,
+            vat_output: self.fin_account_required(AccountRole::VatOutput).await?,
+        };
+        let entry = credit_note_entry(&document, &base_currency, &accounts, &reverses)?;
+        self.post_fin_entry(&entry).await
+    }
+
     /// The entry an invoice's issue already produced, or `None` — the "is this
-    /// document in the books?" a screen and a backfill both ask.
+    /// document in the books?" a screen and a backfill both ask. A credit note
+    /// is one of these too: it is an invoice row, booked under its own id.
     ///
     /// # Errors
     /// [`StoreError::Db`] on failure.
