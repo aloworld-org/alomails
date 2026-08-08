@@ -2,7 +2,7 @@
   width: var(--sidebar-width);
   flex-shrink: 0;
   min-width: 0;
-  background: var(--bg-app);
+  background: var(--bg-sunken);
   display: flex;
   flex-direction: column;
   padding: var(--space-3);

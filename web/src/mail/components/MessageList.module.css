@@ -1,7 +1,7 @@
 .column {
   width: var(--list-width);
   flex-shrink: 0;
-  background: var(--bg-surface);
+  background: var(--bg-app);
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -205,14 +205,6 @@
 
 .snippet {
   color: var(--text-tertiary);
-}
-
-.clip {
-  width: 14px;
-  height: 14px;
-  margin-left: var(--space-1);
-  color: var(--text-tertiary);
-  vertical-align: -2px;
 }
 
 /* top-right slot: time on top, an attachment paperclip below (Gmail); actions

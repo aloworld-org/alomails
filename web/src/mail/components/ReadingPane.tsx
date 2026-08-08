@@ -13,6 +13,7 @@ import {
   Download,
   FolderInput,
   Forward,
+  Inbox,
   ListChecks,
   MailOpen,
   MoreHorizontal,
@@ -267,8 +268,12 @@ export function ReadingPane({
   }
   if (latest === undefined) {
     return (
-      <div className={styles.state}>
-        <p>{strings.mailSelectPrompt}</p>
+      <div className={styles.emptyState}>
+        <span className={styles.emptyArt} aria-hidden="true">
+          <Inbox size={34} strokeWidth={1.7} />
+        </span>
+        <h2 className={styles.emptyTitle}>{strings.mailSelectPrompt}</h2>
+        <p className={styles.emptyBody}>{strings.mailSelectBody}</p>
       </div>
     );
   }
