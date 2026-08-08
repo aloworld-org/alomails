@@ -56,6 +56,7 @@ pub mod document;
 pub mod drive;
 pub mod error;
 pub mod extract;
+pub mod fin_accounts;
 pub mod iban;
 pub mod ical;
 pub mod id;
@@ -159,14 +160,18 @@ pub use dmarc_reports::{DmarcAggregateRow, DmarcEventRecord};
 pub use document::{Document, DocumentSummary};
 pub use drive::{DriveLocation, DriveNode, DriveVersion, NewDriveFile};
 pub use error::{Result, StoreError};
+pub use fin_accounts::{
+    ACCOUNT_CODE_MAX_CHARS, ACCOUNT_NAME_MAX_CHARS, Account, AccountRole, AccountType, CHART,
+    CHART_SEED_KEY, ChartAccount, ChartName, ChartSeed, NewAccount,
+};
 pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId,
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
     BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId, CommentId, ContactId,
-    CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, GroupId,
-    InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId,
-    ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePublishId,
-    SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
+    FinAccountId, GroupId, InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId,
+    ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId,
+    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

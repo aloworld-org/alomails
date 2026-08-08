@@ -307,6 +307,12 @@ opaque_id!(
     ProjectMilestoneId
 );
 opaque_id!(
+    /// One account of a tenant's chart of accounts — a place money can be
+    /// (alo Finance, ADR 0035, wave B4). A posting rule finds it by its
+    /// `role`, never by this id and never by its code.
+    FinAccountId
+);
+opaque_id!(
     /// One person's week, once it has a status — the row that submit, approve
     /// and reject decide, and that every hour in that week is locked by (alo
     /// Projects, ADR 0035, wave B3). A week nobody has submitted has no row and
