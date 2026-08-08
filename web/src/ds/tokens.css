@@ -159,6 +159,13 @@
   --border-width-strong: 2px;
   --overlay-width-sm: 12rem;
   --overlay-width-md: 18rem;
+  --overlay-width-lg: 31.25rem;
+  --overlay-width-xl: 57.5rem;
+  --overlay-height-lg: 38.75rem;
+  --content-height-sm: 11.25rem;
+  --content-height-md: 12.5rem;
+  --scroll-region-sm: 13.75rem;
+  --scroll-region-md: 16.25rem;
 
   /* ---- color control geometry ---- */
   --color-spectrum-height: 13rem;
