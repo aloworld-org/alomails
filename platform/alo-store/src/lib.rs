@@ -97,6 +97,7 @@ pub mod thread;
 pub mod time_entries;
 pub mod time_hours;
 pub mod time_invoice;
+pub mod time_report;
 pub mod time_timer;
 pub mod time_weeks;
 pub mod vat_id;
@@ -223,6 +224,10 @@ pub use time_hours::{hours_net_cents, qty_milli_hours};
 pub use time_invoice::{
     MAX_HANDOFF_ENTRIES, TimeBilling, TimeInvoiceDraft, UnbilledCurrencyTotal, UnbilledGroup,
     UnbilledTotals, unbilled_totals,
+};
+pub use time_report::{
+    ProfitabilityCurrency, ProfitabilityReport, ProfitabilityTotals, ProjectProfitability,
+    profitability_totals,
 };
 pub use time_timer::{RunningTimer, StartTimer, StoppedTimer};
 pub use time_weeks::{

@@ -26,6 +26,7 @@ import { API_BASE } from "../platform/runtime";
 import { RestError, restMessage } from "../platform/rest";
 import type {
   PendingWeek,
+  ProfitabilityReport,
   Project,
   ProjectClient,
   ProjectClientDraft,
@@ -252,10 +253,38 @@ export class ProjectsApi {
     ).then((r) => r.week);
   }
 
+  // ---- reports -----------------------------------------------------------
+
+  /** What each engagement's hours are worth over a period, and how much of its
+   *  budget has gone. `projectId` narrows it to one engagement.
+   *
+   *  Every figure in it is the server's integer cents or minutes, folded there
+   *  from the rows a billing document would carry — including the totals, which
+   *  are one row per currency and never a grand total across them. */
+  profitability(from: string, to: string, projectId?: string): Promise<ProfitabilityReport> {
+    return this.#read<{ report: ProfitabilityReport }>(
+      `/projects/reports/profitability?${reportQuery(from, to, projectId)}`,
+    ).then((r) => r.report);
+  }
+
+  /** The same figures as a CSV file. Fetched rather than linked, because the
+   *  route is authenticated: a plain `<a href>` would save a `401` page. */
+  profitabilityCsv(from: string, to: string, projectId?: string): Promise<string> {
+    return this.#text(`/projects/reports/profitability.csv?${reportQuery(from, to, projectId)}`);
+  }
+
   // ---- plumbing ----------------------------------------------------------
 
   async #read<T>(path: string): Promise<T> {
     return this.#json<T>(await this.#send(path, { method: "GET" }));
+  }
+
+  /** A `GET` whose body is not JSON. A failure still carries the server's
+   *  `Problem` detail, which is JSON — the same error shape as everywhere. */
+  async #text(path: string): Promise<string> {
+    const res = await this.#send(path, { method: "GET" });
+    if (!res.ok) throw await failure(res);
+    return res.text();
   }
 
   async #write<T>(method: string, path: string, body: unknown): Promise<T> {
@@ -279,20 +308,32 @@ export class ProjectsApi {
   }
 
   async #json<T>(res: Response): Promise<T> {
-    if (!res.ok) {
-      // A `409` from the start route carries the running timer beside the
-      // sentence. Read once: the body is consumed either way, and a failure to
-      // find the extra leaves the plain refusal intact rather than becoming a
-      // second, worse failure.
-      const body = (await res.json().catch(() => ({}))) as {
-        detail?: unknown;
-        timer?: RunningTimer | null;
-      };
-      const detail = typeof body.detail === "string" ? body.detail : null;
-      throw new ProjectsError(res.status, detail, body.timer ?? null);
-    }
+    if (!res.ok) throw await failure(res);
     return (await res.json()) as T;
   }
+}
+
+/** The refusal a failed response carries.
+ *
+ *  A `409` from the start route carries the running timer beside the sentence.
+ *  Read once: the body is consumed either way, and a failure to find the extra
+ *  leaves the plain refusal intact rather than becoming a second, worse
+ *  failure. */
+async function failure(res: Response): Promise<ProjectsError> {
+  const body = (await res.json().catch(() => ({}))) as {
+    detail?: unknown;
+    timer?: RunningTimer | null;
+  };
+  const detail = typeof body.detail === "string" ? body.detail : null;
+  return new ProjectsError(res.status, detail, body.timer ?? null);
+}
+
+/** The query a report route takes: both ends of the period, and the one
+ *  engagement when the reader has narrowed it to one. */
+function reportQuery(from: string, to: string, projectId?: string): string {
+  const query = new URLSearchParams({ from, to });
+  if (projectId !== undefined && projectId !== "") query.set("projectId", projectId);
+  return query.toString();
 }
 
 /** The Projects client bound to the current session. Memoized per auth context,

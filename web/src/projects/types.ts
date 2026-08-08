@@ -136,6 +136,73 @@ export interface PendingWeek extends TimesheetWeek {
   billableMinutes: number;
 }
 
+/** What one currency's rated hours are worth over the report's period. The
+ *  server folds every one of these figures; none is summed here. */
+export interface ProfitabilityCurrency {
+  /** ISO 4217 — the currency the hours were **priced in**, which is not always
+   *  the engagement's own. */
+  currency: string;
+  billableMinutes: number;
+  /** Their value net of VAT, in integer cents. */
+  netCents: number;
+  billedMinutes: number;
+  /** The part already carried onto a document. */
+  billedNetCents: number;
+  /** `netCents - billedNetCents`, subtracted by the server: what is earned and
+   *  still to invoice. */
+  unbilledNetCents: number;
+}
+
+/** One engagement's profitability: what the period produced, and how much of
+ *  the budget has gone. */
+export interface ProjectProfitability {
+  projectId: string;
+  projectName: string;
+  customerId: string;
+  /** The engagement's own currency — the one its money budget is stated in. */
+  currency: string;
+  budgetMinutes: number | null;
+  budgetCents: number | null;
+  /** Every accepted minute inside the period, billable or not. */
+  minutes: number;
+  billableMinutes: number;
+  /** Chargeable minutes carrying no rate: counted, and priced nowhere. */
+  unratedMinutes: number;
+  /** One row per currency the period's rated hours were priced in. Never added
+   *  together — this report does not convert. */
+  byCurrency: ProfitabilityCurrency[];
+  /** Everything up to and including the period's last day — what a budget is
+   *  consumed by. */
+  toDateMinutes: number;
+  /** The value of the rated hours to date, in the engagement's own currency. */
+  toDateNetCents: number;
+  /** Consumption in basis points (10 000 = the whole budget), or `null` when
+   *  there is no budget. Over 10 000 is an overrun the server reports rather
+   *  than clamps. */
+  hoursConsumptionBp: number | null;
+  budgetConsumptionBp: number | null;
+  /** What is left of the money budget; negative past it. `null` without one. */
+  budgetRemainingCents: number | null;
+}
+
+/** What a whole report adds up to: minutes across every engagement, and value
+ *  one row per currency. */
+export interface ProfitabilityTotals {
+  minutes: number;
+  billableMinutes: number;
+  unratedMinutes: number;
+  byCurrency: ProfitabilityCurrency[];
+}
+
+/** The profitability report for a stated period. */
+export interface ProfitabilityReport {
+  /** `YYYY-MM-DD`, inclusive. */
+  from: string;
+  to: string;
+  projects: ProjectProfitability[];
+  totals: ProfitabilityTotals;
+}
+
 /** What a manual entry, or a correction to one, states. */
 export interface TimeEntryDraft {
   projectId?: string;

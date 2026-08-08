@@ -32,6 +32,7 @@ import { ClientDialog } from "./ClientDialog";
 import { projectsMessage, useProjectsApi } from "./api";
 import { ErrorBanner } from "./parts";
 import { ProjectsView } from "./ProjectsView";
+import { ReportView } from "./ReportView";
 import { announceTimerChanged } from "./timerBus";
 import { WeekView } from "./WeekView";
 import type { Project } from "./types";
@@ -132,6 +133,14 @@ export function ProjectsModule() {
           >
             {strings.projectsTabWeek}
           </NavLink>
+          <NavLink
+            to="reports"
+            className={({ isActive }) =>
+              isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+            }
+          >
+            {strings.projectsTabReports}
+          </NavLink>
           {isAdmin && (
             <NavLink
               to="approvals"
@@ -165,6 +174,14 @@ export function ProjectsModule() {
         <Route
           path="week"
           element={<WeekView projects={projects} revision={revision} onChanged={bump} />}
+        />
+        {/* Profitability is a PROJECT aggregate — engagements, minutes and
+            money, and never who worked when — so it is everybody's tab, not
+            the admin's (docs/design/projects.md § The hours of a person are
+            personal data). */}
+        <Route
+          path="reports"
+          element={<ReportView customerName={customerName} revision={revision} />}
         />
         {/* The admin tab is a route too, so a manager's bookmark works — and a
             non-admin who follows one gets the server's own `403` on the read

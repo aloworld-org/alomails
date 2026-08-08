@@ -2590,6 +2590,7 @@ export const en = {
   projectsTabList: "Projects",
   projectsTabWeek: "My week",
   projectsTabApprovals: "Approvals",
+  projectsTabReports: "Reports",
   projectsLoadFailed: "Your projects could not be loaded.",
   projectsSaveFailed: "The change could not be saved.",
   projectsStartFailed: "The timer could not be started.",
@@ -2695,6 +2696,41 @@ export const en = {
   projectsRejectPlaceholder: "What needs correcting",
   projectsApprovalsEmptyTitle: "Nothing to approve",
   projectsApprovalsEmptyBody: "Weeks people hand in land here, oldest first.",
+
+  // The profitability report — hours × rates against a budget.
+  //
+  // The copy says *value* and never *margin*: this is the revenue side, and
+  // what an hour costs us needs the ledger and the employee record neither of
+  // which exists yet (docs/design/projects.md § Budgets). Two datings sit on
+  // one screen and the basis line says so out loud: the work is the period's,
+  // the budget is consumed by everything up to the period's last day.
+  projectsReportTitle: "Profitability",
+  projectsReportFrom: "From",
+  projectsReportTo: "To",
+  projectsReportShow: "Show",
+  projectsReportThisQuarter: "This quarter",
+  projectsReportLastQuarter: "Last quarter",
+  projectsReportDownloadCsv: "Download CSV",
+  projectsReportDownloadFailed: "The report could not be downloaded.",
+  projectsReportBasis: (from: string, to: string) => `Hours worked between ${from} and ${to}.`,
+  projectsReportBudgetBasis: (to: string) =>
+    `Budgets count everything up to ${to}, not just this period.`,
+  projectsReportColValue: "Value",
+  projectsReportColInvoiced: "Invoiced",
+  projectsReportColToInvoice: "To invoice",
+  projectsReportColToDate: "Hours to date",
+  projectsReportColBudget: "Budget used",
+  projectsReportTotals: "All engagements",
+  projectsReportUnrated: (duration: string) => `${duration} not priced`,
+  projectsReportUnratedHint:
+    "Chargeable hours with no rate. They are counted here and valued nowhere — price the engagement, then log them.",
+  projectsReportNoValue: "No value yet",
+  projectsReportBudgetLeft: (amount: string) => `${amount} left`,
+  projectsReportBudgetOver: (amount: string) => `${amount} over`,
+  projectsReportNoBudget: "No budget set",
+  projectsReportEmptyTitle: "No client projects yet",
+  projectsReportEmptyBody:
+    "Profitability is hours against a rate and a budget, so it starts with a client project. Give a project a customer and a rate, and this fills in.",
 
   // The running-timer widget in the rail.
   projectsTimerRunning: "Timer running",

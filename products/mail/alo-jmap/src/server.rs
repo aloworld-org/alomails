@@ -21,7 +21,8 @@ use crate::{
     billing_settings, blob, calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff,
     crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
     docs, drive, filters, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, projects_clients, projects_invoices, projects_time, projects_weeks, push,
+    insights_gallery, projects_clients, projects_invoices, projects_reports, projects_time,
+    projects_weeks, push,
     reset_route, schedule, security, session, settings, share, signup_route, sites, snooze, spaces,
     tasks, unsubscribe, wopi, workspace_search,
 };
@@ -739,11 +740,27 @@ pub fn app(state: AppState) -> Router {
             "/projects/invoices",
             post(projects_invoices::create_invoice),
         )
+        // The profitability report (B3.08) — hours × rates against a budget,
+        // per engagement per currency, with the CSV beside it. Two paths rather
+        // than one route with a `?format=`, the shape `/billing/reports/vat` and
+        // `/crm/reports/pipeline` already have: a URL that names its
+        // representation is the one a browser saves under a sensible name.
+        //
+        // A project aggregate, like the unbilled view: it answers with
+        // engagements, minutes and money and never with who worked when.
+        .route(
+            "/projects/reports/profitability",
+            get(projects_reports::profitability_report),
+        )
+        .route(
+            "/projects/reports/profitability.csv",
+            get(projects_reports::profitability_report_csv),
+        )
         // One engagement, registered last so the file reads in the order
         // matchit resolves: every literal segment above (`time`, `timer`,
-        // `weeks`, `approvals`, `clients`, `unbilled`, `invoices`) wins over
-        // this capture, and an id — a base64url'd 16-byte token — can never
-        // spell one of them anyway.
+        // `weeks`, `approvals`, `clients`, `unbilled`, `invoices`, `reports`)
+        // wins over this capture, and an id — a base64url'd 16-byte token —
+        // can never spell one of them anyway.
         .route("/projects/{id}", get(projects_clients::get_project))
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
