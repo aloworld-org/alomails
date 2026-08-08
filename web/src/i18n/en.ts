@@ -1269,6 +1269,7 @@ export const en = {
   close: "Close",
   driveMyFiles: "My Files",
   driveSpaces: "Spaces",
+  driveLocations: "Drive locations",
   driveTrash: "Trash",
   driveNewFolder: "New folder",
   driveNew: "New",

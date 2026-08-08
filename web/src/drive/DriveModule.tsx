@@ -693,6 +693,32 @@ export function DriveModule() {
           }
         }}
       >
+        <nav className={styles.mobileLocations} aria-label={strings.driveLocations}>
+          <button
+            type="button"
+            className={location === null && !trashView ? styles.mobileLocationActive : styles.mobileLocation}
+            onClick={() => selectLocation(null)}
+          >
+            <HardDrive size={17} /> {strings.driveMyFiles}
+          </button>
+          {spaces.filter((space) => !space.archived).map((space) => (
+            <button
+              key={space.id}
+              type="button"
+              className={location === space.id && !trashView ? styles.mobileLocationActive : styles.mobileLocation}
+              onClick={() => selectLocation(space.id)}
+            >
+              <Users size={17} /> {space.name}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={trashView ? styles.mobileLocationActive : styles.mobileLocation}
+            onClick={() => { setTrashView(true); setPath([]); }}
+          >
+            <Trash2 size={17} /> {strings.driveTrash}
+          </button>
+        </nav>
         <header className={styles.head}>
           <nav className={styles.crumbs}>
             <button type="button" className={styles.crumb} onClick={() => setPath([])}>

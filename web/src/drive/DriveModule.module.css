@@ -89,6 +89,7 @@
   min-height: 0;
   position: relative;
 }
+.mobileLocations { display: none; }
 .mainDrag::after {
   content: "";
   position: absolute;
@@ -934,9 +935,52 @@
   .sidebar {
     display: none;
   }
+  .mobileLocations {
+    display: flex;
+    flex: 0 0 auto;
+    gap: var(--space-1);
+    overflow-x: auto;
+    border-bottom: var(--border-width) solid var(--border-subtle);
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-sunken);
+    scrollbar-width: none;
+  }
+  .mobileLocations::-webkit-scrollbar { display: none; }
+  .mobileLocation,
+  .mobileLocationActive {
+    min-height: var(--control-height);
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--space-2);
+    border-radius: var(--radius-md);
+    padding: 0 var(--space-3);
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+  .mobileLocation:hover { background: var(--bg-raised); color: var(--text-primary); }
+  .mobileLocationActive {
+    background: var(--accent-tint);
+    color: var(--accent);
+    font-weight: var(--weight-semibold);
+  }
+  .head {
+    align-items: stretch;
+    gap: var(--space-2);
+    padding: var(--space-3);
+  }
+  .crumbs { width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+  .crumb,
+  .crumbSep { flex: 0 0 auto; }
+  .actions {
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: var(--space-1);
+  }
+  .selectionBar { flex: 0 0 auto; }
   .listHead,
   .row {
-    grid-template-columns: var(--control-height) 1fr 70px var(--control-height);
+    grid-template-columns: var(--control-height) minmax(0, 1fr) var(--control-width-medium) var(--control-height);
   }
   .colDate {
     display: none;
