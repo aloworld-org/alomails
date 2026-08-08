@@ -2223,4 +2223,7 @@ export const fr: Partial<Catalog> = {
   baseDefaultTableName: (number: number) => `Table ${number}`,
   baseView: "Vue",
   baseSaveChanges: "Enregistrer les modifications",
+  officeLoading: "Ouverture de l’éditeur Office…",
+  officeDiscoveryMissing: "L’éditeur Office n’a pas publié d’adresse d’éditeur.",
+  officeLoadFailed: (reason: string) => `Réessayez. Serveur : ${reason}`,
 };

@@ -8,7 +8,7 @@ import { X } from "lucide-react";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { OFFICE_HOST } from "../platform/runtime";
-import { Spinner } from "../ds";
+import { driveErrorReason } from "./parts";
 import styles from "./OfficeEditor.module.css";
 
 /** File name extensions that open in Collabora. */
@@ -25,17 +25,20 @@ export function OfficeEditor({
 }) {
   const client = useJmapClient();
   const [src, setSrc] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let live = true;
+    setSrc(null);
+    setError(null);
     void (async () => {
       try {
         const token = await client.driveOfficeToken(nodeId);
         // Discovery is read same-origin (proxied in dev) to avoid CORS.
         const discovery = await (await fetch(`${window.location.origin}/hosting/discovery`)).text();
         const match = discovery.match(/\/browser\/[^"'?]+?\/cool\.html/);
-        if (!match) throw new Error("no editor url");
+        if (!match) throw new Error(strings.officeDiscoveryMissing);
         // Load the whole editor from OFFICE_HOST so Collabora runs entirely
         // within its own origin (socket, WOPI file, everything) — same-origin in
         // prod, the real backend in local dev. The only cross-origin bit is that
@@ -43,14 +46,14 @@ export function OfficeEditor({
         const wopiSrc = `${OFFICE_HOST}/wopi/files/${encodeURIComponent(nodeId)}`;
         const url = `${OFFICE_HOST}${match[0]}?WOPISrc=${encodeURIComponent(wopiSrc)}&access_token=${encodeURIComponent(token)}&lang=en`;
         if (live) setSrc(url);
-      } catch {
-        if (live) setFailed(true);
+      } catch (caught) {
+        if (live) setError(driveErrorReason(caught) ?? strings.driveUnknownError);
       }
     })();
     return () => {
       live = false;
     };
-  }, [client, nodeId]);
+  }, [attempt, client, nodeId]);
 
   return (
     <div className={styles.overlay}>
@@ -61,12 +64,14 @@ export function OfficeEditor({
         <span className={styles.name}>{name}</span>
       </header>
       <div className={styles.body}>
-        {failed ? (
-          <div className={styles.center}>{strings.officeUnavailable}</div>
-        ) : src === null ? (
-          <div className={styles.center}>
-            <Spinner size={22} />
+        {error !== null ? (
+          <div className={styles.officeError} role="alert">
+            <h2>{strings.officeUnavailable}</h2>
+            <p>{strings.officeLoadFailed(error)}</p>
+            <button type="button" onClick={() => setAttempt((value) => value + 1)}>{strings.driveRetry}</button>
           </div>
+        ) : src === null ? (
+          <OfficeSkeleton />
         ) : (
           <iframe
             title={name}
@@ -76,6 +81,15 @@ export function OfficeEditor({
           />
         )}
       </div>
+    </div>
+  );
+}
+
+function OfficeSkeleton() {
+  return (
+    <div className={styles.officeSkeleton} role="status" aria-label={strings.officeLoading} aria-busy="true">
+      <span className={styles.officeSkeletonToolbar} />
+      <span className={styles.officeSkeletonPage} />
     </div>
   );
 }

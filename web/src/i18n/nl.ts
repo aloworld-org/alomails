@@ -2195,4 +2195,7 @@ export const nl: Partial<Catalog> = {
   baseDefaultTableName: (number: number) => `Tabel ${number}`,
   baseView: "Weergave",
   baseSaveChanges: "Wijzigingen opslaan",
+  officeLoading: "De Office-editor wordt geopend…",
+  officeDiscoveryMissing: "De Office-editor heeft geen editoradres gepubliceerd.",
+  officeLoadFailed: (reason: string) => `Probeer het opnieuw. Server: ${reason}`,
 };
