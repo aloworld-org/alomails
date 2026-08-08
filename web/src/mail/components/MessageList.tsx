@@ -10,6 +10,7 @@ import {
   CalendarClock,
   Check,
   Mail,
+  MailPlus,
   MailOpen,
   MessagesSquare,
   PanelLeftClose,
@@ -58,6 +59,7 @@ interface MessageListProps {
   onMarkRead: (threads: ThreadRow[], read: boolean) => void;
   onSnooze: (threads: ThreadRow[], until: number) => void;
   onToggleFlag: (thread: ThreadRow) => void;
+  onCompose: () => void;
 }
 
 /** A compact flag due-date badge for a list row: a clock + short date, red when
@@ -104,6 +106,7 @@ export function MessageList({
   onMarkRead,
   onSnooze,
   onToggleFlag,
+  onCompose,
 }: MessageListProps) {
   const client = useJmapClient();
   const [query, setQuery] = useState(initialQuery);
@@ -264,7 +267,13 @@ export function MessageList({
       {!loading && !error && (
         <ul className={styles.list}>
           {threads.length === 0 && (
-            <li className={styles.empty}>{isSearch ? strings.mailSearchEmpty : strings.mailEmpty}</li>
+            <li className={styles.empty}>
+              <span className={styles.emptyArt} aria-hidden="true"><MailPlus /></span>
+              <p>{isSearch ? strings.mailSearchEmpty : strings.mailEmpty}</p>
+              <button type="button" className={styles.emptyAction} onClick={isSearch ? () => setQuery("") : onCompose}>
+                {isSearch ? strings.eqSearchClear : strings.compose}
+              </button>
+            </li>
           )}
           {threads.map((thread) => {
             const email = thread.latest;

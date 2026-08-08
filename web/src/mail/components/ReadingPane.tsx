@@ -132,6 +132,7 @@ interface ReadingPaneProps {
    *  inbox to accept/dismiss, never straight on the board (ADR 0023/0024). The
    *  action is offered only when the pane's own `aiEnabled` is true. */
   onSuggestTasks: () => void;
+  onCompose: () => void;
 }
 
 export function ReadingPane({
@@ -163,6 +164,7 @@ export function ReadingPane({
   onSetFlagDue,
   onCreateTask,
   onSuggestTasks,
+  onCompose,
 }: ReadingPaneProps) {
   const { identity } = useAuth();
   const client = useJmapClient();
@@ -274,6 +276,7 @@ export function ReadingPane({
         </span>
         <h2 className={styles.emptyTitle}>{strings.mailSelectPrompt}</h2>
         <p className={styles.emptyBody}>{strings.mailSelectBody}</p>
+        <button type="button" className={styles.emptyAction} onClick={onCompose}>{strings.compose}</button>
       </div>
     );
   }

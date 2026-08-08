@@ -802,6 +802,13 @@ export function MailModule() {
   // A read-only shared mailbox can be read but not organised — hide its
   // create/rename/delete affordances (the server would refuse them anyway).
   const canManage = activeShared === undefined || !activeShared.readOnly;
+  function startCompose() {
+    if (activeShared !== undefined && !activeShared.canSend) {
+      setToast(strings.sharedNoSend);
+      return;
+    }
+    setCompose({ mode: "new" });
+  }
   const otherAccounts = [
     ...(activeAccount !== null && ownId !== null
       ? [{ id: ownId, name: ownLabel, boxes: treeMap[ownId] ?? [], readOnly: false }]
@@ -850,13 +857,7 @@ export function MailModule() {
         otherAccounts={otherAccounts}
         onSelectAccount={selectAccountFolder}
         canManage={canManage}
-        onCompose={() => {
-          if (activeShared !== undefined && !activeShared.canSend) {
-            setToast(strings.sharedNoSend);
-            return;
-          }
-          setCompose({ mode: "new" });
-        }}
+        onCompose={startCompose}
         onDropMessage={moveIds}
         onSetColor={(id, color) => void setLabelColor(id, color)}
         onCreateFolder={(name, parentId) => void createFolder(name, parentId)}
@@ -903,6 +904,7 @@ export function MailModule() {
         onMarkRead={(ts, read) => markSeenIds(ts.flatMap((t) => t.memberIds), read)}
         onSnooze={(ts, until) => snoozeIds(ts.flatMap((t) => t.memberIds), until)}
         onToggleFlag={(t) => toggleFlag(t.latest)}
+        onCompose={startCompose}
       />
       )}
       {!isMobile && (
@@ -945,6 +947,7 @@ export function MailModule() {
         onSetFlagDue={setFlagDue}
         onCreateTask={() => void createTaskFromMessage()}
         onSuggestTasks={() => void suggestTasksFromMessage()}
+        onCompose={startCompose}
       />
       )}
       {compose !== null && (
