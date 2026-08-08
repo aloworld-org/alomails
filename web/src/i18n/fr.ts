@@ -12,6 +12,7 @@ export const fr: Partial<Catalog> = {
   driveEmptyTrashTitle: "La corbeille est vide",
   driveEmptyTrash: "Les éléments supprimés apparaîtront ici.",
   driveFolderEmpty: "Ce dossier est vide",
+  driveUploadHere: "Téléverser ici",
   driveSort: "Trier",
   driveSortNameAsc: "Nom (A–Z)",
   driveSortNameDesc: "Nom (Z–A)",

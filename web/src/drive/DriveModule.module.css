@@ -697,6 +697,9 @@
 .nestedRow .rowMain { padding-left: calc(var(--drive-depth) * var(--space-6)); }
 .nestedStatusContent { gap: var(--space-2); }
 .nestedStatusContent button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   min-height: var(--control-height);
   border-radius: var(--radius-md);
   padding: 0 var(--space-3);

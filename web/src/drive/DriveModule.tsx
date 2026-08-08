@@ -132,6 +132,7 @@ export function DriveModule() {
   const [showMembers, setShowMembers] = useState(false);
   const [notice, setNotice] = useState<DriveNotice | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const uploadTargetRef = useRef<DriveNodeDto | null>(null);
 
   const parent = path.length > 0 ? (path[path.length - 1]?.id ?? null) : null;
   const currentSpace = useMemo(() => spaces.find((s) => s.id === location) ?? null, [spaces, location]);
@@ -410,7 +411,14 @@ export function DriveModule() {
                 </li>
               ) : children.length === 0 ? (
                 <li className={`${styles.row} ${styles.nestedStatus}`}>
-                  <span className={styles.nestedStatusContent}>{strings.driveFolderEmpty}</span>
+                  <span className={styles.nestedStatusContent}>
+                    {strings.driveFolderEmpty}
+                    {canWrite && (
+                      <button type="button" onClick={() => chooseUpload(n)}>
+                        <Upload size={15} /> {strings.driveUploadHere}
+                      </button>
+                    )}
+                  </span>
                 </li>
               ) : renderRows(children, depth + 1)}
             </ul>
@@ -492,13 +500,19 @@ export function DriveModule() {
     }
   }
 
-  async function uploadFiles(files: FileList | File[]) {
+  function chooseUpload(folder: DriveNodeDto | null = null) {
+    uploadTargetRef.current = folder;
+    fileRef.current?.click();
+  }
+
+  async function uploadFiles(files: FileList | File[], targetFolder: DriveNodeDto | null = null) {
     setUploading(true);
     try {
       for (const f of Array.from(files)) {
-        await client.driveUpload(location, parent, f);
+        await client.driveUpload(location, targetFolder?.id ?? parent, f);
       }
-      await load();
+      if (targetFolder === null) await load();
+      else loadFolderChildren(targetFolder);
     } catch (error) {
       reportFailure(strings.driveUpload, error);
     } finally {
@@ -875,7 +889,7 @@ export function DriveModule() {
                     { key: "folder", label: strings.driveKindFolder, icon: <FolderPlus size={15} />, onClick: () => void newFolder(), divider: true },
                   ]}
                 />
-                <button type="button" className={styles.primaryBtn} onClick={() => fileRef.current?.click()} disabled={uploading}>
+                <button type="button" className={styles.primaryBtn} onClick={() => chooseUpload()} disabled={uploading}>
                   <Upload size={15} /> {uploading ? strings.driveUploading : strings.driveUpload}
                 </button>
                 <input
@@ -884,7 +898,9 @@ export function DriveModule() {
                   multiple
                   style={{ display: "none" }}
                   onChange={(e) => {
-                    if (e.target.files && e.target.files.length > 0) void uploadFiles(e.target.files);
+                    const targetFolder = uploadTargetRef.current;
+                    uploadTargetRef.current = null;
+                    if (e.target.files && e.target.files.length > 0) void uploadFiles(e.target.files, targetFolder);
                     e.target.value = "";
                   }}
                 />
@@ -917,7 +933,7 @@ export function DriveModule() {
             </p>
             {canWrite && !trashView && (
               <div className={styles.emptyActions}>
-                <button type="button" className={styles.emptyPrimary} onClick={() => fileRef.current?.click()}>
+                <button type="button" className={styles.emptyPrimary} onClick={() => chooseUpload()}>
                   <Upload size={17} /> {strings.driveUpload}
                 </button>
                 <button type="button" className={styles.emptySecondary} onClick={() => void newFolder()}>

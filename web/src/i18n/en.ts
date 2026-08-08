@@ -1311,6 +1311,7 @@ export const en = {
   driveEmptyReadOnly: "This space does not contain any files yet.",
   driveEmptyTrashTitle: "Trash is empty",
   driveFolderEmpty: "This folder is empty",
+  driveUploadHere: "Upload here",
   driveFolderLoading: (name: string): string => `Loading ${name}…`,
   driveFolderLoadFailed: (reason: string): string => `This folder didn’t load. Server: ${reason}`,
   driveSpacesLoadFailed: (reason: string): string => `Your Spaces didn’t load. Try again. Server: ${reason}`,

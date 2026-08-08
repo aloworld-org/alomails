@@ -12,6 +12,7 @@ export const nl: Partial<Catalog> = {
   driveEmptyTrashTitle: "De prullenbak is leeg",
   driveEmptyTrash: "Verwijderde items verschijnen hier.",
   driveFolderEmpty: "Deze map is leeg",
+  driveUploadHere: "Hier uploaden",
   driveSort: "Sorteren",
   driveSortNameAsc: "Naam (A–Z)",
   driveSortNameDesc: "Naam (Z–A)",
