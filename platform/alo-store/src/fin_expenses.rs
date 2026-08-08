@@ -6,14 +6,20 @@
 //! # A claim is personal data about an employee
 //!
 //! A receipt names a restaurant, a pharmacy, a city on a date. Every statement
-//! here binds `user_id = self.user` from the account door, so reaching a
-//! colleague's claim through this API is **unrepresentable, not merely
-//! rejected** — there is no function that takes a user id. This is
+//! on the **personal door** ([`AccountStore`]) binds `user_id = self.user`, so
+//! reaching a colleague's claim through it is **unrepresentable, not merely
+//! rejected** — no function there takes a user id. This is
 //! [`crate::time_entries`]' rule, for a worse case, and it is answered by the
-//! same door. The approver's cross-user read and the decisions themselves are
-//! tenant-door work behind a role gate and arrive with the approval flow
-//! (B4.05b). Merchant, description and note never reach a log: the spans on
-//! this path carry ids and cent counts and nothing a human typed.
+//! same door.
+//!
+//! The **approver's door** ([`TenantStore`]) crosses that line on purpose and
+//! only behind a role gate at the edge (`Account::require_admin`, the decision
+//! [`crate::time_weeks`] recorded for hours and this module inherits). It is
+//! deliberately the narrowest cross-user surface the module has: the claims
+//! awaiting a decision, who made each and what it books to, and the four
+//! statements that decide them. Merchant, description and decision note never
+//! reach a log: the spans on this path carry ids and cent counts and nothing a
+//! human typed.
 //!
 //! # VAT is stated, never derived
 //!
@@ -43,15 +49,33 @@
 //!   the same reason [`crate::base`] checks one. No foreign key either: purging
 //!   a file must not delete the claim it evidenced.
 //!
-//! # Scope of this slice (B4.05a)
+//! # The flow, and the one rule under all of it
 //!
-//! Create, read, list, correct and delete, on the personal door — the model and
-//! its CRUD. The four transitions (`submit`, `approve`, `reject`, `reimburse`),
-//! the approver's inbox and the postings they trigger are B4.05b and B4.04's
-//! rules; what this slice fixes is the vocabulary ([`ExpenseStatus`]) and the
-//! rule every one of them will lean on: **a claim is editable only while it is
-//! a draft**. Once it is handed in, it is a document somebody is deciding on,
-//! and editing it underneath them would change what they approved.
+//! ```text
+//!  draft ──submit──> submitted ──approve──> approved ──reimburse──> reimbursed
+//!    ^                   │  │                                (personal money only)
+//!    └──withdraw─────────┘  └──reject──> rejected ──submit──> submitted
+//!                                            │
+//!    (draft and rejected are the claimant's own: editable, deletable, submittable)
+//! ```
+//!
+//! **A claim is the claimant's to change while nobody is deciding it, and
+//! frozen the moment somebody is.** [`ExpenseStatus::is_editable`] is that
+//! sentence: draft and rejected yes, submitted and approved and reimbursed no.
+//! A rejection is editable on purpose — the whole point of refusing a claim is
+//! that the person fixes it and hands it in again, and a refused claim that
+//! could only be deleted and retyped would lose the receipt link and the note
+//! explaining it. (B4.05a shipped this predicate as draft-only, with its test
+//! deferred to this slice because nothing could yet set another status;
+//! widening it to the rejection is the same call [`crate::time_weeks`] made for
+//! a refused week, and no claim anybody has approved becomes editable by it.)
+//!
+//! What is **not** here: the postings an approval writes (`employee_payable`
+//! for money the employee is owed, `bank` for the company's own card — the rule
+//! in `docs/design/finance.md` § "Posting rules"). B4.04's rules are pure
+//! functions not yet wired into any document verb, and an expense that booked
+//! at approval while an issued invoice still did not would make the ledger read
+//! half-live. It lands with the rest of them.
 
 use time::{Date, OffsetDateTime};
 
@@ -61,6 +85,7 @@ use crate::billing_field::{
 };
 use crate::error::{Result, StoreError};
 use crate::id::{DriveNodeId, FinCategoryId, FinExpenseId, ProjectId, UserId};
+use crate::store::TenantStore;
 
 /// The smallest claim that is a claim at all. A claim of nothing is a mistake,
 /// and it would still be a row in every total.
@@ -75,6 +100,16 @@ pub const EXPENSE_DESCRIPTION_MAX: usize = 500;
 /// Longest note an approver may attach to a decision (B4.05b). Bounded here
 /// because the column is this table's.
 pub const EXPENSE_DECISION_NOTE_MAX: usize = 500;
+
+/// Most claims one read of the approvals inbox returns. A queue longer than
+/// this is a paging question, and answering it in full would be a page nobody
+/// works through anyway.
+const PENDING_LIMIT: i64 = 500;
+
+/// The statuses in which a claim is still its claimant's own, as a SQL list —
+/// the `WHERE` half of [`ExpenseStatus::is_editable`], spelled once so the
+/// predicate and the statements cannot drift apart.
+const CLAIMANTS_STATUSES: &str = "'draft', 'rejected'";
 
 /// The columns every read selects, in [`ExpenseRow`] order.
 const EXPENSE_COLS: &str = "id, user_id, spent_on, category_id, merchant, description, \
@@ -130,10 +165,7 @@ impl ExpenseMethod {
     }
 }
 
-/// Where a claim is in the flow.
-///
-/// The transitions are B4.05b's; the vocabulary and the one rule every write
-/// here leans on — a draft is the only editable state — are this slice's.
+/// Where a claim is in the flow (the diagram in the module header).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ExpenseStatus {
@@ -182,16 +214,75 @@ impl ExpenseStatus {
         }
     }
 
-    /// Whether the claimant may still change what the claim says. Only a draft:
-    /// once it is handed in, it is a document somebody is deciding on.
+    /// Whether the claim is still the claimant's own — to correct, to remove
+    /// and to hand in.
+    ///
+    /// Draft and rejected. Once it is submitted it is a document somebody is
+    /// deciding on, and changing it underneath them would change what they
+    /// approved; once it is approved the company owes money on it. A rejection
+    /// is the claimant's again by design (module header).
     pub fn is_editable(self) -> bool {
-        matches!(self, Self::Draft)
+        matches!(self, Self::Draft | Self::Rejected)
+    }
+
+    /// Whether the claimant may hand this claim in.
+    ///
+    /// Exactly [`Self::is_editable`], and not by coincidence: a claim you may
+    /// still change is a claim nobody is deciding, which is the same claim you
+    /// may hand in. Named separately because the two questions read differently
+    /// at their call sites.
+    pub fn can_submit(self) -> bool {
+        self.is_editable()
+    }
+
+    /// Whether the claimant may take this claim back out of the queue. Only one
+    /// that is waiting: an approved claim is not theirs to unmake, and a draft
+    /// or a rejection is already theirs.
+    pub fn can_withdraw(self) -> bool {
+        matches!(self, Self::Submitted)
+    }
+
+    /// Whether an approver may still decide this claim — only one that is
+    /// waiting for them. Deciding a decided claim is not a transition this
+    /// module has: the claimant resubmits a rejection, and an approval that was
+    /// wrong is a matter for the books, not for a status flip.
+    pub fn can_decide(self) -> bool {
+        matches!(self, Self::Submitted)
+    }
+
+    /// Whether this claim can be marked paid back. Only an approved one: money
+    /// is not repaid against a claim nobody has agreed to.
+    pub fn can_reimburse(self) -> bool {
+        matches!(self, Self::Approved)
+    }
+}
+
+/// What an approver decided about a claim.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExpenseDecision {
+    /// Yes: the cost is the company's, and — when the employee's own money paid
+    /// — so is the debt to them.
+    Approve,
+    /// No, with a note saying why. The claim goes back to being the claimant's
+    /// own, so they can correct it and hand it in again.
+    Reject,
+}
+
+impl ExpenseDecision {
+    /// The status a claim reaches when this decision is recorded.
+    pub fn resulting_status(self) -> ExpenseStatus {
+        match self {
+            Self::Approve => ExpenseStatus::Approved,
+            Self::Reject => ExpenseStatus::Rejected,
+        }
     }
 }
 
 /// The writable shape of a claim, used for both create and correction (a
-/// correction is a full replace — the route layer merges a partial `PATCH` onto
-/// the stored record before calling, as the chart's routes do).
+/// correction is a full replace — `finance_expenses`' `PATCH` merges the stated
+/// fields onto the stored record before calling, so a field left out of a
+/// request keeps its value and an explicit `null` clears one).
 ///
 /// Neither the status nor any decision field is here, and that is the point: a
 /// claimant states what they spent, and the flow states everything else.
@@ -304,12 +395,31 @@ impl Expense {
         self.gross_cents - self.vat_cents
     }
 
-    /// Whether the claimant may still change what this says
+    /// Whether the claim is still the claimant's own to change
     /// ([`ExpenseStatus::is_editable`]).
     #[must_use]
     pub fn is_editable(&self) -> bool {
         self.status.is_editable()
     }
+}
+
+/// One claim waiting in the approvals inbox: the claim, who made it, and the
+/// word that says where it books.
+///
+/// The two joined fields are what an approver needs and the account door cannot
+/// answer — a colleague's address, and the category's name rather than its
+/// opaque id. Nothing else crosses: no other claim of that person's, no
+/// history, no totals about them.
+#[derive(Debug, Clone)]
+pub struct PendingExpense {
+    /// The claim itself.
+    pub expense: Expense,
+    /// The claimant's address — what an inbox shows instead of an opaque id.
+    /// Empty when the user record has since been removed.
+    pub user_email: String,
+    /// The category's name, when the claim carries one. `None` is a claim
+    /// nobody has classified, which books to the chart's `expense_default`.
+    pub category_name: Option<String>,
 }
 
 /// A validated, normalised claim ready to be bound into a statement.
@@ -468,20 +578,22 @@ impl AccountStore {
         rows.into_iter().map(ExpenseRow::into_expense).collect()
     }
 
-    /// Corrects one of the caller's own **draft** claims.
+    /// Corrects one of the caller's own claims that nobody is deciding.
     ///
     /// A claim that has been handed in is frozen: an approver is looking at it,
     /// and changing what it says underneath them would change what they
-    /// approved. Withdrawing it back to a draft is B4.05b's verb.
+    /// approved. [`Self::withdraw_expense`] takes it back out of the queue
+    /// first. A **rejected** claim is editable — the point of a refusal is that
+    /// the person fixes it and hands it in again.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] when the claim is not the caller's own, or a
-    /// link is not one they can reach; [`StoreError::Conflict`] when it is no
-    /// longer a draft; [`StoreError::Validation`] when a field breaks its rule;
-    /// [`StoreError::Db`] on failure.
+    /// link is not one they can reach; [`StoreError::Conflict`] when somebody is
+    /// deciding it or has; [`StoreError::Validation`] when a field breaks its
+    /// rule; [`StoreError::Db`] on failure.
     pub async fn edit_expense(&self, id: &FinExpenseId, edit: &NewExpense) -> Result<Expense> {
         let claim = self.expense(id).await?.ok_or(StoreError::NotFound)?;
-        require_draft(&claim, "changed")?;
+        require_claimants(&claim, "changed")?;
         let e = normalize(edit)?;
         self.require_links(edit).await?;
         let row = sqlx::query_as::<_, ExpenseRow>(&format!(
@@ -489,9 +601,9 @@ impl AccountStore {
                  description = $7, gross_cents = $8, vat_cents = $9, vat_rate_bp = $10, \
                  currency = $11, method = $12, project_id = $13, receipt_node_id = $14, \
                  updated_at = now() \
-             WHERE tenant_id = $1 AND user_id = $2 AND id = $3 AND status = '{draft}' \
+             WHERE tenant_id = $1 AND user_id = $2 AND id = $3 AND status IN ({claimants}) \
              RETURNING {EXPENSE_COLS}",
-            draft = ExpenseStatus::Draft.as_str()
+            claimants = CLAIMANTS_STATUSES
         ))
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -513,11 +625,7 @@ impl AccountStore {
         // The status is re-tested inside the statement, so a submit that lands
         // between the read and the write wins the race rather than being
         // overwritten by an edit that never saw it.
-        .ok_or_else(|| {
-            StoreError::Conflict(
-                "a claim that has been handed in cannot be changed; withdraw it first".to_owned(),
-            )
-        })?;
+        .ok_or_else(|| handed_in("changed"))?;
         row.into_expense()
     }
 
@@ -535,17 +643,11 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn delete_expense(&self, id: &FinExpenseId) -> Result<()> {
         let claim = self.expense(id).await?.ok_or(StoreError::NotFound)?;
-        if !matches!(claim.status, ExpenseStatus::Draft | ExpenseStatus::Rejected) {
-            return Err(StoreError::Conflict(
-                "a claim that has been handed in cannot be deleted; withdraw it first".to_owned(),
-            ));
-        }
+        require_claimants(&claim, "deleted")?;
         let done = sqlx::query(&format!(
             "DELETE FROM fin_expenses \
              WHERE tenant_id = $1 AND user_id = $2 AND id = $3 \
-               AND status IN ('{draft}', '{rejected}')",
-            draft = ExpenseStatus::Draft.as_str(),
-            rejected = ExpenseStatus::Rejected.as_str()
+               AND status IN ({CLAIMANTS_STATUSES})"
         ))
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -555,11 +657,96 @@ impl AccountStore {
         .map_err(StoreError::Db)?;
         if done.rows_affected() == 0 {
             // Somebody handed it in between the read and the delete.
-            return Err(StoreError::Conflict(
-                "a claim that has been handed in cannot be deleted; withdraw it first".to_owned(),
-            ));
+            return Err(handed_in("deleted"));
         }
         Ok(())
+    }
+
+    /// Hands one of the caller's own claims in for a decision.
+    ///
+    /// One statement, whose `WHERE` clause is the state machine: a claim that
+    /// is already waiting, approved or paid back moves nothing and is read back
+    /// to say what it actually is. Handing a **rejected** claim in again clears
+    /// the old decision, because a decision that no longer stands must not still
+    /// be displayed on the record — the history of it is in the audit log, which
+    /// is what an append-only log is for.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the claim is not the caller's own;
+    /// [`StoreError::Conflict`] when it is not the claimant's to hand in, naming
+    /// what it is; [`StoreError::Db`] on failure.
+    pub async fn submit_expense(&self, id: &FinExpenseId) -> Result<Expense> {
+        let row = sqlx::query_as::<_, ExpenseRow>(&format!(
+            "UPDATE fin_expenses \
+                SET status = '{submitted}', submitted_at = now(), decided_by = NULL, \
+                    decided_at = NULL, decision_note = '', updated_at = now() \
+             WHERE tenant_id = $1 AND user_id = $2 AND id = $3 AND status IN ({CLAIMANTS_STATUSES}) \
+             RETURNING {EXPENSE_COLS}",
+            submitted = ExpenseStatus::Submitted.as_str()
+        ))
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(id.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        match row {
+            Some(row) => row.into_expense(),
+            None => Err(self.claim_refusal(id, "handed in").await),
+        }
+    }
+
+    /// Takes one of the caller's own waiting claims back out of the queue.
+    ///
+    /// Only one nobody has decided. An approved claim is not the claimant's to
+    /// unmake — the company owes money on it, and the way back is the approver's
+    /// — and a draft or a rejection is already theirs.
+    ///
+    /// `submitted_at` is cleared, which is what the schema's
+    /// `fin_expenses_submitted_when_past_draft` expects of a draft: a claim that
+    /// is not in a queue was not handed in.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the claim is not the caller's own;
+    /// [`StoreError::Conflict`] when it is not waiting for a decision, naming
+    /// what it is; [`StoreError::Db`] on failure.
+    pub async fn withdraw_expense(&self, id: &FinExpenseId) -> Result<Expense> {
+        let row = sqlx::query_as::<_, ExpenseRow>(&format!(
+            "UPDATE fin_expenses \
+                SET status = '{draft}', submitted_at = NULL, updated_at = now() \
+             WHERE tenant_id = $1 AND user_id = $2 AND id = $3 AND status = '{submitted}' \
+             RETURNING {EXPENSE_COLS}",
+            draft = ExpenseStatus::Draft.as_str(),
+            submitted = ExpenseStatus::Submitted.as_str()
+        ))
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(id.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        match row {
+            Some(row) => row.into_expense(),
+            None => Err(self.claim_refusal(id, "withdrawn").await),
+        }
+    }
+
+    /// Names, in a refusal, what the claim actually is — read after a statement
+    /// declined to move it.
+    ///
+    /// A second read rather than a guess: "already waiting for a decision" and
+    /// "already approved" want different answers from the person reading them.
+    /// A claim that is not the caller's own is [`StoreError::NotFound`] and
+    /// never a conflict, so no refusal here is an existence oracle.
+    async fn claim_refusal(&self, id: &FinExpenseId, verb: &str) -> StoreError {
+        match self.expense(id).await {
+            Ok(None) => StoreError::NotFound,
+            Ok(Some(claim)) => StoreError::Conflict(format!(
+                "this claim is {} and cannot be {verb}",
+                claim.status.as_str()
+            )),
+            Err(error) => error,
+        }
     }
 
     /// Confirms every thing a claim points at is one the caller can reach: the
@@ -598,13 +785,197 @@ impl AccountStore {
 
 /// Refuses a write to a claim that is no longer the claimant's alone, naming
 /// the verb that would make it one again.
-fn require_draft(claim: &Expense, verb: &str) -> Result<()> {
+fn require_claimants(claim: &Expense, verb: &str) -> Result<()> {
     if claim.is_editable() {
         return Ok(());
     }
-    Err(StoreError::Conflict(format!(
+    Err(handed_in(verb))
+}
+
+/// The refusal a write to a handed-in claim reads, in one place because the
+/// check and the statement's own `WHERE` clause both produce it — the second
+/// when a submit lands between the read and the write.
+fn handed_in(verb: &str) -> StoreError {
+    StoreError::Conflict(format!(
         "a claim that has been handed in cannot be {verb}; withdraw it first"
-    )))
+    ))
+}
+
+impl TenantStore {
+    /// Every claim of this tenant awaiting a decision, oldest purchase first —
+    /// the approvals inbox. **Admin only**, gated at the edge by
+    /// `Account::require_admin`.
+    ///
+    /// It crosses the personal-data line the account door exists to hold, so it
+    /// is deliberately the narrowest cross-user read the module has: the
+    /// waiting claims, their claimants' addresses, and the category each books
+    /// to. Nothing about anybody's other claims, and no totals per person.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure; [`StoreError::Validation`] if a stored
+    /// method or status is a word this build does not know.
+    pub async fn pending_expenses(&self) -> Result<Vec<PendingExpense>> {
+        let rows = sqlx::query_as::<_, PendingRow>(&format!(
+            "SELECT {expense}, COALESCE(u.email, '') AS user_email, c.name AS category_name \
+             FROM fin_expenses e \
+             LEFT JOIN users u ON u.tenant_id = e.tenant_id AND u.id = e.user_id \
+             LEFT JOIN fin_categories c ON c.tenant_id = e.tenant_id AND c.id = e.category_id \
+             WHERE e.tenant_id = $1 AND e.status = '{submitted}' \
+             ORDER BY e.spent_on, e.submitted_at, e.id LIMIT $2",
+            expense = expense_cols_prefixed("e"),
+            submitted = ExpenseStatus::Submitted.as_str()
+        ))
+        .bind(self.tenant().as_str())
+        .bind(PENDING_LIMIT)
+        .fetch_all(self.pool())
+        .await
+        .map_err(StoreError::Db)?;
+        rows.into_iter().map(PendingRow::into_pending).collect()
+    }
+
+    /// One of this tenant's claims by id, whoever it belongs to — **admin
+    /// only**, the read behind every decision below.
+    ///
+    /// Another tenant's id is `None`, exactly like one that was never issued.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure; [`StoreError::Validation`] if a stored
+    /// word is one this build does not know.
+    pub async fn expense_by_id(&self, id: &FinExpenseId) -> Result<Option<Expense>> {
+        let row = sqlx::query_as::<_, ExpenseRow>(&format!(
+            "SELECT {EXPENSE_COLS} FROM fin_expenses WHERE tenant_id = $1 AND id = $2"
+        ))
+        .bind(self.tenant().as_str())
+        .bind(id.as_str())
+        .fetch_optional(self.pool())
+        .await
+        .map_err(StoreError::Db)?;
+        row.map(ExpenseRow::into_expense).transpose()
+    }
+
+    /// Records an approver's decision on a waiting claim — **admin only**.
+    ///
+    /// An approval fixes the cost as the company's; a rejection hands the claim
+    /// back to its claimant, editable, so they can correct it and submit again.
+    /// `approver` is the authenticated caller and never request input.
+    ///
+    /// An admin may decide their own claim: a one-person tenant has nobody else,
+    /// and the audit entry records who it was — the rule
+    /// [`TenantStore::decide_week`] states for a timesheet.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the claim is not this tenant's;
+    /// [`StoreError::Conflict`] when it is not awaiting a decision;
+    /// [`StoreError::Validation`] when the note is too long;
+    /// [`StoreError::Db`] on failure.
+    pub async fn decide_expense(
+        &self,
+        id: &FinExpenseId,
+        decision: ExpenseDecision,
+        approver: &UserId,
+        note: &str,
+    ) -> Result<Expense> {
+        let note = bounded("decision note", note, EXPENSE_DECISION_NOTE_MAX)?;
+        let row = sqlx::query_as::<_, ExpenseRow>(&format!(
+            "UPDATE fin_expenses \
+                SET status = $3, decided_by = $4, decided_at = now(), decision_note = $5, \
+                    updated_at = now() \
+             WHERE tenant_id = $1 AND id = $2 AND status = '{submitted}' \
+             RETURNING {EXPENSE_COLS}",
+            submitted = ExpenseStatus::Submitted.as_str()
+        ))
+        .bind(self.tenant().as_str())
+        .bind(id.as_str())
+        .bind(decision.resulting_status().as_str())
+        .bind(approver.as_str())
+        .bind(&note)
+        .fetch_optional(self.pool())
+        .await
+        .map_err(StoreError::Db)?;
+        match row {
+            Some(row) => row.into_expense(),
+            None => Err(self.expense_decision_refusal(id, "decided").await),
+        }
+    }
+
+    /// Marks an approved claim paid back, on the day the money moved —
+    /// **admin only**.
+    ///
+    /// Two rules, both refusals rather than silent no-ops:
+    ///
+    /// - Only an **approved** claim. Money is not repaid against a claim nobody
+    ///   agreed to.
+    /// - Only one the **employee's own money** paid
+    ///   ([`ExpenseMethod::owes_the_employee`]). A company card or petty cash
+    ///   left nobody owed anything, so there is nothing to pay back, and
+    ///   recording a reimbursement against one would book money out of the bank
+    ///   twice.
+    ///
+    /// The day is the caller's, never the server's clock: it is the date the
+    /// reimbursement books on, and a day chosen by whichever zone a container
+    /// runs in is a posting in the wrong period.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the claim is not this tenant's;
+    /// [`StoreError::Conflict`] when it is not approved, or nobody is owed
+    /// anything on it; [`StoreError::Db`] on failure.
+    pub async fn reimburse_expense(&self, id: &FinExpenseId, paid_on: Date) -> Result<Expense> {
+        let claim = self.expense_by_id(id).await?.ok_or(StoreError::NotFound)?;
+        if !claim.status.can_reimburse() {
+            return Err(StoreError::Conflict(format!(
+                "this claim is {} and cannot be marked reimbursed",
+                claim.status.as_str()
+            )));
+        }
+        if !claim.method.owes_the_employee() {
+            return Err(StoreError::Conflict(
+                "the company's own money paid this claim, so there is nobody to reimburse"
+                    .to_owned(),
+            ));
+        }
+        let row = sqlx::query_as::<_, ExpenseRow>(&format!(
+            "UPDATE fin_expenses \
+                SET status = '{reimbursed}', reimbursed_on = $3, updated_at = now() \
+             WHERE tenant_id = $1 AND id = $2 AND status = '{approved}' AND method = '{personal}' \
+             RETURNING {EXPENSE_COLS}",
+            reimbursed = ExpenseStatus::Reimbursed.as_str(),
+            approved = ExpenseStatus::Approved.as_str(),
+            personal = ExpenseMethod::Personal.as_str()
+        ))
+        .bind(self.tenant().as_str())
+        .bind(id.as_str())
+        .bind(paid_on)
+        .fetch_optional(self.pool())
+        .await
+        .map_err(StoreError::Db)?;
+        match row {
+            Some(row) => row.into_expense(),
+            // Somebody decided it between the read and the write.
+            None => Err(self.expense_decision_refusal(id, "marked reimbursed").await),
+        }
+    }
+
+    /// Names, in a refusal, why a decision statement moved nothing. A claim that
+    /// is not this tenant's is [`StoreError::NotFound`] and never a conflict.
+    async fn expense_decision_refusal(&self, id: &FinExpenseId, verb: &str) -> StoreError {
+        match self.expense_by_id(id).await {
+            Ok(None) => StoreError::NotFound,
+            Ok(Some(claim)) => StoreError::Conflict(format!(
+                "this claim is {} and cannot be {verb}",
+                claim.status.as_str()
+            )),
+            Err(error) => error,
+        }
+    }
+}
+
+/// [`EXPENSE_COLS`] qualified with a table alias, for the joined inbox read.
+fn expense_cols_prefixed(alias: &str) -> String {
+    EXPENSE_COLS
+        .split(',')
+        .map(|column| format!("{alias}.{}", column.trim()))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 // ---- row types --------------------------------------------------------------
@@ -662,6 +1033,24 @@ impl ExpenseRow {
             reimbursed_on: self.reimbursed_on,
             created_at: self.created_at,
             updated_at: self.updated_at,
+        })
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct PendingRow {
+    #[sqlx(flatten)]
+    expense: ExpenseRow,
+    user_email: String,
+    category_name: Option<String>,
+}
+
+impl PendingRow {
+    fn into_pending(self) -> Result<PendingExpense> {
+        Ok(PendingExpense {
+            expense: self.expense.into_expense()?,
+            user_email: self.user_email,
+            category_name: self.category_name,
         })
     }
 }
@@ -881,15 +1270,127 @@ mod tests {
     }
 
     #[test]
-    fn a_draft_is_the_only_editable_state() {
-        assert!(ExpenseStatus::Draft.is_editable());
+    fn a_claim_is_its_claimants_own_until_somebody_is_deciding_it() {
+        // A rejection goes back to the claimant: the whole point of refusing a
+        // claim is that the person fixes it and hands it in again.
+        for theirs in [ExpenseStatus::Draft, ExpenseStatus::Rejected] {
+            assert!(theirs.is_editable(), "{} is frozen", theirs.as_str());
+            assert!(
+                theirs.can_submit(),
+                "{} cannot be handed in",
+                theirs.as_str()
+            );
+        }
         for frozen in [
             ExpenseStatus::Submitted,
+            ExpenseStatus::Approved,
+            ExpenseStatus::Reimbursed,
+        ] {
+            assert!(!frozen.is_editable(), "{} is editable", frozen.as_str());
+            assert!(!frozen.can_submit(), "{} can be handed in", frozen.as_str());
+        }
+    }
+
+    #[test]
+    fn the_transitions_are_the_state_machine_and_nothing_else() {
+        // Only a waiting claim can be taken back, and only by its claimant.
+        assert!(ExpenseStatus::Submitted.can_withdraw());
+        for no in [
+            ExpenseStatus::Draft,
             ExpenseStatus::Approved,
             ExpenseStatus::Rejected,
             ExpenseStatus::Reimbursed,
         ] {
-            assert!(!frozen.is_editable(), "{} is editable", frozen.as_str());
+            assert!(!no.can_withdraw(), "{} can be withdrawn", no.as_str());
+        }
+
+        // Only a waiting claim is decidable — a rejection is resubmitted by its
+        // claimant, not re-decided by an approver.
+        assert!(ExpenseStatus::Submitted.can_decide());
+        for no in [
+            ExpenseStatus::Draft,
+            ExpenseStatus::Approved,
+            ExpenseStatus::Rejected,
+            ExpenseStatus::Reimbursed,
+        ] {
+            assert!(!no.can_decide(), "{} can be decided", no.as_str());
+        }
+
+        // Only an approved claim can be paid back, and paying it back is the
+        // end of the line.
+        assert!(ExpenseStatus::Approved.can_reimburse());
+        for no in [
+            ExpenseStatus::Draft,
+            ExpenseStatus::Submitted,
+            ExpenseStatus::Rejected,
+            ExpenseStatus::Reimbursed,
+        ] {
+            assert!(!no.can_reimburse(), "{} can be reimbursed", no.as_str());
+        }
+    }
+
+    #[test]
+    fn a_decision_names_the_state_it_produces() {
+        assert_eq!(
+            ExpenseDecision::Approve.resulting_status(),
+            ExpenseStatus::Approved
+        );
+        assert_eq!(
+            ExpenseDecision::Reject.resulting_status(),
+            ExpenseStatus::Rejected
+        );
+        // The asymmetry the flow rests on: a refusal hands the claim back,
+        // an approval keeps it.
+        assert!(ExpenseDecision::Reject.resulting_status().is_editable());
+        assert!(!ExpenseDecision::Approve.resulting_status().is_editable());
+    }
+
+    #[test]
+    fn the_editable_statuses_are_spelled_the_same_way_in_sql_and_in_code() {
+        let listed: Vec<String> = CLAIMANTS_STATUSES
+            .split(',')
+            .map(|word| word.trim().trim_matches('\'').to_owned())
+            .collect();
+        let predicate: Vec<String> = [
+            ExpenseStatus::Draft,
+            ExpenseStatus::Submitted,
+            ExpenseStatus::Approved,
+            ExpenseStatus::Rejected,
+            ExpenseStatus::Reimbursed,
+        ]
+        .into_iter()
+        .filter(|status| status.is_editable())
+        .map(|status| status.as_str().to_owned())
+        .collect();
+        assert_eq!(
+            listed, predicate,
+            "the statements and the predicate disagree about whose claim it is"
+        );
+    }
+
+    #[test]
+    fn the_joined_inbox_read_qualifies_every_column_it_selects() {
+        let prefixed = expense_cols_prefixed("e");
+        assert!(prefixed.starts_with("e.id, e.user_id, e.spent_on"));
+        assert_eq!(
+            prefixed.split(", ").count(),
+            EXPENSE_COLS.split(',').count(),
+            "no column is dropped or duplicated by the prefixing"
+        );
+        assert!(
+            prefixed.split(", ").all(|column| column.starts_with("e.")),
+            "an unqualified column would be ambiguous against the joined tables: {prefixed}"
+        );
+    }
+
+    #[test]
+    fn a_refusal_to_write_a_handed_in_claim_names_the_way_back() {
+        match handed_in("changed") {
+            StoreError::Conflict(message) => {
+                assert!(message.contains("cannot be changed"), "{message}");
+                assert!(message.contains("withdraw it first"), "{message}");
+            }
+            other => panic!("expected Conflict, got {other:?}"),
         }
     }
 }

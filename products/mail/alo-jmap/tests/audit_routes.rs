@@ -1,7 +1,8 @@
 //! Coverage of the business audit trail over the router's own source (B2.13).
 //!
 //! The item's promise is "every mutating billing/CRM route writes exactly one
-//! entry" — and, since B3.04, every mutating `/projects` route too.
+//! entry" — and, since B3.04, every mutating `/projects` route too, and since
+//! B4.05b every mutating `/finance` route.
 //! `audit_http.rs` proves the *writing* on a live service, one route at a time;
 //! what cannot be proved that way is **every**. axum's router does not hand back
 //! the routes it holds, so this suite reads the source that registers them —
@@ -101,7 +102,7 @@ fn methods_of(call: &str) -> Vec<String> {
 /// `audit_action::AUDITED_MODULES`, spelled out here rather than imported so
 /// adding a module to that list without deciding what its trail says fails
 /// loudly instead of quietly widening the promise.
-const AUDITED_PREFIXES: [&str; 3] = ["/billing/", "/crm/", "/projects/"];
+const AUDITED_PREFIXES: [&str; 4] = ["/billing/", "/crm/", "/finance/", "/projects/"];
 
 /// Every `(method, template)` the router registers under an audited module.
 fn business_routes() -> Vec<(String, String)> {
@@ -217,6 +218,7 @@ DELETE /crm/activities/{id} -> crm.activity.delete
 DELETE /crm/deals/{id} -> crm.deal.delete
 DELETE /crm/deals/{id}/threads/{threadId} -> crm.deal.thread.delete
 DELETE /crm/stages/{id} -> crm.stage.delete
+DELETE /finance/expenses/{id} -> finance.expense.delete
 DELETE /projects/clients/{id} -> projects.client.delete
 DELETE /projects/milestones/{id} -> projects.milestone.delete
 DELETE /projects/tasks/{task_id}/milestone -> projects.task.milestone.delete
@@ -231,6 +233,7 @@ PATCH /billing/settings -> billing.setting.update
 PATCH /crm/deals/{id} -> crm.deal.update
 PATCH /crm/pipelines/{id} -> crm.pipeline.update
 PATCH /crm/stages/{id} -> crm.stage.update
+PATCH /finance/expenses/{id} -> finance.expense.update
 PATCH /projects/milestones/{id} -> projects.milestone.update
 PATCH /projects/time/{id} -> projects.time.update
 POST /billing/bills/import -> billing.bill.import
@@ -271,6 +274,12 @@ POST /crm/pipelines/{id}/archive -> crm.pipeline.archive
 POST /crm/pipelines/{id}/stages -> crm.pipeline.stage.create
 POST /crm/stages/{id}/archive -> crm.stage.archive
 POST /crm/stages/{id}/move -> crm.stage.move
+POST /finance/expenses -> finance.expense.create
+POST /finance/expenses/{id}/approve -> finance.expense.approve
+POST /finance/expenses/{id}/reimburse -> finance.expense.reimburse
+POST /finance/expenses/{id}/reject -> finance.expense.reject
+POST /finance/expenses/{id}/submit -> finance.expense.submit
+POST /finance/expenses/{id}/withdraw -> finance.expense.withdraw
 POST /projects/approvals/{id}/approve -> projects.approval.approve
 POST /projects/approvals/{id}/reject -> projects.approval.reject
 POST /projects/approvals/{id}/reopen -> projects.approval.reopen

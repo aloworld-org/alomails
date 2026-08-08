@@ -176,8 +176,8 @@ pub use fin_accounts::{
 };
 pub use fin_categories::{CATEGORY_NAME_MAX_CHARS, ExpenseCategory, NewExpenseCategory};
 pub use fin_expenses::{
-    EXPENSE_DECISION_NOTE_MAX, EXPENSE_DESCRIPTION_MAX, Expense, ExpenseMethod, ExpenseStatus,
-    GROSS_MIN_CENTS, MERCHANT_MAX, NewExpense,
+    EXPENSE_DECISION_NOTE_MAX, EXPENSE_DESCRIPTION_MAX, Expense, ExpenseDecision, ExpenseMethod,
+    ExpenseStatus, GROSS_MIN_CENTS, MERCHANT_MAX, NewExpense, PendingExpense,
 };
 pub use fin_journal::{
     DIMENSION_MAX_CHARS, ENTRY_POSTINGS_MAX, Entry, EntryKind, EntrySource, JOURNAL_PAGE_MAX,

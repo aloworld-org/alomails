@@ -46,7 +46,12 @@ pub struct AuditEvent {
 /// `projects` joined at B3.04 (`docs/design/projects.md` § Audit): "who
 /// approved my week, and when" is a question an employee is entitled to have
 /// answered, and a timer somebody else stopped is the same kind of question.
-const AUDITED_MODULES: [&str; 3] = ["billing", "crm", "projects"];
+///
+/// `finance` joined at B4.05b (`docs/design/finance.md` § Tenancy) for the
+/// sharper version of it: an expense claim is money somebody is owed, decided
+/// by somebody else, and "who approved this, and when" is a question an auditor
+/// asks as readily as the claimant does.
+const AUDITED_MODULES: [&str; 4] = ["billing", "crm", "projects", "finance"];
 
 /// `POST` routes that mutate nothing — a dry run whose whole point is to answer
 /// "what *would* this do". Auditing them would file a paper trail for looking.
@@ -241,6 +246,10 @@ mod tests {
             "billing.invoice.credit_note"
         );
         assert_eq!(action("POST", "/crm/deals/{id}/stage"), "crm.deal.stage");
+        assert_eq!(
+            action("POST", "/finance/expenses/{id}/approve"),
+            "finance.expense.approve"
+        );
         assert_eq!(
             action("POST", "/billing/bills/sepa.xml"),
             "billing.bill.sepa_xml"

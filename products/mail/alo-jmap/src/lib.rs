@@ -73,6 +73,8 @@ pub mod drafts;
 pub mod drive;
 pub mod error;
 pub mod filters;
+pub mod finance_approvals;
+pub mod finance_expenses;
 pub mod flagdue;
 pub mod imap_import;
 pub mod imap_import_route;

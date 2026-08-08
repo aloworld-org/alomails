@@ -20,11 +20,11 @@ use crate::{
     billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
     billing_settings, blob, calendar, carddav, chat, contacts, crm_activities, crm_deals,
     crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
-    delegates, docs, drive, filters, flagdue, imap_import_route, insights, insights_ask,
-    insights_eval, insights_gallery, projects_clients, projects_invoices, projects_plan,
-    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
-    schedule, security, session, settings, share, signup_route, sites, snooze, spaces, tasks,
-    unsubscribe, wopi, workspace_search,
+    delegates, docs, drive, filters, finance_approvals, finance_expenses, flagdue,
+    imap_import_route, insights, insights_ask, insights_eval, insights_gallery, projects_clients,
+    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
+    projects_weeks, push, reset_route, schedule, security, session, settings, share, signup_route,
+    sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -858,6 +858,60 @@ pub fn app(state: AppState) -> Router {
         // wins over this capture, and an id — a base64url'd 16-byte token —
         // can never spell one of them anyway.
         .route("/projects/{id}", get(projects_clients::get_project))
+        // Finance — expense claims (B4.05) and the flow that decides them.
+        //
+        // `/finance` is a NEW top-level prefix: the production Caddyfile needs
+        // it added at the next deploy, and `web/vite.config.ts` carries it in
+        // `API_PATHS` from this commit.
+        //
+        // Two doors onto one row, exactly as `/projects/weeks` and
+        // `/projects/approvals` are. The CLAIMANT's routes are their own and
+        // carry no `userId` anywhere; the APPROVER's are cross-user, gated by
+        // `Account::require_admin` in the handler, and live in their own module
+        // so the module's one privileged read cannot hide among ordinary ones.
+        //
+        // The queue is `/finance/expenses/pending` rather than a second
+        // collection: the decisions are on the claim itself (the design note's
+        // routes table), so the queue is a view of the same collection. `pending`
+        // is a static segment and an id — a base64url'd 16-byte token — can
+        // never spell it, the shape `/tasks/labels` beside `/tasks/{id}` has had
+        // since ADR 0021.
+        .route(
+            "/finance/expenses",
+            get(finance_expenses::list_expenses).post(finance_expenses::create_expense),
+        )
+        .route(
+            "/finance/expenses/pending",
+            get(finance_approvals::list_pending_expenses),
+        )
+        .route(
+            "/finance/expenses/{id}",
+            get(finance_expenses::get_expense)
+                .patch(finance_expenses::update_expense)
+                .delete(finance_expenses::delete_expense),
+        )
+        .route(
+            "/finance/expenses/{id}/submit",
+            post(finance_expenses::submit_expense),
+        )
+        .route(
+            "/finance/expenses/{id}/withdraw",
+            post(finance_expenses::withdraw_expense),
+        )
+        // Admin only, all three (`Account::require_admin`, checked in the
+        // handler as `/admin/*` does).
+        .route(
+            "/finance/expenses/{id}/approve",
+            post(finance_approvals::approve_expense),
+        )
+        .route(
+            "/finance/expenses/{id}/reject",
+            post(finance_approvals::reject_expense),
+        )
+        .route(
+            "/finance/expenses/{id}/reimburse",
+            post(finance_approvals::reimburse_expense),
+        )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))
