@@ -2199,6 +2199,10 @@ export const fr: Partial<Catalog> = {
   driveUnknownError: "Le serveur n’a fourni aucune raison.",
   driveLoadFailedTitle: "Vos fichiers ne se sont pas chargés",
   driveLoadFailed: (reason: string) => `Réessayez. Serveur : ${reason}`,
+  driveActionFailed: (action: string, reason: string) => `${action} ne s’est pas terminé. Réessayez. Serveur : ${reason}`,
+  driveMovedToTrash: (name: string) => `${name} a été placé dans la corbeille.`,
+  driveRestoredFromTrash: (name: string) => `${name} a été restauré.`,
+  driveUndo: "Annuler",
   driveVersionsLoadFailed: (reason: string) => `L’historique des versions ne s’est pas chargé. Réessayez. Serveur : ${reason}`,
   driveMembersLoadFailed: (reason: string) => `Les membres ne se sont pas chargés. Réessayez. Serveur : ${reason}`,
 };

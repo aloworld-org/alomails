@@ -61,6 +61,7 @@ export function VersionsDialog({ nodeId, onChanged, onClose }: { nodeId: string;
   const client = useJmapClient();
   const [versions, setVersions] = useState<DriveVersionDto[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState("");
 
   const load = () => {
     let live = true;
@@ -87,12 +88,13 @@ export function VersionsDialog({ nodeId, onChanged, onClose }: { nodeId: string;
   }, [client, nodeId]);
 
   async function restore(no: number) {
+    setActionError("");
     try {
       await client.driveRestoreVersion(nodeId, no);
       setVersions(await client.driveVersions(nodeId));
       onChanged();
-    } catch {
-      /* ignore */
+    } catch (error) {
+      setActionError(strings.driveActionFailed(strings.driveRestore, driveErrorReason(error) ?? strings.driveUnknownError));
     }
   }
 
@@ -133,6 +135,7 @@ export function VersionsDialog({ nodeId, onChanged, onClose }: { nodeId: string;
             ))}
           </ul>
         )}
+        {actionError !== "" && <p className={styles.memberErr} role="alert">{actionError}</p>}
       </div>
     </div>
   );
@@ -167,8 +170,8 @@ export function MembersDialog({ space, onClose }: { space: SpaceDto; onClose: ()
       await client.addSpaceMember(space.id, addr, role);
       setEmail("");
       load();
-    } catch {
-      setError(strings.driveMemberError);
+    } catch (caught) {
+      setError(strings.driveActionFailed(strings.driveAdd, driveErrorReason(caught) ?? strings.driveUnknownError));
     }
   }
 
@@ -177,8 +180,8 @@ export function MembersDialog({ space, onClose }: { space: SpaceDto; onClose: ()
     try {
       await client.removeSpaceMember(space.id, userId);
       load();
-    } catch {
-      /* ignore */
+    } catch (caught) {
+      setError(strings.driveActionFailed(strings.driveRemoveMember, driveErrorReason(caught) ?? strings.driveUnknownError));
     }
   }
 

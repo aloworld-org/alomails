@@ -2171,6 +2171,10 @@ export const nl: Partial<Catalog> = {
   driveUnknownError: "De server gaf geen reden op.",
   driveLoadFailedTitle: "Uw bestanden zijn niet geladen",
   driveLoadFailed: (reason: string) => `Probeer het opnieuw. Server: ${reason}`,
+  driveActionFailed: (action: string, reason: string) => `${action} is niet voltooid. Probeer het opnieuw. Server: ${reason}`,
+  driveMovedToTrash: (name: string) => `${name} is naar de prullenbak verplaatst.`,
+  driveRestoredFromTrash: (name: string) => `${name} is hersteld.`,
+  driveUndo: "Ongedaan maken",
   driveVersionsLoadFailed: (reason: string) => `De versiegeschiedenis is niet geladen. Probeer het opnieuw. Server: ${reason}`,
   driveMembersLoadFailed: (reason: string) => `De leden zijn niet geladen. Probeer het opnieuw. Server: ${reason}`,
 };

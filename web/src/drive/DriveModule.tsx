@@ -60,6 +60,11 @@ type Crumb = { id: string; name: string };
 type EditorKind = "doc" | "sheet" | "office";
 type SortMode = "name-asc" | "name-desc" | "newest" | "oldest" | "largest" | "smallest";
 type ViewMode = "extra-large" | "large" | "medium" | "small" | "list" | "details" | "tiles" | "content";
+type DriveNotice = {
+  kind: "error" | "success";
+  message: string;
+  action: { label: string; run: () => void } | null;
+};
 
 function fileSlug(name: string): string {
   const slug = name
@@ -122,6 +127,7 @@ export function DriveModule() {
   const [importing, setImporting] = useState<string | null>(null);
   const [importFailed, setImportFailed] = useState<string | null>(null);
   const [showMembers, setShowMembers] = useState(false);
+  const [notice, setNotice] = useState<DriveNotice | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const parent = path.length > 0 ? (path[path.length - 1]?.id ?? null) : null;
@@ -279,6 +285,11 @@ export function DriveModule() {
     return dot > 0 ? node.name.slice(0, dot) : node.name;
   }
 
+  function reportFailure(action: string, error: unknown) {
+    const reason = driveErrorReason(error) ?? strings.driveUnknownError;
+    setNotice({ kind: "error", message: strings.driveActionFailed(action, reason), action: null });
+  }
+
   function renderRows(items: DriveNodeDto[], depth = 0): ReactNode[] {
     return sortNodes(items).map((n) => {
       const Icon = nodeIcon(n);
@@ -349,8 +360,8 @@ export function DriveModule() {
       const id = await client.driveCreateDoc(location, parent, name);
       await load();
       showEditor("doc", id, name);
-    } catch {
-      /* ignore */
+    } catch (error) {
+      reportFailure(strings.driveKindDoc, error);
     }
   }
 
@@ -361,8 +372,8 @@ export function DriveModule() {
       const id = await client.driveCreateSheet(location, parent, name);
       await load();
       showEditor("sheet", id, name);
-    } catch {
-      /* ignore */
+    } catch (error) {
+      reportFailure(strings.driveKindSheet, error);
     }
   }
 
@@ -380,8 +391,9 @@ export function DriveModule() {
       await client.driveSaveSheet(id, snapshot);
       await load();
       showEditor("sheet", id, base);
-    } catch {
+    } catch (error) {
       setImportFailed(fileName);
+      reportFailure(strings.driveImporting(fileName), error);
     } finally {
       setImporting(null);
     }
@@ -399,8 +411,8 @@ export function DriveModule() {
       const id = await client.driveUpload(location, parent, file);
       await load();
       showEditor("office", id, file.name);
-    } catch {
-      /* ignore */
+    } catch (error) {
+      reportFailure(kind, error);
     }
   }
 
@@ -408,8 +420,8 @@ export function DriveModule() {
     if (n.blobId === null) return;
     try {
       saveBlob(await client.driveDownload(n.id), n.name);
-    } catch {
-      /* ignore */
+    } catch (error) {
+      reportFailure(strings.driveDownload, error);
     }
   }
 
@@ -420,8 +432,8 @@ export function DriveModule() {
         await client.driveUpload(location, parent, f);
       }
       await load();
-    } catch {
-      /* leave as-is */
+    } catch (error) {
+      reportFailure(strings.driveUpload, error);
     } finally {
       setUploading(false);
     }
@@ -433,8 +445,8 @@ export function DriveModule() {
     try {
       await client.driveCreateFolder(location, parent, name);
       await load();
-    } catch {
-      /* ignore */
+    } catch (error) {
+      reportFailure(strings.driveNewFolder, error);
     }
   }
 
@@ -445,8 +457,8 @@ export function DriveModule() {
       const id = await client.createSpace(name);
       loadSpaces();
       selectLocation(id);
-    } catch {
-      /* ignore */
+    } catch (error) {
+      reportFailure(strings.driveNewSpace, error);
     }
   }
 
@@ -456,27 +468,39 @@ export function DriveModule() {
     try {
       await client.driveRename(n.id, name);
       await load();
-    } catch {
-      /* ignore */
+    } catch (error) {
+      reportFailure(strings.driveRename, error);
     }
   }
 
   async function trash(n: DriveNodeDto) {
-    if (!(await confirm({ message: strings.driveTrashConfirm(n.name) }))) return;
     try {
       await client.driveTrashNode(n.id);
       await load();
-    } catch {
-      /* ignore */
+      setNotice({
+        kind: "success",
+        message: strings.driveMovedToTrash(n.name),
+        action: {
+          label: strings.driveUndo,
+          run: () => {
+            void restore(n, true);
+          },
+        },
+      });
+    } catch (error) {
+      reportFailure(strings.driveTrashAction, error);
     }
   }
 
-  async function restore(n: DriveNodeDto) {
+  async function restore(n: DriveNodeDto, fromUndo = false) {
     try {
       await client.driveRestoreNode(n.id);
       await load();
-    } catch {
-      /* ignore */
+      if (fromUndo) {
+        setNotice({ kind: "success", message: strings.driveRestoredFromTrash(n.name), action: null });
+      }
+    } catch (error) {
+      reportFailure(strings.driveRestore, error);
     }
   }
 
@@ -485,8 +509,8 @@ export function DriveModule() {
     try {
       await client.drivePurge(n.id);
       await load();
-    } catch {
-      /* ignore */
+    } catch (error) {
+      reportFailure(strings.driveDeleteForever, error);
     }
   }
 
@@ -498,8 +522,8 @@ export function DriveModule() {
       if (target.mode === "move") await client.driveMove(target.id, space, null);
       else await client.driveCopy(target.id, space, null);
       await load();
-    } catch {
-      /* ignore */
+    } catch (error) {
+      reportFailure(target.mode === "move" ? strings.driveMove : strings.driveCopy, error);
     }
   }
 
@@ -825,6 +849,23 @@ export function DriveModule() {
             onClick={() => setImportFailed(null)}
             aria-label={strings.close}
           >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+      {notice !== null && (
+        <div className={`${styles.driveNotice} ${notice.kind === "error" ? styles.driveNoticeError : ""}`} role={notice.kind === "error" ? "alert" : "status"}>
+          <span>{notice.message}</span>
+          {notice.action !== null && (
+            <button type="button" className={styles.driveNoticeAction} onClick={() => {
+              const run = notice.action?.run;
+              setNotice(null);
+              run?.();
+            }}>
+              {notice.action.label}
+            </button>
+          )}
+          <button type="button" className={styles.driveNoticeClose} onClick={() => setNotice(null)} aria-label={strings.close}>
             <X size={16} />
           </button>
         </div>
