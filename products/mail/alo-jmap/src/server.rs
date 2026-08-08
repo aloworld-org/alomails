@@ -21,8 +21,8 @@ use crate::{
     billing_settings, blob, calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff,
     crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
     docs, drive, filters, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, projects_clients, projects_invoices, projects_reports, projects_time,
-    projects_weeks, push,
+    insights_gallery, projects_clients, projects_invoices, projects_plan, projects_reports,
+    projects_time, projects_weeks, push,
     reset_route, schedule, security, session, settings, share, signup_route, sites, snooze, spaces,
     tasks, unsubscribe, wopi, workspace_search,
 };
@@ -756,9 +756,42 @@ pub fn app(state: AppState) -> Router {
             "/projects/reports/profitability.csv",
             get(projects_reports::profitability_report_csv),
         )
+        // The plan (B3.09) — the milestones a timeline is drawn from, and
+        // where each task sits among them. The list route answers with both in
+        // one read: a timeline that fetched them separately would draw a bar
+        // before it knew what was under it.
+        //
+        // Addressed as `/projects/milestones/{id}` rather than the design
+        // note's `/projects/{id}/milestones`, for the audit derivation's
+        // reason the client facts give above; the project is stated as
+        // `projectId`. Reaching a milestone is its own POST rather than a
+        // field on the PATCH, so the trail says `projects.milestone.done`
+        // instead of filing a closed deliverable as an edit.
+        .route(
+            "/projects/milestones",
+            get(projects_plan::list_plan).post(projects_plan::create_milestone),
+        )
+        .route(
+            "/projects/milestones/{id}",
+            get(projects_plan::get_milestone)
+                .patch(projects_plan::update_milestone)
+                .delete(projects_plan::delete_milestone),
+        )
+        .route(
+            "/projects/milestones/{id}/done",
+            post(projects_plan::set_milestone_done),
+        )
+        // A task's place in the plan, filed against the task whose place it is
+        // (`projects.task.milestone.*`): one milestone per task, so putting it
+        // somewhere is a PUT and moving it is the same call.
+        .route(
+            "/projects/tasks/{task_id}/milestone",
+            put(projects_plan::place_task).delete(projects_plan::unplace_task),
+        )
         // One engagement, registered last so the file reads in the order
         // matchit resolves: every literal segment above (`time`, `timer`,
-        // `weeks`, `approvals`, `clients`, `unbilled`, `invoices`, `reports`)
+        // `weeks`, `approvals`, `clients`, `unbilled`, `invoices`, `reports`,
+        // `milestones`, `tasks`)
         // wins over this capture, and an id — a base64url'd 16-byte token —
         // can never spell one of them anyway.
         .route("/projects/{id}", get(projects_clients::get_project))

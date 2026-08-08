@@ -212,3 +212,47 @@ export interface TimeEntryDraft {
   billable: boolean;
   note: string;
 }
+
+/** One milestone: a named date on a project, with what the timeline draws
+ *  beside it. Every field is the server's — including `late`, which is judged
+ *  against the server's date so a browser with a wrong clock cannot clear its
+ *  own late list. */
+export interface Milestone {
+  id: string;
+  projectId: string;
+  name: string;
+  /** `YYYY-MM-DD`. A milestone always has one. */
+  dueOn: string;
+  /** Whether a human marked it reached. Never derived from its tasks. */
+  done: boolean;
+  /** RFC 3339 instant it was reached, or `null`. */
+  doneAt: string | null;
+  /** Past its day and not reached, as at the server's today. */
+  late: boolean;
+  /** How many tasks are placed under it, and how many of those are closed.
+   *  Information beside `done`, never the thing itself. */
+  taskCount: number;
+  taskDoneCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Where one task sits in the plan. One milestone per task. */
+export interface TaskPlacement {
+  taskId: string;
+  milestoneId: string;
+}
+
+/** One project's plan and the placements over it — the timeline's single
+ *  read. */
+export interface ProjectPlan {
+  milestones: Milestone[];
+  placements: TaskPlacement[];
+}
+
+/** What a milestone form states: the two facts a milestone is. */
+export interface MilestoneDraft {
+  name: string;
+  /** `YYYY-MM-DD`. */
+  dueOn: string;
+}

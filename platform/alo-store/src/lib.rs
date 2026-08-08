@@ -73,6 +73,7 @@ pub mod message;
 pub mod model;
 pub mod project_clients;
 pub mod project_hours;
+pub mod project_milestones;
 pub mod reset;
 pub mod rfc2047;
 pub mod schedule;
@@ -161,7 +162,8 @@ pub use id::{
     BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId, BillingProductId,
     BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId, CommentId, ContactId,
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, GroupId,
-    InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId, SiteFormId,
+    InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId, ProjectMilestoneId,
+    SiteFormId,
     SiteFormSubmissionId, SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId,
     ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
@@ -193,6 +195,10 @@ pub use model::{
 };
 pub use project_clients::{BUDGET_CENTS_MAX, BUDGET_MINUTES_MAX, NewProjectClient, ProjectClient};
 pub use project_hours::ProjectHours;
+pub use project_milestones::{
+    MILESTONES_MAX, Milestone, MilestoneEdit, NAME_MAX as MILESTONE_NAME_MAX, NewMilestone,
+    TaskPlacement,
+};
 pub use reset::PendingReset;
 pub use schedule::DueSend;
 pub use search::SearchHit;

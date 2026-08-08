@@ -218,6 +218,8 @@ DELETE /crm/deals/{id} -> crm.deal.delete
 DELETE /crm/deals/{id}/threads/{threadId} -> crm.deal.thread.delete
 DELETE /crm/stages/{id} -> crm.stage.delete
 DELETE /projects/clients/{id} -> projects.client.delete
+DELETE /projects/milestones/{id} -> projects.milestone.delete
+DELETE /projects/tasks/{task_id}/milestone -> projects.task.milestone.delete
 DELETE /projects/time/{id} -> projects.time.delete
 PATCH /billing/customers/{id} -> billing.customer.update
 PATCH /billing/invoices/{id} -> billing.invoice.update
@@ -228,6 +230,7 @@ PATCH /billing/settings -> billing.setting.update
 PATCH /crm/deals/{id} -> crm.deal.update
 PATCH /crm/pipelines/{id} -> crm.pipeline.update
 PATCH /crm/stages/{id} -> crm.stage.update
+PATCH /projects/milestones/{id} -> projects.milestone.update
 PATCH /projects/time/{id} -> projects.time.update
 POST /billing/bills/import -> billing.bill.import
 POST /billing/bills/sepa.xml -> billing.bill.sepa_xml
@@ -271,6 +274,8 @@ POST /projects/approvals/{id}/approve -> projects.approval.approve
 POST /projects/approvals/{id}/reject -> projects.approval.reject
 POST /projects/approvals/{id}/reopen -> projects.approval.reopen
 POST /projects/invoices -> projects.invoice.create
+POST /projects/milestones -> projects.milestone.create
+POST /projects/milestones/{id}/done -> projects.milestone.done
 POST /projects/time -> projects.time.create
 POST /projects/timer/start -> projects.timer.start
 POST /projects/timer/stop -> projects.timer.stop
@@ -278,4 +283,5 @@ POST /projects/weeks/{monday}/submit -> projects.week.submit
 POST /projects/weeks/{monday}/withdraw -> projects.week.withdraw
 PUT /billing/fx/rates -> billing.fx.rates.update
 PUT /projects/clients/{id} -> projects.client.update
+PUT /projects/tasks/{task_id}/milestone -> projects.task.milestone.update
 "#;

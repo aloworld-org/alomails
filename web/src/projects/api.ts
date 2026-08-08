@@ -25,11 +25,14 @@ import { useAuth } from "../auth";
 import { API_BASE } from "../platform/runtime";
 import { RestError, restMessage } from "../platform/rest";
 import type {
+  Milestone,
+  MilestoneDraft,
   PendingWeek,
   ProfitabilityReport,
   Project,
   ProjectClient,
   ProjectClientDraft,
+  ProjectPlan,
   RunningTimer,
   TimeEntry,
   TimeEntryDraft,
@@ -117,6 +120,73 @@ export class ProjectsApi {
   async clearClient(projectId: string): Promise<void> {
     await this.#json<unknown>(
       await this.#send(`/projects/clients/${encodeURIComponent(projectId)}`, { method: "DELETE" }),
+    );
+  }
+
+  // ---- the plan ----------------------------------------------------------
+
+  /** One project's milestones and where its tasks sit among them — the
+   *  timeline's single read. A project this caller cannot see answers with two
+   *  empty lists, exactly as a project with no plan does: existence is never
+   *  disclosed by the shape of a list. */
+  plan(projectId: string): Promise<ProjectPlan> {
+    const query = new URLSearchParams({ projectId });
+    return this.#read<ProjectPlan>(`/projects/milestones?${query.toString()}`);
+  }
+
+  /** Plans a date on a project. */
+  createMilestone(projectId: string, draft: MilestoneDraft): Promise<Milestone> {
+    return this.#write<{ milestone: Milestone }>("POST", "/projects/milestones", {
+      projectId,
+      ...draft,
+    }).then((r) => r.milestone);
+  }
+
+  /** Renames a milestone or moves its date. A whole record, like the entry
+   *  edit: "the milestone now says this". */
+  updateMilestone(id: string, draft: MilestoneDraft): Promise<Milestone> {
+    return this.#write<{ milestone: Milestone }>(
+      "PATCH",
+      `/projects/milestones/${encodeURIComponent(id)}`,
+      draft,
+    ).then((r) => r.milestone);
+  }
+
+  /** Marks a milestone reached, or puts it back ahead of us. Its own call and
+   *  not a field on the edit, so the trail says a deliverable was closed
+   *  instead of filing it as a spelling correction. */
+  setMilestoneDone(id: string, done: boolean): Promise<Milestone> {
+    return this.#write<{ milestone: Milestone }>(
+      "POST",
+      `/projects/milestones/${encodeURIComponent(id)}/done`,
+      { done },
+    ).then((r) => r.milestone);
+  }
+
+  /** Takes a date out of the plan. The tasks under it stay on the board —
+   *  deleting a plan never deletes work. */
+  async deleteMilestone(id: string): Promise<void> {
+    await this.#json<unknown>(
+      await this.#send(`/projects/milestones/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    );
+  }
+
+  /** Puts a task under a milestone, or moves it to another one — the same call,
+   *  because a task has exactly one place in a plan. */
+  async placeTask(taskId: string, milestoneId: string): Promise<void> {
+    await this.#write<unknown>(
+      "PUT",
+      `/projects/tasks/${encodeURIComponent(taskId)}/milestone`,
+      { milestoneId },
+    );
+  }
+
+  /** Takes a task out of the plan, leaving it on the board. */
+  async unplaceTask(taskId: string): Promise<void> {
+    await this.#json<unknown>(
+      await this.#send(`/projects/tasks/${encodeURIComponent(taskId)}/milestone`, {
+        method: "DELETE",
+      }),
     );
   }
 

@@ -2631,6 +2631,7 @@ export const en = {
   projectsTabWeek: "My week",
   projectsTabApprovals: "Approvals",
   projectsTabReports: "Reports",
+  projectsTabPlan: "Plan",
   projectsLoadFailed: "Your projects could not be loaded.",
   projectsSaveFailed: "The change could not be saved.",
   projectsStartFailed: "The timer could not be started.",
@@ -2719,6 +2720,36 @@ export const en = {
   projectsSubmitWeek: "Submit week",
   projectsWithdrawWeek: "Take it back",
   projectsRejectedBecause: (note: string) => `Sent back: ${note}`,
+
+  // The plan — milestones on a date axis, over the board that already exists.
+  // "Reached" is deliberately a person's word and not "complete": a milestone
+  // is reached when somebody says the deliverable was accepted, never when the
+  // last task under it was closed (docs/design/projects.md).
+  projectsPlanLoadFailed: "The plan could not be loaded.",
+  projectsMilestoneAdd: "Add a milestone",
+  projectsMilestoneNew: "New milestone",
+  projectsMilestoneName: "Milestone",
+  projectsMilestoneNameHint: "What the date is for — \u201cDesign signed off\u201d, \u201cBeta with the pilot\u201d.",
+  projectsMilestoneDue: "Date",
+  projectsMilestoneDueHint: "The day it is due. Moving it later is ordinary; nothing is stopped by it.",
+  projectsMilestoneReach: "Mark reached",
+  projectsMilestoneReopen: "Not reached yet",
+  projectsMilestoneReached: "Reached",
+  projectsMilestoneLate: "Late",
+  projectsMilestoneNoTasks: "No tasks under it yet",
+  projectsMilestoneTasksClosed: (done: number, total: number) =>
+    `${done} of ${total} tasks closed`,
+  projectsMilestoneDelete: "Delete",
+  projectsMilestoneDeleteTitle: "Delete this milestone?",
+  projectsMilestoneDeleteBody:
+    "The date goes; the tasks under it stay exactly where they are on the board.",
+  projectsPlanUnplaced: "Not in the plan",
+  projectsPlanPlace: "Put under\u2026",
+  projectsPlanPlaceTask: (task: string) => `Put ${task} under a milestone`,
+  projectsPlanRemove: "Take out",
+  projectsPlanEmptyTitle: "No plan yet",
+  projectsPlanEmptyBody:
+    "A milestone is a named date on this project \u2014 the dates a client asks about. Add the first one, then put the board\u2019s tasks under it.",
 
   // Where a week stands. The server's word, never re-derived in the browser.
   projectsWeekOpen: "Open",

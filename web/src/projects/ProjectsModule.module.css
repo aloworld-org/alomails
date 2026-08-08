@@ -523,3 +523,122 @@
   font-size: var(--text-xs);
   color: var(--text-tertiary);
 }
+
+/* ---- the plan (B3.09) ------------------------------------------------- */
+
+/* The picker sits IN the toolbar rather than above it: a plan is always a plan
+   of one project, so the project is a control on this screen and not a heading
+   over it. */
+.inlineField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+}
+.inlineField .select {
+  width: auto;
+  min-width: 18ch;
+}
+
+/* The axis. Drawn only when the plan HAS a span — one date is a date, not a
+   timeline — and marked `aria-hidden` because every fact on it is written in
+   words in the list below: a screen reader gets the plan, not a decoration. */
+.timeline {
+  position: relative;
+  height: 46px;
+  margin: var(--space-2) var(--space-3) 0;
+}
+.timelineTrack {
+  position: absolute;
+  top: 9px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--border-subtle);
+}
+.timelineMark {
+  position: absolute;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.timelineDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--bg-surface);
+  border: 2px solid var(--text-tertiary);
+  margin-top: 4px;
+}
+.timelineDotDone {
+  background: #1f6b45;
+  border-color: #1f6b45;
+}
+.timelineDotLate {
+  background: #9b3222;
+  border-color: #9b3222;
+}
+.timelineDay {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.milestone {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.milestoneHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-4);
+  flex-wrap: wrap;
+}
+.milestoneTasks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+.milestoneTask {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+.milestoneTask + .milestoneTask {
+  border-top: 1px solid var(--border-subtle);
+}
+/* A closed task, struck through: the plan shows the board's state and does not
+   restate it in words the board does not use. */
+.taskDone {
+  text-decoration: line-through;
+  color: var(--text-tertiary);
+}
+
+.unplaced {
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+}
+.unplacedTitle {
+  margin: 0;
+  padding: 10px var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+}

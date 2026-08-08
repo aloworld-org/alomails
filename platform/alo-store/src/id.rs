@@ -301,6 +301,12 @@ opaque_id!(
     TimeEntryId
 );
 opaque_id!(
+    /// One milestone of a project — a named date the plan is drawn from (alo
+    /// Projects, ADR 0035, wave B3). A task points at one through
+    /// `task_milestones`, so a milestone owns no work: it places it.
+    ProjectMilestoneId
+);
+opaque_id!(
     /// One person's week, once it has a status — the row that submit, approve
     /// and reject decide, and that every hour in that week is locked by (alo
     /// Projects, ADR 0035, wave B3). A week nobody has submitted has no row and

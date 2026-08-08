@@ -31,6 +31,7 @@ import { ApprovalsView } from "./ApprovalsView";
 import { ClientDialog } from "./ClientDialog";
 import { projectsMessage, useProjectsApi } from "./api";
 import { ErrorBanner } from "./parts";
+import { PlanView } from "./PlanView";
 import { ProjectsView } from "./ProjectsView";
 import { ReportView } from "./ReportView";
 import { announceTimerChanged } from "./timerBus";
@@ -134,6 +135,14 @@ export function ProjectsModule() {
             {strings.projectsTabWeek}
           </NavLink>
           <NavLink
+            to="plan"
+            className={({ isActive }) =>
+              isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+            }
+          >
+            {strings.projectsTabPlan}
+          </NavLink>
+          <NavLink
             to="reports"
             className={({ isActive }) =>
               isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
@@ -174,6 +183,13 @@ export function ProjectsModule() {
         <Route
           path="week"
           element={<WeekView projects={projects} revision={revision} onChanged={bump} />}
+        />
+        {/* The plan is a rendering of the board Tasks already shows — the same
+            rows, grouped by the dates somebody planned them against — so it is
+            everybody's tab too, and it names no person at all. */}
+        <Route
+          path="plan"
+          element={<PlanView projects={projects} revision={revision} onChanged={bump} />}
         />
         {/* Profitability is a PROJECT aggregate — engagements, minutes and
             money, and never who worked when — so it is everybody's tab, not
