@@ -2167,6 +2167,9 @@ export const nl: Partial<Catalog> = {
   mailScheduleErrorDetail: (reason: string) =>
     `Uw bericht is niet gepland. Het blijft in Concepten staan zodat u het kunt openen en opnieuw kunt proberen. Server: ${reason}`,
   driveLoading: "Uw bestanden worden geladen…",
+  driveFolderLoading: (name: string) => `${name} wordt geladen…`,
+  driveFolderLoadFailed: (reason: string) => `Deze map is niet geladen. Server: ${reason}`,
+  driveSpacesLoadFailed: (reason: string) => `Uw ruimtes zijn niet geladen. Probeer het opnieuw. Server: ${reason}`,
   driveRetry: "Opnieuw proberen",
   driveUnknownError: "De server gaf geen reden op.",
   driveLoadFailedTitle: "Uw bestanden zijn niet geladen",

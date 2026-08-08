@@ -328,22 +328,58 @@
   position: absolute;
   inset: 0;
   z-index: 25;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-3);
+  display: grid;
+  grid-template-rows: auto auto 1fr;
   background: var(--bg-surface);
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
-
-.editorLoading span {
-  max-width: min(420px, 80vw);
+.editorLoadingHead {
+  min-height: var(--control-height);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  padding: var(--space-2) var(--space-4);
+}
+.editorLoadingIcon,
+.editorLoadingToolbar span,
+.editorLoadingCanvas span,
+.nestedSkeleton,
+.nestedSkeletonShort {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--bg-raised), var(--bg-sunken), var(--bg-raised));
+  background-size: 200% 100%;
+  animation: driveSkeletonPulse var(--animation-skeleton);
+}
+.editorLoadingIcon { width: var(--icon-size-control); height: var(--icon-size-control); }
+.editorLoadingName {
+  max-width: min(var(--overlay-width-lg), 80vw);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.editorLoadingToolbar {
+  min-height: var(--control-height);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  padding: var(--space-2) var(--space-4);
+}
+.editorLoadingToolbar span { width: var(--control-height); height: var(--control-height); }
+.editorLoadingCanvas {
+  width: min(var(--overlay-width-xl), calc(100% - var(--space-8)));
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  margin: var(--space-8) auto;
+  padding: var(--space-8);
+}
+.editorLoadingCanvas span { width: 72%; height: var(--space-3); }
+.editorLoadingCanvas span:first-child { width: 48%; height: var(--space-5); }
+.editorLoadingCanvas span:last-child { width: 88%; }
 
 /* ---- Office import (ADR 0033) ---- */
 .importOverlay {
@@ -658,6 +694,19 @@
   align-items: center;
 }
 .nestedStatusContent { padding-left: var(--space-8); }
+.nestedRow .rowMain { padding-left: calc(var(--drive-depth) * var(--space-6)); }
+.nestedStatusContent { gap: var(--space-2); }
+.nestedStatusContent button {
+  min-height: var(--control-height);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-3);
+  color: var(--accent);
+  font-weight: var(--weight-semibold);
+}
+.nestedStatusContent button:hover { background: var(--accent-tint); }
+.nestedSkeleton,
+.nestedSkeletonShort { width: var(--control-width-wide); height: var(--space-2); }
+.nestedSkeletonShort { width: var(--control-width-medium); }
 .rowName {
   overflow: hidden;
   text-overflow: ellipsis;

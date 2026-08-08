@@ -3,7 +3,7 @@
 // and per-item actions. Every file lives in one location; its access is that
 // location's access (ADR 0027), so there is no per-file sharing here — sharing
 // is membership of the Space it lives in, always visible via "Members".
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowUpDown,
@@ -110,6 +110,8 @@ export function DriveModule() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<ReadonlySet<string>>(new Set());
   const [folderChildren, setFolderChildren] = useState<ReadonlyMap<string, DriveNodeDto[] | null>>(new Map());
+  const [folderErrors, setFolderErrors] = useState<ReadonlyMap<string, string>>(new Map());
+  const [spacesAttempt, setSpacesAttempt] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [sortMode, setSortMode] = useState<SortMode>("name-asc");
@@ -177,12 +179,21 @@ export function DriveModule() {
   }, [client, navigate, route.pathname]);
 
   const loadSpaces = useCallback(() => {
-    void client.spaces().then(setSpaces).catch(() => setSpaces([]));
+    void client.spaces().then(setSpaces).catch((error: unknown) => {
+      const reason = driveErrorReason(error) ?? strings.driveUnknownError;
+      setSpaces([]);
+      setNotice({
+        kind: "error",
+        message: strings.driveSpacesLoadFailed(reason),
+        action: { label: strings.driveRetry, run: () => setSpacesAttempt((value) => value + 1) },
+      });
+    });
   }, [client]);
 
   const load = useCallback(async () => {
     setExpandedFolders(new Set());
     setFolderChildren(new Map());
+    setFolderErrors(new Map());
     setSelectedNodes(new Map());
     setLoadError(null);
     try {
@@ -198,7 +209,7 @@ export function DriveModule() {
 
   useEffect(() => {
     if (!editorRouteActive) loadSpaces();
-  }, [editorRouteActive, loadSpaces]);
+  }, [editorRouteActive, loadSpaces, spacesAttempt]);
   useEffect(() => {
     if (editorRouteActive) return;
     setNodes(null);
@@ -251,6 +262,21 @@ export function DriveModule() {
     else void download(n);
   }
 
+  function loadFolderChildren(folder: DriveNodeDto) {
+    setFolderErrors((current) => {
+      const next = new Map(current);
+      next.delete(folder.id);
+      return next;
+    });
+    setFolderChildren((current) => new Map(current).set(folder.id, null));
+    void client.driveList(location, folder.id).then((children) => {
+      setFolderChildren((current) => new Map(current).set(folder.id, children));
+    }).catch((error: unknown) => {
+      setFolderChildren((current) => new Map(current).set(folder.id, []));
+      setFolderErrors((current) => new Map(current).set(folder.id, driveErrorReason(error) ?? strings.driveUnknownError));
+    });
+  }
+
   function toggleFolder(folder: DriveNodeDto) {
     if (trashView) return;
     const isExpanded = expandedFolders.has(folder.id);
@@ -261,12 +287,7 @@ export function DriveModule() {
       return next;
     });
     if (isExpanded || folderChildren.has(folder.id)) return;
-    setFolderChildren((current) => new Map(current).set(folder.id, null));
-    void client.driveList(location, folder.id).then((children) => {
-      setFolderChildren((current) => new Map(current).set(folder.id, children));
-    }).catch(() => {
-      setFolderChildren((current) => new Map(current).set(folder.id, []));
-    });
+    loadFolderChildren(folder);
   }
 
   function sortNodes(items: DriveNodeDto[]): DriveNodeDto[] {
@@ -320,8 +341,12 @@ export function DriveModule() {
       const folder = n.kind === "folder";
       const expanded = folder && expandedFolders.has(n.id);
       const children = folderChildren.get(n.id);
+      const folderError = folderErrors.get(n.id);
       const row = (
-        <div className={`${styles.row} ${selectedNodes.has(n.id) ? styles.rowSelected : ""} ${depth > 0 ? styles.nestedRow : ""}`}>
+        <div
+          className={`${styles.row} ${selectedNodes.has(n.id) ? styles.rowSelected : ""} ${depth > 0 ? styles.nestedRow : ""}`}
+          style={{ "--drive-depth": depth } as CSSProperties}
+        >
           <label className={styles.rowSelect}>
             <input
               type="checkbox"
@@ -333,7 +358,6 @@ export function DriveModule() {
           <button
             type="button"
             className={styles.rowMain}
-            style={{ paddingLeft: depth * 24 }}
             onPointerEnter={() => {
               if (n.kind === "sheet") void loadSheetEditor();
             }}
@@ -369,9 +393,20 @@ export function DriveModule() {
           {row}
           {expanded && (
             <ul className={styles.folderChildren}>
-              {children === null || children === undefined ? (
+              {folderError !== undefined ? (
                 <li className={`${styles.row} ${styles.nestedStatus}`}>
-                  <span className={styles.nestedStatusContent}><Spinner size={16} /></span>
+                  <span className={styles.nestedStatusContent} role="alert">
+                    {strings.driveFolderLoadFailed(folderError)}
+                    <button type="button" onClick={() => loadFolderChildren(n)}>{strings.driveRetry}</button>
+                  </span>
+                </li>
+              ) : children === null || children === undefined ? (
+                <li className={`${styles.row} ${styles.nestedStatus}`}>
+                  <span className={styles.nestedStatusContent} role="status" aria-label={strings.driveFolderLoading(n.name)}>
+                    <span className={styles.nestedSkeleton} />
+                    <span className={styles.nestedSkeleton} />
+                    <span className={styles.nestedSkeletonShort} />
+                  </span>
                 </li>
               ) : children.length === 0 ? (
                 <li className={`${styles.row} ${styles.nestedStatus}`}>
@@ -974,9 +1009,17 @@ export function DriveModule() {
 
 function EditorLoading({ name }: { name: string }) {
   return (
-    <div className={styles.editorLoading} role="status" aria-label={strings.driveLoadingFile(name)}>
-      <Spinner size={24} />
-      <span>{strings.driveLoadingFile(name)}</span>
+    <div className={styles.editorLoading} role="status" aria-label={strings.driveLoadingFile(name)} aria-busy="true">
+      <div className={styles.editorLoadingHead}>
+        <span className={styles.editorLoadingIcon} />
+        <span className={styles.editorLoadingName}>{name}</span>
+      </div>
+      <div className={styles.editorLoadingToolbar}>
+        {Array.from({ length: 8 }, (_, index) => <span key={index} />)}
+      </div>
+      <div className={styles.editorLoadingCanvas}>
+        <span /><span /><span /><span />
+      </div>
     </div>
   );
 }
