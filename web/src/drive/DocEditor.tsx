@@ -30,6 +30,7 @@ import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { Spinner } from "../ds";
 import { docSchema } from "./docBlocks";
+import { driveErrorReason } from "./parts";
 import styles from "./DocEditor.module.css";
 
 type SaveState = "idle" | "saving" | "saved";
@@ -94,6 +95,9 @@ export function DocEditor({
   const client = useJmapClient();
   const editor = useCreateBlockNote({ schema: docSchema, uploadFile: fileAsDataUrl });
   const [ready, setReady] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [saveError, setSaveError] = useState("");
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [viewMode, setViewMode] = useState<DocViewMode>(() =>
     window.localStorage.getItem(`alo-doc-view:${nodeId}`) === "page" ? "page" : "canvas",
@@ -156,6 +160,8 @@ export function DocEditor({
 
   useEffect(() => {
     let live = true;
+    setReady(false);
+    setLoadError(null);
     void client
       .driveDocContent(nodeId)
       .then((c) => {
@@ -183,11 +189,13 @@ export function DocEditor({
         setCounts(documentCounts(blocks));
         setReady(true);
       })
-      .catch(() => live && setReady(true));
+      .catch((error: unknown) => {
+        if (live) setLoadError(driveErrorReason(error) ?? strings.driveUnknownError);
+      });
     return () => {
       live = false;
     };
-  }, [client, nodeId, editor]);
+  }, [client, nodeId, editor, loadAttempt]);
 
   useEffect(() => {
     window.localStorage.setItem(`alo-doc-view:${nodeId}`, viewMode);
@@ -292,8 +300,10 @@ export function DocEditor({
       try {
         await client.driveSaveDoc(nodeId, blocks);
         pending.current = null;
+        setSaveError("");
         setSaveState("saved");
-      } catch {
+      } catch (error: unknown) {
+        setSaveError(strings.docSaveFailed(driveErrorReason(error) ?? strings.driveUnknownError));
         setSaveState("idle");
       }
     },
@@ -521,10 +531,14 @@ export function DocEditor({
           <span className={styles.pageFooter}>{pageFooter}</span>
           {showPageNumber && <span className={styles.pageNumber}>1</span>}
         </div>}
-        {!ready ? (
-          <div className={styles.center}>
-            <Spinner size={22} />
+        {loadError !== null ? (
+          <div className={styles.docLoadError} role="alert">
+            <h2>{strings.docLoadFailedTitle}</h2>
+            <p>{strings.driveLoadFailed(loadError)}</p>
+            <button type="button" onClick={() => setLoadAttempt((value) => value + 1)}>{strings.driveRetry}</button>
           </div>
+        ) : !ready ? (
+          <DocSkeleton viewMode={viewMode} />
         ) : (
           <BlockNoteView
             editor={editorProp}
@@ -587,6 +601,12 @@ export function DocEditor({
             />
           </BlockNoteView>
         )}
+        {saveError !== "" && (
+          <div className={styles.docSaveError} role="alert">
+            <span>{saveError}</span>
+            <button type="button" onClick={() => { if (pending.current !== null) void save(pending.current); }}>{strings.driveRetry}</button>
+          </div>
+        )}
       </div>
 
       {/* AI: a compact, centred dock at the bottom — a button until opened, then
@@ -640,6 +660,17 @@ export function DocEditor({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+function DocSkeleton({ viewMode }: { viewMode: DocViewMode }) {
+  return (
+    <div className={`${styles.docSkeleton} ${viewMode === "page" ? styles.docSkeletonPage : ""}`} role="status" aria-label={strings.docLoading} aria-busy="true">
+      <span className={styles.docSkeletonLineWide} />
+      <span className={styles.docSkeletonLine} />
+      <span className={styles.docSkeletonLineShort} />
+      <span className={styles.docSkeletonBlock} />
     </div>
   );
 }

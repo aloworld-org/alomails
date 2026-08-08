@@ -2200,5 +2200,8 @@ export const nl: Partial<Catalog> = {
   officeLoadFailed: (reason: string) => `Probeer het opnieuw. Server: ${reason}`,
   sheetLoading: "Uw sheet wordt geladen…",
   sheetLoadFailedTitle: "Deze sheet is niet geladen",
+  docLoading: "Uw document wordt geladen…",
+  docLoadFailedTitle: "Dit document is niet geladen",
+  docSaveFailed: (reason: string) => `Uw laatste wijzigingen zijn nog niet opgeslagen. Kies Opnieuw proberen om ze op te slaan. Server: ${reason}`,
   sheetSaveFailed: (reason: string) => `Uw laatste wijzigingen zijn nog niet opgeslagen. We blijven het proberen. Server: ${reason}`,
 };
