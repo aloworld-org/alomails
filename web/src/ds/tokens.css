@@ -65,10 +65,10 @@
   --warm-900: #102a43;
 
   /* ---- semantic: backgrounds ---- */
-  --bg-app: #f8f6f2;                   /* warm porcelain workspace canvas */
+  --bg-app: #f4f1ec;                   /* warm porcelain workspace canvas */
   --bg-surface: #fffefc;               /* soft ivory panels and reading panes */
-  --bg-raised: #ece8e1;                /* controls and hover fills */
-  --bg-sunken: #f3f0ea;                /* warm-stone sidebars and lists */
+  --bg-raised: #e9e4dc;                /* controls and hover fills */
+  --bg-sunken: #f0ece6;                /* warm-stone sidebars and lists */
   --bg-rail: #1f2529;                  /* premium warm charcoal */
   --bg-rail-hover: #2a3237;            /* graphite hover */
   --bg-rail-active: #343d42;           /* lifted active surface */
@@ -85,8 +85,8 @@
   --text-link: var(--verdigris-600);   /* links are terracotta */
 
   /* ---- semantic: borders ---- */
-  --border-subtle: #ebe6de;
-  --border-default: #e3ddd4;
+  --border-subtle: #e8e2d9;
+  --border-default: #ded7cd;
   --border-strong: #cbd5e1; /* stone */
 
   /* ---- semantic: accents & states ---- */

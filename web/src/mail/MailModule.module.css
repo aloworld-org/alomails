@@ -3,6 +3,7 @@
   display: flex;
   align-items: stretch;
   position: relative;
+  background: var(--bg-app);
 }
 
 /* ---- Phone layout: one pane at a time, folders in a drawer ---- */
