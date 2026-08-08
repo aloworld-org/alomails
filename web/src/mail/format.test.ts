@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { strings } from "../i18n";
 import type { EmailFull, EmailHeaders } from "../jmap";
-import { formatDate, isUnread, senderName, subjectOr } from "./format";
+import { formatDate, isUnread, mailErrorReason, senderName, subjectOr } from "./format";
 import { sandboxedHtml, textContent } from "./body";
 
 function headers(partial: Partial<EmailHeaders>): EmailHeaders {
@@ -71,6 +71,21 @@ describe("formatDate", () => {
   });
   it("returns empty for an unparseable date", () => {
     expect(formatDate("not-a-date", now)).toBe("");
+  });
+});
+
+describe("mailErrorReason", () => {
+  it("preserves a server error message", () => {
+    expect(mailErrorReason(new Error("Mailbox quota exceeded"))).toBe("Mailbox quota exceeded");
+  });
+
+  it("accepts a non-empty string reason", () => {
+    expect(mailErrorReason("Attachment type is blocked")).toBe("Attachment type is blocked");
+  });
+
+  it("ignores values that do not explain the failure", () => {
+    expect(mailErrorReason(new Error("  "))).toBeNull();
+    expect(mailErrorReason({ status: 500 })).toBeNull();
   });
 });
 

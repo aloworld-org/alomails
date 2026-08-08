@@ -2186,4 +2186,12 @@ export const fr: Partial<Catalog> = {
   // Les abréviations françaises : trimestre et semaine, pas Q et W.
   insightsQuarter: (quarter: number, year: number) => `T${quarter} ${year}`,
   insightsWeek: (week: number, year: number) => `S${week} ${year}`,
+  mailAttachmentErrorDetail: (reason: string) =>
+    `Ce fichier n’a pas été joint. Essayez de l’ajouter à nouveau. Serveur : ${reason}`,
+  mailDraftCreateErrorDetail: (reason: string) =>
+    `Votre message n’a pas été envoyé, car son brouillon n’a pas pu être créé. La fenêtre de rédaction reste ouverte ; réessayez d’envoyer. Serveur : ${reason}`,
+  mailSubmitErrorDetail: (reason: string) =>
+    `Votre message n’a pas été envoyé. Il reste dans les Brouillons afin que vous puissiez le rouvrir et réessayer. Serveur : ${reason}`,
+  mailScheduleErrorDetail: (reason: string) =>
+    `Votre message n’a pas été programmé. Il reste dans les Brouillons afin que vous puissiez le rouvrir et réessayer. Serveur : ${reason}`,
 };

@@ -24,7 +24,7 @@ import { strings } from "../../i18n";
 import { Spinner, cx } from "../../ds";
 import { useJmapClient } from "../../jmap";
 import type { EmailAddress, EmailFull } from "../../jmap";
-import { formatBytes, formatDate, senderName } from "../format";
+import { formatBytes, formatDate, mailErrorReason, senderName } from "../format";
 import { textContent } from "../body";
 import { RecipientInput } from "./RecipientInput";
 import { RichTextEditor } from "./RichTextEditor";
@@ -503,8 +503,11 @@ export function ComposeModal({
             { blobId: up.blobId, name: file.name, type: up.type, size: up.size },
           ]);
         }
-      } catch {
-        setError(strings.attachmentUploadFailed);
+      } catch (error) {
+        const reason = mailErrorReason(error);
+        setError(
+          reason === null ? strings.attachmentUploadFailed : strings.mailAttachmentErrorDetail(reason),
+        );
       } finally {
         setUploading((n) => n - 1);
       }
@@ -576,8 +579,9 @@ export function ComposeModal({
       // envelope recipients here so they are actually delivered.
       const rcpts = [...to, ...cc, ...bcc].map((a) => a.email);
       return { emailId, fromEmail: from, rcpts };
-    } catch {
-      setError(strings.composeSendError);
+    } catch (error) {
+      const reason = mailErrorReason(error);
+      setError(reason === null ? strings.composeSendError : strings.mailDraftCreateErrorDetail(reason));
       setSending(false);
       return null;
     }

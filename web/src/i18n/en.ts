@@ -2555,7 +2555,6 @@ export const en = {
   insightsAge90Plus: "90+ days",
   insightsQuarter: (quarter: number, year: number) => `Q${quarter} ${year}`,
   insightsWeek: (week: number, year: number) => `W${week} ${year}`,
-
   // Projects (alo Projects, ADR 0035, wave B3). The words of client work: an
   // engagement, the hours worked on it, the week they are handed in as, and the
   // decision somebody makes about that week.
@@ -2682,6 +2681,14 @@ export const en = {
   projectsTimerRunning: "Timer running",
   projectsStopTimer: "Stop the timer",
   projectsStop: "Stop",
+  mailAttachmentErrorDetail: (reason: string) =>
+    `That file was not attached. Try adding it again. Server: ${reason}`,
+  mailDraftCreateErrorDetail: (reason: string) =>
+    `Your message was not sent because its draft could not be created. The compose window is still open; try Send again. Server: ${reason}`,
+  mailSubmitErrorDetail: (reason: string) =>
+    `Your message was not sent. It remains in Drafts so you can open it and try again. Server: ${reason}`,
+  mailScheduleErrorDetail: (reason: string) =>
+    `Your message was not scheduled. It remains in Drafts so you can open it and try again. Server: ${reason}`,
 } as const;
 
 /** Every string key in the catalog. */

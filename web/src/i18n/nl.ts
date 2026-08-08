@@ -2158,4 +2158,12 @@ export const nl: Partial<Catalog> = {
   // De Nederlandse afkortingen: kwartaal en week, geen Q en W.
   insightsQuarter: (quarter: number, year: number) => `K${quarter} ${year}`,
   insightsWeek: (week: number, year: number) => `W${week} ${year}`,
+  mailAttachmentErrorDetail: (reason: string) =>
+    `Dat bestand is niet bijgevoegd. Probeer het opnieuw toe te voegen. Server: ${reason}`,
+  mailDraftCreateErrorDetail: (reason: string) =>
+    `Uw bericht is niet verzonden omdat het concept niet kon worden gemaakt. Het opstelvenster blijft open; probeer opnieuw te verzenden. Server: ${reason}`,
+  mailSubmitErrorDetail: (reason: string) =>
+    `Uw bericht is niet verzonden. Het blijft in Concepten staan zodat u het kunt openen en opnieuw kunt proberen. Server: ${reason}`,
+  mailScheduleErrorDetail: (reason: string) =>
+    `Uw bericht is niet gepland. Het blijft in Concepten staan zodat u het kunt openen en opnieuw kunt proberen. Server: ${reason}`,
 };

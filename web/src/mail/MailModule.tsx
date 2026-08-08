@@ -13,7 +13,7 @@ import { KEYWORD_FLAGGED, useJmapClient } from "../jmap";
 import type { Category, EmailAddress, EmailFull, SharedMailbox } from "../jmap";
 import { useAuth } from "../auth";
 import { useCategories, useEmailHeaders, useFlagged, useMailboxTrees, useThread } from "./state/useMail";
-import { senderName } from "./format";
+import { mailErrorReason, senderName } from "./format";
 import type { ThreadRow } from "./threads";
 import { FolderSidebar } from "./components/FolderSidebar";
 import { CategorySection } from "./components/CategorySection";
@@ -405,8 +405,9 @@ export function MailModule() {
       await client.submitEmail(queued.emailId, queued.fromEmail, queued.rcpts);
       afterChange(strings.composeSent);
       if (threadId !== null) thread.reload(); // a sent reply joins the open thread
-    } catch {
-      setToast(strings.composeSendError);
+    } catch (error) {
+      const reason = mailErrorReason(error);
+      setToast(reason === null ? strings.composeSendError : strings.mailSubmitErrorDetail(reason));
     }
   }
 
@@ -449,8 +450,9 @@ export function MailModule() {
     try {
       await client.scheduleSend(queued.emailId, queued.fromEmail, queued.rcpts, queued.sendAt);
       afterChange(strings.mailScheduled(formatSendAt(queued.sendAt)));
-    } catch {
-      setToast(strings.scheduleError);
+    } catch (error) {
+      const reason = mailErrorReason(error);
+      setToast(reason === null ? strings.scheduleError : strings.mailScheduleErrorDetail(reason));
       emails.reload();
       mailboxes.reload();
     }

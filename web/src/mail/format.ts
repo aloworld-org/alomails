@@ -58,3 +58,10 @@ export function formatDate(iso: string, now: Date = new Date()): string {
     year: "numeric",
   }).format(date);
 }
+
+/** Preserve the backend's useful reason for a human-facing recovery message. */
+export function mailErrorReason(error: unknown): string | null {
+  if (error instanceof Error && error.message.trim().length > 0) return error.message.trim();
+  if (typeof error === "string" && error.trim().length > 0) return error.trim();
+  return null;
+}
