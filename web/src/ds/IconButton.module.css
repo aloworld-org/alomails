@@ -10,23 +10,23 @@
 }
 
 .md {
-  width: 38px;
-  height: 38px;
+  width: var(--control-height);
+  height: var(--control-height);
 }
 
 .sm {
-  width: 30px;
-  height: 30px;
+  width: var(--control-height);
+  height: var(--control-height);
 }
 
 .iconButton :global(svg) {
-  width: 20px;
-  height: 20px;
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
 }
 
 .sm :global(svg) {
-  width: 18px;
-  height: 18px;
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
 }
 
 /* default tone (on light surfaces) */
