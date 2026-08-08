@@ -58,6 +58,7 @@ pub mod error;
 pub mod extract;
 pub mod fin_accounts;
 pub mod fin_journal;
+pub mod fin_ledger;
 pub mod iban;
 pub mod ical;
 pub mod id;
@@ -169,6 +170,10 @@ pub use fin_journal::{
     DIMENSION_MAX_CHARS, ENTRY_POSTINGS_MAX, Entry, EntryKind, EntrySource, JOURNAL_PAGE_MAX,
     JournalEntry, MEMO_MAX_CHARS, NewEntry, NewPosting, POSTING_AMOUNT_MAX_CENTS, Posting,
     SourceEvent, SourceKind,
+};
+pub use fin_ledger::{
+    AccountBalance, AccountLedger, DimensionBalance, DimensionBalances, LEDGER_GROUPS_MAX,
+    LEDGER_PAGE_MAX, LedgerDimension, LedgerLine, LedgerScope, TrialBalance,
 };
 pub use id::{
     AttachmentId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId, BillingBillId,
