@@ -850,6 +850,15 @@ export function DriveModule() {
             )}
             {canWrite && !trashView && (
               <>
+                <button type="button" className={styles.ghostBtn} onClick={() => void newFolder()}>
+                  <FolderPlus size={17} /> {strings.driveNewFolder}
+                </button>
+                <button type="button" className={styles.ghostBtn} onClick={() => void newDoc()}>
+                  <FileText size={17} /> {strings.driveKindDoc}
+                </button>
+                <button type="button" className={styles.ghostBtn} onPointerEnter={() => void loadSheetEditor()} onFocus={() => void loadSheetEditor()} onClick={() => void newSheet()}>
+                  <Sheet size={17} /> {strings.driveKindSheet}
+                </button>
                 <Menu
                   triggerLabel={strings.driveNew}
                   label={strings.driveNew}
