@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   BellRing,
   CalendarPlus,
+  CalendarRange,
   Clock,
   FileCheck,
   FileText,
@@ -277,6 +278,23 @@ function describeAction(action: AgentActionDto): ActionView {
         fields: [{ label: strings.agentFieldProject, value: str(a, "project") }],
         note: strings.agentProjectStatusNote,
       };
+    // The calendar draft (B3.10b). The days are what the user is really
+    // approving — how many entries appear depends entirely on them — so the
+    // range is a field of its own even when it is a single day.
+    case "draft_timesheet_from_calendar": {
+      const from = dayOf(str(a, "from") || str(a, "date"));
+      const to = dayOf(str(a, "to")) || from;
+      const fields: Field[] = [
+        { label: strings.agentFieldProject, value: str(a, "project") },
+      ];
+      if (from !== "") fields.push({ label: strings.agentFieldDay, value: strings.agentDraftedRange(from, to) });
+      return {
+        icon: CalendarRange,
+        title: strings.agentActDraftTimesheet,
+        fields,
+        note: strings.agentDraftTimesheetNote,
+      };
+    }
     case "create_event": {
       const fields: Field[] = [{ label: strings.agentFieldEvent, value: str(a, "title") }];
       const start = whenAt(str(a, "start"));

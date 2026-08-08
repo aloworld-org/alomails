@@ -77,6 +77,7 @@ export {
   type AgentResultDto,
   type ProjectStatusResultDto,
   type TimeEntryResultDto,
+  type TimesheetDraftResultDto,
   type ShareableGroup,
   type SharedMailbox,
   type Delegate,

@@ -18,6 +18,7 @@ pub mod agent_args;
 pub mod agent_billing;
 pub mod agent_crm;
 pub mod agent_projects;
+pub mod agent_timesheet;
 pub mod ai;
 pub mod api;
 pub mod audit;

@@ -1685,6 +1685,47 @@ export const en = {
   agentStatusTasksOverdue: (overdue: number): string => `${overdue} past due`,
   agentStatusLastWorked: "Last worked",
   agentStatusNeverWorked: "No hours yet",
+  // The calendar draft (B3.10b). A batch of suggestions, plus what it left out
+  // — the server sends reason codes, and every word for them is written here.
+  agentActDraftTimesheet: "Timesheet from your calendar",
+  agentDraftTimesheetNote:
+    "Suggests one entry per meeting in your calendar on those days — each counts once you accept it in Projects.",
+  agentDraftedCount: (count: number): string =>
+    count === 1 ? "1 entry suggested" : `${count} entries suggested`,
+  agentDraftedNone: "Nothing to suggest",
+  agentDraftedRange: (from: string, to: string): string =>
+    from === to ? from : `${from} – ${to}`,
+  agentDraftedTotal: "Total",
+  agentDraftedOverlap: "overlaps the one before it",
+  agentDraftedOverlaps: (count: number): string =>
+    count === 1
+      ? "1 of them overlaps another meeting — check which was the work."
+      : `${count} of them overlap other meetings — check which was the work.`,
+  agentDraftedNote: (project: string): string =>
+    `Suggested in your timesheet on ${project} — accept each one in Projects to count it.`,
+  agentDraftedLeftOut: "Left out",
+  agentDraftedReason: (reason: string): string => {
+    switch (reason) {
+      case "allDay":
+        return "all-day — not hours worked";
+      case "alreadyDrafted":
+        return "already in your timesheet";
+      case "noDuration":
+        return "no length";
+      case "tooLong":
+        return "longer than a day";
+      case "weekLocked":
+        return "that week is submitted";
+      case "limitReached":
+        return "over the batch limit — ask again for the remaining days";
+      case "outsideRange":
+        return "starts outside those days";
+      default:
+        // A reason a newer server knows and this client does not: say it was
+        // left out rather than pretend it was drafted.
+        return "left out";
+    }
+  },
   searchKind: (kind: string): string =>
     kind === "task"
       ? "Task"
@@ -2751,6 +2792,18 @@ export const en = {
     "Start the timer on a project, or add a row below and write the hours straight into a day.",
   projectsBillableOfWeek: (duration: string) => `${duration} billable`,
   projectsProposedInWeek: (duration: string) => `${duration} suggested, not yet accepted`,
+  // Deciding about a suggestion (B3.10b). Accepting is what makes it an hour —
+  // the wording says so, because "OK" would not.
+  projectsAcceptEntry: "Accept",
+  projectsRejectEntry: "Discard",
+  projectsAcceptEntryLabel: (project: string, duration: string) =>
+    `Accept the suggested ${duration} on ${project}`,
+  projectsRejectEntryLabel: (project: string, duration: string) =>
+    `Discard the suggested ${duration} on ${project}`,
+  projectsSuggestionsWaiting: (count: number) =>
+    count === 1
+      ? "1 suggestion is waiting for you this week."
+      : `${count} suggestions are waiting for you this week.`,
   projectsSubmitWeek: "Submit week",
   projectsWithdrawWeek: "Take it back",
   projectsRejectedBecause: (note: string) => `Sent back: ${note}`,

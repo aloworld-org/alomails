@@ -17,7 +17,12 @@
 //   the status rather than offering a save that fails.
 // - **A suggestion is not an hour.** Proposals arrive alongside real entries
 //   saying which they are, and are counted only in `proposedMinutes` — so the
-//   grid marks them and the totals do not silently include them.
+//   grid marks them and the totals do not silently include them. Deciding about
+//   one is its own pair of verbs (B3.10b): accepting is what prices the hour and
+//   puts it in the week, discarding removes something that was in no total, so
+//   neither is offered as an edit and neither asks "are you sure" (the interface
+//   laws' undo-over-confirm — a discarded suggestion costs a person nothing that
+//   an agent cannot draft again).
 // - **The week is addressed by its Monday**, because a week nobody has
 //   submitted has no record yet and asking a person to create one first would
 //   be a round trip that exists only to satisfy REST.
@@ -72,6 +77,10 @@ export function WeekView({
   const [target, setTarget] = useState<CellTarget | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  /** The suggestion a click is currently deciding about, so only its own two
+   *  buttons go quiet — a whole grid disabled by one row's request reads as a
+   *  broken screen. */
+  const [deciding, setDeciding] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
 
@@ -129,6 +138,12 @@ export function WeekView({
     return entries.filter((e) => e.projectId === projectId && e.workDate === workDate);
   }
 
+  /** The board's own name, or its id when the row belongs to a project this
+   *  list no longer carries (an archived one somebody worked on). */
+  function projectName(projectId: string): string {
+    return projects.find((p) => p.id === projectId)?.name ?? projectId;
+  }
+
   /** Minutes in a set of entries, proposals excluded — a suggestion invisibly
    *  inside a total is not a suggestion. */
   function minutesOf(set: TimeEntry[]): number {
@@ -148,6 +163,25 @@ export function WeekView({
       workDate,
       entry: written.length === 1 ? (written[0] ?? null) : null,
     });
+  }
+
+  /** Accept or discard one suggestion. The row is reloaded rather than patched
+   *  in place: accepting is what resolves the rate and moves the minutes into
+   *  the week's totals, and both of those are the server's answer, not this
+   *  screen's arithmetic. */
+  async function decideEntry(entry: TimeEntry, verdict: "accept" | "reject") {
+    setDeciding(entry.id);
+    setError(null);
+    try {
+      if (verdict === "accept") await api.acceptTime(entry.id);
+      else await api.rejectTime(entry.id);
+      setReload((r) => r + 1);
+      onChanged();
+    } catch (err) {
+      setError(projectsMessage(err, strings.projectsSaveFailed));
+    } finally {
+      setDeciding(null);
+    }
   }
 
   async function decide(action: "submit" | "withdraw") {
@@ -326,7 +360,7 @@ export function WeekView({
                   <td className={styles.muted}>
                     {dayLabel(entry.workDate, { weekday: "short", day: "numeric", month: "short" })}
                   </td>
-                  <td>{projects.find((p) => p.id === entry.projectId)?.name ?? entry.projectId}</td>
+                  <td>{projectName(entry.projectId)}</td>
                   <td className={styles.muted}>
                     {entry.note === "" ? strings.projectsNoNote : entry.note}
                     {!entry.billable && ` · ${strings.projectsNotBillable}`}
@@ -336,21 +370,51 @@ export function WeekView({
                   <td className={styles.numeric}>{durationLabel(entry.minutes)}</td>
                   <td>
                     <div className={styles.rowActions}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        // A suggestion is accepted or rejected, never corrected.
-                        disabled={locked || entry.proposed}
-                        onClick={() =>
-                          setTarget({
-                            projectId: entry.projectId,
-                            workDate: entry.workDate,
-                            entry,
-                          })
-                        }
-                      >
-                        {strings.projectsEdit}
-                      </Button>
+                      {entry.proposed ? (
+                        // A suggestion is accepted or discarded, never
+                        // corrected: correcting one would file an hour the
+                        // person never agreed happened.
+                        <>
+                          <Button
+                            size="sm"
+                            disabled={locked || deciding === entry.id}
+                            aria-label={strings.projectsAcceptEntryLabel(
+                              projectName(entry.projectId),
+                              durationLabel(entry.minutes),
+                            )}
+                            onClick={() => void decideEntry(entry, "accept")}
+                          >
+                            {strings.projectsAcceptEntry}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={locked || deciding === entry.id}
+                            aria-label={strings.projectsRejectEntryLabel(
+                              projectName(entry.projectId),
+                              durationLabel(entry.minutes),
+                            )}
+                            onClick={() => void decideEntry(entry, "reject")}
+                          >
+                            {strings.projectsRejectEntry}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={locked}
+                          onClick={() =>
+                            setTarget({
+                              projectId: entry.projectId,
+                              workDate: entry.workDate,
+                              entry,
+                            })
+                          }
+                        >
+                          {strings.projectsEdit}
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -367,9 +431,19 @@ export function WeekView({
             {strings.projectsBillableOfWeek(durationLabel(totals?.billableMinutes ?? 0))}
           </p>
           {(totals?.proposedMinutes ?? 0) > 0 && (
-            <p className={styles.weekFootNote}>
-              {strings.projectsProposedInWeek(durationLabel(totals?.proposedMinutes ?? 0))}
-            </p>
+            <>
+              <p className={styles.weekFootNote}>
+                {strings.projectsProposedInWeek(durationLabel(totals?.proposedMinutes ?? 0))}
+              </p>
+              {/* What to do about them, where they are: the list above is the
+                  only place a suggestion is decided, and a person who has just
+                  asked an agent to draft a month needs telling once. */}
+              <p className={styles.weekFootNote}>
+                {strings.projectsSuggestionsWaiting(
+                  entries.filter((e) => e.proposed).length,
+                )}
+              </p>
+            </>
           )}
         </div>
         <span className={styles.toolbarSpacer} />

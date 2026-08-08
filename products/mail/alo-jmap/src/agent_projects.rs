@@ -245,9 +245,16 @@ fn work_json(tasks: &[Task], now: OffsetDateTime) -> Value {
 
 /// The project a proposal names, resolved among the boards this caller can see.
 ///
+/// Shared with [`crate::agent_timesheet`], which resolves the same name the same
+/// way: two readings of "the Hansen project" would be two ways to reach the
+/// wrong engagement.
+///
 /// `task_projects` is the visibility answer already: a colleague's private
 /// board is not in the list, so no name can reach it.
-async fn resolve_project(account: &Account, args: &Value) -> Result<TaskProject, Problem> {
+pub(crate) async fn resolve_project(
+    account: &Account,
+    args: &Value,
+) -> Result<TaskProject, Problem> {
     let wanted = string_arg(args, "project")
         .or_else(|| string_arg(args, "projectName"))
         .ok_or_else(|| unprocessable("which project this is about is required"))?;

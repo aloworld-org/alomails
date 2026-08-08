@@ -26,6 +26,13 @@
 //!   The description says so in the model's own words, because a model that
 //!   believes it is filing a timesheet writes different notes than one that
 //!   knows it is suggesting a line.
+//! - **A meeting is evidence of an hour, never of a project.** The calendar
+//!   draft (B3.10b) takes the project from the user's own words and reads only
+//!   the *days* from the diary; a model told it may infer the engagement from a
+//!   meeting's title will eventually bill one customer for a call with another.
+//!
+//! ADR 0035 wave B3.10 ends here: three tools, two of which write nothing but a
+//! suggestion, and one that writes nothing at all.
 //!
 //! Nothing here invoices anybody: the hours→invoice handoff (B3.06) is a human
 //! act on the unbilled view, and no tool in this list can reach it.
@@ -34,8 +41,12 @@
 ///
 /// The jmap layer validates an approved tool against the union of this list and
 /// every other product's ([`crate::is_agent_tool`]) and owns the execution of
-/// each. `draft_timesheet_from_calendar` joins this list at B3.10b.
-pub const PROJECTS_TOOLS: &[&str] = &["log_time", "project_status_summary"];
+/// each.
+pub const PROJECTS_TOOLS: &[&str] = &[
+    "log_time",
+    "project_status_summary",
+    "draft_timesheet_from_calendar",
+];
 
 /// The description of each Projects tool, spliced into the agent's system
 /// prompt after the CRM tools ([`crate::agent`]).
@@ -44,7 +55,8 @@ pub const PROJECTS_TOOLS: &[&str] = &["log_time", "project_status_summary"];
 /// it without the caller knowing how many tools Projects has.
 pub const PROJECTS_TOOL_DOC: &str = "\
 - log_time: suggest a timesheet entry for work somebody did on a project. It is SAVED AS A SUGGESTION for the user to accept in their timesheet — it counts towards nothing until they do, and it is never submitted or invoiced on its own. args: {\"project\": string (the project's name, exactly as the user says it, required), \"date\": string in \"YYYY-MM-DD\" (the day the work was done, required), \"minutes\": integer (WHOLE MINUTES — 90 for an hour and a half, never 1.5, required), \"note\": string (what was done, optional), \"task\": string (the task on that project it was done under, optional), \"billable\": boolean (optional; work on a client project is chargeable unless the user says otherwise)}. Never invent a day, a duration or a project the user did not give you.\n\
-- project_status_summary: report where one project stands — hours logged, budget used, milestones, and open tasks. It only READS; it changes nothing. args: {\"project\": string (the project's name, exactly as the user says it, required)}. Propose this instead of answering from the sources when the user asks how a project is going: the figures are in the timesheet and the plan, not in the search results.\n";
+- project_status_summary: report where one project stands — hours logged, budget used, milestones, and open tasks. It only READS; it changes nothing. args: {\"project\": string (the project's name, exactly as the user says it, required)}. Propose this instead of answering from the sources when the user asks how a project is going: the figures are in the timesheet and the plan, not in the search results.\n\
+- draft_timesheet_from_calendar: suggest one timesheet entry per meeting in the user's OWN Agenda over a range of days — the way somebody fills in a week they forgot to log. Every entry is SAVED AS A SUGGESTION for the user to accept, exactly like log_time, and counts towards nothing until they do. args: {\"project\": string (the project those meetings were for, exactly as the user says it, required — the project is what the USER says it is and is never taken from a meeting's title), \"from\": string in \"YYYY-MM-DD\" (the first day of the range, required), \"to\": string in \"YYYY-MM-DD\" (the last day, included; optional — the same day as from when it is left out), \"billable\": boolean (optional; as for log_time)}. A range covers at most 31 days, and all-day entries are left out because a day marked \"Leave\" is not an hour worked. Propose this when the user asks to fill in a timesheet from their calendar or diary; never call it to find out what somebody did.\n";
 
 /// The Projects paragraph of the agent's general instructions.
 ///
@@ -52,7 +64,7 @@ pub const PROJECTS_TOOL_DOC: &str = "\
 /// is, not what a tool takes: it is the sentence that stops a model rewriting a
 /// project's name on its way to the store, and the one that tells it what to do
 /// when the user's words name no project at all.
-pub const PROJECTS_GUIDANCE: &str = "For a projects tool, pass the project's name through EXACTLY as the user gave it — never invent, complete or reformat one, and never guess which project was meant. If the user did not name one, ANSWER and ask which. A project has no number: it is found by its name, so it is not in the numbered sources. State every duration in whole minutes, and resolve a relative day (yesterday, last Friday) against today's date below.\n";
+pub const PROJECTS_GUIDANCE: &str = "For a projects tool, pass the project's name through EXACTLY as the user gave it — never invent, complete or reformat one, and never guess which project was meant. If the user did not name one, ANSWER and ask which. A project has no number: it is found by its name, so it is not in the numbered sources. State every duration in whole minutes, and resolve a relative day (yesterday, last Friday) against today's date below. When drafting a timesheet from the calendar, the project is still the user's word and never a meeting's: read only the DAYS from the diary.\n";
 
 #[cfg(test)]
 mod tests {
@@ -94,6 +106,26 @@ mod tests {
         assert!(PROJECTS_TOOL_DOC.contains("counts towards nothing until they do"));
         // The summary is a read, and it is proposed instead of a guessed answer.
         assert!(PROJECTS_TOOL_DOC.contains("only READS"));
+    }
+
+    #[test]
+    fn the_calendar_draft_says_where_a_project_comes_from_and_what_it_leaves_out() {
+        // The one mistake this tool can make that nothing downstream catches:
+        // an engagement read off a meeting's title.
+        assert!(PROJECTS_TOOL_DOC.contains("never taken from a meeting's title"));
+        assert!(PROJECTS_GUIDANCE.contains("never a meeting's"));
+        // A day marked "Leave" is not an hour, and the model is told so rather
+        // than left to discover it from the skipped list.
+        assert!(PROJECTS_TOOL_DOC.contains("all-day entries are left out"));
+        // A suggestion, on this tool as much as on log_time.
+        let calendar = PROJECTS_TOOL_DOC
+            .split("- draft_timesheet_from_calendar:")
+            .nth(1)
+            .unwrap_or_default();
+        assert!(!calendar.is_empty(), "the calendar tool is described");
+        assert!(calendar.contains("SAVED AS A SUGGESTION"));
+        // The range is bounded, and the bound is a number the model can obey.
+        assert!(calendar.contains("at most 31 days"));
     }
 
     #[test]

@@ -1,4 +1,4 @@
-/* What an executed agent action produced (ADR 0034, B3.10a). Deliberately
+/* What an executed agent action produced (ADR 0034, B3.10a, B3.10b). Deliberately
    quieter than the approval card beside it: the decision is already made, and
    this is the receipt. Tokens only, so it inherits light/dark. */
 .card {
@@ -54,5 +54,48 @@
   margin: 0;
   font-size: var(--text-xs);
   line-height: 1.4;
+  color: var(--text-tertiary);
+}
+
+/* The calendar draft's own list: one line per suggested entry, and below it the
+   meetings that were left out. Indented from the labelled rows above so a
+   reader sees a list where the card otherwise shows facts. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.item {
+  display: flex;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+.itemDay {
+  flex: none;
+  min-width: 96px;
+  color: var(--text-tertiary);
+}
+.itemName {
+  overflow-wrap: anywhere;
+}
+.itemMinutes {
+  margin-left: auto;
+  flex: none;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+/* A meeting that produced no entry, and the reason it did not. Quieter than a
+   drafted line: it is context, not something to act on. */
+.itemSkipped {
+  color: var(--text-tertiary);
+}
+.groupLabel {
+  font-size: var(--text-xs);
+  font-weight: 600;
   color: var(--text-tertiary);
 }

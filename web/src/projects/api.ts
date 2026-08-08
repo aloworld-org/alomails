@@ -293,6 +293,23 @@ export class ProjectsApi {
     ).then((r) => r.entry);
   }
 
+  /** The human "yes" that turns one suggestion into real work. The server
+   *  prices it now — the answer carries the stored entry, so the screen shows
+   *  what was written rather than what it hoped for. */
+  acceptTime(id: string): Promise<TimeEntry> {
+    return this.#write<{ entry: TimeEntry }>(
+      "POST",
+      `/projects/time/${encodeURIComponent(id)}/accept`,
+      {},
+    ).then((r) => r.entry);
+  }
+
+  /** The human "no". Discards a suggestion that was in no total, so nothing is
+   *  recalculated and nothing is lost that anybody had counted on. */
+  async rejectTime(id: string): Promise<void> {
+    await this.#write<unknown>("POST", `/projects/time/${encodeURIComponent(id)}/reject`, {});
+  }
+
   /** Removes one of the caller's own entries. */
   async deleteTime(id: string): Promise<void> {
     await this.#json<unknown>(

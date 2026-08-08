@@ -727,7 +727,7 @@ export interface AgentAnswerDto {
 }
 
 /** Result of executing an approved agent action. Most tools answer only the
- *  record they touched; the two Projects tools (B3.10a) answer more, and their
+ *  record they touched; the Projects tools (B3.10a, B3.10b) answer more, and their
  *  shapes are spelled out below so the UI can render them without guessing. */
 export interface AgentExecuteResultDto {
   ok: boolean;
@@ -735,7 +735,7 @@ export interface AgentExecuteResultDto {
 }
 
 /** The record an executed tool produced. `kind` is open — a tool the client does
- *  not recognise still confirms cleanly — so the two rich shapes are narrowed by
+ *  not recognise still confirms cleanly — so the rich shapes are narrowed by
  *  the guards in `AgentResultCard`, never by the type alone. */
 export interface AgentResultDto {
   kind: string;
@@ -751,6 +751,31 @@ export interface TimeEntryResultDto extends AgentResultDto {
   billable: boolean;
   note: string;
   proposed: boolean;
+}
+
+/** What `draft_timesheet_from_calendar` wrote: a batch of *proposed* entries
+ *  drafted from the caller's own Agenda (B3.10b), and — just as much part of the
+ *  answer — the meetings it left out, each with a machine-readable reason the
+ *  catalogue writes words for. An empty `drafted` with a full `skipped` is a
+ *  real and useful reply; an empty pair means the diary held nothing. */
+export interface TimesheetDraftResultDto extends AgentResultDto {
+  from: string;
+  to: string;
+  drafted: {
+    id: string;
+    workDate: string;
+    minutes: number;
+    note: string;
+    /** Sits on top of the meeting drafted before it. Flagged, never resolved:
+     *  which of two double-booked calls was the work is the user's to say. */
+    overlaps: boolean;
+  }[];
+  /** The batch's own total, as the server counted it. */
+  minutes: number;
+  /** How many of the drafted entries overlap the one before them. */
+  overlaps: number;
+  billable: boolean;
+  skipped: { summary: string; day: string; reason: string }[];
 }
 
 /** What `project_status_summary` read: figures only. The server composes no

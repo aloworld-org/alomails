@@ -1,20 +1,21 @@
 // The receipt for an agent action the user already approved (ADR 0034). Most
 // tools produce a record and nothing more to say — those get the one-line
-// confirmation the overlay always showed. The two Projects tools (B3.10a)
-// produce something worth reading back: a suggested timesheet entry, and a
-// project's figures.
+// confirmation the overlay always showed. The three Projects tools produce
+// something worth reading back: a suggested timesheet entry, a project's
+// figures (B3.10a), and a batch drafted from the diary (B3.10b).
 //
 // The figures come from the server as numbers only — it composes no sentence,
 // because a sentence written in the server is a user-facing string in one
 // language (CLAUDE.md). Every word around them is written here, in the
 // catalogue, so the summary is in the reader's language.
-import { CalendarClock, Gauge } from "lucide-react";
+import { CalendarClock, CalendarRange, Gauge } from "lucide-react";
 
 import { strings } from "../i18n";
 import type {
   AgentResultDto,
   ProjectStatusResultDto,
   TimeEntryResultDto,
+  TimesheetDraftResultDto,
 } from "../jmap";
 import { dayLabel, durationLabel, percentLabel } from "../projects/format";
 import styles from "./AgentResultCard.module.css";
@@ -29,6 +30,13 @@ function isProjectStatus(result: AgentResultDto): result is ProjectStatusResultD
  *  other kind), and the card says so rather than implying the hour is counted. */
 function isTimeEntry(result: AgentResultDto): result is TimeEntryResultDto {
   return result.kind === "timeEntry" && "minutes" in result && "workDate" in result;
+}
+
+/** A `timesheetDraft` result — a batch drafted from the caller's Agenda. Both
+ *  lists may be empty (a diary with nothing in it), so the shape is what is
+ *  checked, not their contents. */
+function isTimesheetDraft(result: AgentResultDto): result is TimesheetDraftResultDto {
+  return result.kind === "timesheetDraft" && "drafted" in result && "skipped" in result;
 }
 
 /** One labelled figure. `aside` is a second fact on the same line ("3 open ·
@@ -69,6 +77,90 @@ function TimeEntryResult({ entry }: { entry: TimeEntryResultDto }) {
         {entry.note !== "" && <Row label={strings.projectsNote} value={entry.note} />}
       </div>
       <p className={styles.note}>{strings.agentTimeLogged(entry.title ?? "")}</p>
+    </div>
+  );
+}
+
+/** The batch: what was drafted, what was left out, and why. Every entry in it
+ *  is a suggestion — the card says so once, at the end, rather than on each of
+ *  twenty lines.
+ *
+ *  The reasons arrive as codes and are turned into words here: a server that
+ *  wrote the sentence would write it in one language. A code this build does not
+ *  know still reads as "left out", never as nothing. */
+function TimesheetDraftResult({ draft }: { draft: TimesheetDraftResultDto }) {
+  return (
+    <div className={styles.card}>
+      <div className={styles.header}>
+        <CalendarRange size={16} aria-hidden />
+        <span>{strings.agentActDraftTimesheet}</span>
+      </div>
+      <div className={styles.rows}>
+        <Row label={strings.agentFieldProject} value={draft.title ?? ""} />
+        <Row
+          label={strings.agentFieldDay}
+          value={strings.agentDraftedRange(dayLabel(draft.from), dayLabel(draft.to))}
+        />
+        <Row
+          label={strings.agentDraftedTotal}
+          value={
+            draft.drafted.length === 0
+              ? strings.agentDraftedNone
+              : durationLabel(draft.minutes)
+          }
+          aside={
+            draft.drafted.length === 0
+              ? undefined
+              : strings.agentDraftedCount(draft.drafted.length)
+          }
+        />
+      </div>
+      {draft.drafted.length > 0 && (
+        <ul className={styles.list}>
+          {draft.drafted.map((entry) => (
+            <li key={entry.id} className={styles.item}>
+              <span className={styles.itemDay}>{dayLabel(entry.workDate)}</span>
+              <span className={styles.itemName}>
+                {entry.note}
+                {entry.overlaps && (
+                  <span className={styles.aside}> · {strings.agentDraftedOverlap}</span>
+                )}
+              </span>
+              <span className={styles.itemMinutes}>{durationLabel(entry.minutes)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {draft.skipped.length > 0 && (
+        <>
+          <span className={styles.groupLabel}>{strings.agentDraftedLeftOut}</span>
+          <ul className={styles.list}>
+            {draft.skipped.map((skipped, i) => (
+              <li
+                // Nothing in a skipped line is an id — a meeting left out has no
+                // record — so its position is the only stable key it has.
+                key={`${skipped.day}-${i}`}
+                className={`${styles.item} ${styles.itemSkipped}`}
+              >
+                <span className={styles.itemDay}>{dayLabel(skipped.day)}</span>
+                <span className={styles.itemName}>
+                  {skipped.summary}
+                  <span className={styles.aside}>
+                    {" "}
+                    · {strings.agentDraftedReason(skipped.reason)}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {draft.overlaps > 0 && (
+        <p className={styles.note}>{strings.agentDraftedOverlaps(draft.overlaps)}</p>
+      )}
+      {draft.drafted.length > 0 && (
+        <p className={styles.note}>{strings.agentDraftedNote(draft.title ?? "")}</p>
+      )}
     </div>
   );
 }
@@ -152,6 +244,7 @@ function ProjectStatusResult({ status }: { status: ProjectStatusResultDto }) {
 export function AgentResultCard({ result }: { result: AgentResultDto }) {
   if (isProjectStatus(result)) return <ProjectStatusResult status={result} />;
   if (isTimeEntry(result)) return <TimeEntryResult entry={result} />;
+  if (isTimesheetDraft(result)) return <TimesheetDraftResult draft={result} />;
   // Every other tool: the confirmation this overlay has always shown.
   return <p className={styles.note}>{strings.agentDone}</p>;
 }

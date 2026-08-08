@@ -20,6 +20,7 @@ use time::format_description::well_known::Rfc3339;
 use crate::agent_billing as billing;
 use crate::agent_crm as crm;
 use crate::agent_projects as projects;
+use crate::agent_timesheet as timesheet;
 use crate::ai::MAX_ASK_BYTES;
 use crate::error::Problem;
 use crate::state::{Account, AppState, authenticate};
@@ -186,6 +187,12 @@ pub async fn agent_execute(
         // writes nothing at all.
         "log_time" => projects::execute_log_time(&account, &args).await,
         "project_status_summary" => projects::execute_project_status_summary(&account, &args).await,
+        // B3.10b: a period of the caller's own Agenda turned into proposals,
+        // in its own module because it decides about a diary rather than a
+        // record.
+        "draft_timesheet_from_calendar" => {
+            timesheet::execute_draft_timesheet_from_calendar(&account, &args).await
+        }
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
     }
