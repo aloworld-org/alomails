@@ -1385,6 +1385,11 @@ export const fr: Partial<Catalog> = {
   refTabTables: "Tableaux",
   refTabFigures: "Figures",
   driveLoadingFile: (name: string) => `Ouverture de ${name}…`,
+  driveOpeningEditor: "votre fichier",
+  driveFileOpenFailedTitle: "Ce fichier ne s’est pas ouvert",
+  driveFileUnavailable: "Il a peut-être été déplacé ou supprimé. Revenez à vos fichiers et choisissez un autre élément.",
+  driveEditorLoadFailed: (reason: string) => `Drive n’a pas pu ouvrir ce fichier. ${reason}`,
+  driveBackToFiles: "Retour aux fichiers",
 
   // Outils de facturation de l’agent (ADR 0035, B1.25). Chacun produit un
   // brouillon : approuver n’émet rien, ne numérote rien et n’envoie rien.

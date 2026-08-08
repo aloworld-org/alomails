@@ -126,6 +126,9 @@ export function DriveModule() {
   const [openDoc, setOpenDoc] = useState<{ id: string; name: string } | null>(null);
   const [openSheet, setOpenSheet] = useState<{ id: string; name: string } | null>(null);
   const [openOffice, setOpenOffice] = useState<{ id: string; name: string } | null>(null);
+  const [editorRoutePending, setEditorRoutePending] = useState(false);
+  const [editorRouteError, setEditorRouteError] = useState<string | null>(null);
+  const [editorRouteAttempt, setEditorRouteAttempt] = useState(0);
   // Best-effort import of a real Office file into a native editor (ADR 0033).
   const [importing, setImporting] = useState<string | null>(null);
   const [importFailed, setImportFailed] = useState<string | null>(null);
@@ -151,6 +154,7 @@ export function DriveModule() {
   // Editor state is URL-backed. A direct visit or browser refresh restores the
   // exact Drive file instead of falling back to the file list.
   useEffect(() => {
+    let cancelled = false;
     const legacyMatch = /^\/drive\/(doc|sheet|office)\/([^/]+)\/([^/]*)$/.exec(route.pathname);
     const cleanMatch = /^\/drive\/(doc|sheet|office)\/([^/]+)$/.exec(route.pathname);
     const match = legacyMatch ?? cleanMatch;
@@ -158,15 +162,25 @@ export function DriveModule() {
       setOpenDoc(null);
       setOpenSheet(null);
       setOpenOffice(null);
-      return;
+      setEditorRoutePending(false);
+      setEditorRouteError(null);
+      return undefined;
     }
     const kind = match[1] as EditorKind;
     const routeValue = decodeURIComponent(match[2] ?? "");
     const id = legacyMatch !== null ? routeValue : (storedEditorId(kind, routeValue) ?? "");
-    if (id === "") return;
+    if (id === "") {
+      setEditorRoutePending(false);
+      setEditorRouteError(strings.driveFileUnavailable);
+      return undefined;
+    }
+    setEditorRoutePending(true);
+    setEditorRouteError(null);
     void client.driveNode(id).then((node) => {
+      if (cancelled) return;
+      setEditorRoutePending(false);
       if (node === null) {
-        navigate("/drive", { replace: true });
+        setEditorRouteError(strings.driveFileUnavailable);
         return;
       }
       const canonicalKind: EditorKind = node.kind === "doc" ? "doc" : node.kind === "sheet" ? "sheet" : "office";
@@ -176,8 +190,14 @@ export function DriveModule() {
       setOpenSheet(canonicalKind === "sheet" ? value : null);
       setOpenOffice(canonicalKind === "office" ? value : null);
       if (route.pathname !== canonicalPath) navigate(canonicalPath, { replace: true });
-    }).catch(() => navigate("/drive", { replace: true }));
-  }, [client, navigate, route.pathname]);
+    }).catch((error: unknown) => {
+      if (cancelled) return;
+      setEditorRoutePending(false);
+      const reason = driveErrorReason(error) ?? strings.driveUnknownError;
+      setEditorRouteError(strings.driveEditorLoadFailed(reason));
+    });
+    return () => { cancelled = true; };
+  }, [client, editorRouteAttempt, navigate, route.pathname]);
 
   const loadSpaces = useCallback(() => {
     void client.spaces().then(setSpaces).catch((error: unknown) => {
@@ -979,6 +999,26 @@ export function DriveModule() {
       )}
       {showMembers && currentSpace !== null && (
         <MembersDialog space={currentSpace} onClose={() => setShowMembers(false)} />
+      )}
+      {editorRoutePending && openDoc === null && openSheet === null && openOffice === null && (
+        <EditorLoading name={strings.driveOpeningEditor} />
+      )}
+      {editorRouteError !== null && (
+        <div className={styles.editorRouteError} role="alert">
+          <div className={styles.loadError}>
+            <FileText size={38} />
+            <h2>{strings.driveFileOpenFailedTitle}</h2>
+            <p>{editorRouteError}</p>
+            <div className={styles.emptyActions}>
+              <button type="button" className={styles.emptyPrimary} onClick={() => setEditorRouteAttempt((value) => value + 1)}>
+                {strings.driveRetry}
+              </button>
+              <button type="button" className={styles.emptySecondary} onClick={() => navigate("/drive", { replace: true })}>
+                {strings.driveBackToFiles}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {openDoc !== null && (
         <Suspense fallback={<EditorLoading name={openDoc.name} />}>

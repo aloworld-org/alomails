@@ -1360,6 +1360,11 @@ export const nl: Partial<Catalog> = {
   refTabTables: "Tabellen",
   refTabFigures: "Figuren",
   driveLoadingFile: (name: string) => `${name} openen…`,
+  driveOpeningEditor: "je bestand",
+  driveFileOpenFailedTitle: "Dit bestand is niet geopend",
+  driveFileUnavailable: "Het bestand is mogelijk verplaatst of verwijderd. Ga terug naar je bestanden en kies een ander item.",
+  driveEditorLoadFailed: (reason: string) => `Drive kon dit bestand niet openen. ${reason}`,
+  driveBackToFiles: "Terug naar bestanden",
 
   // Facturatiegereedschap van de agent (ADR 0035, B1.25). Elk levert een
   // concept op: goedkeuren geeft niets uit, nummert niets en verstuurt niets.

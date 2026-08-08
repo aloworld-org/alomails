@@ -322,6 +322,14 @@
 .emptySecondary { border: var(--border-width) solid var(--border-default); color: var(--text-primary); background: var(--bg-surface); }
 .emptySecondary:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-tint); }
 
+.editorRouteError {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-overlay);
+  display: flex;
+  background: var(--bg-app);
+}
+
 .editorLoading {
   position: absolute;
   inset: 0;
