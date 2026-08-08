@@ -230,10 +230,26 @@
   display: flex;
   min-height: 46px;
   align-items: center;
-  gap: 3px;
   padding: 5px 12px;
+  overflow: hidden;
+}
+.formattingScroller {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-1);
   overflow-x: auto;
   overflow-y: hidden;
+}
+.primaryActions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-1);
+  border-left: 1px solid var(--border-subtle);
+  padding-left: var(--space-1);
+  background: var(--bg-surface);
 }
 .docMenus details {
   position: relative;

@@ -444,6 +444,7 @@ export function DocEditor({
           </div></details>
         </div>
         <div className={styles.formattingRow}>
+        <div className={styles.formattingScroller}>
         <div className={styles.commandDivider} />
         <select className={styles.blockTypeSelect} aria-label={strings.docParagraphStyle} value={activeBlockType === "heading" ? "heading-1" : activeBlockType} onChange={(event) => changeBlockType(event.target.value)}>
           <option value="paragraph">{strings.docStyleParagraph}</option>
@@ -475,22 +476,24 @@ export function DocEditor({
         <button type="button" className={activeBlockType === "bulletListItem" ? styles.commandIconActive : styles.commandIcon} onClick={() => changeBlockType("bulletListItem")} aria-label={strings.docStyleBulletList} title={strings.docStyleBulletList}><List size={17} /></button>
         <button type="button" className={activeBlockType === "numberedListItem" ? styles.commandIconActive : styles.commandIcon} onClick={() => changeBlockType("numberedListItem")} aria-label={strings.docStyleNumberedList} title={strings.docStyleNumberedList}><ListOrdered size={17} /></button>
         <button type="button" className={activeBlockType === "checkListItem" ? styles.commandIconActive : styles.commandIcon} onClick={() => changeBlockType("checkListItem")} aria-label={strings.docStyleChecklist} title={strings.docStyleChecklist}><ListChecks size={17} /></button>
-        <button type="button" className={styles.commandIcon} onClick={createLink} aria-label={strings.docInsertLink}><Link2 size={17} /></button>
-        <button type="button" className={styles.commandIcon} onClick={() => imageInputRef.current?.click()} aria-label={strings.docInsertImage}><ImagePlus size={17} /></button>
-        <button type="button" className={styles.commandIcon} onClick={() => insertBlock("table")} aria-label={strings.sheetInsertTable}><Table2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("aloCode")} aria-label={strings.composeInsertCode}><Code2 size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("equation")} aria-label={strings.docEquation}><Sigma size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={insertComment} aria-label={strings.docAddComment}><MessageSquarePlus size={17} /></button>
         <button type="button" className={styles.commandIcon} onClick={() => insertBlock("divider")} aria-label={strings.docInsertDivider}><Minus size={17} /></button>
-        <div className={styles.commandSpacer} />
-        <button type="button" className={styles.commandIcon} onClick={() => setFindOpen((open) => !open)} aria-label={strings.docFindReplace}><Search size={17} /></button>
         <span className={styles.wordCount} title={`${counts.characters} ${strings.docCharacters}`}>{counts.words} {strings.docWords}</span>
         <div className={styles.zoomControl} aria-label={strings.docZoom}>
           <button type="button" onClick={() => setZoom((value) => Math.max(50, value - 10))} aria-label={strings.docZoomOut}><Minus size={15} /></button>
           <button type="button" onClick={() => setZoom(100)}>{zoom}%</button>
           <button type="button" onClick={() => setZoom((value) => Math.min(200, value + 10))} aria-label={strings.docZoomIn}><Plus size={15} /></button>
         </div>
-        <button type="button" className={styles.printButton} onClick={() => window.print()}><Printer size={16} /><span>{strings.docPrint}</span></button>
+        </div>
+        <div className={styles.primaryActions}>
+          <button type="button" className={styles.commandIcon} onClick={createLink} aria-label={strings.docInsertLink}><Link2 size={17} /></button>
+          <button type="button" className={styles.commandIcon} onClick={() => imageInputRef.current?.click()} aria-label={strings.docInsertImage}><ImagePlus size={17} /></button>
+          <button type="button" className={styles.commandIcon} onClick={() => insertBlock("table")} aria-label={strings.sheetInsertTable}><Table2 size={17} /></button>
+          <button type="button" className={styles.commandIcon} onClick={() => setFindOpen((open) => !open)} aria-label={strings.docFindReplace}><Search size={17} /></button>
+          <button type="button" className={styles.printButton} onClick={() => window.print()}><Printer size={16} /><span>{strings.docPrint}</span></button>
+        </div>
         </div>
         <input ref={imageInputRef} className={styles.hiddenFileInput} type="file" accept="image/*" onChange={(event) => { const file = event.target.files?.[0]; if (file) void insertImage(file); event.target.value = ""; }} />
       </div>}
