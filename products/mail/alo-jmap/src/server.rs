@@ -21,8 +21,9 @@ use crate::{
     billing_settings, blob, calendar, carddav, contacts, crm_activities, crm_deals, crm_handoff,
     crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates,
     docs, drive, filters, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, projects_time, push, reset_route, schedule, security, session, settings, share,
-    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    insights_gallery, projects_time, projects_weeks, push, reset_route, schedule, security,
+    session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
+    workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -671,6 +672,39 @@ pub fn app(state: AppState) -> Router {
             get(projects_time::get_time)
                 .patch(projects_time::update_time)
                 .delete(projects_time::delete_time),
+        )
+        // The week (B3.05) — two doors onto the same row, and the shape of each
+        // URL is the reason it is a different door.
+        //
+        // The PERSONAL door names a week by its Monday, because a week nobody
+        // has submitted has no row and therefore no id; the ADMIN door names it
+        // by id, because spelling a colleague's week as (person, date) would put
+        // an employee's identity in every access log on the way here. Both are
+        // audited: `projects.week.*` for what a person did with their own week,
+        // `projects.approval.*` for what an approver decided about somebody's.
+        .route("/projects/weeks", get(projects_weeks::list_weeks))
+        .route(
+            "/projects/weeks/{monday}/submit",
+            post(projects_weeks::submit_week),
+        )
+        .route(
+            "/projects/weeks/{monday}/withdraw",
+            post(projects_weeks::withdraw_week),
+        )
+        // Admin only, every one of them (`Account::require_admin`, checked in
+        // the handler as `/admin/*` does).
+        .route("/projects/approvals", get(projects_weeks::list_approvals))
+        .route(
+            "/projects/approvals/{id}/approve",
+            post(projects_weeks::approve_week),
+        )
+        .route(
+            "/projects/approvals/{id}/reject",
+            post(projects_weeks::reject_week),
+        )
+        .route(
+            "/projects/approvals/{id}/reopen",
+            post(projects_weeks::reopen_week),
         )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))

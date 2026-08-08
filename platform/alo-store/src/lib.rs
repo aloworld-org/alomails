@@ -95,6 +95,7 @@ pub mod tasks;
 pub mod thread;
 pub mod time_entries;
 pub mod time_timer;
+pub mod time_weeks;
 pub mod vat_id;
 pub mod vcard;
 
@@ -158,7 +159,7 @@ pub use id::{
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, GroupId,
     InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId, SiteFormId,
     SiteFormSubmissionId, SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId,
-    ThreadId, TimeEntryId, UserId,
+    ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -217,3 +218,7 @@ pub use time_entries::{
     TimeTotals, week_totals,
 };
 pub use time_timer::{RunningTimer, StartTimer, StoppedTimer};
+pub use time_weeks::{
+    DECISION_NOTE_MAX, PendingWeek, TimesheetWeek, WeekDecision, WeekStatus, require_monday,
+    week_end, week_start,
+};

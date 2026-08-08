@@ -300,6 +300,13 @@ opaque_id!(
     /// invoice line are all folds over.
     TimeEntryId
 );
+opaque_id!(
+    /// One person's week, once it has a status — the row that submit, approve
+    /// and reject decide, and that every hour in that week is locked by (alo
+    /// Projects, ADR 0035, wave B3). A week nobody has submitted has no row and
+    /// therefore no id: on the personal door a week is addressed by its Monday.
+    TimeWeekId
+);
 
 #[cfg(test)]
 mod tests {

@@ -266,8 +266,13 @@ POST /crm/pipelines/{id}/archive -> crm.pipeline.archive
 POST /crm/pipelines/{id}/stages -> crm.pipeline.stage.create
 POST /crm/stages/{id}/archive -> crm.stage.archive
 POST /crm/stages/{id}/move -> crm.stage.move
+POST /projects/approvals/{id}/approve -> projects.approval.approve
+POST /projects/approvals/{id}/reject -> projects.approval.reject
+POST /projects/approvals/{id}/reopen -> projects.approval.reopen
 POST /projects/time -> projects.time.create
 POST /projects/timer/start -> projects.timer.start
 POST /projects/timer/stop -> projects.timer.stop
+POST /projects/weeks/{monday}/submit -> projects.week.submit
+POST /projects/weeks/{monday}/withdraw -> projects.week.withdraw
 PUT /billing/fx/rates -> billing.fx.rates.update
 "#;

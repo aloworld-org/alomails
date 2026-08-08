@@ -41,19 +41,32 @@
 //! Correcting an entry ([`AccountStore::edit_time_entry`]) therefore does not
 //! touch the rate. Repricing an hour is not a correction of what happened.
 //!
-//! # Scope of this slice (B3.03, extended at B3.04)
+//! # Two things freeze an hour, and they are both somewhere else
 //!
-//! Create, read, list, correct, delete, and the proposal verbs. The **week
-//! lock** — that an entry in a submitted or approved week refuses to move — is
-//! B3.05's, and arrives with the table that holds a week's status; the guard
-//! that an entry already carried onto a document cannot be edited or deleted is
-//! here already, because `invoice_id` is representable from this migration on.
+//! An entry refuses to move when it is **already on a document**
+//! ([`require_unbilled`], here, because `invoice_id` is a column of this table)
+//! and when **its week has been handed in or approved**
+//! ([`crate::time_weeks::require_week_unlocked`], there, because a week's status
+//! is a fact about the week). Every write below asks both questions, and a
+//! correction that moves an entry to another day asks the week question
+//! **twice** — of the week it leaves and the week it joins — because otherwise a
+//! locked week can be drained one entry at a time.
+//!
+//! The one deliberate exception is [`AccountStore::reject_time_entry`]: a
+//! proposal is in no total, so discarding one changes nothing an approver saw,
+//! and since *creating* a proposal in a locked week is refused, one found there
+//! can only be a draft the lock arrived after. Refusing its rejection too would
+//! leave it stuck with no way to clear it.
+//!
+//! # Scope of this slice (B3.03, extended at B3.04 and B3.05)
+//!
+//! Create, read, list, correct, delete, and the proposal verbs.
 //!
 //! B3.04 added two things and no new rules: [`week_totals`], the minute fold a
 //! week grid puts at the bottom of its column, and [`insert_entry`] — the one
 //! place an hour is written, lifted out of [`AccountStore::log_time`] so that
 //! [`crate::time_timer`]'s stop can write inside the same transaction that
-//! clears the running clock.
+//! clears the running clock. B3.05 added the week lock to every one of them.
 
 use sqlx::PgConnection;
 use time::{Date, OffsetDateTime};
@@ -62,6 +75,7 @@ use crate::account::AccountStore;
 use crate::billing_field::{bounded, currency as validate_currency, unit_price_cents};
 use crate::error::{Result, StoreError};
 use crate::id::{BillingInvoiceId, ProjectId, TaskId, TimeEntryId, UserId};
+use crate::time_weeks::require_week_unlocked;
 
 /// The shortest entry that is work at all. Zero minutes is not a piece of work,
 /// and an entry of zero would still be a row in every total.
@@ -345,10 +359,16 @@ pub(crate) fn snapshot_rate(
 /// `log_time` before writing, `stop_timer` when the clock was started. An hour
 /// already worked is not un-worked by the board being archived since.
 ///
+/// The **week lock** *is* checked here, on the caller's connection, so that the
+/// timer's stop tests the week inside the same transaction that writes the hour.
+/// It applies to a proposal as much as to real work: a suggestion that could
+/// never be accepted is not a suggestion.
+///
 /// # Errors
 /// [`StoreError::NotFound`] never — the caller has already resolved the
 /// project; [`StoreError::Validation`] when the duration, the note, the source
-/// or the rate breaks its rule; [`StoreError::Db`] on failure.
+/// or the rate breaks its rule; [`StoreError::Conflict`] when the week the hour
+/// falls in is submitted or approved; [`StoreError::Db`] on failure.
 pub(crate) async fn insert_entry(
     conn: &mut PgConnection,
     tenant: &str,
@@ -356,6 +376,7 @@ pub(crate) async fn insert_entry(
     new: &NewTimeEntry,
     project: &ProjectRate,
 ) -> Result<TimeEntry> {
+    require_week_unlocked(conn, tenant, user, new.work_date).await?;
     let minutes = minutes(new.minutes)?;
     let note = bounded("note", &new.note, NOTE_MAX)?;
     let source_kind = optional_bounded("source kind", new.source_kind.as_deref(), SOURCE_KIND_MAX)?;
@@ -556,15 +577,19 @@ impl AccountStore {
     /// The rate is untouched by design (see [`TimeEntryEdit`]). An entry
     /// already carried onto a document is frozen: the hours are on paper a
     /// customer has read, and the way back is to void or credit that document
-    /// (B1's own verbs), not to edit history underneath it. The week lock —
-    /// the same refusal for an entry in a submitted or approved week — joins
-    /// this guard at B3.05.
+    /// (B1's own verbs), not to edit history underneath it.
+    ///
+    /// **Both weeks are checked** — the one the entry is in and the one the
+    /// correction moves it to. Checking only the destination would let a locked
+    /// week be drained a day at a time; checking only the source would let hours
+    /// be pushed into a week somebody has already approved.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] when the entry is not the caller's own;
-    /// [`StoreError::Conflict`] when it is already billed;
-    /// [`StoreError::Validation`] when a field breaks its rule or the task
-    /// belongs to another project; [`StoreError::Db`] on failure.
+    /// [`StoreError::Conflict`] when it is already billed, or either week is
+    /// submitted or approved; [`StoreError::Validation`] when a field breaks its
+    /// rule or the task belongs to another project; [`StoreError::Db`] on
+    /// failure.
     pub async fn edit_time_entry(
         &self,
         id: &TimeEntryId,
@@ -572,6 +597,8 @@ impl AccountStore {
     ) -> Result<TimeEntry> {
         let entry = self.time_entry(id).await?.ok_or(StoreError::NotFound)?;
         require_unbilled(&entry)?;
+        self.require_weeks_unlocked(&[entry.work_date, edit.work_date])
+            .await?;
         self.require_task_on_project(edit.task_id.as_ref(), &entry.project_id)
             .await?;
         let minutes = minutes(edit.minutes)?;
@@ -601,11 +628,12 @@ impl AccountStore {
     ///
     /// # Errors
     /// [`StoreError::NotFound`] when the entry is not the caller's own;
-    /// [`StoreError::Conflict`] when it is already billed;
-    /// [`StoreError::Db`] on failure.
+    /// [`StoreError::Conflict`] when it is already billed or its week is
+    /// submitted or approved; [`StoreError::Db`] on failure.
     pub async fn delete_time_entry(&self, id: &TimeEntryId) -> Result<()> {
         let entry = self.time_entry(id).await?.ok_or(StoreError::NotFound)?;
         require_unbilled(&entry)?;
+        self.require_weeks_unlocked(&[entry.work_date]).await?;
         let done = sqlx::query(
             "DELETE FROM time_entries WHERE tenant_id = $1 AND user_id = $2 AND id = $3",
         )
@@ -625,17 +653,21 @@ impl AccountStore {
     /// and **its rate is resolved now** — at the moment a human agreed the work
     /// happened, from the engagement's facts as they stand today.
     ///
+    /// Accepting is what puts the hour into the week's totals, so it is a write
+    /// like any other and the week lock applies.
+    ///
     /// # Errors
     /// [`StoreError::NotFound`] when the entry is not the caller's own pending
     /// proposal — an already-accepted one included, so a double accept cannot
-    /// reprice an hour; [`StoreError::Validation`] when the project has since
-    /// gained a rate with no currency to express it in; [`StoreError::Db`] on
-    /// failure.
+    /// reprice an hour; [`StoreError::Conflict`] when its week is submitted or
+    /// approved; [`StoreError::Validation`] when the project has since gained a
+    /// rate with no currency to express it in; [`StoreError::Db`] on failure.
     pub async fn accept_time_entry(&self, id: &TimeEntryId) -> Result<TimeEntry> {
         let entry = self.time_entry(id).await?.ok_or(StoreError::NotFound)?;
         if !entry.is_proposed() {
             return Err(StoreError::NotFound);
         }
+        self.require_weeks_unlocked(&[entry.work_date]).await?;
         // The board may have been archived, or the engagement repriced, since
         // the suggestion was drafted; both are answered by resolving against
         // what is true now rather than what was true then.
@@ -661,6 +693,12 @@ impl AccountStore {
 
     /// Rejects one of the caller's own proposed entries by deleting it. A
     /// suggestion nobody accepted is not a record of anything.
+    ///
+    /// **The week lock deliberately does not apply here.** A proposal is in no
+    /// total, so discarding one changes nothing an approver saw; and since
+    /// creating a proposal in a locked week is refused, one found in a locked
+    /// week is a draft the lock arrived after. Refusing its rejection would
+    /// leave it stuck with no way to clear it.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] when the entry is not the caller's own pending
@@ -709,6 +747,22 @@ impl AccountStore {
             rate_cents,
             currency,
         })
+    }
+
+    /// Confirms every week these days fall in is still the caller's to change.
+    ///
+    /// Takes days rather than Mondays so no caller here resolves a week
+    /// boundary itself, and takes a slice because a correction that moves an
+    /// entry has two weeks to answer for and both must pass before either is
+    /// touched. Duplicates are harmless: an entry corrected within its own week
+    /// asks the same question twice and gets the same answer.
+    async fn require_weeks_unlocked(&self, days: &[Date]) -> Result<()> {
+        let mut conn = self.pool.acquire().await.map_err(StoreError::Db)?;
+        for day in days {
+            require_week_unlocked(&mut conn, self.tenant.as_str(), self.user.as_str(), *day)
+                .await?;
+        }
+        Ok(())
     }
 
     /// Confirms a named task is one the caller can see and lives on the
