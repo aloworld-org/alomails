@@ -7,8 +7,9 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 2px var(--space-2);
-  border: 1px solid var(--border-subtle);
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-full);
   color: var(--text-secondary);
   font-size: var(--text-xs);
@@ -35,15 +36,15 @@
 
 .menu {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + var(--space-1));
   left: 0;
-  z-index: 41;
-  min-width: 180px;
+  z-index: var(--z-modal);
+  min-width: var(--content-height-sm);
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--border-width);
   padding: var(--space-2);
-  border: 1px solid var(--border-subtle);
+  border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
   box-shadow: var(--shadow-lg);
@@ -53,6 +54,7 @@
   display: flex;
   align-items: center;
   width: 100%;
+  min-height: var(--control-height);
   padding: var(--space-2);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -70,6 +72,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
+  min-height: var(--control-height);
   padding: var(--space-2);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -82,9 +85,10 @@
 }
 
 .date {
-  width: 140px;
-  padding: 2px var(--space-2);
-  border: 1px solid var(--border-subtle);
+  width: calc(var(--control-width-wide) + var(--space-1));
+  min-height: var(--control-height);
+  padding: 0 var(--space-2);
+  border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-sm);
   background: var(--bg-surface);
   color: var(--text-primary);
@@ -93,7 +97,7 @@
 }
 
 .divider {
-  height: 1px;
+  height: var(--border-width);
   margin: var(--space-1) 0;
   background: var(--border-subtle);
 }

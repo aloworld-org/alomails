@@ -45,6 +45,7 @@
   align-items: center;
   gap: var(--space-1);
   width: 100%;
+  min-height: var(--control-height);
   padding: var(--space-1) var(--space-1);
   color: var(--text-secondary);
   font-size: var(--text-sm);
@@ -54,7 +55,7 @@
 }
 
 .accountToggle:hover {
-  background: var(--bg-hover);
+  background: var(--bg-raised);
 }
 
 .accountLock {
@@ -72,7 +73,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  height: 44px;
+  height: var(--control-height);
   width: 100%;
   border-radius: var(--radius-md);
   background: var(--accent);
@@ -89,7 +90,7 @@
   padding-left: var(--space-2);
   padding-right: var(--space-2);
   /* No resize handle in collapsed mode, so provide the divider here. */
-  border-right: 1px solid var(--border-subtle);
+  border-right: var(--border-width) solid var(--border-subtle);
 }
 
 .collapsed .compose {
@@ -122,7 +123,7 @@
 .group {
   display: flex;
   flex-direction: column;
-  gap: 1px;
+  gap: var(--border-width);
   padding-bottom: var(--space-3);
 }
 
@@ -167,7 +168,7 @@
   min-width: 0;
   height: var(--control-height);
   padding: 0 var(--space-2);
-  border: 1px solid var(--accent);
+  border: var(--border-width) solid var(--accent);
   border-radius: var(--radius-sm);
   background: var(--bg-surface);
   color: var(--text-primary);
@@ -177,7 +178,7 @@
 
 .rename:focus {
   outline: none;
-  box-shadow: 0 0 0 2px var(--accent-soft);
+  box-shadow: var(--focus-ring);
 }
 
 .item {
@@ -185,6 +186,7 @@
   align-items: center;
   gap: var(--space-3);
   width: 100%;
+  min-height: var(--control-height);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -257,13 +259,13 @@
 /* Drag-and-drop target highlight (neutral "drop here" affordance). */
 .item.dropTarget {
   background: var(--bg-raised);
-  outline: 2px dashed var(--border-strong);
-  outline-offset: -2px;
+  outline: var(--border-width-strong) dashed var(--border-strong);
+  outline-offset: calc(-1 * var(--border-width-strong));
 }
 
 .icon {
-  width: 18px;
-  height: 18px;
+  width: var(--icon-size-inline);
+  height: var(--icon-size-inline);
   flex-shrink: 0;
   color: var(--text-secondary);
 }
@@ -274,32 +276,32 @@
 
 /* Label color dot (custom folders). Neutral ring until a color is set. */
 .dot {
-  width: 12px;
-  height: 12px;
+  width: var(--icon-size-inline);
+  height: var(--icon-size-inline);
   flex-shrink: 0;
-  margin: 0 3px;
+  margin: 0 var(--space-1);
   border-radius: var(--radius-full);
   background: var(--border-strong);
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06);
+  box-shadow: inset 0 0 0 var(--border-width) var(--border-default);
 }
 
 /* Right-click color palette popover, anchored at the cursor. */
 .pickerScrim {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: var(--z-overlay);
   cursor: default;
 }
 
 .palette {
   position: fixed;
-  z-index: 41;
-  width: 178px;
+  z-index: var(--z-modal);
+  width: calc(var(--overlay-width-sm) + var(--space-12));
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--border-subtle);
+  border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-lg);
   background: var(--bg-surface);
   box-shadow: var(--shadow-lg);
@@ -323,7 +325,7 @@
   width: 100%;
   aspect-ratio: 1;
   border-radius: var(--radius-full);
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
+  box-shadow: inset 0 0 0 var(--border-width) var(--border-default);
   transition: transform var(--transition-fast);
 }
 
@@ -332,6 +334,7 @@
 }
 
 .clearColor {
+  min-height: var(--control-height);
   padding: var(--space-1) var(--space-2);
   border-radius: var(--radius-md);
   color: var(--text-secondary);
@@ -349,6 +352,7 @@
   align-items: center;
   gap: var(--space-2);
   width: 100%;
+  min-height: var(--control-height);
   padding: var(--space-2) var(--space-2);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -362,11 +366,11 @@
 }
 
 .menuDanger {
-  color: var(--danger, #c0392b);
+  color: var(--danger);
 }
 
 .menuDivider {
-  height: 1px;
+  height: var(--border-width);
   margin: var(--space-1) 0;
   background: var(--border-subtle);
 }
@@ -384,8 +388,8 @@
   color: var(--text-secondary);
   background: var(--bg-raised);
   border-radius: var(--radius-full);
-  padding: 1px var(--space-2);
-  min-width: 20px;
+  padding: var(--border-width) var(--space-2);
+  min-width: var(--icon-size-control);
   text-align: center;
 }
 

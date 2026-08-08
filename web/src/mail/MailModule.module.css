@@ -7,7 +7,7 @@
 }
 
 /* ---- Phone layout: one pane at a time, folders in a drawer ---- */
-@media (max-width: 768px) {
+@media (max-width: 48rem) {
   /* The single visible content pane (list or reading) fills the width.
      The folders nav is only ever the drawer on mobile, styled below. */
   .mail > :global(section),
@@ -24,16 +24,16 @@
     top: 0;
     left: 0;
     bottom: 0;
-    z-index: var(--z-overlay, 50);
-    width: min(82vw, 320px);
+    z-index: var(--z-overlay);
+    width: min(82vw, calc(var(--overlay-width-md) + var(--space-8)));
     box-shadow: var(--shadow-lg);
   }
 
   .drawerOverlay {
     position: absolute;
     inset: 0;
-    z-index: calc(var(--z-overlay, 50) - 1);
-    background: var(--bg-overlay, rgba(0, 0, 0, 0.4));
+    z-index: calc(var(--z-overlay) - 1);
+    background: var(--bg-overlay);
   }
 }
 
@@ -59,7 +59,7 @@
 }
 
 .undoButton {
-  color: var(--copper-300, var(--accent));
+  color: var(--accent);
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   text-decoration: underline;
