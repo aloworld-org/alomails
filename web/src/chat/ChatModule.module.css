@@ -1,12 +1,21 @@
 /* alo Chat (ADR 0038). Every value comes from the token scale by role — no
    literal colours or spacings live here (the visual-scale law). */
 
+/* Rooms · conversation · thread. The third column exists only while a thread
+   is open, so the conversation has the full width the rest of the time. */
 .module {
   display: grid;
   grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
   height: 100%;
   min-height: 0;
   background: var(--bg-app);
+}
+
+.module:has(.thread) {
+  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr) minmax(
+      280px,
+      360px
+    );
 }
 
 /* ---- the room list ------------------------------------------------ */
@@ -161,9 +170,11 @@
   gap: 2px;
 }
 
+/* Centred, not baseline-aligned: the row now leads with an avatar, and text
+   baselines do not line up with a circle. */
 .messageMeta {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
 }
 
@@ -222,6 +233,112 @@
 .input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+/* ---- threads ------------------------------------------------------- */
+
+/* Quiet until wanted: a link, not a button, so a feed of fifty messages does
+   not read as fifty controls. */
+.threadLink,
+.replyLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  min-height: 28px;
+  margin-top: 2px;
+  padding: 0 var(--space-2) 0 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--accent);
+}
+
+/* The invitation to reply appears on approach; the reply *count* is always
+   visible, because it is information rather than an offer. */
+.replyLink {
+  color: var(--text-tertiary);
+  font-weight: 500;
+  opacity: 0;
+}
+
+.message:hover .replyLink,
+.replyLink:focus-visible {
+  opacity: 1;
+}
+
+.threadLink:hover,
+.replyLink:hover {
+  text-decoration: underline;
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.threadHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.threadClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin: -6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.threadClose:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+.threadFeed {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.threadRule {
+  width: 100%;
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--border-subtle);
+}
+
+/* Narrow screens cannot afford three columns; the thread takes the
+   conversation's place rather than squeezing it to nothing. */
+@media (max-width: 900px) {
+  .module:has(.thread) {
+    grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+  }
+
+  .module:has(.thread) .room {
+    display: none;
+  }
 }
 
 .archivedNote {

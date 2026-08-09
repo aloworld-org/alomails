@@ -38,6 +38,9 @@ export interface ChannelSummary extends Channel {
 /** One person in a room. */
 export interface Member {
   user: string;
+  /** Their address, or `null` if the id no longer resolves (they left the
+   *  tenant). The id stays the identity; this is only what to show. */
+  email: string | null;
   role: MemberRole;
   joinedAt: string;
   lastReadSeq: number;
@@ -58,6 +61,9 @@ export interface Message {
   /** Position in the room: the ordering key and the page cursor. */
   seq: number;
   author: string;
+  /** The author's address, or `null` when the id no longer resolves. A feed
+   *  must still render for someone who has left. */
+  authorEmail: string | null;
   /** Empty when withdrawn — see `deletedAt`. */
   body: string;
   kind: "text" | "system";
@@ -68,6 +74,18 @@ export interface Message {
   /** Set when withdrawn: the row survives so the numbering never gains a
    *  hole, but the words are gone. */
   deletedAt: string | null;
+}
+
+/**
+ * A message as the main feed shows it. The feed carries top-level messages
+ * only — a reply lives in its thread and is announced here by the count, so
+ * a conversation is never read twice over.
+ */
+export interface FeedMessage extends Message {
+  /** Surviving replies under this message; withdrawn ones are not counted. */
+  replyCount: number;
+  /** When the thread last moved. */
+  lastReplyAt: string | null;
 }
 
 /** What to create: a named room, or a DM with one person. */

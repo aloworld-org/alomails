@@ -1672,6 +1672,14 @@ export const en = {
   chatWithdrawn: "This message was withdrawn.",
   chatNoMessagesYet: "No messages yet — say the first thing.",
   chatArchived: "Archived",
+  chatReplyInThread: "Reply in thread",
+  chatReplies: (count: number): string =>
+    count === 1 ? "1 reply" : `${count} replies`,
+  chatThread: "Thread",
+  chatThreadClose: "Close thread",
+  chatThreadEmpty: "No replies yet — start this one.",
+  chatThreadPlaceholder: "Reply…",
+  chatThreadFailed: "That thread couldn’t be loaded.",
   chatArchivedNote:
     "This channel is archived. Its history stays here to read, but nothing new can be sent.",
   chatNoChannelsLead: "No conversations yet",

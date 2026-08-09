@@ -152,7 +152,9 @@ pub use blob::GarageConfig;
 pub use blob::{BlobStore, ShareStream};
 pub use changes::Changes;
 pub use chat::{ChannelKind, ChannelVisibility, ChatChannel, ChatMember, MemberRole};
-pub use chat_messages::{ChatChannelSummary, ChatMessage, MESSAGE_PAGE_DEFAULT, MessageKind};
+pub use chat_messages::{
+    ChatChannelSummary, ChatFeedMessage, ChatMessage, MESSAGE_PAGE_DEFAULT, MessageKind,
+};
 pub use contacts::AddressHeaders;
 pub use control::PLATFORM_TENANT_NAME;
 pub use crm_activities::{Activity, ActivityKind, NewActivity};

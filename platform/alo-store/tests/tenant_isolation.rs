@@ -2648,12 +2648,12 @@ async fn chat_messages_are_room_scoped_and_ordered_by_their_own_sequence() {
     }
     let page = a.messages(&room, None, 3).await.unwrap();
     assert_eq!(
-        page.iter().map(|m| m.seq).collect::<Vec<_>>(),
+        page.iter().map(|m| m.message.seq).collect::<Vec<_>>(),
         vec![6, 5, 4]
     );
     let older = a.messages(&room, Some(4), 3).await.unwrap();
     assert_eq!(
-        older.iter().map(|m| m.seq).collect::<Vec<_>>(),
+        older.iter().map(|m| m.message.seq).collect::<Vec<_>>(),
         vec![3, 2, 1]
     );
 
@@ -2664,6 +2664,27 @@ async fn chat_messages_are_room_scoped_and_ordered_by_their_own_sequence() {
         .unwrap();
     assert_eq!(reply.thread_root_seq, Some(1));
     assert_eq!(a.thread_replies(&room, first.seq).await.unwrap().len(), 1);
+
+    // ...and it leaves the main feed for it. A reply read twice — once in its
+    // thread and once in the room's spine — is the failure threaded chat is
+    // judged on. The feed keeps only the count, so the thread still announces
+    // itself.
+    let feed = a.messages(&room, None, 50).await.unwrap();
+    assert!(
+        !feed.iter().any(|m| m.message.seq == reply.seq),
+        "a reply belongs to its thread, not to the feed"
+    );
+    let root = feed
+        .iter()
+        .find(|m| m.message.seq == first.seq)
+        .expect("the root stays in the feed");
+    assert_eq!(root.reply_count, 1);
+    assert!(root.last_reply_at.is_some());
+    assert_eq!(
+        feed.iter().filter(|m| m.reply_count > 0).count(),
+        1,
+        "only the one message that was replied to"
+    );
     assert!(
         a.post_message(&room, "nested", Some(reply.seq))
             .await
@@ -2731,5 +2752,109 @@ async fn chat_messages_are_room_scoped_and_ordered_by_their_own_sequence() {
     // An archived room keeps its history and takes no new words.
     a.archive_channel(&room).await.unwrap();
     assert!(a.post_message(&room, "after the end", None).await.is_err());
-    assert_eq!(a.messages(&room, None, 50).await.unwrap().len(), 7);
+    assert_eq!(
+        a.messages(&room, None, 50).await.unwrap().len(),
+        6,
+        "seven said, one of them a reply that lives in its thread"
+    );
+}
+
+/// The batch directory lookup must label only the caller's own tenant. A chat
+/// feed asks it to name every author on a page, so if it ever answered for a
+/// foreign id it would turn a rendering helper into a cross-tenant probe: send
+/// a guessed id, learn from the answer whether that person exists elsewhere.
+#[tokio::test]
+async fn batch_email_lookup_never_names_a_user_from_another_tenant() {
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("dir-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@dir.test").await.unwrap();
+    let ub = ts1.create_user("b@dir.test").await.unwrap();
+
+    let t2 = store.create_tenant("dir-t2").await.unwrap();
+    let foreign = store
+        .for_tenant(t2)
+        .create_user("stranger@dir.test")
+        .await
+        .unwrap();
+
+    // Its own people, in one call, in any order and with duplicates.
+    let found = ts1
+        .emails_of(&[ub.clone(), ua.clone(), ua.clone()])
+        .await
+        .unwrap();
+    assert_eq!(found.len(), 2, "two distinct users, deduped");
+    assert_eq!(
+        found.get(ua.as_str()).map(String::as_str),
+        Some("a@dir.test")
+    );
+    assert_eq!(
+        found.get(ub.as_str()).map(String::as_str),
+        Some("b@dir.test")
+    );
+
+    // A foreign id is absent — not an error, and not an address. Absence is
+    // the same answer an id that never existed gets, so nothing is disclosed.
+    let probed = ts1
+        .emails_of(&[
+            foreign.clone(),
+            alo_store::UserId::new("no-such-user".to_owned()),
+        ])
+        .await
+        .unwrap();
+    assert!(probed.is_empty(), "no foreign user, no invented user");
+
+    // And the mirror: tenant 2 cannot name tenant 1's people either.
+    let back = store.for_tenant(t1).emails_of(&[foreign]).await.unwrap();
+    assert!(back.is_empty());
+
+    // Asking about nobody is a valid, cheap question.
+    assert!(ts1.emails_of(&[]).await.unwrap().is_empty());
+}
+
+/// A thread's count follows what is still standing in it. Its own room, so the
+/// arithmetic of the larger message test stays undisturbed.
+#[tokio::test]
+async fn a_withdrawn_reply_stops_being_counted_but_keeps_its_place() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("thread-count").await.unwrap();
+    let ua = store
+        .for_tenant(t.clone())
+        .create_user("a@thread.test")
+        .await
+        .unwrap();
+    let a = store.for_account(t, ua);
+
+    let room = a
+        .create_channel("threads", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
+    let root = a.post_message(&room, "the question", None).await.unwrap();
+    let one = a
+        .post_message(&room, "an answer", Some(root.seq))
+        .await
+        .unwrap();
+    a.post_message(&room, "another", Some(root.seq))
+        .await
+        .unwrap();
+
+    let counted = |feed: Vec<alo_store::ChatFeedMessage>| {
+        feed.into_iter()
+            .find(|m| m.message.seq == root.seq)
+            .expect("the root stays in the feed")
+    };
+
+    let before = counted(a.messages(&room, None, 50).await.unwrap());
+    assert_eq!(before.reply_count, 2);
+    assert!(before.last_reply_at.is_some());
+
+    a.delete_message(&one.id).await.unwrap();
+    assert_eq!(
+        counted(a.messages(&room, None, 50).await.unwrap()).reply_count,
+        1
+    );
+
+    // The tombstone stays in the thread — the sequence never gains a hole —
+    // it simply stops being advertised on the feed.
+    assert_eq!(a.thread_replies(&room, root.seq).await.unwrap().len(), 2);
 }

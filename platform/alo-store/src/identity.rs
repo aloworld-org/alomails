@@ -563,6 +563,40 @@ impl TenantStore {
         Ok(row.map(|r| r.email))
     }
 
+    /// The email addresses of many users at once, keyed by user id — for any
+    /// surface that labels a list of people (a chat room's authors, a task's
+    /// followers, a space's members).
+    ///
+    /// One query rather than one per id: a page of chat history can name fifty
+    /// authors, and [`email_of`](Self::email_of) in a loop turns rendering a
+    /// screen into fifty round trips.
+    ///
+    /// Ids not in this tenant are simply absent from the map — a caller cannot
+    /// use this to discover whether a foreign user exists, only to label the
+    /// people it was already allowed to see.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn emails_of(
+        &self,
+        users: &[UserId],
+    ) -> Result<std::collections::HashMap<String, String>> {
+        if users.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+        let mut ids: Vec<String> = users.iter().map(|u| u.as_str().to_owned()).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        let rows = sqlx::query!(
+            "SELECT id, email FROM users WHERE tenant_id = $1 AND id = ANY($2)",
+            self.tenant().as_str(),
+            &ids[..]
+        )
+        .fetch_all(self.pool())
+        .await?;
+        Ok(rows.into_iter().map(|r| (r.id, r.email)).collect())
+    }
+
     // ---- mailbox delegation (ADR 0017) --------------------------------
 
     /// Grants `delegate` access to `owner`'s mailbox in this tenant (creating or

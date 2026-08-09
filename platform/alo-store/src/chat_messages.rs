@@ -102,6 +102,25 @@ pub struct ChatChannelSummary {
     pub last_at: Option<OffsetDateTime>,
 }
 
+/// A message as the main feed shows it: the message, plus what is hanging
+/// under it.
+///
+/// The feed carries top-level messages only. A reply belongs to its thread,
+/// not to the room's spine — showing both means a conversation is read twice
+/// and out of order, which is the failure every threaded chat is judged on.
+/// What the feed keeps instead is the count, so a thread announces itself
+/// without being unrolled.
+#[derive(Debug, Clone)]
+pub struct ChatFeedMessage {
+    /// The top-level message itself.
+    pub message: ChatMessage,
+    /// Replies under it, withdrawn ones excluded — a thread whose replies
+    /// were all taken back reads as having none, which is the truth.
+    pub reply_count: i64,
+    /// When the newest surviving reply arrived, for "last reply 5m ago".
+    pub last_reply_at: Option<OffsetDateTime>,
+}
+
 const MESSAGE_COLUMNS: &str = "id, channel_id, seq, author_id, body, kind, \
      thread_root_seq, created_at, edited_at, deleted_at";
 
@@ -226,8 +245,14 @@ impl AccountStore {
         row_to_message(row)
     }
 
-    /// A page of a room's history, newest first. `before` is a seq cursor:
+    /// A page of a room's main feed, newest first. `before` is a seq cursor:
     /// pass the oldest seq you already have to walk further back.
+    ///
+    /// **Top-level messages only** — a reply is reached through
+    /// [`thread_replies`](Self::thread_replies), and is announced here by its
+    /// root's `reply_count`. The cursor still walks the room's own sequence,
+    /// so paging stays exact even though the numbers it skips are the replies
+    /// living in threads.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] if the room is not the caller's to see.
@@ -236,14 +261,41 @@ impl AccountStore {
         channel: &ChatChannelId,
         before: Option<i64>,
         limit: i64,
-    ) -> Result<Vec<ChatMessage>> {
+    ) -> Result<Vec<ChatFeedMessage>> {
         self.channel(channel).await?;
         let limit = limit.clamp(1, MESSAGE_PAGE_MAX);
-        let rows: Vec<MessageRow> = sqlx::query_as(&format!(
-            "SELECT {MESSAGE_COLUMNS} FROM chat_messages \
-             WHERE tenant_id = $1 AND channel_id = $2 \
-               AND ($3::bigint IS NULL OR seq < $3) \
-             ORDER BY seq DESC LIMIT $4"
+        type FeedRow = (
+            String,
+            String,
+            i64,
+            String,
+            String,
+            String,
+            Option<i64>,
+            OffsetDateTime,
+            Option<OffsetDateTime>,
+            Option<OffsetDateTime>,
+            i64,
+            Option<OffsetDateTime>,
+        );
+        let rows: Vec<FeedRow> = sqlx::query_as(&format!(
+            "SELECT {}, \
+                 (SELECT count(*) FROM chat_messages r \
+                  WHERE r.tenant_id = m.tenant_id AND r.channel_id = m.channel_id \
+                    AND r.thread_root_seq = m.seq AND r.deleted_at IS NULL) AS reply_count, \
+                 (SELECT max(r.created_at) FROM chat_messages r \
+                  WHERE r.tenant_id = m.tenant_id AND r.channel_id = m.channel_id \
+                    AND r.thread_root_seq = m.seq AND r.deleted_at IS NULL) AS last_reply_at \
+             FROM chat_messages m \
+             WHERE m.tenant_id = $1 AND m.channel_id = $2 \
+               AND m.thread_root_seq IS NULL \
+               AND ($3::bigint IS NULL OR m.seq < $3) \
+             ORDER BY m.seq DESC LIMIT $4",
+            MESSAGE_COLUMNS
+                .split(", ")
+                .map(|column| format!("m.{}", column.trim()))
+                .collect::<Vec<_>>()
+                .join(", ")
         ))
         .bind(self.tenant.as_str())
         .bind(channel.as_str())
@@ -252,7 +304,16 @@ impl AccountStore {
         .fetch_all(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-        rows.into_iter().map(row_to_message).collect()
+        rows.into_iter()
+            .map(|r| {
+                let message: MessageRow = (r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9);
+                Ok(ChatFeedMessage {
+                    message: row_to_message(message)?,
+                    reply_count: r.10,
+                    last_reply_at: r.11,
+                })
+            })
+            .collect()
     }
 
     /// The replies gathered under one top-level message, oldest first.

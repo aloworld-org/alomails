@@ -18,6 +18,7 @@ import type {
   Channel,
   ChannelDetail,
   ChannelSummary,
+  FeedMessage,
   Message,
   NewChannel,
 } from "./types";
@@ -97,18 +98,27 @@ export class ChatApi {
     );
   }
 
-  /** A page of history, newest first. Pass the oldest `seq` held as `before`
-   *  to walk further back. */
+  /** The replies under one message, oldest first — a thread reads forwards. */
+  async thread(id: string, rootSeq: number): Promise<Message[]> {
+    const body = await this.#read<{ messages: Message[] }>(
+      `/chat/channels/${encodeURIComponent(id)}/threads/${rootSeq}`,
+    );
+    return body.messages;
+  }
+
+  /** A page of the main feed, newest first. Pass the oldest `seq` held as
+   *  `before` to walk further back. Replies are not here — they live in their
+   *  thread, and each message says how many it has. */
   async messages(
     id: string,
     before?: number,
     limit?: number,
-  ): Promise<Message[]> {
+  ): Promise<FeedMessage[]> {
     const query = new URLSearchParams();
     if (before !== undefined) query.set("before", String(before));
     if (limit !== undefined) query.set("limit", String(limit));
     const suffix = query.toString() === "" ? "" : `?${query.toString()}`;
-    const body = await this.#read<{ messages: Message[] }>(
+    const body = await this.#read<{ messages: FeedMessage[] }>(
       `/chat/channels/${encodeURIComponent(id)}/messages${suffix}`,
     );
     return body.messages;

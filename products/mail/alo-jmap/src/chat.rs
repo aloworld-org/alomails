@@ -13,8 +13,15 @@
 //! oneself — are 422 carrying the store's own message, which the UI shows
 //! verbatim (UX law 8).
 //!
-//! Members and message authors are returned as user ids; resolving them to
-//! names is the UI phase's job, together with the directory lookup it needs.
+//! Members and message authors carry their opaque user id **and** the email
+//! address it belongs to, the way tasks carries `assigneeId` beside
+//! `assignee`: the id is what a client sends back, the address is what a
+//! person recognises. The address is `null` when the id no longer resolves —
+//! someone left the tenant — because a feed must still render when an author
+//! is gone. There is no display-name column in this schema yet; when there is,
+//! it is added beside the address, not in place of it.
+
+use std::collections::HashMap;
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
@@ -25,8 +32,8 @@ use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
 use alo_store::{
-    ChannelVisibility, ChatChannel, ChatChannelId, ChatChannelSummary, ChatMember, ChatMessage,
-    ChatMessageId, MESSAGE_PAGE_DEFAULT, StoreError, UserId,
+    ChannelVisibility, ChatChannel, ChatChannelId, ChatChannelSummary, ChatFeedMessage, ChatMember,
+    ChatMessage, ChatMessageId, MESSAGE_PAGE_DEFAULT, StoreError, UserId,
 };
 
 use crate::error::Problem;
@@ -97,9 +104,31 @@ fn summary_json(s: &ChatChannelSummary) -> Value {
     value
 }
 
-fn member_json(m: &ChatMember) -> Value {
+/// Email addresses for the people a payload names, keyed by user id.
+///
+/// One query for the whole page (`emails_of`), not one per line: fifty
+/// messages from five people cost five names, and a loop over `email_of`
+/// would cost fifty round trips to say the same thing.
+///
+/// Best-effort by design — if the lookup fails, the payload still goes out
+/// with ids and no addresses. A feed that renders unlabelled is a poor screen;
+/// a feed that 500s because the directory hiccuped is a broken one.
+async fn resolve_emails(
+    state: &AppState,
+    account: &Account,
+    users: &[UserId],
+) -> HashMap<String, String> {
+    if users.is_empty() {
+        return HashMap::new();
+    }
+    let ts = state.store.for_tenant(account.tenant.clone());
+    ts.emails_of(users).await.unwrap_or_default()
+}
+
+fn member_json(m: &ChatMember, emails: &HashMap<String, String>) -> Value {
     json!({
         "user": m.user.as_str(),
+        "email": emails.get(m.user.as_str()),
         "role": m.role.as_str(),
         "joinedAt": iso(m.joined_at),
         "lastReadSeq": m.last_read_seq,
@@ -107,12 +136,25 @@ fn member_json(m: &ChatMember) -> Value {
     })
 }
 
-fn message_json(m: &ChatMessage) -> Value {
+/// A feed line: the message, plus the thread hanging under it. `replyCount`
+/// is what lets a client draw "3 replies" without fetching the thread, and
+/// `lastReplyAt` is when that thread last moved.
+fn feed_message_json(f: &ChatFeedMessage, emails: &HashMap<String, String>) -> Value {
+    let mut value = message_json(&f.message, emails);
+    if let Some(object) = value.as_object_mut() {
+        object.insert("replyCount".to_owned(), json!(f.reply_count));
+        object.insert("lastReplyAt".to_owned(), json!(f.last_reply_at.map(iso)));
+    }
+    value
+}
+
+fn message_json(m: &ChatMessage, emails: &HashMap<String, String>) -> Value {
     json!({
         "id": m.id.as_str(),
         "channel": m.channel.as_str(),
         "seq": m.seq,
         "author": m.author.as_str(),
+        "authorEmail": emails.get(m.author.as_str()),
         "body": m.body,
         "kind": m.kind.as_str(),
         "threadRootSeq": m.thread_root_seq,
@@ -244,11 +286,18 @@ pub async fn get_channel(
         .await
         .map_err(map_store_err)?;
     let role = account.acc.channel_role(&id).await.map_err(map_store_err)?;
+    let who: Vec<UserId> = members.iter().map(|m| m.user.clone()).collect();
+    let emails = resolve_emails(&state, &account, &who).await;
     let mut value = channel_json(&channel);
     if let Some(object) = value.as_object_mut() {
         object.insert(
             "members".to_owned(),
-            json!(members.iter().map(member_json).collect::<Vec<_>>()),
+            json!(
+                members
+                    .iter()
+                    .map(|m| member_json(m, &emails))
+                    .collect::<Vec<_>>()
+            ),
         );
         object.insert("myRole".to_owned(), json!(role.map(|r| r.as_str())));
     }
@@ -358,8 +407,13 @@ pub async fn add_member(
         .channel_members(&id)
         .await
         .map_err(map_store_err)?;
+    let who: Vec<UserId> = members.iter().map(|m| m.user.clone()).collect();
+    let emails = resolve_emails(&state, &account, &who).await;
     Ok(Json(json!({
-        "members": members.iter().map(member_json).collect::<Vec<_>>()
+        "members": members
+            .iter()
+            .map(|m| member_json(m, &emails))
+            .collect::<Vec<_>>()
     })))
 }
 
@@ -422,8 +476,13 @@ pub async fn list_messages(
         )
         .await
         .map_err(map_store_err)?;
+    let who: Vec<UserId> = messages.iter().map(|m| m.message.author.clone()).collect();
+    let emails = resolve_emails(&state, &account, &who).await;
     Ok(Json(json!({
-        "messages": messages.iter().map(message_json).collect::<Vec<_>>()
+        "messages": messages
+            .iter()
+            .map(|m| feed_message_json(m, &emails))
+            .collect::<Vec<_>>()
     })))
 }
 
@@ -455,7 +514,8 @@ pub async fn post_message(
         .await
         .map_err(map_store_err)?;
     notify_room(&state, &account, &message.channel, &[]).await;
-    Ok(Json(message_json(&message)))
+    let emails = resolve_emails(&state, &account, std::slice::from_ref(&message.author)).await;
+    Ok(Json(message_json(&message, &emails)))
 }
 
 /// `GET /chat/channels/{id}/threads/{seq}` → the replies gathered under one
@@ -474,8 +534,13 @@ pub async fn list_thread(
         .thread_replies(&ChatChannelId::new(id), seq)
         .await
         .map_err(map_store_err)?;
+    let who: Vec<UserId> = messages.iter().map(|m| m.author.clone()).collect();
+    let emails = resolve_emails(&state, &account, &who).await;
     Ok(Json(json!({
-        "messages": messages.iter().map(message_json).collect::<Vec<_>>()
+        "messages": messages
+            .iter()
+            .map(|m| message_json(m, &emails))
+            .collect::<Vec<_>>()
     })))
 }
 
@@ -504,7 +569,8 @@ pub async fn edit_message(
         .await
         .map_err(map_store_err)?;
     notify_room(&state, &account, &message.channel, &[]).await;
-    Ok(Json(message_json(&message)))
+    let emails = resolve_emails(&state, &account, std::slice::from_ref(&message.author)).await;
+    Ok(Json(message_json(&message, &emails)))
 }
 
 /// `DELETE /chat/messages/{id}` → withdraw one's own message. The words go;
