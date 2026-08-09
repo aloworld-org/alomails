@@ -36,8 +36,8 @@ use alo_sites::render::{
 };
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
-    BlobId, Section, SectionsEnvelope, Site, SiteFormId, SiteId, SitePage, SitePageId, SiteTheme,
-    StoreError, site_theme::THEME_PRESETS,
+    BlobId, Section, SectionsEnvelope, Site, SiteFormId, SiteFormSubmissionId, SiteId, SitePage,
+    SitePageId, SiteTheme, StoreError, site_theme::THEME_PRESETS,
 };
 
 use crate::error::Problem;
@@ -255,6 +255,87 @@ pub async fn delete_site(
     account
         .acc
         .delete_site(&SiteId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+// ---- form submissions ------------------------------------------------------
+
+/// `GET /sites/:id/submissions` -> every contact-form submission for the
+/// site, newest first. Form labels ride with each row so the owner can tell
+/// which page invitation produced it without another request.
+pub async fn list_submissions(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let site = SiteId::new(id);
+    if account
+        .acc
+        .site(&site)
+        .await
+        .map_err(map_store_err)?
+        .is_none()
+    {
+        return Err(Problem::with(StatusCode::NOT_FOUND, "no such site"));
+    }
+
+    let forms = account.acc.site_forms(&site).await.map_err(map_store_err)?;
+    let mut rows = Vec::new();
+    for form in forms {
+        for submission in account
+            .acc
+            .site_form_submissions(&site, &form.id)
+            .await
+            .map_err(map_store_err)?
+        {
+            rows.push((
+                submission.received_at,
+                json!({
+                    "id": submission.id.as_str(),
+                    "formId": form.id.as_str(),
+                    "formName": form.name,
+                    "senderName": submission.sender_name,
+                    "senderEmail": submission.sender_email,
+                    "message": submission.message,
+                    "handled": submission.handled,
+                    "receivedAt": iso(submission.received_at),
+                }),
+            ));
+        }
+    }
+    rows.sort_by_key(|row| std::cmp::Reverse(row.0));
+    Ok(Json(json!({
+        "submissions": rows.into_iter().map(|(_, row)| row).collect::<Vec<_>>()
+    })))
+}
+
+#[derive(Deserialize)]
+struct HandledBody {
+    handled: bool,
+}
+
+/// `PUT /sites/:id/forms/:form/submissions/:submission` `{handled}` -> ok.
+/// The account door scopes every id, so an id copied from another tenant or
+/// another site receives the same 404 as an invented one.
+pub async fn set_submission_handled(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, form, submission)): Path<(String, String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: HandledBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    account
+        .acc
+        .set_form_submission_handled(
+            &SiteId::new(id),
+            &SiteFormId::new(form),
+            &SiteFormSubmissionId::new(submission),
+            req.handled,
+        )
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "status": "ok" })))

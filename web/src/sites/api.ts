@@ -26,6 +26,7 @@ import type {
   SiteDraft,
   SitePage,
   SitePageDetail,
+  SiteSubmission,
   SitesConfig,
   SubdomainCheck,
   ThemeEnvelope,
@@ -119,6 +120,27 @@ export class SitesApi {
       "POST",
       `/sites/${encodeURIComponent(siteId)}/unpublish`,
       {},
+    );
+  }
+
+  /** Every visitor message sent through this site's contact forms, newest first. */
+  submissions(siteId: string): Promise<SiteSubmission[]> {
+    return this.#read<{ submissions?: SiteSubmission[] }>(
+      `/sites/${encodeURIComponent(siteId)}/submissions`,
+    ).then((r) => r.submissions ?? []);
+  }
+
+  /** Moves one message between the open and handled queues. */
+  async setSubmissionHandled(
+    siteId: string,
+    formId: string,
+    submissionId: string,
+    handled: boolean,
+  ): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "PUT",
+      `/sites/${encodeURIComponent(siteId)}/forms/${encodeURIComponent(formId)}/submissions/${encodeURIComponent(submissionId)}`,
+      { handled },
     );
   }
 

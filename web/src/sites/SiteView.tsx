@@ -4,8 +4,8 @@
 // here. A stale or foreign id reads as "not found" with the way back, never
 // a broken screen.
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, Palette } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, FileText, Inbox, Palette } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
@@ -18,6 +18,7 @@ import styles from "./SitesModule.module.css";
 
 export function SiteView() {
   const { siteId = "" } = useParams();
+  const navigate = useNavigate();
   const api = useSitesApi();
   const [site, setSite] = useState<SiteDetail | null>(null);
   const [pages, setPages] = useState<SitePage[]>([]);
@@ -167,6 +168,14 @@ export function SiteView() {
           <div className={styles.sectionBar}>
             <h2 className={styles.sectionTitle}>{strings.sitesPages}</h2>
             <div className={styles.sectionBarActions}>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Inbox size={14} />}
+                onClick={() => navigate("submissions")}
+              >
+                {strings.sitesSubmissions}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

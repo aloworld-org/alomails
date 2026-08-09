@@ -237,6 +237,11 @@ pub fn app(state: AppState) -> Router {
         .route("/sites/{id}/theme", put(sites::set_theme))
         .route("/sites/{id}/publish", post(sites::publish_site))
         .route("/sites/{id}/unpublish", post(sites::unpublish_site))
+        .route("/sites/{id}/submissions", get(sites::list_submissions))
+        .route(
+            "/sites/{id}/forms/{form}/submissions/{submission}",
+            put(sites::set_submission_handled),
+        )
         .route(
             "/sites/{id}/pages",
             get(sites::list_pages).post(sites::create_page),

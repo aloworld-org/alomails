@@ -2695,6 +2695,22 @@ export const en = {
     `Your site will live at ${address}.`,
   sitesPublishFailed: "The site could not be published.",
   sitesUnpublishFailed: "The site could not be taken offline.",
+  // Sites — the contact-form inbox.
+  sitesSubmissions: "Submissions",
+  sitesSubmissionsLoadFailed: "Your form submissions could not be loaded.",
+  sitesSubmissionSaveFailed: "That submission could not be updated.",
+  sitesNoSubmissionsTitle: "No messages yet",
+  sitesNoSubmissionsBody:
+    "Add a contact form to a page. New visitor messages will appear here.",
+  sitesOpenPages: "Open pages",
+  sitesSubmissionList: "Visitor messages",
+  sitesSubmissionDetail: "Selected visitor message",
+  sitesHandled: "Handled",
+  sitesNeedsReply: "Needs reply",
+  sitesMarkHandled: "Mark handled",
+  sitesReopenSubmission: "Reopen",
+  sitesForm: "Form",
+  sitesReceived: "Received",
 
   // Audit trail — a record's own history (B2.13). The labels are VERBS, not
   // sentences: the record kind is the page the reader is already on, so an

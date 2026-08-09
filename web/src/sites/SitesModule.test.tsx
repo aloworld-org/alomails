@@ -122,6 +122,69 @@ describe("the site list", () => {
   });
 });
 
+describe("the contact submissions inbox", () => {
+  const detail = { ...ALPHA, publish: null, theme: {} };
+  const submission = {
+    id: "submission-1",
+    formId: "form-1",
+    formName: "Contact us",
+    senderName: "Ada Lovelace",
+    senderEmail: "ada@example.test",
+    message: "Could you call me tomorrow?",
+    handled: false,
+    receivedAt: "2026-08-08T09:30:00Z",
+  };
+
+  test("reads a visitor message and marks it handled without leaving the inbox", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/submissions"),
+        status: 200,
+        body: { submissions: [submission] },
+      },
+      {
+        match: (url, method) =>
+          method === "PUT" &&
+          url.endsWith("/sites/site-1/forms/form-1/submissions/submission-1"),
+        status: 200,
+        body: { status: "ok" },
+      },
+    ];
+
+    ui("/sites/site-1/submissions");
+    expect((await screen.findAllByText("Ada Lovelace")).length).toBe(2);
+    expect(screen.getByText("Could you call me tomorrow?")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesMarkHandled }));
+
+    expect(await screen.findByText(strings.sitesHandled)).toBeTruthy();
+    expect(lastWrite()).toMatchObject({ method: "PUT", body: { handled: true } });
+    expect(screen.getByRole("button", { name: strings.sitesReopenSubmission })).toBeTruthy();
+  });
+
+  test("an empty inbox teaches the next step", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/submissions"),
+        status: 200,
+        body: { submissions: [] },
+      },
+    ];
+    ui("/sites/site-1/submissions");
+    expect(await screen.findByText(strings.sitesNoSubmissionsTitle)).toBeTruthy();
+    expect(screen.getByRole("button", { name: strings.sitesOpenPages })).toBeTruthy();
+  });
+});
+
 describe("creating a site", () => {
   test("the typed address is checked live against the server", async () => {
     ui("/sites");

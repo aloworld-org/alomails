@@ -75,6 +75,18 @@ export interface SitePageDetail extends SitePage {
   sections: SectionsEnvelope;
 }
 
+/** One visitor message in the site's contact-form inbox. */
+export interface SiteSubmission {
+  id: string;
+  formId: string;
+  formName: string;
+  senderName: string;
+  senderEmail: string;
+  message: string;
+  handled: boolean;
+  receivedAt: string;
+}
+
 /** The deployment-wide sites config: published sites serve at
  *  `<subdomain>.<domain>`. The UI composes "goes live at" copy and live
  *  links from it — the domain is the server's to know, never hardcoded. */

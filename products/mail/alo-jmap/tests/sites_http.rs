@@ -117,6 +117,12 @@ async fn every_route_family_requires_a_bearer_token() {
         ),
         ("GET", "/sites/theme-presets".to_owned(), None),
         ("GET", "/sites/config".to_owned(), None),
+        ("GET", "/sites/some-id/submissions".to_owned(), None),
+        (
+            "PUT",
+            "/sites/some-id/forms/form/submissions/submission".to_owned(),
+            Some(json!({ "handled": true })),
+        ),
         ("PUT", "/sites/some-id/theme".to_owned(), Some(json!({}))),
         ("POST", "/sites/some-id/publish".to_owned(), Some(json!({}))),
         (
@@ -143,6 +149,66 @@ async fn every_route_family_requires_a_bearer_token() {
         let (status, _) = send(&h.app, req).await;
         assert_eq!(status, StatusCode::UNAUTHORIZED, "{method} {uri}");
     }
+}
+
+// ---- form submissions inbox ------------------------------------------------
+
+#[tokio::test]
+async fn submissions_list_is_site_scoped_and_handled_is_one_write() {
+    let h = harness("sites-submissions").await;
+    let site = created_id(
+        "site",
+        post(
+            &h.app,
+            &h.token,
+            "/sites",
+            json!({ "name": "Inbox site", "subdomain": sub("inbox", &h) }),
+        )
+        .await,
+    );
+    let site_id = SiteId::new(&site);
+    let form = h
+        .acc
+        .create_site_form(&site_id, "Contact us")
+        .await
+        .unwrap();
+    let older = h
+        .acc
+        .add_site_form_submission(&site_id, &form, "Ada", "ada@example.test", "First")
+        .await
+        .unwrap();
+    let newer = h
+        .acc
+        .add_site_form_submission(&site_id, &form, "Grace", "grace@example.test", "Second")
+        .await
+        .unwrap();
+
+    let (status, body) = get(&h.app, &h.token, &format!("/sites/{site}/submissions")).await;
+    assert_eq!(status, StatusCode::OK);
+    let rows = body["submissions"].as_array().unwrap();
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0]["id"], json!(newer.as_str()));
+    assert_eq!(rows[0]["formName"], json!("Contact us"));
+    assert_eq!(rows[0]["senderEmail"], json!("grace@example.test"));
+    assert_eq!(rows[0]["handled"], json!(false));
+
+    let (status, body) = put(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/forms/{form}/submissions/{older}"),
+        json!({ "handled": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let (_, body) = get(&h.app, &h.token, &format!("/sites/{site}/submissions")).await;
+    let handled = body["submissions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["id"] == older.as_str())
+        .unwrap();
+    assert_eq!(handled["handled"], json!(true));
 }
 
 // ---- the site arc ------------------------------------------------------------
@@ -863,6 +929,23 @@ async fn another_tenants_site_is_invisible_on_every_route() {
         )
         .await,
     );
+    let b_site_id = SiteId::new(&b_site);
+    let b_form = b
+        .acc
+        .create_site_form(&b_site_id, "Private form")
+        .await
+        .unwrap();
+    let b_submission = b
+        .acc
+        .add_site_form_submission(
+            &b_site_id,
+            &b_form,
+            "Private sender",
+            "private@example.test",
+            "Tenant B only",
+        )
+        .await
+        .unwrap();
 
     // A's list never mentions it.
     let (status, body) = get(&a.app, &a.token, "/sites").await;
@@ -889,6 +972,12 @@ async fn another_tenants_site_is_invisible_on_every_route() {
         ("POST", format!("/sites/{b_site}/publish"), json!({})),
         ("POST", format!("/sites/{b_site}/unpublish"), json!({})),
         ("GET", format!("/sites/{b_site}/pages"), json!({})),
+        ("GET", format!("/sites/{b_site}/submissions"), json!({})),
+        (
+            "PUT",
+            format!("/sites/{b_site}/forms/{b_form}/submissions/{b_submission}"),
+            json!({ "handled": true }),
+        ),
         (
             "POST",
             format!("/sites/{b_site}/pages"),
@@ -961,14 +1050,19 @@ async fn another_tenants_site_is_invisible_on_every_route() {
     assert_eq!(body["name"], json!("B Marketing"));
     let (_, body) = get(&b.app, &b.token, &format!("/sites/{b_site}/pages/{b_page}")).await;
     assert_eq!(body["title"], json!("B Home"));
-    assert!(
-        b.acc
-            .site_forms(&SiteId::new(&b_site))
-            .await
-            .unwrap()
-            .is_empty(),
-        "a foreign add-section request must not create a form"
+    let forms = b.acc.site_forms(&b_site_id).await.unwrap();
+    assert_eq!(
+        forms.len(),
+        1,
+        "a foreign add-section request created a form"
     );
+    let submissions = b
+        .acc
+        .site_form_submissions(&b_site_id, &b_form)
+        .await
+        .unwrap();
+    assert_eq!(submissions.len(), 1);
+    assert!(!submissions[0].handled, "foreign tenant marked it handled");
 }
 
 // ---- the draft preview (S1.13) -----------------------------------------------
