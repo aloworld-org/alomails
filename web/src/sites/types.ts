@@ -75,6 +75,21 @@ export interface SitePageDetail extends SitePage {
   sections: SectionsEnvelope;
 }
 
+/** One blog post linked to its source alo Doc. The document remains the
+ *  authoring source; Sites stores only the public metadata and publish state. */
+export interface SitePost {
+  id: string;
+  docNodeId: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  coverBlobId: string | null;
+  status: "draft" | "published";
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /** One visitor message in the site's contact-form inbox. */
 export interface SiteSubmission {
   id: string;
@@ -112,4 +127,13 @@ export interface PageDraft {
   title: string;
   slug: string;
   home: boolean;
+}
+
+/** Metadata that binds a new alo Doc to a draft blog post. */
+export interface PostDraft {
+  docNodeId: string;
+  slug: string;
+  title: string;
+  excerpt: string;
+  coverBlobId?: string | undefined;
 }

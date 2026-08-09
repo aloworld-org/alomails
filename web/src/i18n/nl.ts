@@ -2568,4 +2568,21 @@ export const nl: Partial<Catalog> = {
   sitesExportingSubmissions: "Export voorbereiden…",
   sitesSubmissionsExportFailed:
     "Uw inzendingen konden niet worden geëxporteerd. Probeer het opnieuw.",
+  sitesPosts: "Blogartikelen",
+  sitesBackToWebsite: "Website",
+  sitesPostsLoadFailed: "Uw blogartikelen konden niet worden geladen.",
+  sitesLoadingPosts: "Blogartikelen laden",
+  sitesWriteInDocs: "Schrijven in alo Docs",
+  sitesOpeningDocs: "alo Docs openen…",
+  sitesUntitledArticle: "Naamloos artikel",
+  sitesPostCreateFailed: "Het artikel kon niet worden gemaakt. Probeer het opnieuw.",
+  sitesNoPostsTitle: "Nog geen artikelen",
+  sitesNoPostsBody:
+    "Begin een artikel in alo Docs. Het blijft privé totdat u het publiceert.",
+  sitesColArticle: "Artikel",
+  sitesColUpdated: "Bijgewerkt",
+  sitesColActions: "Acties",
+  sitesEditInDocs: "Bewerken in alo Docs",
+  sitesPostStatusDraft: "Concept",
+  sitesPostStatusPublished: "Gepubliceerd",
 };

@@ -6,13 +6,13 @@
 // The auth layer is stubbed down to one recording `fetch`, so the REAL
 // client and the real views run — only the network is fake.
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { strings } from "../i18n";
 import { saveTextFile } from "../platform/download";
 import { SitesModule } from "./SitesModule";
-import type { Site, SitePage } from "./types";
+import type { Site, SitePage, SitePost } from "./types";
 
 interface Call {
   url: string;
@@ -54,8 +54,10 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
 
 /** The lists a screen loads before anything interesting happens. */
 function fallback(url: string): Reply {
-  const body = url.includes("/pages")
-    ? { pages: [] }
+  const body = url.includes("/posts")
+    ? { posts: [] }
+    : url.includes("/pages")
+      ? { pages: [] }
     : url.endsWith("/sites")
       ? { sites: [] }
       : {};
@@ -70,17 +72,47 @@ vi.mock("../platform/download", () => ({
   saveTextFile: vi.fn(),
 }));
 
+const fakeJmap = vi.hoisted(() => ({
+  driveCreateDoc: vi.fn(),
+  driveTrashNode: vi.fn(),
+}));
+
+vi.mock("../jmap/useJmapClient", () => ({
+  useJmapClient: () => fakeJmap,
+}));
+
 const ALPHA: Site = { id: "site-1", name: "Alpha Bakery", subdomain: "alpha", status: "live" };
 const BETA: Site = { id: "site-2", name: "Beta Atelier", subdomain: "beta", status: "draft" };
 const HOME: SitePage = { id: "page-1", slug: "", title: "Welcome", home: true };
 const ABOUT: SitePage = { id: "page-2", slug: "about", title: "About us", home: false };
+const ARTICLE: SitePost = {
+  id: "post-1",
+  docNodeId: "doc-1",
+  slug: "summer-menu",
+  title: "Our summer menu",
+  excerpt: "Fresh bakes for long afternoons.",
+  coverBlobId: null,
+  status: "draft",
+  publishedAt: null,
+  createdAt: "2026-08-08T09:00:00Z",
+  updatedAt: "2026-08-08T10:00:00Z",
+};
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{`${location.pathname}${location.search}`}</output>;
+}
 
 /** The module as it is really mounted: at `/sites/*`, routing itself. */
 function ui(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
+      <LocationProbe />
       <Routes>
         <Route path="/sites/*" element={<SitesModule />} />
+        {/* The real shell owns Drive; this sink lets navigation assertions
+            observe the hand-off without a test-only unmatched-route warning. */}
+        <Route path="/drive" element={null} />
       </Routes>
     </MemoryRouter>,
   );
@@ -96,6 +128,9 @@ beforeEach(() => {
   replies = [];
   fakeFetch.mockClear();
   vi.mocked(saveTextFile).mockClear();
+  fakeJmap.driveCreateDoc.mockReset();
+  fakeJmap.driveTrashNode.mockReset();
+  fakeJmap.driveTrashNode.mockResolvedValue(undefined);
 });
 
 afterEach(cleanup);
@@ -538,5 +573,105 @@ describe("one site", () => {
     });
     // The list reloaded with the created page.
     expect(await screen.findByText("Welcome")).toBeTruthy();
+  });
+});
+
+describe("blog authoring", () => {
+  const detail = { ...ALPHA, publish: null, theme: {} };
+
+  test("lists linked articles and opens the source document in one click", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        status: 200,
+        body: { posts: [ARTICLE] },
+      },
+    ];
+
+    ui("/sites/site-1/posts");
+    expect(await screen.findByText("Our summer menu")).toBeTruthy();
+    expect(screen.getByText("Fresh bakes for long afternoons.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesEditInDocs }));
+    expect(screen.getByTestId("location").textContent).toBe("/drive?open=doc-1");
+  });
+
+  test("creates and links an alo Doc before opening it", async () => {
+    fakeJmap.driveCreateDoc.mockResolvedValueOnce("doc-9");
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        status: 200,
+        body: { posts: [] },
+      },
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites/site-1/posts"),
+        status: 200,
+        body: { ...ARTICLE, id: "post-9", docNodeId: "doc-9", title: strings.sitesUntitledArticle },
+      },
+    ];
+
+    ui("/sites/site-1/posts");
+    fireEvent.click(
+      (await screen.findAllByRole("button", { name: strings.sitesWriteInDocs }))[0]!,
+    );
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(fakeJmap.driveCreateDoc).toHaveBeenCalledWith(
+      null,
+      null,
+      strings.sitesUntitledArticle,
+    );
+    expect(lastWrite()).toMatchObject({
+      method: "POST",
+      body: {
+        docNodeId: "doc-9",
+        slug: "draft-doc-9",
+        title: strings.sitesUntitledArticle,
+        excerpt: "",
+      },
+    });
+    expect(screen.getByTestId("location").textContent).toBe("/drive?open=doc-9");
+  });
+
+  test("shows the server reason and trashes a new blank doc when linking is refused", async () => {
+    fakeJmap.driveCreateDoc.mockResolvedValueOnce("doc-9");
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        status: 200,
+        body: { posts: [] },
+      },
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites/site-1/posts"),
+        status: 422,
+        body: { detail: "the document is not available in this workspace" },
+      },
+    ];
+
+    ui("/sites/site-1/posts");
+    fireEvent.click(
+      (await screen.findAllByRole("button", { name: strings.sitesWriteInDocs }))[0]!,
+    );
+
+    expect(
+      await screen.findByText("the document is not available in this workspace"),
+    ).toBeTruthy();
+    expect(fakeJmap.driveTrashNode).toHaveBeenCalledWith("doc-9");
+    expect(screen.getByTestId("location").textContent).toBe("/sites/site-1/posts");
   });
 });

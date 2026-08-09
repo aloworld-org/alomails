@@ -21,11 +21,13 @@ import { API_BASE } from "../platform/runtime";
 import type { Section, SectionsEnvelope } from "./sections";
 import type {
   PageDraft,
+  PostDraft,
   Site,
   SiteDetail,
   SiteDraft,
   SitePage,
   SitePageDetail,
+  SitePost,
   SiteSubmission,
   SitesConfig,
   SubdomainCheck,
@@ -182,6 +184,18 @@ export class SitesApi {
    *  stack; answers the stored page. */
   createPage(siteId: string, draft: PageDraft): Promise<SitePage> {
     return this.#write<SitePage>("POST", `/sites/${encodeURIComponent(siteId)}/pages`, draft);
+  }
+
+  /** The site's blog posts, newest first. */
+  posts(siteId: string): Promise<SitePost[]> {
+    return this.#read<{ posts?: SitePost[] }>(
+      `/sites/${encodeURIComponent(siteId)}/posts`,
+    ).then((r) => r.posts ?? []);
+  }
+
+  /** Binds an alo Doc to a new draft post and answers the stored metadata. */
+  createPost(siteId: string, draft: PostDraft): Promise<SitePost> {
+    return this.#write<SitePost>("POST", `/sites/${encodeURIComponent(siteId)}/posts`, draft);
   }
 
   /** One page with its sections envelope — the editor's load. */

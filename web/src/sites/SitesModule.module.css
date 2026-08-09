@@ -619,6 +619,49 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ---- blog authoring desk (S1.21a) ---- */
+.postSiteName {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+.postTitle,
+.postExcerpt {
+  display: block;
+}
+.postTitle {
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.postExcerpt {
+  max-width: var(--overlay-width-xl);
+  margin-top: var(--space-1);
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.postDate {
+  white-space: nowrap;
+}
+.postActionCell {
+  text-align: right;
+  white-space: nowrap;
+}
+.postSkeletons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6);
+}
+.postSkeletons span {
+  height: var(--control-height);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
 }
 
 /* ---- contact submissions inbox (S1.17a) ---- */

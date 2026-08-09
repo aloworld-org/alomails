@@ -5,7 +5,7 @@
 // a broken screen.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, Inbox, Palette } from "lucide-react";
+import { ArrowLeft, FileText, Inbox, Newspaper, Palette } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
@@ -168,6 +168,14 @@ export function SiteView() {
           <div className={styles.sectionBar}>
             <h2 className={styles.sectionTitle}>{strings.sitesPages}</h2>
             <div className={styles.sectionBarActions}>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Newspaper size="var(--icon-size-inline)" />}
+                onClick={() => navigate("posts")}
+              >
+                {strings.sitesPosts}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

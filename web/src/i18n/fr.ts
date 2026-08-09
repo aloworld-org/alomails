@@ -2595,4 +2595,21 @@ export const fr: Partial<Catalog> = {
   sitesExportingSubmissions: "Préparation de l’export…",
   sitesSubmissionsExportFailed:
     "Vos messages n’ont pas pu être exportés. Réessayez.",
+  sitesPosts: "Articles du blog",
+  sitesBackToWebsite: "Site web",
+  sitesPostsLoadFailed: "Les articles de votre blog n’ont pas pu être chargés.",
+  sitesLoadingPosts: "Chargement des articles du blog",
+  sitesWriteInDocs: "Écrire dans alo Docs",
+  sitesOpeningDocs: "Ouverture d’alo Docs…",
+  sitesUntitledArticle: "Article sans titre",
+  sitesPostCreateFailed: "L’article n’a pas pu être créé. Réessayez.",
+  sitesNoPostsTitle: "Aucun article pour le moment",
+  sitesNoPostsBody:
+    "Commencez un article dans alo Docs. Il reste privé jusqu’à sa publication.",
+  sitesColArticle: "Article",
+  sitesColUpdated: "Modifié",
+  sitesColActions: "Actions",
+  sitesEditInDocs: "Modifier dans alo Docs",
+  sitesPostStatusDraft: "Brouillon",
+  sitesPostStatusPublished: "Publié",
 };
