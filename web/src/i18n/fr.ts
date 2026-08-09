@@ -2591,4 +2591,8 @@ export const fr: Partial<Catalog> = {
   sitesReopenSubmission: "Rouvrir",
   sitesForm: "Formulaire",
   sitesReceived: "Reçu",
+  sitesExportSubmissions: "Exporter en CSV",
+  sitesExportingSubmissions: "Préparation de l’export…",
+  sitesSubmissionsExportFailed:
+    "Vos messages n’ont pas pu être exportés. Réessayez.",
 };

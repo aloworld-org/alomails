@@ -2711,6 +2711,10 @@ export const en = {
   sitesReopenSubmission: "Reopen",
   sitesForm: "Form",
   sitesReceived: "Received",
+  sitesExportSubmissions: "Export CSV",
+  sitesExportingSubmissions: "Preparing export…",
+  sitesSubmissionsExportFailed:
+    "Your submissions could not be exported. Try again.",
 
   // Audit trail — a record's own history (B2.13). The labels are VERBS, not
   // sentences: the record kind is the page the reader is already on, so an

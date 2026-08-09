@@ -2564,4 +2564,8 @@ export const nl: Partial<Catalog> = {
   sitesReopenSubmission: "Heropenen",
   sitesForm: "Formulier",
   sitesReceived: "Ontvangen",
+  sitesExportSubmissions: "CSV exporteren",
+  sitesExportingSubmissions: "Export voorbereiden…",
+  sitesSubmissionsExportFailed:
+    "Uw inzendingen konden niet worden geëxporteerd. Probeer het opnieuw.",
 };

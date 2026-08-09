@@ -118,6 +118,7 @@ async fn every_route_family_requires_a_bearer_token() {
         ("GET", "/sites/theme-presets".to_owned(), None),
         ("GET", "/sites/config".to_owned(), None),
         ("GET", "/sites/some-id/submissions".to_owned(), None),
+        ("GET", "/sites/some-id/submissions.csv".to_owned(), None),
         (
             "PUT",
             "/sites/some-id/forms/form/submissions/submission".to_owned(),
@@ -209,6 +210,72 @@ async fn submissions_list_is_site_scoped_and_handled_is_one_write() {
         .find(|row| row["id"] == older.as_str())
         .unwrap();
     assert_eq!(handled["handled"], json!(true));
+}
+
+#[tokio::test]
+async fn submissions_export_is_safe_complete_and_downloadable() {
+    let h = harness("sites-submissions-csv").await;
+    let subdomain = sub("export", &h);
+    let site = created_id(
+        "site",
+        post(
+            &h.app,
+            &h.token,
+            "/sites",
+            json!({ "name": "Export site", "subdomain": subdomain }),
+        )
+        .await,
+    );
+    let site_id = SiteId::new(&site);
+    let form = h
+        .acc
+        .create_site_form(&site_id, "=Risky, form")
+        .await
+        .unwrap();
+    h.acc
+        .add_site_form_submission(
+            &site_id,
+            &form,
+            "+Visitor",
+            "visitor@example.test",
+            "Hello,\nplease call me",
+        )
+        .await
+        .unwrap();
+
+    let (status, headers, csv) =
+        get_text(&h.app, &h.token, &format!("/sites/{site}/submissions.csv")).await;
+    assert_eq!(status, StatusCode::OK, "{csv}");
+    assert_eq!(
+        headers
+            .get("content-type")
+            .and_then(|value| value.to_str().ok()),
+        Some("text/csv; charset=utf-8")
+    );
+    let expected_disposition = format!("attachment; filename=\"submissions-{subdomain}.csv\"");
+    assert_eq!(
+        headers
+            .get("content-disposition")
+            .and_then(|value| value.to_str().ok()),
+        Some(expected_disposition.as_str()),
+    );
+    assert_eq!(
+        headers
+            .get("cache-control")
+            .and_then(|value| value.to_str().ok()),
+        Some("no-store")
+    );
+    assert_eq!(
+        headers
+            .get("x-content-type-options")
+            .and_then(|value| value.to_str().ok()),
+        Some("nosniff")
+    );
+    assert!(csv.starts_with("receivedAt,form,senderName,senderEmail,message,status\r\n"));
+    assert!(csv.contains("'=Risky, form"));
+    assert!(csv.contains("'+Visitor"));
+    assert!(csv.contains("\"Hello,\nplease call me\""));
+    assert!(csv.ends_with(",needs reply\r\n"));
 }
 
 // ---- the site arc ------------------------------------------------------------
@@ -973,6 +1040,7 @@ async fn another_tenants_site_is_invisible_on_every_route() {
         ("POST", format!("/sites/{b_site}/unpublish"), json!({})),
         ("GET", format!("/sites/{b_site}/pages"), json!({})),
         ("GET", format!("/sites/{b_site}/submissions"), json!({})),
+        ("GET", format!("/sites/{b_site}/submissions.csv"), json!({})),
         (
             "PUT",
             format!("/sites/{b_site}/forms/{b_form}/submissions/{b_submission}"),

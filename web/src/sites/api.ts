@@ -130,6 +130,16 @@ export class SitesApi {
     ).then((r) => r.submissions ?? []);
   }
 
+  /** The same visitor inbox as a spreadsheet-safe CSV rendered by the server. */
+  async submissionsCsv(siteId: string): Promise<string> {
+    const response = await this.#send(
+      `/sites/${encodeURIComponent(siteId)}/submissions.csv`,
+      { method: "GET" },
+    );
+    await SitesApi.#rejectFailed(response);
+    return response.text();
+  }
+
   /** Moves one message between the open and handled queues. */
   async setSubmissionHandled(
     siteId: string,

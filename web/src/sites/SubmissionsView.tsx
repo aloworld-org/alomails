@@ -2,11 +2,12 @@
 // surface, like Mail, so reading and resolving a visitor request never
 // navigates away or hides the next action in a menu.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, Inbox, RotateCcw } from "lucide-react";
+import { ArrowLeft, Check, Download, Inbox, RotateCcw } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
+import { saveTextFile } from "../platform/download";
 import { sitesMessage, useSitesApi } from "./api";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { SiteDetail, SiteSubmission } from "./types";
@@ -26,6 +27,7 @@ export function SubmissionsView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -87,6 +89,24 @@ export function SubmissionsView() {
     }
   }
 
+  async function exportCsv() {
+    if (site === null) return;
+    setExporting(true);
+    setError(null);
+    try {
+      const csv = await api.submissionsCsv(siteId);
+      saveTextFile(
+        csv,
+        `submissions-${site.subdomain}.csv`,
+        "text/csv;charset=utf-8",
+      );
+    } catch (err) {
+      setError(sitesMessage(err, strings.sitesSubmissionsExportFailed));
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -100,7 +120,20 @@ export function SubmissionsView() {
             <span className={styles.submissionSiteName}>{site.name}</span>
           )}
         </div>
-        {loading && <Spinner size={16} />}
+        <div className={styles.headerActions}>
+          {loading && <Spinner size={16} />}
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<Download size={14} />}
+            disabled={site === null || submissions.length === 0 || exporting}
+            onClick={() => void exportCsv()}
+          >
+            {exporting
+              ? strings.sitesExportingSubmissions
+              : strings.sitesExportSubmissions}
+          </Button>
+        </div>
       </header>
 
       {error !== null && <ErrorBanner message={error} />}

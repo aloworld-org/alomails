@@ -262,6 +262,53 @@ pub async fn delete_site(
 
 // ---- form submissions ------------------------------------------------------
 
+struct SubmissionRow {
+    id: String,
+    form_id: String,
+    form_name: String,
+    sender_name: String,
+    sender_email: String,
+    message: String,
+    handled: bool,
+    received_at: OffsetDateTime,
+}
+
+async fn site_submissions(
+    account: &Account,
+    site: &SiteId,
+) -> Result<(Site, Vec<SubmissionRow>), Problem> {
+    let stored_site = account
+        .acc
+        .site(site)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such site"))?;
+
+    let forms = account.acc.site_forms(site).await.map_err(map_store_err)?;
+    let mut rows = Vec::new();
+    for form in forms {
+        for submission in account
+            .acc
+            .site_form_submissions(site, &form.id)
+            .await
+            .map_err(map_store_err)?
+        {
+            rows.push(SubmissionRow {
+                id: submission.id.as_str().to_owned(),
+                form_id: form.id.as_str().to_owned(),
+                form_name: form.name.clone(),
+                sender_name: submission.sender_name,
+                sender_email: submission.sender_email,
+                message: submission.message,
+                handled: submission.handled,
+                received_at: submission.received_at,
+            });
+        }
+    }
+    rows.sort_by_key(|row| std::cmp::Reverse(row.received_at));
+    Ok((stored_site, rows))
+}
+
 /// `GET /sites/:id/submissions` -> every contact-form submission for the
 /// site, newest first. Form labels ride with each row so the owner can tell
 /// which page invitation produced it without another request.
@@ -272,44 +319,92 @@ pub async fn list_submissions(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let site = SiteId::new(id);
-    if account
-        .acc
-        .site(&site)
-        .await
-        .map_err(map_store_err)?
-        .is_none()
-    {
-        return Err(Problem::with(StatusCode::NOT_FOUND, "no such site"));
-    }
-
-    let forms = account.acc.site_forms(&site).await.map_err(map_store_err)?;
-    let mut rows = Vec::new();
-    for form in forms {
-        for submission in account
-            .acc
-            .site_form_submissions(&site, &form.id)
-            .await
-            .map_err(map_store_err)?
-        {
-            rows.push((
-                submission.received_at,
-                json!({
-                    "id": submission.id.as_str(),
-                    "formId": form.id.as_str(),
-                    "formName": form.name,
-                    "senderName": submission.sender_name,
-                    "senderEmail": submission.sender_email,
-                    "message": submission.message,
-                    "handled": submission.handled,
-                    "receivedAt": iso(submission.received_at),
-                }),
-            ));
-        }
-    }
-    rows.sort_by_key(|row| std::cmp::Reverse(row.0));
+    let (_, rows) = site_submissions(&account, &site).await?;
     Ok(Json(json!({
-        "submissions": rows.into_iter().map(|(_, row)| row).collect::<Vec<_>>()
+        "submissions": rows.into_iter().map(|row| json!({
+            "id": row.id,
+            "formId": row.form_id,
+            "formName": row.form_name,
+            "senderName": row.sender_name,
+            "senderEmail": row.sender_email,
+            "message": row.message,
+            "handled": row.handled,
+            "receivedAt": iso(row.received_at),
+        })).collect::<Vec<_>>()
     })))
+}
+
+/// Neutralises user-authored text before it reaches a spreadsheet cell.
+/// Excel and compatible tools treat these leading characters as formulas,
+/// including when whitespace precedes them; a leading apostrophe keeps the
+/// visible text and prevents evaluation.
+fn csv_text(value: &str) -> String {
+    if value
+        .trim_start()
+        .chars()
+        .next()
+        .is_some_and(|first| matches!(first, '=' | '+' | '-' | '@'))
+    {
+        format!("'{value}")
+    } else {
+        value.to_owned()
+    }
+}
+
+/// `GET /sites/:id/submissions.csv` -> the same tenant-scoped inbox as a
+/// spreadsheet-ready download. The site subdomain is validated ASCII, so it
+/// makes a recognisable filename without putting user-authored prose in a
+/// response header.
+pub async fn export_submissions(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let site = SiteId::new(id);
+    let (stored_site, rows) = site_submissions(&account, &site).await?;
+    let mut body = crate::csv::row(&[
+        "receivedAt",
+        "form",
+        "senderName",
+        "senderEmail",
+        "message",
+        "status",
+    ]);
+    for row in rows {
+        let received_at = iso(row.received_at);
+        let form = csv_text(&row.form_name);
+        let sender_name = csv_text(&row.sender_name);
+        let sender_email = csv_text(&row.sender_email);
+        let message = csv_text(&row.message);
+        let status = if row.handled {
+            "handled"
+        } else {
+            "needs reply"
+        };
+        body.push_str(&crate::csv::row(&[
+            &received_at,
+            &form,
+            &sender_name,
+            &sender_email,
+            &message,
+            status,
+        ]));
+    }
+    let file_name = format!("submissions-{}.csv", stored_site.subdomain);
+    Ok((
+        [
+            (header::CONTENT_TYPE, "text/csv; charset=utf-8".to_owned()),
+            (
+                header::CONTENT_DISPOSITION,
+                format!("attachment; filename=\"{file_name}\""),
+            ),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_owned()),
+            (header::CACHE_CONTROL, "no-store".to_owned()),
+        ],
+        body,
+    )
+        .into_response())
 }
 
 #[derive(Deserialize)]

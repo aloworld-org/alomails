@@ -10,6 +10,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { strings } from "../i18n";
+import { saveTextFile } from "../platform/download";
 import { SitesModule } from "./SitesModule";
 import type { Site, SitePage } from "./types";
 
@@ -37,10 +38,18 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
   });
   const index = replies.findIndex((r) => r.match(url, method));
   const answer = index === -1 ? fallback(url) : (replies.splice(index, 1)[0] as Reply);
-  return new Response(JSON.stringify(answer.body), {
-    status: answer.status,
-    headers: { "content-type": "application/json" },
-  });
+  return new Response(
+    typeof answer.body === "string" ? answer.body : JSON.stringify(answer.body),
+    {
+      status: answer.status,
+      headers: {
+        "content-type":
+          typeof answer.body === "string"
+            ? "text/csv; charset=utf-8"
+            : "application/json",
+      },
+    },
+  );
 });
 
 /** The lists a screen loads before anything interesting happens. */
@@ -55,6 +64,10 @@ function fallback(url: string): Reply {
 
 vi.mock("../auth", () => ({
   useAuth: () => ({ authorizedFetch: fakeFetch }),
+}));
+
+vi.mock("../platform/download", () => ({
+  saveTextFile: vi.fn(),
 }));
 
 const ALPHA: Site = { id: "site-1", name: "Alpha Bakery", subdomain: "alpha", status: "live" };
@@ -82,6 +95,7 @@ beforeEach(() => {
   calls.length = 0;
   replies = [];
   fakeFetch.mockClear();
+  vi.mocked(saveTextFile).mockClear();
 });
 
 afterEach(cleanup);
@@ -182,6 +196,39 @@ describe("the contact submissions inbox", () => {
     ui("/sites/site-1/submissions");
     expect(await screen.findByText(strings.sitesNoSubmissionsTitle)).toBeTruthy();
     expect(screen.getByRole("button", { name: strings.sitesOpenPages })).toBeTruthy();
+  });
+
+  test("exports the visible inbox in one click", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/submissions"),
+        status: 200,
+        body: { submissions: [submission] },
+      },
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/submissions.csv"),
+        status: 200,
+        body: "receivedAt,form\r\n2026-08-08T09:30:00Z,Contact us\r\n",
+      },
+    ];
+
+    ui("/sites/site-1/submissions");
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesExportSubmissions }),
+    );
+
+    await waitFor(() => expect(saveTextFile).toHaveBeenCalledTimes(1));
+    expect(saveTextFile).toHaveBeenCalledWith(
+      expect.stringContaining("Contact us"),
+      "submissions-alpha.csv",
+      "text/csv;charset=utf-8",
+    );
   });
 });
 

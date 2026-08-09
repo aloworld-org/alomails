@@ -240,6 +240,10 @@ pub fn app(state: AppState) -> Router {
         .route("/sites/{id}/unpublish", post(sites::unpublish_site))
         .route("/sites/{id}/submissions", get(sites::list_submissions))
         .route(
+            "/sites/{id}/submissions.csv",
+            get(sites::export_submissions),
+        )
+        .route(
             "/sites/{id}/forms/{form}/submissions/{submission}",
             put(sites::set_submission_handled),
         )
