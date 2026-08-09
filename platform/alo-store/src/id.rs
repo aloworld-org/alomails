@@ -402,6 +402,13 @@ opaque_id!(
     /// it, and it is what created the payment and moved the books.
     BankMatchId
 );
+opaque_id!(
+    /// One rule a tenant taught the reconciliation screen — "money from this
+    /// counterparty is that customer's" (alo Finance, ADR 0035, wave B4.09b). A
+    /// rule only ever ranks a suggestion higher; confirming is still a person's
+    /// act.
+    FinMatchRuleId
+);
 
 #[cfg(test)]
 mod tests {

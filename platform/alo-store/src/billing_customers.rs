@@ -18,6 +18,8 @@
 //! contact that isn't the tenant's is a [`StoreError::NotFound`], the same
 //! answer as a contact that does not exist at all.
 
+use std::collections::HashMap;
+
 use time::OffsetDateTime;
 
 use crate::account::AccountStore;
@@ -359,6 +361,37 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         Ok(rows.into_iter().map(CustomerRow::into_customer).collect())
+    }
+
+    /// The names of the tenant's customers named by `ids`, keyed by id.
+    ///
+    /// The name and nothing else, in one statement rather than one read per
+    /// customer: the reconciliation suggestions ([`crate::bank_suggest`]) need a
+    /// name per open document and would otherwise either read every customer the
+    /// tenant has or read one per invoice. An id that is not this tenant's is
+    /// simply absent from the answer, exactly as it is from every other read on
+    /// this door.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn billing_customer_names(
+        &self,
+        ids: &[BillingCustomerId],
+    ) -> Result<HashMap<String, String>> {
+        if ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let wanted: Vec<String> = ids.iter().map(|id| id.as_str().to_owned()).collect();
+        let rows: Vec<(String, String)> = sqlx::query_as(
+            "SELECT id, name FROM billing_customers \
+             WHERE tenant_id = $1 AND id = ANY($2::text[])",
+        )
+        .bind(self.tenant.as_str())
+        .bind(&wanted)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(rows.into_iter().collect())
     }
 
     /// One customer of the tenant, or `None` — including when the id belongs

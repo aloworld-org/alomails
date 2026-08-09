@@ -15,9 +15,11 @@ pub mod bank_camt;
 pub mod bank_csv;
 pub mod bank_import;
 pub mod bank_match;
+pub mod bank_match_heuristic;
 pub mod bank_mt940;
 pub mod bank_read;
 pub mod bank_reconcile;
+pub mod bank_suggest;
 pub mod base;
 pub mod billing_bills;
 pub mod billing_cadence;
@@ -76,6 +78,7 @@ pub mod fin_categories;
 pub mod fin_expenses;
 pub mod fin_journal;
 pub mod fin_ledger;
+pub mod fin_match_rules;
 pub mod fin_mileage;
 pub mod fin_receipt;
 pub mod fin_receipt_read;
@@ -145,16 +148,18 @@ pub use bank_import::{
 };
 pub use bank_match::{
     EXACT_WINDOW_DAYS, ExactMatch, MatchCandidate, NUMBERS_PER_REMITTANCE_MAX, document_numbers,
-    ensure_exact_match, exact_match,
+    ensure_exact_match, ensure_matchable, exact_match,
+};
+pub use bank_match_heuristic::{
+    Candidate as HeuristicCandidate, LIKELY_MATCHES_MAX, LikelyMatch, MatchEvidence,
+    NAME_SIMILAR_MIN_BP, SCORE_MIN, likely_matches, name_similarity_bp,
 };
 pub use bank_mt940::parse_mt940;
 pub use bank_read::{
     BankFileImport, BankFileReading, BankImportRequest, read_bank_file, sniff_bank_source,
 };
-pub use bank_reconcile::{
-    BANK_MATCH_METHOD, BankMatch, BankMatchTarget, BankSuggestions, ConfirmedMatch,
-    LineSuggestions, SUGGESTION_NUMBERS_MAX,
-};
+pub use bank_reconcile::{BANK_MATCH_METHOD, BankMatch, BankMatchTarget, ConfirmedMatch};
+pub use bank_suggest::{BankSuggestions, LineSuggestions, OPEN_LEDGER_MAX, SUGGESTION_NUMBERS_MAX};
 pub use base::{Base, BaseField, BaseRecord, BaseTable, BaseView};
 pub use billing_bills::{Bill, BillDocument, BillStatus, BillTotals, NewBill, Supplier};
 pub use billing_cadence::{Cadence, next_occurrence};
@@ -231,6 +236,9 @@ pub use fin_ledger::{
     AccountBalance, AccountLedger, DimensionBalance, DimensionBalances, LEDGER_GROUPS_MAX,
     LEDGER_PAGE_MAX, LedgerDimension, LedgerLine, LedgerScope, TrialBalance,
 };
+pub use fin_match_rules::{
+    MatchOn, MatchRule, NewMatchRule, RULE_PATTERN_MAX, RULE_PATTERN_MIN, RULES_MAX,
+};
 pub use fin_mileage::{
     KM_MAX_MILLI, KM_MIN_MILLI, MILEAGE_REASON_MAX, Mileage, MileageClaim, MileageRate, NewMileage,
     NewMileageRate, PLACE_MAX, RATE_MAX_CENTS_PER_KM, RATE_MIN_CENTS_PER_KM, RATE_NOTE_MAX,
@@ -251,9 +259,9 @@ pub use id::{
     BillingPaymentId, BillingProductId, BillingQuoteId, BillingScheduleId, BlobId, CalendarId,
     CategoryId, ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, CommentId, ContactId,
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
-    FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMileageId, FinMileageRateId,
-    FinPostingId, GroupId, InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId,
-    ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId,
+    FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
+    FinMileageRateId, FinPostingId, GroupId, InsightDashboardId, InsightTileId, LabelId, MailboxId,
+    MessageId, ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId,
     SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId,
     TimeWeekId, UserId,
 };

@@ -31,9 +31,9 @@
 //!
 //! - **Partial payments.** A customer quoting our number and paying half of it
 //!   is a real and common event, and it is not *exact*: the amount does not
-//!   equal what is owed. It belongs to the heuristic stage (B4.09b), which
-//!   ranks with evidence, and to the manual one (B4.09c), where a person states
-//!   the amount.
+//!   equal what is owed. It belongs to the heuristic stage
+//!   ([`crate::bank_match_heuristic`]), which ranks with evidence, and to the
+//!   manual one (B4.09c), where a person states the amount.
 //! - **Credit notes.** They share the invoice series, so a credit note's number
 //!   can appear in a remittance, but money moving against one is a *refund* —
 //!   an event in the other direction that [`crate::billing_payments`] refuses
@@ -204,6 +204,52 @@ pub fn exact_match(line: &BankLine, candidate: &MatchCandidate) -> Option<ExactM
 /// screen and written to a log, and a bank line is the tenant's own money
 /// moving (Law 1).
 pub fn ensure_exact_match(line: &BankLine, candidate: &MatchCandidate) -> Result<ExactMatch> {
+    let days_after_issue = ensure_matchable(line, candidate)?;
+
+    let quoted = document_numbers(&line.remittance, INVOICE_NUMBER_PREFIX);
+    if !quoted
+        .iter()
+        .any(|number| same_number(number, &candidate.number))
+    {
+        return Err(StoreError::Validation(
+            "this bank line does not quote that invoice's number, so the exact stage cannot \
+             confirm it; match it by hand instead"
+                .to_owned(),
+        ));
+    }
+    if line.amount_cents != candidate.outstanding_cents {
+        return Err(StoreError::Validation(
+            "this bank line does not move exactly what that invoice still owes; the exact stage \
+             confirms whole settlements only"
+                .to_owned(),
+        ));
+    }
+
+    Ok(ExactMatch {
+        invoice_id: candidate.invoice_id.clone(),
+        number: candidate.number.clone(),
+        amount_cents: line.amount_cents,
+        days_after_issue,
+    })
+}
+
+/// Everything both matching stages demand before either looks at *which*
+/// document a line names: that the line is still open, that the document can
+/// take money at all, that the money moves the right way in the right currency,
+/// and that the bank booked it inside the window after the issue date. Answers
+/// how many days after that date it was booked.
+///
+/// It is separate from [`ensure_exact_match`] because the heuristic stage
+/// ([`crate::bank_match_heuristic`]) has exactly the same preconditions and a
+/// different way of identifying the document. Two copies of "a credit note takes
+/// no payment" would eventually disagree, and the one that disagreed would be
+/// the one that booked money against a credit note.
+///
+/// # Errors
+/// [`StoreError::Conflict`] when the line or the document is in no state to be
+/// matched at all; [`StoreError::Validation`] when the money moves the wrong
+/// way, the currencies differ, or the dates cannot be reconciled.
+pub fn ensure_matchable(line: &BankLine, candidate: &MatchCandidate) -> Result<i64> {
     match line.status {
         BankLineStatus::Unmatched => {}
         BankLineStatus::Matched => {
@@ -263,27 +309,9 @@ pub fn ensure_exact_match(line: &BankLine, candidate: &MatchCandidate) -> Result
                 .to_owned(),
         ));
     }
-    let quoted = document_numbers(&line.remittance, INVOICE_NUMBER_PREFIX);
-    if !quoted
-        .iter()
-        .any(|number| same_number(number, &candidate.number))
-    {
-        return Err(StoreError::Validation(
-            "this bank line does not quote that invoice's number, so the exact stage cannot \
-             confirm it; match it by hand instead"
-                .to_owned(),
-        ));
-    }
     if line.currency != candidate.currency {
         return Err(StoreError::Validation(
             "this bank line is in a different currency from that invoice".to_owned(),
-        ));
-    }
-    if line.amount_cents != candidate.outstanding_cents {
-        return Err(StoreError::Validation(
-            "this bank line does not move exactly what that invoice still owes; the exact stage \
-             confirms whole settlements only"
-                .to_owned(),
         ));
     }
 
@@ -301,13 +329,7 @@ pub fn ensure_exact_match(line: &BankLine, candidate: &MatchCandidate) -> Result
              was issued; match it by hand if it really is its payment"
         )));
     }
-
-    Ok(ExactMatch {
-        invoice_id: candidate.invoice_id.clone(),
-        number: candidate.number.clone(),
-        amount_cents: line.amount_cents,
-        days_after_issue,
-    })
+    Ok(days_after_issue)
 }
 
 /// Whether two printed numbers are the same document's, ignoring case and

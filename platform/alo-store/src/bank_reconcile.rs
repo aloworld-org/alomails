@@ -2,9 +2,10 @@
 //! `docs/design/finance.md`, "The bank and reconciliation").
 //!
 //! [`crate::bank_import`] stages what the bank said happened and posts nothing.
-//! [`crate::bank_match`] says, arithmetically and without a database, which
-//! staged line looks like which document. **This file is the verb between
-//! them**, and it is the one that touches money:
+//! [`crate::bank_match`] and [`crate::bank_match_heuristic`] say, arithmetically
+//! and without a database, which staged line looks like which document, and
+//! [`crate::bank_suggest`] folds those rules over a tenant's ledger. **This file
+//! is the verb between them**, and it is the one that touches money:
 //!
 //! 1. a person picks a line and the document it settles;
 //! 2. the exact rule is re-run on the server, against the line and the document
@@ -44,23 +45,22 @@
 //!
 //! **Unmatching** (`POST .../unmatch`, B4.09c) — deleting the payment and
 //! *reversing* its entry. **Ignoring** a line as not ours to book, and the
-//! manual pick that does not have to be exact: both B4.09c. **Rules learned
-//! from a confirmation** (`fin_match_rules`), which is B4.09b — hence the
-//! `rule_id` column that is always `NULL` here. And **no HTTP route and no
-//! screen**: B4.13b is the reconciliation screen and it calls this.
+//! manual pick that does not have to be exact: both B4.09c, and it is the manual
+//! pick that will confirm a *heuristic* suggestion, record the
+//! [`crate::fin_match_rules`] rule that proposed it in `rule_id` and count its
+//! hit. This door confirms exact matches only, which need no rule: the payer
+//! quoted our own number. And **no HTTP route and no screen**: B4.13b is the
+//! reconciliation screen and it calls this.
 
 use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::bank_import::{BankLine, BankLineStatus};
-use crate::bank_match::{
-    ExactMatch, MatchCandidate, document_numbers, ensure_exact_match, exact_match,
-};
+use crate::bank_match::{MatchCandidate, ensure_exact_match};
 use crate::billing_invoices::{Invoice, InvoiceStatus};
 use crate::billing_payments::{
     NewPayment, PAYMENT_REFERENCE_MAX_CHARS, Settlement, payment_in_sequence,
 };
-use crate::billing_sequence::INVOICE_NUMBER_PREFIX;
 use crate::error::{Result, StoreError};
 use crate::fin_accounts::AccountRole;
 use crate::fin_journal::{EntrySource, SourceEvent, SourceKind};
@@ -68,10 +68,7 @@ use crate::fin_rules::{
     InvoiceAccounts, PaymentAccounts, invoice_issue_entry, payment_settle_entry,
     payment_settlement_role, settlement_needs_exchange_account,
 };
-use crate::id::{
-    BankLineId, BankMatchId, BankStatementId, BillingInvoiceId, BillingPaymentId, FinEntryId,
-    UserId,
-};
+use crate::id::{BankLineId, BankMatchId, BillingInvoiceId, BillingPaymentId, FinEntryId, UserId};
 
 /// The method a confirmed bank match records its payment as.
 ///
@@ -83,15 +80,6 @@ use crate::id::{
 /// French translates the token it reads, exactly as it does for any other
 /// method a colleague typed.
 pub const BANK_MATCH_METHOD: &str = "bank transfer";
-
-/// The most distinct document numbers one suggestion read will look up.
-///
-/// A statement can stage five thousand lines and each may quote several
-/// numbers; the cap keeps that from becoming one enormous query. It is never
-/// silent: [`BankSuggestions::numbers_capped`] says when it bit, so a screen can
-/// tell a bookkeeper to work a statement at a time rather than quietly showing
-/// them a shorter list of suggestions than exists.
-pub const SUGGESTION_NUMBERS_MAX: usize = 1_000;
 
 /// The columns every read of a match selects, in [`MatchRow`] order.
 const MATCH_COLS: &str = "id, line_id, target_kind, target_id, amount_cents, payment_id, \
@@ -176,94 +164,7 @@ pub struct ConfirmedMatch {
     pub invoice_booked_now: bool,
 }
 
-/// One staged line and the documents the exact stage thinks it settles.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LineSuggestions {
-    /// The line, as staged.
-    pub line: BankLine,
-    /// Every exact match found for it, in the order the documents were read.
-    /// Usually one; empty for most lines; more than one when a payer quoted
-    /// two documents that owe the same amount, which is a question for a person
-    /// and not something to resolve by picking the first.
-    pub exact: Vec<ExactMatch>,
-}
-
-/// The suggestions for a set of staged lines.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BankSuggestions {
-    /// The unmatched lines, oldest first, each with its exact matches.
-    pub lines: Vec<LineSuggestions>,
-    /// Whether more distinct document numbers were quoted than
-    /// [`SUGGESTION_NUMBERS_MAX`] allows to be looked up — in which case some
-    /// lines late in the list may show no suggestion that a narrower read would
-    /// have found. Never silent, so a screen can say so.
-    pub numbers_capped: bool,
-}
-
 impl AccountStore {
-    /// The exact-stage suggestions for this tenant's unmatched lines,
-    /// optionally narrowed to one import.
-    ///
-    /// Three reads whatever the size of the statement: the lines, the documents
-    /// whose numbers those lines quote, and their payments — then the pure rule
-    /// per (line, document) pair. Nothing here writes, nothing here posts, and
-    /// a suggestion is worth exactly as much as the person who looks at it
-    /// (ADR 0023).
-    ///
-    /// # Errors
-    /// [`StoreError::Db`] on failure.
-    pub async fn bank_match_suggestions(
-        &self,
-        statement: Option<&BankStatementId>,
-    ) -> Result<BankSuggestions> {
-        let lines = self
-            .bank_lines(statement, Some(BankLineStatus::Unmatched))
-            .await?;
-
-        let mut numbers: Vec<String> = Vec::new();
-        let mut numbers_capped = false;
-        for line in &lines {
-            for number in document_numbers(&line.remittance, INVOICE_NUMBER_PREFIX) {
-                if numbers.contains(&number) {
-                    continue;
-                }
-                if numbers.len() >= SUGGESTION_NUMBERS_MAX {
-                    numbers_capped = true;
-                    break;
-                }
-                numbers.push(number);
-            }
-        }
-
-        let candidates: Vec<MatchCandidate> = self
-            .billing_invoices_by_numbers(&numbers)
-            .await?
-            .iter()
-            .map(|summary| {
-                candidate(
-                    &summary.invoice,
-                    summary.totals.gross_cents,
-                    summary.paid_cents,
-                )
-            })
-            .collect();
-
-        let lines = lines
-            .into_iter()
-            .map(|line| {
-                let exact = candidates
-                    .iter()
-                    .filter_map(|candidate| exact_match(&line, candidate))
-                    .collect();
-                LineSuggestions { line, exact }
-            })
-            .collect();
-        Ok(BankSuggestions {
-            lines,
-            numbers_capped,
-        })
-    }
-
     /// **Confirms** that a staged line is the settlement of one of this
     /// tenant's invoices: records the payment, moves the books, and marks the
     /// line matched — in one transaction.
@@ -306,7 +207,7 @@ impl AccountStore {
         // same words the second one would use.
         ensure_exact_match(
             &line,
-            &candidate(
+            &match_candidate(
                 &document.invoice,
                 document.totals.gross_cents,
                 document.paid_cents,
@@ -383,7 +284,7 @@ impl AccountStore {
         // still owed.
         let mut locked_line = line.clone();
         locked_line.status = locked_status;
-        let mut locked_candidate = candidate(
+        let mut locked_candidate = match_candidate(
             &document.invoice,
             document.totals.gross_cents,
             locked_paid.unwrap_or(0),
@@ -514,7 +415,15 @@ impl AccountStore {
 }
 
 /// The candidate a document makes: what the exact rule needs, and nothing else.
-fn candidate(invoice: &Invoice, gross_cents: i64, paid_cents: i64) -> MatchCandidate {
+///
+/// Shared with the suggestion read ([`crate::bank_suggest`]) so that the rule
+/// re-run under the row locks is fed by exactly the same projection the screen
+/// was.
+pub(crate) fn match_candidate(
+    invoice: &Invoice,
+    gross_cents: i64,
+    paid_cents: i64,
+) -> MatchCandidate {
     MatchCandidate {
         invoice_id: invoice.id.clone(),
         number: invoice.number.clone().unwrap_or_default(),
