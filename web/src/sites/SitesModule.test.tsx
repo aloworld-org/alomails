@@ -5,7 +5,7 @@
 //
 // The auth layer is stubbed down to one recording `fetch`, so the REAL
 // client and the real views run — only the network is fake.
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -75,6 +75,7 @@ vi.mock("../platform/download", () => ({
 const fakeJmap = vi.hoisted(() => ({
   driveCreateDoc: vi.fn(),
   driveTrashNode: vi.fn(),
+  driveUploadBlob: vi.fn(),
 }));
 
 vi.mock("../jmap/useJmapClient", () => ({
@@ -130,6 +131,7 @@ beforeEach(() => {
   vi.mocked(saveTextFile).mockClear();
   fakeJmap.driveCreateDoc.mockReset();
   fakeJmap.driveTrashNode.mockReset();
+  fakeJmap.driveUploadBlob.mockReset();
   fakeJmap.driveTrashNode.mockResolvedValue(undefined);
 });
 
@@ -673,5 +675,183 @@ describe("blog authoring", () => {
     ).toBeTruthy();
     expect(fakeJmap.driveTrashNode).toHaveBeenCalledWith("doc-9");
     expect(screen.getByTestId("location").textContent).toBe("/sites/site-1/posts");
+  });
+
+  test("publishes a draft with its public details and uploaded cover", async () => {
+    fakeJmap.driveUploadBlob.mockResolvedValueOnce({
+      id: "cover-node",
+      blobId: "cover-blob",
+      size: 4,
+    });
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        status: 200,
+        body: { posts: [ARTICLE] },
+      },
+      {
+        match: (url, method) => method === "PUT" && url.endsWith("/sites/site-1/posts/post-1"),
+        status: 200,
+        body: { status: "ok" },
+      },
+      {
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/posts/post-1/publish"),
+        status: 200,
+        body: { status: "ok" },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        status: 200,
+        body: {
+          posts: [
+            {
+              ...ARTICLE,
+              title: "Summer at Alpha",
+              slug: "summer-at-alpha",
+              excerpt: "The season's newest bakes.",
+              coverBlobId: "cover-blob",
+              status: "published",
+              publishedAt: "2026-08-09T10:00:00Z",
+            },
+          ],
+        },
+      },
+    ];
+
+    ui("/sites/site-1/posts");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesPublishArticle }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(strings.sitesFieldPostTitle), {
+      target: { value: "Summer at Alpha" },
+    });
+    fireEvent.change(within(dialog).getByLabelText(strings.sitesFieldPostSlug), {
+      target: { value: "summer-at-alpha" },
+    });
+    fireEvent.change(within(dialog).getByLabelText(strings.sitesFieldPostExcerpt), {
+      target: { value: "The season's newest bakes." },
+    });
+    const cover = dialog.querySelector('input[type="file"]') as HTMLInputElement;
+    const file = new File(["hero"], "summer.png", { type: "image/png" });
+    fireEvent.change(cover, { target: { files: [file] } });
+    expect(await within(dialog).findByText(strings.sitesPostCoverAdded)).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole("button", { name: strings.sitesPublishArticle }));
+
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (call) => call.method === "POST" && call.url.endsWith("/posts/post-1/publish"),
+        ),
+      ).toBe(true),
+    );
+    expect(fakeJmap.driveUploadBlob).toHaveBeenCalledWith(null, null, file);
+    expect(
+      calls.find(
+        (call) => call.method === "PUT" && call.url.endsWith("/sites/site-1/posts/post-1"),
+      ),
+    ).toMatchObject({
+      body: {
+        title: "Summer at Alpha",
+        slug: "summer-at-alpha",
+        excerpt: "The season's newest bakes.",
+        coverBlobId: "cover-blob",
+      },
+    });
+    expect(await screen.findByText(strings.sitesPostStatusPublished)).toBeTruthy();
+  });
+
+  test("keeps a refused publish open with the server's reason", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        status: 200,
+        body: { posts: [ARTICLE] },
+      },
+      {
+        match: (url, method) => method === "PUT" && url.endsWith("/sites/site-1/posts/post-1"),
+        status: 200,
+        body: { status: "ok" },
+      },
+      {
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/posts/post-1/publish"),
+        status: 422,
+        body: { detail: "the article document is empty" },
+      },
+    ];
+
+    ui("/sites/site-1/posts");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesPublishArticle }));
+    const dialog = screen.getByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText(strings.sitesFieldPostSlug), {
+      target: { value: "summer-menu" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: strings.sitesPublishArticle }));
+
+    expect(await within(dialog).findByText("the article document is empty")).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  test("takes a published article offline in one click", async () => {
+    const published = {
+      ...ARTICLE,
+      status: "published" as const,
+      publishedAt: "2026-08-09T10:00:00Z",
+    };
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        status: 200,
+        body: { posts: [published] },
+      },
+      {
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/sites/site-1/posts/post-1/unpublish"),
+        status: 200,
+        body: { status: "ok" },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/posts"),
+        status: 200,
+        body: { posts: [ARTICLE] },
+      },
+    ];
+
+    ui("/sites/site-1/posts");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesUnpublishArticle }));
+
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (call) => call.method === "POST" && call.url.endsWith("/posts/post-1/unpublish"),
+        ),
+      ).toBe(true),
+    );
+    expect(await screen.findByText(strings.sitesPostStatusDraft)).toBeTruthy();
   });
 });

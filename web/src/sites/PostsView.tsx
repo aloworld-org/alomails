@@ -3,7 +3,15 @@
 // source document and links it as one operation, while every existing row
 // offers its edit action directly on the surface.
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, ExternalLink, FilePenLine, Newspaper } from "lucide-react";
+import {
+  ArrowLeft,
+  ExternalLink,
+  FilePenLine,
+  Newspaper,
+  PencilLine,
+  Send,
+  Undo2,
+} from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { Button } from "../ds";
@@ -11,6 +19,7 @@ import { strings } from "../i18n";
 import { useJmapClient } from "../jmap/useJmapClient";
 import { sitesMessage, useSitesApi } from "./api";
 import { EmptyState, ErrorBanner } from "./parts";
+import { PostPublishDialog } from "./PostPublishDialog";
 import type { SiteDetail, SitePost } from "./types";
 import styles from "./SitesModule.module.css";
 
@@ -41,6 +50,8 @@ export function PostsView() {
   const [posts, setPosts] = useState<SitePost[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [editingPost, setEditingPost] = useState<SitePost | null>(null);
+  const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -91,6 +102,19 @@ export function PostsView() {
       }
       setError(sitesMessage(err, strings.sitesPostCreateFailed));
       setCreating(false);
+    }
+  }
+
+  async function unpublish(post: SitePost) {
+    setUnpublishingId(post.id);
+    setError(null);
+    try {
+      await api.unpublishPost(siteId, post.id);
+      await load();
+    } catch (err) {
+      setError(sitesMessage(err, strings.sitesPostUnpublishFailed));
+    } finally {
+      setUnpublishingId(null);
     }
   }
 
@@ -157,25 +181,74 @@ export function PostsView() {
                     )}
                   </td>
                   <td>
-                    {post.status === "published"
-                      ? strings.sitesPostStatusPublished
-                      : strings.sitesPostStatusDraft}
+                    <span
+                      className={
+                        post.status === "published"
+                          ? `${styles.chip} ${styles.chipLive}`
+                          : styles.chip
+                      }
+                    >
+                      {post.status === "published"
+                        ? strings.sitesPostStatusPublished
+                        : strings.sitesPostStatusDraft}
+                    </span>
                   </td>
                   <td className={styles.postDate}>{updated.format(new Date(post.updatedAt))}</td>
                   <td className={styles.postActionCell}>
-                    <Button
-                      variant="ghost"
-                      icon={<ExternalLink size="var(--icon-size-inline)" aria-hidden="true" />}
-                      onClick={() => edit(post)}
-                    >
-                      {strings.sitesEditInDocs}
-                    </Button>
+                    <div className={styles.postActions}>
+                      <Button
+                        variant="ghost"
+                        icon={<ExternalLink size="var(--icon-size-inline)" aria-hidden="true" />}
+                        onClick={() => edit(post)}
+                      >
+                        {strings.sitesEditInDocs}
+                      </Button>
+                      <Button
+                        variant={post.status === "draft" ? "primary" : "ghost"}
+                        icon={
+                          post.status === "draft" ? (
+                            <Send size="var(--icon-size-inline)" aria-hidden="true" />
+                          ) : (
+                            <PencilLine size="var(--icon-size-inline)" aria-hidden="true" />
+                          )
+                        }
+                        onClick={() => setEditingPost(post)}
+                      >
+                        {post.status === "draft"
+                          ? strings.sitesPublishArticle
+                          : strings.sitesEditArticleDetails}
+                      </Button>
+                      {post.status === "published" && (
+                        <Button
+                          variant="ghost"
+                          icon={<Undo2 size="var(--icon-size-inline)" aria-hidden="true" />}
+                          disabled={unpublishingId === post.id}
+                          onClick={() => void unpublish(post)}
+                        >
+                          {unpublishingId === post.id
+                            ? strings.sitesUnpublishingArticle
+                            : strings.sitesUnpublishArticle}
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {editingPost !== null && (
+        <PostPublishDialog
+          siteId={siteId}
+          post={editingPost}
+          onClose={() => setEditingPost(null)}
+          onSaved={() => {
+            setEditingPost(null);
+            void load();
+          }}
+        />
       )}
     </div>
   );

@@ -137,3 +137,11 @@ export interface PostDraft {
   excerpt: string;
   coverBlobId?: string | undefined;
 }
+
+/** The complete replace-body for a post's editable public metadata. */
+export interface PostUpdate {
+  slug: string;
+  title: string;
+  excerpt: string;
+  coverBlobId: string | null;
+}

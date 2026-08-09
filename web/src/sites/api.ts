@@ -22,6 +22,7 @@ import type { Section, SectionsEnvelope } from "./sections";
 import type {
   PageDraft,
   PostDraft,
+  PostUpdate,
   Site,
   SiteDetail,
   SiteDraft,
@@ -198,6 +199,33 @@ export class SitesApi {
     return this.#write<SitePost>("POST", `/sites/${encodeURIComponent(siteId)}/posts`, draft);
   }
 
+  /** Replaces the public title, path, excerpt, and optional cover. */
+  async updatePost(siteId: string, postId: string, update: PostUpdate): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "PUT",
+      this.#postPath(siteId, postId),
+      update,
+    );
+  }
+
+  /** Makes a draft post public. */
+  async publishPost(siteId: string, postId: string): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "POST",
+      `${this.#postPath(siteId, postId)}/publish`,
+      {},
+    );
+  }
+
+  /** Returns a public post to private draft state. */
+  async unpublishPost(siteId: string, postId: string): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "POST",
+      `${this.#postPath(siteId, postId)}/unpublish`,
+      {},
+    );
+  }
+
   /** One page with its sections envelope — the editor's load. */
   page(siteId: string, pageId: string): Promise<SitePageDetail> {
     return this.#read<SitePageDetail>(this.#pagePath(siteId, pageId));
@@ -259,6 +287,10 @@ export class SitesApi {
 
   #pagePath(siteId: string, pageId: string): string {
     return `/sites/${encodeURIComponent(siteId)}/pages/${encodeURIComponent(pageId)}`;
+  }
+
+  #postPath(siteId: string, postId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/posts/${encodeURIComponent(postId)}`;
   }
 
   /** Every section op answers `{"sections": <envelope>}` — unwraps it. */
