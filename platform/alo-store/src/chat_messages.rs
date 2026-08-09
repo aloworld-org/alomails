@@ -180,6 +180,32 @@ impl AccountStore {
         body: &str,
         thread_root_seq: Option<i64>,
     ) -> Result<ChatMessage> {
+        // A person posts as themselves, on nobody's behalf.
+        let author = self.user.as_str().to_owned();
+        self.insert_message(channel, &author, "user", None, body, thread_root_seq)
+            .await
+    }
+
+    /// The one place a message is written, for a person or an agent alike.
+    ///
+    /// `author_kind` and `on_behalf_of` are what separate them: an agent posts
+    /// under its own id and records the person whose reach produced the turn.
+    /// Sharing this body is the point — sequence allocation, the threading
+    /// rule and the archived-room refusal must not grow two implementations
+    /// that can drift apart.
+    ///
+    /// Membership is checked against **the caller**, never the author: an
+    /// agent posts because a member asked it to, and it is that member's
+    /// standing in the room that permits it.
+    pub(crate) async fn insert_message(
+        &self,
+        channel: &ChatChannelId,
+        author: &str,
+        author_kind: &str,
+        on_behalf_of: Option<&str>,
+        body: &str,
+        thread_root_seq: Option<i64>,
+    ) -> Result<ChatMessage> {
         validate_body(body)?;
         let room = self.channel(channel).await?;
         if self.channel_role(channel).await?.is_none() {
@@ -228,14 +254,17 @@ impl AccountStore {
         let id = ChatMessageId::generate();
         let row: MessageRow = sqlx::query_as(&format!(
             "INSERT INTO chat_messages \
-                 (tenant_id, channel_id, id, seq, author_id, body, thread_root_seq) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING {MESSAGE_COLUMNS}"
+                 (tenant_id, channel_id, id, seq, author_id, author_kind, \
+                  on_behalf_of, body, thread_root_seq) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING {MESSAGE_COLUMNS}"
         ))
         .bind(self.tenant.as_str())
         .bind(channel.as_str())
         .bind(id.as_str())
         .bind(seq)
-        .bind(self.user.as_str())
+        .bind(author)
+        .bind(author_kind)
+        .bind(on_behalf_of)
         .bind(body.trim())
         .bind(thread_root_seq)
         .fetch_one(&mut *tx)
@@ -247,9 +276,14 @@ impl AccountStore {
         // something here for me?" is later an index lookup and not a text
         // scan. After the commit: a message that was said is said, and a
         // mention that failed to record must not unsay it.
-        let _ = self
-            .record_mentions(channel, &message.id, message.seq, &message.body)
-            .await;
+        //
+        // Only for a person's words: an agent naming its asker is answering
+        // them, not summoning them, and must not badge them for it.
+        if author_kind == "user" {
+            let _ = self
+                .record_mentions(channel, &message.id, message.seq, &message.body)
+                .await;
+        }
         Ok(message)
     }
 

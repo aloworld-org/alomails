@@ -328,6 +328,18 @@ opaque_id!(
     ChatChannelId
 );
 opaque_id!(
+    /// One agent that can be named in a conversation (ADR 0034 §chat). It is
+    /// deliberately **not** a [`UserId`]: an agent has an identity to post
+    /// under and no authority of its own, so it must never be usable anywhere
+    /// a person is expected — mail, assignment, seats, Space membership.
+    ChatAgentId
+);
+opaque_id!(
+    /// One action an agent has proposed, waiting for a tap (ADR 0023, ADR
+    /// 0034). Addressed by this id when approved or turned down.
+    ChatProposalId
+);
+opaque_id!(
     /// One journal entry — everything one document event did to the books, in
     /// one transaction (alo Finance, ADR 0035, wave B4). An entry is written
     /// whole and never edited: a correction is another entry pointing back at

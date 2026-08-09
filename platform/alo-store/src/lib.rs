@@ -41,9 +41,11 @@ pub mod blob;
 pub mod calendar;
 pub mod changes;
 pub mod chat;
+pub mod chat_agents;
 pub mod chat_attachments;
 pub mod chat_mentions;
 pub mod chat_messages;
+pub mod chat_proposals;
 pub mod chat_reactions;
 pub mod contacts;
 pub mod control;
@@ -166,6 +168,7 @@ pub use blob::GarageConfig;
 pub use blob::{BlobStore, ShareStream};
 pub use changes::Changes;
 pub use chat::{ChannelKind, ChannelVisibility, ChatChannel, ChatMember, MemberRole};
+pub use chat_agents::{ChatAgent, ChatProposal, ProposalState};
 pub use chat_attachments::{ATTACHMENTS_MAX, ChatAttachment};
 pub use chat_mentions::parse_handles;
 pub use chat_messages::{
@@ -229,12 +232,12 @@ pub use id::{
     AttachmentId, BankLineId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId,
     BillingBillId, BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId,
     BillingProductId, BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId,
-    ChatChannelId, ChatMessageId, CommentId, ContactId, CrmActivityId, CrmDealId, CrmEventId,
-    CrmPipelineId, CrmStageId, DriveNodeId, EventId, FinAccountId, FinCategoryId, FinEntryId,
-    FinExpenseId, FinMileageId, FinMileageRateId, FinPostingId, GroupId, InsightDashboardId,
-    InsightTileId, LabelId, MailboxId, MessageId, ProjectId, ProjectMilestoneId, SiteFormId,
-    SiteFormSubmissionId, SiteId, SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId,
-    TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, CommentId, ContactId, CrmActivityId,
+    CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, FinAccountId,
+    FinCategoryId, FinEntryId, FinExpenseId, FinMileageId, FinMileageRateId, FinPostingId, GroupId,
+    InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId,
+    ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId,
+    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
