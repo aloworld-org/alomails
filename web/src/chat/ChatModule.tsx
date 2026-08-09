@@ -39,6 +39,7 @@ import { ChatError, chatMessage, useChatApi } from "./api";
 import type { DriveNodeDto } from "../jmap/types";
 import type {
   Attachment,
+  Channel,
   ChannelSummary,
   FeedMessage,
   Message,
@@ -459,6 +460,9 @@ export function ChatModule() {
   // Whether anything remains behind the oldest line held. Derived from the
   // last page's size rather than a count, because a count would be a second
   // truth about the same thing.
+  // The live public channels not yet joined. Loaded on demand: it is a
+  // browsing act, not something every sidebar draw should pay for.
+  const [browsing, setBrowsing] = useState<Channel[] | null>(null);
   const [moreBehind, setMoreBehind] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [finding, setFinding] = useState("");
@@ -681,6 +685,30 @@ export function ChatModule() {
    *  feel broken. The height is measured before and after, and the difference
    *  is added back to the scroll position.
    */
+  async function browse() {
+    setError(null);
+    try {
+      setBrowsing(await api.joinable());
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatBrowseFailed));
+      setBrowsing([]);
+    }
+  }
+
+  async function joinRoom(channel: Channel) {
+    setError(null);
+    try {
+      await api.join(channel.id);
+      await loadChannels();
+      setBrowsing(null);
+      // Open what was just joined: joining in order to then hunt for it in the
+      // list would be a step the person did not ask for.
+      setOpenId(channel.id);
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatJoinFailed));
+    }
+  }
+
   async function loadOlder() {
     const feed = feedRef.current;
     const oldest = messages?.[0]?.seq;
@@ -822,6 +850,14 @@ export function ChatModule() {
             <MessageSquarePlus size={15} />
             {strings.chatNewChannel}
           </Button>
+          <button
+            type="button"
+            className={styles.browseButton}
+            onClick={() => void browse()}
+            title={strings.chatBrowse}
+          >
+            <Hash size={15} />
+          </button>
         </header>
         <div className={styles.searchRow}>
           <Search size={14} className={styles.channelIcon} />
@@ -845,7 +881,42 @@ export function ChatModule() {
           )}
         </div>
 
-        {found !== null ? (
+        {browsing !== null ? (
+          <div className={styles.browsePane}>
+            <div className={styles.browseHead}>
+              <span className={styles.browseTitle}>{strings.chatBrowse}</span>
+              <button
+                type="button"
+                className={styles.searchClear}
+                onClick={() => setBrowsing(null)}
+                aria-label={strings.chatClose}
+              >
+                <X size={14} />
+              </button>
+            </div>
+            {browsing.length === 0 ? (
+              <p className={styles.sidebarNote}>{strings.chatNothingToJoin}</p>
+            ) : (
+              <ul className={styles.channelList}>
+                {browsing.map((room) => (
+                  <li key={room.id}>
+                    <button
+                      type="button"
+                      className={styles.channel}
+                      onClick={() => void joinRoom(room)}
+                    >
+                      <Hash size={15} className={styles.channelIcon} />
+                      <span className={styles.channelName}>{room.name}</span>
+                      <span className={styles.joinHint}>
+                        {strings.chatJoin}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : found !== null ? (
           found.length === 0 ? (
             <p className={styles.sidebarNote}>{strings.chatSearchNothing}</p>
           ) : (

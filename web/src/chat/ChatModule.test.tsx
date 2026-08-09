@@ -478,3 +478,29 @@ test("showing earlier messages asks for what is behind the oldest held", async (
     expect(calls.some((c) => c.url.includes("before=1"))).toBe(true);
   });
 });
+
+test("browsing lists open channels and joining opens the one chosen", async () => {
+  answers = [
+    { match: "/chat/reactions", body: { emoji: ["👍"] } },
+    {
+      match: "/chat/channels/joinable",
+      body: { channels: [{ ...ROOM, id: "room-open", name: "open-room" }] },
+    },
+    { match: "/messages", body: { messages: [] } },
+    { match: "/chat/channels", body: { channels: [ROOM] } },
+  ];
+  render(<ChatModule />);
+
+  fireEvent.click(await screen.findByTitle(strings.chatBrowse));
+  fireEvent.click(await screen.findByText("open-room"));
+
+  await waitFor(() => {
+    expect(
+      calls.some(
+        (c) =>
+          c.url.includes("/chat/channels/room-open/join") &&
+          c.method === "POST",
+      ),
+    ).toBe(true);
+  });
+});
