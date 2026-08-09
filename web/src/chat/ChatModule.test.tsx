@@ -374,3 +374,68 @@ test("an agent can be put into a room from the UI", async () => {
     expect(call?.body).toEqual({ agent: "agent-alo" });
   });
 });
+
+test("only my own standing words offer Edit and Withdraw", async () => {
+  withMessages([
+    message({ id: "m-mine", seq: 1, author: ME, body: "my words" }),
+    message({
+      id: "m-theirs",
+      seq: 2,
+      author: THEM,
+      authorEmail: "ben@alo.test",
+      body: "their words",
+    }),
+    message({
+      id: "m-agent",
+      seq: 3,
+      author: "agent-alo",
+      authorKind: "agent",
+      authorEmail: "alo",
+      onBehalfOf: ME,
+      body: "what the agent said",
+    }),
+    message({
+      id: "m-gone",
+      seq: 4,
+      author: ME,
+      body: "",
+      deletedAt: "2026-08-09T10:00:00Z",
+    }),
+  ]);
+  render(<ChatModule />);
+  await screen.findByText("my words");
+
+  // One Edit and one Withdraw in the whole feed: mine, still standing.
+  // Not someone else's (the server refuses), not the agent's (its message is
+  // a record of what it said, not a draft), not an already-withdrawn one.
+  expect(screen.getAllByText(strings.chatEditAction)).toHaveLength(1);
+  expect(screen.getAllByText(strings.chatWithdrawAction)).toHaveLength(1);
+});
+
+test("editing sends the new words, and an unchanged edit sends nothing", async () => {
+  withMessages([
+    message({ id: "m-mine", seq: 1, author: ME, body: "teh plan" }),
+  ]);
+  render(<ChatModule />);
+  await screen.findByText("teh plan");
+
+  fireEvent.click(screen.getByText(strings.chatEditAction));
+  const box = screen.getByLabelText(strings.chatEditLabel);
+
+  // Saving it untouched must not stamp "edited" on words nobody changed.
+  fireEvent.submit(box);
+  await waitFor(() => {
+    expect(calls.some((c) => c.method === "PATCH")).toBe(false);
+  });
+
+  fireEvent.click(screen.getByText(strings.chatEditAction));
+  const again = screen.getByLabelText(strings.chatEditLabel);
+  fireEvent.change(again, { target: { value: "the plan" } });
+  fireEvent.submit(again);
+
+  await waitFor(() => {
+    const patch = calls.find((c) => c.method === "PATCH");
+    expect(patch?.url).toContain("/chat/messages/m-mine");
+    expect(patch?.body).toEqual({ body: "the plan" });
+  });
+});

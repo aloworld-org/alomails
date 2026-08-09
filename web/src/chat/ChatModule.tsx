@@ -183,6 +183,8 @@ function MessageLine({
   onReact,
   onOpenFile,
   onDecide,
+  onEdit,
+  onWithdraw,
   children,
 }: {
   message: Message;
@@ -197,10 +199,22 @@ function MessageLine({
   /** Decide the proposal on this message. Only ever reachable for the asker;
    *  everyone else sees the card without buttons. */
   onDecide: (proposal: Proposal, approve: boolean) => void;
+  /** Rewrite these words. Offered only on one's own, because the server
+   *  refuses anyone else's and an offer that ends in 403 is a lie. */
+  onEdit: (message: Message, body: string) => void;
+  onWithdraw: (message: Message) => void;
   children?: ReactNode;
 }) {
   const namesMe = me !== null && message.mentions.includes(me);
   const [picking, setPicking] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
+  // Mine to change: my own words, still standing, and never an agent's — an
+  // agent's message is a record of what it said, not a draft.
+  const mine =
+    me !== null &&
+    message.authorKind === "user" &&
+    message.author === me &&
+    message.deletedAt === null;
   const isAgent = message.authorKind === "agent";
   // An agent's name is already a name; a person's address needs its local part.
   const who = isAgent
@@ -240,13 +254,68 @@ function MessageLine({
           <span className={styles.edited}>{strings.chatEdited}</span>
         )}
       </div>
-      <p
-        className={message.deletedAt === null ? styles.body : styles.withdrawn}
-      >
-        {message.deletedAt === null
-          ? withHandlesMarked(message.body)
-          : strings.chatWithdrawn}
-      </p>
+      {editing !== null ? (
+        <form
+          className={styles.editRow}
+          onSubmit={(event) => {
+            event.preventDefault();
+            const next = editing.trim();
+            setEditing(null);
+            // An unchanged edit is not an edit; sending it would stamp
+            // "edited" on words nobody touched.
+            if (next !== "" && next !== message.body) onEdit(message, next);
+          }}
+        >
+          <input
+            className={styles.editInput}
+            value={editing}
+            onChange={(event) => setEditing(event.target.value)}
+            aria-label={strings.chatEditLabel}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.preventDefault();
+                setEditing(null);
+              }
+            }}
+            autoFocus
+          />
+          <Button type="submit" size="sm" variant="primary">
+            {strings.chatEditSave}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(null)}>
+            {strings.chatEditCancel}
+          </Button>
+        </form>
+      ) : (
+        <p
+          className={
+            message.deletedAt === null ? styles.body : styles.withdrawn
+          }
+        >
+          {message.deletedAt === null
+            ? withHandlesMarked(message.body)
+            : strings.chatWithdrawn}
+        </p>
+      )}
+
+      {mine && editing === null && (
+        <span className={styles.ownControls}>
+          <button
+            type="button"
+            className={styles.ownAction}
+            onClick={() => setEditing(message.body)}
+          >
+            {strings.chatEditAction}
+          </button>
+          <button
+            type="button"
+            className={styles.ownAction}
+            onClick={() => onWithdraw(message)}
+          >
+            {strings.chatWithdrawAction}
+          </button>
+        </span>
+      )}
 
       {message.proposal !== null && (
         <div className={styles.proposal}>
@@ -590,6 +659,30 @@ export function ChatModule() {
     }
   }
 
+  async function editMessage(message: Message, body: string) {
+    setError(null);
+    try {
+      await api.editMessage(message.id, body);
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatEditFailed));
+    }
+    if (openId !== null) void loadMessages(openId);
+    if (openId !== null && threadSeq !== null)
+      void loadReplies(openId, threadSeq);
+  }
+
+  async function withdrawMessage(message: Message) {
+    setError(null);
+    try {
+      await api.withdrawMessage(message.id);
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatWithdrawFailed));
+    }
+    if (openId !== null) void loadMessages(openId);
+    if (openId !== null && threadSeq !== null)
+      void loadReplies(openId, threadSeq);
+  }
+
   async function decide(proposal: Proposal, approve: boolean) {
     setError(null);
     try {
@@ -844,6 +937,8 @@ export function ChatModule() {
                     onReact={(emoji) => void react(message.id, emoji)}
                     onOpenFile={(file) => void openFile(file)}
                     onDecide={(p, ok) => void decide(p, ok)}
+                    onEdit={(m, body) => void editMessage(m, body)}
+                    onWithdraw={(m) => void withdrawMessage(m)}
                   >
                     {message.replyCount > 0 ? (
                       <button
@@ -1076,6 +1171,8 @@ export function ChatModule() {
               onReact={(emoji) => void react(threadRoot.id, emoji)}
               onOpenFile={(file) => void openFile(file)}
               onDecide={(p, ok) => void decide(p, ok)}
+              onEdit={(m, body) => void editMessage(m, body)}
+              onWithdraw={(m) => void withdrawMessage(m)}
             />
             <hr className={styles.threadRule} />
             {replies === null ? (
@@ -1095,6 +1192,8 @@ export function ChatModule() {
                   onReact={(emoji) => void react(reply.id, emoji)}
                   onOpenFile={(file) => void openFile(file)}
                   onDecide={(p, ok) => void decide(p, ok)}
+                  onEdit={(m, body) => void editMessage(m, body)}
+                  onWithdraw={(m) => void withdrawMessage(m)}
                 />
               ))
             )}

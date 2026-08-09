@@ -169,6 +169,24 @@ export class ChatApi {
     return body.messages;
   }
 
+  /** Rewrite one's own message. The sequence is untouched, so nobody's read
+   *  state moves and the room's order is unchanged. */
+  async editMessage(messageId: string, body: string): Promise<Message> {
+    return this.#write<Message>(
+      "PATCH",
+      `/chat/messages/${encodeURIComponent(messageId)}`,
+      { body },
+    );
+  }
+
+  /** Withdraw one's own message. The words go; the position stays as a
+   *  tombstone, so the room's numbering never gains a hole. */
+  async withdrawMessage(messageId: string): Promise<void> {
+    await this.#send(`/chat/messages/${encodeURIComponent(messageId)}`, {
+      method: "DELETE",
+    }).then(ChatApi.#rejectFailed);
+  }
+
   /** Take an agent out of a room. Its past messages stay — a room's history
    *  does not change because somebody left it. */
   async removeAgent(id: string, agent: string): Promise<void> {
