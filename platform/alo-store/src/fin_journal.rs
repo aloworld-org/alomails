@@ -463,10 +463,11 @@ pub struct JournalEntry {
 ///   debtors report keeps a balance no document explains.
 /// - **The date is the original's.** A correction belongs in the period the
 ///   thing it corrects moved money in; dating it today would take money out of a
-///   period that was already reported. (When B4.10 locks that period, the
-///   reversal is refused rather than re-dated — a locked period is exactly the
-///   case where a person has to decide, and `post_fin_entry_in` already refuses
-///   a reversal dated before its original.)
+///   period that was already reported. When that period is **closed**
+///   ([`crate::fin_periods`], B4.10) the reversal is refused rather than
+///   re-dated: a closed period is exactly the case where a person has to decide,
+///   and the choice — reopen the quarter, or leave the correction unmade — is
+///   not one a store function may take on their behalf.
 /// - **The rate is the original's snapshot**, not today's: reversing an entry
 ///   at a different rate would leave an exchange difference nobody made.
 ///
@@ -729,13 +730,18 @@ impl AccountStore {
     ///   deactivated account is a tenant saying they are done with it, and
     ///   posting to it anyway would be us deciding they did not mean it;
     /// - a document event that is already posted is a [`StoreError::Conflict`]
-    ///   — the idempotency the whole module is built on.
+    ///   — the idempotency the whole module is built on;
+    /// - an entry dated **on or before the lock date** is a
+    ///   [`StoreError::Conflict`] naming the closed period and the day it was
+    ///   closed ([`crate::fin_periods`]): the books shut behind a close, and
+    ///   they open again only when an admin reopens the period and says why.
     ///
     /// # Errors
     /// [`StoreError::Validation`] for any of the above shape rules;
     /// [`StoreError::NotFound`] when the entry claims to reverse one that is
     /// not this tenant's; [`StoreError::Conflict`] when the document event is
-    /// already posted; [`StoreError::Db`] on failure.
+    /// already posted or the period it is dated in is closed;
+    /// [`StoreError::Db`] on failure.
     pub async fn post_fin_entry(&self, input: &NewEntry) -> Result<FinEntryId> {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         let id = self.post_fin_entry_in(&mut tx, input).await?;
@@ -762,6 +768,19 @@ impl AccountStore {
     ) -> Result<FinEntryId> {
         let entry = normalize(input)?;
         let id = FinEntryId::generate();
+
+        // **The soft close** (B4.10). The books are shut through the last closed
+        // period's final day, and an entry dated on or before it would change a
+        // period somebody has already reported and filed. Asked here, inside the
+        // caller's transaction, so that the document act which would have caused
+        // the posting — issuing an invoice into a closed quarter, confirming a
+        // bank match against it — is refused **whole** rather than half-done
+        // with a floating entry. [`crate::fin_periods`] owns the sentence.
+        if let Some(closed) = self.fin_closed_through_on(&mut **tx).await?
+            && entry.entry_date <= closed.to_date
+        {
+            return Err(StoreError::Conflict(closed.refusal(entry.entry_date)));
+        }
 
         // A reversal must correct one of THIS tenant's entries, and may not be
         // dated before it: a correction that predates what it corrects would

@@ -83,6 +83,7 @@ pub mod fin_journal;
 pub mod fin_ledger;
 pub mod fin_match_rules;
 pub mod fin_mileage;
+pub mod fin_periods;
 pub mod fin_receipt;
 pub mod fin_receipt_read;
 pub mod fin_rules;
@@ -250,6 +251,9 @@ pub use fin_mileage::{
     NewMileageRate, PLACE_MAX, RATE_MAX_CENTS_PER_KM, RATE_MIN_CENTS_PER_KM, RATE_NOTE_MAX,
     RATES_MAX, allowance_cents, rate_effective_on,
 };
+pub use fin_periods::{
+    ClosedThrough, FinPeriod, PERIOD_MAX_DAYS, PERIOD_NOTE_MAX_CHARS, PERIODS_MAX, PeriodStatus,
+};
 pub use fin_receipt::{
     AMOUNT_MAX_CENTS, Confidence, Evidence, Found, ParsedReceipt, PatternExtractor,
     RECEIPT_LINES_MAX, ReceiptExtractor, ReceiptInput, default_extractor,
@@ -266,10 +270,10 @@ pub use id::{
     CategoryId, ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, CommentId, ContactId,
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
     FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
-    FinMileageRateId, FinPostingId, GroupId, InsightDashboardId, InsightTileId, LabelId, MailboxId,
-    MessageId, ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId,
-    SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId,
-    TimeWeekId, UserId,
+    FinMileageRateId, FinPeriodId, FinPostingId, GroupId, InsightDashboardId, InsightTileId,
+    LabelId, MailboxId, MessageId, ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId,
+    SiteId, SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
+    TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

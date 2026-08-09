@@ -279,6 +279,10 @@ POST /crm/pipelines/{id}/archive -> crm.pipeline.archive
 POST /crm/pipelines/{id}/stages -> crm.pipeline.stage.create
 POST /crm/stages/{id}/archive -> crm.stage.archive
 POST /crm/stages/{id}/move -> crm.stage.move
+POST /finance/bank/lines/{id}/ignore -> finance.bank.lines.ignore
+POST /finance/bank/lines/{id}/match -> finance.bank.lines.match
+POST /finance/bank/lines/{id}/unignore -> finance.bank.lines.unignore
+POST /finance/bank/lines/{id}/unmatch -> finance.bank.lines.unmatch
 POST /finance/expenses -> finance.expense.create
 POST /finance/expenses/{id}/approve -> finance.expense.approve
 POST /finance/expenses/{id}/reimburse -> finance.expense.reimburse
@@ -287,6 +291,9 @@ POST /finance/expenses/{id}/submit -> finance.expense.submit
 POST /finance/expenses/{id}/withdraw -> finance.expense.withdraw
 POST /finance/imports/bank -> finance.import.bank
 POST /finance/mileage -> finance.mileage.create
+POST /finance/periods -> finance.period.create
+POST /finance/periods/{id}/close -> finance.period.close
+POST /finance/periods/{id}/reopen -> finance.period.reopen
 POST /projects/approvals/{id}/approve -> projects.approval.approve
 POST /projects/approvals/{id}/reject -> projects.approval.reject
 POST /projects/approvals/{id}/reopen -> projects.approval.reopen

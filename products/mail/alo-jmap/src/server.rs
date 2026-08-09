@@ -21,11 +21,11 @@ use crate::{
     billing_settings, blob, calendar, carddav, chat, chat_agent_routes, contacts, crm_activities,
     crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages,
     crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
-    finance_bank_match, finance_expenses, finance_mileage, finance_receipts, flagdue,
-    imap_import_route, insights, insights_ask, insights_eval, insights_gallery, projects_clients,
-    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
-    projects_weeks, push, reset_route, schedule, security, session, settings, share, signup_route,
-    sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    finance_bank_match, finance_expenses, finance_mileage, finance_periods, finance_receipts,
+    flagdue, imap_import_route, insights, insights_ask, insights_eval, insights_gallery,
+    projects_clients, projects_invoices, projects_plan, projects_reports, projects_templates,
+    projects_time, projects_weeks, push, reset_route, schedule, security, session, settings, share,
+    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -1047,6 +1047,22 @@ pub fn app(state: AppState) -> Router {
         .route(
             "/finance/bank/lines/{id}/unignore",
             post(finance_bank_match::unignore_bank_line),
+        )
+        // Fiscal periods and the soft close (B4.10). Close and reopen are named
+        // acts rather than a settable status: one shuts the books, the other
+        // admits a reported period is being changed, and the audit trail records
+        // them apart.
+        .route(
+            "/finance/periods",
+            get(finance_periods::list_periods).post(finance_periods::create_period),
+        )
+        .route(
+            "/finance/periods/{id}/close",
+            post(finance_periods::close_period),
+        )
+        .route(
+            "/finance/periods/{id}/reopen",
+            post(finance_periods::reopen_period),
         )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))

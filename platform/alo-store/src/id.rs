@@ -409,6 +409,12 @@ opaque_id!(
     /// act.
     FinMatchRuleId
 );
+opaque_id!(
+    /// One fiscal period of a tenant — a quarter, a month or a year the books
+    /// are reported on, and closed as a whole (alo Finance, ADR 0035, wave
+    /// B4.10). Closing it is what shuts the journal to entries dated inside it.
+    FinPeriodId
+);
 
 #[cfg(test)]
 mod tests {
