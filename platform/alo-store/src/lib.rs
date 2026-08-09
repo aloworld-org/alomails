@@ -65,6 +65,7 @@ pub mod fin_expenses;
 pub mod fin_journal;
 pub mod fin_ledger;
 pub mod fin_receipt;
+pub mod fin_receipt_read;
 pub mod fin_rules;
 pub mod iban;
 pub mod ical;
@@ -194,6 +195,7 @@ pub use fin_receipt::{
     AMOUNT_MAX_CENTS, Confidence, Evidence, Found, ParsedReceipt, PatternExtractor,
     RECEIPT_LINES_MAX, ReceiptExtractor, ReceiptInput, default_extractor,
 };
+pub use fin_receipt_read::{MAX_RECEIPT_BYTES, ReceiptReading};
 pub use fin_rules::{
     InvoiceAccounts, PaymentAccounts, credit_note_entry, credit_note_original, invoice_issue_entry,
     payment_settle_entry, payment_settlement_role, settlement_needs_exchange_account,

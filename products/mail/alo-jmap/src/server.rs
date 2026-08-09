@@ -20,11 +20,11 @@ use crate::{
     billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
     billing_settings, blob, calendar, carddav, chat, contacts, crm_activities, crm_deals,
     crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
-    delegates, docs, drive, filters, finance_approvals, finance_expenses, flagdue,
-    imap_import_route, insights, insights_ask, insights_eval, insights_gallery, projects_clients,
-    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
-    projects_weeks, push, reset_route, schedule, security, session, settings, share, signup_route,
-    sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    delegates, docs, drive, filters, finance_approvals, finance_expenses, finance_receipts,
+    flagdue, imap_import_route, insights, insights_ask, insights_eval, insights_gallery,
+    projects_clients, projects_invoices, projects_plan, projects_reports, projects_templates,
+    projects_time, projects_weeks, push, reset_route, schedule, security, session, settings, share,
+    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -912,6 +912,13 @@ pub fn app(state: AppState) -> Router {
             "/finance/expenses/{id}/reimburse",
             post(finance_approvals::reimburse_expense),
         )
+        // Reading an uploaded receipt (B4.06b): a POST that writes NOTHING —
+        // the file is already in the caller's Drive, and the answer is candidate
+        // fields for a human to confirm in the create form above. It joins
+        // `audit_action::READ_ONLY_POSTS` beside `/crm/imports/leads/preview`
+        // for that reason: an audit line saying somebody created something they
+        // only looked at would be a false line in the log.
+        .route("/finance/receipts", post(finance_receipts::read_receipt))
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))

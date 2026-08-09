@@ -151,7 +151,7 @@ fn every_mutating_business_route_resolves_to_an_audit_action() {
     // The one documented exception, restated here rather than imported: if the
     // list of dry runs grows, this test should be the thing that makes someone
     // say so out loud.
-    const DRY_RUNS: [&str; 1] = ["/crm/imports/leads/preview"];
+    const DRY_RUNS: [&str; 2] = ["/crm/imports/leads/preview", "/finance/receipts"];
 
     for (method, template) in business_routes() {
         if !is_mutating(&method) {

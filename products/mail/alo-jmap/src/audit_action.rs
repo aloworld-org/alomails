@@ -56,7 +56,11 @@ const AUDITED_MODULES: [&str; 4] = ["billing", "crm", "projects", "finance"];
 /// `POST` routes that mutate nothing — a dry run whose whole point is to answer
 /// "what *would* this do". Auditing them would file a paper trail for looking.
 /// Kept as an explicit, short list: the default is that a `POST` writes.
-const READ_ONLY_POSTS: [&str; 1] = ["/crm/imports/leads/preview"];
+///
+/// `/finance/receipts` joined at B4.06b: it reads a file the caller already has
+/// in Drive and answers with fields for them to confirm. The claim that follows
+/// is an ordinary `POST /finance/expenses`, and that is the event worth a line.
+const READ_ONLY_POSTS: [&str; 2] = ["/crm/imports/leads/preview", "/finance/receipts"];
 
 /// Whether `method` can change stored state at all. `GET`/`HEAD`/`OPTIONS`
 /// never reach the audit log.
