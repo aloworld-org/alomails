@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A file whose second entry states an amount but no CdtDbtInd — the one
+  thing about a bank line that cannot be guessed, because guessing it wrong
+  reverses the direction of money. The import must refuse the whole file and
+  name the entry, never stage the first one and stop.
+-->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02">
+  <BkToCstmrStmt>
+    <GrpHdr><MsgId>camt053-broken</MsgId><CreDtTm>2026-02-01T02:15:00</CreDtTm></GrpHdr>
+    <Stmt>
+      <Id>2026/003</Id>
+      <FrToDt>
+        <FrDtTm>2026-01-01T00:00:00</FrDtTm>
+        <ToDtTm>2026-01-31T23:59:59</ToDtTm>
+      </FrToDt>
+      <Acct><Id><IBAN>DE02120300000000202051</IBAN></Id><Ccy>EUR</Ccy></Acct>
+      <Ntry>
+        <Amt Ccy="EUR">10.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-01-05</Dt></BookgDt>
+      </Ntry>
+      <Ntry>
+        <Amt Ccy="EUR">20.00</Amt>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-01-06</Dt></BookgDt>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

@@ -369,6 +369,17 @@ opaque_id!(
     /// the table never restates a claim already paid.
     FinMileageRateId
 );
+opaque_id!(
+    /// One imported bank statement — a file a bank produced, held as what it
+    /// said rather than as anything booked (alo Finance, ADR 0035, wave B4.08).
+    BankStatementId
+);
+opaque_id!(
+    /// One staged bank line: a transaction the bank states, waiting for a human
+    /// to say what it *was* (alo Finance, ADR 0035, wave B4.08). It is not an
+    /// event and posts nothing — confirming its match is what does.
+    BankLineId
+);
 
 #[cfg(test)]
 mod tests {

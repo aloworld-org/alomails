@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The same account's first week, downloaded before the month closed — the
+  ordinary way a bookkeeper ends up with overlapping files. Its first two
+  entries are byte-for-byte the same transactions as the January statement's
+  first two; the third is one the month-end file does not have because the
+  bank later corrected and re-booked it under a different reference.
+
+  This file exists to prove the LINE rule: a different file (different
+  SHA-256, so a legitimate import) whose transactions are already staged
+  adds only what is new, and the import report says how many it skipped.
+-->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>camt053-2026-01-DE-w1</MsgId>
+      <CreDtTm>2026-01-08T02:15:00</CreDtTm>
+    </GrpHdr>
+    <Stmt>
+      <Id>2026/001-w1</Id>
+      <FrToDt>
+        <FrDtTm>2026-01-01T00:00:00</FrDtTm>
+        <ToDtTm>2026-01-08T23:59:59</ToDtTm>
+      </FrToDt>
+      <Acct>
+        <Id><IBAN>DE02120300000000202051</IBAN></Id>
+        <Ccy>EUR</Ccy>
+      </Acct>
+
+      <Ntry>
+        <NtryRef>2026010500001</NtryRef>
+        <Amt Ccy="EUR">1250.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-01-05</Dt></BookgDt>
+        <ValDt><Dt>2026-01-04</Dt></ValDt>
+        <AcctSvcrRef>DE-2026-0105-0001</AcctSvcrRef>
+        <NtryDtls>
+          <TxDtls>
+            <RltdPties>
+              <Dbtr><Nm>Kaffeehaus Berlin GmbH</Nm></Dbtr>
+              <DbtrAcct><Id><IBAN>NL91ABNA0417164300</IBAN></Id></DbtrAcct>
+            </RltdPties>
+            <RmtInf><Ustrd>Rechnung   INV-2026-00007   vielen Dank</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+
+      <Ntry>
+        <NtryRef>2026010700004</NtryRef>
+        <Amt Ccy="EUR">89.90</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-01-07</Dt></BookgDt>
+        <ValDt><Dt>2026-01-07</Dt></ValDt>
+        <AcctSvcrRef>DE-2026-0107-0004</AcctSvcrRef>
+        <NtryDtls>
+          <TxDtls>
+            <RltdPties>
+              <Cdtr><Nm>Stadtwerke Muenchen GmbH</Nm></Cdtr>
+              <CdtrAcct><Id><IBAN>DE89370400440532013000</IBAN></Id></CdtrAcct>
+            </RltdPties>
+            <RmtInf><Strd><CdtrRefInf><Ref>RF18539007547034</Ref></CdtrRefInf></Strd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+
+      <Ntry>
+        <NtryRef>2026010800009</NtryRef>
+        <Amt Ccy="EUR">42.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-01-08</Dt></BookgDt>
+        <ValDt><Dt>2026-01-08</Dt></ValDt>
+        <AcctSvcrRef>DE-2026-0108-0009</AcctSvcrRef>
+        <AddtlNtryInf>Kartenzahlung Tankstelle</AddtlNtryInf>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

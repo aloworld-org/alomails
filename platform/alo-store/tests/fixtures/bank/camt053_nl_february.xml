@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The same standard as its German sibling, written the way the Dutch banks'
+  published camt.053 examples are: a namespace PREFIX on every element, no
+  <Sts> at all (everything in a 053 is booked), PRCD standing in for OPBD,
+  and an end-to-end id of NOTPROVIDED — which the standard allows and which
+  therefore must not become a reference we key anything on.
+
+  It also closes OVERDRAWN, so the closing balance is a debit: a balance is
+  signed by its own indicator, not by being a balance.
+
+  Hand-authored to the published shape. Test IBANs only.
+-->
+<ns2:Document xmlns:ns2="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02">
+  <ns2:BkToCstmrStmt>
+    <ns2:GrpHdr>
+      <ns2:MsgId>camt053-2026-02-NL</ns2:MsgId>
+      <ns2:CreDtTm>2026-03-01T01:00:00+01:00</ns2:CreDtTm>
+    </ns2:GrpHdr>
+    <ns2:Stmt>
+      <ns2:Id>0000002</ns2:Id>
+      <ns2:ElctrncSeqNb>2</ns2:ElctrncSeqNb>
+      <ns2:FrToDt>
+        <ns2:FrDtTm>2026-02-01T00:00:00+01:00</ns2:FrDtTm>
+        <ns2:ToDtTm>2026-02-28T23:59:59+01:00</ns2:ToDtTm>
+      </ns2:FrToDt>
+      <ns2:Acct>
+        <ns2:Id><ns2:IBAN>NL91ABNA0417164300</ns2:IBAN></ns2:Id>
+        <ns2:Ccy>EUR</ns2:Ccy>
+        <ns2:Ownr><ns2:Nm>Voorbeeld Handel BV</ns2:Nm></ns2:Ownr>
+      </ns2:Acct>
+      <ns2:Bal>
+        <ns2:Tp><ns2:CdOrPrtry><ns2:Cd>PRCD</ns2:Cd></ns2:CdOrPrtry></ns2:Tp>
+        <ns2:Amt Ccy="EUR">250.00</ns2:Amt>
+        <ns2:CdtDbtInd>CRDT</ns2:CdtDbtInd>
+        <ns2:Dt><ns2:Dt>2026-02-01</ns2:Dt></ns2:Dt>
+      </ns2:Bal>
+      <ns2:Bal>
+        <ns2:Tp><ns2:CdOrPrtry><ns2:Cd>CLBD</ns2:Cd></ns2:CdOrPrtry></ns2:Tp>
+        <ns2:Amt Ccy="EUR">480.00</ns2:Amt>
+        <ns2:CdtDbtInd>DBIT</ns2:CdtDbtInd>
+        <ns2:Dt><ns2:Dt>2026-02-28</ns2:Dt></ns2:Dt>
+      </ns2:Bal>
+
+      <!-- Two unstructured remittance lines, which is one remittance. -->
+      <ns2:Ntry>
+        <ns2:Amt Ccy="EUR">500.00</ns2:Amt>
+        <ns2:CdtDbtInd>CRDT</ns2:CdtDbtInd>
+        <ns2:BookgDt><ns2:Dt>2026-02-02</ns2:Dt></ns2:BookgDt>
+        <ns2:ValDt><ns2:Dt>2026-02-02</ns2:Dt></ns2:ValDt>
+        <ns2:AcctSvcrRef>NL-0000000000000201</ns2:AcctSvcrRef>
+        <ns2:NtryDtls><ns2:TxDtls>
+          <ns2:Refs><ns2:EndToEndId>2026-00011</ns2:EndToEndId></ns2:Refs>
+          <ns2:RltdPties>
+            <ns2:Dbtr><ns2:Nm>Gemeente Amsterdam</ns2:Nm></ns2:Dbtr>
+            <ns2:DbtrAcct><ns2:Id><ns2:IBAN>NL02ABNA0123456789</ns2:IBAN></ns2:Id></ns2:DbtrAcct>
+          </ns2:RltdPties>
+          <ns2:RmtInf>
+            <ns2:Ustrd>Factuur INV-2026-00011</ns2:Ustrd>
+            <ns2:Ustrd>betaling februari</ns2:Ustrd>
+          </ns2:RmtInf>
+        </ns2:TxDtls></ns2:NtryDtls>
+      </ns2:Ntry>
+
+      <!-- No bank reference anywhere except a NOTPROVIDED end-to-end id.
+           The line must come out with no reference at all. -->
+      <ns2:Ntry>
+        <ns2:Amt Ccy="EUR">1200.00</ns2:Amt>
+        <ns2:CdtDbtInd>DBIT</ns2:CdtDbtInd>
+        <ns2:BookgDt><ns2:Dt>2026-02-10</ns2:Dt></ns2:BookgDt>
+        <ns2:ValDt><ns2:Dt>2026-02-09</ns2:Dt></ns2:ValDt>
+        <ns2:NtryDtls><ns2:TxDtls>
+          <ns2:Refs><ns2:EndToEndId>NOTPROVIDED</ns2:EndToEndId></ns2:Refs>
+          <ns2:RltdPties>
+            <ns2:Cdtr><ns2:Nm>Leverancier BV</ns2:Nm></ns2:Cdtr>
+            <ns2:CdtrAcct><ns2:Id><ns2:IBAN>BE68539007547034</ns2:IBAN></ns2:Id></ns2:CdtrAcct>
+          </ns2:RltdPties>
+          <ns2:RmtInf><ns2:Ustrd>Inkoopfactuur 2026-3391</ns2:Ustrd></ns2:RmtInf>
+        </ns2:TxDtls></ns2:NtryDtls>
+      </ns2:Ntry>
+
+      <!-- Bank charges: money out, and nobody on the other side of it. -->
+      <ns2:Ntry>
+        <ns2:Amt Ccy="EUR">30.00</ns2:Amt>
+        <ns2:CdtDbtInd>DBIT</ns2:CdtDbtInd>
+        <ns2:BookgDt><ns2:Dt>2026-02-28</ns2:Dt></ns2:BookgDt>
+        <ns2:ValDt><ns2:Dt>2026-02-28</ns2:Dt></ns2:ValDt>
+        <ns2:AcctSvcrRef>NL-0000000000000288</ns2:AcctSvcrRef>
+        <ns2:AddtlNtryInf>Kosten betalingsverkeer februari</ns2:AddtlNtryInf>
+      </ns2:Ntry>
+    </ns2:Stmt>
+  </ns2:BkToCstmrStmt>
+</ns2:Document>

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A month of a German business current account, in the shape the public
+  ISO 20022 / DK (Deutsche Kreditwirtschaft) camt.053.001.02 examples are
+  written in: unprefixed default namespace, <Sts>BOOK</Sts> spelled out,
+  OPBD and CLBD balances, and the booking/value date pair a German bank
+  always states.
+
+  Hand-authored to the published shape rather than copied from a bank's own
+  file: a real statement is somebody's money. The account and counterparty
+  IBANs are the standard test IBANs used in the specifications' own examples.
+
+  The file is internally consistent — opening + the four booked entries =
+  closing — and `bank_camt_fixtures.rs` asserts exactly that, which is what
+  makes it a golden file rather than a fixture that merely parses.
+-->
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.02"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>camt053-2026-01-DE</MsgId>
+      <CreDtTm>2026-02-01T02:15:00</CreDtTm>
+    </GrpHdr>
+    <Stmt>
+      <Id>2026/001</Id>
+      <ElctrncSeqNb>1</ElctrncSeqNb>
+      <CreDtTm>2026-02-01T02:15:00</CreDtTm>
+      <FrToDt>
+        <FrDtTm>2026-01-01T00:00:00</FrDtTm>
+        <ToDtTm>2026-01-31T23:59:59</ToDtTm>
+      </FrToDt>
+      <Acct>
+        <Id><IBAN>DE02120300000000202051</IBAN></Id>
+        <Ccy>EUR</Ccy>
+        <Ownr><Nm>Muster Handels GmbH</Nm></Ownr>
+        <Svcr><FinInstnId><BIC>BYLADEM1001</BIC></FinInstnId></Svcr>
+      </Acct>
+      <Bal>
+        <Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp>
+        <Amt Ccy="EUR">12500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt><Dt>2026-01-01</Dt></Dt>
+      </Bal>
+      <Bal>
+        <Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp>
+        <Amt Ccy="EUR">7910.10</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt><Dt>2026-01-31</Dt></Dt>
+      </Bal>
+
+      <!-- A customer pays an invoice, and writes its number on the payment. -->
+      <Ntry>
+        <NtryRef>2026010500001</NtryRef>
+        <Amt Ccy="EUR">1250.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <RvslInd>false</RvslInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-01-05</Dt></BookgDt>
+        <ValDt><Dt>2026-01-04</Dt></ValDt>
+        <AcctSvcrRef>DE-2026-0105-0001</AcctSvcrRef>
+        <BkTxCd><Domn><Cd>PMNT</Cd>
+          <Fmly><Cd>RCDT</Cd><SubFmlyCd>ESCT</SubFmlyCd></Fmly></Domn></BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs><EndToEndId>E2E-20260105-0001</EndToEndId></Refs>
+            <RltdPties>
+              <Dbtr><Nm>Kaffeehaus Berlin GmbH</Nm></Dbtr>
+              <DbtrAcct><Id><IBAN>NL91ABNA0417164300</IBAN></Id></DbtrAcct>
+              <Cdtr><Nm>Muster Handels GmbH</Nm></Cdtr>
+              <CdtrAcct><Id><IBAN>DE02120300000000202051</IBAN></Id></CdtrAcct>
+            </RltdPties>
+            <RmtInf><Ustrd>Rechnung INV-2026-00007 vielen Dank</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>SEPA-Gutschrift</AddtlNtryInf>
+      </Ntry>
+
+      <!-- A utility bill, paid by direct debit, carrying a structured
+           creditor reference (RF, ISO 11649) instead of free text. -->
+      <Ntry>
+        <NtryRef>2026010700004</NtryRef>
+        <Amt Ccy="EUR">89.90</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-01-07</Dt></BookgDt>
+        <ValDt><Dt>2026-01-07</Dt></ValDt>
+        <AcctSvcrRef>DE-2026-0107-0004</AcctSvcrRef>
+        <NtryDtls>
+          <TxDtls>
+            <Refs><MndtId>SW-2019-4471</MndtId></Refs>
+            <RltdPties>
+              <Dbtr><Nm>Muster Handels GmbH</Nm></Dbtr>
+              <Cdtr><Nm>Stadtwerke Muenchen GmbH</Nm></Cdtr>
+              <CdtrAcct><Id><IBAN>DE89370400440532013000</IBAN></Id></CdtrAcct>
+            </RltdPties>
+            <RmtInf><Strd><CdtrRefInf>
+              <Tp><CdOrPrtry><Cd>SCOR</Cd></CdOrPrtry></Tp>
+              <Ref>RF18539007547034</Ref>
+            </CdtrRefInf></Strd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>Lastschrift Strom</AddtlNtryInf>
+      </Ntry>
+
+      <!-- The payroll run: one movement of money, several people inside it.
+           The bank booked it once, so it is one line. -->
+      <Ntry>
+        <NtryRef>2026012800011</NtryRef>
+        <Amt Ccy="EUR">4500.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-01-28</Dt></BookgDt>
+        <ValDt><Dt>2026-01-28</Dt></ValDt>
+        <AcctSvcrRef>DE-2026-0128-0011</AcctSvcrRef>
+        <NtryDtls>
+          <Btch><NbOfTxs>2</NbOfTxs><TtlAmt Ccy="EUR">4500.00</TtlAmt></Btch>
+          <TxDtls>
+            <Amt Ccy="EUR">2500.00</Amt>
+            <RltdPties><Cdtr><Nm>A Person</Nm></Cdtr></RltdPties>
+            <RmtInf><Ustrd>Gehalt Januar</Ustrd></RmtInf>
+          </TxDtls>
+          <TxDtls>
+            <Amt Ccy="EUR">2000.00</Amt>
+            <RltdPties><Cdtr><Nm>Another Person</Nm></Cdtr></RltdPties>
+            <RmtInf><Ustrd>Gehalt Januar</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>Sammelueberweisung Gehaltslauf Januar 2026</AddtlNtryInf>
+      </Ntry>
+
+      <!-- The customer's bank pulls the January payment back: a reversed
+           credit, which is money leaving whatever the indicator says. -->
+      <Ntry>
+        <NtryRef>2026012900014</NtryRef>
+        <Amt Ccy="EUR">1250.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <RvslInd>true</RvslInd>
+        <Sts>BOOK</Sts>
+        <BookgDt><Dt>2026-01-29</Dt></BookgDt>
+        <ValDt><Dt>2026-01-29</Dt></ValDt>
+        <AcctSvcrRef>DE-2026-0129-0014</AcctSvcrRef>
+        <NtryDtls>
+          <TxDtls>
+            <Refs><EndToEndId>E2E-20260105-0001</EndToEndId></Refs>
+            <RltdPties>
+              <Cdtr><Nm>Kaffeehaus Berlin GmbH</Nm></Cdtr>
+              <CdtrAcct><Id><IBAN>NL91ABNA0417164300</IBAN></Id></CdtrAcct>
+            </RltdPties>
+            <RmtInf><Ustrd>Rueckbuchung Rechnung INV-2026-00007</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>Retoure SEPA-Gutschrift</AddtlNtryInf>
+      </Ntry>
+
+      <!-- Not booked yet. A camt.053 should carry none of these; some banks
+           send them anyway, and a pending item is not reconcilable. -->
+      <Ntry>
+        <Amt Ccy="EUR">15.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>PDNG</Sts>
+        <BookgDt><Dt>2026-01-31</Dt></BookgDt>
+        <AddtlNtryInf>Kartenzahlung vorgemerkt</AddtlNtryInf>
+      </Ntry>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>
