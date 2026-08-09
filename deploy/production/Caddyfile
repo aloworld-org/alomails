@@ -39,7 +39,7 @@ https://{$DOMAIN} {
 	# endpoint (discovery, authorize, token, userinfo, jwks, revoke). Everything
 	# else is the web app. `/auth/token` is backend; `/auth/callback` is a client
 	# route (falls through to the SPA).
-	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /calendar/* /tasks /tasks/* /spaces /spaces/* /drive/* /wopi/* /search /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
+	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /calendar/* /tasks /tasks/* /spaces /spaces/* /drive/* /chat/* /wopi/* /search /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
 	handle @backend {
 		reverse_proxy alo-jmap:8080
 	}
@@ -186,7 +186,7 @@ https://app.aloworkplace.com {
 	tls /certs/live/aloworkplace.com/fullchain.pem /certs/live/aloworkplace.com/privkey.pem
 	encode zstd gzip
 
-	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /calendar/* /tasks /tasks/* /spaces /spaces/* /drive/* /wopi/* /search /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
+	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /calendar/* /tasks /tasks/* /spaces /spaces/* /drive/* /chat/* /wopi/* /search /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
 	handle @backend {
 		reverse_proxy alo-jmap:8080
 	}
@@ -268,7 +268,7 @@ https://app.alodrives.com {
 	tls /certs/live/alodrives.com/fullchain.pem /certs/live/alodrives.com/privkey.pem
 	encode zstd gzip
 
-	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /calendar/* /tasks /tasks/* /spaces /spaces/* /drive/* /wopi/* /search /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
+	@backend path /jmap/* /ai/* /admin/* /settings/* /docs /docs/* /snooze /send-later /send-later/* /calendar/* /tasks /tasks/* /spaces /spaces/* /drive/* /chat/* /wopi/* /search /contacts /contacts/* /import/* /signup/* /reset/* /autodiscover/* /Autodiscover/* /mail/config-v1.1.xml /dav /dav/* /filters /filters/* /share/* /oauth/* /.well-known/* /auth/token
 	handle @backend {
 		reverse_proxy alo-jmap:8080
 	}
