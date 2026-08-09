@@ -18,6 +18,7 @@ import {
   Lock,
   MessageSquarePlus,
   MessagesSquare,
+  Paperclip,
   Reply,
   Send,
   SmilePlus,
@@ -27,11 +28,18 @@ import {
 
 import { strings } from "../i18n";
 import { useAuth } from "../auth";
+import { FilePicker, fileSize, saveBlob } from "../drive";
 import { useJmapClient } from "../jmap";
 import { Avatar, Button } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
-import type { ChannelSummary, FeedMessage, Message } from "./types";
+import type { DriveNodeDto } from "../jmap/types";
+import type { Attachment, ChannelSummary, FeedMessage, Message } from "./types";
 import styles from "./ChatModule.module.css";
+
+/** The ceiling the server enforces (`ATTACHMENTS_MAX` in the store). Kept in
+ *  step by hand: exceeding it is refused server-side either way, so the worst
+ *  a drifted copy does is offer a choice that is then declined. */
+const ATTACHMENTS_MAX = 10;
 
 /** A room's label: its `#name`, or the standing of a DM. */
 function channelLabel(channel: ChannelSummary): string {
@@ -95,6 +103,7 @@ function MessageLine({
   palette,
   me,
   onReact,
+  onOpenFile,
   children,
 }: {
   message: Message;
@@ -103,6 +112,9 @@ function MessageLine({
   /** The reader's own user id, for "this one is addressed to me". */
   me: string | null;
   onReact: (emoji: string) => void;
+  /** Fetches and saves a shared file. The API takes a bearer token, so a
+   *  plain link would arrive unauthenticated and 401. */
+  onOpenFile: (file: Attachment) => void;
   children?: ReactNode;
 }) {
   const namesMe = me !== null && message.mentions.includes(me);
@@ -135,6 +147,33 @@ function MessageLine({
           ? withHandlesMarked(message.body)
           : strings.chatWithdrawn}
       </p>
+
+      {message.attachments.length > 0 && (
+        <ul className={styles.files}>
+          {message.attachments.map((file) => (
+            <li key={file.node}>
+              {/* A plain link to Drive's own download route: the file is not
+                  copied here, so opening it is Drive's business and Drive's
+                  permission check. */}
+              <button
+                type="button"
+                className={styles.file}
+                onClick={() => void onOpenFile(file)}
+                title={strings.chatOpenFile}
+              >
+                <Paperclip size={14} className={styles.fileIcon} />
+                <span className={styles.fileName}>{file.name}</span>
+                <span className={styles.fileSize}>{fileSize(file.size)}</span>
+                {file.trashed && (
+                  <span className={styles.fileTrashed}>
+                    {strings.chatFileTrashed}
+                  </span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {(message.reactions.length > 0 || reactable) && (
         <div className={styles.chips}>
@@ -215,6 +254,10 @@ export function ChatModule() {
   // What may be left, per the server. Empty until it answers, which simply
   // means no picker yet — never a picker offering emoji it would refuse.
   const [palette, setPalette] = useState<string[]>([]);
+  // Files chosen but not yet sent. Held as Drive nodes so the composer can
+  // show their names without a second lookup.
+  const [staged, setStaged] = useState<DriveNodeDto[]>([]);
+  const [picking, setPicking] = useState(false);
   const feedRef = useRef<HTMLDivElement | null>(null);
 
   const loadChannels = useCallback(async () => {
@@ -318,11 +361,18 @@ export function ChatModule() {
   async function send() {
     const body = draft.trim();
     if (body === "" || openId === null || sending) return;
+    const files = staged;
     setSending(true);
     setError(null);
     setDraft("");
+    setStaged([]);
     try {
-      const sent = await api.post(openId, body);
+      const sent = await api.post(
+        openId,
+        body,
+        undefined,
+        files.map((f) => f.id),
+      );
       // A message just said has no replies yet; the refetch will confirm it.
       setMessages((current) => [
         ...(current ?? []),
@@ -330,10 +380,24 @@ export function ChatModule() {
       ]);
       void loadChannels();
     } catch (failure) {
-      setDraft(body); // give the words back rather than losing them
+      // Give back the words AND the files: the server refuses the whole post
+      // when a file is not shareable, so nothing was said and nothing should
+      // be lost.
+      setDraft(body);
+      setStaged(files);
       setError(chatMessage(failure, strings.chatSendFailed));
     } finally {
       setSending(false);
+    }
+  }
+
+  async function openFile(file: Attachment) {
+    try {
+      saveBlob(await client.driveDownload(file.node), file.name);
+    } catch (failure) {
+      // Drive is the authority here: if it will not serve the bytes, the
+      // reader has lost access since the message was written.
+      setError(chatMessage(failure, strings.chatAttachFailed));
     }
   }
 
@@ -509,6 +573,7 @@ export function ChatModule() {
                     palette={open.archivedAt === null ? palette : []}
                     me={me}
                     onReact={(emoji) => void react(message.id, emoji)}
+                    onOpenFile={(file) => void openFile(file)}
                   >
                     {message.replyCount > 0 ? (
                       <button
@@ -556,6 +621,37 @@ export function ChatModule() {
                   void send();
                 }}
               >
+                {staged.length > 0 && (
+                  <ul className={styles.staged}>
+                    {staged.map((file) => (
+                      <li key={file.id}>
+                        <button
+                          type="button"
+                          className={styles.stagedChip}
+                          onClick={() =>
+                            setStaged((held) =>
+                              held.filter((f) => f.id !== file.id),
+                            )
+                          }
+                          aria-label={strings.chatUnstage(file.name)}
+                        >
+                          <Paperclip size={13} />
+                          <span className={styles.stagedName}>{file.name}</span>
+                          <X size={13} />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <button
+                  type="button"
+                  className={styles.attachButton}
+                  onClick={() => setPicking(true)}
+                  aria-label={strings.chatAttach}
+                  title={strings.chatAttach}
+                >
+                  <Paperclip size={16} />
+                </button>
                 <input
                   className={styles.input}
                   value={draft}
@@ -580,6 +676,30 @@ export function ChatModule() {
         )}
       </section>
 
+      {picking && (
+        <FilePicker
+          max={ATTACHMENTS_MAX}
+          onClose={() => setPicking(false)}
+          onPick={(files) => {
+            setPicking(false);
+            // Merge rather than replace, so choosing twice adds rather than
+            // silently discarding the first pick.
+            setStaged((held) => {
+              const merged = [...held];
+              for (const file of files) {
+                if (
+                  !merged.some((f) => f.id === file.id) &&
+                  merged.length < ATTACHMENTS_MAX
+                ) {
+                  merged.push(file);
+                }
+              }
+              return merged;
+            });
+          }}
+        />
+      )}
+
       {threadRoot !== null && open !== null && (
         <aside className={styles.thread}>
           <header className={styles.threadHeader}>
@@ -602,6 +722,7 @@ export function ChatModule() {
               palette={open.archivedAt === null ? palette : []}
               me={me}
               onReact={(emoji) => void react(threadRoot.id, emoji)}
+              onOpenFile={(file) => void openFile(file)}
             />
             <hr className={styles.threadRule} />
             {replies === null ? (
@@ -619,6 +740,7 @@ export function ChatModule() {
                   palette={open.archivedAt === null ? palette : []}
                   me={me}
                   onReact={(emoji) => void react(reply.id, emoji)}
+                  onOpenFile={(file) => void openFile(file)}
                 />
               ))
             )}

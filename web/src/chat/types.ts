@@ -65,6 +65,20 @@ export interface Reaction {
   mine: boolean;
 }
 
+/** A file shared in a conversation: a pointer into Drive, never a copy.
+ *  Name and size are what Drive says *now* — a renamed file shows its new
+ *  name, and a file the reader may no longer open is absent entirely. */
+export interface Attachment {
+  /** The Drive node. Opened with `GET /drive/nodes/{node}/download`. */
+  node: string;
+  name: string;
+  size: number;
+  contentType: string | null;
+  /** Drive has it in the trash. Still shown, but shown as trashed. */
+  trashed: boolean;
+  sharedAt: string;
+}
+
 /** One thing said in a room. */
 export interface Message {
   id: string;
@@ -86,6 +100,8 @@ export interface Message {
    *  against the room's members, so a handle matching nobody there is absent
    *  rather than guessed at here. */
   mentions: string[];
+  /** Files shared with it; empty when none. */
+  attachments: Attachment[];
   createdAt: string;
   editedAt: string | null;
   /** Set when withdrawn: the row survives so the numbering never gains a

@@ -3037,3 +3037,129 @@ async fn a_mention_reaches_only_someone_already_in_the_room() {
         "a badge must not point at an empty tombstone"
     );
 }
+
+/// A shared file is a pointer into Drive, and Drive keeps deciding who may see
+/// it. You may only share what you can already open, and a pointer that stops
+/// resolving stops being shown — including its name, which is the part a
+/// write-time-only check would leave on display.
+#[tokio::test]
+async fn a_shared_file_is_a_pointer_that_drive_keeps_deciding_about() {
+    use alo_store::{DriveLocation, NewDriveFile};
+    use bytes::Bytes;
+
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("attach-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("anna@attach.test").await.unwrap();
+    let ub = ts1.create_user("ben@attach.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua);
+    let b = store.for_account(t1, ub.clone());
+
+    let t2 = store.create_tenant("attach-t2").await.unwrap();
+    let uc = store
+        .for_tenant(t2.clone())
+        .create_user("stranger@attach.test")
+        .await
+        .unwrap();
+    let c = store.for_account(t2, uc);
+
+    // A file in Anna's own Drive, and one in the other tenant's.
+    let blob = a
+        .put_blob(
+            Bytes::from_static(b"the quarterly plan"),
+            Some("text/plain"),
+        )
+        .await
+        .unwrap();
+    let mine = a
+        .drive_create_file(
+            &DriveLocation::Personal,
+            None,
+            &NewDriveFile {
+                name: "plan.txt".to_owned(),
+                blob_id: blob.as_str().to_owned(),
+                size: 18,
+                content_type: Some("text/plain".to_owned()),
+                ..NewDriveFile::default()
+            },
+        )
+        .await
+        .unwrap();
+
+    let far_blob = c
+        .put_blob(Bytes::from_static(b"not yours"), Some("text/plain"))
+        .await
+        .unwrap();
+    let theirs = c
+        .drive_create_file(
+            &DriveLocation::Personal,
+            None,
+            &NewDriveFile {
+                name: "secret.txt".to_owned(),
+                blob_id: far_blob.as_str().to_owned(),
+                size: 9,
+                content_type: Some("text/plain".to_owned()),
+                ..NewDriveFile::default()
+            },
+        )
+        .await
+        .unwrap();
+
+    let room = a
+        .create_channel("planning", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
+    a.add_member(&room, &ub).await.unwrap();
+    let said = a.post_message(&room, "here it is", None).await.unwrap();
+
+    // You cannot share a file you cannot open — and the refusal is the same
+    // "not found" a missing file gets, so it tells nothing either way.
+    assert_not_found(
+        a.attach_files(&said.id, std::slice::from_ref(&theirs))
+            .await,
+    );
+    assert_not_found(
+        a.attach_files(
+            &said.id,
+            &[alo_store::DriveNodeId::new("no-such".to_owned())],
+        )
+        .await,
+    );
+
+    // Your own file attaches, once, in the order given.
+    let kept = a
+        .attach_files(&said.id, &[mine.clone(), mine.clone()])
+        .await
+        .unwrap();
+    assert_eq!(kept.len(), 1, "the same file twice is one attachment");
+
+    // Anna sees it with Drive's current name and size.
+    let seen = a.message_attachments(&said.id).await.unwrap();
+    assert_eq!(seen.len(), 1);
+    assert_eq!(seen[0].name, "plan.txt");
+    assert_eq!(seen[0].size, 18);
+    assert!(!seen[0].trashed);
+
+    // Ben is in the room and can read the message — but the file lives in
+    // ANNA'S personal Drive, which he was never given. The pointer resolves to
+    // nothing for him, so he sees the words without the filename.
+    let bens = b.message_attachments(&said.id).await.unwrap();
+    assert!(
+        bens.is_empty(),
+        "a room must not disclose the name of a file the reader cannot open"
+    );
+
+    // A renamed file shows its new name: the name is read live, never stored.
+    a.drive_rename(&mine, "plan-v2.txt").await.unwrap();
+    let after = a.message_attachments(&said.id).await.unwrap();
+    assert_eq!(after[0].name, "plan-v2.txt");
+
+    // Another tenant reaches none of it.
+    assert_not_found(c.message_attachments(&said.id).await);
+
+    // Past the ceiling is refused rather than silently truncated.
+    let many: Vec<_> = (0..alo_store::ATTACHMENTS_MAX + 1)
+        .map(|_| mine.clone())
+        .collect();
+    assert!(a.attach_files(&said.id, &many).await.is_err());
+}

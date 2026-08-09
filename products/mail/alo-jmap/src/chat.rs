@@ -32,8 +32,9 @@ use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
 use alo_store::{
-    ChannelVisibility, ChatChannel, ChatChannelId, ChatChannelSummary, ChatFeedMessage, ChatMember,
-    ChatMessage, ChatMessageId, MESSAGE_PAGE_DEFAULT, ReactionTally, StoreError, UserId,
+    ChannelVisibility, ChatAttachment, ChatChannel, ChatChannelId, ChatChannelSummary,
+    ChatFeedMessage, ChatMember, ChatMessage, ChatMessageId, DriveNodeId, MESSAGE_PAGE_DEFAULT,
+    ReactionTally, StoreError, UserId,
 };
 
 use crate::error::Problem;
@@ -150,8 +151,9 @@ fn feed_message_json(
     emails: &HashMap<String, String>,
     reactions: &HashMap<String, Vec<ReactionTally>>,
     mentions: &HashMap<String, Vec<UserId>>,
+    files: &HashMap<String, Vec<ChatAttachment>>,
 ) -> Value {
-    let mut value = message_json_with(&f.message, emails, reactions, mentions);
+    let mut value = message_json_with(&f.message, emails, reactions, mentions, files);
     if let Some(object) = value.as_object_mut() {
         object.insert("replyCount".to_owned(), json!(f.reply_count));
         object.insert("lastReplyAt".to_owned(), json!(f.last_reply_at.map(iso)));
@@ -173,11 +175,33 @@ fn reactions_json(tallies: Option<&Vec<ReactionTally>>) -> Value {
     )
 }
 
+/// The files shared on a message. Name and size come from Drive as it is
+/// now, and anything the reader may no longer open has already been dropped
+/// by the store — so this never prints a filename its reader has no right to.
+fn attachments_json(files: Option<&Vec<ChatAttachment>>) -> Value {
+    json!(
+        files
+            .map(Vec::as_slice)
+            .unwrap_or_default()
+            .iter()
+            .map(|f| json!({
+                "node": f.node.as_str(),
+                "name": f.name,
+                "size": f.size,
+                "contentType": f.content_type,
+                "trashed": f.trashed,
+                "sharedAt": iso(f.shared_at),
+            }))
+            .collect::<Vec<_>>()
+    )
+}
+
 fn message_json_with(
     m: &ChatMessage,
     emails: &HashMap<String, String>,
     reactions: &HashMap<String, Vec<ReactionTally>>,
     mentions: &HashMap<String, Vec<UserId>>,
+    files: &HashMap<String, Vec<ChatAttachment>>,
 ) -> Value {
     let mut value = message_json(m, emails);
     if let Some(object) = value.as_object_mut() {
@@ -199,6 +223,10 @@ fn message_json_with(
                     .collect::<Vec<_>>()
             ),
         );
+        object.insert(
+            "attachments".to_owned(),
+            attachments_json(files.get(m.id.as_str())),
+        );
     }
     value
 }
@@ -218,6 +246,7 @@ fn message_json(m: &ChatMessage, emails: &HashMap<String, String>) -> Value {
         // client has to guard, and one of them will forget.
         "reactions": [],
         "mentions": [],
+        "attachments": [],
         "createdAt": iso(m.created_at),
         "editedAt": m.edited_at.map(iso),
         "deletedAt": m.deleted_at.map(iso),
@@ -554,10 +583,15 @@ pub async fn list_messages(
         .mentions_for_channel(&channel, &ids)
         .await
         .unwrap_or_default();
+    let files = account
+        .acc
+        .attachments_for_channel(&channel, &ids)
+        .await
+        .unwrap_or_default();
     Ok(Json(json!({
         "messages": messages
             .iter()
-            .map(|m| feed_message_json(m, &emails, &reactions, &mentions))
+            .map(|m| feed_message_json(m, &emails, &reactions, &mentions, &files))
             .collect::<Vec<_>>()
     })))
 }
@@ -568,6 +602,9 @@ pub struct NewMessageBody {
     body: String,
     /// The `seq` of the message being replied to, for a threaded reply.
     thread_root_seq: Option<i64>,
+    /// Drive node ids to share with the message — pointers, never copies.
+    #[serde(default)]
+    attachments: Vec<String>,
 }
 
 /// `POST /chat/channels/{id}/messages` `{body, threadRootSeq?}` → say
@@ -584,9 +621,19 @@ pub async fn post_message(
     Json(body): Json<NewMessageBody>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let files: Vec<DriveNodeId> = body
+        .attachments
+        .iter()
+        .map(|n| DriveNodeId::new(n.clone()))
+        .collect();
     let message = account
         .acc
-        .post_message(&ChatChannelId::new(id), &body.body, body.thread_root_seq)
+        .post_message_with_files(
+            &ChatChannelId::new(id),
+            &body.body,
+            body.thread_root_seq,
+            &files,
+        )
         .await
         .map_err(map_store_err)?;
     let mentions = account
@@ -600,11 +647,17 @@ pub async fn post_message(
     let named: Vec<UserId> = mentions.values().flatten().cloned().collect();
     notify_room(&state, &account, &message.channel, &named).await;
     let emails = resolve_emails(&state, &account, std::slice::from_ref(&message.author)).await;
+    let shared = account
+        .acc
+        .attachments_for_channel(&message.channel, std::slice::from_ref(&message.id))
+        .await
+        .unwrap_or_default();
     Ok(Json(message_json_with(
         &message,
         &emails,
         &HashMap::new(),
         &mentions,
+        &shared,
     )))
 }
 
@@ -638,10 +691,15 @@ pub async fn list_thread(
         .mentions_for_channel(&channel, &ids)
         .await
         .unwrap_or_default();
+    let files = account
+        .acc
+        .attachments_for_channel(&channel, &ids)
+        .await
+        .unwrap_or_default();
     Ok(Json(json!({
         "messages": messages
             .iter()
-            .map(|m| message_json_with(m, &emails, &reactions, &mentions))
+            .map(|m| message_json_with(m, &emails, &reactions, &mentions, &files))
             .collect::<Vec<_>>()
     })))
 }
@@ -683,8 +741,13 @@ pub async fn edit_message(
         .reactions_for_channel(&message.channel, std::slice::from_ref(&message.id))
         .await
         .unwrap_or_default();
+    let shared = account
+        .acc
+        .attachments_for_channel(&message.channel, std::slice::from_ref(&message.id))
+        .await
+        .unwrap_or_default();
     Ok(Json(message_json_with(
-        &message, &emails, &reactions, &mentions,
+        &message, &emails, &reactions, &mentions, &shared,
     )))
 }
 

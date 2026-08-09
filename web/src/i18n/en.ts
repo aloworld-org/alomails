@@ -1674,6 +1674,25 @@ export const en = {
   chatArchived: "Archived",
   chatReplyInThread: "Reply in thread",
   chatAddReaction: "Add a reaction",
+  chatAttach: "Attach a file",
+  chatUnstage: (name: string): string => `Remove ${name}`,
+  chatAttachFailed: "That file couldn’t be shared.",
+  chatOpenFile: "Open in Drive",
+  chatFileTrashed: "in Drive’s trash",
+  // The Drive file picker (first used by chat).
+  pickerTitle: "Choose a file",
+  pickerPlaces: "Where to look",
+  pickerMyDrive: "My Drive",
+  pickerLoading: "Loading…",
+  pickerEmpty: "Nothing here yet.",
+  pickerLoadFailed: "That folder couldn’t be opened.",
+  pickerAttach: "Attach",
+  pickerNonePicked: "No files chosen",
+  pickerPicked: (count: number, max: number): string =>
+    `${count} of ${max} chosen`,
+  pickerPersonalNotice:
+    "Files in My Drive are yours alone — people in the conversation won’t be able to open them. Use a Space to share.",
+  cancel: "Cancel",
   chatMentionsYou: (count: number): string =>
     count === 1 ? "1 message mentions you" : `${count} messages mention you`,
   chatReactFailed: "That reaction couldn’t be saved.",

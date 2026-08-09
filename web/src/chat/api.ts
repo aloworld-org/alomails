@@ -147,11 +147,14 @@ export class ChatApi {
     return body.messages;
   }
 
-  /** Say something. `threadRootSeq` makes it a reply. */
+  /** Say something. `threadRootSeq` makes it a reply; `attachments` are Drive
+   *  node ids, shared as pointers. The server refuses the whole post if any
+   *  file is not the caller's to share, so nothing is said on a rejection. */
   async post(
     id: string,
     body: string,
     threadRootSeq?: number,
+    attachments?: string[],
   ): Promise<Message> {
     return this.#write<Message>(
       "POST",
@@ -159,6 +162,9 @@ export class ChatApi {
       {
         body,
         ...(threadRootSeq === undefined ? {} : { threadRootSeq }),
+        ...(attachments === undefined || attachments.length === 0
+          ? {}
+          : { attachments }),
       },
     );
   }
