@@ -5,7 +5,7 @@
 // a broken screen.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, FileText, Inbox, Newspaper, Palette } from "lucide-react";
+import { ArrowLeft, BarChart3, FileText, Inbox, Newspaper, Palette } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
@@ -179,7 +179,7 @@ export function SiteView() {
               <Button
                 variant="ghost"
                 size="sm"
-                icon={<Inbox size={14} />}
+                icon={<Inbox size="var(--icon-size-inline)" />}
                 onClick={() => navigate("submissions")}
               >
                 {strings.sitesSubmissions}
@@ -187,7 +187,15 @@ export function SiteView() {
               <Button
                 variant="ghost"
                 size="sm"
-                icon={<Palette size={14} />}
+                icon={<BarChart3 size="var(--icon-size-inline)" />}
+                onClick={() => navigate("analytics")}
+              >
+                {strings.sitesAnalytics}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Palette size="var(--icon-size-inline)" />}
                 onClick={() => setTheming(true)}
               >
                 {strings.sitesTheme}

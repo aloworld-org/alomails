@@ -24,6 +24,7 @@ import type {
   PostDraft,
   PostUpdate,
   Site,
+  SiteAnalyticsReport,
   SiteDetail,
   SiteDraft,
   SitePage,
@@ -154,6 +155,13 @@ export class SitesApi {
       "PUT",
       `/sites/${encodeURIComponent(siteId)}/forms/${encodeURIComponent(formId)}/submissions/${encodeURIComponent(submissionId)}`,
       { handled },
+    );
+  }
+
+  /** Anonymous daily traffic totals and actionable rankings for one site. */
+  analytics(siteId: string, days: number): Promise<SiteAnalyticsReport> {
+    return this.#read<SiteAnalyticsReport>(
+      `/sites/${encodeURIComponent(siteId)}/analytics?days=${encodeURIComponent(String(days))}`,
     );
   }
 

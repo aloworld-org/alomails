@@ -22,14 +22,16 @@
 //! schema write gate; the editor is single-writer per page by design, so no
 //! optimistic-concurrency header exists yet (recorded as an S2 seam).
 
+use std::collections::BTreeMap;
+
 use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use serde_json::{Value, json};
-use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
+use time::{Duration, OffsetDateTime};
 
 use alo_sites::render::{
     EN, ImageSources, PageRenderContext, SiteRenderContext, render_page_preview, sections_lenient,
@@ -215,6 +217,80 @@ pub async fn get_site(
         );
     }
     Ok(Json(j))
+}
+
+#[derive(Deserialize)]
+pub struct AnalyticsQuery {
+    days: Option<u16>,
+}
+
+/// `GET /sites/:id/analytics?days=30` -> privacy-preserving aggregate traffic
+/// for the caller's site. Quiet days are included so the chart keeps an
+/// honest time axis without inventing data in the browser.
+pub async fn get_analytics(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Query(query): Query<AnalyticsQuery>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let days = query.days.unwrap_or(30);
+    if !(1..=365).contains(&days) {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "analytics period must be between 1 and 365 days",
+        ));
+    }
+
+    let to = OffsetDateTime::now_utc().date();
+    let from = to - Duration::days(i64::from(days - 1));
+    let report = account
+        .acc
+        .site_analytics(&SiteId::new(id), from, to)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such site"))?;
+    let sparse = report
+        .daily
+        .iter()
+        .map(|row| (row.day, row))
+        .collect::<BTreeMap<_, _>>();
+    let mut daily = Vec::with_capacity(usize::from(days));
+    let mut day = from;
+    while day <= to {
+        let (visits, unique_visitors) = sparse
+            .get(&day)
+            .map_or((0, 0), |row| (row.visits, row.unique_visitors));
+        daily.push(json!({
+            "date": day.to_string(),
+            "visits": visits,
+            "uniqueVisitors": unique_visitors,
+        }));
+        day += Duration::days(1);
+    }
+    let visits = report.daily.iter().map(|row| row.visits).sum::<u64>();
+    let unique_visitors = report
+        .daily
+        .iter()
+        .map(|row| row.unique_visitors)
+        .sum::<u64>();
+
+    Ok(Json(json!({
+        "from": from.to_string(),
+        "to": to.to_string(),
+        "totals": { "visits": visits, "uniqueVisitors": unique_visitors },
+        "daily": daily,
+        "topPages": report.top_pages.into_iter().map(|row| json!({
+            "path": row.label,
+            "visits": row.visits,
+            "uniqueVisitors": row.unique_visitors,
+        })).collect::<Vec<_>>(),
+        "topReferrers": report.top_referrers.into_iter().map(|row| json!({
+            "domain": row.label,
+            "visits": row.visits,
+            "uniqueVisitors": row.unique_visitors,
+        })).collect::<Vec<_>>(),
+    })))
 }
 
 #[derive(Deserialize)]

@@ -135,6 +135,7 @@ async fn notifications_land_in_the_owning_inbox_only_and_resist_injection() {
     let public = PublicAppState::new(
         SitePublicStore::new(pool, BlobStore::in_memory(1024 * 1024)),
         "sites.test".to_owned(),
+        b"site-notify-local-analytics-secret",
     );
     let request = Request::builder()
         .method("POST")

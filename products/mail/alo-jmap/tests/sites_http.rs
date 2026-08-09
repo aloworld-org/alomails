@@ -118,6 +118,7 @@ async fn every_route_family_requires_a_bearer_token() {
         ("GET", "/sites/theme-presets".to_owned(), None),
         ("GET", "/sites/config".to_owned(), None),
         ("GET", "/sites/some-id/submissions".to_owned(), None),
+        ("GET", "/sites/some-id/analytics".to_owned(), None),
         ("GET", "/sites/some-id/submissions.csv".to_owned(), None),
         ("GET", "/sites/some-id/posts".to_owned(), None),
         (
@@ -165,6 +166,36 @@ async fn every_route_family_requires_a_bearer_token() {
 }
 
 // ---- form submissions inbox ------------------------------------------------
+
+#[tokio::test]
+async fn analytics_answers_a_complete_period_and_validates_the_range() {
+    let h = harness("sites-analytics").await;
+    let site = created_id(
+        "site",
+        post(
+            &h.app,
+            &h.token,
+            "/sites",
+            json!({ "name": "Measured site", "subdomain": sub("measured", &h) }),
+        )
+        .await,
+    );
+
+    let (status, body) = get(&h.app, &h.token, &format!("/sites/{site}/analytics?days=7")).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["daily"].as_array().unwrap().len(), 7);
+    assert_eq!(body["totals"]["visits"], json!(0));
+    assert_eq!(body["totals"]["uniqueVisitors"], json!(0));
+    assert_eq!(body["topPages"], json!([]));
+    assert_eq!(body["topReferrers"], json!([]));
+
+    let (status, body) = get(&h.app, &h.token, &format!("/sites/{site}/analytics?days=0")).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+    assert_eq!(
+        body["detail"],
+        json!("analytics period must be between 1 and 365 days")
+    );
+}
 
 #[tokio::test]
 async fn submissions_list_is_site_scoped_and_handled_is_one_write() {
@@ -1167,6 +1198,7 @@ async fn another_tenants_site_is_invisible_on_every_route() {
         ("POST", format!("/sites/{b_site}/publish"), json!({})),
         ("POST", format!("/sites/{b_site}/unpublish"), json!({})),
         ("GET", format!("/sites/{b_site}/pages"), json!({})),
+        ("GET", format!("/sites/{b_site}/analytics"), json!({})),
         ("GET", format!("/sites/{b_site}/submissions"), json!({})),
         ("GET", format!("/sites/{b_site}/submissions.csv"), json!({})),
         ("GET", format!("/sites/{b_site}/posts"), json!({})),
@@ -1438,10 +1470,10 @@ async fn config_names_the_sites_domain() {
     assert_eq!(body["domain"], json!("alosites.com"));
 }
 
-/// The preview inlines the theme logo and section images as `data:` URIs
-/// (the public image path does not resolve on the edit origin), while a
-/// referenced blob that is not an image falls back to the public path
-/// instead of inlining non-image bytes.
+/// The preview inlines visible theme and section images as `data:` URIs (the
+/// public image path does not resolve on the edit origin), while crawler-only
+/// OG metadata remains an absolute public URL and a referenced blob that is
+/// not an image falls back instead of inlining non-image bytes.
 #[tokio::test]
 async fn preview_inlines_theme_and_section_images() {
     let h = harness("sites-imgprev").await;
@@ -1510,7 +1542,10 @@ async fn preview_inlines_theme_and_section_images() {
     assert_eq!(status, StatusCode::OK);
     // The logo is inlined: its bytes as a data URI ("logo-bytes" base64).
     assert!(html.contains("data:image/png;base64,bG9nby1ieXRlcw=="));
-    assert!(!html.contains(&format!("/assets/img/{}", logo.as_str())));
+    assert!(html.contains(&format!(
+        "https://{claimed}.alosites.com/assets/img/{}",
+        logo.as_str()
+    )));
     // The non-image blob is not inlined — public-path fallback.
     assert!(html.contains(&format!("/assets/img/{}", not_an_image.as_str())));
 }

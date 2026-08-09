@@ -115,6 +115,7 @@ pub mod search;
 pub mod settings;
 pub mod share;
 pub mod signup;
+pub mod site_analytics;
 pub mod site_assets;
 pub mod site_form_notify;
 pub mod site_forms;
@@ -317,6 +318,7 @@ pub use schedule::DueSend;
 pub use search::SearchHit;
 pub use share::{ShareCreated, ShareTarget};
 pub use signup::PendingSignup;
+pub use site_analytics::{SiteAnalyticsDay, SiteAnalyticsRank, SiteAnalyticsReport};
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
 pub use site_form_notify::FormNotification;
 pub use site_forms::{

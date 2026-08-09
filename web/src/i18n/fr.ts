@@ -2595,6 +2595,29 @@ export const fr: Partial<Catalog> = {
   sitesExportingSubmissions: "Préparation de l’export…",
   sitesSubmissionsExportFailed:
     "Vos messages n’ont pas pu être exportés. Réessayez.",
+  sitesAnalytics: "Statistiques",
+  sitesAnalyticsLoadFailed:
+    "Les statistiques de votre site n’ont pas pu être chargées. Réessayez.",
+  sitesAnalyticsLoading: "Chargement des statistiques du site",
+  sitesAnalyticsPeriod: "Période des statistiques",
+  sitesAnalyticsDays: (days: number) => `${days} jours`,
+  sitesAnalyticsSummary: "Résumé du trafic",
+  sitesAnalyticsVisits: "Visites",
+  sitesAnalyticsVisitors: "Visiteurs quotidiens",
+  sitesAnalyticsOverTime: "Visites au fil du temps",
+  sitesAnalyticsChartLabel: "Visites quotidiennes du site",
+  sitesAnalyticsDayLabel: (date: string, visits: number) =>
+    `${date} : ${visits} ${visits === 1 ? "visite" : "visites"}`,
+  sitesAnalyticsTopPages: "Pages les plus visitées",
+  sitesAnalyticsTopReferrers: "Principales sources",
+  sitesAnalyticsDirect: "Accès direct",
+  sitesAnalyticsPrivacyTitle: "Sans cookies. Sans bannière.",
+  sitesAnalyticsPrivacyBody:
+    "Le trafic est compté anonymement par jour. alo ne conserve ni adresse du visiteur, ni profil d’appareil, ni historique de navigation.",
+  sitesAnalyticsEmptyTitle: "Aucune visite pour le moment",
+  sitesAnalyticsEmptyBody:
+    "Ouvrez ou partagez votre site publié. Ses premières visites apparaîtront ici automatiquement.",
+  sitesAnalyticsOpenSite: "Ouvrir le site publié",
   sitesPosts: "Articles du blog",
   sitesBackToWebsite: "Site web",
   sitesPostsLoadFailed: "Les articles de votre blog n’ont pas pu être chargés.",

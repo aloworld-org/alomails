@@ -2568,6 +2568,29 @@ export const nl: Partial<Catalog> = {
   sitesExportingSubmissions: "Export voorbereiden…",
   sitesSubmissionsExportFailed:
     "Uw inzendingen konden niet worden geëxporteerd. Probeer het opnieuw.",
+  sitesAnalytics: "Statistieken",
+  sitesAnalyticsLoadFailed:
+    "De statistieken van uw site konden niet worden geladen. Probeer het opnieuw.",
+  sitesAnalyticsLoading: "Sitestatistieken laden",
+  sitesAnalyticsPeriod: "Periode voor statistieken",
+  sitesAnalyticsDays: (days: number) => `${days} dagen`,
+  sitesAnalyticsSummary: "Verkeersoverzicht",
+  sitesAnalyticsVisits: "Bezoeken",
+  sitesAnalyticsVisitors: "Dagelijkse bezoekers",
+  sitesAnalyticsOverTime: "Bezoeken door de tijd",
+  sitesAnalyticsChartLabel: "Dagelijkse sitebezoeken",
+  sitesAnalyticsDayLabel: (date: string, visits: number) =>
+    `${date}: ${visits} ${visits === 1 ? "bezoek" : "bezoeken"}`,
+  sitesAnalyticsTopPages: "Populairste pagina’s",
+  sitesAnalyticsTopReferrers: "Belangrijkste verwijzers",
+  sitesAnalyticsDirect: "Rechtstreeks",
+  sitesAnalyticsPrivacyTitle: "Geen cookies. Geen banner.",
+  sitesAnalyticsPrivacyBody:
+    "Verkeer wordt per dag anoniem geteld. alo bewaart geen bezoekersadres, apparaatprofiel of browsegeschiedenis.",
+  sitesAnalyticsEmptyTitle: "Nog geen bezoeken",
+  sitesAnalyticsEmptyBody:
+    "Open of deel uw gepubliceerde site. De eerste bezoeken verschijnen hier automatisch.",
+  sitesAnalyticsOpenSite: "Live site openen",
   sitesPosts: "Blogartikelen",
   sitesBackToWebsite: "Website",
   sitesPostsLoadFailed: "Uw blogartikelen konden niet worden geladen.",

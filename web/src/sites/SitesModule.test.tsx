@@ -283,6 +283,81 @@ describe("the contact submissions inbox", () => {
   });
 });
 
+describe("the site analytics desk", () => {
+  const detail = { ...ALPHA, publish: null, theme: {} };
+
+  test("shows actionable traffic and the no-cookie promise", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/config"),
+        status: 200,
+        body: { domain: "sites.test" },
+      },
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/analytics?days=30"),
+        status: 200,
+        body: {
+          from: "2026-07-11",
+          to: "2026-08-09",
+          totals: { visits: 42, uniqueVisitors: 17 },
+          daily: [
+            { date: "2026-08-08", visits: 12, uniqueVisitors: 7 },
+            { date: "2026-08-09", visits: 30, uniqueVisitors: 10 },
+          ],
+          topPages: [{ path: "/menu", visits: 24, uniqueVisitors: 12 }],
+          topReferrers: [{ domain: "", visits: 20, uniqueVisitors: 9 }],
+        },
+      },
+    ];
+
+    ui("/sites/site-1/analytics");
+    expect(await screen.findByText(strings.sitesAnalyticsPrivacyTitle)).toBeTruthy();
+    expect(screen.getByText("42")).toBeTruthy();
+    expect(screen.getByText("17")).toBeTruthy();
+    expect(screen.getByText("/menu")).toBeTruthy();
+    expect(screen.getByText(strings.sitesAnalyticsDirect)).toBeTruthy();
+    expect(screen.getByRole("list", { name: strings.sitesAnalyticsChartLabel })).toBeTruthy();
+  });
+
+  test("an empty report teaches the one next step", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: detail,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/config"),
+        status: 200,
+        body: { domain: "sites.test" },
+      },
+      {
+        match: (url, method) => method === "GET" && url.includes("/analytics?days=30"),
+        status: 200,
+        body: {
+          from: "2026-07-11",
+          to: "2026-08-09",
+          totals: { visits: 0, uniqueVisitors: 0 },
+          daily: [],
+          topPages: [],
+          topReferrers: [],
+        },
+      },
+    ];
+
+    ui("/sites/site-1/analytics");
+    expect(await screen.findByText(strings.sitesAnalyticsEmptyTitle)).toBeTruthy();
+    expect(screen.getByText(strings.sitesAnalyticsEmptyBody)).toBeTruthy();
+    expect(screen.getByRole("button", { name: strings.sitesAnalyticsOpenSite })).toBeTruthy();
+  });
+});
+
 describe("creating a site", () => {
   test("the typed address is checked live against the server", async () => {
     ui("/sites");

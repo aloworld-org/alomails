@@ -105,6 +105,16 @@ export interface SiteSubmission {
   receivedAt: string;
 }
 
+/** Privacy-preserving traffic aggregates for one inclusive period. */
+export interface SiteAnalyticsReport {
+  from: string;
+  to: string;
+  totals: { visits: number; uniqueVisitors: number };
+  daily: Array<{ date: string; visits: number; uniqueVisitors: number }>;
+  topPages: Array<{ path: string; visits: number; uniqueVisitors: number }>;
+  topReferrers: Array<{ domain: string; visits: number; uniqueVisitors: number }>;
+}
+
 /** The deployment-wide sites config: published sites serve at
  *  `<subdomain>.<domain>`. The UI composes "goes live at" copy and live
  *  links from it — the domain is the server's to know, never hardcoded. */

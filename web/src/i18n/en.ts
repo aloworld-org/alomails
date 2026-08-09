@@ -2832,6 +2832,29 @@ export const en = {
   sitesExportingSubmissions: "Preparing export…",
   sitesSubmissionsExportFailed:
     "Your submissions could not be exported. Try again.",
+  // Sites — privacy-friendly traffic analytics.
+  sitesAnalytics: "Analytics",
+  sitesAnalyticsLoadFailed: "Your site analytics could not be loaded. Try again.",
+  sitesAnalyticsLoading: "Loading site analytics",
+  sitesAnalyticsPeriod: "Analytics period",
+  sitesAnalyticsDays: (days: number) => `${days} days`,
+  sitesAnalyticsSummary: "Traffic summary",
+  sitesAnalyticsVisits: "Visits",
+  sitesAnalyticsVisitors: "Daily visitors",
+  sitesAnalyticsOverTime: "Visits over time",
+  sitesAnalyticsChartLabel: "Daily site visits",
+  sitesAnalyticsDayLabel: (date: string, visits: number) =>
+    `${date}: ${visits} ${visits === 1 ? "visit" : "visits"}`,
+  sitesAnalyticsTopPages: "Top pages",
+  sitesAnalyticsTopReferrers: "Top referrers",
+  sitesAnalyticsDirect: "Direct",
+  sitesAnalyticsPrivacyTitle: "No cookies. No banner.",
+  sitesAnalyticsPrivacyBody:
+    "Traffic is counted anonymously by day. alo stores no visitor address, device profile, or browsing history.",
+  sitesAnalyticsEmptyTitle: "No visits yet",
+  sitesAnalyticsEmptyBody:
+    "Open or share your published site. Its first visits will appear here automatically.",
+  sitesAnalyticsOpenSite: "Open live site",
 
   // Audit trail — a record's own history (B2.13). The labels are VERBS, not
   // sentences: the record kind is the page the reader is already on, so an

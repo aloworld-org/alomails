@@ -719,6 +719,182 @@
   background: var(--bg-raised);
 }
 
+/* ---- privacy-friendly traffic desk (S1.24) ---- */
+.analyticsHeader {
+  flex-wrap: wrap;
+}
+.analyticsPeriods {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  padding: var(--space-1);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+}
+.analyticsPeriod {
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+.analyticsPeriod:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.analyticsPeriodActive,
+.analyticsPeriodActive:hover {
+  color: var(--accent);
+  background: var(--bg-surface);
+}
+.analyticsContent {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6) var(--space-6);
+  overflow-y: auto;
+}
+.analyticsPrivacy {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: var(--space-5) var(--space-6) 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.analyticsContent .analyticsPrivacy {
+  margin: 0;
+}
+.analyticsPrivacy strong {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+.analyticsPrivacy p {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+.analyticsSummary,
+.analyticsRankings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--control-width-wide), 1fr));
+  gap: var(--space-4);
+}
+.analyticsMetric,
+.analyticsPanel {
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.analyticsMetric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+}
+.analyticsMetric span {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.analyticsMetric strong {
+  color: var(--text-primary);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+}
+.analyticsPanel {
+  min-width: 0;
+  padding: var(--space-5);
+}
+.analyticsPanelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.analyticsPanelHead h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.analyticsPanelHead span {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+.analyticsChart {
+  display: grid;
+  grid-auto-columns: minmax(var(--space-1), 1fr);
+  grid-auto-flow: column;
+  align-items: end;
+  height: var(--content-height-sm);
+  gap: var(--space-1);
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  border-bottom: var(--border-width) solid var(--border-default);
+  list-style: none;
+  overflow-x: auto;
+}
+.analyticsChart li {
+  display: flex;
+  height: 100%;
+  align-items: flex-end;
+}
+.analyticsBar {
+  display: block;
+  width: 100%;
+  height: calc(var(--analytics-value) * 100%);
+  min-height: var(--border-width);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--accent);
+}
+.analyticsRanking {
+  display: flex;
+  flex-direction: column;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.analyticsRanking li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-height: var(--control-height);
+  padding: var(--space-2) 0;
+  border-top: var(--border-width) solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.analyticsRanking li span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.analyticsSkeletons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--control-width-wide), 1fr));
+  gap: var(--space-4);
+  padding: var(--space-6);
+}
+.analyticsSkeletons span {
+  height: var(--content-height-sm);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+}
+
 /* ---- contact submissions inbox (S1.17a) ---- */
 .submissionSiteName {
   font-size: var(--text-sm);

@@ -260,6 +260,7 @@ pub fn app(state: AppState) -> Router {
         .route("/sites/{id}/theme", put(sites::set_theme))
         .route("/sites/{id}/publish", post(sites::publish_site))
         .route("/sites/{id}/unpublish", post(sites::unpublish_site))
+        .route("/sites/{id}/analytics", get(sites::get_analytics))
         .route("/sites/{id}/submissions", get(sites::list_submissions))
         .route(
             "/sites/{id}/submissions.csv",
