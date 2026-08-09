@@ -2639,4 +2639,20 @@ export const fr: Partial<Catalog> = {
   sitesRemovePostCover: "Retirer",
   sitesUploadingPostCover: "Téléversement…",
   sitesPostCoverUploadFailed: "L’image de couverture n’a pas pu être téléversée. Réessayez.",
+  sitesSeoAction: "Recherche et partage",
+  sitesSeoTitle: "Recherche et partage",
+  sitesSeoSubtitle:
+    "Choisissez comment cette page apparaît dans les résultats et les liens partagés.",
+  sitesSeoPreview: "Aperçu du résultat de recherche",
+  sitesSeoFieldTitle: "Titre de recherche",
+  sitesSeoTitleHint: "Laissez vide pour utiliser le titre de la page et le nom du site.",
+  sitesSeoFieldDescription: "Description",
+  sitesSeoDescriptionHint:
+    "Un résumé court et utile pour la recherche et les liens partagés.",
+  sitesSeoDescriptionDefault: "Ajoutez une description pour présenter cette page.",
+  sitesSeoImageHint:
+    "Les liens partagés utilisent d’abord l’image principale, puis le logo du site.",
+  sitesSeoSave: "Enregistrer les détails",
+  sitesSeoSaveFailed:
+    "Les détails de recherche n’ont pas pu être enregistrés. Réessayez.",
 };

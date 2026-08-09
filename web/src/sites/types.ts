@@ -1,6 +1,6 @@
 // The wire types of the `/sites/*` edit surface that this module reads —
 // deliberately only the fields the screens render, so a server that says more
-// (theme envelopes, SEO fields, timestamps the UI does not show yet) never
+// (timestamps and fields the UI does not show yet) never
 // forces a change here. The server is the authority on every rule; these
 // types carry its answers, they do not re-state its validation.
 import type { SectionsEnvelope } from "./sections";
@@ -68,6 +68,9 @@ export interface SitePage {
   slug: string;
   title: string;
   home: boolean;
+  /** Optional search/share overrides. `null` means use the page/site default. */
+  seoTitle: string | null;
+  seoDescription: string | null;
 }
 
 /** One page with its sections envelope — what the editor loads and edits. */

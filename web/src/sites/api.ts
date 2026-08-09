@@ -231,6 +231,20 @@ export class SitesApi {
     return this.#read<SitePageDetail>(this.#pagePath(siteId, pageId));
   }
 
+  /** Sets or clears one page's search and sharing copy. Blank strings clear
+   *  the overrides through the server's existing normalization gate. */
+  async setPageSeo(
+    siteId: string,
+    pageId: string,
+    seoTitle: string,
+    seoDescription: string,
+  ): Promise<void> {
+    await this.#write<{ status?: string }>("PUT", this.#pagePath(siteId, pageId), {
+      seoTitle,
+      seoDescription,
+    });
+  }
+
   /** The draft page rendered by the server as one complete, self-contained
    *  HTML document — the editor's preview. Answers text, not JSON; the
    *  caller puts it in a sandboxed iframe via `srcdoc`. */

@@ -2612,4 +2612,21 @@ export const nl: Partial<Catalog> = {
   sitesRemovePostCover: "Verwijderen",
   sitesUploadingPostCover: "Uploaden…",
   sitesPostCoverUploadFailed: "De omslagafbeelding kon niet worden geüpload. Probeer het opnieuw.",
+  sitesSeoAction: "Zoeken en delen",
+  sitesSeoTitle: "Zoeken en delen",
+  sitesSeoSubtitle:
+    "Kies hoe deze pagina in zoekresultaten en gedeelde links verschijnt.",
+  sitesSeoPreview: "Voorbeeld van zoekresultaat",
+  sitesSeoFieldTitle: "Zoektitel",
+  sitesSeoTitleHint: "Laat leeg om de paginatitel en websitenaam te gebruiken.",
+  sitesSeoFieldDescription: "Beschrijving",
+  sitesSeoDescriptionHint:
+    "Een korte, nuttige samenvatting voor zoeken en gedeelde links.",
+  sitesSeoDescriptionDefault:
+    "Voeg een beschrijving toe zodat mensen weten waar deze pagina over gaat.",
+  sitesSeoImageHint:
+    "Gedeelde links gebruiken eerst de hero-afbeelding en daarna uw sitelogo.",
+  sitesSeoSave: "Zoekgegevens opslaan",
+  sitesSeoSaveFailed:
+    "De zoekgegevens konden niet worden opgeslagen. Probeer het opnieuw.",
 };

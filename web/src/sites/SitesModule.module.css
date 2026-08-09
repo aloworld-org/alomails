@@ -622,6 +622,42 @@
   flex-wrap: wrap;
 }
 
+/* ---- per-page search and sharing (S1.22b) ---- */
+.seoPreview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+}
+.seoPreviewPath,
+.seoPreviewDescription,
+.seoImageHint {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+.seoPreviewPath {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.seoPreviewTitle {
+  color: var(--text-primary);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+.seoPreviewDescription {
+  line-height: var(--leading-relaxed);
+}
+.seoImageHint {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--text-secondary);
+}
+
 /* ---- blog authoring desk (S1.21a) ---- */
 .postSiteName {
   color: var(--text-tertiary);

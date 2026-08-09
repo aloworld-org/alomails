@@ -71,7 +71,15 @@ function pageReply(sections: Section[]): Reply {
   return {
     match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages/page-1"),
     status: 200,
-    body: { id: "page-1", slug: "", title: "Welcome", home: true, sections: env(sections) },
+    body: {
+      id: "page-1",
+      slug: "",
+      title: "Welcome",
+      home: true,
+      seoTitle: null,
+      seoDescription: null,
+      sections: env(sections),
+    },
   };
 }
 
@@ -122,6 +130,66 @@ describe("the section stack", () => {
     ui();
     expect(await screen.findByText("no such page")).toBeTruthy();
     expect(screen.getByText(strings.sitesBackToSite)).toBeTruthy();
+  });
+});
+
+describe("search and sharing details", () => {
+  test("the visible page action saves both overrides through the page route", async () => {
+    replies = [pageReply([HERO])];
+    ui();
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesSeoAction }),
+    );
+    expect(screen.getByLabelText(strings.sitesSeoPreview)).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText(strings.sitesSeoFieldTitle), {
+      target: { value: "  Bread delivered today  " },
+    });
+    fireEvent.change(screen.getByLabelText(strings.sitesSeoFieldDescription), {
+      target: { value: "  Warm loaves from our neighbourhood bakery.  " },
+    });
+    replies = [
+      {
+        match: (url, method) =>
+          method === "PUT" && url.endsWith("/sites/site-1/pages/page-1"),
+        status: 200,
+        body: { status: "ok" },
+      },
+    ];
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesSeoSave }));
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()!.body).toEqual({
+      seoTitle: "Bread delivered today",
+      seoDescription: "Warm loaves from our neighbourhood bakery.",
+    });
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  test("a server refusal keeps the entered details visible with its reason", async () => {
+    replies = [pageReply([])];
+    ui();
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesSeoAction }),
+    );
+    fireEvent.change(screen.getByLabelText(strings.sitesSeoFieldTitle), {
+      target: { value: "A title the server refuses" },
+    });
+    replies = [
+      {
+        match: (url, method) =>
+          method === "PUT" && url.endsWith("/sites/site-1/pages/page-1"),
+        status: 422,
+        body: { detail: "SEO title must be at most 200 characters" },
+      },
+    ];
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesSeoSave }));
+
+    expect(await screen.findByText("SEO title must be at most 200 characters")).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    expect(
+      (screen.getByLabelText(strings.sitesSeoFieldTitle) as HTMLInputElement).value,
+    ).toBe("A title the server refuses");
   });
 });
 

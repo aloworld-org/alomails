@@ -84,8 +84,22 @@ vi.mock("../jmap/useJmapClient", () => ({
 
 const ALPHA: Site = { id: "site-1", name: "Alpha Bakery", subdomain: "alpha", status: "live" };
 const BETA: Site = { id: "site-2", name: "Beta Atelier", subdomain: "beta", status: "draft" };
-const HOME: SitePage = { id: "page-1", slug: "", title: "Welcome", home: true };
-const ABOUT: SitePage = { id: "page-2", slug: "about", title: "About us", home: false };
+const HOME: SitePage = {
+  id: "page-1",
+  slug: "",
+  title: "Welcome",
+  home: true,
+  seoTitle: null,
+  seoDescription: null,
+};
+const ABOUT: SitePage = {
+  id: "page-2",
+  slug: "about",
+  title: "About us",
+  home: false,
+  seoTitle: null,
+  seoDescription: null,
+};
 const ARTICLE: SitePost = {
   id: "post-1",
   docNodeId: "doc-1",

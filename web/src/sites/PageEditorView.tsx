@@ -15,6 +15,7 @@ import {
   Monitor,
   Palette,
   Pencil,
+  SearchCheck,
   Smartphone,
   Trash2,
 } from "lucide-react";
@@ -26,6 +27,7 @@ import { kindLabel, sectionSummary } from "./sectionInfo";
 import { SectionFormDialog } from "./SectionForm";
 import { SectionPicker } from "./SectionPicker";
 import { ThemeDialog } from "./ThemeDialog";
+import { PageSeoDialog } from "./PageSeoDialog";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 import type { SitePageDetail } from "./types";
@@ -59,6 +61,7 @@ export function PageEditorView() {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewMobile, setPreviewMobile] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
+  const [seoOpen, setSeoOpen] = useState(false);
   // Bumped when the theme changes — the preview document depends on the
   // site's theme, not only on this page's sections.
   const [previewEpoch, setPreviewEpoch] = useState(0);
@@ -175,6 +178,14 @@ export function PageEditorView() {
             <div className={styles.sectionBar}>
               <h2 className={styles.sectionTitle}>{strings.sitesSections}</h2>
               <div className={styles.sectionBarActions}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<SearchCheck size={14} />}
+                  onClick={() => setSeoOpen(true)}
+                >
+                  {strings.sitesSeoAction}
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -329,6 +340,19 @@ export function PageEditorView() {
           onClose={() => setThemeOpen(false)}
           onApplied={() => {
             setThemeOpen(false);
+            setPreviewEpoch((epoch) => epoch + 1);
+          }}
+        />
+      )}
+
+      {seoOpen && page !== null && (
+        <PageSeoDialog
+          siteId={siteId}
+          page={page}
+          onClose={() => setSeoOpen(false)}
+          onSaved={(seoTitle, seoDescription) => {
+            setPage({ ...page, seoTitle, seoDescription });
+            setSeoOpen(false);
             setPreviewEpoch((epoch) => epoch + 1);
           }}
         />
