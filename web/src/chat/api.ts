@@ -158,6 +158,17 @@ export class ChatApi {
     );
   }
 
+  /** Find messages, newest first. Only what the caller may already read: the
+   *  server applies the room rule in the query, not as an afterthought. */
+  async search(query: string, channel?: string): Promise<Message[]> {
+    const params = new URLSearchParams({ q: query });
+    if (channel !== undefined) params.set("channel", channel);
+    const body = await this.#read<{ messages: Message[] }>(
+      `/chat/search?${params.toString()}`,
+    );
+    return body.messages;
+  }
+
   /** The replies under one message, oldest first — a thread reads forwards. */
   async thread(id: string, rootSeq: number): Promise<Message[]> {
     const body = await this.#read<{ messages: Message[] }>(

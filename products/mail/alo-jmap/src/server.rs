@@ -225,6 +225,7 @@ pub fn app(state: AppState) -> Router {
         // Static before `{id}`: `/chat/reactions` must not be read as a
         // message called "reactions".
         .route("/chat/reactions", get(chat::list_reactions))
+        .route("/chat/search", get(chat::search))
         .route(
             "/chat/agents",
             get(chat_agent_routes::list_agents).post(chat_agent_routes::create_agent),

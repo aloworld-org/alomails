@@ -928,3 +928,48 @@ pub async fn list_reactions(
     authenticate(&state, &headers).await?;
     Ok(Json(json!({ "emoji": alo_store::REACTIONS })))
 }
+
+#[derive(Deserialize)]
+pub struct SearchQuery {
+    q: String,
+    /// Narrow to one room; omitted searches everything the caller may read.
+    channel: Option<String>,
+    limit: Option<i64>,
+}
+
+/// `GET /chat/search?q=&channel=&limit=` → messages the caller may read,
+/// newest first.
+///
+/// Visibility is applied in the query itself, not filtered afterwards: search
+/// is the likeliest place for a private room to leak, and a post-filter is
+/// something someone eventually forgets. Each hit carries its room so a client
+/// can say where it was said.
+///
+/// # Errors
+/// 401 unauthenticated.
+pub async fn search(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<SearchQuery>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let channel = query.channel.map(ChatChannelId::new);
+    let hits = account
+        .acc
+        .search_messages(
+            &query.q,
+            channel.as_ref(),
+            query.limit.unwrap_or(MESSAGE_PAGE_DEFAULT),
+        )
+        .await
+        .map_err(map_store_err)?;
+    let who: Vec<UserId> = hits.iter().map(|m| m.author.clone()).collect();
+    let mut emails = resolve_emails(&state, &account, &who).await;
+    label_agents(&account, &mut emails).await;
+    Ok(Json(json!({
+        "messages": hits
+            .iter()
+            .map(|m| message_json(m, &emails))
+            .collect::<Vec<_>>()
+    })))
+}

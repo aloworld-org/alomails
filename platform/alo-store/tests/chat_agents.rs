@@ -210,3 +210,92 @@ async fn a_discarded_proposal_stays_discarded() {
     assert_eq!(decided.state, ProposalState::Discarded);
     assert!(a.decide_proposal(&proposal, true).await.is_err());
 }
+
+/// Search sees exactly what reading sees. It is the likeliest place for a
+/// private room to leak, because a naive implementation searches everything
+/// and filters afterwards — and a filter is something someone eventually
+/// forgets.
+#[tokio::test]
+async fn search_finds_only_what_the_reader_could_already_read() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("search-t").await.unwrap();
+    let ts = store.for_tenant(t.clone());
+    let ua = ts.create_user("anna@search.test").await.unwrap();
+    let ub = ts.create_user("ben@search.test").await.unwrap();
+    let a = store.for_account(t.clone(), ua);
+    let b = store.for_account(t.clone(), ub.clone());
+
+    let t2 = store.create_tenant("search-t2").await.unwrap();
+    let uc = store
+        .for_tenant(t2.clone())
+        .create_user("stranger@search.test")
+        .await
+        .unwrap();
+    let c = store.for_account(t2, uc);
+
+    let open = a
+        .create_channel("open", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
+    let closed = a
+        .create_channel("closed", None, ChannelVisibility::Private)
+        .await
+        .unwrap();
+    a.post_message(&open, "the pelican budget is approved", None)
+        .await
+        .unwrap();
+    a.post_message(&closed, "the pelican salary review", None)
+        .await
+        .unwrap();
+
+    // Anna is in both, so she finds both.
+    assert_eq!(
+        a.search_messages("pelican", None, 50).await.unwrap().len(),
+        2
+    );
+
+    // Ben may read the live public room and is not in the private one. He
+    // finds one — and never learns the other sentence exists.
+    let bens = b.search_messages("pelican", None, 50).await.unwrap();
+    assert_eq!(bens.len(), 1);
+    assert!(bens[0].body.contains("budget"));
+
+    // Another tenant finds nothing, however well they guess the words.
+    assert!(
+        c.search_messages("pelican", None, 50)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+
+    // Narrowing to one room, and a room that is not the caller's to see
+    // simply yields nothing rather than an error that confirms it exists.
+    assert_eq!(
+        a.search_messages("pelican", Some(&open), 50)
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(
+        b.search_messages("pelican", Some(&closed), 50)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+
+    // Withdrawn words are not findable: the body is gone, so a hit would show
+    // nothing.
+    let said = a.post_message(&open, "pelican typo", None).await.unwrap();
+    assert_eq!(a.search_messages("typo", None, 50).await.unwrap().len(), 1);
+    a.delete_message(&said.id).await.unwrap();
+    assert!(
+        a.search_messages("typo", None, 50)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+
+    // An empty question asks nothing rather than returning everything.
+    assert!(a.search_messages("   ", None, 50).await.unwrap().is_empty());
+}

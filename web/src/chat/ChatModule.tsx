@@ -20,6 +20,7 @@ import {
   MessagesSquare,
   Paperclip,
   Reply,
+  Search,
   Send,
   Sparkles,
   SmilePlus,
@@ -379,6 +380,8 @@ export function ChatModule() {
   const feedRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLInputElement | null>(null);
   const [caret, setCaret] = useState(0);
+  const [finding, setFinding] = useState("");
+  const [found, setFound] = useState<Message[] | null>(null);
 
   const loadChannels = useCallback(async () => {
     try {
@@ -568,6 +571,23 @@ export function ChatModule() {
     });
   }
 
+  /** Look for something that was said. Debounced by the keystroke that
+   *  triggers it rather than a timer: a short question is cheap, and a timer
+   *  would make the first result feel late. */
+  async function find(query: string) {
+    setFinding(query);
+    if (query.trim() === "") {
+      setFound(null);
+      return;
+    }
+    try {
+      setFound(await api.search(query));
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatSearchFailed));
+      setFound([]);
+    }
+  }
+
   async function decide(proposal: Proposal, approve: boolean) {
     setError(null);
     try {
@@ -663,7 +683,57 @@ export function ChatModule() {
             {strings.chatNewChannel}
           </Button>
         </header>
-        {channels === null ? (
+        <div className={styles.searchRow}>
+          <Search size={14} className={styles.channelIcon} />
+          <input
+            className={styles.search}
+            value={finding}
+            onChange={(event) => void find(event.target.value)}
+            placeholder={strings.chatSearchPlaceholder}
+            aria-label={strings.chatSearchPlaceholder}
+            autoComplete="off"
+          />
+          {finding !== "" && (
+            <button
+              type="button"
+              className={styles.searchClear}
+              onClick={() => void find("")}
+              aria-label={strings.chatSearchClear}
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {found !== null ? (
+          found.length === 0 ? (
+            <p className={styles.sidebarNote}>{strings.chatSearchNothing}</p>
+          ) : (
+            <ul className={styles.channelList}>
+              {found.map((hit) => (
+                <li key={hit.id}>
+                  <button
+                    type="button"
+                    className={styles.hit}
+                    onClick={() => {
+                      // Open the room it was said in. The message is not
+                      // scrolled to yet — see chatSearchOpensRoom.
+                      setOpenId(hit.channel);
+                      void find("");
+                    }}
+                  >
+                    <span className={styles.hitWho}>
+                      {hit.authorKind === "agent"
+                        ? (hit.authorEmail ?? hit.author)
+                        : personName(hit.authorEmail, hit.author)}
+                    </span>
+                    <span className={styles.hitBody}>{hit.body}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )
+        ) : channels === null ? (
           <p className={styles.sidebarNote}>
             <Loader2 className={styles.spin} size={14} /> {strings.chatLoading}
           </p>

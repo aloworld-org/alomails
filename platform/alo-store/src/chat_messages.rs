@@ -373,6 +373,49 @@ impl AccountStore {
             .collect()
     }
 
+    /// Find messages the caller may read, newest first.
+    ///
+    /// Visibility is the room's, applied in SQL and identical to
+    /// [`channel`](Self::channel)'s rule: a room you are in, or a live public
+    /// channel. Search must never be the one place a private room leaks, so
+    /// the predicate is written here rather than filtered afterwards — a
+    /// post-filter is a leak waiting for someone to forget it.
+    ///
+    /// Withdrawn messages are excluded: their words are gone, and a hit with
+    /// nothing to show is noise. `channel` narrows to one room.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn search_messages(
+        &self,
+        query: &str,
+        channel: Option<&ChatChannelId>,
+        limit: i64,
+    ) -> Result<Vec<ChatMessage>> {
+        let query = query.trim();
+        if query.is_empty() {
+            return Ok(Vec::new());
+        }
+        let limit = limit.clamp(1, MESSAGE_PAGE_MAX);
+        let rows: Vec<MessageRow> = sqlx::query_as(&format!(
+            "SELECT {} FROM chat_messages m              JOIN chat_channels c                ON c.tenant_id = m.tenant_id AND c.id = m.channel_id              WHERE m.tenant_id = $1                AND m.deleted_at IS NULL                AND ($4::text IS NULL OR m.channel_id = $4)                AND to_tsvector('simple', m.body) @@ plainto_tsquery('simple', $2)                AND (                  EXISTS (SELECT 1 FROM chat_members mm                          WHERE mm.tenant_id = c.tenant_id AND mm.channel_id = c.id                            AND mm.user_id = $3)                  OR (c.visibility = 'public' AND c.archived_at IS NULL))              ORDER BY m.created_at DESC LIMIT $5",
+            MESSAGE_COLUMNS
+                .split(", ")
+                .map(|column| format!("m.{}", column.trim()))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ))
+        .bind(self.tenant.as_str())
+        .bind(query)
+        .bind(self.user.as_str())
+        .bind(channel.map(ChatChannelId::as_str))
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        rows.into_iter().map(row_to_message).collect()
+    }
+
     /// The replies gathered under one top-level message, oldest first.
     ///
     /// # Errors

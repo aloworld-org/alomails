@@ -1675,6 +1675,10 @@ export const en = {
   chatReplyInThread: "Reply in thread",
   chatAddReaction: "Add a reaction",
   chatAgentTag: "agent",
+  chatSearchPlaceholder: "Search messages",
+  chatSearchClear: "Clear search",
+  chatSearchNothing: "Nothing matched.",
+  chatSearchFailed: "That search couldn’t be run.",
   chatProposalNotYours:
     "Only the person who asked can approve this — it would run with their access.",
   chatProposalSettled: (state: string): string =>
@@ -2621,7 +2625,8 @@ export const en = {
   sitesEditArticleDetails: "Edit details",
   sitesSaveArticle: "Save changes",
   sitesPostSaveFailed: "The article details could not be saved. Try again.",
-  sitesPostUnpublishFailed: "The article could not be taken offline. Try again.",
+  sitesPostUnpublishFailed:
+    "The article could not be taken offline. Try again.",
   sitesUnpublishArticle: "Take offline",
   sitesUnpublishingArticle: "Taking offline…",
   sitesFieldPostTitle: "Article title",
@@ -2629,7 +2634,8 @@ export const en = {
   sitesPostSlugHint: "Lowercase letters, digits and hyphens.",
   sitesPostSlugPlaceholder: "my-article",
   sitesFieldPostExcerpt: "Summary",
-  sitesPostExcerptHint: "A short introduction shown on the blog page and in RSS.",
+  sitesPostExcerptHint:
+    "A short introduction shown on the blog page and in RSS.",
   sitesFieldPostCover: "Cover image",
   sitesPostCoverHint: "Shown on the blog page and above the article.",
   sitesPostNoCover: "No cover",
@@ -2638,7 +2644,8 @@ export const en = {
   sitesReplacePostCover: "Replace image",
   sitesRemovePostCover: "Remove",
   sitesUploadingPostCover: "Uploading…",
-  sitesPostCoverUploadFailed: "The cover image could not be uploaded. Try again.",
+  sitesPostCoverUploadFailed:
+    "The cover image could not be uploaded. Try again.",
   sitesHomeBadge: "Home",
   sitesNewPageTitle: "New page",
   sitesNewPageSubtitle: "A page holds the sections you stack on it.",
@@ -2673,13 +2680,16 @@ export const en = {
   sitesPreviewFailed: "The preview could not be loaded.",
   sitesSeoAction: "Search & sharing",
   sitesSeoTitle: "Search & sharing",
-  sitesSeoSubtitle: "Choose how this page appears in search results and shared links.",
+  sitesSeoSubtitle:
+    "Choose how this page appears in search results and shared links.",
   sitesSeoPreview: "Search result preview",
   sitesSeoFieldTitle: "Search title",
   sitesSeoTitleHint: "Leave blank to use the page title and website name.",
   sitesSeoFieldDescription: "Description",
-  sitesSeoDescriptionHint: "A short, useful summary for search results and shared links.",
-  sitesSeoDescriptionDefault: "Add a description so people know what this page is about.",
+  sitesSeoDescriptionHint:
+    "A short, useful summary for search results and shared links.",
+  sitesSeoDescriptionDefault:
+    "Add a description so people know what this page is about.",
   sitesSeoImageHint:
     "Shared links use the page's first hero image. If there isn't one, your site logo is used.",
   sitesSeoSave: "Save search details",
