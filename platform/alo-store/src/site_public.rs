@@ -26,7 +26,7 @@ use crate::site_assets::{SiteImageData, site_image_content_type};
 use crate::site_publish::{SitePageSnapshot, SitePageSnapshotRow};
 
 /// A site resolved for public serving: the current publish of a live site.
-/// Only [`SitePublicStore::resolve_published`] constructs this — the private
+/// Only the [`SitePublicStore`] Host resolvers construct this — the private
 /// tenant field is what keeps every follow-up read scoped to the site the
 /// Host header actually named.
 #[derive(Debug, Clone)]
@@ -127,6 +127,33 @@ impl SitePublicStore {
              WHERE s.subdomain = $1",
         )
         .bind(subdomain)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(row.map(PublishedSiteRow::into_site))
+    }
+
+    /// Resolves a live custom domain to the owning site's current publish.
+    /// Pending and merely verified claims are deliberately absent: Caddy and
+    /// the public server share this exact readiness boundary, so TLS is never
+    /// authorized before the domain can serve useful bytes.
+    ///
+    /// The global domain claim is the public routing key. The joined tenant,
+    /// site and publish ids come only from that claim, preserving the same
+    /// by-construction tenant boundary as [`Self::resolve_published`].
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn resolve_custom_published(&self, domain: &str) -> Result<Option<PublishedSite>> {
+        let row = sqlx::query_as::<_, PublishedSiteRow>(
+            "SELECT s.tenant_id, s.id AS site_id, s.name, p.id AS publish_id, p.theme \
+             FROM site_domains d \
+             JOIN sites s ON s.tenant_id = d.tenant_id AND s.id = d.site_id \
+             JOIN site_publishes p \
+               ON p.tenant_id = s.tenant_id AND p.id = s.published_publish_id \
+             WHERE d.domain = $1 AND d.status = 'live'",
+        )
+        .bind(domain)
         .fetch_optional(&self.pool)
         .await
         .map_err(StoreError::Db)?;

@@ -233,7 +233,9 @@ pub async fn delete_domain(
 
 /// `POST /sites/:id/domains/:domain/verify` checks the current DNS TXT set.
 /// A missing record is a normal, retryable 200 response; the claim changes to
-/// `verified` only after the exact opaque token is observed.
+/// `live` only after the exact opaque token is observed. Verification and
+/// serving activation are one user action now that alo-sites supports the
+/// custom Host; there is no second ceremony step to discover.
 pub async fn verify_domain(
     State(state): State<AppState>,
     Extension(dns): Extension<Arc<dyn SiteDomainTxtLookup>>,
@@ -266,12 +268,17 @@ pub async fn verify_domain(
     if !found {
         return Ok(Json(site_domain_json(&claim)));
     }
-    let verified = account
+    account
         .acc
         .verify_site_domain(&site, &domain)
         .await
         .map_err(map_store_err)?;
-    Ok(Json(site_domain_json(&verified)))
+    let live = account
+        .acc
+        .activate_site_domain(&site, &domain)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(site_domain_json(&live)))
 }
 
 #[derive(Deserialize)]

@@ -292,10 +292,10 @@ async fn custom_domain_claim_and_mocked_txt_verification_run_on_the_wire() {
     assert_eq!(still_pending["status"], json!("pending"));
 
     let matching_dns = app_with_dns(&h, HashMap::from([(record_name, vec![record_value])]));
-    let (status, verified) = post(&matching_dns, &h.token, &verify_path, json!({})).await;
-    assert_eq!(status, StatusCode::OK, "{verified}");
-    assert_eq!(verified["status"], json!("verified"));
-    assert!(verified["verifiedAt"].is_string());
+    let (status, live) = post(&matching_dns, &h.token, &verify_path, json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{live}");
+    assert_eq!(live["status"], json!("live"));
+    assert!(live["verifiedAt"].is_string());
 
     let (status, body) = delete(&h.app, &h.token, &format!("{base}/{host}")).await;
     assert_eq!(status, StatusCode::OK, "{body}");
