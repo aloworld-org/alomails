@@ -439,3 +439,42 @@ test("editing sends the new words, and an unchanged edit sends nothing", async (
     expect(patch?.body).toEqual({ body: "the plan" });
   });
 });
+
+/** A full page means there is probably more behind it. A short page means we
+ *  have reached the beginning — and the control must go away, or it invites a
+ *  request that returns nothing forever. */
+function page(n: number, from: number) {
+  return Array.from({ length: n }, (_, i) =>
+    message({ id: `m-${from - i}`, seq: from - i, body: `line ${from - i}` }),
+  );
+}
+
+test("a full page offers to show earlier messages; a short one does not", async () => {
+  // 50 back = exactly one page, so something is probably behind it.
+  withMessages(page(50, 50));
+  render(<ChatModule />);
+  await screen.findByText("line 50");
+  expect(screen.getByText(strings.chatOlder)).toBeTruthy();
+
+  cleanup();
+  calls.length = 0;
+  // A short page is the beginning of the room.
+  withMessages(page(3, 3));
+  render(<ChatModule />);
+  await screen.findByText("line 3");
+  expect(screen.queryByText(strings.chatOlder)).toBeNull();
+});
+
+test("showing earlier messages asks for what is behind the oldest held", async () => {
+  withMessages(page(50, 50));
+  render(<ChatModule />);
+  await screen.findByText("line 50");
+
+  fireEvent.click(screen.getByText(strings.chatOlder));
+
+  await waitFor(() => {
+    // The cursor is the oldest seq on screen — seq 1 — not a page number and
+    // not an offset, so a message arriving meanwhile cannot shift the window.
+    expect(calls.some((c) => c.url.includes("before=1"))).toBe(true);
+  });
+});

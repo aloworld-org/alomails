@@ -409,6 +409,31 @@
   color: var(--accent);
 }
 
+/* ---- reading back ---------------------------------------------------- */
+
+.older {
+  align-self: center;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: var(--bg-surface);
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.older:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.older:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
 /* ---- changing your own words ----------------------------------------- */
 
 /* As quiet as the reply affordance, and for the same reason: a feed of fifty

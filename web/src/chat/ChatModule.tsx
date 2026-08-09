@@ -51,6 +51,11 @@ import styles from "./ChatModule.module.css";
  *  a drifted copy does is offer a choice that is then declined. */
 const ATTACHMENTS_MAX = 10;
 
+/** What one page of history holds — the server's own default
+ *  (`MESSAGE_PAGE_DEFAULT`). A full page means there is probably more behind
+ *  it; a short one means we have reached the beginning. */
+const PAGE = 50;
+
 /** A room's label: its `#name`, or the standing of a DM. */
 function channelLabel(channel: ChannelSummary): string {
   return channel.name ?? strings.chatDirectMessage;
@@ -451,6 +456,11 @@ export function ChatModule() {
   const composerRef = useRef<HTMLInputElement | null>(null);
   const [caret, setCaret] = useState(0);
   const [showingPeople, setShowingPeople] = useState(false);
+  // Whether anything remains behind the oldest line held. Derived from the
+  // last page's size rather than a count, because a count would be a second
+  // truth about the same thing.
+  const [moreBehind, setMoreBehind] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [finding, setFinding] = useState("");
   const [found, setFound] = useState<Message[] | null>(null);
 
@@ -470,6 +480,7 @@ export function ChatModule() {
         // Newest-first on the wire; the feed reads oldest-first.
         const page = await api.messages(id);
         setMessages([...page].reverse());
+        setMoreBehind(page.length === PAGE);
         const newest = page[0]?.seq;
         if (newest !== undefined) await api.markRead(id, newest);
       } catch (failure) {
@@ -576,11 +587,14 @@ export function ChatModule() {
     };
   }, [client, openId, threadSeq, loadChannels, loadMessages, loadReplies]);
 
-  // Keep the newest line in view as the conversation grows.
+  // Keep the newest line in view as the conversation grows — but only when
+  // the newest line actually changed. Scrolling to the bottom after prepending
+  // older history would throw the reader out of what they went back to read.
+  const newestSeq = messages?.[messages.length - 1]?.seq ?? null;
   useEffect(() => {
     const feed = feedRef.current;
     if (feed !== null) feed.scrollTop = feed.scrollHeight;
-  }, [messages]);
+  }, [newestSeq, openId]);
 
   async function send() {
     const body = draft.trim();
@@ -656,6 +670,37 @@ export function ChatModule() {
     } catch (failure) {
       setError(chatMessage(failure, strings.chatSearchFailed));
       setFound([]);
+    }
+  }
+
+  /** Fetch the page behind the oldest line held, and keep the reader where
+   *  they were.
+   *
+   *  Prepending changes the scroll height, so without correction the content
+   *  under the cursor jumps — the single thing that makes an infinite feed
+   *  feel broken. The height is measured before and after, and the difference
+   *  is added back to the scroll position.
+   */
+  async function loadOlder() {
+    const feed = feedRef.current;
+    const oldest = messages?.[0]?.seq;
+    if (openId === null || oldest === undefined || loadingOlder) return;
+    setLoadingOlder(true);
+    const before = feed?.scrollHeight ?? 0;
+    try {
+      const page = await api.messages(openId, oldest);
+      if (page.length > 0) {
+        setMessages((held) => [...[...page].reverse(), ...(held ?? [])]);
+      }
+      setMoreBehind(page.length === PAGE);
+      requestAnimationFrame(() => {
+        const now = feedRef.current;
+        if (now !== null) now.scrollTop += now.scrollHeight - before;
+      });
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatLoadFailed));
+    } finally {
+      setLoadingOlder(false);
     }
   }
 
@@ -920,6 +965,19 @@ export function ChatModule() {
             </header>
 
             <div className={styles.feed} ref={feedRef}>
+              {/* An explicit control rather than a scroll trigger: a feed that
+                  loads on approach fires while someone is simply reading back,
+                  and there is no way to tell it to stop. */}
+              {moreBehind && messages !== null && (
+                <button
+                  type="button"
+                  className={styles.older}
+                  onClick={() => void loadOlder()}
+                  disabled={loadingOlder}
+                >
+                  {loadingOlder ? strings.chatLoading : strings.chatOlder}
+                </button>
+              )}
               {messages === null ? (
                 <p className={styles.feedNote}>
                   <Loader2 className={styles.spin} size={14} />{" "}

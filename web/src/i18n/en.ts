@@ -1675,6 +1675,7 @@ export const en = {
   chatReplyInThread: "Reply in thread",
   chatAddReaction: "Add a reaction",
   chatAgentTag: "agent",
+  chatOlder: "Show earlier messages",
   chatEditAction: "Edit",
   chatWithdrawAction: "Withdraw",
   chatEditLabel: "Edit this message",
@@ -2841,7 +2842,8 @@ export const en = {
     "Your submissions could not be exported. Try again.",
   // Sites — privacy-friendly traffic analytics.
   sitesAnalytics: "Analytics",
-  sitesAnalyticsLoadFailed: "Your site analytics could not be loaded. Try again.",
+  sitesAnalyticsLoadFailed:
+    "Your site analytics could not be loaded. Try again.",
   sitesAnalyticsLoading: "Loading site analytics",
   sitesAnalyticsPeriod: "Analytics period",
   sitesAnalyticsDays: (days: number) => `${days} days`,
