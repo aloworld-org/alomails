@@ -89,6 +89,13 @@
   color: var(--text-tertiary);
 }
 
+/* Archived: still reachable, visibly no longer live. Dimmed rather than
+   hidden — the history belongs to the team, not to the archive button. */
+.channelArchived .channelName {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
 .channelName {
   flex: 1;
   overflow: hidden;
@@ -215,6 +222,18 @@
 .input:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+.archivedNote {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
 }
 
 .error {

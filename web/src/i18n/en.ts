@@ -110,7 +110,8 @@ export const en = {
   contactSave: "Save",
   contactCancel: "Cancel",
   contactDelete: "Delete",
-  contactDeleteConfirm: (name: string) => `Delete ${name}? This cannot be undone.`,
+  contactDeleteConfirm: (name: string) =>
+    `Delete ${name}? This cannot be undone.`,
   contactNeedsName: "Add a name or at least one email.",
   contactSaveError: "Couldn't save this contact.",
   contactDeleteError: "Couldn't delete this contact.",
@@ -151,7 +152,8 @@ export const en = {
   importClose: "Close",
   signedInAs: "Signed in as",
   comingSoonTitle: "Coming soon",
-  comingSoonBody: "This part of your workspace is on the way. Mail is ready now.",
+  comingSoonBody:
+    "This part of your workspace is on the way. Mail is ready now.",
 
   // auth — brand panel
   brandHeadline: "Your workspace.\nYour servers.\nYour rules.",
@@ -246,7 +248,8 @@ export const en = {
 
   // auth — password reset
   resetHeading: "Reset your password",
-  resetSubtitle: "Enter your alo address — we'll email a reset code to your recovery mailbox.",
+  resetSubtitle:
+    "Enter your alo address — we'll email a reset code to your recovery mailbox.",
   resetAddressLabel: "Your alo address",
   resetSendCode: "Send reset code",
   resetSending: "Sending…",
@@ -302,7 +305,8 @@ export const en = {
   cancelledAbsent: "This event wasn't on your calendar.",
   agendaEventGuests: "Guests",
   agendaGuestsPlaceholder: "name@example.com, another@example.com",
-  agendaGuestsHint: "We'll email each guest an invitation they can accept in their own calendar.",
+  agendaGuestsHint:
+    "We'll email each guest an invitation they can accept in their own calendar.",
   agendaEventDescription: "Notes",
   agendaSave: "Save",
   agendaSaveThis: "This event",
@@ -376,12 +380,14 @@ export const en = {
   taskFilesNeedTask: "Create a task first, then attach images and files to it.",
   taskFilesUploadError: "Couldn't attach those files. Please try again.",
   taskChooseFromDrive: "Choose from Drive",
-  taskChooseFromDriveHint: "Attach existing files without uploading them again.",
+  taskChooseFromDriveHint:
+    "Attach existing files without uploading them again.",
   taskSearchDrive: "Search this folder",
   taskDriveBack: "Back to previous folder",
   taskNoDriveFiles: "No files in this folder.",
   taskAttachSelected: "Attach selected",
-  taskFilesSelected: (count: number) => count === 1 ? "1 file selected" : `${count} files selected`,
+  taskFilesSelected: (count: number) =>
+    count === 1 ? "1 file selected" : `${count} files selected`,
   taskCreateOnDate: (date: string) => `Create a task due ${date}`,
   taskLabelsTitle: "Labels",
   taskAddLabel: "Add label",
@@ -440,7 +446,9 @@ export const en = {
   taskSuggesting: "Reading the email for action items…",
   taskNoSuggestions: "No action items found in this email.",
   taskSuggested: (n: number) =>
-    n === 1 ? "1 suggestion added to your task inbox." : `${n} suggestions added to your task inbox.`,
+    n === 1
+      ? "1 suggestion added to your task inbox."
+      : `${n} suggestions added to your task inbox.`,
   taskAiOff: "AI is off, so nothing could be suggested.",
   taskClose: "Close",
   taskDelete: "Delete",
@@ -458,12 +466,23 @@ export const en = {
   taskEmpty: "No tasks yet. Add one above.",
   taskPlateEmpty: "Nothing due. You’re all caught up.",
   taskNoProposalsTitle: "You're all caught up",
-  taskNoProposals: "Suggestions appear here when alo finds action items in an email.",
+  taskNoProposals:
+    "Suggestions appear here when alo finds action items in an email.",
   taskAiSuggested: "AI suggested",
   taskAccept: "Accept",
   taskReject: "Dismiss",
   taskActivityKind: (kind: string) =>
-    ({ created: "created this task", status_changed: "moved it", assigned: "changed the assignee", due_changed: "changed the due date", commented: "commented", accepted: "accepted the suggestion", proposed: "was suggested by AI" } as Record<string, string>)[kind] ?? kind,
+    (
+      ({
+        created: "created this task",
+        status_changed: "moved it",
+        assigned: "changed the assignee",
+        due_changed: "changed the due date",
+        commented: "commented",
+        accepted: "accepted the suggestion",
+        proposed: "was suggested by AI",
+      }) as Record<string, string>
+    )[kind] ?? kind,
   agendaReminder: "Reminder",
   agendaReminderNone: "No reminder",
   agendaReminderAtStart: "At time of event",
@@ -519,8 +538,10 @@ export const en = {
   flagDueLabel: (when: string) => `Due ${when}`,
   flagDueOverdue: (when: string) => `Overdue — was due ${when}`,
   flagDueSet: "Set a follow-up date",
-  resizeFolders: "Resize the folders panel (drag, or arrow keys; double-click to reset)",
-  resizeMessages: "Resize the message list (drag, or arrow keys; double-click to reset)",
+  resizeFolders:
+    "Resize the folders panel (drag, or arrow keys; double-click to reset)",
+  resizeMessages:
+    "Resize the message list (drag, or arrow keys; double-click to reset)",
   collapseFolders: "Hide folders",
   expandFolders: "Show folders",
   mailEmpty: "No messages here yet.",
@@ -641,7 +662,8 @@ export const en = {
   folderRename: "Rename",
   folderDelete: "Delete folder",
   folderNamePlaceholder: "Folder name",
-  folderDeleteConfirm: (name: string) => `Delete the folder "${name}"? Its messages are not deleted.`,
+  folderDeleteConfirm: (name: string) =>
+    `Delete the folder "${name}"? Its messages are not deleted.`,
   folderActionFailed: "That folder change didn't work — please try again.",
   folderActions: (name: string) => `Options for the ${name} folder`,
   // Shared mailboxes / delegation
@@ -649,7 +671,8 @@ export const en = {
   sharedMailboxesHeading: "Shared mailboxes",
   sharedMyMailbox: "My mailbox",
   sharedReadOnly: "read-only",
-  sharedNoSend: "You can't send from this shared mailbox — you weren't granted send access.",
+  sharedNoSend:
+    "You can't send from this shared mailbox — you weren't granted send access.",
   // Self-service sharing (Settings)
   settingsSharing: "Sharing",
   settingsSharingHint:
@@ -657,7 +680,8 @@ export const en = {
   sharingNone: "You haven't shared your mailbox with anyone.",
   sharingEmailPlaceholder: "Colleague's email",
   sharingAdd: "Share",
-  sharingAddError: "Couldn't share — check the email is a colleague in your organization.",
+  sharingAddError:
+    "Couldn't share — check the email is a colleague in your organization.",
   // Admin — mailbox delegation
   userShareAccess: "Shared access",
   delegateTitle: (email: string) => `Who can access ${email}`,
@@ -700,9 +724,11 @@ export const en = {
   transferDownload: "Download",
   transferExpires: (date: string) => `link expires ${date}`,
   transferExpiryTitle: "How long large-file links stay live",
-  transferExpiryOption: (days: number) => (days === 1 ? "1 day" : `${days} days`),
+  transferExpiryOption: (days: number) =>
+    days === 1 ? "1 day" : `${days} days`,
   blockSenderNamed: (email: string) => `Block ${email}`,
-  senderBlocked: (email: string) => `Blocked ${email} — their mail now goes to Junk.`,
+  senderBlocked: (email: string) =>
+    `Blocked ${email} — their mail now goes to Junk.`,
   // Filters & rules
   settingsFilters: "Filters & rules",
   settingsFiltersHint:
@@ -751,7 +777,8 @@ export const en = {
   spamBannerTitle: "This message is in Spam",
   spamReasonDmarc: (domain: string) =>
     `We couldn't confirm it was really sent from ${domain} — it failed DMARC authentication, a common sign of spoofing.`,
-  spamReasonDkim: "Its cryptographic signature (DKIM) didn't validate, so the sender couldn't be verified.",
+  spamReasonDkim:
+    "Its cryptographic signature (DKIM) didn't validate, so the sender couldn't be verified.",
   spamReasonSpf: (domain: string) =>
     `The server that sent it isn't authorized to send mail for ${domain} (SPF failed).`,
   spamReasonNone:
@@ -763,7 +790,8 @@ export const en = {
   unsubscribeConfirm: (sender: string) =>
     `Unsubscribe from ${sender}? We'll ask the sender to stop emailing you.`,
   unsubscribed: "Unsubscribed — the sender was asked to stop.",
-  unsubscribeFailed: "Couldn't unsubscribe automatically — try the link in the message.",
+  unsubscribeFailed:
+    "Couldn't unsubscribe automatically — try the link in the message.",
   unsubscribeOpened: "Opened the unsubscribe page in a new tab.",
   forwardAsAttachment: "Forward as attachment",
   blockSender: "Block sender",
@@ -787,12 +815,15 @@ export const en = {
   settingsSignature: "Your signature",
   settingsSignatureHint: "Added to the bottom of messages you send…",
   settingsOrgFooter: "Organization footer",
-  settingsOrgFooterHint: "Added to every user's outgoing mail, after their signature.",
+  settingsOrgFooterHint:
+    "Added to every user's outgoing mail, after their signature.",
   settingsOrgFooterPlaceholder: "e.g. company name, address, legal notice…",
   settingsOutOfOffice: "Out of office",
-  settingsOutOfOfficeHint: "Automatically reply once to anyone who emails you while you're away.",
+  settingsOutOfOfficeHint:
+    "Automatically reply once to anyone who emails you while you're away.",
   settingsOooSubjectPlaceholder: "Subject (optional) — e.g. Out of office",
-  settingsOooMessagePlaceholder: "e.g. I'm away until Monday and will reply on my return.",
+  settingsOooMessagePlaceholder:
+    "e.g. I'm away until Monday and will reply on my return.",
   settingsOooNeedsMessage: "Add a message to turn on out-of-office.",
   settingsSave: "Save",
   settingsSaved: "Saved.",
@@ -819,7 +850,8 @@ export const en = {
 
   // admin — domains (tenant's own; ADR 0012)
   adminDomains: "Domains",
-  adminDomainsIntro: "Domains this organization sends and receives mail for, and their verification.",
+  adminDomainsIntro:
+    "Domains this organization sends and receives mail for, and their verification.",
   adminDomainsError: "Couldn't load domains.",
   adminDomainsEmpty: "No domains yet. Add one to verify it.",
   adminAddDomain: "Add domain",
@@ -827,7 +859,8 @@ export const en = {
   dkimRotate: "Rotate DKIM",
   dkimRotateConfirm: (domain: string) =>
     `Rotate the DKIM key for ${domain}? Publish the new record; keep the old one until mail stops using it.`,
-  dkimRotated: (domain: string) => `New DKIM key for ${domain} — publish the updated record.`,
+  dkimRotated: (domain: string) =>
+    `New DKIM key for ${domain} — publish the updated record.`,
 
   // admin — audit log
   adminAudit: "Audit log",
@@ -873,7 +906,8 @@ export const en = {
   tenantAdminPassword: "First admin password",
   tenantAdminPasswordHint: "at least 12 characters",
   tenantCreate: "Create tenant",
-  tenantInvalid: "A name, a valid admin email, and a 12+ character password are required.",
+  tenantInvalid:
+    "A name, a valid admin email, and a 12+ character password are required.",
   tenantCreateError: "Couldn't create that tenant.",
   tenantActive: "Active",
   tenantSuspended: "Suspended",
@@ -882,7 +916,8 @@ export const en = {
   tenantDelete: "Delete tenant",
   tenantDeleteConfirm: (name: string) =>
     `Permanently delete "${name}" and all of its data? This cannot be undone.`,
-  tenantUsage: (n: number, size: string) => `${n === 1 ? "1 user" : `${n} users`} · ${size}`,
+  tenantUsage: (n: number, size: string) =>
+    `${n === 1 ? "1 user" : `${n} users`} · ${size}`,
   tenantQuota: "Quota",
   tenantQuotaPrompt: "Storage quota in GB (leave blank for unlimited):",
   tenantQuotaUnlimited: "unlimited",
@@ -899,7 +934,8 @@ export const en = {
   domainVerify: "Verify",
   domainDelete: "Remove domain",
   domainOwnedBy: (tenant: string) => `Owned by ${tenant}`,
-  domainDeleteConfirm: (domain: string) => `Remove ${domain} from this deployment?`,
+  domainDeleteConfirm: (domain: string) =>
+    `Remove ${domain} from this deployment?`,
   domainVerifiedOk: (domain: string) => `${domain} is verified.`,
   domainVerifyPending: (domain: string) =>
     `No matching DNS TXT record found for ${domain} yet — publish it and try again.`,
@@ -925,7 +961,8 @@ export const en = {
   securityWarn: "Attention",
   securityFail: "Action needed",
   adminGroups: "Groups & lists",
-  adminGroupsIntro: "Groups for shared access, and distribution lists that fan mail out to their members.",
+  adminGroupsIntro:
+    "Groups for shared access, and distribution lists that fan mail out to their members.",
   adminNewGroup: "New group",
   adminGroupsError: "Couldn't load groups.",
   groupName: "Group name",
@@ -942,8 +979,10 @@ export const en = {
   groupAddressClear: "Turn off list",
   groupAddMember: "Add member",
   groupDelete: "Delete group",
-  groupDeleteConfirm: (name: string) => `Delete the group “${name}”? Members keep their mailboxes.`,
-  groupCreateError: "Couldn't create that group — the name may already be taken.",
+  groupDeleteConfirm: (name: string) =>
+    `Delete the group “${name}”? Members keep their mailboxes.`,
+  groupCreateError:
+    "Couldn't create that group — the name may already be taken.",
   groupAddressError: "Couldn't set that address — it may already be in use.",
   groupActionError: "That didn't work — please try again.",
   groupClose: "Close",
@@ -961,7 +1000,8 @@ export const en = {
   userPasswordHint: "At least 8 characters.",
   userCreate: "Create user",
   userInvalid: "Enter a valid email and a password of at least 8 characters.",
-  userCreateError: "Couldn't create that user — the email may already be in use.",
+  userCreateError:
+    "Couldn't create that user — the email may already be in use.",
   userReset: "Reset password",
   userResetDone: "Password reset.",
   userAdminRole: "Tenant admin",
@@ -975,16 +1015,19 @@ export const en = {
   userActionError: "That didn't work — please try again.",
   userClose: "Close",
   adminAiProviders: "AI providers",
-  adminAiIntro: "Choose which models power alo — self-hosted, or your own API keys.",
+  adminAiIntro:
+    "Choose which models power alo — self-hosted, or your own API keys.",
   adminAddProvider: "Add provider",
   adminManage: "Manage",
   adminDefaultBadge: "Default",
   adminMakeDefault: "Make default",
   adminProvidersError: "Couldn't load providers.",
   adminAiSelfHosted: "Self-hosted (recommended)",
-  adminAiSelfHostedHint: "Runs on your own infrastructure — no data leaves your servers.",
+  adminAiSelfHostedHint:
+    "Runs on your own infrastructure — no data leaves your servers.",
   adminAiOwnKeys: "Your own API keys",
-  adminAiOwnKeysHint: "Connect an external provider with your key. Requests leave your server to that provider.",
+  adminAiOwnKeysHint:
+    "Connect an external provider with your key. Requests leave your server to that provider.",
   adminAiFootnote:
     "Self-hosted providers keep all data on your infrastructure. External API keys send requests and content to that provider — choose per your data policy.",
   providerConnected: "Connected",
@@ -998,12 +1041,16 @@ export const en = {
   kindAnthropic: "Anthropic",
   kindCustom: "Custom endpoint",
   builtInTag: "Built in",
-  ollamaDesc: "Local models on your server — Llama 3, Mistral, and more. Fully private.",
-  aloDesc: "Built-in, EU-hosted model tuned for alo — point it at your alo AI endpoint.",
-  mistralDesc: "European models, hosted in the EU. Add your Mistral key to enable. Recommended for data sovereignty.",
+  ollamaDesc:
+    "Local models on your server — Llama 3, Mistral, and more. Fully private.",
+  aloDesc:
+    "Built-in, EU-hosted model tuned for alo — point it at your alo AI endpoint.",
+  mistralDesc:
+    "European models, hosted in the EU. Add your Mistral key to enable. Recommended for data sovereignty.",
   openaiDesc: "GPT-4o, GPT-4o mini. Add your OpenAI key to enable.",
   anthropicDesc: "Claude models. Add your Anthropic API key to enable.",
-  customDesc: "Any OpenAI-compatible API — self-hosted vLLM, Together, Groq, OpenRouter…",
+  customDesc:
+    "Any OpenAI-compatible API — self-hosted vLLM, Together, Groq, OpenRouter…",
   connectTitle: (name: string) => `Connect ${name}`,
   configureTitle: (name: string) => `Configure ${name}`,
   providerBaseUrl: "API endpoint",
@@ -1021,7 +1068,9 @@ export const en = {
   providerTestAgain: "Test again",
   providerTesting: "Testing…",
   providerTestOk: (n: number) =>
-    n === 1 ? "Connection verified — 1 model reachable" : `Connection verified — ${n} models reachable`,
+    n === 1
+      ? "Connection verified — 1 model reachable"
+      : `Connection verified — ${n} models reachable`,
   providerTestFail: "Couldn't reach that endpoint.",
   providerCancel: "Cancel",
   providerSave: "Save & enable",
@@ -1228,7 +1277,8 @@ export const en = {
   headingLabel: "Heading text",
 
   // paragraph block
-  paraPlaceholder: "Write here. Use the toolbar to insert inline math or a cross-reference.",
+  paraPlaceholder:
+    "Write here. Use the toolbar to insert inline math or a cross-reference.",
   paraLabel: "Paragraph text",
   paraInlineMath: "Inline math",
   paraReference: "Reference",
@@ -1287,28 +1337,36 @@ export const en = {
   driveLoadingFile: (name: string) => `Opening ${name}…`,
   driveOpeningEditor: "your file",
   driveFileOpenFailedTitle: "This file did not open",
-  driveFileUnavailable: "It may have been moved or deleted. Return to your files and choose another item.",
-  driveEditorLoadFailed: (reason: string) => `Drive could not open this file. ${reason}`,
+  driveFileUnavailable:
+    "It may have been moved or deleted. Return to your files and choose another item.",
+  driveEditorLoadFailed: (reason: string) =>
+    `Drive could not open this file. ${reason}`,
   driveBackToFiles: "Back to files",
   driveLoading: "Loading your files…",
   driveRetry: "Try again",
   driveUnknownError: "The server did not provide a reason.",
   driveLoadFailedTitle: "Your files didn’t load",
   driveLoadFailed: (reason: string): string => `Try again. Server: ${reason}`,
-  driveActionFailed: (action: string, reason: string): string => `${action} didn’t finish. Try again. Server: ${reason}`,
+  driveActionFailed: (action: string, reason: string): string =>
+    `${action} didn’t finish. Try again. Server: ${reason}`,
   driveMovedToTrash: (name: string): string => `${name} moved to Trash.`,
   driveRestoredFromTrash: (name: string): string => `${name} restored.`,
   driveUndo: "Undo",
-  driveSelected: (count: number): string => count === 1 ? "1 item selected" : `${count} items selected`,
+  driveSelected: (count: number): string =>
+    count === 1 ? "1 item selected" : `${count} items selected`,
   driveSelectItem: (name: string): string => `Select ${name}`,
   driveSelectAll: "Select all visible items",
   driveClearSelection: "Clear selection",
   driveSelectionActions: "Selected item actions",
-  driveItemsMovedToTrash: (count: number): string => `${count} items moved to Trash.`,
+  driveItemsMovedToTrash: (count: number): string =>
+    `${count} items moved to Trash.`,
   driveItemsRestored: (count: number): string => `${count} items restored.`,
-  drivePurgeManyConfirm: (count: number): string => `Permanently delete ${count} items? This cannot be undone.`,
-  driveVersionsLoadFailed: (reason: string): string => `Version history didn’t load. Try again. Server: ${reason}`,
-  driveMembersLoadFailed: (reason: string): string => `Members didn’t load. Try again. Server: ${reason}`,
+  drivePurgeManyConfirm: (count: number): string =>
+    `Permanently delete ${count} items? This cannot be undone.`,
+  driveVersionsLoadFailed: (reason: string): string =>
+    `Version history didn’t load. Try again. Server: ${reason}`,
+  driveMembersLoadFailed: (reason: string): string =>
+    `Members didn’t load. Try again. Server: ${reason}`,
   driveMembers: "Members",
   driveActions: "Actions",
   driveEmpty: "This folder is empty. Upload a file or create a folder.",
@@ -1318,8 +1376,10 @@ export const en = {
   driveFolderEmpty: "This folder is empty",
   driveUploadHere: "Upload here",
   driveFolderLoading: (name: string): string => `Loading ${name}…`,
-  driveFolderLoadFailed: (reason: string): string => `This folder didn’t load. Server: ${reason}`,
-  driveSpacesLoadFailed: (reason: string): string => `Your Spaces didn’t load. Try again. Server: ${reason}`,
+  driveFolderLoadFailed: (reason: string): string =>
+    `This folder didn’t load. Server: ${reason}`,
+  driveSpacesLoadFailed: (reason: string): string =>
+    `Your Spaces didn’t load. Try again. Server: ${reason}`,
   driveSort: "Sort",
   driveSortNameAsc: "Name (A–Z)",
   driveSortNameDesc: "Name (Z–A)",
@@ -1355,7 +1415,8 @@ export const en = {
   driveNewFolderPrompt: "Name the new folder",
   driveRenamePrompt: "New name",
   driveTrashConfirm: (name: string) => `Move “${name}” to Trash?`,
-  drivePurgeConfirm: (name: string) => `Permanently delete “${name}”? This cannot be undone.`,
+  drivePurgeConfirm: (name: string) =>
+    `Permanently delete “${name}”? This cannot be undone.`,
   driveMoveTo: "Move to…",
   driveCopyTo: "Copy to…",
   driveDestHint: "The item takes on the access of wherever you put it.",
@@ -1373,8 +1434,10 @@ export const en = {
   driveNewDocPrompt: "Name the new doc",
   driveNewSheetPrompt: "Name the new sheet",
   driveImporting: (name: string): string => `Importing ${name}…`,
-  driveImportNote: "We’re opening this as an alo Sheet. Some formatting may differ — your original file stays in Drive, unchanged.",
-  driveImportFailed: (name: string): string => `Couldn’t import ${name}. You can still download the original.`,
+  driveImportNote:
+    "We’re opening this as an alo Sheet. Some formatting may differ — your original file stays in Drive, unchanged.",
+  driveImportFailed: (name: string): string =>
+    `Couldn’t import ${name}. You can still download the original.`,
   sheetDownloadXlsx: "Download as Excel (.xlsx)",
   sheetDownloadXlsxShort: "Excel",
   sheetName: "Sheet name",
@@ -1382,8 +1445,10 @@ export const en = {
   sheetLoadFailedTitle: "This sheet didn’t load",
   docLoading: "Loading your document…",
   docLoadFailedTitle: "This document didn’t load",
-  docSaveFailed: (reason: string): string => `Your latest changes are not saved yet. Choose Retry to save them. Server: ${reason}`,
-  sheetSaveFailed: (reason: string): string => `Your latest changes are not saved yet. We’ll keep trying. Server: ${reason}`,
+  docSaveFailed: (reason: string): string =>
+    `Your latest changes are not saved yet. Choose Retry to save them. Server: ${reason}`,
+  sheetSaveFailed: (reason: string): string =>
+    `Your latest changes are not saved yet. We’ll keep trying. Server: ${reason}`,
   sheetSaved: "Saved",
   sheetExport: "Export",
   sheetMore: "More actions",
@@ -1582,9 +1647,11 @@ export const en = {
   sheetRotation90: "Rotate 90° clockwise",
   sheetRotationMinus90: "Rotate 90° counter-clockwise",
   sheetRotationVertical: "Vertical text",
-  officeUnavailable: "This document couldn’t be opened for editing. Try again, or download it.",
+  officeUnavailable:
+    "This document couldn’t be opened for editing. Try again, or download it.",
   officeLoading: "Opening the Office editor…",
-  officeDiscoveryMissing: "The Office editor did not publish an editor address.",
+  officeDiscoveryMissing:
+    "The Office editor did not publish an editor address.",
   officeLoadFailed: (reason: string): string => `Try again. Server: ${reason}`,
   moduleSearch: "Search",
   searchPlaceholder: "Search files, tasks and email…",
@@ -1592,7 +1659,8 @@ export const en = {
   searchNoResults: "Nothing found.",
   aiAskAbout: (q: string): string => `Ask AI: “${q}”`,
   aiSources: "Sources",
-  aiUnconfigured: "AI isn’t set up yet — an admin can add a model. Here’s what matched:",
+  aiUnconfigured:
+    "AI isn’t set up yet — an admin can add a model. Here’s what matched:",
   aiUnreachable: "The AI couldn’t be reached. Here’s what matched:",
   // alo Chat (ADR 0038).
   chatNewChannel: "New channel",
@@ -1603,8 +1671,12 @@ export const en = {
   chatEdited: "edited",
   chatWithdrawn: "This message was withdrawn.",
   chatNoMessagesYet: "No messages yet — say the first thing.",
+  chatArchived: "Archived",
+  chatArchivedNote:
+    "This channel is archived. Its history stays here to read, but nothing new can be sent.",
   chatNoChannelsLead: "No conversations yet",
-  chatNoChannelsHint: "Make a channel for a team or a topic, and everyone in it sees the same history.",
+  chatNoChannelsHint:
+    "Make a channel for a team or a topic, and everyone in it sees the same history.",
   chatNoRoomOpenLead: "Pick a conversation",
   chatNoRoomOpenHint: "Choose a channel on the left, or make a new one.",
   chatComposerLabel: "Write a message",
@@ -1641,8 +1713,10 @@ export const en = {
   agentFieldQuote: "Quote",
   agentFieldInvoice: "Invoice",
   agentLineCount: (n: number): string => (n === 1 ? "1 line" : `${n} lines`),
-  agentInvoiceDraftNote: "Creates a draft — nothing is issued, numbered or sent.",
-  agentQuoteToInvoiceNote: "Closes the quote as accepted and raises a draft invoice.",
+  agentInvoiceDraftNote:
+    "Creates a draft — nothing is issued, numbered or sent.",
+  agentQuoteToInvoiceNote:
+    "Closes the quote as accepted and raises a draft invoice.",
   agentReminderNote: "Writes a reminder into your Drafts — nothing is sent.",
   // CRM tools (ADR 0035, B2.10). A deal is named, not numbered, so each card
   // shows the title being acted on.
@@ -1780,12 +1854,16 @@ export const en = {
   baseChoicesPlaceholder: "Choices, comma-separated",
   baseLinkTarget: "Linked table…",
   baseUncategorised: "Uncategorised",
-  baseBoardNeedsSelect: "Add a board view grouped by a Select field to use this.",
-  baseCalendarNeedsDate: "Add a calendar view based on a Date field to use this.",
+  baseBoardNeedsSelect:
+    "Add a board view grouped by a Select field to use this.",
+  baseCalendarNeedsDate:
+    "Add a calendar view based on a Date field to use this.",
   baseBoardEmptyTitle: "Group records into a board",
   baseCalendarEmptyTitle: "Put records on a calendar",
-  baseBoardEmptyBody: "Boards group records by a Select field. Add a ready-to-use Status field to continue.",
-  baseCalendarEmptyBody: "Calendars place records by a Date field. Add one to continue.",
+  baseBoardEmptyBody:
+    "Boards group records by a Select field. Add a ready-to-use Status field to continue.",
+  baseCalendarEmptyBody:
+    "Calendars place records by a Date field. Add one to continue.",
   baseAddStatusField: "Add Status field",
   baseAddDateField: "Add Date field",
   baseStatusField: "Status",
@@ -1799,7 +1877,8 @@ export const en = {
   baseLoading: "Loading your base…",
   baseLoadFailedTitle: "This base didn’t load",
   baseEmptyTitle: "Start with your first table",
-  baseEmptyBody: "Tables keep related records together. Create one to start adding fields and records.",
+  baseEmptyBody:
+    "Tables keep related records together. Create one to start adding fields and records.",
   baseDefaultTableName: (number: number): string => `Table ${number}`,
   baseView: "View",
   baseSaveChanges: "Save changes",
@@ -1835,7 +1914,8 @@ export const en = {
   billingCreate: "Create",
   billingSave: "Save",
   billingCancel: "Cancel",
-  billingLoadFailed: "Could not load this list. Check your connection and try again.",
+  billingLoadFailed:
+    "Could not load this list. Check your connection and try again.",
   billingSaveFailed: "Could not save. Check your connection and try again.",
   billingNoMatches: "Nothing matches that search.",
   billingNoCustomersTitle: "No customers yet",
@@ -1924,17 +2004,20 @@ export const en = {
   billingInvoiceGone: "This document no longer exists.",
   billingFieldCustomer: "Customer",
   billingChooseCustomer: "Choose a customer…",
-  billingCustomerFixedHint: "Their currency and payment terms are copied onto the document.",
+  billingCustomerFixedHint:
+    "Their currency and payment terms are copied onto the document.",
   billingFieldReference: "Their reference",
   billingReferencePlaceholder: "PO-1234",
-  billingReferenceHint: "The customer's own order number, printed on the document.",
+  billingReferenceHint:
+    "The customer's own order number, printed on the document.",
   billingFieldNote: "Note",
   billingNotePlaceholder: "Anything the customer should read on the document.",
   billingNoteHint: "Printed under the lines.",
   billingFieldIssueDate: "Issue date",
   billingFieldDueDate: "Due date",
   billingCreateDraft: "Create draft",
-  billingCreateDraftHint: "The draft is raised first; then you add what you are billing for.",
+  billingCreateDraftHint:
+    "The draft is raised first; then you add what you are billing for.",
   billingLines: "Lines",
   billingAddLine: "Add line",
   billingRemoveLine: "Remove this line",
@@ -1942,12 +2025,14 @@ export const en = {
   billingPickProduct: "From the price list…",
   billingDescriptionPlaceholder: "What you are billing for",
   billingQtyPlaceholder: "1",
-  billingLineNeedsDescription: "A line needs a description before the draft can save.",
+  billingLineNeedsDescription:
+    "A line needs a description before the draft can save.",
   billingNotAQuantity: "Enter a quantity like 1.5.",
   billingTotalsNet: "Net",
   billingTotalsGross: "Total",
   billingVatAtRate: (rate: string) => `VAT at ${rate}`,
-  billingTotalsStale: "These are the last figures the server sent; they update when the draft saves.",
+  billingTotalsStale:
+    "These are the last figures the server sent; they update when the draft saves.",
   billingSaving: "Saving…",
   billingSaved: "Saved",
   billingUnsaved: "Not saved yet",
@@ -1964,8 +2049,10 @@ export const en = {
   // freezes the prices, closes the offer — rather than asking whether the
   // person is sure. None of them promises an email: nothing is sent to anyone
   // until B1.18.
-  billingActionFailed: "That did not go through. Check your connection and try again.",
-  billingActionsWaitForSave: "These wait until your last change has been saved.",
+  billingActionFailed:
+    "That did not go through. Check your connection and try again.",
+  billingActionsWaitForSave:
+    "These wait until your last change has been saved.",
   billingIssue: "Issue",
   billingIssueTitle: "Issue this invoice?",
   billingIssueConfirm:
@@ -1974,7 +2061,8 @@ export const en = {
   billingVoidTitle: "Void this invoice?",
   billingVoidConfirm:
     "A void invoice keeps its number and stays readable, but is worth nothing. Void one nobody has seen; if the customer already holds this document, raise a credit note instead.",
-  billingVoidNotice: "This invoice has been voided. It keeps its number and is worth nothing.",
+  billingVoidNotice:
+    "This invoice has been voided. It keeps its number and is worth nothing.",
   billingCreditNoteAction: "Credit note",
   billingCreditNoteTitle: "Raise a credit note?",
   billingCreditNoteConfirm:
@@ -2004,14 +2092,17 @@ export const en = {
   billingColPaymentReference: "Bank reference",
   billingColAmount: "Amount",
   billingFieldAmount: (currency: string) => `Amount (${currency})`,
-  billingFieldAmountHint: "What actually arrived, which may be less than the invoice.",
+  billingFieldAmountHint:
+    "What actually arrived, which may be less than the invoice.",
   billingFieldPaidOn: "Received on",
-  billingFieldPaidOnHint: "The day your bank shows it. Leave it empty for today.",
+  billingFieldPaidOnHint:
+    "The day your bank shows it. Leave it empty for today.",
   billingFieldMethod: "How it arrived",
   billingFieldMethodHint: "Free text — whatever your bookkeeping calls it.",
   billingMethodPlaceholder: "Bank transfer",
   billingFieldPaymentReference: "Bank reference",
-  billingFieldPaymentRefHint: "The reference on the statement line, so it can be matched later.",
+  billingFieldPaymentRefHint:
+    "The reference on the statement line, so it can be matched later.",
   billingFilterOverdue: "Overdue",
   billingColOutstanding: "Still owed",
 
@@ -2062,16 +2153,19 @@ export const en = {
   billingBackToQuotes: "All quotes",
   billingQuoteGone: "This quote no longer exists.",
   billingQuoteCustomerHint: "Their currency is copied onto the offer.",
-  billingCreateQuoteHint: "The draft is raised first; then you add what you are offering.",
+  billingCreateQuoteHint:
+    "The draft is raised first; then you add what you are offering.",
   billingFieldSentDate: "Sent on",
   billingFieldValidUntil: "Valid until",
-  billingValidForDays: (days: number) => `Stands for ${days} days from the day it is sent.`,
+  billingValidForDays: (days: number) =>
+    `Stands for ${days} days from the day it is sent.`,
   billingDeleteQuoteDraft: "Delete draft",
   billingDeleteQuoteDraftConfirm:
     "Delete this draft? It carries no number and was never made to anybody — and nothing can be recovered.",
   billingQuoteSentNotice:
     "This offer has been sent and can no longer be changed. If the price moves, make a new quote.",
-  billingQuoteClosedNotice: "This offer is closed and can no longer be changed.",
+  billingQuoteClosedNotice:
+    "This offer is closed and can no longer be changed.",
   billingSendQuote: "Mark as sent",
   billingSendQuoteTitle: "Send this quote?",
   billingSendQuoteConfirm:
@@ -2094,8 +2188,10 @@ export const en = {
   // The document itself is rendered by the server and speaks its own language
   // table (`billing_print.rs`); these are the words around it.
   billingPrint: "Print",
-  billingPrintUnsaved: "This prints the saved document, so it waits for your last change.",
-  billingPrintFailed: "The document could not be prepared for printing. Try again.",
+  billingPrintUnsaved:
+    "This prints the saved document, so it waits for your last change.",
+  billingPrintFailed:
+    "The document could not be prepared for printing. Try again.",
   billingSettings: "Your details",
   billingSettingsIntro:
     "This is who your invoices, credit notes and quotes are from: the name and numbers at the top, and the account the money goes to.",
@@ -2105,17 +2201,21 @@ export const en = {
   billingSettingsContact: "How customers reach you",
   billingSettingsBank: "Where the money goes",
   billingSettingsFooter: "The line under the totals",
-  billingSettingsSaved: "Saved. Every document you print from now on carries this.",
+  billingSettingsSaved:
+    "Saved. Every document you print from now on carries this.",
   billingSettingsLoadFailed: "Your billing details could not be loaded.",
   billingFieldLegalName: "Legal name",
   billingLegalNameHint: "The name you trade and invoice under, as registered.",
-  billingIssuerVatIdHint: "Leave empty if you are not VAT-registered. State your country first.",
+  billingIssuerVatIdHint:
+    "Leave empty if you are not VAT-registered. State your country first.",
   billingFieldRegistrationNo: "Company number",
-  billingRegistrationHint: "As your register prints it — KVK, SIREN, HRB, Companies House.",
+  billingRegistrationHint:
+    "As your register prints it — KVK, SIREN, HRB, Companies House.",
   billingFieldPhone: "Phone",
   billingFieldWebsite: "Website",
   billingFieldIban: "IBAN",
-  billingIbanHint: "Checked against your country's length and its check digits before it is saved.",
+  billingIbanHint:
+    "Checked against your country's length and its check digits before it is saved.",
   billingIbanPlaceholder: "NL91 ABNA 0417 1643 00",
   billingFieldBic: "BIC",
   billingBicPlaceholder: "ABNANL2A",
@@ -2142,15 +2242,18 @@ export const en = {
   billingFxSourceEcb: "Reference file",
   billingFxSourceManual: "Entered by hand",
   billingFxAdd: "Add a rate",
-  billingFxAddSaved: (currency: string, date: string) => `Saved the ${currency} rate for ${date}.`,
-  billingFxRateHint: "As published: units of this currency for one euro, written 1.1626.",
+  billingFxAddSaved: (currency: string, date: string) =>
+    `Saved the ${currency} rate for ${date}.`,
+  billingFxRateHint:
+    "As published: units of this currency for one euro, written 1.1626.",
   billingFxImport: "Import a rate file",
   billingFxImportHint:
     "Paste the European Central Bank's eurofxref CSV, or any file in that shape. A file with one bad value changes nothing.",
   billingFxImportRun: "Import",
   billingFxImported: (rates: number, days: number) =>
     `Imported ${rates} rates over ${days} days.`,
-  billingFxEmpty: "No rates yet. You only need them if you invoice in another currency.",
+  billingFxEmpty:
+    "No rates yet. You only need them if you invoice in another currency.",
   billingFxLoadFailed: "The exchange rates could not be loaded.",
   billingDocumentFx: (rate: string, day: string) =>
     `Converted at ${rate}, the reference rate published on ${day}.`,
@@ -2169,13 +2272,20 @@ export const en = {
   // stop clicking in, so the notice says where the letter went and who sends
   // it. The figures in it are the server's own.
   billingRemind: "Remind",
-  billingRemindHint: "Write a payment reminder to this customer, and leave it in your Drafts.",
-  billingReminderDrafted: (invoice: string, outstanding: string, days: number) =>
+  billingRemindHint:
+    "Write a payment reminder to this customer, and leave it in your Drafts.",
+  billingReminderDrafted: (
+    invoice: string,
+    outstanding: string,
+    days: number,
+  ) =>
     days === 1
       ? `A reminder for ${invoice} — ${outstanding} still owed, 1 day past its date — is waiting in your Drafts. Nothing has been sent: read it, change what you like, and send it yourself.`
       : `A reminder for ${invoice} — ${outstanding} still owed, ${days} days past its date — is waiting in your Drafts. Nothing has been sent: read it, change what you like, and send it yourself.`,
-  billingReminderFailed: "The reminder could not be written. Check your connection and try again.",
-  billingNothingOverdue: "Nothing is overdue. Every issued invoice is either settled or still in date.",
+  billingReminderFailed:
+    "The reminder could not be written. Check your connection and try again.",
+  billingNothingOverdue:
+    "Nothing is overdue. Every issued invoice is either settled or still in date.",
 
   // Recurring invoices (B2.11). The words here carry one promise above all:
   // this raises DRAFTS. A product that issued numbered invoices on a timer
@@ -2193,7 +2303,8 @@ export const en = {
   billingScheduleFromHint:
     "Set up a recurring invoice that bills these lines again on a rhythm. Each occurrence appears as a draft — nothing is ever issued for you.",
   billingScheduleName: "Name",
-  billingScheduleNameHint: "What you call this arrangement. Never printed on the invoice.",
+  billingScheduleNameHint:
+    "What you call this arrangement. Never printed on the invoice.",
   billingScheduleCadence: "Bills",
   billingCadenceWeekly: "Every week",
   billingCadenceMonthly: "Every month",
@@ -2219,7 +2330,8 @@ export const en = {
   billingScheduleRunDue: "Raise what is due",
   billingScheduleRunHint:
     "alo does this on its own every hour. This is only for when you would rather not wait.",
-  billingScheduleRunNone: "Nothing was due. Every recurring invoice is up to date.",
+  billingScheduleRunNone:
+    "Nothing was due. Every recurring invoice is up to date.",
   billingScheduleRunDrafted: (count: number) =>
     count === 1
       ? "1 draft was raised and is waiting in your invoices. Nothing has been issued: read it, change what you like, and issue it yourself."
@@ -2249,7 +2361,8 @@ export const en = {
   crmNoBoardBody:
     "Every board you had has been archived. Restore one to start working deals again.",
   crmNoDealsTitle: "No deals yet",
-  crmNoDealsBody: "Raise the first opportunity and move it across the board as it progresses.",
+  crmNoDealsBody:
+    "Raise the first opportunity and move it across the board as it progresses.",
   crmNoMatches: "No deal matches what you typed.",
 
   // The deal form
@@ -2260,20 +2373,23 @@ export const en = {
   crmSave: "Save",
   crmCancel: "Cancel",
   crmClose: "Close",
-  crmDealSubtitle: "What the opportunity is, who it is with, and what it is worth.",
+  crmDealSubtitle:
+    "What the opportunity is, who it is with, and what it is worth.",
   crmFieldTitle: "Deal",
   crmFieldCompany: "Company",
   crmCompanyHint: "The company as your whole team should see it.",
   crmFieldContactName: "Contact",
   crmFieldContactEmail: "Contact email",
-  crmContactEmailHint: "Used to suggest the conversations this deal belongs to.",
+  crmContactEmailHint:
+    "Used to suggest the conversations this deal belongs to.",
   crmFieldValue: "Value",
   crmValueHint: "What the deal is worth, before VAT.",
   crmFieldCurrency: "Currency",
   crmCurrencyHint: "Three letters, e.g. EUR.",
   crmFieldExpectedClose: "Expected close",
   crmFieldSource: "Source",
-  crmSourceHint: "Where the opportunity came from — a referral, a campaign, a call.",
+  crmSourceHint:
+    "Where the opportunity came from — a referral, a campaign, a call.",
   crmNotAnAmount: "That is not an amount.",
   crmDeleteDeal: "Delete",
   crmDeleteDealConfirm:
@@ -2325,7 +2441,8 @@ export const en = {
   crmRaiseTitle: (document: string) => `Raise a ${document}`,
   crmRaiseSubtitle:
     "It lands in Billing as a draft for you to check and complete. Nothing is issued and nothing is sent.",
-  crmRaiseFrom: (deal: string, value: string) => `From “${deal}”, worth ${value}.`,
+  crmRaiseFrom: (deal: string, value: string) =>
+    `From “${deal}”, worth ${value}.`,
   crmRaiseConfirm: "Raise it",
   crmRaiseFailed: "The document could not be raised.",
   crmFieldVatRate: "VAT rate",
@@ -2334,7 +2451,8 @@ export const en = {
   crmCountryHint:
     "Two letters. This deal is still a lead, so a customer is created from it — and the country decides VAT treatment.",
   crmRaisedTitle: (document: string) => `Your ${document} is ready`,
-  crmRaisedSubtitle: "Open it in Billing to check the lines, the address and the VAT.",
+  crmRaisedSubtitle:
+    "Open it in Billing to check the lines, the address and the VAT.",
   crmRaisedWorth: (gross: string) => `${gross} including VAT.`,
   crmOpenInBilling: "Open in Billing",
 
@@ -2348,15 +2466,20 @@ export const en = {
   crmReportLastQuarter: "Last quarter",
   crmReportDownloadCsv: "Download CSV",
   crmReportDownloadFailed: "The report could not be downloaded.",
-  crmReportBasis: (from: string, to: string) => `Won and lost between ${from} and ${to}.`,
-  crmReportOpenAsOf: (at: string) => `The open pipeline is as it stands at ${at}.`,
-  crmReportOpenCaption: (currency: string) => `Open pipeline by stage (${currency})`,
-  crmReportClosedCaption: (currency: string) => `Closed in the period (${currency})`,
+  crmReportBasis: (from: string, to: string) =>
+    `Won and lost between ${from} and ${to}.`,
+  crmReportOpenAsOf: (at: string) =>
+    `The open pipeline is as it stands at ${at}.`,
+  crmReportOpenCaption: (currency: string) =>
+    `Open pipeline by stage (${currency})`,
+  crmReportClosedCaption: (currency: string) =>
+    `Closed in the period (${currency})`,
   crmReportColDeals: "Deals",
   crmReportOpenTotal: "Open total",
   crmReportWinRate: (rate: string, won: number, closed: number) =>
     `Win rate ${rate} — ${won} of ${closed} closed deals.`,
-  crmReportNoWinRate: "No deal closed in this period, so there is no win rate to show.",
+  crmReportNoWinRate:
+    "No deal closed in this period, so there is no win rate to show.",
   crmReportEmptyTitle: "Nothing to report yet",
   crmReportEmptyBody:
     "This board holds no deals. Raise one and it will appear here, by stage and by currency.",
@@ -2388,9 +2511,12 @@ export const en = {
   crmThreadLink: "Link",
   crmThreadUnlink: "Unlink",
   crmThreadOpenInMail: "Open in Mail",
-  crmThreadNotYours: "This conversation is not in your mailbox — ask the colleague who linked it.",
-  crmThreadLinkedBy: (who: string, when: string) => `Linked by ${who} · ${when}`,
-  crmSuggestionsEmpty: "Nothing in your recent mail matches this deal's addresses.",
+  crmThreadNotYours:
+    "This conversation is not in your mailbox — ask the colleague who linked it.",
+  crmThreadLinkedBy: (who: string, when: string) =>
+    `Linked by ${who} · ${when}`,
+  crmSuggestionsEmpty:
+    "Nothing in your recent mail matches this deal's addresses.",
   crmSuggestionAddress: (address: string) => `Matches ${address}`,
   crmSuggestionDomain: (address: string) => `Same company as ${address}`,
 
@@ -2404,7 +2530,8 @@ export const en = {
   sitesCheckFailed: "The address could not be checked.",
   sitesNewSite: "New website",
   sitesNoSitesTitle: "No websites yet",
-  sitesNoSitesBody: "Build a site for your business and publish it under its own address.",
+  sitesNoSitesBody:
+    "Build a site for your business and publish it under its own address.",
   sitesColName: "Name",
   sitesColAddress: "Address",
   sitesColStatus: "Status",
@@ -2418,14 +2545,16 @@ export const en = {
     "Lowercase letters, digits and hyphens, 3–40 characters — this becomes the site's web address.",
   sitesSubdomainChecking: "Checking availability…",
   sitesSubdomainAvailable: (subdomain: string) => `“${subdomain}” is free.`,
-  sitesSubdomainTaken: (subdomain: string) => `“${subdomain}” is already taken.`,
+  sitesSubdomainTaken: (subdomain: string) =>
+    `“${subdomain}” is already taken.`,
   sitesCreateSite: "Create website",
   sitesCancel: "Cancel",
   sitesBack: "All websites",
   sitesPages: "Pages",
   sitesNewPage: "New page",
   sitesNoPagesTitle: "No pages yet",
-  sitesNoPagesBody: "Every site starts with a home page. Add one to start building.",
+  sitesNoPagesBody:
+    "Every site starts with a home page. Add one to start building.",
   sitesColPage: "Page",
   sitesColPath: "Path",
   sitesHomeBadge: "Home",
@@ -2433,7 +2562,8 @@ export const en = {
   sitesNewPageSubtitle: "A page holds the sections you stack on it.",
   sitesFieldPageTitle: "Title",
   sitesFieldSlug: "Path",
-  sitesSlugHint: "Lowercase letters, digits and hyphens. The home page leaves this empty.",
+  sitesSlugHint:
+    "Lowercase letters, digits and hyphens. The home page leaves this empty.",
   sitesFieldHome: "This is the home page",
   sitesCreatePage: "Create page",
   // Sites — the page editor (section stack + per-type prop forms).
@@ -2483,9 +2613,12 @@ export const en = {
   sitesSectionContactFormDesc: "Let visitors write to you.",
   sitesSectionFooter: "Footer",
   sitesSectionFooterDesc: "The line at the bottom of the page.",
-  sitesCountLinks: (count: number) => (count === 1 ? "1 link" : `${count} links`),
-  sitesCountImages: (count: number) => (count === 1 ? "1 image" : `${count} images`),
-  sitesCountEntries: (count: number) => (count === 1 ? "1 entry" : `${count} entries`),
+  sitesCountLinks: (count: number) =>
+    count === 1 ? "1 link" : `${count} links`,
+  sitesCountImages: (count: number) =>
+    count === 1 ? "1 image" : `${count} images`,
+  sitesCountEntries: (count: number) =>
+    count === 1 ? "1 entry" : `${count} entries`,
   sitesItemN: (position: number) => `Entry ${position}`,
   sitesRemoveItem: "Remove entry",
   sitesAddLink: "Add link",
@@ -2507,9 +2640,11 @@ export const en = {
   sitesFieldImage: "Image",
   sitesFieldPhoto: "Photo",
   sitesFieldImageId: "Image ID",
-  sitesImageIdHint: "Upload a picture, or paste an image ID from an earlier upload.",
+  sitesImageIdHint:
+    "Upload a picture, or paste an image ID from an earlier upload.",
   sitesFieldImageAlt: "Image description",
-  sitesImageAltHint: "Read aloud by screen readers; leave empty for a purely decorative image.",
+  sitesImageAltHint:
+    "Read aloud by screen readers; leave empty for a purely decorative image.",
   sitesFieldImageSide: "Picture side",
   sitesSideLeft: "Left",
   sitesSideRight: "Right",
@@ -2554,8 +2689,10 @@ export const en = {
   sitesUnpublish: "Take offline",
   sitesConfirmUnpublish: "Really take offline?",
   sitesLiveAtLabel: "Your site is live at",
-  sitesGoesLiveAt: (address: string) => `Publishing puts this site live at ${address}.`,
-  sitesAddressPreview: (address: string) => `Your site will live at ${address}.`,
+  sitesGoesLiveAt: (address: string) =>
+    `Publishing puts this site live at ${address}.`,
+  sitesAddressPreview: (address: string) =>
+    `Your site will live at ${address}.`,
   sitesPublishFailed: "The site could not be published.",
   sitesUnpublishFailed: "The site could not be taken offline.",
 
@@ -2629,7 +2766,8 @@ export const en = {
   // reader sees, and what is stored as the tile's title when they pin one.
   insightsAddChart: "Add a chart",
   insightsGalleryTitle: "Ready-made charts",
-  insightsGallerySubtitle: "Pick one to pin it to this board. You can rename or remove it after.",
+  insightsGallerySubtitle:
+    "Pick one to pin it to this board. You can rename or remove it after.",
   insightsGalleryClose: "Close",
   insightsGalleryLoadFailed: "The ready-made charts could not be loaded.",
   insightsGalleryRevenueByMonth: "Revenue by month",
@@ -2642,21 +2780,26 @@ export const en = {
   insightsGalleryOverdueAgingBody:
     "What is owed, grouped by how late it is: 0–30, 31–60, 61–90 and 90+ days.",
   insightsGalleryVatByQuarter: "VAT by quarter",
-  insightsGalleryVatByQuarterBody: "VAT charged per quarter — the shape a return is filed in.",
+  insightsGalleryVatByQuarterBody:
+    "VAT charged per quarter — the shape a return is filed in.",
   insightsGalleryTopCustomers: "Top customers",
-  insightsGalleryTopCustomersBody: "Who this year's revenue came from, largest ten first.",
+  insightsGalleryTopCustomersBody:
+    "Who this year's revenue came from, largest ten first.",
   insightsGalleryPaymentsByMonth: "Payments received",
   insightsGalleryPaymentsByMonthBody:
     "Money that actually arrived, month by month, in the currency it arrived in.",
   insightsGalleryPipelineByStage: "Pipeline by stage",
-  insightsGalleryPipelineByStageBody: "The value of open deals in each column of your funnel.",
+  insightsGalleryPipelineByStageBody:
+    "The value of open deals in each column of your funnel.",
   insightsGalleryWonThisMonth: "Won this month",
-  insightsGalleryWonThisMonthBody: "The value of deals closed as won this month.",
+  insightsGalleryWonThisMonthBody:
+    "The value of deals closed as won this month.",
   insightsGalleryWinRateByQuarter: "Win rate by quarter",
   insightsGalleryWinRateByQuarterBody:
     "How often a decided deal was won, quarter by quarter.",
   insightsGalleryWonByMonth: "Won by month",
-  insightsGalleryWonByMonthBody: "Deal value won, month by month over the last year.",
+  insightsGalleryWonByMonthBody:
+    "Deal value won, month by month over the last year.",
   insightsAsk: "Ask for a chart",
   insightsAskSubtitle:
     "Describe what you want to see. You get the chart to look at first — nothing is added to this board until you pin it.",
@@ -2667,9 +2810,11 @@ export const en = {
   insightsAskPreview: "The proposed chart",
   insightsAskPin: "Pin to this board",
   insightsAskDiscard: "Discard",
-  insightsAskRepaired: "The first attempt did not fit the data, so it was corrected before drawing.",
+  insightsAskRepaired:
+    "The first attempt did not fit the data, so it was corrected before drawing.",
   insightsAskFailed: "No chart could be built from that question.",
-  insightsAskUnavailable: "The assistant is not switched on for this workspace.",
+  insightsAskUnavailable:
+    "The assistant is not switched on for this workspace.",
   insightsTileActions: (title: string) => `Options for ${title}`,
   insightsRenameTile: "Rename chart",
   insightsRenameTilePrompt: "What should this chart be called?",
@@ -2681,9 +2826,11 @@ export const en = {
   insightsMoveLeft: "Move earlier",
   insightsMoveRight: "Move later",
   insightsUnreadableTitle: "Made by a newer version of alo",
-  insightsUnreadableBody: "This chart's question cannot be read here, so its figures are not shown.",
+  insightsUnreadableBody:
+    "This chart's question cannot be read here, so its figures are not shown.",
   insightsNoFigures: "Nothing to show for this period.",
-  insightsTruncated: "Only the largest categories are shown; the rest are grouped as “Other”.",
+  insightsTruncated:
+    "Only the largest categories are shown; the rest are grouped as “Other”.",
   insightsNoteUnconverted: (count: number) =>
     count === 1
       ? "1 document could not be restated in your accounting currency and is not counted."
@@ -2762,7 +2909,8 @@ export const en = {
   projectsBudgetAmount: "Budget (amount)",
   projectsBudgetHint: "Advisory. Nothing stops an hour logged past it.",
   projectsBudgetHoursInvalid: "Write the budget as a whole number of hours.",
-  projectsBudgetAmountInvalid: "Write the budget as an amount, for example 7600.00.",
+  projectsBudgetAmountInvalid:
+    "Write the budget as an amount, for example 7600.00.",
   projectsLastWorked: "Last worked",
   projectsNeverWorked: "Never",
   projectsStartsOn: "Starts on",
@@ -2773,7 +2921,8 @@ export const en = {
     "A project here is a board from Tasks, seen as client work. Create one in Tasks, then say who it is worked for.",
 
   // The engagement form.
-  projectsClientSubtitle: "Who this project is worked for, and what an hour on it is worth.",
+  projectsClientSubtitle:
+    "Who this project is worked for, and what an hour on it is worth.",
   projectsPersonalBoard:
     "This is a personal board. Only a team project can be client work — its hours are approved by somebody else and billed to a customer.",
   projectsDetach: "Make internal",
@@ -2789,27 +2938,32 @@ export const en = {
   projectsWeek: "Week",
   projectsDay: "Day",
   projectsDuration: "Duration",
-  projectsDurationHint: "90, 1:30 and 1,5 all mean an hour and a half. 2h means two hours.",
-  projectsDurationInvalid: "Write a duration like 90, 1:30, 1,5 or 2h — up to one day.",
+  projectsDurationHint:
+    "90, 1:30 and 1,5 all mean an hour and a half. 2h means two hours.",
+  projectsDurationInvalid:
+    "Write a duration like 90, 1:30, 1,5 or 2h — up to one day.",
   projectsTotal: "Total",
   projectsAddRow: "Add a project row…",
   projectsBillable: "Billable to the customer",
   projectsNotBillable: "not billable",
   projectsNote: "Note",
   projectsNoNote: "No note",
-  projectsNoteHint: "What you were doing. Nobody outside this workspace reads it.",
+  projectsNoteHint:
+    "What you were doing. Nobody outside this workspace reads it.",
   projectsProposedEntry: "suggested",
   projectsBilledEntry: "on an invoice",
   projectsCellLabel: (project: string, day: string, duration: string) =>
     `${project}, ${day}: ${duration}`,
   projectsDeleteEntry: "Delete",
   projectsDeleteEntryTitle: "Delete these hours?",
-  projectsDeleteEntryBody: "The entry goes for good. Its week has to be open for that.",
+  projectsDeleteEntryBody:
+    "The entry goes for good. Its week has to be open for that.",
   projectsWeekEmptyTitle: "Nothing logged this week",
   projectsWeekEmptyBody:
     "Start the timer on a project, or add a row below and write the hours straight into a day.",
   projectsBillableOfWeek: (duration: string) => `${duration} billable`,
-  projectsProposedInWeek: (duration: string) => `${duration} suggested, not yet accepted`,
+  projectsProposedInWeek: (duration: string) =>
+    `${duration} suggested, not yet accepted`,
   // Deciding about a suggestion (B3.10b). Accepting is what makes it an hour —
   // the wording says so, because "OK" would not.
   projectsAcceptEntry: "Accept",
@@ -2834,9 +2988,11 @@ export const en = {
   projectsMilestoneAdd: "Add a milestone",
   projectsMilestoneNew: "New milestone",
   projectsMilestoneName: "Milestone",
-  projectsMilestoneNameHint: "What the date is for — \u201cDesign signed off\u201d, \u201cBeta with the pilot\u201d.",
+  projectsMilestoneNameHint:
+    "What the date is for — \u201cDesign signed off\u201d, \u201cBeta with the pilot\u201d.",
   projectsMilestoneDue: "Date",
-  projectsMilestoneDueHint: "The day it is due. Moving it later is ordinary; nothing is stopped by it.",
+  projectsMilestoneDueHint:
+    "The day it is due. Moving it later is ordinary; nothing is stopped by it.",
   projectsMilestoneReach: "Mark reached",
   projectsMilestoneReopen: "Not reached yet",
   projectsMilestoneReached: "Reached",
@@ -2881,7 +3037,8 @@ export const en = {
   projectsTemplateNoPlan:
     "This template has no milestones, so its dates are copied exactly as they are.",
   projectsTemplateMarkOn: (project: string) => `Make ${project} a template`,
-  projectsTemplateUnmarkOn: (project: string) => `${project} is a template — remove the mark`,
+  projectsTemplateUnmarkOn: (project: string) =>
+    `${project} is a template — remove the mark`,
   projectsTemplateEmptyTitle: "No templates yet",
   projectsTemplateEmptyBody:
     "Open a project you would run the same way again and press the star beside it. It stays an ordinary board — it can just be copied.",
@@ -2900,7 +3057,8 @@ export const en = {
   projectsApprove: "Approve",
   projectsReject: "Send back",
   projectsRejectTitle: "Send this week back?",
-  projectsRejectBody: (person: string) => `${person} will read what you write here.`,
+  projectsRejectBody: (person: string) =>
+    `${person} will read what you write here.`,
   projectsRejectPlaceholder: "What needs correcting",
   projectsApprovalsEmptyTitle: "Nothing to approve",
   projectsApprovalsEmptyBody: "Weeks people hand in land here, oldest first.",
@@ -2920,7 +3078,8 @@ export const en = {
   projectsReportLastQuarter: "Last quarter",
   projectsReportDownloadCsv: "Download CSV",
   projectsReportDownloadFailed: "The report could not be downloaded.",
-  projectsReportBasis: (from: string, to: string) => `Hours worked between ${from} and ${to}.`,
+  projectsReportBasis: (from: string, to: string) =>
+    `Hours worked between ${from} and ${to}.`,
   projectsReportBudgetBasis: (to: string) =>
     `Budgets count everything up to ${to}, not just this period.`,
   projectsReportColValue: "Value",

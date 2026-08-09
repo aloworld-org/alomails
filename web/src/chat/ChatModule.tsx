@@ -11,6 +11,7 @@
 // click is never answered by silence (law 6).
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  Archive,
   Hash,
   Loader2,
   Lock,
@@ -182,9 +183,14 @@ export function ChatModule() {
               <li key={channel.id}>
                 <button
                   type="button"
-                  className={
-                    channel.id === openId ? styles.channelOpen : styles.channel
-                  }
+                  className={[
+                    channel.id === openId ? styles.channelOpen : styles.channel,
+                    // An archived room stays reachable (its history is still
+                    // the team's), but it must not read as a live one.
+                    channel.archivedAt !== null ? styles.channelArchived : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
                   onClick={() => setOpenId(channel.id)}
                 >
                   {channel.kind === "dm" ? (
@@ -197,6 +203,13 @@ export function ChatModule() {
                   <span className={styles.channelName}>
                     {channelLabel(channel)}
                   </span>
+                  {channel.archivedAt !== null && (
+                    <Archive
+                      size={13}
+                      className={styles.channelIcon}
+                      aria-label={strings.chatArchived}
+                    />
+                  )}
                   {channel.unread > 0 && (
                     <span className={styles.badge}>{channel.unread}</span>
                   )}
@@ -264,32 +277,41 @@ export function ChatModule() {
 
             {error !== null && <p className={styles.error}>{error}</p>}
 
-            <form
-              className={styles.composer}
-              onSubmit={(event) => {
-                event.preventDefault();
-                void send();
-              }}
-            >
-              <input
-                className={styles.input}
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                placeholder={strings.chatComposerPlaceholder(
-                  channelLabel(open),
-                )}
-                aria-label={strings.chatComposerLabel}
-                autoComplete="off"
-              />
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={draft.trim() === "" || sending}
+            {open.archivedAt !== null ? (
+              // The server refuses new words in an archived room, so the
+              // composer must not be offered at all: a control that looks
+              // usable and answers with an error is worse than its absence.
+              <p className={styles.archivedNote}>
+                <Archive size={14} /> {strings.chatArchivedNote}
+              </p>
+            ) : (
+              <form
+                className={styles.composer}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void send();
+                }}
               >
-                <Send size={15} />
-                {strings.chatSend}
-              </Button>
-            </form>
+                <input
+                  className={styles.input}
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  placeholder={strings.chatComposerPlaceholder(
+                    channelLabel(open),
+                  )}
+                  aria-label={strings.chatComposerLabel}
+                  autoComplete="off"
+                />
+                <Button
+                  type="submit"
+                  variant="primary"
+                  disabled={draft.trim() === "" || sending}
+                >
+                  <Send size={15} />
+                  {strings.chatSend}
+                </Button>
+              </form>
+            )}
           </>
         )}
       </section>
