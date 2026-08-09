@@ -42,6 +42,7 @@ import type {
   Channel,
   ChannelSummary,
   FeedMessage,
+  Person,
   Message,
   Proposal,
 } from "./types";
@@ -463,6 +464,9 @@ export function ChatModule() {
   // The live public channels not yet joined. Loaded on demand: it is a
   // browsing act, not something every sidebar draw should pay for.
   const [browsing, setBrowsing] = useState<Channel[] | null>(null);
+  // Starting a conversation with someone: the search text, and what it found.
+  const [dmQuery, setDmQuery] = useState<string | null>(null);
+  const [dmFound, setDmFound] = useState<Person[]>([]);
   const [moreBehind, setMoreBehind] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [finding, setFinding] = useState("");
@@ -685,6 +689,37 @@ export function ChatModule() {
    *  feel broken. The height is measured before and after, and the difference
    *  is added back to the scroll position.
    */
+  async function findPeople(query: string) {
+    setDmQuery(query);
+    if (query.trim().length < 2) {
+      // The server wants two characters; asking with fewer would be a request
+      // that always answers nothing.
+      setDmFound([]);
+      return;
+    }
+    try {
+      setDmFound(await api.findPeople(query));
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatPeopleFailed));
+      setDmFound([]);
+    }
+  }
+
+  async function openDm(person: Person) {
+    setError(null);
+    try {
+      // Opening the same DM twice returns the same room, so this is safe to
+      // press again — the server settles it, not a check here.
+      const room = await api.createChannel({ kind: "dm", with: person.user });
+      await loadChannels();
+      setDmQuery(null);
+      setDmFound([]);
+      setOpenId(room.id);
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatDmFailed));
+    }
+  }
+
   async function browse() {
     setError(null);
     try {
@@ -858,6 +893,14 @@ export function ChatModule() {
           >
             <Hash size={15} />
           </button>
+          <button
+            type="button"
+            className={styles.browseButton}
+            onClick={() => setDmQuery("")}
+            title={strings.chatNewDm}
+          >
+            <Users size={15} />
+          </button>
         </header>
         <div className={styles.searchRow}>
           <Search size={14} className={styles.channelIcon} />
@@ -881,7 +924,62 @@ export function ChatModule() {
           )}
         </div>
 
-        {browsing !== null ? (
+        {dmQuery !== null ? (
+          <div className={styles.browsePane}>
+            <div className={styles.browseHead}>
+              <span className={styles.browseTitle}>{strings.chatNewDm}</span>
+              <button
+                type="button"
+                className={styles.searchClear}
+                onClick={() => {
+                  setDmQuery(null);
+                  setDmFound([]);
+                }}
+                aria-label={strings.chatClose}
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className={styles.searchRow}>
+              <Users size={14} className={styles.channelIcon} />
+              <input
+                className={styles.search}
+                value={dmQuery}
+                onChange={(event) => void findPeople(event.target.value)}
+                placeholder={strings.chatFindPerson}
+                aria-label={strings.chatFindPerson}
+                autoComplete="off"
+                autoFocus
+              />
+            </div>
+            {dmFound.length === 0 ? (
+              <p className={styles.sidebarNote}>
+                {dmQuery.trim().length < 2
+                  ? strings.chatFindPersonHint
+                  : strings.chatNobodyFound}
+              </p>
+            ) : (
+              <ul className={styles.channelList}>
+                {dmFound.map((person) => (
+                  <li key={person.user}>
+                    <button
+                      type="button"
+                      className={styles.channel}
+                      onClick={() => void openDm(person)}
+                    >
+                      <Avatar
+                        name={person.email}
+                        email={person.email}
+                        size="sm"
+                      />
+                      <span className={styles.channelName}>{person.email}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : browsing !== null ? (
           <div className={styles.browsePane}>
             <div className={styles.browseHead}>
               <span className={styles.browseTitle}>{strings.chatBrowse}</span>

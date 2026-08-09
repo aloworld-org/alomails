@@ -38,6 +38,12 @@ export interface ChannelSummary extends Channel {
   lastAt: string | null;
 }
 
+/** Somebody in the tenant, found by searching for their address. */
+export interface Person {
+  user: string;
+  email: string;
+}
+
 /** One person in a room. */
 export interface Member {
   user: string;

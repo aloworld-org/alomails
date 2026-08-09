@@ -1265,3 +1265,51 @@ pub(crate) async fn emails_of_ids(
     .await?;
     Ok(rows.into_iter().map(|r| (r.id, r.email)).collect())
 }
+
+/// People in a tenant whose address matches `query`, for picking someone to
+/// talk to.
+///
+/// **A search, never a listing.** It requires something to search for and caps
+/// what it returns, so it answers "is there a Ben here?" and never "give me
+/// everyone". That is the difference between a colleague-finder and an export
+/// of the staff directory, and it is enforced here rather than trusted to
+/// every caller.
+///
+/// Bounded by `tenant` like everything else, so it cannot see across one.
+/// `exclude` drops the caller themselves: a list of people to talk to should
+/// not offer you yourself.
+///
+/// # Errors
+/// [`StoreError::Db`] on a database failure.
+pub(crate) async fn find_people(
+    pool: &sqlx::PgPool,
+    tenant: &str,
+    query: &str,
+    exclude: &str,
+    limit: i64,
+) -> Result<Vec<(UserId, String)>> {
+    let query = query.trim().to_lowercase();
+    // Two characters is the floor: one would match most of a company and make
+    // this a listing wearing a search's clothes.
+    if query.chars().count() < 2 {
+        return Ok(Vec::new());
+    }
+    let limit = limit.clamp(1, 25);
+    // Escape the wildcards, so a query of "%" searches for a percent sign
+    // rather than matching everyone — which would turn this straight back into
+    // the listing it exists not to be.
+    let like = format!("%{}%", query.replace('%', r"\%").replace('_', r"\_"));
+    let rows = sqlx::query!(
+        "SELECT id, email FROM users          WHERE tenant_id = $1 AND id <> $2 AND lower(email) LIKE $3          ORDER BY email LIMIT $4",
+        tenant,
+        exclude,
+        like,
+        limit
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(|r| (UserId::new(r.id), r.email))
+        .collect())
+}

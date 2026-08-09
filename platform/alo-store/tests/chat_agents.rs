@@ -299,3 +299,64 @@ async fn search_finds_only_what_the_reader_could_already_read() {
     // An empty question asks nothing rather than returning everything.
     assert!(a.search_messages("   ", None, 50).await.unwrap().is_empty());
 }
+
+/// Finding a colleague is a search, never a listing. The distinction is the
+/// whole privacy argument for having it at all: it answers "is there a Ben
+/// here?" and refuses "give me everyone".
+#[tokio::test]
+async fn people_can_be_searched_for_but_never_listed() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("people-t").await.unwrap();
+    let ts = store.for_tenant(t.clone());
+    let ua = ts.create_user("anna@people.test").await.unwrap();
+    ts.create_user("ben@people.test").await.unwrap();
+    ts.create_user("bernard@people.test").await.unwrap();
+    let a = store.for_account(t.clone(), ua.clone());
+
+    let t2 = store.create_tenant("people-t2").await.unwrap();
+    store
+        .for_tenant(t2.clone())
+        .create_user("ben@other.test")
+        .await
+        .unwrap();
+
+    // A real search finds the people it should.
+    let found = a.find_people("ber", 25).await.unwrap();
+    assert_eq!(
+        found.iter().map(|(_, e)| e.as_str()).collect::<Vec<_>>(),
+        vec!["bernard@people.test"]
+    );
+
+    // Nothing to search for returns nothing — this is the line between a
+    // finder and an export of the staff directory.
+    assert!(a.find_people("", 25).await.unwrap().is_empty());
+    assert!(
+        a.find_people("b", 25).await.unwrap().is_empty(),
+        "one letter is a listing in disguise"
+    );
+    assert!(a.find_people("   ", 25).await.unwrap().is_empty());
+
+    // A wildcard is searched for literally, not honoured — otherwise "%" would
+    // hand back everybody.
+    assert!(a.find_people("%%", 25).await.unwrap().is_empty());
+    assert!(a.find_people("__", 25).await.unwrap().is_empty());
+
+    // Never yourself: a list of people to talk to should not offer you you.
+    let all = a.find_people("people.test", 25).await.unwrap();
+    assert!(!all.iter().any(|(u, _)| u.as_str() == ua.as_str()));
+    assert_eq!(all.len(), 2, "ben and bernard, not anna");
+
+    // Never across a tenant, however exactly the address is guessed. Anna is
+    // in people-t; "ben@other.test" is real, and is not hers to find.
+    assert!(
+        a.find_people("ben@other.test", 25)
+            .await
+            .unwrap()
+            .is_empty(),
+        "another tenant's person is not findable even by exact address"
+    );
+    assert!(
+        a.find_people("other.test", 25).await.unwrap().is_empty(),
+        "nor by their domain"
+    );
+}

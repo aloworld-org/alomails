@@ -226,6 +226,7 @@ pub fn app(state: AppState) -> Router {
         // message called "reactions".
         .route("/chat/reactions", get(chat::list_reactions))
         .route("/chat/search", get(chat::search))
+        .route("/chat/people", get(chat::find_people))
         .route(
             "/chat/agents",
             get(chat_agent_routes::list_agents).post(chat_agent_routes::create_agent),

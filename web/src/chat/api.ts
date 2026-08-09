@@ -22,6 +22,7 @@ import type {
   FeedMessage,
   Message,
   NewChannel,
+  Person,
   Proposal,
   Reaction,
 } from "./types";
@@ -167,6 +168,16 @@ export class ChatApi {
       `/chat/search?${params.toString()}`,
     );
     return body.messages;
+  }
+
+  /** Colleagues whose address matches. A search, never a listing: the server
+   *  wants two characters and caps what it returns, so this cannot be used to
+   *  pull the staff directory. */
+  async findPeople(query: string): Promise<Person[]> {
+    const body = await this.#read<{ people: Person[] }>(
+      `/chat/people?${new URLSearchParams({ q: query }).toString()}`,
+    );
+    return body.people;
   }
 
   /** Rewrite one's own message. The sequence is untouched, so nobody's read

@@ -973,3 +973,38 @@ pub async fn search(
             .collect::<Vec<_>>()
     })))
 }
+
+#[derive(Deserialize)]
+pub struct PeopleQuery {
+    q: String,
+}
+
+/// `GET /chat/people?q=` → colleagues whose address matches, for choosing
+/// someone to talk to.
+///
+/// A **search, never a listing**: the store requires two characters and caps
+/// the answer, so this cannot be used to pull the staff directory. It is the
+/// least surface that makes starting a conversation possible, which is the
+/// only reason it exists — every other way of finding a person here is either
+/// admin-gated or a personal address book.
+///
+/// # Errors
+/// 401 unauthenticated.
+pub async fn find_people(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(query): Query<PeopleQuery>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let found = account
+        .acc
+        .find_people(&query.q, 25)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "people": found
+            .iter()
+            .map(|(user, email)| json!({ "user": user.as_str(), "email": email }))
+            .collect::<Vec<_>>()
+    })))
+}

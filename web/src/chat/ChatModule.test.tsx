@@ -504,3 +504,39 @@ test("browsing lists open channels and joining opens the one chosen", async () =
     ).toBe(true);
   });
 });
+
+test("a colleague is searched for, never listed, and one letter asks nothing", async () => {
+  answers = [
+    { match: "/chat/reactions", body: { emoji: ["👍"] } },
+    {
+      match: "/chat/people",
+      body: { people: [{ user: THEM, email: "ben@alo.test" }] },
+    },
+    { match: "/messages", body: { messages: [] } },
+    { match: "/chat/channels", body: { channels: [ROOM] } },
+  ];
+  render(<ChatModule />);
+
+  fireEvent.click(await screen.findByTitle(strings.chatNewDm));
+  const box = screen.getByLabelText(strings.chatFindPerson);
+
+  // One letter must not reach the server: it would ask a question whose only
+  // answer is nothing, and a client that asks anyway invites someone to widen
+  // the rule later "because it's already being called".
+  fireEvent.change(box, { target: { value: "b" } });
+  await waitFor(() => {
+    expect(calls.some((c) => c.url.includes("/chat/people"))).toBe(false);
+  });
+  expect(screen.getByText(strings.chatFindPersonHint)).toBeTruthy();
+
+  fireEvent.change(box, { target: { value: "ben" } });
+  await screen.findByText("ben@alo.test");
+
+  fireEvent.click(screen.getByText("ben@alo.test"));
+  await waitFor(() => {
+    const made = calls.find(
+      (c) => c.url.endsWith("/chat/channels") && c.method === "POST",
+    );
+    expect(made?.body).toEqual({ kind: "dm", with: THEM });
+  });
+});

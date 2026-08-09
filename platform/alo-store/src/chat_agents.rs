@@ -290,3 +290,25 @@ impl AccountStore {
         Ok(())
     }
 }
+
+impl AccountStore {
+    /// Colleagues whose address matches `query` — for choosing someone to
+    /// start a conversation with.
+    ///
+    /// A search and not a listing: see
+    /// [`find_people`](crate::identity::find_people). Never includes the
+    /// caller, and never reaches outside their tenant.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn find_people(&self, query: &str, limit: i64) -> Result<Vec<(UserId, String)>> {
+        crate::identity::find_people(
+            &self.pool,
+            self.tenant.as_str(),
+            query,
+            self.user.as_str(),
+            limit,
+        )
+        .await
+    }
+}
