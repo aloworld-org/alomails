@@ -22,6 +22,7 @@ pub mod agent_billing;
 pub mod agent_crm;
 pub mod agent_projects;
 pub mod insights;
+pub mod site_edits;
 pub mod sites;
 pub use agent::{
     AGENT_TOOLS, AgentDecision, ProposedAction, agent_messages, is_agent_tool, parse_decision,
@@ -31,6 +32,10 @@ pub use agent_billing::BILLING_TOOLS;
 pub use agent_crm::CRM_TOOLS;
 pub use agent_projects::PROJECTS_TOOLS;
 pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, repair_messages};
+pub use site_edits::{
+    SITE_EDIT_SCHEMA_VERSION, SiteEditEnvelope, SiteEditError, SiteEditOperation,
+    SiteSectionTarget, apply_site_edit, parse_site_edit, site_edit_messages,
+};
 pub use sites::{
     SITE_DRAFT_SCHEMA_VERSION, SiteDraft, SiteDraftError, SiteDraftPage, SiteDraftSite,
     generate_site_draft, parse_site_draft, site_generation_messages, site_repair_messages,
