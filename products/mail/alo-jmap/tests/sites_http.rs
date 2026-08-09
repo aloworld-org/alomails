@@ -13,13 +13,39 @@
 
 mod common;
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use alo_store::{DriveLocation, NewDriveFile, SiteId};
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
+use futures::future::BoxFuture;
 use serde_json::{Value, json};
 
 use common::{Harness, harness, send};
+
+struct FakeSiteDomainDns {
+    answers: HashMap<String, Vec<String>>,
+}
+
+impl alo_jmap::sites::SiteDomainTxtLookup for FakeSiteDomainDns {
+    fn lookup(&self, name: String) -> BoxFuture<'static, Vec<String>> {
+        let records = self.answers.get(&name).cloned().unwrap_or_default();
+        Box::pin(async move { records })
+    }
+}
+
+fn app_with_dns(harness: &Harness, answers: HashMap<String, Vec<String>>) -> Router {
+    alo_jmap::app_with_site_domain_dns(
+        alo_jmap::app_state(
+            Arc::clone(&harness.store),
+            harness.identity.clone(),
+            "http://test",
+        ),
+        Arc::new(FakeSiteDomainDns { answers }),
+    )
+}
 
 // ---- request helpers ---------------------------------------------------------
 
@@ -119,6 +145,22 @@ async fn every_route_family_requires_a_bearer_token() {
         ("GET", "/sites/config".to_owned(), None),
         ("GET", "/sites/some-id/submissions".to_owned(), None),
         ("GET", "/sites/some-id/analytics".to_owned(), None),
+        ("GET", "/sites/some-id/domains".to_owned(), None),
+        (
+            "POST",
+            "/sites/some-id/domains".to_owned(),
+            Some(json!({ "domain": "example.test" })),
+        ),
+        (
+            "POST",
+            "/sites/some-id/domains/example.test/verify".to_owned(),
+            Some(json!({})),
+        ),
+        (
+            "DELETE",
+            "/sites/some-id/domains/example.test".to_owned(),
+            Some(json!({})),
+        ),
         ("GET", "/sites/some-id/submissions.csv".to_owned(), None),
         ("GET", "/sites/some-id/posts".to_owned(), None),
         (
@@ -195,6 +237,69 @@ async fn analytics_answers_a_complete_period_and_validates_the_range() {
         body["detail"],
         json!("analytics period must be between 1 and 365 days")
     );
+}
+
+#[tokio::test]
+async fn custom_domain_claim_and_mocked_txt_verification_run_on_the_wire() {
+    let h = harness("sites-domain").await;
+    let site = created_id(
+        "site",
+        post(
+            &h.app,
+            &h.token,
+            "/sites",
+            json!({ "name": "Domain site", "subdomain": sub("domain", &h) }),
+        )
+        .await,
+    );
+    let base = format!("/sites/{site}/domains");
+
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        &base,
+        json!({ "domain": "https://wrong.example/path" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert!(body["detail"].as_str().unwrap().contains("ASCII"));
+
+    let host = format!("custom-{}.example.test", sub("host", &h));
+    let (status, claim) = post(
+        &h.app,
+        &h.token,
+        &base,
+        json!({ "domain": host.to_ascii_uppercase() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{claim}");
+    assert_eq!(claim["domain"], json!(host));
+    assert_eq!(claim["status"], json!("pending"));
+    assert_eq!(claim["verifyRecord"]["type"], json!("TXT"));
+    let record_name = claim["verifyRecord"]["name"].as_str().unwrap().to_owned();
+    let record_value = claim["verifyRecord"]["value"].as_str().unwrap().to_owned();
+    assert_eq!(record_name, format!("_alo-sites.{host}"));
+    assert!(record_value.starts_with("alo-site-verification="));
+
+    let (status, listed) = get(&h.app, &h.token, &base).await;
+    assert_eq!(status, StatusCode::OK, "{listed}");
+    assert_eq!(listed["domains"].as_array().unwrap().len(), 1);
+
+    let verify_path = format!("{base}/{host}/verify");
+    let missing_dns = app_with_dns(&h, HashMap::new());
+    let (status, still_pending) = post(&missing_dns, &h.token, &verify_path, json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{still_pending}");
+    assert_eq!(still_pending["status"], json!("pending"));
+
+    let matching_dns = app_with_dns(&h, HashMap::from([(record_name, vec![record_value])]));
+    let (status, verified) = post(&matching_dns, &h.token, &verify_path, json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{verified}");
+    assert_eq!(verified["status"], json!("verified"));
+    assert!(verified["verifiedAt"].is_string());
+
+    let (status, body) = delete(&h.app, &h.token, &format!("{base}/{host}")).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["status"], json!("deleted"));
 }
 
 #[tokio::test]
@@ -1172,6 +1277,15 @@ async fn another_tenants_site_is_invisible_on_every_route() {
         )
         .await
         .unwrap();
+    let b_domain = format!("private-{}.example.test", sub("domain", &b));
+    let (status, body) = post(
+        &b.app,
+        &b.token,
+        &format!("/sites/{b_site}/domains"),
+        json!({ "domain": b_domain }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "B domain claim failed: {body}");
 
     // A's list never mentions it.
     let (status, body) = get(&a.app, &a.token, "/sites").await;
@@ -1199,6 +1313,22 @@ async fn another_tenants_site_is_invisible_on_every_route() {
         ("POST", format!("/sites/{b_site}/unpublish"), json!({})),
         ("GET", format!("/sites/{b_site}/pages"), json!({})),
         ("GET", format!("/sites/{b_site}/analytics"), json!({})),
+        ("GET", format!("/sites/{b_site}/domains"), json!({})),
+        (
+            "POST",
+            format!("/sites/{b_site}/domains"),
+            json!({ "domain": "foreign-write.example.test" }),
+        ),
+        (
+            "POST",
+            format!("/sites/{b_site}/domains/{b_domain}/verify"),
+            json!({}),
+        ),
+        (
+            "DELETE",
+            format!("/sites/{b_site}/domains/{b_domain}"),
+            json!({}),
+        ),
         ("GET", format!("/sites/{b_site}/submissions"), json!({})),
         ("GET", format!("/sites/{b_site}/submissions.csv"), json!({})),
         ("GET", format!("/sites/{b_site}/posts"), json!({})),
@@ -1321,6 +1451,9 @@ async fn another_tenants_site_is_invisible_on_every_route() {
         .unwrap();
     assert_eq!(submissions.len(), 1);
     assert!(!submissions[0].handled, "foreign tenant marked it handled");
+    let domains = b.acc.site_domains(&b_site_id).await.unwrap();
+    assert_eq!(domains.len(), 1, "foreign tenant changed B's domain claim");
+    assert_eq!(domains[0].domain, b_domain);
 }
 
 // ---- the draft preview (S1.13) -----------------------------------------------

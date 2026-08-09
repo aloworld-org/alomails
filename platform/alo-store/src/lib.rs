@@ -118,6 +118,7 @@ pub mod share;
 pub mod signup;
 pub mod site_analytics;
 pub mod site_assets;
+pub mod site_domains;
 pub mod site_form_notify;
 pub mod site_forms;
 pub mod site_model;
@@ -322,6 +323,7 @@ pub use share::{ShareCreated, ShareTarget};
 pub use signup::PendingSignup;
 pub use site_analytics::{SiteAnalyticsDay, SiteAnalyticsRank, SiteAnalyticsReport};
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
+pub use site_domains::{SITE_DOMAIN_MAX_LEN, SiteDomain, SiteDomainStatus, normalize_site_domain};
 pub use site_form_notify::FormNotification;
 pub use site_forms::{
     MAX_FORMS_PER_SITE, SiteForm, SiteFormSubmission, SubmissionContent, normalize_submission,

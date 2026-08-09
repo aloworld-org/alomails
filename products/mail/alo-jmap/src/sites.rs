@@ -23,11 +23,13 @@
 //! optimistic-concurrency header exists yet (recorded as an S2 seam).
 
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use axum::Json;
-use axum::extract::{Path, Query, State};
+use axum::extract::{Extension, Path, Query, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
+use futures::future::BoxFuture;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::format_description::well_known::Rfc3339;
@@ -38,13 +40,40 @@ use alo_sites::render::{
 };
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
-    BlobId, DriveNodeId, NewSitePost, Section, SectionsEnvelope, Site, SiteFormId,
-    SiteFormSubmissionId, SiteId, SitePage, SitePageId, SitePost, SitePostId, SitePostUpdate,
-    SiteTheme, StoreError, site_theme::THEME_PRESETS,
+    BlobId, DriveNodeId, NewSitePost, Section, SectionsEnvelope, Site, SiteDomain,
+    SiteDomainStatus, SiteFormId, SiteFormSubmissionId, SiteId, SitePage, SitePageId, SitePost,
+    SitePostId, SitePostUpdate, SiteTheme, StoreError, normalize_site_domain,
+    site_theme::THEME_PRESETS,
 };
 
 use crate::error::Problem;
 use crate::state::{Account, AppState, authenticate};
+
+/// TXT lookup boundary used by custom-domain verification. Production uses
+/// the system resolver; tests inject a deterministic implementation and never
+/// call external DNS.
+pub trait SiteDomainTxtLookup: Send + Sync {
+    fn lookup(&self, name: String) -> BoxFuture<'static, Vec<String>>;
+}
+
+/// Production TXT lookup through the same Hickory system resolver as the
+/// Security & trust checks.
+pub struct SystemSiteDomainTxtLookup;
+
+impl SiteDomainTxtLookup for SystemSiteDomainTxtLookup {
+    fn lookup(&self, name: String) -> BoxFuture<'static, Vec<String>> {
+        Box::pin(async move {
+            let Some(resolver) = crate::security::build_resolver() else {
+                return Vec::new();
+            };
+            crate::security::txt_records(&resolver, &name).await
+        })
+    }
+}
+
+/// DNS label and value used to prove control of a custom site host.
+const SITE_DOMAIN_VERIFY_PREFIX: &str = "_alo-sites";
+const SITE_DOMAIN_VERIFY_VALUE_PREFIX: &str = "alo-site-verification=";
 
 // ---- JSON shaping -----------------------------------------------------------
 
@@ -63,6 +92,21 @@ fn site_json(s: &Site) -> Value {
         "theme": s.theme,
         "createdAt": iso(s.created_at),
         "updatedAt": iso(s.updated_at),
+    })
+}
+
+fn site_domain_json(domain: &SiteDomain) -> Value {
+    json!({
+        "domain": domain.domain,
+        "status": domain.status.as_str(),
+        "verifiedAt": domain.verified_at.map(iso),
+        "verifyRecord": {
+            "name": format!("{SITE_DOMAIN_VERIFY_PREFIX}.{}", domain.domain),
+            "type": "TXT",
+            "value": format!("{SITE_DOMAIN_VERIFY_VALUE_PREFIX}{}", domain.verify_token),
+        },
+        "createdAt": iso(domain.created_at),
+        "updatedAt": iso(domain.updated_at),
     })
 }
 
@@ -128,6 +172,106 @@ pub async fn list_sites(
     Ok(Json(
         json!({ "sites": sites.iter().map(site_json).collect::<Vec<_>>() }),
     ))
+}
+
+// ---- custom domains --------------------------------------------------------
+
+/// `GET /sites/:id/domains` → `{domains:[...]}` for an owned site.
+pub async fn list_domains(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let domains = account
+        .acc
+        .site_domains(&SiteId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "domains": domains.iter().map(site_domain_json).collect::<Vec<_>>()
+    })))
+}
+
+#[derive(Deserialize)]
+struct SiteDomainBody {
+    domain: String,
+}
+
+/// `POST /sites/:id/domains` `{domain}` → a pending claim and the exact TXT
+/// ownership record to publish.
+pub async fn create_domain(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let body: SiteDomainBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let domain = account
+        .acc
+        .create_site_domain(&SiteId::new(id), &body.domain)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(site_domain_json(&domain)))
+}
+
+/// `DELETE /sites/:id/domains/:domain` releases an owned claim.
+pub async fn delete_domain(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, domain)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .delete_site_domain(&SiteId::new(id), &domain)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "deleted" })))
+}
+
+/// `POST /sites/:id/domains/:domain/verify` checks the current DNS TXT set.
+/// A missing record is a normal, retryable 200 response; the claim changes to
+/// `verified` only after the exact opaque token is observed.
+pub async fn verify_domain(
+    State(state): State<AppState>,
+    Extension(dns): Extension<Arc<dyn SiteDomainTxtLookup>>,
+    headers: HeaderMap,
+    Path((id, value)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let site = SiteId::new(id);
+    let domain = normalize_site_domain(&value).map_err(map_store_err)?;
+    let claims = account
+        .acc
+        .site_domains(&site)
+        .await
+        .map_err(map_store_err)?;
+    let claim = claims
+        .into_iter()
+        .find(|claim| claim.domain == domain)
+        .ok_or_else(Problem::not_found)?;
+    if claim.status != SiteDomainStatus::Pending {
+        return Ok(Json(site_domain_json(&claim)));
+    }
+
+    let record_name = format!("{SITE_DOMAIN_VERIFY_PREFIX}.{domain}");
+    let expected = format!("{SITE_DOMAIN_VERIFY_VALUE_PREFIX}{}", claim.verify_token);
+    let found = dns
+        .lookup(record_name)
+        .await
+        .iter()
+        .any(|record| record.trim() == expected);
+    if !found {
+        return Ok(Json(site_domain_json(&claim)));
+    }
+    let verified = account
+        .acc
+        .verify_site_domain(&site, &domain)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(site_domain_json(&verified)))
 }
 
 #[derive(Deserialize)]

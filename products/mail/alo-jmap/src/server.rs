@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use alo_identity::Identity;
 use alo_store::Store;
-use axum::extract::{DefaultBodyLimit, State};
+use axum::extract::{DefaultBodyLimit, Extension, State};
 use axum::routing::{any, delete, get, patch, post, put};
 use axum::{Json, Router};
 use serde_json::{Value, json};
@@ -33,6 +33,15 @@ use crate::{
 /// OAuth 2.0 provider (`alo-identity`) is mounted alongside so a Phase-1
 /// deployment serves JMAP and the IdP from one HTTP service.
 pub fn app(state: AppState) -> Router {
+    app_with_site_domain_dns(state, Arc::new(sites::SystemSiteDomainTxtLookup))
+}
+
+/// Builds the router with an injectable Sites TXT lookup. Production callers
+/// use [`app`]; integration tests replace only this external DNS boundary.
+pub fn app_with_site_domain_dns(
+    state: AppState,
+    site_domain_dns: Arc<dyn sites::SiteDomainTxtLookup>,
+) -> Router {
     let upload_limit = state.limits.max_size_upload as usize;
     let request_limit = state.limits.max_size_request;
     let identity_routes = alo_identity::router(state.identity.clone());
@@ -262,6 +271,15 @@ pub fn app(state: AppState) -> Router {
         .route("/sites/{id}/publish", post(sites::publish_site))
         .route("/sites/{id}/unpublish", post(sites::unpublish_site))
         .route("/sites/{id}/analytics", get(sites::get_analytics))
+        .route(
+            "/sites/{id}/domains",
+            get(sites::list_domains).post(sites::create_domain),
+        )
+        .route("/sites/{id}/domains/{domain}", delete(sites::delete_domain))
+        .route(
+            "/sites/{id}/domains/{domain}/verify",
+            post(sites::verify_domain),
+        )
         .route("/sites/{id}/submissions", get(sites::list_submissions))
         .route(
             "/sites/{id}/submissions.csv",
@@ -1283,6 +1301,7 @@ pub fn app(state: AppState) -> Router {
             state.clone(),
             audit_record::audit_business_mutations,
         ))
+        .layer(Extension(site_domain_dns))
         .with_state(state);
     jmap.merge(identity_routes)
 }

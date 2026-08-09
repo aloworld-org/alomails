@@ -126,5 +126,5 @@ pub mod wopi;
 pub mod workspace_search;
 
 pub use push::PushHub;
-pub use server::{app, app_state, serve};
+pub use server::{app, app_state, app_with_site_domain_dns, serve};
 pub use state::{AppState, Limits};
