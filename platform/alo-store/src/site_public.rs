@@ -6,19 +6,22 @@
 //! private — so serving another tenant's rows is unrepresentable, the same
 //! by-construction guarantee the account door gives authenticated code.
 //!
-//! This door reads **published snapshots only** (`site_publishes`,
-//! `site_page_snapshots`). Drafts, forms, and everything else in a tenant's
+//! This door reads **public state only**: immutable page snapshots
+//! (`site_publishes`, `site_page_snapshots`) plus explicitly published blog
+//! posts. Draft pages, draft posts, forms, and everything else in a tenant's
 //! scope are simply not reachable through it. It is the module's one
 //! deliberate global surface: what it exposes is public by definition —
 //! exactly what `<subdomain>.<SITES_DOMAIN>` serves to the internet.
 
+use bytes::Bytes;
 use serde_json::Value;
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;
+use time::OffsetDateTime;
 
 use crate::blob::BlobStore;
 use crate::error::{Result, StoreError};
-use crate::id::{SiteId, SitePublishId, TenantId};
+use crate::id::{BlobId, SiteId, SitePublishId, TenantId};
 use crate::site_assets::{SiteImageData, site_image_content_type};
 use crate::site_publish::{SitePageSnapshot, SitePageSnapshotRow};
 
@@ -38,6 +41,25 @@ pub struct PublishedSite {
     pub publish: SitePublishId,
     /// The theme envelope frozen by that publish.
     pub theme: Value,
+}
+
+/// Public metadata for one published blog post. The document id and tenant
+/// never leave the store door: a public caller gets only what the article
+/// page and index are allowed to reveal.
+#[derive(Debug, Clone)]
+pub struct PublishedSitePost {
+    pub slug: String,
+    pub title: String,
+    pub excerpt: String,
+    pub cover_blob_id: Option<BlobId>,
+    pub published_at: OffsetDateTime,
+}
+
+/// One published post plus the current alo Docs bytes that form its body.
+#[derive(Debug, Clone)]
+pub struct PublishedSitePostBody {
+    pub post: PublishedSitePost,
+    pub body: Bytes,
 }
 
 /// The read-only store handle of the public `alo-sites` service: a Postgres
@@ -128,6 +150,90 @@ impl SitePublicStore {
             .collect())
     }
 
+    /// Published blog metadata for a resolved live site, newest first. Draft
+    /// posts are absent at the query boundary and the private tenant/site pair
+    /// comes only from the Host resolution.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn published_posts(&self, site: &PublishedSite) -> Result<Vec<PublishedSitePost>> {
+        let rows = sqlx::query_as::<_, PublishedSitePostRow>(
+            "SELECT slug, title, excerpt, cover_blob_id, published_at \
+             FROM site_posts \
+             WHERE tenant_id = $1 AND site_id = $2 AND status = 'published' \
+             ORDER BY published_at DESC, id",
+        )
+        .bind(site.tenant.as_str())
+        .bind(site.site.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(rows
+            .into_iter()
+            .map(PublishedSitePostRow::into_post)
+            .collect())
+    }
+
+    /// One published blog post and its current alo Docs body. A missing,
+    /// draft, trashed, wrong-kind, or foreign document is one clean absence.
+    /// Blob bytes are fetched only after the tenant/site-scoped row resolves.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`]/[`StoreError::Blob`] on backend failure.
+    pub async fn published_post(
+        &self,
+        site: &PublishedSite,
+        slug: &str,
+    ) -> Result<Option<PublishedSitePostBody>> {
+        let row = sqlx::query_as::<_, PublishedSitePostBodyRow>(
+            "SELECT p.slug, p.title, p.excerpt, p.cover_blob_id, p.published_at, b.hash \
+             FROM site_posts p \
+             JOIN drive_nodes d \
+               ON d.tenant_id = p.tenant_id AND d.id = p.doc_node_id \
+             JOIN blobs b \
+               ON b.tenant_id = d.tenant_id AND b.id = d.blob_id \
+             WHERE p.tenant_id = $1 AND p.site_id = $2 AND p.slug = $3 \
+               AND p.status = 'published' AND d.kind = 'doc' AND NOT d.trashed",
+        )
+        .bind(site.tenant.as_str())
+        .bind(site.site.as_str())
+        .bind(slug)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let Some(row) = row else { return Ok(None) };
+        let body = self.blobs.get(site.tenant.as_str(), &row.hash).await?;
+        Ok(Some(PublishedSitePostBody {
+            post: row.into_post(),
+            body,
+        }))
+    }
+
+    /// Whether `blob_id` is the cover of a published post on this resolved
+    /// site. This is the reference gate paired with [`Self::published_image`]
+    /// for `/assets/img/<blob_id>`; a known foreign or draft cover stays
+    /// indistinguishable from an absent id.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn published_post_uses_cover(
+        &self,
+        site: &PublishedSite,
+        blob_id: &str,
+    ) -> Result<bool> {
+        sqlx::query_scalar::<_, bool>(
+            "SELECT EXISTS(SELECT 1 FROM site_posts \
+             WHERE tenant_id = $1 AND site_id = $2 AND status = 'published' \
+               AND cover_blob_id = $3)",
+        )
+        .bind(site.tenant.as_str())
+        .bind(site.site.as_str())
+        .bind(blob_id)
+        .fetch_one(&self.pool)
+        .await
+        .map_err(StoreError::Db)
+    }
+
     /// An image blob of a resolved site's tenant, for the public
     /// `/assets/img/<blob_id>` path: `None` when the id does not resolve in
     /// that tenant or the stored content type is not a servable image type.
@@ -182,5 +288,49 @@ impl PublishedSiteRow {
             publish: SitePublishId::new(self.publish_id),
             theme: self.theme.0,
         }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct PublishedSitePostRow {
+    slug: String,
+    title: String,
+    excerpt: String,
+    cover_blob_id: Option<String>,
+    published_at: OffsetDateTime,
+}
+
+impl PublishedSitePostRow {
+    fn into_post(self) -> PublishedSitePost {
+        PublishedSitePost {
+            slug: self.slug,
+            title: self.title,
+            excerpt: self.excerpt,
+            cover_blob_id: self.cover_blob_id.map(BlobId::new),
+            published_at: self.published_at,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct PublishedSitePostBodyRow {
+    slug: String,
+    title: String,
+    excerpt: String,
+    cover_blob_id: Option<String>,
+    published_at: OffsetDateTime,
+    hash: String,
+}
+
+impl PublishedSitePostBodyRow {
+    fn into_post(self) -> PublishedSitePost {
+        PublishedSitePostRow {
+            slug: self.slug,
+            title: self.title,
+            excerpt: self.excerpt,
+            cover_blob_id: self.cover_blob_id,
+            published_at: self.published_at,
+        }
+        .into_post()
     }
 }

@@ -284,7 +284,7 @@ pub use site_forms::{
 pub use site_model::{SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope};
 pub use site_pages::{SitePage, validate_page_slug};
 pub use site_posts::{NewSitePost, SitePost, SitePostStatus, SitePostUpdate};
-pub use site_public::{PublishedSite, SitePublicStore};
+pub use site_public::{PublishedSite, PublishedSitePost, PublishedSitePostBody, SitePublicStore};
 pub use site_publish::{SitePageSnapshot, SitePublish};
 pub use site_theme::{
     DEFAULT_THEME_PRESET, SiteTheme, THEME_PRESETS, THEME_SCHEMA_VERSION, ThemePreset,
