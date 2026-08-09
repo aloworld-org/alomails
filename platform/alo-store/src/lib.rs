@@ -13,6 +13,7 @@ pub mod account_sieve;
 pub mod audit;
 pub mod bank_camt;
 pub mod bank_import;
+pub mod bank_mt940;
 pub mod base;
 pub mod billing_bills;
 pub mod billing_cadence;
@@ -132,6 +133,7 @@ pub use bank_import::{
     BankStatement, COUNTERPARTY_NAME_MAX, LINE_AMOUNT_MAX_CENTS, MAX_BANK_FILE_BYTES, ParsedLine,
     ParsedStatement, REMITTANCE_MAX, STATEMENT_LINES_MAX, STATEMENT_REF_MAX,
 };
+pub use bank_mt940::parse_mt940;
 pub use base::{Base, BaseField, BaseRecord, BaseTable, BaseView};
 pub use billing_bills::{Bill, BillDocument, BillStatus, BillTotals, NewBill, Supplier};
 pub use billing_cadence::{Cadence, next_occurrence};

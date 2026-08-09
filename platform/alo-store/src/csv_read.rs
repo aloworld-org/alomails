@@ -212,7 +212,11 @@ fn check_unique(header: &[String]) -> Result<()> {
 }
 
 /// Decodes the bytes, reporting which way it read them.
-fn decode(bytes: &[u8]) -> (String, CsvEncoding) {
+///
+/// Shared with [`crate::bank_mt940`]: an MT940 file is not CSV, but it arrives
+/// from the same portals in the same encodings, and one notion of "how European
+/// bookkeeping software writes a text file" is better than two.
+pub(crate) fn decode(bytes: &[u8]) -> (String, CsvEncoding) {
     if let Some(rest) = bytes.strip_prefix(&[0xEF, 0xBB, 0xBF]) {
         return (
             String::from_utf8_lossy(rest).into_owned(),

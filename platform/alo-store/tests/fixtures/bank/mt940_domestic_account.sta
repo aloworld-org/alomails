@@ -1,0 +1,12 @@
+A German MT940 in the pre-SEPA domestic form: :25: states a Bankleitzahl and
+an account number rather than an IBAN. There is nothing to file the lines
+under, so the file is refused with the words a person needs — ask the bank for
+the SEPA format — rather than imported under a guess.
+
+:20:STARTUMSATZ
+:25:12030000/0002020510
+:28C:00006/001
+:60F:C260601EUR100,00
+:61:2606020602C10,00NTRFREF-1
+:86:Erste
+:62F:C260630EUR110,00

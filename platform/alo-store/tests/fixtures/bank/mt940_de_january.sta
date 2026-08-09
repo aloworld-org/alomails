@@ -1,0 +1,35 @@
+MT940 has no comment syntax, and a bank's covering text stands before the
+first tag exactly like this — which is why the reader drops everything above
+the first tag instead of refusing the file.
+
+A month of a German business current account, in the shape a German bank
+writes MT940: structured :86: subfields (?00 posting text, ?2n remittance in
+27-character slices, ?31 the counterparty's account, ?32/?33 their name).
+
+It is deliberately the SAME month as camt053_de_january.xml, transaction for
+transaction, with the same bank references — because the two formats must
+stage to the same lines, and bank_import_tenancy.rs proves it by importing
+both and finding four duplicates and nothing new.
+
+Hand-authored to the published shape rather than copied from a bank's own
+file: a real statement is somebody's money. The IBANs are the standard test
+numbers used in the specifications' own examples.
+
+Opening + the four transactions = closing, and the golden suite asserts it.
+
+:20:STARTUMSATZ
+:25:DE02120300000000202051
+:28C:00001/001
+:60F:C260101EUR12500,00
+:61:2601040105C1250,00NTRFE2E-20260105-0001//DE-2026-0105-0001
+:86:166?00SEPA-GUTSCHRIFT?20Rechnung INV-2026-00007 ?21vielen Dank?30ABNANL2A
+?31NL91ABNA0417164300?32Kaffeehaus Berlin ?33GmbH
+:61:2601070107D89,90NDDTSW-2019-4471//DE-2026-0107-0004
+:86:105?00LASTSCHRIFT STROM?20RF18539007547034?30BYLADEM1001
+?31DE89370400440532013000?32Stadtwerke Muenchen ?33GmbH
+:61:2601280128D4500,00NTRFNONREF//DE-2026-0128-0011
+:86:191?00SAMMELUEBERWEISUNG?20Sammelueberweisung Gehalt?21slauf Januar 2026
+:61:2601290129RC1250,00NTRFE2E-20260105-0001//DE-2026-0129-0014
+:86:159?00RETOURE SEPA-GUTSCHRIFT?20Rueckbuchung Rechnung INV?21-2026-00007
+?31NL91ABNA0417164300?32Kaffeehaus Berlin GmbH
+:62F:C260131EUR7910,10

@@ -1,0 +1,26 @@
+A month of a Dutch business account, written the way a bank interface emits
+it: SWIFT's transport blocks around the statement, CRLF line endings,
+free-text information fields instead of German ?-subfields, NONREF where the
+payer supplied no reference, and a month that ends overdrawn — so a debit
+closing balance is exercised.
+
+The last :86: stands AFTER the closing balance: it is the bank's note about the
+statement, and it must not attach itself to the final transaction.
+
+Opening + the three transactions = closing, and the golden suite asserts it.
+
+{1:F01ABNANL2AXXXX0000000000}{2:O9401200260301ABNANL2AXXXX00000000002603010200N}{4:
+:20:940-2026-02
+:25:NL91ABNA0417164300EUR
+:28C:00002/001
+:60F:C260201EUR250,00
+:61:2602030203C500,00NTRFNONREF//NL-2026-0203-0007
+:86:Factuur INV-2026-00011
+betaling februari
+:61:2602120212D1200,00NTRFNONREF
+Leverancier BV maandtermijn
+:61:2602280228D30,00NCHGNONREF//NL-2026-0228-0091
+:86:Kosten betalingsverkeer februari
+:62F:D260228EUR480,00
+:86:Vanaf 1 maart wijzigen onze tarieven
+-}{5:{CHK:0123456789AB}}

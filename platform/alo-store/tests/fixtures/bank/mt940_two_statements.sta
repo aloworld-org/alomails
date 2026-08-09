@@ -1,0 +1,18 @@
+Two statements in one file — two accounts, two closing balances, one upload.
+It is refused rather than half-imported: staging the first silently would put
+one account's lines on screen and lose the other's entirely.
+
+:20:FIRST
+:25:DE02120300000000202051
+:28C:00005/001
+:60F:C260501EUR100,00
+:61:2605020502C10,00NTRFREF-1
+:86:Erste
+:62F:C260531EUR110,00
+:20:SECOND
+:25:NL91ABNA0417164300
+:28C:00005/001
+:60F:C260501EUR200,00
+:61:2605020502C20,00NTRFREF-2
+:86:Tweede
+:62F:C260531EUR220,00

@@ -1,0 +1,19 @@
+One statement over two pages, which is how a bank sends a long month: the
+first page closes with an intermediate balance ("more to come") and the second
+reopens with one. It is ONE statement — same account, same period — and
+reading it as two would file half a month under an import of its own.
+
+:20:PAGE-1
+:25:DE02120300000000202051
+:28C:00004/001
+:60F:C260401EUR1000,00
+:61:2604030403C500,00NTRFREF-A//DE-2026-0403-0001
+:86:166?00SEPA-GUTSCHRIFT?20Anzahlung Projekt?32Bauhaus Leipzig GmbH
+:62M:C260403EUR1500,00
+:20:PAGE-2
+:25:DE02120300000000202051
+:28C:00004/002
+:60M:C260403EUR1500,00
+:61:2604100410D200,00NTRFREF-B//DE-2026-0410-0002
+:86:105?00LASTSCHRIFT?20Versicherung April?32Allianz SE
+:62F:C260430EUR1300,00

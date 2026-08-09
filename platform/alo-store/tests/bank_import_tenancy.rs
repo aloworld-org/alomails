@@ -273,6 +273,136 @@ async fn another_tenant_holding_the_identical_file_sees_none_of_ours() {
 }
 
 #[tokio::test]
+async fn an_mt940_stages_through_exactly_the_same_rules_as_a_camt() {
+    let store = common::test_store().await;
+    let (acc, _) = tenant(&store, "swift").await;
+
+    let report = acc
+        .import_bank_mt940(&fixture("mt940_nl_february.sta"))
+        .await
+        .unwrap();
+    assert_eq!(report.staged, 3);
+    assert_eq!((report.duplicates, report.unbooked), (0, 0));
+    assert_eq!(report.statement.source, BankSource::Mt940);
+    assert_eq!(report.statement.account_iban, "NL91ABNA0417164300");
+    assert_eq!(report.statement.statement_ref, "00002/001");
+    assert_eq!(report.statement.closing_balance_cents, Some(-48_000));
+
+    let lines = acc.bank_lines(None, None).await.unwrap();
+    assert_eq!(
+        lines
+            .iter()
+            .map(|line| (line.line_no, line.amount_cents))
+            .collect::<Vec<_>>(),
+        vec![(1, 50_000), (2, -120_000), (3, -3_000)]
+    );
+    assert!(
+        lines
+            .iter()
+            .all(|line| line.status == BankLineStatus::Unmatched && line.currency == "EUR"),
+        "a staged line is not an event, whichever parser read it"
+    );
+
+    // The same bytes twice is the same file, and the refusal names the period.
+    assert_conflict(
+        acc.import_bank_mt940(&fixture("mt940_nl_february.sta"))
+            .await,
+        "2026-02-01 to 2026-02-28",
+    );
+
+    // A file we cannot read stages nothing at all.
+    assert_invalid(
+        acc.import_bank_mt940(&fixture("mt940_two_statements.sta"))
+            .await,
+        "one at a time",
+    );
+    assert_invalid(
+        acc.import_bank_mt940(&fixture("mt940_domestic_account.sta"))
+            .await,
+        "IBAN",
+    );
+    assert_invalid(acc.import_bank_mt940(b"a covering letter").await, "MT940");
+    assert_eq!(
+        acc.bank_statements().await.unwrap().len(),
+        1,
+        "a refusal is never a partial import"
+    );
+}
+
+#[tokio::test]
+async fn the_same_month_in_two_formats_is_the_same_month() {
+    // Three parsers, one contract — and the line hash is of what the bank said
+    // happened, not of how it spelled it. So a bookkeeper who downloads January
+    // as CAMT and then again as MT940 does not book the month twice.
+    let store = common::test_store().await;
+    let (acc, _) = tenant(&store, "both").await;
+
+    let camt = acc
+        .import_bank_camt053(&fixture("camt053_de_january.xml"))
+        .await
+        .unwrap();
+    assert_eq!(camt.staged, 4);
+
+    let swift = acc
+        .import_bank_mt940(&fixture("mt940_de_january.sta"))
+        .await
+        .unwrap();
+    assert_eq!(
+        (swift.staged, swift.duplicates),
+        (0, 4),
+        "the same four transactions, read out of another syntax"
+    );
+    assert_eq!(swift.statement.source, BankSource::Mt940);
+    assert_eq!(
+        swift.statement.line_count, 0,
+        "the import honestly shows that it added nothing"
+    );
+
+    let lines = acc.bank_lines(None, None).await.unwrap();
+    assert_eq!(lines.len(), 4, "the month is staged once, not twice");
+    assert!(
+        lines
+            .iter()
+            .all(|line| line.statement_id == camt.statement.id)
+    );
+}
+
+#[tokio::test]
+async fn another_tenant_holding_the_identical_mt940_sees_none_of_ours() {
+    let store = common::test_store().await;
+    let (ours, _) = tenant(&store, "swift-a").await;
+    let (theirs, _) = tenant(&store, "swift-b").await;
+
+    let file = fixture("mt940_de_january.sta");
+    let mine = ours.import_bank_mt940(&file).await.unwrap();
+
+    // Two companies banking at the same institution can hold byte-identical
+    // files; neither import is an oracle for the other's.
+    let yours = theirs.import_bank_mt940(&file).await.unwrap();
+    assert_eq!((yours.staged, yours.duplicates), (4, 0));
+    assert_ne!(yours.statement.id, mine.statement.id);
+
+    assert!(
+        theirs
+            .bank_statement(&mine.statement.id)
+            .await
+            .unwrap()
+            .is_none(),
+        "another tenant's import is absent, never Forbidden"
+    );
+    assert!(
+        theirs
+            .bank_lines(Some(&mine.statement.id), None)
+            .await
+            .unwrap()
+            .is_empty(),
+        "filtering by another tenant's statement yields our own nothing"
+    );
+    assert_eq!(ours.bank_lines(None, None).await.unwrap().len(), 4);
+    assert_eq!(theirs.bank_lines(None, None).await.unwrap().len(), 4);
+}
+
+#[tokio::test]
 async fn a_colleague_on_the_same_tenant_reads_the_company_statement() {
     let store = common::test_store().await;
     let (acc, tenant_id) = tenant(&store, "shared").await;

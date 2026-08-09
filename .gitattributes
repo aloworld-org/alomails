@@ -4,3 +4,8 @@
 
 # Windows-only files that genuinely require CRLF would be listed here;
 # none exist today.
+
+# Wire fixtures are stored as the byte sequence they stand in for, never
+# normalised. An MT940 file is a CRLF format, and a golden file whose line
+# endings git rewrote would stop being the thing the reader is tested against.
+platform/alo-store/tests/fixtures/bank/*.sta -text

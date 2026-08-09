@@ -335,6 +335,25 @@ impl AccountStore {
         self.stage_bank_statement(&parsed, &sha256_hex(file)).await
     }
 
+    /// Imports a SWIFT MT940 statement file.
+    ///
+    /// The same door as [`Self::import_bank_camt053`], one format along: the
+    /// parser differs and nothing after it does, which is the whole point of
+    /// [`ParsedStatement`]. Two files of the same month in the two formats
+    /// therefore de-duplicate against each other line by line, because the hash
+    /// is of what the bank said happened and not of how it spelled it.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] when the file is not a readable MT940 or
+    /// states something we cannot hold exactly — the message names the
+    /// transaction and the field and **never quotes the file**, which is the
+    /// tenant's bank data (Law 1); [`StoreError::Conflict`] when these exact
+    /// bytes have already been imported; [`StoreError::Db`] on failure.
+    pub async fn import_bank_mt940(&self, file: &[u8]) -> Result<BankImport> {
+        let parsed = crate::bank_mt940::parse_mt940(file)?;
+        self.stage_bank_statement(&parsed, &sha256_hex(file)).await
+    }
+
     /// Validates a parsed statement and stages it.
     ///
     /// Separate from the parsers so that all three formats — and the CSV
