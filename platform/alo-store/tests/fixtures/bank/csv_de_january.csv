@@ -1,0 +1,5 @@
+Buchungstag;Wertstellung;Empfänger;IBAN;Verwendungszweck;Kundenreferenz;Betrag;Währung
+05.01.2026;04.01.2026;Kaffeehaus Berlin GmbH;NL91ABNA0417164300;Rechnung INV-2026-00007 vielen Dank;DE-2026-0105-0001;1.250,00;EUR
+07.01.2026;07.01.2026;Stadtwerke Muenchen GmbH;DE89370400440532013000;RF18539007547034;DE-2026-0107-0004;-89,90;EUR
+28.01.2026;28.01.2026;;;Sammelueberweisung Gehaltslauf Januar 2026;DE-2026-0128-0011;-4.500,00;EUR
+29.01.2026;29.01.2026;Kaffeehaus Berlin GmbH;NL91ABNA0417164300;Rueckbuchung Rechnung INV-2026-00007;DE-2026-0129-0014;-1.250,00;EUR

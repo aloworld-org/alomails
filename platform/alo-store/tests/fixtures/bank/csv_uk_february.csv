@@ -1,0 +1,5 @@
+Date,Description,Counterparty,Counterparty IBAN,Paid out,Paid in,Balance
+2026-02-03,Coffee beans,Kaffeehaus Berlin GmbH,NL91ABNA0417164300,3.40,,1231.16
+2026-02-10,Invoice INV-2026-00011,Acme Trading Ltd,GB33BUKB20201555555555,,1200.00,2431.16
+2026-02-27,Rent February,Landlord Holdings Ltd,GB33BUKB20201555555555,800.00,,1631.16
+,,,,,,1631.16

@@ -281,14 +281,11 @@ pub struct DuplicateRow {
 }
 
 /// A row that cannot be imported at all, with the rule it broke.
-#[derive(Debug, Clone)]
-pub struct RowError {
-    /// The line of the file.
-    pub line: usize,
-    /// The rule, in the store's own words. Never the row's content: a lead
-    /// list is somebody's customer data (law 1).
-    pub rule: String,
-}
+///
+/// Re-exported from [`crate::csv_read`] since B4.08c, where the bank-statement
+/// wizard needed the same answer: one shape for "line 7, and here is why" is one
+/// import screen.
+pub use crate::csv_read::RowError;
 
 /// A lead the import would create, or did.
 #[derive(Debug, Clone)]

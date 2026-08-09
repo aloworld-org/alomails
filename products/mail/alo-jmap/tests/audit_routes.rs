@@ -151,7 +151,11 @@ fn every_mutating_business_route_resolves_to_an_audit_action() {
     // The one documented exception, restated here rather than imported: if the
     // list of dry runs grows, this test should be the thing that makes someone
     // say so out loud.
-    const DRY_RUNS: [&str; 2] = ["/crm/imports/leads/preview", "/finance/receipts"];
+    const DRY_RUNS: [&str; 3] = [
+        "/crm/imports/leads/preview",
+        "/finance/receipts",
+        "/finance/imports/bank/preview",
+    ];
 
     for (method, template) in business_routes() {
         if !is_mutating(&method) {
@@ -281,6 +285,7 @@ POST /finance/expenses/{id}/reimburse -> finance.expense.reimburse
 POST /finance/expenses/{id}/reject -> finance.expense.reject
 POST /finance/expenses/{id}/submit -> finance.expense.submit
 POST /finance/expenses/{id}/withdraw -> finance.expense.withdraw
+POST /finance/imports/bank -> finance.import.bank
 POST /finance/mileage -> finance.mileage.create
 POST /projects/approvals/{id}/approve -> projects.approval.approve
 POST /projects/approvals/{id}/reject -> projects.approval.reject

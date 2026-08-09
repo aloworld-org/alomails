@@ -70,8 +70,21 @@ const STRIPPED: &[char] = &[
 /// # Errors
 ///
 /// [`AmountText`], which is a reason rather than a message.
+/// The number without the decoration a person or a spreadsheet put around it —
+/// currency symbols, every width of space, the Swiss thousands apostrophe.
+///
+/// Exposed because a caller that must rewrite an amount before reading it (the
+/// bank CSV wizard, [`crate::bank_csv`], which is told which separator is the
+/// decimal one) has to strip exactly what [`parse_amount_cents`] strips. Two
+/// lists would drift, and the drift would be a currency symbol read as a third
+/// decimal.
+#[must_use]
+pub fn strip_decoration(raw: &str) -> String {
+    raw.chars().filter(|c| !STRIPPED.contains(c)).collect()
+}
+
 pub fn parse_amount_cents(raw: &str) -> Result<i64, AmountText> {
-    let cleaned: String = raw.chars().filter(|c| !STRIPPED.contains(c)).collect();
+    let cleaned = strip_decoration(raw);
     if cleaned.is_empty() {
         return Err(AmountText::Empty);
     }

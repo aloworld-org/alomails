@@ -20,12 +20,12 @@ use crate::{
     billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
     billing_settings, blob, calendar, carddav, chat, contacts, crm_activities, crm_deals,
     crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
-    delegates, docs, drive, filters, finance_approvals, finance_expenses, finance_mileage,
-    finance_receipts, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, projects_clients, projects_invoices, projects_plan, projects_reports,
-    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, security,
-    session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
-    workspace_search,
+    delegates, docs, drive, filters, finance_approvals, finance_bank, finance_expenses,
+    finance_mileage, finance_receipts, flagdue, imap_import_route, insights, insights_ask,
+    insights_eval, insights_gallery, projects_clients, projects_invoices, projects_plan,
+    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
+    schedule, security, session, settings, share, signup_route, sites, snooze, spaces, tasks,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -976,6 +976,36 @@ pub fn app(state: AppState) -> Router {
             "/finance/mileage/{id}",
             delete(finance_mileage::delete_mileage),
         )
+        // The bank (B4.08). One upload door for three formats — CAMT.053,
+        // MT940 and a mapped CSV — because a person has a file, not a format;
+        // the store sniffs which parser it wants unless the caller says.
+        //
+        // The preview writes nothing and joins `audit_action::READ_ONLY_POSTS`
+        // beside `/crm/imports/leads/preview`: the store's reading is a pure
+        // function, and an audit line saying somebody imported something they
+        // only looked at would be a false line in the log.
+        //
+        // Both carry the statement file's own body limit rather than the JMAP
+        // request limit, as `/crm/imports/leads` does, because the file IS the
+        // body.
+        .route(
+            "/finance/imports/bank/preview",
+            post(finance_bank::preview_bank_import)
+                .layer(DefaultBodyLimit::max(alo_store::MAX_BANK_FILE_BYTES)),
+        )
+        .route(
+            "/finance/imports/bank",
+            post(finance_bank::import_bank_file)
+                .layer(DefaultBodyLimit::max(alo_store::MAX_BANK_FILE_BYTES)),
+        )
+        // What was imported, and where each line stands. A statement is the
+        // company's and not one employee's, so neither read is narrowed by user
+        // — which is the point of importing a month once.
+        .route(
+            "/finance/bank/statements",
+            get(finance_bank::list_bank_statements),
+        )
+        .route("/finance/bank/lines", get(finance_bank::list_bank_lines))
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))

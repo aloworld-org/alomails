@@ -12,8 +12,10 @@ pub mod account_imap;
 pub mod account_sieve;
 pub mod audit;
 pub mod bank_camt;
+pub mod bank_csv;
 pub mod bank_import;
 pub mod bank_mt940;
+pub mod bank_read;
 pub mod base;
 pub mod billing_bills;
 pub mod billing_cadence;
@@ -132,12 +134,16 @@ pub use account::AccountStore;
 pub use account_imap::{ImapEntry, ImapMailbox, ImapSearchRow};
 pub use account_sieve::{OutboundAction, SieveDelivery, SieveScriptMeta};
 pub use bank_camt::parse_camt053;
+pub use bank_csv::{BankCsvDates, BankCsvDecimal, BankCsvMapping};
 pub use bank_import::{
     BANK_LINES_PAGE_MAX, BANK_REF_MAX, BankImport, BankLine, BankLineStatus, BankSource,
     BankStatement, COUNTERPARTY_NAME_MAX, LINE_AMOUNT_MAX_CENTS, MAX_BANK_FILE_BYTES, ParsedLine,
     ParsedStatement, REMITTANCE_MAX, STATEMENT_LINES_MAX, STATEMENT_REF_MAX,
 };
 pub use bank_mt940::parse_mt940;
+pub use bank_read::{
+    BankFileImport, BankFileReading, BankImportRequest, read_bank_file, sniff_bank_source,
+};
 pub use base::{Base, BaseField, BaseRecord, BaseTable, BaseView};
 pub use billing_bills::{Bill, BillDocument, BillStatus, BillTotals, NewBill, Supplier};
 pub use billing_cadence::{Cadence, next_occurrence};
@@ -183,14 +189,14 @@ pub use crm_deals::{Deal, DealFilter, DealState, NewDeal, StageEvent, StageMove}
 pub use crm_handoff::DealHandoff;
 pub use crm_lead_import::{
     DuplicateReason, DuplicateRow, DuplicateSource, LeadImportReport, LeadImportRequest,
-    LeadMapping, LeadRow, RowError,
+    LeadMapping, LeadRow,
 };
 pub use crm_next_steps::DEAL_SOURCE_KIND;
 pub use crm_pipelines::{NewPipeline, Pipeline, PipelineSeed, StageSeed};
 pub use crm_report::{PipelineCurrency, PipelineReport, PipelineStageRow, PipelineTally};
 pub use crm_stages::{NewStage, Stage};
 pub use crm_thread_match::MatchReason;
-pub use csv_read::{CsvEncoding, CsvRow, CsvTable};
+pub use csv_read::{CsvEncoding, CsvRow, CsvTable, RowError};
 pub use dkim::DkimSigningMaterial;
 pub use dmarc_reports::{DmarcAggregateRow, DmarcEventRecord};
 pub use document::{Document, DocumentSummary};

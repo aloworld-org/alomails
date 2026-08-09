@@ -106,6 +106,24 @@ impl CsvRow {
     }
 }
 
+/// A row of an uploaded file that cannot be imported, with the rule it broke.
+///
+/// Shared by every importer over this reader — the CRM lead list
+/// ([`crate::crm_lead_import`], B2.09) and the bank statement
+/// ([`crate::bank_csv`], B4.08c) — because "line 7, and here is why" is the same
+/// answer in both, and a second shape for it would make a second import screen.
+///
+/// The rule is the store's own words and **never the row's content**: an
+/// uploaded file is somebody's customer list or somebody's bank account (Law 1),
+/// and a report is read in places a row is not.
+#[derive(Debug, Clone)]
+pub struct RowError {
+    /// The line of the file, as a spreadsheet numbers it.
+    pub line: usize,
+    /// The rule that was broken.
+    pub rule: String,
+}
+
 /// A parsed file: how it was read, what its columns are called, and its rows.
 #[derive(Debug, Clone)]
 pub struct CsvTable {

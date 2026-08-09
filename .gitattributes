@@ -9,3 +9,7 @@
 # normalised. An MT940 file is a CRLF format, and a golden file whose line
 # endings git rewrote would stop being the thing the reader is tested against.
 platform/alo-store/tests/fixtures/bank/*.sta -text
+# The same holds for a bank's CSV export: one of these is Windows-1252 with
+# CRLF, which is what half of Europe's portals write, and normalising it would
+# quietly delete the encoding fallback the reader is tested on.
+platform/alo-store/tests/fixtures/bank/*.csv -text

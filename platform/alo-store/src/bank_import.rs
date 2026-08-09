@@ -706,7 +706,10 @@ fn hex_sha256(value: &str) -> Result<String> {
 }
 
 /// The SHA-256 of some bytes, lowercase hex.
-fn sha256_hex(bytes: &[u8]) -> String {
+///
+/// `pub(crate)` for [`crate::bank_read`], which owns the door all three formats
+/// arrive through and therefore owns the bytes the digest is of.
+pub(crate) fn sha256_hex(bytes: &[u8]) -> String {
     let digest = Sha256::digest(bytes);
     digest.iter().map(|byte| format!("{byte:02x}")).collect()
 }

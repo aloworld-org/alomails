@@ -15,8 +15,10 @@
 
 mod common;
 
+use alo_store::bank_read::BankImportRequest;
 use alo_store::{
-    AccountStore, BankLineStatus, BankSource, BankStatementId, Store, StoreError, TenantId,
+    AccountStore, BankCsvDates, BankCsvMapping, BankLineStatus, BankSource, BankStatementId, Store,
+    StoreError, TenantId,
 };
 use time::{Date, Month};
 
@@ -436,5 +438,262 @@ async fn a_colleague_on_the_same_tenant_reads_the_company_statement() {
             .import_bank_camt053(&fixture("camt053_nl_february.xml"))
             .await,
         "already been imported",
+    );
+}
+
+// ---- the CSV wizard (B4.08c) -------------------------------------------------
+
+/// A request naming only the account, which is all a CSV needs when its header
+/// is one the wizard knows.
+fn csv_for(account: &str) -> BankImportRequest {
+    BankImportRequest {
+        account_iban: account.to_owned(),
+        ..BankImportRequest::default()
+    }
+}
+
+#[tokio::test]
+async fn a_mapped_spreadsheet_stages_through_exactly_the_same_rules() {
+    let store = common::test_store().await;
+    let (acc, _) = tenant(&store, "sheet").await;
+
+    let import = acc
+        .import_bank_file(
+            &csv_for("GB33BUKB20201555555555"),
+            &fixture("csv_uk_february.csv"),
+        )
+        .await
+        .unwrap();
+    let report = import.imported.expect("a staged statement");
+    assert_eq!(
+        (report.staged, report.duplicates, report.unbooked),
+        (3, 0, 0)
+    );
+    assert_eq!(report.statement.source, BankSource::Csv);
+    assert_eq!(report.statement.account_iban, "GB33BUKB20201555555555");
+    assert_eq!(
+        (
+            report.statement.statement_ref.as_str(),
+            report.statement.opening_balance_cents
+        ),
+        ("", None),
+        "a spreadsheet names no statement and states no balance"
+    );
+    assert_eq!(
+        import.reading.skipped,
+        vec![5],
+        "the footer row is reported, so a person told '3 of 4' can find the fourth"
+    );
+
+    let lines = acc.bank_lines(None, None).await.unwrap();
+    assert_eq!(
+        lines
+            .iter()
+            .map(|line| (line.line_no, line.amount_cents))
+            .collect::<Vec<_>>(),
+        vec![(1, -340), (2, 120_000), (3, -80_000)]
+    );
+    assert!(
+        lines
+            .iter()
+            .all(|line| line.status == BankLineStatus::Unmatched),
+        "a staged line is not an event, whichever parser read it"
+    );
+
+    // The same bytes twice is the same file, whichever door they arrive at.
+    let repeat = acc
+        .import_bank_file(
+            &csv_for("GB33BUKB20201555555555"),
+            &fixture("csv_uk_february.csv"),
+        )
+        .await;
+    assert_conflict(repeat, "2026-02-03 to 2026-02-27");
+}
+
+#[tokio::test]
+async fn one_unreadable_row_writes_nothing_at_all() {
+    let store = common::test_store().await;
+    let (acc, _) = tenant(&store, "half").await;
+
+    let import = acc
+        .import_bank_file(
+            &csv_for("DE02120300000000202051"),
+            &fixture("csv_broken_rows.csv"),
+        )
+        .await
+        .unwrap();
+    assert!(
+        import.imported.is_none(),
+        "nothing is imported halfway: the readable row is not staged either"
+    );
+    assert_eq!(import.reading.errors.len(), 2);
+    assert!(
+        acc.bank_statements().await.unwrap().is_empty(),
+        "and no statement header is left behind"
+    );
+    assert!(acc.bank_lines(None, None).await.unwrap().is_empty());
+
+    // The same file, uploaded again after the rows are fixed, is an ordinary
+    // first import: a refusal reserves nothing.
+    let fixed = String::from_utf8(fixture("csv_broken_rows.csv"))
+        .unwrap()
+        .replace("2026-03-XX", "2026-03-03")
+        .replace("twenty euros", "20.00");
+    let import = acc
+        .import_bank_file(&csv_for("DE02120300000000202051"), fixed.as_bytes())
+        .await
+        .unwrap();
+    assert_eq!(import.imported.expect("staged").staged, 3);
+}
+
+#[tokio::test]
+async fn the_same_month_as_a_spreadsheet_is_still_the_same_month() {
+    // The third format, and the same promise the other two keep to each other:
+    // the line hash is of what the bank said happened, not of how it spelled
+    // it. A bookkeeper who downloads January as CAMT and then as a spreadsheet
+    // does not book it twice.
+    let store = common::test_store().await;
+    let (acc, _) = tenant(&store, "three").await;
+
+    let camt = acc
+        .import_bank_camt053(&fixture("camt053_de_january.xml"))
+        .await
+        .unwrap();
+    assert_eq!(camt.staged, 4);
+
+    let sheet = acc
+        .import_bank_file(
+            &csv_for("DE02120300000000202051"),
+            &fixture("csv_de_january.csv"),
+        )
+        .await
+        .unwrap()
+        .imported
+        .expect("a staged statement");
+    assert_eq!(
+        (sheet.staged, sheet.duplicates),
+        (0, 4),
+        "the same four transactions, read out of a third format"
+    );
+    assert_eq!(sheet.statement.source, BankSource::Csv);
+    assert_eq!(sheet.statement.line_count, 0);
+    assert_eq!(
+        acc.bank_lines(None, None).await.unwrap().len(),
+        4,
+        "the month is staged once, not three times"
+    );
+}
+
+#[tokio::test]
+async fn another_tenant_holding_the_identical_spreadsheet_sees_none_of_ours() {
+    let store = common::test_store().await;
+    let (ours, _) = tenant(&store, "sheet-a").await;
+    let (theirs, _) = tenant(&store, "sheet-b").await;
+
+    // Two companies exporting from the same portal in the same quiet month can
+    // hold byte-identical spreadsheets — and, unlike the other two formats,
+    // they can also import them **for different accounts**, because on a CSV
+    // the account is the uploader's word. Neither is an oracle for the other.
+    let file = fixture("csv_uk_february.csv");
+    let mine = ours
+        .import_bank_file(&csv_for("GB33BUKB20201555555555"), &file)
+        .await
+        .unwrap()
+        .imported
+        .expect("ours");
+    let yours = theirs
+        .import_bank_file(&csv_for("DE02120300000000202051"), &file)
+        .await
+        .unwrap()
+        .imported
+        .expect("theirs");
+
+    assert_eq!((yours.staged, yours.duplicates), (3, 0));
+    assert_ne!(yours.statement.id, mine.statement.id);
+    assert_eq!(
+        yours.statement.file_sha256, mine.statement.file_sha256,
+        "the same file has the same digest; only the tenant differs"
+    );
+    assert!(
+        theirs
+            .bank_statement(&mine.statement.id)
+            .await
+            .unwrap()
+            .is_none(),
+        "another tenant's import is absent, never Forbidden"
+    );
+    assert!(
+        theirs
+            .bank_lines(Some(&mine.statement.id), None)
+            .await
+            .unwrap()
+            .is_empty(),
+        "filtering by another tenant's statement yields our own nothing"
+    );
+    assert_eq!(ours.bank_lines(None, None).await.unwrap().len(), 3);
+    assert_eq!(theirs.bank_lines(None, None).await.unwrap().len(), 3);
+}
+
+#[tokio::test]
+async fn a_file_the_wizard_cannot_be_told_how_to_read_stages_nothing() {
+    let store = common::test_store().await;
+    let (acc, _) = tenant(&store, "wizard").await;
+
+    let account = "DE02120300000000202051";
+    // No account stated, on the one format that cannot state its own.
+    assert_invalid(
+        acc.import_bank_file(
+            &BankImportRequest::default(),
+            b"Date,Amount\n2026-01-05,10.00\n",
+        )
+        .await,
+        "state the account's IBAN",
+    );
+    // A mapping pointing at a column the file has not got.
+    assert_invalid(
+        acc.import_bank_file(
+            &BankImportRequest {
+                mapping: BankCsvMapping {
+                    booked_on: Some("Date".to_owned()),
+                    amount: Some("Montant".to_owned()),
+                    ..BankCsvMapping::default()
+                },
+                ..csv_for(account)
+            },
+            b"Date,Amount\n2026-01-05,10.00\n",
+        )
+        .await,
+        "no column mapped to the amount",
+    );
+    // Dates that could be either way round, with nothing in the file to settle
+    // it — refused, never read one of the two ways.
+    assert_invalid(
+        acc.import_bank_file(
+            &csv_for(account),
+            b"Date,Amount\n03/04/2026,10.00\n05/06/2026,20.00\n",
+        )
+        .await,
+        "state the date order",
+    );
+    // And the same file, told which way round it is, imports.
+    let told = acc
+        .import_bank_file(
+            &BankImportRequest {
+                dates: BankCsvDates::Dmy,
+                ..csv_for(account)
+            },
+            b"Date,Amount\n03/04/2026,10.00\n05/06/2026,20.00\n",
+        )
+        .await
+        .unwrap()
+        .imported
+        .expect("staged");
+    assert_eq!(told.staged, 2);
+    assert_eq!(told.statement.from_date, day(2026, Month::April, 3));
+
+    assert_eq!(
+        acc.bank_statements().await.unwrap().len(),
+        1,
+        "a refusal is never a partial import"
     );
 }
