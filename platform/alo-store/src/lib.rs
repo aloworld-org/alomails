@@ -13,13 +13,16 @@ pub mod account_sieve;
 pub mod audit;
 pub mod bank_camt;
 pub mod bank_csv;
+pub mod bank_ignore;
 pub mod bank_import;
+pub mod bank_manual;
 pub mod bank_match;
 pub mod bank_match_heuristic;
 pub mod bank_mt940;
 pub mod bank_read;
 pub mod bank_reconcile;
 pub mod bank_suggest;
+pub mod bank_unmatch;
 pub mod base;
 pub mod billing_bills;
 pub mod billing_cadence;
@@ -141,14 +144,16 @@ pub use account_imap::{ImapEntry, ImapMailbox, ImapSearchRow};
 pub use account_sieve::{OutboundAction, SieveDelivery, SieveScriptMeta};
 pub use bank_camt::parse_camt053;
 pub use bank_csv::{BankCsvDates, BankCsvDecimal, BankCsvMapping};
+pub use bank_ignore::IGNORE_REASON_MAX_CHARS;
 pub use bank_import::{
     BANK_LINES_PAGE_MAX, BANK_REF_MAX, BankImport, BankLine, BankLineStatus, BankSource,
     BankStatement, COUNTERPARTY_NAME_MAX, LINE_AMOUNT_MAX_CENTS, MAX_BANK_FILE_BYTES, ParsedLine,
     ParsedStatement, REMITTANCE_MAX, STATEMENT_LINES_MAX, STATEMENT_REF_MAX,
 };
+pub use bank_manual::ensure_manual_match;
 pub use bank_match::{
     EXACT_WINDOW_DAYS, ExactMatch, MatchCandidate, NUMBERS_PER_REMITTANCE_MAX, document_numbers,
-    ensure_exact_match, ensure_matchable, exact_match,
+    ensure_exact_match, ensure_matchable, ensure_settleable, exact_match,
 };
 pub use bank_match_heuristic::{
     Candidate as HeuristicCandidate, LIKELY_MATCHES_MAX, LikelyMatch, MatchEvidence,
@@ -160,6 +165,7 @@ pub use bank_read::{
 };
 pub use bank_reconcile::{BANK_MATCH_METHOD, BankMatch, BankMatchTarget, ConfirmedMatch};
 pub use bank_suggest::{BankSuggestions, LineSuggestions, OPEN_LEDGER_MAX, SUGGESTION_NUMBERS_MAX};
+pub use bank_unmatch::UnmatchedLine;
 pub use base::{Base, BaseField, BaseRecord, BaseTable, BaseView};
 pub use billing_bills::{Bill, BillDocument, BillStatus, BillTotals, NewBill, Supplier};
 pub use billing_cadence::{Cadence, next_occurrence};
@@ -230,7 +236,7 @@ pub use fin_expenses::{
 pub use fin_journal::{
     DIMENSION_MAX_CHARS, ENTRY_POSTINGS_MAX, Entry, EntryKind, EntrySource, JOURNAL_PAGE_MAX,
     JournalEntry, MEMO_MAX_CHARS, NewEntry, NewPosting, POSTING_AMOUNT_MAX_CENTS, Posting,
-    SourceEvent, SourceKind,
+    SourceEvent, SourceKind, reversal_entry,
 };
 pub use fin_ledger::{
     AccountBalance, AccountLedger, DimensionBalance, DimensionBalances, LEDGER_GROUPS_MAX,

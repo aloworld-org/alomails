@@ -233,11 +233,10 @@ pub fn ensure_exact_match(line: &BankLine, candidate: &MatchCandidate) -> Result
     })
 }
 
-/// Everything both matching stages demand before either looks at *which*
-/// document a line names: that the line is still open, that the document can
-/// take money at all, that the money moves the right way in the right currency,
-/// and that the bank booked it inside the window after the issue date. Answers
-/// how many days after that date it was booked.
+/// Everything both *suggesting* stages demand before either looks at which
+/// document a line names: [`ensure_settleable`], plus the date window — the
+/// bank booked the money inside [`EXACT_WINDOW_DAYS`] of the issue date.
+/// Answers how many days after that date it was booked.
 ///
 /// It is separate from [`ensure_exact_match`] because the heuristic stage
 /// ([`crate::bank_match_heuristic`]) has exactly the same preconditions and a
@@ -245,11 +244,51 @@ pub fn ensure_exact_match(line: &BankLine, candidate: &MatchCandidate) -> Result
 /// no payment" would eventually disagree, and the one that disagreed would be
 /// the one that booked money against a credit note.
 ///
+/// The **manual** stage ([`crate::bank_manual`]) deliberately calls
+/// [`ensure_settleable`] instead: the window is a rule about how far a *guess*
+/// may reach, and the refusal above even says "match it by hand if it really is
+/// its payment". Applying it to the pick a person makes would take that sentence
+/// back.
+///
 /// # Errors
 /// [`StoreError::Conflict`] when the line or the document is in no state to be
 /// matched at all; [`StoreError::Validation`] when the money moves the wrong
 /// way, the currencies differ, or the dates cannot be reconciled.
 pub fn ensure_matchable(line: &BankLine, candidate: &MatchCandidate) -> Result<i64> {
+    let issue_date = ensure_settleable(line, candidate)?;
+    let days_after_issue = (line.booked_on - issue_date).whole_days();
+    if days_after_issue < 0 {
+        return Err(StoreError::Validation(
+            "the bank booked this money before that invoice was issued, so it cannot be its \
+             payment"
+                .to_owned(),
+        ));
+    }
+    if days_after_issue > EXACT_WINDOW_DAYS {
+        return Err(StoreError::Validation(format!(
+            "the bank booked this money more than {EXACT_WINDOW_DAYS} days after that invoice \
+             was issued; match it by hand if it really is its payment"
+        )));
+    }
+    Ok(days_after_issue)
+}
+
+/// Everything **every** stage demands, the manual one included: that the line is
+/// still open, that the document can take money at all, and that the money moves
+/// the right way in the right currency. Answers the document's issue date.
+///
+/// No date rule lives here. What a *suggestion* may reach for is
+/// [`ensure_matchable`]'s question; what a person may state is not bounded by a
+/// window, and a payment dated before the document it settles is an ordinary
+/// deposit taken in advance (which
+/// [`crate::billing_payments::AccountStore::record_billing_payment`] has always
+/// allowed).
+///
+/// # Errors
+/// [`StoreError::Conflict`] when the line or the document is in no state to be
+/// matched at all; [`StoreError::Validation`] when the money moves the wrong way
+/// or the currencies differ.
+pub fn ensure_settleable(line: &BankLine, candidate: &MatchCandidate) -> Result<Date> {
     match line.status {
         BankLineStatus::Unmatched => {}
         BankLineStatus::Matched => {
@@ -314,22 +353,7 @@ pub fn ensure_matchable(line: &BankLine, candidate: &MatchCandidate) -> Result<i
             "this bank line is in a different currency from that invoice".to_owned(),
         ));
     }
-
-    let days_after_issue = (line.booked_on - issue_date).whole_days();
-    if days_after_issue < 0 {
-        return Err(StoreError::Validation(
-            "the bank booked this money before that invoice was issued, so it cannot be its \
-             payment"
-                .to_owned(),
-        ));
-    }
-    if days_after_issue > EXACT_WINDOW_DAYS {
-        return Err(StoreError::Validation(format!(
-            "the bank booked this money more than {EXACT_WINDOW_DAYS} days after that invoice \
-             was issued; match it by hand if it really is its payment"
-        )));
-    }
-    Ok(days_after_issue)
+    Ok(issue_date)
 }
 
 /// Whether two printed numbers are the same document's, ignoring case and
@@ -442,6 +466,7 @@ mod tests {
             remittance: remittance.to_owned(),
             bank_ref: "REF9".to_owned(),
             status: BankLineStatus::Unmatched,
+            ignored_reason: String::new(),
             created_at: OffsetDateTime::UNIX_EPOCH,
         }
     }

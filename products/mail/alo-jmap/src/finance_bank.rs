@@ -112,7 +112,7 @@ pub struct ImportQuery {
 
 /// A blank query parameter is an unstated one: a client that builds the URL
 /// from an empty form field must not map a column called "".
-fn stated(value: Option<String>) -> Option<String> {
+pub(crate) fn stated(value: Option<String>) -> Option<String> {
     value
         .map(|raw| raw.trim().to_owned())
         .filter(|raw| !raw.is_empty())
@@ -224,7 +224,12 @@ pub(crate) fn statement_json(statement: &BankStatement) -> Value {
 }
 
 /// One staged line.
-fn line_json(line: &BankLine) -> Value {
+///
+/// `pub(crate)` because the reconciliation surface
+/// ([`crate::finance_bank_match`]) answers with a line after every verb it has,
+/// and two spellings of the same record on one wire is how a client ends up
+/// with two shapes for one thing.
+pub(crate) fn line_json(line: &BankLine) -> Value {
     json!({
         "id": line.id.as_str(),
         "statementId": line.statement_id.as_str(),
@@ -238,6 +243,7 @@ fn line_json(line: &BankLine) -> Value {
         "remittance": line.remittance,
         "bankRef": line.bank_ref,
         "status": line.status.as_str(),
+        "ignoredReason": line.ignored_reason,
         "createdAt": iso(line.created_at),
     })
 }

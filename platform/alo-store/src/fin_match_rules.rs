@@ -368,12 +368,36 @@ impl AccountStore {
     /// [`StoreError::NotFound`] when the rule is not this tenant's;
     /// [`StoreError::Db`] on failure.
     pub async fn fin_match_rule_hit(&self, id: &FinMatchRuleId) -> Result<()> {
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        self.fin_match_rule_hit_in(&mut tx, id).await?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// [`AccountStore::fin_match_rule_hit`], inside a transaction the caller
+    /// owns — the form the settling path uses ([`crate::bank_reconcile`]).
+    ///
+    /// A hit counted outside the transaction that earned it could survive a
+    /// settlement that rolled back, and it is the same statement either way, so
+    /// the counter and the money move together. It doubles as the **ownership
+    /// check** on a rule id a client sent: another tenant's rule updates no row
+    /// and is a [`StoreError::NotFound`], indistinguishable from one that never
+    /// existed.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the rule is not this tenant's;
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn fin_match_rule_hit_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        id: &FinMatchRuleId,
+    ) -> Result<()> {
         let moved = sqlx::query(
             "UPDATE fin_match_rules SET hits = hits + 1 WHERE tenant_id = $1 AND id = $2",
         )
         .bind(self.tenant.as_str())
         .bind(id.as_str())
-        .execute(&self.pool)
+        .execute(&mut **tx)
         .await
         .map_err(StoreError::Db)?;
         if moved.rows_affected() == 0 {
@@ -469,6 +493,7 @@ mod tests {
             remittance: remittance.to_owned(),
             bank_ref: "REF9".to_owned(),
             status: BankLineStatus::Unmatched,
+            ignored_reason: String::new(),
             created_at: OffsetDateTime::UNIX_EPOCH,
         }
     }

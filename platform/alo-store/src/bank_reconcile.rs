@@ -41,16 +41,23 @@
 //! reason: `suspense` is for money whose owner is unknown, not for a
 //! configuration mistake nobody would find until the year end.
 //!
+//! # One transaction, two doors into it
+//!
+//! [`AccountStore::settle_bank_line`] is that transaction, and it belongs to
+//! nobody in particular: this file's [`AccountStore::confirm_bank_match`] takes
+//! it with the exact rule, and [`crate::bank_manual`] takes it with the rule a
+//! person's own pick has to satisfy. The **rule** is what differs between the
+//! two stages; everything after it — the locks, the issue that has to be in the
+//! books before it can be relieved, the payment, the settlement, the row, the
+//! line's status — is the same act and is stated once.
+//!
 //! # What is deliberately not here
 //!
-//! **Unmatching** (`POST .../unmatch`, B4.09c) — deleting the payment and
-//! *reversing* its entry. **Ignoring** a line as not ours to book, and the
-//! manual pick that does not have to be exact: both B4.09c, and it is the manual
-//! pick that will confirm a *heuristic* suggestion, record the
-//! [`crate::fin_match_rules`] rule that proposed it in `rule_id` and count its
-//! hit. This door confirms exact matches only, which need no rule: the payer
-//! quoted our own number. And **no HTTP route and no screen**: B4.13b is the
-//! reconciliation screen and it calls this.
+//! **Unmatching** is [`crate::bank_unmatch`] and **ignoring** is
+//! [`crate::bank_ignore`] — one file per verb, because taking money back out of
+//! the books is a different act from putting it in and neither should be able
+//! to change under the other's tests. And **no screen**: B4.13b is the
+//! reconciliation UI, and it calls the routes in `finance_bank_match.rs`.
 
 use time::OffsetDateTime;
 
@@ -68,7 +75,9 @@ use crate::fin_rules::{
     InvoiceAccounts, PaymentAccounts, invoice_issue_entry, payment_settle_entry,
     payment_settlement_role, settlement_needs_exchange_account,
 };
-use crate::id::{BankLineId, BankMatchId, BillingInvoiceId, BillingPaymentId, FinEntryId, UserId};
+use crate::id::{
+    BankLineId, BankMatchId, BillingInvoiceId, BillingPaymentId, FinEntryId, FinMatchRuleId, UserId,
+};
 
 /// The method a confirmed bank match records its payment as.
 ///
@@ -164,6 +173,27 @@ pub struct ConfirmedMatch {
     pub invoice_booked_now: bool,
 }
 
+/// What a caller has decided a staged line settles, and the rule that has to
+/// still hold when the row locks are taken.
+///
+/// The rule is a plain function pointer rather than a closure on purpose: the
+/// two stages that settle a line differ in **exactly** this one thing, and
+/// making it an argument is what stops the transaction below from being written
+/// twice and drifting.
+pub(crate) struct LineSettlement<'a> {
+    /// The staged line, as it read outside the transaction.
+    pub line: &'a BankLine,
+    /// The document it settles.
+    pub invoice_id: &'a BillingInvoiceId,
+    /// What of the line is attributed to that document.
+    pub amount_cents: i64,
+    /// The learned rule that proposed it, whose hit this settlement counts.
+    pub rule_id: Option<&'a FinMatchRuleId>,
+    /// The stage's rule, re-run under the row locks against the line and the
+    /// document **as they are then**.
+    pub rule: fn(&BankLine, &MatchCandidate, i64) -> Result<()>,
+}
+
 impl AccountStore {
     /// **Confirms** that a staged line is the settlement of one of this
     /// tenant's invoices: records the payment, moves the books, and marks the
@@ -199,19 +229,59 @@ impl AccountStore {
     ) -> Result<ConfirmedMatch> {
         let BankMatchTarget::Invoice(invoice_id) = target;
         let line = self.bank_line(line_id).await?.ok_or(StoreError::NotFound)?;
+        self.settle_bank_line(&LineSettlement {
+            // The exact rule *is* "the line moves what the document owes", so
+            // the amount attributed is the whole line and the rule is what
+            // proves it.
+            amount_cents: line.amount_cents,
+            line: &line,
+            invoice_id,
+            rule_id: None,
+            rule: |line, candidate, _amount| ensure_exact_match(line, candidate).map(drop),
+        })
+        .await
+    }
+
+    /// The transaction both stages settle a line in: the rule, the locks, the
+    /// issue that has to be in the books before it can be relieved, the
+    /// payment, the settlement, the match row and the line's status.
+    ///
+    /// The rule is re-derived twice: once from the documents as they read
+    /// outside the transaction, and once **under the row locks** of the line
+    /// and the invoice, because between a screen being drawn and a person
+    /// clicking it the money may already have been accounted for by somebody
+    /// else. Two colleagues settling the same line, or two lines against the
+    /// same invoice, serialise on those locks and the second is refused rather
+    /// than doubling the payment.
+    ///
+    /// # Errors
+    /// As [`AccountStore::confirm_bank_match`], plus [`StoreError::NotFound`]
+    /// when a named rule is not this tenant's.
+    pub(crate) async fn settle_bank_line(
+        &self,
+        settlement: &LineSettlement<'_>,
+    ) -> Result<ConfirmedMatch> {
+        let LineSettlement {
+            line,
+            invoice_id,
+            amount_cents,
+            rule_id,
+            rule,
+        } = *settlement;
         let document = self
             .billing_invoice(invoice_id)
             .await?
             .ok_or(StoreError::NotFound)?;
         // The first pass answers the caller before anything is locked, with the
         // same words the second one would use.
-        ensure_exact_match(
-            &line,
+        rule(
+            line,
             &match_candidate(
                 &document.invoice,
                 document.totals.gross_cents,
                 document.paid_cents,
             ),
+            amount_cents,
         )?;
 
         // Everything the rules need, resolved before the transaction opens: a
@@ -247,7 +317,7 @@ impl AccountStore {
             "SELECT status FROM bank_lines WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
         )
         .bind(self.tenant.as_str())
-        .bind(line_id.as_str())
+        .bind(line.id.as_str())
         .fetch_optional(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -296,7 +366,7 @@ impl AccountStore {
                 ))
             })?;
         locked_candidate.is_credit_note = is_credit_note;
-        let matched = ensure_exact_match(&locked_line, &locked_candidate)?;
+        rule(&locked_line, &locked_candidate, amount_cents)?;
 
         // The receivable has to be in the books before it can be relieved. It
         // usually is not, because nothing else in alo books an issue yet.
@@ -320,9 +390,9 @@ impl AccountStore {
                 invoice_id,
                 &NewPayment {
                     paid_on: Some(line.booked_on),
-                    amount_cents: matched.amount_cents,
+                    amount_cents,
                     method: BANK_MATCH_METHOD.to_owned(),
-                    reference: payment_reference(&line),
+                    reference: payment_reference(line),
                 },
             )
             .await?;
@@ -338,23 +408,34 @@ impl AccountStore {
         )?;
         let entry_id = self.post_fin_entry_in(&mut tx, &settlement).await?;
 
+        // The rule that proposed this match is counted **in the same
+        // transaction** as the match itself, which is also what proves the rule
+        // is this tenant's: a hit counted outside could survive a settlement
+        // that rolled back, and a counter nobody can explain is worse than no
+        // counter.
+        if let Some(rule_id) = rule_id {
+            self.fin_match_rule_hit_in(&mut tx, rule_id).await?;
+        }
+
+        let target = BankMatchTarget::Invoice(invoice_id.clone());
         let id = BankMatchId::generate();
         // The stored time is answered rather than guessed at: one clock, the
         // database's, for the row and for what the caller is told about it.
         let confirmed_at: OffsetDateTime = sqlx::query_scalar(
             "INSERT INTO bank_matches (tenant_id, id, line_id, target_kind, target_id, \
-                 amount_cents, payment_id, entry_id, confirmed_by) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
+                 amount_cents, payment_id, entry_id, rule_id, confirmed_by) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) \
              RETURNING confirmed_at",
         )
         .bind(self.tenant.as_str())
         .bind(id.as_str())
-        .bind(line_id.as_str())
+        .bind(line.id.as_str())
         .bind(target.kind())
         .bind(target.id())
-        .bind(matched.amount_cents)
+        .bind(amount_cents)
         .bind(payment_id.as_str())
         .bind(entry_id.as_str())
+        .bind(rule_id.map(FinMatchRuleId::as_str))
         .bind(self.user.as_str())
         .fetch_one(&mut *tx)
         .await
@@ -367,7 +448,7 @@ impl AccountStore {
              WHERE tenant_id = $1 AND id = $2 AND status = 'unmatched'",
         )
         .bind(self.tenant.as_str())
-        .bind(line_id.as_str())
+        .bind(line.id.as_str())
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -381,12 +462,12 @@ impl AccountStore {
         Ok(ConfirmedMatch {
             matched: BankMatch {
                 id,
-                line_id: line_id.clone(),
-                target: target.clone(),
-                amount_cents: matched.amount_cents,
+                line_id: line.id.clone(),
+                target,
+                amount_cents,
                 payment_id: Some(payment_id),
                 entry_id: Some(entry_id),
-                rule_id: None,
+                rule_id: rule_id.map(|rule| rule.as_str().to_owned()),
                 confirmed_by: self.user.clone(),
                 confirmed_at,
             },
@@ -402,12 +483,33 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure; [`StoreError::Validation`] when the row
     /// names a target kind this build does not know.
     pub async fn bank_match(&self, line_id: &BankLineId) -> Result<Option<BankMatch>> {
+        self.bank_match_on(&self.pool, line_id).await
+    }
+
+    /// [`AccountStore::bank_match`] against any executor.
+    ///
+    /// Taking a match back ([`crate::bank_unmatch`]) has to read it **again**
+    /// under the line's row lock, because what it is about to delete a payment
+    /// for must be the row that is there now and not the one a screen was drawn
+    /// from.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure; [`StoreError::Validation`] when the row
+    /// names a target kind this build does not know.
+    pub(crate) async fn bank_match_on<'e, E>(
+        &self,
+        executor: E,
+        line_id: &BankLineId,
+    ) -> Result<Option<BankMatch>>
+    where
+        E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+    {
         let row = sqlx::query_as::<_, MatchRow>(&format!(
             "SELECT {MATCH_COLS} FROM bank_matches WHERE tenant_id = $1 AND line_id = $2"
         ))
         .bind(self.tenant.as_str())
         .bind(line_id.as_str())
-        .fetch_optional(&self.pool)
+        .fetch_optional(executor)
         .await
         .map_err(StoreError::Db)?;
         row.map(MatchRow::into_match).transpose()
@@ -516,6 +618,7 @@ mod tests {
             remittance: remittance.to_owned(),
             bank_ref: bank_ref.to_owned(),
             status: BankLineStatus::Unmatched,
+            ignored_reason: String::new(),
             created_at: OffsetDateTime::UNIX_EPOCH,
         }
     }

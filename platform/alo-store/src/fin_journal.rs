@@ -448,6 +448,64 @@ pub struct JournalEntry {
     pub postings: Vec<Posting>,
 }
 
+/// The **mirror** of an entry: the same postings with both money columns
+/// negated, carrying [`EntryKind::Reversal`] and pointing at what it corrects.
+///
+/// This is the only correction the books have. Nothing here is ever updated or
+/// deleted (`docs/design/finance.md`, "Signed amounts"; migration 0131), so an
+/// act taken back leaves **two** entries a reader can see rather than one that
+/// quietly changed — which is the difference between a ledger and a spreadsheet.
+///
+/// Three readings, each of which would be a bug taken the other way:
+///
+/// - **The dimensions are kept, not dropped.** A relief posted against a
+///   customer has to be *un*-relieved against that same customer, or the aged
+///   debtors report keeps a balance no document explains.
+/// - **The date is the original's.** A correction belongs in the period the
+///   thing it corrects moved money in; dating it today would take money out of a
+///   period that was already reported. (When B4.10 locks that period, the
+///   reversal is refused rather than re-dated — a locked period is exactly the
+///   case where a person has to decide, and `post_fin_entry_in` already refuses
+///   a reversal dated before its original.)
+/// - **The rate is the original's snapshot**, not today's: reversing an entry
+///   at a different rate would leave an exchange difference nobody made.
+///
+/// `source` is the event the reversal itself books — a payment taken back is
+/// `(payment, its id, void)` — or `None` for a correction that belongs to no
+/// document. It is never the original's own source, which is already taken
+/// (`fin_entries_source_once`).
+#[must_use]
+pub fn reversal_entry(original: &JournalEntry, source: Option<EntrySource>) -> NewEntry {
+    NewEntry {
+        entry_date: original.entry.entry_date,
+        kind: EntryKind::Reversal,
+        source,
+        memo: original.entry.memo.clone(),
+        reverses_entry_id: Some(original.entry.id.clone()),
+        attachment_node_id: None,
+        currency: original.entry.currency.clone(),
+        fx: original.entry.fx.clone(),
+        postings: original
+            .postings
+            .iter()
+            .map(|posting| NewPosting {
+                account_id: posting.account_id.clone(),
+                // Bounded by the money CHECK every alo column carries, so the
+                // saturation can never bite; it is here because a panic in the
+                // books is not a correction.
+                amount_cents: posting.amount_cents.saturating_neg(),
+                base_cents: posting.base_cents.saturating_neg(),
+                vat_rate_bp: posting.vat_rate_bp,
+                customer_id: posting.customer_id.clone(),
+                supplier_key: posting.supplier_key.clone(),
+                project_id: posting.project_id.clone(),
+                user_id: posting.user_id.clone(),
+                memo: posting.memo.clone(),
+            })
+            .collect(),
+    }
+}
+
 /// A validated, normalised entry ready to be bound into statements.
 #[derive(Debug)]
 struct Normalized {

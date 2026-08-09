@@ -232,6 +232,7 @@ mod tests {
             remittance: remittance.to_owned(),
             bank_ref: "REF9".to_owned(),
             status: BankLineStatus::Unmatched,
+            ignored_reason: String::new(),
             created_at: OffsetDateTime::UNIX_EPOCH,
         }
     }

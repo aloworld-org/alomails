@@ -110,7 +110,8 @@ const STATEMENT_COLS: &str = "id, account_iban, currency, source, statement_ref,
 
 /// The columns every read of a line selects, in [`LineRow`] order.
 const LINE_COLS: &str = "id, statement_id, line_no, booked_on, value_on, amount_cents, currency, \
-     counterparty_name, counterparty_iban, remittance, bank_ref, status, created_at";
+     counterparty_name, counterparty_iban, remittance, bank_ref, status, ignored_reason, \
+     created_at";
 
 /// Which parser read the file.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -295,6 +296,11 @@ pub struct BankLine {
     pub bank_ref: String,
     /// Where the line stands.
     pub status: BankLineStatus,
+    /// Why it is not ours to book, when a person has said so
+    /// ([`crate::bank_ignore`]); `""` for every other state. The sentence
+    /// belongs on the line rather than only in the audit log, because it is
+    /// what the next person to read the statement needs.
+    pub ignored_reason: String,
     /// When it was staged.
     pub created_at: OffsetDateTime,
 }
@@ -862,6 +868,7 @@ struct LineRow {
     remittance: String,
     bank_ref: String,
     status: String,
+    ignored_reason: String,
     created_at: OffsetDateTime,
 }
 
@@ -890,6 +897,7 @@ impl LineRow {
             remittance: self.remittance,
             bank_ref: self.bank_ref,
             status,
+            ignored_reason: self.ignored_reason,
             created_at: self.created_at,
         })
     }

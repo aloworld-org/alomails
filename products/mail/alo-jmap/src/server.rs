@@ -21,12 +21,11 @@ use crate::{
     billing_settings, blob, calendar, carddav, chat, chat_agent_routes, contacts, crm_activities,
     crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages,
     crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
-    finance_expenses,
-    finance_mileage, finance_receipts, flagdue, imap_import_route, insights, insights_ask,
-    insights_eval, insights_gallery, projects_clients, projects_invoices, projects_plan,
-    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
-    schedule, security, session, settings, share, signup_route, sites, snooze, spaces, tasks,
-    unsubscribe, wopi, workspace_search,
+    finance_bank_match, finance_expenses, finance_mileage, finance_receipts, flagdue,
+    imap_import_route, insights, insights_ask, insights_eval, insights_gallery, projects_clients,
+    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
+    projects_weeks, push, reset_route, schedule, security, session, settings, share, signup_route,
+    sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -1023,6 +1022,32 @@ pub fn app(state: AppState) -> Router {
             get(finance_bank::list_bank_statements),
         )
         .route("/finance/bank/lines", get(finance_bank::list_bank_lines))
+        // Reconciliation (B4.09c). The suggestions read is static and comes
+        // before the `{id}` routes; matchit prefers the static segment anyway,
+        // and keeping them in this order is what makes that obvious to a reader.
+        .route(
+            "/finance/bank/suggestions",
+            get(finance_bank_match::list_bank_suggestions),
+        )
+        // Four named acts on one line, never a settable status: each has its own
+        // consequences (a payment and two entries; a reversal; a sentence) and
+        // the audit log records them by name.
+        .route(
+            "/finance/bank/lines/{id}/match",
+            post(finance_bank_match::match_bank_line),
+        )
+        .route(
+            "/finance/bank/lines/{id}/unmatch",
+            post(finance_bank_match::unmatch_bank_line),
+        )
+        .route(
+            "/finance/bank/lines/{id}/ignore",
+            post(finance_bank_match::ignore_bank_line),
+        )
+        .route(
+            "/finance/bank/lines/{id}/unignore",
+            post(finance_bank_match::unignore_bank_line),
+        )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))

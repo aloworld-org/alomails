@@ -400,10 +400,35 @@ impl AccountStore {
         payment_id: &BillingPaymentId,
     ) -> Result<()> {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        self.delete_billing_payment_in(&mut tx, invoice_id, payment_id)
+            .await?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// [`AccountStore::delete_billing_payment`], inside a transaction the
+    /// caller owns.
+    ///
+    /// Money leaving again is rarely only money leaving again: unmatching a
+    /// bank line ([`crate::bank_unmatch`]) removes this payment, reverses the
+    /// entry it posted and returns the line to the pile, and a tenant must
+    /// never be left holding any one of those three without the others. Every
+    /// rule and every refusal is the public door's; only the `BEGIN` and the
+    /// `COMMIT` move to the caller.
+    ///
+    /// # Errors
+    /// Exactly [`AccountStore::delete_billing_payment`]'s. The caller must drop
+    /// the transaction on any of them rather than carrying on.
+    pub(crate) async fn delete_billing_payment_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        invoice_id: &BillingInvoiceId,
+        payment_id: &BillingPaymentId,
+    ) -> Result<()> {
         // The invoice's lock is taken first and by every payment path, so
         // removals and insertions serialise on the same row and the status
         // below is computed from a ledger nobody else is changing.
-        self.lock_invoice_for_payment(&mut tx, invoice_id).await?;
+        self.lock_invoice_for_payment(tx, invoice_id).await?;
         let removed = sqlx::query(
             "DELETE FROM billing_payments \
              WHERE tenant_id = $1 AND invoice_id = $2 AND id = $3",
@@ -411,14 +436,13 @@ impl AccountStore {
         .bind(self.tenant.as_str())
         .bind(invoice_id.as_str())
         .bind(payment_id.as_str())
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .map_err(StoreError::Db)?;
         if removed.rows_affected() == 0 {
             return Err(StoreError::NotFound);
         }
-        self.reproject_invoice_status(&mut tx, invoice_id).await?;
-        tx.commit().await.map_err(StoreError::Db)?;
+        self.reproject_invoice_status(tx, invoice_id).await?;
         Ok(())
     }
 
