@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "site": {
+    "name": "Juniper Bakery",
+    "subdomain": "juniper-bakery",
+    "theme": {
+      "schema_version": 1,
+      "preset": "terra"
+    }
+  },
+  "pages": [
+    {
+      "title": "Home",
+      "slug": "",
+      "is_home": true,
+      "seo_title": "Juniper Bakery — Bread baked each morning",
+      "seo_description": "Small-batch bread and pastries baked each morning in Utrecht.",
+      "sections": {
+        "schema_version": 1,
+        "sections": [
+          {
+            "type": "nav",
+            "links": [
+              { "label": "Our baking", "href": "#baking" },
+              { "label": "Contact", "href": "/contact" }
+            ],
+            "cta": { "label": "Visit us", "href": "/contact" }
+          },
+          {
+            "type": "hero",
+            "heading": "Bread worth waking up for",
+            "subheading": "Small-batch loaves and pastries, baked in Utrecht every morning.",
+            "image": null,
+            "primary_cta": { "label": "See what we bake", "href": "#baking" },
+            "secondary_cta": { "label": "Find the bakery", "href": "/contact" }
+          },
+          {
+            "type": "features",
+            "heading": "From our ovens",
+            "intro": "A focused daily selection made with patient fermentation and good ingredients.",
+            "items": [
+              { "title": "Sourdough", "body": "Naturally leavened loaves with a crisp crust.", "icon": "bread" },
+              { "title": "Pastries", "body": "Buttery seasonal pastries baked throughout the morning.", "icon": "sparkles" },
+              { "title": "Local grain", "body": "Flour chosen from mills we know and trust.", "icon": "wheat" }
+            ]
+          },
+          {
+            "type": "cta",
+            "heading": "Come by while the bread is warm",
+            "body": "Our counter changes with the season and the day's bake.",
+            "button": { "label": "Plan your visit", "href": "/contact" }
+          },
+          {
+            "type": "footer",
+            "text": "Juniper Bakery",
+            "links": [
+              { "label": "Contact", "href": "/contact" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "title": "Contact",
+      "slug": "contact",
+      "is_home": false,
+      "seo_title": null,
+      "seo_description": "Visit or contact Juniper Bakery in Utrecht.",
+      "sections": {
+        "schema_version": 1,
+        "sections": [
+          {
+            "type": "nav",
+            "links": [
+              { "label": "Home", "href": "/" }
+            ],
+            "cta": null
+          },
+          {
+            "type": "contact_form",
+            "heading": "Talk to the bakery",
+            "body": "Send us a note and we will get back to you.",
+            "form_id": null,
+            "success_message": "Thanks — your note has reached the bakery."
+          },
+          {
+            "type": "footer",
+            "text": "Juniper Bakery",
+            "links": [
+              { "label": "Home", "href": "/" }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
