@@ -496,6 +496,29 @@ impl AccountStore {
         row.map(StatementRow::into_statement).transpose()
     }
 
+    /// One of this tenant's staged lines, or `None` when the id is absent **or
+    /// another tenant's** — never an existence oracle, exactly like
+    /// [`AccountStore::bank_statement`].
+    ///
+    /// The read reconciliation makes before it decides anything
+    /// ([`crate::bank_reconcile`]): a line is matched by naming it, and naming
+    /// somebody else's line has to be indistinguishable from naming one that
+    /// was never imported.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn bank_line(&self, id: &BankLineId) -> Result<Option<BankLine>> {
+        let row = sqlx::query_as::<_, LineRow>(&format!(
+            "SELECT {LINE_COLS} FROM bank_lines WHERE tenant_id = $1 AND id = $2"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        row.map(LineRow::into_line).transpose()
+    }
+
     /// This tenant's staged lines, oldest first — the order a bookkeeper works
     /// a month in — optionally narrowed to one import, one status, or both.
     ///

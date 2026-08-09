@@ -229,6 +229,42 @@ fn ensure_payable(status: InvoiceStatus) -> Result<()> {
     }
 }
 
+/// One of a document's payments, with the sum of the payments that come before
+/// it — the pair the settlement rule ([`crate::fin_rules::payment_settle_entry`])
+/// needs to know how much receivable this payment relieves.
+///
+/// `payments` is [`AccountStore::billing_payments`]' own order, and the walk is
+/// back to front. What the rule needs is not a particular sequence but a
+/// **stable** one: the reliefs telescope to the booked receivable as long as
+/// every payment of a document agrees about which ones precede it, whatever
+/// order they were actually booked in. Pure, so the two callers that must agree
+/// — booking a payment that was keyed in, and booking one a bank match just
+/// created — agree by construction.
+///
+/// # Errors
+/// [`StoreError::NotFound`] when the payment is not one of this document's,
+/// which includes a document that is another tenant's (it reads as an empty
+/// list); [`StoreError::Validation`] when the payments cannot be added up.
+pub(crate) fn payment_in_sequence(
+    payments: Vec<Payment>,
+    payment_id: &BillingPaymentId,
+) -> Result<(Payment, i64)> {
+    let mut paid_before_cents: i64 = 0;
+    for payment in payments.into_iter().rev() {
+        if payment.id == *payment_id {
+            return Ok((payment, paid_before_cents));
+        }
+        paid_before_cents = paid_before_cents
+            .checked_add(payment.amount_cents)
+            .ok_or_else(|| {
+                StoreError::Validation(
+                    "this document's payments are too large to add up".to_owned(),
+                )
+            })?;
+    }
+    Err(StoreError::NotFound)
+}
+
 impl AccountStore {
     /// Records money received against one of this tenant's **issued** invoices,
     /// and reprojects the document's status from the ledger that results.
@@ -262,15 +298,41 @@ impl AccountStore {
         invoice_id: &BillingInvoiceId,
         input: &NewPayment,
     ) -> Result<BillingPaymentId> {
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let id = self
+            .record_billing_payment_in(&mut tx, invoice_id, input)
+            .await?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(id)
+    }
+
+    /// [`AccountStore::record_billing_payment`], inside a transaction the
+    /// caller owns.
+    ///
+    /// Money arriving is rarely only money arriving. A confirmed bank match
+    /// ([`crate::bank_reconcile`]) records the payment, books the receivable it
+    /// relieves and marks the statement line settled, and a tenant must never
+    /// be left holding any one of those three without the others. Every rule
+    /// and every refusal is the public door's; only the `BEGIN` and the
+    /// `COMMIT` move to the caller.
+    ///
+    /// # Errors
+    /// Exactly [`AccountStore::record_billing_payment`]'s. The caller must drop
+    /// the transaction on any of them rather than carrying on.
+    pub(crate) async fn record_billing_payment_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        invoice_id: &BillingInvoiceId,
+        input: &NewPayment,
+    ) -> Result<BillingPaymentId> {
         let amount = amount_cents(input.amount_cents)?;
         let method = bounded("method", &input.method, PAYMENT_METHOD_MAX_CHARS)?;
         let reference = bounded("reference", &input.reference, PAYMENT_REFERENCE_MAX_CHARS)?;
 
-        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         // Authoritative: the state that matters is the one under the lock the
         // reprojection below writes through. Dropping the transaction on any
         // error rolls it back untouched.
-        let locked = self.lock_invoice_for_payment(&mut tx, invoice_id).await?;
+        let locked = self.lock_invoice_for_payment(tx, invoice_id).await?;
         if locked.is_credit_note {
             return Err(StoreError::Conflict(
                 "a credit note is money owed to the customer; a refund is not recorded as a \
@@ -283,7 +345,7 @@ impl AccountStore {
         // One clock for the whole transaction, and the same clock the issue
         // date was read from.
         let today: Date = sqlx::query_scalar("SELECT CURRENT_DATE")
-            .fetch_one(&mut *tx)
+            .fetch_one(&mut **tx)
             .await
             .map_err(StoreError::Db)?;
         let paid_on = input.paid_on.unwrap_or(today);
@@ -307,12 +369,11 @@ impl AccountStore {
         .bind(&method)
         .bind(&reference)
         .bind(self.user.as_str())
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .map_err(StoreError::Db)?;
 
-        self.reproject_invoice_status(&mut tx, invoice_id).await?;
-        tx.commit().await.map_err(StoreError::Db)?;
+        self.reproject_invoice_status(tx, invoice_id).await?;
         Ok(id)
     }
 
@@ -370,6 +431,26 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn billing_payments(&self, invoice_id: &BillingInvoiceId) -> Result<Vec<Payment>> {
+        self.billing_payments_on(&self.pool, invoice_id).await
+    }
+
+    /// [`AccountStore::billing_payments`] against any executor.
+    ///
+    /// A caller that has just inserted a payment inside its own transaction has
+    /// to read the sequence **there**: the pool cannot see an uncommitted row,
+    /// and the settlement rule's `paid_before` is a fact about the whole
+    /// document, not about one insert ([`crate::bank_reconcile`]).
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn billing_payments_on<'e, E>(
+        &self,
+        executor: E,
+        invoice_id: &BillingInvoiceId,
+    ) -> Result<Vec<Payment>>
+    where
+        E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+    {
         let rows = sqlx::query_as::<_, PaymentRow>(&format!(
             "SELECT {PAYMENT_COLS} FROM billing_payments \
              WHERE tenant_id = $1 AND invoice_id = $2 \
@@ -377,7 +458,7 @@ impl AccountStore {
         ))
         .bind(self.tenant.as_str())
         .bind(invoice_id.as_str())
-        .fetch_all(&self.pool)
+        .fetch_all(executor)
         .await
         .map_err(StoreError::Db)?;
         Ok(rows.into_iter().map(PaymentRow::into_payment).collect())

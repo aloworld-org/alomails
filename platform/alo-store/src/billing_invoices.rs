@@ -785,6 +785,89 @@ impl AccountStore {
         Ok(id.map(BillingInvoiceId::new))
     }
 
+    /// The tenant's invoices carrying any of `numbers`, with their totals and
+    /// what has been received against them.
+    ///
+    /// The batch form of [`AccountStore::billing_invoice_id_by_number`], and it
+    /// exists for one caller: reconciliation reads a statement's remittances,
+    /// finds the numbers a payer quoted ([`crate::bank_match`]) and needs every
+    /// one of those documents *with its settlement* before it can say which
+    /// lines are exact matches. Asking per number would be three statements per
+    /// line of a bank file.
+    ///
+    /// Matching is case-insensitive, like the single lookup, and only issued
+    /// documents carry a number at all. An empty list reads nothing rather than
+    /// everything.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn billing_invoices_by_numbers(
+        &self,
+        numbers: &[String],
+    ) -> Result<Vec<InvoiceSummary>> {
+        if numbers.is_empty() {
+            return Ok(Vec::new());
+        }
+        let wanted: Vec<String> = numbers
+            .iter()
+            .map(|number| number.trim().to_uppercase())
+            .collect();
+        // One scope in all three statements, so a document cannot appear in one
+        // and be missing from another.
+        let scope = "upper(number) = ANY($2::text[])";
+        let rows = sqlx::query_as::<_, InvoiceRow>(&format!(
+            "SELECT {INVOICE_COLS} FROM billing_invoices \
+             WHERE tenant_id = $1 AND {scope} \
+             ORDER BY created_at DESC, id"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(&wanted)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+
+        let figures = sqlx::query_as::<_, FiguresRow>(&format!(
+            "SELECT invoice_id AS doc_id, qty_milli, unit_price_cents, vat_rate_bp \
+             FROM billing_invoice_lines \
+             WHERE tenant_id = $1 AND invoice_id IN ( \
+                 SELECT id FROM billing_invoices WHERE tenant_id = $1 AND {scope})"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(&wanted)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let mut by_invoice = group_figures(figures);
+
+        let paid: Vec<(String, Option<i64>)> = sqlx::query_as(&format!(
+            "SELECT invoice_id, sum(amount_cents)::bigint FROM billing_payments \
+             WHERE tenant_id = $1 AND invoice_id IN ( \
+                 SELECT id FROM billing_invoices WHERE tenant_id = $1 AND {scope}) \
+             GROUP BY invoice_id"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(&wanted)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let mut by_paid: HashMap<String, i64> = paid
+            .into_iter()
+            .map(|(id, sum)| (id, sum.unwrap_or(0)))
+            .collect();
+
+        rows.into_iter()
+            .map(|row| {
+                let lines = by_invoice.remove(&row.id).unwrap_or_default();
+                let paid_cents = by_paid.remove(&row.id).unwrap_or(0);
+                Ok(InvoiceSummary {
+                    invoice: row.into_invoice()?,
+                    totals: totals(&lines),
+                    paid_cents,
+                })
+            })
+            .collect()
+    }
+
     /// Replaces the writable header of a **draft** invoice: customer,
     /// currency, terms, reference and note. Status, number and dates are not
     /// writable here — they move only through the lifecycle actions.

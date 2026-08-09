@@ -396,6 +396,12 @@ opaque_id!(
     /// event and posts nothing — confirming its match is what does.
     BankLineId
 );
+opaque_id!(
+    /// One confirmed match between a staged bank line and the document it
+    /// turned out to be (alo Finance, ADR 0035, wave B4.09). A person confirmed
+    /// it, and it is what created the payment and moved the books.
+    BankMatchId
+);
 
 #[cfg(test)]
 mod tests {

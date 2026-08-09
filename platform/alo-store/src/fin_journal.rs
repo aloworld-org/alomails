@@ -679,9 +679,31 @@ impl AccountStore {
     /// not this tenant's; [`StoreError::Conflict`] when the document event is
     /// already posted; [`StoreError::Db`] on failure.
     pub async fn post_fin_entry(&self, input: &NewEntry) -> Result<FinEntryId> {
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let id = self.post_fin_entry_in(&mut tx, input).await?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(id)
+    }
+
+    /// [`AccountStore::post_fin_entry`], inside a transaction the caller owns.
+    ///
+    /// The books and the thing that caused them to move belong in **one**
+    /// transaction — a confirmed bank match writes a payment and posts its
+    /// settlement, and a tenant must never be left holding one without the
+    /// other ([`crate::bank_reconcile`]). Every rule and every refusal is the
+    /// public door's; only the `BEGIN` and the `COMMIT` move to the caller.
+    ///
+    /// # Errors
+    /// Exactly [`AccountStore::post_fin_entry`]'s. A caller must **not** catch
+    /// them and carry on inside the same transaction: an error here has already
+    /// poisoned it, and the only correct next step is to drop it.
+    pub(crate) async fn post_fin_entry_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        input: &NewEntry,
+    ) -> Result<FinEntryId> {
         let entry = normalize(input)?;
         let id = FinEntryId::generate();
-        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
 
         // A reversal must correct one of THIS tenant's entries, and may not be
         // dated before it: a correction that predates what it corrects would
@@ -692,7 +714,7 @@ impl AccountStore {
             )
             .bind(self.tenant.as_str())
             .bind(target)
-            .fetch_optional(&mut *tx)
+            .fetch_optional(&mut **tx)
             .await
             .map_err(StoreError::Db)?;
             let original = original.ok_or(StoreError::NotFound)?;
@@ -720,7 +742,7 @@ impl AccountStore {
         )
         .bind(self.tenant.as_str())
         .bind(wanted.as_slice())
-        .fetch_all(&mut *tx)
+        .fetch_all(&mut **tx)
         .await
         .map_err(StoreError::Db)?;
         for id in &wanted {
@@ -760,7 +782,7 @@ impl AccountStore {
         .bind(entry.fx_rate_micro)
         .bind(entry.fx_rate_date)
         .bind(self.user.as_str())
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .map_err(map_journal_conflict)?;
 
@@ -784,12 +806,11 @@ impl AccountStore {
             .bind(posting.project_id.as_deref())
             .bind(posting.user_id.as_deref())
             .bind(&posting.memo)
-            .execute(&mut *tx)
+            .execute(&mut **tx)
             .await
             .map_err(map_journal_conflict)?;
         }
 
-        tx.commit().await.map_err(StoreError::Db)?;
         Ok(id)
     }
 
@@ -886,6 +907,26 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn fin_entry_for_source(&self, source: &EntrySource) -> Result<Option<FinEntryId>> {
+        self.fin_entry_for_source_on(&self.pool, source).await
+    }
+
+    /// [`AccountStore::fin_entry_for_source`] against any executor, so the same
+    /// question can be asked **inside** a transaction that is about to post.
+    ///
+    /// A caller in a transaction has to *look* rather than catch: an already
+    /// posted document raises a conflict from the unique index, and a conflict
+    /// inside a transaction has already aborted it.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn fin_entry_for_source_on<'e, E>(
+        &self,
+        executor: E,
+        source: &EntrySource,
+    ) -> Result<Option<FinEntryId>>
+    where
+        E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+    {
         let row: Option<String> = sqlx::query_scalar(
             "SELECT id FROM fin_entries WHERE tenant_id = $1 AND source_kind = $2 \
                  AND source_id = $3 AND source_event = $4",
@@ -894,7 +935,7 @@ impl AccountStore {
         .bind(source.kind.as_str())
         .bind(source.id.trim())
         .bind(source.event.as_str())
-        .fetch_optional(&self.pool)
+        .fetch_optional(executor)
         .await
         .map_err(StoreError::Db)?;
         Ok(row.map(FinEntryId::new))

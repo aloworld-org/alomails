@@ -14,8 +14,10 @@ pub mod audit;
 pub mod bank_camt;
 pub mod bank_csv;
 pub mod bank_import;
+pub mod bank_match;
 pub mod bank_mt940;
 pub mod bank_read;
+pub mod bank_reconcile;
 pub mod base;
 pub mod billing_bills;
 pub mod billing_cadence;
@@ -141,9 +143,17 @@ pub use bank_import::{
     BankStatement, COUNTERPARTY_NAME_MAX, LINE_AMOUNT_MAX_CENTS, MAX_BANK_FILE_BYTES, ParsedLine,
     ParsedStatement, REMITTANCE_MAX, STATEMENT_LINES_MAX, STATEMENT_REF_MAX,
 };
+pub use bank_match::{
+    EXACT_WINDOW_DAYS, ExactMatch, MatchCandidate, NUMBERS_PER_REMITTANCE_MAX, document_numbers,
+    ensure_exact_match, exact_match,
+};
 pub use bank_mt940::parse_mt940;
 pub use bank_read::{
     BankFileImport, BankFileReading, BankImportRequest, read_bank_file, sniff_bank_source,
+};
+pub use bank_reconcile::{
+    BANK_MATCH_METHOD, BankMatch, BankMatchTarget, BankSuggestions, ConfirmedMatch,
+    LineSuggestions, SUGGESTION_NUMBERS_MAX,
 };
 pub use base::{Base, BaseField, BaseRecord, BaseTable, BaseView};
 pub use billing_bills::{Bill, BillDocument, BillStatus, BillTotals, NewBill, Supplier};
@@ -236,15 +246,16 @@ pub use fin_rules::{
     payment_settle_entry, payment_settlement_role, settlement_needs_exchange_account,
 };
 pub use id::{
-    AttachmentId, BankLineId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId, BaseViewId,
-    BillingBillId, BillingCustomerId, BillingInvoiceId, BillingLineId, BillingPaymentId,
-    BillingProductId, BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId,
-    ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, CommentId, ContactId, CrmActivityId,
-    CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, FinAccountId,
-    FinCategoryId, FinEntryId, FinExpenseId, FinMileageId, FinMileageRateId, FinPostingId, GroupId,
-    InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId, ProjectId,
-    ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId,
-    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    AttachmentId, BankLineId, BankMatchId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId,
+    BaseViewId, BillingBillId, BillingCustomerId, BillingInvoiceId, BillingLineId,
+    BillingPaymentId, BillingProductId, BillingQuoteId, BillingScheduleId, BlobId, CalendarId,
+    CategoryId, ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, CommentId, ContactId,
+    CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
+    FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMileageId, FinMileageRateId,
+    FinPostingId, GroupId, InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId,
+    ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId,
+    SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId,
+    TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

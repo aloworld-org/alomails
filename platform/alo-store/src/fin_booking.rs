@@ -56,7 +56,7 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Validation`] naming the role when no active account holds
     /// it; [`StoreError::Db`] on failure.
-    async fn fin_account_required(&self, role: AccountRole) -> Result<FinAccountId> {
+    pub(crate) async fn fin_account_required(&self, role: AccountRole) -> Result<FinAccountId> {
         self.fin_account_for_role(role)
             .await?
             .map(|account| account.id)
@@ -252,13 +252,8 @@ impl AccountStore {
     }
 
     /// One of a document's payments, with the sum of the payments that come
-    /// before it.
-    ///
-    /// The order is [`AccountStore::billing_payments`]' own, read back to
-    /// front. What the settlement rule needs from it is not a particular
-    /// sequence but a **stable** one: the reliefs telescope to the booked
-    /// receivable as long as every payment of a document agrees about which
-    /// ones precede it, whatever order they are actually booked in.
+    /// before it — [`crate::billing_payments::payment_in_sequence`] over this
+    /// document's rows.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] when the payment is not one of this document's
@@ -269,20 +264,8 @@ impl AccountStore {
         invoice_id: &BillingInvoiceId,
         payment_id: &BillingPaymentId,
     ) -> Result<(Payment, i64)> {
-        let mut paid_before_cents: i64 = 0;
-        for payment in self.billing_payments(invoice_id).await?.into_iter().rev() {
-            if payment.id == *payment_id {
-                return Ok((payment, paid_before_cents));
-            }
-            paid_before_cents = paid_before_cents
-                .checked_add(payment.amount_cents)
-                .ok_or_else(|| {
-                    StoreError::Validation(
-                        "this document's payments are too large to add up".to_owned(),
-                    )
-                })?;
-        }
-        Err(StoreError::NotFound)
+        let payments = self.billing_payments(invoice_id).await?;
+        crate::billing_payments::payment_in_sequence(payments, payment_id)
     }
 
     /// The rate the accounting currency received a payment at: the reference
@@ -293,7 +276,7 @@ impl AccountStore {
     /// [`StoreError::Validation`] when no usable rate has been imported for
     /// that day — the payment is refused rather than booked at a guessed rate,
     /// exactly as issuing a document is; [`StoreError::Db`] on failure.
-    async fn settlement_rate(
+    pub(crate) async fn settlement_rate(
         &self,
         currency: &str,
         base_currency: &str,
