@@ -101,6 +101,47 @@ function withHandlesMarked(body: string): ReactNode[] {
   return parts;
 }
 
+/** One thing that can be named after an `@`: a person or an agent. */
+interface Nameable {
+  /** What gets typed — a person's local part, or an agent's handle. */
+  handle: string;
+  /** What is shown: an address, or an agent's name. */
+  label: string;
+  agent: boolean;
+}
+
+/**
+ * The `@token` being typed immediately before the caret, if any.
+ *
+ * Mirrors the server's own parser (`parse_handles`): an `@` only opens a
+ * mention at a word boundary, so an address typed inline is not one, and a
+ * space ends it. The two must agree, or the list would offer a completion the
+ * server then declines to resolve.
+ */
+function mentionAt(
+  value: string,
+  caret: number,
+): { start: number; token: string } | null {
+  const upto = value.slice(0, caret);
+  const at = upto.lastIndexOf("@");
+  if (at < 0) return null;
+  const before = at === 0 ? " " : upto[at - 1]!;
+  if (!/[\s([{"']/.test(before)) return null;
+  const token = upto.slice(at + 1);
+  if (/\s/.test(token)) return null;
+  return { start: at, token: token.toLowerCase() };
+}
+
+/** Who the list offers for `token`, agents first: an agent is the thing a
+ *  person is least likely to know is there. */
+function candidatesFor(token: string, all: Nameable[]): Nameable[] {
+  const matching = all.filter((n) => n.handle.startsWith(token));
+  return [
+    ...matching.filter((n) => n.agent),
+    ...matching.filter((n) => !n.agent),
+  ].slice(0, 6);
+}
+
 /**
  * Whether this reader may decide a proposal, and why not when they may not.
  *
@@ -331,7 +372,13 @@ export function ChatModule() {
   // show their names without a second lookup.
   const [staged, setStaged] = useState<DriveNodeDto[]>([]);
   const [picking, setPicking] = useState(false);
+  // Who can be named here: the room's people and its agents, in one list,
+  // because the person typing does not care which kind they are reaching for.
+  const [nameable, setNameable] = useState<Nameable[]>([]);
+  const [highlighted, setHighlighted] = useState(0);
   const feedRef = useRef<HTMLDivElement | null>(null);
+  const composerRef = useRef<HTMLInputElement | null>(null);
+  const [caret, setCaret] = useState(0);
 
   const loadChannels = useCallback(async () => {
     try {
@@ -390,6 +437,36 @@ export function ChatModule() {
     setReplies(null);
     void loadMessages(openId);
   }, [openId, loadMessages]);
+
+  // Reloaded per room: membership is per room, and so is which agents are in
+  // it. Best-effort — a composer that cannot suggest still sends.
+  useEffect(() => {
+    if (openId === null) return;
+    let live = true;
+    void (async () => {
+      const [detail, agents] = await Promise.all([
+        api.channel(openId).catch(() => null),
+        api.channelAgents(openId).catch(() => []),
+      ]);
+      if (!live) return;
+      const people: Nameable[] = (detail?.members ?? []).map((m) => ({
+        handle: (m.email ?? m.user).split("@")[0]!.toLowerCase(),
+        label: m.email ?? m.user,
+        agent: false,
+      }));
+      setNameable([
+        ...agents.map((a) => ({
+          handle: a.handle,
+          label: a.name,
+          agent: true,
+        })),
+        ...people,
+      ]);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [api, openId]);
 
   useEffect(() => {
     if (openId === null || threadSeq === null) return;
@@ -474,6 +551,23 @@ export function ChatModule() {
     }
   }
 
+  /** Put the chosen handle where the `@token` was, and carry on typing. */
+  function complete(choice: Nameable) {
+    const found = mentionAt(draft, caret);
+    if (found === null) return;
+    const next = `${draft.slice(0, found.start)}@${choice.handle} ${draft.slice(caret)}`;
+    setDraft(next);
+    setHighlighted(0);
+    // Put the caret after what was just inserted, not at the end of the line:
+    // people complete a name mid-sentence.
+    const at = found.start + choice.handle.length + 2;
+    requestAnimationFrame(() => {
+      composerRef.current?.focus();
+      composerRef.current?.setSelectionRange(at, at);
+      setCaret(at);
+    });
+  }
+
   async function decide(proposal: Proposal, approve: boolean) {
     setError(null);
     try {
@@ -541,6 +635,11 @@ export function ChatModule() {
   }
 
   const open = channels?.find((c) => c.id === openId) ?? null;
+  // Derived, not stored: the list is a function of what is typed and where
+  // the caret is, so it can never disagree with the composer.
+  const mention = mentionAt(draft, caret);
+  const suggestions =
+    mention === null ? [] : candidatesFor(mention.token, nameable);
   // The message a thread hangs under, taken from the feed the panel was opened
   // from. If a refetch drops it (someone withdrew it), the panel closes with
   // it rather than floating replies under nothing.
@@ -740,10 +839,79 @@ export function ChatModule() {
                 >
                   <Paperclip size={16} />
                 </button>
+                {suggestions.length > 0 && (
+                  <ul className={styles.suggestions} role="listbox">
+                    {suggestions.map((choice, i) => (
+                      <li key={`${choice.agent}-${choice.handle}`}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={i === highlighted}
+                          className={
+                            i === highlighted
+                              ? styles.suggestionOn
+                              : styles.suggestion
+                          }
+                          // A mousedown, not a click: a click fires after the
+                          // input has already lost focus and closed the list.
+                          onMouseDown={(event) => {
+                            event.preventDefault();
+                            complete(choice);
+                          }}
+                        >
+                          {choice.agent ? (
+                            <Sparkles size={13} className={styles.agentHint} />
+                          ) : (
+                            <Users size={13} className={styles.channelIcon} />
+                          )}
+                          <span className={styles.suggestionHandle}>
+                            @{choice.handle}
+                          </span>
+                          <span className={styles.suggestionLabel}>
+                            {choice.label}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
                 <input
+                  ref={composerRef}
                   className={styles.input}
                   value={draft}
-                  onChange={(event) => setDraft(event.target.value)}
+                  onChange={(event) => {
+                    setDraft(event.target.value);
+                    setCaret(event.target.selectionStart ?? 0);
+                    setHighlighted(0);
+                  }}
+                  onSelect={(event) =>
+                    setCaret(event.currentTarget.selectionStart ?? 0)
+                  }
+                  onKeyDown={(event) => {
+                    if (suggestions.length === 0) return;
+                    // While the list is open it owns these keys, so Enter
+                    // completes a name instead of sending a half-typed one.
+                    if (event.key === "ArrowDown") {
+                      event.preventDefault();
+                      setHighlighted((at) => (at + 1) % suggestions.length);
+                    } else if (event.key === "ArrowUp") {
+                      event.preventDefault();
+                      setHighlighted(
+                        (at) =>
+                          (at - 1 + suggestions.length) % suggestions.length,
+                      );
+                    } else if (event.key === "Enter" || event.key === "Tab") {
+                      event.preventDefault();
+                      const choice = suggestions[highlighted];
+                      if (choice !== undefined) complete(choice);
+                    } else if (event.key === "Escape") {
+                      event.preventDefault();
+                      // Dismiss without choosing: move the caret past the
+                      // token so the list stops matching it.
+                      setCaret(draft.length);
+                      setHighlighted(0);
+                    }
+                  }}
                   placeholder={strings.chatComposerPlaceholder(
                     channelLabel(open),
                   )}

@@ -253,3 +253,94 @@ test("a person's message is not marked as an agent", async () => {
   await screen.findByText("just me talking");
   expect(screen.queryByText(strings.chatAgentTag)).toBeNull();
 });
+
+/** The composer's `@` list must offer agents, because an agent is the thing a
+ *  person is least likely to know is in the room at all. */
+function withRoomPeople(messages: FeedMessage[]) {
+  answers = [
+    { match: "/chat/reactions", body: { emoji: ["👍"] } },
+    { match: "/agents", body: { agents: [AGENT] } },
+    { match: "/messages", body: { messages } },
+    {
+      match: "/chat/channels/room-1",
+      body: {
+        ...ROOM,
+        members: [
+          {
+            user: ME,
+            email: "anna@alo.test",
+            role: "owner",
+            joinedAt: "",
+            lastReadSeq: 0,
+            muted: false,
+          },
+          {
+            user: THEM,
+            email: "ben@alo.test",
+            role: "member",
+            joinedAt: "",
+            lastReadSeq: 0,
+            muted: false,
+          },
+        ],
+        myRole: "owner",
+      },
+    },
+    { match: "/chat/channels", body: { channels: [ROOM] } },
+  ];
+}
+
+const AGENT = {
+  id: "agent-alo",
+  handle: "alo",
+  name: "alo",
+  description: "asks and answers",
+  disabled: false,
+};
+
+test("typing @ offers the room's agents and people, agents first", async () => {
+  withRoomPeople([message({ body: "hi" })]);
+  render(<ChatModule />);
+  const box = await screen.findByLabelText(strings.chatComposerLabel);
+
+  // Nothing offered until an '@' opens a mention.
+  expect(screen.queryByText("@alo")).toBeNull();
+
+  fireEvent.change(box, { target: { value: "@a", selectionStart: 2 } });
+  await screen.findByText("@alo");
+  // Anna matches "@a" too, but the agent leads: it is the discovery.
+  const offered = screen.getAllByRole("option").map((o) => o.textContent ?? "");
+  expect(offered[0]).toContain("@alo");
+  expect(offered.some((o) => o.includes("@anna"))).toBe(true);
+});
+
+test("an address typed inline is not a mention, so nothing is offered", async () => {
+  withRoomPeople([message({ body: "hi" })]);
+  render(<ChatModule />);
+  const box = await screen.findByLabelText(strings.chatComposerLabel);
+
+  // The token after this '@' is exactly "alo", which IS an agent handle — so
+  // if the boundary rule were dropped, the list would offer @alo here. The
+  // server's parser refuses it, and the composer must agree: offering a
+  // completion the server then declines to resolve would be a lie.
+  fireEvent.change(box, {
+    target: { value: "write to ben@alo", selectionStart: 16 },
+  });
+  await waitFor(() => {
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+  });
+});
+
+test("choosing a name puts it in the message", async () => {
+  withRoomPeople([message({ body: "hi" })]);
+  render(<ChatModule />);
+  const box = await screen.findByLabelText(strings.chatComposerLabel);
+
+  fireEvent.change(box, { target: { value: "@al", selectionStart: 3 } });
+  const choice = await screen.findByText("@alo");
+  fireEvent.mouseDown(choice);
+
+  await waitFor(() => {
+    expect((box as HTMLInputElement).value).toBe("@alo ");
+  });
+});

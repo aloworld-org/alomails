@@ -235,6 +235,66 @@
   outline-offset: 1px;
 }
 
+/* ---- naming someone while typing ------------------------------------- */
+
+/* Above the composer, not below: a list that pushes the input down moves the
+   thing being typed into, which is intolerable mid-sentence. */
+.suggestions {
+  order: -2;
+  flex-basis: 100%;
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised, var(--bg-surface));
+  box-shadow: var(--shadow-md, 0 4px 16px rgb(0 0 0 / 18%));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.suggestion,
+.suggestionOn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 36px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.suggestionOn {
+  background: var(--accent-tint);
+}
+
+.suggestionHandle {
+  font-weight: 600;
+}
+
+.suggestionLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+.agentHint {
+  flex: none;
+  color: var(--accent);
+}
+
 /* ---- agents ---------------------------------------------------------- */
 
 /* An agent is marked, not avatared. A face would say "colleague", and the one
