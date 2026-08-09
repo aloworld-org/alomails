@@ -20,6 +20,7 @@ fn reset_app(store: Arc<Store>, identity: Identity, domains: Vec<String>) -> Rou
     use alo_jmap::push::PushHub;
     use alo_jmap::state::{AppState, Limits};
     alo_jmap::app(AppState {
+        turns: Default::default(),
         store,
         identity,
         push: PushHub::new(),

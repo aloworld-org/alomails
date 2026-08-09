@@ -20,6 +20,10 @@ pub struct AppState {
     pub identity: Identity,
     /// Per-tenant push fan-out for EventSource.
     pub push: PushHub,
+    /// Agent turns running on this process right now (ADR 0034's Stop
+    /// control). In memory on purpose: a turn in flight is a fact about this
+    /// process for a few seconds, not about the workspace.
+    pub turns: crate::chat_turns::Turns,
     /// Advertised, enforced limits.
     pub limits: Limits,
     /// Externally-visible base URL, for building session URLs.

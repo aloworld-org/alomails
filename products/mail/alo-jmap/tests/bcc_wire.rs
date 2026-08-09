@@ -167,6 +167,7 @@ async fn bcc_stripped_on_wire_delivered_by_envelope_kept_in_sent() {
     let identity =
         Identity::new(Arc::clone(&store), IdentityConfig::new("https://id.test")).unwrap();
     let state = AppState {
+        turns: Default::default(),
         store: Arc::clone(&store),
         identity,
         push: PushHub::new(),

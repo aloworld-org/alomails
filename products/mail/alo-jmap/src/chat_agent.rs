@@ -64,6 +64,7 @@ async fn take_turn(
     channel: &ChatChannelId,
     agent: &ChatAgent,
     question: &str,
+    stopped: &std::sync::atomic::AtomicBool,
 ) -> Option<Spoken> {
     // Access-scoped retrieval — the only thing this turn may ever see, and it
     // is the asker's access, never the agent's.
@@ -101,7 +102,13 @@ async fn take_turn(
     };
 
     let today = time::OffsetDateTime::now_utc().date().to_string();
-    match alo_ai::run_agent(&config, question, &ground, &today, &[]).await {
+    let decided = alo_ai::run_agent(&config, question, &ground, &today, &[]).await;
+    // Stopped while it was thinking: the call cannot be un-made, but its words
+    // can be kept out of the room, which is what someone pressing Stop wants.
+    if stopped.load(std::sync::atomic::Ordering::SeqCst) {
+        return None;
+    }
+    match decided {
         Ok(AgentDecision::Answer(answer)) => {
             acc.post_as_agent(channel, &agent.id, &answer, None)
                 .await
@@ -166,7 +173,19 @@ pub(crate) fn answer_if_named(
             return;
         };
         for agent in named_agents(&body, &present) {
-            if take_turn(&acc, &channel, &agent, &body).await.is_some() {
+            // Registered before the call so the room can say who is thinking,
+            // and forgotten afterwards however it ended.
+            let (id, stopped) = state.turns.begin(
+                &tenant,
+                &channel,
+                agent.id.as_str(),
+                &agent.handle,
+                acc.user().as_str(),
+            );
+            push::notify_chat(&state, &tenant, &[acc.user().clone()]).await;
+            let spoke = take_turn(&acc, &channel, &agent, &body, &stopped).await;
+            state.turns.end(&tenant, &channel, &id);
+            if spoke.is_some() {
                 // Tell the room its shape changed, exactly as a person's
                 // message does.
                 let users: Vec<alo_store::UserId> = acc

@@ -247,3 +247,55 @@ async fn notify(state: &AppState, account: &crate::state::Account, channel: &Cha
         .unwrap_or_default();
     push::notify_chat(state, &account.tenant, &users).await;
 }
+
+/// `GET /chat/channels/{id}/turns` → the agent turns running in this room
+/// right now, so a reader can see that something is happening rather than
+/// staring at a room that looks idle while a model thinks.
+///
+/// # Errors
+/// 404 when the room is not the caller's to see.
+pub async fn list_turns(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let channel = ChatChannelId::new(id);
+    // The room decides whether any of this exists for the caller.
+    account.acc.channel(&channel).await.map_err(map_store_err)?;
+    let running = state.turns.in_room(&account.tenant, &channel);
+    Ok(Json(json!({
+        "turns": running
+            .iter()
+            .map(|t| crate::chat_turns::turn_json(t, account.user.as_str()))
+            .collect::<Vec<_>>()
+    })))
+}
+
+/// `POST /chat/channels/{id}/turns/{turn}/stop` → stop a running turn.
+///
+/// Only the person who asked may stop it, for the same reason only they may
+/// approve what it proposes: the turn is running with their access, not the
+/// room's.
+///
+/// A stop that finds nothing still answers 204. The turn may have finished a
+/// moment ago or be running on another process; either way what the caller
+/// wanted — that turn not continuing — is now true, and a 404 would invite a
+/// client to retry something already settled.
+///
+/// # Errors
+/// 404 when the room is not the caller's to see.
+pub async fn stop_turn(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, turn)): Path<(String, String)>,
+) -> Result<StatusCode, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let channel = ChatChannelId::new(id);
+    account.acc.channel(&channel).await.map_err(map_store_err)?;
+    let _ = state
+        .turns
+        .stop(&account.tenant, &channel, &turn, account.user.as_str());
+    notify(&state, &account, &channel).await;
+    Ok(StatusCode::NO_CONTENT)
+}

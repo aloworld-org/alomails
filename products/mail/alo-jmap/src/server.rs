@@ -237,6 +237,14 @@ pub fn app_with_site_domain_dns(
         .route("/chat/search", get(chat::search))
         .route("/chat/people", get(chat::find_people))
         .route(
+            "/chat/channels/{id}/turns",
+            get(chat_agent_routes::list_turns),
+        )
+        .route(
+            "/chat/channels/{id}/turns/{turn}/stop",
+            post(chat_agent_routes::stop_turn),
+        )
+        .route(
             "/chat/agents",
             get(chat_agent_routes::list_agents).post(chat_agent_routes::create_agent),
         )
@@ -1309,6 +1317,7 @@ pub fn app_with_site_domain_dns(
 /// A convenience [`AppState`] with default limits and a fresh push hub.
 pub fn app_state(store: Arc<Store>, identity: Identity, base_url: impl Into<String>) -> AppState {
     AppState {
+        turns: crate::chat_turns::Turns::default(),
         store,
         identity,
         push: PushHub::new(),
