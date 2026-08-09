@@ -221,10 +221,14 @@ pub fn app(state: AppState) -> Router {
         )
         .route("/chat/channels/{id}/threads/{seq}", get(chat::list_thread))
         .route("/chat/channels/{id}/read", post(chat::mark_read))
+        // Static before `{id}`: `/chat/reactions` must not be read as a
+        // message called "reactions".
+        .route("/chat/reactions", get(chat::list_reactions))
         .route(
             "/chat/messages/{id}",
             patch(chat::edit_message).delete(chat::delete_message),
         )
+        .route("/chat/messages/{id}/reactions", post(chat::toggle_reaction))
         .route("/sites", get(sites::list_sites).post(sites::create_site))
         .route("/sites/subdomain-check", get(sites::check_subdomain))
         .route("/sites/theme-presets", get(sites::list_theme_presets))

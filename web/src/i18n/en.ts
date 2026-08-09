@@ -1673,6 +1673,8 @@ export const en = {
   chatNoMessagesYet: "No messages yet — say the first thing.",
   chatArchived: "Archived",
   chatReplyInThread: "Reply in thread",
+  chatAddReaction: "Add a reaction",
+  chatReactFailed: "That reaction couldn’t be saved.",
   chatReplies: (count: number): string =>
     count === 1 ? "1 reply" : `${count} replies`,
   chatThread: "Thread",

@@ -2858,3 +2858,97 @@ async fn a_withdrawn_reply_stops_being_counted_but_keeps_its_place() {
     // it simply stops being advertised on the feed.
     assert_eq!(a.thread_replies(&room, root.seq).await.unwrap().len(), 2);
 }
+
+/// Reactions carry the same rules as the words they hang on: a room you cannot
+/// see has no reactions to leave, reading a public room does not let you react
+/// in it, and the toggle is the primary key's job rather than the caller's.
+#[tokio::test]
+async fn reactions_follow_the_room_and_toggle_exactly_once() {
+    let store = common::test_store().await;
+    let t1 = store.create_tenant("react-t1").await.unwrap();
+    let ts1 = store.for_tenant(t1.clone());
+    let ua = ts1.create_user("a@react.test").await.unwrap();
+    let uc = ts1.create_user("c@react.test").await.unwrap();
+    let a = store.for_account(t1.clone(), ua.clone());
+    let c = store.for_account(t1.clone(), uc.clone());
+
+    let t2 = store.create_tenant("react-t2").await.unwrap();
+    let ub = store
+        .for_tenant(t2.clone())
+        .create_user("b@react.test")
+        .await
+        .unwrap();
+    let b = store.for_account(t2, ub);
+
+    let room = a
+        .create_channel("standup", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
+    let said = a.post_message(&room, "shipping today", None).await.unwrap();
+
+    // Another tenant cannot react to it, tally it, or learn it exists.
+    assert_not_found(b.toggle_reaction(&said.id, "👍").await);
+    assert_not_found(b.message_reactions(&said.id).await);
+
+    // A co-tenant may READ this public room, but reacting is contributing —
+    // it needs membership, exactly as posting does.
+    assert_eq!(c.message_reactions(&said.id).await.unwrap().len(), 0);
+    assert_not_found(c.toggle_reaction(&said.id, "👍").await);
+
+    // Only what the room offers.
+    assert!(a.toggle_reaction(&said.id, "🚀").await.is_err());
+    assert!(a.toggle_reaction(&said.id, "not an emoji").await.is_err());
+
+    // On, off, on — and never two of the same from one person.
+    assert!(a.toggle_reaction(&said.id, "👍").await.unwrap());
+    assert!(!a.toggle_reaction(&said.id, "👍").await.unwrap());
+    assert!(a.toggle_reaction(&said.id, "👍").await.unwrap());
+    let tally = a.message_reactions(&said.id).await.unwrap();
+    assert_eq!(tally.len(), 1);
+    assert_eq!(
+        (tally[0].emoji.as_str(), tally[0].count, tally[0].mine),
+        ("👍", 1, true)
+    );
+
+    // A second person on the same emoji is a count, not a duplicate — and it
+    // is "mine" only to the person who left it.
+    c.join_channel(&room).await.unwrap();
+    assert!(c.toggle_reaction(&said.id, "👍").await.unwrap());
+    assert!(c.toggle_reaction(&said.id, "🎉").await.unwrap());
+    let seen = c.message_reactions(&said.id).await.unwrap();
+    assert_eq!(seen.len(), 2);
+    assert_eq!((seen[0].emoji.as_str(), seen[0].count), ("👍", 2));
+    assert_eq!((seen[1].emoji.as_str(), seen[1].count), ("🎉", 1));
+
+    let mine_only = a.message_reactions(&said.id).await.unwrap();
+    let party = mine_only.iter().find(|r| r.emoji == "🎉").unwrap();
+    assert!(!party.mine, "someone else's reaction is not mine");
+
+    // Who left it, in the order they did.
+    let who = a.reaction_users(&said.id, "👍").await.unwrap();
+    assert_eq!(
+        who.iter()
+            .map(alo_store::UserId::as_str)
+            .collect::<Vec<_>>(),
+        vec![ua.as_str(), uc.as_str()]
+    );
+
+    // A page is tallied in one pass, and a message with none is simply absent.
+    let quiet = a.post_message(&room, "nothing to see", None).await.unwrap();
+    let page = a
+        .reactions_for_channel(&room, &[said.id.clone(), quiet.id.clone()])
+        .await
+        .unwrap();
+    assert_eq!(page.len(), 1);
+    assert_eq!(page.get(said.id.as_str()).unwrap().len(), 2);
+    assert!(!page.contains_key(quiet.id.as_str()));
+
+    // Withdrawn words take no new reactions, and an archived room takes none
+    // at all — the same two refusals posting gives.
+    a.delete_message(&quiet.id).await.unwrap();
+    assert!(a.toggle_reaction(&quiet.id, "👍").await.is_err());
+    a.archive_channel(&room).await.unwrap();
+    assert!(a.toggle_reaction(&said.id, "❤️").await.is_err());
+    // ...but what was already left stays readable.
+    assert_eq!(a.message_reactions(&said.id).await.unwrap().len(), 2);
+}

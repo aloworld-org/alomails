@@ -235,6 +235,115 @@
   outline-offset: 1px;
 }
 
+/* ---- reactions ------------------------------------------------------ */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.chip,
+.chipMine {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-surface);
+  font: inherit;
+  font-size: var(--text-xs);
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+/* Mine is stated, not implied by a shade: the border and the tint both move,
+   so it survives a colour-blind reader and a low-contrast screen. */
+.chipMine {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.chip:hover,
+.chipMine:hover {
+  border-color: var(--border-default);
+}
+
+.chip:disabled,
+.chipMine:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.chipCount {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The opener stays out of the way until the message is approached — a feed of
+   fifty messages must not read as fifty buttons. */
+.chipAdd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+}
+
+.message:hover .chipAdd,
+.chipAdd:focus-visible,
+.chipAdd[aria-expanded="true"] {
+  opacity: 1;
+  border-color: var(--border-subtle);
+}
+
+.pickerWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.picker {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  z-index: 2;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised, var(--bg-surface));
+  box-shadow: var(--shadow-md, 0 4px 16px rgb(0 0 0 / 18%));
+}
+
+.pickerOption {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pickerOption:hover,
+.pickerOption:focus-visible {
+  background: var(--accent-tint);
+}
+
 /* ---- threads ------------------------------------------------------- */
 
 /* Quiet until wanted: a link, not a button, so a feed of fifty messages does

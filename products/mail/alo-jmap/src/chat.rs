@@ -33,7 +33,7 @@ use time::format_description::well_known::Rfc3339;
 
 use alo_store::{
     ChannelVisibility, ChatChannel, ChatChannelId, ChatChannelSummary, ChatFeedMessage, ChatMember,
-    ChatMessage, ChatMessageId, MESSAGE_PAGE_DEFAULT, StoreError, UserId,
+    ChatMessage, ChatMessageId, MESSAGE_PAGE_DEFAULT, ReactionTally, StoreError, UserId,
 };
 
 use crate::error::Problem;
@@ -139,11 +139,44 @@ fn member_json(m: &ChatMember, emails: &HashMap<String, String>) -> Value {
 /// A feed line: the message, plus the thread hanging under it. `replyCount`
 /// is what lets a client draw "3 replies" without fetching the thread, and
 /// `lastReplyAt` is when that thread last moved.
-fn feed_message_json(f: &ChatFeedMessage, emails: &HashMap<String, String>) -> Value {
-    let mut value = message_json(&f.message, emails);
+fn feed_message_json(
+    f: &ChatFeedMessage,
+    emails: &HashMap<String, String>,
+    reactions: &HashMap<String, Vec<ReactionTally>>,
+) -> Value {
+    let mut value = message_json_with(&f.message, emails, reactions);
     if let Some(object) = value.as_object_mut() {
         object.insert("replyCount".to_owned(), json!(f.reply_count));
         object.insert("lastReplyAt".to_owned(), json!(f.last_reply_at.map(iso)));
+    }
+    value
+}
+
+/// The chips under a message. Absent tallies serialise as an empty list, not
+/// as `null` — a message with no reactions has none, which is a fact, not a
+/// missing answer the client has to guard against.
+fn reactions_json(tallies: Option<&Vec<ReactionTally>>) -> Value {
+    json!(
+        tallies
+            .map(Vec::as_slice)
+            .unwrap_or_default()
+            .iter()
+            .map(|t| json!({ "emoji": t.emoji, "count": t.count, "mine": t.mine }))
+            .collect::<Vec<_>>()
+    )
+}
+
+fn message_json_with(
+    m: &ChatMessage,
+    emails: &HashMap<String, String>,
+    reactions: &HashMap<String, Vec<ReactionTally>>,
+) -> Value {
+    let mut value = message_json(m, emails);
+    if let Some(object) = value.as_object_mut() {
+        object.insert(
+            "reactions".to_owned(),
+            reactions_json(reactions.get(m.id.as_str())),
+        );
     }
     value
 }
@@ -158,6 +191,10 @@ fn message_json(m: &ChatMessage, emails: &HashMap<String, String>) -> Value {
         "body": m.body,
         "kind": m.kind.as_str(),
         "threadRootSeq": m.thread_root_seq,
+        // Always present, even where no tally was gathered (a message just
+        // posted has none). A field that is sometimes absent is a field every
+        // client has to guard, and one of them will forget.
+        "reactions": [],
         "createdAt": iso(m.created_at),
         "editedAt": m.edited_at.map(iso),
         "deletedAt": m.deleted_at.map(iso),
@@ -467,10 +504,11 @@ pub async fn list_messages(
     Query(query): Query<HistoryQuery>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let channel = ChatChannelId::new(id);
     let messages = account
         .acc
         .messages(
-            &ChatChannelId::new(id),
+            &channel,
             query.before,
             query.limit.unwrap_or(MESSAGE_PAGE_DEFAULT),
         )
@@ -478,10 +516,16 @@ pub async fn list_messages(
         .map_err(map_store_err)?;
     let who: Vec<UserId> = messages.iter().map(|m| m.message.author.clone()).collect();
     let emails = resolve_emails(&state, &account, &who).await;
+    let ids: Vec<ChatMessageId> = messages.iter().map(|m| m.message.id.clone()).collect();
+    let reactions = account
+        .acc
+        .reactions_for_channel(&channel, &ids)
+        .await
+        .unwrap_or_default();
     Ok(Json(json!({
         "messages": messages
             .iter()
-            .map(|m| feed_message_json(m, &emails))
+            .map(|m| feed_message_json(m, &emails, &reactions))
             .collect::<Vec<_>>()
     })))
 }
@@ -529,17 +573,24 @@ pub async fn list_thread(
     Path((id, seq)): Path<(String, i64)>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let channel = ChatChannelId::new(id);
     let messages = account
         .acc
-        .thread_replies(&ChatChannelId::new(id), seq)
+        .thread_replies(&channel, seq)
         .await
         .map_err(map_store_err)?;
     let who: Vec<UserId> = messages.iter().map(|m| m.author.clone()).collect();
     let emails = resolve_emails(&state, &account, &who).await;
+    let ids: Vec<ChatMessageId> = messages.iter().map(|m| m.id.clone()).collect();
+    let reactions = account
+        .acc
+        .reactions_for_channel(&channel, &ids)
+        .await
+        .unwrap_or_default();
     Ok(Json(json!({
         "messages": messages
             .iter()
-            .map(|m| message_json(m, &emails))
+            .map(|m| message_json_with(m, &emails, &reactions))
             .collect::<Vec<_>>()
     })))
 }
@@ -621,4 +672,64 @@ pub async fn mark_read(
     // A read cursor is personal: only this person's other devices need it.
     push::notify_chat(&state, &account.tenant, std::slice::from_ref(&account.user)).await;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ReactionBody {
+    emoji: String,
+}
+
+/// `POST /chat/messages/{id}/reactions` `{emoji}` → leave the caller's
+/// reaction, or take it back if it is already there.
+///
+/// Returns the message's whole tally rather than just the toggled emoji, so a
+/// client redraws the chips from one answer instead of patching its own copy
+/// and hoping it matches what everyone else sees.
+///
+/// # Errors
+/// 404 when the message is not the caller's to see or they are not a member of
+/// its room, 422 for an emoji outside the offered set, a withdrawn message, or
+/// an archived room.
+pub async fn toggle_reaction(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<ReactionBody>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let id = ChatMessageId::new(id);
+    let mine = account
+        .acc
+        .toggle_reaction(&id, &body.emoji)
+        .await
+        .map_err(map_store_err)?;
+    let message = account.acc.chat_message(&id).await.map_err(map_store_err)?;
+    notify_room(&state, &account, &message.channel, &[]).await;
+    let tallies = account
+        .acc
+        .message_reactions(&id)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "message": id.as_str(),
+        "mine": mine,
+        "reactions": reactions_json(Some(&tallies)),
+    })))
+}
+
+/// `GET /chat/reactions` → the reactions this deployment offers, in the order
+/// a picker should show them.
+///
+/// The set lives in the store and will grow; a client that hardcodes its own
+/// copy would offer emoji the server then refuses. It asks instead.
+///
+/// # Errors
+/// 401 unauthenticated.
+pub async fn list_reactions(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    authenticate(&state, &headers).await?;
+    Ok(Json(json!({ "emoji": alo_store::REACTIONS })))
 }

@@ -54,6 +54,14 @@ export interface ChannelDetail extends Channel {
   myRole: MemberRole | null;
 }
 
+/** One emoji on one message, with how many people chose it. */
+export interface Reaction {
+  emoji: string;
+  count: number;
+  /** Whether I am one of them — what makes the chip a toggle, not a counter. */
+  mine: boolean;
+}
+
 /** One thing said in a room. */
 export interface Message {
   id: string;
@@ -69,6 +77,8 @@ export interface Message {
   kind: "text" | "system";
   /** The seq this replies to; `null` in the main feed. */
   threadRootSeq: number | null;
+  /** Chips under the message; empty when nobody has reacted. */
+  reactions: Reaction[];
   createdAt: string;
   editedAt: string | null;
   /** Set when withdrawn: the row survives so the numbering never gains a

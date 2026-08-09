@@ -20,6 +20,7 @@ import {
   MessagesSquare,
   Reply,
   Send,
+  SmilePlus,
   Users,
   X,
 } from "lucide-react";
@@ -63,12 +64,21 @@ function timeOf(iso: string): string {
  */
 function MessageLine({
   message,
+  palette,
+  onReact,
   children,
 }: {
   message: Message;
+  /** What may be left here, asked of the server. Empty disables the picker. */
+  palette: string[];
+  onReact: (emoji: string) => void;
   children?: ReactNode;
 }) {
+  const [picking, setPicking] = useState(false);
   const who = personName(message.authorEmail, message.author);
+  // Withdrawn words take no reactions — the server refuses, so the picker is
+  // not offered on them either.
+  const reactable = palette.length > 0 && message.deletedAt === null;
   return (
     <article className={styles.message}>
       <div className={styles.messageMeta}>
@@ -91,6 +101,58 @@ function MessageLine({
       >
         {message.deletedAt === null ? message.body : strings.chatWithdrawn}
       </p>
+
+      {(message.reactions.length > 0 || reactable) && (
+        <div className={styles.chips}>
+          {message.reactions.map((reaction) => (
+            <button
+              key={reaction.emoji}
+              type="button"
+              className={reaction.mine ? styles.chipMine : styles.chip}
+              onClick={() => onReact(reaction.emoji)}
+              // The chip is a toggle, and says which way it will go.
+              aria-pressed={reaction.mine}
+              disabled={!reactable}
+            >
+              <span aria-hidden="true">{reaction.emoji}</span>
+              <span className={styles.chipCount}>{reaction.count}</span>
+            </button>
+          ))}
+
+          {reactable && (
+            <span className={styles.pickerWrap}>
+              <button
+                type="button"
+                className={styles.chipAdd}
+                onClick={() => setPicking((open) => !open)}
+                aria-label={strings.chatAddReaction}
+                aria-expanded={picking}
+              >
+                <SmilePlus size={14} />
+              </button>
+              {picking && (
+                <span className={styles.picker} role="menu">
+                  {palette.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      role="menuitem"
+                      className={styles.pickerOption}
+                      onClick={() => {
+                        setPicking(false);
+                        onReact(emoji);
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </span>
+              )}
+            </span>
+          )}
+        </div>
+      )}
+
       {children}
     </article>
   );
@@ -113,6 +175,9 @@ export function ChatModule() {
   const [replies, setReplies] = useState<Message[] | null>(null);
   const [replyDraft, setReplyDraft] = useState("");
   const [replying, setReplying] = useState(false);
+  // What may be left, per the server. Empty until it answers, which simply
+  // means no picker yet — never a picker offering emoji it would refuse.
+  const [palette, setPalette] = useState<string[]>([]);
   const feedRef = useRef<HTMLDivElement | null>(null);
 
   const loadChannels = useCallback(async () => {
@@ -154,6 +219,14 @@ export function ChatModule() {
   useEffect(() => {
     void loadChannels();
   }, [loadChannels]);
+
+  useEffect(() => {
+    // Asked once: the offered set changes with a release, not with a room.
+    void api
+      .reactionPalette()
+      .then(setPalette)
+      .catch(() => setPalette([]));
+  }, [api]);
 
   useEffect(() => {
     if (openId === null) return;
@@ -224,6 +297,22 @@ export function ChatModule() {
       setError(chatMessage(failure, strings.chatSendFailed));
     } finally {
       setSending(false);
+    }
+  }
+
+  async function react(messageId: string, emoji: string) {
+    try {
+      const tally = await api.react(messageId, emoji);
+      // Apply where it is shown — a message can be on screen in the feed, in
+      // the thread panel, or in both at once.
+      const applied = <T extends Message>(list: T[] | null): T[] | null =>
+        list?.map((m) =>
+          m.id === messageId ? { ...m, reactions: tally } : m,
+        ) ?? null;
+      setMessages(applied);
+      setReplies(applied);
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatReactFailed));
     }
   }
 
@@ -366,7 +455,12 @@ export function ChatModule() {
                 <p className={styles.feedNote}>{strings.chatNoMessagesYet}</p>
               ) : (
                 messages.map((message) => (
-                  <MessageLine key={message.id} message={message}>
+                  <MessageLine
+                    key={message.id}
+                    message={message}
+                    palette={open.archivedAt === null ? palette : []}
+                    onReact={(emoji) => void react(message.id, emoji)}
+                  >
                     {message.replyCount > 0 ? (
                       <button
                         type="button"
@@ -454,7 +548,11 @@ export function ChatModule() {
           <div className={styles.threadFeed}>
             {/* The root is shown first, so a thread is readable on its own
                 without hunting for what it is about. */}
-            <MessageLine message={threadRoot} />
+            <MessageLine
+              message={threadRoot}
+              palette={open.archivedAt === null ? palette : []}
+              onReact={(emoji) => void react(threadRoot.id, emoji)}
+            />
             <hr className={styles.threadRule} />
             {replies === null ? (
               <p className={styles.feedNote}>
@@ -465,7 +563,12 @@ export function ChatModule() {
               <p className={styles.feedNote}>{strings.chatThreadEmpty}</p>
             ) : (
               replies.map((reply) => (
-                <MessageLine key={reply.id} message={reply} />
+                <MessageLine
+                  key={reply.id}
+                  message={reply}
+                  palette={open.archivedAt === null ? palette : []}
+                  onReact={(emoji) => void react(reply.id, emoji)}
+                />
               ))
             )}
           </div>

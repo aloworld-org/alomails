@@ -39,6 +39,7 @@ pub mod calendar;
 pub mod changes;
 pub mod chat;
 pub mod chat_messages;
+pub mod chat_reactions;
 pub mod contacts;
 pub mod control;
 pub mod crm_activities;
@@ -155,6 +156,7 @@ pub use chat::{ChannelKind, ChannelVisibility, ChatChannel, ChatMember, MemberRo
 pub use chat_messages::{
     ChatChannelSummary, ChatFeedMessage, ChatMessage, MESSAGE_PAGE_DEFAULT, MessageKind,
 };
+pub use chat_reactions::{REACTIONS, ReactionTally};
 pub use contacts::AddressHeaders;
 pub use control::PLATFORM_TENANT_NAME;
 pub use crm_activities::{Activity, ActivityKind, NewActivity};

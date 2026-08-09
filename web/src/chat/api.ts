@@ -21,6 +21,7 @@ import type {
   FeedMessage,
   Message,
   NewChannel,
+  Reaction,
 } from "./types";
 
 type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
@@ -96,6 +97,28 @@ export class ChatApi {
       `/chat/channels/${encodeURIComponent(id)}/join`,
       {},
     );
+  }
+
+  /** The reactions this deployment offers, in the order to show them.
+   *
+   *  Asked for rather than hardcoded: the set lives in the store and will
+   *  grow, and a client with its own copy would offer emoji the server then
+   *  refuses. */
+  async reactionPalette(): Promise<string[]> {
+    const body = await this.#read<{ emoji: string[] }>("/chat/reactions");
+    return body.emoji;
+  }
+
+  /** Leave a reaction, or take it back if it is already mine. Returns the
+   *  message's whole tally, so chips are redrawn from one answer rather than
+   *  patched locally and hoped to match. */
+  async react(messageId: string, emoji: string): Promise<Reaction[]> {
+    const body = await this.#write<{ reactions: Reaction[] }>(
+      "POST",
+      `/chat/messages/${encodeURIComponent(messageId)}/reactions`,
+      { emoji },
+    );
+    return body.reactions;
   }
 
   /** The replies under one message, oldest first — a thread reads forwards. */
