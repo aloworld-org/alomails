@@ -76,6 +76,7 @@ pub mod drive;
 pub mod error;
 pub mod extract;
 pub mod fin_accounts;
+pub mod fin_balance;
 pub mod fin_booking;
 pub mod fin_categories;
 pub mod fin_expenses;
@@ -231,6 +232,7 @@ pub use fin_accounts::{
     ACCOUNT_CODE_MAX_CHARS, ACCOUNT_NAME_MAX_CHARS, Account, AccountRole, AccountType, CHART,
     CHART_SEED_KEY, ChartAccount, ChartName, ChartSeed, NewAccount,
 };
+pub use fin_balance::{BalanceLine, BalanceSheet};
 pub use fin_categories::{CATEGORY_NAME_MAX_CHARS, ExpenseCategory, NewExpenseCategory};
 pub use fin_expenses::{
     EXPENSE_DECISION_NOTE_MAX, EXPENSE_DESCRIPTION_MAX, Expense, ExpenseDecision, ExpenseMethod,
