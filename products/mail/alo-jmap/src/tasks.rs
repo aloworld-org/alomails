@@ -19,9 +19,8 @@ use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
 use alo_store::{
-    AccountStore, AttachmentId, BlobId, CommentId, LabelId, NewTask, ProjectId, StoreError, SubtaskId, Task, TaskEdit, TaskId, TaskLabel,
-    TenantStore,
-    UserId,
+    AccountStore, AttachmentId, BlobId, CommentId, LabelId, NewTask, ProjectId, StoreError,
+    SubtaskId, Task, TaskEdit, TaskId, TaskLabel, TenantStore, UserId,
 };
 
 use crate::error::Problem;
@@ -778,11 +777,19 @@ pub async fn add_attachment(
     let account = authenticate(&state, &headers).await?;
     let req: AttachBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     if req.blob_id.trim().is_empty() || req.filename.trim().is_empty() {
-        return Err(Problem::with(StatusCode::BAD_REQUEST, "blobId and filename required"));
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "blobId and filename required",
+        ));
     }
     let aid = account
         .acc
-        .add_task_attachment(&TaskId::new(id), req.blob_id.trim(), req.filename.trim(), req.size)
+        .add_task_attachment(
+            &TaskId::new(id),
+            req.blob_id.trim(),
+            req.filename.trim(),
+            req.size,
+        )
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "id": aid.as_str() })))
@@ -848,7 +855,11 @@ pub async fn download_attachment(
         .blob_bytes_for_send(&BlobId::new(att.blob_id.clone()))
         .await
         .map_err(map_store_err)?;
-    Ok(crate::blob::serve_download(bytes, "application/octet-stream", &att.filename))
+    Ok(crate::blob::serve_download(
+        bytes,
+        "application/octet-stream",
+        &att.filename,
+    ))
 }
 
 // ---- labels -----------------------------------------------------------------
@@ -859,8 +870,14 @@ pub async fn list_labels(
     headers: HeaderMap,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    let labels = account.acc.task_labels().await.map_err(|_| Problem::server_error())?;
-    Ok(Json(json!({ "labels": labels.iter().map(label_json).collect::<Vec<_>>() })))
+    let labels = account
+        .acc
+        .task_labels()
+        .await
+        .map_err(|_| Problem::server_error())?;
+    Ok(Json(
+        json!({ "labels": labels.iter().map(label_json).collect::<Vec<_>>() }),
+    ))
 }
 
 #[derive(Deserialize)]
@@ -880,15 +897,24 @@ pub async fn create_label(
     let req: LabelBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let name = req.name.trim();
     if name.is_empty() {
-        return Err(Problem::with(StatusCode::BAD_REQUEST, "a label name is required"));
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "a label name is required",
+        ));
     }
-    let color = req.color.as_deref().map(str::trim).filter(|c| !c.is_empty());
+    let color = req
+        .color
+        .as_deref()
+        .map(str::trim)
+        .filter(|c| !c.is_empty());
     let id = account
         .acc
         .create_task_label(name, color)
         .await
         .map_err(|_| Problem::server_error())?;
-    Ok(Json(json!({ "id": id.as_str(), "name": name, "color": color })))
+    Ok(Json(
+        json!({ "id": id.as_str(), "name": name, "color": color }),
+    ))
 }
 
 /// `DELETE /tasks/labels/:id` → remove a label from the tenant (and every task).
@@ -996,11 +1022,17 @@ pub async fn add_dependency(
     let account = authenticate(&state, &headers).await?;
     let req: DependencyBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     if req.depends_on.trim().is_empty() {
-        return Err(Problem::with(StatusCode::BAD_REQUEST, "dependsOn is required"));
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "dependsOn is required",
+        ));
     }
     account
         .acc
-        .add_dependency(&TaskId::new(id), &TaskId::new(req.depends_on.trim().to_owned()))
+        .add_dependency(
+            &TaskId::new(id),
+            &TaskId::new(req.depends_on.trim().to_owned()),
+        )
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "status": "ok" })))

@@ -55,6 +55,8 @@ pub mod blob;
 pub mod calendar;
 pub mod carddav;
 pub mod chat;
+pub mod chat_agent;
+pub mod chat_agent_routes;
 pub mod contacts;
 pub mod crm;
 pub mod crm_activities;

@@ -132,6 +132,20 @@ async fn resolve_emails(
     ts.emails_of(users).await.unwrap_or_default()
 }
 
+/// Names for the agents that spoke on a page, keyed by agent id, merged into
+/// the same map the addresses live in.
+///
+/// An agent's id is not a user id and never resolves through the directory, so
+/// without this its messages would render as an opaque string. One map keeps
+/// the serialiser from needing to know which kind it is holding.
+async fn label_agents(account: &Account, into: &mut HashMap<String, String>) {
+    if let Ok(agents) = account.acc.agents().await {
+        for agent in agents {
+            into.insert(agent.id.as_str().to_owned(), agent.name);
+        }
+    }
+}
+
 fn member_json(m: &ChatMember, emails: &HashMap<String, String>) -> Value {
     json!({
         "user": m.user.as_str(),
@@ -231,13 +245,36 @@ fn message_json_with(
     value
 }
 
+/// Hangs a message's proposal on it, so a client draws the approval card in
+/// place rather than fetching one per message.
+fn attach_proposal(
+    value: &mut Value,
+    proposals: &HashMap<String, alo_store::ChatProposal>,
+    message: &str,
+) {
+    let Some(proposal) = proposals.get(message) else {
+        return;
+    };
+    if let Some(object) = value.as_object_mut() {
+        object.insert(
+            "proposal".to_owned(),
+            crate::chat_agent_routes::proposal_json(proposal),
+        );
+    }
+}
+
 fn message_json(m: &ChatMessage, emails: &HashMap<String, String>) -> Value {
     json!({
         "id": m.id.as_str(),
         "channel": m.channel.as_str(),
         "seq": m.seq,
         "author": m.author.as_str(),
+        // A person's address, or an agent's name — the same slot, because a
+        // reader wants the same thing from it: something to call the author.
+        // `authorKind` says which, so nobody has to guess from the id.
+        "authorKind": if m.author_is_agent { "agent" } else { "user" },
         "authorEmail": emails.get(m.author.as_str()),
+        "onBehalfOf": m.on_behalf_of.as_ref().map(UserId::as_str),
         "body": m.body,
         "kind": m.kind.as_str(),
         "threadRootSeq": m.thread_root_seq,
@@ -247,6 +284,7 @@ fn message_json(m: &ChatMessage, emails: &HashMap<String, String>) -> Value {
         "reactions": [],
         "mentions": [],
         "attachments": [],
+        "proposal": Value::Null,
         "createdAt": iso(m.created_at),
         "editedAt": m.edited_at.map(iso),
         "deletedAt": m.deleted_at.map(iso),
@@ -571,7 +609,8 @@ pub async fn list_messages(
         .await
         .map_err(map_store_err)?;
     let who: Vec<UserId> = messages.iter().map(|m| m.message.author.clone()).collect();
-    let emails = resolve_emails(&state, &account, &who).await;
+    let mut emails = resolve_emails(&state, &account, &who).await;
+    label_agents(&account, &mut emails).await;
     let ids: Vec<ChatMessageId> = messages.iter().map(|m| m.message.id.clone()).collect();
     let reactions = account
         .acc
@@ -588,10 +627,20 @@ pub async fn list_messages(
         .attachments_for_channel(&channel, &ids)
         .await
         .unwrap_or_default();
+    let proposals = account
+        .acc
+        .proposals_for_channel(&channel, &ids)
+        .await
+        .unwrap_or_default();
     Ok(Json(json!({
         "messages": messages
             .iter()
-            .map(|m| feed_message_json(m, &emails, &reactions, &mentions, &files))
+            .map(|m| {
+                let mut value =
+                    feed_message_json(m, &emails, &reactions, &mentions, &files);
+                attach_proposal(&mut value, &proposals, m.message.id.as_str());
+                value
+            })
             .collect::<Vec<_>>()
     })))
 }
@@ -646,6 +695,15 @@ pub async fn post_message(
     // happen to look.
     let named: Vec<UserId> = mentions.values().flatten().cloned().collect();
     notify_room(&state, &account, &message.channel, &named).await;
+    // Naming an agent is the whole trigger; the turn runs off this request so
+    // the words just said are not held up by a model call.
+    crate::chat_agent::answer_if_named(
+        &state,
+        &account.acc,
+        &account.tenant,
+        &message.channel,
+        &message.body,
+    );
     let emails = resolve_emails(&state, &account, std::slice::from_ref(&message.author)).await;
     let shared = account
         .acc
@@ -679,7 +737,8 @@ pub async fn list_thread(
         .await
         .map_err(map_store_err)?;
     let who: Vec<UserId> = messages.iter().map(|m| m.author.clone()).collect();
-    let emails = resolve_emails(&state, &account, &who).await;
+    let mut emails = resolve_emails(&state, &account, &who).await;
+    label_agents(&account, &mut emails).await;
     let ids: Vec<ChatMessageId> = messages.iter().map(|m| m.id.clone()).collect();
     let reactions = account
         .acc
@@ -696,10 +755,19 @@ pub async fn list_thread(
         .attachments_for_channel(&channel, &ids)
         .await
         .unwrap_or_default();
+    let proposals = account
+        .acc
+        .proposals_for_channel(&channel, &ids)
+        .await
+        .unwrap_or_default();
     Ok(Json(json!({
         "messages": messages
             .iter()
-            .map(|m| message_json_with(m, &emails, &reactions, &mentions, &files))
+            .map(|m| {
+                let mut value = message_json_with(m, &emails, &reactions, &mentions, &files);
+                attach_proposal(&mut value, &proposals, m.id.as_str());
+                value
+            })
             .collect::<Vec<_>>()
     })))
 }

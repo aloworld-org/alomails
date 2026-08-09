@@ -8,28 +8,32 @@
 
 use std::sync::OnceLock;
 
+use axum::Json;
 use axum::body::Bytes;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
-use axum::Json;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use hmac::{Hmac, Mac};
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::Sha256;
 
 use alo_store::{BlobId, DriveNodeId, TenantId, UserId};
 
 use crate::error::Problem;
-use crate::state::{authenticate, AppState};
+use crate::state::{AppState, authenticate};
 
 /// The signing secret; WOPI/office editing is disabled when unset.
 fn secret() -> Option<&'static str> {
     static S: OnceLock<Option<String>> = OnceLock::new();
-    S.get_or_init(|| std::env::var("ALO_JMAP_WOPI_SECRET").ok().filter(|s| !s.is_empty()))
-        .as_deref()
+    S.get_or_init(|| {
+        std::env::var("ALO_JMAP_WOPI_SECRET")
+            .ok()
+            .filter(|s| !s.is_empty())
+    })
+    .as_deref()
 }
 
 /// A verified WOPI grant.
@@ -53,12 +57,25 @@ fn sign_bytes(payload: &str, key: &str) -> Vec<u8> {
 }
 
 /// Mints a token valid for `ttl_secs` for (node, tenant, user, can_write).
-fn mint(node: &str, tenant: &str, user: &str, can_write: bool, now: i64, ttl_secs: i64) -> Option<String> {
+fn mint(
+    node: &str,
+    tenant: &str,
+    user: &str,
+    can_write: bool,
+    now: i64,
+    ttl_secs: i64,
+) -> Option<String> {
     let key = secret()?;
     let exp = now + ttl_secs;
-    let payload = format!("{node}|{tenant}|{user}|{}|{exp}", if can_write { 1 } else { 0 });
+    let payload = format!(
+        "{node}|{tenant}|{user}|{}|{exp}",
+        if can_write { 1 } else { 0 }
+    );
     let p = URL_SAFE_NO_PAD.encode(payload.as_bytes());
-    Some(format!("{p}.{}", URL_SAFE_NO_PAD.encode(sign_bytes(&p, key))))
+    Some(format!(
+        "{p}.{}",
+        URL_SAFE_NO_PAD.encode(sign_bytes(&p, key))
+    ))
 }
 
 /// Verifies a token: HMAC (constant-time via the mac crate), format, and expiry.
@@ -109,7 +126,10 @@ pub async fn office_token(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Problem> {
     if secret().is_none() {
-        return Err(Problem::with(StatusCode::NOT_FOUND, "office editing not configured"));
+        return Err(Problem::with(
+            StatusCode::NOT_FOUND,
+            "office editing not configured",
+        ));
     }
     let account = authenticate(&state, &headers).await?;
     let node = DriveNodeId::new(id);
@@ -139,9 +159,13 @@ async fn resolve(
     id: &str,
     token: &str,
 ) -> Result<(alo_store::AccountStore, alo_store::DriveNode, bool), Problem> {
-    let t = verify(token, now_unix()).ok_or_else(|| Problem::with(StatusCode::UNAUTHORIZED, "invalid token"))?;
+    let t = verify(token, now_unix())
+        .ok_or_else(|| Problem::with(StatusCode::UNAUTHORIZED, "invalid token"))?;
     if t.node != id {
-        return Err(Problem::with(StatusCode::UNAUTHORIZED, "token/file mismatch"));
+        return Err(Problem::with(
+            StatusCode::UNAUTHORIZED,
+            "token/file mismatch",
+        ));
     }
     let acc = state
         .store

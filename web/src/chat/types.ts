@@ -79,6 +79,31 @@ export interface Attachment {
   sharedAt: string;
 }
 
+/** An agent that can be named in a conversation. It has an identity to post
+ *  under and no authority of its own: every turn runs with the access of the
+ *  person who asked it. */
+export interface Agent {
+  id: string;
+  /** Typed after `@`. */
+  handle: string;
+  name: string;
+  description: string | null;
+  /** Retired: keeps its past messages, takes no new turns. */
+  disabled: boolean;
+}
+
+/** An action an agent proposed, waiting for a tap. */
+export interface Proposal {
+  id: string;
+  message: string;
+  /** The person whose words caused it — the only one who may decide. */
+  askedBy: string;
+  tool: string;
+  args: Record<string, unknown>;
+  state: "pending" | "approved" | "discarded" | "expired";
+  decidedBy: string | null;
+}
+
 /** One thing said in a room. */
 export interface Message {
   id: string;
@@ -86,9 +111,14 @@ export interface Message {
   /** Position in the room: the ordering key and the page cursor. */
   seq: number;
   author: string;
-  /** The author's address, or `null` when the id no longer resolves. A feed
-   *  must still render for someone who has left. */
+  /** Whether a person or an agent said it. Never inferred from the id: the
+   *  two do not share a namespace and must not be told apart by shape. */
+  authorKind: "user" | "agent";
+  /** A person's address, or an agent's name — whatever to call the author.
+   *  `null` when the id no longer resolves. */
   authorEmail: string | null;
+  /** On an agent's message, the person whose reach produced it. */
+  onBehalfOf: string | null;
   /** Empty when withdrawn — see `deletedAt`. */
   body: string;
   kind: "text" | "system";
@@ -102,6 +132,8 @@ export interface Message {
   mentions: string[];
   /** Files shared with it; empty when none. */
   attachments: Attachment[];
+  /** An action proposed on this message, if there is one. */
+  proposal: Proposal | null;
   createdAt: string;
   editedAt: string | null;
   /** Set when withdrawn: the row survives so the numbering never gains a

@@ -68,8 +68,15 @@ pub struct ChatMessage {
     /// Its position in that room: the ordering key, the page cursor, and what
     /// a read cursor is compared against.
     pub seq: i64,
-    /// Who said it.
+    /// Who said it. A person's user id, or an agent's id when
+    /// `author_is_agent` — the two never share a namespace, and a reader must
+    /// use the flag rather than guess from the shape of the string.
     pub author: UserId,
+    /// Whether the author is an agent rather than a person.
+    pub author_is_agent: bool,
+    /// On an agent's message, the person whose reach produced it. The room
+    /// sees the agent; the record shows who asked.
+    pub on_behalf_of: Option<UserId>,
     /// The text — empty when withdrawn (see `deleted_at`).
     pub body: String,
     /// A person's line, or the room's own narration.
@@ -121,7 +128,7 @@ pub struct ChatFeedMessage {
     pub last_reply_at: Option<OffsetDateTime>,
 }
 
-const MESSAGE_COLUMNS: &str = "id, channel_id, seq, author_id, body, kind, \
+const MESSAGE_COLUMNS: &str = "id, channel_id, seq, author_id, author_kind, on_behalf_of, body, kind, \
      thread_root_seq, created_at, edited_at, deleted_at";
 
 type MessageRow = (
@@ -129,6 +136,8 @@ type MessageRow = (
     String,
     i64,
     String,
+    String,
+    Option<String>,
     String,
     String,
     Option<i64>,
@@ -143,12 +152,14 @@ fn row_to_message(row: MessageRow) -> Result<ChatMessage> {
         channel: ChatChannelId::new(row.1),
         seq: row.2,
         author: UserId::new(row.3),
-        body: row.4,
-        kind: MessageKind::parse(&row.5)?,
-        thread_root_seq: row.6,
-        created_at: row.7,
-        edited_at: row.8,
-        deleted_at: row.9,
+        author_is_agent: row.4 == "agent",
+        on_behalf_of: row.5.map(UserId::new),
+        body: row.6,
+        kind: MessageKind::parse(&row.7)?,
+        thread_root_seq: row.8,
+        created_at: row.9,
+        edited_at: row.10,
+        deleted_at: row.11,
     })
 }
 
@@ -306,11 +317,14 @@ impl AccountStore {
     ) -> Result<Vec<ChatFeedMessage>> {
         self.channel(channel).await?;
         let limit = limit.clamp(1, MESSAGE_PAGE_MAX);
+        // The message's own columns, then the two the feed adds.
         type FeedRow = (
             String,
             String,
             i64,
             String,
+            String,
+            Option<String>,
             String,
             String,
             Option<i64>,
@@ -348,11 +362,12 @@ impl AccountStore {
         .map_err(StoreError::Db)?;
         rows.into_iter()
             .map(|r| {
-                let message: MessageRow = (r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9);
+                let message: MessageRow =
+                    (r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10, r.11);
                 Ok(ChatFeedMessage {
                     message: row_to_message(message)?,
-                    reply_count: r.10,
-                    last_reply_at: r.11,
+                    reply_count: r.12,
+                    last_reply_at: r.13,
                 })
             })
             .collect()

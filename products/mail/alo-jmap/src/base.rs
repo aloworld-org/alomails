@@ -4,18 +4,16 @@
 //! distinct literal prefixes (`base`, `base-tables`, `base-records`) so a node id
 //! param never collides with a `tables`/`records` literal in the router.
 
+use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
-use axum::Json;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
-use alo_store::{
-    Base, BaseRecordId, BaseTableId, DriveLocation, DriveNodeId, SpaceId, StoreError,
-};
+use alo_store::{Base, BaseRecordId, BaseTableId, DriveLocation, DriveNodeId, SpaceId, StoreError};
 
 use crate::error::Problem;
-use crate::state::{authenticate, AppState};
+use crate::state::{AppState, authenticate};
 
 fn map_err(e: StoreError) -> Problem {
     match e {
@@ -83,7 +81,11 @@ pub async fn create_base(
     }
     let node = account
         .acc
-        .create_base(&location_of(req.space.as_deref()), parent_of(req.parent.as_deref()).as_ref(), name)
+        .create_base(
+            &location_of(req.space.as_deref()),
+            parent_of(req.parent.as_deref()).as_ref(),
+            name,
+        )
         .await
         .map_err(map_err)?;
     Ok(Json(json!({ "nodeId": node.as_str() })))
@@ -183,7 +185,10 @@ pub async fn add_record(
     let req: RecordBody = serde_json::from_slice(&body).unwrap_or(RecordBody { cells: None });
     let id = account
         .acc
-        .base_add_record(&BaseTableId::new(table), &req.cells.unwrap_or_else(|| json!({})))
+        .base_add_record(
+            &BaseTableId::new(table),
+            &req.cells.unwrap_or_else(|| json!({})),
+        )
         .await
         .map_err(map_err)?;
     Ok(Json(json!({ "id": id.as_str() })))
@@ -200,7 +205,10 @@ pub async fn update_record(
     let req: RecordBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     account
         .acc
-        .base_update_record(&BaseRecordId::new(record), &req.cells.unwrap_or_else(|| json!({})))
+        .base_update_record(
+            &BaseRecordId::new(record),
+            &req.cells.unwrap_or_else(|| json!({})),
+        )
         .await
         .map_err(map_err)?;
     Ok(Json(json!({ "status": "ok" })))

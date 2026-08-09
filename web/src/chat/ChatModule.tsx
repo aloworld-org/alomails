@@ -21,6 +21,7 @@ import {
   Paperclip,
   Reply,
   Send,
+  Sparkles,
   SmilePlus,
   Users,
   X,
@@ -29,11 +30,18 @@ import {
 import { strings } from "../i18n";
 import { useAuth } from "../auth";
 import { FilePicker, fileSize, saveBlob } from "../drive";
+import { AgentActionCard } from "../shell/AgentActionCard";
 import { useJmapClient } from "../jmap";
 import { Avatar, Button } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
 import type { DriveNodeDto } from "../jmap/types";
-import type { Attachment, ChannelSummary, FeedMessage, Message } from "./types";
+import type {
+  Attachment,
+  ChannelSummary,
+  FeedMessage,
+  Message,
+  Proposal,
+} from "./types";
 import styles from "./ChatModule.module.css";
 
 /** The ceiling the server enforces (`ATTACHMENTS_MAX` in the store). Kept in
@@ -94,6 +102,33 @@ function withHandlesMarked(body: string): ReactNode[] {
 }
 
 /**
+ * Whether this reader may decide a proposal, and why not when they may not.
+ *
+ * Spread rather than passed as a possibly-undefined prop: with
+ * `exactOptionalPropertyTypes`, "absent" and "present but undefined" are
+ * different things, and only the first means "decidable".
+ */
+function standingOf(
+  proposal: Proposal,
+  me: string | null,
+): { standing?: { decidable: false; reason: string } } {
+  if (proposal.state !== "pending") {
+    return {
+      standing: {
+        decidable: false,
+        reason: strings.chatProposalSettled(proposal.state),
+      },
+    };
+  }
+  if (proposal.askedBy !== me) {
+    return {
+      standing: { decidable: false, reason: strings.chatProposalNotYours },
+    };
+  }
+  return {};
+}
+
+/**
  * One line of conversation, used by both the feed and the thread panel — the
  * two must never drift into showing a message differently. `children` is what
  * hangs under it (the thread affordance in the feed, nothing in a thread).
@@ -104,6 +139,7 @@ function MessageLine({
   me,
   onReact,
   onOpenFile,
+  onDecide,
   children,
 }: {
   message: Message;
@@ -115,26 +151,47 @@ function MessageLine({
   /** Fetches and saves a shared file. The API takes a bearer token, so a
    *  plain link would arrive unauthenticated and 401. */
   onOpenFile: (file: Attachment) => void;
+  /** Decide the proposal on this message. Only ever reachable for the asker;
+   *  everyone else sees the card without buttons. */
+  onDecide: (proposal: Proposal, approve: boolean) => void;
   children?: ReactNode;
 }) {
   const namesMe = me !== null && message.mentions.includes(me);
   const [picking, setPicking] = useState(false);
-  const who = personName(message.authorEmail, message.author);
+  const isAgent = message.authorKind === "agent";
+  // An agent's name is already a name; a person's address needs its local part.
+  const who = isAgent
+    ? (message.authorEmail ?? message.author)
+    : personName(message.authorEmail, message.author);
   // Withdrawn words take no reactions — the server refuses, so the picker is
   // not offered on them either.
   const reactable = palette.length > 0 && message.deletedAt === null;
   return (
     <article className={namesMe ? styles.messageForMe : styles.message}>
       <div className={styles.messageMeta}>
-        <Avatar name={who} email={message.authorEmail ?? undefined} size="sm" />
+        {isAgent ? (
+          <span className={styles.agentMark} aria-hidden="true">
+            <Sparkles size={13} />
+          </span>
+        ) : (
+          <Avatar
+            name={who}
+            email={message.authorEmail ?? undefined}
+            size="sm"
+          />
+        )}
         <span
-          className={styles.author}
+          className={isAgent ? styles.authorAgent : styles.author}
           // The full address on hover: the local part is what people say, the
           // address is what settles who it was.
           title={message.authorEmail ?? message.author}
         >
           {who}
         </span>
+        {isAgent && (
+          // An agent is not a colleague and must never be mistaken for one.
+          <span className={styles.agentTag}>{strings.chatAgentTag}</span>
+        )}
         <span className={styles.time}>{timeOf(message.createdAt)}</span>
         {message.editedAt !== null && message.deletedAt === null && (
           <span className={styles.edited}>{strings.chatEdited}</span>
@@ -147,6 +204,22 @@ function MessageLine({
           ? withHandlesMarked(message.body)
           : strings.chatWithdrawn}
       </p>
+
+      {message.proposal !== null && (
+        <div className={styles.proposal}>
+          <AgentActionCard
+            action={{
+              tool: message.proposal.tool,
+              args: message.proposal.args,
+              say: message.body,
+            }}
+            running={false}
+            onApprove={() => onDecide(message.proposal!, true)}
+            onDiscard={() => onDecide(message.proposal!, false)}
+            {...standingOf(message.proposal, me)}
+          />
+        </div>
+      )}
 
       {message.attachments.length > 0 && (
         <ul className={styles.files}>
@@ -401,6 +474,20 @@ export function ChatModule() {
     }
   }
 
+  async function decide(proposal: Proposal, approve: boolean) {
+    setError(null);
+    try {
+      await api.decideProposal(proposal.id, approve);
+    } catch (failure) {
+      // Includes the 403 for someone else's proposal, said in the server's
+      // own words rather than a guess made here.
+      setError(chatMessage(failure, strings.chatDecideFailed));
+    }
+    // Either way the room moved: approving ran the action, and both outcomes
+    // settle a card the whole room is watching.
+    if (openId !== null) void loadMessages(openId);
+  }
+
   async function react(messageId: string, emoji: string) {
     try {
       const tally = await api.react(messageId, emoji);
@@ -574,6 +661,7 @@ export function ChatModule() {
                     me={me}
                     onReact={(emoji) => void react(message.id, emoji)}
                     onOpenFile={(file) => void openFile(file)}
+                    onDecide={(p, ok) => void decide(p, ok)}
                   >
                     {message.replyCount > 0 ? (
                       <button
@@ -723,6 +811,7 @@ export function ChatModule() {
               me={me}
               onReact={(emoji) => void react(threadRoot.id, emoji)}
               onOpenFile={(file) => void openFile(file)}
+              onDecide={(p, ok) => void decide(p, ok)}
             />
             <hr className={styles.threadRule} />
             {replies === null ? (
@@ -741,6 +830,7 @@ export function ChatModule() {
                   me={me}
                   onReact={(emoji) => void react(reply.id, emoji)}
                   onOpenFile={(file) => void openFile(file)}
+                  onDecide={(p, ok) => void decide(p, ok)}
                 />
               ))
             )}

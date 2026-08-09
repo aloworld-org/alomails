@@ -4,18 +4,18 @@
 //! location, so a non-member gets 404 and a space viewer trying to write gets
 //! 403 — enforced entirely in the store.
 
+use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::Response;
-use axum::Json;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use time::format_description::well_known::Rfc3339;
 
 use alo_store::{BlobId, DriveLocation, DriveNode, DriveNodeId, NewDriveFile, SpaceId, StoreError};
 
 use crate::error::Problem;
-use crate::state::{authenticate, AppState};
+use crate::state::{AppState, authenticate};
 
 fn map_err(e: StoreError) -> Problem {
     match e {
@@ -87,7 +87,9 @@ pub async fn list(
         .drive_list(&loc, parent.as_ref())
         .await
         .map_err(map_err)?;
-    Ok(Json(json!({ "nodes": nodes.iter().map(node_json).collect::<Vec<_>>() })))
+    Ok(Json(
+        json!({ "nodes": nodes.iter().map(node_json).collect::<Vec<_>>() }),
+    ))
 }
 
 /// `GET /drive/trash?space=` → `{"nodes":[...]}` — the trashed nodes of a location.
@@ -99,7 +101,9 @@ pub async fn trash(
     let account = authenticate(&state, &headers).await?;
     let loc = location_of(q.space.as_deref());
     let nodes = account.acc.drive_trash(&loc).await.map_err(map_err)?;
-    Ok(Json(json!({ "nodes": nodes.iter().map(node_json).collect::<Vec<_>>() })))
+    Ok(Json(
+        json!({ "nodes": nodes.iter().map(node_json).collect::<Vec<_>>() }),
+    ))
 }
 
 #[derive(Deserialize)]
@@ -125,7 +129,11 @@ pub async fn create_folder(
     }
     let id = account
         .acc
-        .drive_create_folder(&location_of(req.space.as_deref()), parent_of(req.parent.as_deref()).as_ref(), name)
+        .drive_create_folder(
+            &location_of(req.space.as_deref()),
+            parent_of(req.parent.as_deref()).as_ref(),
+            name,
+        )
         .await
         .map_err(map_err)?;
     Ok(Json(json!({ "id": id.as_str() })))
@@ -163,7 +171,10 @@ pub async fn create_file(
     let account = authenticate(&state, &headers).await?;
     let req: FileBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     if req.name.trim().is_empty() || req.blob_id.trim().is_empty() {
-        return Err(Problem::with(StatusCode::BAD_REQUEST, "name and blobId are required"));
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "name and blobId are required",
+        ));
     }
     let kind = req.kind.as_deref().unwrap_or("file");
     if !FILE_KINDS.contains(&kind) {
@@ -180,7 +191,11 @@ pub async fn create_file(
     };
     let id = account
         .acc
-        .drive_create_file(&location_of(req.space.as_deref()), parent_of(req.parent.as_deref()).as_ref(), &new)
+        .drive_create_file(
+            &location_of(req.space.as_deref()),
+            parent_of(req.parent.as_deref()).as_ref(),
+            &new,
+        )
         .await
         .map_err(map_err)?;
     Ok(Json(json!({ "id": id.as_str() })))
@@ -220,7 +235,10 @@ pub async fn rename(
     let req: RenameBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let name = req.name.trim();
     if name.is_empty() {
-        return Err(Problem::with(StatusCode::BAD_REQUEST, "name cannot be empty"));
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "name cannot be empty",
+        ));
     }
     account
         .acc
@@ -250,7 +268,11 @@ pub async fn move_node(
     let req: DestBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     account
         .acc
-        .drive_move(&DriveNodeId::new(id), &location_of(req.space.as_deref()), parent_of(req.parent.as_deref()).as_ref())
+        .drive_move(
+            &DriveNodeId::new(id),
+            &location_of(req.space.as_deref()),
+            parent_of(req.parent.as_deref()).as_ref(),
+        )
         .await
         .map_err(map_err)?;
     Ok(Json(json!({ "status": "ok" })))
@@ -267,7 +289,11 @@ pub async fn copy_node(
     let req: DestBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let new = account
         .acc
-        .drive_copy(&DriveNodeId::new(id), &location_of(req.space.as_deref()), parent_of(req.parent.as_deref()).as_ref())
+        .drive_copy(
+            &DriveNodeId::new(id),
+            &location_of(req.space.as_deref()),
+            parent_of(req.parent.as_deref()).as_ref(),
+        )
         .await
         .map_err(map_err)?;
     Ok(Json(json!({ "id": new.as_str() })))
@@ -406,6 +432,9 @@ pub async fn download(
         .blob_bytes_for_send(&BlobId::new(blob))
         .await
         .map_err(map_err)?;
-    let ct = node.content_type.as_deref().unwrap_or("application/octet-stream");
+    let ct = node
+        .content_type
+        .as_deref()
+        .unwrap_or("application/octet-stream");
     Ok(crate::blob::serve_download(bytes, ct, &node.name))
 }

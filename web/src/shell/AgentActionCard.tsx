@@ -76,7 +76,9 @@ function whenAt(iso: string): string {
 function dayOf(iso: string): string {
   if (iso === "") return "";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString(undefined, { dateStyle: "medium" });
+  return Number.isNaN(d.getTime())
+    ? iso
+    : d.toLocaleDateString(undefined, { dateStyle: "medium" });
 }
 
 function subjectOrNone(args: Record<string, unknown>): string {
@@ -95,7 +97,8 @@ function proposedLines(args: Record<string, unknown>): string[] {
     const what = str(l, "product") || str(l, "description");
     if (what === "") return [];
     const qty = l["quantity"];
-    const shown = typeof qty === "number" || typeof qty === "string" ? String(qty) : "1";
+    const shown =
+      typeof qty === "number" || typeof qty === "string" ? String(qty) : "1";
     return [`${shown} × ${what}`];
   });
 }
@@ -109,14 +112,21 @@ function proposedValue(args: Record<string, unknown>): string {
   const cents = args["valueCents"];
   if (typeof cents !== "number" || !Number.isInteger(cents)) return "";
   const currency = str(args, "currency");
-  return formatAmount(cents, getLocale(), currency === "" ? undefined : currency);
+  return formatAmount(
+    cents,
+    getLocale(),
+    currency === "" ? undefined : currency,
+  );
 }
 
 /** Map a proposed action to its icon, title, and preview fields. Falls back to the
  *  model's own one-line `say` for any tool without a bespoke preview. */
 function describeAction(action: AgentActionDto): ActionView {
   const a = action.args;
-  const email: Field = { label: strings.agentFieldEmail, value: subjectOrNone(a) };
+  const email: Field = {
+    label: strings.agentFieldEmail,
+    value: subjectOrNone(a),
+  };
   switch (action.tool) {
     case "draft_email":
       return {
@@ -130,7 +140,8 @@ function describeAction(action: AgentActionDto): ActionView {
       };
     case "draft_reply": {
       const s = str(a, "subject");
-      const re = s === "" ? strings.agentNoSubject : /^re:/i.test(s) ? s : `Re: ${s}`;
+      const re =
+        s === "" ? strings.agentNoSubject : /^re:/i.test(s) ? s : `Re: ${s}`;
       return {
         icon: Reply,
         title: strings.agentActReply,
@@ -152,38 +163,55 @@ function describeAction(action: AgentActionDto): ActionView {
     case "mark_read":
       return {
         icon: MailOpen,
-        title: isTrue(a, "read") ? strings.agentActMarkRead : strings.agentActMarkUnread,
+        title: isTrue(a, "read")
+          ? strings.agentActMarkRead
+          : strings.agentActMarkUnread,
         fields: [email],
       };
     case "flag_email":
       return {
         icon: isTrue(a, "flagged") ? Flag : FlagOff,
-        title: isTrue(a, "flagged") ? strings.agentActFlag : strings.agentActUnflag,
+        title: isTrue(a, "flagged")
+          ? strings.agentActFlag
+          : strings.agentActUnflag,
         fields: [email],
       };
     case "snooze_email":
       return {
         icon: Clock,
         title: strings.agentActSnooze,
-        fields: [email, { label: strings.agentFieldUntil, value: whenAt(str(a, "until")) }],
+        fields: [
+          email,
+          { label: strings.agentFieldUntil, value: whenAt(str(a, "until")) },
+        ],
       };
     case "move_to_folder":
       return {
         icon: FolderInput,
         title: strings.agentActMove,
-        fields: [email, { label: strings.agentFieldFolder, value: str(a, "folder") }],
+        fields: [
+          email,
+          { label: strings.agentFieldFolder, value: str(a, "folder") },
+        ],
       };
     case "create_task": {
-      const fields: Field[] = [{ label: strings.agentFieldTask, value: str(a, "title") }];
+      const fields: Field[] = [
+        { label: strings.agentFieldTask, value: str(a, "title") },
+      ];
       const due = dayOf(str(a, "due"));
       if (due !== "") fields.push({ label: strings.agentFieldDue, value: due });
       return { icon: ListChecks, title: strings.agentActTask, fields };
     }
     case "create_invoice_draft": {
       const lines = proposedLines(a);
-      const fields: Field[] = [{ label: strings.agentFieldCustomer, value: str(a, "customer") }];
+      const fields: Field[] = [
+        { label: strings.agentFieldCustomer, value: str(a, "customer") },
+      ];
       if (lines.length > 0) {
-        fields.push({ label: strings.agentFieldLines, value: strings.agentLineCount(lines.length) });
+        fields.push({
+          label: strings.agentFieldLines,
+          value: strings.agentLineCount(lines.length),
+        });
       }
       return {
         icon: FileText,
@@ -206,25 +234,32 @@ function describeAction(action: AgentActionDto): ActionView {
       return {
         icon: BellRing,
         title: strings.agentActPaymentReminder,
-        fields: [{ label: strings.agentFieldInvoice, value: str(a, "invoice") }],
+        fields: [
+          { label: strings.agentFieldInvoice, value: str(a, "invoice") },
+        ],
         body: str(a, "note"),
         note: strings.agentReminderNote,
       };
     // CRM tools (ADR 0035, B2.10). A deal is named, never numbered, so every
     // one of these previews the title the user will be acting on.
     case "create_deal": {
-      const fields: Field[] = [{ label: strings.agentFieldDeal, value: str(a, "title") }];
+      const fields: Field[] = [
+        { label: strings.agentFieldDeal, value: str(a, "title") },
+      ];
       const company = str(a, "company");
-      if (company !== "") fields.push({ label: strings.agentFieldCompany, value: company });
+      if (company !== "")
+        fields.push({ label: strings.agentFieldCompany, value: company });
       const value = proposedValue(a);
       if (value !== "") fields.push({ label: strings.agentFieldValue, value });
       const stage = str(a, "stage");
-      if (stage !== "") fields.push({ label: strings.agentFieldStage, value: stage });
+      if (stage !== "")
+        fields.push({ label: strings.agentFieldStage, value: stage });
       // The note is only there when the proposal carries an email: approving
       // then links that conversation to the new deal, which is worth saying out
       // loud. (The propose route rewrites the source number into a message id,
       // so either shape means "raised from a conversation".)
-      const fromEmail = a["source"] !== undefined || a["message_id"] !== undefined;
+      const fromEmail =
+        a["source"] !== undefined || a["message_id"] !== undefined;
       return {
         icon: Handshake,
         title: strings.agentActCreateDeal,
@@ -238,7 +273,8 @@ function describeAction(action: AgentActionDto): ActionView {
         { label: strings.agentFieldStage, value: str(a, "stage") },
       ];
       const reason = str(a, "reason");
-      if (reason !== "") fields.push({ label: strings.agentFieldLostReason, value: reason });
+      if (reason !== "")
+        fields.push({ label: strings.agentFieldLostReason, value: reason });
       return { icon: MoveRight, title: strings.agentActMoveDeal, fields };
     }
     case "draft_followup":
@@ -247,7 +283,10 @@ function describeAction(action: AgentActionDto): ActionView {
         title: strings.agentActFollowup,
         fields: [
           { label: strings.agentFieldDeal, value: str(a, "deal") },
-          { label: strings.agentFieldSubject, value: str(a, "subject") || str(a, "deal") },
+          {
+            label: strings.agentFieldSubject,
+            value: str(a, "subject") || str(a, "deal"),
+          },
         ],
         body: str(a, "body"),
         note: strings.agentFollowupNote,
@@ -256,12 +295,17 @@ function describeAction(action: AgentActionDto): ActionView {
     // a logged hour is a suggestion the timesheet accepts — both are said out
     // loud on the card, because approving is where the user decides.
     case "log_time": {
-      const fields: Field[] = [{ label: strings.agentFieldProject, value: str(a, "project") }];
+      const fields: Field[] = [
+        { label: strings.agentFieldProject, value: str(a, "project") },
+      ];
       const day = dayOf(str(a, "date"));
       if (day !== "") fields.push({ label: strings.agentFieldDay, value: day });
       const minutes = a["minutes"];
       if (typeof minutes === "number" && Number.isInteger(minutes)) {
-        fields.push({ label: strings.agentFieldDuration, value: durationLabel(minutes) });
+        fields.push({
+          label: strings.agentFieldDuration,
+          value: durationLabel(minutes),
+        });
       }
       return {
         icon: Clock,
@@ -275,7 +319,9 @@ function describeAction(action: AgentActionDto): ActionView {
       return {
         icon: Gauge,
         title: strings.agentActProjectStatus,
-        fields: [{ label: strings.agentFieldProject, value: str(a, "project") }],
+        fields: [
+          { label: strings.agentFieldProject, value: str(a, "project") },
+        ],
         note: strings.agentProjectStatusNote,
       };
     // The calendar draft (B3.10b). The days are what the user is really
@@ -287,7 +333,11 @@ function describeAction(action: AgentActionDto): ActionView {
       const fields: Field[] = [
         { label: strings.agentFieldProject, value: str(a, "project") },
       ];
-      if (from !== "") fields.push({ label: strings.agentFieldDay, value: strings.agentDraftedRange(from, to) });
+      if (from !== "")
+        fields.push({
+          label: strings.agentFieldDay,
+          value: strings.agentDraftedRange(from, to),
+        });
       return {
         icon: CalendarRange,
         title: strings.agentActDraftTimesheet,
@@ -296,9 +346,12 @@ function describeAction(action: AgentActionDto): ActionView {
       };
     }
     case "create_event": {
-      const fields: Field[] = [{ label: strings.agentFieldEvent, value: str(a, "title") }];
+      const fields: Field[] = [
+        { label: strings.agentFieldEvent, value: str(a, "title") },
+      ];
       const start = whenAt(str(a, "start"));
-      if (start !== "") fields.push({ label: strings.agentFieldWhen, value: start });
+      if (start !== "")
+        fields.push({ label: strings.agentFieldWhen, value: start });
       return { icon: CalendarPlus, title: strings.agentActEvent, fields };
     }
     default:
@@ -315,16 +368,23 @@ export function AgentActionCard({
   running,
   onApprove,
   onDiscard,
+  standing,
 }: {
   action: AgentActionDto;
   running: boolean;
   onApprove: () => void;
   onDiscard: () => void;
+  /** When set, the card shows the proposal but offers no decision, and says
+   *  why. Used in chat, where a whole room sees a proposal only its asker may
+   *  decide, and where a settled one stays visible as a record. Omitted
+   *  everywhere the viewer is the only person who could ever decide. */
+  standing?: { decidable: false; reason: string };
 }) {
   const view = describeAction(action);
   const Icon = view.icon;
   const isSend = view.caution !== undefined;
-  const hasPreview = view.fields.length > 0 || (view.body !== undefined && view.body !== "");
+  const hasPreview =
+    view.fields.length > 0 || (view.body !== undefined && view.body !== "");
   return (
     <div className={styles.card}>
       <div className={styles.header}>
@@ -338,7 +398,9 @@ export function AgentActionCard({
           {view.fields.map((f) => (
             <div key={f.label} className={styles.field}>
               <span className={styles.fieldLabel}>{f.label}</span>
-              <span className={styles.fieldValue}>{f.value === "" ? "—" : f.value}</span>
+              <span className={styles.fieldValue}>
+                {f.value === "" ? "—" : f.value}
+              </span>
             </div>
           ))}
           {view.body !== undefined && view.body !== "" && (
@@ -353,30 +415,36 @@ export function AgentActionCard({
           <span>{view.caution}</span>
         </p>
       )}
-      <div className={styles.buttons}>
-        <button
-          type="button"
-          className={styles.approve}
-          onClick={onApprove}
-          disabled={running}
-        >
-          {running ? (
-            <Spinner size={14} />
-          ) : isSend ? (
-            strings.agentSendButton
-          ) : (
-            strings.agentApprove
-          )}
-        </button>
-        <button
-          type="button"
-          className={styles.discard}
-          onClick={onDiscard}
-          disabled={running}
-        >
-          {strings.agentDiscard}
-        </button>
-      </div>
+      {standing !== undefined ? (
+        // Not a disabled button: a control that cannot be used should not be
+        // shown as one. The sentence is the whole affordance.
+        <p className={styles.note}>{standing.reason}</p>
+      ) : (
+        <div className={styles.buttons}>
+          <button
+            type="button"
+            className={styles.approve}
+            onClick={onApprove}
+            disabled={running}
+          >
+            {running ? (
+              <Spinner size={14} />
+            ) : isSend ? (
+              strings.agentSendButton
+            ) : (
+              strings.agentApprove
+            )}
+          </button>
+          <button
+            type="button"
+            className={styles.discard}
+            onClick={onDiscard}
+            disabled={running}
+          >
+            {strings.agentDiscard}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

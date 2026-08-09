@@ -1674,6 +1674,12 @@ export const en = {
   chatArchived: "Archived",
   chatReplyInThread: "Reply in thread",
   chatAddReaction: "Add a reaction",
+  chatAgentTag: "agent",
+  chatProposalNotYours:
+    "Only the person who asked can approve this — it would run with their access.",
+  chatProposalSettled: (state: string): string =>
+    state === "approved" ? "Approved and done." : `This was ${state}.`,
+  chatDecideFailed: "That couldn’t be decided.",
   chatAttach: "Attach a file",
   chatUnstage: (name: string): string => `Remove ${name}`,
   chatAttachFailed: "That file couldn’t be shared.",

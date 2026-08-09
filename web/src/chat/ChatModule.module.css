@@ -235,6 +235,48 @@
   outline-offset: 1px;
 }
 
+/* ---- agents ---------------------------------------------------------- */
+
+/* An agent is marked, not avatared. A face would say "colleague", and the one
+   thing a reader must never be unsure about is whether they are talking to a
+   person. */
+.agentMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.authorAgent {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.agentTag {
+  flex: none;
+  padding: 0 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* The proposal sits under the words that proposed it, indented so the feed
+   still reads as a conversation with a card in it rather than a form. */
+.proposal {
+  margin-top: var(--space-2);
+  max-width: 520px;
+}
+
 /* ---- shared files ---------------------------------------------------- */
 
 .files {

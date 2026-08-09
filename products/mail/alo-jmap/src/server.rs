@@ -18,9 +18,10 @@ use crate::{
     admin, agent, ai, api, audit, audit_record, autoconfig, base, billing_bills, billing_customers,
     billing_fx, billing_invoices, billing_payments, billing_products, billing_quotes,
     billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
-    billing_settings, blob, calendar, carddav, chat, contacts, crm_activities, crm_deals,
-    crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
-    delegates, docs, drive, filters, finance_approvals, finance_bank, finance_expenses,
+    billing_settings, blob, calendar, carddav, chat, chat_agent_routes, contacts, crm_activities,
+    crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages,
+    crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
+    finance_expenses,
     finance_mileage, finance_receipts, flagdue, imap_import_route, insights, insights_ask,
     insights_eval, insights_gallery, projects_clients, projects_invoices, projects_plan,
     projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
@@ -224,6 +225,22 @@ pub fn app(state: AppState) -> Router {
         // Static before `{id}`: `/chat/reactions` must not be read as a
         // message called "reactions".
         .route("/chat/reactions", get(chat::list_reactions))
+        .route(
+            "/chat/agents",
+            get(chat_agent_routes::list_agents).post(chat_agent_routes::create_agent),
+        )
+        .route(
+            "/chat/channels/{id}/agents",
+            get(chat_agent_routes::list_channel_agents).post(chat_agent_routes::add_channel_agent),
+        )
+        .route(
+            "/chat/channels/{id}/agents/{agent}",
+            delete(chat_agent_routes::remove_channel_agent),
+        )
+        .route(
+            "/chat/proposals/{id}",
+            post(chat_agent_routes::decide_proposal),
+        )
         .route(
             "/chat/messages/{id}",
             patch(chat::edit_message).delete(chat::delete_message),

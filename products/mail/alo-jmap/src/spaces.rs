@@ -4,17 +4,17 @@
 //! non-member gets 404 (existence hidden), a member below the needed role gets
 //! 403.
 
+use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
-use axum::Json;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use time::format_description::well_known::Rfc3339;
 
 use alo_store::{SpaceId, SpaceRole, StoreError, UserId};
 
 use crate::error::Problem;
-use crate::state::{authenticate, AppState};
+use crate::state::{AppState, authenticate};
 
 fn map_err(e: StoreError) -> Problem {
     match e {
@@ -128,9 +128,16 @@ pub async fn update_space(
     let sid = SpaceId::new(id);
     if let Some(name) = req.name.as_deref().map(str::trim) {
         if name.is_empty() {
-            return Err(Problem::with(StatusCode::BAD_REQUEST, "name cannot be empty"));
+            return Err(Problem::with(
+                StatusCode::BAD_REQUEST,
+                "name cannot be empty",
+            ));
         }
-        account.acc.rename_space(&sid, name).await.map_err(map_err)?;
+        account
+            .acc
+            .rename_space(&sid, name)
+            .await
+            .map_err(map_err)?;
     }
     if let Some(archived) = req.archived {
         account

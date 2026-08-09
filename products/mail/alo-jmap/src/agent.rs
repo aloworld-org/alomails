@@ -155,43 +155,63 @@ pub async fn agent_execute(
     let req: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let tool = req.get("tool").and_then(Value::as_str).unwrap_or("").trim();
     let args = req.get("args").cloned().unwrap_or(Value::Null);
+    execute_tool(&state, &account, tool, &args).await
+}
+
+/// Run one approved tool through the caller's own store.
+///
+/// The **only** acting path, shared by every surface that can approve
+/// something: the command palette's execute route above, and chat's proposal
+/// approval. One allowlist and one dispatcher, so a tool cannot be reachable
+/// from one surface and unreachable from another, and a new tool cannot be
+/// half-wired.
+///
+/// # Errors
+/// 400 for a tool outside the allowlist, 422 for arguments that do not name
+/// something real, whatever the executor itself raises otherwise.
+pub(crate) async fn execute_tool(
+    state: &AppState,
+    account: &Account,
+    tool: &str,
+    args: &Value,
+) -> Result<Json<Value>, Problem> {
     if !alo_ai::is_agent_tool(tool) {
         return Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool"));
     }
     match tool {
-        "create_task" => execute_create_task(&account, &args).await,
-        "create_event" => execute_create_event(&account, &args).await,
-        "mark_read" => execute_set_keyword(&account, &args, "$seen", "read").await,
-        "flag_email" => execute_set_keyword(&account, &args, "$flagged", "flagged").await,
-        "archive_email" => execute_move_to_role(&account, &args, "archive", "Archive").await,
-        "trash_email" => execute_move_to_role(&account, &args, "trash", "Trash").await,
-        "snooze_email" => execute_snooze(&account, &args).await,
-        "draft_email" => execute_draft_email(&account, &args, &state).await,
-        "draft_reply" => execute_draft_reply(&account, &args, &state).await,
-        "send_email" => execute_send(&account, &args, &state).await,
-        "move_to_folder" => execute_move_to_folder(&account, &args).await,
+        "create_task" => execute_create_task(account, args).await,
+        "create_event" => execute_create_event(account, args).await,
+        "mark_read" => execute_set_keyword(account, args, "$seen", "read").await,
+        "flag_email" => execute_set_keyword(account, args, "$flagged", "flagged").await,
+        "archive_email" => execute_move_to_role(account, args, "archive", "Archive").await,
+        "trash_email" => execute_move_to_role(account, args, "trash", "Trash").await,
+        "snooze_email" => execute_snooze(account, args).await,
+        "draft_email" => execute_draft_email(account, args, state).await,
+        "draft_reply" => execute_draft_reply(account, args, state).await,
+        "send_email" => execute_send(account, args, state).await,
+        "move_to_folder" => execute_move_to_folder(account, args).await,
         // alo Billing's tools (B1.25). A product's executors live in that
         // product's module, so this match stays a dispatcher and never becomes
         // the place every module's argument rules pile up.
-        "create_invoice_draft" => billing::execute_create_invoice_draft(&account, &args).await,
-        "quote_to_invoice" => billing::execute_quote_to_invoice(&account, &args).await,
+        "create_invoice_draft" => billing::execute_create_invoice_draft(account, args).await,
+        "quote_to_invoice" => billing::execute_quote_to_invoice(account, args).await,
         "draft_payment_reminder" => {
-            billing::execute_draft_payment_reminder(&account, &args, &state).await
+            billing::execute_draft_payment_reminder(account, args, state).await
         }
         // alo CRM's tools (B2.10), on the same seam.
-        "create_deal" => crm::execute_create_deal(&account, &args, &state).await,
-        "move_deal_stage" => crm::execute_move_deal_stage(&account, &args).await,
-        "draft_followup" => crm::execute_draft_followup(&account, &args, &state).await,
+        "create_deal" => crm::execute_create_deal(account, args, state).await,
+        "move_deal_stage" => crm::execute_move_deal_stage(account, args).await,
+        "draft_followup" => crm::execute_draft_followup(account, args, state).await,
         // alo Projects' tools (B3.10a), on the same seam. `log_time` writes a
         // *proposed* entry the user accepts in their own timesheet; the summary
         // writes nothing at all.
-        "log_time" => projects::execute_log_time(&account, &args).await,
-        "project_status_summary" => projects::execute_project_status_summary(&account, &args).await,
+        "log_time" => projects::execute_log_time(account, args).await,
+        "project_status_summary" => projects::execute_project_status_summary(account, args).await,
         // B3.10b: a period of the caller's own Agenda turned into proposals,
         // in its own module because it decides about a diary rather than a
         // record.
         "draft_timesheet_from_calendar" => {
-            timesheet::execute_draft_timesheet_from_calendar(&account, &args).await
+            timesheet::execute_draft_timesheet_from_calendar(account, args).await
         }
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),

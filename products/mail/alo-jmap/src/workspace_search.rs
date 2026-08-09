@@ -2,14 +2,14 @@
 //! caller's Drive files, visible tasks, and own mail (by full message content).
 //! Access is enforced in the store, so this only shapes the response.
 
+use axum::Json;
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
-use axum::Json;
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::error::Problem;
-use crate::state::{authenticate, AppState};
+use crate::state::{AppState, authenticate};
 
 #[derive(Deserialize)]
 pub struct SearchQuery {

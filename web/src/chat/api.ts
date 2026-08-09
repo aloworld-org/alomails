@@ -15,12 +15,14 @@ import { useMemo } from "react";
 import { useAuth } from "../auth";
 import { API_BASE } from "../platform/runtime";
 import type {
+  Agent,
   Channel,
   ChannelDetail,
   ChannelSummary,
   FeedMessage,
   Message,
   NewChannel,
+  Proposal,
   Reaction,
 } from "./types";
 
@@ -119,6 +121,41 @@ export class ChatApi {
       { emoji },
     );
     return body.reactions;
+  }
+
+  /** The agents in a room, for the composer's `@` list. */
+  async channelAgents(id: string): Promise<Agent[]> {
+    const body = await this.#read<{ agents: Agent[] }>(
+      `/chat/channels/${encodeURIComponent(id)}/agents`,
+    );
+    return body.agents;
+  }
+
+  /** Every agent the tenant has, for choosing one to add to a room. */
+  async agents(): Promise<Agent[]> {
+    const body = await this.#read<{ agents: Agent[] }>("/chat/agents");
+    return body.agents;
+  }
+
+  /** Put an agent in a room. */
+  async addAgent(id: string, agent: string): Promise<Agent[]> {
+    const body = await this.#write<{ agents: Agent[] }>(
+      "POST",
+      `/chat/channels/${encodeURIComponent(id)}/agents`,
+      { agent },
+    );
+    return body.agents;
+  }
+
+  /** Decide a proposed action. Approving runs it in the same request, so the
+   *  answer already reflects what happened; 403 if the caller is not the
+   *  person who asked. */
+  async decideProposal(id: string, approve: boolean): Promise<Proposal> {
+    return this.#write<Proposal>(
+      "POST",
+      `/chat/proposals/${encodeURIComponent(id)}`,
+      { approve },
+    );
   }
 
   /** The replies under one message, oldest first — a thread reads forwards. */
