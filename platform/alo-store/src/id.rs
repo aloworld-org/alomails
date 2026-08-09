@@ -216,6 +216,10 @@ opaque_id!(
     SiteFormSubmissionId
 );
 opaque_id!(
+    /// One blog post on an alo Sites website; its body lives in alo Docs.
+    SitePostId
+);
+opaque_id!(
     /// A billing customer — the company or person a tenant invoices
     /// (alo Billing, ADR 0035).
     BillingCustomerId

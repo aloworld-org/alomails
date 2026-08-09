@@ -255,6 +255,24 @@ pub fn app(state: AppState) -> Router {
             "/sites/{id}/pages",
             get(sites::list_pages).post(sites::create_page),
         )
+        .route(
+            "/sites/{id}/posts",
+            get(sites::list_posts).post(sites::create_post),
+        )
+        .route(
+            "/sites/{id}/posts/{post}",
+            get(sites::get_post)
+                .put(sites::update_post)
+                .delete(sites::delete_post),
+        )
+        .route(
+            "/sites/{id}/posts/{post}/publish",
+            post(sites::publish_post),
+        )
+        .route(
+            "/sites/{id}/posts/{post}/unpublish",
+            post(sites::unpublish_post),
+        )
         .route("/sites/{id}/pages/order", put(sites::reorder_pages))
         .route(
             "/sites/{id}/pages/{pid}",

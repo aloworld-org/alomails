@@ -13,7 +13,7 @@
 
 mod common;
 
-use alo_store::SiteId;
+use alo_store::{DriveLocation, NewDriveFile, SiteId};
 use axum::Router;
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -119,6 +119,18 @@ async fn every_route_family_requires_a_bearer_token() {
         ("GET", "/sites/config".to_owned(), None),
         ("GET", "/sites/some-id/submissions".to_owned(), None),
         ("GET", "/sites/some-id/submissions.csv".to_owned(), None),
+        ("GET", "/sites/some-id/posts".to_owned(), None),
+        (
+            "POST",
+            "/sites/some-id/posts".to_owned(),
+            Some(json!({ "docNodeId": "doc", "slug": "post", "title": "Post" })),
+        ),
+        ("GET", "/sites/some-id/posts/post".to_owned(), None),
+        (
+            "POST",
+            "/sites/some-id/posts/post/publish".to_owned(),
+            Some(json!({})),
+        ),
         (
             "PUT",
             "/sites/some-id/forms/form/submissions/submission".to_owned(),
@@ -968,6 +980,94 @@ async fn rule_violations_answer_422_with_the_rule() {
     assert_eq!(status, StatusCode::BAD_REQUEST);
 }
 
+// ---- blog posts ------------------------------------------------------------
+
+#[tokio::test]
+async fn blog_post_routes_keep_the_body_in_drive_and_metadata_on_the_site() {
+    let h = harness("sites-posts").await;
+    let site = created_id(
+        "site",
+        post(
+            &h.app,
+            &h.token,
+            "/sites",
+            json!({ "name": "Journal", "subdomain": sub("journal", &h) }),
+        )
+        .await,
+    );
+    let doc = h
+        .acc
+        .drive_create_file(
+            &DriveLocation::Personal,
+            None,
+            &NewDriveFile {
+                name: "Opening story".to_owned(),
+                blob_id: "http-post-doc".to_owned(),
+                kind: Some("doc".to_owned()),
+                ..NewDriveFile::default()
+            },
+        )
+        .await
+        .unwrap();
+    let base = format!("/sites/{site}/posts");
+    let post_id = created_id(
+        "post",
+        post(
+            &h.app,
+            &h.token,
+            &base,
+            json!({
+                "docNodeId": doc.as_str(),
+                "slug": "opening-story",
+                "title": "Opening story",
+                "excerpt": "The first chapter"
+            }),
+        )
+        .await,
+    );
+
+    let (status, body) = get(&h.app, &h.token, &base).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["posts"][0]["id"], json!(post_id));
+    assert_eq!(body["posts"][0]["status"], json!("draft"));
+    assert_eq!(body["posts"][0]["docNodeId"], json!(doc.as_str()));
+
+    let item = format!("{base}/{post_id}");
+    let (status, body) = put(
+        &h.app,
+        &h.token,
+        &item,
+        json!({
+            "slug": "opening-notes",
+            "title": "Opening notes",
+            "excerpt": "Revised"
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "update failed: {body}");
+    let (status, body) = post(&h.app, &h.token, &format!("{item}/publish"), json!({})).await;
+    assert_eq!(status, StatusCode::OK, "publish failed: {body}");
+    let (_, body) = get(&h.app, &h.token, &item).await;
+    assert_eq!(body["title"], json!("Opening notes"));
+    assert_eq!(body["status"], json!("published"));
+    assert!(body["publishedAt"].is_string());
+
+    let (status, body) = post(&h.app, &h.token, &format!("{item}/unpublish"), json!({})).await;
+    assert_eq!(status, StatusCode::OK, "unpublish failed: {body}");
+    let (status, body) = delete(&h.app, &h.token, &item).await;
+    assert_eq!(status, StatusCode::OK, "delete failed: {body}");
+    assert!(h.acc.drive_node(&doc).await.unwrap().is_some());
+
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        &base,
+        json!({ "docNodeId": "missing", "slug": "missing", "title": "Missing" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "missing doc: {body}");
+}
+
 // ---- the wrong-tenant test (mandatory: CLAUDE.md law 1) ----------------------
 
 #[tokio::test]
@@ -993,6 +1093,34 @@ async fn another_tenants_site_is_invisible_on_every_route() {
             &b.token,
             &format!("/sites/{b_site}/pages"),
             json!({ "title": "B Home", "home": true }),
+        )
+        .await,
+    );
+    let b_doc = b
+        .acc
+        .drive_create_file(
+            &DriveLocation::Personal,
+            None,
+            &NewDriveFile {
+                name: "B private post".to_owned(),
+                blob_id: "tenant-b-post-doc".to_owned(),
+                kind: Some("doc".to_owned()),
+                ..NewDriveFile::default()
+            },
+        )
+        .await
+        .unwrap();
+    let b_post = created_id(
+        "post",
+        post(
+            &b.app,
+            &b.token,
+            &format!("/sites/{b_site}/posts"),
+            json!({
+                "docNodeId": b_doc.as_str(),
+                "slug": "private-post",
+                "title": "B private post"
+            }),
         )
         .await,
     );
@@ -1041,6 +1169,33 @@ async fn another_tenants_site_is_invisible_on_every_route() {
         ("GET", format!("/sites/{b_site}/pages"), json!({})),
         ("GET", format!("/sites/{b_site}/submissions"), json!({})),
         ("GET", format!("/sites/{b_site}/submissions.csv"), json!({})),
+        ("GET", format!("/sites/{b_site}/posts"), json!({})),
+        (
+            "POST",
+            format!("/sites/{b_site}/posts"),
+            json!({ "docNodeId": b_doc.as_str(), "slug": "injected", "title": "Injected" }),
+        ),
+        ("GET", format!("/sites/{b_site}/posts/{b_post}"), json!({})),
+        (
+            "PUT",
+            format!("/sites/{b_site}/posts/{b_post}"),
+            json!({ "slug": "defaced", "title": "Defaced" }),
+        ),
+        (
+            "POST",
+            format!("/sites/{b_site}/posts/{b_post}/publish"),
+            json!({}),
+        ),
+        (
+            "POST",
+            format!("/sites/{b_site}/posts/{b_post}/unpublish"),
+            json!({}),
+        ),
+        (
+            "DELETE",
+            format!("/sites/{b_site}/posts/{b_post}"),
+            json!({}),
+        ),
         (
             "PUT",
             format!("/sites/{b_site}/forms/{b_form}/submissions/{b_submission}"),
@@ -1118,6 +1273,9 @@ async fn another_tenants_site_is_invisible_on_every_route() {
     assert_eq!(body["name"], json!("B Marketing"));
     let (_, body) = get(&b.app, &b.token, &format!("/sites/{b_site}/pages/{b_page}")).await;
     assert_eq!(body["title"], json!("B Home"));
+    let (_, body) = get(&b.app, &b.token, &format!("/sites/{b_site}/posts/{b_post}")).await;
+    assert_eq!(body["title"], json!("B private post"));
+    assert_eq!(body["status"], json!("draft"));
     let forms = b.acc.site_forms(&b_site_id).await.unwrap();
     assert_eq!(
         forms.len(),

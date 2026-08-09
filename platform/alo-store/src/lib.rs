@@ -103,6 +103,7 @@ pub mod site_form_notify;
 pub mod site_forms;
 pub mod site_model;
 pub mod site_pages;
+pub mod site_posts;
 pub mod site_public;
 pub mod site_public_forms;
 pub mod site_publish;
@@ -226,8 +227,8 @@ pub use id::{
     CrmPipelineId, CrmStageId, DriveNodeId, EventId, FinAccountId, FinCategoryId, FinEntryId,
     FinExpenseId, FinMileageId, FinMileageRateId, FinPostingId, GroupId, InsightDashboardId,
     InsightTileId, LabelId, MailboxId, MessageId, ProjectId, ProjectMilestoneId, SiteFormId,
-    SiteFormSubmissionId, SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId,
-    ThreadId, TimeEntryId, TimeWeekId, UserId,
+    SiteFormSubmissionId, SiteId, SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId,
+    TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -276,6 +277,7 @@ pub use site_forms::{
 };
 pub use site_model::{SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope};
 pub use site_pages::{SitePage, validate_page_slug};
+pub use site_posts::{NewSitePost, SitePost, SitePostStatus, SitePostUpdate};
 pub use site_public::{PublishedSite, SitePublicStore};
 pub use site_publish::{SitePageSnapshot, SitePublish};
 pub use site_theme::{

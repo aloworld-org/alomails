@@ -36,8 +36,9 @@ use alo_sites::render::{
 };
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
-    BlobId, Section, SectionsEnvelope, Site, SiteFormId, SiteFormSubmissionId, SiteId, SitePage,
-    SitePageId, SiteTheme, StoreError, site_theme::THEME_PRESETS,
+    BlobId, DriveNodeId, NewSitePost, Section, SectionsEnvelope, Site, SiteFormId,
+    SiteFormSubmissionId, SiteId, SitePage, SitePageId, SitePost, SitePostId, SitePostUpdate,
+    SiteTheme, StoreError, site_theme::THEME_PRESETS,
 };
 
 use crate::error::Problem;
@@ -81,6 +82,21 @@ fn page_json(p: &SitePage, with_sections: bool) -> Value {
         obj.insert("sections".to_owned(), p.sections.clone());
     }
     j
+}
+
+fn post_json(post: &SitePost) -> Value {
+    json!({
+        "id": post.id.as_str(),
+        "docNodeId": post.doc_node_id.as_str(),
+        "slug": post.slug,
+        "title": post.title,
+        "excerpt": post.excerpt,
+        "coverBlobId": post.cover_blob_id.as_ref().map(BlobId::as_str),
+        "status": post.status.as_str(),
+        "publishedAt": post.published_at.map(iso),
+        "createdAt": iso(post.created_at),
+        "updatedAt": iso(post.updated_at),
+    })
 }
 
 /// The sites-module error map (`docs/design/sites.md` → Errors). The sites
@@ -863,6 +879,168 @@ pub async fn reorder_pages(
     account
         .acc
         .reorder_site_pages(&SiteId::new(id), &order)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+// ---- blog posts ------------------------------------------------------------
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PostCreateBody {
+    doc_node_id: String,
+    slug: String,
+    title: String,
+    #[serde(default)]
+    excerpt: String,
+    #[serde(default)]
+    cover_blob_id: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PostUpdateBody {
+    slug: String,
+    title: String,
+    #[serde(default)]
+    excerpt: String,
+    #[serde(default)]
+    cover_blob_id: Option<String>,
+}
+
+/// `GET /sites/:id/posts` returns the site's blog metadata newest first.
+pub async fn list_posts(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let site = SiteId::new(id);
+    require_site(&account, &site).await?;
+    let posts = account.acc.site_posts(&site).await.map_err(map_store_err)?;
+    Ok(Json(json!({
+        "posts": posts.iter().map(post_json).collect::<Vec<_>>()
+    })))
+}
+
+/// `POST /sites/:id/posts` binds a readable alo document to a new draft post.
+pub async fn create_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: PostCreateBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let site = SiteId::new(id);
+    let document = DriveNodeId::new(req.doc_node_id);
+    let cover = req.cover_blob_id.map(BlobId::new);
+    let post_id = account
+        .acc
+        .create_site_post(
+            &site,
+            &NewSitePost {
+                doc_node_id: &document,
+                slug: req.slug.trim(),
+                title: req.title.trim(),
+                excerpt: req.excerpt.trim(),
+                cover_blob_id: cover.as_ref(),
+            },
+        )
+        .await
+        .map_err(map_store_err)?;
+    let post = account
+        .acc
+        .site_post(&site, &post_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(Problem::server_error)?;
+    Ok(Json(post_json(&post)))
+}
+
+/// `GET /sites/:id/posts/:post` returns one post's metadata.
+pub async fn get_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, post)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let post = account
+        .acc
+        .site_post(&SiteId::new(id), &SitePostId::new(post))
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such post"))?;
+    Ok(Json(post_json(&post)))
+}
+
+/// `PUT /sites/:id/posts/:post` replaces the editable public metadata.
+pub async fn update_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, post)): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: PostUpdateBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let cover = req.cover_blob_id.map(BlobId::new);
+    account
+        .acc
+        .update_site_post(
+            &SiteId::new(id),
+            &SitePostId::new(post),
+            &SitePostUpdate {
+                slug: req.slug.trim(),
+                title: req.title.trim(),
+                excerpt: req.excerpt.trim(),
+                cover_blob_id: cover.as_ref(),
+            },
+        )
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `DELETE /sites/:id/posts/:post` removes only the blog metadata; the alo
+/// document remains in Drive.
+pub async fn delete_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, post)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .delete_site_post(&SiteId::new(id), &SitePostId::new(post))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+pub async fn publish_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, post)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .publish_site_post(&SiteId::new(id), &SitePostId::new(post))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+pub async fn unpublish_post(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, post)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .unpublish_site_post(&SiteId::new(id), &SitePostId::new(post))
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "status": "ok" })))
