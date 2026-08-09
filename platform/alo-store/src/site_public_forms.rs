@@ -1,5 +1,5 @@
-//! The one public **write** of alo Sites (`docs/design/sites.md`, form
-//! flow): a visitor's contact-form submission arriving through the anonymous
+//! The public contact-form **write** of alo Sites (`docs/design/sites.md`,
+//! form flow): a visitor's submission arriving through the anonymous
 //! `POST /f/:form_id` endpoint on `alo-sites`. The endpoint holds only the
 //! bare form id a rendered `contact_form` section carries; this module
 //! resolves it to its owning tenant and writes the submission into that

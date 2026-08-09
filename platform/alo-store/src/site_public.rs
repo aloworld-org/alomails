@@ -1,4 +1,4 @@
-//! The public serving door — the read surface of the anonymous `alo-sites`
+//! The public serving door of the anonymous `alo-sites`
 //! service (ADR 0036, `docs/design/sites.md`). The service holds no session;
 //! its tenant scope is derived from the Host lookup: [`SitePublicStore`]
 //! resolves a subdomain to a [`PublishedSite`] in one indexed read, and every
@@ -6,7 +6,7 @@
 //! private — so serving another tenant's rows is unrepresentable, the same
 //! by-construction guarantee the account door gives authenticated code.
 //!
-//! This door reads **public state only**: immutable page snapshots
+//! Its reads expose **public state only**: immutable page snapshots
 //! (`site_publishes`, `site_page_snapshots`) plus explicitly published blog
 //! posts. Draft pages, draft posts, forms, and everything else in a tenant's
 //! scope are simply not reachable through it. It is the module's one
@@ -31,7 +31,7 @@ use crate::site_publish::{SitePageSnapshot, SitePageSnapshotRow};
 /// Host header actually named.
 #[derive(Debug, Clone)]
 pub struct PublishedSite {
-    tenant: TenantId,
+    pub(crate) tenant: TenantId,
     /// The site (stable across publishes; useful for logging/metrics keys).
     pub site: SiteId,
     /// The site's display name (nav brand fallback, title suffix).
@@ -70,9 +70,9 @@ pub struct PublishedSitePostBody {
     pub body: Bytes,
 }
 
-/// The read-only store handle of the public `alo-sites` service: a Postgres
-/// pool exposing published-snapshot reads, plus the blob backend those
-/// snapshots' images live in — and nothing else. Deliberately not
+/// The narrow store handle of the public `alo-sites` service: a Postgres
+/// pool exposing published-snapshot reads, privacy-reduced analytics and
+/// form writes, plus the blob backend published images live in. Deliberately not
 /// [`crate::Store`] — the public service gets no system operations and no way
 /// to open a tenant or account door; the blob backend is reachable only
 /// through [`Self::published_image`], which takes a resolved
@@ -104,8 +104,8 @@ impl SitePublicStore {
         Self { pool, blobs }
     }
 
-    /// The underlying pool, for the sibling module that implements this
-    /// door's one public write (`crate::site_public_forms`). Crate-internal:
+    /// The underlying pool, for sibling modules implementing the public
+    /// form and privacy-analytics writes. Crate-internal:
     /// the pool itself is never part of the public surface.
     pub(crate) fn pool(&self) -> &PgPool {
         &self.pool

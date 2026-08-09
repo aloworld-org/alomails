@@ -112,6 +112,7 @@ pub mod site_model;
 pub mod site_pages;
 pub mod site_posts;
 pub mod site_public;
+mod site_public_analytics;
 pub mod site_public_forms;
 pub mod site_publish;
 pub mod site_theme;
