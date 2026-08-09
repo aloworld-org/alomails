@@ -1674,6 +1674,8 @@ export const en = {
   chatArchived: "Archived",
   chatReplyInThread: "Reply in thread",
   chatAddReaction: "Add a reaction",
+  chatMentionsYou: (count: number): string =>
+    count === 1 ? "1 message mentions you" : `${count} messages mention you`,
   chatReactFailed: "That reaction couldn’t be saved.",
   chatReplies: (count: number): string =>
     count === 1 ? "1 reply" : `${count} replies`,

@@ -93,10 +93,16 @@ fn channel_json(c: &ChatChannel) -> Value {
     })
 }
 
-fn summary_json(s: &ChatChannelSummary) -> Value {
+fn summary_json(s: &ChatChannelSummary, mentions: &HashMap<String, i64>) -> Value {
     let mut value = channel_json(&s.channel);
     if let Some(object) = value.as_object_mut() {
         object.insert("unread".to_owned(), json!(s.unread));
+        // Separate from `unread`: a room with forty new lines and one naming
+        // you is a different call on your attention than forty that do not.
+        object.insert(
+            "mentions".to_owned(),
+            json!(mentions.get(s.channel.id.as_str()).copied().unwrap_or(0)),
+        );
         object.insert("lastReadSeq".to_owned(), json!(s.last_read_seq));
         object.insert("lastSeq".to_owned(), json!(s.last_seq));
         object.insert("lastAt".to_owned(), json!(s.last_at.map(iso)));
@@ -143,8 +149,9 @@ fn feed_message_json(
     f: &ChatFeedMessage,
     emails: &HashMap<String, String>,
     reactions: &HashMap<String, Vec<ReactionTally>>,
+    mentions: &HashMap<String, Vec<UserId>>,
 ) -> Value {
-    let mut value = message_json_with(&f.message, emails, reactions);
+    let mut value = message_json_with(&f.message, emails, reactions, mentions);
     if let Some(object) = value.as_object_mut() {
         object.insert("replyCount".to_owned(), json!(f.reply_count));
         object.insert("lastReplyAt".to_owned(), json!(f.last_reply_at.map(iso)));
@@ -170,12 +177,27 @@ fn message_json_with(
     m: &ChatMessage,
     emails: &HashMap<String, String>,
     reactions: &HashMap<String, Vec<ReactionTally>>,
+    mentions: &HashMap<String, Vec<UserId>>,
 ) -> Value {
     let mut value = message_json(m, emails);
     if let Some(object) = value.as_object_mut() {
         object.insert(
             "reactions".to_owned(),
             reactions_json(reactions.get(m.id.as_str())),
+        );
+        // Who this message names, so a client can mark the caller's own
+        // mention without re-parsing the text the server already parsed.
+        object.insert(
+            "mentions".to_owned(),
+            json!(
+                mentions
+                    .get(m.id.as_str())
+                    .map(Vec::as_slice)
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|u| u.as_str())
+                    .collect::<Vec<_>>()
+            ),
         );
     }
     value
@@ -195,6 +217,7 @@ fn message_json(m: &ChatMessage, emails: &HashMap<String, String>) -> Value {
         // posted has none). A field that is sometimes absent is a field every
         // client has to guard, and one of them will forget.
         "reactions": [],
+        "mentions": [],
         "createdAt": iso(m.created_at),
         "editedAt": m.edited_at.map(iso),
         "deletedAt": m.deleted_at.map(iso),
@@ -216,8 +239,12 @@ pub async fn list_channels(
         .channel_summaries()
         .await
         .map_err(map_store_err)?;
+    let mentions = account.acc.unread_mentions().await.unwrap_or_default();
     Ok(Json(json!({
-        "channels": summaries.iter().map(summary_json).collect::<Vec<_>>()
+        "channels": summaries
+            .iter()
+            .map(|s| summary_json(s, &mentions))
+            .collect::<Vec<_>>()
     })))
 }
 
@@ -522,10 +549,15 @@ pub async fn list_messages(
         .reactions_for_channel(&channel, &ids)
         .await
         .unwrap_or_default();
+    let mentions = account
+        .acc
+        .mentions_for_channel(&channel, &ids)
+        .await
+        .unwrap_or_default();
     Ok(Json(json!({
         "messages": messages
             .iter()
-            .map(|m| feed_message_json(m, &emails, &reactions))
+            .map(|m| feed_message_json(m, &emails, &reactions, &mentions))
             .collect::<Vec<_>>()
     })))
 }
@@ -557,9 +589,23 @@ pub async fn post_message(
         .post_message(&ChatChannelId::new(id), &body.body, body.thread_root_seq)
         .await
         .map_err(map_store_err)?;
-    notify_room(&state, &account, &message.channel, &[]).await;
+    let mentions = account
+        .acc
+        .mentions_for_channel(&message.channel, std::slice::from_ref(&message.id))
+        .await
+        .unwrap_or_default();
+    // The people named are told too: a mention is the one thing in a room
+    // addressed to someone in particular, so it must not wait for them to
+    // happen to look.
+    let named: Vec<UserId> = mentions.values().flatten().cloned().collect();
+    notify_room(&state, &account, &message.channel, &named).await;
     let emails = resolve_emails(&state, &account, std::slice::from_ref(&message.author)).await;
-    Ok(Json(message_json(&message, &emails)))
+    Ok(Json(message_json_with(
+        &message,
+        &emails,
+        &HashMap::new(),
+        &mentions,
+    )))
 }
 
 /// `GET /chat/channels/{id}/threads/{seq}` → the replies gathered under one
@@ -587,10 +633,15 @@ pub async fn list_thread(
         .reactions_for_channel(&channel, &ids)
         .await
         .unwrap_or_default();
+    let mentions = account
+        .acc
+        .mentions_for_channel(&channel, &ids)
+        .await
+        .unwrap_or_default();
     Ok(Json(json!({
         "messages": messages
             .iter()
-            .map(|m| message_json_with(m, &emails, &reactions))
+            .map(|m| message_json_with(m, &emails, &reactions, &mentions))
             .collect::<Vec<_>>()
     })))
 }
@@ -619,9 +670,22 @@ pub async fn edit_message(
         .edit_message(&ChatMessageId::new(id), &body.body)
         .await
         .map_err(map_store_err)?;
-    notify_room(&state, &account, &message.channel, &[]).await;
+    let mentions = account
+        .acc
+        .mentions_for_channel(&message.channel, std::slice::from_ref(&message.id))
+        .await
+        .unwrap_or_default();
+    let named: Vec<UserId> = mentions.values().flatten().cloned().collect();
+    notify_room(&state, &account, &message.channel, &named).await;
     let emails = resolve_emails(&state, &account, std::slice::from_ref(&message.author)).await;
-    Ok(Json(message_json(&message, &emails)))
+    let reactions = account
+        .acc
+        .reactions_for_channel(&message.channel, std::slice::from_ref(&message.id))
+        .await
+        .unwrap_or_default();
+    Ok(Json(message_json_with(
+        &message, &emails, &reactions, &mentions,
+    )))
 }
 
 /// `DELETE /chat/messages/{id}` → withdraw one's own message. The words go;

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 
 import { strings } from "../i18n";
+import { useAuth } from "../auth";
 import { useJmapClient } from "../jmap";
 import { Avatar, Button } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
@@ -58,6 +59,33 @@ function timeOf(iso: string): string {
 }
 
 /**
+ * A message body with its `@handles` marked.
+ *
+ * The marking is typographic only — who was actually named is the server's
+ * answer (`message.mentions`), resolved against the room's members at post
+ * time. Re-deciding that here would be a second, weaker copy of a rule that
+ * already has an owner; this only makes what was typed visible.
+ */
+function withHandlesMarked(body: string): ReactNode[] {
+  const parts: ReactNode[] = [];
+  const pattern = /(^|[\s([{"'])(@[A-Za-z0-9._%+-]+(?:@[A-Za-z0-9.-]+)?)/g;
+  let at = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(body)) !== null) {
+    const start = match.index + match[1]!.length;
+    if (start > at) parts.push(body.slice(at, start));
+    parts.push(
+      <span key={`${start}`} className={styles.handle}>
+        {match[2]}
+      </span>,
+    );
+    at = start + match[2]!.length;
+  }
+  if (at < body.length) parts.push(body.slice(at));
+  return parts;
+}
+
+/**
  * One line of conversation, used by both the feed and the thread panel — the
  * two must never drift into showing a message differently. `children` is what
  * hangs under it (the thread affordance in the feed, nothing in a thread).
@@ -65,22 +93,26 @@ function timeOf(iso: string): string {
 function MessageLine({
   message,
   palette,
+  me,
   onReact,
   children,
 }: {
   message: Message;
   /** What may be left here, asked of the server. Empty disables the picker. */
   palette: string[];
+  /** The reader's own user id, for "this one is addressed to me". */
+  me: string | null;
   onReact: (emoji: string) => void;
   children?: ReactNode;
 }) {
+  const namesMe = me !== null && message.mentions.includes(me);
   const [picking, setPicking] = useState(false);
   const who = personName(message.authorEmail, message.author);
   // Withdrawn words take no reactions — the server refuses, so the picker is
   // not offered on them either.
   const reactable = palette.length > 0 && message.deletedAt === null;
   return (
-    <article className={styles.message}>
+    <article className={namesMe ? styles.messageForMe : styles.message}>
       <div className={styles.messageMeta}>
         <Avatar name={who} email={message.authorEmail ?? undefined} size="sm" />
         <span
@@ -99,7 +131,9 @@ function MessageLine({
       <p
         className={message.deletedAt === null ? styles.body : styles.withdrawn}
       >
-        {message.deletedAt === null ? message.body : strings.chatWithdrawn}
+        {message.deletedAt === null
+          ? withHandlesMarked(message.body)
+          : strings.chatWithdrawn}
       </p>
 
       {(message.reactions.length > 0 || reactable) && (
@@ -161,6 +195,9 @@ function MessageLine({
 export function ChatModule() {
   const api = useChatApi();
   const client = useJmapClient();
+  // The reader's own id, for marking the messages addressed to them.
+  const { identity } = useAuth();
+  const me = identity?.sub ?? null;
   const [channels, setChannels] = useState<ChannelSummary[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<FeedMessage[] | null>(null);
@@ -419,8 +456,19 @@ export function ChatModule() {
                       aria-label={strings.chatArchived}
                     />
                   )}
-                  {channel.unread > 0 && (
-                    <span className={styles.badge}>{channel.unread}</span>
+                  {channel.mentions > 0 ? (
+                    // A room with something addressed to you says so, rather
+                    // than hiding it inside a larger unread number.
+                    <span
+                      className={styles.badgeMention}
+                      title={strings.chatMentionsYou(channel.mentions)}
+                    >
+                      @{channel.mentions}
+                    </span>
+                  ) : (
+                    channel.unread > 0 && (
+                      <span className={styles.badge}>{channel.unread}</span>
+                    )
                   )}
                 </button>
               </li>
@@ -459,6 +507,7 @@ export function ChatModule() {
                     key={message.id}
                     message={message}
                     palette={open.archivedAt === null ? palette : []}
+                    me={me}
                     onReact={(emoji) => void react(message.id, emoji)}
                   >
                     {message.replyCount > 0 ? (
@@ -551,6 +600,7 @@ export function ChatModule() {
             <MessageLine
               message={threadRoot}
               palette={open.archivedAt === null ? palette : []}
+              me={me}
               onReact={(emoji) => void react(threadRoot.id, emoji)}
             />
             <hr className={styles.threadRule} />
@@ -567,6 +617,7 @@ export function ChatModule() {
                   key={reply.id}
                   message={reply}
                   palette={open.archivedAt === null ? palette : []}
+                  me={me}
                   onReact={(emoji) => void react(reply.id, emoji)}
                 />
               ))

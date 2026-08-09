@@ -2952,3 +2952,88 @@ async fn reactions_follow_the_room_and_toggle_exactly_once() {
     // ...but what was already left stays readable.
     assert_eq!(a.message_reactions(&said.id).await.unwrap().len(), 2);
 }
+
+/// Mentions are resolved against the room's members at post time. A handle
+/// naming someone who is not in the room resolves to nobody — a badge that
+/// pointed at a door they have no key to would be worse than no badge.
+#[tokio::test]
+async fn a_mention_reaches_only_someone_already_in_the_room() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("mention-t").await.unwrap();
+    let ts = store.for_tenant(t.clone());
+    let ua = ts.create_user("anna@mention.test").await.unwrap();
+    let ub = ts.create_user("ben@mention.test").await.unwrap();
+    let uc = ts.create_user("outsider@mention.test").await.unwrap();
+    let a = store.for_account(t.clone(), ua.clone());
+    let b = store.for_account(t.clone(), ub.clone());
+    let c = store.for_account(t, uc.clone());
+
+    let room = a
+        .create_channel("plans", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
+    a.add_member(&room, &ub).await.unwrap();
+
+    // A member is reached; a co-tenant who is not in the room is not, even
+    // though the address is perfectly real.
+    let m = a
+        .post_message(&room, "@ben and @outsider, thoughts?", None)
+        .await
+        .unwrap();
+    let named = a
+        .mentions_for_channel(&room, std::slice::from_ref(&m.id))
+        .await
+        .unwrap();
+    assert_eq!(
+        named
+            .get(m.id.as_str())
+            .map(|u| u.iter().map(alo_store::UserId::as_str).collect::<Vec<_>>()),
+        Some(vec![ub.as_str()]),
+        "only the member is named"
+    );
+
+    // It badges the person named, and nobody else.
+    assert_eq!(
+        b.unread_mentions().await.unwrap().get(room.as_str()),
+        Some(&1)
+    );
+    assert!(c.unread_mentions().await.unwrap().is_empty());
+    // Not the author, even when they write their own handle.
+    a.post_message(&room, "note to @anna: ship it", None)
+        .await
+        .unwrap();
+    assert!(a.unread_mentions().await.unwrap().is_empty());
+
+    // Reading the room clears the badge; it is the same cursor everything
+    // else uses.
+    b.mark_read(&room, 2).await.unwrap();
+    assert!(b.unread_mentions().await.unwrap().is_empty());
+
+    // Editing re-derives: a name added afterwards still reaches its person,
+    // and a name edited out stops badging them.
+    let later = a.post_message(&room, "nothing here", None).await.unwrap();
+    assert!(b.unread_mentions().await.unwrap().is_empty());
+    a.edit_message(&later.id, "actually @ben, look at this")
+        .await
+        .unwrap();
+    assert_eq!(
+        b.unread_mentions().await.unwrap().get(room.as_str()),
+        Some(&1)
+    );
+    a.edit_message(&later.id, "never mind").await.unwrap();
+    assert!(b.unread_mentions().await.unwrap().is_empty());
+
+    // Withdrawing takes the mention with the words.
+    a.edit_message(&later.id, "@ben one more time")
+        .await
+        .unwrap();
+    assert_eq!(
+        b.unread_mentions().await.unwrap().get(room.as_str()),
+        Some(&1)
+    );
+    a.delete_message(&later.id).await.unwrap();
+    assert!(
+        b.unread_mentions().await.unwrap().is_empty(),
+        "a badge must not point at an empty tombstone"
+    );
+}

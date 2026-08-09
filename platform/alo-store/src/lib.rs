@@ -41,6 +41,7 @@ pub mod blob;
 pub mod calendar;
 pub mod changes;
 pub mod chat;
+pub mod chat_mentions;
 pub mod chat_messages;
 pub mod chat_reactions;
 pub mod contacts;
@@ -164,6 +165,7 @@ pub use blob::GarageConfig;
 pub use blob::{BlobStore, ShareStream};
 pub use changes::Changes;
 pub use chat::{ChannelKind, ChannelVisibility, ChatChannel, ChatMember, MemberRole};
+pub use chat_mentions::parse_handles;
 pub use chat_messages::{
     ChatChannelSummary, ChatFeedMessage, ChatMessage, MESSAGE_PAGE_DEFAULT, MessageKind,
 };

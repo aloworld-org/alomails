@@ -242,7 +242,15 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         tx.commit().await.map_err(StoreError::Db)?;
-        row_to_message(row)
+        let message = row_to_message(row)?;
+        // Resolved now, while the words are being written, so "is there
+        // something here for me?" is later an index lookup and not a text
+        // scan. After the commit: a message that was said is said, and a
+        // mention that failed to record must not unsay it.
+        let _ = self
+            .record_mentions(channel, &message.id, message.seq, &message.body)
+            .await;
+        Ok(message)
     }
 
     /// A page of a room's main feed, newest first. `before` is a seq cursor:
@@ -389,7 +397,13 @@ impl AccountStore {
         .fetch_one(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-        row_to_message(row)
+        let message = row_to_message(row)?;
+        // Re-derived, not left alone: editing a message to add a name must
+        // reach that person, and editing one out must stop badging them.
+        let _ = self
+            .record_mentions(&message.channel, &message.id, message.seq, &message.body)
+            .await;
+        Ok(message)
     }
 
     /// Withdraw one's own message: the body goes, the row stays as a tombstone
@@ -413,6 +427,14 @@ impl AccountStore {
         .execute(&self.pool)
         .await
         .map_err(StoreError::Db)?;
+        // The words are gone, so the mentions in them are too — a badge
+        // pointing at an empty tombstone is a promise the room cannot keep.
+        sqlx::query("DELETE FROM chat_mentions WHERE tenant_id = $1 AND message_id = $2")
+            .bind(self.tenant.as_str())
+            .bind(id.as_str())
+            .execute(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
         Ok(())
     }
 

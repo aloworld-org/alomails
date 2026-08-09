@@ -30,6 +30,9 @@ export interface Channel {
 export interface ChannelSummary extends Channel {
   /** Messages after my read cursor — my own never count. */
   unread: number;
+  /** How many of those name me. Separate from `unread` on purpose: forty new
+   *  lines and one addressed to you are different calls on your attention. */
+  mentions: number;
   lastReadSeq: number;
   lastSeq: number | null;
   lastAt: string | null;
@@ -79,6 +82,10 @@ export interface Message {
   threadRootSeq: number | null;
   /** Chips under the message; empty when nobody has reacted. */
   reactions: Reaction[];
+  /** The user ids this message names. Resolved by the server at post time
+   *  against the room's members, so a handle matching nobody there is absent
+   *  rather than guessed at here. */
+  mentions: string[];
   createdAt: string;
   editedAt: string | null;
   /** Set when withdrawn: the row survives so the numbering never gains a

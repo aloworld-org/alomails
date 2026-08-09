@@ -581,20 +581,7 @@ impl TenantStore {
         &self,
         users: &[UserId],
     ) -> Result<std::collections::HashMap<String, String>> {
-        if users.is_empty() {
-            return Ok(std::collections::HashMap::new());
-        }
-        let mut ids: Vec<String> = users.iter().map(|u| u.as_str().to_owned()).collect();
-        ids.sort_unstable();
-        ids.dedup();
-        let rows = sqlx::query!(
-            "SELECT id, email FROM users WHERE tenant_id = $1 AND id = ANY($2)",
-            self.tenant().as_str(),
-            &ids[..]
-        )
-        .fetch_all(self.pool())
-        .await?;
-        Ok(rows.into_iter().map(|r| (r.id, r.email)).collect())
+        emails_of_ids(self.pool(), self.tenant().as_str(), users).await
     }
 
     // ---- mailbox delegation (ADR 0017) --------------------------------
@@ -1243,4 +1230,38 @@ impl TenantStore {
         .await?;
         Ok(())
     }
+}
+
+/// Email addresses for a set of user ids within one tenant, keyed by id.
+///
+/// The shared body behind [`TenantStore::emails_of`] and the account-scoped
+/// callers that need the same answer (chat resolving `@handles` against a
+/// room's members). It lives as a free function so that reaching it does not
+/// require a [`TenantStore`] — an account door should not have to widen itself
+/// to a tenant door just to put a name beside a message.
+///
+/// Always bounded by `tenant`: ids from elsewhere are absent from the map, not
+/// errors, so this cannot be used to discover whether a foreign user exists.
+///
+/// # Errors
+/// [`StoreError::Db`] on a database failure.
+pub(crate) async fn emails_of_ids(
+    pool: &sqlx::PgPool,
+    tenant: &str,
+    users: &[UserId],
+) -> Result<std::collections::HashMap<String, String>> {
+    if users.is_empty() {
+        return Ok(std::collections::HashMap::new());
+    }
+    let mut ids: Vec<String> = users.iter().map(|u| u.as_str().to_owned()).collect();
+    ids.sort_unstable();
+    ids.dedup();
+    let rows = sqlx::query!(
+        "SELECT id, email FROM users WHERE tenant_id = $1 AND id = ANY($2)",
+        tenant,
+        &ids[..]
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(rows.into_iter().map(|r| (r.id, r.email)).collect())
 }
