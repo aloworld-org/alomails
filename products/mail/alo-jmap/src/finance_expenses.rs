@@ -231,10 +231,16 @@ fn required_day(name: &str, raw: Option<&str>) -> Result<Date, Problem> {
     stated_day(name, stated)
 }
 
-/// The two ends of a claims read, and the ceiling only this route owns.
-fn period(query: &ExpensesQuery) -> Result<(Date, Date), Problem> {
-    let from = required_day("from", query.from.as_deref())?;
-    let to = required_day("to", query.to.as_deref())?;
+/// The two ends of a read of somebody's own finance records, and the ceiling
+/// only the route layer owns.
+///
+/// Shared with [`crate::finance_mileage`]: a journey and the claim it became are
+/// read over the same period by the same person, and two different answers to
+/// "how long a period may I ask for" would be a list that ends where its
+/// neighbour does not.
+pub(crate) fn period_bounds(from: Option<&str>, to: Option<&str>) -> Result<(Date, Date), Problem> {
+    let from = required_day("from", from)?;
+    let to = required_day("to", to)?;
     // The store owns "must not end before it starts"; this owns the ceiling.
     if (to - from).whole_days() >= MAX_PERIOD_DAYS {
         return Err(Problem::with(
@@ -243,6 +249,11 @@ fn period(query: &ExpensesQuery) -> Result<(Date, Date), Problem> {
         ));
     }
     Ok((from, to))
+}
+
+/// The two ends of a claims read.
+fn period(query: &ExpensesQuery) -> Result<(Date, Date), Problem> {
+    period_bounds(query.from.as_deref(), query.to.as_deref())
 }
 
 /// The optional status filter. Absent means every status; a word the store does

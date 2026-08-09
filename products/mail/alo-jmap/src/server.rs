@@ -20,11 +20,12 @@ use crate::{
     billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
     billing_settings, blob, calendar, carddav, chat, contacts, crm_activities, crm_deals,
     crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
-    delegates, docs, drive, filters, finance_approvals, finance_expenses, finance_receipts,
-    flagdue, imap_import_route, insights, insights_ask, insights_eval, insights_gallery,
-    projects_clients, projects_invoices, projects_plan, projects_reports, projects_templates,
-    projects_time, projects_weeks, push, reset_route, schedule, security, session, settings, share,
-    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    delegates, docs, drive, filters, finance_approvals, finance_expenses, finance_mileage,
+    finance_receipts, flagdue, imap_import_route, insights, insights_ask, insights_eval,
+    insights_gallery, projects_clients, projects_invoices, projects_plan, projects_reports,
+    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, security,
+    session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
+    workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -924,6 +925,31 @@ pub fn app(state: AppState) -> Router {
         // for that reason: an audit line saying somebody created something they
         // only looked at would be a false line in the log.
         .route("/finance/receipts", post(finance_receipts::read_receipt))
+        // Mileage (B4.07): a journey is not an amount somebody types, it is a
+        // distance at a rate the company published — so the rate table is a
+        // route of its own, and the journey route takes no money at all.
+        //
+        // `rates` before `{id}` for the reason `pending` is registered before
+        // `/finance/expenses/{id}`: matchit prefers the static segment, and an
+        // id — a base64url'd 16-byte token — can never spell one.
+        //
+        // The two doors differ here in an unusual way and it is deliberate:
+        // EVERYBODY reads the rate table (a traveller must know what a kilometre
+        // is worth), only an ADMIN replaces it (`Account::require_admin`, in the
+        // handler) — a rate table anybody could raise is a self-service pay
+        // rise. The journeys below are the caller's own and carry no `userId`.
+        .route(
+            "/finance/mileage/rates",
+            get(finance_mileage::list_mileage_rates).put(finance_mileage::replace_mileage_rates),
+        )
+        .route(
+            "/finance/mileage",
+            get(finance_mileage::list_mileage).post(finance_mileage::create_mileage),
+        )
+        .route(
+            "/finance/mileage/{id}",
+            delete(finance_mileage::delete_mileage),
+        )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))
         .route("/drive/trash", get(drive::trash))

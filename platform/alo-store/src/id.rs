@@ -356,6 +356,19 @@ opaque_id!(
     /// person who made it.
     FinExpenseId
 );
+opaque_id!(
+    /// One journey somebody drove in their own car (alo Finance, ADR 0035, wave
+    /// B4). A journey is not money: it points at the [`FinExpenseId`] the rate
+    /// table turned it into, and that claim carries the amount.
+    FinMileageId
+);
+opaque_id!(
+    /// One row of a tenant's per-kilometre rate table — what a kilometre is
+    /// worth from a given day on (alo Finance, ADR 0035, wave B4). Tenant-wide
+    /// configuration; a journey copies the *value*, never this id, so correcting
+    /// the table never restates a claim already paid.
+    FinMileageRateId
+);
 
 #[cfg(test)]
 mod tests {

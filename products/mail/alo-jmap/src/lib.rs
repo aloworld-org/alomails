@@ -75,6 +75,7 @@ pub mod error;
 pub mod filters;
 pub mod finance_approvals;
 pub mod finance_expenses;
+pub mod finance_mileage;
 pub mod finance_receipts;
 pub mod flagdue;
 pub mod imap_import;

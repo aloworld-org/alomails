@@ -64,6 +64,7 @@ pub mod fin_categories;
 pub mod fin_expenses;
 pub mod fin_journal;
 pub mod fin_ledger;
+pub mod fin_mileage;
 pub mod fin_receipt;
 pub mod fin_receipt_read;
 pub mod fin_rules;
@@ -191,6 +192,11 @@ pub use fin_ledger::{
     AccountBalance, AccountLedger, DimensionBalance, DimensionBalances, LEDGER_GROUPS_MAX,
     LEDGER_PAGE_MAX, LedgerDimension, LedgerLine, LedgerScope, TrialBalance,
 };
+pub use fin_mileage::{
+    KM_MAX_MILLI, KM_MIN_MILLI, MILEAGE_REASON_MAX, Mileage, MileageClaim, MileageRate, NewMileage,
+    NewMileageRate, PLACE_MAX, RATE_MAX_CENTS_PER_KM, RATE_MIN_CENTS_PER_KM, RATE_NOTE_MAX,
+    RATES_MAX, allowance_cents, rate_effective_on,
+};
 pub use fin_receipt::{
     AMOUNT_MAX_CENTS, Confidence, Evidence, Found, ParsedReceipt, PatternExtractor,
     RECEIPT_LINES_MAX, ReceiptExtractor, ReceiptInput, default_extractor,
@@ -206,9 +212,10 @@ pub use id::{
     BillingQuoteId, BillingScheduleId, BlobId, CalendarId, CategoryId, ChatChannelId,
     ChatMessageId, CommentId, ContactId, CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId,
     CrmStageId, DriveNodeId, EventId, FinAccountId, FinCategoryId, FinEntryId, FinExpenseId,
-    FinPostingId, GroupId, InsightDashboardId, InsightTileId, LabelId, MailboxId, MessageId,
-    ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId,
-    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    FinMileageId, FinMileageRateId, FinPostingId, GroupId, InsightDashboardId, InsightTileId,
+    LabelId, MailboxId, MessageId, ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId,
+    SiteId, SitePageId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId,
+    TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

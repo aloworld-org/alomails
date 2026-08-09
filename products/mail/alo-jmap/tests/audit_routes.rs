@@ -219,6 +219,7 @@ DELETE /crm/deals/{id} -> crm.deal.delete
 DELETE /crm/deals/{id}/threads/{threadId} -> crm.deal.thread.delete
 DELETE /crm/stages/{id} -> crm.stage.delete
 DELETE /finance/expenses/{id} -> finance.expense.delete
+DELETE /finance/mileage/{id} -> finance.mileage.delete
 DELETE /projects/clients/{id} -> projects.client.delete
 DELETE /projects/milestones/{id} -> projects.milestone.delete
 DELETE /projects/tasks/{task_id}/milestone -> projects.task.milestone.delete
@@ -280,6 +281,7 @@ POST /finance/expenses/{id}/reimburse -> finance.expense.reimburse
 POST /finance/expenses/{id}/reject -> finance.expense.reject
 POST /finance/expenses/{id}/submit -> finance.expense.submit
 POST /finance/expenses/{id}/withdraw -> finance.expense.withdraw
+POST /finance/mileage -> finance.mileage.create
 POST /projects/approvals/{id}/approve -> projects.approval.approve
 POST /projects/approvals/{id}/reject -> projects.approval.reject
 POST /projects/approvals/{id}/reopen -> projects.approval.reopen
@@ -296,6 +298,7 @@ POST /projects/timer/stop -> projects.timer.stop
 POST /projects/weeks/{monday}/submit -> projects.week.submit
 POST /projects/weeks/{monday}/withdraw -> projects.week.withdraw
 PUT /billing/fx/rates -> billing.fx.rates.update
+PUT /finance/mileage/rates -> finance.mileage.rates.update
 PUT /projects/clients/{id} -> projects.client.update
 PUT /projects/tasks/{task_id}/milestone -> projects.task.milestone.update
 "#;

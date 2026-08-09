@@ -112,7 +112,7 @@ const PENDING_LIMIT: i64 = 500;
 const CLAIMANTS_STATUSES: &str = "'draft', 'rejected'";
 
 /// The columns every read selects, in [`ExpenseRow`] order.
-const EXPENSE_COLS: &str = "id, user_id, spent_on, category_id, merchant, description, \
+pub(crate) const EXPENSE_COLS: &str = "id, user_id, spent_on, category_id, merchant, description, \
      gross_cents, vat_cents, vat_rate_bp, currency, method, project_id, receipt_node_id, \
      status, submitted_at, decided_by, decided_at, decision_note, reimbursed_on, \
      created_at, updated_at";
@@ -485,40 +485,24 @@ impl AccountStore {
     /// Records a claim of the caller's own. It starts as a draft: nothing is in
     /// anybody's queue until the claimant hands it in (B4.05b).
     ///
+    /// The links are checked before the fields, so a claim pointing at somebody
+    /// else's category is `NotFound` whatever else is wrong with it — a refusal
+    /// that never becomes a way to ask which of two mistakes was made.
+    ///
     /// # Errors
     /// [`StoreError::Validation`] when an amount, a string or the currency
     /// breaks its rule; [`StoreError::NotFound`] when the category, the project
     /// or the receipt is not one the caller can reach — existence is never
     /// disclosed; [`StoreError::Db`] on failure.
     pub async fn log_expense(&self, new: &NewExpense) -> Result<Expense> {
-        let e = normalize(new)?;
         self.require_links(new).await?;
-        let id = FinExpenseId::generate();
-        let row = sqlx::query_as::<_, ExpenseRow>(&format!(
-            "INSERT INTO fin_expenses (tenant_id, id, user_id, spent_on, category_id, merchant, \
-                 description, gross_cents, vat_cents, vat_rate_bp, currency, method, project_id, \
-                 receipt_node_id) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
-             RETURNING {EXPENSE_COLS}"
-        ))
-        .bind(self.tenant.as_str())
-        .bind(id.as_str())
-        .bind(self.user.as_str())
-        .bind(new.spent_on)
-        .bind(new.category_id.as_ref().map(FinCategoryId::as_str))
-        .bind(&e.merchant)
-        .bind(&e.description)
-        .bind(e.gross_cents)
-        .bind(e.vat_cents)
-        .bind(e.vat_rate_bp)
-        .bind(&e.currency)
-        .bind(new.method.as_str())
-        .bind(new.project_id.as_ref().map(ProjectId::as_str))
-        .bind(new.receipt_node_id.as_ref().map(DriveNodeId::as_str))
-        .fetch_one(&self.pool)
-        .await
-        .map_err(StoreError::Db)?;
-        row.into_expense()
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        // A failure drops `tx`, which rolls it back: there is no half-written
+        // claim to clean up.
+        let claim =
+            insert_expense_in(&mut tx, self.tenant.as_str(), self.user.as_str(), new).await?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(claim)
     }
 
     /// One of the caller's **own** claims, or `None`.
@@ -755,7 +739,12 @@ impl AccountStore {
     ///
     /// All three answer `NotFound` when they are somebody else's, never a
     /// refusal that would confirm the thing exists.
-    async fn require_links(&self, new: &NewExpense) -> Result<()> {
+    ///
+    /// Visible to the crate because [`crate::fin_mileage`] writes a claim of its
+    /// own and must apply exactly these rules — a journey pointing at a
+    /// colleague's category would otherwise be the one way into this table that
+    /// skips them.
+    pub(crate) async fn require_links(&self, new: &NewExpense) -> Result<()> {
         if let Some(category) = new.category_id.as_ref() {
             let found = self
                 .fin_category(category)
@@ -781,6 +770,57 @@ impl AccountStore {
         }
         Ok(())
     }
+}
+
+/// Validates a claim and writes it, as a draft, inside a caller-supplied
+/// transaction.
+///
+/// The one place the `INSERT` lives. [`AccountStore::log_expense`] is a
+/// transaction around it, and [`crate::fin_mileage`] calls it in the same
+/// transaction that writes the journey the claim came from — a journey whose
+/// claim did not land, or a claim with no journey to explain it, are both states
+/// this atomicity makes unreachable.
+///
+/// The caller owns the two things this cannot see: that the links are the
+/// caller's ([`AccountStore::require_links`]) and that `user` is the
+/// authenticated user rather than request input.
+///
+/// # Errors
+/// [`StoreError::Validation`] when an amount, a string or the currency breaks
+/// its rule; [`StoreError::Db`] on failure.
+pub(crate) async fn insert_expense_in(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    tenant: &str,
+    user: &str,
+    new: &NewExpense,
+) -> Result<Expense> {
+    let e = normalize(new)?;
+    let id = FinExpenseId::generate();
+    let row = sqlx::query_as::<_, ExpenseRow>(&format!(
+        "INSERT INTO fin_expenses (tenant_id, id, user_id, spent_on, category_id, merchant, \
+             description, gross_cents, vat_cents, vat_rate_bp, currency, method, project_id, \
+             receipt_node_id) \
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14) \
+         RETURNING {EXPENSE_COLS}"
+    ))
+    .bind(tenant)
+    .bind(id.as_str())
+    .bind(user)
+    .bind(new.spent_on)
+    .bind(new.category_id.as_ref().map(FinCategoryId::as_str))
+    .bind(&e.merchant)
+    .bind(&e.description)
+    .bind(e.gross_cents)
+    .bind(e.vat_cents)
+    .bind(e.vat_rate_bp)
+    .bind(&e.currency)
+    .bind(new.method.as_str())
+    .bind(new.project_id.as_ref().map(ProjectId::as_str))
+    .bind(new.receipt_node_id.as_ref().map(DriveNodeId::as_str))
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(StoreError::Db)?;
+    row.into_expense()
 }
 
 /// Refuses a write to a claim that is no longer the claimant's alone, naming
@@ -969,8 +1009,10 @@ impl TenantStore {
     }
 }
 
-/// [`EXPENSE_COLS`] qualified with a table alias, for the joined inbox read.
-fn expense_cols_prefixed(alias: &str) -> String {
+/// [`EXPENSE_COLS`] qualified with a table alias, for the reads that join a
+/// claim to something else — the approvals inbox here, and the journey that
+/// became a claim in [`crate::fin_mileage`].
+pub(crate) fn expense_cols_prefixed(alias: &str) -> String {
     EXPENSE_COLS
         .split(',')
         .map(|column| format!("{alias}.{}", column.trim()))
@@ -980,8 +1022,13 @@ fn expense_cols_prefixed(alias: &str) -> String {
 
 // ---- row types --------------------------------------------------------------
 
+/// A claim exactly as the table holds it.
+///
+/// Visible to the crate so a joined read elsewhere can flatten it and get the
+/// same [`Expense`] the module's own reads produce — the alternative, a second
+/// hand-written mapping, is how two readings of one row start to disagree.
 #[derive(sqlx::FromRow)]
-struct ExpenseRow {
+pub(crate) struct ExpenseRow {
     id: String,
     user_id: String,
     spent_on: Date,
@@ -1010,7 +1057,7 @@ impl ExpenseRow {
     /// rather than trusted: a word this build does not know is a schema
     /// disagreement, and answering `500` is honest where inventing a variant
     /// would put a claim in the wrong queue.
-    fn into_expense(self) -> Result<Expense> {
+    pub(crate) fn into_expense(self) -> Result<Expense> {
         Ok(Expense {
             id: FinExpenseId::new(self.id),
             user_id: UserId::new(self.user_id),
