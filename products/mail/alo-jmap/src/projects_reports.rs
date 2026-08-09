@@ -30,8 +30,8 @@
 
 use axum::Json;
 use axum::extract::{Query, State};
-use axum::http::{HeaderMap, StatusCode, header};
-use axum::response::{IntoResponse, Response};
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::Response;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::Date;
@@ -332,26 +332,6 @@ fn file_name(report: &ProfitabilityReport, project: Option<&ProjectId>) -> Strin
     )
 }
 
-/// Serves the report as a file, with the four headers every alo export carries:
-/// `attachment` (this exists to be saved), `nosniff` (nothing re-interprets the
-/// bytes), `no-store` (a tenant's figures are not a cacheable asset) and a
-/// stated charset (a CSV without one is guessed at).
-fn csv_response(body: String, file_name: &str) -> Response {
-    (
-        [
-            (header::CONTENT_TYPE, "text/csv; charset=utf-8".to_owned()),
-            (
-                header::CONTENT_DISPOSITION,
-                format!("attachment; filename=\"{file_name}\""),
-            ),
-            (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_owned()),
-            (header::CACHE_CONTROL, "no-store".to_owned()),
-        ],
-        body,
-    )
-        .into_response()
-}
-
 /// Reads the report behind both routes, so the file and the screen cannot
 /// disagree about a cent.
 async fn read(
@@ -398,7 +378,7 @@ pub async fn profitability_report_csv(
     let account = authenticate(&state, &headers).await?;
     let (report, project) = read(&account.acc, &query).await?;
     let totals = profitability_totals(&report.projects);
-    Ok(csv_response(
+    Ok(csv::attachment(
         report_csv(&report, &totals),
         &file_name(&report, project.as_ref()),
     ))

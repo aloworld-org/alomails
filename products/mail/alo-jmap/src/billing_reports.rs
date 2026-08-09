@@ -35,8 +35,8 @@
 
 use axum::Json;
 use axum::extract::{Query, State};
-use axum::http::{HeaderMap, StatusCode, header};
-use axum::response::{IntoResponse, Response};
+use axum::http::{HeaderMap, StatusCode};
+use axum::response::Response;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::Date;
@@ -289,30 +289,6 @@ fn file_name(period: &VatPeriod) -> String {
     )
 }
 
-/// Serves the summary as a file.
-///
-/// The same three headers the PDF carries, for the same reasons
-/// ([`crate::billing_pdf::response`]): **`attachment`**, because this exists to
-/// be saved and handed to an accountant rather than rendered in our origin;
-/// **`nosniff`**, so nothing re-interprets the bytes; and **`no-store`**,
-/// because a tenant's turnover is not a cacheable asset. The charset is stated
-/// because a CSV without one is guessed at.
-fn csv_response(body: String, file_name: &str) -> Response {
-    (
-        [
-            (header::CONTENT_TYPE, "text/csv; charset=utf-8".to_owned()),
-            (
-                header::CONTENT_DISPOSITION,
-                format!("attachment; filename=\"{file_name}\""),
-            ),
-            (header::X_CONTENT_TYPE_OPTIONS, "nosniff".to_owned()),
-            (header::CACHE_CONTROL, "no-store".to_owned()),
-        ],
-        body,
-    )
-        .into_response()
-}
-
 /// `GET /billing/reports/vat?from&to` → `{"report":{…}}` — what was billed at
 /// each VAT rate between two days, both included.
 ///
@@ -351,7 +327,7 @@ pub async fn vat_report_csv(
         .billing_vat_period(from, to)
         .await
         .map_err(map_store_err)?;
-    Ok(csv_response(report_csv(&period), &file_name(&period)))
+    Ok(csv::attachment(report_csv(&period), &file_name(&period)))
 }
 
 #[cfg(test)]
@@ -652,26 +628,9 @@ mod tests {
     }
 
     #[test]
-    fn the_file_is_served_as_an_attachment_that_is_never_cached() {
-        let response = csv_response(report_csv(&quarter()), &file_name(&quarter()));
-        let headers = response.headers();
-        assert_eq!(
-            headers
-                .get(header::CONTENT_TYPE)
-                .and_then(|v| v.to_str().ok()),
-            Some("text/csv; charset=utf-8")
-        );
-        assert_eq!(
-            headers
-                .get(header::CONTENT_DISPOSITION)
-                .and_then(|v| v.to_str().ok()),
-            Some("attachment; filename=\"vat-2025-07-01-to-2025-09-30.csv\"")
-        );
-        assert_eq!(
-            headers
-                .get(header::CACHE_CONTROL)
-                .and_then(|v| v.to_str().ok()),
-            Some("no-store")
-        );
+    fn the_summary_is_saved_under_the_days_it_covers() {
+        // The headers the file is served under are [`crate::csv::attachment`]'s
+        // and are asserted there, once, for every export in alo.
+        assert_eq!(file_name(&quarter()), "vat-2025-07-01-to-2025-09-30.csv");
     }
 }

@@ -82,6 +82,7 @@ pub mod finance_expenses;
 pub mod finance_mileage;
 pub mod finance_periods;
 pub mod finance_receipts;
+pub mod finance_reports;
 pub mod flagdue;
 pub mod imap_import;
 pub mod imap_import_route;

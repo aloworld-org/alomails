@@ -84,6 +84,7 @@ pub mod fin_ledger;
 pub mod fin_match_rules;
 pub mod fin_mileage;
 pub mod fin_periods;
+pub mod fin_pl;
 pub mod fin_receipt;
 pub mod fin_receipt_read;
 pub mod fin_rules;
@@ -254,6 +255,7 @@ pub use fin_mileage::{
 pub use fin_periods::{
     ClosedThrough, FinPeriod, PERIOD_MAX_DAYS, PERIOD_NOTE_MAX_CHARS, PERIODS_MAX, PeriodStatus,
 };
+pub use fin_pl::{PlLine, ProfitAndLoss, comparative_period};
 pub use fin_receipt::{
     AMOUNT_MAX_CENTS, Confidence, Evidence, Found, ParsedReceipt, PatternExtractor,
     RECEIPT_LINES_MAX, ReceiptExtractor, ReceiptInput, default_extractor,
