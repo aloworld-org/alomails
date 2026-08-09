@@ -6,12 +6,13 @@
 //! output cannot drift from what the editor and publisher accept.
 
 use std::collections::HashSet;
+use std::future::Future;
 
 use alo_store::{Section, SectionsEnvelope, SiteTheme, validate_page_slug, validate_subdomain};
 use serde::{Deserialize, Serialize};
 
-use crate::ChatMessage;
 use crate::agent::extract_json;
+use crate::{AiConfig, ChatMessage, InferenceError, chat};
 
 /// Current version of the complete generated-site envelope.
 pub const SITE_DRAFT_SCHEMA_VERSION: u64 = 1;
@@ -54,6 +55,8 @@ pub struct SiteDraft {
 /// Why a model response could not become a safe draft proposal.
 #[derive(Debug, thiserror::Error)]
 pub enum SiteDraftError {
+    #[error(transparent)]
+    Inference(#[from] InferenceError),
     #[error("site draft response did not contain one JSON object")]
     MissingObject,
     #[error(
@@ -64,6 +67,8 @@ pub enum SiteDraftError {
     Shape(#[from] serde_json::Error),
     #[error("site draft is invalid: {0}")]
     Invalid(String),
+    #[error("site draft was still invalid after one repair: {0}")]
+    RepairFailed(String),
 }
 
 #[derive(Deserialize)]
@@ -135,6 +140,75 @@ pub fn site_generation_messages(description: &str) -> Vec<ChatMessage> {
             content: format!("Business description:\n{}", description.trim()),
         },
     ]
+}
+
+/// Adds the model's refused reply and the validator's own reason to the base
+/// conversation. The wording explicitly grants one correction, not a fresh
+/// creative attempt.
+#[must_use]
+pub fn site_repair_messages(
+    base: &[ChatMessage],
+    reply: &str,
+    refusal: &SiteDraftError,
+) -> Vec<ChatMessage> {
+    const MAX_REFUSAL_CHARS: usize = 1_000;
+
+    let refusal: String = refusal
+        .to_string()
+        .chars()
+        .take(MAX_REFUSAL_CHARS)
+        .collect();
+    let mut messages = base.to_vec();
+    messages.push(ChatMessage {
+        role: "assistant".to_owned(),
+        content: reply.trim().to_owned(),
+    });
+    messages.push(ChatMessage {
+        role: "user".to_owned(),
+        content: format!(
+            "That draft was refused by the site schema: {refusal}\n\
+             Correct only the refused fields. Reply with ONE complete corrected site JSON object \
+             and nothing else. This is your only repair attempt."
+        ),
+    });
+    messages
+}
+
+/// Generates and validates one complete site proposal, with exactly one
+/// schema-repair attempt. Transport/configuration failures are not retried;
+/// only a well-formed model response that the Sites schema refuses earns the
+/// correction turn.
+///
+/// This function never persists or publishes the result. Callers must still
+/// present/apply it as a draft.
+pub async fn generate_site_draft(
+    config: &AiConfig,
+    description: &str,
+) -> Result<SiteDraft, SiteDraftError> {
+    generate_site_draft_with(description, |messages| async move {
+        chat(config, &messages, 0.2).await
+    })
+    .await
+}
+
+async fn generate_site_draft_with<T, F>(
+    description: &str,
+    mut turn: T,
+) -> Result<SiteDraft, SiteDraftError>
+where
+    T: FnMut(Vec<ChatMessage>) -> F,
+    F: Future<Output = Result<String, InferenceError>>,
+{
+    let base = site_generation_messages(description);
+    let first = turn(base.clone()).await?;
+    let refusal = match parse_site_draft(&first) {
+        Ok(draft) => return Ok(draft),
+        Err(error) => error,
+    };
+
+    let repair = site_repair_messages(&base, &first, &refusal);
+    let second = turn(repair).await?;
+    parse_site_draft(&second).map_err(|error| SiteDraftError::RepairFailed(error.to_string()))
 }
 
 /// Parses one proposed site through the complete, closed v1 schema.
@@ -285,8 +359,15 @@ fn invalid(detail: String) -> SiteDraftError {
 mod tests {
     use super::*;
     use alo_store::THEME_PRESETS;
+    use std::cell::RefCell;
+    use std::collections::VecDeque;
+    use std::future::ready;
 
     const VALID: &str = include_str!("../tests/fixtures/sites/valid_full_site.json");
+    const NEAR_MISS_SECTION: &str =
+        include_str!("../tests/fixtures/sites/near_miss_unknown_section.json");
+    const NEAR_MISS_ASSET: &str =
+        include_str!("../tests/fixtures/sites/near_miss_asset_reference.json");
 
     #[test]
     fn fixture_is_a_complete_strict_draft() {
@@ -411,5 +492,86 @@ mod tests {
             parse_site_draft(&future),
             Err(SiteDraftError::UnsupportedVersion(9))
         ));
+    }
+
+    #[test]
+    fn repair_conversation_keeps_the_base_and_names_the_schema_refusal() {
+        let base = site_generation_messages("a bakery");
+        let refusal = parse_site_draft(NEAR_MISS_SECTION).unwrap_err();
+        let repaired = site_repair_messages(&base, NEAR_MISS_SECTION, &refusal);
+
+        assert_eq!(repaired.len(), 4);
+        assert_eq!(repaired[0].content, base[0].content);
+        assert_eq!(repaired[1].content, base[1].content);
+        assert_eq!(repaired[2].role, "assistant");
+        assert_eq!(repaired[2].content, NEAR_MISS_SECTION.trim());
+        assert_eq!(repaired[3].role, "user");
+        assert!(repaired[3].content.contains("unknown variant `carousel`"));
+        assert!(repaired[3].content.contains("only repair attempt"));
+    }
+
+    #[tokio::test]
+    async fn a_near_miss_gets_one_repair_and_returns_the_corrected_fixture() {
+        let replies = RefCell::new(VecDeque::from([
+            NEAR_MISS_SECTION.to_owned(),
+            VALID.to_owned(),
+        ]));
+        let conversations = RefCell::new(Vec::new());
+
+        let draft = generate_site_draft_with("a bakery", |messages| {
+            conversations.borrow_mut().push(messages);
+            ready(Ok(replies.borrow_mut().pop_front().unwrap()))
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(draft.site.name, "Juniper Bakery");
+        let conversations = conversations.into_inner();
+        assert_eq!(conversations.len(), 2, "one repair, never two");
+        assert_eq!(conversations[0].len(), 2);
+        assert_eq!(conversations[1].len(), 4);
+        assert!(replies.into_inner().is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_second_refusal_is_typed_and_never_gets_a_third_turn() {
+        let replies = RefCell::new(VecDeque::from([
+            NEAR_MISS_SECTION.to_owned(),
+            NEAR_MISS_ASSET.to_owned(),
+            VALID.to_owned(),
+        ]));
+        let turns = RefCell::new(0_u8);
+
+        let error = generate_site_draft_with("a bakery", |_| {
+            *turns.borrow_mut() += 1;
+            ready(Ok(replies.borrow_mut().pop_front().unwrap()))
+        })
+        .await
+        .unwrap_err();
+
+        assert!(matches!(error, SiteDraftError::RepairFailed(_)));
+        assert_eq!(turns.into_inner(), 2, "a third model turn is forbidden");
+        assert_eq!(
+            replies.into_inner().len(),
+            1,
+            "the third fixture stays unused"
+        );
+    }
+
+    #[tokio::test]
+    async fn inference_failures_are_not_retried() {
+        let turns = RefCell::new(0_u8);
+        let error = generate_site_draft_with("a bakery", |_| {
+            *turns.borrow_mut() += 1;
+            ready(Err(InferenceError::NotConfigured))
+        })
+        .await
+        .unwrap_err();
+
+        assert!(matches!(
+            error,
+            SiteDraftError::Inference(InferenceError::NotConfigured)
+        ));
+        assert_eq!(turns.into_inner(), 1);
     }
 }

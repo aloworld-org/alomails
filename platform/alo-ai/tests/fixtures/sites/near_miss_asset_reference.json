@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "site": {
+    "name": "Juniper Bakery",
+    "subdomain": "juniper-bakery",
+    "theme": { "schema_version": 1, "preset": "terra" }
+  },
+  "pages": [
+    {
+      "title": "Home",
+      "slug": "",
+      "is_home": true,
+      "seo_title": null,
+      "seo_description": null,
+      "sections": {
+        "schema_version": 1,
+        "sections": [
+          {
+            "type": "hero",
+            "heading": "Fresh every morning",
+            "subheading": null,
+            "image": { "blob_id": "invented-asset", "alt": "Bread" },
+            "primary_cta": null,
+            "secondary_cta": null
+          }
+        ]
+      }
+    }
+  ]
+}

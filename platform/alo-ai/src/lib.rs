@@ -33,7 +33,7 @@ pub use agent_projects::PROJECTS_TOOLS;
 pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, repair_messages};
 pub use sites::{
     SITE_DRAFT_SCHEMA_VERSION, SiteDraft, SiteDraftError, SiteDraftPage, SiteDraftSite,
-    parse_site_draft, site_generation_messages,
+    generate_site_draft, parse_site_draft, site_generation_messages, site_repair_messages,
 };
 
 /// Per-tenant backend configuration (admin-set, ADR 0011).
