@@ -344,3 +344,33 @@ test("choosing a name puts it in the message", async () => {
     expect((box as HTMLInputElement).value).toBe("@alo ");
   });
 });
+
+/** Putting an agent in a room was API-only until now: the one thing that makes
+ *  this chat different could not be switched on from the interface. */
+test("an agent can be put into a room from the UI", async () => {
+  answers = [
+    { match: "/chat/reactions", body: { emoji: ["👍"] } },
+    { match: "/chat/agents", body: { agents: [AGENT] } },
+    { match: "/chat/channels/room-1/agents", body: { agents: [] } },
+    { match: "/messages", body: { messages: [message({ body: "hi" })] } },
+    {
+      match: "/chat/channels/room-1",
+      body: { ...ROOM, members: [], myRole: "owner" },
+    },
+    { match: "/chat/channels", body: { channels: [ROOM] } },
+  ];
+  render(<ChatModule />);
+
+  fireEvent.click(await screen.findByTitle(strings.chatWhoIsHere));
+  // It is offered because it is not in the room yet.
+  const add = await screen.findByTitle(strings.chatAgentAdd("alo"));
+  fireEvent.click(add);
+
+  await waitFor(() => {
+    const call = calls.find(
+      (c) =>
+        c.url.includes("/chat/channels/room-1/agents") && c.method === "POST",
+    );
+    expect(call?.body).toEqual({ agent: "agent-alo" });
+  });
+});

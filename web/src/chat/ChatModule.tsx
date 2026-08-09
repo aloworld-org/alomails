@@ -32,6 +32,7 @@ import { strings } from "../i18n";
 import { useAuth } from "../auth";
 import { FilePicker, fileSize, saveBlob } from "../drive";
 import { AgentActionCard } from "../shell/AgentActionCard";
+import { RoomPeople } from "./RoomPeople";
 import { useJmapClient } from "../jmap";
 import { Avatar, Button } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
@@ -380,6 +381,7 @@ export function ChatModule() {
   const feedRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLInputElement | null>(null);
   const [caret, setCaret] = useState(0);
+  const [showingPeople, setShowingPeople] = useState(false);
   const [finding, setFinding] = useState("");
   const [found, setFound] = useState<Message[] | null>(null);
 
@@ -807,10 +809,21 @@ export function ChatModule() {
         ) : (
           <>
             <header className={styles.roomHeader}>
-              <h3 className={styles.roomName}>{channelLabel(open)}</h3>
-              {open.topic !== null && (
-                <p className={styles.roomTopic}>{open.topic}</p>
-              )}
+              <div className={styles.roomTitle}>
+                <h3 className={styles.roomName}>{channelLabel(open)}</h3>
+                {open.topic !== null && (
+                  <p className={styles.roomTopic}>{open.topic}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                className={styles.roomPeople}
+                onClick={() => setShowingPeople(true)}
+                title={strings.chatWhoIsHere}
+              >
+                <Users size={15} />
+                {strings.chatWhoIsHere}
+              </button>
             </header>
 
             <div className={styles.feed} ref={feedRef}>
@@ -1001,6 +1014,19 @@ export function ChatModule() {
           </>
         )}
       </section>
+
+      {showingPeople && openId !== null && (
+        <RoomPeople
+          channel={openId}
+          onClose={() => setShowingPeople(false)}
+          onChanged={() => {
+            // The room's cast changed: reload the feed (an agent's arrival is
+            // narrated nowhere yet) and the '@' list, which is per room.
+            void loadMessages(openId);
+            void loadChannels();
+          }}
+        />
+      )}
 
       {picking && (
         <FilePicker

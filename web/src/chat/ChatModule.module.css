@@ -136,9 +136,41 @@
 }
 
 .roomHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface);
+}
+
+.roomTitle {
+  min-width: 0;
+}
+
+/* Always visible, not hover-revealed: this is how an agent gets into a room,
+   and a discovery path that only appears on approach is one most people never
+   find. */
+.roomPeople {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.roomPeople:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
 }
 
 .roomName {

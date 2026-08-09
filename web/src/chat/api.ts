@@ -169,6 +169,15 @@ export class ChatApi {
     return body.messages;
   }
 
+  /** Take an agent out of a room. Its past messages stay — a room's history
+   *  does not change because somebody left it. */
+  async removeAgent(id: string, agent: string): Promise<void> {
+    await this.#send(
+      `/chat/channels/${encodeURIComponent(id)}/agents/${encodeURIComponent(agent)}`,
+      { method: "DELETE" },
+    ).then(ChatApi.#rejectFailed);
+  }
+
   /** The replies under one message, oldest first — a thread reads forwards. */
   async thread(id: string, rootSeq: number): Promise<Message[]> {
     const body = await this.#read<{ messages: Message[] }>(
