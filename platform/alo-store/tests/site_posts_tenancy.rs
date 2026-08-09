@@ -316,12 +316,20 @@ async fn public_posts_and_bodies_follow_only_the_resolved_host_tenant() {
 
     let resolved_a = public.resolve_published(&sub_a).await.unwrap().unwrap();
     let resolved_b = public.resolve_published(&sub_b).await.unwrap().unwrap();
-    let posts_a = public.published_posts(&resolved_a).await.unwrap();
-    let posts_b = public.published_posts(&resolved_b).await.unwrap();
-    assert_eq!(posts_a.len(), 1);
-    assert_eq!(posts_b.len(), 1);
-    assert_eq!(posts_a[0].title, "Alpha story");
-    assert_eq!(posts_b[0].title, "Beta story");
+    let page_a = public
+        .published_posts_page(&resolved_a, 0, 10)
+        .await
+        .unwrap();
+    let page_b = public
+        .published_posts_page(&resolved_b, 0, 10)
+        .await
+        .unwrap();
+    assert_eq!(page_a.total, 1);
+    assert_eq!(page_b.total, 1);
+    assert_eq!(page_a.posts.len(), 1);
+    assert_eq!(page_b.posts.len(), 1);
+    assert_eq!(page_a.posts[0].title, "Alpha story");
+    assert_eq!(page_b.posts[0].title, "Beta story");
     assert!(
         public
             .published_post(&resolved_a, "beta-story")

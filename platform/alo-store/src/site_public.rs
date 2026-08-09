@@ -55,6 +55,14 @@ pub struct PublishedSitePost {
     pub published_at: OffsetDateTime,
 }
 
+/// One bounded page of published post metadata. `total` counts only posts
+/// that passed the same tenant/site/publication boundary as `posts`.
+#[derive(Debug, Clone)]
+pub struct PublishedSitePostPage {
+    pub posts: Vec<PublishedSitePost>,
+    pub total: u64,
+}
+
 /// One published post plus the current alo Docs bytes that form its body.
 #[derive(Debug, Clone)]
 pub struct PublishedSitePostBody {
@@ -150,28 +158,48 @@ impl SitePublicStore {
             .collect())
     }
 
-    /// Published blog metadata for a resolved live site, newest first. Draft
-    /// posts are absent at the query boundary and the private tenant/site pair
-    /// comes only from the Host resolution.
+    /// A bounded page of published blog metadata for a resolved live site,
+    /// newest first. Draft posts are absent at both query boundaries and the
+    /// private tenant/site pair comes only from the Host resolution.
     ///
     /// # Errors
     /// [`StoreError::Db`] on failure.
-    pub async fn published_posts(&self, site: &PublishedSite) -> Result<Vec<PublishedSitePost>> {
+    pub async fn published_posts_page(
+        &self,
+        site: &PublishedSite,
+        offset: u32,
+        limit: u32,
+    ) -> Result<PublishedSitePostPage> {
+        let total = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM site_posts \
+             WHERE tenant_id = $1 AND site_id = $2 AND status = 'published'",
+        )
+        .bind(site.tenant.as_str())
+        .bind(site.site.as_str())
+        .fetch_one(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
         let rows = sqlx::query_as::<_, PublishedSitePostRow>(
             "SELECT slug, title, excerpt, cover_blob_id, published_at \
              FROM site_posts \
              WHERE tenant_id = $1 AND site_id = $2 AND status = 'published' \
-             ORDER BY published_at DESC, id",
+             ORDER BY published_at DESC, id \
+             OFFSET $3 LIMIT $4",
         )
         .bind(site.tenant.as_str())
         .bind(site.site.as_str())
+        .bind(i64::from(offset))
+        .bind(i64::from(limit))
         .fetch_all(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-        Ok(rows
-            .into_iter()
-            .map(PublishedSitePostRow::into_post)
-            .collect())
+        Ok(PublishedSitePostPage {
+            posts: rows
+                .into_iter()
+                .map(PublishedSitePostRow::into_post)
+                .collect(),
+            total: u64::try_from(total).unwrap_or_default(),
+        })
     }
 
     /// One published blog post and its current alo Docs body. A missing,
