@@ -61,6 +61,8 @@ export function PageEditorView() {
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewMobile, setPreviewMobile] = useState(false);
+  const [proposedPreviewHtml, setProposedPreviewHtml] = useState<string | null>(null);
+  const [previewVersion, setPreviewVersion] = useState<"before" | "after">("before");
   const [themeOpen, setThemeOpen] = useState(false);
   const [seoOpen, setSeoOpen] = useState(false);
   // Bumped when the theme changes — the preview document depends on the
@@ -84,6 +86,11 @@ export function PageEditorView() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    setProposedPreviewHtml(null);
+    setPreviewVersion("before");
+  }, [siteId, pageId]);
 
   // The live preview: the server renders the draft with the exact renderer
   // publishing uses. `sections` is always the envelope the last op answered,
@@ -204,6 +211,10 @@ export function PageEditorView() {
             <PageAiEditPanel
               siteId={siteId}
               pageId={pageId}
+              onPreviewChange={(html) => {
+                setProposedPreviewHtml(html);
+                setPreviewVersion(html === null ? "before" : "after");
+              }}
               onApplied={(envelope) => {
                 setSections(envelope.sections);
                 setError(null);
@@ -308,21 +319,55 @@ export function PageEditorView() {
           <aside className={styles.previewPane} aria-label={strings.sitesPreview}>
             <div className={styles.previewBar}>
               <h2 className={styles.sectionTitle}>{strings.sitesPreview}</h2>
-              <div className={styles.previewToggle}>
-                <IconButton
-                  size="sm"
-                  label={strings.sitesPreviewDesktop}
-                  icon={<Monitor size={15} />}
-                  active={!previewMobile}
-                  onClick={() => setPreviewMobile(false)}
-                />
-                <IconButton
-                  size="sm"
-                  label={strings.sitesPreviewMobile}
-                  icon={<Smartphone size={15} />}
-                  active={previewMobile}
-                  onClick={() => setPreviewMobile(true)}
-                />
+              <div className={styles.previewControls}>
+                {proposedPreviewHtml !== null && (
+                  <div
+                    className={styles.previewCompareToggle}
+                    role="group"
+                    aria-label={strings.sitesAiPreviewCompare}
+                  >
+                    <Button
+                      variant="ghost"
+                      className={
+                        previewVersion === "before"
+                          ? styles.previewCompareButtonActive
+                          : undefined
+                      }
+                      aria-pressed={previewVersion === "before"}
+                      onClick={() => setPreviewVersion("before")}
+                    >
+                      {strings.sitesAiPreviewBefore}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      className={
+                        previewVersion === "after"
+                          ? styles.previewCompareButtonActive
+                          : undefined
+                      }
+                      aria-pressed={previewVersion === "after"}
+                      onClick={() => setPreviewVersion("after")}
+                    >
+                      {strings.sitesAiPreviewAfter}
+                    </Button>
+                  </div>
+                )}
+                <div className={styles.previewToggle}>
+                  <IconButton
+                    size="sm"
+                    label={strings.sitesPreviewDesktop}
+                    icon={<Monitor size={15} />}
+                    active={!previewMobile}
+                    onClick={() => setPreviewMobile(false)}
+                  />
+                  <IconButton
+                    size="sm"
+                    label={strings.sitesPreviewMobile}
+                    icon={<Smartphone size={15} />}
+                    active={previewMobile}
+                    onClick={() => setPreviewMobile(true)}
+                  />
+                </div>
               </div>
             </div>
             {previewError !== null && <ErrorBanner message={previewError} />}
@@ -337,7 +382,11 @@ export function PageEditorView() {
                 className={styles.previewFrame}
                 title={strings.sitesPreviewTitle}
                 sandbox="allow-scripts"
-                srcDoc={previewHtml ?? ""}
+                srcDoc={
+                  previewVersion === "after" && proposedPreviewHtml !== null
+                    ? proposedPreviewHtml
+                    : (previewHtml ?? "")
+                }
               />
             </div>
           </aside>

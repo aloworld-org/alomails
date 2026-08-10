@@ -28,10 +28,12 @@ export function PageAiEditPanel({
   siteId,
   pageId,
   onApplied,
+  onPreviewChange,
 }: {
   siteId: string;
   pageId: string;
   onApplied: (sections: SectionsEnvelope) => void;
+  onPreviewChange: (html: string | null) => void;
 }) {
   const api = useSitesApi();
   const [instruction, setInstruction] = useState("");
@@ -43,7 +45,9 @@ export function PageAiEditPanel({
     setBusy(true);
     setError(null);
     try {
-      setProposal(await api.proposePageEdit(siteId, pageId, instruction.trim()));
+      const prepared = await api.proposePageEdit(siteId, pageId, instruction.trim());
+      setProposal(prepared.proposal);
+      onPreviewChange(prepared.previewHtml);
     } catch (reason) {
       setError(sitesMessage(reason, strings.sitesAiEditFailed));
     } finally {
@@ -58,6 +62,7 @@ export function PageAiEditPanel({
     try {
       const result = await api.applyPageEdit(siteId, pageId, proposal);
       onApplied(result);
+      onPreviewChange(null);
       setProposal(null);
       setInstruction("");
     } catch (reason) {
@@ -88,7 +93,6 @@ export function PageAiEditPanel({
             placeholder={strings.sitesAiInstructionPlaceholder}
           />
           <Button
-            size="sm"
             disabled={busy || instruction.trim() === ""}
             onClick={() => void propose()}
           >
@@ -96,8 +100,9 @@ export function PageAiEditPanel({
           </Button>
         </div>
       ) : (
-        <div className={styles.aiProposal}>
-          <h4>{strings.sitesAiProposalTitle}</h4>
+        <div className={styles.aiProposal} aria-live="polite">
+          <h4>{strings.sitesAiProposalCount(proposal.operations.length)}</h4>
+          <p className={styles.aiProposalHint}>{strings.sitesAiPreviewHint}</p>
           <ol>
             {proposal.operations.map((operation, index) => (
               <li key={`${operation.op}-${index}`}>{operationLabel(operation)}</li>
@@ -106,16 +111,16 @@ export function PageAiEditPanel({
           <div className={styles.aiProposalActions}>
             <Button
               variant="ghost"
-              size="sm"
               disabled={busy}
               onClick={() => {
                 setProposal(null);
                 setError(null);
+                onPreviewChange(null);
               }}
             >
               {strings.sitesAiDiscard}
             </Button>
-            <Button size="sm" disabled={busy} onClick={() => void apply()}>
+            <Button disabled={busy} onClick={() => void apply()}>
               {busy ? strings.sitesAiApplying : strings.sitesAiApprove}
             </Button>
           </div>

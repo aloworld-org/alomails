@@ -315,6 +315,9 @@ async fn page_edit_is_a_reviewable_proposal_until_approved_and_tenant_scoped() {
     .await;
     assert_eq!(status, StatusCode::OK, "{proposed}");
     assert_eq!(proposed["proposal"]["operations"][0]["op"], "rewrite_copy");
+    let proposed_preview = proposed["previewHtml"].as_str().unwrap();
+    assert!(proposed_preview.contains("A clearer welcome"));
+    assert!(!proposed_preview.contains("Old heading"));
     assert_eq!(seen.lock().unwrap().len(), 1);
 
     // Proposing writes nothing.

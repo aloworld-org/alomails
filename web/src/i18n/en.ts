@@ -2668,6 +2668,12 @@ export const en = {
   sitesAiPropose: "Prepare changes",
   sitesAiPreparing: "Preparing changes…",
   sitesAiProposalTitle: "Proposed changes",
+  sitesAiProposalCount: (count: number) =>
+    count === 1 ? "1 proposed change" : `${count} proposed changes`,
+  sitesAiPreviewHint: "Compare the page before and after, then choose what happens.",
+  sitesAiPreviewCompare: "Compare proposed page changes",
+  sitesAiPreviewBefore: "Before",
+  sitesAiPreviewAfter: "After",
   sitesAiApprove: "Approve changes",
   sitesAiApplying: "Applying changes…",
   sitesAiDiscard: "Discard",

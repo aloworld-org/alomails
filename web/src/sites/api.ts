@@ -29,6 +29,7 @@ import type {
   SiteDraft,
   GeneratedSiteDraft,
   SiteEditEnvelope,
+  ProposedSiteEdit,
   SitePage,
   SitePageDetail,
   SitePost,
@@ -210,12 +211,12 @@ export class SitesApi {
     siteId: string,
     pageId: string,
     instruction: string,
-  ): Promise<SiteEditEnvelope> {
-    return this.#write<{ proposal: SiteEditEnvelope }>(
+  ): Promise<ProposedSiteEdit> {
+    return this.#write<ProposedSiteEdit>(
       "POST",
       `${this.#pagePath(siteId, pageId)}/ai-edits`,
       { instruction },
-    ).then((answer) => answer.proposal);
+    );
   }
 
   /** Applies only the operation set the owner reviewed. The server replays it

@@ -344,7 +344,8 @@ pub async fn propose_page_edit(
     let account = authenticate(&state, &headers).await?;
     let sid = SiteId::new(id);
     let page_id = SitePageId::new(pid);
-    let current = page_envelope(&account, &sid, &page_id).await?;
+    let page = page_record(&account, &sid, &page_id).await?;
+    let current = parse_envelope(page.sections.clone())?;
     let req: ProposeSiteEditBody =
         serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let instruction = req.instruction.trim();
@@ -374,7 +375,15 @@ pub async fn propose_page_edit(
     let proposal = alo_ai::propose_site_edit(&config, &current, instruction)
         .await
         .map_err(|error| site_edit_problem(&error))?;
-    Ok(Json(json!({ "proposal": proposal })))
+    let proposed =
+        alo_ai::apply_site_edit(&current, &proposal).map_err(|error| site_edit_problem(&error))?;
+    let proposed_value = proposed.to_value().map_err(|_| Problem::server_error())?;
+    let site = require_site(&account, &sid).await?;
+    let preview_html = render_preview_html(&account, &site, &page, &proposed_value).await;
+    Ok(Json(json!({
+        "proposal": proposal,
+        "previewHtml": preview_html,
+    })))
 }
 
 /// `PUT /sites/:id/pages/:pid/ai-edits` `{proposal}` applies an explicitly
@@ -1166,15 +1175,30 @@ pub async fn preview_page(
     let account = authenticate(&state, &headers).await?;
     let sid = SiteId::new(id);
     let site = require_site(&account, &sid).await?;
-    let page = account
-        .acc
-        .site_page(&sid, &SitePageId::new(pid))
-        .await
-        .map_err(map_store_err)?
-        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
+    let page = page_record(&account, &sid, &SitePageId::new(pid)).await?;
+    let html = render_preview_html(&account, &site, &page, &page.sections).await;
+    Ok((
+        [
+            (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-store"),
+        ],
+        html,
+    )
+        .into_response())
+}
 
+/// Renders either the stored page or an already-validated proposed envelope
+/// through the public renderer. Keeping this one path means the AI review's
+/// “after” view is the page that approval would actually store, not a client
+/// approximation.
+async fn render_preview_html(
+    account: &Account,
+    site: &Site,
+    page: &SitePage,
+    sections: &Value,
+) -> String {
     let theme = SiteTheme::from_stored(site.theme.clone());
-    let images = preview_image_map(&account, &theme, &page.sections).await;
+    let images = preview_image_map(account, &theme, sections).await;
     let base_url = format!("https://{}.{}", site.subdomain, sites_domain());
     let site_ctx = SiteRenderContext {
         name: &site.name,
@@ -1193,17 +1217,9 @@ pub async fn preview_page(
         title: &page.title,
         seo_title: page.seo_title.as_deref(),
         seo_description: page.seo_description.as_deref(),
-        sections: &page.sections,
+        sections,
     };
-    let html = render_page_preview(&site_ctx, &page_ctx, &stylesheet(&theme));
-    Ok((
-        [
-            (header::CONTENT_TYPE, "text/html; charset=utf-8"),
-            (header::CACHE_CONTROL, "no-store"),
-        ],
-        html,
-    )
-        .into_response())
+    render_page_preview(&site_ctx, &page_ctx, &stylesheet(&theme))
 }
 
 #[derive(Deserialize)]
@@ -1516,17 +1532,26 @@ fn parse_section(value: Value) -> Result<Section, Problem> {
 }
 
 /// Loads the page's current envelope for a read-modify-write section op.
+async fn page_record(
+    account: &Account,
+    site: &SiteId,
+    page: &SitePageId,
+) -> Result<SitePage, Problem> {
+    account
+        .acc
+        .site_page(site, page)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))
+}
+
+/// Loads the page's current envelope for a read-modify-write section op.
 async fn page_envelope(
     account: &Account,
     site: &SiteId,
     page: &SitePageId,
 ) -> Result<SectionsEnvelope, Problem> {
-    let p = account
-        .acc
-        .site_page(site, page)
-        .await
-        .map_err(map_store_err)?
-        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
+    let p = page_record(account, site, page).await?;
     parse_envelope(p.sections)
 }
 

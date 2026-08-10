@@ -160,6 +160,13 @@ export interface SiteEditEnvelope {
   operations: SiteEditOperation[];
 }
 
+/** A validated no-write proposal together with the exact public-renderer
+ *  document that approval would produce. */
+export interface ProposedSiteEdit {
+  proposal: SiteEditEnvelope;
+  previewHtml: string;
+}
+
 /** What the create-page form sends. The empty slug is only accepted by the
  *  server together with `home: true` — it is the home page's spelling. */
 export interface PageDraft {

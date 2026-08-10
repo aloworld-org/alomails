@@ -2680,6 +2680,12 @@ export const nl: Partial<Catalog> = {
   sitesAiPropose: "Wijzigingen voorbereiden",
   sitesAiPreparing: "Wijzigingen voorbereiden…",
   sitesAiProposalTitle: "Voorgestelde wijzigingen",
+  sitesAiProposalCount: (count: number) =>
+    count === 1 ? "1 voorgestelde wijziging" : `${count} voorgestelde wijzigingen`,
+  sitesAiPreviewHint: "Vergelijk de pagina voor en na en kies daarna wat er gebeurt.",
+  sitesAiPreviewCompare: "Voorgestelde paginawijzigingen vergelijken",
+  sitesAiPreviewBefore: "Voor",
+  sitesAiPreviewAfter: "Na",
   sitesAiApprove: "Wijzigingen goedkeuren",
   sitesAiApplying: "Wijzigingen toepassen…",
   sitesAiDiscard: "Verwerpen",

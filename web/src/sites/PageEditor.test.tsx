@@ -150,12 +150,21 @@ describe("reviewed page changes", () => {
     replies = [
       pageReply([HERO]),
       {
+        match: (url, method) => method === "GET" && url.endsWith("/preview"),
+        status: 200,
+        body: "<!doctype html><p>Before copy</p>",
+      },
+      {
         match: (url, method) => method === "POST" && url.endsWith("/ai-edits"),
         status: 200,
-        body: { proposal },
+        body: { proposal, previewHtml: "<!doctype html><p>After copy</p>" },
       },
     ];
     ui();
+    const frame = (await screen.findByTitle(
+      strings.sitesPreviewTitle,
+    )) as HTMLIFrameElement;
+    await waitFor(() => expect(frame.getAttribute("srcdoc")).toContain("Before copy"));
     fireEvent.change(await screen.findByLabelText(strings.sitesAiInstruction), {
       target: { value: "Make the welcome clearer" },
     });
@@ -168,14 +177,23 @@ describe("reviewed page changes", () => {
       method: "POST",
       body: { instruction: "Make the welcome clearer" },
     });
+    await waitFor(() => expect(frame.getAttribute("srcdoc")).toContain("After copy"));
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiPreviewBefore }));
+    expect(frame.getAttribute("srcdoc")).toContain("Before copy");
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiPreviewAfter }));
+    expect(frame.getAttribute("srcdoc")).toContain("After copy");
     fireEvent.click(screen.getByRole("button", { name: strings.sitesAiDiscard }));
     expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
+    expect(frame.getAttribute("srcdoc")).toContain("Before copy");
+    expect(
+      screen.queryByRole("button", { name: strings.sitesAiPreviewAfter }),
+    ).toBeNull();
 
     replies = [
       {
         match: (url, method) => method === "POST" && url.endsWith("/ai-edits"),
         status: 200,
-        body: { proposal },
+        body: { proposal, previewHtml: "<!doctype html><p>After copy</p>" },
       },
       {
         match: (url, method) => method === "PUT" && url.endsWith("/ai-edits"),

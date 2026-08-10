@@ -2706,6 +2706,12 @@ export const fr: Partial<Catalog> = {
   sitesAiPropose: "Préparer les modifications",
   sitesAiPreparing: "Préparation des modifications…",
   sitesAiProposalTitle: "Modifications proposées",
+  sitesAiProposalCount: (count: number) =>
+    count === 1 ? "1 modification proposée" : `${count} modifications proposées`,
+  sitesAiPreviewHint: "Comparez la page avant et après, puis choisissez la suite.",
+  sitesAiPreviewCompare: "Comparer les modifications proposées",
+  sitesAiPreviewBefore: "Avant",
+  sitesAiPreviewAfter: "Après",
   sitesAiApprove: "Approuver les modifications",
   sitesAiApplying: "Application des modifications…",
   sitesAiDiscard: "Ignorer",
