@@ -288,6 +288,8 @@ POST /finance/bank/lines/{id}/unignore -> finance.bank.lines.unignore
 POST /finance/bank/lines/{id}/unmatch -> finance.bank.lines.unmatch
 POST /finance/expenses -> finance.expense.create
 POST /finance/expenses/{id}/approve -> finance.expense.approve
+POST /finance/expenses/{id}/category/accept -> finance.expense.category.accept
+POST /finance/expenses/{id}/category/decline -> finance.expense.category.decline
 POST /finance/expenses/{id}/reimburse -> finance.expense.reimburse
 POST /finance/expenses/{id}/reject -> finance.expense.reject
 POST /finance/expenses/{id}/submit -> finance.expense.submit
