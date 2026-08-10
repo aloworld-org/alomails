@@ -18,6 +18,7 @@ import {
   Lock,
   MessageSquarePlus,
   MessagesSquare,
+  MoreHorizontal,
   Paperclip,
   Pencil,
   Plus,
@@ -50,6 +51,7 @@ import type {
   Message,
   Proposal,
 } from "./types";
+import { EMOJI, searchEmoji } from "./emoji";
 import styles from "./ChatModule.module.css";
 
 /** The ceiling the server enforces (`ATTACHMENTS_MAX` in the store). Kept in
@@ -516,6 +518,12 @@ export function ChatModule() {
     null,
   );
   const composerMenuRef = useRef<HTMLDivElement | null>(null);
+  // Which room's row menu is open, by id — one at a time, same reason.
+  const [emojiQuery, setEmojiQuery] = useState("");
+  const [rowMenu, setRowMenu] = useState<string | null>(null);
+  const rowMenuRef = useRef<HTMLUListElement | null>(null);
+  const closeRowMenu = useCallback(() => setRowMenu(null), []);
+  useDismiss(rowMenu !== null, rowMenuRef, closeRowMenu);
   const closeComposerMenu = useCallback(() => setComposerMenu(null), []);
   useDismiss(composerMenu !== null, composerMenuRef, closeComposerMenu);
   // Whether anything remains behind the oldest line held. Derived from the
@@ -984,6 +992,8 @@ export function ChatModule() {
   const open = channels?.find((c) => c.id === openId) ?? null;
   // Derived, not stored: the list is a function of what is typed and where
   // the caret is, so it can never disagree with the composer.
+  // Null while nothing is being searched for: the picker shows its groups.
+  const emojiHits = emojiQuery.trim() === "" ? null : searchEmoji(emojiQuery);
   const mention = mentionAt(draft, caret);
   const suggestions =
     mention === null ? [] : candidatesFor(mention.token, nameable);
@@ -1182,9 +1192,12 @@ export function ChatModule() {
             <p className={styles.emptyHint}>{strings.chatNoChannelsHint}</p>
           </div>
         ) : (
-          <ul className={styles.channelList}>
+          <ul className={styles.channelList} ref={rowMenuRef}>
             {channels.map((channel) => (
-              <li key={channel.id}>
+              // The row is the target; its menu sits beside the button rather
+              // than inside it, because a button inside a button is invalid
+              // and swallows the click.
+              <li key={channel.id} className={styles.channelRow}>
                 <button
                   type="button"
                   className={[
@@ -1229,6 +1242,53 @@ export function ChatModule() {
                     )
                   )}
                 </button>
+                {channel.kind === "channel" && channel.archivedAt === null && (
+                  <span className={styles.rowMenuWrap}>
+                    <button
+                      type="button"
+                      className={styles.rowMenuButton}
+                      onClick={() =>
+                        setRowMenu((at) =>
+                          at === channel.id ? null : channel.id,
+                        )
+                      }
+                      aria-label={strings.chatChannelActions(
+                        channelLabel(channel),
+                      )}
+                      aria-expanded={rowMenu === channel.id}
+                    >
+                      <MoreHorizontal size={16} />
+                    </button>
+                    {rowMenu === channel.id && (
+                      <span className={styles.rowMenu} role="menu">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={styles.rowMenuItem}
+                          onClick={() => {
+                            setRowMenu(null);
+                            void renameRoom(channel);
+                          }}
+                        >
+                          <Pencil size={14} />
+                          {strings.chatRename}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={styles.rowMenuItem}
+                          onClick={() => {
+                            setRowMenu(null);
+                            void archiveRoom(channel);
+                          }}
+                        >
+                          <Archive size={14} />
+                          {strings.chatArchiveAction}
+                        </button>
+                      </span>
+                    )}
+                  </span>
+                )}
               </li>
             ))}
           </ul>
@@ -1486,21 +1546,67 @@ export function ChatModule() {
                       <Smile size={18} />
                     </button>
                     {composerMenu === "emoji" && palette.length > 0 && (
-                      <div className={styles.emojiMenu} role="menu">
-                        {palette.map((glyph) => (
-                          <button
-                            key={glyph}
-                            type="button"
-                            role="menuitem"
-                            className={styles.pickerOption}
-                            onClick={() => {
-                              setComposerMenu(null);
-                              insertAtCaret(glyph);
-                            }}
-                          >
-                            {glyph}
-                          </button>
-                        ))}
+                      <div className={styles.emojiMenu}>
+                        <input
+                          className={styles.emojiSearch}
+                          value={emojiQuery}
+                          onChange={(event) =>
+                            setEmojiQuery(event.target.value)
+                          }
+                          placeholder={strings.chatEmojiSearch}
+                          aria-label={strings.chatEmojiSearch}
+                          autoComplete="off"
+                          autoFocus
+                        />
+                        <div className={styles.emojiScroll}>
+                          {emojiHits !== null ? (
+                            emojiHits.length === 0 ? (
+                              <p className={styles.emojiNone}>
+                                {strings.chatEmojiNone}
+                              </p>
+                            ) : (
+                              <div className={styles.emojiGrid}>
+                                {emojiHits.map((glyph) => (
+                                  <button
+                                    key={glyph}
+                                    type="button"
+                                    className={styles.pickerOption}
+                                    onClick={() => {
+                                      setComposerMenu(null);
+                                      setEmojiQuery("");
+                                      insertAtCaret(glyph);
+                                    }}
+                                  >
+                                    {glyph}
+                                  </button>
+                                ))}
+                              </div>
+                            )
+                          ) : (
+                            EMOJI.map((group) => (
+                              <div key={group.name}>
+                                <h4 className={styles.emojiHeading}>
+                                  {group.name}
+                                </h4>
+                                <div className={styles.emojiGrid}>
+                                  {group.items.map(([glyph]) => (
+                                    <button
+                                      key={glyph}
+                                      type="button"
+                                      className={styles.pickerOption}
+                                      onClick={() => {
+                                        setComposerMenu(null);
+                                        insertAtCaret(glyph);
+                                      }}
+                                    >
+                                      {glyph}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
                       </div>
                     )}
                   </span>

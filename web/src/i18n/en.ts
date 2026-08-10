@@ -1698,6 +1698,7 @@ export const en = {
   chatWithdrawFailed: "That message couldn’t be withdrawn.",
   chatWhoIsHere: "Who's here",
   chatMembersAndAgents: "Members & agents",
+  chatChannelActions: (name: string): string => `Actions for ${name}`,
   chatRename: "Rename channel",
   chatRenamePrompt: "Everyone in the channel sees the new name.",
   chatRenameSave: "Rename",
@@ -1737,6 +1738,8 @@ export const en = {
   chatShareAsk: "Ask alo",
   chatShareAskHint: "Answers from across your workspace",
   chatInsertEmoji: "Emoji",
+  chatEmojiSearch: "Search emoji",
+  chatEmojiNone: "No emoji matches that.",
   chatUnstage: (name: string): string => `Remove ${name}`,
   chatAttachFailed: "That file couldn’t be shared.",
   chatOpenFile: "Open in Drive",
@@ -2654,17 +2657,21 @@ export const en = {
   sitesBlankTemplate: "Blank site",
   sitesHomePageTitle: "Home",
   sitesAiEditTitle: "Describe a page change",
-  sitesAiEditBody: "alo prepares a reviewable change list. Nothing changes until you approve it.",
+  sitesAiEditBody:
+    "alo prepares a reviewable change list. Nothing changes until you approve it.",
   sitesAiInstruction: "Page change",
-  sitesAiInstructionPlaceholder: "Make the welcome warmer and move testimonials above pricing…",
+  sitesAiInstructionPlaceholder:
+    "Make the welcome warmer and move testimonials above pricing…",
   sitesAiPropose: "Prepare changes",
   sitesAiPreparing: "Preparing changes…",
   sitesAiProposalTitle: "Proposed changes",
   sitesAiApprove: "Approve changes",
   sitesAiApplying: "Applying changes…",
   sitesAiDiscard: "Discard",
-  sitesAiEditFailed: "The change list could not be prepared. Try again or edit the sections directly.",
-  sitesAiApplyFailed: "These changes could not be applied. Review the server message and try again.",
+  sitesAiEditFailed:
+    "The change list could not be prepared. Try again or edit the sections directly.",
+  sitesAiApplyFailed:
+    "These changes could not be applied. Review the server message and try again.",
   sitesAiAddChange: (section: string, position: number) =>
     `Add ${section} at position ${position}`,
   sitesAiRemoveChange: (section: string) => `Remove ${section}`,
