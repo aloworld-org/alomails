@@ -413,6 +413,144 @@ describe("alo Projects is fully translated (B3.11)", () => {
   });
 });
 
+describe("alo Finance is fully translated (B4.15)", () => {
+  /** The B4 surface: expense claims an employee is answerable for, the bank
+   *  statements and the pile they leave, the chart of accounts, the four
+   *  reports a company files from, and the three agent cards that read the
+   *  books. Same rule as billing, CRM, Insights and Projects above — a figure
+   *  somebody copies into a VAT return must not come with half its words in
+   *  English. */
+  const FINANCE_AGENT_KEYS = Object.keys(en).filter(
+    (key) =>
+      key.startsWith("agentCategorise") ||
+      key.startsWith("agentVat") ||
+      key.startsWith("agentAnomaly") ||
+      key === "agentActCategorise" ||
+      key === "agentActVatSummary" ||
+      key === "agentActFlagAnomalies",
+  );
+  const financeKeys = Object.keys(en).filter(
+    (key) =>
+      key.startsWith("finance") ||
+      key === "moduleFinance" ||
+      FINANCE_AGENT_KEYS.includes(key),
+  );
+
+  test("the key list is the real Finance surface, not an empty filter", () => {
+    // A typo in the filter above would make every assertion below vacuous.
+    expect(financeKeys.length).toBeGreaterThan(300);
+    expect(FINANCE_AGENT_KEYS.length).toBeGreaterThan(40);
+    expect(en).toHaveProperty("moduleFinance");
+  });
+
+  test.each([
+    ["fr", fr],
+    ["nl", nl],
+  ])("%s translates every Finance string", (_locale, catalog) => {
+    const missing = financeKeys.filter((key) => !(key in catalog));
+    expect(missing).toEqual([]);
+  });
+
+  test.each([
+    ["fr", fr],
+    ["nl", nl],
+  ])("%s keeps every interpolation a function of the same shape", (locale, catalog) => {
+    for (const key of financeKeys) {
+      const source = (en as Record<string, unknown>)[key];
+      const translated = (catalog as Record<string, unknown>)[key];
+      expect(typeof translated).toBe(typeof source);
+      if (typeof source === "function" && typeof translated === "function") {
+        expect(translated.length).toBe(source.length);
+      } else {
+        expect(String(translated).trim()).not.toBe("");
+      }
+    }
+    expect(locale).toMatch(/^(fr|nl)$/);
+  });
+
+  test("the translated strings really are different words", () => {
+    expect(buildCatalog("fr").moduleFinance).toBe("Finance");
+    expect(buildCatalog("nl").moduleFinance).toBe("Financiën");
+    // The four report titles are the words an accountant looks for.
+    expect(buildCatalog("fr").financeReportPl).toBe("Compte de résultat");
+    expect(buildCatalog("nl").financeReportPl).toBe("Winst-en-verliesrekening");
+    expect(buildCatalog("fr").financeReportVat).toBe("Déclaration de TVA");
+    expect(buildCatalog("nl").financeReportVat).toBe("Btw-aangifte");
+    expect(buildCatalog("fr").financeChartLoadFailed).toContain("plan comptable");
+    expect(buildCatalog("nl").financeChartLoadFailed).toContain("rekeningschema");
+    // …including the ones built by a function, and both branches of a plural.
+    expect(buildCatalog("fr").financeReportOpenDocuments(1)).toBe("1 document ouvert");
+    expect(buildCatalog("fr").financeReportOpenDocuments(3)).toBe("3 documents ouverts");
+    expect(buildCatalog("nl").financeReportOpenDocuments(1)).toBe("1 openstaand document");
+    expect(buildCatalog("nl").financeReportOpenDocuments(3)).toBe("3 openstaande documenten");
+  });
+
+  test("no sentence makes a participle agree with an interpolated amount", () => {
+    // French agreement is the trap on this surface: an amount arrives as a
+    // formatted string, so "1,00 € restent dus" would be ungrammatical for
+    // every singular amount. Each of these is deliberately invariable.
+    expect(buildCatalog("fr").financeBankStillOwedIs("1,00 €")).toBe(
+      "1,00 € restant à payer",
+    );
+    expect(buildCatalog("fr").financeBankPickSubtitle("1,00 €")).toContain(
+      "Nous avons reçu 1,00 €",
+    );
+    expect(buildCatalog("fr").financeReportUnbalanced("1,00 €")).toContain(
+      "un écart de 1,00 € n’est pas expliqué",
+    );
+    expect(buildCatalog("fr").financeMarkPaidBackSubtitle("Marie", "1,00 €")).toBe(
+      "Retour de 1,00 € à Marie.",
+    );
+  });
+
+  test("the words the two modules share stay one word", () => {
+    // A payment settles a *billing* invoice and is read on a *finance* screen.
+    // If "issued" is one word under Billing and another under Finance, the
+    // same document appears to have two states.
+    expect(buildCatalog("fr").billingStatusIssued).toBe("Émise");
+    expect(buildCatalog("fr").financeBankNoOpenInvoices).toContain("facture émise");
+    expect(buildCatalog("nl").billingStatusIssued).toBe("Uitgegeven");
+    expect(buildCatalog("nl").financeBankNoOpenInvoices).toContain("uitgegeven factuur");
+    expect(buildCatalog("nl").financeReportAgedEmptyBody).toContain("uitgegeven document");
+  });
+
+  test("every reason and kind the agent cards render has words in each language", () => {
+    // The server sends codes, so an untranslated branch is a French card that
+    // explains itself in English. The default branch matters most: a newer
+    // server's code must still read as an answer.
+    const reasons = [
+      "noMerchant",
+      "noHistory",
+      "alreadyProposed",
+      "declined",
+      "somethingNewerServersKnow",
+    ];
+    const kinds = [
+      "duplicate",
+      "unusualAmount",
+      "missingRecurring",
+      "somethingNewerServersKnow",
+    ];
+    for (const locale of ["fr", "nl"] as const) {
+      const say = buildCatalog(locale);
+      for (const reason of reasons) {
+        expect(say.agentCategoriseReason(reason)).not.toBe(en.agentCategoriseReason(reason));
+        expect(say.agentCategoriseReason(reason).trim()).not.toBe("");
+      }
+      for (const kind of kinds) {
+        expect(say.agentAnomalyKind(kind)).not.toBe(en.agentAnomalyKind(kind));
+        expect(say.agentAnomalyKind(kind).trim()).not.toBe("");
+      }
+    }
+    expect(buildCatalog("fr").agentAnomalyKind("duplicate")).toBe(
+      "Comptabilisé deux fois en une semaine",
+    );
+    expect(buildCatalog("nl").agentAnomalyKind("duplicate")).toBe(
+      "Twee keer geboekt in één week",
+    );
+  });
+});
+
 describe("runtime switching", () => {
   test("strings proxy reflects the active locale live", () => {
     expect(getLocale()).toBe("en");

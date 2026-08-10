@@ -2914,4 +2914,540 @@ export const fr: Partial<Catalog> = {
     `Votre site sera accessible à l’adresse ${address}.`,
   sitesPublishFailed: "Le site n’a pas pu être publié.",
   sitesUnpublishFailed: "Le site n’a pas pu être mis hors ligne.",
+
+  // ---- alo Finance (wave B4, translated at B4.15) -------------------------
+  //
+  // Le vocabulaire est celui des documents que ces écrans produisent : une
+  // *note de frais*, un *relevé bancaire*, un *plan comptable*, une
+  // *déclaration de TVA* — pas la glose des mots anglais. Deux règles suivies
+  // partout : (1) les statuts d’une note de frais s’accordent au féminin, parce
+  // que le sujet est toujours « la note de frais » et jamais un autre document ;
+  // (2) aucune phrase interpolant un montant ne fait accorder un participe sur
+  // ce montant (« 1,00 € restent dus » serait faux), d’où les tournures
+  // invariables « restant à payer », « un écart de … », « nous avons reçu … ».
+  moduleFinance: "Finance",
+  financeTabExpenses: "Notes de frais",
+  financeTabApprovals: "Approbations",
+  financeLoadFailed: "Vos notes de frais n’ont pas pu être chargées.",
+  financeSaveFailed: "La modification n’a pas pu être enregistrée.",
+  financeCancel: "Annuler",
+  financeSave: "Enregistrer",
+  financeEdit: "Modifier",
+  financeDelete: "Supprimer",
+  financeActions: "Actions",
+  financeShow: "Afficher",
+  financeFrom: "Du",
+  financeTo: "Au",
+
+  // La note de frais elle-même.
+  financeNewClaim: "Nouvelle note de frais",
+  financeEditClaim: "Modifier la note de frais",
+  financeClaimSubtitle: "Ce que vous avez dépensé, et avec quel argent.",
+  financeSpentOn: "Date",
+  financeSpentOnHint:
+    "Le jour où l’argent est parti, dans votre propre fuseau horaire.",
+  financeMerchant: "Commerçant",
+  financeMerchantHint: "Qui a été payé — le nom figurant sur le reçu.",
+  financeNoMerchant: "Aucun commerçant",
+  financeDescription: "Objet de la dépense",
+  financeGross: "Total",
+  financeVat: "TVA",
+  financeVatHint:
+    "La TVA indiquée sur le reçu. Laissez vide s’il n’en indique aucune.",
+  financeNoVat: "—",
+  financeVatRate: "Taux de TVA %",
+  financeVatRateHint: "Tel qu’imprimé : 19, 21, 5,5.",
+  financeCurrency: "Devise",
+  financeCurrencyHint:
+    "Laissez vide pour la devise de votre espace de travail.",
+  financeProject: "Projet",
+  financeProjectHint:
+    "Rattachez la note de frais au travail d’un client, pour qu’elle apparaisse dans le coût de ce projet.",
+  financeNoProject: "Aucun projet",
+  financeMethod: "Payé avec",
+  financeMethodHint:
+    "Seul votre propre argent donne lieu à un remboursement.",
+  financeMethodPersonal: "Argent personnel",
+  financeMethodCard: "Carte de l’entreprise",
+  financeMethodCash: "Caisse",
+  financeMethodPersonalOption: "Mon propre argent",
+  financeMethodCardOption: "La carte de l’entreprise",
+  financeMethodCashOption: "La caisse",
+  financeAmountInvalid: "Ce n’est pas un montant.",
+  financeRateInvalid: "Ce n’est pas un pourcentage.",
+
+  // Où en est une note de frais. Le mot du serveur, dans la langue de la
+  // personne — au féminin, puisqu’il s’agit toujours d’une note de frais.
+  financeStatus: "Statut",
+  financeAnyStatus: "Tous les statuts",
+  financeStatusDraft: "Brouillon",
+  financeStatusSubmitted: "En attente",
+  financeStatusApproved: "Approuvée",
+  financeStatusRejected: "Refusée",
+  financeStatusReimbursed: "Remboursée",
+  financePaidBackOn: (day: string) => `Remboursée le ${day}`,
+
+  // Les verbes.
+  financeSubmit: "Transmettre",
+  financeWithdraw: "Retirer",
+  financeApprove: "Approuver",
+  financeReject: "Refuser",
+  financeMarkPaidBack: "Marquer comme remboursée",
+  financeMarkPaidBackSubtitle: (person: string, amount: string) =>
+    `Retour de ${amount} à ${person}.`,
+  financeReimbursedOn: "Remboursée le",
+  financeReimbursedOnHint:
+    "Le jour où l’argent a réellement bougé — c’est le jour de la comptabilisation.",
+  financeDeleteTitle: "Supprimer cette note de frais ?",
+  financeDeleteBody:
+    "La note de frais et ce que vous y avez saisi sont supprimés. C’est irréversible.",
+  financeRejectTitle: "Refuser cette note de frais",
+  financeRejectBody: (person: string) =>
+    `${person} lira ceci, et pourra corriger la note de frais puis la transmettre à nouveau.`,
+  financeRejectPlaceholder: "Pourquoi elle revient…",
+
+  // L’écran de celui qui approuve.
+  financePerson: "Personne",
+  financeCategory: "Catégorie",
+  financeUncategorised: "Non classée",
+  financeSubmittedAt: "Transmise le",
+  financeApprovedAt: "Approuvée le",
+  financeOfWhichVat: (amount: string) => `dont ${amount} de TVA`,
+  financeWaitingTitle: "En attente d’une décision",
+  financeWaitingEmptyTitle: "Rien n’attend",
+  financeWaitingEmptyBody:
+    "Les notes de frais transmises par vos collègues apparaissent ici, l’achat le plus ancien en premier.",
+  financeOwedTitle: "À rembourser",
+  financeOwedNote:
+    "Les notes de frais approuvées que vos collègues ont payées de leur poche. Une note payée par la carte de l’entreprise est approuvée sans rien devoir à personne : elle n’est pas ici.",
+  financeOwedEmptyTitle: "Personne n’attend d’argent",
+  financeOwedEmptyBody:
+    "Dès que vous approuvez une note de frais que quelqu’un a payée de sa poche, elle attend ici que l’argent reparte.",
+
+  // Ce qu’un employé voit du module en premier.
+  financeExpensesEmptyTitle: "Aucune note de frais sur cette période",
+  financeExpensesEmptyBody:
+    "Enregistrez ce que vous avez dépensé pour le travail — la date, le total du reçu et l’argent qui a payé. Elle reste la vôtre jusqu’à ce que vous la transmettiez.",
+
+  // ---- la banque, et la pile qu’elle laisse ------------------------------
+  financeTabBank: "Banque",
+  financeTabReconcile: "Rapprochement",
+  financeBankLoadFailed: "Les relevés bancaires n’ont pas pu être chargés.",
+
+  // Importer un relevé.
+  financeBankImportStatement: "Importer un relevé",
+  financeBankImportTitle: "Importer un relevé bancaire",
+  financeBankImportSubtitle:
+    "Nous lisons d’abord le fichier et vous montrons ce que nous en avons compris. Rien n’est enregistré avant votre accord.",
+  financeBankFile: "Fichier du relevé",
+  financeBankFileHint:
+    "Un fichier CAMT.053 ou MT940 téléchargé depuis votre banque, ou un export CSV.",
+  financeBankAccount: "Compte",
+  financeBankAccountHint:
+    "L’IBAN concerné par ce relevé. Un fichier CAMT.053 ou MT940 l’indique lui-même ; un CSV ne le fait pas.",
+  financeBankCurrencyHint:
+    "Pour un CSV qui ne l’indique pas. Laissez vide pour la devise de votre espace de travail.",
+  financeBankCheckFile: "Vérifier ce fichier",
+  financeBankCheckAgain: "Vérifier à nouveau",
+  financeBankImport: "Importer",
+  financeBankReadFailed: "Ce fichier n’a pas pu être lu.",
+  financeBankImportFailed: "Rien n’a été importé.",
+  financeBankStale:
+    "Vous avez modifié la façon de lire le fichier. Vérifiez-le à nouveau pour voir le résultat.",
+  financeBankStaged: (staged: number, duplicates: number) =>
+    duplicates === 0
+      ? `${staged} opérations importées.`
+      : `${staged} opérations importées ; ${duplicates} étaient déjà là et ont été laissées telles quelles.`,
+
+  // Ce que le serveur a fait du fichier.
+  financeBankFormat: "Lu comme",
+  financeBankSourceCamt: "CAMT.053",
+  financeBankSourceMt940: "MT940",
+  financeBankSourceCsv: "CSV",
+  financeBankRows: "Opérations",
+  financeBankRowsRead: (lines: number, rows: number) =>
+    `${lines} lignes sur ${rows}`,
+  financeBankSkipped: "Lignes qui ne sont pas des opérations",
+  financeBankUnbooked: "Pas encore comptabilisées par la banque",
+  financeBankPeriod: "Période",
+  financeBankEncoding: "Encodage",
+  financeBankSampleTitle: "Les premières opérations, telles que nous les lisons",
+  financeBankSampleTruncated:
+    "Seules les premières opérations sont affichées ici. Toutes sont importées.",
+  financeBankRowsRefused: (count: number) =>
+    count === 1
+      ? "Une ligne ne peut pas être lue : rien n’a été importé."
+      : `${count} lignes ne peuvent pas être lues : rien n’a été importé.`,
+  financeBankRowAt: (line: number) => `Ligne ${line} :`,
+  financeBankRowUnknown: "Une ligne :",
+
+  // Nous dire quelle colonne est quoi.
+  financeBankMappingTitle: "Quelle colonne est quoi",
+  financeBankMappingNote:
+    "Nous avons deviné d’après l’en-tête du fichier. Corrigez ce que nous avons mal compris, puis vérifiez le fichier à nouveau.",
+  financeBankColumnNone: "Absente de ce fichier",
+  financeBankColDate: "Date de comptabilisation",
+  financeBankColValueDate: "Date de valeur",
+  financeBankColAmount: "Montant (une seule colonne signée)",
+  financeBankColDebit: "Argent sorti",
+  financeBankColCredit: "Argent entré",
+  financeBankColSign: "Le sens de l’opération",
+  financeBankColCurrency: "Devise par ligne",
+  financeBankColCounterparty: "Qui a été payé, ou qui a payé",
+  financeBankColIban: "Leur compte",
+  financeBankColRemittance: "Ce qui était écrit sur le paiement",
+  financeBankColReference: "La référence propre à la banque",
+  financeBankDates: "Dates lues comme",
+  financeBankDecimal: "Centimes séparés par",
+  financeBankConventionAuto: "Le déduire du fichier",
+  financeBankConventionDmy: "Jour/mois/année",
+  financeBankConventionMdy: "Mois/jour/année",
+  financeBankConventionYmd: "Année-mois-jour",
+  financeBankConventionComma: "Une virgule",
+  financeBankConventionDot: "Un point",
+
+  // Ce qui a été importé.
+  financeBankLines: "Opérations",
+  financeBankClosingBalance: "Solde de clôture",
+  financeBankImportedAt: "Importé le",
+  financeBankEmptyTitle: "Aucun relevé pour l’instant",
+  financeBankEmptyBody:
+    "Importez un mois depuis votre banque et chaque opération arrive dans une seule pile, en attente d’être rapprochée de la facture qu’elle a payée.",
+
+  // L’écran de rapprochement.
+  financeBankStatement: "Relevé",
+  financeBankAllStatements: "Tout ce qui n’est pas encore rapproché",
+  financeBankToMatchTitle: (count: number) =>
+    count === 1
+      ? "1 opération à rapprocher"
+      : `${count} opérations à rapprocher`,
+  financeBankAllMatchedTitle: "Plus rien à rapprocher",
+  financeBankAllMatchedBody:
+    "Chaque opération des relevés importés est soit attribuée à une facture, soit écartée. Importez un autre mois pour continuer.",
+  financeBankCapped:
+    "Cette liste est un premier lot, pas la totalité — traitez-la puis rechargez pour voir la suite.",
+  financeBankBookedOn: "Comptabilisée le",
+  financeBankCounterparty: "Qui",
+  financeBankNoCounterparty: "Aucun nom sur le paiement",
+  financeBankRemittance: "Référence",
+  financeBankCertain: "Certain",
+  financeBankThisOne: "C’est celle-ci",
+  financeBankNoGuess:
+    "Nous n’avons aucune idée de ce dont il s’agit. Choisissez la facture, ou écartez l’opération.",
+  financeBankNotOurs: "Pas à nous",
+  financeBankPickInvoice: "Choisir une facture",
+  financeBankStillOwed: "restant à payer",
+  financeBankStillOwedIs: (amount: string) => `${amount} restant à payer`,
+  financeBankMatchFailed: "Cette opération n’a pas été attribuée.",
+  financeBankUnmatchFailed: "Ce rapprochement n’a pas été annulé.",
+  financeBankIgnoreFailed: "Cette opération n’a pas été écartée.",
+
+  // Pourquoi nous pensons qu’une opération a réglé un document.
+  financeBankWhyNumberQuoted:
+    "notre numéro de facture est écrit sur le paiement",
+  financeBankWhyRuleSaved: "ce payeur a déjà été rapproché de cette façon",
+  financeBankWhyCustomerNamed: (percent: number) =>
+    `le nom sur le paiement ressemble à celui du client (${percent} %)`,
+  financeBankWhyWholeAmount: "le montant correspond exactement à ce qui est dû",
+  financeBankWhyOnlyDocument:
+    "c’est la seule facture ouverte pour ce montant",
+  financeBankWhyBeforeDue: (days: number) =>
+    days === 1
+      ? "il est arrivé la veille de l’échéance"
+      : `il est arrivé ${days} jours avant l’échéance`,
+  financeBankWhyAfterDue: (days: number) =>
+    days === 1
+      ? "il est arrivé le lendemain de l’échéance"
+      : `il est arrivé ${days} jours après l’échéance`,
+  financeBankWhyPartPayment: (amount: string) =>
+    `c’est une partie de la facture — il resterait ${amount}`,
+
+  // Écarter une opération.
+  financeBankIgnoreTitle: "Pas à nous de comptabiliser",
+  financeBankIgnoreBody:
+    "Dites pourquoi, pour que la prochaine personne qui lit ce relevé n’ait pas à le redécouvrir. Frais bancaires, virement privé, doublon.",
+  financeBankIgnore: "Écarter",
+  financeBankIgnorePlaceholder: "Pourquoi ce n’est pas à nous…",
+
+  // Choisir la facture à la main.
+  financeBankPickTitle: "Quelle facture cette opération a-t-elle réglée ?",
+  financeBankPickSubtitle: (amount: string) =>
+    `Nous avons reçu ${amount}. Dites ce que ce paiement a réglé.`,
+  financeBankFindInvoice: "Rechercher une facture",
+  financeBankFindInvoiceHint:
+    "Par numéro, ou par la référence que votre client lui a donnée.",
+  financeBankNoOpenInvoices:
+    "Aucune facture émise n’attend encore de paiement.",
+  financeBankNoNumber: "Sans numéro",
+  financeBankOverdue: "En retard",
+  financeBankConfirmMatch: "C’est elle qui a été réglée",
+
+  // Ce qui est déjà traité.
+  financeBankUnmatched: "À rapprocher",
+  financeBankMatched: "Rapprochées",
+  financeBankIgnored: "Écartées",
+  financeBankSettledTitle: "Déjà rapprochées",
+  financeBankSettledNote:
+    "Chacune a enregistré un paiement et déplacé les comptes. En annuler une l’inverse par une écriture qui lui est propre.",
+  financeBankUndoMatch: "Annuler",
+  financeBankSetAsideTitle: "Écartées",
+  financeBankSetAsideNote:
+    "Opérations dont quelqu’un a décidé qu’elles ne sont pas à nous.",
+  financeBankUndoIgnore: "Remettre dans la pile",
+
+  // ---- alo Finance : le plan comptable ------------------------------------
+  financeTabAccounts: "Comptes",
+  financeChartLoadFailed: "Le plan comptable n’a pas pu être chargé.",
+  financeChartSeeded:
+    "Nous vous avons créé un plan comptable neutre. Chacun de ces comptes est à vous : renommez-le ou renumérotez-le — la numérotation de votre comptable ne cassera rien, car la comptabilisation suit le rôle de chaque compte et non son numéro.",
+  financeChartEmptyTitle: "Aucun compte pour l’instant",
+  financeChartEmptyBody:
+    "Le plan comptable est la liste des endroits où l’argent peut se trouver : la banque, ce que les clients vous doivent, ce que vous gagnez, ce que vous dépensez. Rien ne peut être comptabilisé tant qu’il n’y en a pas.",
+
+  financeAccountAdd: "Ajouter un compte",
+  financeAccountEdit: "Modifier",
+  financeAccountDelete: "Supprimer",
+  financeAccountCode: "Numéro",
+  financeAccountCodeHint:
+    "Le numéro qu’utilise votre comptable. Lettres et chiffres, sans espaces.",
+  financeAccountName: "Nom",
+  financeAccountRole: "Rôle",
+  financeAccountRoleHint:
+    "Ce à quoi ce compte sert automatiquement. Les factures, les paiements et les notes de frais trouvent leur compte par son rôle et jamais par son numéro — renuméroter est donc sans risque, et retirer un rôle empêche ces documents de se comptabiliser tant qu’un autre compte ne l’a pas repris.",
+  financeAccountType: "Nature",
+  financeAccountTypeHint:
+    "Ce que le compte contient. Cela détermine le rapport où il apparaît.",
+  financeAccountTypeUnset: "Choisissez…",
+  financeAccountActive: "Utilisé",
+  financeAccountActiveHint:
+    "Un compte retiré conserve son historique et son solde et cesse d’être proposé sur les nouveaux documents.",
+  financeAccountInUse: "Utilisé",
+  financeAccountRetired: "Retiré",
+  financeAccountShowRetired: "Afficher les comptes retirés",
+  financeAccountMovement: "Mouvement",
+  financeAccountPostings: "Écritures",
+  financeAccountSystemNote:
+    "Nous avons créé ce compte : il ne peut pas être supprimé, car la comptabilisation passe par lui. Renommez-le, renumérotez-le ou retirez-le.",
+  financeAccountNewTitle: "Ajouter un compte",
+  financeAccountNewBody: "Votre propre ligne dans votre propre plan.",
+  financeAccountEditTitle: "Modifier le compte",
+  financeAccountEditBody:
+    "Renommer et renuméroter sont sans risque à tout moment.",
+  financeAccountSaveFailed: "Le compte n’a pas été enregistré.",
+  financeAccountDeleteFailed: "Le compte n’a pas été supprimé.",
+
+  // Les cinq natures, deux fois : le mot court pour un en-tête de tableau, et
+  // la phrase à laquelle on répond vraiment en en choisissant une.
+  financeAccountTypeAsset: "Ce que nous possédons",
+  financeAccountTypeLiability: "Ce que nous devons",
+  financeAccountTypeEquity: "Capitaux propres",
+  financeAccountTypeIncome: "Ce que nous gagnons",
+  financeAccountTypeExpense: "Ce que nous dépensons",
+  financeAccountTypeAssetLong:
+    "Quelque chose que nous possédons ou qui nous est dû — un compte bancaire, la caisse, les créances clients",
+  financeAccountTypeLiabilityLong:
+    "Quelque chose que nous devons — fournisseurs, impôts, sommes dues au personnel",
+  financeAccountTypeEquityLong:
+    "La part des associés, et les soldes avec lesquels les comptes ont ouvert",
+  financeAccountTypeIncomeLong: "Quelque chose que nous gagnons",
+  financeAccountTypeExpenseLong: "Quelque chose que nous dépensons",
+
+  // Les rôles par lesquels une règle de comptabilisation passe.
+  financeRoleNone: "Aucun rôle particulier",
+  financeRoleAr: "Ce que les clients nous doivent",
+  financeRoleAp: "Ce que nous devons aux fournisseurs",
+  financeRoleBank: "Le compte bancaire par lequel l’argent passe",
+  financeRoleCash: "La caisse",
+  financeRoleVatOutput: "La TVA que nous avons facturée et que nous devons",
+  financeRoleVatInput: "La TVA que nous avons payée et pouvons récupérer",
+  financeRoleRevenue: "Les ventes",
+  financeRoleExpenseDefault: "Les frais sans catégorie propre",
+  financeRoleEmployeePayable: "Les notes de frais que nous devons au personnel",
+  financeRoleFxDiff: "Les écarts de change",
+  financeRoleRounding: "Les écarts d’arrondi",
+  financeRoleOpeningBalance: "Les soldes avec lesquels les comptes ont ouvert",
+  financeRoleSuspense: "L’argent que nous ne savons pas encore où placer",
+
+  // ---- alo Finance : les quatre rapports ----------------------------------
+  financeTabReports: "Rapports",
+  financeReportPl: "Compte de résultat",
+  financeReportBalance: "Bilan",
+  financeReportAged: "Qui doit quoi",
+  financeReportVat: "Déclaration de TVA",
+  financeReportFrom: "Du",
+  financeReportTo: "Au",
+  financeReportOn: "Au",
+  financeReportShow: "Afficher",
+  financeReportToday: "Aujourd’hui",
+  financeReportThisYear: "Cette année",
+  financeReportThisQuarter: "Ce trimestre",
+  financeReportLastQuarter: "Trimestre précédent",
+  financeReportLastYearEnd: "Fin de l’année dernière",
+  financeReportDownloadCsv: "Télécharger le CSV",
+  financeReportDownloadFailed: "Le fichier n’a pas pu être téléchargé.",
+  financeReportLoadFailed: "Le rapport n’a pas pu être chargé.",
+  financeReportBasis: (from: string, to: string) =>
+    `Tout ce qui est comptabilisé entre le ${from} et le ${to}, ces deux jours inclus.`,
+  financeReportBasisOn: (on: string) =>
+    `Tout ce qui est comptabilisé jusqu’au ${on} inclus.`,
+  financeReportEmptyTitle: "Rien n’est encore comptabilisé",
+  financeReportEmptyBody:
+    "Les factures émises, les paiements et les notes de frais approuvées se comptabilisent d’eux-mêmes. Dès que c’est le cas, cela apparaît ici.",
+  financeReportAmount: "Montant",
+  financeReportTotal: "Total",
+  financeReportPrevious: (from: string, to: string) => `${from} – ${to}`,
+
+  // Le compte de résultat.
+  financeReportIncome: "Ce que nous avons gagné",
+  financeReportIncomeTotal: "Gagné au total",
+  financeReportExpense: "Ce que nous avons dépensé",
+  financeReportExpenseTotal: "Dépensé au total",
+  financeReportProfit: "Bénéfice",
+  financeReportLoss: "Perte",
+
+  // Le bilan.
+  financeReportAssets: "Ce que nous possédons",
+  financeReportAssetsTotal: "Possédé au total",
+  financeReportLiabilities: "Ce que nous devons",
+  financeReportLiabilitiesTotal: "Dû au total",
+  financeReportEquity: "Capitaux propres",
+  financeReportEquityTotal: "Capitaux propres au total",
+  financeReportResultToDate:
+    "Bénéfice ou perte à ce jour, pas encore affecté aux capitaux propres",
+  financeReportLiabilitiesEquityTotal:
+    "Dettes, capitaux propres et résultat réunis",
+  financeReportDifference: "Écart",
+  financeReportUnbalanced: (amount: string) =>
+    `Ces comptes ne sont pas équilibrés : un écart de ${amount} n’est pas expliqué. Ne déclarez rien à partir de ce bilan — envoyez-le-nous plutôt.`,
+
+  // Qui doit quoi.
+  financeReportSide: "Affichage",
+  financeReportReceivable: "Ce qu’on nous doit",
+  financeReportPayable: "Ce que nous devons",
+  financeReportParty: "Qui",
+  financeReportBandCurrent: "Pas encore échu",
+  financeReportBand1To30: "1–30 jours",
+  financeReportBand31To60: "31–60 jours",
+  financeReportBand61To90: "61–90 jours",
+  financeReportBand90Plus: "Plus de 90 jours",
+  financeReportOpenDocuments: (count: number) =>
+    count === 1 ? "1 document ouvert" : `${count} documents ouverts`,
+  financeReportNothingOwedToUs: "Personne ne vous doit rien",
+  financeReportNothingWeOwe: "Vous ne devez rien à personne",
+  financeReportAgedEmptyBody:
+    "Tous les documents émis de ce côté ont été réglés intégralement.",
+  financeReportUnconverted: (count: number) =>
+    count === 1
+      ? "1 document ne figure dans aucune de ces colonnes : nous n’avons pas de taux de change pour l’exprimer dans votre propre devise."
+      : `${count} documents ne figurent dans aucune de ces colonnes : nous n’avons pas de taux de change pour les exprimer dans votre propre devise.`,
+
+  // La déclaration de TVA.
+  financeReportVatRate: "Taux",
+  financeReportVatBase: "Montant hors TVA",
+  financeReportVatTax: "TVA",
+  financeReportVatOutput: "TVA que nous avons facturée",
+  financeReportVatOutputTotal: "Facturée au total",
+  financeReportVatInput: "TVA que nous avons payée",
+  financeReportVatInputTotal: "Payée au total",
+  financeReportVatUnrated: "Sans taux indiqué",
+  financeReportVatPayable: "À payer",
+  financeReportVatRefund: "À récupérer",
+  financeReportVatNote:
+    "Ce sont les chiffres de vos comptes — ventes et achats — c’est-à-dire ce à partir de quoi une déclaration se remplit. Le récapitulatif de TVA sous Facturation montre ce que vous avez facturé, ce qui est une autre question.",
+
+  // ---- l’agent Finance : la proposition de catégories ---------------------
+  agentActCategorise: "Proposer des catégories",
+  agentCategoriseNote:
+    "Examine vos propres notes de frais sans catégorie et en propose une pour chacune, parmi les catégories que vous avez déjà utilisées pour ce commerçant. Rien n’est classé tant que vous ne l’avez pas accepté.",
+  agentCategoriseFieldPeriod: "Notes de frais depuis le",
+  agentCategoriseSuggested: (count: number): string =>
+    count === 1 ? "1 proposition" : `${count} propositions`,
+  agentCategoriseNone: "Rien à proposer",
+  agentCategoriseConsidered: (count: number): string =>
+    count === 1
+      ? "1 note de frais examinée"
+      : `${count} notes de frais examinées`,
+  agentCategoriseEvidence: (times: number): string =>
+    times === 1
+      ? "déjà comptabilisé ici une fois"
+      : `déjà comptabilisé ici ${times} fois`,
+  agentCategoriseAccept: "Accepter",
+  agentCategoriseDecline: "Non",
+  agentCategoriseAccepted: "Acceptée",
+  agentCategoriseDeclined: "Refusée",
+  agentCategoriseLeftOut: "Laissée de côté",
+  agentCategoriseNoMerchant: "Aucun commerçant",
+  agentCategoriseFooter:
+    "Chaque proposition vous attend — rien n’est comptabilisé, déclaré ni récupéré tant que vous ne l’avez pas acceptée.",
+  agentCategoriseFailed:
+    "Cela n’a pas pu être calculé — réessayez depuis Finance.",
+  agentCategoriseReason: (reason: string): string => {
+    switch (reason) {
+      case "noMerchant":
+        return "aucun commerçant permettant de la reconnaître";
+      case "noHistory":
+        return "vous n’avez jamais classé ce commerçant";
+      case "alreadyProposed":
+        return "a déjà une proposition";
+      case "declined":
+        return "vous avez refusé une proposition ici";
+      default:
+        // Une raison qu’un serveur plus récent connaît et pas ce client : dire
+        // qu’elle a été laissée de côté plutôt que de prétendre le contraire.
+        return "laissée de côté";
+    }
+  },
+
+  // ---- l’agent Finance : les deux réponses --------------------------------
+  agentActVatSummary: "Chiffres de TVA",
+  agentVatSummaryNote:
+    "Lit la TVA que vos comptes portent sur ces jours — taxe facturée, taxe payée, et la différence. Rien n’est déclaré et rien n’est modifié.",
+  agentVatFieldPeriod: "Période",
+  agentVatCharged: "Facturée sur les ventes",
+  agentVatPaid: "Payée sur les achats",
+  agentVatOwed: "Vous devez",
+  agentVatRefund: "On vous doit",
+  agentVatBaseSales: "Chiffre d’affaires",
+  agentVatBaseCosts: "Charges",
+  agentVatUnrated: "Sans taux",
+  agentVatRateRow: (rate: string, base: string): string => `${rate} de ${base}`,
+  agentVatNothing: "Rien sur ces jours",
+  agentVatFooter:
+    "Des chiffres pour une déclaration, pas une déclaration — le dépôt se fait toujours sur votre portail national.",
+  agentActFlagAnomalies: "Vérifier les comptes",
+  agentAnomalyNote:
+    "Lit votre journal sur ces jours et nomme ce qui mérite un second regard, avec les écritures qui sont derrière. N’écrit rien et ne marque rien comme vérifié.",
+  agentAnomalyFieldPeriod: "Comptes depuis le",
+  agentAnomalyFound: (count: number): string =>
+    count === 1 ? "1 point à regarder" : `${count} points à regarder`,
+  agentAnomalyNone: "Rien ne ressort",
+  agentAnomalyScanned: (count: number): string =>
+    count === 1 ? "1 écriture lue" : `${count} écritures lues`,
+  agentAnomalyShown: (shown: number, found: number): string =>
+    `${shown} sur ${found} affichés`,
+  agentAnomalyTruncated:
+    "Ces jours contiennent plus d’écritures qu’une seule vérification n’en lit — redemandez sur une période plus courte pour voir le reste.",
+  agentAnomalyNotComparable: (count: number): string =>
+    count === 1
+      ? "1 écriture ne nomme ni client ni fournisseur : elle n’a pas pu être comparée"
+      : `${count} écritures ne nomment ni client ni fournisseur : elles n’ont pas pu être comparées`,
+  agentAnomalyKind: (kind: string): string => {
+    switch (kind) {
+      case "duplicate":
+        return "Comptabilisé deux fois en une semaine";
+      case "unusualAmount":
+        return "Différent du reste de ce compte";
+      case "missingRecurring":
+        return "Un mois sans rien";
+      default:
+        // Un genre qu’un serveur plus récent connaît et pas ce client : encore
+        // une question, jamais rien.
+        return "À regarder";
+    }
+  },
+  agentAnomalyTypical: (amount: string): string => `d’habitude ${amount}`,
+  agentAnomalyMissingMonth: (month: string): string => `rien en ${month}`,
+  agentAnomalyEvidence: "Les écritures qui sont derrière",
+  agentAnomalyFooter:
+    "Rien n’a été modifié et rien n’a été marqué comme vérifié — chacun de ces points est une question sur des écritures, et la réponse à une question est une écriture de correction.",
 };

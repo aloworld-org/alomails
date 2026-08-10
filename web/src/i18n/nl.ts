@@ -2888,4 +2888,535 @@ export const nl: Partial<Catalog> = {
     `Uw site komt online op ${address}.`,
   sitesPublishFailed: "De site kon niet worden gepubliceerd.",
   sitesUnpublishFailed: "De site kon niet offline worden gehaald.",
+
+  // ---- alo Financiën (wave B4, vertaald bij B4.15) ------------------------
+  //
+  // De woorden zijn die van de documenten die deze schermen maken: een
+  // *declaratie*, een *rekeningafschrift*, een *rekeningschema*, een
+  // *btw-aangifte* — niet een omschrijving van het Engelse woord. Twee vaste
+  // keuzes: *afletteren* is het werkwoord voor het bankwerk (wat een
+  // boekhouder zegt, waar "matchen" een leenwoord blijft), en *uitgegeven* is
+  // de status van een factuur, zoals in het facturatiescherm (B1.27), zodat
+  // dezelfde factuur in twee modules niet twee namen draagt.
+  moduleFinance: "Financiën",
+  financeTabExpenses: "Declaraties",
+  financeTabApprovals: "Goedkeuringen",
+  financeLoadFailed: "Uw declaraties konden niet worden geladen.",
+  financeSaveFailed: "De wijziging kon niet worden opgeslagen.",
+  financeCancel: "Annuleren",
+  financeSave: "Opslaan",
+  financeEdit: "Bewerken",
+  financeDelete: "Verwijderen",
+  financeActions: "Acties",
+  financeShow: "Tonen",
+  financeFrom: "Van",
+  financeTo: "Tot",
+
+  // De declaratie zelf.
+  financeNewClaim: "Nieuwe declaratie",
+  financeEditClaim: "Declaratie bewerken",
+  financeClaimSubtitle: "Wat u hebt uitgegeven, en wiens geld betaalde.",
+  financeSpentOn: "Datum",
+  financeSpentOnHint:
+    "De dag waarop het geld wegging, in uw eigen tijdzone.",
+  financeMerchant: "Leverancier",
+  financeMerchantHint: "Wie er betaald is — de naam op de bon.",
+  financeNoMerchant: "Geen leverancier",
+  financeDescription: "Waarvoor het was",
+  financeGross: "Totaal",
+  financeVat: "Btw",
+  financeVatHint:
+    "De btw die op de bon staat. Laat leeg als er geen op staat.",
+  financeNoVat: "—",
+  financeVatRate: "Btw-tarief %",
+  financeVatRateHint: "Zoals afgedrukt: 19, 21, 5,5.",
+  financeCurrency: "Valuta",
+  financeCurrencyHint: "Laat leeg voor de eigen valuta van uw werkruimte.",
+  financeProject: "Project",
+  financeProjectHint:
+    "Koppel de declaratie aan klantwerk, zodat ze in de kosten van dat project verschijnt.",
+  financeNoProject: "Geen project",
+  financeMethod: "Betaald met",
+  financeMethodHint: "Alleen uw eigen geld eindigt in een terugbetaling.",
+  financeMethodPersonal: "Eigen geld",
+  financeMethodCard: "Bedrijfskaart",
+  financeMethodCash: "Kleine kas",
+  financeMethodPersonalOption: "Mijn eigen geld",
+  financeMethodCardOption: "De bedrijfskaart",
+  financeMethodCashOption: "De kleine kas",
+  financeAmountInvalid: "Dat is geen bedrag.",
+  financeRateInvalid: "Dat is geen percentage.",
+
+  // Waar een declaratie staat. Het woord van de server, in de taal van de
+  // persoon.
+  financeStatus: "Status",
+  financeAnyStatus: "Elke status",
+  financeStatusDraft: "Concept",
+  financeStatusSubmitted: "In afwachting",
+  financeStatusApproved: "Goedgekeurd",
+  financeStatusRejected: "Afgewezen",
+  financeStatusReimbursed: "Terugbetaald",
+  financePaidBackOn: (day: string) => `Terugbetaald op ${day}`,
+
+  // De werkwoorden.
+  financeSubmit: "Indienen",
+  financeWithdraw: "Intrekken",
+  financeApprove: "Goedkeuren",
+  financeReject: "Afwijzen",
+  financeMarkPaidBack: "Markeren als terugbetaald",
+  financeMarkPaidBackSubtitle: (person: string, amount: string) =>
+    `${amount} terug naar ${person}.`,
+  financeReimbursedOn: "Terugbetaald op",
+  financeReimbursedOnHint:
+    "De dag waarop het geld echt is verplaatst — op die dag wordt het geboekt.",
+  financeDeleteTitle: "Deze declaratie verwijderen?",
+  financeDeleteBody:
+    "De declaratie en alles wat u erin hebt getypt verdwijnen. Dit kan niet ongedaan worden gemaakt.",
+  financeRejectTitle: "Deze declaratie afwijzen",
+  financeRejectBody: (person: string) =>
+    `${person} leest dit, en kan de declaratie corrigeren en opnieuw indienen.`,
+  financeRejectPlaceholder: "Waarom ze terugkomt…",
+
+  // Het scherm van wie goedkeurt.
+  financePerson: "Persoon",
+  financeCategory: "Categorie",
+  financeUncategorised: "Niet ingedeeld",
+  financeSubmittedAt: "Ingediend",
+  financeApprovedAt: "Goedgekeurd",
+  financeOfWhichVat: (amount: string) => `incl. ${amount} btw`,
+  financeWaitingTitle: "Wacht op een beslissing",
+  financeWaitingEmptyTitle: "Er wacht niets",
+  financeWaitingEmptyBody:
+    "Declaraties die uw collega's indienen verschijnen hier, de oudste aankoop eerst.",
+  financeOwedTitle: "Terug te betalen",
+  financeOwedNote:
+    "Goedgekeurde declaraties die uw collega's uit eigen zak hebben betaald. Een declaratie die de bedrijfskaart betaalde is goedgekeurd en is niemand iets schuldig, dus die staat hier niet.",
+  financeOwedEmptyTitle: "Niemand krijgt nog iets terug",
+  financeOwedEmptyBody:
+    "Zodra u een declaratie goedkeurt die iemand zelf heeft betaald, wacht ze hier tot het geld teruggaat.",
+
+  // Het eerste wat een medewerker van de module ziet.
+  financeExpensesEmptyTitle: "Geen declaraties in deze periode",
+  financeExpensesEmptyBody:
+    "Leg vast wat u voor het werk hebt uitgegeven — de datum, het totaal op de bon en wiens geld betaalde. Ze blijft van u tot u ze indient.",
+
+  // ---- de bank, en de stapel die ze achterlaat ----------------------------
+  financeTabBank: "Bank",
+  financeTabReconcile: "Afletteren",
+  financeBankLoadFailed: "De rekeningafschriften konden niet worden geladen.",
+
+  // Een afschrift importeren.
+  financeBankImportStatement: "Afschrift importeren",
+  financeBankImportTitle: "Een rekeningafschrift importeren",
+  financeBankImportSubtitle:
+    "We lezen het bestand eerst en tonen u wat we ervan hebben gemaakt. Er wordt niets opgeslagen tot u het zegt.",
+  financeBankFile: "Afschriftbestand",
+  financeBankFileHint:
+    "Een CAMT.053- of MT940-download van uw bank, of een CSV-export.",
+  financeBankAccount: "Rekening",
+  financeBankAccountHint:
+    "Het IBAN waarvoor dit afschrift geldt. Een CAMT.053- of MT940-bestand zegt het zelf; een CSV niet.",
+  financeBankCurrencyHint:
+    "Voor een CSV die het niet zegt. Laat leeg voor de eigen valuta van uw werkruimte.",
+  financeBankCheckFile: "Dit bestand controleren",
+  financeBankCheckAgain: "Opnieuw controleren",
+  financeBankImport: "Importeren",
+  financeBankReadFailed: "Dat bestand kon niet worden gelezen.",
+  financeBankImportFailed: "Er is niets geïmporteerd.",
+  financeBankStale:
+    "U hebt gewijzigd hoe het bestand wordt gelezen. Controleer het opnieuw om het resultaat te zien.",
+  financeBankStaged: (staged: number, duplicates: number) =>
+    duplicates === 0
+      ? `${staged} transacties geïmporteerd.`
+      : `${staged} transacties geïmporteerd; ${duplicates} stonden er al en zijn ongemoeid gelaten.`,
+
+  // Wat de server van het bestand heeft gemaakt.
+  financeBankFormat: "Gelezen als",
+  financeBankSourceCamt: "CAMT.053",
+  financeBankSourceMt940: "MT940",
+  financeBankSourceCsv: "CSV",
+  financeBankRows: "Transacties",
+  financeBankRowsRead: (lines: number, rows: number) =>
+    `${lines} van ${rows} regels`,
+  financeBankSkipped: "Regels die geen transactie zijn",
+  financeBankUnbooked: "Nog niet door de bank geboekt",
+  financeBankPeriod: "Periode",
+  financeBankEncoding: "Codering",
+  financeBankSampleTitle: "De eerste transacties, zoals wij ze lezen",
+  financeBankSampleTruncated:
+    "Hier ziet u alleen de eerste transacties. Ze worden allemaal geïmporteerd.",
+  financeBankRowsRefused: (count: number) =>
+    count === 1
+      ? "Eén regel kan niet worden gelezen, dus er is niets geïmporteerd."
+      : `${count} regels kunnen niet worden gelezen, dus er is niets geïmporteerd.`,
+  financeBankRowAt: (line: number) => `Regel ${line}:`,
+  financeBankRowUnknown: "Een regel:",
+
+  // Ons zeggen welke kolom wat is.
+  financeBankMappingTitle: "Welke kolom is wat",
+  financeBankMappingNote:
+    "We hebben het geraden uit de kop van het bestand zelf. Corrigeer wat we verkeerd hebben, en controleer het bestand daarna opnieuw.",
+  financeBankColumnNone: "Niet in dit bestand",
+  financeBankColDate: "Boekdatum",
+  financeBankColValueDate: "Valutadatum",
+  financeBankColAmount: "Bedrag (één kolom met teken)",
+  financeBankColDebit: "Geld eruit",
+  financeBankColCredit: "Geld erin",
+  financeBankColSign: "Welke kant het op gaat",
+  financeBankColCurrency: "Valuta per regel",
+  financeBankColCounterparty: "Wie er betaald is, of wie betaalde",
+  financeBankColIban: "Hun rekening",
+  financeBankColRemittance: "Wat er bij de betaling stond",
+  financeBankColReference: "De eigen referentie van de bank",
+  financeBankDates: "Datums gelezen als",
+  financeBankDecimal: "Centen gescheiden door",
+  financeBankConventionAuto: "Uit het bestand afleiden",
+  financeBankConventionDmy: "Dag/maand/jaar",
+  financeBankConventionMdy: "Maand/dag/jaar",
+  financeBankConventionYmd: "Jaar-maand-dag",
+  financeBankConventionComma: "Een komma",
+  financeBankConventionDot: "Een punt",
+
+  // Wat er geïmporteerd is.
+  financeBankLines: "Transacties",
+  financeBankClosingBalance: "Eindsaldo",
+  financeBankImportedAt: "Geïmporteerd",
+  financeBankEmptyTitle: "Nog geen afschriften",
+  financeBankEmptyBody:
+    "Importeer een maand van uw bank en elke transactie erin belandt op één stapel, klaar om afgeletterd te worden tegen de factuur die ze betaalde.",
+
+  // Het afletterscherm.
+  financeBankStatement: "Afschrift",
+  financeBankAllStatements: "Alles wat nog niet afgeletterd is",
+  financeBankToMatchTitle: (count: number) =>
+    count === 1
+      ? "1 transactie af te letteren"
+      : `${count} transacties af te letteren`,
+  financeBankAllMatchedTitle: "Niets meer af te letteren",
+  financeBankAllMatchedBody:
+    "Elke transactie in de geïmporteerde afschriften is aan een factuur toegewezen of opzijgezet. Importeer nog een maand om verder te gaan.",
+  financeBankCapped:
+    "Deze lijst is een eerste stapel, niet alles — werk ze af en herlaad om de rest te zien.",
+  financeBankBookedOn: "Geboekt",
+  financeBankCounterparty: "Wie",
+  financeBankNoCounterparty: "Geen naam bij de betaling",
+  financeBankRemittance: "Referentie",
+  financeBankCertain: "Zeker",
+  financeBankThisOne: "Deze",
+  financeBankNoGuess:
+    "We hebben geen idee wat dit is. Kies de factuur, of zet de transactie opzij.",
+  financeBankNotOurs: "Niet van ons",
+  financeBankPickInvoice: "Een factuur kiezen",
+  financeBankStillOwed: "nog openstaand",
+  financeBankStillOwedIs: (amount: string) => `${amount} nog openstaand`,
+  financeBankMatchFailed: "Die transactie is niet toegewezen.",
+  financeBankUnmatchFailed: "Die aflettering is niet teruggedraaid.",
+  financeBankIgnoreFailed: "Die transactie is niet opzijgezet.",
+
+  // Waarom wij denken dat een transactie een document heeft voldaan.
+  financeBankWhyNumberQuoted: "ons factuurnummer staat bij de betaling",
+  financeBankWhyRuleSaved: "deze betaler is eerder zo afgeletterd",
+  financeBankWhyCustomerNamed: (percent: number) =>
+    `de naam bij de betaling lijkt op die van de klant (${percent}%)`,
+  financeBankWhyWholeAmount: "het bedrag is precies wat openstaat",
+  financeBankWhyOnlyDocument:
+    "het is de enige openstaande factuur voor dit bedrag",
+  financeBankWhyBeforeDue: (days: number) =>
+    days === 1
+      ? "ze kwam de dag voor de vervaldag binnen"
+      : `ze kwam ${days} dagen voor de vervaldag binnen`,
+  financeBankWhyAfterDue: (days: number) =>
+    days === 1
+      ? "ze kwam de dag na de vervaldag binnen"
+      : `ze kwam ${days} dagen na de vervaldag binnen`,
+  financeBankWhyPartPayment: (amount: string) =>
+    `het is een deel van de factuur — ${amount} zou openblijven`,
+
+  // Een transactie opzijzetten.
+  financeBankIgnoreTitle: "Niet van ons om te boeken",
+  financeBankIgnoreBody:
+    "Zeg waarom, zodat wie dit afschrift na u leest het niet opnieuw hoeft uit te zoeken. Bankkosten, een privéoverboeking, een dubbele.",
+  financeBankIgnore: "Opzijzetten",
+  financeBankIgnorePlaceholder: "Waarom ze niet van ons is…",
+
+  // De factuur met de hand kiezen.
+  financeBankPickTitle: "Welke factuur heeft deze betaling voldaan?",
+  financeBankPickSubtitle: (amount: string) =>
+    `Er kwam ${amount} binnen. Zeg wat het heeft betaald.`,
+  financeBankFindInvoice: "Een factuur zoeken",
+  financeBankFindInvoiceHint:
+    "Op nummer, of op de referentie die uw klant eraan gaf.",
+  financeBankNoOpenInvoices:
+    "Geen enkele uitgegeven factuur wacht nog op geld.",
+  financeBankNoNumber: "Geen nummer",
+  financeBankOverdue: "Achterstallig",
+  financeBankConfirmMatch: "Deze is ermee voldaan",
+
+  // Wat al afgehandeld is.
+  financeBankUnmatched: "Af te letteren",
+  financeBankMatched: "Afgeletterd",
+  financeBankIgnored: "Opzijgezet",
+  financeBankSettledTitle: "Al afgeletterd",
+  financeBankSettledNote:
+    "Elk hiervan legde een betaling vast en verplaatste de boeken. Er een terugdraaien keert dat om met een eigen boeking.",
+  financeBankUndoMatch: "Terugdraaien",
+  financeBankSetAsideTitle: "Opzijgezet",
+  financeBankSetAsideNote:
+    "Transacties waarvan iemand besloot dat ze niet van ons zijn.",
+  financeBankUndoIgnore: "Terug op de stapel",
+
+  // ---- alo Financiën: het rekeningschema ----------------------------------
+  financeTabAccounts: "Rekeningen",
+  financeChartLoadFailed: "Het rekeningschema kon niet worden geladen.",
+  financeChartSeeded:
+    "We zijn voor u begonnen met een neutraal rekeningschema. Elke rekening hierin is van u om te hernoemen of te hernummeren — de nummering van uw boekhouder breekt niets, want het boeken volgt de taak van elke rekening en niet haar nummer.",
+  financeChartEmptyTitle: "Nog geen rekeningen",
+  financeChartEmptyBody:
+    "Het rekeningschema is de lijst van plaatsen waar geld kan zijn: de bank, wat klanten u schuldig zijn, wat u verdient, wat u uitgeeft. Er kan niets geboekt worden zolang er geen is.",
+
+  financeAccountAdd: "Rekening toevoegen",
+  financeAccountEdit: "Bewerken",
+  financeAccountDelete: "Verwijderen",
+  financeAccountCode: "Nummer",
+  financeAccountCodeHint:
+    "Het nummer dat uw boekhouder gebruikt. Letters en cijfers, geen spaties.",
+  financeAccountName: "Naam",
+  financeAccountRole: "Taak",
+  financeAccountRoleHint:
+    "Waar deze rekening automatisch voor dient. Facturen, betalingen en declaraties vinden hun rekening via haar taak, nooit via haar nummer — hernummeren is dus veilig, en een taak weghalen laat die documenten niet meer boeken tot een andere rekening ze heeft.",
+  financeAccountType: "Soort",
+  financeAccountTypeHint:
+    "Wat de rekening bevat. Het bepaalt in welk rapport ze verschijnt.",
+  financeAccountTypeUnset: "Kies er een…",
+  financeAccountActive: "In gebruik",
+  financeAccountActiveHint:
+    "Een uitgefaseerde rekening behoudt haar geschiedenis en haar saldo en wordt niet meer aangeboden op nieuwe documenten.",
+  financeAccountInUse: "In gebruik",
+  financeAccountRetired: "Uitgefaseerd",
+  financeAccountShowRetired: "Uitgefaseerde tonen",
+  financeAccountMovement: "Mutatie",
+  financeAccountPostings: "Boekingen",
+  financeAccountSystemNote:
+    "Wij hebben deze rekening aangemaakt, dus ze kan niet worden verwijderd — de boekhouding loopt erdoorheen. Hernoem ze, hernummer ze, of faseer ze uit.",
+  financeAccountNewTitle: "Rekening toevoegen",
+  financeAccountNewBody: "Uw eigen regel in uw eigen schema.",
+  financeAccountEditTitle: "De rekening bewerken",
+  financeAccountEditBody: "Hernoemen en hernummeren is altijd veilig.",
+  financeAccountSaveFailed: "De rekening is niet opgeslagen.",
+  financeAccountDeleteFailed: "De rekening is niet verwijderd.",
+
+  // De vijf soorten, twee keer: het korte woord voor een tabelkop, en de zin
+  // waarop iemand die er een kiest eigenlijk antwoordt.
+  financeAccountTypeAsset: "Wat we bezitten",
+  financeAccountTypeLiability: "Wat we schuldig zijn",
+  financeAccountTypeEquity: "Eigen vermogen",
+  financeAccountTypeIncome: "Wat we verdienen",
+  financeAccountTypeExpense: "Wat we uitgeven",
+  financeAccountTypeAssetLong:
+    "Iets wat we bezitten of tegoed hebben — een bankrekening, kas, vorderingen op klanten",
+  financeAccountTypeLiabilityLong:
+    "Iets wat we schuldig zijn — leveranciers, belasting, geld dat we het personeel schuldig zijn",
+  financeAccountTypeEquityLong:
+    "Het aandeel van de eigenaars, en de saldi waarmee de boeken openden",
+  financeAccountTypeIncomeLong: "Iets wat we verdienen",
+  financeAccountTypeExpenseLong: "Iets wat we uitgeven",
+
+  // De taken waar een boekingsregel doorheen loopt, elk gezegd als waar ze
+  // voor dient.
+  financeRoleNone: "Geen bijzondere taak",
+  financeRoleAr: "Wat klanten ons schuldig zijn",
+  financeRoleAp: "Wat wij leveranciers schuldig zijn",
+  financeRoleBank: "De bankrekening waar het geld doorheen gaat",
+  financeRoleCash: "Kleine kas",
+  financeRoleVatOutput: "Btw die we in rekening brachten en schuldig zijn",
+  financeRoleVatInput: "Btw die we betaalden en kunnen terugvorderen",
+  financeRoleRevenue: "Omzet",
+  financeRoleExpenseDefault: "Kosten zonder eigen categorie",
+  financeRoleEmployeePayable: "Declaraties die we het personeel schuldig zijn",
+  financeRoleFxDiff: "Koersverschillen",
+  financeRoleRounding: "Afrondingsverschillen",
+  financeRoleOpeningBalance: "De saldi waarmee de boeken openden",
+  financeRoleSuspense: "Geld dat we nog niet kunnen plaatsen",
+
+  // ---- alo Financiën: de vier rapporten -----------------------------------
+  financeTabReports: "Rapporten",
+  financeReportPl: "Winst-en-verliesrekening",
+  financeReportBalance: "Balans",
+  financeReportAged: "Wie wat schuldig is",
+  financeReportVat: "Btw-aangifte",
+  financeReportFrom: "Van",
+  financeReportTo: "Tot",
+  financeReportOn: "Op",
+  financeReportShow: "Tonen",
+  financeReportToday: "Vandaag",
+  financeReportThisYear: "Dit jaar",
+  financeReportThisQuarter: "Dit kwartaal",
+  financeReportLastQuarter: "Vorig kwartaal",
+  financeReportLastYearEnd: "Einde vorig jaar",
+  financeReportDownloadCsv: "CSV downloaden",
+  financeReportDownloadFailed: "Het bestand kon niet worden gedownload.",
+  financeReportLoadFailed: "Het rapport kon niet worden geladen.",
+  financeReportBasis: (from: string, to: string) =>
+    `Alles wat tussen ${from} en ${to} is geboekt, beide dagen inbegrepen.`,
+  financeReportBasisOn: (on: string) =>
+    `Alles wat tot en met ${on} is geboekt.`,
+  financeReportEmptyTitle: "Nog niets geboekt",
+  financeReportEmptyBody:
+    "Uitgegeven facturen, betalingen en goedgekeurde declaraties boeken zichzelf. Zodra er een boekt, verschijnt ze hier.",
+  financeReportAmount: "Bedrag",
+  financeReportTotal: "Totaal",
+  financeReportPrevious: (from: string, to: string) => `${from} – ${to}`,
+
+  // De winst-en-verliesrekening.
+  financeReportIncome: "Wat we hebben verdiend",
+  financeReportIncomeTotal: "Totaal verdiend",
+  financeReportExpense: "Wat we hebben uitgegeven",
+  financeReportExpenseTotal: "Totaal uitgegeven",
+  financeReportProfit: "Winst",
+  financeReportLoss: "Verlies",
+
+  // De balans.
+  financeReportAssets: "Wat we bezitten",
+  financeReportAssetsTotal: "Totaal bezit",
+  financeReportLiabilities: "Wat we schuldig zijn",
+  financeReportLiabilitiesTotal: "Totaal schuld",
+  financeReportEquity: "Eigen vermogen",
+  financeReportEquityTotal: "Totaal eigen vermogen",
+  financeReportResultToDate:
+    "Winst of verlies tot nu toe, nog niet naar het eigen vermogen gebracht",
+  financeReportLiabilitiesEquityTotal:
+    "Schulden, eigen vermogen en resultaat samen",
+  financeReportDifference: "Verschil",
+  financeReportUnbalanced: (amount: string) =>
+    `Deze boeken kloppen niet: er is een verschil van ${amount} dat nergens vandaan komt. Dien niets in op basis van deze balans — stuur ze in plaats daarvan naar ons.`,
+
+  // Wie wat schuldig is.
+  financeReportSide: "Weergave",
+  financeReportReceivable: "Wat men ons schuldig is",
+  financeReportPayable: "Wat wij schuldig zijn",
+  financeReportParty: "Wie",
+  financeReportBandCurrent: "Nog niet vervallen",
+  financeReportBand1To30: "1–30 dagen",
+  financeReportBand31To60: "31–60 dagen",
+  financeReportBand61To90: "61–90 dagen",
+  financeReportBand90Plus: "Meer dan 90 dagen",
+  financeReportOpenDocuments: (count: number) =>
+    count === 1 ? "1 openstaand document" : `${count} openstaande documenten`,
+  financeReportNothingOwedToUs: "Niemand is u iets schuldig",
+  financeReportNothingWeOwe: "U bent niemand iets schuldig",
+  financeReportAgedEmptyBody:
+    "Elk uitgegeven document aan deze kant is volledig voldaan.",
+  financeReportUnconverted: (count: number) =>
+    count === 1
+      ? "1 document staat in geen van deze kolommen: we hebben geen wisselkoers om het in uw eigen valuta uit te drukken."
+      : `${count} documenten staan in geen van deze kolommen: we hebben geen wisselkoers om ze in uw eigen valuta uit te drukken.`,
+
+  // De btw-aangifte.
+  financeReportVatRate: "Tarief",
+  financeReportVatBase: "Bedrag exclusief btw",
+  financeReportVatTax: "Btw",
+  financeReportVatOutput: "Btw die we in rekening brachten",
+  financeReportVatOutputTotal: "Totaal in rekening gebracht",
+  financeReportVatInput: "Btw die we betaalden",
+  financeReportVatInputTotal: "Totaal betaald",
+  financeReportVatUnrated: "Zonder vermeld tarief",
+  financeReportVatPayable: "Te betalen",
+  financeReportVatRefund: "Terug te vorderen",
+  financeReportVatNote:
+    "Dit zijn de cijfers van uw boeken — verkopen én aankopen — en daaruit wordt een aangifte ingevuld. Het btw-overzicht onder Facturatie toont wat u hebt gefactureerd, en dat is een andere vraag.",
+
+  // ---- de Financiën-agent: het voorstellen van categorieën ----------------
+  agentActCategorise: "Categorieën voorstellen",
+  agentCategoriseNote:
+    "Kijkt naar uw eigen declaraties zonder categorie en stelt er voor elk een voor, uit de categorieën die u eerder voor die leverancier gebruikte. Er wordt niets ingedeeld tot u het aanvaardt.",
+  agentCategoriseFieldPeriod: "Declaraties vanaf",
+  agentCategoriseSuggested: (count: number): string =>
+    count === 1 ? "1 voorstel" : `${count} voorstellen`,
+  agentCategoriseNone: "Niets voor te stellen",
+  agentCategoriseConsidered: (count: number): string =>
+    count === 1 ? "1 declaratie bekeken" : `${count} declaraties bekeken`,
+  agentCategoriseEvidence: (times: number): string =>
+    times === 1
+      ? "hier eerder één keer geboekt"
+      : `hier eerder ${times} keer geboekt`,
+  agentCategoriseAccept: "Aanvaarden",
+  agentCategoriseDecline: "Nee",
+  agentCategoriseAccepted: "Aanvaard",
+  agentCategoriseDeclined: "Geweigerd",
+  agentCategoriseLeftOut: "Overgeslagen",
+  agentCategoriseNoMerchant: "Geen leverancier",
+  agentCategoriseFooter:
+    "Elk voorstel wacht op u — er wordt niets geboekt, aangegeven of teruggevorderd tot u het aanvaardt.",
+  agentCategoriseFailed:
+    "Dat kon niet worden beantwoord — probeer het opnieuw vanuit Financiën.",
+  agentCategoriseReason: (reason: string): string => {
+    switch (reason) {
+      case "noMerchant":
+        return "geen leverancier om ze aan te herkennen";
+      case "noHistory":
+        return "u hebt deze leverancier nog nooit ingedeeld";
+      case "alreadyProposed":
+        return "heeft al een voorstel";
+      case "declined":
+        return "u hebt hier een voorstel geweigerd";
+      default:
+        // Een reden die een nieuwere server kent en deze client niet: zeg dat
+        // ze is overgeslagen in plaats van te doen alsof er iets voorgesteld is.
+        return "overgeslagen";
+    }
+  },
+
+  // ---- de Financiën-agent: de twee antwoorden -----------------------------
+  agentActVatSummary: "Btw-cijfers",
+  agentVatSummaryNote:
+    "Leest de btw die uw boeken over die dagen dragen — btw in rekening gebracht, btw betaald, en het verschil. Er wordt niets aangegeven en niets gewijzigd.",
+  agentVatFieldPeriod: "Periode",
+  agentVatCharged: "In rekening gebracht op verkopen",
+  agentVatPaid: "Betaald op aankopen",
+  agentVatOwed: "U moet betalen",
+  agentVatRefund: "U krijgt terug",
+  agentVatBaseSales: "Omzet",
+  agentVatBaseCosts: "Kosten",
+  agentVatUnrated: "Zonder tarief",
+  agentVatRateRow: (rate: string, base: string): string =>
+    `${rate} van ${base}`,
+  agentVatNothing: "Niets in deze dagen",
+  agentVatFooter:
+    "Cijfers voor een aangifte, geen aangifte — indienen gebeurt nog altijd in uw nationale portaal.",
+  agentActFlagAnomalies: "De boeken nakijken",
+  agentAnomalyNote:
+    "Leest uw journaal over die dagen en noemt wat een tweede blik verdient, met de boekingen die erachter zitten. Het schrijft niets en markeert niets als nagekeken.",
+  agentAnomalyFieldPeriod: "Boeken vanaf",
+  agentAnomalyFound: (count: number): string =>
+    count === 1 ? "1 om naar te kijken" : `${count} om naar te kijken`,
+  agentAnomalyNone: "Niets viel op",
+  agentAnomalyScanned: (count: number): string =>
+    count === 1 ? "1 boeking gelezen" : `${count} boekingen gelezen`,
+  agentAnomalyShown: (shown: number, found: number): string =>
+    `${shown} van ${found} getoond`,
+  agentAnomalyTruncated:
+    "Deze dagen bevatten meer boekingen dan één controle leest — vraag het opnieuw voor een kortere periode om de rest te zien.",
+  agentAnomalyNotComparable: (count: number): string =>
+    count === 1
+      ? "1 boeking noemt geen klant of leverancier, dus ze kon niet worden vergeleken"
+      : `${count} boekingen noemen geen klant of leverancier, dus ze konden niet worden vergeleken`,
+  agentAnomalyKind: (kind: string): string => {
+    switch (kind) {
+      case "duplicate":
+        return "Twee keer geboekt in één week";
+      case "unusualAmount":
+        return "Anders dan de rest van deze rekening";
+      case "missingRecurring":
+        return "Een maand met niets erin";
+      default:
+        // Een soort die een nieuwere server kent en deze client niet: nog
+        // altijd een vraag, nooit niets.
+        return "Een blik waard";
+    }
+  },
+  agentAnomalyTypical: (amount: string): string => `meestal ${amount}`,
+  agentAnomalyMissingMonth: (month: string): string => `niets in ${month}`,
+  agentAnomalyEvidence: "De boekingen die erachter zitten",
+  agentAnomalyFooter:
+    "Er is niets gewijzigd en niets als nagekeken gemarkeerd — elk hiervan is een vraag over boekingen, en het antwoord op één is een corrigerende boeking.",
 };
