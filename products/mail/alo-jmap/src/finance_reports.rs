@@ -101,7 +101,15 @@ impl OnQuery {
 
 /// Reads one bound of a report, naming it in every refusal so a caller with
 /// two wrong learns which one it is looking at.
-fn day(name: &str, raw: Option<&str>) -> Result<Date, Problem> {
+///
+/// Public to the crate's other report files: a report that takes a date **and**
+/// something else (the aged listing takes a side as well) declares its own
+/// query type, and must still refuse a malformed day in the same words as the
+/// two that take nothing else.
+///
+/// # Errors
+/// [`Problem`] with `422` when the bound is missing or is not a plain day.
+pub fn day(name: &str, raw: Option<&str>) -> Result<Date, Problem> {
     let raw = raw
         .map(str::trim)
         .filter(|value| !value.is_empty())

@@ -83,6 +83,7 @@ pub mod finance_expenses;
 pub mod finance_mileage;
 pub mod finance_periods;
 pub mod finance_receipts;
+pub mod finance_report_aged;
 pub mod finance_report_balance;
 pub mod finance_report_pl;
 pub mod finance_reports;

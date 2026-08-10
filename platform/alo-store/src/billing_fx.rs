@@ -315,6 +315,37 @@ pub fn restated_into(base: &str, fx: Option<&FxSnapshot>, totals: &Totals) -> Op
     convert_totals(totals, fx.rate_micro)
 }
 
+/// **One amount** as one set of books sees it: `cents`, stated in `currency`,
+/// expressed in `base` — or `None` when that cannot be done honestly.
+///
+/// The scalar sibling of [`restated_into`], for a report that adds up what is
+/// *open* on documents rather than what they are worth (`crate::fin_aged`):
+/// an open balance is one figure, not a set of per-rate subtotals, and crossing
+/// it once is the whole conversion.
+///
+/// It differs from [`restated_into`] in one deliberate way: **a document already
+/// in `base` needs no snapshot**, because nothing is being crossed. That case is
+/// answered by the currency itself, which is what lets a bill — which carries no
+/// snapshot at all, having been written by somebody else's system
+/// (`crate::billing_bills`) — be added to a euro total in a euro ledger without
+/// anybody inventing a rate. Anything genuinely foreign still needs a snapshot
+/// naming `base`, and gets `None` without one.
+pub fn restated_open_cents(
+    base: &str,
+    currency: &str,
+    fx: Option<&FxSnapshot>,
+    cents: i64,
+) -> Option<i64> {
+    if currency == base {
+        return Some(cents);
+    }
+    let fx = fx?;
+    if fx.base_currency != base {
+        return None;
+    }
+    convert_cents(cents, fx.rate_micro)
+}
+
 /// The rate of `quote` against `base` when both are published against a third
 /// currency (the euro, in the reference-rate table): `1 base = ? quote`.
 ///
@@ -569,6 +600,42 @@ mod tests {
         }
         // A cross that would leave the bounds is refused rather than stored.
         assert_eq!(cross_rate_micro(RATE_MICRO_MAX, 1), None);
+    }
+
+    #[test]
+    fn an_open_amount_is_crossed_only_when_there_is_something_to_cross() {
+        let on = day(2026, Month::August, 7);
+        // Already in the books' currency: itself, snapshot or no snapshot.
+        assert_eq!(
+            restated_open_cents("EUR", "EUR", None, 121_000),
+            Some(121_000)
+        );
+        assert_eq!(
+            restated_open_cents("EUR", "EUR", Some(&FxSnapshot::identity("EUR", on)), -2_500),
+            Some(-2_500)
+        );
+        // Foreign, with the rate frozen on the document: 1 EUR = 1.10 USD.
+        let usd = FxSnapshot {
+            base_currency: "EUR".to_owned(),
+            rate_micro: 1_100_000,
+            rate_date: on,
+        };
+        assert_eq!(
+            restated_open_cents("EUR", "USD", Some(&usd), 100_000),
+            Some(90_909)
+        );
+        // Foreign with no snapshot, or one taken against books the tenant no
+        // longer keeps: unconvertible, never converted at a guessed rate.
+        assert_eq!(restated_open_cents("EUR", "USD", None, 100_000), None);
+        assert_eq!(
+            restated_open_cents(
+                "EUR",
+                "USD",
+                Some(&FxSnapshot::identity("USD", on)),
+                100_000
+            ),
+            None
+        );
     }
 
     #[test]

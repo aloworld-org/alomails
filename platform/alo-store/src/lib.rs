@@ -76,6 +76,7 @@ pub mod drive;
 pub mod error;
 pub mod extract;
 pub mod fin_accounts;
+pub mod fin_aged;
 pub mod fin_balance;
 pub mod fin_booking;
 pub mod fin_categories;
@@ -232,6 +233,9 @@ pub use error::{Result, StoreError};
 pub use fin_accounts::{
     ACCOUNT_CODE_MAX_CHARS, ACCOUNT_NAME_MAX_CHARS, Account, AccountRole, AccountType, CHART,
     CHART_SEED_KEY, ChartAccount, ChartName, ChartSeed, NewAccount,
+};
+pub use fin_aged::{
+    AGED_BUCKETS, AgedBucket, AgedBuckets, AgedDocument, AgedParty, AgedReport, AgedSide,
 };
 pub use fin_balance::{BalanceLine, BalanceSheet};
 pub use fin_categories::{CATEGORY_NAME_MAX_CHARS, ExpenseCategory, NewExpenseCategory};
