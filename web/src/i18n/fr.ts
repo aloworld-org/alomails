@@ -6,6 +6,7 @@
 import type { Catalog } from "./en";
 
 export const fr: Partial<Catalog> = {
+  sitesAddFirstSection: "Ajouter votre première section",
   sitesAddressAvailable: "Disponible",
   sitesAddressTaken: "Déjà utilisée",
   sitesAddressNotChecked: "Saisissez une adresse valide pour vérifier sa disponibilité",

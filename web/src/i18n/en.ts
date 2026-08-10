@@ -2796,6 +2796,7 @@ export const en = {
   sitesBackToSite: "All pages",
   sitesSections: "Sections",
   sitesAddSection: "Add section",
+  sitesAddFirstSection: "Add your first section",
   sitesNoSectionsTitle: "Nothing on this page yet",
   sitesNoSectionsBody:
     "Stack sections — a hero, your features, a contact form — to build the page.",

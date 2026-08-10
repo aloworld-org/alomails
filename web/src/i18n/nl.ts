@@ -6,6 +6,7 @@
 import type { Catalog } from "./en";
 
 export const nl: Partial<Catalog> = {
+  sitesAddFirstSection: "Voeg je eerste sectie toe",
   sitesAddressAvailable: "Beschikbaar",
   sitesAddressTaken: "Al in gebruik",
   sitesAddressNotChecked: "Voer een geldig adres in om de beschikbaarheid te controleren",

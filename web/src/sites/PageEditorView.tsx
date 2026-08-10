@@ -226,8 +226,8 @@ export function PageEditorView() {
                 Icon={Layers}
                 title={strings.sitesNoSectionsTitle}
                 body={strings.sitesNoSectionsBody}
-                cta={strings.sitesAddSection}
-                onCta={() => setPicking(true)}
+                cta={strings.sitesAddFirstSection}
+                onCta={() => openForm({ kind: "hero", index: null })}
               />
             ) : (
               <ol className={styles.stack}>

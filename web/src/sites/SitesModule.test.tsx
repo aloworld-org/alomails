@@ -392,6 +392,13 @@ describe("creating a site", () => {
         "/sites/site-generated/pages/page-generated",
       ),
     );
+    expect(await screen.findByText(strings.sitesNoSectionsTitle)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesAddFirstSection }));
+    expect(
+      screen.getByRole("dialog", {
+        name: strings.sitesAddSectionTitle(strings.sitesSectionHero),
+      }),
+    ).toBeTruthy();
     expect(calls.find((call) => call.url.endsWith("/sites/generate"))?.body).toEqual({
       description: "A neighborhood bakery for local families",
     });
