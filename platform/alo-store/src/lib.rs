@@ -106,6 +106,9 @@ pub mod insight_series;
 pub mod insight_spec;
 pub mod insight_tiles;
 pub mod inv_barcode;
+pub mod inv_locations;
+pub mod inv_moves;
+pub mod inv_stock;
 pub mod inv_supplier_prices;
 pub mod inv_suppliers;
 pub mod maintenance;
@@ -302,9 +305,9 @@ pub use id::{
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
     FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
     FinMileageRateId, FinPeriodId, FinPostingId, GroupId, InsightDashboardId, InsightTileId,
-    InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
-    SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId, SitePublishId, SpaceId,
-    SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    InvLocationId, InvMoveId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId,
+    ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId,
+    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -326,12 +329,14 @@ pub use insight_spec::{
     ChartSpec, DimensionRef, Filter, MeasureRef, Period, Sort, SortBy, SortDir, SpecError,
 };
 pub use insight_tiles::{NewTile, Tile, TileSpec};
-// `inv_suppliers` and `inv_supplier_prices` are deliberately NOT re-exported
-// here: `Supplier` is already the name of the party **copied onto a bill**
+// The inventory modules are deliberately NOT re-exported here. `Supplier` is
+// already the name of the party **copied onto a bill**
 // (`billing_bills::Supplier`), and the master record is a different thing —
-// the distinction the design note spends a paragraph on. Callers reach them by
-// module path (`alo_store::inv_suppliers::{NewSupplier, Supplier}`), which
-// keeps the two apart at every use site.
+// the distinction the design note spends a paragraph on; `Location` and `Move`
+// are words a mail-and-calendar codebase will want again for something else.
+// Callers reach them by module path (`alo_store::inv_locations::NewLocation`,
+// `alo_store::inv_moves::{NewMove, MoveReason}`, `alo_store::inv_stock::
+// StockFilter`), which keeps every one of them unambiguous at its use site.
 pub use meet::{Meeting, MeetingParticipant, NewMeeting};
 pub use model::{
     AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, CalendarGrant, Category,

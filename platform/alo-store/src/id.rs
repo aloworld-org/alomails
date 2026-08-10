@@ -425,6 +425,23 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// A place stock can be — a warehouse, a shop floor, a van, or one of the
+    /// four virtual counterparties goods arrive from and leave to (alo
+    /// Inventory, ADR 0035, wave B5.04a). Both ends of every movement are one
+    /// of these, so the ledger is a closed system whose quantities sum to zero
+    /// (`docs/design/inventory.md`, "Why virtual locations").
+    InvLocationId
+);
+
+opaque_id!(
+    /// One movement of one product between two locations (alo Inventory, ADR
+    /// 0035, wave B5.04a). Append-only, like a [`FinEntryId`]: a movement
+    /// recorded in error is corrected by a movement the other way, never by an
+    /// edit.
+    InvMoveId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

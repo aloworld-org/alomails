@@ -37,10 +37,11 @@
 //!   misread scan is refused at the door rather than discovered when the
 //!   wrong item ships.
 //! - **`stocked` decides whether the move ledger accepts the product at all**
-//!   (B5.04a). Turning it *off* for a product that already carries movements
-//!   will be refused there, once there are movements to count — this module
-//!   deliberately holds no such guard while `inv_moves` does not exist, since
-//!   a guard that reads a missing table is a lie in the shape of a check.
+//!   ([`crate::inv_moves`] refuses to move a service). Turning it *off* for a
+//!   product that already carries movements is a [`StoreError::Conflict`] as of
+//!   B5.04a: those quantities are a claim about a thing with a shelf, and
+//!   un-saying it would leave them describing nothing. Archiving the product is
+//!   the way out, and it keeps every movement explainable.
 //!
 //! The photo is a Drive node referenced by id and never copied, gated on write
 //! by [`AccountStore::drive_require_read`] — the caller must be able to see
@@ -367,6 +368,23 @@ impl AccountStore {
     ) -> Result<()> {
         let p = normalize(input)?;
         self.require_product_links(input).await?;
+        // **Un-stocking a product that has moved is refused** (B5.04a). The
+        // ledger's quantities are a claim about a thing with a shelf; saying it
+        // never had one leaves those movements describing a service, and the
+        // stock screen quietly stops showing goods that are still in the
+        // building. The way out is to archive the product, which keeps every
+        // movement explainable.
+        if !p.stocked
+            && self.inv_product_has_moves(id).await?
+            && self
+                .billing_product(id)
+                .await?
+                .is_some_and(|stored| stored.stocked)
+        {
+            return Err(StoreError::Conflict(
+                "a product that has stock movements cannot stop being stocked".to_owned(),
+            ));
+        }
         let done = sqlx::query(
             "UPDATE billing_products SET name = $3, unit = $4, unit_price_cents = $5, \
                  vat_rate_bp = $6, sku = $7, barcode = $8, stocked = $9, \
