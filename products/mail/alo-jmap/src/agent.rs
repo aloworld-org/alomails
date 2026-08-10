@@ -209,6 +209,13 @@ pub(crate) async fn execute_tool(
         // alo Drive's tool set. It reads and nothing else — there is
         // deliberately no way for an agent to delete or share a file.
         "find_file" => crate::agent_drive::execute_find_file(account, args).await,
+        // The reading tools of Agenda, Chat and Contacts. Every one answers
+        // from the record rather than the search snippets, and none writes.
+        "whats_on" => crate::agent_reads::execute_whats_on(account, args).await,
+        "am_i_free" => crate::agent_reads::execute_am_i_free(account, args).await,
+        "catch_up_room" => crate::agent_reads::execute_catch_up_room(account, args).await,
+        "find_in_chat" => crate::agent_reads::execute_find_in_chat(account, args).await,
+        "find_contact" => crate::agent_reads::execute_find_contact(account, args).await,
         "log_time" => projects::execute_log_time(account, args).await,
         "project_status_summary" => projects::execute_project_status_summary(account, args).await,
         // B3.10b: a period of the caller's own Agenda turned into proposals,
@@ -220,9 +227,7 @@ pub(crate) async fn execute_tool(
         // alo Finance's tools (B4.14a), on the same seam. What
         // `categorise_transactions` writes is a suggestion on each claim, in a
         // column no report reads until the claimant accepts it.
-        "categorise_transactions" => {
-            finance::execute_categorise_transactions(account, args).await
-        }
+        "categorise_transactions" => finance::execute_categorise_transactions(account, args).await,
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
     }

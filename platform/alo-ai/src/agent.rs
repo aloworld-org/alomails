@@ -9,7 +9,10 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
 use crate::agent_billing::{BILLING_GUIDANCE, BILLING_TOOL_DOC, BILLING_TOOLS};
+use crate::agent_chat::{CHAT_GUIDANCE, CHAT_TOOL_DOC, CHAT_TOOLS};
+use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS};
 use crate::agent_crm::{CRM_GUIDANCE, CRM_TOOL_DOC, CRM_TOOLS};
 use crate::agent_drive::{DRIVE_GUIDANCE, DRIVE_TOOL_DOC, DRIVE_TOOLS};
 use crate::agent_finance::{FINANCE_GUIDANCE, FINANCE_TOOL_DOC, FINANCE_TOOLS};
@@ -99,8 +102,9 @@ If the request needs an action no tool covers, ANSWER instead and say you cannot
 pub fn system_prompt() -> String {
     format!(
         "{AGENT_SYSTEM_HEAD}{AGENT_SYSTEM_TOOLS}{BILLING_TOOL_DOC}{CRM_TOOL_DOC}{PROJECTS_TOOL_DOC}\
-         {FINANCE_TOOL_DOC}{DRIVE_TOOL_DOC}\
+         {FINANCE_TOOL_DOC}{DRIVE_TOOL_DOC}{AGENDA_TOOL_DOC}{CHAT_TOOL_DOC}{CONTACTS_TOOL_DOC}\
          {BILLING_GUIDANCE}{CRM_GUIDANCE}{PROJECTS_GUIDANCE}{FINANCE_GUIDANCE}{DRIVE_GUIDANCE}\
+         {AGENDA_GUIDANCE}{CHAT_GUIDANCE}{CONTACTS_GUIDANCE}\
          {AGENT_SYSTEM_RULES}"
     )
 }
@@ -118,6 +122,9 @@ pub fn is_agent_tool(tool: &str) -> bool {
         || PROJECTS_TOOLS.contains(&tool)
         || FINANCE_TOOLS.contains(&tool)
         || DRIVE_TOOLS.contains(&tool)
+        || AGENDA_TOOLS.contains(&tool)
+        || CHAT_TOOLS.contains(&tool)
+        || CONTACTS_TOOLS.contains(&tool)
 }
 
 /// The chat messages for one agent turn. Pure and exported so the prompt is
@@ -315,6 +322,9 @@ mod tests {
             .chain(PROJECTS_TOOLS)
             .chain(FINANCE_TOOLS)
             .chain(DRIVE_TOOLS)
+            .chain(AGENDA_TOOLS)
+            .chain(CHAT_TOOLS)
+            .chain(CONTACTS_TOOLS)
         {
             assert!(prompt.contains(&format!("- {tool}:")), "{tool} undescribed");
             assert!(is_agent_tool(tool), "{tool} is not allowed to execute");
@@ -326,7 +336,10 @@ mod tests {
                 + CRM_TOOLS.len()
                 + PROJECTS_TOOLS.len()
                 + FINANCE_TOOLS.len()
-                + DRIVE_TOOLS.len(),
+                + DRIVE_TOOLS.len()
+                + AGENDA_TOOLS.len()
+                + CHAT_TOOLS.len()
+                + CONTACTS_TOOLS.len(),
             "the prompt describes exactly the tools that exist"
         );
         // A name from neither list is not executable, whatever it looks like.
