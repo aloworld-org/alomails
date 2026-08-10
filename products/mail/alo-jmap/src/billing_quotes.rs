@@ -507,7 +507,7 @@ pub async fn print_quote(
         currency: &quote.currency,
         payment_terms_days: None,
         credits_number: None,
-        customer: &customer,
+        party: print::Party::customer(&customer),
         lines: &document.lines,
         totals: &document.totals,
         // An offer is not a tax point: nothing is chargeable on it, so there is

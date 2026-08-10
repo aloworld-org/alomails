@@ -272,7 +272,11 @@ impl EInvoice {
         let type_code = match doc.kind {
             DocumentKind::Invoice => TypeCode::Invoice,
             DocumentKind::CreditNote => TypeCode::CreditNote,
-            DocumentKind::Quote => return None,
+            // Neither an offer nor an order we placed is an e-invoice of
+            // ours: EN 16931 describes a bill from a seller to a buyer, and on
+            // a purchase order the bill that follows is the *supplier's*
+            // (B1.24 is where one of those is read).
+            DocumentKind::Quote | DocumentKind::PurchaseOrder => return None,
         };
         // Credit direction: a stored credit note is the mirror of its
         // original, and the standard carries that mirroring in BT-3 instead.
@@ -346,15 +350,15 @@ impl EInvoice {
                 phone: doc.issuer.phone.clone(),
             },
             buyer: Party {
-                name: doc.customer.name.clone(),
-                line1: doc.customer.address_line1.clone(),
-                line2: doc.customer.address_line2.clone(),
-                postal_code: doc.customer.postal_code.clone(),
-                city: doc.customer.city.clone(),
-                country: doc.customer.country.clone(),
-                vat_id: doc.customer.vat_id.clone().unwrap_or_default(),
+                name: doc.party.name.to_owned(),
+                line1: doc.party.address_line1.to_owned(),
+                line2: doc.party.address_line2.to_owned(),
+                postal_code: doc.party.postal_code.to_owned(),
+                city: doc.party.city.to_owned(),
+                country: doc.party.country.to_owned(),
+                vat_id: doc.party.vat_id.unwrap_or_default().to_owned(),
                 legal_id: String::new(),
-                email: doc.customer.email.clone().unwrap_or_default(),
+                email: doc.party.email.unwrap_or_default().to_owned(),
                 contact_name: String::new(),
                 phone: String::new(),
             },
@@ -540,7 +544,7 @@ mod tests {
     use alo_store::{BillingCustomerId, BillingLineId, Customer, Line};
     use time::{Month, OffsetDateTime};
 
-    use crate::billing_print::strings_for;
+    use crate::billing_print::{Party as PrintParty, strings_for};
 
     fn day(year: i32, month: u8, day: u8) -> Date {
         Date::from_calendar_date(year, Month::try_from(month).unwrap_or(Month::January), day)
@@ -632,7 +636,7 @@ mod tests {
             currency: "EUR",
             payment_terms_days: Some(14),
             credits_number: None,
-            customer,
+            party: PrintParty::customer(customer),
             lines,
             totals,
             restated: None,

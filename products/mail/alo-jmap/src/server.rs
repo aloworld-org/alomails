@@ -24,11 +24,12 @@ use crate::{
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, inventory_locations, inventory_moves, inventory_po, inventory_stock,
-    inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
-    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
-    projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
-    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    insights_gallery, inventory_locations, inventory_moves, inventory_po, inventory_po_print,
+    inventory_po_send, inventory_stock, inventory_supplier_prices, inventory_suppliers,
+    meet_routes, projects_clients, projects_invoices, projects_plan, projects_reports,
+    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, scoped_roles,
+    security, session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe,
+    wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -474,9 +475,10 @@ pub fn app_with_site_domain_dns(
         // Purchase orders (B5.05a): the order we place with a supplier. A
         // draft is editable and deletable; everything past it is frozen, and
         // cancelling is its own POST because it is a decision with a date, not
-        // a field on a form. `POST …/{id}/send` — which moves the order to
-        // *sent* AND writes the covering mail draft with the printed order
-        // attached, in one act — arrives with the paper in B5.05a2.
+        // a field on a form. `POST …/{id}/send` (B5.05a2) is the one act that
+        // draws the number, stamps the day, freezes the order AND writes the
+        // covering mail draft with the printed order attached; `/print` and
+        // `/pdf` are that same document without the letter.
         .route(
             "/inventory/purchase-orders",
             get(inventory_po::list_purchase_orders).post(inventory_po::create_purchase_order),
@@ -490,6 +492,18 @@ pub fn app_with_site_domain_dns(
         .route(
             "/inventory/purchase-orders/{id}/cancel",
             post(inventory_po::cancel_purchase_order),
+        )
+        .route(
+            "/inventory/purchase-orders/{id}/send",
+            post(inventory_po_send::send_purchase_order),
+        )
+        .route(
+            "/inventory/purchase-orders/{id}/print",
+            get(inventory_po_print::print_purchase_order),
+        )
+        .route(
+            "/inventory/purchase-orders/{id}/pdf",
+            get(inventory_po_print::pdf_purchase_order),
         )
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the

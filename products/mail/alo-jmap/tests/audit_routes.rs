@@ -318,6 +318,7 @@ POST /inventory/locations/{id}/archive -> inventory.location.archive
 POST /inventory/moves -> inventory.move.create
 POST /inventory/purchase-orders -> inventory.purchase_order.create
 POST /inventory/purchase-orders/{id}/cancel -> inventory.purchase_order.cancel
+POST /inventory/purchase-orders/{id}/send -> inventory.purchase_order.send
 POST /inventory/suppliers -> inventory.supplier.create
 POST /inventory/suppliers/{id}/archive -> inventory.supplier.archive
 POST /projects/approvals/{id}/approve -> projects.approval.approve

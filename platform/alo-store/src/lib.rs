@@ -111,6 +111,7 @@ pub mod inv_locations;
 pub mod inv_moves;
 pub mod inv_po;
 pub mod inv_po_lines;
+pub mod inv_po_send;
 pub mod inv_stock;
 pub mod inv_supplier_prices;
 pub mod inv_suppliers;

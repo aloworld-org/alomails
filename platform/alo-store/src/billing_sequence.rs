@@ -41,6 +41,23 @@ pub const QUOTE_SEQUENCE_KIND: &str = "quote";
 /// The prefix printed on a quote number.
 pub const QUOTE_NUMBER_PREFIX: &str = "QUO";
 
+/// The series purchase orders draw from (B5.05a2) — again its own, for the
+/// quote's reason turned around: an order we place is not a document in our
+/// sales ledger at all, and interleaving it with invoice numbers would put
+/// visible holes in the series a tax inspector reads.
+///
+/// A purchase-order number is **not** legally required to be gapless — nothing
+/// in §14 UStG or its equivalents says anything about it. We draw it the same
+/// transactional way anyway (`docs/design/inventory.md` § The number): the
+/// machinery exists, it is tested to 100 parallel iterations, and its cost —
+/// serialising per tenant at the moment of numbering — is one we already pay
+/// for invoices. A second, weaker numbering mechanism would only be a new thing
+/// to get wrong.
+pub const PURCHASE_ORDER_SEQUENCE_KIND: &str = "purchase_order";
+
+/// The prefix printed on a purchase-order number.
+pub const PURCHASE_ORDER_NUMBER_PREFIX: &str = "PO";
+
 /// The smallest number of digits a counter is printed with. A tenant issuing
 /// more than 99 999 documents in one year simply gets a sixth digit — numbers
 /// grow, they are never truncated or reused.
@@ -155,9 +172,21 @@ mod tests {
             "QUO-2026-00001"
         );
         assert_ne!(QUOTE_SEQUENCE_KIND, INVOICE_SEQUENCE_KIND);
-        // Both kinds satisfy the table's shape check (lowercase, ≤ 32 chars),
+        // An order we place is a third series, for the same reason: it must
+        // leave no hole in either of the two a customer ever sees.
+        assert_eq!(
+            document_number(PURCHASE_ORDER_NUMBER_PREFIX, 2026, 1),
+            "PO-2026-00001"
+        );
+        assert_ne!(PURCHASE_ORDER_SEQUENCE_KIND, INVOICE_SEQUENCE_KIND);
+        assert_ne!(PURCHASE_ORDER_SEQUENCE_KIND, QUOTE_SEQUENCE_KIND);
+        // Every kind satisfies the table's shape check (lowercase, ≤ 32 chars),
         // which is what lets a new series be a row rather than a migration.
-        for kind in [INVOICE_SEQUENCE_KIND, QUOTE_SEQUENCE_KIND] {
+        for kind in [
+            INVOICE_SEQUENCE_KIND,
+            QUOTE_SEQUENCE_KIND,
+            PURCHASE_ORDER_SEQUENCE_KIND,
+        ] {
             assert!(
                 !kind.is_empty()
                     && kind.len() <= 32

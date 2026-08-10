@@ -28,13 +28,7 @@ use crate::error::Problem;
 /// return verbatim. Everything else, database failures included, is an opaque
 /// `500`.
 pub fn map_store_err(error: StoreError) -> Problem {
-    match error {
-        StoreError::NotFound => Problem::with(StatusCode::NOT_FOUND, "not found"),
-        StoreError::Forbidden => Problem::with(StatusCode::FORBIDDEN, "insufficient role"),
-        StoreError::Validation(msg) => Problem::with(StatusCode::UNPROCESSABLE_ENTITY, msg),
-        StoreError::Conflict(msg) => Problem::with(StatusCode::CONFLICT, msg),
-        _ => Problem::server_error(),
-    }
+    Problem::from(error)
 }
 
 /// Parses a JSON request body, mapping every failure to a plain `400` with a

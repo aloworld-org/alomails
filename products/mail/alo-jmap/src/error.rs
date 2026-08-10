@@ -112,6 +112,32 @@ impl Problem {
     }
 }
 
+/// A store failure as the problem it is on the wire.
+///
+/// The same mapping [`crate::billing::map_store_err`] has always made — that
+/// function is now this impl, so there is exactly one table — and it exists as
+/// a `From` because the store's own transactional flows take the caller's error
+/// type (`E: From<StoreError>`) so that a callback of ours can run inside their
+/// transaction ([`alo_store::inv_po_send`]).
+///
+/// Anything that is not one of the four typed refusals is a `500` **with no
+/// detail**: a `Db` error's text is internal, and internal text is not
+/// something we hand a client.
+impl From<alo_store::StoreError> for Problem {
+    fn from(error: alo_store::StoreError) -> Self {
+        use alo_store::StoreError;
+        match error {
+            StoreError::NotFound => Self::with(StatusCode::NOT_FOUND, "not found"),
+            StoreError::Forbidden => Self::with(StatusCode::FORBIDDEN, "insufficient role"),
+            StoreError::Validation(message) => {
+                Self::with(StatusCode::UNPROCESSABLE_ENTITY, message)
+            }
+            StoreError::Conflict(message) => Self::with(StatusCode::CONFLICT, message),
+            _ => Self::server_error(),
+        }
+    }
+}
+
 impl IntoResponse for Problem {
     fn into_response(self) -> Response {
         let mut body = json!({ "type": self.type_uri, "status": self.status.as_u16() });

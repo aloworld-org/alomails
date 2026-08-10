@@ -57,6 +57,11 @@ pub enum DocumentKind {
     CreditNote,
     /// An offer: dates are sent and valid-until, and nothing is owed yet.
     Quote,
+    /// An order we place with a supplier (alo Inventory, B5.05a2): dates are
+    /// the day we ordered and the day we expect the goods, the party is the
+    /// supplier rather than a customer, and nothing about payment is on it —
+    /// we are the buyer, and their invoice is the document that asks for money.
+    PurchaseOrder,
 }
 
 /// A state that has to be legible across the whole page rather than tucked
@@ -69,6 +74,58 @@ pub enum Banner {
     Void,
     /// An offer that was turned down or has lapsed.
     Closed,
+    /// An order we stopped expecting the goods against. It keeps the number
+    /// the supplier holds, and the word says plainly that it is off — a
+    /// supplier re-reading their copy must not be able to mistake it for one
+    /// still coming.
+    Cancelled,
+}
+
+/// The counterparty a document names: who it is *to*.
+///
+/// Borrowed, and deliberately **not** one of the stored records. An invoice
+/// names a [`Customer`] and a purchase order names a supplier
+/// ([`alo_store::inv_suppliers::Supplier`]); the paper needs the same eight
+/// facts from either, and the renderers must not learn which record they came
+/// from — that is what would make a second document type mean a second
+/// renderer. Whoever holds the record builds the party from it: billing here
+/// ([`Party::customer`]), inventory in its own module.
+pub struct Party<'a> {
+    /// Legal or display name, as it goes on the address block.
+    pub name: &'a str,
+    /// Street address, first line.
+    pub address_line1: &'a str,
+    /// Street address, second line; blank when there is none.
+    pub address_line2: &'a str,
+    /// Postal/ZIP code.
+    pub postal_code: &'a str,
+    /// City / town.
+    pub city: &'a str,
+    /// ISO 3166-1 alpha-2 country code — printed only when the document
+    /// crosses a border.
+    pub country: &'a str,
+    /// VAT identification number, `None` when they have not given one.
+    pub vat_id: Option<&'a str>,
+    /// Where a covering letter about this document goes
+    /// ([`crate::billing_send`]), `None` when no address is stored. Never
+    /// printed on the paper.
+    pub email: Option<&'a str>,
+}
+
+impl<'a> Party<'a> {
+    /// The party a billing document names.
+    pub fn customer(customer: &'a Customer) -> Self {
+        Self {
+            name: &customer.name,
+            address_line1: &customer.address_line1,
+            address_line2: &customer.address_line2,
+            postal_code: &customer.postal_code,
+            city: &customer.city,
+            country: &customer.country,
+            vat_id: customer.vat_id.as_deref(),
+            email: customer.email.as_deref(),
+        }
+    }
 }
 
 /// The document's VAT restated in the issuer's accounting currency, when it was
@@ -120,8 +177,8 @@ pub struct PrintDocument<'a> {
     pub payment_terms_days: Option<i32>,
     /// The number of the invoice this one credits, when it credits one.
     pub credits_number: Option<&'a str>,
-    /// Who the document is to.
-    pub customer: &'a Customer,
+    /// Who the document is to — a customer, or a supplier on an order.
+    pub party: Party<'a>,
     /// What is on it, in print order.
     pub lines: &'a [Line],
     /// What it comes to — the server's figures, never recomputed here.
@@ -150,24 +207,37 @@ pub struct Strings {
     pub credit_note: &'static str,
     /// Title of an offer.
     pub quote: &'static str,
+    /// Title of an order placed with a supplier.
+    pub purchase_order: &'static str,
     /// Shouted across an unissued document.
     pub draft: &'static str,
     /// Shouted across a cancelled invoice.
     pub void: &'static str,
     /// Shouted across an offer that is no longer open.
     pub closed: &'static str,
+    /// Shouted across an order we stopped expecting.
+    pub cancelled: &'static str,
     /// Heading over the customer's address.
     pub bill_to: &'static str,
+    /// Heading over the supplier's address on an order.
+    pub order_to: &'static str,
     /// Label of the issue/sent date.
     pub issue_date: &'static str,
     /// Label of the sent date on an offer.
     pub sent_date: &'static str,
+    /// Label of the day an order was placed.
+    pub order_date: &'static str,
     /// Label of the due date.
     pub due_date: &'static str,
     /// Label of the valid-until date on an offer.
     pub valid_until: &'static str,
+    /// Label of the day the goods are expected on an order.
+    pub expected_date: &'static str,
     /// Label of the customer's reference.
     pub reference: &'static str,
+    /// Label of our own reference on an order — the same field, read from the
+    /// other side of the table.
+    pub own_reference: &'static str,
     /// Label of the customer's VAT id in the address block.
     pub customer_vat_id: &'static str,
     /// Column heading: what was sold.
@@ -193,6 +263,14 @@ pub struct Strings {
     pub converted_at: fn(&str, &str) -> String,
     /// Heading over the payment instructions.
     pub payment: &'static str,
+    /// Heading over the delivery instructions on an order — what stands where
+    /// payment stands on an invoice, because an order's closing block is about
+    /// goods arriving, not money moving.
+    pub delivery: &'static str,
+    /// The sentence that asks for the goods by a day.
+    pub deliver_by: fn(&str) -> String,
+    /// The sentence used when no day has been agreed.
+    pub deliver_unstated: &'static str,
     /// The sentence that asks for the money, given the due date.
     pub payable_by: fn(&str) -> String,
     /// The sentence used when no due date is known (a draft).
@@ -228,15 +306,21 @@ static EN: Strings = Strings {
     invoice: "Invoice",
     credit_note: "Credit note",
     quote: "Quote",
+    purchase_order: "Purchase order",
     draft: "Draft",
     void: "Void",
     closed: "Closed",
+    cancelled: "Cancelled",
     bill_to: "Bill to",
+    order_to: "Order to",
     issue_date: "Issue date",
     sent_date: "Sent",
+    order_date: "Order date",
     due_date: "Due date",
     valid_until: "Valid until",
+    expected_date: "Expected delivery",
     reference: "Your reference",
+    own_reference: "Our reference",
     customer_vat_id: "VAT id",
     description: "Description",
     quantity: "Qty",
@@ -251,6 +335,11 @@ static EN: Strings = Strings {
         format!("VAT converted at {rate}, the reference rate published on {day}.")
     },
     payment: "Payment",
+    delivery: "Delivery",
+    deliver_by: |date| {
+        format!("Please deliver to the address above by {date}, quoting the order number.")
+    },
+    deliver_unstated: "Please deliver to the address above, quoting the order number, and confirm the delivery date.",
     payable_by: |date| {
         format!("Payable by {date} to the account below, quoting the invoice number.")
     },
@@ -291,15 +380,21 @@ static FR: Strings = Strings {
     invoice: "Facture",
     credit_note: "Avoir",
     quote: "Devis",
+    purchase_order: "Bon de commande",
     draft: "Brouillon",
     void: "Annulée",
     closed: "Clos",
+    cancelled: "Annulé",
     bill_to: "Facturé à",
+    order_to: "Commandé à",
     issue_date: "Date d’émission",
     sent_date: "Envoyé le",
+    order_date: "Date de commande",
     due_date: "Échéance",
     valid_until: "Valable jusqu’au",
+    expected_date: "Livraison prévue",
     reference: "Votre référence",
+    own_reference: "Notre référence",
     customer_vat_id: "N° de TVA",
     description: "Désignation",
     quantity: "Qté",
@@ -312,6 +407,13 @@ static FR: Strings = Strings {
     vat_in: |code| format!("TVA en {code}"),
     converted_at: |rate, day| format!("TVA convertie à {rate}, taux de référence publié le {day}."),
     payment: "Paiement",
+    delivery: "Livraison",
+    deliver_by: |date| {
+        format!(
+            "Merci de livrer à l’adresse ci-dessus avant le {date}, en rappelant le numéro de commande."
+        )
+    },
+    deliver_unstated: "Merci de livrer à l’adresse ci-dessus en rappelant le numéro de commande, et de confirmer la date de livraison.",
     payable_by: |date| {
         format!(
             "À régler avant le {date} sur le compte ci-dessous, en rappelant le numéro de facture."
@@ -354,15 +456,21 @@ static NL: Strings = Strings {
     invoice: "Factuur",
     credit_note: "Creditnota",
     quote: "Offerte",
+    purchase_order: "Inkooporder",
     draft: "Concept",
     void: "Geannuleerd",
     closed: "Gesloten",
+    cancelled: "Ingetrokken",
     bill_to: "Factuuradres",
+    order_to: "Besteld bij",
     issue_date: "Uitgiftedatum",
     sent_date: "Verstuurd op",
+    order_date: "Besteldatum",
     due_date: "Vervaldatum",
     valid_until: "Geldig tot",
+    expected_date: "Verwachte levering",
     reference: "Uw referentie",
+    own_reference: "Onze referentie",
     customer_vat_id: "Btw-nummer",
     description: "Omschrijving",
     quantity: "Aantal",
@@ -377,6 +485,13 @@ static NL: Strings = Strings {
         format!("Btw omgerekend tegen {rate}, de referentiekoers gepubliceerd op {day}.")
     },
     payment: "Betaling",
+    delivery: "Levering",
+    deliver_by: |date| {
+        format!(
+            "Graag leveren op bovenstaand adres vóór {date}, onder vermelding van het ordernummer."
+        )
+    },
+    deliver_unstated: "Graag leveren op bovenstaand adres onder vermelding van het ordernummer, en de leverdatum bevestigen.",
     payable_by: |date| {
         format!(
             "Te voldoen vóór {date} op onderstaande rekening, onder vermelding van het factuurnummer."
@@ -544,7 +659,78 @@ impl DocumentKind {
             Self::Invoice => s.invoice,
             Self::CreditNote => s.credit_note,
             Self::Quote => s.quote,
+            Self::PurchaseOrder => s.purchase_order,
         }
+    }
+
+    /// What the counterparty is called when a *refusal* has to name them
+    /// ([`crate::billing_send::recipient`]).
+    ///
+    /// Not a translated string: `Problem` details are the API's own English,
+    /// and this one has to send a user to the right screen — telling a buyer
+    /// that "this customer has no email address" about an order they placed
+    /// with a supplier is a wrong instruction, not a wrong word.
+    pub(crate) fn party_noun(self) -> &'static str {
+        match self {
+            Self::Invoice | Self::CreditNote | Self::Quote => "customer",
+            Self::PurchaseOrder => "supplier",
+        }
+    }
+
+    /// Heading over the counterparty's address.
+    pub(crate) fn party_label(self, s: &Strings) -> &'static str {
+        match self {
+            Self::Invoice | Self::CreditNote | Self::Quote => s.bill_to,
+            Self::PurchaseOrder => s.order_to,
+        }
+    }
+
+    /// What the document's first date means: issued, sent, ordered.
+    pub(crate) fn primary_date_label(self, s: &Strings) -> &'static str {
+        match self {
+            Self::Invoice | Self::CreditNote => s.issue_date,
+            Self::Quote => s.sent_date,
+            Self::PurchaseOrder => s.order_date,
+        }
+    }
+
+    /// What the document's second date means: owed by, valid until, expected.
+    pub(crate) fn secondary_date_label(self, s: &Strings) -> &'static str {
+        match self {
+            Self::Invoice | Self::CreditNote => s.due_date,
+            Self::Quote => s.valid_until,
+            Self::PurchaseOrder => s.expected_date,
+        }
+    }
+
+    /// Whose reference the `reference` field is. Ours on an order we place,
+    /// theirs on everything we send a customer — the same stored string, read
+    /// from the other side of the table.
+    pub(crate) fn reference_label(self, s: &Strings) -> &'static str {
+        match self {
+            Self::Invoice | Self::CreditNote | Self::Quote => s.reference,
+            Self::PurchaseOrder => s.own_reference,
+        }
+    }
+
+    /// Heading over the closing block: what happens next about the money, or
+    /// on an order, about the goods.
+    pub(crate) fn closing_label(self, s: &Strings) -> &'static str {
+        match self {
+            Self::Invoice | Self::CreditNote | Self::Quote => s.payment,
+            Self::PurchaseOrder => s.delivery,
+        }
+    }
+
+    /// Whether the document prints an account to pay into.
+    ///
+    /// An invoice only. A quote is not paid, a credit note is not paid *to*
+    /// us, and on a purchase order the account that matters is the supplier's,
+    /// which arrives on *their* invoice — an IBAN under "nothing is payable",
+    /// or our own IBAN on an order we placed, is exactly how a document gets
+    /// paid twice or paid backwards.
+    pub(crate) fn prints_bank_details(self) -> bool {
+        matches!(self, Self::Invoice)
     }
 }
 
@@ -555,7 +741,35 @@ impl Banner {
             Self::Draft => s.draft,
             Self::Void => s.void,
             Self::Closed => s.closed,
+            Self::Cancelled => s.cancelled,
         }
+    }
+}
+
+/// The sentence under the closing label: whether anything is owed, and by
+/// when — or, on an order, when the goods are wanted.
+///
+/// One function for both renderings ([`render`] and [`crate::billing_pdf`]),
+/// because the page and the file are one document: a sentence written twice is
+/// a sentence that eventually says two things.
+pub(crate) fn closing_sentence(doc: &PrintDocument<'_>, s: &Strings) -> String {
+    match doc.kind {
+        DocumentKind::Quote => (s.quote_validity)(
+            &doc.secondary_date
+                .map(date)
+                .unwrap_or_else(|| "\u{2014}".to_owned()),
+        ),
+        DocumentKind::CreditNote => {
+            (s.credit_explanation)(doc.credits_number.unwrap_or("\u{2014}"))
+        }
+        DocumentKind::Invoice => match doc.secondary_date {
+            Some(due) => (s.payable_by)(&date(due)),
+            None => (s.payable_on_terms)(doc.payment_terms_days.unwrap_or(0)),
+        },
+        DocumentKind::PurchaseOrder => match doc.secondary_date {
+            Some(expected) => (s.deliver_by)(&date(expected)),
+            None => s.deliver_unstated.to_owned(),
+        },
     }
 }
 
@@ -682,23 +896,16 @@ pub fn render(doc: &PrintDocument<'_>, s: &Strings) -> String {
     // reader check whether the two agree.
     let mut meta = String::new();
     if let Some(primary) = doc.primary_date {
-        let label = if doc.kind == DocumentKind::Quote {
-            s.sent_date
-        } else {
-            s.issue_date
-        };
-        meta.push_str(&meta_row(label, &date(primary)));
+        meta.push_str(&meta_row(doc.kind.primary_date_label(s), &date(primary)));
     }
     if let Some(secondary) = doc.secondary_date {
-        let label = if doc.kind == DocumentKind::Quote {
-            s.valid_until
-        } else {
-            s.due_date
-        };
-        meta.push_str(&meta_row(label, &date(secondary)));
+        meta.push_str(&meta_row(
+            doc.kind.secondary_date_label(s),
+            &date(secondary),
+        ));
     }
     if !doc.reference.is_empty() {
-        meta.push_str(&meta_row(s.reference, doc.reference));
+        meta.push_str(&meta_row(doc.kind.reference_label(s), doc.reference));
     }
 
     let issuer = doc.issuer;
@@ -719,35 +926,31 @@ pub fn render(doc: &PrintDocument<'_>, s: &Strings) -> String {
         )
     };
 
-    let customer = doc.customer;
-    let customer_vat = customer.vat_id.as_deref().unwrap_or_default();
+    let party = &doc.party;
+    let party_vat = party.vat_id.unwrap_or_default();
     // A domestic address does not print its country: postal convention is to
     // name the country only when the document crosses a border, and a lone
     // "NL" under a Dutch address reads like a stray field. Cross-border, it
     // is exactly the line that matters, so it stays.
-    let customer_country = if customer.country == issuer.country {
+    let party_country = if party.country == issuer.country {
         ""
     } else {
-        customer.country.as_str()
+        party.country
     };
-    let customer_block = format!(
+    let party_block = format!(
         "<p class=\"label\">{}</p><div class=\"party-name\">{}</div>{}{}",
-        esc(s.bill_to),
-        esc(&customer.name),
+        esc(doc.kind.party_label(s)),
+        esc(party.name),
         address_lines(&[
-            &customer.address_line1,
-            &customer.address_line2,
-            &format!("{} {}", customer.postal_code, customer.city),
-            customer_country,
+            party.address_line1,
+            party.address_line2,
+            &format!("{} {}", party.postal_code, party.city),
+            party_country,
         ]),
-        if customer_vat.is_empty() {
+        if party_vat.is_empty() {
             String::new()
         } else {
-            format!(
-                "<div>{}: {}</div>",
-                esc(s.customer_vat_id),
-                esc(customer_vat)
-            )
+            format!("<div>{}: {}</div>", esc(s.customer_vat_id), esc(party_vat))
         }
     );
 
@@ -865,7 +1068,7 @@ pub fn render(doc: &PrintDocument<'_>, s: &Strings) -> String {
          <div class=\"title-block\"><h1>{heading_html}</h1>\
          <table class=\"meta\"><tbody>{meta}</tbody></table></div></header>\n\
          {banner}\n\
-         <section class=\"parties\"><div class=\"party\">{customer_block}</div></section>\n\
+         <section class=\"parties\"><div class=\"party\">{party_block}</div></section>\n\
          <table class=\"lines\"><thead><tr><th>{c_desc}</th><th class=\"num\">{c_qty}</th>\
          <th class=\"num\">{c_price}</th><th class=\"num\">{c_vat}</th>\
          <th class=\"num\">{c_net}</th></tr></thead><tbody>{lines}</tbody></table>\n\
@@ -903,27 +1106,12 @@ pub(crate) fn rate_sentence(restated: &Restated, document_currency: &str) -> Str
 /// The block under the totals: what happens about the money, and where it
 /// goes. A quote and a credit note both say explicitly that nothing is
 /// payable, because a document that merely omits payment details reads as one
-/// that forgot them.
+/// that forgot them; an order says when the goods are wanted instead.
 fn render_payment(doc: &PrintDocument<'_>, s: &Strings) -> String {
-    let sentence = match doc.kind {
-        DocumentKind::Quote => (s.quote_validity)(
-            &doc.secondary_date
-                .map(date)
-                .unwrap_or_else(|| "\u{2014}".to_owned()),
-        ),
-        DocumentKind::CreditNote => {
-            (s.credit_explanation)(doc.credits_number.unwrap_or("\u{2014}"))
-        }
-        DocumentKind::Invoice => match doc.secondary_date {
-            Some(due) => (s.payable_by)(&date(due)),
-            None => (s.payable_on_terms)(doc.payment_terms_days.unwrap_or(0)),
-        },
-    };
+    let sentence = closing_sentence(doc, s);
 
-    // A quote is not paid, and a credit note is not paid *to* us, so neither
-    // prints the bank account: an IBAN under "nothing is payable" is exactly
-    // how a customer pays a document twice.
-    let bank = if doc.kind == DocumentKind::Invoice {
+    // Only an invoice prints an account ([`DocumentKind::prints_bank_details`]).
+    let bank = if doc.kind.prints_bank_details() {
         let issuer = doc.issuer;
         let mut fields = String::new();
         if let Some(iban) = issuer.iban.as_deref().filter(|v| !v.is_empty()) {
@@ -962,7 +1150,7 @@ fn render_payment(doc: &PrintDocument<'_>, s: &Strings) -> String {
 
     format!(
         "<section class=\"pay\"><p class=\"label\">{}</p><p>{}</p><div class=\"bank\">{}</div></section>",
-        esc(s.payment),
+        esc(doc.kind.closing_label(s)),
         esc(&sentence),
         bank
     )
@@ -1139,7 +1327,7 @@ mod tests {
             currency: "EUR",
             payment_terms_days: Some(14),
             credits_number: None,
-            customer,
+            party: Party::customer(customer),
             lines,
             totals,
             restated: None,
@@ -1460,15 +1648,23 @@ mod tests {
                 ("invoice", s.invoice),
                 ("credit_note", s.credit_note),
                 ("quote", s.quote),
+                ("purchase_order", s.purchase_order),
                 ("draft", s.draft),
                 ("void", s.void),
                 ("closed", s.closed),
+                ("cancelled", s.cancelled),
                 ("bill_to", s.bill_to),
+                ("order_to", s.order_to),
                 ("issue_date", s.issue_date),
                 ("sent_date", s.sent_date),
+                ("order_date", s.order_date),
                 ("due_date", s.due_date),
                 ("valid_until", s.valid_until),
+                ("expected_date", s.expected_date),
                 ("reference", s.reference),
+                ("own_reference", s.own_reference),
+                ("delivery", s.delivery),
+                ("deliver_unstated", s.deliver_unstated),
                 ("customer_vat_id", s.customer_vat_id),
                 ("description", s.description),
                 ("quantity", s.quantity),
@@ -1507,6 +1703,129 @@ mod tests {
                 (s.quote_validity)("2026-09-01").contains("2026-09-01"),
                 "{tag}"
             );
+            assert!((s.deliver_by)("2026-09-01").contains("2026-09-01"), "{tag}");
         }
+    }
+
+    /// An order to a supplier, built from the same fixtures — the party is a
+    /// supplier's, not a customer's, and the renderer never learns which.
+    fn order<'a>(
+        party: Party<'a>,
+        issuer: &'a BillingSettings,
+        lines: &'a [Line],
+        totals: &'a Totals,
+    ) -> PrintDocument<'a> {
+        PrintDocument {
+            kind: DocumentKind::PurchaseOrder,
+            banner: None,
+            number: Some("PO-2026-00001"),
+            primary_date: Some(day(2026, 8, 10)),
+            secondary_date: Some(day(2026, 8, 24)),
+            reference: "Project Falkenstein",
+            note: "Rear entrance.",
+            currency: "CHF",
+            payment_terms_days: None,
+            credits_number: None,
+            party,
+            lines,
+            totals,
+            restated: None,
+            issuer,
+        }
+    }
+
+    /// A supplier's party, written out rather than derived from a store record
+    /// — this module deliberately does not know the supplier type.
+    fn supplier_party() -> Party<'static> {
+        Party {
+            name: "Hoffmann Möbel GmbH",
+            address_line1: "Werkstraße 9",
+            address_line2: "",
+            postal_code: "8005",
+            city: "Zürich",
+            country: "CH",
+            vat_id: Some("CHE116281277MWST"),
+            email: Some("orders@hoffmann.test"),
+        }
+    }
+
+    #[test]
+    fn an_order_names_the_supplier_the_goods_and_no_bank_account() {
+        let issuer = issuer();
+        let lines = vec![line("Blue chair", 4000, 4_300, 1900)];
+        let totals = figures(&lines);
+        let html = render(
+            &order(supplier_party(), &issuer, &lines, &totals),
+            strings_for("en"),
+        );
+
+        assert!(html.contains("<title>Purchase order PO-2026-00001</title>"));
+        // The supplier stands where a customer stands, under the order heading.
+        assert!(html.contains("Order to") && !html.contains("Bill to"));
+        assert!(html.contains("Hoffmann Möbel GmbH") && html.contains("Zürich"));
+        // Cross-border (NL → CH), so their country is on the address.
+        assert!(html.contains("<div>CH</div>"));
+        // The two dates mean what an order's dates mean.
+        assert!(html.contains("Order date") && html.contains("2026-08-10"));
+        assert!(html.contains("Expected delivery") && html.contains("2026-08-24"));
+        assert!(!html.contains("Issue date") && !html.contains("Due date"));
+        // The reference is ours on an order we placed.
+        assert!(html.contains("Our reference") && html.contains("Project Falkenstein"));
+        // The closing block asks for goods, not money — and never prints our
+        // own account: an order is not paid *to* us.
+        assert!(html.contains("Delivery") && html.contains("Please deliver"));
+        assert!(!html.contains("NL91 ABNA"), "{html}");
+        assert!(!html.contains("Payable"), "an order owes nobody anything");
+        // The money is still the server's, to the cent: 4 × 43.00 at 19%.
+        assert_eq!(totals.gross_cents, 20_468);
+        assert!(html.contains("CHF 204.68"));
+    }
+
+    #[test]
+    fn an_order_says_when_it_is_a_draft_when_it_is_off_and_when_no_day_was_agreed() {
+        let issuer = issuer();
+        let lines = vec![line("Blue chair", 4000, 4_300, 1900)];
+        let totals = figures(&lines);
+
+        // A draft order carries no number, exactly like a draft invoice.
+        let html = render(
+            &PrintDocument {
+                banner: Some(Banner::Draft),
+                number: None,
+                primary_date: None,
+                secondary_date: None,
+                ..order(supplier_party(), &issuer, &lines, &totals)
+            },
+            strings_for("en"),
+        );
+        assert!(html.contains("class=\"banner\">Draft<"));
+        assert!(!html.contains("PO-2026"));
+        // With no agreed day it asks for one rather than omitting delivery.
+        assert!(html.contains("confirm the delivery date"));
+
+        // A cancelled order keeps the number the supplier holds and says
+        // plainly that it is off.
+        let html = render(
+            &PrintDocument {
+                banner: Some(Banner::Cancelled),
+                ..order(supplier_party(), &issuer, &lines, &totals)
+            },
+            strings_for("en"),
+        );
+        assert!(html.contains("class=\"banner\">Cancelled<"));
+        assert!(html.contains("PO-2026-00001"));
+    }
+
+    #[test]
+    fn a_party_is_the_eight_facts_a_document_needs_from_either_record() {
+        // The customer's own record, reduced to what the paper prints — the
+        // proof that generalising the party changed no billing behaviour.
+        let c = customer();
+        let party = Party::customer(&c);
+        assert_eq!(party.name, "Kunde & Söhne <GmbH>");
+        assert_eq!(party.postal_code, "10115");
+        assert_eq!(party.country, "DE");
+        assert_eq!(party.vat_id, Some("DE811907980"));
+        assert_eq!(party.email, None);
     }
 }

@@ -37,7 +37,7 @@ use time::{Date, Month, OffsetDateTime};
 
 use alo_jmap::billing_einvoice::EInvoice;
 use alo_jmap::billing_einvoice_rules::violations;
-use alo_jmap::billing_print::{DocumentKind, PrintDocument, Restated, strings_for};
+use alo_jmap::billing_print::{DocumentKind, Party, PrintDocument, Restated, strings_for};
 use alo_jmap::billing_ubl as ubl;
 use alo_jmap::billing_xrechnung_rules;
 use alo_store::billing_settings::BillingSettings;
@@ -186,7 +186,7 @@ fn the_everyday_invoice() {
         currency: "EUR",
         payment_terms_days: Some(14),
         credits_number: None,
-        customer: &customer,
+        party: Party::customer(&customer),
         lines: &lines,
         totals: &totals,
         restated: None,
@@ -250,7 +250,7 @@ fn three_rates_two_categories_and_a_leitweg_id() {
         currency: "EUR",
         payment_terms_days: Some(30),
         credits_number: None,
-        customer: &customer,
+        party: Party::customer(&customer),
         lines: &lines,
         totals: &totals,
         restated: None,
@@ -297,7 +297,7 @@ fn the_credit_note_is_written_in_the_credit_note_schema() {
         currency: "EUR",
         payment_terms_days: Some(14),
         credits_number: Some("INV-2026-00001"),
-        customer: &customer,
+        party: Party::customer(&customer),
         lines: &lines,
         totals: &totals,
         restated: None,
@@ -339,7 +339,7 @@ fn a_document_in_another_currency_states_its_vat_in_a_second_total() {
         currency: "USD",
         payment_terms_days: Some(14),
         credits_number: None,
-        customer: &customer,
+        party: Party::customer(&customer),
         lines: &lines,
         totals: &totals,
         // What the store froze on the document when it was issued: 1 EUR =

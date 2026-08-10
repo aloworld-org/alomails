@@ -41,7 +41,7 @@ use crate::billing_invoices::printable;
 use crate::billing_print::{
     DocumentKind, PrintDocument, PrintQuery, Strings, amount, date, document_heading, strings_for,
 };
-use crate::billing_send::mail_strings_for;
+use crate::document_mail::mail_strings_for;
 use crate::drafts;
 use crate::error::Problem;
 use crate::mime::{Addr, Outgoing};
@@ -273,7 +273,7 @@ pub async fn draft_reminder(
 
     let strings = strings_for(lang);
     let words = reminder_strings_for(lang);
-    let to = crate::billing_send::recipient(&document)?;
+    let to = crate::document_mail::recipient(&document)?;
     let from = drafts::from_address(account, state).await?;
 
     let days_overdue = days_overdue(document.secondary_date, today);
@@ -293,7 +293,7 @@ pub async fn draft_reminder(
             email: from.clone(),
         },
         to: vec![Addr {
-            name: Some(document.customer.name.clone()).filter(|n| !n.trim().is_empty()),
+            name: Some(document.party.name.to_owned()).filter(|n| !n.trim().is_empty()),
             email: to.clone(),
         }],
         cc: Vec::new(),
@@ -431,7 +431,7 @@ fn body(
     };
 
     let mut lines = vec![
-        (mail.greeting)(&document.customer.name),
+        (mail.greeting)(document.party.name),
         String::new(),
         sentence,
     ];
@@ -471,6 +471,8 @@ mod tests {
     use alo_store::billing_totals::{LineFigures, Totals, totals};
     use alo_store::{BillingCustomerId, BillingLineId, Customer, Line};
     use time::{Month, OffsetDateTime};
+
+    use crate::billing_print::Party;
 
     fn day(year: i32, month: u8, day: u8) -> Date {
         Date::from_calendar_date(year, Month::try_from(month).unwrap_or(Month::January), day)
@@ -548,7 +550,7 @@ mod tests {
             currency: "EUR",
             payment_terms_days: Some(14),
             credits_number: None,
-            customer,
+            party: Party::customer(customer),
             lines,
             totals,
             restated: None,

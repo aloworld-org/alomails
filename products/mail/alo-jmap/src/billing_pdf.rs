@@ -29,8 +29,7 @@ use time::{OffsetDateTime, UtcOffset};
 use crate::billing_cii as cii;
 use crate::billing_einvoice::EInvoice;
 use crate::billing_print::{
-    DocumentKind, PrintDocument, Strings, amount, date, document_heading, monogram, quantity, rate,
-    rate_sentence,
+    PrintDocument, Strings, amount, date, document_heading, monogram, quantity, rate, rate_sentence,
 };
 
 // ---- the palette, quoted from the print stylesheet ---------------------------
@@ -442,28 +441,20 @@ impl Layout<'_> {
     }
 
     /// The label/value pairs beside the title: the document's two dates and
-    /// the customer's own reference.
+    /// the reference it carries. What each one *means* is the document kind's
+    /// ([`DocumentKind::primary_date_label`]), so the page and the file cannot
+    /// label the same date two different ways.
     fn meta_rows(&self) -> Vec<(&'static str, String)> {
-        let quote = self.doc.kind == DocumentKind::Quote;
+        let kind = self.doc.kind;
         let mut rows: Vec<(&'static str, String)> = Vec::new();
         if let Some(primary) = self.doc.primary_date {
-            let label = if quote {
-                self.s.sent_date
-            } else {
-                self.s.issue_date
-            };
-            rows.push((label, date(primary)));
+            rows.push((kind.primary_date_label(self.s), date(primary)));
         }
         if let Some(secondary) = self.doc.secondary_date {
-            let label = if quote {
-                self.s.valid_until
-            } else {
-                self.s.due_date
-            };
-            rows.push((label, date(secondary)));
+            rows.push((kind.secondary_date_label(self.s), date(secondary)));
         }
         if !self.doc.reference.is_empty() {
-            rows.push((self.s.reference, self.doc.reference.to_owned()));
+            rows.push((kind.reference_label(self.s), self.doc.reference.to_owned()));
         }
         rows
     }
@@ -500,39 +491,39 @@ impl Layout<'_> {
         self.sheet.y = box_top + height;
     }
 
-    /// Who the document is to.
+    /// Who the document is to — a customer, or a supplier on an order.
     fn parties(&mut self) {
-        let customer = self.doc.customer;
+        let party = &self.doc.party;
         let (left, body) = (self.sheet.left(), body_style());
         self.sheet.y += mm(7.0);
         self.sheet.line(
             left,
             Align::Left,
             &label_style(),
-            self.s.bill_to,
+            self.doc.kind.party_label(self.s),
             SMALL_LEADING + mm(1.5),
         );
         self.sheet.line(
             left,
             Align::Left,
             &TextStyle::new(Font::Bold, BODY).inked(INK),
-            &customer.name,
+            party.name,
             LEADING,
         );
         // A domestic address does not print its country; cross-border it is
         // the line that decides the VAT treatment. The printed page's rule.
-        let country = if customer.country == self.doc.issuer.country {
+        let country = if party.country == self.doc.issuer.country {
             ""
         } else {
-            customer.country.as_str()
+            party.country
         };
         let mut lines = address_lines(&[
-            &customer.address_line1,
-            &customer.address_line2,
-            &format!("{} {}", customer.postal_code, customer.city),
+            party.address_line1,
+            party.address_line2,
+            &format!("{} {}", party.postal_code, party.city),
             country,
         ]);
-        if let Some(vat) = customer.vat_id.as_deref().filter(|v| !v.is_empty()) {
+        if let Some(vat) = party.vat_id.filter(|v| !v.is_empty()) {
             lines.push(format!("{}: {vat}", self.s.customer_vat_id));
         }
         for text in lines {
@@ -724,9 +715,9 @@ impl Layout<'_> {
 
         self.sheet.y += mm(7.0);
         self.sheet.ensure(height);
-        let payment = self.s.payment;
+        let closing = self.doc.kind.closing_label(self.s);
         self.sheet
-            .line(left, Align::Left, &keys, payment, SMALL_LEADING + mm(1.5));
+            .line(left, Align::Left, &keys, closing, SMALL_LEADING + mm(1.5));
         self.sheet.paragraph(&body, &sentence, LEADING);
         if fields.is_empty() {
             return;
@@ -753,35 +744,26 @@ impl Layout<'_> {
         self.sheet.y = row_top + SMALL_LEADING + LEADING;
     }
 
-    /// The sentence under the `Payment` label — the one that says whether
-    /// anything is owed at all.
+    /// The sentence under the closing label — the one that says whether
+    /// anything is owed at all, or when the goods are wanted.
+    ///
+    /// The page's own ([`crate::billing_print::closing_sentence`]): the file
+    /// and the paper are one document, and a sentence written twice is a
+    /// sentence that eventually says two things.
     fn payment_sentence(&self) -> String {
-        match self.doc.kind {
-            DocumentKind::Quote => (self.s.quote_validity)(
-                &self
-                    .doc
-                    .secondary_date
-                    .map(date)
-                    .unwrap_or_else(|| "\u{2014}".to_owned()),
-            ),
-            DocumentKind::CreditNote => {
-                (self.s.credit_explanation)(self.doc.credits_number.unwrap_or("\u{2014}"))
-            }
-            DocumentKind::Invoice => match self.doc.secondary_date {
-                Some(due) => (self.s.payable_by)(&date(due)),
-                None => (self.s.payable_on_terms)(self.doc.payment_terms_days.unwrap_or(0)),
-            },
-        }
+        crate::billing_print::closing_sentence(self.doc, self.s)
     }
 
-    /// The account the money goes to — on an invoice only.
+    /// The account the money goes to — on an invoice only
+    /// ([`DocumentKind::prints_bank_details`]).
     ///
-    /// A quote is not paid and a credit note is not paid *to* us, so neither
-    /// prints an account: an IBAN under "nothing is payable" is exactly how a
-    /// document gets paid twice. The printed page's rule, held here too.
+    /// A quote is not paid, a credit note is not paid *to* us, and an order we
+    /// placed is not paid to us either, so none of them prints an account: an
+    /// IBAN under "nothing is payable" is exactly how a document gets paid
+    /// twice. The printed page's rule, held here too.
     fn bank_fields(&self) -> Vec<(&'static str, String)> {
         let mut fields = Vec::new();
-        if self.doc.kind != DocumentKind::Invoice {
+        if !self.doc.kind.prints_bank_details() {
             return fields;
         }
         let issuer = self.doc.issuer;
@@ -922,7 +904,7 @@ mod tests {
     use alo_store::{BillingCustomerId, BillingLineId, Customer, Line};
     use time::{Date, Month, OffsetDateTime};
 
-    use crate::billing_print::{Banner, strings_for};
+    use crate::billing_print::{Banner, DocumentKind, Party as PrintParty, strings_for};
 
     /// A calendar date without a macro (`time` is built here without its
     /// `macros` feature) and without an `unwrap` (denied workspace-wide).
@@ -1014,7 +996,7 @@ mod tests {
             currency: "EUR",
             payment_terms_days: Some(14),
             credits_number: None,
-            customer,
+            party: PrintParty::customer(customer),
             lines,
             totals,
             restated: None,

@@ -60,7 +60,7 @@ use crate::billing_einvoice_rules::Violation;
 use crate::billing_payments::settlement_json;
 use crate::billing_pdf as pdf;
 use crate::billing_print::{
-    self as print, Banner, DocumentKind, PrintDocument, PrintQuery, Restated,
+    self as print, Banner, DocumentKind, Party, PrintDocument, PrintQuery, Restated,
 };
 use crate::billing_ubl as ubl;
 use crate::billing_xml as xml;
@@ -851,7 +851,7 @@ impl Printable {
             currency: &invoice.currency,
             payment_terms_days: Some(invoice.payment_terms_days),
             credits_number: self.credited.as_deref(),
-            customer: &self.customer,
+            party: Party::customer(&self.customer),
             lines: &self.document.lines,
             totals: &self.document.totals,
             // The VAT restated in the issuer's own currency, when the document

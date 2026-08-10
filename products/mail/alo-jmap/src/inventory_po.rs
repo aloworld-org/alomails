@@ -23,14 +23,13 @@
 //!   short delivery as final is a decision; the store refuses without it, and
 //!   this layer does not decide it on the caller's behalf.
 //!
-//! **Sending is not here.** `POST …/{id}/send` moves the order to *sent* **and**
-//! writes the covering mail draft with the order attached, in one act — a
-//! purchase order's *sent* state means precisely "we have asked them", and a
-//! route that moved the state without writing the mail would let a tenant hold
-//! an order marked sent that nobody ever sent (`docs/design/inventory.md`). It
-//! arrives whole, with the printed order, in B5.05a2; until then an order lives
-//! as a draft, and the states beyond it exist in the store's transition table
-//! rather than in a half-built door.
+//! **Sending is its own module** ([`crate::inventory_po_send`]), and the paper
+//! is [`crate::inventory_po_print`]'s. `POST …/{id}/send` moves the order to
+//! *sent* **and** writes the covering mail draft with the order attached, in one
+//! act — a purchase order's *sent* state means precisely "we have asked them",
+//! and a route that moved the state without writing the mail would let a tenant
+//! hold an order marked sent that nobody ever sent
+//! (`docs/design/inventory.md`).
 //!
 //! Lifecycle transitions are their own `POST`s, never fields on the `PATCH`: a
 //! transition is a decision with a date, and it must not happen because an
@@ -96,7 +95,11 @@ fn line_json(l: &PoLine) -> Value {
 }
 
 /// A whole order: header, lines in print order, totals.
-fn document_json(d: &PurchaseOrderDocument, today: Date) -> Value {
+///
+/// Shared with the placing route ([`crate::inventory_po_send`]), which answers
+/// with the order it just numbered: two shapes for one record would be two
+/// things for a client to learn.
+pub(crate) fn document_json(d: &PurchaseOrderDocument, today: Date) -> Value {
     let mut header = order_json(&d.order, &d.supplier_name, today);
     if let Some(object) = header.as_object_mut() {
         object.insert(
