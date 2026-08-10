@@ -12,7 +12,13 @@
 // from that module rather than growing a second, slightly different one.
 import { formatAmount, formatDocumentDate } from "../billing";
 import { getLocale, strings } from "../i18n";
-import type { ExpenseMethod, ExpenseStatus } from "./types";
+import type {
+  BankLineStatus,
+  BankSource,
+  ExpenseMethod,
+  ExpenseStatus,
+  MatchEvidence,
+} from "./types";
 
 /** An amount the server stored, in the currency it stored beside it. */
 export function amountLabel(cents: number, currency: string): string {
@@ -88,5 +94,81 @@ export function methodLabel(method: ExpenseMethod): string {
       return strings.financeMethodCash;
     default:
       return method;
+  }
+}
+
+// ---- the bank -------------------------------------------------------------
+
+/** Which reader understood the file, in words a bank customer recognises. */
+export function sourceLabel(source: BankSource): string {
+  switch (source) {
+    case "camt":
+      return strings.financeBankSourceCamt;
+    case "mt940":
+      return strings.financeBankSourceMt940;
+    case "csv":
+      return strings.financeBankSourceCsv;
+    default:
+      return source;
+  }
+}
+
+/** Where a staged line stands. */
+export function lineStatusLabel(status: BankLineStatus): string {
+  switch (status) {
+    case "unmatched":
+      return strings.financeBankUnmatched;
+    case "matched":
+      return strings.financeBankMatched;
+    case "ignored":
+      return strings.financeBankIgnored;
+    default:
+      return status;
+  }
+}
+
+/** How loudly a staged line's state reads. */
+export function lineStatusTone(status: BankLineStatus): "info" | "good" | "bad" | "quiet" {
+  switch (status) {
+    case "matched":
+      return "good";
+    case "ignored":
+      return "quiet";
+    default:
+      return "info";
+  }
+}
+
+/**
+ * The sentence behind one piece of evidence, in the reader's own language.
+ *
+ * The server sends a **token and its numbers** and never a sentence, precisely
+ * so that this function can exist (`finance_bank_match.rs`). A token this client
+ * has not learned yet — a stage the server grew first — is skipped rather than
+ * printed raw: an untranslated identifier in a list of reasons reads as a bug,
+ * and the guess is still shown with the reasons that did translate.
+ */
+export function evidenceLabel(evidence: MatchEvidence, currency: string): string | null {
+  switch (evidence.kind) {
+    case "numberQuoted":
+      return strings.financeBankWhyNumberQuoted;
+    case "ruleSaved":
+      return strings.financeBankWhyRuleSaved;
+    case "customerNamed":
+      // Basis points, like every rate the suite stores: 8_500 is 85%.
+      return strings.financeBankWhyCustomerNamed(Math.round(evidence.similarityBp / 100));
+    case "wholeAmount":
+      return strings.financeBankWhyWholeAmount;
+    case "onlyDocumentForTheAmount":
+      return strings.financeBankWhyOnlyDocument;
+    case "nearDue":
+      // The server's sign convention: negative is before the day it was due.
+      return evidence.days < 0
+        ? strings.financeBankWhyBeforeDue(-evidence.days)
+        : strings.financeBankWhyAfterDue(evidence.days);
+    case "partPayment":
+      return strings.financeBankWhyPartPayment(amountLabel(evidence.remainingCents, currency));
+    default:
+      return null;
   }
 }

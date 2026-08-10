@@ -26,7 +26,19 @@ import { useMemo } from "react";
 import { useAuth } from "../auth";
 import { API_BASE } from "../platform/runtime";
 import { RestError, problemDetail, restMessage } from "../platform/rest";
-import type { Expense, ExpenseDraft, ExpenseStatus, PendingExpense } from "./types";
+import type {
+  BankImportOptions,
+  BankImportReport,
+  BankLine,
+  BankLineStatus,
+  BankStatement,
+  BankSuggestions,
+  ConfirmedMatch,
+  Expense,
+  ExpenseDraft,
+  ExpenseStatus,
+  PendingExpense,
+} from "./types";
 
 type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -35,6 +47,55 @@ export class FinanceError extends RestError {
   constructor(status: number, detail: string | null) {
     super(status, detail, "FinanceError");
   }
+}
+
+/**
+ * The import refused, **with the report that says why**.
+ *
+ * A file with one unreadable row imports nothing, and the server answers `422`
+ * carrying the same report a preview would have shown — naming every broken
+ * line and the rule it broke. A refusal a person cannot act on is the one thing
+ * an importer must never answer (`finance_bank.rs`), so the client keeps the
+ * report on the error rather than reducing the whole thing to a sentence.
+ */
+export class BankImportRefused extends FinanceError {
+  readonly report: BankImportReport;
+
+  constructor(status: number, detail: string | null, report: BankImportReport) {
+    super(status, detail);
+    this.name = "BankImportRefused";
+    this.report = report;
+  }
+}
+
+/** The upload's query string: the account, the two conventions and which column
+ *  of the file is which. A blank value is an unstated one — the server reads ""
+ *  as "not mapped", and sending it would be mapping a column called "". */
+function importQuery(options: BankImportOptions): string {
+  const query = new URLSearchParams();
+  const put = (key: string, value: string | null | undefined) => {
+    const stated = (value ?? "").trim();
+    if (stated !== "") query.set(key, stated);
+  };
+  put("format", options.format);
+  put("account", options.account);
+  put("currency", options.currency);
+  put("dates", options.dates);
+  put("decimal", options.decimal);
+  const mapping = options.mapping ?? {};
+  put("date", mapping.date);
+  put("valueDate", mapping.valueDate);
+  put("amount", mapping.amount);
+  put("debit", mapping.debit);
+  put("credit", mapping.credit);
+  put("sign", mapping.sign);
+  put("currencyColumn", mapping.currencyColumn);
+  put("counterparty", mapping.counterparty);
+  put("iban", mapping.iban);
+  put("remittance", mapping.remittance);
+  put("reference", mapping.reference);
+  const rendered = query.toString();
+  return rendered === "" ? "" : `?${rendered}`;
 }
 
 /** What to show a user about a failed request: the server's sentence when it
@@ -137,7 +198,123 @@ export class FinanceApi {
     return this.#act(id, "reimburse", { reimbursedOn });
   }
 
+  // ---- the bank, and the pile it leaves ----------------------------------
+  //
+  // **Admin or accountant**, every one of them: a statement is the whole
+  // company's money moving past a bookkeeper, and matching a line records a
+  // payment and moves the books. The server answers `403` to anybody else, and
+  // this client — like the approver's door above — never decides who may call.
+
+  /** What this file **would** stage. Writes nothing, and is the answer a person
+   *  corrects their column mapping against before committing to it. */
+  previewBankImport(file: Blob, options: BankImportOptions = {}): Promise<BankImportReport> {
+    return this.#upload(`/finance/imports/bank/preview${importQuery(options)}`, file);
+  }
+
+  /** Stages the file. Duplicate transactions are skipped and counted; a file
+   *  with an unreadable row imports **nothing** and throws
+   *  {@link BankImportRefused} carrying the report that names the rows. */
+  importBankFile(file: Blob, options: BankImportOptions = {}): Promise<BankImportReport> {
+    return this.#upload(`/finance/imports/bank${importQuery(options)}`, file);
+  }
+
+  /** What has been imported, most recent period first. */
+  bankStatements(): Promise<BankStatement[]> {
+    return this.#read<{ statements?: BankStatement[] }>("/finance/bank/statements").then(
+      (r) => r.statements ?? [],
+    );
+  }
+
+  /** The staged lines, oldest first — the order a bookkeeper works a month in.
+   *  Both narrowings are optional and neither is an existence oracle: an
+   *  unknown statement matches nothing and answers an empty list. */
+  bankLines(filter: { statement?: string; status?: BankLineStatus } = {}): Promise<BankLine[]> {
+    const query = new URLSearchParams();
+    if (filter.statement !== undefined) query.set("statement", filter.statement);
+    if (filter.status !== undefined) query.set("status", filter.status);
+    const rendered = query.toString();
+    return this.#read<{ lines?: BankLine[] }>(
+      `/finance/bank/lines${rendered === "" ? "" : `?${rendered}`}`,
+    ).then((r) => r.lines ?? []);
+  }
+
+  /** Every unmatched line with what the two guessing stages think it is. A
+   *  read: it writes nothing, and is worth exactly as much as the person
+   *  looking at it (ADR 0023). */
+  bankSuggestions(statement?: string): Promise<BankSuggestions> {
+    const query = statement === undefined ? "" : `?statement=${encodeURIComponent(statement)}`;
+    return this.#read<{ suggestions: BankSuggestions }>(
+      `/finance/bank/suggestions${query}`,
+    ).then((r) => r.suggestions);
+  }
+
+  /** **This line settled that invoice.** `amountCents` is what the person saw
+   *  attributed on their screen: the server compares it with what the bank said
+   *  the line moves rather than believing it, so a stale screen is a refusal
+   *  instead of a payment for the wrong money. `ruleId` is the learned rule
+   *  whose suggestion they took, when they took one. */
+  matchBankLine(
+    lineId: string,
+    invoiceId: string,
+    amountCents: number,
+    ruleId?: string | null,
+  ): Promise<ConfirmedMatch> {
+    const body: { invoiceId: string; amountCents: number; ruleId?: string } = {
+      invoiceId,
+      amountCents,
+    };
+    if (ruleId !== undefined && ruleId !== null && ruleId !== "") body.ruleId = ruleId;
+    return this.#write<{ match: ConfirmedMatch }>(
+      "POST",
+      `/finance/bank/lines/${encodeURIComponent(lineId)}/match`,
+      body,
+    ).then((r) => r.match);
+  }
+
+  /** Takes a match back: the payment goes, the entry is reversed by an entry of
+   *  its own, and the line returns to the pile. */
+  async unmatchBankLine(lineId: string): Promise<void> {
+    await this.#write<unknown>(
+      "POST",
+      `/finance/bank/lines/${encodeURIComponent(lineId)}/unmatch`,
+      {},
+    );
+  }
+
+  /** **This line is not ours to book**, with the reason. The reason is required
+   *  by the server: a line set aside without one is a line the next person
+   *  cannot judge. */
+  ignoreBankLine(lineId: string, reason: string): Promise<BankLine> {
+    return this.#write<{ line: BankLine }>(
+      "POST",
+      `/finance/bank/lines/${encodeURIComponent(lineId)}/ignore`,
+      { reason },
+    ).then((r) => r.line);
+  }
+
+  /** Back in the pile, with the reason cleared. */
+  unignoreBankLine(lineId: string): Promise<BankLine> {
+    return this.#write<{ line: BankLine }>(
+      "POST",
+      `/finance/bank/lines/${encodeURIComponent(lineId)}/unignore`,
+      {},
+    ).then((r) => r.line);
+  }
+
   // ---- plumbing ----------------------------------------------------------
+
+  /** A file as the body — the shape both import doors take, because what a
+   *  person has is a file and escaping a spreadsheet into a JSON string first
+   *  would be a worse surface for no gain. */
+  async #upload(path: string, file: Blob): Promise<BankImportReport> {
+    const res = await this.#send(path, {
+      method: "POST",
+      headers: { "content-type": "application/octet-stream" },
+      body: file,
+    });
+    if (res.ok) return ((await res.json()) as { import: BankImportReport }).import;
+    throw await importFailure(res);
+  }
 
   /** One verb on one claim. Every one of them answers with the claim as it now
    *  stands, so a screen never has to guess what a decision did to it. */
@@ -189,6 +366,23 @@ export class FinanceApi {
  *  or nothing when the body was not the `Problem` shape. */
 async function failure(res: Response): Promise<FinanceError> {
   return new FinanceError(res.status, await problemDetail(res));
+}
+
+/** The refusal an upload carries. The body is read **once**, so the report and
+ *  the sentence come out of the same read: a second `res.json()` on a consumed
+ *  body would throw and lose both. */
+async function importFailure(res: Response): Promise<FinanceError> {
+  const body = (await res.json().catch(() => ({}))) as {
+    detail?: unknown;
+    import?: unknown;
+  };
+  const detail = typeof body.detail === "string" ? body.detail : null;
+  // The report rides on a `422` and on nothing else — a `403`, a `413` or a
+  // proxy's HTML page has none, and inventing an empty one would tell a person
+  // their file was read when it never was.
+  return typeof body.import === "object" && body.import !== null
+    ? new BankImportRefused(res.status, detail, body.import as BankImportReport)
+    : new FinanceError(res.status, detail);
 }
 
 /** The Finance client bound to the current session. Memoized per auth context,

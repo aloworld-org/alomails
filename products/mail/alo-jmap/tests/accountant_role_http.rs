@@ -97,12 +97,33 @@ async fn colleague(h: &Harness, tag: &str) -> (String, alo_store::UserId) {
 }
 
 /// The privileged finance reads an accountant is hired for.
-const FINANCE_READS: [&str; 5] = [
+///
+/// The bank three joined the list with B4.13b: a statement names every
+/// counterparty the company paid and was paid by, and the suggestions read
+/// lists every open invoice beside them. That is the tenant's business and not
+/// an employee's, so it is the bookkeeper's door like the reports are.
+const FINANCE_READS: [&str; 8] = [
     "/finance/reports/pl?from=2026-01-01&to=2026-12-31",
     "/finance/reports/pl.csv?from=2026-01-01&to=2026-12-31",
     "/finance/reports/balance?on=2026-12-31",
     "/finance/reports/aged?on=2026-12-31&side=receivable",
     "/finance/expenses/pending",
+    "/finance/bank/statements",
+    "/finance/bank/lines",
+    "/finance/bank/suggestions",
+];
+
+/// The acts on a bank line, and the two upload doors. Every one of them is a
+/// `POST`, and every one is refused an ordinary member **before** the store is
+/// asked anything — which is what makes the refusal a `403` and not a `404`
+/// telling them whether the line exists.
+const BANK_WRITES: [&str; 6] = [
+    "/finance/imports/bank/preview",
+    "/finance/imports/bank",
+    "/finance/bank/lines/nosuchline/match",
+    "/finance/bank/lines/nosuchline/unmatch",
+    "/finance/bank/lines/nosuchline/ignore",
+    "/finance/bank/lines/nosuchline/unignore",
 ];
 
 /// Doors the role must never open. The admin console is the company, not the
@@ -141,6 +162,44 @@ async fn the_books_open_for_an_accountant_and_for_no_other_member() {
         .unwrap();
     for uri in FINANCE_READS {
         let (status, _) = get(&h.app, &clerk, uri).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{uri} after revoke");
+    }
+}
+
+#[tokio::test]
+async fn the_bank_is_the_bookkeepers_and_every_act_on_a_line_is_shut_before_it_is_looked_up() {
+    let h = harness("acctbank").await;
+    let (clerk, clerk_id) = colleague(&h, "clerk").await;
+
+    // An ordinary member is refused every act, and refused it as a `403`: a
+    // `404` here would answer "that line is not yours" to somebody who was
+    // never allowed to ask, and would be an existence oracle for the pile.
+    for uri in BANK_WRITES {
+        let (status, _) = post(&h.app, &clerk, uri, json!({})).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{uri}");
+    }
+
+    // The bookkeeper gets past the gate on the same made-up line — the `404` is
+    // the store answering, which is the proof that the `403`s above were the
+    // gate and not a broken token.
+    h.ts.grant_role(&clerk_id, TenantRole::Accountant, &h.user)
+        .await
+        .unwrap();
+    let (status, _) = post(
+        &h.app,
+        &clerk,
+        "/finance/bank/lines/nosuchline/unmatch",
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    // And the role is a state: revoking shuts the same doors again.
+    h.ts.revoke_role(&clerk_id, TenantRole::Accountant)
+        .await
+        .unwrap();
+    for uri in BANK_WRITES {
+        let (status, _) = post(&h.app, &clerk, uri, json!({})).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{uri} after revoke");
     }
 }

@@ -27,3 +27,10 @@ export { previousQuarterOf, quarterOf, type Period } from "./period";
 // whether archived ones are on offer.
 export { useCustomers } from "./pickers";
 export type { BillingCustomer } from "./types";
+
+// The documents that can still take money. Finance's reconciliation screen
+// (B4.13b) has to let a bookkeeper say by hand which invoice a bank line
+// settled, and the list of candidates is Billing's — the same argument as
+// `useCustomers`, one door up.
+export { useOpenInvoices } from "./pickers";
+export type { BillingInvoiceSummary } from "./types";

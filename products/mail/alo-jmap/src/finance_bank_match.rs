@@ -12,6 +12,14 @@
 //! - `POST /finance/bank/lines/{id}/ignore` · `/unignore` — *this line is not
 //!   ours to book*, with the reason, and the undo of that.
 //!
+//! **All five are admin-or-accountant** (`Account::require_finance`, B4.12),
+//! like the import they read ([`crate::finance_bank`]). Matching records a
+//! payment and moves the books; the read that precedes it lists every open
+//! invoice against every counterparty the company banks with. Neither is one
+//! colleague's own record the way an expense claim is, and
+//! [`crate::scoped_roles`] deliberately leaves `/finance/*` to gate itself per
+//! route.
+//!
 //! Three things this edge owns, and nothing else — every rule about what a
 //! legitimate match is lives in the store, so a second caller can never get a
 //! weaker definition of one.
@@ -167,6 +175,8 @@ pub struct SuggestionsQuery {
 
 /// `GET /finance/bank/suggestions?statement=` → `{"suggestions":{…}}`.
 ///
+/// Admin or accountant; `403` for anybody else.
+///
 /// An unknown statement narrows to nothing and answers an empty list, like every
 /// other narrowing in this service — answering otherwise would make the filter
 /// an oracle for another tenant's ids.
@@ -176,6 +186,7 @@ pub async fn list_bank_suggestions(
     Query(query): Query<SuggestionsQuery>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    account.require_finance()?;
     let statement = stated(query.statement).map(BankStatementId::new);
     let suggestions = account
         .acc
@@ -202,6 +213,8 @@ pub struct MatchBody {
 /// `POST /finance/bank/lines/{id}/match` → `{"match":{…}}` — records the
 /// payment, moves the books, marks the line matched.
 ///
+/// Admin or accountant; `403` for anybody else.
+///
 /// `404` when the line, the invoice or the rule is not this tenant's, `409`
 /// when the line or the document is in no state to be matched, `422` when the
 /// pick is not a legitimate one (more than is owed, the wrong currency, money
@@ -213,6 +226,7 @@ pub async fn match_bank_line(
     body: axum::body::Bytes,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    account.require_finance()?;
     let input: MatchBody = parse_body(&body)?;
     let invoice_id = stated(Some(input.invoice_id)).ok_or_else(|| {
         Problem::with(
@@ -235,6 +249,8 @@ pub async fn match_bank_line(
 
 /// `POST /finance/bank/lines/{id}/unmatch` → `{"unmatched":{…}}`.
 ///
+/// Admin or accountant; `403` for anybody else.
+///
 /// `404` when the line is not this tenant's or carries no match, `409` when it
 /// is not matched any more or a later payment on the same document has to be
 /// taken back first.
@@ -244,6 +260,7 @@ pub async fn unmatch_bank_line(
     Path(line_id): Path<String>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    account.require_finance()?;
     let unmatched = account
         .acc
         .unmatch_bank_line(&BankLineId::new(line_id))
@@ -264,6 +281,8 @@ pub struct IgnoreBody {
 /// `POST /finance/bank/lines/{id}/ignore` → `{"line":{…}}` — the line, as it now
 /// stands.
 ///
+/// Admin or accountant; `403` for anybody else.
+///
 /// `422` with no reason, `409` when the line is matched to a document (take that
 /// back first), `404` when it is not this tenant's.
 pub async fn ignore_bank_line(
@@ -273,6 +292,7 @@ pub async fn ignore_bank_line(
     body: axum::body::Bytes,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    account.require_finance()?;
     let input: IgnoreBody = parse_body(&body)?;
     let line = account
         .acc
@@ -283,13 +303,14 @@ pub async fn ignore_bank_line(
 }
 
 /// `POST /finance/bank/lines/{id}/unignore` → `{"line":{…}}` — back in the pile,
-/// with the reason cleared.
+/// with the reason cleared. Admin or accountant; `403` for anybody else.
 pub async fn unignore_bank_line(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(line_id): Path<String>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    account.require_finance()?;
     let line = account
         .acc
         .unignore_bank_line(&BankLineId::new(line_id))

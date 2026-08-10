@@ -375,3 +375,189 @@
   outline: 2px solid var(--accent);
   outline-offset: -1px;
 }
+
+/* ---- the bank and the reconciliation screen (B4.13b) ------------------- */
+
+/* What an act just did, in the server's own counts — not a failure, so it
+   never borrows the error colour. */
+.notice {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* The server's reading of an uploaded file: one fact per cell, so a person
+   scans for the one that is wrong rather than reading a paragraph. */
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.summary dt {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+.summary dd {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+/* Eleven column pickers: two per row on a laptop, one on a phone. */
+.mappingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+}
+
+/* The rows a file could not be read from, each naming its line and its rule. */
+.rowErrors {
+  margin: 0;
+  padding-left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* One unmatched transaction: what the bank said on the left, what we think it
+   is on the right. Stacks on a narrow screen, where "left" and "right" stop
+   meaning anything. */
+.lineList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.lineCard {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) minmax(260px, 3fr);
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+@media (max-width: 860px) {
+  .lineCard {
+    grid-template-columns: 1fr;
+  }
+}
+.lineFacts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.lineDay {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+.lineWho {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.lineRemittance {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.lineAmount {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--success);
+}
+/* Money leaving reads as ordinary text: a payment we made is not a warning. */
+.lineAmountOut {
+  color: var(--text-primary);
+}
+
+.lineGuesses {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.guess {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto;
+  align-items: center;
+  gap: 4px var(--space-3);
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.guessNumber {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.guessWhy {
+  grid-column: 1 / -1;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+.guessNone {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+/* The invoice picker's list: number, due day, what is still owed. */
+.pickList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.pickRow {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 2fr) minmax(90px, 1fr) minmax(110px, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.pickRow:hover {
+  background: var(--bg-raised);
+}
+.pickNumber,
+.pickDue,
+.pickAmount {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+.pickAmount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

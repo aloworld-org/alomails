@@ -11,6 +11,14 @@
 //! - `GET /finance/bank/statements` and `GET /finance/bank/lines` — what has
 //!   been imported, and where each line stands.
 //!
+//! **All four are admin-or-accountant** (`Account::require_finance`, B4.12).
+//! A bank statement is the whole company's money moving past a bookkeeper, not
+//! one colleague's own record the way an expense claim is, and
+//! [`crate::scoped_roles`] deliberately leaves `/finance/*` to gate itself per
+//! route. The reads are gated too: a statement names every counterparty the
+//! company paid and was paid by, and a list of those is the tenant's business
+//! and not an employee's (Law 1).
+//!
 //! Three things this edge owns, and nothing else — every rule about what a
 //! readable statement is lives in the store, so a second caller cannot get a
 //! weaker definition of one.
@@ -321,6 +329,8 @@ fn check_size(body: &Bytes) -> Result<(), Problem> {
 
 /// `POST /finance/imports/bank/preview?account&…` (the file as the body) →
 /// `{"import":{…}}` — what the file would stage. Nothing is written.
+///
+/// Admin or accountant; `403` for anybody else.
 pub async fn preview_bank_import(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -328,8 +338,11 @@ pub async fn preview_bank_import(
     body: Bytes,
 ) -> Result<Json<Value>, Problem> {
     // Authenticated before anything is read: a dry run is still a door, and an
-    // unauthenticated caller must not be able to use ours as a CSV parser.
-    let _account = authenticate(&state, &headers).await?;
+    // unauthenticated caller must not be able to use ours as a CSV parser. Nor
+    // may a colleague who is not the bookkeeper — a dry run reads the whole
+    // statement, which is the same disclosure the commit is.
+    let account = authenticate(&state, &headers).await?;
+    account.require_finance()?;
     let request = query.read()?;
     check_size(&body)?;
     let reading = read_bank_file(&request, &body).map_err(map_store_err)?;
@@ -338,6 +351,8 @@ pub async fn preview_bank_import(
 
 /// `POST /finance/imports/bank?account&…` (the file as the body) →
 /// `{"import":{…}}` — the commit.
+///
+/// Admin or accountant; `403` for anybody else.
 ///
 /// `200` when the statement was staged (duplicate lines skipped and counted),
 /// `422` with the same report when any row cannot be read and therefore
@@ -349,6 +364,7 @@ pub async fn import_bank_file(
     body: Bytes,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    account.require_finance()?;
     let request = query.read()?;
     check_size(&body)?;
     let BankFileImport { reading, imported } = account
@@ -368,12 +384,13 @@ pub async fn import_bank_file(
 }
 
 /// `GET /finance/bank/statements` → `{"statements":[…]}` — the most recent
-/// period first.
+/// period first. Admin or accountant; `403` for anybody else.
 pub async fn list_bank_statements(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    account.require_finance()?;
     let statements = account.acc.bank_statements().await.map_err(map_store_err)?;
     Ok(Json(json!({
         "statements": statements.iter().map(statement_json).collect::<Vec<_>>(),
@@ -393,7 +410,8 @@ pub struct LinesQuery {
 }
 
 /// `GET /finance/bank/lines?statement=&status=` → `{"lines":[…]}` — oldest
-/// first, the order a bookkeeper works a month in.
+/// first, the order a bookkeeper works a month in. Admin or accountant; `403`
+/// for anybody else.
 ///
 /// An unknown status is a `422` rather than an empty list: silently answering
 /// "nothing" to a filter nobody implements is how a screen ends up looking
@@ -406,6 +424,7 @@ pub async fn list_bank_lines(
     Query(query): Query<LinesQuery>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    account.require_finance()?;
     let status = match stated(query.status) {
         None => None,
         Some(raw) => Some(BankLineStatus::parse(&raw).ok_or_else(|| {

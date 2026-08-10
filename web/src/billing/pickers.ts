@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 
 import { strings } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
-import type { BillingCustomer, BillingProduct } from "./types";
+import type { BillingCustomer, BillingInvoiceSummary, BillingProduct } from "./types";
 
 export interface Pickers {
   /** Every customer, archived included. */
@@ -48,6 +48,60 @@ export function usePickers(): Pickers {
   }, [api]);
 
   return { customers, products, error };
+}
+
+/**
+ * The documents that can still take money, for a screen outside Billing that
+ * has to name one — the reconciliation screen in Finance (B4.13b), where a
+ * person says by hand which invoice a bank line settled.
+ *
+ * Issued, unsettled, and not a credit note. All three are the server's own
+ * facts; this hook narrows the list it was given and never works out what is
+ * owed, which arrives as `settlement.outstandingCents` beside each one.
+ *
+ * `enabled` exists because the caller is a dialog: a picker nobody has opened
+ * must not read the whole ledger on every render of the screen behind it.
+ */
+export function useOpenInvoices(enabled = true): {
+  invoices: BillingInvoiceSummary[];
+  error: string | null;
+  loading: boolean;
+} {
+  const api = useBillingApi();
+  const [invoices, setInvoices] = useState<BillingInvoiceSummary[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let live = true;
+    setLoading(true);
+    void (async () => {
+      try {
+        const issued = await api.invoices("issued");
+        if (!live) return;
+        // Two categorical filters over the server's own answers, and no
+        // arithmetic: `settlement.state` is computed on the server from the
+        // payment rows, and `creditNote` is a flag it stores. A settled
+        // document and a credit note are both refusals on the settling route,
+        // and offering a choice that always fails is worse than not offering
+        // it.
+        setInvoices(
+          issued.filter((invoice) => !invoice.creditNote && invoice.settlement.state !== "paid"),
+        );
+        setError(null);
+      } catch (err) {
+        if (live) setError(billingMessage(err, strings.billingLoadFailed));
+      } finally {
+        if (live) setLoading(false);
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [api, enabled]);
+
+  return { invoices, error, loading };
 }
 
 /**

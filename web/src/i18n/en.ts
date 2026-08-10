@@ -3495,6 +3495,160 @@ export const en = {
   financeExpensesEmptyBody:
     "Record what you spent for work — the date, the total on the receipt and whose money paid. It stays yours until you hand it in.",
 
+  // ---- the bank, and the pile it leaves (B4.13b) -------------------------
+  //
+  // Two rules on top of the module's own. **Nothing here names a rule the
+  // server owns**: a refusal — an unreadable row, a payment larger than the
+  // debt, a line already matched — arrives as the server's own sentence, and
+  // these strings are the fallback for a request that never reached it. And the
+  // words are a bookkeeper's, not a programmer's: a file is a "statement", a
+  // guess is what "we think", and CAMT.053 is spelled out because the person
+  // downloading it from their bank has read that word on the download button.
+  financeTabBank: "Bank",
+  financeTabReconcile: "Match",
+  financeBankLoadFailed: "The bank statements could not be loaded.",
+
+  // Importing a statement.
+  financeBankImportStatement: "Import a statement",
+  financeBankImportTitle: "Import a bank statement",
+  financeBankImportSubtitle: "We read the file first and show you what we made of it. Nothing is stored until you say so.",
+  financeBankFile: "Statement file",
+  financeBankFileHint: "A CAMT.053 or MT940 download from your bank, or a CSV export.",
+  financeBankAccount: "Account",
+  financeBankAccountHint: "The IBAN this statement is for. A CAMT.053 or MT940 file says it itself; a CSV does not.",
+  financeBankCurrencyHint: "For a CSV that does not say. Leave empty for your workspace's own currency.",
+  financeBankCheckFile: "Check this file",
+  financeBankCheckAgain: "Check again",
+  financeBankImport: "Import",
+  financeBankReadFailed: "That file could not be read.",
+  financeBankImportFailed: "Nothing was imported.",
+  financeBankStale: "You changed how the file is read. Check it again to see the result.",
+  financeBankStaged: (staged: number, duplicates: number) =>
+    duplicates === 0
+      ? `${staged} transactions imported.`
+      : `${staged} transactions imported; ${duplicates} were already here and were left alone.`,
+
+  // What the server made of the file.
+  financeBankFormat: "Read as",
+  financeBankSourceCamt: "CAMT.053",
+  financeBankSourceMt940: "MT940",
+  financeBankSourceCsv: "CSV",
+  financeBankRows: "Transactions",
+  financeBankRowsRead: (lines: number, rows: number) => `${lines} of ${rows} rows`,
+  financeBankSkipped: "Rows that are not transactions",
+  financeBankUnbooked: "Not yet booked by the bank",
+  financeBankPeriod: "Period",
+  financeBankEncoding: "Encoding",
+  financeBankSampleTitle: "The first transactions, as we read them",
+  financeBankSampleTruncated: "Only the first transactions are shown here. All of them are imported.",
+  financeBankRowsRefused: (count: number) =>
+    count === 1
+      ? "One row cannot be read, so nothing was imported."
+      : `${count} rows cannot be read, so nothing was imported.`,
+  financeBankRowAt: (line: number) => `Line ${line}:`,
+  financeBankRowUnknown: "A row:",
+
+  // Telling us which column is which.
+  financeBankMappingTitle: "Which column is which",
+  financeBankMappingNote:
+    "We guessed from the file's own header. Correct anything we got wrong, then check the file again.",
+  financeBankColumnNone: "Not in this file",
+  financeBankColDate: "Booking date",
+  financeBankColValueDate: "Value date",
+  financeBankColAmount: "Amount (one signed column)",
+  financeBankColDebit: "Money out",
+  financeBankColCredit: "Money in",
+  financeBankColSign: "Which way it points",
+  financeBankColCurrency: "Currency per row",
+  financeBankColCounterparty: "Who was paid, or who paid",
+  financeBankColIban: "Their account",
+  financeBankColRemittance: "What was written on the payment",
+  financeBankColReference: "The bank's own reference",
+  financeBankDates: "Dates read as",
+  financeBankDecimal: "Cents separated by",
+  financeBankConventionAuto: "Work it out from the file",
+  financeBankConventionDmy: "Day/month/year",
+  financeBankConventionMdy: "Month/day/year",
+  financeBankConventionYmd: "Year-month-day",
+  financeBankConventionComma: "A comma",
+  financeBankConventionDot: "A dot",
+
+  // What has been imported.
+  financeBankLines: "Transactions",
+  financeBankClosingBalance: "Closing balance",
+  financeBankImportedAt: "Imported",
+  financeBankEmptyTitle: "No statements yet",
+  financeBankEmptyBody:
+    "Import a month from your bank and every transaction in it lands in one pile, waiting to be matched to the invoices it paid.",
+
+  // The reconciliation screen.
+  financeBankStatement: "Statement",
+  financeBankAllStatements: "Everything not yet matched",
+  financeBankToMatchTitle: (count: number) =>
+    count === 1 ? "1 transaction to match" : `${count} transactions to match`,
+  financeBankAllMatchedTitle: "Nothing left to match",
+  financeBankAllMatchedBody:
+    "Every transaction in the imported statements is either attributed to an invoice or set aside. Import another month to carry on.",
+  financeBankCapped:
+    "This list is a first batch, not everything — work through it and reload to see the rest.",
+  financeBankBookedOn: "Booked",
+  financeBankCounterparty: "Who",
+  financeBankNoCounterparty: "No name on the payment",
+  financeBankRemittance: "Reference",
+  financeBankCertain: "Certain",
+  financeBankThisOne: "This one",
+  financeBankNoGuess: "We have no idea what this one is. Pick the invoice, or set it aside.",
+  financeBankNotOurs: "Not ours",
+  financeBankPickInvoice: "Pick an invoice",
+  financeBankStillOwed: "still owed",
+  financeBankStillOwedIs: (amount: string) => `${amount} still owed`,
+  financeBankMatchFailed: "That transaction was not attributed.",
+  financeBankUnmatchFailed: "That match was not taken back.",
+  financeBankIgnoreFailed: "That transaction was not set aside.",
+
+  // Why we think a transaction settled a document. The server sends the fact;
+  // these are the sentences it is read as.
+  financeBankWhyNumberQuoted: "our invoice number is written on the payment",
+  financeBankWhyRuleSaved: "this payer has been matched this way before",
+  financeBankWhyCustomerNamed: (percent: number) =>
+    `the name on the payment looks like the customer's (${percent}%)`,
+  financeBankWhyWholeAmount: "the amount is exactly what is owed",
+  financeBankWhyOnlyDocument: "it is the only open invoice for this amount",
+  financeBankWhyBeforeDue: (days: number) =>
+    days === 1 ? "it arrived the day before it was due" : `it arrived ${days} days before it was due`,
+  financeBankWhyAfterDue: (days: number) =>
+    days === 1 ? "it arrived the day after it was due" : `it arrived ${days} days after it was due`,
+  financeBankWhyPartPayment: (amount: string) => `it is part of the invoice — ${amount} would be left`,
+
+  // Setting a transaction aside.
+  financeBankIgnoreTitle: "Not ours to book",
+  financeBankIgnoreBody:
+    "Say why, so the next person reading this statement does not have to work it out again. Bank charges, a private transfer, a duplicate.",
+  financeBankIgnore: "Set aside",
+  financeBankIgnorePlaceholder: "Why it is not ours…",
+
+  // Picking the invoice by hand.
+  financeBankPickTitle: "Which invoice did this settle?",
+  financeBankPickSubtitle: (amount: string) => `${amount} arrived. Say what it paid.`,
+  financeBankFindInvoice: "Find an invoice",
+  financeBankFindInvoiceHint: "By number, or by the reference your customer gave it.",
+  financeBankNoOpenInvoices: "No issued invoice is still waiting for money.",
+  financeBankNoNumber: "No number",
+  financeBankOverdue: "Overdue",
+  financeBankConfirmMatch: "This one settled it",
+
+  // What is already dealt with.
+  financeBankUnmatched: "To match",
+  financeBankMatched: "Matched",
+  financeBankIgnored: "Set aside",
+  financeBankSettledTitle: "Already matched",
+  financeBankSettledNote:
+    "Each of these recorded a payment and moved the books. Taking one back reverses it with an entry of its own.",
+  financeBankUndoMatch: "Take it back",
+  financeBankSetAsideTitle: "Set aside",
+  financeBankSetAsideNote: "Transactions somebody decided are not ours to book.",
+  financeBankUndoIgnore: "Back to the pile",
+
   mailAttachmentErrorDetail: (reason: string) =>
     `That file was not attached. Try adding it again. Server: ${reason}`,
   mailDraftCreateErrorDetail: (reason: string) =>
