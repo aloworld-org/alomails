@@ -1093,6 +1093,8 @@ async fn sites_scope_by_tenant_and_subdomains_are_globally_unique() {
     assert_eq!(got.subdomain, sub);
     assert_eq!(got.status, alo_store::SiteStatus::Draft);
     assert_eq!(got.theme, serde_json::json!({}));
+    assert_eq!(got.default_locale, "en");
+    assert_eq!(got.enabled_locales, ["en"]);
 
     // Sites are tenant-wide: a co-tenant user sees and can manage them.
     assert_eq!(c.sites().await.unwrap().len(), 1);
@@ -1105,6 +1107,7 @@ async fn sites_scope_by_tenant_and_subdomains_are_globally_unique() {
     assert!(b.sites().await.unwrap().is_empty());
     assert_not_found(b.rename_site(&site, "hijacked").await);
     assert_not_found(b.set_site_subdomain(&site, "stolen-subdomain").await);
+    assert_not_found(b.set_site_locales(&site, "fr", &["fr".to_owned()]).await);
     assert_not_found(
         b.set_site_theme(
             &site,
@@ -1117,6 +1120,34 @@ async fn sites_scope_by_tenant_and_subdomains_are_globally_unique() {
     let untouched = a.site(&site).await.unwrap().unwrap();
     assert_eq!(untouched.subdomain, sub);
     assert_eq!(untouched.theme, serde_json::json!({}));
+    assert_eq!(untouched.default_locale, "en");
+    assert_eq!(untouched.enabled_locales, ["en"]);
+
+    // A co-tenant can enable the site's visitor languages. Tags are stored in
+    // canonical lowercase order, while malformed/default-missing requests are
+    // refused before the row changes.
+    c.set_site_locales(
+        &site,
+        "FR",
+        &["fr".to_owned(), "NL".to_owned(), "en-GB".to_owned()],
+    )
+    .await
+    .unwrap();
+    let multilingual = a.site(&site).await.unwrap().unwrap();
+    assert_eq!(multilingual.default_locale, "fr");
+    assert_eq!(multilingual.enabled_locales, ["fr", "nl", "en-gb"]);
+    match a
+        .set_site_locales(&site, "de", &["fr".to_owned(), "nl".to_owned()])
+        .await
+    {
+        Err(StoreError::Conflict(message)) => assert!(message.contains("must also be enabled")),
+        other => panic!("expected default-language Conflict, got {other:?}"),
+    }
+    assert_eq!(
+        a.site(&site).await.unwrap().unwrap().enabled_locales,
+        multilingual.enabled_locales,
+        "a rejected locale write must not change the site"
+    );
 
     // The theme write gate: a co-tenant user can set a valid theme (stored
     // canonically), and off-schema values never reach the column.

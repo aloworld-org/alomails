@@ -538,6 +538,69 @@ async fn site_lifecycle_create_check_edit_delete() {
     );
 }
 
+#[tokio::test]
+async fn site_languages_are_canonical_validated_and_tenant_scoped() {
+    let owner = harness("sites-locales").await;
+    let outsider = harness_on(Arc::clone(&owner.store), "sites-locales-other").await;
+    let site = created_id(
+        "localized site",
+        post(
+            &owner.app,
+            &owner.token,
+            "/sites",
+            json!({
+                "name": "European journal",
+                "subdomain": sub("locales", &owner),
+                "defaultLocale": "PT-br",
+                "enabledLocales": ["PT-BR", "en", "nl"]
+            }),
+        )
+        .await,
+    );
+
+    let (status, created) = get(&owner.app, &owner.token, &format!("/sites/{site}")).await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+    assert_eq!(created["defaultLocale"], json!("pt-br"));
+    assert_eq!(created["enabledLocales"], json!(["pt-br", "en", "nl"]));
+
+    let (status, changed) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}"),
+        json!({ "defaultLocale": "fr", "enabledLocales": ["fr", "de", "EN-gb"] }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{changed}");
+    let (_, changed) = get(&owner.app, &owner.token, &format!("/sites/{site}")).await;
+    assert_eq!(changed["defaultLocale"], json!("fr"));
+    assert_eq!(changed["enabledLocales"], json!(["fr", "de", "en-gb"]));
+
+    let (status, invalid) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}"),
+        json!({ "defaultLocale": "it", "enabledLocales": ["fr", "de"] }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{invalid}");
+    assert_eq!(
+        invalid["detail"],
+        json!("default language 'it' must also be enabled")
+    );
+
+    let (status, hidden) = put(
+        &outsider.app,
+        &outsider.token,
+        &format!("/sites/{site}"),
+        json!({ "defaultLocale": "nl", "enabledLocales": ["nl"] }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{hidden}");
+    let (_, unchanged) = get(&owner.app, &owner.token, &format!("/sites/{site}")).await;
+    assert_eq!(unchanged["defaultLocale"], json!("fr"));
+    assert_eq!(unchanged["enabledLocales"], json!(["fr", "de", "en-gb"]));
+}
+
 // ---- pages -------------------------------------------------------------------
 
 #[tokio::test]

@@ -102,6 +102,8 @@ fn site_json(s: &Site) -> Value {
         "subdomain": s.subdomain,
         "status": s.status.as_str(),
         "theme": s.theme,
+        "defaultLocale": s.default_locale,
+        "enabledLocales": s.enabled_locales,
         "createdAt": iso(s.created_at),
         "updatedAt": iso(s.updated_at),
     })
@@ -625,11 +627,17 @@ pub async fn verify_domain(
 struct SiteBody {
     name: String,
     subdomain: String,
+    #[serde(default, rename = "defaultLocale")]
+    default_locale: Option<String>,
+    #[serde(default, rename = "enabledLocales")]
+    enabled_locales: Option<Vec<String>>,
 }
 
-/// `POST /sites` `{name, subdomain}` → the created site (status `draft`,
-/// empty theme). The subdomain is claimed in the global namespace; a claim
-/// that collides answers taken/free only, never the owner.
+/// `POST /sites` `{name, subdomain, defaultLocale?, enabledLocales?}` → the
+/// created site (status `draft`, empty theme). Omitted locale settings start
+/// in English; providing only a default enables that language. The subdomain
+/// is claimed in the global namespace; a collision answers taken/free only,
+/// never the owner.
 pub async fn create_site(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -637,9 +645,17 @@ pub async fn create_site(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let req: SiteBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let default_locale = req.default_locale.as_deref().unwrap_or("en");
+    let fallback_locales = [default_locale.to_owned()];
+    let enabled_locales = req.enabled_locales.as_deref().unwrap_or(&fallback_locales);
     let id = account
         .acc
-        .create_site(req.name.trim(), req.subdomain.trim())
+        .create_site_with_locales(
+            req.name.trim(),
+            req.subdomain.trim(),
+            default_locale,
+            enabled_locales,
+        )
         .await
         .map_err(map_store_err)?;
     let site = account
@@ -790,10 +806,15 @@ struct SiteEditBody {
     name: Option<String>,
     #[serde(default)]
     subdomain: Option<String>,
+    #[serde(default, rename = "defaultLocale")]
+    default_locale: Option<String>,
+    #[serde(default, rename = "enabledLocales")]
+    enabled_locales: Option<Vec<String>>,
 }
 
-/// `PUT /sites/:id` `{name?, subdomain?}` → `{status:"ok"}` — rename and/or
-/// move to a new subdomain; fields absent from the body are untouched.
+/// `PUT /sites/:id` updates identity and/or language settings. Supplying one
+/// locale field keeps the other current value; fields absent from the body are
+/// untouched.
 pub async fn update_site(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -802,13 +823,39 @@ pub async fn update_site(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let req: SiteEditBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
-    if req.name.is_none() && req.subdomain.is_none() {
+    if req.name.is_none()
+        && req.subdomain.is_none()
+        && req.default_locale.is_none()
+        && req.enabled_locales.is_none()
+    {
         return Err(Problem::with(
             StatusCode::UNPROCESSABLE_ENTITY,
-            "nothing to update: provide name and/or subdomain",
+            "nothing to update: provide a name, web address, or language setting",
         ));
     }
     let sid = SiteId::new(id);
+    let locale_update = if req.default_locale.is_some() || req.enabled_locales.is_some() {
+        let current = account
+            .acc
+            .site(&sid)
+            .await
+            .map_err(map_store_err)?
+            .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such site"))?;
+        let default_locale = req
+            .default_locale
+            .as_deref()
+            .unwrap_or(&current.default_locale);
+        let enabled_locales = req
+            .enabled_locales
+            .as_deref()
+            .unwrap_or(&current.enabled_locales);
+        Some(
+            alo_store::normalize_site_locales(default_locale, enabled_locales)
+                .map_err(map_store_err)?,
+        )
+    } else {
+        None
+    };
     if let Some(name) = &req.name {
         account
             .acc
@@ -820,6 +867,13 @@ pub async fn update_site(
         account
             .acc
             .set_site_subdomain(&sid, subdomain.trim())
+            .await
+            .map_err(map_store_err)?;
+    }
+    if let Some((default_locale, enabled_locales)) = locale_update {
+        account
+            .acc
+            .set_site_locales(&sid, &default_locale, &enabled_locales)
             .await
             .map_err(map_store_err)?;
     }

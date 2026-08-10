@@ -14,6 +14,13 @@ use crate::error::{Result, StoreError};
 use crate::id::SiteId;
 use crate::site_theme::SiteTheme;
 
+/// The language every existing and newly-created site starts in.
+pub const DEFAULT_SITE_LOCALE: &str = "en";
+/// A deliberate UX and publish-size bound: twelve visible languages cover a
+/// serious multilingual site without turning its editor into an unbounded
+/// locale registry.
+pub const MAX_SITE_LOCALES: usize = 12;
+
 /// Subdomain length bounds (DNS label rules, tightened for a public product
 /// namespace: real DNS allows 63 octets, we cap at 40 for URL sanity).
 pub const SUBDOMAIN_MIN_LEN: usize = 3;
@@ -145,9 +152,80 @@ pub struct Site {
     /// value that passed [`crate::site_theme::SiteTheme::from_value`], or the
     /// pristine `{}` default of a site that never set one.
     pub theme: Value,
+    /// Lowercase BCP-47-like tag used when a visitor enters without an
+    /// explicit language path.
+    pub default_locale: String,
+    /// Ordered language choices shown by the editor and public switcher. The
+    /// default locale is always present and the list never contains duplicates.
+    pub enabled_locales: Vec<String>,
     pub created_by: String,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
+}
+
+/// Normalize one language tag into the stable wire/storage representation.
+/// We accept the useful BCP-47 subset browsers and search engines understand:
+/// a 2-3 letter language followed by optional 2-8 character alphanumeric
+/// subtags. Lowercase storage makes equality and URL construction unambiguous.
+fn normalize_locale_tag(locale: &str) -> Result<String> {
+    let locale = locale.trim().to_ascii_lowercase();
+    let mut parts = locale.split('-');
+    let Some(language) = parts.next() else {
+        return Err(StoreError::Conflict(
+            "language code must start with 2 or 3 letters".to_owned(),
+        ));
+    };
+    if !(2..=3).contains(&language.len()) || !language.bytes().all(|b| b.is_ascii_lowercase()) {
+        return Err(StoreError::Conflict(
+            "language code must start with 2 or 3 letters".to_owned(),
+        ));
+    }
+    for subtag in parts {
+        if !(2..=8).contains(&subtag.len()) || !subtag.bytes().all(|b| b.is_ascii_alphanumeric()) {
+            return Err(StoreError::Conflict(
+                "language code subtags must contain 2-8 letters or digits".to_owned(),
+            ));
+        }
+    }
+    Ok(locale)
+}
+
+/// Validate and canonicalize a site's locale settings before any write.
+///
+/// # Errors
+/// [`StoreError::Conflict`] when there are no languages, too many languages,
+/// a malformed/duplicate tag, or the default language is not enabled.
+pub fn normalize_site_locales(
+    default_locale: &str,
+    enabled_locales: &[String],
+) -> Result<(String, Vec<String>)> {
+    if enabled_locales.is_empty() {
+        return Err(StoreError::Conflict(
+            "enable at least one site language".to_owned(),
+        ));
+    }
+    if enabled_locales.len() > MAX_SITE_LOCALES {
+        return Err(StoreError::Conflict(format!(
+            "a site may enable at most {MAX_SITE_LOCALES} languages"
+        )));
+    }
+    let default_locale = normalize_locale_tag(default_locale)?;
+    let mut normalized = Vec::with_capacity(enabled_locales.len());
+    for locale in enabled_locales {
+        let locale = normalize_locale_tag(locale)?;
+        if normalized.contains(&locale) {
+            return Err(StoreError::Conflict(format!(
+                "language {locale} is enabled more than once"
+            )));
+        }
+        normalized.push(locale);
+    }
+    if !normalized.contains(&default_locale) {
+        return Err(StoreError::Conflict(format!(
+            "default language '{default_locale}' must also be enabled"
+        )));
+    }
+    Ok((default_locale, normalized))
 }
 
 /// Validates a subdomain claim: DNS-safe `[a-z0-9-]`, 3–40 chars, no leading
@@ -219,17 +297,44 @@ impl AccountStore {
     /// subdomain, or a subdomain already taken (by any tenant — the message
     /// says taken, nothing more); [`StoreError::Db`] on failure.
     pub async fn create_site(&self, name: &str, subdomain: &str) -> Result<SiteId> {
+        self.create_site_with_locales(
+            name,
+            subdomain,
+            DEFAULT_SITE_LOCALE,
+            &[DEFAULT_SITE_LOCALE.to_owned()],
+        )
+        .await
+    }
+
+    /// Creates a draft site with explicitly chosen, validated languages.
+    /// Existing callers use [`Self::create_site`] and receive the English
+    /// default, keeping the S1 API source-compatible.
+    ///
+    /// # Errors
+    /// The same errors as [`Self::create_site`], plus locale validation errors.
+    pub async fn create_site_with_locales(
+        &self,
+        name: &str,
+        subdomain: &str,
+        default_locale: &str,
+        enabled_locales: &[String],
+    ) -> Result<SiteId> {
         validate_site_name(name)?;
         validate_subdomain(subdomain)?;
+        let (default_locale, enabled_locales) =
+            normalize_site_locales(default_locale, enabled_locales)?;
         let id = SiteId::generate();
         sqlx::query(
-            "INSERT INTO sites (tenant_id, id, name, subdomain, created_by) \
-             VALUES ($1, $2, $3, $4, $5)",
+            "INSERT INTO sites (tenant_id, id, name, subdomain, default_locale, \
+                                enabled_locales, created_by) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7)",
         )
         .bind(self.tenant.as_str())
         .bind(id.as_str())
         .bind(name.trim())
         .bind(subdomain)
+        .bind(default_locale)
+        .bind(enabled_locales)
         .bind(self.user.as_str())
         .execute(&self.pool)
         .await
@@ -243,7 +348,8 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn sites(&self) -> Result<Vec<Site>> {
         let rows = sqlx::query_as::<_, SiteRow>(
-            "SELECT id, name, subdomain, status, theme, created_by, created_at, updated_at \
+            "SELECT id, name, subdomain, status, theme, default_locale, enabled_locales, \
+                    created_by, created_at, updated_at \
              FROM sites WHERE tenant_id = $1 ORDER BY lower(name), id",
         )
         .bind(self.tenant.as_str())
@@ -260,7 +366,8 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn site(&self, id: &SiteId) -> Result<Option<Site>> {
         let row = sqlx::query_as::<_, SiteRow>(
-            "SELECT id, name, subdomain, status, theme, created_by, created_at, updated_at \
+            "SELECT id, name, subdomain, status, theme, default_locale, enabled_locales, \
+                    created_by, created_at, updated_at \
              FROM sites WHERE tenant_id = $1 AND id = $2",
         )
         .bind(self.tenant.as_str())
@@ -312,6 +419,37 @@ impl AccountStore {
         .execute(&self.pool)
         .await
         .map_err(map_subdomain_unique)?;
+        if done.rows_affected() == 0 {
+            return Err(StoreError::NotFound);
+        }
+        Ok(())
+    }
+
+    /// Replaces the languages available on a site. Validation happens before
+    /// the tenant-scoped update, so a malformed request never partially writes.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the site isn't the tenant's;
+    /// [`StoreError::Conflict`] for invalid locale settings; [`StoreError::Db`].
+    pub async fn set_site_locales(
+        &self,
+        id: &SiteId,
+        default_locale: &str,
+        enabled_locales: &[String],
+    ) -> Result<()> {
+        let (default_locale, enabled_locales) =
+            normalize_site_locales(default_locale, enabled_locales)?;
+        let done = sqlx::query(
+            "UPDATE sites SET default_locale = $3, enabled_locales = $4, updated_at = now() \
+             WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(default_locale)
+        .bind(enabled_locales)
+        .execute(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
         if done.rows_affected() == 0 {
             return Err(StoreError::NotFound);
         }
@@ -398,6 +536,8 @@ struct SiteRow {
     subdomain: String,
     status: String,
     theme: sqlx::types::Json<Value>,
+    default_locale: String,
+    enabled_locales: Vec<String>,
     created_by: String,
     created_at: OffsetDateTime,
     updated_at: OffsetDateTime,
@@ -410,6 +550,8 @@ impl SiteRow {
             subdomain: self.subdomain,
             status: SiteStatus::parse(&self.status).ok_or(StoreError::NotFound)?,
             theme: self.theme.0,
+            default_locale: self.default_locale,
+            enabled_locales: self.enabled_locales,
             created_by: self.created_by,
             created_at: self.created_at,
             updated_at: self.updated_at,
@@ -486,5 +628,33 @@ mod tests {
             assert_eq!(SiteStatus::parse(status.as_str()), Some(status));
         }
         assert_eq!(SiteStatus::parse("published"), None);
+    }
+
+    #[test]
+    fn locale_settings_normalize_and_keep_the_default_enabled() {
+        let Ok(settings) = normalize_site_locales(
+            "PT-br",
+            &["EN".to_owned(), "pt-BR".to_owned(), "zh-Hant".to_owned()],
+        ) else {
+            panic!("valid locale settings were rejected");
+        };
+        assert_eq!(settings.0, "pt-br");
+        assert_eq!(settings.1, ["en", "pt-br", "zh-hant"]);
+
+        for (default, enabled) in [
+            ("en", Vec::new()),
+            ("en", vec!["fr".to_owned()]),
+            ("en", vec!["en".to_owned(), "EN".to_owned()]),
+            ("english", vec!["english".to_owned()]),
+            ("en", vec!["en-".to_owned()]),
+        ] {
+            assert!(
+                matches!(
+                    normalize_site_locales(default, &enabled),
+                    Err(StoreError::Conflict(_))
+                ),
+                "expected invalid locale settings: {default:?}, {enabled:?}"
+            );
+        }
     }
 }

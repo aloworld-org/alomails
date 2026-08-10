@@ -363,7 +363,10 @@ pub use site_theme::{
     DEFAULT_THEME_PRESET, SiteTheme, THEME_PRESETS, THEME_SCHEMA_VERSION, ThemePreset,
     ThemeSchemaError, theme_preset,
 };
-pub use sites::{Site, SiteStatus, validate_subdomain};
+pub use sites::{
+    DEFAULT_SITE_LOCALE, MAX_SITE_LOCALES, Site, SiteStatus, normalize_site_locales,
+    validate_subdomain,
+};
 pub use spaces::{Space, SpaceMember, SpaceRole};
 pub use store::{CATEGORY_KEYWORD_PREFIX, SEEN, Store, TenantStore, category_keyword};
 pub use tasks::{
