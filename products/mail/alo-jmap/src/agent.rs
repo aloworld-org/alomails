@@ -59,6 +59,9 @@ pub async fn agent(
         .unwrap_or("")
         .trim()
         .to_owned();
+    // The browser's own zone, when it sends one. Optional on purpose: a
+    // caller that omits it still works, and is told so in the prompt.
+    let tz = req.get("tz").and_then(Value::as_str).map(str::to_owned);
     if request.is_empty() {
         return Err(Problem::with(StatusCode::BAD_REQUEST, "q required"));
     }
@@ -112,7 +115,15 @@ pub async fn agent(
     // only, so it can't propose a folder that does not exist (internal roles
     // like Snoozed/Scheduled are excluded; Archive/Trash have their own tools).
     let folders = movable_folder_names(&account).await;
-    match alo_ai::run_agent(&config, &request, &ground, &today_utc(), &folders).await {
+    match alo_ai::run_agent(
+        &config,
+        &request,
+        &ground,
+        &today_where(tz.as_deref()),
+        &folders,
+    )
+    .await
+    {
         Ok(AgentDecision::Answer(answer)) => Ok(Json(json!({
             "answer": answer, "action": Value::Null,
             "reason": Value::Null, "sources": sources_json
@@ -837,6 +848,26 @@ fn parse_wake_time(s: &str, now: time::OffsetDateTime) -> Option<i64> {
 fn today_utc() -> String {
     let d = time::OffsetDateTime::now_utc().date();
     format!("{:04}-{:02}-{:02}", d.year(), u8::from(d.month()), d.day())
+}
+
+/// Today's date **and the clock the asker is on**, for the prompt.
+///
+/// A model given a bare UTC date reads "Thursday at 10" as 10:00Z. For anyone
+/// not on UTC that is the wrong hour — a wrong answer from `am_i_free`, and a
+/// meeting in the wrong slot from `create_event`. The browser knows the zone,
+/// so it sends it; when it does not, the model is told the times it produces
+/// will be read as UTC, so it can say so rather than quietly assume.
+fn today_where(tz: Option<&str>) -> String {
+    let today = today_utc();
+    match tz {
+        Some(zone) if !zone.trim().is_empty() => format!(
+            "{today}, and the person asking is in the {} timezone. Every datetime you              produce must be an instant that means the time THEY said on THEIR clock.",
+            zone.trim()
+        ),
+        _ => format!(
+            "{today}. The person's timezone is unknown, so any datetime you produce is              read as UTC — say which hour you assumed in your `say` line."
+        ),
+    }
 }
 
 /// Parse a `YYYY-MM-DD` due date to midnight UTC, or `None` if malformed (a bad

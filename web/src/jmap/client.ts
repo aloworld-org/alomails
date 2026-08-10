@@ -784,7 +784,10 @@ export class JmapClient {
    */
   async canWorkTheBooks(): Promise<boolean> {
     const session = await this.session();
-    return session["alo:isAdmin"] === true || (session["alo:roles"] ?? []).includes("accountant");
+    return (
+      session["alo:isAdmin"] === true ||
+      (session["alo:roles"] ?? []).includes("accountant")
+    );
   }
 
   /** The addresses this user may send from (canonical + aliases), for the
@@ -893,7 +896,11 @@ export class JmapClient {
   /** Grant or revoke a tenant-wide scoped role, e.g. the accountant
    * (ADR 0035, B4.12). Its own call rather than a field beside `isAdmin`:
    * the admin flag is the console, a role is a scope. */
-  async setUserRole(userId: string, role: TenantRole, granted: boolean): Promise<void> {
+  async setUserRole(
+    userId: string,
+    role: TenantRole,
+    granted: boolean,
+  ): Promise<void> {
     await this.#adminPost("/admin/users/roles", { userId, role, granted });
   }
 
@@ -1818,7 +1825,10 @@ export class JmapClient {
     const res = await this.#fetch(`${API_BASE}/ai/agent`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ q: query }),
+      body: JSON.stringify({
+        q: query,
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }),
     });
     if (!res.ok) throw new JmapError(`agent ${res.status}`);
     return (await res.json()) as AgentAnswerDto;
