@@ -372,10 +372,36 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   max-width: 760px;
-  padding: 3px var(--space-3) 4px calc(var(--gutter) + var(--gutter-gap));
+  padding: 0 var(--space-3) 0 calc(var(--gutter) + var(--gutter-gap));
   margin-top: 14px;
-  border-radius: 8px;
+}
+
+/* The bubble. Everything the message says sits inside it, so a wall of text
+   reads as separate remarks rather than one column of prose. */
+.message > p,
+.messageForMe > p,
+.message > .editRow,
+.messageForMe > .editRow {
+  max-width: 100%;
+  padding: 7px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px 12px 12px 12px;
+  background: var(--bg-surface);
+}
+
+/* Yours: the accent's own tint, so it is obviously yours without inventing a
+   colour the product does not already use. */
+.messageForMe > p {
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border-subtle));
+  background: var(--accent-tint);
+}
+
+/* A continued line tucks under the one above — square top-left, as Teams
+   does, so a run reads as one person still speaking. */
+.grouped > p {
+  border-top-left-radius: 4px;
 }
 
 .message.grouped,
@@ -387,9 +413,11 @@
 
 /* The whole block lifts on approach, as a card — not a grey band bleeding to
    the edge of the screen. */
-.message:hover,
-.messageForMe:hover {
-  background: var(--bg-surface);
+/* The row no longer changes colour on approach: the bubble already carries
+   the surface, and tinting behind it made two backgrounds fight. */
+.message:hover > p,
+.messageForMe:hover > p {
+  border-color: var(--border-default);
 }
 
 /* The avatar sits in the gutter, out of the text flow, so every line of every
@@ -888,6 +916,40 @@
   opacity: 1;
 }
 
+/* ---- the formatting bar ---------------------------------------------- */
+
+/* Always visible above the field. Hiding it behind a menu is how "how do I
+   make this bold?" becomes a question nobody finds the answer to. */
+.formatBar {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  /* Its own row. `flex: none` on the composer's children resets flex-basis,
+     so the width has to be stated outright or the tools crowd the field. */
+  flex: 0 0 100%;
+  padding: 0 0 4px 2px;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.formatTool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.formatTool:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
 /* ---- jumping, dropping, and where you left off ------------------------ */
 
 .switcherBackdrop {
@@ -1236,18 +1298,29 @@
   color: var(--text-primary);
 }
 
+/* An edit takes the shape of the message it replaces: a paragraph stays a
+   paragraph, a list stays a list. Cramming it into one line was asking people
+   to edit something they could not see. */
 .editRow {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
   gap: var(--space-2);
-  margin-top: 2px;
+  margin-top: 4px;
+}
+
+.editActions {
+  display: flex;
+  gap: var(--space-2);
 }
 
 .editInput {
-  flex: 1;
-  min-width: 0;
-  min-height: 36px;
-  padding: 0 var(--space-2);
+  width: 100%;
+  min-height: 60px;
+  max-height: 40vh;
+  padding: var(--space-2);
+  resize: vertical;
+  line-height: 1.45;
   border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
   font: inherit;
@@ -1369,6 +1442,10 @@
   flex: none;
 }
 
+.composer {
+  align-items: flex-end;
+}
+
 .composer > .input {
   flex: 1 1 auto;
 }
@@ -1447,14 +1524,6 @@
    the words stay as legible as every other line. */
 /* Addressed to you: a tinted band the full width of the row, not a rail that
    knocks the text out of alignment with everything above it. */
-.messageForMe {
-  background: var(--accent-tint);
-  box-shadow: inset 2px 0 0 var(--accent);
-}
-
-.messageForMe:hover {
-  background: var(--accent-tint);
-}
 
 /* Outranks the plain unread count: a number you must look at, versus a number
    you may. Carries the "@" so it is not read as just a larger count. */

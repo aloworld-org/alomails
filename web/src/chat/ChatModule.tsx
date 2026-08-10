@@ -14,6 +14,13 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   Archive,
   Hash,
+  Quote,
+  List,
+  Sigma,
+  SquareCode,
+  Code,
+  Italic,
+  Bold,
   Loader2,
   Lock,
   MessageSquarePlus,
@@ -426,15 +433,28 @@ function MessageLine({
             if (next !== "" && next !== message.body) onEdit(message, next);
           }}
         >
-          <input
+          <textarea
             className={styles.editInput}
             value={editing}
+            rows={Math.min(
+              12,
+              editing.split(String.fromCharCode(10)).length + 1,
+            )}
             onChange={(event) => setEditing(event.target.value)}
             aria-label={strings.chatEditLabel}
             onKeyDown={(event) => {
               if (event.key === "Escape") {
                 event.preventDefault();
                 setEditing(null);
+              }
+              // Same rule as the composer: Enter commits, Shift+Enter breaks
+              // the line. A message written across lines must be editable
+              // across lines.
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                const next = editing.trim();
+                setEditing(null);
+                if (next !== "" && next !== message.body) onEdit(message, next);
               }
             }}
             autoFocus
@@ -807,6 +827,28 @@ export function ChatModule() {
     });
   }
 
+  /** Wrap the selection in `before`/`after`, or if nothing is selected, insert
+   *  both and leave the caret between them ready to type. */
+  function wrapSelection(before: string, after: string, sample: string) {
+    const box = composerRef.current;
+    if (box === null) return;
+    const from = box.selectionStart ?? draft.length;
+    const to = box.selectionEnd ?? from;
+    const chosen = draft.slice(from, to);
+    const body = chosen === "" ? sample : chosen;
+    const next = `${draft.slice(0, from)}${before}${body}${after}${draft.slice(to)}`;
+    setDraft(next);
+    if (openId !== null) drafts.current.set(openId, next);
+    // Select the sample so the next keystroke replaces it — the mark is done,
+    // the words are what you type now.
+    const start = from + before.length;
+    requestAnimationFrame(() => {
+      composerRef.current?.focus();
+      composerRef.current?.setSelectionRange(start, start + body.length);
+      setCaret(start + body.length);
+    });
+  }
+
   /** Put the chosen handle where the `@token` was, and carry on typing. */
   function complete(choice: Nameable) {
     const found = mentionAt(draft, caret);
@@ -947,7 +989,20 @@ export function ChatModule() {
   async function browse() {
     setError(null);
     try {
-      setBrowsing(await api.joinable());
+      // Everything public, not only what is left to join. Browsing a directory
+      // that hides the rooms you are already in reads as empty and broken —
+      // which is exactly how it read.
+      const open = await api.joinable();
+      const mine = (channels ?? []).filter(
+        (c) =>
+          c.kind === "channel" &&
+          c.visibility === "public" &&
+          c.archivedAt === null,
+      );
+      const all = [...open, ...mine].sort((a, b) =>
+        (a.name ?? "").localeCompare(b.name ?? ""),
+      );
+      setBrowsing(all);
     } catch (failure) {
       setError(chatMessage(failure, strings.chatBrowseFailed));
       setBrowsing([]);
@@ -1302,12 +1357,21 @@ export function ChatModule() {
                     <button
                       type="button"
                       className={styles.channel}
-                      onClick={() => void joinRoom(room)}
+                      onClick={() => {
+                        if ((channels ?? []).some((c) => c.id === room.id)) {
+                          setOpenId(room.id);
+                          setBrowsing(null);
+                        } else {
+                          void joinRoom(room);
+                        }
+                      }}
                     >
                       <Hash size={15} className={styles.channelIcon} />
                       <span className={styles.channelName}>{room.name}</span>
                       <span className={styles.joinHint}>
-                        {strings.chatJoin}
+                        {(channels ?? []).some((c) => c.id === room.id)
+                          ? strings.chatJoined
+                          : strings.chatJoin}
                       </span>
                     </button>
                   </li>
@@ -1683,6 +1747,96 @@ export function ChatModule() {
                   void send();
                 }}
               >
+                {/* Visible, always. The syntax exists for people who know it; this is
+                for everyone else, who should never have to learn markup to make a
+                word bold. */}
+                <div className={styles.formatBar}>
+                  <button
+                    type="button"
+                    className={styles.formatTool}
+                    onClick={() =>
+                      wrapSelection("**", "**", strings.chatFormatHint)
+                    }
+                    aria-label={strings.chatBold}
+                    title={`${strings.chatBold}  (Ctrl+B)`}
+                  >
+                    <Bold size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.formatTool}
+                    onClick={() =>
+                      wrapSelection("_", "_", strings.chatFormatHint)
+                    }
+                    aria-label={strings.chatItalic}
+                    title={`${strings.chatItalic}  (Ctrl+I)`}
+                  >
+                    <Italic size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.formatTool}
+                    onClick={() => wrapSelection("`", "`", "code")}
+                    aria-label={strings.chatInlineCode}
+                    title={strings.chatInlineCode}
+                  >
+                    <Code size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.formatTool}
+                    onClick={() =>
+                      wrapSelection(
+                        "```" + String.fromCharCode(10),
+                        String.fromCharCode(10) + "```",
+                        "code",
+                      )
+                    }
+                    aria-label={strings.chatCodeBlock}
+                    title={strings.chatCodeBlock}
+                  >
+                    <SquareCode size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.formatTool}
+                    onClick={() => wrapSelection("$", "$", "e^{i\\pi}+1=0")}
+                    aria-label={strings.chatFormula}
+                    title={strings.chatFormula}
+                  >
+                    <Sigma size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.formatTool}
+                    onClick={() =>
+                      wrapSelection(
+                        String.fromCharCode(10) + "- ",
+                        "",
+                        strings.chatFormatHint,
+                      )
+                    }
+                    aria-label={strings.chatBulletList}
+                    title={strings.chatBulletList}
+                  >
+                    <List size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.formatTool}
+                    onClick={() =>
+                      wrapSelection(
+                        String.fromCharCode(10) + "> ",
+                        "",
+                        strings.chatFormatHint,
+                      )
+                    }
+                    aria-label={strings.chatQuoteAction}
+                    title={strings.chatQuoteAction}
+                  >
+                    <Quote size={15} />
+                  </button>
+                </div>
                 {staged.length > 0 && (
                   <ul className={styles.staged}>
                     {staged.map((file) => (

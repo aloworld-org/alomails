@@ -65,7 +65,7 @@ describe("reading a message body", () => {
   });
 
   test("maths renders, and broken maths stays readable", () => {
-    const { container } = show("$e^{i\pi}+1=0$");
+    const { container } = show("$e^{i\\pi}+1=0$");
     expect(container.querySelector(".katex")).not.toBeNull();
     // Nonsense LaTeX must not blank the message or throw — the sender's own
     // characters are more use than an error nobody can act on.
