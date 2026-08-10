@@ -7,7 +7,16 @@ export { BillingModule } from "./BillingModule";
 // and a second module that shows an amount (CRM's deal value, B2.07) reads them
 // from here rather than growing a second, slightly different formatter. The
 // arithmetic that produces a total still lives on the server, always.
-export { formatAmount, formatRate, hundredthsToInput, parseHundredths } from "./money";
+// `formatQty` joined them for wave B5: a quantity is the same kind of scaled
+// integer (milli-units), and a stock screen that wrote its own divide-by-1000
+// would round a third of a kilo differently from an invoice line.
+export {
+  formatAmount,
+  formatQty,
+  formatRate,
+  hundredthsToInput,
+  parseHundredths,
+} from "./money";
 
 // The same argument for a calendar day: a `YYYY-MM-DD` the server sent means
 // that day in every zone, and the one rule that keeps it from sliding a day
@@ -31,6 +40,21 @@ export { previousQuarterOf, previousYearOf, quarterOf, yearOf, type Period } fro
 // whether archived ones are on offer.
 export { useCustomers } from "./pickers";
 export type { BillingCustomer } from "./types";
+
+// The catalog, for the module that reads the same rows as things rather than
+// as prices: Inventory's catalog screen (B5.09a).
+//
+// **It reuses this module's client and this module's product dialog** rather
+// than growing a second one for `/billing/products`. A product is one row
+// (`docs/design/inventory.md` § The catalog) — SKU, barcode, stocked-or-not
+// and purchase price sit beside the sale price — and two forms over one row
+// would eventually disagree about what a product is. The dialog takes the
+// supplier choices Inventory has loaded and Billing has not, which is the only
+// difference between the two screens' editors.
+export { ProductDialog } from "./ProductDialog";
+export type { SupplierChoice } from "./ProductDialog";
+export type { BillingProduct, ProductDraft } from "./types";
+export { billingMessage, useBillingApi } from "./api";
 
 // The documents that can still take money. Finance's reconciliation screen
 // (B4.13b) has to let a bookkeeper say by hand which invoice a bank line

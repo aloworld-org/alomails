@@ -32,6 +32,13 @@ const PRODUCT: BillingProduct = {
   unit: "hour",
   unitPriceCents: 12500,
   vatRateBp: 2100,
+  // The catalog half (B5.02/B5.03): a service, so nothing about it is stocked.
+  sku: "",
+  barcode: "",
+  stocked: false,
+  purchasePriceCents: 0,
+  photoNodeId: null,
+  defaultSupplierId: null,
   archived: false,
   archivedAt: null,
   createdBy: "u-1",

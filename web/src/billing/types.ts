@@ -64,6 +64,26 @@ export interface BillingProduct {
   unit: string;
   unitPriceCents: number;
   vatRateBp: number;
+  // ---- the catalog half (B5.02/B5.03) ------------------------------------
+  // The same rows seen as things rather than as prices. They are on THIS
+  // record and not on a sibling one (`docs/design/inventory.md` § The
+  // catalog): one product, one table, one editor.
+  /** The tenant's own code for the item; empty is legitimate. */
+  sku: string;
+  /** The code on the box (GTIN), check-digit-validated by the server; empty
+   *  for the plenty of stock that has none. */
+  barcode: string;
+  /** Whether the thing has a quantity at all. `false` is a service, which the
+   *  move ledger refuses to move. */
+  stocked: boolean;
+  /** What we pay for it, in the tenant's own currency. `unitPriceCents` is
+   *  what we charge. */
+  purchasePriceCents: number;
+  /** A Drive node, referenced and never copied; `null` when there is no photo.
+   *  Read-only here — this wave ships no picker for it. */
+  photoNodeId: string | null;
+  /** Who we usually buy it from; `null` when nobody in particular. */
+  defaultSupplierId: string | null;
   archived: boolean;
   archivedAt: string | null;
   createdBy: string;
@@ -77,6 +97,13 @@ export interface ProductDraft {
   unit?: string;
   unitPriceCents?: number;
   vatRateBp?: number;
+  sku?: string;
+  barcode?: string;
+  stocked?: boolean;
+  purchasePriceCents?: number;
+  /** `null` takes the default supplier off again — the three-way absent /
+   *  `null` / value the server reads (`billing_products.rs`). */
+  defaultSupplierId?: string | null;
 }
 
 /** Where an invoice is in its life. Only a `draft` is editable; the other

@@ -4020,6 +4020,128 @@ export const en = {
   financeReportVatNote:
     "These are your books' figures — sales and purchases both — which is what a return is filed from. The VAT summary under Billing shows what you invoiced, which is a different question.",
 
+  // ---- alo Inventory (ADR 0035, wave B5.09a) -------------------------------
+  //
+  // The catalog and the stock list, and the movement history behind a row.
+  //
+  // Three rules the copy follows. **Nothing here states a quantity, a value or
+  // a rule the server owns**: every figure on these screens is the ledger's
+  // fold, a refusal is shown in the server's own sentence, and these strings
+  // are only the fallback for a request that never reached it. **A value is
+  // never called a balance** — B5 chooses no costing method, so what a screen
+  // shows is what the goods cost us at today's purchase price, and the words
+  // say exactly that. And the words are a warehouse's — "on hand", "what we
+  // pay" — because the person reading them is holding a box, not closing a
+  // ledger.
+  moduleInventory: "Inventory",
+  inventoryTabCatalog: "Catalog",
+  inventoryTabStock: "Stock",
+  inventoryLoadFailed: "Your catalog could not be loaded.",
+  inventorySaveFailed: "The change could not be saved.",
+  inventoryHistoryFailed: "That history could not be loaded.",
+  inventoryClose: "Close",
+  inventoryEdit: "Edit",
+  inventoryArchive: "Archive",
+  inventoryRestore: "Restore",
+  inventoryArchived: "archived",
+  inventoryColActions: "Actions",
+  inventoryNoMatches: "Nothing here matches what you typed.",
+
+  // The catalog: the price list seen as things.
+  inventoryNewProduct: "New product",
+  inventorySearchCatalog: "Search by name, code or barcode",
+  inventoryStockedOnly: "Stocked only",
+  inventoryShowArchived: "Show archived",
+  inventoryCatalogEmptyTitle: "Your catalog is empty",
+  inventoryCatalogEmptyBody:
+    "A product here is one record: what you charge for it, what you pay for it, and — if it is something you keep on a shelf — how much of it you have. Add the first one and it can go on an invoice and into a warehouse the same day.",
+  inventoryColProduct: "Product",
+  inventoryColSku: "Code",
+  inventoryColBarcode: "Barcode",
+  inventoryColOnHand: "On hand",
+  inventoryColPurchasePrice: "We pay",
+  inventoryColSalePrice: "We charge",
+  inventoryColVatRate: "VAT",
+  inventoryTypeStocked: "Stocked",
+  inventoryTypeService: "Service",
+  inventoryNotStocked: "—",
+  inventoryArchiveProductConfirm: (name: string) =>
+    `Archive ${name}? It stays on every document already raised from it and stops being offered on new ones. You can restore it at any time.`,
+
+  // The catalog fields on the product form, which Billing's price list and this
+  // module's catalog share. The two hints that matter are the ones about rules
+  // the server enforces: a barcode's check digit, and what "stocked" decides.
+  inventoryFieldSku: "Code (SKU)",
+  inventorySkuHint: "Your own code for this item. Unique among your products; leave it empty if you have none.",
+  inventoryFieldBarcode: "Barcode",
+  inventoryBarcodeHint: "The GTIN on the box. Its check digit is verified, so a mistyped code is refused here rather than found when the wrong thing ships.",
+  inventoryFieldPurchasePrice: "Purchase price",
+  inventoryPurchasePriceHint: "What you pay for it, in your own currency.",
+  inventoryFieldDefaultSupplier: "Usual supplier",
+  inventoryDefaultSupplierHint: "Who this is normally bought from. It is what a reorder proposal starts from.",
+  inventoryNoSupplier: "Nobody in particular",
+  inventoryFieldStocked: "Stock",
+  inventoryStockedLabel: "Keep a quantity of this",
+  inventoryStockedHint:
+    "Only a stocked product can move between places. A service cannot be received, delivered or counted — and once something has moved, this cannot be turned off again.",
+
+  // The stock list, and what its figures mean.
+  inventorySearchStock: "Search by product, code or place",
+  inventoryFilterLocation: "Place",
+  inventoryAllLocations: "Everywhere",
+  inventoryShowCounterparties: "Show counterparties",
+  inventoryCounterpartiesNote:
+    "Suppliers, customers, adjustments and production are counterparties, not places: they are the other end of every movement. With them shown, the total below sums to roughly nothing — which is what a ledger that closes looks like, not an empty warehouse.",
+  inventoryStockEmptyTitle: "Nothing is on the shelves yet",
+  inventoryStockEmptyBody:
+    "Stock appears here when something moves: a purchase order you receive, a delivery you send, or an adjustment you make by hand. There is no quantity to type — what is here is the sum of everything that has happened.",
+  inventoryColLocation: "Place",
+  inventoryColValue: "Value",
+  inventoryColLastMove: "Last movement",
+  inventoryOpenHistory: "History",
+  inventoryReferenceValue: (total: string) =>
+    `${total} at today's purchase prices — a reference figure for what is listed, not an accounting balance.`,
+
+  // The movement history: from → to, how many, why, and which document.
+  inventoryHistoryTitle: (product: string) => `${product} — movements`,
+  inventoryHistorySubtitle: (place: string) => `Everything that moved in or out of ${place}.`,
+  inventoryHistoryEmpty: "Nothing has moved in or out of this place yet.",
+  inventoryHistoryCapped: (limit: number) =>
+    `Showing the most recent ${limit} movements. Older ones are still recorded.`,
+  inventoryColWhen: "When",
+  inventoryColMovement: "From → to",
+  inventoryColQuantity: "Quantity",
+  inventoryColWhy: "Why",
+  inventoryColDocument: "Document",
+  inventoryNoDocument: "By hand",
+
+  // What a place is. The four counterparties are named as what they mean to a
+  // warehouse rather than as the words the wire uses.
+  inventoryKindStock: "Warehouse",
+  inventoryKindTransit: "In transit",
+  inventoryKindSupplier: "Supplier",
+  inventoryKindCustomer: "Customer",
+  inventoryKindAdjust: "Adjustment",
+  inventoryKindProduction: "Production",
+
+  // Why something moved.
+  inventoryReasonReceipt: "Received",
+  inventoryReasonDelivery: "Delivered",
+  inventoryReasonTransfer: "Transferred",
+  inventoryReasonAdjustment: "Adjusted",
+  inventoryReasonReturn: "Returned",
+  inventoryReasonShrinkage: "Shrinkage",
+  inventoryReasonCount: "Stocktake",
+
+  // The reason somebody gave for an adjustment they made by hand.
+  inventoryAdjustDamaged: "Damaged",
+  inventoryAdjustLost: "Lost",
+  inventoryAdjustFound: "Found",
+  inventoryAdjustExpired: "Expired",
+  inventoryAdjustTheft: "Theft",
+  inventoryAdjustSample: "Sample",
+  inventoryAdjustCorrection: "Correction",
+
   mailAttachmentErrorDetail: (reason: string) =>
     `That file was not attached. Try adding it again. Server: ${reason}`,
   mailDraftCreateErrorDetail: (reason: string) =>

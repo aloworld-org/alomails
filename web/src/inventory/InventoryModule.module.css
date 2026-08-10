@@ -1,0 +1,344 @@
+/* The Inventory module's own styles. The catalog, the stock list and the
+   history dialog read as Billing's, CRM's and Finance's screens, because they
+   are the same kind of screen — a table of records and a modal over one.
+   Tokens only: no literal colour that is not a token lives here, so a theme
+   change reaches this module without touching it. */
+
+.inventory {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-app);
+  position: relative;
+}
+
+/* ---- chrome ---------------------------------------------------------- */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5) 0;
+  flex-wrap: wrap;
+}
+.title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.tab {
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+}
+.tab:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+.tabActive {
+  background: var(--accent-tint);
+  color: var(--accent-active);
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  min-height: 0;
+  overflow: auto;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.toolbarSpacer {
+  flex: 1;
+}
+.search {
+  flex: 0 1 260px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+}
+.search:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.toggle,
+.filterField {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.select {
+  padding: 6px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+}
+
+/* ---- tables ---------------------------------------------------------- */
+
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.table th {
+  text-align: left;
+  padding: 10px 14px;
+  color: var(--text-tertiary);
+  font-weight: var(--weight-medium);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+.table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+.table tbody tr:hover {
+  background: var(--bg-raised);
+}
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* An SKU and a barcode are read digit by digit and compared against a label on
+   a box, which is the one place in this product a fixed-width face earns its
+   keep. */
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+.rowName {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.rowName:hover {
+  color: var(--accent);
+}
+.muted {
+  color: var(--text-tertiary);
+}
+/* A second line under a cell's own value: the place's full name under its code,
+   the reason code under the reason. Quiet, because it qualifies the line above
+   it rather than competing with it. */
+.subtle {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+.archivedRow td {
+  opacity: 0.6;
+}
+/* A quiet verb inside a row: "Edit", "History". A button and not a link —
+   nothing navigates — but it must not carry a button's weight beside the one
+   action a screen actually leads with. */
+.linkAction {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+}
+.linkAction:hover {
+  color: var(--accent);
+  background: var(--bg-raised);
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---- states ---------------------------------------------------------- */
+
+.error {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--danger-tint);
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+/* What a figure on this screen actually means, or what a filter did to it. Not
+   a failure, so it never borrows the error colour. */
+.notice {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.totalLine {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.noMatches {
+  margin: 0;
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-5);
+  text-align: center;
+  color: var(--text-secondary);
+}
+.emptyArt {
+  color: var(--text-tertiary);
+}
+.emptyTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+.emptyBody {
+  max-width: 46ch;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+/* ---- the history dialog ---------------------------------------------- */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: var(--z-modal);
+}
+/* Wider than a form modal on purpose: this one holds a five-column table, and a
+   history squeezed into a form's width is a history nobody reads. */
+.modalWide {
+  width: min(860px, 100%);
+  max-height: 90vh;
+  background: var(--bg-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.modalHead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.modalIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--accent-tint);
+  color: var(--accent-active);
+  flex-shrink: 0;
+}
+.modalHeadText {
+  flex: 1;
+  min-width: 0;
+}
+.modalHeadText h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.modalHeadText p {
+  margin: 2px 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+.modalClose {
+  color: var(--text-tertiary);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+}
+.modalClose:hover {
+  color: var(--text-primary);
+  background: var(--bg-raised);
+}
+.modalBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.modalFooter {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--border-subtle);
+}
+.modalFooterSpacer {
+  flex: 1;
+}
