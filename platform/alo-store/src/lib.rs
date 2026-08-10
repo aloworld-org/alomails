@@ -106,6 +106,7 @@ pub mod insight_series;
 pub mod insight_spec;
 pub mod insight_tiles;
 pub mod maintenance;
+pub mod meet;
 pub mod message;
 pub mod model;
 pub mod money_text;
@@ -298,9 +299,9 @@ pub use id::{
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
     FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
     FinMileageRateId, FinPeriodId, FinPostingId, GroupId, InsightDashboardId, InsightTileId,
-    LabelId, MailboxId, MessageId, ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId,
-    SiteId, SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
-    TimeEntryId, TimeWeekId, UserId,
+    LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId, SiteFormId,
+    SiteFormSubmissionId, SiteId, SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId,
+    TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -322,6 +323,7 @@ pub use insight_spec::{
     ChartSpec, DimensionRef, Filter, MeasureRef, Period, Sort, SortBy, SortDir, SpecError,
 };
 pub use insight_tiles::{NewTile, Tile, TileSpec};
+pub use meet::{Meeting, MeetingParticipant, NewMeeting};
 pub use model::{
     AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, CalendarGrant, Category,
     Contact, ContactField, DkimKeyRow, DomainRow, EmailFilter, EmailQuery, GroupRow, MAX_PAGE,

@@ -416,6 +416,13 @@ opaque_id!(
     FinPeriodId
 );
 
+opaque_id!(
+    /// A meeting. Distinct from the opaque room name the media engine is told:
+    /// that is generated separately so the engine cannot be correlated back to
+    /// a workspace record by anyone reading its logs.
+    MeetingId
+);
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]

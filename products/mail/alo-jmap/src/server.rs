@@ -24,10 +24,10 @@ use crate::{
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, projects_clients, projects_invoices, projects_plan, projects_reports,
-    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, scoped_roles,
-    security, session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe,
-    wopi, workspace_search,
+    insights_gallery, meet_routes, projects_clients, projects_invoices, projects_plan,
+    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
+    schedule, scoped_roles, security, session, settings, share, signup_route, sites, snooze,
+    spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -237,6 +237,13 @@ pub fn app_with_site_domain_dns(
         .route("/chat/reactions", get(chat::list_reactions))
         .route("/chat/search", get(chat::search))
         .route("/chat/people", get(chat::find_people))
+        // alo Meet: the record is ours, the media is the engine's.
+        .route("/meet", post(meet_routes::start))
+        .route("/meet/{id}", get(meet_routes::get))
+        .route("/meet/{id}/join", post(meet_routes::join))
+        .route("/meet/{id}/end", post(meet_routes::end))
+        .route("/meet/{id}/participants", get(meet_routes::participants))
+        .route("/meet/channels/{id}", get(meet_routes::in_channel))
         .route(
             "/chat/channels/{id}/turns",
             get(chat_agent_routes::list_turns),
@@ -1405,6 +1412,7 @@ pub fn app_with_site_domain_dns(
 pub fn app_state(store: Arc<Store>, identity: Identity, base_url: impl Into<String>) -> AppState {
     AppState {
         turns: crate::chat_turns::Turns::default(),
+        media: crate::state::MediaEngine::from_env(),
         store,
         identity,
         push: PushHub::new(),

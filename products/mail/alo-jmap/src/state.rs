@@ -24,6 +24,10 @@ pub struct AppState {
     /// control). In memory on purpose: a turn in flight is a fact about this
     /// process for a few seconds, not about the workspace.
     pub turns: crate::chat_turns::Turns,
+    /// The media engine behind alo Meet, when this deployment has one.
+    /// `None` means meetings can be recorded but not held — which is a
+    /// deployment fact the join route reports plainly rather than a failure.
+    pub media: Option<MediaEngine>,
     /// Advertised, enforced limits.
     pub limits: Limits,
     /// Externally-visible base URL, for building session URLs.
@@ -367,4 +371,37 @@ pub(crate) fn bearer_token(headers: &HeaderMap) -> Option<String> {
         .strip_prefix("Bearer ")
         .map(|token| token.trim().to_owned())
         .filter(|token| !token.is_empty())
+}
+
+/// How to reach the media engine, and how to sign for it.
+///
+/// The secret stays here and is never sent anywhere: a browser receives a
+/// minted token, never a key, and so cannot mint another.
+#[derive(Clone)]
+pub struct MediaEngine {
+    /// The URL a browser connects to, e.g. `wss://meet.example.com`.
+    pub url: String,
+    pub api_key: String,
+    pub api_secret: String,
+}
+
+impl MediaEngine {
+    /// Read it from the environment, or `None` when it is not configured.
+    ///
+    /// All three parts or nothing: a half-configured engine produces tokens
+    /// that are refused, which is harder to diagnose than an absent one.
+    #[must_use]
+    pub fn from_env() -> Option<Self> {
+        let url = std::env::var("ALO_MEET_URL").ok()?;
+        let api_key = std::env::var("ALO_MEET_API_KEY").ok()?;
+        let api_secret = std::env::var("ALO_MEET_API_SECRET").ok()?;
+        if url.trim().is_empty() || api_key.trim().is_empty() || api_secret.trim().is_empty() {
+            return None;
+        }
+        Some(Self {
+            url,
+            api_key,
+            api_secret,
+        })
+    }
 }
