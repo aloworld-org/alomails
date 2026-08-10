@@ -392,6 +392,69 @@ describe("adding a section", () => {
 });
 
 describe("editing a section", () => {
+  test("copy tools propose one selected field and write only after approval", async () => {
+    replies = [pageReply([HERO])];
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+    fireEvent.click(screen.getByLabelText(strings.sitesEditSection));
+
+    fireEvent.click(
+      screen.getAllByRole("button", { name: strings.sitesAiImproveCopy })[0]!,
+    );
+    expect(screen.getByRole("button", { name: strings.sitesAiRewrite })).toBeTruthy();
+    expect(screen.getByRole("button", { name: strings.sitesAiShorter })).toBeTruthy();
+    expect(screen.getByRole("button", { name: strings.sitesAiLonger })).toBeTruthy();
+
+    const copyProposal = {
+      schema_version: 1,
+      operations: [
+        {
+          op: "rewrite_copy",
+          target: { index: 0, type: "hero" },
+          pointer: "/heading",
+          text: "Fresh bread",
+        },
+      ],
+    } as const;
+    replies = [
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/ai-edits"),
+        status: 200,
+        body: { proposal: copyProposal, previewHtml: "<!doctype html><p>Fresh bread</p>" },
+      },
+    ];
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiShorter }));
+
+    expect(await screen.findByText(strings.sitesAiCopyBefore)).toBeTruthy();
+    expect(screen.getByText(strings.sitesAiCopyAfter)).toBeTruthy();
+    expect(screen.getAllByText("Fresh bread daily")).toHaveLength(2);
+    expect(screen.getByText("Fresh bread")).toBeTruthy();
+    expect(lastWrite()).toMatchObject({
+      method: "POST",
+      body: {
+        copy: {
+          target: { index: 0, type: "hero" },
+          pointer: "/heading",
+          action: "shorter",
+        },
+      },
+    });
+    expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
+
+    replies = [
+      {
+        match: (url, method) => method === "PUT" && url.endsWith("/ai-edits"),
+        status: 200,
+        body: { sections: env([{ ...HERO, heading: "Fresh bread" }]) },
+      },
+    ];
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiApprove }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(await screen.findByText("Fresh bread")).toBeTruthy();
+    expect(lastWrite()).toMatchObject({ method: "PUT", body: { proposal: copyProposal } });
+  });
+
   test("the form opens prefilled and PUTs to the section's index", async () => {
     replies = [pageReply([HERO, CONTACT])];
     ui();

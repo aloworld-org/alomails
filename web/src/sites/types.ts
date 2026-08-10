@@ -167,6 +167,17 @@ export interface ProposedSiteEdit {
   previewHtml: string;
 }
 
+export type SiteCopyAction = "rewrite" | "tone" | "shorter" | "longer";
+
+/** One deliberately narrow copy request. The server accepts a result only
+ *  when it contains one rewrite operation for this exact string leaf. */
+export interface SiteCopyRequest {
+  target: SiteEditTarget;
+  pointer: string;
+  action: SiteCopyAction;
+  tone?: string | undefined;
+}
+
 /** What the create-page form sends. The empty slug is only accepted by the
  *  server together with `home: true` — it is the home page's spelling. */
 export interface PageDraft {

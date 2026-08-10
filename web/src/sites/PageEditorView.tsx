@@ -438,6 +438,21 @@ export function PageEditorView() {
             setFormError(null);
           }}
           onSave={(section) => void save(form, section)}
+          copyContext={
+            form.index === null
+              ? undefined
+              : {
+                  siteId,
+                  pageId,
+                  target: { index: form.index, type: form.kind },
+                  onApplied: (envelope) => {
+                    setSections(envelope.sections);
+                    setForm(null);
+                    setFormError(null);
+                    setError(null);
+                  },
+                }
+          }
         />
       )}
     </div>

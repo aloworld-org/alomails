@@ -2694,6 +2694,18 @@ export const en = {
     `Move ${section} to position ${position}`,
   sitesAiSettingChange: (section: string) => `Update a setting in ${section}`,
   sitesAiCopyChange: (section: string) => `Rewrite text in ${section}`,
+  sitesAiImproveCopy: "Improve this copy",
+  sitesAiCopyActions: "Copy improvements",
+  sitesAiRewrite: "Rewrite",
+  sitesAiShorter: "Make shorter",
+  sitesAiLonger: "Add detail",
+  sitesAiTone: "Desired tone",
+  sitesAiTonePlaceholder: "Warm and direct",
+  sitesAiUseTone: "Change tone",
+  sitesAiCopyBefore: "Current copy",
+  sitesAiCopyAfter: "Proposed copy",
+  sitesAiCopyFailed:
+    "This copy change could not be prepared. Try again or keep editing it directly.",
   sitesFieldName: "Site name",
   sitesFieldSubdomain: "Address",
   sitesSubdomainHint:

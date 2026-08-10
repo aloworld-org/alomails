@@ -2700,4 +2700,16 @@ export const nl: Partial<Catalog> = {
     `${section} verplaatsen naar positie ${position}`,
   sitesAiSettingChange: (section: string) => `Een instelling in ${section} bijwerken`,
   sitesAiCopyChange: (section: string) => `Tekst in ${section} herschrijven`,
+  sitesAiImproveCopy: "Deze tekst verbeteren",
+  sitesAiCopyActions: "Tekstverbeteringen",
+  sitesAiRewrite: "Herschrijven",
+  sitesAiShorter: "Korter maken",
+  sitesAiLonger: "Details toevoegen",
+  sitesAiTone: "Gewenste toon",
+  sitesAiTonePlaceholder: "Warm en direct",
+  sitesAiUseTone: "Toon wijzigen",
+  sitesAiCopyBefore: "Huidige tekst",
+  sitesAiCopyAfter: "Voorgestelde tekst",
+  sitesAiCopyFailed:
+    "Deze tekstwijziging kon niet worden voorbereid. Probeer opnieuw of blijf de tekst direct bewerken.",
 };

@@ -2726,4 +2726,16 @@ export const fr: Partial<Catalog> = {
     `Déplacer ${section} en position ${position}`,
   sitesAiSettingChange: (section: string) => `Mettre à jour un réglage dans ${section}`,
   sitesAiCopyChange: (section: string) => `Réécrire le texte dans ${section}`,
+  sitesAiImproveCopy: "Améliorer ce texte",
+  sitesAiCopyActions: "Améliorations du texte",
+  sitesAiRewrite: "Réécrire",
+  sitesAiShorter: "Raccourcir",
+  sitesAiLonger: "Ajouter des détails",
+  sitesAiTone: "Ton souhaité",
+  sitesAiTonePlaceholder: "Chaleureux et direct",
+  sitesAiUseTone: "Changer le ton",
+  sitesAiCopyBefore: "Texte actuel",
+  sitesAiCopyAfter: "Texte proposé",
+  sitesAiCopyFailed:
+    "Cette modification n’a pas pu être préparée. Réessayez ou continuez à modifier le texte directement.",
 };

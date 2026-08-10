@@ -25,7 +25,10 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use alo_ai::{InferenceError, SiteDraftError, SiteEditEnvelope, SiteEditError};
+use alo_ai::{
+    InferenceError, SiteDraftError, SiteEditEnvelope, SiteEditError, SiteEditOperation,
+    SiteSectionTarget,
+};
 use axum::Json;
 use axum::extract::{Extension, Path, Query, State};
 use axum::http::{HeaderMap, StatusCode, header};
@@ -297,9 +300,28 @@ pub async fn generate_site(
 }
 
 #[derive(Deserialize)]
+#[serde(untagged)]
+enum ProposeSiteEditBody {
+    Instruction { instruction: String },
+    Copy { copy: SiteCopyRequest },
+}
+
+#[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-struct ProposeSiteEditBody {
-    instruction: String,
+struct SiteCopyRequest {
+    target: SiteSectionTarget,
+    pointer: String,
+    action: SiteCopyAction,
+    tone: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum SiteCopyAction {
+    Rewrite,
+    Tone,
+    Shorter,
+    Longer,
 }
 
 #[derive(Deserialize)]
@@ -332,6 +354,86 @@ fn site_edit_problem(error: &SiteEditError) -> Problem {
     }
 }
 
+fn invalid_copy_proposal(detail: impl Into<String>) -> Problem {
+    Problem::with(
+        StatusCode::UNPROCESSABLE_ENTITY,
+        format!(
+            "The proposed copy change is not safe to apply: {}",
+            detail.into()
+        ),
+    )
+    .with_extra(json!({ "reason": "invalid_proposal" }))
+}
+
+fn copy_instruction(page: &SectionsEnvelope, request: &SiteCopyRequest) -> Result<String, Problem> {
+    let section = page
+        .sections
+        .get(request.target.index)
+        .ok_or_else(|| invalid_copy_proposal("the selected section no longer exists"))?;
+    if section.kind() != request.target.kind {
+        return Err(invalid_copy_proposal(
+            "the selected section changed; reopen it and try again",
+        ));
+    }
+    if request.pointer.is_empty()
+        || !request.pointer.starts_with('/')
+        || request.pointer.chars().count() > 300
+        || request.pointer == "/type"
+        || request.pointer.starts_with("/type/")
+    {
+        return Err(invalid_copy_proposal("the selected text field is invalid"));
+    }
+    let section_value = serde_json::to_value(section).map_err(|_| Problem::server_error())?;
+    let current = section_value
+        .pointer(&request.pointer)
+        .and_then(Value::as_str)
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| invalid_copy_proposal("the selected field does not contain text"))?;
+
+    let action = match request.action {
+        SiteCopyAction::Rewrite => "Rewrite it for clarity while preserving its meaning".to_owned(),
+        SiteCopyAction::Shorter => "Make it shorter while preserving its meaning".to_owned(),
+        SiteCopyAction::Longer => {
+            "Make it more detailed without inventing facts or changing its meaning".to_owned()
+        }
+        SiteCopyAction::Tone => {
+            let tone = request
+                .tone
+                .as_deref()
+                .map(str::trim)
+                .filter(|tone| !tone.is_empty())
+                .ok_or_else(|| invalid_copy_proposal("name the tone you want"))?;
+            if tone.chars().count() > 60 {
+                return Err(invalid_copy_proposal(
+                    "the tone must be 60 characters or fewer",
+                ));
+            }
+            format!("Rewrite it in a {tone} tone while preserving its meaning")
+        }
+    };
+
+    Ok(format!(
+        "{action}. Change ONLY section {} (`{}`) at JSON pointer `{}`. The current text is {:?}. Return exactly one `rewrite_copy` operation targeting that same section and pointer.",
+        request.target.index, request.target.kind, request.pointer, current
+    ))
+}
+
+fn require_scoped_copy_proposal(
+    proposal: &SiteEditEnvelope,
+    request: &SiteCopyRequest,
+) -> Result<(), Problem> {
+    match proposal.operations.as_slice() {
+        [
+            SiteEditOperation::RewriteCopy {
+                target, pointer, ..
+            },
+        ] if target == &request.target && pointer == &request.pointer => Ok(()),
+        _ => Err(invalid_copy_proposal(
+            "the service changed more than the selected text field",
+        )),
+    }
+}
+
 /// `POST /sites/:id/pages/:pid/ai-edits` `{instruction}` proposes a typed
 /// operation set for review. It loads the caller-owned current page, validates
 /// the proposal against that exact envelope, and writes nothing.
@@ -348,7 +450,10 @@ pub async fn propose_page_edit(
     let current = parse_envelope(page.sections.clone())?;
     let req: ProposeSiteEditBody =
         serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
-    let instruction = req.instruction.trim();
+    let instruction = match &req {
+        ProposeSiteEditBody::Instruction { instruction } => instruction.trim().to_owned(),
+        ProposeSiteEditBody::Copy { copy } => copy_instruction(&current, copy)?,
+    };
     if instruction.is_empty() {
         return Err(Problem::with(
             StatusCode::BAD_REQUEST,
@@ -372,9 +477,12 @@ pub async fn propose_page_edit(
             problem
         }
     })?;
-    let proposal = alo_ai::propose_site_edit(&config, &current, instruction)
+    let proposal = alo_ai::propose_site_edit(&config, &current, &instruction)
         .await
         .map_err(|error| site_edit_problem(&error))?;
+    if let ProposeSiteEditBody::Copy { copy } = &req {
+        require_scoped_copy_proposal(&proposal, copy)?;
+    }
     let proposed =
         alo_ai::apply_site_edit(&current, &proposal).map_err(|error| site_edit_problem(&error))?;
     let proposed_value = proposed.to_value().map_err(|_| Problem::server_error())?;

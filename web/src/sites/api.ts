@@ -30,6 +30,7 @@ import type {
   GeneratedSiteDraft,
   SiteEditEnvelope,
   ProposedSiteEdit,
+  SiteCopyRequest,
   SitePage,
   SitePageDetail,
   SitePost,
@@ -216,6 +217,20 @@ export class SitesApi {
       "POST",
       `${this.#pagePath(siteId, pageId)}/ai-edits`,
       { instruction },
+    );
+  }
+
+  /** Proposes one guarded rewrite of one existing section string. All copy
+   *  actions share the page proposal door and still require approval. */
+  proposePageCopyEdit(
+    siteId: string,
+    pageId: string,
+    copy: SiteCopyRequest,
+  ): Promise<ProposedSiteEdit> {
+    return this.#write<ProposedSiteEdit>(
+      "POST",
+      `${this.#pagePath(siteId, pageId)}/ai-edits`,
+      { copy },
     );
   }
 

@@ -302,7 +302,22 @@ async fn page_edit_is_a_reviewable_proposal_until_approved_and_tenant_scoped() {
         }]
     })
     .to_string();
-    let (base_url, seen) = scripted_model(vec![proposal_fixture]).await;
+    let unscoped_fixture = json!({
+        "schema_version": 1,
+        "operations": [{
+            "op": "set_prop",
+            "target": { "index": 0, "type": "hero" },
+            "pointer": "/heading",
+            "value": "Changed through the wrong operation"
+        }]
+    })
+    .to_string();
+    let (base_url, seen) = scripted_model(vec![
+        proposal_fixture.clone(),
+        proposal_fixture,
+        unscoped_fixture,
+    ])
+    .await;
     use_model(&a, &base_url).await;
     let edit_uri = format!("/sites/{site_id}/pages/{page_id}/ai-edits");
 
@@ -320,6 +335,52 @@ async fn page_edit_is_a_reviewable_proposal_until_approved_and_tenant_scoped() {
     assert!(!proposed_preview.contains("Old heading"));
     assert_eq!(seen.lock().unwrap().len(), 1);
 
+    // The same route accepts a structured per-field copy action, scopes the
+    // model to that exact string leaf, and still returns a no-write proposal.
+    let copy_request = json!({
+        "copy": {
+            "target": { "index": 0, "type": "hero" },
+            "pointer": "/heading",
+            "action": "shorter"
+        }
+    });
+    let (status, copy_proposed) =
+        post(&a.app, Some(&a.token), &edit_uri, copy_request.clone()).await;
+    assert_eq!(status, StatusCode::OK, "{copy_proposed}");
+    assert_eq!(
+        copy_proposed["proposal"]["operations"][0]["pointer"],
+        "/heading"
+    );
+    {
+        let requests = seen.lock().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert!(
+            requests[1]["messages"][1]["content"]
+                .as_str()
+                .unwrap()
+                .contains("Make it shorter")
+        );
+    }
+
+    // Even a schema-valid model answer is refused when it changes anything
+    // other than the one selected copy leaf.
+    let (status, refused) = post(
+        &a.app,
+        Some(&a.token),
+        &edit_uri,
+        json!({
+            "copy": {
+                "target": { "index": 0, "type": "hero" },
+                "pointer": "/heading",
+                "action": "tone",
+                "tone": "warm and direct"
+            }
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+    assert_eq!(refused["reason"], "invalid_proposal");
+
     // Proposing writes nothing.
     let page_uri = format!("/sites/{site_id}/pages/{page_id}");
     let (status, unchanged) = get(&a.app, &a.token, &page_uri).await;
@@ -334,13 +395,7 @@ async fn page_edit_is_a_reviewable_proposal_until_approved_and_tenant_scoped() {
     );
 
     // Mandatory wrong-tenant proof for both the proposal and persistence doors.
-    let (status, _) = post(
-        &b.app,
-        Some(&b.token),
-        &edit_uri,
-        json!({ "instruction": "Change it" }),
-    )
-    .await;
+    let (status, _) = post(&b.app, Some(&b.token), &edit_uri, copy_request).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
     let (status, _) = put(
         &b.app,

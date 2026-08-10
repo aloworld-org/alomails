@@ -4,9 +4,9 @@
 // SERVER rules on content (blank required text, bad hrefs, empty lists) and
 // its 422 sentence is shown here verbatim, so there is exactly one copy of
 // every rule.
-import { useRef, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Blocks, Plus, Trash2, Upload } from "lucide-react";
+import { Blocks, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
@@ -39,10 +39,145 @@ import type {
   TextImageDraft,
 } from "./sectionDrafts";
 import type { Section, SectionImage, SectionKind, SectionLink } from "./sections";
+import type { SectionsEnvelope } from "./sections";
+import type { SiteCopyAction, SiteEditEnvelope, SiteEditTarget } from "./types";
+import { sitesMessage, useSitesApi } from "./api";
 import { DialogFrame, Field } from "./parts";
 import styles from "./SitesModule.module.css";
 
 // ---- field primitives -------------------------------------------------------
+
+interface CopyContextValue {
+  siteId: string;
+  pageId: string;
+  target: SiteEditTarget;
+  onApplied: (sections: SectionsEnvelope) => void;
+}
+
+const CopyContext = createContext<CopyContextValue | null>(null);
+
+function CopyTools({ pointer, value }: { pointer: string; value: string }) {
+  const context = useContext(CopyContext);
+  const api = useSitesApi();
+  const [open, setOpen] = useState(false);
+  const [tone, setTone] = useState("");
+  const [proposal, setProposal] = useState<SiteEditEnvelope | null>(null);
+  const [after, setAfter] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (context === null || value.trim() === "") return null;
+
+  async function propose(action: SiteCopyAction) {
+    if (context === null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const prepared = await api.proposePageCopyEdit(context.siteId, context.pageId, {
+        target: context.target,
+        pointer,
+        action,
+        ...(action === "tone" ? { tone: tone.trim() } : {}),
+      });
+      const operation = prepared.proposal.operations[0];
+      if (operation?.op !== "rewrite_copy") throw new Error(strings.sitesAiCopyFailed);
+      setProposal(prepared.proposal);
+      setAfter(operation.text);
+    } catch (reason) {
+      setError(sitesMessage(reason, strings.sitesAiCopyFailed));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function apply() {
+    if (context === null || proposal === null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      context.onApplied(await api.applyPageEdit(context.siteId, context.pageId, proposal));
+    } catch (reason) {
+      setError(sitesMessage(reason, strings.sitesAiApplyFailed));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className={styles.copyTools}>
+      <Button
+        variant="ghost"
+        icon={<Sparkles size={16} />}
+        aria-expanded={open}
+        onClick={() => {
+          setOpen((shown) => !shown);
+          setProposal(null);
+          setError(null);
+        }}
+      >
+        {strings.sitesAiImproveCopy}
+      </Button>
+      {open && proposal === null && (
+        <div className={styles.copyChoices} aria-label={strings.sitesAiCopyActions}>
+          <Button variant="ghost" disabled={busy} onClick={() => void propose("rewrite")}>
+            {strings.sitesAiRewrite}
+          </Button>
+          <Button variant="ghost" disabled={busy} onClick={() => void propose("shorter")}>
+            {strings.sitesAiShorter}
+          </Button>
+          <Button variant="ghost" disabled={busy} onClick={() => void propose("longer")}>
+            {strings.sitesAiLonger}
+          </Button>
+          <div className={styles.copyTone}>
+            <input
+              className={styles.input}
+              value={tone}
+              maxLength={60}
+              aria-label={strings.sitesAiTone}
+              placeholder={strings.sitesAiTonePlaceholder}
+              onChange={(event) => setTone(event.target.value)}
+            />
+            <Button
+              variant="ghost"
+              disabled={busy || tone.trim() === ""}
+              onClick={() => void propose("tone")}
+            >
+              {strings.sitesAiUseTone}
+            </Button>
+          </div>
+        </div>
+      )}
+      {open && proposal !== null && (
+        <div className={styles.copyProposal} aria-live="polite">
+          <div>
+            <span>{strings.sitesAiCopyBefore}</span>
+            <p>{value}</p>
+          </div>
+          <div>
+            <span>{strings.sitesAiCopyAfter}</span>
+            <p>{after}</p>
+          </div>
+          <p className={styles.copyProposalHint}>{strings.sitesAiPreviewHint}</p>
+          <div className={styles.copyProposalActions}>
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => {
+                setProposal(null);
+                setAfter("");
+              }}
+            >
+              {strings.sitesAiDiscard}
+            </Button>
+            <Button disabled={busy} onClick={() => void apply()}>
+              {busy ? strings.sitesAiApplying : strings.sitesAiApprove}
+            </Button>
+          </div>
+        </div>
+      )}
+      {error !== null && <p className={styles.aiEditError} role="alert">{error}</p>}
+    </div>
+  );
+}
 
 function TextField({
   label,
@@ -51,6 +186,7 @@ function TextField({
   hint,
   mono = false,
   autoFocus = false,
+  copyPointer,
 }: {
   label: string;
   value: string;
@@ -58,6 +194,7 @@ function TextField({
   hint?: string;
   mono?: boolean;
   autoFocus?: boolean;
+  copyPointer?: string;
 }) {
   return (
     <Field label={label} hint={hint}>
@@ -68,6 +205,7 @@ function TextField({
         autoFocus={autoFocus}
         {...(mono ? { autoCapitalize: "none", autoCorrect: "off", spellCheck: false } : {})}
       />
+      {copyPointer !== undefined && <CopyTools pointer={copyPointer} value={value} />}
     </Field>
   );
 }
@@ -77,11 +215,13 @@ function LongTextField({
   value,
   onChange,
   hint,
+  copyPointer,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   hint?: string;
+  copyPointer?: string;
 }) {
   return (
     <Field label={label} hint={hint}>
@@ -91,6 +231,7 @@ function LongTextField({
         rows={4}
         onChange={(e) => onChange(e.target.value)}
       />
+      {copyPointer !== undefined && <CopyTools pointer={copyPointer} value={value} />}
     </Field>
   );
 }
@@ -306,11 +447,13 @@ function HeroFields({ draft, onChange }: { draft: HeroDraft; onChange: Change })
         value={draft.heading}
         onChange={(heading) => onChange({ ...draft, heading })}
         autoFocus
+        copyPointer="/heading"
       />
       <TextField
         label={strings.sitesFieldSubheading}
         value={draft.subheading}
         onChange={(subheading) => onChange({ ...draft, subheading })}
+        copyPointer="/subheading"
       />
       <ImageFields
         legend={strings.sitesFieldImage}
@@ -341,28 +484,32 @@ function FeaturesFields({ draft, onChange }: { draft: FeaturesDraft; onChange: C
         value={draft.heading}
         onChange={(heading) => onChange({ ...draft, heading })}
         autoFocus
+        copyPointer="/heading"
       />
       <LongTextField
         label={strings.sitesFieldIntro}
         value={draft.intro}
         onChange={(intro) => onChange({ ...draft, intro })}
+        copyPointer="/intro"
       />
       <ItemsEditor
         addLabel={strings.sitesAddEntry}
         items={draft.items}
         onChange={(items) => onChange({ ...draft, items })}
         blank={blankFeature}
-        render={(item, update) => (
+        render={(item, update, index) => (
           <>
             <TextField
               label={strings.sitesFieldItemTitle}
               value={item.title}
               onChange={(title) => update({ title })}
+              copyPointer={`/items/${index}/title`}
             />
             <LongTextField
               label={strings.sitesFieldBody}
               value={item.body}
               onChange={(body) => update({ body })}
+              copyPointer={`/items/${index}/body`}
             />
           </>
         )}
@@ -379,11 +526,13 @@ function TextImageFields({ draft, onChange }: { draft: TextImageDraft; onChange:
         value={draft.heading}
         onChange={(heading) => onChange({ ...draft, heading })}
         autoFocus
+        copyPointer="/heading"
       />
       <LongTextField
         label={strings.sitesFieldBody}
         value={draft.body}
         onChange={(body) => onChange({ ...draft, body })}
+        copyPointer="/body"
       />
       <ImageFields
         legend={strings.sitesFieldImage}
@@ -414,6 +563,7 @@ function GalleryFields({ draft, onChange }: { draft: GalleryDraft; onChange: Cha
         value={draft.heading}
         onChange={(heading) => onChange({ ...draft, heading })}
         autoFocus
+        copyPointer="/heading"
       />
       <ItemsEditor
         addLabel={strings.sitesAddImage}
@@ -434,18 +584,20 @@ function TestimonialsFields({ draft, onChange }: { draft: TestimonialsDraft; onC
         value={draft.heading}
         onChange={(heading) => onChange({ ...draft, heading })}
         autoFocus
+        copyPointer="/heading"
       />
       <ItemsEditor
         addLabel={strings.sitesAddEntry}
         items={draft.items}
         onChange={(items) => onChange({ ...draft, items })}
         blank={blankTestimonial}
-        render={(item, update) => (
+        render={(item, update, index) => (
           <>
             <LongTextField
               label={strings.sitesFieldQuote}
               value={item.quote}
               onChange={(quote) => update({ quote })}
+              copyPointer={`/items/${index}/quote`}
             />
             <TextField
               label={strings.sitesFieldAuthor}
@@ -456,6 +608,7 @@ function TestimonialsFields({ draft, onChange }: { draft: TestimonialsDraft; onC
               label={strings.sitesFieldRole}
               value={item.role}
               onChange={(role) => update({ role })}
+              copyPointer={`/items/${index}/role`}
             />
           </>
         )}
@@ -472,18 +625,20 @@ function PricingFields({ draft, onChange }: { draft: PricingDraft; onChange: Cha
         value={draft.heading}
         onChange={(heading) => onChange({ ...draft, heading })}
         autoFocus
+        copyPointer="/heading"
       />
       <LongTextField
         label={strings.sitesFieldIntro}
         value={draft.intro}
         onChange={(intro) => onChange({ ...draft, intro })}
+        copyPointer="/intro"
       />
       <ItemsEditor
         addLabel={strings.sitesAddTier}
         items={draft.tiers}
         onChange={(tiers) => onChange({ ...draft, tiers })}
         blank={blankTier}
-        render={(tier, update) => (
+        render={(tier, update, index) => (
           <>
             <div className={styles.fieldRow}>
               <TextField
@@ -506,6 +661,7 @@ function PricingFields({ draft, onChange }: { draft: PricingDraft; onChange: Cha
               label={strings.sitesFieldTierDescription}
               value={tier.description}
               onChange={(description) => update({ description })}
+              copyPointer={`/tiers/${index}/description`}
             />
             <LongTextField
               label={strings.sitesFieldTierFeatures}
@@ -538,13 +694,14 @@ function TeamFields({ draft, onChange }: { draft: TeamDraft; onChange: Change })
         value={draft.heading}
         onChange={(heading) => onChange({ ...draft, heading })}
         autoFocus
+        copyPointer="/heading"
       />
       <ItemsEditor
         addLabel={strings.sitesAddMember}
         items={draft.members}
         onChange={(members) => onChange({ ...draft, members })}
         blank={blankMember}
-        render={(member, update) => (
+        render={(member, update, index) => (
           <>
             <div className={styles.fieldRow}>
               <TextField
@@ -567,6 +724,7 @@ function TeamFields({ draft, onChange }: { draft: TeamDraft; onChange: Change })
               label={strings.sitesFieldBio}
               value={member.bio}
               onChange={(bio) => update({ bio })}
+              copyPointer={`/members/${index}/bio`}
             />
           </>
         )}
@@ -583,23 +741,26 @@ function FaqFields({ draft, onChange }: { draft: FaqDraft; onChange: Change }) {
         value={draft.heading}
         onChange={(heading) => onChange({ ...draft, heading })}
         autoFocus
+        copyPointer="/heading"
       />
       <ItemsEditor
         addLabel={strings.sitesAddQuestion}
         items={draft.items}
         onChange={(items) => onChange({ ...draft, items })}
         blank={blankFaqItem}
-        render={(item, update) => (
+        render={(item, update, index) => (
           <>
             <TextField
               label={strings.sitesFieldQuestion}
               value={item.question}
               onChange={(question) => update({ question })}
+              copyPointer={`/items/${index}/question`}
             />
             <LongTextField
               label={strings.sitesFieldAnswer}
               value={item.answer}
               onChange={(answer) => update({ answer })}
+              copyPointer={`/items/${index}/answer`}
             />
           </>
         )}
@@ -616,11 +777,13 @@ function CtaFields({ draft, onChange }: { draft: CtaDraft; onChange: Change }) {
         value={draft.heading}
         onChange={(heading) => onChange({ ...draft, heading })}
         autoFocus
+        copyPointer="/heading"
       />
       <LongTextField
         label={strings.sitesFieldBody}
         value={draft.body}
         onChange={(body) => onChange({ ...draft, body })}
+        copyPointer="/body"
       />
       <LinkFields
         legend={strings.sitesFieldButton}
@@ -639,16 +802,19 @@ function ContactFormFields({ draft, onChange }: { draft: ContactFormDraft; onCha
         value={draft.heading}
         onChange={(heading) => onChange({ ...draft, heading })}
         autoFocus
+        copyPointer="/heading"
       />
       <LongTextField
         label={strings.sitesFieldBody}
         value={draft.body}
         onChange={(body) => onChange({ ...draft, body })}
+        copyPointer="/body"
       />
       <TextField
         label={strings.sitesFieldSuccessMessage}
         value={draft.success_message}
         onChange={(success_message) => onChange({ ...draft, success_message })}
+        copyPointer="/success_message"
       />
       <p className={styles.hint}>{strings.sitesContactFormHint}</p>
     </>
@@ -663,6 +829,7 @@ function FooterFields({ draft, onChange }: { draft: FooterDraft; onChange: Chang
         value={draft.text}
         onChange={(text) => onChange({ ...draft, text })}
         autoFocus
+        copyPointer="/text"
       />
       <ItemsEditor
         addLabel={strings.sitesAddLink}
@@ -717,6 +884,7 @@ export function SectionFormDialog({
   error,
   onClose,
   onSave,
+  copyContext,
 }: {
   kind: SectionKind;
   /** The stored section when editing; absent when adding. */
@@ -725,6 +893,9 @@ export function SectionFormDialog({
   error: string | null;
   onClose: () => void;
   onSave: (section: Section) => void;
+  /** Present only for a stored section. New sections have no stable page
+   *  target yet, so their copy remains directly editable until first save. */
+  copyContext?: CopyContextValue | undefined;
 }) {
   const [draft, setDraft] = useState<SectionDraft>(() => toDraft(kind, initial));
   const label = kindLabel(kind);
@@ -744,7 +915,9 @@ export function SectionFormDialog({
       onClose={onClose}
       onSubmit={() => onSave(toSection(draft))}
     >
-      <FormFields draft={draft} onChange={setDraft} />
+      <CopyContext.Provider value={copyContext ?? null}>
+        <FormFields draft={draft} onChange={setDraft} />
+      </CopyContext.Provider>
     </DialogFrame>
   );
 }
