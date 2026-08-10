@@ -5,7 +5,9 @@
 
 mod common;
 
-use alo_store::{ChannelVisibility, ChatAgentId, ProposalState, StoreError};
+use alo_store::{
+    ChannelVisibility, ChatAgentId, DriveLocation, NewDriveFile, ProposalState, StoreError,
+};
 use serde_json::json;
 
 fn assert_not_found<T: std::fmt::Debug>(r: Result<T, StoreError>) {
@@ -415,4 +417,60 @@ async fn an_agents_record_counts_only_rooms_the_reader_can_see() {
         seen.actions, 0,
         "an action taken out of sight is not counted"
     );
+}
+
+/// The agent's `find_file` runs on the asker's own account door, so it must
+/// find their files and nobody else's — including files belonging to another
+/// person in the same tenant, whose personal Drive is theirs alone.
+#[tokio::test]
+async fn the_agent_finds_only_the_askers_own_files() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("drive-t").await.unwrap();
+    let ts = store.for_tenant(t.clone());
+    let ua = ts.create_user("anna@drive.test").await.unwrap();
+    let ub = ts.create_user("ben@drive.test").await.unwrap();
+    let a = store.for_account(t.clone(), ua);
+    let b = store.for_account(t.clone(), ub);
+
+    a.drive_create_file(
+        &DriveLocation::Personal,
+        None,
+        &NewDriveFile {
+            name: "Q3 forecast.xlsx".to_owned(),
+            blob_id: "blob-a".to_owned(),
+            size: 10,
+            content_type: Some("application/vnd.ms-excel".to_owned()),
+            kind: None,
+            source_kind: None,
+            source_id: None,
+        },
+    )
+    .await
+    .unwrap();
+    b.drive_create_file(
+        &DriveLocation::Personal,
+        None,
+        &NewDriveFile {
+            name: "Q3 forecast.xlsx".to_owned(),
+            blob_id: "blob-b".to_owned(),
+            size: 10,
+            content_type: Some("application/vnd.ms-excel".to_owned()),
+            kind: None,
+            source_kind: None,
+            source_id: None,
+        },
+    )
+    .await
+    .unwrap();
+
+    // Anna finds hers, once — not Ben's identically-named file.
+    let hers = a.drive_find("forecast", 10).await.unwrap();
+    assert_eq!(hers.len(), 1, "one file, not both");
+    assert_eq!(hers[0].blob_id.as_deref(), Some("blob-a"));
+
+    // Nothing to search for finds nothing: an empty query must not become
+    // "list this person's drive".
+    assert!(a.drive_find("", 10).await.unwrap().is_empty());
+    // Nor may a wildcard mean everything.
+    assert!(a.drive_find("%", 10).await.unwrap().is_empty());
 }

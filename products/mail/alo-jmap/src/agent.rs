@@ -206,6 +206,9 @@ pub(crate) async fn execute_tool(
         // alo Projects' tools (B3.10a), on the same seam. `log_time` writes a
         // *proposed* entry the user accepts in their own timesheet; the summary
         // writes nothing at all.
+        // alo Drive's tool set. It reads and nothing else — there is
+        // deliberately no way for an agent to delete or share a file.
+        "find_file" => crate::agent_drive::execute_find_file(account, args).await,
         "log_time" => projects::execute_log_time(account, args).await,
         "project_status_summary" => projects::execute_project_status_summary(account, args).await,
         // B3.10b: a period of the caller's own Agenda turned into proposals,

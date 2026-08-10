@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::agent_billing::{BILLING_GUIDANCE, BILLING_TOOL_DOC, BILLING_TOOLS};
 use crate::agent_crm::{CRM_GUIDANCE, CRM_TOOL_DOC, CRM_TOOLS};
+use crate::agent_drive::{DRIVE_GUIDANCE, DRIVE_TOOL_DOC, DRIVE_TOOLS};
 use crate::agent_finance::{FINANCE_GUIDANCE, FINANCE_TOOL_DOC, FINANCE_TOOLS};
 use crate::agent_projects::{PROJECTS_GUIDANCE, PROJECTS_TOOL_DOC, PROJECTS_TOOLS};
 use crate::{AiConfig, ChatMessage, InferenceError, WorkspaceSource, chat, render_sources};
@@ -98,7 +99,8 @@ If the request needs an action no tool covers, ANSWER instead and say you cannot
 pub fn system_prompt() -> String {
     format!(
         "{AGENT_SYSTEM_HEAD}{AGENT_SYSTEM_TOOLS}{BILLING_TOOL_DOC}{CRM_TOOL_DOC}{PROJECTS_TOOL_DOC}\
-         {FINANCE_TOOL_DOC}{BILLING_GUIDANCE}{CRM_GUIDANCE}{PROJECTS_GUIDANCE}{FINANCE_GUIDANCE}\
+         {FINANCE_TOOL_DOC}{DRIVE_TOOL_DOC}\
+         {BILLING_GUIDANCE}{CRM_GUIDANCE}{PROJECTS_GUIDANCE}{FINANCE_GUIDANCE}{DRIVE_GUIDANCE}\
          {AGENT_SYSTEM_RULES}"
     )
 }
@@ -115,6 +117,7 @@ pub fn is_agent_tool(tool: &str) -> bool {
         || CRM_TOOLS.contains(&tool)
         || PROJECTS_TOOLS.contains(&tool)
         || FINANCE_TOOLS.contains(&tool)
+        || DRIVE_TOOLS.contains(&tool)
 }
 
 /// The chat messages for one agent turn. Pure and exported so the prompt is
@@ -311,6 +314,7 @@ mod tests {
             .chain(CRM_TOOLS)
             .chain(PROJECTS_TOOLS)
             .chain(FINANCE_TOOLS)
+            .chain(DRIVE_TOOLS)
         {
             assert!(prompt.contains(&format!("- {tool}:")), "{tool} undescribed");
             assert!(is_agent_tool(tool), "{tool} is not allowed to execute");
@@ -321,11 +325,18 @@ mod tests {
                 + BILLING_TOOLS.len()
                 + CRM_TOOLS.len()
                 + PROJECTS_TOOLS.len()
-                + FINANCE_TOOLS.len(),
+                + FINANCE_TOOLS.len()
+                + DRIVE_TOOLS.len(),
             "the prompt describes exactly the tools that exist"
         );
         // A name from neither list is not executable, whatever it looks like.
-        for stranger in ["", "create_task ", "delete_invoice", "delete_deal", "post_entry"] {
+        for stranger in [
+            "",
+            "create_task ",
+            "delete_invoice",
+            "delete_deal",
+            "post_entry",
+        ] {
             assert!(!is_agent_tool(stranger), "{stranger:?} must not be allowed");
         }
     }

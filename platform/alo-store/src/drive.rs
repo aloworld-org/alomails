@@ -861,3 +861,47 @@ impl VersionRow {
         }
     }
 }
+
+impl AccountStore {
+    /// Files in the caller's **own** Drive whose name matches `query`.
+    ///
+    /// Personal only, deliberately. A search that also swept every Space the
+    /// caller belongs to would need each Space's read rule applied per row,
+    /// and a permission check written inside a search is a permission check
+    /// somebody will forget to update. Spaces get their own method the day
+    /// they are asked for, with that rule stated once.
+    ///
+    /// Folders are excluded: someone asking where a file is does not mean the
+    /// folder. Trashed nodes are excluded for the same reason they are hidden
+    /// everywhere else.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn drive_find(&self, query: &str, limit: i64) -> Result<Vec<DriveNode>> {
+        let query = query.trim().to_lowercase();
+        if query.is_empty() {
+            return Ok(Vec::new());
+        }
+        let limit = limit.clamp(1, 20);
+        // Escape the wildcards, or a query of "%" returns the whole drive.
+        let like = format!("%{}%", query.replace('%', r"\%").replace('_', r"\_"));
+        let rows = sqlx::query_as::<_, NodeRow>(
+            "SELECT id, parent_id, location_kind, location_id, kind, name, blob_id, size, \
+                    content_type, trashed, source_kind, source_id, created_by, created_at, updated_at \
+             FROM drive_nodes \
+             WHERE tenant_id = $1 AND location_kind = 'personal' AND location_id = $2 \
+               AND trashed = false AND kind <> 'folder' \
+               AND lower(name) LIKE $3 \
+             ORDER BY updated_at DESC, lower(name) \
+             LIMIT $4",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(like)
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(rows.into_iter().map(NodeRow::into_node).collect())
+    }
+}
