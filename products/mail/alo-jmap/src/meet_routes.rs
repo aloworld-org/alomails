@@ -112,6 +112,29 @@ pub async fn in_channel(
     })))
 }
 
+/// `GET /meet/events/{id}` — the meeting on a calendar event, if any.
+///
+/// Answers `null` rather than 404 when there is none: "this invitation has no
+/// meeting" is an ordinary state an agenda asks about constantly, not an error.
+///
+/// # Errors
+/// 401 unauthenticated.
+pub async fn for_event(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let found = account
+        .acc
+        .meeting_for_event(&EventId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "meeting": found.as_ref().map(meeting_json)
+    })))
+}
+
 /// `POST /meet/{id}/join` — record attendance and mint a token for the engine.
 ///
 /// The store decides first. Only a meeting the caller may be in produces a

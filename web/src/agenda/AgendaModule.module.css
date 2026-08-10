@@ -398,8 +398,16 @@
   flex-shrink: 0;
 }
 .chipAllDay {
-  background: color-mix(in srgb, var(--cal, var(--terracotta)) 15%, transparent);
-  color: color-mix(in srgb, var(--cal, var(--terracotta)) 72%, var(--text-primary));
+  background: color-mix(
+    in srgb,
+    var(--cal, var(--terracotta)) 15%,
+    transparent
+  );
+  color: color-mix(
+    in srgb,
+    var(--cal, var(--terracotta)) 72%,
+    var(--text-primary)
+  );
   border-left: 3px solid var(--cal, var(--terracotta));
   font-weight: var(--weight-medium);
 }
@@ -1170,4 +1178,40 @@
   .emTwoCol {
     grid-template-columns: 1fr;
   }
+}
+
+/* The meeting on an invitation. Adding one is quiet; joining one that exists
+   carries the accent, because at the moment somebody opens the invitation the
+   call is the thing they came for. */
+.emMeetAdd,
+.emMeetJoin {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.emMeetJoin {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--on-accent, #fff);
+}
+
+.emMeetAdd:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.emMeetAdd:disabled {
+  cursor: default;
+  opacity: 0.6;
 }

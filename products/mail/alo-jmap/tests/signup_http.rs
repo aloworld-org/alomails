@@ -22,6 +22,7 @@ fn signup_app(store: Arc<Store>, identity: Identity, domains: Vec<String>) -> Ro
     use alo_jmap::push::PushHub;
     use alo_jmap::state::{AppState, Limits};
     alo_jmap::app(AppState {
+        media: None,
         turns: Default::default(),
         store,
         identity,

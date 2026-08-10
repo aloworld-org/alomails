@@ -1714,6 +1714,8 @@ export const en = {
   chatBulletList: "Bulleted list",
   chatQuoteAction: "Quote",
   chatFormatHint: "text",
+  meetTitle: "Meeting",
+  meetAddToEvent: "Add a meeting",
   meetStart: "Start a meeting",
   meetJoin: "Join the meeting",
   meetLive: "Meeting in progress",

@@ -2,7 +2,7 @@
 // converts to/from the UTC RFC 3339 the API speaks at save time. All-day events
 // use date-only bounds (end is exclusive, so a one-day event ends the next
 // midnight).
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
   Bell,
@@ -12,6 +12,7 @@ import {
   FileText,
   Globe,
   MapPin,
+  Video,
   Repeat as RepeatIcon,
   Trash2,
   Users,
@@ -19,8 +20,15 @@ import {
 } from "lucide-react";
 
 import { strings } from "../i18n";
+import { MeetRoom, useMeetApi } from "../meet";
+import type { Meeting } from "../meet";
 import { Button } from "../ds";
-import { useJmapClient, type Calendar, type CalendarEvent, type EventInput } from "../jmap";
+import {
+  useJmapClient,
+  type Calendar,
+  type CalendarEvent,
+  type EventInput,
+} from "../jmap";
 import { addDays, toDateInput, toLocalInput } from "./dates";
 import { calendarColorMap } from "./colors";
 import styles from "./AgendaModule.module.css";
@@ -49,7 +57,11 @@ interface Props {
   calendars: Calendar[];
   onSave: (id: string | null, input: EventInput) => Promise<void>;
   /** Override just one occurrence in place (edit this instance of a series). */
-  onSaveOccurrence?: (id: string, occurrence: string, input: EventInput) => Promise<void>;
+  onSaveOccurrence?: (
+    id: string,
+    occurrence: string,
+    input: EventInput,
+  ) => Promise<void>;
   onDelete: (id: string, occurrence?: string) => Promise<void>;
   onClose: () => void;
 }
@@ -73,13 +85,18 @@ function repeatOf(rrule: string | null): Repeat {
     const byday = /BYDAY=([^;]+)/.exec(up)?.[1];
     if (byday) {
       const set = new Set(byday.split(",").map((s) => s.trim()));
-      if (set.size === 5 && ["MO", "TU", "WE", "TH", "FR"].every((d) => set.has(d))) {
+      if (
+        set.size === 5 &&
+        ["MO", "TU", "WE", "TH", "FR"].every((d) => set.has(d))
+      ) {
         return "weekdays";
       }
     }
   }
   const f = /FREQ=([A-Z]+)/.exec(up)?.[1]?.toLowerCase();
-  return f === "daily" || f === "weekly" || f === "monthly" || f === "yearly" ? f : "none";
+  return f === "daily" || f === "weekly" || f === "monthly" || f === "yearly"
+    ? f
+    : "none";
 }
 
 /** A short label for a guest's RSVP PARTSTAT (organizer's view). */
@@ -115,14 +132,22 @@ export function EventModal({
   onClose,
 }: Props) {
   // Only calendars the viewer can write to may host a new or moved event.
-  const editable = calendars.filter((c) => c.role === "owner" || c.role === "editor");
+  const editable = calendars.filter(
+    (c) => c.role === "owner" || c.role === "editor",
+  );
   const defaultCalendar =
-    event?.calendarId ?? editable.find((c) => c.kind === "personal")?.id ?? editable[0]?.id ?? "";
+    event?.calendarId ??
+    editable.find((c) => c.kind === "personal")?.id ??
+    editable[0]?.id ??
+    "";
   // An existing event on a view-only shared calendar is shown read-only.
   const readOnly =
-    event != null && calendars.find((c) => c.id === event.calendarId)?.role === "viewer";
+    event != null &&
+    calendars.find((c) => c.id === event.calendarId)?.role === "viewer";
   const startDate = event ? new Date(event.startsAt) : initialStart;
-  const endDate = event ? new Date(event.endsAt) : new Date(initialStart.getTime() + 3600_000);
+  const endDate = event
+    ? new Date(event.endsAt)
+    : new Date(initialStart.getTime() + 3600_000);
 
   const [summary, setSummary] = useState(event?.summary ?? "");
   const [allDay, setAllDay] = useState(event?.allDay ?? false);
@@ -130,11 +155,31 @@ export function EventModal({
   const [end, setEnd] = useState(toLocalInput(endDate));
   // All-day: the end date is inclusive in the UI (storage is exclusive).
   const [startDay, setStartDay] = useState(toDateInput(startDate));
-  const [endDay, setEndDay] = useState(toDateInput(allDay ? addDays(endDate, -1) : startDate));
+  const [endDay, setEndDay] = useState(
+    toDateInput(allDay ? addDays(endDate, -1) : startDate),
+  );
   const [location, setLocation] = useState(event?.location ?? "");
+  // The meeting on this invitation, if it has one. An event that already has a
+  // meeting must not grow a second: two links on one invitation puts half the
+  // attendees in the wrong call.
+  const meet = useMeetApi();
+  const [meeting, setMeeting] = useState<Meeting | null>(null);
+  const [addingMeeting, setAddingMeeting] = useState(false);
+  const [inMeeting, setInMeeting] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = event?.id;
+    if (id === undefined) return;
+    void meet
+      .forEvent(id)
+      .then(setMeeting)
+      .catch(() => setMeeting(null));
+  }, [meet, event?.id]);
   const [guests, setGuests] = useState((event?.attendees ?? []).join(", "));
   const [description, setDescription] = useState(event?.description ?? "");
-  const [repeat, setRepeat] = useState<Repeat>(repeatOf(event?.recurrence ?? null));
+  const [repeat, setRepeat] = useState<Repeat>(
+    repeatOf(event?.recurrence ?? null),
+  );
   // "" = no reminder; otherwise minutes-before-start as a string.
   const [reminder, setReminder] = useState<string>(
     event?.reminderMinutes != null ? String(event.reminderMinutes) : "",
@@ -183,11 +228,16 @@ export function EventModal({
       const e = new Date(t.endsAt).getTime();
       const clash = fb
         .filter((p) =>
-          p.busy.some((b) => new Date(b.start).getTime() < e && new Date(b.end).getTime() > s),
+          p.busy.some(
+            (b) =>
+              new Date(b.start).getTime() < e && new Date(b.end).getTime() > s,
+          ),
         )
         .map((p) => p.email);
       setAvailability(
-        clash.length === 0 ? strings.agendaAvailAllFree : strings.agendaAvailBusy(clash.join(", ")),
+        clash.length === 0
+          ? strings.agendaAvailAllFree
+          : strings.agendaAvailBusy(clash.join(", ")),
       );
     } catch {
       setAvailability(strings.agendaAvailError);
@@ -218,7 +268,12 @@ export function EventModal({
 
   /** Assemble the writable event fields, omitting empty optionals. */
   function inputFrom(startsAt: string, endsAt: string): EventInput {
-    const input: EventInput = { summary: summary.trim(), startsAt, endsAt, allDay };
+    const input: EventInput = {
+      summary: summary.trim(),
+      startsAt,
+      endsAt,
+      allDay,
+    };
     const desc = description.trim();
     if (desc) input.description = desc;
     const loc = location.trim();
@@ -254,17 +309,30 @@ export function EventModal({
     if (t === null) return;
     let input = inputFrom(t.startsAt, t.endsAt);
     if (recurringOccurrence && master && event) {
-      const delta = new Date(t.startsAt).getTime() - new Date(event.startsAt).getTime();
+      const delta =
+        new Date(t.startsAt).getTime() - new Date(event.startsAt).getTime();
       const ms = new Date(master.startsAt).getTime() + delta;
-      const me = ms + (new Date(master.endsAt).getTime() - new Date(master.startsAt).getTime());
-      input = { ...input, startsAt: new Date(ms).toISOString(), endsAt: new Date(me).toISOString() };
+      const me =
+        ms +
+        (new Date(master.endsAt).getTime() -
+          new Date(master.startsAt).getTime());
+      input = {
+        ...input,
+        startsAt: new Date(ms).toISOString(),
+        endsAt: new Date(me).toISOString(),
+      };
     }
     await run(() => onSave(event?.id ?? null, input));
   }
 
   /** Override just this occurrence in place (edit "this event" of a series). */
   async function submitThis() {
-    if (summary.trim() === "" || !onSaveOccurrence || occurrenceStart === undefined || !event) {
+    if (
+      summary.trim() === "" ||
+      !onSaveOccurrence ||
+      occurrenceStart === undefined ||
+      !event
+    ) {
       return;
     }
     const t = readTimes();
@@ -287,18 +355,37 @@ export function EventModal({
   // A recurring event opened from a specific instance offers "this one" vs the
   // whole series; a one-off just deletes.
   const recurringOccurrence =
-    event !== null && event.recurrence !== null && occurrenceStart !== undefined;
+    event !== null &&
+    event.recurrence !== null &&
+    occurrenceStart !== undefined;
 
   return (
-    <div className={styles.modalScrim} role="dialog" aria-modal="true" onMouseDown={onClose}>
-      <form className={styles.emModal} onSubmit={submitSeries} onMouseDown={(e) => e.stopPropagation()}>
+    <div
+      className={styles.modalScrim}
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={onClose}
+    >
+      <form
+        className={styles.emModal}
+        onSubmit={submitSeries}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         <div className={styles.emHead}>
           <span className={styles.emHeadIcon}>
             <CalendarDays size={20} />
           </span>
           <div className={styles.emHeadText}>
-            <h2>{event ? strings.agendaEditEventTitle : strings.agendaNewEventTitle}</h2>
-            <p>{event ? strings.agendaEditEventSubtitle : strings.agendaNewEventSubtitle}</p>
+            <h2>
+              {event
+                ? strings.agendaEditEventTitle
+                : strings.agendaNewEventTitle}
+            </h2>
+            <p>
+              {event
+                ? strings.agendaEditEventSubtitle
+                : strings.agendaNewEventSubtitle}
+            </p>
           </div>
           <button
             type="button"
@@ -338,16 +425,26 @@ export function EventModal({
                 {allDay ? (
                   <span className={styles.emControl}>
                     <CalendarDays size={15} className={styles.emControlIcon} />
-                    <input type="date" value={startDay} onChange={(e) => setStartDay(e.target.value)} required />
+                    <input
+                      type="date"
+                      value={startDay}
+                      onChange={(e) => setStartDay(e.target.value)}
+                      required
+                    />
                   </span>
                 ) : (
                   <>
                     <span className={styles.emControl}>
-                      <CalendarDays size={15} className={styles.emControlIcon} />
+                      <CalendarDays
+                        size={15}
+                        className={styles.emControlIcon}
+                      />
                       <input
                         type="date"
                         value={dateOf(start)}
-                        onChange={(e) => setStart(`${e.target.value}T${timeOf(start)}`)}
+                        onChange={(e) =>
+                          setStart(`${e.target.value}T${timeOf(start)}`)
+                        }
                         required
                       />
                     </span>
@@ -356,7 +453,9 @@ export function EventModal({
                       <input
                         type="time"
                         value={timeOf(start)}
-                        onChange={(e) => setStart(`${dateOf(start)}T${e.target.value}`)}
+                        onChange={(e) =>
+                          setStart(`${dateOf(start)}T${e.target.value}`)
+                        }
                         required
                       />
                     </span>
@@ -370,16 +469,26 @@ export function EventModal({
                 {allDay ? (
                   <span className={styles.emControl}>
                     <CalendarDays size={15} className={styles.emControlIcon} />
-                    <input type="date" value={endDay} onChange={(e) => setEndDay(e.target.value)} required />
+                    <input
+                      type="date"
+                      value={endDay}
+                      onChange={(e) => setEndDay(e.target.value)}
+                      required
+                    />
                   </span>
                 ) : (
                   <>
                     <span className={styles.emControl}>
-                      <CalendarDays size={15} className={styles.emControlIcon} />
+                      <CalendarDays
+                        size={15}
+                        className={styles.emControlIcon}
+                      />
                       <input
                         type="date"
                         value={dateOf(end)}
-                        onChange={(e) => setEnd(`${e.target.value}T${timeOf(end)}`)}
+                        onChange={(e) =>
+                          setEnd(`${e.target.value}T${timeOf(end)}`)
+                        }
                         required
                       />
                     </span>
@@ -388,7 +497,9 @@ export function EventModal({
                       <input
                         type="time"
                         value={timeOf(end)}
-                        onChange={(e) => setEnd(`${dateOf(end)}T${e.target.value}`)}
+                        onChange={(e) =>
+                          setEnd(`${dateOf(end)}T${e.target.value}`)
+                        }
                         required
                       />
                     </span>
@@ -412,7 +523,10 @@ export function EventModal({
                   style={{ background: colorMap.get(calendarId) ?? "#e76f51" }}
                   aria-hidden
                 />
-                <select value={calendarId} onChange={(e) => setCalendarId(e.target.value)}>
+                <select
+                  value={calendarId}
+                  onChange={(e) => setCalendarId(e.target.value)}
+                >
                   {editable.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name}
@@ -431,11 +545,16 @@ export function EventModal({
                 <RepeatIcon size={15} /> {strings.agendaRepeat}
               </span>
               <div className={styles.emControl}>
-                <select value={repeat} onChange={(e) => setRepeat(e.target.value as Repeat)}>
+                <select
+                  value={repeat}
+                  onChange={(e) => setRepeat(e.target.value as Repeat)}
+                >
                   <option value="none">{strings.agendaRepeatNone}</option>
                   <option value="daily">{strings.agendaRepeatDaily}</option>
                   <option value="weekly">{strings.agendaRepeatWeekly}</option>
-                  <option value="weekdays">{strings.agendaRepeatWeekdays}</option>
+                  <option value="weekdays">
+                    {strings.agendaRepeatWeekdays}
+                  </option>
                   <option value="monthly">{strings.agendaRepeatMonthly}</option>
                   <option value="yearly">{strings.agendaRepeatYearly}</option>
                 </select>
@@ -446,7 +565,10 @@ export function EventModal({
                 <Bell size={15} /> {strings.agendaReminder}
               </span>
               <div className={styles.emControl}>
-                <select value={reminder} onChange={(e) => setReminder(e.target.value)}>
+                <select
+                  value={reminder}
+                  onChange={(e) => setReminder(e.target.value)}
+                >
                   <option value="">{strings.agendaReminderNone}</option>
                   <option value="0">{strings.agendaReminderAtStart}</option>
                   <option value="5">{strings.agendaReminder5}</option>
@@ -474,6 +596,49 @@ export function EventModal({
                 <MapPin size={15} className={styles.emControlTrail} />
               </div>
             </div>
+            {inMeeting !== null && (
+              <MeetRoom
+                meetingId={inMeeting}
+                onLeft={() => setInMeeting(null)}
+              />
+            )}
+            {/* A meeting belongs to the invitation, so this is where it is
+                added and where everyone invited finds it. Offered only once
+                the event exists — an unsaved event has no id to attach to. */}
+            {event?.id !== undefined && (
+              <div className={styles.emField}>
+                <span className={styles.emLabel}>
+                  <Video size={15} /> {strings.meetTitle}
+                </span>
+                <div className={styles.emControl}>
+                  {meeting !== null ? (
+                    <button
+                      type="button"
+                      className={styles.emMeetJoin}
+                      onClick={() => setInMeeting(meeting.id)}
+                    >
+                      <Video size={15} /> {strings.meetJoin}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className={styles.emMeetAdd}
+                      disabled={addingMeeting}
+                      onClick={() => {
+                        setAddingMeeting(true);
+                        void meet
+                          .start({ event: event.id, title: summary })
+                          .then(setMeeting)
+                          .catch(() => setMeeting(null))
+                          .finally(() => setAddingMeeting(false));
+                      }}
+                    >
+                      <Video size={15} /> {strings.meetAddToEvent}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
             <div className={styles.emField}>
               <span className={styles.emLabel}>
                 <Users size={15} /> {strings.agendaEventGuests}
@@ -489,7 +654,9 @@ export function EventModal({
                   spellCheck={false}
                 />
               </div>
-              <small className={styles.fieldHint}>{strings.agendaGuestsHint}</small>
+              <small className={styles.fieldHint}>
+                {strings.agendaGuestsHint}
+              </small>
               <div className={styles.availabilityRow}>
                 <button
                   type="button"
@@ -498,13 +665,19 @@ export function EventModal({
                   disabled={checking}
                 >
                   <CalendarDays size={15} />
-                  {checking ? strings.agendaAvailChecking : strings.agendaCheckAvailability}
+                  {checking
+                    ? strings.agendaAvailChecking
+                    : strings.agendaCheckAvailability}
                 </button>
-                {availability !== null && <small className={styles.fieldHint}>{availability}</small>}
+                {availability !== null && (
+                  <small className={styles.fieldHint}>{availability}</small>
+                )}
               </div>
               {event?.attendeeStatus && event.attendeeStatus.length > 0 && (
                 <small className={styles.fieldHint}>
-                  {event.attendeeStatus.map((a) => `${a.email} — ${rsvpLabel(a.status)}`).join(" · ")}
+                  {event.attendeeStatus
+                    .map((a) => `${a.email} — ${rsvpLabel(a.status)}`)
+                    .join(" · ")}
                 </small>
               )}
             </div>
@@ -540,7 +713,12 @@ export function EventModal({
 
         <div className={styles.emFooter}>
           {!readOnly && event !== null && !recurringOccurrence && (
-            <button type="button" className={styles.deleteBtn} onClick={() => void remove()} disabled={busy}>
+            <button
+              type="button"
+              className={styles.deleteBtn}
+              onClick={() => void remove()}
+              disabled={busy}
+            >
               <Trash2 size={15} /> {strings.agendaDelete}
             </button>
           )}
@@ -565,7 +743,12 @@ export function EventModal({
             </div>
           )}
           <div className={styles.modalActionsRight}>
-            <button type="button" className={styles.emCancel} onClick={onClose} disabled={busy}>
+            <button
+              type="button"
+              className={styles.emCancel}
+              onClick={onClose}
+              disabled={busy}
+            >
               {readOnly ? strings.agendaClose : strings.agendaCancel}
             </button>
             {!readOnly && recurringOccurrence && onSaveOccurrence && (
@@ -580,12 +763,17 @@ export function EventModal({
             )}
             {!readOnly &&
               (recurringOccurrence ? (
-                <Button type="button" onClick={() => void submitSeries()} disabled={busy || summary.trim() === ""}>
+                <Button
+                  type="button"
+                  onClick={() => void submitSeries()}
+                  disabled={busy || summary.trim() === ""}
+                >
                   {strings.agendaSaveAll}
                 </Button>
               ) : (
                 <Button type="submit" disabled={busy || summary.trim() === ""}>
-                  <Check size={16} /> {event ? strings.agendaSave : strings.agendaCreateEvent}
+                  <Check size={16} />{" "}
+                  {event ? strings.agendaSave : strings.agendaCreateEvent}
                 </Button>
               ))}
           </div>

@@ -254,3 +254,46 @@ impl AccountStore {
             .collect())
     }
 }
+
+impl AccountStore {
+    /// The meeting attached to a calendar event, if there is one.
+    ///
+    /// An event has at most one: a second meeting on the same invitation is
+    /// two links in one place, and half the attendees end up in the wrong
+    /// call. The route that creates one asks this first.
+    ///
+    /// Ended meetings are ignored — a recurring weekly that finished last
+    /// Tuesday should not hand out last Tuesday's room.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn meeting_for_event(&self, event: &EventId) -> Result<Option<Meeting>> {
+        let row: Option<MeetingRow> = sqlx::query_as(&format!(
+            "SELECT {COLUMNS} FROM meetings \
+             WHERE tenant_id = $1 AND event_id = $2 AND ended_at IS NULL \
+             ORDER BY created_at DESC LIMIT 1"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(event.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        // The event's own visibility is the gate: a meeting on somebody's
+        // invitation is theirs to see exactly when the invitation is.
+        match row {
+            Some(row) => {
+                let meeting = to_meeting(row);
+                if self
+                    .event(event)
+                    .await
+                    .map_err(|_| StoreError::NotFound)?
+                    .is_none()
+                {
+                    return Ok(None);
+                }
+                Ok(Some(meeting))
+            }
+            None => Ok(None),
+        }
+    }
+}

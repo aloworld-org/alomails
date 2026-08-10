@@ -18,19 +18,30 @@ export function MiniMonth({ anchor, today, onPick }: Props) {
   const [shown, setShown] = useState<Date>(startOfMonth(anchor));
   const month = shown.getMonth();
   const days = monthGridDays(shown);
-  const title = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(shown);
+  const title = new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+  }).format(shown);
   const wFmt = new Intl.DateTimeFormat(locale, { weekday: "narrow" });
-  const header = Array.from({ length: 7 }, (_, i) => wFmt.format(new Date(2024, 0, 1 + i)));
+  const header = Array.from({ length: 7 }, (_, i) =>
+    wFmt.format(new Date(2024, 0, 1 + i)),
+  );
 
   return (
     <div className={styles.mini}>
       <div className={styles.miniHead}>
         <span>{title}</span>
         <div className={styles.miniNav}>
-          <button onClick={() => setShown((d) => addMonths(d, -1))} aria-label="previous month">
+          <button
+            onClick={() => setShown((d) => addMonths(d, -1))}
+            aria-label="previous month"
+          >
             <ChevronLeft size={15} />
           </button>
-          <button onClick={() => setShown((d) => addMonths(d, 1))} aria-label="next month">
+          <button
+            onClick={() => setShown((d) => addMonths(d, 1))}
+            aria-label="next month"
+          >
             <ChevronRight size={15} />
           </button>
         </div>
@@ -51,7 +62,11 @@ export function MiniMonth({ anchor, today, onPick }: Props) {
             .filter(Boolean)
             .join(" ");
           return (
-            <button key={day.toISOString()} className={cls} onClick={() => onPick(day)}>
+            <button
+              key={day.toISOString()}
+              className={cls}
+              onClick={() => onPick(day)}
+            >
               {day.getDate()}
             </button>
           );

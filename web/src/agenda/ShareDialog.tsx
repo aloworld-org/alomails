@@ -7,7 +7,12 @@ import { X } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button } from "../ds";
-import { useJmapClient, type Calendar, type CalendarGrant, type ShareableGroup } from "../jmap";
+import {
+  useJmapClient,
+  type Calendar,
+  type CalendarGrant,
+  type ShareableGroup,
+} from "../jmap";
 import styles from "./AgendaModule.module.css";
 
 interface Props {
@@ -77,7 +82,12 @@ export function ShareDialog({ calendar, onClose }: Props) {
   }
 
   return (
-    <div className={styles.modalScrim} role="dialog" aria-modal="true" onMouseDown={onClose}>
+    <div
+      className={styles.modalScrim}
+      role="dialog"
+      aria-modal="true"
+      onMouseDown={onClose}
+    >
       <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
         <div className={styles.modalHead}>
           <h2>{strings.agendaShareTitle(calendar.name)}</h2>
@@ -97,10 +107,16 @@ export function ShareDialog({ calendar, onClose }: Props) {
               <li key={`${g.kind}:${g.subject}`} className={styles.shareRow}>
                 <span className={styles.shareLabel}>
                   {g.label}
-                  {g.kind === "group" && <span className={styles.shareTag}>{strings.agendaShareGroup}</span>}
+                  {g.kind === "group" && (
+                    <span className={styles.shareTag}>
+                      {strings.agendaShareGroup}
+                    </span>
+                  )}
                 </span>
                 <span className={styles.shareRole}>
-                  {g.role === "editor" ? strings.agendaShareEditor : strings.agendaShareViewer}
+                  {g.role === "editor"
+                    ? strings.agendaShareEditor
+                    : strings.agendaShareViewer}
                 </span>
                 <button
                   type="button"
@@ -120,7 +136,10 @@ export function ShareDialog({ calendar, onClose }: Props) {
         <div className={styles.shareForm}>
           <label className={styles.field}>
             <span>{strings.agendaShareWith}</span>
-            <select value={kind} onChange={(e) => setKind(e.target.value as Kind)}>
+            <select
+              value={kind}
+              onChange={(e) => setKind(e.target.value as Kind)}
+            >
               <option value="user">{strings.agendaSharePerson}</option>
               <option value="group">{strings.agendaShareGroupOption}</option>
             </select>
@@ -142,7 +161,10 @@ export function ShareDialog({ calendar, onClose }: Props) {
           ) : (
             <label className={styles.field}>
               <span>{strings.agendaShareGroupOption}</span>
-              <select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+              <select
+                value={groupId}
+                onChange={(e) => setGroupId(e.target.value)}
+              >
                 <option value="">{strings.agendaShareGroupPick}</option>
                 {groups.map((g) => (
                   <option key={g.id} value={g.id}>
@@ -155,7 +177,10 @@ export function ShareDialog({ calendar, onClose }: Props) {
 
           <label className={styles.field}>
             <span>{strings.agendaShareAccess}</span>
-            <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as Role)}
+            >
               <option value="viewer">{strings.agendaShareViewer}</option>
               <option value="editor">{strings.agendaShareEditor}</option>
             </select>
@@ -170,13 +195,20 @@ export function ShareDialog({ calendar, onClose }: Props) {
 
         <div className={styles.modalActions}>
           <div className={styles.modalActionsRight}>
-            <button type="button" className={styles.linkBtn} onClick={onClose} disabled={busy}>
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={onClose}
+              disabled={busy}
+            >
               {strings.agendaClose}
             </button>
             <Button
               type="button"
               onClick={() => void add()}
-              disabled={busy || (kind === "user" ? email.trim() === "" : groupId === "")}
+              disabled={
+                busy || (kind === "user" ? email.trim() === "" : groupId === "")
+              }
             >
               {strings.agendaShareAdd}
             </Button>

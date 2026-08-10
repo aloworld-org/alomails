@@ -15,7 +15,10 @@ interface Props {
 }
 
 function hm(iso: string, locale: string): string {
-  return new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function titleOf(e: CalendarEvent): string {
@@ -47,7 +50,11 @@ export function DayPanel({ day, today, events, colorOf, onEventClick }: Props) {
     const d = new Date(iso);
     if (sameDay(d, today)) return strings.homeTaskToday;
     if (sameDay(d, addDays(today, 1))) return strings.agendaTomorrow;
-    return new Intl.DateTimeFormat(locale, { weekday: "long", month: "short", day: "numeric" }).format(d);
+    return new Intl.DateTimeFormat(locale, {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+    }).format(d);
   };
 
   return (
@@ -59,7 +66,9 @@ export function DayPanel({ day, today, events, colorOf, onEventClick }: Props) {
       <section className={styles.panelSection}>
         <div className={styles.panelSectionHead}>
           <span>{sameDay(day, today) ? strings.homeTaskToday : dateLabel}</span>
-          <span className={styles.panelCount}>{strings.agendaEventCount(dayEvents.length)}</span>
+          <span className={styles.panelCount}>
+            {strings.agendaEventCount(dayEvents.length)}
+          </span>
         </div>
         {dayEvents.length === 0 ? (
           <p className={styles.panelEmpty}>{strings.homeNoEventsToday}</p>
@@ -67,11 +76,21 @@ export function DayPanel({ day, today, events, colorOf, onEventClick }: Props) {
           <ul className={styles.panelList}>
             {dayEvents.map((e, i) => (
               <li key={`${e.id}-${i}`}>
-                <button type="button" className={styles.evItem} onClick={() => onEventClick(e)}>
-                  <span className={styles.evBar} style={{ background: colorOf(e.calendarId) }} aria-hidden />
+                <button
+                  type="button"
+                  className={styles.evItem}
+                  onClick={() => onEventClick(e)}
+                >
+                  <span
+                    className={styles.evBar}
+                    style={{ background: colorOf(e.calendarId) }}
+                    aria-hidden
+                  />
                   <span className={styles.evBody}>
                     <span className={styles.evTime}>
-                      {e.allDay ? strings.agendaAllDay : `${hm(e.startsAt, locale)} – ${hm(e.endsAt, locale)}`}
+                      {e.allDay
+                        ? strings.agendaAllDay
+                        : `${hm(e.startsAt, locale)} – ${hm(e.endsAt, locale)}`}
                     </span>
                     <span className={styles.evTitle}>{titleOf(e)}</span>
                     {e.location !== null && e.location.length > 0 && (
@@ -88,7 +107,9 @@ export function DayPanel({ day, today, events, colorOf, onEventClick }: Props) {
       <section className={styles.panelSection}>
         <div className={styles.panelSectionHead}>
           <span>{strings.agendaUpcoming}</span>
-          <span className={styles.panelCount}>{strings.agendaEventCount(upcoming.length)}</span>
+          <span className={styles.panelCount}>
+            {strings.agendaEventCount(upcoming.length)}
+          </span>
         </div>
         {upcoming.length === 0 ? (
           <p className={styles.panelEmpty}>{strings.agendaNothingUpcoming}</p>
@@ -96,12 +117,22 @@ export function DayPanel({ day, today, events, colorOf, onEventClick }: Props) {
           <ul className={styles.panelList}>
             {upcoming.map((e, i) => (
               <li key={`${e.id}-up-${i}`}>
-                <button type="button" className={styles.evItem} onClick={() => onEventClick(e)}>
-                  <span className={styles.evBar} style={{ background: colorOf(e.calendarId) }} aria-hidden />
+                <button
+                  type="button"
+                  className={styles.evItem}
+                  onClick={() => onEventClick(e)}
+                >
+                  <span
+                    className={styles.evBar}
+                    style={{ background: colorOf(e.calendarId) }}
+                    aria-hidden
+                  />
                   <span className={styles.evBody}>
                     <span className={styles.evDay}>{relDay(e.startsAt)}</span>
                     <span className={styles.evTime}>
-                      {e.allDay ? strings.agendaAllDay : `${hm(e.startsAt, locale)} – ${hm(e.endsAt, locale)}`}
+                      {e.allDay
+                        ? strings.agendaAllDay
+                        : `${hm(e.startsAt, locale)} – ${hm(e.endsAt, locale)}`}
                     </span>
                     <span className={styles.evTitle}>{titleOf(e)}</span>
                     {e.location !== null && e.location.length > 0 && (

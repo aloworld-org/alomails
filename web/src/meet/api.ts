@@ -85,6 +85,14 @@ export class MeetApi {
    * attendance was recorded, there is simply nowhere to hold it. That is worth
    * saying differently from a failure.
    */
+  /** The meeting on a calendar event, or `null` when the invitation has none.
+   *  An absent meeting is an ordinary state, not a failure. */
+  async forEvent(event: string): Promise<Meeting | null> {
+    const res = await this.#send(`/meet/events/${encodeURIComponent(event)}`);
+    if (!res.ok) return null;
+    return ((await res.json()) as { meeting: Meeting | null }).meeting;
+  }
+
   async join(id: string): Promise<JoinGrant> {
     const res = await this.#send(`/meet/${encodeURIComponent(id)}/join`, {
       method: "POST",

@@ -16,13 +16,26 @@ interface Props {
 }
 
 function hm(iso: string, locale: string): string {
-  return new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-export function AgendaListView({ from, to, today, events, colorOf, onEventClick }: Props) {
+export function AgendaListView({
+  from,
+  to,
+  today,
+  events,
+  colorOf,
+  onEventClick,
+}: Props) {
   const locale = getLocale();
   const inRange = events
-    .filter((e) => new Date(e.startsAt) >= startOfDay(from) && new Date(e.startsAt) < to)
+    .filter(
+      (e) =>
+        new Date(e.startsAt) >= startOfDay(from) && new Date(e.startsAt) < to,
+    )
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
 
   // Group by calendar day.
@@ -45,7 +58,9 @@ export function AgendaListView({ from, to, today, events, colorOf, onEventClick 
   };
 
   if (groups.length === 0) {
-    return <p className={styles.agendaListEmpty}>{strings.agendaNothingUpcoming}</p>;
+    return (
+      <p className={styles.agendaListEmpty}>{strings.agendaNothingUpcoming}</p>
+    );
   }
 
   return (
@@ -59,8 +74,16 @@ export function AgendaListView({ from, to, today, events, colorOf, onEventClick 
           <ul className={styles.agendaListItems}>
             {g.items.map((e, i) => (
               <li key={`${e.id}-${i}`}>
-                <button type="button" className={styles.evItem} onClick={() => onEventClick(e)}>
-                  <span className={styles.evBar} style={{ background: colorOf(e.calendarId) }} aria-hidden />
+                <button
+                  type="button"
+                  className={styles.evItem}
+                  onClick={() => onEventClick(e)}
+                >
+                  <span
+                    className={styles.evBar}
+                    style={{ background: colorOf(e.calendarId) }}
+                    aria-hidden
+                  />
                   <span className={styles.evBody}>
                     <span className={styles.evTime}>
                       {e.allDay
@@ -68,7 +91,9 @@ export function AgendaListView({ from, to, today, events, colorOf, onEventClick 
                         : `${hm(e.startsAt, locale)} – ${hm(e.endsAt, locale)}`}
                     </span>
                     <span className={styles.evTitle}>
-                      {e.summary.trim().length > 0 ? e.summary : strings.agendaUntitledEvent}
+                      {e.summary.trim().length > 0
+                        ? e.summary
+                        : strings.agendaUntitledEvent}
                     </span>
                     {e.location !== null && e.location.length > 0 && (
                       <span className={styles.evLoc}>{e.location}</span>

@@ -128,6 +128,7 @@ async fn junk_moves_train_rspamd_and_keyword_changes_do_not() {
         .reveal()
         .to_owned();
     let app = alo_jmap::app(AppState {
+        media: None,
         turns: Default::default(),
         store: Arc::clone(&store),
         identity: identity.clone(),

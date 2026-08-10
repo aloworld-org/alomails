@@ -30,9 +30,14 @@ export function MonthView({
   const days = monthGridDays(anchor);
   const month = startOfMonth(anchor).getMonth();
   const weekdayFmt = new Intl.DateTimeFormat(locale, { weekday: "short" });
-  const timeFmt = new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit" });
+  const timeFmt = new Intl.DateTimeFormat(locale, {
+    hour: "numeric",
+    minute: "2-digit",
+  });
   // A reference Monday (2024-01-01) to label the weekday header row.
-  const header = Array.from({ length: 7 }, (_, i) => weekdayFmt.format(new Date(2024, 0, 1 + i)));
+  const header = Array.from({ length: 7 }, (_, i) =>
+    weekdayFmt.format(new Date(2024, 0, 1 + i)),
+  );
 
   return (
     <div className={styles.month}>
@@ -46,9 +51,19 @@ export function MonthView({
       <div className={styles.monthGrid}>
         {days.map((day) => {
           const dayEvents = events
-            .map((e) => ({ e, s: new Date(e.startsAt), en: new Date(e.endsAt) }))
+            .map((e) => ({
+              e,
+              s: new Date(e.startsAt),
+              en: new Date(e.endsAt),
+            }))
             .filter(({ s, en }) => eventOnDay(s, en, day))
-            .sort((a, b) => (a.e.allDay === b.e.allDay ? a.s.getTime() - b.s.getTime() : a.e.allDay ? -1 : 1));
+            .sort((a, b) =>
+              a.e.allDay === b.e.allDay
+                ? a.s.getTime() - b.s.getTime()
+                : a.e.allDay
+                  ? -1
+                  : 1,
+            );
           const isToday = sameDay(day, today);
           const isSelected = sameDay(day, selectedDay);
           const otherMonth = day.getMonth() !== month;
@@ -67,7 +82,9 @@ export function MonthView({
               aria-label={`${strings.agendaNewEvent}: ${day.toLocaleDateString(locale)}`}
             >
               <div className={styles.dayNumRow}>
-                <span className={`${styles.dayNum} ${isToday ? styles.todayNum : ""}`}>
+                <span
+                  className={`${styles.dayNum} ${isToday ? styles.todayNum : ""}`}
+                >
                   {day.getDate()}
                 </span>
               </div>
@@ -76,7 +93,11 @@ export function MonthView({
                   <button
                     key={`${e.id}-${e.startsAt}`}
                     className={`${styles.chip} ${e.allDay ? styles.chipAllDay : styles.chipTimed}`}
-                    style={{ ["--cal"]: colorOf(e.calendarId) } as React.CSSProperties}
+                    style={
+                      {
+                        ["--cal"]: colorOf(e.calendarId),
+                      } as React.CSSProperties
+                    }
                     onClick={(ev) => {
                       ev.stopPropagation();
                       onEventClick(e);
@@ -84,18 +105,26 @@ export function MonthView({
                     title={e.summary}
                   >
                     {e.allDay ? (
-                      <span className={styles.chipTitle}>{e.summary || strings.agendaUntitledEvent}</span>
+                      <span className={styles.chipTitle}>
+                        {e.summary || strings.agendaUntitledEvent}
+                      </span>
                     ) : (
                       <>
                         <span className={styles.chipDot} aria-hidden />
-                        <span className={styles.chipTime}>{timeFmt.format(s)}</span>
-                        <span className={styles.chipTitle}>{e.summary || strings.agendaUntitledEvent}</span>
+                        <span className={styles.chipTime}>
+                          {timeFmt.format(s)}
+                        </span>
+                        <span className={styles.chipTitle}>
+                          {e.summary || strings.agendaUntitledEvent}
+                        </span>
                       </>
                     )}
                   </button>
                 ))}
                 {dayEvents.length > MAX_CHIPS && (
-                  <span className={styles.moreChip}>+{dayEvents.length - MAX_CHIPS}</span>
+                  <span className={styles.moreChip}>
+                    +{dayEvents.length - MAX_CHIPS}
+                  </span>
                 )}
               </div>
             </div>

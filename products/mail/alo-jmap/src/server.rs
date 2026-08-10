@@ -244,6 +244,7 @@ pub fn app_with_site_domain_dns(
         .route("/meet/{id}/end", post(meet_routes::end))
         .route("/meet/{id}/participants", get(meet_routes::participants))
         .route("/meet/channels/{id}", get(meet_routes::in_channel))
+        .route("/meet/events/{id}", get(meet_routes::for_event))
         .route(
             "/chat/channels/{id}/turns",
             get(chat_agent_routes::list_turns),

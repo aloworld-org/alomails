@@ -16,7 +16,12 @@ import {
 } from "lucide-react";
 
 import { getLocale, strings } from "../i18n";
-import { useJmapClient, type Calendar, type CalendarEvent, type EventInput } from "../jmap";
+import {
+  useJmapClient,
+  type Calendar,
+  type CalendarEvent,
+  type EventInput,
+} from "../jmap";
 import { Spinner, useDialogs } from "../ds";
 import { EventModal } from "./EventModal";
 import { ShareDialog } from "./ShareDialog";
@@ -26,7 +31,14 @@ import { WeekView } from "./WeekView";
 import { AgendaListView } from "./AgendaListView";
 import { DayPanel } from "./DayPanel";
 import { calendarColorMap } from "./colors";
-import { addDays, addMonths, startOfDay, startOfMonth, startOfWeek, weekDays } from "./dates";
+import {
+  addDays,
+  addMonths,
+  startOfDay,
+  startOfMonth,
+  startOfWeek,
+  weekDays,
+} from "./dates";
 import styles from "./AgendaModule.module.css";
 
 type View = "day" | "week" | "month" | "agenda";
@@ -60,7 +72,10 @@ export function AgendaModule() {
   const [sharing, setSharing] = useState<Calendar | null>(null);
 
   const colorMap = useMemo(() => calendarColorMap(calendars), [calendars]);
-  const colorOf = useCallback((id: string) => colorMap.get(id) ?? "#e76f51", [colorMap]);
+  const colorOf = useCallback(
+    (id: string) => colorMap.get(id) ?? "#e76f51",
+    [colorMap],
+  );
   const visibleEvents = useMemo(
     () => events.filter((e) => !hidden.has(e.calendarId)),
     [events, hidden],
@@ -88,7 +103,9 @@ export function AgendaModule() {
   }
 
   async function newCalendar() {
-    const name = (await prompt({ message: strings.agendaNewCalendarPrompt }))?.trim();
+    const name = (
+      await prompt({ message: strings.agendaNewCalendarPrompt })
+    )?.trim();
     if (name === undefined || name === "") return;
     try {
       await client.createCalendar(name);
@@ -116,14 +133,18 @@ export function AgendaModule() {
         : view === "week"
           ? startOfWeek(anchor)
           : startOfDay(anchor);
-    const span = view === "month" ? 42 : view === "week" ? 7 : view === "agenda" ? 30 : 1;
+    const span =
+      view === "month" ? 42 : view === "week" ? 7 : view === "agenda" ? 30 : 1;
     return [base, addDays(base, Math.max(span, 21))];
   }, [view, anchor]);
 
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await client.calendarEvents(from.toISOString(), to.toISOString());
+      const list = await client.calendarEvents(
+        from.toISOString(),
+        to.toISOString(),
+      );
       setEvents(list);
     } catch {
       setEvents([]);
@@ -138,17 +159,32 @@ export function AgendaModule() {
 
   const label = useMemo(() => {
     if (view === "month") {
-      return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(anchor);
+      return new Intl.DateTimeFormat(locale, {
+        month: "long",
+        year: "numeric",
+      }).format(anchor);
     }
     if (view === "day") {
-      return new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long" }).format(anchor);
+      return new Intl.DateTimeFormat(locale, {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }).format(anchor);
     }
     if (view === "agenda") {
-      return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(anchor);
+      return new Intl.DateTimeFormat(locale, {
+        month: "long",
+        year: "numeric",
+      }).format(anchor);
     }
     const week = weekDays(anchor);
-    const fmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short" });
-    const yr = new Intl.DateTimeFormat(locale, { year: "numeric" }).format(week[6]);
+    const fmt = new Intl.DateTimeFormat(locale, {
+      day: "numeric",
+      month: "short",
+    });
+    const yr = new Intl.DateTimeFormat(locale, { year: "numeric" }).format(
+      week[6],
+    );
     return `${fmt.format(week[0])} – ${fmt.format(week[6])}, ${yr}`;
   }, [view, anchor, locale]);
 
@@ -204,7 +240,11 @@ export function AgendaModule() {
     await reload();
   }
 
-  async function saveOccurrence(id: string, occurrence: string, input: EventInput) {
+  async function saveOccurrence(
+    id: string,
+    occurrence: string,
+    input: EventInput,
+  ) {
     await client.overrideOccurrence(id, occurrence, input);
     setEditing(null);
     await reload();
@@ -247,7 +287,9 @@ export function AgendaModule() {
         </button>
         {c.role !== "owner" && (
           <span className={styles.calShared}>
-            {c.role === "editor" ? strings.agendaShareEditor : strings.agendaShareViewer}
+            {c.role === "editor"
+              ? strings.agendaShareEditor
+              : strings.agendaShareViewer}
           </span>
         )}
         {c.role === "owner" && (
@@ -279,7 +321,10 @@ export function AgendaModule() {
   return (
     <div className={styles.agenda}>
       <aside className={styles.sidebar}>
-        <button className={styles.newBtn} onClick={() => openNew(dayAtNine(selectedDay))}>
+        <button
+          className={styles.newBtn}
+          onClick={() => openNew(dayAtNine(selectedDay))}
+        >
           <CalendarPlus size={18} />
           {strings.agendaNewEvent}
         </button>
@@ -316,10 +361,18 @@ export function AgendaModule() {
           <button className={styles.todayBtn} onClick={goToday}>
             {strings.agendaToday}
           </button>
-          <button className={styles.navBtn} onClick={() => step(-1)} aria-label={strings.agendaPrev}>
+          <button
+            className={styles.navBtn}
+            onClick={() => step(-1)}
+            aria-label={strings.agendaPrev}
+          >
             <ChevronLeft size={18} />
           </button>
-          <button className={styles.navBtn} onClick={() => step(1)} aria-label={strings.agendaNext}>
+          <button
+            className={styles.navBtn}
+            onClick={() => step(1)}
+            aria-label={strings.agendaNext}
+          >
             <ChevronRight size={18} />
           </button>
           <h1 className={styles.periodLabel}>{label}</h1>
@@ -391,7 +444,9 @@ export function AgendaModule() {
         />
       )}
 
-      {sharing !== null && <ShareDialog calendar={sharing} onClose={() => setSharing(null)} />}
+      {sharing !== null && (
+        <ShareDialog calendar={sharing} onClose={() => setSharing(null)} />
+      )}
     </div>
   );
 }
