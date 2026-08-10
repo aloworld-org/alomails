@@ -677,3 +677,156 @@ async fn another_tenants_customer_and_price_are_invisible_on_every_route() {
         other => panic!("expected NotFound, got {other:?}"),
     }
 }
+
+// ---- the catalog on the wire (B5.02) -----------------------------------------
+
+/// The five catalog fields alo Inventory adds to a product, and the two
+/// refusals that come with them: a barcode that fails its own check digit is a
+/// `422` naming the field and never the code, and a code another product of the
+/// **same** tenant already carries is a `409`.
+#[tokio::test]
+async fn a_product_carries_its_catalog_facts_and_refuses_a_bad_code() {
+    let h = harness("bill-prod-catalog").await;
+
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        "/billing/products",
+        json!({
+            "name": "Blue chair",
+            "unit": "piece",
+            "unitPriceCents": 4_900,
+            "vatRateBp": 2100,
+            "sku": "  CH-BLUE-01 ",
+            "barcode": " 400-638 133 393 1 ",
+            "stocked": true,
+            "purchasePriceCents": 2_150,
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let p = &body["product"];
+    assert_eq!(p["sku"], "CH-BLUE-01", "stored trimmed");
+    assert_eq!(p["barcode"], "4006381333931", "separators are presentation");
+    assert_eq!(p["stocked"], true);
+    assert_eq!(p["purchasePriceCents"], 2_150);
+    assert_eq!(
+        p["unitPriceCents"], 4_900,
+        "what we charge is not what we pay"
+    );
+    assert!(
+        p["purchasePriceCents"].is_i64(),
+        "what we pay is integer cents too"
+    );
+    assert!(p["photoNodeId"].is_null());
+    let id = p["id"].as_str().unwrap().to_owned();
+
+    // A product created without any of them is a service with no codes — the
+    // shape every billing tenant already has, unchanged by this release.
+    let (_, body) = post(
+        &h.app,
+        &h.token,
+        "/billing/products",
+        json!({ "name": "Consulting" }),
+    )
+    .await;
+    assert_eq!(body["product"]["stocked"], false);
+    assert_eq!(body["product"]["sku"], "");
+    assert_eq!(body["product"]["barcode"], "");
+    assert_eq!(body["product"]["purchasePriceCents"], 0);
+
+    // A typo in the code is caught here rather than when the wrong item ships,
+    // and the refusal never echoes the code back into a log.
+    for bad in ["4006381333930", "12345", "40063813339A1"] {
+        let (status, body) = post(
+            &h.app,
+            &h.token,
+            "/billing/products",
+            json!({ "name": "Mistyped", "barcode": bad }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+        let detail = body["detail"].as_str().unwrap_or_default();
+        assert!(detail.contains("barcode"), "unhelpful: {detail}");
+        assert!(
+            !detail.contains(bad),
+            "the detail carried the code: {detail}"
+        );
+    }
+
+    // The same code twice inside one tenant is a conflict naming the field.
+    for (field, value, word) in [
+        ("sku", "CH-BLUE-01", "SKU"),
+        ("barcode", "4006381333931", "barcode"),
+    ] {
+        let mut request = json!({ "name": "Second chair" });
+        request[field] = json!(value);
+        let (status, body) = post(&h.app, &h.token, "/billing/products", request).await;
+        assert_eq!(status, StatusCode::CONFLICT, "{body}");
+        assert!(
+            body["detail"].as_str().unwrap_or_default().contains(word),
+            "unhelpful: {body}"
+        );
+    }
+
+    // A photo nobody can see is the same 404 an id that never existed gets.
+    let (status, body) = patch(
+        &h.app,
+        &h.token,
+        &format!("/billing/products/{id}"),
+        json!({ "photoNodeId": "no-such-node" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+
+    // Un-stocking and clearing a code are stated values, not absences.
+    let (status, body) = patch(
+        &h.app,
+        &h.token,
+        &format!("/billing/products/{id}"),
+        json!({ "stocked": false, "sku": "", "barcode": "" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["product"]["stocked"], false);
+    assert_eq!(body["product"]["sku"], "");
+    assert_eq!(body["product"]["barcode"], "");
+    assert_eq!(
+        body["product"]["name"], "Blue chair",
+        "unstated fields hold"
+    );
+}
+
+/// Uniqueness is the tenant's own business: two companies selling the same
+/// book never collide, and neither insert fails because of the other. A global
+/// index would leak the existence of another tenant's product through a
+/// constraint violation — the kind of side channel that is easy to miss and
+/// impossible to explain afterwards.
+#[tokio::test]
+async fn the_same_barcode_in_two_tenants_is_two_products() {
+    let a = harness("bill-code-a").await;
+    let b = harness("bill-code-b").await;
+
+    let chair = json!({
+        "name": "Blue chair",
+        "sku": "CH-BLUE-01",
+        "barcode": "4006381333931",
+        "stocked": true,
+        "purchasePriceCents": 2_150,
+    });
+    let (status, body) = post(&a.app, &a.token, "/billing/products", chair.clone()).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) = post(&b.app, &b.token, "/billing/products", chair).await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "another tenant's identical code must not block this one: {body}"
+    );
+    assert_eq!(body["product"]["barcode"], "4006381333931");
+
+    // ... and each tenant sees exactly one chair.
+    for h in [&a, &b] {
+        let (_, body) = get(&h.app, &h.token, "/billing/products").await;
+        assert_eq!(names(&body, "products"), vec!["Blue chair".to_owned()]);
+    }
+}

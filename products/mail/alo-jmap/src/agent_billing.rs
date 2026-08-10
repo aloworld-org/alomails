@@ -384,6 +384,14 @@ mod tests {
             unit: unit.to_owned(),
             unit_price_cents: cents,
             vat_rate_bp: bp,
+            // The catalog half (B5.02) says nothing about resolving a product
+            // by name, which is what these tests exercise: a service with no
+            // codes is exactly the shape a billing tenant has.
+            sku: String::new(),
+            barcode: String::new(),
+            stocked: false,
+            purchase_price_cents: 0,
+            photo_node_id: None,
             archived_at: None,
             created_by: "u1".to_owned(),
             created_at: OffsetDateTime::UNIX_EPOCH,

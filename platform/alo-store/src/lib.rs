@@ -105,6 +105,7 @@ pub mod insight_query;
 pub mod insight_series;
 pub mod insight_spec;
 pub mod insight_tiles;
+pub mod inv_barcode;
 pub mod maintenance;
 pub mod meet;
 pub mod message;
