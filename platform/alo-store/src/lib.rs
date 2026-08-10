@@ -113,6 +113,7 @@ pub mod inv_po;
 pub mod inv_po_lines;
 pub mod inv_po_receive;
 pub mod inv_po_send;
+pub mod inv_reorder;
 pub mod inv_so;
 pub mod inv_so_confirm;
 pub mod inv_so_deliver;
@@ -315,10 +316,11 @@ pub use id::{
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
     FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
     FinMileageRateId, FinPeriodId, FinPostingId, GroupId, InsightDashboardId, InsightTileId,
-    InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId, InvSalesOrderId, InvSoDeliveryId,
-    InvSoInvoiceId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId,
-    ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId,
-    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId,
+    InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId, InvSupplierId, LabelId, MailboxId, MeetingId,
+    MessageId, ProjectId, ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId,
+    SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId,
+    TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

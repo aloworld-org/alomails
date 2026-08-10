@@ -235,6 +235,7 @@ DELETE /finance/expenses/{id} -> finance.expense.delete
 DELETE /finance/mileage/{id} -> finance.mileage.delete
 DELETE /inventory/locations/{id} -> inventory.location.delete
 DELETE /inventory/purchase-orders/{id} -> inventory.purchase_order.delete
+DELETE /inventory/reorder-rules/{id} -> inventory.reorder_rule.delete
 DELETE /inventory/sales-orders/{id} -> inventory.sales_order.delete
 DELETE /inventory/suppliers/{id}/products/{product_id} -> inventory.supplier.product.delete
 DELETE /projects/clients/{id} -> projects.client.delete
@@ -255,6 +256,7 @@ PATCH /finance/accounts/{id} -> finance.account.update
 PATCH /finance/expenses/{id} -> finance.expense.update
 PATCH /inventory/locations/{id} -> inventory.location.update
 PATCH /inventory/purchase-orders/{id} -> inventory.purchase_order.update
+PATCH /inventory/reorder-rules/{id} -> inventory.reorder_rule.update
 PATCH /inventory/sales-orders/{id} -> inventory.sales_order.update
 PATCH /inventory/suppliers/{id} -> inventory.supplier.update
 PATCH /projects/milestones/{id} -> projects.milestone.update
@@ -322,6 +324,7 @@ POST /inventory/purchase-orders -> inventory.purchase_order.create
 POST /inventory/purchase-orders/{id}/cancel -> inventory.purchase_order.cancel
 POST /inventory/purchase-orders/{id}/receipts -> inventory.purchase_order.receipt.create
 POST /inventory/purchase-orders/{id}/send -> inventory.purchase_order.send
+POST /inventory/reorder-rules -> inventory.reorder_rule.create
 POST /inventory/sales-orders -> inventory.sales_order.create
 POST /inventory/sales-orders/{id}/cancel -> inventory.sales_order.cancel
 POST /inventory/sales-orders/{id}/confirm -> inventory.sales_order.confirm

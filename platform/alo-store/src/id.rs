@@ -486,6 +486,16 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One standing instruction about how much of a product to keep at a place
+    /// (alo Inventory, ADR 0035, wave B5.07). Its identity is really the pair
+    /// `(product, location)` — the unique index says so — and it carries an id
+    /// of its own only so a screen can `PATCH` and `DELETE` one row without
+    /// spelling both ends into the path
+    /// (`docs/design/inventory.md`, "Reorder rules and the shortage query").
+    InvReorderRuleId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

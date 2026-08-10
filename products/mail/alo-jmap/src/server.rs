@@ -25,12 +25,12 @@ use crate::{
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
     insights_gallery, inventory_locations, inventory_moves, inventory_po, inventory_po_print,
-    inventory_po_receipts, inventory_po_send, inventory_so, inventory_so_deliveries,
-    inventory_so_invoice, inventory_stock, inventory_supplier_prices, inventory_suppliers,
-    meet_routes, projects_clients, projects_invoices, projects_plan, projects_reports,
-    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, scoped_roles,
-    security, session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe,
-    wopi, workspace_search,
+    inventory_po_receipts, inventory_po_send, inventory_reorder, inventory_so,
+    inventory_so_deliveries, inventory_so_invoice, inventory_stock, inventory_supplier_prices,
+    inventory_suppliers, meet_routes, projects_clients, projects_invoices, projects_plan,
+    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
+    schedule, scoped_roles, security, session, settings, share, signup_route, sites, snooze,
+    spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -556,6 +556,30 @@ pub fn app_with_site_domain_dns(
         .route(
             "/inventory/sales-orders/{id}/invoices",
             get(inventory_so_invoice::list_invoices),
+        )
+        // Reorder rules and the shortage report (B5.07). The rules are the only
+        // thing a tenant types; the report is derived — on-hand from the
+        // ledger, on-order from the placed purchase orders, committed from the
+        // confirmed sales orders — so it has no writable surface and never
+        // will. The `.csv` twin names its format in the URL, as every report
+        // before it does (B1.20).
+        .route(
+            "/inventory/reorder-rules",
+            get(inventory_reorder::list_rules).post(inventory_reorder::create_rule),
+        )
+        .route(
+            "/inventory/reorder-rules/{id}",
+            get(inventory_reorder::get_rule)
+                .patch(inventory_reorder::update_rule)
+                .delete(inventory_reorder::delete_rule),
+        )
+        .route(
+            "/inventory/shortages",
+            get(inventory_reorder::list_shortages),
+        )
+        .route(
+            "/inventory/shortages.csv",
+            get(inventory_reorder::shortages_csv),
         )
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the
