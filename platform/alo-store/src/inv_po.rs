@@ -201,6 +201,38 @@ impl PoStatus {
         )))
     }
 
+    /// The guard receiving runs before it books a single movement: goods can
+    /// only arrive against an order the supplier actually has.
+    ///
+    /// A **draft** is refused because nobody has asked for the goods, a
+    /// **received** one because there is nothing left to come, and a
+    /// **cancelled** one because we told them to stop — a lorry that turns up
+    /// against any of the three is a conversation, not a booking, and stock
+    /// booked in silently is how a shortage report starts lying.
+    ///
+    /// A second receipt against a `partially_received` order is ordinary and is
+    /// **not** a transition ([`PoStatus::can_advance_to`] never allows a state
+    /// to itself), which is why this guard exists beside the table rather than
+    /// inside it.
+    ///
+    /// # Errors
+    /// [`StoreError::Conflict`] (`409` at the route edge) naming the state that
+    /// refused and what to do about it.
+    pub fn ensure_receivable(self) -> Result<()> {
+        if self.is_open() {
+            return Ok(());
+        }
+        let because = match self {
+            Self::Draft => "it has not been sent to the supplier yet",
+            Self::Received => "everything on it has already arrived",
+            _ => "it was cancelled",
+        };
+        Err(StoreError::Conflict(format!(
+            "goods cannot be received against a purchase order that is {}: {because}",
+            self.as_str()
+        )))
+    }
+
     /// The guard cancelling runs **in addition** to the transition table:
     /// giving up on an order some of whose goods have already arrived is
     /// accepting a short delivery as final, so it has to be said out loud.
@@ -463,13 +495,20 @@ impl AccountStore {
 
     /// The status of one of this tenant's orders, without taking a lock — the
     /// cheap pre-check that lets a write refuse a frozen document before it
-    /// does any other work. It is never the authority: every write re-reads the
-    /// status under [`AccountStore::lock_purchase_order`] before writing.
+    /// does any other work, and that answers `NotFound` for another tenant's id
+    /// **before** anything else about the request is judged. It is never the
+    /// authority: every write re-reads the status under
+    /// [`AccountStore::lock_purchase_order`] before writing.
+    ///
+    /// `pub(crate)` for receiving ([`crate::inv_po_receive`]), which has the
+    /// same two reasons to ask and one more: resolving the places goods came
+    /// from and went to must not produce a refusal about a document the caller
+    /// is not allowed to know exists.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] when the id is absent or another tenant's;
     /// [`StoreError::Db`] on failure.
-    async fn purchase_order_status(&self, id: &InvPurchaseOrderId) -> Result<PoStatus> {
+    pub(crate) async fn purchase_order_status(&self, id: &InvPurchaseOrderId) -> Result<PoStatus> {
         let stored: Option<String> = sqlx::query_scalar(
             "SELECT status FROM inv_purchase_orders WHERE tenant_id = $1 AND id = $2",
         )
@@ -1006,6 +1045,25 @@ mod tests {
                 }
                 other => panic!("expected Conflict for {frozen:?}, got {other:?}"),
             }
+        }
+    }
+
+    #[test]
+    fn goods_arrive_only_against_an_order_the_supplier_has() {
+        for open in [PoStatus::Sent, PoStatus::PartiallyReceived] {
+            assert!(open.ensure_receivable().is_ok(), "{open:?}");
+        }
+        for (shut, because) in [
+            (PoStatus::Draft, "not been sent"),
+            (PoStatus::Received, "already arrived"),
+            (PoStatus::Cancelled, "cancelled"),
+        ] {
+            let message = match shut.ensure_receivable() {
+                Err(StoreError::Conflict(message)) => message,
+                other => panic!("expected Conflict for {shut:?}, got {other:?}"),
+            };
+            assert!(message.contains(shut.as_str()), "{message}");
+            assert!(message.contains(because), "{message}");
         }
     }
 

@@ -25,11 +25,11 @@ use crate::{
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
     insights_gallery, inventory_locations, inventory_moves, inventory_po, inventory_po_print,
-    inventory_po_send, inventory_stock, inventory_supplier_prices, inventory_suppliers,
-    meet_routes, projects_clients, projects_invoices, projects_plan, projects_reports,
-    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, scoped_roles,
-    security, session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe,
-    wopi, workspace_search,
+    inventory_po_receipts, inventory_po_send, inventory_stock, inventory_supplier_prices,
+    inventory_suppliers, meet_routes, projects_clients, projects_invoices, projects_plan,
+    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
+    schedule, scoped_roles, security, session, settings, share, signup_route, sites, snooze,
+    spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -496,6 +496,14 @@ pub fn app_with_site_domain_dns(
         .route(
             "/inventory/purchase-orders/{id}/send",
             post(inventory_po_send::send_purchase_order),
+        )
+        // Receiving (B5.05b): one act with three consequences — the movements
+        // into stock, the order's new state, and the draft bill for what
+        // arrived. A sub-resource, so the audit trail files it against the
+        // order it happened to.
+        .route(
+            "/inventory/purchase-orders/{id}/receipts",
+            get(inventory_po_receipts::list_receipts).post(inventory_po_receipts::create_receipt),
         )
         .route(
             "/inventory/purchase-orders/{id}/print",

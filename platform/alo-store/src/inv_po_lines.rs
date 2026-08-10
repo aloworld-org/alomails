@@ -55,12 +55,45 @@ pub struct PoLine {
     pub product_id: Option<BillingProductId>,
     /// The shared line: id, print position, and the five snapshotted fields.
     pub line: Line,
+    /// How much of this line has arrived, in the same milli-units it was
+    /// ordered in (B5.05b). `0` on a line nothing has come in against, and on
+    /// every charge in words — freight does not arrive on a pallet.
+    ///
+    /// An accumulator rather than a fold over the movement ledger, because two
+    /// lines of one order may name the same product and the ledger could then
+    /// not say which line a movement belongs to. Written only by the receiving
+    /// transaction, which writes those movements in the same breath.
+    pub received_qty_milli: i64,
 }
 
 impl PoLine {
     /// The three numbers this line contributes to the order's totals.
     pub fn figures(&self) -> LineFigures {
         self.line.figures()
+    }
+
+    /// Whether this line is goods that will move into stock when they arrive,
+    /// rather than a charge in words.
+    pub fn is_goods(&self) -> bool {
+        self.product_id.is_some()
+    }
+
+    /// How much of this line is still to come, in milli-units.
+    ///
+    /// Zero for a charge in words and for a line that is complete; never
+    /// negative, because an over-receipt is refused before it is written
+    /// ([`crate::inv_po_receive`]) and the database's own CHECK backs that.
+    pub fn outstanding_qty_milli(&self) -> i64 {
+        if !self.is_goods() {
+            return 0;
+        }
+        (self.line.qty_milli - self.received_qty_milli).max(0)
+    }
+
+    /// Whether everything this line asked for has arrived. A charge in words is
+    /// never outstanding, so it never holds an order open.
+    pub fn is_fully_received(&self) -> bool {
+        self.outstanding_qty_milli() == 0
     }
 }
 
@@ -138,7 +171,7 @@ where
 {
     let rows: Vec<PoLineRow> = sqlx::query_as(
         "SELECT id, line_order, description, unit, qty_milli, unit_price_cents, vat_rate_bp, \
-             product_id \
+             product_id, received_qty_milli \
          FROM inv_purchase_order_lines WHERE tenant_id = $1 AND po_id = $2 ORDER BY line_order",
     )
     .bind(tenant)
@@ -209,6 +242,7 @@ struct PoLineRow {
     #[sqlx(flatten)]
     shared: LineRow,
     product_id: Option<String>,
+    received_qty_milli: i64,
 }
 
 impl PoLineRow {
@@ -216,6 +250,7 @@ impl PoLineRow {
         PoLine {
             product_id: self.product_id.map(BillingProductId::new),
             line: self.shared.into_line(),
+            received_qty_milli: self.received_qty_milli,
         }
     }
 }
@@ -310,6 +345,52 @@ mod tests {
         let mut negative_price = words(1_000);
         negative_price.line.unit_price_cents = -1;
         assert!(refusal(&[negative_price]).starts_with("line 1: "));
+    }
+
+    /// A stored line, as receiving reads it back.
+    fn stored(product: Option<&str>, ordered: i64, received: i64) -> PoLine {
+        PoLine {
+            product_id: product.map(BillingProductId::new),
+            line: Line {
+                id: BillingLineId::new("line-1"),
+                line_order: 0,
+                description: "Blue chair".to_owned(),
+                unit: "piece".to_owned(),
+                qty_milli: ordered,
+                unit_price_cents: 4_300,
+                vat_rate_bp: 1900,
+            },
+            received_qty_milli: received,
+        }
+    }
+
+    #[test]
+    fn what_is_still_to_come_is_what_was_ordered_less_what_arrived() {
+        let untouched = stored(Some("prod-1"), 4_000, 0);
+        assert!(untouched.is_goods());
+        assert_eq!(untouched.outstanding_qty_milli(), 4_000);
+        assert!(!untouched.is_fully_received());
+
+        let part = stored(Some("prod-1"), 4_000, 2_500);
+        assert_eq!(part.outstanding_qty_milli(), 1_500);
+        assert!(!part.is_fully_received());
+
+        let whole = stored(Some("prod-1"), 4_000, 4_000);
+        assert_eq!(whole.outstanding_qty_milli(), 0);
+        assert!(whole.is_fully_received());
+    }
+
+    #[test]
+    fn a_charge_in_words_never_holds_an_order_open() {
+        // Freight does not arrive on a pallet: it is not outstanding, whatever
+        // its quantity says, and a negative one (a discount) cannot make the
+        // outstanding figure negative either.
+        for qty in [1_000, -1_000] {
+            let words = stored(None, qty, 0);
+            assert!(!words.is_goods());
+            assert_eq!(words.outstanding_qty_milli(), 0);
+            assert!(words.is_fully_received());
+        }
     }
 
     #[test]

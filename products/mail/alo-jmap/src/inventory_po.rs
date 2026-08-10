@@ -80,7 +80,12 @@ fn order_json(o: &PurchaseOrder, supplier_name: &str, today: Date) -> Value {
 }
 
 /// One ordered line: the shared document line, plus the catalog item it will
-/// put into stock when it arrives (`null` for a charge in words).
+/// put into stock when it arrives (`null` for a charge in words), plus how much
+/// of it already has.
+///
+/// `outstandingQtyMilli` is derived, never stored — what a receipt sheet shows
+/// in its "still to come" column — and it is `0` on a charge in words, because
+/// freight does not arrive on a pallet and must not hold an order open.
 fn line_json(l: &PoLine) -> Value {
     json!({
         "id": l.line.id.as_str(),
@@ -88,6 +93,8 @@ fn line_json(l: &PoLine) -> Value {
         "description": l.line.description,
         "unit": l.line.unit,
         "qtyMilli": l.line.qty_milli,
+        "receivedQtyMilli": l.received_qty_milli,
+        "outstandingQtyMilli": l.outstanding_qty_milli(),
         "unitPriceCents": l.line.unit_price_cents,
         "vatRateBp": l.line.vat_rate_bp,
         "netCents": l.line.net_cents(),

@@ -451,6 +451,14 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One delivery against one purchase order (alo Inventory, ADR 0035, wave
+    /// B5.05b) — what arrived, where it was put, and the movements it wrote.
+    /// An order has as many of these as the supplier sent lorries
+    /// (`docs/design/inventory.md`, "Receiving").
+    InvPoReceiptId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

@@ -107,6 +107,7 @@ pub mod inventory_locations;
 pub mod inventory_moves;
 pub mod inventory_po;
 pub mod inventory_po_print;
+pub mod inventory_po_receipts;
 pub mod inventory_po_send;
 pub mod inventory_stock;
 pub mod inventory_supplier_prices;

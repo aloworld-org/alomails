@@ -16,6 +16,14 @@
 //!   ([`crate::billing_einvoice_import`]), so an incoherent invoice is refused
 //!   at the door rather than booked and discovered at the year end.
 //!
+//! **One bill is drafted rather than received**, and it is the exception that
+//! proves both rules: receiving a purchase order ([`crate::inv_po_receive`])
+//! raises a bill for what we ordered and *actually took delivery of*, so that a
+//! delivery is never silently unbilled while the supplier's own invoice is in
+//! the post. It carries no syntax and no checksum, because it was read from no
+//! file, and it is `received` like every other — nobody has decided about it,
+//! and the supplier's real document arrives later as a bill of its own.
+//!
 //! **A decision is final.** `received → approved` or `received → rejected`, and
 //! nothing else: an approved bill is a liability the accounts will carry, and
 //! un-approving it after the fact would rewrite history. A bill approved by
@@ -307,6 +315,30 @@ impl AccountStore {
     /// [`StoreError::Validation`] when a field breaks its rule;
     /// [`StoreError::Conflict`] on a duplicate; [`StoreError::Db`] on failure.
     pub async fn create_billing_bill(&self, input: &NewBill) -> Result<BillingBillId> {
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let id = self.create_billing_bill_in(&mut tx, input).await?;
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(id)
+    }
+
+    /// [`AccountStore::create_billing_bill`], inside a transaction the caller
+    /// owns.
+    ///
+    /// The bill and whatever raised it belong in **one** transaction: receiving
+    /// a purchase order writes movements, the order's new state and this draft
+    /// bill together ([`crate::inv_po_receive`]), and a tenant must never be
+    /// left holding two of the three. Every rule and every refusal is the
+    /// public door's; only the `BEGIN` and the `COMMIT` move to the caller.
+    ///
+    /// # Errors
+    /// Exactly [`AccountStore::create_billing_bill`]'s. A caller must **not**
+    /// catch them and carry on inside the same transaction: an error here has
+    /// already poisoned it, and the only correct next step is to drop it.
+    pub(crate) async fn create_billing_bill_in(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        input: &NewBill,
+    ) -> Result<BillingBillId> {
         let bill = normalize_bill(input)?;
         let lines = normalize_lines(&input.lines)?;
         if lines.is_empty() {
@@ -316,7 +348,6 @@ impl AccountStore {
         }
 
         let id = BillingBillId::generate();
-        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         let inserted = sqlx::query(
             "INSERT INTO billing_bills (tenant_id, id, source_syntax, source_sha256, type_code, \
                  supplier_name, supplier_vat_id, supplier_legal_id, supplier_line1, \
@@ -331,7 +362,9 @@ impl AccountStore {
         )
         .bind(self.tenant.as_str())
         .bind(id.as_str())
-        .bind(bill.source_syntax.map(EInvoiceSyntax::as_str))
+        // No syntax is the empty string, not NULL: a bill we drafted ourselves
+        // came from no file, and the column has always been NOT NULL.
+        .bind(bill.source_syntax.map_or("", EInvoiceSyntax::as_str))
         .bind(&bill.source_sha256)
         .bind(bill.type_code)
         .bind(&bill.supplier.name)
@@ -361,7 +394,7 @@ impl AccountStore {
         .bind(bill.totals.prepaid_cents)
         .bind(bill.totals.payable_cents)
         .bind(self.user.as_str())
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await
         .map_err(StoreError::Db)?;
         if inserted.rows_affected() == 0 {
@@ -377,10 +410,9 @@ impl AccountStore {
             let order = i32::try_from(index)
                 .map_err(|_| StoreError::Validation("a bill has too many lines".to_owned()))?;
             BILL_LINES
-                .write(&mut tx, self.tenant.as_str(), id.as_str(), order, line)
+                .write(tx, self.tenant.as_str(), id.as_str(), order, line)
                 .await?;
         }
-        tx.commit().await.map_err(StoreError::Db)?;
         Ok(id)
     }
 
@@ -579,7 +611,7 @@ fn normalize_bill(input: &NewBill) -> Result<NormalizedBill> {
         email: bounded("supplier email", &input.supplier.email, 200)?,
         iban: bounded("supplier IBAN", &input.supplier.iban, 40)?,
     };
-    let source_sha256 = hex_sha256(&input.source_sha256)?;
+    let source_sha256 = source_checksum(input.source_syntax, &input.source_sha256)?;
     let issue_date = input.issue_date.ok_or_else(|| {
         StoreError::Validation("a bill must carry the date the supplier issued it".to_owned())
     })?;
@@ -644,6 +676,30 @@ fn checked_totals(totals: BillTotals) -> Result<BillTotals> {
         }
     }
     Ok(totals)
+}
+
+/// The checksum a bill records of the file it was read from — and **no**
+/// checksum for a bill that was read from no file.
+///
+/// A bill drafted from a goods receipt ([`crate::inv_po_receive`]) states what
+/// we ordered and received; there is no document to hash, and inventing a hash
+/// of our own bytes would claim a provenance the record does not have. So a
+/// bill with no syntax carries an empty checksum, and one that names a syntax
+/// must carry a real hex SHA-256 — the value that ties it to the archived file.
+///
+/// # Errors
+/// [`StoreError::Validation`] when a bill from a file has no usable checksum,
+/// or a bill from no file claims one.
+fn source_checksum(syntax: Option<EInvoiceSyntax>, value: &str) -> Result<String> {
+    if syntax.is_none() {
+        if value.is_empty() {
+            return Ok(String::new());
+        }
+        return Err(StoreError::Validation(
+            "a bill that was read from no file cannot carry a file's checksum".to_owned(),
+        ));
+    }
+    hex_sha256(value)
 }
 
 /// Checks a hex SHA-256, which is written by us and never by a caller: a
@@ -1032,6 +1088,27 @@ mod tests {
                 .contains("checksum")
             );
         }
+    }
+
+    #[test]
+    fn a_bill_read_from_no_file_carries_no_checksum_and_may_not_claim_one() {
+        // The shape a goods receipt drafts (B5.05b): our own statement of what
+        // we ordered and received, with no supplier document behind it.
+        let ours = NewBill {
+            source_syntax: None,
+            source_sha256: String::new(),
+            ..bill()
+        };
+        let normalized = normalize_bill(&ours).unwrap_or_else(|e| panic!("rejected: {e}"));
+        assert!(normalized.source_syntax.is_none());
+        assert!(normalized.source_sha256.is_empty());
+
+        let claiming = NewBill {
+            source_syntax: None,
+            source_sha256: "a".repeat(64),
+            ..bill()
+        };
+        assert!(refused(&claiming).contains("read from no file"));
     }
 
     #[test]

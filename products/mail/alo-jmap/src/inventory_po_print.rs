@@ -269,6 +269,7 @@ mod tests {
                 unit_price_cents: 4_300,
                 vat_rate_bp: 1900,
             },
+            received_qty_milli: 0,
         };
         let figures = [LineFigures {
             qty_milli: 4_000,
