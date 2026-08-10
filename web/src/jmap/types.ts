@@ -750,7 +750,10 @@ export interface AgentExecuteResultDto {
  *  the guards in `AgentResultCard`, never by the type alone. */
 export interface AgentResultDto {
   kind: string;
-  id: string;
+  /** The record the tool touched. Absent for a tool that touched a *set* of
+   *  them (`categorise_transactions` suggests on many claims at once), which is
+   *  why it is optional rather than an empty string standing in for nothing. */
+  id?: string;
   title?: string;
 }
 
@@ -787,6 +790,38 @@ export interface TimesheetDraftResultDto extends AgentResultDto {
   overlaps: number;
   billable: boolean;
   skipped: { summary: string; day: string; reason: string }[];
+}
+
+/** What `categorise_transactions` wrote (B4.14a): one *suggested* category per
+ *  unclassified claim, each waiting for the claimant to accept or decline it —
+ *  and, just as much part of the answer, the claims it suggested nothing for,
+ *  with a machine-readable reason the catalogue writes words for.
+ *
+ *  Nothing here is classified: `categoryId` on the claim itself is untouched
+ *  until a person accepts, which is what keeps a guess out of the books. */
+export interface CategoryProposalsResultDto extends AgentResultDto {
+  from: string;
+  to: string;
+  proposed: {
+    /** The claim the suggestion is about. */
+    id: string;
+    merchant: string | null;
+    spentOn: string | null;
+    grossCents: number | null;
+    currency: string | null;
+    categoryId: string;
+    /** The tenant's own word for it; `null` only if it was retired mid-flight. */
+    categoryName: string | null;
+    reason: string;
+    /** How many of the claimant's own past claims back it — the argument for
+     *  the suggestion, and the reason it is worth showing at all. */
+    evidence: number;
+  }[];
+  skipped: { id: string; merchant: string | null; spentOn: string | null; reason: string }[];
+  /** How many suggestions were written, as the server counted them. */
+  suggested: number;
+  /** How many claims were looked at in total. */
+  considered: number;
 }
 
 /** What `project_status_summary` read: figures only. The server composes no

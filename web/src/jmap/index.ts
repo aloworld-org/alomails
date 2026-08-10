@@ -76,6 +76,7 @@ export {
   type AgentActionDto,
   type AgentExecuteResultDto,
   type AgentResultDto,
+  type CategoryProposalsResultDto,
   type ProjectStatusResultDto,
   type TimeEntryResultDto,
   type TimesheetDraftResultDto,

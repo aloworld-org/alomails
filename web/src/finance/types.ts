@@ -53,6 +53,18 @@ export interface Expense {
   decisionNote: string;
   /** `YYYY-MM-DD` the money moved, or `null`. */
   reimbursedOn: string | null;
+  /** What the agent SUGGESTS this claim books to (B4.14a), or `null`. A
+   *  different field from `categoryId` on purpose: nothing books, reports or
+   *  returns a suggestion — it waits for the claimant to accept it. */
+  proposedCategoryId: string | null;
+  /** RFC 3339, when the suggestion was made. */
+  proposedAt: string | null;
+  /** Why, as a code (`merchantHistory`) — never a sentence: the words are
+   *  written here, in the reader's language. */
+  proposedReason: string | null;
+  /** RFC 3339, when the claimant declined a suggestion on this claim. Nothing
+   *  suggests one again after that. */
+  proposalDeclinedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

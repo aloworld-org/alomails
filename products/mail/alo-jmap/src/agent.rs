@@ -19,6 +19,7 @@ use time::format_description::well_known::Rfc3339;
 
 use crate::agent_billing as billing;
 use crate::agent_crm as crm;
+use crate::agent_finance as finance;
 use crate::agent_projects as projects;
 use crate::agent_timesheet as timesheet;
 use crate::ai::MAX_ASK_BYTES;
@@ -212,6 +213,12 @@ pub(crate) async fn execute_tool(
         // record.
         "draft_timesheet_from_calendar" => {
             timesheet::execute_draft_timesheet_from_calendar(account, args).await
+        }
+        // alo Finance's tools (B4.14a), on the same seam. What
+        // `categorise_transactions` writes is a suggestion on each claim, in a
+        // column no report reads until the claimant accepts it.
+        "categorise_transactions" => {
+            finance::execute_categorise_transactions(account, args).await
         }
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),

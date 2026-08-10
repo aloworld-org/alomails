@@ -91,6 +91,15 @@ pub(crate) fn expense_json(e: &Expense) -> Value {
         "decidedAt": e.decided_at.map(iso),
         "decisionNote": e.decision_note,
         "reimbursedOn": e.reimbursed_on.map(iso_date),
+        // What the agent SUGGESTS this claim books to (B4.14a), which is a
+        // different thing from `categoryId` and is read by nothing but the
+        // screen that offers it. `null` is the normal state.
+        "proposedCategoryId": e.proposed_category_id.as_ref().map(FinCategoryId::as_str),
+        "proposedAt": e.proposed_at.map(iso),
+        // A code, never a sentence: the client writes the words in the
+        // reader's own language.
+        "proposedReason": blank_to_none(Some(e.proposed_reason.clone())),
+        "proposalDeclinedAt": e.proposal_declined_at.map(iso),
         "createdAt": iso(e.created_at),
         "updatedAt": iso(e.updated_at),
     })
@@ -469,6 +478,58 @@ pub async fn withdraw_expense(
     let claim = account
         .acc
         .withdraw_expense(&FinExpenseId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "expense": expense_json(&claim) })))
+}
+
+/// `POST /finance/expenses/{id}/category/accept` → `{"expense": {…}}` — the
+/// claimant agrees with the suggested category, and it becomes the claim's own.
+///
+/// The claimant's verb on the claimant's claim, which is why it is here rather
+/// than beside the tool that made the suggestion ([`crate::agent_finance`]):
+/// accepting is *picking a category*, and it is subject to every rule picking
+/// one by hand is — the claim must still be theirs to change, and the word must
+/// still be one the tenant offers.
+///
+/// # Errors
+/// `401` without a valid bearer token; `404` when the claim is not the caller's
+/// own, or the suggested category has since been deleted; `409` when the claim
+/// has been handed in, or carries no suggestion to answer; `422` when the
+/// suggested category is no longer offered.
+pub async fn accept_expense_category(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let claim = account
+        .acc
+        .accept_category_proposal(&FinExpenseId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "expense": expense_json(&claim) })))
+}
+
+/// `POST /finance/expenses/{id}/category/decline` → `{"expense": {…}}` — the
+/// claimant says no, and nothing suggests a category for that claim again.
+///
+/// The refusal outlives the suggestion (`proposalDeclinedAt`): a suggestion a
+/// person has to decline twice is one they stop reading. The claim stays
+/// classifiable by hand, which is the point of saying no.
+///
+/// # Errors
+/// `401` without a valid bearer token; `404` when the claim is not the caller's
+/// own; `409` when it carries no suggestion to answer.
+pub async fn decline_expense_category(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let claim = account
+        .acc
+        .decline_category_proposal(&FinExpenseId::new(id))
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "expense": expense_json(&claim) })))

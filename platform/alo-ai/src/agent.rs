@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::agent_billing::{BILLING_GUIDANCE, BILLING_TOOL_DOC, BILLING_TOOLS};
 use crate::agent_crm::{CRM_GUIDANCE, CRM_TOOL_DOC, CRM_TOOLS};
+use crate::agent_finance::{FINANCE_GUIDANCE, FINANCE_TOOL_DOC, FINANCE_TOOLS};
 use crate::agent_projects::{PROJECTS_GUIDANCE, PROJECTS_TOOL_DOC, PROJECTS_TOOLS};
 use crate::{AiConfig, ChatMessage, InferenceError, WorkspaceSource, chat, render_sources};
 
@@ -97,7 +98,8 @@ If the request needs an action no tool covers, ANSWER instead and say you cannot
 pub fn system_prompt() -> String {
     format!(
         "{AGENT_SYSTEM_HEAD}{AGENT_SYSTEM_TOOLS}{BILLING_TOOL_DOC}{CRM_TOOL_DOC}{PROJECTS_TOOL_DOC}\
-         {BILLING_GUIDANCE}{CRM_GUIDANCE}{PROJECTS_GUIDANCE}{AGENT_SYSTEM_RULES}"
+         {FINANCE_TOOL_DOC}{BILLING_GUIDANCE}{CRM_GUIDANCE}{PROJECTS_GUIDANCE}{FINANCE_GUIDANCE}\
+         {AGENT_SYSTEM_RULES}"
     )
 }
 
@@ -112,6 +114,7 @@ pub fn is_agent_tool(tool: &str) -> bool {
         || BILLING_TOOLS.contains(&tool)
         || CRM_TOOLS.contains(&tool)
         || PROJECTS_TOOLS.contains(&tool)
+        || FINANCE_TOOLS.contains(&tool)
 }
 
 /// The chat messages for one agent turn. Pure and exported so the prompt is
@@ -307,17 +310,22 @@ mod tests {
             .chain(BILLING_TOOLS)
             .chain(CRM_TOOLS)
             .chain(PROJECTS_TOOLS)
+            .chain(FINANCE_TOOLS)
         {
             assert!(prompt.contains(&format!("- {tool}:")), "{tool} undescribed");
             assert!(is_agent_tool(tool), "{tool} is not allowed to execute");
         }
         assert_eq!(
             prompt.matches("\n- ").count(),
-            AGENT_TOOLS.len() + BILLING_TOOLS.len() + CRM_TOOLS.len() + PROJECTS_TOOLS.len(),
+            AGENT_TOOLS.len()
+                + BILLING_TOOLS.len()
+                + CRM_TOOLS.len()
+                + PROJECTS_TOOLS.len()
+                + FINANCE_TOOLS.len(),
             "the prompt describes exactly the tools that exist"
         );
         // A name from neither list is not executable, whatever it looks like.
-        for stranger in ["", "create_task ", "delete_invoice", "delete_deal"] {
+        for stranger in ["", "create_task ", "delete_invoice", "delete_deal", "post_entry"] {
             assert!(!is_agent_tool(stranger), "{stranger:?} must not be allowed");
         }
     }
@@ -332,11 +340,13 @@ mod tests {
         assert!(at("- create_task:") < at("- create_invoice_draft:"));
         assert!(at("- create_invoice_draft:") < at("- create_deal:"));
         assert!(at("- create_deal:") < at("- log_time:"));
+        assert!(at("- log_time:") < at("- categorise_transactions:"));
         // Every tool line comes before every product's guidance, so a model
         // reads the whole menu before it reads how to fill an order from it.
-        assert!(at("- project_status_summary:") < at("For a billing tool"));
+        assert!(at("- categorise_transactions:") < at("For a billing tool"));
         assert!(at("For a billing tool") < at("For a CRM tool"));
         assert!(at("For a CRM tool") < at("For a projects tool"));
-        assert!(at("For a projects tool") < at("Output ONLY the JSON object"));
+        assert!(at("For a projects tool") < at("For a finance tool"));
+        assert!(at("For a finance tool") < at("Output ONLY the JSON object"));
     }
 }

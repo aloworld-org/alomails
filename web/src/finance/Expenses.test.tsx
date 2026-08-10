@@ -47,6 +47,10 @@ const DRAFT: Expense = {
   decidedAt: null,
   decisionNote: "",
   reimbursedOn: null,
+  proposedCategoryId: null,
+  proposedAt: null,
+  proposedReason: null,
+  proposalDeclinedAt: null,
   createdAt: "2026-08-03T10:00:00Z",
   updatedAt: "2026-08-03T10:00:00Z",
 };

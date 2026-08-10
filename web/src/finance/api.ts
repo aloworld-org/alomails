@@ -181,6 +181,19 @@ export class FinanceApi {
     return this.#act(id, "withdraw");
   }
 
+  /** Agrees with the category the agent suggested: it becomes the claim's own
+   *  (B4.14a). The server applies every rule picking one by hand is subject to,
+   *  so this can refuse — with its own sentence. */
+  acceptExpenseCategory(id: string): Promise<Expense> {
+    return this.#act(id, "category/accept");
+  }
+
+  /** Declines it. Nothing suggests a category for that claim again; the person
+   *  can still pick one themselves. */
+  declineExpenseCategory(id: string): Promise<Expense> {
+    return this.#act(id, "category/decline");
+  }
+
   // ---- the approver's door -----------------------------------------------
 
   /** **Admin or accountant:** every claim of this tenant awaiting a decision,

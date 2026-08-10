@@ -25,6 +25,7 @@ import {
   Reply,
   Send,
   Sparkles,
+  Tags,
   Trash2,
   type LucideIcon,
 } from "lucide-react";
@@ -343,6 +344,26 @@ function describeAction(action: AgentActionDto): ActionView {
         title: strings.agentActDraftTimesheet,
         fields,
         note: strings.agentDraftTimesheetNote,
+      };
+    }
+    // The finance agent (ADR 0035, B4.14a). The user is approving a *period of
+    // their own claims being looked at* — no category is on this card because
+    // there is none to approve: the suggestions come from what they have
+    // already agreed to, and each of them is answered afterwards, one at a time.
+    case "categorise_transactions": {
+      const from = dayOf(str(a, "from"));
+      const to = dayOf(str(a, "to")) || from;
+      const fields: Field[] = [];
+      if (from !== "")
+        fields.push({
+          label: strings.agentCategoriseFieldPeriod,
+          value: strings.agentDraftedRange(from, to),
+        });
+      return {
+        icon: Tags,
+        title: strings.agentActCategorise,
+        fields,
+        note: strings.agentCategoriseNote,
       };
     }
     case "create_event": {

@@ -115,6 +115,7 @@ const CLAIMANTS_STATUSES: &str = "'draft', 'rejected'";
 pub(crate) const EXPENSE_COLS: &str = "id, user_id, spent_on, category_id, merchant, description, \
      gross_cents, vat_cents, vat_rate_bp, currency, method, project_id, receipt_node_id, \
      status, submitted_at, decided_by, decided_at, decision_note, reimbursed_on, \
+     proposed_category_id, proposed_at, proposed_reason, proposal_declined_at, \
      created_at, updated_at";
 
 /// Whose money paid, which is what the approval books.
@@ -378,6 +379,19 @@ pub struct Expense {
     pub decision_note: String,
     /// The day the money was paid back (B4.05b).
     pub reimbursed_on: Option<Date>,
+    /// What the agent SUGGESTS this claim books to (B4.14a,
+    /// [`crate::fin_categorise`]), if anything. Deliberately a different field
+    /// from [`Self::category_id`], and read by nothing but the screen that
+    /// offers it: a guess in the decided column would be in the P&L.
+    pub proposed_category_id: Option<FinCategoryId>,
+    /// When that suggestion was made.
+    pub proposed_at: Option<OffsetDateTime>,
+    /// Why it was suggested, as a machine-readable code — never a sentence.
+    /// Empty when there is no suggestion.
+    pub proposed_reason: String,
+    /// When the claimant declined a suggestion on this claim. Kept after the
+    /// suggestion itself is cleared, so nothing offers the same word again.
+    pub proposal_declined_at: Option<OffsetDateTime>,
     /// When the claim was written.
     pub created_at: OffsetDateTime,
     /// When it was last changed.
@@ -570,6 +584,12 @@ impl AccountStore {
     /// first. A **rejected** claim is editable — the point of a refusal is that
     /// the person fixes it and hands it in again.
     ///
+    /// Any edit clears an open **suggestion** ([`crate::fin_categorise`]): it
+    /// was made about the claim as it stood, and a suggestion about a merchant
+    /// that has since changed is an offer about a different purchase. The
+    /// claimant's earlier "no" is not cleared — that was about the suggesting,
+    /// not about the claim.
+    ///
     /// # Errors
     /// [`StoreError::NotFound`] when the claim is not the caller's own, or a
     /// link is not one they can reach; [`StoreError::Conflict`] when somebody is
@@ -584,6 +604,7 @@ impl AccountStore {
             "UPDATE fin_expenses SET spent_on = $4, category_id = $5, merchant = $6, \
                  description = $7, gross_cents = $8, vat_cents = $9, vat_rate_bp = $10, \
                  currency = $11, method = $12, project_id = $13, receipt_node_id = $14, \
+                 proposed_category_id = NULL, proposed_at = NULL, proposed_reason = '', \
                  updated_at = now() \
              WHERE tenant_id = $1 AND user_id = $2 AND id = $3 AND status IN ({claimants}) \
              RETURNING {EXPENSE_COLS}",
@@ -1094,6 +1115,10 @@ pub(crate) struct ExpenseRow {
     decided_at: Option<OffsetDateTime>,
     decision_note: String,
     reimbursed_on: Option<Date>,
+    proposed_category_id: Option<String>,
+    proposed_at: Option<OffsetDateTime>,
+    proposed_reason: String,
+    proposal_declined_at: Option<OffsetDateTime>,
     created_at: OffsetDateTime,
     updated_at: OffsetDateTime,
 }
@@ -1124,6 +1149,10 @@ impl ExpenseRow {
             decided_at: self.decided_at,
             decision_note: self.decision_note,
             reimbursed_on: self.reimbursed_on,
+            proposed_category_id: self.proposed_category_id.map(FinCategoryId::new),
+            proposed_at: self.proposed_at,
+            proposed_reason: self.proposed_reason,
+            proposal_declined_at: self.proposal_declined_at,
             created_at: self.created_at,
             updated_at: self.updated_at,
         })

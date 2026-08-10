@@ -99,3 +99,35 @@
   font-weight: 600;
   color: var(--text-tertiary);
 }
+
+/* The finance agent's suggestions (B4.14a). Each line is a thing to answer, not
+   a fact to read, so it carries its own two verbs on the right — the reason it
+   is a row of its own rather than a `.item` with an aside. */
+.answerable {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+.answerName {
+  overflow-wrap: anywhere;
+}
+.answerCategory {
+  margin-left: auto;
+  flex: none;
+  color: var(--text-secondary);
+}
+.answerVerbs {
+  flex: none;
+  display: flex;
+  gap: var(--space-1);
+}
+/* What a line becomes once it has been answered: the answer, quietly, where
+   the buttons were. */
+.answered {
+  flex: none;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}

@@ -1947,6 +1947,45 @@ export const en = {
         return "left out";
     }
   },
+  // The finance agent's categorise tool (B4.14a). A suggestion is not a
+  // classification, and every word on the card says so — the server sends
+  // figures and reason codes only.
+  agentActCategorise: "Suggest categories",
+  agentCategoriseNote:
+    "Looks at your own claims with no category and suggests one for each, from the categories you have used for that merchant before. Nothing is classified until you accept it.",
+  agentCategoriseFieldPeriod: "Claims from",
+  agentCategoriseSuggested: (count: number): string =>
+    count === 1 ? "1 suggestion" : `${count} suggestions`,
+  agentCategoriseNone: "Nothing to suggest",
+  agentCategoriseConsidered: (count: number): string =>
+    count === 1 ? "1 claim looked at" : `${count} claims looked at`,
+  agentCategoriseEvidence: (times: number): string =>
+    times === 1 ? "booked here once before" : `booked here ${times} times before`,
+  agentCategoriseAccept: "Accept",
+  agentCategoriseDecline: "No",
+  agentCategoriseAccepted: "Accepted",
+  agentCategoriseDeclined: "Declined",
+  agentCategoriseLeftOut: "Left out",
+  agentCategoriseNoMerchant: "No merchant",
+  agentCategoriseFooter:
+    "Each suggestion waits for you — nothing is booked, reported or returned until you accept it.",
+  agentCategoriseFailed: "That could not be answered — try again from Finance.",
+  agentCategoriseReason: (reason: string): string => {
+    switch (reason) {
+      case "noMerchant":
+        return "no merchant to recognise it by";
+      case "noHistory":
+        return "you have never classified this merchant";
+      case "alreadyProposed":
+        return "already has a suggestion";
+      case "declined":
+        return "you said no to a suggestion here";
+      default:
+        // A reason a newer server knows and this client does not: say it was
+        // left out rather than pretend something was suggested.
+        return "left out";
+    }
+  },
   searchKind: (kind: string): string =>
     kind === "task"
       ? "Task"

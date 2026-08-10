@@ -80,6 +80,7 @@ pub mod fin_aged;
 pub mod fin_balance;
 pub mod fin_booking;
 pub mod fin_categories;
+pub mod fin_categorise;
 pub mod fin_expenses;
 pub mod fin_journal;
 pub mod fin_ledger;
@@ -242,6 +243,11 @@ pub use fin_aged::{
 };
 pub use fin_balance::{BalanceLine, BalanceSheet};
 pub use fin_categories::{CATEGORY_NAME_MAX_CHARS, ExpenseCategory, NewExpenseCategory};
+pub use fin_categorise::{
+    CATEGORISE_CLAIMS_MAX, CATEGORISE_HISTORY_MAX, CategorisePlan, CategoryProposal,
+    ClassifiedClaim, REASON_MERCHANT_HISTORY, SKIP_ALREADY_PROPOSED, SKIP_DECLINED,
+    SKIP_NO_HISTORY, SKIP_NO_MERCHANT, SkippedClaim, merchant_key, plan_categorisation,
+};
 pub use fin_expenses::{
     EXPENSE_DECISION_NOTE_MAX, EXPENSE_DESCRIPTION_MAX, Expense, ExpenseDecision, ExpenseMethod,
     ExpenseStatus, GROSS_MIN_CENTS, MERCHANT_MAX, NewExpense, PendingExpense,

@@ -996,6 +996,17 @@ pub fn app_with_site_domain_dns(
             "/finance/expenses/{id}/withdraw",
             post(finance_expenses::withdraw_expense),
         )
+        // Answering the agent's suggested category (B4.14a). The claimant's own
+        // verbs on their own claim, so they sit with the rest of the personal
+        // surface rather than with the tool that produced the suggestion.
+        .route(
+            "/finance/expenses/{id}/category/accept",
+            post(finance_expenses::accept_expense_category),
+        )
+        .route(
+            "/finance/expenses/{id}/category/decline",
+            post(finance_expenses::decline_expense_category),
+        )
         // Admin only, all three (`Account::require_admin`, checked in the
         // handler as `/admin/*` does).
         .route(

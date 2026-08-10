@@ -2,17 +2,24 @@
 // tools produce a record and nothing more to say — those get the one-line
 // confirmation the overlay always showed. The three Projects tools produce
 // something worth reading back: a suggested timesheet entry, a project's
-// figures (B3.10a), and a batch drafted from the diary (B3.10b).
+// figures (B3.10a), and a batch drafted from the diary (B3.10b). The finance
+// agent's suggested categories (B4.14a) go further and are *answerable* here —
+// each one is accepted or declined on the spot, because a suggestion a person
+// cannot answer where they see it is one they never answer at all.
 //
 // The figures come from the server as numbers only — it composes no sentence,
 // because a sentence written in the server is a user-facing string in one
 // language (CLAUDE.md). Every word around them is written here, in the
 // catalogue, so the summary is in the reader's language.
-import { CalendarClock, CalendarRange, Gauge } from "lucide-react";
+import { useState } from "react";
+import { CalendarClock, CalendarRange, Gauge, Tags } from "lucide-react";
 
+import { Button } from "../ds";
+import { financeMessage, useFinanceApi } from "../finance";
 import { strings } from "../i18n";
 import type {
   AgentResultDto,
+  CategoryProposalsResultDto,
   ProjectStatusResultDto,
   TimeEntryResultDto,
   TimesheetDraftResultDto,
@@ -37,6 +44,13 @@ function isTimeEntry(result: AgentResultDto): result is TimeEntryResultDto {
  *  checked, not their contents. */
 function isTimesheetDraft(result: AgentResultDto): result is TimesheetDraftResultDto {
   return result.kind === "timesheetDraft" && "drafted" in result && "skipped" in result;
+}
+
+/** A `categoryProposals` result — the finance agent's suggestions (B4.14a).
+ *  Both lists may be empty (a period with nothing unclassified in it), so the
+ *  shape is what is checked, not their contents. */
+function isCategoryProposals(result: AgentResultDto): result is CategoryProposalsResultDto {
+  return result.kind === "categoryProposals" && "proposed" in result && "skipped" in result;
 }
 
 /** One labelled figure. `aside` is a second fact on the same line ("3 open ·
@@ -241,10 +255,147 @@ function ProjectStatusResult({ status }: { status: ProjectStatusResultDto }) {
   );
 }
 
+/** The suggestions, each with the two verbs that answer it.
+ *
+ *  The verbs are here rather than only on the Finance screen because this is
+ *  where the person is looking when the suggestions are made, and a suggestion
+ *  nobody can answer where they see it is one they never answer at all. Each
+ *  answer is one call about one claim: the batch was suggested together, and it
+ *  is agreed to one at a time (ADR 0023).
+ *
+ *  An answered line keeps its place and says what was answered — removing it
+ *  would move every line below it under the reader's cursor. */
+function CategoryProposalsResult({ proposals }: { proposals: CategoryProposalsResultDto }) {
+  const api = useFinanceApi();
+  const [answered, setAnswered] = useState<Record<string, "accepted" | "declined">>({});
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function answer(id: string, verb: "accepted" | "declined") {
+    setBusy(id);
+    setError(null);
+    try {
+      if (verb === "accepted") await api.acceptExpenseCategory(id);
+      else await api.declineExpenseCategory(id);
+      setAnswered((done) => ({ ...done, [id]: verb }));
+    } catch (err) {
+      // The server's own sentence, which names the rule it refused on — a claim
+      // handed in while the card was open is the case a person must be told
+      // about rather than left clicking.
+      setError(financeMessage(err, strings.agentCategoriseFailed));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className={styles.card}>
+      <div className={styles.header}>
+        <Tags size={16} aria-hidden />
+        <span>{strings.agentActCategorise}</span>
+      </div>
+      <div className={styles.rows}>
+        <Row
+          label={strings.agentCategoriseFieldPeriod}
+          value={strings.agentDraftedRange(dayLabel(proposals.from), dayLabel(proposals.to))}
+        />
+        <Row
+          label={strings.agentDraftedTotal}
+          value={
+            proposals.proposed.length === 0
+              ? strings.agentCategoriseNone
+              : strings.agentCategoriseSuggested(proposals.proposed.length)
+          }
+          aside={strings.agentCategoriseConsidered(proposals.considered)}
+        />
+      </div>
+      {proposals.proposed.length > 0 && (
+        <ul className={styles.list}>
+          {proposals.proposed.map((one) => {
+            const done = answered[one.id];
+            return (
+              <li key={one.id} className={styles.answerable}>
+                <span className={styles.itemDay}>
+                  {one.spentOn === null ? "" : dayLabel(one.spentOn)}
+                </span>
+                <span className={styles.answerName}>
+                  {one.merchant === null || one.merchant === ""
+                    ? strings.agentCategoriseNoMerchant
+                    : one.merchant}
+                  <span className={styles.aside}>
+                    {" "}
+                    · {strings.agentCategoriseEvidence(one.evidence)}
+                  </span>
+                </span>
+                <span className={styles.answerCategory}>
+                  {one.categoryName ?? one.categoryId}
+                </span>
+                {done === undefined ? (
+                  <span className={styles.answerVerbs}>
+                    <Button
+                      size="sm"
+                      disabled={busy !== null}
+                      onClick={() => void answer(one.id, "accepted")}
+                    >
+                      {strings.agentCategoriseAccept}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy !== null}
+                      onClick={() => void answer(one.id, "declined")}
+                    >
+                      {strings.agentCategoriseDecline}
+                    </Button>
+                  </span>
+                ) : (
+                  <span className={styles.answered}>
+                    {done === "accepted"
+                      ? strings.agentCategoriseAccepted
+                      : strings.agentCategoriseDeclined}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {proposals.skipped.length > 0 && (
+        <>
+          <span className={styles.groupLabel}>{strings.agentCategoriseLeftOut}</span>
+          <ul className={styles.list}>
+            {proposals.skipped.map((skipped) => (
+              <li key={skipped.id} className={`${styles.item} ${styles.itemSkipped}`}>
+                <span className={styles.itemDay}>
+                  {skipped.spentOn === null ? "" : dayLabel(skipped.spentOn)}
+                </span>
+                <span className={styles.itemName}>
+                  {skipped.merchant === null || skipped.merchant === ""
+                    ? strings.agentCategoriseNoMerchant
+                    : skipped.merchant}
+                  <span className={styles.aside}>
+                    {" "}
+                    · {strings.agentCategoriseReason(skipped.reason)}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {error !== null && <p className={styles.note}>{error}</p>}
+      {proposals.proposed.length > 0 && (
+        <p className={styles.note}>{strings.agentCategoriseFooter}</p>
+      )}
+    </div>
+  );
+}
+
 export function AgentResultCard({ result }: { result: AgentResultDto }) {
   if (isProjectStatus(result)) return <ProjectStatusResult status={result} />;
   if (isTimeEntry(result)) return <TimeEntryResult entry={result} />;
   if (isTimesheetDraft(result)) return <TimesheetDraftResult draft={result} />;
+  if (isCategoryProposals(result)) return <CategoryProposalsResult proposals={result} />;
   // Every other tool: the confirmation this overlay has always shown.
   return <p className={styles.note}>{strings.agentDone}</p>;
 }
