@@ -38,7 +38,7 @@ import { FilePicker, fileSize, saveBlob } from "../drive";
 import { AgentActionCard } from "../shell/AgentActionCard";
 import { RoomPeople } from "./RoomPeople";
 import { useJmapClient } from "../jmap";
-import { Avatar, Button, useDialogs } from "../ds";
+import { Avatar, Button, useDialogs, useDismiss } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
 import type { DriveNodeDto } from "../jmap/types";
 import type {
@@ -241,6 +241,9 @@ function MessageLine({
 }) {
   const namesMe = me !== null && message.mentions.includes(me);
   const [picking, setPicking] = useState(false);
+  const pickerRef = useRef<HTMLSpanElement | null>(null);
+  const closePicker = useCallback(() => setPicking(false), []);
+  useDismiss(picking, pickerRef, closePicker);
   const [editing, setEditing] = useState<string | null>(null);
   // Mine to change: my own words, still standing, and never an agent's — an
   // agent's message is a record of what it said, not a draft.
@@ -269,7 +272,7 @@ function MessageLine({
       {editing === null && (
         <div className={styles.tools}>
           {reactable && (
-            <span className={styles.pickerWrap}>
+            <span className={styles.pickerWrap} ref={pickerRef}>
               <button
                 type="button"
                 className={styles.tool}
@@ -507,8 +510,14 @@ export function ChatModule() {
   const composerRef = useRef<HTMLInputElement | null>(null);
   const [caret, setCaret] = useState(0);
   const [showingPeople, setShowingPeople] = useState(false);
-  const [sharing, setSharing] = useState(false);
-  const [emoji, setEmoji] = useState(false);
+  // One composer popover at a time: opening either closes the other, so two
+  // menus can never sit open over each other.
+  const [composerMenu, setComposerMenu] = useState<"share" | "emoji" | null>(
+    null,
+  );
+  const composerMenuRef = useRef<HTMLDivElement | null>(null);
+  const closeComposerMenu = useCallback(() => setComposerMenu(null), []);
+  useDismiss(composerMenu !== null, composerMenuRef, closeComposerMenu);
   // Whether anything remains behind the oldest line held. Derived from the
   // last page's size rather than a count, because a count would be a second
   // truth about the same thing.
@@ -1380,112 +1389,122 @@ export function ChatModule() {
                     ))}
                   </ul>
                 )}
-                <span className={styles.shareWrap}>
-                  <button
-                    type="button"
-                    className={styles.composerTool}
-                    onClick={() => setSharing((open) => !open)}
-                    aria-label={strings.chatShare}
-                    title={strings.chatShare}
-                    aria-expanded={sharing}
-                  >
-                    <Plus size={18} />
-                  </button>
-                  {sharing && (
-                    <div className={styles.shareMenu} role="menu">
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className={styles.shareItem}
-                        onClick={() => {
-                          setSharing(false);
-                          setPicking(true);
-                        }}
-                      >
-                        <Paperclip size={15} className={styles.shareIcon} />
-                        <span>
-                          <span className={styles.shareName}>
-                            {strings.chatShareFile}
-                          </span>
-                          <span className={styles.shareHint}>
-                            {strings.chatShareFileHint}
-                          </span>
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className={styles.shareItem}
-                        onClick={() => {
-                          setSharing(false);
-                          // Open the '@' list by typing the character the
-                          // composer already understands, rather than
-                          // inventing a second way to name someone.
-                          insertAtCaret("@");
-                        }}
-                      >
-                        <Users size={15} className={styles.shareIcon} />
-                        <span>
-                          <span className={styles.shareName}>
-                            {strings.chatShareMention}
-                          </span>
-                          <span className={styles.shareHint}>
-                            {strings.chatShareMentionHint}
-                          </span>
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        role="menuitem"
-                        className={styles.shareItem}
-                        onClick={() => {
-                          setSharing(false);
-                          insertAtCaret("@alo ");
-                        }}
-                      >
-                        <Sparkles size={15} className={styles.shareIcon} />
-                        <span>
-                          <span className={styles.shareName}>
-                            {strings.chatShareAsk}
-                          </span>
-                          <span className={styles.shareHint}>
-                            {strings.chatShareAskHint}
-                          </span>
-                        </span>
-                      </button>
-                    </div>
-                  )}
-                </span>
-                <span className={styles.shareWrap}>
-                  <button
-                    type="button"
-                    className={styles.composerTool}
-                    onClick={() => setEmoji((open) => !open)}
-                    aria-label={strings.chatInsertEmoji}
-                    title={strings.chatInsertEmoji}
-                    aria-expanded={emoji}
-                  >
-                    <Smile size={18} />
-                  </button>
-                  {emoji && palette.length > 0 && (
-                    <div className={styles.emojiMenu} role="menu">
-                      {palette.map((glyph) => (
+                <div className={styles.composerMenus} ref={composerMenuRef}>
+                  <span className={styles.shareWrap}>
+                    <button
+                      type="button"
+                      className={styles.composerTool}
+                      onClick={() =>
+                        setComposerMenu((at) =>
+                          at === "share" ? null : "share",
+                        )
+                      }
+                      aria-label={strings.chatShare}
+                      title={strings.chatShare}
+                      aria-expanded={composerMenu === "share"}
+                    >
+                      <Plus size={18} />
+                    </button>
+                    {composerMenu === "share" && (
+                      <div className={styles.shareMenu} role="menu">
                         <button
-                          key={glyph}
                           type="button"
                           role="menuitem"
-                          className={styles.pickerOption}
+                          className={styles.shareItem}
                           onClick={() => {
-                            setEmoji(false);
-                            insertAtCaret(glyph);
+                            setComposerMenu(null);
+                            setPicking(true);
                           }}
                         >
-                          {glyph}
+                          <Paperclip size={15} className={styles.shareIcon} />
+                          <span>
+                            <span className={styles.shareName}>
+                              {strings.chatShareFile}
+                            </span>
+                            <span className={styles.shareHint}>
+                              {strings.chatShareFileHint}
+                            </span>
+                          </span>
                         </button>
-                      ))}
-                    </div>
-                  )}
-                </span>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={styles.shareItem}
+                          onClick={() => {
+                            setComposerMenu(null);
+                            // Open the '@' list by typing the character the
+                            // composer already understands, rather than
+                            // inventing a second way to name someone.
+                            insertAtCaret("@");
+                          }}
+                        >
+                          <Users size={15} className={styles.shareIcon} />
+                          <span>
+                            <span className={styles.shareName}>
+                              {strings.chatShareMention}
+                            </span>
+                            <span className={styles.shareHint}>
+                              {strings.chatShareMentionHint}
+                            </span>
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={styles.shareItem}
+                          onClick={() => {
+                            setComposerMenu(null);
+                            insertAtCaret("@alo ");
+                          }}
+                        >
+                          <Sparkles size={15} className={styles.shareIcon} />
+                          <span>
+                            <span className={styles.shareName}>
+                              {strings.chatShareAsk}
+                            </span>
+                            <span className={styles.shareHint}>
+                              {strings.chatShareAskHint}
+                            </span>
+                          </span>
+                        </button>
+                      </div>
+                    )}
+                  </span>
+                  <span className={styles.shareWrap}>
+                    <button
+                      type="button"
+                      className={styles.composerTool}
+                      onClick={() =>
+                        setComposerMenu((at) =>
+                          at === "emoji" ? null : "emoji",
+                        )
+                      }
+                      aria-label={strings.chatInsertEmoji}
+                      title={strings.chatInsertEmoji}
+                      aria-expanded={composerMenu === "emoji"}
+                    >
+                      <Smile size={18} />
+                    </button>
+                    {composerMenu === "emoji" && palette.length > 0 && (
+                      <div className={styles.emojiMenu} role="menu">
+                        {palette.map((glyph) => (
+                          <button
+                            key={glyph}
+                            type="button"
+                            role="menuitem"
+                            className={styles.pickerOption}
+                            onClick={() => {
+                              setComposerMenu(null);
+                              insertAtCaret(glyph);
+                            }}
+                          >
+                            {glyph}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </span>
+                </div>
                 {suggestions.length > 0 && (
                   <ul className={styles.suggestions} role="listbox">
                     {suggestions.map((choice, i) => (

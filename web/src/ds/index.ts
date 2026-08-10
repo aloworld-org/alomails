@@ -3,6 +3,7 @@
 // main.tsx.
 export { cx } from "./cx";
 export { Menu } from "./Menu";
+export { useDismiss } from "./useDismiss";
 export type { MenuItem } from "./Menu";
 export { ResizeHandle } from "./ResizeHandle";
 export { usePanelWidth, clampWidth } from "./usePanelWidth";
