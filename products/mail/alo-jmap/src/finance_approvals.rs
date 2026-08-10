@@ -107,6 +107,36 @@ pub async fn list_pending_expenses(
     })))
 }
 
+/// `GET /finance/expenses/reimbursable` → `{"expenses": [ … ]}` — **admin or
+/// accountant**: every claim this tenant has approved and still owes the
+/// employee for, oldest decision first.
+///
+/// Its own route rather than a status filter on the queue above, because it is
+/// not the same list read differently: an approved claim a company card paid is
+/// approved and is *not* reimbursable, and a payer's queue that listed it would
+/// be a queue with a line in it nobody can clear (the store's
+/// `reimbursable_expenses`, and the `409` [`reimburse_expense`] answers).
+///
+/// # Errors
+/// `401` without a valid bearer token; `403` when the caller is neither a
+/// tenant admin nor an accountant.
+pub async fn list_reimbursable_expenses(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account.require_finance()?;
+    let owed = state
+        .store
+        .for_tenant(account.tenant.clone())
+        .reimbursable_expenses()
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "expenses": owed.iter().map(pending_json).collect::<Vec<_>>(),
+    })))
+}
+
 /// `POST /finance/expenses/{id}/approve` `{note?}` → `{"expense": {…}}` —
 /// **admin or accountant**: the cost is the company's, and (when the
 /// employee's own money paid) so is the debt to them.

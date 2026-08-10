@@ -53,6 +53,10 @@ export interface Session {
   "alo:aiEnabled"?: boolean;
   /** alo extension: whether the signed-in user is a tenant admin. */
   "alo:isAdmin"?: boolean;
+  /** alo extension: the tenant-wide scoped roles this user holds (ADR 0035,
+   * B4.12) — separate from `alo:isAdmin`, which is the console. Absent on a
+   * server that predates the roles, which reads as "none". */
+  "alo:roles"?: TenantRole[];
   /** alo extension: addresses this user may send from (canonical + aliases). */
   "alo:sendAs"?: string[];
   /** RFC 8620 accounts map: the user's own account plus any shared mailboxes

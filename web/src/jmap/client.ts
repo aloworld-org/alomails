@@ -773,6 +773,20 @@ export class JmapClient {
     return session["alo:isAdmin"] === true;
   }
 
+  /**
+   * Whether this user may work the books: a tenant admin, or the holder of the
+   * `accountant` role (ADR 0035, B4.12) — the server's own `require_finance`,
+   * asked here only to decide whether to *draw* the approver's tab.
+   *
+   * It is never an access decision. Every finance route checks the same thing
+   * again and answers `403`, so a stale session hides a tab at worst and opens
+   * nothing at all.
+   */
+  async canWorkTheBooks(): Promise<boolean> {
+    const session = await this.session();
+    return session["alo:isAdmin"] === true || (session["alo:roles"] ?? []).includes("accountant");
+  }
+
   /** The addresses this user may send from (canonical + aliases), for the
    * compose From picker. Empty if the session doesn't carry the list. */
   async sendableAddresses(): Promise<string[]> {

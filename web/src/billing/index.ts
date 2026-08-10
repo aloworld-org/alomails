@@ -9,6 +9,12 @@ export { BillingModule } from "./BillingModule";
 // arithmetic that produces a total still lives on the server, always.
 export { formatAmount, formatRate, hundredthsToInput, parseHundredths } from "./money";
 
+// The same argument for a calendar day: a `YYYY-MM-DD` the server sent means
+// that day in every zone, and the one rule that keeps it from sliding a day
+// backwards for a reader west of Greenwich lives here. Finance's claims (B4.13)
+// read it rather than parsing a day as an instant of their own.
+export { formatDocumentDate } from "./dates";
+
 // The calendar periods a report is asked for. A quarter is a calendar fact, not
 // a billing one, and the pipeline report (B2.08) asks for exactly the same two
 // days as the VAT summary — so the second caller reads these rather than

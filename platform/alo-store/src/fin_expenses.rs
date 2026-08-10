@@ -855,15 +855,61 @@ impl TenantStore {
     /// [`StoreError::Db`] on failure; [`StoreError::Validation`] if a stored
     /// method or status is a word this build does not know.
     pub async fn pending_expenses(&self) -> Result<Vec<PendingExpense>> {
+        self.expense_queue(
+            &format!(
+                "e.status = '{submitted}'",
+                submitted = ExpenseStatus::Submitted.as_str()
+            ),
+            "e.spent_on, e.submitted_at, e.id",
+        )
+        .await
+    }
+
+    /// Every claim of this tenant the company has approved and **still owes the
+    /// employee**, oldest decision first — the payer's queue. **Admin or
+    /// accountant**, gated at the edge by `Account::require_finance`.
+    ///
+    /// Two conditions, and the second is the one a status filter alone would
+    /// get wrong: a claim a company card or petty cash paid left nobody owed
+    /// anything ([`ExpenseMethod::owes_the_employee`]), and
+    /// [`TenantStore::reimburse_expense`] refuses one — so listing it here
+    /// would be a queue of work that cannot be done, with no way to clear it.
+    ///
+    /// It is the same narrow cross-user read [`TenantStore::pending_expenses`]
+    /// is, for the same reason and with the same three facts: the claim, whose
+    /// it is, and what it books to.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure; [`StoreError::Validation`] if a stored
+    /// method or status is a word this build does not know.
+    pub async fn reimbursable_expenses(&self) -> Result<Vec<PendingExpense>> {
+        self.expense_queue(
+            &format!(
+                "e.status = '{approved}' AND e.method = '{personal}'",
+                approved = ExpenseStatus::Approved.as_str(),
+                personal = ExpenseMethod::Personal.as_str()
+            ),
+            "e.decided_at, e.spent_on, e.id",
+        )
+        .await
+    }
+
+    /// The one joined read behind both queues: the claims a `predicate` selects,
+    /// with the claimant's address and the category's name beside each.
+    ///
+    /// `predicate` and `order` are **code-authored SQL fragments** — the two
+    /// callers above are the only ones and both build theirs from the enums'
+    /// own words. Nothing a caller of the crate types reaches this string; the
+    /// tenant is bound, as every statement in the crate binds it.
+    async fn expense_queue(&self, predicate: &str, order: &str) -> Result<Vec<PendingExpense>> {
         let rows = sqlx::query_as::<_, PendingRow>(&format!(
             "SELECT {expense}, COALESCE(u.email, '') AS user_email, c.name AS category_name \
              FROM fin_expenses e \
              LEFT JOIN users u ON u.tenant_id = e.tenant_id AND u.id = e.user_id \
              LEFT JOIN fin_categories c ON c.tenant_id = e.tenant_id AND c.id = e.category_id \
-             WHERE e.tenant_id = $1 AND e.status = '{submitted}' \
-             ORDER BY e.spent_on, e.submitted_at, e.id LIMIT $2",
+             WHERE e.tenant_id = $1 AND {predicate} \
+             ORDER BY {order} LIMIT $2",
             expense = expense_cols_prefixed("e"),
-            submitted = ExpenseStatus::Submitted.as_str()
         ))
         .bind(self.tenant().as_str())
         .bind(PENDING_LIMIT)

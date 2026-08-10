@@ -347,6 +347,7 @@ async fn the_queue_is_this_tenants_and_nobody_decides_across_the_line() {
     // Tenant B's own queue is empty, and A's claim is absent from every read
     // and every statement B's handle can make about it.
     assert!(b.tenant.pending_expenses().await.unwrap().is_empty());
+    assert!(b.tenant.reimbursable_expenses().await.unwrap().is_empty());
     assert!(b.tenant.expense_by_id(&id).await.unwrap().is_none());
     assert_not_found(
         b.tenant
@@ -377,6 +378,16 @@ async fn the_queue_is_this_tenants_and_nobody_decides_across_the_line() {
     assert_not_found(colleague.submit_expense(&id).await);
     assert_not_found(colleague.withdraw_expense(&id).await);
     assert_not_found(colleague.delete_expense(&id).await);
+
+    // Once A approves it, A owes A's employee — and B's payer queue is still
+    // empty, so a debt never appears on another company's books.
+    a.tenant
+        .decide_expense(&id, ExpenseDecision::Approve, &a.approver, "")
+        .await
+        .unwrap();
+    assert_eq!(a.tenant.reimbursable_expenses().await.unwrap().len(), 1);
+    assert!(b.tenant.reimbursable_expenses().await.unwrap().is_empty());
+    assert_not_found(b.tenant.reimburse_expense(&id, day(31)).await);
 }
 
 #[tokio::test]
@@ -421,4 +432,89 @@ async fn the_inbox_holds_the_waiting_claims_of_everybody_oldest_purchase_first()
     assert_eq!(queue[1].user_email, office.claimant_email);
     assert_eq!(queue[1].expense.merchant, "Bahn");
     assert_eq!(queue[1].expense.gross_cents, 11_900);
+}
+
+#[tokio::test]
+async fn the_payers_queue_holds_only_what_the_company_still_owes_a_person() {
+    let store = common::test_store().await;
+    let office = office(&store, "owed").await;
+    let colleague_user = office
+        .tenant
+        .create_user("owed-second@expenses.test")
+        .await
+        .unwrap();
+    let colleague = store.for_account(office.tenant_id.clone(), colleague_user);
+
+    // Four claims: one out of a pocket, one on the company card, one still
+    // waiting for a decision, and one already paid back.
+    let owed = office.claimant.log_expense(&ticket()).await.unwrap().id;
+    let on_the_card = colleague
+        .log_expense(&NewExpense::spent(day(4), 2_499, ExpenseMethod::Card))
+        .await
+        .unwrap()
+        .id;
+    let waiting = colleague
+        .log_expense(&NewExpense::spent(day(5), 800, ExpenseMethod::Personal))
+        .await
+        .unwrap()
+        .id;
+    let settled = office
+        .claimant
+        .log_expense(&NewExpense::spent(day(6), 1_250, ExpenseMethod::Personal))
+        .await
+        .unwrap()
+        .id;
+    for id in [&settled, &owed, &on_the_card, &waiting] {
+        let door = if id == &on_the_card || id == &waiting {
+            &colleague
+        } else {
+            &office.claimant
+        };
+        door.submit_expense(id).await.unwrap();
+    }
+    // Decided in this order, so "oldest decision first" is a claim about the
+    // decision and not about the purchase date, which runs the other way.
+    for id in [&settled, &owed, &on_the_card] {
+        office
+            .tenant
+            .decide_expense(id, ExpenseDecision::Approve, &office.approver, "")
+            .await
+            .unwrap();
+    }
+    office
+        .tenant
+        .reimburse_expense(&settled, day(30))
+        .await
+        .unwrap();
+
+    let payable = office.tenant.reimbursable_expenses().await.unwrap();
+    let ids: Vec<&str> = payable.iter().map(|p| p.expense.id.as_str()).collect();
+    assert_eq!(
+        ids,
+        vec![owed.as_str()],
+        "only an approved claim the employee's own money paid is still owed"
+    );
+    assert!(!ids.contains(&on_the_card.as_str()), "the card owes nobody");
+    assert!(!ids.contains(&waiting.as_str()), "nobody has approved it");
+    assert!(!ids.contains(&settled.as_str()), "already paid back");
+    assert_eq!(
+        payable[0].user_email, office.claimant_email,
+        "the payer's queue names the person who is owed the money"
+    );
+    assert_eq!(payable[0].expense.gross_cents, 11_900);
+
+    // Paying it clears the queue, which is the only way a line leaves it.
+    office
+        .tenant
+        .reimburse_expense(&owed, day(31))
+        .await
+        .unwrap();
+    assert!(
+        office
+            .tenant
+            .reimbursable_expenses()
+            .await
+            .unwrap()
+            .is_empty()
+    );
 }

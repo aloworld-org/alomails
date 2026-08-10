@@ -3389,6 +3389,112 @@ export const en = {
   projectsTimerRunning: "Timer running",
   projectsStopTimer: "Stop the timer",
   projectsStop: "Stop",
+
+  // ---- alo Finance (ADR 0035, wave B4) ---------------------------------
+  //
+  // The expenses slice (B4.13a): what somebody spent, and the three verbs that
+  // settle it. The Bank, Accounts and Reports tabs are B4.13b/c and bring their
+  // own strings.
+  //
+  // Two rules the copy follows. **Nothing here states an amount or a rule the
+  // server owns**: a refusal is shown in the server's own sentence, and these
+  // strings are only the fallback for a request that never reached it. And the
+  // words are the ones a person uses about their own money — "paid back", not
+  // "reimbursement processed" — because the person filling this in is an
+  // employee with a receipt, not a bookkeeper.
+  moduleFinance: "Finance",
+  financeTabExpenses: "Expenses",
+  financeTabApprovals: "Approvals",
+  financeLoadFailed: "Your expense claims could not be loaded.",
+  financeSaveFailed: "The change could not be saved.",
+  financeCancel: "Cancel",
+  financeSave: "Save",
+  financeEdit: "Edit",
+  financeDelete: "Delete",
+  financeActions: "Actions",
+  financeShow: "Show",
+  financeFrom: "From",
+  financeTo: "To",
+
+  // The claim itself.
+  financeNewClaim: "New claim",
+  financeEditClaim: "Edit claim",
+  financeClaimSubtitle: "What you spent, and whose money paid.",
+  financeSpentOn: "Date",
+  financeSpentOnHint: "The day the money left, in your own time zone.",
+  financeMerchant: "Merchant",
+  financeMerchantHint: "Who was paid — the name on the receipt.",
+  financeNoMerchant: "No merchant",
+  financeDescription: "What it was for",
+  financeGross: "Total",
+  financeVat: "VAT",
+  financeVatHint: "The VAT shown on the receipt. Leave empty if it shows none.",
+  financeNoVat: "—",
+  financeVatRate: "VAT rate %",
+  financeVatRateHint: "As printed: 19, 21, 5.5.",
+  financeCurrency: "Currency",
+  financeCurrencyHint: "Leave empty for your workspace's own currency.",
+  financeProject: "Project",
+  financeProjectHint: "Attach the claim to client work, so it shows in that project's cost.",
+  financeNoProject: "No project",
+  financeMethod: "Paid with",
+  financeMethodHint: "Your own money is the only one that ends in being paid back.",
+  financeMethodPersonal: "Own money",
+  financeMethodCard: "Company card",
+  financeMethodCash: "Petty cash",
+  financeMethodPersonalOption: "My own money",
+  financeMethodCardOption: "The company card",
+  financeMethodCashOption: "Petty cash",
+  financeAmountInvalid: "That is not an amount.",
+  financeRateInvalid: "That is not a percentage.",
+
+  // Where a claim stands. The server's word for each, in the person's language.
+  financeStatus: "Status",
+  financeAnyStatus: "Any status",
+  financeStatusDraft: "Draft",
+  financeStatusSubmitted: "Waiting",
+  financeStatusApproved: "Approved",
+  financeStatusRejected: "Refused",
+  financeStatusReimbursed: "Paid back",
+  financePaidBackOn: (day: string) => `Paid back ${day}`,
+
+  // The verbs.
+  financeSubmit: "Hand in",
+  financeWithdraw: "Take back",
+  financeApprove: "Approve",
+  financeReject: "Refuse",
+  financeMarkPaidBack: "Mark paid back",
+  financeMarkPaidBackSubtitle: (person: string, amount: string) =>
+    `${amount} back to ${person}.`,
+  financeReimbursedOn: "Paid back on",
+  financeReimbursedOnHint: "The day the money actually moved — it is the day it books on.",
+  financeDeleteTitle: "Delete this claim?",
+  financeDeleteBody: "The claim and what you typed into it are removed. This cannot be undone.",
+  financeRejectTitle: "Refuse this claim",
+  financeRejectBody: (person: string) => `${person} will read this, and can correct the claim and hand it in again.`,
+  financeRejectPlaceholder: "Why it comes back…",
+
+  // The approver's screen.
+  financePerson: "Person",
+  financeCategory: "Category",
+  financeUncategorised: "Not classified",
+  financeSubmittedAt: "Handed in",
+  financeApprovedAt: "Approved",
+  financeOfWhichVat: (amount: string) => `incl. ${amount} VAT`,
+  financeWaitingTitle: "Waiting for a decision",
+  financeWaitingEmptyTitle: "Nothing is waiting",
+  financeWaitingEmptyBody: "Claims your colleagues hand in appear here, oldest purchase first.",
+  financeOwedTitle: "To pay back",
+  financeOwedNote:
+    "Approved claims your colleagues paid out of their own pocket. A claim the company card paid is approved and owes nobody anything, so it is not here.",
+  financeOwedEmptyTitle: "Nobody is owed anything",
+  financeOwedEmptyBody: "Once you approve a claim somebody paid for themselves, it waits here until the money goes back.",
+
+  // The first thing an employee sees of the module.
+  financeExpensesEmptyTitle: "No claims in this period",
+  financeExpensesEmptyBody:
+    "Record what you spent for work — the date, the total on the receipt and whose money paid. It stays yours until you hand it in.",
+
   mailAttachmentErrorDetail: (reason: string) =>
     `That file was not attached. Try adding it again. Server: ${reason}`,
   mailDraftCreateErrorDetail: (reason: string) =>

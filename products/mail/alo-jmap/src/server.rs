@@ -972,6 +972,15 @@ pub fn app_with_site_domain_dns(
             "/finance/expenses/pending",
             get(finance_approvals::list_pending_expenses),
         )
+        // The payer's queue beside the approver's, and a static segment for the
+        // same reason `pending` is: what the company has approved and still owes
+        // an employee for. Not `pending?status=approved` — an approved claim a
+        // company card paid is approved and is NOT reimbursable, so the two
+        // lists differ by more than a word (B4.13a).
+        .route(
+            "/finance/expenses/reimbursable",
+            get(finance_approvals::list_reimbursable_expenses),
+        )
         .route(
             "/finance/expenses/{id}",
             get(finance_expenses::get_expense)

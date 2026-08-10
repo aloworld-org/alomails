@@ -8,3 +8,8 @@ export { ProjectsModule } from "./ProjectsModule";
 // declared by the workspace product surface, so the standalone mail product —
 // which has no Projects — never renders or imports it.
 export { TimerWidget } from "./TimerWidget";
+
+// The engagements, for a screen outside Projects that has to name one — the
+// expense claim form in Finance (B4.13a). The list and nothing else: the hours,
+// the budgets and the weeks stay inside the module.
+export { useProjects } from "./pickers";

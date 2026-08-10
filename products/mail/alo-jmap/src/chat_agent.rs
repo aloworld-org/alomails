@@ -18,9 +18,7 @@
 use serde_json::{Value, json};
 
 use alo_ai::{AgentDecision, AiConfig, InferenceError, WorkspaceSource};
-use alo_store::{
-    AccountStore, AgentRecord, ChatAgent, ChatChannelId, TenantId, parse_handles,
-};
+use alo_store::{AccountStore, AgentRecord, ChatAgent, ChatChannelId, TenantId, parse_handles};
 
 use crate::push;
 use crate::state::AppState;
