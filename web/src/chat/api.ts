@@ -24,6 +24,7 @@ import type {
   NewChannel,
   Person,
   Proposal,
+  Turn,
   Reaction,
 } from "./types";
 
@@ -168,6 +169,29 @@ export class ChatApi {
       `/chat/search?${params.toString()}`,
     );
     return body.messages;
+  }
+
+  /** Agent turns running in this room right now, so a room does not sit
+   *  silent while a model thinks. */
+  async turns(channel: string): Promise<Turn[]> {
+    const body = await this.#read<{ turns?: Turn[] }>(
+      `/chat/channels/${encodeURIComponent(channel)}/turns`,
+    );
+    // Nobody thinking is the common case and must not be an error.
+    return body.turns ?? [];
+  }
+
+  /** Stop a running turn. Only the person who asked may; the server settles
+   *  it, and answers 204 either way. */
+  async stopTurn(channel: string, turn: string): Promise<void> {
+    await this.#send(
+      `/chat/channels/${encodeURIComponent(channel)}/turns/${encodeURIComponent(turn)}/stop`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      },
+    ).then(ChatApi.#rejectFailed);
   }
 
   /** Rename a channel, or give it a topic. Owner only — the server refuses

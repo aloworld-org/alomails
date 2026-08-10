@@ -881,6 +881,144 @@
   opacity: 1;
 }
 
+/* ---- an agent thinking ----------------------------------------------- */
+
+/* Above the composer, out of the feed: it is not a message and must not sit
+   in the transcript as though it were one. */
+.thinkingRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) 6px;
+}
+
+.thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  background: var(--accent-tint);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.thinkingMark {
+  color: var(--accent);
+}
+
+.thinkingDots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.thinkingDots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: thinking 1.2s infinite ease-in-out;
+}
+
+.thinkingDots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.thinkingDots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes thinking {
+  0%,
+  60%,
+  100% {
+    opacity: 0.3;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+/* Motion is decoration here; the words already say what is happening. */
+@media (prefers-reduced-motion: reduce) {
+  .thinkingDots i {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+.stop {
+  margin-left: 4px;
+  padding: 0 8px;
+  min-height: 22px;
+  border: 1px solid var(--border-default);
+  border-radius: 11px;
+  background: var(--bg-surface);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.stop:hover {
+  border-color: var(--accent);
+}
+
+/* ---- where a conversation starts, and what day it is ------------------ */
+
+/* The first thing in a room, so a short history reads as "this is all of it"
+   rather than as space where messages ought to be. */
+.beginning {
+  max-width: 760px;
+  padding: var(--space-4) var(--space-3) var(--space-3)
+    calc(var(--gutter) + var(--gutter-gap));
+}
+
+.beginningName {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.beginningTopic {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* A rule with the day sitting on it — without this a feed is a wall of clock
+   times with no way to tell this morning from three weeks ago. */
+.day {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  max-width: 760px;
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+.day::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border-subtle);
+}
+
+.dayLabel {
+  position: relative;
+  padding: 2px var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--bg-app);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
 /* ---- reading back ---------------------------------------------------- */
 
 .older {

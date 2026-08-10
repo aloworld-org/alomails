@@ -120,6 +120,7 @@ function message(over: Partial<FeedMessage>): FeedMessage {
 function withMessages(messages: FeedMessage[]) {
   answers = [
     { match: "/chat/channels?", body: { channels: [ROOM] } },
+    { match: "/turns", body: { turns: [] } },
     { match: "/chat/reactions", body: { emoji: ["👍"] } },
     { match: "/messages", body: { messages } },
     { match: "/chat/channels", body: { channels: [ROOM] } },
@@ -270,6 +271,7 @@ test("a person's message is not marked as an agent", async () => {
  *  person is least likely to know is in the room at all. */
 function withRoomPeople(messages: FeedMessage[]) {
   answers = [
+    { match: "/turns", body: { turns: [] } },
     { match: "/chat/reactions", body: { emoji: ["👍"] } },
     { match: "/agents", body: { agents: [AGENT] } },
     { match: "/messages", body: { messages } },
@@ -361,6 +363,7 @@ test("choosing a name puts it in the message", async () => {
  *  this chat different could not be switched on from the interface. */
 test("an agent can be put into a room from the UI", async () => {
   answers = [
+    { match: "/turns", body: { turns: [] } },
     { match: "/chat/reactions", body: { emoji: ["👍"] } },
     { match: "/chat/agents", body: { agents: [AGENT] } },
     { match: "/chat/channels/room-1/agents", body: { agents: [] } },
@@ -496,6 +499,7 @@ test("showing earlier messages asks for what is behind the oldest held", async (
 
 test("browsing lists open channels and joining opens the one chosen", async () => {
   answers = [
+    { match: "/turns", body: { turns: [] } },
     { match: "/chat/reactions", body: { emoji: ["👍"] } },
     {
       match: "/chat/channels/joinable",
@@ -522,6 +526,7 @@ test("browsing lists open channels and joining opens the one chosen", async () =
 
 test("a colleague is searched for, never listed, and one letter asks nothing", async () => {
   answers = [
+    { match: "/turns", body: { turns: [] } },
     { match: "/chat/reactions", body: { emoji: ["👍"] } },
     {
       match: "/chat/people",

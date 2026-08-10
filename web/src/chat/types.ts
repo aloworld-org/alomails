@@ -38,6 +38,15 @@ export interface ChannelSummary extends Channel {
   lastAt: string | null;
 }
 
+/** An agent turn running right now. */
+export interface Turn {
+  id: string;
+  agent: string;
+  handle: string;
+  /** Whether this reader is the one who asked, and so may stop it. */
+  mine: boolean;
+}
+
 /** Somebody in the tenant, found by searching for their address. */
 export interface Person {
   user: string;

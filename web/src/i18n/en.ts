@@ -1703,6 +1703,12 @@ export const en = {
   chatWithdrawFailed: "That message couldn’t be withdrawn.",
   chatWhoIsHere: "Who's here",
   chatMembersAndAgents: "Members & agents",
+  chatThinking: (handle: string): string => `@${handle} is thinking`,
+  chatStop: "Stop",
+  chatToday: "Today",
+  chatYesterday: "Yesterday",
+  chatBeginning: (name: string): string => `This is the beginning of ${name}`,
+  chatBeginningDm: "This is the beginning of your conversation",
   chatSectionChannels: "Channels",
   chatSectionDirect: "Direct messages",
   chatSectionArchived: "Archived",
@@ -2681,7 +2687,8 @@ export const en = {
   sitesAiProposalTitle: "Proposed changes",
   sitesAiProposalCount: (count: number) =>
     count === 1 ? "1 proposed change" : `${count} proposed changes`,
-  sitesAiPreviewHint: "Compare the page before and after, then choose what happens.",
+  sitesAiPreviewHint:
+    "Compare the page before and after, then choose what happens.",
   sitesAiPreviewCompare: "Compare proposed page changes",
   sitesAiPreviewBefore: "Before",
   sitesAiPreviewAfter: "After",
@@ -3435,10 +3442,12 @@ export const en = {
   financeCurrency: "Currency",
   financeCurrencyHint: "Leave empty for your workspace's own currency.",
   financeProject: "Project",
-  financeProjectHint: "Attach the claim to client work, so it shows in that project's cost.",
+  financeProjectHint:
+    "Attach the claim to client work, so it shows in that project's cost.",
   financeNoProject: "No project",
   financeMethod: "Paid with",
-  financeMethodHint: "Your own money is the only one that ends in being paid back.",
+  financeMethodHint:
+    "Your own money is the only one that ends in being paid back.",
   financeMethodPersonal: "Own money",
   financeMethodCard: "Company card",
   financeMethodCash: "Petty cash",
@@ -3467,11 +3476,14 @@ export const en = {
   financeMarkPaidBackSubtitle: (person: string, amount: string) =>
     `${amount} back to ${person}.`,
   financeReimbursedOn: "Paid back on",
-  financeReimbursedOnHint: "The day the money actually moved — it is the day it books on.",
+  financeReimbursedOnHint:
+    "The day the money actually moved — it is the day it books on.",
   financeDeleteTitle: "Delete this claim?",
-  financeDeleteBody: "The claim and what you typed into it are removed. This cannot be undone.",
+  financeDeleteBody:
+    "The claim and what you typed into it are removed. This cannot be undone.",
   financeRejectTitle: "Refuse this claim",
-  financeRejectBody: (person: string) => `${person} will read this, and can correct the claim and hand it in again.`,
+  financeRejectBody: (person: string) =>
+    `${person} will read this, and can correct the claim and hand it in again.`,
   financeRejectPlaceholder: "Why it comes back…",
 
   // The approver's screen.
@@ -3483,12 +3495,14 @@ export const en = {
   financeOfWhichVat: (amount: string) => `incl. ${amount} VAT`,
   financeWaitingTitle: "Waiting for a decision",
   financeWaitingEmptyTitle: "Nothing is waiting",
-  financeWaitingEmptyBody: "Claims your colleagues hand in appear here, oldest purchase first.",
+  financeWaitingEmptyBody:
+    "Claims your colleagues hand in appear here, oldest purchase first.",
   financeOwedTitle: "To pay back",
   financeOwedNote:
     "Approved claims your colleagues paid out of their own pocket. A claim the company card paid is approved and owes nobody anything, so it is not here.",
   financeOwedEmptyTitle: "Nobody is owed anything",
-  financeOwedEmptyBody: "Once you approve a claim somebody paid for themselves, it waits here until the money goes back.",
+  financeOwedEmptyBody:
+    "Once you approve a claim somebody paid for themselves, it waits here until the money goes back.",
 
   // The first thing an employee sees of the module.
   financeExpensesEmptyTitle: "No claims in this period",
@@ -3511,18 +3525,23 @@ export const en = {
   // Importing a statement.
   financeBankImportStatement: "Import a statement",
   financeBankImportTitle: "Import a bank statement",
-  financeBankImportSubtitle: "We read the file first and show you what we made of it. Nothing is stored until you say so.",
+  financeBankImportSubtitle:
+    "We read the file first and show you what we made of it. Nothing is stored until you say so.",
   financeBankFile: "Statement file",
-  financeBankFileHint: "A CAMT.053 or MT940 download from your bank, or a CSV export.",
+  financeBankFileHint:
+    "A CAMT.053 or MT940 download from your bank, or a CSV export.",
   financeBankAccount: "Account",
-  financeBankAccountHint: "The IBAN this statement is for. A CAMT.053 or MT940 file says it itself; a CSV does not.",
-  financeBankCurrencyHint: "For a CSV that does not say. Leave empty for your workspace's own currency.",
+  financeBankAccountHint:
+    "The IBAN this statement is for. A CAMT.053 or MT940 file says it itself; a CSV does not.",
+  financeBankCurrencyHint:
+    "For a CSV that does not say. Leave empty for your workspace's own currency.",
   financeBankCheckFile: "Check this file",
   financeBankCheckAgain: "Check again",
   financeBankImport: "Import",
   financeBankReadFailed: "That file could not be read.",
   financeBankImportFailed: "Nothing was imported.",
-  financeBankStale: "You changed how the file is read. Check it again to see the result.",
+  financeBankStale:
+    "You changed how the file is read. Check it again to see the result.",
   financeBankStaged: (staged: number, duplicates: number) =>
     duplicates === 0
       ? `${staged} transactions imported.`
@@ -3534,13 +3553,15 @@ export const en = {
   financeBankSourceMt940: "MT940",
   financeBankSourceCsv: "CSV",
   financeBankRows: "Transactions",
-  financeBankRowsRead: (lines: number, rows: number) => `${lines} of ${rows} rows`,
+  financeBankRowsRead: (lines: number, rows: number) =>
+    `${lines} of ${rows} rows`,
   financeBankSkipped: "Rows that are not transactions",
   financeBankUnbooked: "Not yet booked by the bank",
   financeBankPeriod: "Period",
   financeBankEncoding: "Encoding",
   financeBankSampleTitle: "The first transactions, as we read them",
-  financeBankSampleTruncated: "Only the first transactions are shown here. All of them are imported.",
+  financeBankSampleTruncated:
+    "Only the first transactions are shown here. All of them are imported.",
   financeBankRowsRefused: (count: number) =>
     count === 1
       ? "One row cannot be read, so nothing was imported."
@@ -3597,7 +3618,8 @@ export const en = {
   financeBankRemittance: "Reference",
   financeBankCertain: "Certain",
   financeBankThisOne: "This one",
-  financeBankNoGuess: "We have no idea what this one is. Pick the invoice, or set it aside.",
+  financeBankNoGuess:
+    "We have no idea what this one is. Pick the invoice, or set it aside.",
   financeBankNotOurs: "Not ours",
   financeBankPickInvoice: "Pick an invoice",
   financeBankStillOwed: "still owed",
@@ -3615,10 +3637,15 @@ export const en = {
   financeBankWhyWholeAmount: "the amount is exactly what is owed",
   financeBankWhyOnlyDocument: "it is the only open invoice for this amount",
   financeBankWhyBeforeDue: (days: number) =>
-    days === 1 ? "it arrived the day before it was due" : `it arrived ${days} days before it was due`,
+    days === 1
+      ? "it arrived the day before it was due"
+      : `it arrived ${days} days before it was due`,
   financeBankWhyAfterDue: (days: number) =>
-    days === 1 ? "it arrived the day after it was due" : `it arrived ${days} days after it was due`,
-  financeBankWhyPartPayment: (amount: string) => `it is part of the invoice — ${amount} would be left`,
+    days === 1
+      ? "it arrived the day after it was due"
+      : `it arrived ${days} days after it was due`,
+  financeBankWhyPartPayment: (amount: string) =>
+    `it is part of the invoice — ${amount} would be left`,
 
   // Setting a transaction aside.
   financeBankIgnoreTitle: "Not ours to book",
@@ -3629,9 +3656,11 @@ export const en = {
 
   // Picking the invoice by hand.
   financeBankPickTitle: "Which invoice did this settle?",
-  financeBankPickSubtitle: (amount: string) => `${amount} arrived. Say what it paid.`,
+  financeBankPickSubtitle: (amount: string) =>
+    `${amount} arrived. Say what it paid.`,
   financeBankFindInvoice: "Find an invoice",
-  financeBankFindInvoiceHint: "By number, or by the reference your customer gave it.",
+  financeBankFindInvoiceHint:
+    "By number, or by the reference your customer gave it.",
   financeBankNoOpenInvoices: "No issued invoice is still waiting for money.",
   financeBankNoNumber: "No number",
   financeBankOverdue: "Overdue",
@@ -3646,7 +3675,8 @@ export const en = {
     "Each of these recorded a payment and moved the books. Taking one back reverses it with an entry of its own.",
   financeBankUndoMatch: "Take it back",
   financeBankSetAsideTitle: "Set aside",
-  financeBankSetAsideNote: "Transactions somebody decided are not ours to book.",
+  financeBankSetAsideNote:
+    "Transactions somebody decided are not ours to book.",
   financeBankUndoIgnore: "Back to the pile",
 
   // ---- alo Finance: the chart of accounts (B4.13c) ------------------------

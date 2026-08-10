@@ -10,7 +10,7 @@
 // optimistic — the line appears at once and is reconciled by the refetch — so a
 // click is never answered by silence (law 6).
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import {
   Archive,
   Hash,
@@ -48,6 +48,7 @@ import type {
   ChannelSummary,
   FeedMessage,
   Person,
+  Turn,
   Message,
   Proposal,
 } from "./types";
@@ -98,6 +99,25 @@ function continues(message: Message, before: Message | undefined): boolean {
     new Date(message.createdAt).getTime() -
     new Date(before.createdAt).getTime();
   return gap >= 0 && gap < GROUP_MINUTES * 60_000;
+}
+
+/** The day a message belongs to, as a divider reads it. */
+function dayOf(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+  if (same(d, today)) return strings.chatToday;
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (same(d, yesterday)) return strings.chatYesterday;
+  return d.toLocaleDateString(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    // The year only when it is not this one — "12 March 2024" matters, "12
+    // March 2026" is noise in March 2026.
+    ...(d.getFullYear() === today.getFullYear() ? {} : { year: "numeric" }),
+  });
 }
 
 /** Hour and minute only, for the gutter beside a grouped line. The full
@@ -548,6 +568,9 @@ export function ChatModule() {
   const composerMenuRef = useRef<HTMLDivElement | null>(null);
   // Which room's row menu is open, by id — one at a time, same reason.
   const [emojiQuery, setEmojiQuery] = useState("");
+  // Agent turns running in the open room. Refetched on every push, so it
+  // follows the same signal the messages do rather than polling on a timer.
+  const [turns, setTurns] = useState<Turn[]>([]);
   const [rowMenu, setRowMenu] = useState<string | null>(null);
   const rowMenuRef = useRef<HTMLDivElement | null>(null);
   const closeRowMenu = useCallback(() => setRowMenu(null), []);
@@ -577,6 +600,19 @@ export function ChatModule() {
       setError(chatMessage(failure, strings.chatLoadFailed));
     }
   }, [api]);
+
+  const loadTurns = useCallback(
+    async (id: string) => {
+      try {
+        setTurns(await api.turns(id));
+      } catch {
+        // A room that cannot say who is thinking is not broken; it just says
+        // nothing. Never surface this.
+        setTurns([]);
+      }
+    },
+    [api],
+  );
 
   const loadMessages = useCallback(
     async (id: string) => {
@@ -624,8 +660,10 @@ export function ChatModule() {
     // rather than leaving a panel of someone else's replies on screen.
     setThreadSeq(null);
     setReplies(null);
+    setTurns([]);
     void loadMessages(openId);
-  }, [openId, loadMessages]);
+    void loadTurns(openId);
+  }, [openId, loadMessages, loadTurns]);
 
   // Reloaded per room: membership is per room, and so is which agents are in
   // it. Best-effort — a composer that cannot suggest still sends.
@@ -676,6 +714,7 @@ export function ChatModule() {
             void loadChannels();
             if (openId !== null) {
               void loadMessages(openId);
+              void loadTurns(openId);
               if (threadSeq !== null) void loadReplies(openId, threadSeq);
             }
           }, controller.signal);
@@ -1405,10 +1444,53 @@ export function ChatModule() {
               </div>
             </header>
 
+            {turns.length > 0 && (
+              <div className={styles.thinkingRow}>
+                {turns.map((turn) => (
+                  <span key={turn.id} className={styles.thinking}>
+                    <Sparkles size={13} className={styles.thinkingMark} />
+                    <span className={styles.thinkingDots} aria-hidden="true">
+                      <i />
+                      <i />
+                      <i />
+                    </span>
+                    {strings.chatThinking(turn.handle)}
+                    {/* Only the person who asked may stop it — the same rule
+                        as approving what it proposes. */}
+                    {turn.mine && openId !== null && (
+                      <button
+                        type="button"
+                        className={styles.stop}
+                        onClick={() => {
+                          void api
+                            .stopTurn(openId, turn.id)
+                            .then(() => loadTurns(openId));
+                        }}
+                      >
+                        {strings.chatStop}
+                      </button>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <div className={styles.feed} ref={feedRef}>
               {/* An explicit control rather than a scroll trigger: a feed that
                   loads on approach fires while someone is simply reading back,
                   and there is no way to tell it to stop. */}
+              {!moreBehind && messages !== null && (
+                <div className={styles.beginning}>
+                  <h4 className={styles.beginningName}>
+                    {open.kind === "dm"
+                      ? strings.chatBeginningDm
+                      : strings.chatBeginning(channelLabel(open))}
+                  </h4>
+                  {open.topic !== null && (
+                    <p className={styles.beginningTopic}>{open.topic}</p>
+                  )}
+                </div>
+              )}
               {moreBehind && messages !== null && (
                 <button
                   type="button"
@@ -1428,34 +1510,44 @@ export function ChatModule() {
                 <p className={styles.feedNote}>{strings.chatNoMessagesYet}</p>
               ) : (
                 messages.map((message, i) => (
-                  <MessageLine
-                    key={message.id}
-                    message={message}
-                    grouped={continues(message, messages[i - 1])}
-                    palette={open.archivedAt === null ? palette : []}
-                    me={me}
-                    onReact={(emoji) => void react(message.id, emoji)}
-                    onOpenFile={(file) => void openFile(file)}
-                    onDecide={(p, ok) => void decide(p, ok)}
-                    onEdit={(m, body) => void editMessage(m, body)}
-                    onWithdraw={(m) => void withdrawMessage(m)}
-                    onReply={
-                      open.archivedAt === null
-                        ? (m) => setThreadSeq(m.seq)
-                        : undefined
-                    }
-                  >
-                    {message.replyCount > 0 && (
-                      <button
-                        type="button"
-                        className={styles.threadLink}
-                        onClick={() => setThreadSeq(message.seq)}
-                      >
-                        <MessagesSquare size={13} />
-                        {strings.chatReplies(message.replyCount)}
-                      </button>
+                  <Fragment key={message.id}>
+                    {(i === 0 ||
+                      dayOf(message.createdAt) !==
+                        dayOf(messages[i - 1]!.createdAt)) && (
+                      <div className={styles.day}>
+                        <span className={styles.dayLabel}>
+                          {dayOf(message.createdAt)}
+                        </span>
+                      </div>
                     )}
-                  </MessageLine>
+                    <MessageLine
+                      message={message}
+                      grouped={continues(message, messages[i - 1])}
+                      palette={open.archivedAt === null ? palette : []}
+                      me={me}
+                      onReact={(emoji) => void react(message.id, emoji)}
+                      onOpenFile={(file) => void openFile(file)}
+                      onDecide={(p, ok) => void decide(p, ok)}
+                      onEdit={(m, body) => void editMessage(m, body)}
+                      onWithdraw={(m) => void withdrawMessage(m)}
+                      onReply={
+                        open.archivedAt === null
+                          ? (m) => setThreadSeq(m.seq)
+                          : undefined
+                      }
+                    >
+                      {message.replyCount > 0 && (
+                        <button
+                          type="button"
+                          className={styles.threadLink}
+                          onClick={() => setThreadSeq(message.seq)}
+                        >
+                          <MessagesSquare size={13} />
+                          {strings.chatReplies(message.replyCount)}
+                        </button>
+                      )}
+                    </MessageLine>
+                  </Fragment>
                 ))
               )}
             </div>
