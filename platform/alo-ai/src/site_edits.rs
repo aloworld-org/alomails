@@ -10,8 +10,8 @@
 use alo_store::{Section, SectionsEnvelope};
 use serde::{Deserialize, Serialize};
 
-use crate::ChatMessage;
 use crate::agent::extract_json;
+use crate::{AiConfig, ChatMessage, InferenceError, chat};
 
 /// Current version of the Sites edit-operation envelope.
 pub const SITE_EDIT_SCHEMA_VERSION: u64 = 1;
@@ -69,6 +69,8 @@ pub struct SiteEditEnvelope {
 /// Why an edit proposal could not be parsed or safely applied.
 #[derive(Debug, thiserror::Error)]
 pub enum SiteEditError {
+    #[error(transparent)]
+    Inference(#[from] InferenceError),
     #[error("site edit response did not contain one JSON object")]
     MissingObject,
     #[error(
@@ -83,6 +85,21 @@ pub enum SiteEditError {
     Invalid { operation: usize, detail: String },
     #[error("site edit result is invalid: {0}")]
     InvalidResult(String),
+}
+
+/// Asks the configured provider for one strict operation envelope and proves
+/// it can be applied to the exact page context before returning it. This is a
+/// proposal only: no store handle exists in this layer and nothing is written.
+pub async fn propose_site_edit(
+    config: &AiConfig,
+    page: &SectionsEnvelope,
+    instruction: &str,
+) -> Result<SiteEditEnvelope, SiteEditError> {
+    let messages = site_edit_messages(page, instruction);
+    let reply = chat(config, &messages?, 0.2).await?;
+    let proposal = parse_site_edit(&reply)?;
+    apply_site_edit(page, &proposal)?;
+    Ok(proposal)
 }
 
 const SITE_EDIT_SYSTEM: &str = r#"You propose precise edits to ONE alo Sites page. Reply with a SINGLE JSON object and nothing else: no prose, no markdown, no code fences.

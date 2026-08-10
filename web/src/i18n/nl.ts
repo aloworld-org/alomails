@@ -2672,4 +2672,26 @@ export const nl: Partial<Catalog> = {
   sitesChooseTemplate: "Kies een beginstijl",
   sitesBlankTemplate: "Lege site",
   sitesHomePageTitle: "Home",
+  sitesAiEditTitle: "Beschrijf een paginawijziging",
+  sitesAiEditBody: "alo maakt een controleerbare lijst. Er verandert niets tot u goedkeurt.",
+  sitesAiInstruction: "Paginawijziging",
+  sitesAiInstructionPlaceholder:
+    "Maak het welkom warmer en zet ervaringen boven de prijzen…",
+  sitesAiPropose: "Wijzigingen voorbereiden",
+  sitesAiPreparing: "Wijzigingen voorbereiden…",
+  sitesAiProposalTitle: "Voorgestelde wijzigingen",
+  sitesAiApprove: "Wijzigingen goedkeuren",
+  sitesAiApplying: "Wijzigingen toepassen…",
+  sitesAiDiscard: "Verwerpen",
+  sitesAiEditFailed:
+    "De wijzigingslijst kon niet worden voorbereid. Probeer opnieuw of bewerk de secties direct.",
+  sitesAiApplyFailed:
+    "Deze wijzigingen konden niet worden toegepast. Bekijk het serverbericht en probeer opnieuw.",
+  sitesAiAddChange: (section: string, position: number) =>
+    `${section} toevoegen op positie ${position}`,
+  sitesAiRemoveChange: (section: string) => `${section} verwijderen`,
+  sitesAiMoveChange: (section: string, position: number) =>
+    `${section} verplaatsen naar positie ${position}`,
+  sitesAiSettingChange: (section: string) => `Een instelling in ${section} bijwerken`,
+  sitesAiCopyChange: (section: string) => `Tekst in ${section} herschrijven`,
 };

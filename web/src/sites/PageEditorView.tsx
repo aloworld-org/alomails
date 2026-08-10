@@ -28,6 +28,7 @@ import { SectionFormDialog } from "./SectionForm";
 import { SectionPicker } from "./SectionPicker";
 import { ThemeDialog } from "./ThemeDialog";
 import { PageSeoDialog } from "./PageSeoDialog";
+import { PageAiEditPanel } from "./PageAiEditPanel";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 import type { SitePageDetail } from "./types";
@@ -199,6 +200,15 @@ export function PageEditorView() {
                 </Button>
               </div>
             </div>
+
+            <PageAiEditPanel
+              siteId={siteId}
+              pageId={pageId}
+              onApplied={(envelope) => {
+                setSections(envelope.sections);
+                setError(null);
+              }}
+            />
 
             {empty && !loading ? (
               <EmptyState

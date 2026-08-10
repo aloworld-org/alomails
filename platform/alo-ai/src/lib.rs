@@ -34,7 +34,7 @@ pub use agent_projects::PROJECTS_TOOLS;
 pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, repair_messages};
 pub use site_edits::{
     SITE_EDIT_SCHEMA_VERSION, SiteEditEnvelope, SiteEditError, SiteEditOperation,
-    SiteSectionTarget, apply_site_edit, parse_site_edit, site_edit_messages,
+    SiteSectionTarget, apply_site_edit, parse_site_edit, propose_site_edit, site_edit_messages,
 };
 pub use sites::{
     SITE_DRAFT_SCHEMA_VERSION, SiteDraft, SiteDraftError, SiteDraftPage, SiteDraftSite,

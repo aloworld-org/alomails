@@ -333,6 +333,12 @@ pub fn app_with_site_domain_dns(
         .route("/sites/{id}/pages/{pid}/home", post(sites::set_home_page))
         .route("/sites/{id}/pages/{pid}/preview", get(sites::preview_page))
         .route(
+            "/sites/{id}/pages/{pid}/ai-edits",
+            post(sites::propose_page_edit)
+                .put(sites::apply_page_edit)
+                .layer(DefaultBodyLimit::max(sites::MAX_SITE_EDIT_BYTES)),
+        )
+        .route(
             "/sites/{id}/pages/{pid}/sections",
             put(sites::set_sections).post(sites::add_section),
         )

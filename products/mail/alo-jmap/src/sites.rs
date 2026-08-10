@@ -25,7 +25,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use alo_ai::{InferenceError, SiteDraftError};
+use alo_ai::{InferenceError, SiteDraftError, SiteEditEnvelope, SiteEditError};
 use axum::Json;
 use axum::extract::{Extension, Path, Query, State};
 use axum::http::{HeaderMap, StatusCode, header};
@@ -81,6 +81,8 @@ const SITE_DOMAIN_VERIFY_VALUE_PREFIX: &str = "alo-site-verification=";
 /// before buffering independently of the server's larger upload ceiling.
 pub const MAX_SITE_GENERATE_BYTES: usize = 16 * 1024;
 const MAX_SITE_DESCRIPTION_CHARS: usize = 8_000;
+pub const MAX_SITE_EDIT_BYTES: usize = 64 * 1024;
+const MAX_SITE_EDIT_INSTRUCTION_CHARS: usize = 4_000;
 
 // ---- JSON shaping -----------------------------------------------------------
 
@@ -292,6 +294,107 @@ pub async fn generate_site(
         "site": site_json(&site),
         "pages": pages.iter().map(|page| page_json(page, true)).collect::<Vec<_>>(),
     })))
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProposeSiteEditBody {
+    instruction: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ApplySiteEditBody {
+    proposal: SiteEditEnvelope,
+}
+
+fn site_edit_problem(error: &SiteEditError) -> Problem {
+    match error {
+        SiteEditError::Inference(InferenceError::Disabled | InferenceError::NotConfigured) => {
+            Problem::with(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "AI editing is not configured. You can keep editing sections directly.",
+            )
+            .with_extra(json!({ "reason": "unconfigured" }))
+        }
+        SiteEditError::Inference(
+            InferenceError::Backend(_) | InferenceError::Transport | InferenceError::Empty,
+        ) => Problem::with(
+            StatusCode::BAD_GATEWAY,
+            "AI editing could not reach the configured service. Try again shortly.",
+        )
+        .with_extra(json!({ "reason": "unreachable" })),
+        _ => Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("The proposed website change is not safe to apply: {error}"),
+        )
+        .with_extra(json!({ "reason": "invalid_proposal" })),
+    }
+}
+
+/// `POST /sites/:id/pages/:pid/ai-edits` `{instruction}` proposes a typed
+/// operation set for review. It loads the caller-owned current page, validates
+/// the proposal against that exact envelope, and writes nothing.
+pub async fn propose_page_edit(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid)): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let sid = SiteId::new(id);
+    let page_id = SitePageId::new(pid);
+    let current = page_envelope(&account, &sid, &page_id).await?;
+    let req: ProposeSiteEditBody =
+        serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let instruction = req.instruction.trim();
+    if instruction.is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "Describe the change you want to make.",
+        ));
+    }
+    if instruction.chars().count() > MAX_SITE_EDIT_INSTRUCTION_CHARS {
+        return Err(Problem::with(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "The change request is too long. Shorten it and try again.",
+        ));
+    }
+    let config = tenant_ai_config(&account).await.map_err(|problem| {
+        if problem.status == StatusCode::SERVICE_UNAVAILABLE {
+            Problem::with(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "AI editing is not configured. You can keep editing sections directly.",
+            )
+            .with_extra(json!({ "reason": "unconfigured" }))
+        } else {
+            problem
+        }
+    })?;
+    let proposal = alo_ai::propose_site_edit(&config, &current, instruction)
+        .await
+        .map_err(|error| site_edit_problem(&error))?;
+    Ok(Json(json!({ "proposal": proposal })))
+}
+
+/// `PUT /sites/:id/pages/:pid/ai-edits` `{proposal}` applies an explicitly
+/// approved operation set. It re-loads the page and re-applies every guarded
+/// target, so a proposal made stale by another edit is refused rather than
+/// overwriting newer work.
+pub async fn apply_page_edit(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid)): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: ApplySiteEditBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let sid = SiteId::new(id);
+    let page_id = SitePageId::new(pid);
+    let current = page_envelope(&account, &sid, &page_id).await?;
+    let result = alo_ai::apply_site_edit(&current, &req.proposal)
+        .map_err(|error| site_edit_problem(&error))?;
+    store_sections(&account, &sid, &page_id, &result).await
 }
 
 // ---- custom domains --------------------------------------------------------

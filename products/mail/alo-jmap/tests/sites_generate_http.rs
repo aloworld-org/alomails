@@ -1,4 +1,4 @@
-//! `POST /sites/generate` through the real router and Postgres.
+//! Sites AI generation and page-edit proposals through the real router and Postgres.
 //!
 //! The model is a scripted localhost fixture server; this suite never calls an
 //! external AI service. It pins draft-only atomic persistence, the typed
@@ -130,6 +130,20 @@ async fn get(app: &Router, token: &str, uri: &str) -> (StatusCode, Value) {
     .await
 }
 
+async fn put(app: &Router, token: &str, uri: &str, body: Value) -> (StatusCode, Value) {
+    send(
+        app,
+        Request::builder()
+            .method("PUT")
+            .uri(uri)
+            .header("authorization", format!("Bearer {token}"))
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap(),
+    )
+    .await
+}
+
 fn subdomain(tag: &str, h: &Harness) -> String {
     let suffix: String = h
         .tenant
@@ -238,4 +252,118 @@ async fn invalid_fixture_gets_one_repair_then_rolls_back_everything() {
     let (status, sites) = get(&h.app, &h.token, "/sites").await;
     assert_eq!(status, StatusCode::OK, "{sites}");
     assert!(sites["sites"].as_array().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn page_edit_is_a_reviewable_proposal_until_approved_and_tenant_scoped() {
+    let a = harness("sites-edit-fixture").await;
+    let b = harness_on(Arc::clone(&a.store), "sites-edit-other").await;
+    let (status, site) = post(
+        &a.app,
+        Some(&a.token),
+        "/sites",
+        json!({ "name": "Edit fixture", "subdomain": subdomain("edit", &a) }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{site}");
+    let site_id = site["id"].as_str().unwrap();
+    let pages_uri = format!("/sites/{site_id}/pages");
+    let (status, page) = post(
+        &a.app,
+        Some(&a.token),
+        &pages_uri,
+        json!({ "title": "Home", "slug": "", "home": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    let page_id = page["id"].as_str().unwrap();
+    let sections_uri = format!("/sites/{site_id}/pages/{page_id}/sections");
+    let original = json!({
+        "schema_version": 1,
+        "sections": [{
+            "type": "hero",
+            "heading": "Old heading",
+            "subheading": null,
+            "image": null,
+            "primary_cta": null,
+            "secondary_cta": null
+        }]
+    });
+    let (status, body) = put(&a.app, &a.token, &sections_uri, original.clone()).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let proposal_fixture = json!({
+        "schema_version": 1,
+        "operations": [{
+            "op": "rewrite_copy",
+            "target": { "index": 0, "type": "hero" },
+            "pointer": "/heading",
+            "text": "A clearer welcome"
+        }]
+    })
+    .to_string();
+    let (base_url, seen) = scripted_model(vec![proposal_fixture]).await;
+    use_model(&a, &base_url).await;
+    let edit_uri = format!("/sites/{site_id}/pages/{page_id}/ai-edits");
+
+    let (status, proposed) = post(
+        &a.app,
+        Some(&a.token),
+        &edit_uri,
+        json!({ "instruction": "Make the welcome clearer" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{proposed}");
+    assert_eq!(proposed["proposal"]["operations"][0]["op"], "rewrite_copy");
+    assert_eq!(seen.lock().unwrap().len(), 1);
+
+    // Proposing writes nothing.
+    let page_uri = format!("/sites/{site_id}/pages/{page_id}");
+    let (status, unchanged) = get(&a.app, &a.token, &page_uri).await;
+    assert_eq!(status, StatusCode::OK, "{unchanged}");
+    assert_eq!(
+        unchanged["sections"]["sections"].as_array().unwrap().len(),
+        1
+    );
+    assert_eq!(
+        unchanged["sections"]["sections"][0]["heading"],
+        "Old heading"
+    );
+
+    // Mandatory wrong-tenant proof for both the proposal and persistence doors.
+    let (status, _) = post(
+        &b.app,
+        Some(&b.token),
+        &edit_uri,
+        json!({ "instruction": "Change it" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let (status, _) = put(
+        &b.app,
+        &b.token,
+        &edit_uri,
+        json!({ "proposal": proposed["proposal"].clone() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    let (status, applied) = put(
+        &a.app,
+        &a.token,
+        &edit_uri,
+        json!({ "proposal": proposed["proposal"].clone() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    assert_eq!(
+        applied["sections"]["sections"][0]["heading"],
+        "A clearer welcome"
+    );
+    let (status, stored) = get(&a.app, &a.token, &page_uri).await;
+    assert_eq!(status, StatusCode::OK, "{stored}");
+    assert_eq!(
+        stored["sections"]["sections"][0]["heading"],
+        "A clearer welcome"
+    );
 }

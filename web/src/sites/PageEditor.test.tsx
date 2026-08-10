@@ -133,6 +133,66 @@ describe("the section stack", () => {
   });
 });
 
+describe("reviewed page changes", () => {
+  const proposal = {
+    schema_version: 1,
+    operations: [
+      {
+        op: "rewrite_copy",
+        target: { index: 0, type: "hero" },
+        pointer: "/heading",
+        text: "A clearer welcome",
+      },
+    ],
+  } as const;
+
+  test("a proposal is readable and writes only after Approve", async () => {
+    replies = [
+      pageReply([HERO]),
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/ai-edits"),
+        status: 200,
+        body: { proposal },
+      },
+    ];
+    ui();
+    fireEvent.change(await screen.findByLabelText(strings.sitesAiInstruction), {
+      target: { value: "Make the welcome clearer" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiPropose }));
+
+    expect(
+      await screen.findByText(strings.sitesAiCopyChange(strings.sitesSectionHero)),
+    ).toBeTruthy();
+    expect(lastWrite()).toMatchObject({
+      method: "POST",
+      body: { instruction: "Make the welcome clearer" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiDiscard }));
+    expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
+
+    replies = [
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/ai-edits"),
+        status: 200,
+        body: { proposal },
+      },
+      {
+        match: (url, method) => method === "PUT" && url.endsWith("/ai-edits"),
+        status: 200,
+        body: {
+          sections: env([{ ...HERO, heading: "A clearer welcome" }]),
+        },
+      },
+    ];
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesAiPropose }));
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesAiApprove }));
+
+    await waitFor(() => expect(screen.getByText("A clearer welcome")).toBeTruthy());
+    expect(lastWrite()).toMatchObject({ method: "PUT", body: { proposal } });
+  });
+});
+
 describe("search and sharing details", () => {
   test("the visible page action saves both overrides through the page route", async () => {
     replies = [pageReply([HERO])];

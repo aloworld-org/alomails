@@ -28,6 +28,7 @@ import type {
   SiteDetail,
   SiteDraft,
   GeneratedSiteDraft,
+  SiteEditEnvelope,
   SitePage,
   SitePageDetail,
   SitePost,
@@ -202,6 +203,31 @@ export class SitesApi {
    *  stack; answers the stored page. */
   createPage(siteId: string, draft: PageDraft): Promise<SitePage> {
     return this.#write<SitePage>("POST", `/sites/${encodeURIComponent(siteId)}/pages`, draft);
+  }
+
+  /** Proposes a guarded, reviewable operation set and writes nothing. */
+  proposePageEdit(
+    siteId: string,
+    pageId: string,
+    instruction: string,
+  ): Promise<SiteEditEnvelope> {
+    return this.#write<{ proposal: SiteEditEnvelope }>(
+      "POST",
+      `${this.#pagePath(siteId, pageId)}/ai-edits`,
+      { instruction },
+    ).then((answer) => answer.proposal);
+  }
+
+  /** Applies only the operation set the owner reviewed. The server replays it
+   *  against the current page, refusing stale targets. */
+  applyPageEdit(
+    siteId: string,
+    pageId: string,
+    proposal: SiteEditEnvelope,
+  ): Promise<SectionsEnvelope> {
+    return this.#sections(
+      this.#write("PUT", `${this.#pagePath(siteId, pageId)}/ai-edits`, { proposal }),
+    );
   }
 
   /** The site's blog posts, newest first. */

@@ -3,7 +3,7 @@
 // (timestamps and fields the UI does not show yet) never
 // forces a change here. The server is the authority on every rule; these
 // types carry its answers, they do not re-state its validation.
-import type { SectionsEnvelope } from "./sections";
+import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 
 /** A site as the list answers it. */
 export interface Site {
@@ -140,6 +140,24 @@ export interface SiteDraft {
 export interface GeneratedSiteDraft {
   site: Site;
   pages: SitePageDetail[];
+}
+
+export interface SiteEditTarget {
+  index: number;
+  type: SectionKind;
+}
+
+/** The closed operation vocabulary returned for review by page AI editing. */
+export type SiteEditOperation =
+  | { op: "add_section"; at: number; section: Section }
+  | { op: "remove_section"; target: SiteEditTarget }
+  | { op: "reorder_section"; target: SiteEditTarget; to: number }
+  | { op: "set_prop"; target: SiteEditTarget; pointer: string; value: unknown }
+  | { op: "rewrite_copy"; target: SiteEditTarget; pointer: string; text: string };
+
+export interface SiteEditEnvelope {
+  schema_version: number;
+  operations: SiteEditOperation[];
 }
 
 /** What the create-page form sends. The empty slug is only accepted by the

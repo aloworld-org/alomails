@@ -2698,4 +2698,26 @@ export const fr: Partial<Catalog> = {
   sitesChooseTemplate: "Choisissez un style de départ",
   sitesBlankTemplate: "Site vierge",
   sitesHomePageTitle: "Accueil",
+  sitesAiEditTitle: "Décrivez une modification de page",
+  sitesAiEditBody: "alo prépare une liste à vérifier. Rien ne change avant votre approbation.",
+  sitesAiInstruction: "Modification de la page",
+  sitesAiInstructionPlaceholder:
+    "Rendez l’accueil plus chaleureux et placez les témoignages avant les tarifs…",
+  sitesAiPropose: "Préparer les modifications",
+  sitesAiPreparing: "Préparation des modifications…",
+  sitesAiProposalTitle: "Modifications proposées",
+  sitesAiApprove: "Approuver les modifications",
+  sitesAiApplying: "Application des modifications…",
+  sitesAiDiscard: "Ignorer",
+  sitesAiEditFailed:
+    "La liste des modifications n’a pas pu être préparée. Réessayez ou modifiez directement les sections.",
+  sitesAiApplyFailed:
+    "Ces modifications n’ont pas pu être appliquées. Consultez le message du serveur et réessayez.",
+  sitesAiAddChange: (section: string, position: number) =>
+    `Ajouter ${section} en position ${position}`,
+  sitesAiRemoveChange: (section: string) => `Supprimer ${section}`,
+  sitesAiMoveChange: (section: string, position: number) =>
+    `Déplacer ${section} en position ${position}`,
+  sitesAiSettingChange: (section: string) => `Mettre à jour un réglage dans ${section}`,
+  sitesAiCopyChange: (section: string) => `Réécrire le texte dans ${section}`,
 };
