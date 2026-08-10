@@ -1323,6 +1323,135 @@ async fn site_pages_scope_by_tenant_and_site_with_slug_and_home_rules() {
     let got = a.site_page(&site, &about).await.unwrap().unwrap();
     assert!(got.seo_title.is_none() && got.seo_description.is_none());
 
+    // Localized drafts keep the same page identity. Before French exists the
+    // read explicitly falls back to English; after the write it resolves the
+    // French slug, SEO, and section envelope independently.
+    a.set_site_locales(
+        &site,
+        "en",
+        &["en".to_owned(), "fr".to_owned(), "nl".to_owned()],
+    )
+    .await
+    .unwrap();
+    let fallback = a
+        .localized_site_page(&site, &about, "FR")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(fallback.page.id, about);
+    assert_eq!(fallback.requested_locale, "fr");
+    assert_eq!(fallback.resolved_locale, "en");
+    assert!(fallback.fallback);
+
+    let french = json!({
+        "schema_version": 1,
+        "sections": [{"type": "hero", "heading": "Notre histoire"}]
+    });
+    a.set_site_page_locale(
+        &site,
+        &about,
+        "fr",
+        "Notre histoire",
+        "notre-histoire",
+        french.clone(),
+        Some("À propos d'Acme"),
+        Some("Ce que nous faisons."),
+    )
+    .await
+    .unwrap();
+    let localized = a
+        .localized_site_page(&site, &about, "fr")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(localized.page.id, about);
+    assert_eq!(localized.page.title, "Notre histoire");
+    assert_eq!(localized.page.slug, "notre-histoire");
+    assert_eq!(localized.page.sections, french);
+    assert_eq!(localized.resolved_locale, "fr");
+    assert!(!localized.fallback);
+    match a
+        .set_site_page_locale(
+            &site,
+            &contact,
+            "fr",
+            "Même chemin",
+            "notre-histoire",
+            json!({"schema_version": 1, "sections": []}),
+            None,
+            None,
+        )
+        .await
+    {
+        Err(StoreError::Conflict(message)) => assert!(message.contains("slug")),
+        other => panic!("expected localized slug Conflict, got {other:?}"),
+    }
+    match a.localized_site_page(&site, &about, "de").await {
+        Err(StoreError::Conflict(message)) => assert!(message.contains("not enabled")),
+        other => panic!("expected disabled-language Conflict, got {other:?}"),
+    }
+
+    // Changing the site's default and then editing that language promotes its
+    // draft without destroying the previous default-language content.
+    a.set_site_locales(
+        &site,
+        "fr",
+        &["fr".to_owned(), "en".to_owned(), "nl".to_owned()],
+    )
+    .await
+    .unwrap();
+    a.set_site_page_locale(
+        &site,
+        &about,
+        "fr",
+        "Notre histoire",
+        "notre-histoire",
+        localized.page.sections.clone(),
+        Some("À propos d'Acme"),
+        Some("Ce que nous faisons."),
+    )
+    .await
+    .unwrap();
+    let english = a
+        .localized_site_page(&site, &about, "en")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(english.page.title, "About");
+    assert_eq!(english.resolved_locale, "en");
+    assert!(!english.fallback);
+
+    // The localized surface has the same clean wrong-tenant denial as the
+    // base page surface, on both read and write.
+    assert!(
+        b.localized_site_page(&site, &about, "fr")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert_not_found(
+        b.set_site_page_locale(
+            &site,
+            &about,
+            "fr",
+            "Piraté",
+            "pirate",
+            json!({"schema_version": 1, "sections": []}),
+            None,
+            None,
+        )
+        .await,
+    );
+    assert_eq!(
+        a.localized_site_page(&site, &about, "fr")
+            .await
+            .unwrap()
+            .unwrap()
+            .page
+            .title,
+        "Notre histoire"
+    );
+
     // Moving the home flag: the current home sits at the empty slug, so it
     // must get a real slug first — then the flip demotes it atomically.
     match a.set_home_page(&site, &about).await {

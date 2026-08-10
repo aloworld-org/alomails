@@ -44,10 +44,10 @@ use alo_sites::render::{
 };
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
-    BlobId, DriveNodeId, NewGeneratedSite, NewGeneratedSitePage, NewSitePost, Section,
-    SectionsEnvelope, Site, SiteDomain, SiteDomainStatus, SiteFormId, SiteFormSubmissionId, SiteId,
-    SitePage, SitePageId, SitePost, SitePostId, SitePostUpdate, SiteTheme, StoreError,
-    normalize_site_domain, site_theme::THEME_PRESETS,
+    BlobId, DriveNodeId, LocalizedSitePage, NewGeneratedSite, NewGeneratedSitePage, NewSitePost,
+    Section, SectionsEnvelope, Site, SiteDomain, SiteDomainStatus, SiteFormId,
+    SiteFormSubmissionId, SiteId, SitePage, SitePageId, SitePost, SitePostId, SitePostUpdate,
+    SiteTheme, StoreError, normalize_site_domain, site_theme::THEME_PRESETS,
 };
 
 use crate::ai::tenant_ai_config;
@@ -142,6 +142,22 @@ fn page_json(p: &SitePage, with_sections: bool) -> Value {
         obj.insert("sections".to_owned(), p.sections.clone());
     }
     j
+}
+
+fn localized_page_json(localized: &LocalizedSitePage) -> Value {
+    let mut value = page_json(&localized.page, true);
+    if let Some(object) = value.as_object_mut() {
+        object.insert(
+            "requestedLocale".to_owned(),
+            json!(localized.requested_locale),
+        );
+        object.insert(
+            "resolvedLocale".to_owned(),
+            json!(localized.resolved_locale),
+        );
+        object.insert("fallback".to_owned(), json!(localized.fallback));
+    }
+    value
 }
 
 fn post_json(post: &SitePost) -> Value {
@@ -1254,6 +1270,69 @@ pub async fn get_page(
         .map_err(map_store_err)?
         .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
     Ok(Json(page_json(&page, true)))
+}
+
+#[derive(Deserialize)]
+pub struct LocalizedPageBody {
+    title: String,
+    slug: String,
+    sections: Value,
+    #[serde(default, rename = "seoTitle")]
+    seo_title: Option<String>,
+    #[serde(default, rename = "seoDescription")]
+    seo_description: Option<String>,
+}
+
+/// `GET /sites/:id/pages/:pid/locales/:locale` resolves an enabled-language
+/// draft and explicitly reports whether the site's fallback was used.
+pub async fn get_localized_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid, locale)): Path<(String, String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let page = account
+        .acc
+        .localized_site_page(&SiteId::new(id), &SitePageId::new(pid), &locale)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
+    Ok(Json(localized_page_json(&page)))
+}
+
+/// `PUT /sites/:id/pages/:pid/locales/:locale` fully replaces one localized
+/// draft while preserving the page's identity, navigation, and home role.
+pub async fn put_localized_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid, locale)): Path<(String, String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: LocalizedPageBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let sid = SiteId::new(id);
+    let page_id = SitePageId::new(pid);
+    account
+        .acc
+        .set_site_page_locale(
+            &sid,
+            &page_id,
+            &locale,
+            req.title.trim(),
+            req.slug.trim(),
+            req.sections,
+            req.seo_title.as_deref(),
+            req.seo_description.as_deref(),
+        )
+        .await
+        .map_err(map_store_err)?;
+    let page = account
+        .acc
+        .localized_site_page(&sid, &page_id, &locale)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(Problem::server_error)?;
+    Ok(Json(localized_page_json(&page)))
 }
 
 /// The apex domain draft previews advertise in canonical/OG URLs — the same

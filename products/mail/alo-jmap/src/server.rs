@@ -334,6 +334,10 @@ pub fn app_with_site_domain_dns(
         )
         .route("/sites/{id}/pages/order", put(sites::reorder_pages))
         .route(
+            "/sites/{id}/pages/{pid}/locales/{locale}",
+            get(sites::get_localized_page).put(sites::put_localized_page),
+        )
+        .route(
             "/sites/{id}/pages/{pid}",
             get(sites::get_page)
                 .put(sites::update_page)

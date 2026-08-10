@@ -13,6 +13,7 @@ use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
 use crate::id::{SiteId, SitePageId};
 use crate::site_model::SectionsEnvelope;
+use crate::sites::normalize_locale_tag;
 
 /// Maximum length of a page slug. Slugs are single URL path segments; 80 is
 /// generous for readable URLs and far under any protocol limit.
@@ -48,11 +49,24 @@ pub struct SitePage {
     pub seo_title: Option<String>,
     /// SEO description override; `None` means no meta description.
     pub seo_description: Option<String>,
+    /// Language of the content in this projection. It can differ from the
+    /// site's current default after a language-setting change.
+    pub content_locale: String,
     /// Position in the site's navigation, ascending.
     pub nav_order: i32,
     pub is_home: bool,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
+}
+
+/// A localized draft resolved for one requested language. `fallback` is true
+/// exactly when the returned content came from another language.
+#[derive(Debug, Clone)]
+pub struct LocalizedSitePage {
+    pub page: SitePage,
+    pub requested_locale: String,
+    pub resolved_locale: String,
+    pub fallback: bool,
 }
 
 /// Validates a non-empty page slug: `[a-z0-9-]`, 1–80 chars, no leading or
@@ -167,9 +181,10 @@ impl AccountStore {
             validate_page_slug(slug)?;
         }
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
-        let pages: Option<i64> = sqlx::query_scalar(
+        let row: Option<(i64, String)> = sqlx::query_as(
             "SELECT (SELECT count(*) FROM site_pages p \
                      WHERE p.tenant_id = s.tenant_id AND p.site_id = s.id) \
+                    AS page_count, s.default_locale \
              FROM sites s WHERE s.tenant_id = $1 AND s.id = $2",
         )
         .bind(self.tenant.as_str())
@@ -177,7 +192,7 @@ impl AccountStore {
         .fetch_optional(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
-        let pages = pages.ok_or(StoreError::NotFound)?;
+        let (pages, default_locale) = row.ok_or(StoreError::NotFound)?;
         if pages >= MAX_PAGES_PER_SITE {
             return Err(StoreError::Conflict(format!(
                 "a site may have at most {MAX_PAGES_PER_SITE} pages"
@@ -185,17 +200,19 @@ impl AccountStore {
         }
         let id = SitePageId::generate();
         sqlx::query(
-            "INSERT INTO site_pages (tenant_id, site_id, id, slug, title, nav_order, is_home) \
-             SELECT $1, $2, $3, $4, $5, \
+            "INSERT INTO site_pages (tenant_id, site_id, id, slug, title, content_locale, \
+                                     nav_order, is_home) \
+             SELECT $1, $2, $3, $4, $5, $6, \
                     COALESCE((SELECT max(nav_order) + 1 FROM site_pages \
                               WHERE tenant_id = $1 AND site_id = $2), 0), \
-                    $6",
+                    $7",
         )
         .bind(self.tenant.as_str())
         .bind(site.as_str())
         .bind(id.as_str())
         .bind(slug)
         .bind(title.trim())
+        .bind(default_locale)
         .bind(home)
         .execute(&mut *tx)
         .await
@@ -211,7 +228,8 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn site_pages(&self, site: &SiteId) -> Result<Vec<SitePage>> {
         let rows = sqlx::query_as::<_, SitePageRow>(
-            "SELECT id, slug, title, sections, seo_title, seo_description, nav_order, is_home, \
+            "SELECT id, slug, title, sections, seo_title, seo_description, content_locale, \
+                    nav_order, is_home, \
                     created_at, updated_at \
              FROM site_pages WHERE tenant_id = $1 AND site_id = $2 ORDER BY nav_order, id",
         )
@@ -230,7 +248,8 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn site_page(&self, site: &SiteId, page: &SitePageId) -> Result<Option<SitePage>> {
         let row = sqlx::query_as::<_, SitePageRow>(
-            "SELECT id, slug, title, sections, seo_title, seo_description, nav_order, is_home, \
+            "SELECT id, slug, title, sections, seo_title, seo_description, content_locale, \
+                    nav_order, is_home, \
                     created_at, updated_at \
              FROM site_pages WHERE tenant_id = $1 AND site_id = $2 AND id = $3",
         )
@@ -241,6 +260,205 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         Ok(row.map(SitePageRow::into_page))
+    }
+
+    /// Resolves a page draft for an enabled language. Resolution is exact,
+    /// then the site's default language, then the base projection's recorded
+    /// language. The result always names the language actually returned.
+    pub async fn localized_site_page(
+        &self,
+        site: &SiteId,
+        page: &SitePageId,
+        locale: &str,
+    ) -> Result<Option<LocalizedSitePage>> {
+        let requested = normalize_locale_tag(locale)?;
+        let Some(site_record) = self.site(site).await? else {
+            return Ok(None);
+        };
+        if !site_record.enabled_locales.contains(&requested) {
+            return Err(StoreError::Conflict(format!(
+                "language '{requested}' is not enabled for this site"
+            )));
+        }
+        let Some(base) = self.site_page(site, page).await? else {
+            return Ok(None);
+        };
+
+        let resolved = if requested == base.content_locale {
+            base.clone()
+        } else if let Some(localized) = self.site_page_locale_row(site, page, &requested).await? {
+            localized.into_page_from(&base)
+        } else if site_record.default_locale != base.content_locale {
+            match self
+                .site_page_locale_row(site, page, &site_record.default_locale)
+                .await?
+            {
+                Some(localized) => localized.into_page_from(&base),
+                None => base.clone(),
+            }
+        } else {
+            base.clone()
+        };
+        let resolved_locale = resolved.content_locale.clone();
+        Ok(Some(LocalizedSitePage {
+            page: resolved,
+            fallback: requested != resolved_locale,
+            requested_locale: requested,
+            resolved_locale,
+        }))
+    }
+
+    /// Creates or fully replaces one language draft without changing the
+    /// page's stable identity, navigation position, or home-page role.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn set_site_page_locale(
+        &self,
+        site: &SiteId,
+        page: &SitePageId,
+        locale: &str,
+        title: &str,
+        slug: &str,
+        sections: Value,
+        seo_title: Option<&str>,
+        seo_description: Option<&str>,
+    ) -> Result<()> {
+        let locale = normalize_locale_tag(locale)?;
+        validate_page_title(title)?;
+        let envelope = SectionsEnvelope::from_value(sections)
+            .map_err(|schema| StoreError::Conflict(schema.to_string()))?;
+        let sections = envelope
+            .to_value()
+            .map_err(|schema| StoreError::Conflict(schema.to_string()))?;
+        let seo_title = normalize_seo(seo_title, SEO_TITLE_MAX_CHARS, "SEO title")?;
+        let seo_description = normalize_seo(
+            seo_description,
+            SEO_DESCRIPTION_MAX_CHARS,
+            "SEO description",
+        )?;
+
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let settings: Option<(String, Vec<String>, bool)> = sqlx::query_as(
+            "SELECT s.default_locale, s.enabled_locales, p.is_home \
+             FROM sites s JOIN site_pages p \
+               ON p.tenant_id = s.tenant_id AND p.site_id = s.id \
+             WHERE s.tenant_id = $1 AND s.id = $2 AND p.id = $3 FOR UPDATE",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .bind(page.as_str())
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        let (default_locale, enabled_locales, is_home) = settings.ok_or(StoreError::NotFound)?;
+        if !enabled_locales.contains(&locale) {
+            return Err(StoreError::Conflict(format!(
+                "language '{locale}' is not enabled for this site"
+            )));
+        }
+        if !(is_home && slug.is_empty()) {
+            validate_page_slug(slug)?;
+        }
+
+        if locale == default_locale {
+            // If the site's default changed since this projection was last
+            // edited, preserve the projection under the language it actually
+            // contains before replacing it. Switching defaults must never
+            // erase a finished translation.
+            sqlx::query(
+                "INSERT INTO site_page_locales \
+                    (tenant_id, site_id, page_id, locale, slug, title, sections, \
+                     seo_title, seo_description) \
+                 SELECT tenant_id, site_id, id, content_locale, slug, title, sections, \
+                        seo_title, seo_description \
+                 FROM site_pages \
+                 WHERE tenant_id = $1 AND site_id = $2 AND id = $3 \
+                   AND content_locale <> $4 \
+                 ON CONFLICT (tenant_id, page_id, locale) DO UPDATE SET \
+                    slug = EXCLUDED.slug, title = EXCLUDED.title, sections = EXCLUDED.sections, \
+                    seo_title = EXCLUDED.seo_title, seo_description = EXCLUDED.seo_description, \
+                    updated_at = now()",
+            )
+            .bind(self.tenant.as_str())
+            .bind(site.as_str())
+            .bind(page.as_str())
+            .bind(&locale)
+            .execute(&mut *tx)
+            .await
+            .map_err(map_page_locale_constraints)?;
+            sqlx::query(
+                "UPDATE site_pages SET slug = $4, title = $5, sections = $6, seo_title = $7, \
+                                       seo_description = $8, content_locale = $9, updated_at = now() \
+                 WHERE tenant_id = $1 AND site_id = $2 AND id = $3",
+            )
+            .bind(self.tenant.as_str())
+            .bind(site.as_str())
+            .bind(page.as_str())
+            .bind(slug)
+            .bind(title.trim())
+            .bind(sqlx::types::Json(sections))
+            .bind(seo_title)
+            .bind(seo_description)
+            .bind(&locale)
+            .execute(&mut *tx)
+            .await
+            .map_err(map_page_constraints)?;
+            sqlx::query(
+                "DELETE FROM site_page_locales \
+                 WHERE tenant_id = $1 AND site_id = $2 AND page_id = $3 AND locale = $4",
+            )
+            .bind(self.tenant.as_str())
+            .bind(site.as_str())
+            .bind(page.as_str())
+            .bind(&locale)
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
+        } else {
+            sqlx::query(
+                "INSERT INTO site_page_locales \
+                    (tenant_id, site_id, page_id, locale, slug, title, sections, \
+                     seo_title, seo_description) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) \
+                 ON CONFLICT (tenant_id, page_id, locale) DO UPDATE SET \
+                    slug = EXCLUDED.slug, title = EXCLUDED.title, sections = EXCLUDED.sections, \
+                    seo_title = EXCLUDED.seo_title, seo_description = EXCLUDED.seo_description, \
+                    updated_at = now()",
+            )
+            .bind(self.tenant.as_str())
+            .bind(site.as_str())
+            .bind(page.as_str())
+            .bind(&locale)
+            .bind(slug)
+            .bind(title.trim())
+            .bind(sqlx::types::Json(sections))
+            .bind(seo_title)
+            .bind(seo_description)
+            .execute(&mut *tx)
+            .await
+            .map_err(map_page_locale_constraints)?;
+        }
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    async fn site_page_locale_row(
+        &self,
+        site: &SiteId,
+        page: &SitePageId,
+        locale: &str,
+    ) -> Result<Option<SitePageLocaleRow>> {
+        sqlx::query_as(
+            "SELECT locale, slug, title, sections, seo_title, seo_description, updated_at \
+             FROM site_page_locales \
+             WHERE tenant_id = $1 AND site_id = $2 AND page_id = $3 AND locale = $4",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .bind(page.as_str())
+        .bind(locale)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)
     }
 
     /// Retitles a page.
@@ -510,6 +728,7 @@ struct SitePageRow {
     sections: sqlx::types::Json<Value>,
     seo_title: Option<String>,
     seo_description: Option<String>,
+    content_locale: String,
     nav_order: i32,
     is_home: bool,
     created_at: OffsetDateTime,
@@ -524,12 +743,53 @@ impl SitePageRow {
             sections: self.sections.0,
             seo_title: self.seo_title,
             seo_description: self.seo_description,
+            content_locale: self.content_locale,
             nav_order: self.nav_order,
             is_home: self.is_home,
             created_at: self.created_at,
             updated_at: self.updated_at,
         }
     }
+}
+
+#[derive(sqlx::FromRow)]
+struct SitePageLocaleRow {
+    locale: String,
+    slug: String,
+    title: String,
+    sections: sqlx::types::Json<Value>,
+    seo_title: Option<String>,
+    seo_description: Option<String>,
+    updated_at: OffsetDateTime,
+}
+
+impl SitePageLocaleRow {
+    fn into_page_from(self, base: &SitePage) -> SitePage {
+        SitePage {
+            id: base.id.clone(),
+            slug: self.slug,
+            title: self.title,
+            sections: self.sections.0,
+            seo_title: self.seo_title,
+            seo_description: self.seo_description,
+            content_locale: self.locale,
+            nav_order: base.nav_order,
+            is_home: base.is_home,
+            created_at: base.created_at,
+            updated_at: self.updated_at,
+        }
+    }
+}
+
+fn map_page_locale_constraints(error: sqlx::Error) -> StoreError {
+    if let sqlx::Error::Database(ref db) = error
+        && db.constraint() == Some("site_page_locales_slug_unique")
+    {
+        return StoreError::Conflict(
+            "slug is already used in this language on this site".to_owned(),
+        );
+    }
+    error.into()
 }
 
 #[cfg(test)]

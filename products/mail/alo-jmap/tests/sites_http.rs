@@ -207,6 +207,7 @@ async fn every_route_family_requires_a_bearer_token() {
             Some(json!({ "section": {} })),
         ),
         ("GET", "/sites/some-id/pages/p/preview".to_owned(), None),
+        ("GET", "/sites/some-id/pages/p/locales/fr".to_owned(), None),
     ];
     for (method, uri, body) in attempts {
         let req = match body {
@@ -724,6 +725,99 @@ async fn page_lifecycle_slug_seo_home_and_order() {
     assert_eq!(status, StatusCode::OK);
     let (status, _) = get(&h.app, &h.token, &format!("{base}/{home}")).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
+}
+
+#[tokio::test]
+async fn localized_page_drafts_resolve_fallback_and_hide_other_tenants() {
+    let owner = harness("sites-page-locales").await;
+    let outsider = harness_on(Arc::clone(&owner.store), "sites-page-locales-other").await;
+    let site = created_id(
+        "localized site",
+        post(
+            &owner.app,
+            &owner.token,
+            "/sites",
+            json!({
+                "name": "European journal",
+                "subdomain": sub("page-locales", &owner),
+                "defaultLocale": "en",
+                "enabledLocales": ["en", "fr", "nl"]
+            }),
+        )
+        .await,
+    );
+    let page = created_id(
+        "localized page",
+        post(
+            &owner.app,
+            &owner.token,
+            &format!("/sites/{site}/pages"),
+            json!({ "title": "About", "slug": "about" }),
+        )
+        .await,
+    );
+    let french_uri = format!("/sites/{site}/pages/{page}/locales/fr");
+
+    let (status, fallback) = get(&owner.app, &owner.token, &french_uri).await;
+    assert_eq!(status, StatusCode::OK, "{fallback}");
+    assert_eq!(fallback["id"], json!(page));
+    assert_eq!(fallback["title"], json!("About"));
+    assert_eq!(fallback["requestedLocale"], json!("fr"));
+    assert_eq!(fallback["resolvedLocale"], json!("en"));
+    assert_eq!(fallback["fallback"], json!(true));
+
+    let french_sections = json!({
+        "schema_version": 1,
+        "sections": [{"type": "hero", "heading": "Notre histoire"}]
+    });
+    let (status, localized) = put(
+        &owner.app,
+        &owner.token,
+        &french_uri,
+        json!({
+            "title": "Notre histoire",
+            "slug": "notre-histoire",
+            "sections": french_sections,
+            "seoTitle": "À propos",
+            "seoDescription": "Notre équipe."
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{localized}");
+    assert_eq!(localized["id"], json!(page));
+    assert_eq!(localized["slug"], json!("notre-histoire"));
+    assert_eq!(localized["resolvedLocale"], json!("fr"));
+    assert_eq!(localized["fallback"], json!(false));
+    assert_eq!(
+        localized["sections"]["sections"][0]["heading"],
+        json!("Notre histoire")
+    );
+
+    let (status, disabled) = get(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/pages/{page}/locales/de"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{disabled}");
+    assert!(disabled["detail"].as_str().unwrap().contains("not enabled"));
+
+    let (status, hidden) = get(&outsider.app, &outsider.token, &french_uri).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{hidden}");
+    let (status, hidden) = put(
+        &outsider.app,
+        &outsider.token,
+        &french_uri,
+        json!({
+            "title": "Defaced",
+            "slug": "defaced",
+            "sections": {"schema_version": 1, "sections": []}
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{hidden}");
+    let (_, unchanged) = get(&owner.app, &owner.token, &french_uri).await;
+    assert_eq!(unchanged["title"], json!("Notre histoire"));
 }
 
 // ---- sections ----------------------------------------------------------------

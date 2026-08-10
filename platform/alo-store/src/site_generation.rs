@@ -18,7 +18,9 @@ use crate::site_pages::{
     validate_page_title,
 };
 use crate::site_theme::SiteTheme;
-use crate::sites::{map_subdomain_unique, validate_site_name, validate_subdomain};
+use crate::sites::{
+    DEFAULT_SITE_LOCALE, map_subdomain_unique, validate_site_name, validate_subdomain,
+};
 
 const SEO_TITLE_MAX_CHARS: usize = 200;
 const SEO_DESCRIPTION_MAX_CHARS: usize = 500;
@@ -213,8 +215,8 @@ impl AccountStore {
             sqlx::query(
                 "INSERT INTO site_pages \
                  (tenant_id, site_id, id, slug, title, sections, seo_title, seo_description, \
-                  nav_order, is_home) \
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+                  content_locale, nav_order, is_home) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)",
             )
             .bind(self.tenant.as_str())
             .bind(site.as_str())
@@ -224,6 +226,7 @@ impl AccountStore {
             .bind(sqlx::types::Json(&page.sections))
             .bind(&page.seo_title)
             .bind(&page.seo_description)
+            .bind(DEFAULT_SITE_LOCALE)
             .bind(nav_order)
             .bind(page.is_home)
             .execute(&mut *tx)

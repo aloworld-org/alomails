@@ -167,7 +167,7 @@ pub struct Site {
 /// We accept the useful BCP-47 subset browsers and search engines understand:
 /// a 2-3 letter language followed by optional 2-8 character alphanumeric
 /// subtags. Lowercase storage makes equality and URL construction unambiguous.
-fn normalize_locale_tag(locale: &str) -> Result<String> {
+pub(crate) fn normalize_locale_tag(locale: &str) -> Result<String> {
     let locale = locale.trim().to_ascii_lowercase();
     let mut parts = locale.split('-');
     let Some(language) = parts.next() else {
