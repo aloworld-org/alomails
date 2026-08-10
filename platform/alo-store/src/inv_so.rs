@@ -233,6 +233,34 @@ impl SoStatus {
         )))
     }
 
+    /// The guard invoicing runs ([`crate::inv_so_invoice`]) before it raises a
+    /// document for what has gone out.
+    ///
+    /// Only a **draft** is refused, and only because nobody has promised
+    /// anything yet: an order still being typed has moved no goods, and billing
+    /// a conversation is how a customer receives an invoice for a quote they
+    /// never accepted. Every other state may be invoiced — including
+    /// `cancelled`, which is the case the cancellation itself names out loud:
+    /// giving up on a part-delivered order closes the remainder and **leaves
+    /// the customer to be invoiced for what they received**.
+    ///
+    /// Whether there is anything left to bill is a separate question, answered
+    /// from the lines rather than from the state.
+    ///
+    /// # Errors
+    /// [`StoreError::Conflict`] (`409` at the route edge) when the order is
+    /// still a draft.
+    pub fn ensure_invoiceable(self) -> Result<()> {
+        if !self.is_draft() {
+            return Ok(());
+        }
+        Err(StoreError::Conflict(
+            "this sales order is still a draft: nothing has been promised and nothing has gone \
+             out, so there is nothing to invoice"
+                .to_owned(),
+        ))
+    }
+
     /// The guard cancelling runs **in addition** to the transition table:
     /// giving up on an order some of whose goods have already gone out closes
     /// the remainder for good, and the customer is invoiced for what they
@@ -1075,6 +1103,27 @@ mod tests {
             assert!(message.contains(shut.as_str()), "{message}");
             assert!(message.contains(because), "{message}");
         }
+    }
+
+    #[test]
+    fn only_an_order_nobody_confirmed_is_refused_an_invoice() {
+        // Including `cancelled`: giving up on a part-delivered order closes the
+        // remainder and leaves the customer to be invoiced for what they
+        // received, which is exactly what the cancellation says out loud.
+        for billable in [
+            SoStatus::Confirmed,
+            SoStatus::PartiallyDelivered,
+            SoStatus::Delivered,
+            SoStatus::Cancelled,
+        ] {
+            assert!(billable.ensure_invoiceable().is_ok(), "{billable:?}");
+        }
+        let message = match SoStatus::Draft.ensure_invoiceable() {
+            Err(StoreError::Conflict(message)) => message,
+            other => panic!("expected Conflict, got {other:?}"),
+        };
+        assert!(message.contains("draft"), "{message}");
+        assert!(message.contains("nothing to invoice"), "{message}");
     }
 
     #[test]

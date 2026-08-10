@@ -326,6 +326,7 @@ POST /inventory/sales-orders -> inventory.sales_order.create
 POST /inventory/sales-orders/{id}/cancel -> inventory.sales_order.cancel
 POST /inventory/sales-orders/{id}/confirm -> inventory.sales_order.confirm
 POST /inventory/sales-orders/{id}/deliveries -> inventory.sales_order.delivery.create
+POST /inventory/sales-orders/{id}/invoice -> inventory.sales_order.invoice
 POST /inventory/suppliers -> inventory.supplier.create
 POST /inventory/suppliers/{id}/archive -> inventory.supplier.archive
 POST /projects/approvals/{id}/approve -> projects.approval.approve

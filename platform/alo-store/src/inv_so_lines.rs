@@ -64,6 +64,16 @@ pub struct SoLine {
     /// not say which line a movement belongs to. Written only by the delivering
     /// transaction, which writes those movements in the same breath.
     pub delivered_qty_milli: i64,
+    /// How much of this line is already on an invoice, in the same milli-units
+    /// it was ordered in — negative on a discount granted in words, which is
+    /// billed exactly once.
+    ///
+    /// The opposite of [`Self::delivered_qty_milli`]: a **fold** over the
+    /// invoices raised from this order ([`crate::inv_so_invoice`]) rather than
+    /// a column, because the link names this line and so the sum can never be
+    /// ambiguous. Throwing away the draft or voiding the issued document
+    /// therefore releases the quantity by construction, with no hook to forget.
+    pub invoiced_qty_milli: i64,
 }
 
 impl SoLine {
@@ -163,6 +173,14 @@ pub(crate) fn products_named(lines: &[NormalizedSoLine]) -> Vec<String> {
 /// Takes any executor so the same read serves a plain pool read and a read
 /// inside the transaction that holds the order's lock.
 ///
+/// The invoiced quantity is summed here rather than stored (see
+/// [`SoLine::invoiced_qty_milli`]): the correlated sum walks
+/// `inv_so_invoice_lines_by_ordered_line` and counts only documents that still
+/// stand, so a draft that was thrown away and an issued document that was
+/// voided both release what they carried. A **credit note** is a document of
+/// its own and does not: crediting corrects an invoice, the goods stay billed
+/// against it, and re-billing them would charge a customer twice.
+///
 /// # Errors
 /// [`StoreError::Db`] on failure.
 pub(crate) async fn read<'e, E>(executor: E, tenant: &str, so_id: &str) -> Result<Vec<SoLine>>
@@ -170,9 +188,18 @@ where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
 {
     let rows: Vec<SoLineRow> = sqlx::query_as(
-        "SELECT id, line_order, description, unit, qty_milli, unit_price_cents, vat_rate_bp, \
-             product_id, delivered_qty_milli \
-         FROM inv_sales_order_lines WHERE tenant_id = $1 AND so_id = $2 ORDER BY line_order",
+        "SELECT l.id, l.line_order, l.description, l.unit, l.qty_milli, l.unit_price_cents, \
+             l.vat_rate_bp, l.product_id, l.delivered_qty_milli, \
+             coalesce(( \
+                 SELECT sum(il.qty_milli)::bigint FROM inv_so_invoice_lines il \
+                 JOIN inv_so_invoices si \
+                   ON si.tenant_id = il.tenant_id AND si.id = il.so_invoice_id \
+                 JOIN billing_invoices bi \
+                   ON bi.tenant_id = si.tenant_id AND bi.id = si.invoice_id \
+                 WHERE il.tenant_id = l.tenant_id AND il.so_line_id = l.id \
+                   AND bi.status <> 'void'), 0) AS invoiced_qty_milli \
+         FROM inv_sales_order_lines l \
+         WHERE l.tenant_id = $1 AND l.so_id = $2 ORDER BY l.line_order",
     )
     .bind(tenant)
     .bind(so_id)
@@ -243,6 +270,7 @@ struct SoLineRow {
     shared: LineRow,
     product_id: Option<String>,
     delivered_qty_milli: i64,
+    invoiced_qty_milli: i64,
 }
 
 impl SoLineRow {
@@ -251,6 +279,7 @@ impl SoLineRow {
             product_id: self.product_id.map(BillingProductId::new),
             line: self.shared.into_line(),
             delivered_qty_milli: self.delivered_qty_milli,
+            invoiced_qty_milli: self.invoiced_qty_milli,
         }
     }
 }
@@ -361,6 +390,7 @@ mod tests {
                 vat_rate_bp: 1900,
             },
             delivered_qty_milli: delivered,
+            invoiced_qty_milli: 0,
         }
     }
 

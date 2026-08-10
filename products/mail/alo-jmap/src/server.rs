@@ -26,10 +26,11 @@ use crate::{
     finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
     insights_gallery, inventory_locations, inventory_moves, inventory_po, inventory_po_print,
     inventory_po_receipts, inventory_po_send, inventory_so, inventory_so_deliveries,
-    inventory_stock, inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
-    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
-    projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
-    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    inventory_so_invoice, inventory_stock, inventory_supplier_prices, inventory_suppliers,
+    meet_routes, projects_clients, projects_invoices, projects_plan, projects_reports,
+    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, scoped_roles,
+    security, session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe,
+    wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -543,6 +544,18 @@ pub fn app_with_site_domain_dns(
             "/inventory/sales-orders/{id}/deliveries",
             get(inventory_so_deliveries::list_deliveries)
                 .post(inventory_so_deliveries::create_delivery),
+        )
+        // Invoicing (B5.06b): the bridge into billing. It bills what has been
+        // DELIVERED and not yet invoiced — never what was ordered — so a
+        // partial consignment invoices correctly and a second one raises a
+        // second draft for the new quantity only.
+        .route(
+            "/inventory/sales-orders/{id}/invoice",
+            post(inventory_so_invoice::create_invoice),
+        )
+        .route(
+            "/inventory/sales-orders/{id}/invoices",
+            get(inventory_so_invoice::list_invoices),
         )
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the

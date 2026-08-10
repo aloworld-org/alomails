@@ -116,6 +116,7 @@ pub mod inv_po_send;
 pub mod inv_so;
 pub mod inv_so_confirm;
 pub mod inv_so_deliver;
+pub mod inv_so_invoice;
 pub mod inv_so_lines;
 pub mod inv_stock;
 pub mod inv_supplier_prices;
@@ -315,9 +316,9 @@ pub use id::{
     FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
     FinMileageRateId, FinPeriodId, FinPostingId, GroupId, InsightDashboardId, InsightTileId,
     InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId, InvSalesOrderId, InvSoDeliveryId,
-    InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
-    SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId, SitePublishId, SpaceId,
-    SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    InvSoInvoiceId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId,
+    ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId,
+    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

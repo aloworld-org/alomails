@@ -42,6 +42,7 @@ use time::Date;
 use alo_store::inv_so::{
     NewSalesOrder, SalesOrder, SalesOrderDocument, SalesOrderSummary, SoStatus,
 };
+use alo_store::inv_so_invoice::invoiceable;
 use alo_store::inv_so_lines::{NewSoLine, SoLine};
 use alo_store::{AccountStore, BillingCustomerId, BillingProductId, InvSalesOrderId};
 
@@ -78,12 +79,20 @@ fn order_json(o: &SalesOrder, customer_name: &str, today: Date) -> Value {
 
 /// One ordered line: the shared document line, plus the catalog item a delivery
 /// will take out of stock (`null` for a charge in words), plus how much of it
-/// already has gone.
+/// already has gone and how much of it is already billed.
 ///
 /// `outstandingQtyMilli` is derived, never stored — what a picking list shows in
 /// its "still to go" column — and it is `0` on a charge in words, because
 /// assembly does not leave on a pallet and must not hold an order open.
-fn line_json(l: &SoLine) -> Value {
+///
+/// `invoiceableQtyMilli` is derived too, and by the **store's** own rule
+/// ([`alo_store::inv_so_invoice::invoiceable`]) rather than by arithmetic here:
+/// what a screen offers to bill and what pressing the button actually bills have
+/// to be the same number, computed once. It is `0` on a line with nothing left
+/// to bill, which is why it is passed in rather than computed per line — a
+/// charge in words waits for the first consignment, and that is a fact about the
+/// order, not about the line.
+fn line_json(l: &SoLine, invoiceable_qty_milli: i64) -> Value {
     json!({
         "id": l.line.id.as_str(),
         "productId": l.product_id.as_ref().map(BillingProductId::as_str),
@@ -92,10 +101,28 @@ fn line_json(l: &SoLine) -> Value {
         "qtyMilli": l.line.qty_milli,
         "deliveredQtyMilli": l.delivered_qty_milli,
         "outstandingQtyMilli": l.outstanding_qty_milli(),
+        "invoicedQtyMilli": l.invoiced_qty_milli,
+        "invoiceableQtyMilli": invoiceable_qty_milli,
         "unitPriceCents": l.line.unit_price_cents,
         "vatRateBp": l.line.vat_rate_bp,
         "netCents": l.line.net_cents(),
     })
+}
+
+/// The lines of one order as JSON, each carrying what an invoice raised right
+/// now would take from it.
+fn lines_json(lines: &[SoLine]) -> Vec<Value> {
+    let carrying = invoiceable(lines);
+    lines
+        .iter()
+        .map(|line| {
+            let qty = carrying
+                .iter()
+                .find(|c| c.so_line_id.as_str() == line.line.id.as_str())
+                .map_or(0, |c| c.line.qty_milli);
+            line_json(line, qty)
+        })
+        .collect()
 }
 
 /// A whole order: header, lines in print order, totals.
@@ -106,10 +133,7 @@ fn line_json(l: &SoLine) -> Value {
 pub(crate) fn document_json(d: &SalesOrderDocument, today: Date) -> Value {
     let mut header = order_json(&d.order, &d.customer_name, today);
     if let Some(object) = header.as_object_mut() {
-        object.insert(
-            "lines".to_owned(),
-            Value::Array(d.lines.iter().map(line_json).collect()),
-        );
+        object.insert("lines".to_owned(), Value::Array(lines_json(&d.lines)));
         object.insert("totals".to_owned(), totals_json(&d.totals));
     }
     header

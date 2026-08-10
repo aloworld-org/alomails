@@ -683,6 +683,7 @@ mod tests {
                 vat_rate_bp: 1900,
             },
             delivered_qty_milli: delivered,
+            invoiced_qty_milli: 0,
         }
     }
 

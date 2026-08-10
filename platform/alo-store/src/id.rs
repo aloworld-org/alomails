@@ -476,6 +476,16 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One raising of an invoice from a sales order (alo Inventory, ADR 0035,
+    /// wave B5.06b) — the link between the order and the **draft** document it
+    /// put what was delivered onto. Distinct from the [`BillingInvoiceId`] it
+    /// names: the invoice is billing's from the moment it exists, and this id
+    /// identifies only the act of raising it
+    /// (`docs/design/inventory.md`, "The invoice").
+    InvSoInvoiceId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.
