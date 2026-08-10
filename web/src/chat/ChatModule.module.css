@@ -75,7 +75,7 @@
   padding: 0 var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
-  font-size: var(--text-sm);
+  font-size: 15px;
   text-align: left;
   cursor: pointer;
   background: transparent;
@@ -140,7 +140,8 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  min-height: 56px;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-surface);
 }
@@ -175,9 +176,12 @@
 
 .roomName {
   margin: 0;
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .roomTopic {
@@ -186,20 +190,74 @@
   color: var(--text-tertiary);
 }
 
+/* The measure that makes a conversation readable: a gutter the width of an
+   avatar, with everything after it aligned to one line. */
 .feed {
+  --gutter: 36px;
+  --gutter-gap: 10px;
+
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
 }
 
-.message {
+/* A message starting a run gets air above it; one continuing gets almost
+   none. That rhythm is what separates people speaking from a list of rows. */
+.message,
+.messageForMe {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  padding: 2px 0 2px calc(var(--gutter) + var(--gutter-gap));
+  margin-top: var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+.message.grouped,
+.messageForMe.grouped {
+  margin-top: 0;
+}
+
+.message:hover,
+.messageForMe:hover {
+  background: var(--bg-raised);
+}
+
+/* The avatar sits in the gutter, out of the text flow, so every line of every
+   message begins at the same x. */
+.messageMeta {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-bottom: 2px;
+}
+
+.messageMeta > :first-child {
+  position: absolute;
+  left: 0;
+  top: 2px;
+}
+
+/* The time a grouped line was said, in the gutter, on approach only. */
+.gutterTime {
+  position: absolute;
+  left: 0;
+  width: var(--gutter);
+  top: 4px;
+  font-size: 11px;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+}
+
+.message:hover .gutterTime,
+.messageForMe:hover .gutterTime {
+  opacity: 1;
 }
 
 /* Centred, not baseline-aligned: the row now leads with an avatar, and text
@@ -211,9 +269,10 @@
 }
 
 .author {
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--text-primary);
+  line-height: 1.2;
 }
 
 .time,
@@ -225,8 +284,9 @@
 
 .body {
   margin: 0;
-  font-size: var(--text-sm);
-  line-height: 1.55;
+  /* 15px, not 13: this is the text people actually read all day. */
+  font-size: 15px;
+  line-height: 1.46;
   color: var(--text-primary);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -241,30 +301,51 @@
 
 /* ---- saying something --------------------------------------------- */
 
+/* One bordered box holding the field and its actions — the shape every chat
+   app uses, because it says "this whole area is where you write". */
 .composer {
   display: flex;
+  align-items: center;
   gap: var(--space-2);
-  padding: var(--space-3);
-  border-top: 1px solid var(--border-subtle);
+  margin: 0 var(--space-4) var(--space-4);
+  padding: 6px 6px 6px var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg, 12px);
   background: var(--bg-surface);
+  transition: border-color 120ms ease;
 }
 
+.composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-tint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer {
+    transition: none;
+  }
+}
+
+/* The field carries no border of its own: the box is the border. */
 .input {
   flex: 1;
   min-width: 0;
-  min-height: 40px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  min-height: 36px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   font: inherit;
-  font-size: var(--text-sm);
+  font-size: 15px;
   color: var(--text-primary);
-  background: var(--bg-app);
 }
 
+.input:focus,
 .input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
 }
 
 /* ---- finding something that was said --------------------------------- */
@@ -693,13 +774,19 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 40px;
-  min-height: 40px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
+  order: -1;
+  width: 32px;
+  height: 32px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
+}
+
+.attachButton:hover {
+  background: var(--bg-raised);
 }
 
 .attachButton:hover {
@@ -716,13 +803,15 @@
 
 /* A message addressed to you is marked by a rail, not by a background wash —
    the words stay as legible as every other line. */
+/* Addressed to you: a tinted band the full width of the row, not a rail that
+   knocks the text out of alignment with everything above it. */
 .messageForMe {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  border-left: 2px solid var(--accent);
-  padding-left: var(--space-2);
-  margin-left: calc(var(--space-2) * -1 - 2px);
+  background: var(--accent-tint);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.messageForMe:hover {
+  background: var(--accent-tint);
 }
 
 /* Outranks the plain unread count: a number you must look at, versus a number

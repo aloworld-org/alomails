@@ -75,6 +75,25 @@ function personName(email: string | null, id: string): string {
   return at > 0 ? email.slice(0, at) : email;
 }
 
+/** Minutes within which consecutive messages from one person are one run.
+ *  Slack and Teams both use about this; longer and a reply an hour later
+ *  hides under a stale name, shorter and a quick exchange fragments. */
+const GROUP_MINUTES = 5;
+
+/** Whether `message` continues the run started by `before`. */
+function continues(message: Message, before: Message | undefined): boolean {
+  if (before === undefined) return false;
+  if (before.author !== message.author) return false;
+  if (before.authorKind !== message.authorKind) return false;
+  // A proposal or an attachment ends a run: those carry their own block and
+  // reading them without a name above is disorienting.
+  if (before.proposal !== null || before.attachments.length > 0) return false;
+  const gap =
+    new Date(message.createdAt).getTime() -
+    new Date(before.createdAt).getTime();
+  return gap >= 0 && gap < GROUP_MINUTES * 60_000;
+}
+
 /** Local time of day, for the line beside an author. */
 function timeOf(iso: string): string {
   const at = new Date(iso);
@@ -192,6 +211,7 @@ function MessageLine({
   onDecide,
   onEdit,
   onWithdraw,
+  grouped = false,
   children,
 }: {
   message: Message;
@@ -210,6 +230,9 @@ function MessageLine({
    *  refuses anyone else's and an offer that ends in 403 is a lie. */
   onEdit: (message: Message, body: string) => void;
   onWithdraw: (message: Message) => void;
+  /** This message continues the previous author's run: no avatar, no name, no
+   *  timestamp — just the words, aligned under the ones above. */
+  grouped?: boolean;
   children?: ReactNode;
 }) {
   const namesMe = me !== null && message.mentions.includes(me);
@@ -231,36 +254,49 @@ function MessageLine({
   // not offered on them either.
   const reactable = palette.length > 0 && message.deletedAt === null;
   return (
-    <article className={namesMe ? styles.messageForMe : styles.message}>
-      <div className={styles.messageMeta}>
-        {isAgent ? (
-          <span className={styles.agentMark} aria-hidden="true">
-            <Sparkles size={13} />
+    <article
+      className={[
+        namesMe ? styles.messageForMe : styles.message,
+        grouped ? styles.grouped : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {grouped ? (
+        // The time still exists for the reader who wants it, on approach only,
+        // in the gutter the avatar would occupy.
+        <span className={styles.gutterTime}>{timeOf(message.createdAt)}</span>
+      ) : (
+        <div className={styles.messageMeta}>
+          {isAgent ? (
+            <span className={styles.agentMark} aria-hidden="true">
+              <Sparkles size={13} />
+            </span>
+          ) : (
+            <Avatar
+              name={who}
+              email={message.authorEmail ?? undefined}
+              size="sm"
+            />
+          )}
+          <span
+            className={isAgent ? styles.authorAgent : styles.author}
+            // The full address on hover: the local part is what people say, the
+            // address is what settles who it was.
+            title={message.authorEmail ?? message.author}
+          >
+            {who}
           </span>
-        ) : (
-          <Avatar
-            name={who}
-            email={message.authorEmail ?? undefined}
-            size="sm"
-          />
-        )}
-        <span
-          className={isAgent ? styles.authorAgent : styles.author}
-          // The full address on hover: the local part is what people say, the
-          // address is what settles who it was.
-          title={message.authorEmail ?? message.author}
-        >
-          {who}
-        </span>
-        {isAgent && (
-          // An agent is not a colleague and must never be mistaken for one.
-          <span className={styles.agentTag}>{strings.chatAgentTag}</span>
-        )}
-        <span className={styles.time}>{timeOf(message.createdAt)}</span>
-        {message.editedAt !== null && message.deletedAt === null && (
-          <span className={styles.edited}>{strings.chatEdited}</span>
-        )}
-      </div>
+          {isAgent && (
+            // An agent is not a colleague and must never be mistaken for one.
+            <span className={styles.agentTag}>{strings.chatAgentTag}</span>
+          )}
+          <span className={styles.time}>{timeOf(message.createdAt)}</span>
+          {message.editedAt !== null && message.deletedAt === null && (
+            <span className={styles.edited}>{strings.chatEdited}</span>
+          )}
+        </div>
+      )}
       {editing !== null ? (
         <form
           className={styles.editRow}
@@ -1155,10 +1191,11 @@ export function ChatModule() {
               ) : messages.length === 0 ? (
                 <p className={styles.feedNote}>{strings.chatNoMessagesYet}</p>
               ) : (
-                messages.map((message) => (
+                messages.map((message, i) => (
                   <MessageLine
                     key={message.id}
                     message={message}
+                    grouped={continues(message, messages[i - 1])}
                     palette={open.archivedAt === null ? palette : []}
                     me={me}
                     onReact={(emoji) => void react(message.id, emoji)}
@@ -1410,10 +1447,11 @@ export function ChatModule() {
             ) : replies.length === 0 ? (
               <p className={styles.feedNote}>{strings.chatThreadEmpty}</p>
             ) : (
-              replies.map((reply) => (
+              replies.map((reply, i) => (
                 <MessageLine
                   key={reply.id}
                   message={reply}
+                  grouped={continues(reply, replies[i - 1])}
                   palette={open.archivedAt === null ? palette : []}
                   me={me}
                   onReact={(emoji) => void react(reply.id, emoji)}
