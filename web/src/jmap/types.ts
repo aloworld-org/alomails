@@ -824,6 +824,90 @@ export interface CategoryProposalsResultDto extends AgentResultDto {
   considered: number;
 }
 
+/** One side of the VAT figures the books carry — the sales side or the purchase
+ *  side. Rates the period did not use are simply absent; `unrated*` is turnover
+ *  or cost on no line of the return, reported apart from the totals because its
+ *  absence would read as "the question does not arise" when it means "none". */
+export interface VatSummarySideDto {
+  rates: { rateBp: number; baseCents: number; vatCents: number }[];
+  baseCents: number;
+  vatCents: number;
+  unratedBaseCents: number;
+  unratedVatCents: number;
+}
+
+/** What `vat_summary` read (B4.14b): the same figures `GET /finance/reports/vat`
+ *  answers, in the same shape — the agent is another reader of that report, not
+ *  a second rendering of it. `netPayableCents` is positive when the tenant owes
+ *  the authority and negative when it is owed a refund; the card says which in
+ *  words, the number carries the sign either way.
+ *
+ *  These are **figures for a return, not a return**: nothing is filed anywhere. */
+export interface VatSummaryResultDto extends AgentResultDto {
+  from: string;
+  to: string;
+  /** The tenant's accounting currency — every figure here is in it. */
+  currency: string;
+  output: VatSummarySideDto;
+  input: VatSummarySideDto;
+  netPayableCents: number;
+}
+
+/** One thing worth a second look, with the entries that caused it.
+ *
+ *  `entries` is the whole of the argument for a finding: an unexplained flag is
+ *  an accusation, so a card never shows one without them. Nothing here names a
+ *  person — the server's rules never read a posting's user — and there is no
+ *  score, no ranking and no confidence anywhere in the shape, because a number
+ *  attached to a suspicion is read as evidence for it. */
+export interface AnomalyFindingDto {
+  /** `duplicate`, `unusualAmount` or `missingRecurring`. Open: a kind a newer
+   *  server knows still renders, as "worth a look". */
+  kind: string;
+  accountId: string;
+  /** The chart's own code and name, or `null` for an account outside the chart
+   *  this read returned — an id is never shown as if it were a name. */
+  accountCode: string | null;
+  accountName: string | null;
+  /** The other side of the transaction, when the postings name one. */
+  counterparty: { kind: string; id: string; name: string | null } | null;
+  /** The amount the finding is about, in the scan's currency. */
+  amountCents: number;
+  /** What the account, or the cost, usually moves — what the amount above is
+   *  unusual against. `null` where the rule makes no comparison. */
+  typicalCents: number | null;
+  /** The first day of the month nothing was booked in (`missingRecurring`). */
+  missingMonth: string | null;
+  entries: {
+    id: string;
+    entryDate: string;
+    entryKind: string;
+    memo: string;
+    amountCents: number;
+  }[];
+}
+
+/** What `flag_anomalies` read (B4.14b). It wrote nothing: there is no anomaly
+ *  record, no "reviewed" flag and no dismissal — the answer to a finding is a
+ *  correcting entry in the journal.
+ *
+ *  `found` is what the scan found and `shown` is how many are in the list;
+ *  `truncated` says the period holds more entries than one scan carries, and
+ *  `notComparable` how many entries name no counterparty and so could not be
+ *  compared for duplication. Silence would read as "nothing was wrong" when
+ *  what it means is "I stopped looking". */
+export interface JournalAnomaliesResultDto extends AgentResultDto {
+  from: string;
+  to: string;
+  currency: string;
+  findings: AnomalyFindingDto[];
+  found: number;
+  shown: number;
+  scanned: number;
+  truncated: boolean;
+  notComparable: number;
+}
+
 /** What `project_status_summary` read: figures only. The server composes no
  *  sentence — every label around these numbers comes from the UI's own
  *  catalogue, so the summary is in the reader's language. */

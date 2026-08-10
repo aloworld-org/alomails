@@ -23,7 +23,9 @@ import {
   MessagesSquare,
   MoveRight,
   PenLine,
+  Percent,
   Reply,
+  ScanSearch,
   Send,
   Sparkles,
   Tags,
@@ -377,6 +379,43 @@ function describeAction(action: AgentActionDto): ActionView {
         title: strings.agentActCategorise,
         fields,
         note: strings.agentCategoriseNote,
+      };
+    }
+    // The finance agent's two answers (B4.14b). Both read and nothing else, so
+    // the card previews the one thing the user is really approving: which days
+    // are about to be read. The VAT card shows both days as the tool states
+    // them — there is no default period to fall back on, and a figure under a
+    // period nobody asked for is the one number that must never be guessed.
+    case "vat_summary": {
+      const from = dayOf(str(a, "from"));
+      const to = dayOf(str(a, "to"));
+      const fields: Field[] = [];
+      if (from !== "" && to !== "")
+        fields.push({
+          label: strings.agentVatFieldPeriod,
+          value: strings.agentDraftedRange(from, to),
+        });
+      return {
+        icon: Percent,
+        title: strings.agentActVatSummary,
+        fields,
+        note: strings.agentVatSummaryNote,
+      };
+    }
+    case "flag_anomalies": {
+      const from = dayOf(str(a, "from"));
+      const to = dayOf(str(a, "to")) || from;
+      const fields: Field[] = [];
+      if (from !== "")
+        fields.push({
+          label: strings.agentAnomalyFieldPeriod,
+          value: strings.agentDraftedRange(from, to),
+        });
+      return {
+        icon: ScanSearch,
+        title: strings.agentActFlagAnomalies,
+        fields,
+        note: strings.agentAnomalyNote,
       };
     }
     case "create_event": {

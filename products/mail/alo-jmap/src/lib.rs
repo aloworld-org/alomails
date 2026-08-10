@@ -19,6 +19,7 @@ pub mod agent_billing;
 pub mod agent_crm;
 pub mod agent_drive;
 pub mod agent_finance;
+pub mod agent_finance_answers;
 pub mod agent_projects;
 pub mod agent_reads;
 pub mod agent_timesheet;

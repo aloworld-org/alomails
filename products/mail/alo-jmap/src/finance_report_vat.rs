@@ -59,7 +59,11 @@ fn side_json(side: &VatReturnSide) -> Value {
 /// The whole return as JSON. `netPayableCents` is positive when the tenant owes
 /// the authority and negative when it is owed a refund — the screen says which
 /// in words, and the number carries the sign either way.
-fn report_json(report: &VatReturn) -> Value {
+///
+/// Visible to the crate so the agent's `vat_summary`
+/// ([`crate::agent_finance_answers`]) answers with *these* figures in *this*
+/// shape: a second rendering of a VAT figure is a second figure.
+pub(crate) fn report_json(report: &VatReturn) -> Value {
     json!({
         "from": iso_date(report.from),
         "to": iso_date(report.to),

@@ -1996,6 +1996,62 @@ export const en = {
         return "left out";
     }
   },
+  // The finance agent's two answers (B4.14b). Both only read: the words say so
+  // more than once, because a person told "your VAT" by a machine will assume
+  // something was filed unless the card says it was not.
+  agentActVatSummary: "VAT figures",
+  agentVatSummaryNote:
+    "Reads the VAT your books carry for those days — tax charged, tax paid, and the difference. Nothing is filed and nothing is changed.",
+  agentVatFieldPeriod: "Period",
+  agentVatCharged: "Charged on sales",
+  agentVatPaid: "Paid on purchases",
+  agentVatOwed: "You owe",
+  agentVatRefund: "You are owed back",
+  agentVatBaseSales: "Turnover",
+  agentVatBaseCosts: "Costs",
+  agentVatUnrated: "On no rate",
+  agentVatRateRow: (rate: string, base: string): string => `${rate} of ${base}`,
+  agentVatNothing: "Nothing in these days",
+  agentVatFooter:
+    "Figures for a return, not a return — filing still happens in your national portal.",
+  // The books-check. Every word here is a question, never a verdict: the tool
+  // has no score, and the card must not invent one.
+  agentActFlagAnomalies: "Check the books",
+  agentAnomalyNote:
+    "Reads your journal for those days and names what is worth a second look, with the entries behind each one. It writes nothing and marks nothing as reviewed.",
+  agentAnomalyFieldPeriod: "Books from",
+  agentAnomalyFound: (count: number): string =>
+    count === 1 ? "1 worth a look" : `${count} worth a look`,
+  agentAnomalyNone: "Nothing stood out",
+  agentAnomalyScanned: (count: number): string =>
+    count === 1 ? "1 entry read" : `${count} entries read`,
+  agentAnomalyShown: (shown: number, found: number): string =>
+    `showing ${shown} of ${found}`,
+  agentAnomalyTruncated:
+    "These days hold more entries than one check reads — ask again for a shorter period to see the rest.",
+  agentAnomalyNotComparable: (count: number): string =>
+    count === 1
+      ? "1 entry names no customer or supplier, so it could not be compared"
+      : `${count} entries name no customer or supplier, so they could not be compared`,
+  agentAnomalyKind: (kind: string): string => {
+    switch (kind) {
+      case "duplicate":
+        return "Booked twice in a week";
+      case "unusualAmount":
+        return "Unlike the rest of this account";
+      case "missingRecurring":
+        return "A month with nothing in it";
+      default:
+        // A kind a newer server knows and this client does not: still a
+        // question, never nothing.
+        return "Worth a look";
+    }
+  },
+  agentAnomalyTypical: (amount: string): string => `usually ${amount}`,
+  agentAnomalyMissingMonth: (month: string): string => `nothing in ${month}`,
+  agentAnomalyEvidence: "The entries behind it",
+  agentAnomalyFooter:
+    "Nothing was changed and nothing was marked as reviewed — each of these is a question about entries, and the answer to one is a correcting entry.",
   searchKind: (kind: string): string =>
     kind === "task"
       ? "Task"

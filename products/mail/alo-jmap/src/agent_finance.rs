@@ -57,7 +57,11 @@ const DEFAULT_PERIOD_DAYS: i64 = 90;
 
 /// The longest period one call may cover, both ends included — the same ceiling
 /// the expense list itself refuses past ([`crate::finance_expenses`]).
-const MAX_PERIOD_DAYS: i64 = 366;
+///
+/// Shared with the answering tools ([`crate::agent_finance_answers`]): one
+/// ceiling for the whole finance agent, so a period refused by one of its tools
+/// is refused by all of them in the same words.
+pub(crate) const MAX_PERIOD_DAYS: i64 = 366;
 
 /// `categorise_transactions` — suggest a category for the caller's own
 /// unclassified claims over a period.
@@ -76,7 +80,7 @@ pub async fn execute_categorise_transactions(
     account: &Account,
     args: &Value,
 ) -> Result<Json<Value>, Problem> {
-    let (from, to) = period(args, OffsetDateTime::now_utc().date())?;
+    let (from, to) = period(args, OffsetDateTime::now_utc().date(), DEFAULT_PERIOD_DAYS)?;
     let plan = account
         .acc
         .propose_expense_categories(from, to)
@@ -167,13 +171,26 @@ fn skipped_json(skipped: &SkippedClaim, claims: &HashMap<&str, &Expense>) -> Val
     })
 }
 
-/// The period of claims to look at: what the proposal states, or the last
-/// [`DEFAULT_PERIOD_DAYS`] days ending today.
+/// The period to look at: what the proposal states, or the last `default_days`
+/// days ending today.
 ///
 /// `today` is passed in rather than read here so the rule is testable without a
-/// clock. Both bounds are plain days in the claimant's own reading of the
-/// calendar, as everywhere on the expense surface.
-fn period(args: &Value, today: Date) -> Result<(Date, Date), Problem> {
+/// clock, and `default_days` is passed in because what an unstated period means
+/// is the *tool's* decision — a quarter of one's own claims to tidy up, a year
+/// of the books to look over — while what a stated one is allowed to be is the
+/// agent's, and belongs in one place ([`MAX_PERIOD_DAYS`]).
+///
+/// Both bounds are plain days in the reader's own reading of the calendar, as
+/// everywhere on the finance surface.
+///
+/// # Errors
+/// `422` when a bound is not a plain `YYYY-MM-DD`, when the period runs
+/// backwards, or when it is longer than [`MAX_PERIOD_DAYS`].
+pub(crate) fn period(
+    args: &Value,
+    today: Date,
+    default_days: i64,
+) -> Result<(Date, Date), Problem> {
     let to = match string_arg(args, "to") {
         None => today,
         Some(stated) => parse_iso_date(&stated).ok_or_else(|| {
@@ -181,7 +198,7 @@ fn period(args: &Value, today: Date) -> Result<(Date, Date), Problem> {
         })?,
     };
     let from = match string_arg(args, "from") {
-        None => to - Duration::days(DEFAULT_PERIOD_DAYS - 1),
+        None => to - Duration::days(default_days - 1),
         Some(stated) => parse_iso_date(&stated).ok_or_else(|| {
             unprocessable("the start of the period must be a date written YYYY-MM-DD")
         })?,
@@ -212,7 +229,7 @@ mod tests {
     #[test]
     fn an_unstated_period_is_the_quarter_up_to_today() {
         let today = day(Month::August, 10);
-        let (from, to) = period(&json!({}), today).unwrap();
+        let (from, to) = period(&json!({}), today, DEFAULT_PERIOD_DAYS).unwrap();
         assert_eq!(to, today);
         // Both ends included, so the span is one day shorter than the count.
         assert_eq!((to - from).whole_days(), DEFAULT_PERIOD_DAYS - 1);
@@ -220,7 +237,12 @@ mod tests {
 
     #[test]
     fn a_stated_end_moves_the_whole_window_with_it() {
-        let (from, to) = period(&json!({ "to": "2026-06-30" }), day(Month::August, 10)).unwrap();
+        let (from, to) = period(
+            &json!({ "to": "2026-06-30" }),
+            day(Month::August, 10),
+            DEFAULT_PERIOD_DAYS,
+        )
+        .unwrap();
         assert_eq!(to, day(Month::June, 30));
         assert_eq!((to - from).whole_days(), DEFAULT_PERIOD_DAYS - 1);
     }
@@ -230,6 +252,7 @@ mod tests {
         let (from, to) = period(
             &json!({ "from": " 2026-07-01 ", "to": "2026-07-31" }),
             day(Month::August, 10),
+            DEFAULT_PERIOD_DAYS,
         )
         .unwrap();
         assert_eq!(from, day(Month::July, 1));
@@ -244,7 +267,8 @@ mod tests {
             json!({ "to": "2026-07-01T00:00:00Z" }),
             json!({ "to": "2026-13-01" }),
         ] {
-            let problem = period(&bad, day(Month::August, 10)).expect_err("accepted");
+            let problem =
+                period(&bad, day(Month::August, 10), DEFAULT_PERIOD_DAYS).expect_err("accepted");
             assert_eq!(problem.status, axum::http::StatusCode::UNPROCESSABLE_ENTITY);
         }
     }
@@ -254,6 +278,7 @@ mod tests {
         let backwards = period(
             &json!({ "from": "2026-08-01", "to": "2026-07-01" }),
             day(Month::August, 10),
+            DEFAULT_PERIOD_DAYS,
         )
         .expect_err("accepted a backwards period");
         assert!(
@@ -267,6 +292,7 @@ mod tests {
         let endless = period(
             &json!({ "from": "2024-01-01", "to": "2026-08-01" }),
             day(Month::August, 10),
+            DEFAULT_PERIOD_DAYS,
         )
         .expect_err("accepted an endless period");
         assert!(
@@ -281,6 +307,7 @@ mod tests {
         let ok = period(
             &json!({ "from": "2026-01-01", "to": "2026-12-31" }),
             day(Month::August, 10),
+            DEFAULT_PERIOD_DAYS,
         );
         assert!(ok.is_ok(), "a whole year must fit");
     }
@@ -292,8 +319,8 @@ mod tests {
         let with = json!({ "from": "2026-07-01", "to": "2026-07-31", "category": "Travel" });
         let without = json!({ "from": "2026-07-01", "to": "2026-07-31" });
         assert_eq!(
-            period(&with, day(Month::August, 10)).unwrap(),
-            period(&without, day(Month::August, 10)).unwrap()
+            period(&with, day(Month::August, 10), DEFAULT_PERIOD_DAYS).unwrap(),
+            period(&without, day(Month::August, 10), DEFAULT_PERIOD_DAYS).unwrap()
         );
     }
 }

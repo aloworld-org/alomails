@@ -12,17 +12,22 @@
 // language (CLAUDE.md). Every word around them is written here, in the
 // catalogue, so the summary is in the reader's language.
 import { useState } from "react";
-import { CalendarClock, CalendarRange, Gauge, Tags } from "lucide-react";
+import { CalendarClock, CalendarRange, Gauge, Percent, ScanSearch, Tags } from "lucide-react";
 
+import { formatAmount, formatRate } from "../billing";
 import { Button } from "../ds";
 import { financeMessage, useFinanceApi } from "../finance";
-import { strings } from "../i18n";
+import { getLocale, strings } from "../i18n";
 import type {
   AgentResultDto,
+  AnomalyFindingDto,
   CategoryProposalsResultDto,
+  JournalAnomaliesResultDto,
   ProjectStatusResultDto,
   TimeEntryResultDto,
   TimesheetDraftResultDto,
+  VatSummaryResultDto,
+  VatSummarySideDto,
 } from "../jmap";
 import { dayLabel, durationLabel, percentLabel } from "../projects/format";
 import styles from "./AgentResultCard.module.css";
@@ -51,6 +56,20 @@ function isTimesheetDraft(result: AgentResultDto): result is TimesheetDraftResul
  *  shape is what is checked, not their contents. */
 function isCategoryProposals(result: AgentResultDto): result is CategoryProposalsResultDto {
   return result.kind === "categoryProposals" && "proposed" in result && "skipped" in result;
+}
+
+/** A `vatSummary` result — the VAT figures the books carry (B4.14b). Both sides
+ *  are always present, however empty the period was, so the shape is what is
+ *  checked. */
+function isVatSummary(result: AgentResultDto): result is VatSummaryResultDto {
+  return result.kind === "vatSummary" && "output" in result && "netPayableCents" in result;
+}
+
+/** A `journalAnomalies` result — what a scan of the journal found (B4.14b). An
+ *  empty `findings` is a real and useful answer ("nothing stood out"), so the
+ *  shape is what is checked, not its contents. */
+function isJournalAnomalies(result: AgentResultDto): result is JournalAnomaliesResultDto {
+  return result.kind === "journalAnomalies" && "findings" in result && "scanned" in result;
 }
 
 /** One labelled figure. `aside` is a second fact on the same line ("3 open ·
@@ -391,11 +410,203 @@ function CategoryProposalsResult({ proposals }: { proposals: CategoryProposalsRe
   );
 }
 
+/** One side of the VAT figures: the rates the period actually used, what was on
+ *  no rate, and the total. Every amount is the server's, in the accounting
+ *  currency it stated — the browser adds nothing up. */
+function VatSide({
+  label,
+  base,
+  side,
+  currency,
+}: {
+  label: string;
+  base: string;
+  side: VatSummarySideDto;
+  currency: string;
+}) {
+  const money = (cents: number) => formatAmount(cents, getLocale(), currency);
+  return (
+    <>
+      <span className={styles.groupLabel}>{label}</span>
+      <div className={styles.rows}>
+        {side.rates.map((rate) => (
+          <Row
+            key={rate.rateBp}
+            label={strings.agentVatRateRow(
+              formatRate(rate.rateBp, getLocale()),
+              money(rate.baseCents),
+            )}
+            value={money(rate.vatCents)}
+          />
+        ))}
+        {(side.unratedBaseCents !== 0 || side.unratedVatCents !== 0) && (
+          <Row
+            label={strings.agentVatUnrated}
+            value={money(side.unratedVatCents)}
+            aside={money(side.unratedBaseCents)}
+          />
+        )}
+        <Row label={base} value={money(side.vatCents)} aside={money(side.baseCents)} />
+      </div>
+    </>
+  );
+}
+
+/** The VAT figures, read back. Nothing was filed, and the card says so at the
+ *  end rather than leaving a person to assume it. */
+function VatSummaryResult({ report }: { report: VatSummaryResultDto }) {
+  const money = (cents: number) => formatAmount(cents, getLocale(), report.currency);
+  const owed = report.netPayableCents >= 0;
+  const empty =
+    report.output.rates.length === 0 &&
+    report.input.rates.length === 0 &&
+    report.netPayableCents === 0;
+  return (
+    <div className={styles.card}>
+      <div className={styles.header}>
+        <Percent size={16} aria-hidden />
+        <span>{strings.agentActVatSummary}</span>
+      </div>
+      <div className={styles.rows}>
+        <Row
+          label={strings.agentVatFieldPeriod}
+          value={strings.agentDraftedRange(dayLabel(report.from), dayLabel(report.to))}
+        />
+      </div>
+      {empty ? (
+        <p className={styles.note}>{strings.agentVatNothing}</p>
+      ) : (
+        <>
+          <VatSide
+            label={strings.agentVatCharged}
+            base={strings.agentVatBaseSales}
+            side={report.output}
+            currency={report.currency}
+          />
+          <VatSide
+            label={strings.agentVatPaid}
+            base={strings.agentVatBaseCosts}
+            side={report.input}
+            currency={report.currency}
+          />
+          <div className={styles.rows}>
+            {/* The sign is the server's; which way round it reads is written
+                here, because "you owe" and "you are owed" are words. */}
+            <Row
+              label={owed ? strings.agentVatOwed : strings.agentVatRefund}
+              value={money(Math.abs(report.netPayableCents))}
+            />
+          </div>
+        </>
+      )}
+      <p className={styles.note}>{strings.agentVatFooter}</p>
+    </div>
+  );
+}
+
+/** One finding: what kind of question it is, the account and counterparty it is
+ *  about, and — always — the entries behind it. */
+function AnomalyFinding({
+  finding,
+  currency,
+}: {
+  finding: AnomalyFindingDto;
+  currency: string;
+}) {
+  const money = (cents: number) => formatAmount(cents, getLocale(), currency);
+  const where = [finding.accountName ?? finding.accountCode, finding.counterparty?.name]
+    .filter((part) => part !== null && part !== undefined && part !== "")
+    .join(" · ");
+  return (
+    <li className={styles.item}>
+      <span className={styles.itemName}>
+        {strings.agentAnomalyKind(finding.kind)}
+        {where !== "" && <span className={styles.aside}> · {where}</span>}
+      </span>
+      <span className={styles.itemMinutes}>
+        {finding.missingMonth === null
+          ? money(finding.amountCents)
+          : strings.agentAnomalyMissingMonth(
+              dayLabel(finding.missingMonth, { month: "long", year: "numeric" }),
+            )}
+        {finding.typicalCents !== null && (
+          <span className={styles.aside}>
+            {" "}
+            · {strings.agentAnomalyTypical(money(finding.typicalCents))}
+          </span>
+        )}
+      </span>
+      {/* The argument for the finding. A flag without the rows that caused it is
+          an accusation, so this list is never collapsed away. */}
+      <ul className={styles.list}>
+        {finding.entries.map((entry) => (
+          <li key={entry.id} className={`${styles.item} ${styles.itemSkipped}`}>
+            <span className={styles.itemDay}>{dayLabel(entry.entryDate)}</span>
+            <span className={styles.itemName}>{entry.memo}</span>
+            <span className={styles.itemMinutes}>{money(entry.amountCents)}</span>
+          </li>
+        ))}
+      </ul>
+    </li>
+  );
+}
+
+/** What a scan of the journal found — and, just as much part of the answer,
+ *  what it could not look at. */
+function JournalAnomaliesResult({ scan }: { scan: JournalAnomaliesResultDto }) {
+  return (
+    <div className={styles.card}>
+      <div className={styles.header}>
+        <ScanSearch size={16} aria-hidden />
+        <span>{strings.agentActFlagAnomalies}</span>
+      </div>
+      <div className={styles.rows}>
+        <Row
+          label={strings.agentAnomalyFieldPeriod}
+          value={strings.agentDraftedRange(dayLabel(scan.from), dayLabel(scan.to))}
+        />
+        <Row
+          label={
+            scan.found === 0 ? strings.agentAnomalyNone : strings.agentAnomalyFound(scan.found)
+          }
+          value={strings.agentAnomalyScanned(scan.scanned)}
+          aside={
+            scan.shown < scan.found
+              ? strings.agentAnomalyShown(scan.shown, scan.found)
+              : undefined
+          }
+        />
+      </div>
+      {scan.findings.length > 0 && (
+        <ul className={styles.list}>
+          {scan.findings.map((finding, i) => (
+            <AnomalyFinding
+              // A finding is not a record and has no id of its own — it is a
+              // question about a period — so its place in the answer is the only
+              // stable key it has.
+              key={`${finding.kind}-${finding.accountId}-${i}`}
+              finding={finding}
+              currency={scan.currency}
+            />
+          ))}
+        </ul>
+      )}
+      {scan.truncated && <p className={styles.note}>{strings.agentAnomalyTruncated}</p>}
+      {scan.notComparable > 0 && (
+        <p className={styles.note}>{strings.agentAnomalyNotComparable(scan.notComparable)}</p>
+      )}
+      <p className={styles.note}>{strings.agentAnomalyFooter}</p>
+    </div>
+  );
+}
+
 export function AgentResultCard({ result }: { result: AgentResultDto }) {
   if (isProjectStatus(result)) return <ProjectStatusResult status={result} />;
   if (isTimeEntry(result)) return <TimeEntryResult entry={result} />;
   if (isTimesheetDraft(result)) return <TimesheetDraftResult draft={result} />;
   if (isCategoryProposals(result)) return <CategoryProposalsResult proposals={result} />;
+  if (isVatSummary(result)) return <VatSummaryResult report={result} />;
+  if (isJournalAnomalies(result)) return <JournalAnomaliesResult scan={result} />;
   // Every other tool: the confirmation this overlay has always shown.
   return <p className={styles.note}>{strings.agentDone}</p>;
 }

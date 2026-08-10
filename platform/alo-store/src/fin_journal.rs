@@ -34,6 +34,8 @@
 //! describes are produced there too — this module's job is to refuse the entry
 //! if they are missing or wrong.
 
+use std::collections::HashMap;
+
 use time::{Date, OffsetDateTime};
 
 use crate::account::AccountStore;
@@ -973,6 +975,86 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         rows.into_iter().map(EntryRow::into_entry).collect()
+    }
+
+    /// The tenant's journal over a period, **oldest first, with every posting
+    /// attached** — the whole-period read an analysis makes, as against
+    /// [`AccountStore::fin_entries`], which is a screen's page of headers.
+    ///
+    /// Both bounds are inclusive. `limit` is a ceiling on *entries*, clamped to
+    /// at least one; a caller that needs to know whether it hit the ceiling asks
+    /// for one more than it wants and looks at the length, because a truncated
+    /// scan that does not know it was truncated reports "nothing else happened"
+    /// when what it means is "I stopped looking"
+    /// ([`crate::fin_anomalies`]).
+    ///
+    /// Ordered by accounting date and then by id, so the same period reads the
+    /// same way twice — and so a `limit` cuts a **contiguous range of days**
+    /// rather than a scatter, which is what lets a rule about the *rhythm* of a
+    /// cost trust the window it was given.
+    ///
+    /// Two queries rather than a join: the postings come back once per posting
+    /// instead of the entry header repeating on each of them.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure; [`StoreError::Validation`] on a stored
+    /// word this build does not know.
+    pub async fn fin_journal_range(
+        &self,
+        from: Date,
+        to: Date,
+        limit: i64,
+    ) -> Result<Vec<JournalEntry>> {
+        let rows = sqlx::query_as::<_, EntryRow>(&format!(
+            "SELECT {ENTRY_COLS} FROM fin_entries \
+             WHERE tenant_id = $1 AND entry_date >= $2 AND entry_date <= $3 \
+             ORDER BY entry_date, id LIMIT $4"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(from)
+        .bind(to)
+        .bind(limit.max(1))
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let entries: Vec<Entry> = rows
+            .into_iter()
+            .map(EntryRow::into_entry)
+            .collect::<Result<_>>()?;
+        if entries.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        let ids: Vec<String> = entries
+            .iter()
+            .map(|entry| entry.id.as_str().to_owned())
+            .collect();
+        let rows = sqlx::query_as::<_, PostingRow>(&format!(
+            "SELECT {POSTING_COLS} FROM fin_postings \
+             WHERE tenant_id = $1 AND entry_id = ANY($2::text[]) \
+             ORDER BY entry_id, position"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(&ids)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let mut by_entry: HashMap<String, Vec<Posting>> = HashMap::new();
+        for row in rows {
+            let posting = row.into_posting();
+            by_entry
+                .entry(posting.entry_id.as_str().to_owned())
+                .or_default()
+                .push(posting);
+        }
+
+        Ok(entries
+            .into_iter()
+            .map(|entry| {
+                let postings = by_entry.remove(entry.id.as_str()).unwrap_or_default();
+                JournalEntry { entry, postings }
+            })
+            .collect())
     }
 
     /// The entry a document event already produced, if it has been posted.

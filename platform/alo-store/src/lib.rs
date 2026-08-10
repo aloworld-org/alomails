@@ -77,6 +77,7 @@ pub mod error;
 pub mod extract;
 pub mod fin_accounts;
 pub mod fin_aged;
+pub mod fin_anomalies;
 pub mod fin_balance;
 pub mod fin_booking;
 pub mod fin_categories;
@@ -240,6 +241,12 @@ pub use fin_accounts::{
 };
 pub use fin_aged::{
     AGED_BUCKETS, AgedBucket, AgedBuckets, AgedDocument, AgedParty, AgedReport, AgedSide,
+};
+pub use fin_anomalies::{
+    ANOMALY_DUPLICATE, ANOMALY_FINDINGS_MAX, ANOMALY_MISSING_RECURRING, ANOMALY_SCAN_MAX,
+    ANOMALY_SOURCES_MAX, ANOMALY_UNUSUAL_AMOUNT, Anomaly, AnomalyScan, AnomalySource, Counterparty,
+    DUPLICATE_WINDOW_DAYS, OUTLIER_FACTOR, OUTLIER_FLOOR_CENTS, OUTLIER_MIN_SAMPLE, PARTY_CUSTOMER,
+    PARTY_SUPPLIER, RECURRING_MIN_MONTHS, find_anomalies,
 };
 pub use fin_balance::{BalanceLine, BalanceSheet};
 pub use fin_categories::{CATEGORY_NAME_MAX_CHARS, ExpenseCategory, NewExpenseCategory};

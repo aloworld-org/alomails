@@ -374,7 +374,7 @@ impl AccountStore {
     ///
     /// # Errors
     /// [`StoreError::Db`] on failure.
-    pub(crate) async fn billing_customer_names(
+    pub async fn billing_customer_names(
         &self,
         ids: &[BillingCustomerId],
     ) -> Result<HashMap<String, String>> {

@@ -20,6 +20,7 @@ use time::format_description::well_known::Rfc3339;
 use crate::agent_billing as billing;
 use crate::agent_crm as crm;
 use crate::agent_finance as finance;
+use crate::agent_finance_answers as finance_answers;
 use crate::agent_projects as projects;
 use crate::agent_timesheet as timesheet;
 use crate::ai::MAX_ASK_BYTES;
@@ -228,6 +229,12 @@ pub(crate) async fn execute_tool(
         // `categorise_transactions` writes is a suggestion on each claim, in a
         // column no report reads until the claimant accepts it.
         "categorise_transactions" => finance::execute_categorise_transactions(account, args).await,
+        // B4.14b's two **answers**, in their own module because they read the
+        // whole tenant's books rather than the caller's own claims — and are
+        // therefore gated like the finance reports themselves, not like a
+        // personal one.
+        "vat_summary" => finance_answers::execute_vat_summary(account, args).await,
+        "flag_anomalies" => finance_answers::execute_flag_anomalies(account, args).await,
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
     }
