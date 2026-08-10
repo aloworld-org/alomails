@@ -380,7 +380,9 @@ pub use site_forms::{
 };
 pub use site_generation::{GeneratedSiteDraft, NewGeneratedSite, NewGeneratedSitePage};
 pub use site_model::{SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope};
-pub use site_pages::{LocalizedSitePage, SitePage, validate_page_slug};
+pub use site_pages::{
+    LocalizedSitePage, SiteLocaleReadiness, SitePage, SiteTranslationReadiness, validate_page_slug,
+};
 pub use site_posts::{NewSitePost, SitePost, SitePostStatus, SitePostUpdate};
 pub use site_public::{
     PublishedSite, PublishedSitePost, PublishedSitePostBody, PublishedSitePostPage, SitePublicStore,

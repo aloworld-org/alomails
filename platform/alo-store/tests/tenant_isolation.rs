@@ -1370,6 +1370,17 @@ async fn site_pages_scope_by_tenant_and_site_with_slug_and_home_rules() {
     assert_eq!(localized.page.sections, french);
     assert_eq!(localized.resolved_locale, "fr");
     assert!(!localized.fallback);
+    let readiness = a.site_translation_readiness(&site).await.unwrap().unwrap();
+    assert_eq!(readiness.default_locale, "en");
+    assert_eq!(readiness.total_pages, 3);
+    assert_eq!(
+        readiness
+            .locales
+            .iter()
+            .map(|language| (language.locale.as_str(), language.translated_pages))
+            .collect::<Vec<_>>(),
+        [("en", 3), ("fr", 1), ("nl", 0)]
+    );
     match a
         .set_site_page_locale(
             &site,
@@ -1429,6 +1440,7 @@ async fn site_pages_scope_by_tenant_and_site_with_slug_and_home_rules() {
             .unwrap()
             .is_none()
     );
+    assert!(b.site_translation_readiness(&site).await.unwrap().is_none());
     assert_not_found(
         b.set_site_page_locale(
             &site,

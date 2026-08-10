@@ -12,6 +12,10 @@ export interface Site {
   subdomain: string;
   /** `draft` until the first publish; `live` while a published set serves. */
   status: "draft" | "live";
+  /** The language served at unprefixed public paths. */
+  defaultLocale: string;
+  /** Enabled languages in the order visitors see them. */
+  enabledLocales: string[];
 }
 
 /** One site with its current publish (`null` while unpublished) and its
@@ -76,6 +80,26 @@ export interface SitePage {
 /** One page with its sections envelope — what the editor loads and edits. */
 export interface SitePageDetail extends SitePage {
   sections: SectionsEnvelope;
+}
+
+/** One requested-language page draft. A fallback is readable for reference
+ * but must be explicitly copied before edits can write that language. */
+export interface LocalizedSitePageDetail extends SitePageDetail {
+  requestedLocale: string;
+  resolvedLocale: string;
+  fallback: boolean;
+}
+
+export interface SiteTranslationLanguage {
+  locale: string;
+  translatedPages: number;
+  ready: boolean;
+}
+
+export interface SiteTranslationReadiness {
+  defaultLocale: string;
+  totalPages: number;
+  languages: SiteTranslationLanguage[];
 }
 
 /** One blog post linked to its source alo Doc. The document remains the

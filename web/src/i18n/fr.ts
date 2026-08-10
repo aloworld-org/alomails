@@ -2783,6 +2783,37 @@ export const fr: Partial<Catalog> = {
   sitesNewPageSubtitle: "Une page contient les sections que vous y empilez.",
   sitesFieldPageTitle: "Titre",
   sitesFieldSlug: "Chemin",
+  sitesLanguagesLabel: "Langues du site web",
+  sitesEditingLanguage: "Langue d’édition",
+  sitesLanguages: "Langues",
+  sitesLanguagesHint:
+    "Ajoutez les langues proposées aux visiteurs et repérez les pages qui restent à traduire.",
+  sitesDefaultLanguage: "Langue par défaut",
+  sitesAddLanguage: "Ajouter une langue",
+  sitesLanguagePlaceholder: "Code de langue, par exemple fr",
+  sitesAddLanguageAction: "Ajouter la langue",
+  sitesLanguageDefaultBadge: "Par défaut",
+  sitesRemoveLanguage: (language: string) => `Retirer ${language}`,
+  sitesLanguageSaveFailed:
+    "Les langues du site n’ont pas pu être enregistrées. Vérifiez le code de langue et réessayez.",
+  sitesTranslationReady: "Prête",
+  sitesTranslationProgress: (translated: number, total: number) =>
+    `${translated} page(s) sur ${total} traduite(s)`,
+  sitesTranslationAllReady: "Toutes les langues activées sont prêtes à être publiées.",
+  sitesTranslationPublishHint: (count: number) =>
+    `${count} traduction(s) utilise(nt) encore le contenu de secours.`,
+  sitesContinueTranslating: "Continuer la traduction",
+  sitesTranslationSaveFailed:
+    "Cette traduction n’a pas pu être enregistrée. Corrigez les détails indiqués et réessayez.",
+  sitesTranslationMissingTitle: (locale: string) => `La traduction ${locale} est manquante`,
+  sitesTranslationMissingBody: (requested: string, source: string) =>
+    `La version ${source} est affichée comme référence. Copiez-la vers ${requested} pour commencer sans modifier la page source.`,
+  sitesCopyTranslation: (source: string, target: string) =>
+    `Copier ${source} vers ${target}`,
+  sitesTranslationDetails: "Détails de la page traduite",
+  sitesTranslationDetailsHint: (locale: string) =>
+    `Ce titre, ce chemin et ces détails de recherche sont affichés uniquement aux visiteurs ${locale}.`,
+  sitesSaveTranslation: "Enregistrer les détails",
   sitesSlugHint:
     "Lettres minuscules, chiffres et traits d’union. Le chemin de la page d’accueil reste vide.",
   sitesFieldHome: "Ceci est la page d’accueil",

@@ -318,6 +318,10 @@ pub fn app_with_site_domain_dns(
             get(sites::list_pages).post(sites::create_page),
         )
         .route(
+            "/sites/{id}/translation-readiness",
+            get(sites::translation_readiness),
+        )
+        .route(
             "/sites/{id}/posts",
             get(sites::list_posts).post(sites::create_post),
         )
@@ -339,6 +343,10 @@ pub fn app_with_site_domain_dns(
         .route(
             "/sites/{id}/pages/{pid}/locales/{locale}",
             get(sites::get_localized_page).put(sites::put_localized_page),
+        )
+        .route(
+            "/sites/{id}/pages/{pid}/locales/{locale}/preview",
+            get(sites::preview_localized_page),
         )
         .route(
             "/sites/{id}/pages/{pid}",

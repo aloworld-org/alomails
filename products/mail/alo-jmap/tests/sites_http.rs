@@ -793,6 +793,29 @@ async fn localized_page_drafts_resolve_fallback_and_hide_other_tenants() {
         json!("Notre histoire")
     );
 
+    let french_preview_uri = format!("{french_uri}/preview");
+    let (status, headers, preview) = get_text(&owner.app, &owner.token, &french_preview_uri).await;
+    assert_eq!(status, StatusCode::OK, "{preview}");
+    assert_eq!(
+        headers
+            .get("cache-control")
+            .and_then(|value| value.to_str().ok()),
+        Some("no-store")
+    );
+    assert!(preview.contains("<html lang=\"fr\">"), "{preview}");
+    assert!(preview.contains("Notre histoire"), "{preview}");
+    assert!(preview.contains("/fr/notre-histoire"), "{preview}");
+
+    let readiness_uri = format!("/sites/{site}/translation-readiness");
+    let (status, readiness) = get(&owner.app, &owner.token, &readiness_uri).await;
+    assert_eq!(status, StatusCode::OK, "{readiness}");
+    assert_eq!(readiness["defaultLocale"], json!("en"));
+    assert_eq!(readiness["totalPages"], json!(1));
+    assert_eq!(readiness["languages"][0]["translatedPages"], json!(1));
+    assert_eq!(readiness["languages"][1]["translatedPages"], json!(1));
+    assert_eq!(readiness["languages"][2]["translatedPages"], json!(0));
+    assert_eq!(readiness["languages"][2]["ready"], json!(false));
+
     let (status, disabled) = get(
         &owner.app,
         &owner.token,
@@ -804,6 +827,11 @@ async fn localized_page_drafts_resolve_fallback_and_hide_other_tenants() {
 
     let (status, hidden) = get(&outsider.app, &outsider.token, &french_uri).await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{hidden}");
+    let (status, hidden) = get(&outsider.app, &outsider.token, &readiness_uri).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{hidden}");
+    let (status, _, hidden_preview) =
+        get_text(&outsider.app, &outsider.token, &french_preview_uri).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{hidden_preview}");
     let (status, hidden) = put(
         &outsider.app,
         &outsider.token,
@@ -1697,6 +1725,11 @@ async fn another_tenants_site_is_invisible_on_every_route() {
         ("POST", format!("/sites/{b_site}/publish"), json!({})),
         ("POST", format!("/sites/{b_site}/unpublish"), json!({})),
         ("GET", format!("/sites/{b_site}/pages"), json!({})),
+        (
+            "GET",
+            format!("/sites/{b_site}/translation-readiness"),
+            json!({}),
+        ),
         ("GET", format!("/sites/{b_site}/analytics"), json!({})),
         ("GET", format!("/sites/{b_site}/domains"), json!({})),
         (
@@ -1762,6 +1795,11 @@ async fn another_tenants_site_is_invisible_on_every_route() {
         (
             "GET",
             format!("/sites/{b_site}/pages/{b_page}/preview"),
+            json!({}),
+        ),
+        (
+            "GET",
+            format!("/sites/{b_site}/pages/{b_page}/locales/en/preview"),
             json!({}),
         ),
         (

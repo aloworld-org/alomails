@@ -2931,6 +2931,38 @@ export const en = {
   sitesNewPageSubtitle: "A page holds the sections you stack on it.",
   sitesFieldPageTitle: "Title",
   sitesFieldSlug: "Path",
+  sitesLanguagesLabel: "Website languages",
+  sitesEditingLanguage: "Editing language",
+  sitesLanguages: "Languages",
+  sitesLanguagesHint:
+    "Add the languages visitors can choose and see exactly which pages still need translation.",
+  sitesDefaultLanguage: "Default language",
+  sitesAddLanguage: "Add a language",
+  sitesLanguagePlaceholder: "Language code, for example fr",
+  sitesAddLanguageAction: "Add language",
+  sitesLanguageDefaultBadge: "Default",
+  sitesRemoveLanguage: (language: string) => `Remove ${language}`,
+  sitesLanguageSaveFailed:
+    "The website languages could not be saved. Check the language code and try again.",
+  sitesTranslationReady: "Ready",
+  sitesTranslationProgress: (translated: number, total: number) =>
+    `${translated} of ${total} pages translated`,
+  sitesTranslationAllReady: "Every enabled language is ready to publish.",
+  sitesTranslationPublishHint: (count: number) =>
+    `${count} ${count === 1 ? "translation is" : "translations are"} still using fallback content.`,
+  sitesContinueTranslating: "Continue translating",
+  sitesTranslationSaveFailed:
+    "This translation could not be saved. Fix the highlighted details and try again.",
+  sitesTranslationMissingTitle: (locale: string) =>
+    `${locale} needs a translation`,
+  sitesTranslationMissingBody: (requested: string, source: string) =>
+    `You are seeing the ${source} version for reference. Copy it into ${requested} to start translating without changing the source page.`,
+  sitesCopyTranslation: (source: string, target: string) =>
+    `Copy ${source} into ${target}`,
+  sitesTranslationDetails: "Translated page details",
+  sitesTranslationDetailsHint: (locale: string) =>
+    `These title, path, and search details are shown only to ${locale} visitors.`,
+  sitesSaveTranslation: "Save translation details",
   sitesSlugHint:
     "Lowercase letters, digits and hyphens. The home page leaves this empty.",
   sitesFieldHome: "This is the home page",

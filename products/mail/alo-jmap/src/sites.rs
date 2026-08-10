@@ -40,7 +40,8 @@ use time::format_description::well_known::Rfc3339;
 use time::{Duration, OffsetDateTime};
 
 use alo_sites::render::{
-    EN, ImageSources, PageRenderContext, SiteRenderContext, render_page_preview, sections_lenient,
+    ImageSources, PageRenderContext, SiteRenderContext, render_page_preview, sections_lenient,
+    strings_for,
 };
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
@@ -1300,6 +1301,32 @@ pub async fn get_localized_page(
     Ok(Json(localized_page_json(&page)))
 }
 
+/// `GET /sites/:id/translation-readiness` answers exact draft coverage for
+/// every enabled language. It is one bounded store read, not one request per
+/// page, so the visible publish check remains fast at the 200-page limit.
+pub async fn translation_readiness(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let readiness = account
+        .acc
+        .site_translation_readiness(&SiteId::new(id))
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such site"))?;
+    Ok(Json(json!({
+        "defaultLocale": readiness.default_locale,
+        "totalPages": readiness.total_pages,
+        "languages": readiness.locales.into_iter().map(|locale| json!({
+            "locale": locale.locale,
+            "translatedPages": locale.translated_pages,
+            "ready": locale.translated_pages == readiness.total_pages,
+        })).collect::<Vec<_>>()
+    })))
+}
+
 /// `PUT /sites/:id/pages/:pid/locales/:locale` fully replaces one localized
 /// draft while preserving the page's identity, navigation, and home role.
 pub async fn put_localized_page(
@@ -1428,6 +1455,37 @@ pub async fn preview_page(
         .into_response())
 }
 
+/// `GET /sites/:id/pages/:pid/locales/:locale/preview` renders the requested
+/// enabled-language draft through the same self-contained preview contract as
+/// the base page. A missing exact translation deliberately previews the
+/// resolved fallback; the JSON draft read tells the editor that it is a
+/// fallback and keeps editing disabled until the owner explicitly copies it.
+pub async fn preview_localized_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, pid, locale)): Path<(String, String, String)>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let sid = SiteId::new(id);
+    let site = require_site(&account, &sid).await?;
+    let localized = account
+        .acc
+        .localized_site_page(&sid, &SitePageId::new(pid), &locale)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
+    let html =
+        render_preview_html(&account, &site, &localized.page, &localized.page.sections).await;
+    Ok((
+        [
+            (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-store"),
+        ],
+        html,
+    )
+        .into_response())
+}
+
 /// Renders either the stored page or an already-validated proposed envelope
 /// through the public renderer. Keeping this one path means the AI review's
 /// “after” view is the page that approval would actually store, not a client
@@ -1446,13 +1504,22 @@ async fn render_preview_html(
         base_url: &base_url,
         locale: &page.content_locale,
         theme: &theme,
-        strings: &EN,
+        strings: strings_for(&page.content_locale),
         images: ImageSources::Inline(&images),
     };
-    let path = if page.is_home {
-        "/".to_owned()
+    let language_prefix = if page.content_locale == site.default_locale {
+        String::new()
     } else {
-        format!("/{}", page.slug)
+        format!("/{}", page.content_locale)
+    };
+    let path = if page.is_home {
+        if language_prefix.is_empty() {
+            "/".to_owned()
+        } else {
+            language_prefix
+        }
+    } else {
+        format!("{language_prefix}/{}", page.slug)
     };
     let page_ctx = PageRenderContext {
         path: &path,

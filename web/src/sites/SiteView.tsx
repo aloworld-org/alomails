@@ -5,7 +5,17 @@
 // a broken screen.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BarChart3, FileText, Inbox, Newspaper, Palette } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart3,
+  FileText,
+  Globe2,
+  Inbox,
+  Languages,
+  Newspaper,
+  Palette,
+  X,
+} from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
@@ -13,7 +23,7 @@ import { sitesMessage, useSitesApi } from "./api";
 import { NewPageDialog } from "./NewPageDialog";
 import { ThemeDialog } from "./ThemeDialog";
 import { EmptyState, ErrorBanner } from "./parts";
-import type { SiteDetail, SitePage } from "./types";
+import type { SiteDetail, SitePage, SiteTranslationReadiness } from "./types";
 import styles from "./SitesModule.module.css";
 
 export function SiteView() {
@@ -31,6 +41,12 @@ export function SiteView() {
   const [domain, setDomain] = useState<string | null>(null);
   const [publishBusy, setPublishBusy] = useState(false);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [readiness, setReadiness] = useState<SiteTranslationReadiness | null>(
+    null,
+  );
+  const [languageInput, setLanguageInput] = useState("");
+  const [languageBusy, setLanguageBusy] = useState(false);
+  const [languageError, setLanguageError] = useState<string | null>(null);
   // Taking a live site off the air asks for a second click, like deleting a
   // section does: the first click arms, the second one acts.
   const [confirmingOffline, setConfirmingOffline] = useState(false);
@@ -38,9 +54,14 @@ export function SiteView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [detail, pageList] = await Promise.all([api.site(siteId), api.pages(siteId)]);
+      const [detail, pageList, translationReadiness] = await Promise.all([
+        api.site(siteId),
+        api.pages(siteId),
+        api.translationReadiness(siteId),
+      ]);
       setSite(detail);
       setPages(pageList);
+      setReadiness(translationReadiness);
       setError(null);
     } catch (err) {
       setError(sitesMessage(err, strings.sitesSiteLoadFailed));
@@ -57,7 +78,8 @@ export function SiteView() {
     let cancelled = false;
     api.config().then(
       (c) => {
-        if (!cancelled && typeof c.domain === "string" && c.domain !== "") setDomain(c.domain);
+        if (!cancelled && typeof c.domain === "string" && c.domain !== "")
+          setDomain(c.domain);
       },
       () => {
         // Domain unknown: publishing still works, the address copy stays off.
@@ -69,7 +91,62 @@ export function SiteView() {
   }, [api]);
 
   const live = site?.status === "live";
-  const host = site !== null && domain !== null ? `${site.subdomain}.${domain}` : null;
+  const host =
+    site !== null && domain !== null ? `${site.subdomain}.${domain}` : null;
+  const missingTranslations =
+    readiness?.languages.reduce(
+      (count, language) =>
+        count + (readiness.totalPages - language.translatedPages),
+      0,
+    ) ?? 0;
+  const firstIncompleteLocale = readiness?.languages.find(
+    (language) => !language.ready,
+  )?.locale;
+  const firstPageId = pages[0]?.id;
+
+  function languageName(locale: string): string {
+    try {
+      return (
+        new Intl.DisplayNames(undefined, { type: "language" }).of(locale) ??
+        locale.toUpperCase()
+      );
+    } catch {
+      return locale.toUpperCase();
+    }
+  }
+
+  async function saveLanguages(
+    defaultLocale: string,
+    enabledLocales: string[],
+  ) {
+    setLanguageBusy(true);
+    setLanguageError(null);
+    try {
+      await api.setSiteLocales(siteId, defaultLocale, enabledLocales);
+      setLanguageInput("");
+      await load();
+    } catch (err) {
+      setLanguageError(sitesMessage(err, strings.sitesLanguageSaveFailed));
+    } finally {
+      setLanguageBusy(false);
+    }
+  }
+
+  function addLanguage() {
+    if (site === null || languageInput.trim() === "") return;
+    void saveLanguages(site.defaultLocale, [
+      ...site.enabledLocales,
+      languageInput.trim(),
+    ]);
+  }
+
+  function removeLanguage(locale: string) {
+    if (site === null || locale === site.defaultLocale) return;
+    void saveLanguages(
+      site.defaultLocale,
+      site.enabledLocales.filter((enabled) => enabled !== locale),
+    );
+  }
 
   async function publish() {
     setPublishBusy(true);
@@ -114,7 +191,11 @@ export function SiteView() {
           <div className={styles.siteHead}>
             <h1 className={styles.title}>{site.name}</h1>
             <span className={styles.mono}>{site.subdomain}</span>
-            <span className={live ? `${styles.chip} ${styles.chipLive}` : styles.chip}>
+            <span
+              className={
+                live ? `${styles.chip} ${styles.chipLive}` : styles.chip
+              }
+            >
               {live ? strings.sitesStatusLive : strings.sitesStatusDraft}
             </span>
           </div>
@@ -141,7 +222,22 @@ export function SiteView() {
                   </a>
                 </>
               )}
-              {!live && host !== null && <span>{strings.sitesGoesLiveAt(host)}</span>}
+              {!live && host !== null && (
+                <span>{strings.sitesGoesLiveAt(host)}</span>
+              )}
+              {readiness !== null && readiness.totalPages > 0 && (
+                <span
+                  className={
+                    missingTranslations === 0
+                      ? styles.translationReady
+                      : styles.translationWarning
+                  }
+                >
+                  {missingTranslations === 0
+                    ? strings.sitesTranslationAllReady
+                    : strings.sitesTranslationPublishHint(missingTranslations)}
+                </span>
+              )}
               {publishError !== null && (
                 <span className={styles.publishError} role="alert">
                   {publishError}
@@ -156,14 +252,149 @@ export function SiteView() {
                   disabled={publishBusy}
                   onClick={() => void unpublish()}
                 >
-                  {confirmingOffline ? strings.sitesConfirmUnpublish : strings.sitesUnpublish}
+                  {confirmingOffline
+                    ? strings.sitesConfirmUnpublish
+                    : strings.sitesUnpublish}
                 </Button>
               )}
-              <Button size="sm" disabled={publishBusy} onClick={() => void publish()}>
+              <Button
+                size="sm"
+                disabled={publishBusy}
+                onClick={() => void publish()}
+              >
                 {live ? strings.sitesPublishChanges : strings.sitesPublish}
               </Button>
             </div>
           </div>
+
+          <section
+            className={styles.languagePanel}
+            aria-labelledby="site-languages-title"
+          >
+            <div className={styles.languagePanelIntro}>
+              <span className={styles.languagePanelIcon} aria-hidden="true">
+                <Languages />
+              </span>
+              <div>
+                <h2 id="site-languages-title" className={styles.languageTitle}>
+                  {strings.sitesLanguages}
+                </h2>
+                <p className={styles.languageHint}>
+                  {strings.sitesLanguagesHint}
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.languageRows}>
+              {readiness?.languages.map((language) => (
+                <div className={styles.languageRow} key={language.locale}>
+                  <span className={styles.languageCode}>
+                    {language.locale.toUpperCase()}
+                  </span>
+                  <span className={styles.languageName}>
+                    {languageName(language.locale)}
+                  </span>
+                  {language.locale === site.defaultLocale && (
+                    <span className={styles.badge}>
+                      {strings.sitesLanguageDefaultBadge}
+                    </span>
+                  )}
+                  <span
+                    className={
+                      language.ready
+                        ? styles.translationReady
+                        : styles.translationWarning
+                    }
+                  >
+                    {language.ready
+                      ? strings.sitesTranslationReady
+                      : strings.sitesTranslationProgress(
+                          language.translatedPages,
+                          readiness.totalPages,
+                        )}
+                  </span>
+                  {language.locale !== site.defaultLocale && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<X size="var(--icon-size-inline)" />}
+                      disabled={languageBusy}
+                      onClick={() => removeLanguage(language.locale)}
+                    >
+                      {strings.sitesRemoveLanguage(
+                        languageName(language.locale),
+                      )}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.languageControls}>
+              <label className={styles.languageControl}>
+                <span>{strings.sitesDefaultLanguage}</span>
+                <select
+                  className={styles.input}
+                  value={site.defaultLocale}
+                  disabled={languageBusy}
+                  onChange={(event) =>
+                    void saveLanguages(event.target.value, site.enabledLocales)
+                  }
+                >
+                  {site.enabledLocales.map((locale) => (
+                    <option key={locale} value={locale}>
+                      {languageName(locale)} ({locale})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className={styles.languageControl}>
+                <span>{strings.sitesAddLanguage}</span>
+                <span className={styles.languageAddRow}>
+                  <input
+                    className={styles.input}
+                    value={languageInput}
+                    placeholder={strings.sitesLanguagePlaceholder}
+                    disabled={languageBusy}
+                    onChange={(event) => setLanguageInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        addLanguage();
+                      }
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    disabled={languageBusy || languageInput.trim() === ""}
+                    onClick={addLanguage}
+                  >
+                    {strings.sitesAddLanguageAction}
+                  </Button>
+                </span>
+              </label>
+              {firstIncompleteLocale !== undefined &&
+                firstPageId !== undefined && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={<Globe2 size="var(--icon-size-inline)" />}
+                    onClick={() =>
+                      navigate(
+                        `pages/${firstPageId}?locale=${encodeURIComponent(firstIncompleteLocale)}`,
+                      )
+                    }
+                  >
+                    {strings.sitesContinueTranslating}
+                  </Button>
+                )}
+            </div>
+            {languageError !== null && (
+              <span className={styles.publishError} role="alert">
+                {languageError}
+              </span>
+            )}
+          </section>
 
           <div className={styles.sectionBar}>
             <h2 className={styles.sectionTitle}>{strings.sitesPages}</h2>
@@ -231,7 +462,11 @@ export function SiteView() {
                         <Link to={`pages/${p.id}`} className={styles.pageLink}>
                           {p.title}
                         </Link>
-                        {p.home && <span className={styles.badge}>{strings.sitesHomeBadge}</span>}
+                        {p.home && (
+                          <span className={styles.badge}>
+                            {strings.sitesHomeBadge}
+                          </span>
+                        )}
                       </td>
                       <td className={styles.mono}>/{p.slug}</td>
                     </tr>

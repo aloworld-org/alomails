@@ -69,6 +69,21 @@ pub struct LocalizedSitePage {
     pub fallback: bool,
 }
 
+/// Exact draft coverage for one enabled site language.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SiteLocaleReadiness {
+    pub locale: String,
+    pub translated_pages: u64,
+}
+
+/// The bounded translation-readiness summary shown before publishing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SiteTranslationReadiness {
+    pub default_locale: String,
+    pub total_pages: u64,
+    pub locales: Vec<SiteLocaleReadiness>,
+}
+
 /// Validates a non-empty page slug: `[a-z0-9-]`, 1–80 chars, no leading or
 /// trailing hyphen, and not a reserved public path. The empty slug (the home
 /// page's spelling) is not accepted here — the store's write paths allow it
@@ -260,6 +275,59 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         Ok(row.map(SitePageRow::into_page))
+    }
+
+    /// Counts exact page drafts per enabled language in two bounded queries,
+    /// independent of page count. A foreign or absent site is one clean
+    /// absence; missing translations count as zero rather than falling back.
+    pub async fn site_translation_readiness(
+        &self,
+        site: &SiteId,
+    ) -> Result<Option<SiteTranslationReadiness>> {
+        let Some(site_record) = self.site(site).await? else {
+            return Ok(None);
+        };
+        let total_pages: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM site_pages WHERE tenant_id = $1 AND site_id = $2",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .fetch_one(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let exact: Vec<(String, i64)> = sqlx::query_as(
+            "SELECT locale, count(*) FROM (\
+                 SELECT content_locale AS locale, id AS page_id FROM site_pages \
+                  WHERE tenant_id = $1 AND site_id = $2 \
+                 UNION \
+                 SELECT locale, page_id FROM site_page_locales \
+                  WHERE tenant_id = $1 AND site_id = $2\
+             ) drafts GROUP BY locale",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let translated: std::collections::HashMap<String, i64> = exact.into_iter().collect();
+        let total_pages = u64::try_from(total_pages).unwrap_or_default();
+        let locales = site_record
+            .enabled_locales
+            .into_iter()
+            .map(|locale| SiteLocaleReadiness {
+                translated_pages: translated
+                    .get(&locale)
+                    .copied()
+                    .and_then(|count| u64::try_from(count).ok())
+                    .unwrap_or_default(),
+                locale,
+            })
+            .collect();
+        Ok(Some(SiteTranslationReadiness {
+            default_locale: site_record.default_locale,
+            total_pages,
+            locales,
+        }))
     }
 
     /// Resolves a page draft for an enabled language. Resolution is exact,

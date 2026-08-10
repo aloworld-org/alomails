@@ -33,6 +33,8 @@ import type {
   SiteCopyRequest,
   SitePage,
   SitePageDetail,
+  LocalizedSitePageDetail,
+  SiteTranslationReadiness,
   SitePost,
   SiteSubmission,
   SitesConfig,
@@ -101,6 +103,25 @@ export class SitesApi {
   /** One site with its current publish (`null` while unpublished). */
   site(id: string): Promise<SiteDetail> {
     return this.#read<SiteDetail>(`/sites/${encodeURIComponent(id)}`);
+  }
+
+  /** Replaces the visible language set; normalization and validation live on the server. */
+  async setSiteLocales(
+    siteId: string,
+    defaultLocale: string,
+    enabledLocales: string[],
+  ): Promise<void> {
+    await this.#write<{ status?: string }>("PUT", `/sites/${encodeURIComponent(siteId)}`, {
+      defaultLocale,
+      enabledLocales,
+    });
+  }
+
+  /** Exact per-language page coverage used beside the Publish action. */
+  translationReadiness(siteId: string): Promise<SiteTranslationReadiness> {
+    return this.#read<SiteTranslationReadiness>(
+      `/sites/${encodeURIComponent(siteId)}/translation-readiness`,
+    );
   }
 
   /** The live taken/free answer for a well-formed label; a syntactically
@@ -290,6 +311,35 @@ export class SitesApi {
     return this.#read<SitePageDetail>(this.#pagePath(siteId, pageId));
   }
 
+  localizedPage(
+    siteId: string,
+    pageId: string,
+    locale: string,
+  ): Promise<LocalizedSitePageDetail> {
+    return this.#read<LocalizedSitePageDetail>(this.#localizedPagePath(siteId, pageId, locale));
+  }
+
+  setLocalizedPage(
+    siteId: string,
+    pageId: string,
+    locale: string,
+    page: Pick<SitePageDetail, "title" | "slug" | "sections" | "seoTitle" | "seoDescription">,
+  ): Promise<LocalizedSitePageDetail> {
+    return this.#write<LocalizedSitePageDetail>(
+      "PUT",
+      this.#localizedPagePath(siteId, pageId, locale),
+      page,
+    );
+  }
+
+  /** Updates the visible page name/path while preserving its section stack. */
+  async setPageIdentity(siteId: string, pageId: string, title: string, slug: string): Promise<void> {
+    await this.#write<{ status?: string }>("PUT", this.#pagePath(siteId, pageId), {
+      title,
+      slug,
+    });
+  }
+
   /** Sets or clears one page's search and sharing copy. Blank strings clear
    *  the overrides through the server's existing normalization gate. */
   async setPageSeo(
@@ -307,8 +357,11 @@ export class SitesApi {
   /** The draft page rendered by the server as one complete, self-contained
    *  HTML document — the editor's preview. Answers text, not JSON; the
    *  caller puts it in a sandboxed iframe via `srcdoc`. */
-  async pagePreview(siteId: string, pageId: string): Promise<string> {
-    const res = await this.#send(`${this.#pagePath(siteId, pageId)}/preview`, { method: "GET" });
+  async pagePreview(siteId: string, pageId: string, locale?: string): Promise<string> {
+    const path = locale === undefined
+      ? `${this.#pagePath(siteId, pageId)}/preview`
+      : `${this.#localizedPagePath(siteId, pageId, locale)}/preview`;
+    const res = await this.#send(path, { method: "GET" });
     await SitesApi.#rejectFailed(res);
     return res.text();
   }
@@ -360,6 +413,10 @@ export class SitesApi {
 
   #pagePath(siteId: string, pageId: string): string {
     return `/sites/${encodeURIComponent(siteId)}/pages/${encodeURIComponent(pageId)}`;
+  }
+
+  #localizedPagePath(siteId: string, pageId: string, locale: string): string {
+    return `${this.#pagePath(siteId, pageId)}/locales/${encodeURIComponent(locale)}`;
   }
 
   #postPath(siteId: string, postId: string): string {

@@ -83,9 +83,9 @@ function pageReply(sections: Section[]): Reply {
   };
 }
 
-function ui() {
+function ui(path = "/sites/site-1/pages/page-1") {
   return render(
-    <MemoryRouter initialEntries={["/sites/site-1/pages/page-1"]}>
+    <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path="/sites/*" element={<SitesModule />} />
       </Routes>
@@ -105,6 +105,120 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
+
+describe("manual page translation", () => {
+  const localizedFallback = {
+    id: "page-1",
+    slug: "",
+    title: "Welcome",
+    home: true,
+    seoTitle: "Alpha Bakery",
+    seoDescription: "Fresh bread daily.",
+    sections: env([HERO, FAQ]),
+    requestedLocale: "fr",
+    resolvedLocale: "en",
+    fallback: true,
+  };
+
+  function languageSiteReply(): Reply {
+    return {
+      match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+      status: 200,
+      body: {
+        id: "site-1",
+        name: "Alpha Bakery",
+        subdomain: "alpha",
+        status: "draft",
+        publish: null,
+        theme: {},
+        defaultLocale: "en",
+        enabledLocales: ["en", "fr"],
+      },
+    };
+  }
+
+  test("a missing language is read-only until the owner copies the visible fallback", async () => {
+    replies = [
+      languageSiteReply(),
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/pages/page-1/locales/fr"),
+        status: 200,
+        body: localizedFallback,
+      },
+    ];
+    ui("/sites/site-1/pages/page-1?locale=fr");
+
+    expect(await screen.findByText(strings.sitesTranslationMissingTitle("FR"))).toBeTruthy();
+    expect(screen.getAllByLabelText(strings.sitesEditSection)[0]).toHaveProperty("disabled", true);
+
+    const savedFrench = {
+      ...localizedFallback,
+      requestedLocale: "fr",
+      resolvedLocale: "fr",
+      fallback: false,
+    };
+    replies = [
+      {
+        match: (url, method) => method === "PUT" && url.endsWith("/pages/page-1/locales/fr"),
+        status: 200,
+        body: savedFrench,
+      },
+    ];
+    fireEvent.click(screen.getByRole("button", {
+      name: strings.sitesCopyTranslation("EN", "FR"),
+    }));
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()).toMatchObject({
+      method: "PUT",
+      body: {
+        title: "Welcome",
+        slug: "",
+        seoTitle: "Alpha Bakery",
+        seoDescription: "Fresh bread daily.",
+        sections: env([HERO, FAQ]),
+      },
+    });
+    expect(await screen.findByText(strings.sitesTranslationDetails)).toBeTruthy();
+    expect(screen.getAllByLabelText(strings.sitesEditSection)[0]).toHaveProperty("disabled", false);
+  });
+
+  test("localized section changes replace only the selected language draft", async () => {
+    const french = {
+      ...localizedFallback,
+      title: "Bienvenue",
+      requestedLocale: "fr",
+      resolvedLocale: "fr",
+      fallback: false,
+    };
+    replies = [
+      languageSiteReply(),
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/pages/page-1/locales/fr"),
+        status: 200,
+        body: french,
+      },
+    ];
+    ui("/sites/site-1/pages/page-1?locale=fr");
+    await screen.findByText(strings.sitesTranslationDetails);
+
+    replies = [
+      {
+        match: (url, method) => method === "PUT" && url.endsWith("/pages/page-1/locales/fr"),
+        status: 200,
+        body: { ...french, sections: env([FAQ, HERO]) },
+      },
+    ];
+    fireEvent.click(screen.getAllByLabelText(strings.sitesMoveDown)[0]!);
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()).toMatchObject({
+      method: "PUT",
+      body: { title: "Bienvenue", sections: env([FAQ, HERO]) },
+    });
+    expect(lastWrite()?.url.endsWith("/pages/page-1/locales/fr")).toBe(true);
+  });
+});
 
 describe("the section stack", () => {
   test("renders the stored sections in order, each with its type and words", async () => {

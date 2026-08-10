@@ -2757,6 +2757,37 @@ export const nl: Partial<Catalog> = {
   sitesNewPageSubtitle: "Een pagina bevat de secties die u erop stapelt.",
   sitesFieldPageTitle: "Titel",
   sitesFieldSlug: "Pad",
+  sitesLanguagesLabel: "Websitetalen",
+  sitesEditingLanguage: "Bewerkingstaal",
+  sitesLanguages: "Talen",
+  sitesLanguagesHint:
+    "Voeg de talen toe die bezoekers kunnen kiezen en zie welke pagina’s nog vertaald moeten worden.",
+  sitesDefaultLanguage: "Standaardtaal",
+  sitesAddLanguage: "Taal toevoegen",
+  sitesLanguagePlaceholder: "Taalcode, bijvoorbeeld nl",
+  sitesAddLanguageAction: "Taal toevoegen",
+  sitesLanguageDefaultBadge: "Standaard",
+  sitesRemoveLanguage: (language: string) => `${language} verwijderen`,
+  sitesLanguageSaveFailed:
+    "De websitetalen konden niet worden opgeslagen. Controleer de taalcode en probeer opnieuw.",
+  sitesTranslationReady: "Gereed",
+  sitesTranslationProgress: (translated: number, total: number) =>
+    `${translated} van ${total} pagina’s vertaald`,
+  sitesTranslationAllReady: "Elke ingeschakelde taal is klaar om te publiceren.",
+  sitesTranslationPublishHint: (count: number) =>
+    `${count} ${count === 1 ? "vertaling gebruikt" : "vertalingen gebruiken"} nog reservetekst.`,
+  sitesContinueTranslating: "Doorgaan met vertalen",
+  sitesTranslationSaveFailed:
+    "Deze vertaling kon niet worden opgeslagen. Corrigeer de gemarkeerde gegevens en probeer opnieuw.",
+  sitesTranslationMissingTitle: (locale: string) => `${locale} heeft een vertaling nodig`,
+  sitesTranslationMissingBody: (requested: string, source: string) =>
+    `Je ziet de versie ${source} als voorbeeld. Kopieer deze naar ${requested} om te vertalen zonder de bronpagina te wijzigen.`,
+  sitesCopyTranslation: (source: string, target: string) =>
+    `${source} naar ${target} kopiëren`,
+  sitesTranslationDetails: "Gegevens van vertaalde pagina",
+  sitesTranslationDetailsHint: (locale: string) =>
+    `Deze titel, dit pad en deze zoekgegevens worden alleen aan bezoekers met taal ${locale} getoond.`,
+  sitesSaveTranslation: "Vertaalgegevens opslaan",
   sitesSlugHint:
     "Kleine letters, cijfers en koppeltekens. De homepage laat dit veld leeg.",
   sitesFieldHome: "Dit is de homepage",

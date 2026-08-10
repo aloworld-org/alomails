@@ -5,9 +5,10 @@
 // There is no local dirty buffer to lose, and a refusal (422) points at the
 // exact gesture that broke the rule.
 import { useCallback, useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
+  Copy,
   ChevronDown,
   ChevronUp,
   GripVertical,
@@ -43,8 +44,20 @@ interface FormTarget {
 
 export function PageEditorView() {
   const { siteId = "", pageId = "" } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const locale = searchParams.get("locale");
   const api = useSitesApi();
   const [page, setPage] = useState<SitePageDetail | null>(null);
+  const [defaultLocale, setDefaultLocale] = useState("en");
+  const [enabledLocales, setEnabledLocales] = useState<string[]>(["en"]);
+  const [translationFallback, setTranslationFallback] = useState(false);
+  const [resolvedLocale, setResolvedLocale] = useState("en");
+  const [titleDraft, setTitleDraft] = useState("");
+  const [slugDraft, setSlugDraft] = useState("");
+  const [seoTitleDraft, setSeoTitleDraft] = useState("");
+  const [seoDescriptionDraft, setSeoDescriptionDraft] = useState("");
+  const [translationBusy, setTranslationBusy] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -61,8 +74,12 @@ export function PageEditorView() {
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewMobile, setPreviewMobile] = useState(false);
-  const [proposedPreviewHtml, setProposedPreviewHtml] = useState<string | null>(null);
-  const [previewVersion, setPreviewVersion] = useState<"before" | "after">("before");
+  const [proposedPreviewHtml, setProposedPreviewHtml] = useState<string | null>(
+    null,
+  );
+  const [previewVersion, setPreviewVersion] = useState<"before" | "after">(
+    "before",
+  );
   const [themeOpen, setThemeOpen] = useState(false);
   const [seoOpen, setSeoOpen] = useState(false);
   // Bumped when the theme changes — the preview document depends on the
@@ -72,16 +89,39 @@ export function PageEditorView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const detail = await api.page(siteId, pageId);
+      const [site, detail] = await Promise.all([
+        api.site(siteId),
+        locale === null
+          ? api.page(siteId, pageId)
+          : api.localizedPage(siteId, pageId, locale),
+      ]);
+      const siteDefault = site.defaultLocale ?? "en";
+      const siteLanguages =
+        Array.isArray(site.enabledLocales) && site.enabledLocales.length > 0
+          ? site.enabledLocales
+          : [siteDefault];
+      setDefaultLocale(siteDefault);
+      setEnabledLocales(siteLanguages);
       setPage(detail);
       setSections(detail.sections.sections);
+      setTitleDraft(detail.title);
+      setSlugDraft(detail.slug);
+      setSeoTitleDraft(detail.seoTitle ?? "");
+      setSeoDescriptionDraft(detail.seoDescription ?? "");
+      setTranslationFallback("fallback" in detail && detail.fallback === true);
+      setResolvedLocale(
+        "resolvedLocale" in detail && typeof detail.resolvedLocale === "string"
+          ? detail.resolvedLocale
+          : siteDefault,
+      );
+      setTranslationError(null);
       setError(null);
     } catch (err) {
       setError(sitesMessage(err, strings.sitesPageLoadFailed));
     } finally {
       setLoading(false);
     }
-  }, [api, siteId, pageId]);
+  }, [api, siteId, pageId, locale]);
 
   useEffect(() => {
     void load();
@@ -99,7 +139,7 @@ export function PageEditorView() {
   useEffect(() => {
     if (page === null) return undefined;
     let stale = false;
-    api.pagePreview(siteId, pageId).then(
+    api.pagePreview(siteId, pageId, locale ?? undefined).then(
       (html) => {
         if (!stale) {
           setPreviewHtml(html);
@@ -107,13 +147,75 @@ export function PageEditorView() {
         }
       },
       (err: unknown) => {
-        if (!stale) setPreviewError(sitesMessage(err, strings.sitesPreviewFailed));
+        if (!stale)
+          setPreviewError(sitesMessage(err, strings.sitesPreviewFailed));
       },
     );
     return () => {
       stale = true;
     };
-  }, [api, siteId, pageId, page, sections, previewEpoch]);
+  }, [api, siteId, pageId, locale, page, sections, previewEpoch]);
+
+  async function saveLocalized(
+    nextSections: Section[],
+    identity = false,
+  ): Promise<boolean> {
+    if (page === null || locale === null) return false;
+    setTranslationBusy(true);
+    setTranslationError(null);
+    try {
+      const saved = await api.setLocalizedPage(siteId, pageId, locale, {
+        title: identity ? titleDraft : page.title,
+        slug: identity ? slugDraft : page.slug,
+        sections: { ...page.sections, sections: nextSections },
+        seoTitle: identity ? seoTitleDraft : page.seoTitle,
+        seoDescription: identity ? seoDescriptionDraft : page.seoDescription,
+      });
+      setPage(saved);
+      setSections(saved.sections.sections);
+      setTitleDraft(saved.title);
+      setSlugDraft(saved.slug);
+      setSeoTitleDraft(saved.seoTitle ?? "");
+      setSeoDescriptionDraft(saved.seoDescription ?? "");
+      setTranslationFallback(false);
+      setResolvedLocale(saved.resolvedLocale);
+      setPreviewEpoch((epoch) => epoch + 1);
+      setError(null);
+      return true;
+    } catch (err) {
+      setTranslationError(
+        sitesMessage(err, strings.sitesTranslationSaveFailed),
+      );
+      return false;
+    } finally {
+      setTranslationBusy(false);
+    }
+  }
+
+  async function saveIdentity() {
+    if (page === null || translationFallback) return;
+    if (locale !== null) {
+      await saveLocalized(sections, true);
+      return;
+    }
+    setTranslationBusy(true);
+    setTranslationError(null);
+    try {
+      await api.setPageIdentity(siteId, pageId, titleDraft, slugDraft);
+      await api.setPageSeo(siteId, pageId, seoTitleDraft, seoDescriptionDraft);
+      await load();
+    } catch (err) {
+      setTranslationError(
+        sitesMessage(err, strings.sitesTranslationSaveFailed),
+      );
+    } finally {
+      setTranslationBusy(false);
+    }
+  }
+
+  function chooseLocale(nextLocale: string) {
+    setSearchParams({ locale: nextLocale });
+  }
 
   /** Runs one stack op and renders the envelope the server answered. */
   async function run(op: Promise<SectionsEnvelope>) {
@@ -131,7 +233,26 @@ export function PageEditorView() {
 
   function move(from: number, to: number) {
     if (to < 0 || to >= sections.length || from === to) return;
+    if (locale !== null) {
+      const reordered = [...sections];
+      const [moved] = reordered.splice(from, 1);
+      if (moved === undefined) return;
+      reordered.splice(to, 0, moved);
+      void saveLocalized(reordered);
+      return;
+    }
     void run(api.moveSection(siteId, pageId, from, to));
+  }
+
+  function remove(index: number) {
+    if (locale !== null) {
+      void saveLocalized(
+        sections.filter((_, sectionIndex) => sectionIndex !== index),
+      );
+      setConfirmDelete(null);
+      return;
+    }
+    void run(api.removeSection(siteId, pageId, index));
   }
 
   /** The prop form's save: add for a fresh section, replace for a stored
@@ -139,6 +260,16 @@ export function PageEditorView() {
   async function save(target: FormTarget, section: Section) {
     setFormBusy(true);
     try {
+      if (locale !== null) {
+        const nextSections = [...sections];
+        if (target.index === null) nextSections.push(section);
+        else nextSections[target.index] = section;
+        const saved = await saveLocalized(nextSections);
+        if (!saved) return;
+        setForm(null);
+        setFormError(null);
+        return;
+      }
       const envelope =
         target.index === null
           ? await api.addSection(siteId, pageId, section)
@@ -160,6 +291,12 @@ export function PageEditorView() {
   }
 
   const empty = sections.length === 0;
+  const requestedLanguage = locale === null ? defaultLocale : locale;
+
+  async function copyFallback() {
+    if (page === null || locale === null) return;
+    await saveLocalized(sections);
+  }
 
   return (
     <div className={styles.page}>
@@ -172,7 +309,9 @@ export function PageEditorView() {
           <div className={styles.siteHead}>
             <h1 className={styles.title}>{page.title}</h1>
             <span className={styles.mono}>/{page.slug}</span>
-            {page.home && <span className={styles.badge}>{strings.sitesHomeBadge}</span>}
+            {page.home && (
+              <span className={styles.badge}>{strings.sitesHomeBadge}</span>
+            )}
           </div>
         )}
         {loading && <Spinner size={16} />}
@@ -181,216 +320,377 @@ export function PageEditorView() {
       {error !== null && <ErrorBanner message={error} />}
 
       {page !== null && (
-        <div className={styles.editorLayout}>
-          <div className={styles.stackPane}>
-            <div className={styles.sectionBar}>
-              <h2 className={styles.sectionTitle}>{strings.sitesSections}</h2>
-              <div className={styles.sectionBarActions}>
+        <>
+          <nav
+            className={styles.localeStrip}
+            aria-label={strings.sitesLanguagesLabel}
+          >
+            <span className={styles.localeStripLabel}>
+              {strings.sitesEditingLanguage}
+            </span>
+            <div className={styles.localeTabs}>
+              {enabledLocales.map((enabledLocale) => (
                 <Button
+                  key={enabledLocale}
                   variant="ghost"
                   size="sm"
-                  icon={<SearchCheck size={14} />}
-                  onClick={() => setSeoOpen(true)}
+                  className={
+                    requestedLanguage === enabledLocale
+                      ? styles.localeTabActive
+                      : styles.localeTab
+                  }
+                  aria-pressed={requestedLanguage === enabledLocale}
+                  onClick={() => chooseLocale(enabledLocale)}
                 >
-                  {strings.sitesSeoAction}
+                  {enabledLocale.toUpperCase()}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<Palette size={14} />}
-                  onClick={() => setThemeOpen(true)}
-                >
-                  {strings.sitesTheme}
-                </Button>
-                <Button size="sm" onClick={() => setPicking(true)} disabled={working}>
-                  {strings.sitesAddSection}
-                </Button>
-              </div>
+              ))}
             </div>
+          </nav>
 
-            <PageAiEditPanel
-              siteId={siteId}
-              pageId={pageId}
-              onPreviewChange={(html) => {
-                setProposedPreviewHtml(html);
-                setPreviewVersion(html === null ? "before" : "after");
-              }}
-              onApplied={(envelope) => {
-                setSections(envelope.sections);
-                setError(null);
-              }}
-            />
-
-            {empty && !loading ? (
-              <EmptyState
-                Icon={Layers}
-                title={strings.sitesNoSectionsTitle}
-                body={strings.sitesNoSectionsBody}
-                cta={strings.sitesAddFirstSection}
-                onCta={() => openForm({ kind: "hero", index: null })}
-              />
-            ) : (
-              <ol className={styles.stack}>
-                {sections.map((section, i) => {
-                  const summary = sectionSummary(section);
-                  const cardClass =
-                    dragOver === i && dragFrom !== null && dragFrom !== i
-                      ? `${styles.card} ${styles.cardDropTarget}`
-                      : styles.card;
-                  return (
-                    // Sections have no identity — the position is the key.
-                    <li
-                      key={`${section.type}-${i}`}
-                      className={cardClass}
-                      draggable
-                      onDragStart={() => setDragFrom(i)}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setDragOver(i);
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (dragFrom !== null) move(dragFrom, i);
-                        setDragFrom(null);
-                        setDragOver(null);
-                      }}
-                      onDragEnd={() => {
-                        setDragFrom(null);
-                        setDragOver(null);
-                      }}
-                    >
-                      <span className={styles.dragHandle} aria-hidden="true">
-                        <GripVertical size={16} />
-                      </span>
-                      <div className={styles.cardMeta}>
-                        <span className={styles.cardKind}>{kindLabel(section.type)}</span>
-                        {summary !== "" && <span className={styles.cardSummary}>{summary}</span>}
-                      </div>
-                      <div className={styles.cardActions}>
-                        <IconButton
-                          size="sm"
-                          label={strings.sitesMoveUp}
-                          icon={<ChevronUp size={15} />}
-                          disabled={working || i === 0}
-                          onClick={() => move(i, i - 1)}
-                        />
-                        <IconButton
-                          size="sm"
-                          label={strings.sitesMoveDown}
-                          icon={<ChevronDown size={15} />}
-                          disabled={working || i === sections.length - 1}
-                          onClick={() => move(i, i + 1)}
-                        />
-                        <IconButton
-                          size="sm"
-                          label={strings.sitesEditSection}
-                          icon={<Pencil size={15} />}
-                          disabled={working}
-                          onClick={() => openForm({ kind: section.type, index: i })}
-                        />
-                        {confirmDelete === i ? (
-                          // The second, armed step of deleting: one more click
-                          // removes the section; anything else disarms.
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            disabled={working}
-                            onClick={() => void run(api.removeSection(siteId, pageId, i))}
-                          >
-                            {strings.sitesConfirmDelete}
-                          </Button>
-                        ) : (
-                          <IconButton
-                            size="sm"
-                            label={strings.sitesDeleteSection}
-                            icon={<Trash2 size={15} />}
-                            disabled={working}
-                            onClick={() => setConfirmDelete(i)}
-                          />
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
-            )}
-          </div>
-
-          <aside className={styles.previewPane} aria-label={strings.sitesPreview}>
-            <div className={styles.previewBar}>
-              <h2 className={styles.sectionTitle}>{strings.sitesPreview}</h2>
-              <div className={styles.previewControls}>
-                {proposedPreviewHtml !== null && (
-                  <div
-                    className={styles.previewCompareToggle}
-                    role="group"
-                    aria-label={strings.sitesAiPreviewCompare}
-                  >
-                    <Button
-                      variant="ghost"
-                      className={
-                        previewVersion === "before"
-                          ? styles.previewCompareButtonActive
-                          : undefined
-                      }
-                      aria-pressed={previewVersion === "before"}
-                      onClick={() => setPreviewVersion("before")}
-                    >
-                      {strings.sitesAiPreviewBefore}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className={
-                        previewVersion === "after"
-                          ? styles.previewCompareButtonActive
-                          : undefined
-                      }
-                      aria-pressed={previewVersion === "after"}
-                      onClick={() => setPreviewVersion("after")}
-                    >
-                      {strings.sitesAiPreviewAfter}
-                    </Button>
-                  </div>
+          {locale !== null && translationFallback && (
+            <section className={styles.translationMissing} aria-live="polite">
+              <div>
+                <h2 className={styles.translationMissingTitle}>
+                  {strings.sitesTranslationMissingTitle(locale.toUpperCase())}
+                </h2>
+                <p className={styles.translationMissingBody}>
+                  {strings.sitesTranslationMissingBody(
+                    locale.toUpperCase(),
+                    resolvedLocale.toUpperCase(),
+                  )}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                icon={<Copy size="var(--icon-size-inline)" />}
+                disabled={translationBusy}
+                onClick={() => void copyFallback()}
+              >
+                {strings.sitesCopyTranslation(
+                  resolvedLocale.toUpperCase(),
+                  locale.toUpperCase(),
                 )}
-                <div className={styles.previewToggle}>
-                  <IconButton
-                    size="sm"
-                    label={strings.sitesPreviewDesktop}
-                    icon={<Monitor size={15} />}
-                    active={!previewMobile}
-                    onClick={() => setPreviewMobile(false)}
+              </Button>
+            </section>
+          )}
+
+          {locale !== null && !translationFallback && (
+            <section className={styles.translationDetails}>
+              <div className={styles.translationDetailsIntro}>
+                <h2 className={styles.translationDetailsTitle}>
+                  {strings.sitesTranslationDetails}
+                </h2>
+                <p className={styles.translationDetailsHint}>
+                  {strings.sitesTranslationDetailsHint(locale.toUpperCase())}
+                </p>
+              </div>
+              <div className={styles.translationFields}>
+                <label className={styles.translationField}>
+                  <span>{strings.sitesFieldPageTitle}</span>
+                  <input
+                    className={styles.input}
+                    value={titleDraft}
+                    disabled={translationBusy}
+                    onChange={(event) => setTitleDraft(event.target.value)}
                   />
-                  <IconButton
-                    size="sm"
-                    label={strings.sitesPreviewMobile}
-                    icon={<Smartphone size={15} />}
-                    active={previewMobile}
-                    onClick={() => setPreviewMobile(true)}
+                </label>
+                <label className={styles.translationField}>
+                  <span>{strings.sitesFieldSlug}</span>
+                  <input
+                    className={styles.input}
+                    value={slugDraft}
+                    disabled={translationBusy || page.home}
+                    onChange={(event) => setSlugDraft(event.target.value)}
                   />
+                </label>
+                <label className={styles.translationField}>
+                  <span>{strings.sitesSeoFieldTitle}</span>
+                  <input
+                    className={styles.input}
+                    value={seoTitleDraft}
+                    disabled={translationBusy}
+                    onChange={(event) => setSeoTitleDraft(event.target.value)}
+                  />
+                </label>
+                <label className={styles.translationField}>
+                  <span>{strings.sitesSeoFieldDescription}</span>
+                  <input
+                    className={styles.input}
+                    value={seoDescriptionDraft}
+                    disabled={translationBusy}
+                    onChange={(event) =>
+                      setSeoDescriptionDraft(event.target.value)
+                    }
+                  />
+                </label>
+              </div>
+              <Button
+                size="sm"
+                disabled={translationBusy}
+                onClick={() => void saveIdentity()}
+              >
+                {strings.sitesSaveTranslation}
+              </Button>
+            </section>
+          )}
+
+          {translationError !== null && (
+            <ErrorBanner message={translationError} />
+          )}
+
+          <div className={styles.editorLayout}>
+            <div className={styles.stackPane}>
+              <div className={styles.sectionBar}>
+                <h2 className={styles.sectionTitle}>{strings.sitesSections}</h2>
+                <div className={styles.sectionBarActions}>
+                  {locale === null && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      icon={<SearchCheck size={14} />}
+                      onClick={() => setSeoOpen(true)}
+                    >
+                      {strings.sitesSeoAction}
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={<Palette size={14} />}
+                    onClick={() => setThemeOpen(true)}
+                  >
+                    {strings.sitesTheme}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setPicking(true)}
+                    disabled={working || translationBusy || translationFallback}
+                  >
+                    {strings.sitesAddSection}
+                  </Button>
                 </div>
               </div>
+
+              {locale === null && (
+                <PageAiEditPanel
+                  siteId={siteId}
+                  pageId={pageId}
+                  onPreviewChange={(html) => {
+                    setProposedPreviewHtml(html);
+                    setPreviewVersion(html === null ? "before" : "after");
+                  }}
+                  onApplied={(envelope) => {
+                    setSections(envelope.sections);
+                    setError(null);
+                  }}
+                />
+              )}
+
+              {empty && !loading ? (
+                <EmptyState
+                  Icon={Layers}
+                  title={strings.sitesNoSectionsTitle}
+                  body={strings.sitesNoSectionsBody}
+                  cta={strings.sitesAddFirstSection}
+                  onCta={() => openForm({ kind: "hero", index: null })}
+                />
+              ) : (
+                <ol className={styles.stack}>
+                  {sections.map((section, i) => {
+                    const summary = sectionSummary(section);
+                    const cardClass =
+                      dragOver === i && dragFrom !== null && dragFrom !== i
+                        ? `${styles.card} ${styles.cardDropTarget}`
+                        : styles.card;
+                    return (
+                      // Sections have no identity — the position is the key.
+                      <li
+                        key={`${section.type}-${i}`}
+                        className={cardClass}
+                        draggable
+                        onDragStart={() => setDragFrom(i)}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setDragOver(i);
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (dragFrom !== null) move(dragFrom, i);
+                          setDragFrom(null);
+                          setDragOver(null);
+                        }}
+                        onDragEnd={() => {
+                          setDragFrom(null);
+                          setDragOver(null);
+                        }}
+                      >
+                        <span className={styles.dragHandle} aria-hidden="true">
+                          <GripVertical size={16} />
+                        </span>
+                        <div className={styles.cardMeta}>
+                          <span className={styles.cardKind}>
+                            {kindLabel(section.type)}
+                          </span>
+                          {summary !== "" && (
+                            <span className={styles.cardSummary}>
+                              {summary}
+                            </span>
+                          )}
+                        </div>
+                        <div className={styles.cardActions}>
+                          <IconButton
+                            size="sm"
+                            label={strings.sitesMoveUp}
+                            icon={<ChevronUp size={15} />}
+                            disabled={
+                              working ||
+                              translationBusy ||
+                              translationFallback ||
+                              i === 0
+                            }
+                            onClick={() => move(i, i - 1)}
+                          />
+                          <IconButton
+                            size="sm"
+                            label={strings.sitesMoveDown}
+                            icon={<ChevronDown size={15} />}
+                            disabled={
+                              working ||
+                              translationBusy ||
+                              translationFallback ||
+                              i === sections.length - 1
+                            }
+                            onClick={() => move(i, i + 1)}
+                          />
+                          <IconButton
+                            size="sm"
+                            label={strings.sitesEditSection}
+                            icon={<Pencil size={15} />}
+                            disabled={
+                              working || translationBusy || translationFallback
+                            }
+                            onClick={() =>
+                              openForm({ kind: section.type, index: i })
+                            }
+                          />
+                          {confirmDelete === i ? (
+                            // The second, armed step of deleting: one more click
+                            // removes the section; anything else disarms.
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              disabled={
+                                working ||
+                                translationBusy ||
+                                translationFallback
+                              }
+                              onClick={() => remove(i)}
+                            >
+                              {strings.sitesConfirmDelete}
+                            </Button>
+                          ) : (
+                            <IconButton
+                              size="sm"
+                              label={strings.sitesDeleteSection}
+                              icon={<Trash2 size={15} />}
+                              disabled={
+                                working ||
+                                translationBusy ||
+                                translationFallback
+                              }
+                              onClick={() => setConfirmDelete(i)}
+                            />
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
+              )}
             </div>
-            {previewError !== null && <ErrorBanner message={previewError} />}
-            <div
-              className={
-                previewMobile ? styles.previewViewportMobile : styles.previewViewport
-              }
+
+            <aside
+              className={styles.previewPane}
+              aria-label={strings.sitesPreview}
             >
-              {/* Sandboxed: scripts may run (the menu toggle), but the draft
-                  document never touches this origin or navigates the app. */}
-              <iframe
-                className={styles.previewFrame}
-                title={strings.sitesPreviewTitle}
-                sandbox="allow-scripts"
-                srcDoc={
-                  previewVersion === "after" && proposedPreviewHtml !== null
-                    ? proposedPreviewHtml
-                    : (previewHtml ?? "")
+              <div className={styles.previewBar}>
+                <h2 className={styles.sectionTitle}>{strings.sitesPreview}</h2>
+                <div className={styles.previewControls}>
+                  {proposedPreviewHtml !== null && (
+                    <div
+                      className={styles.previewCompareToggle}
+                      role="group"
+                      aria-label={strings.sitesAiPreviewCompare}
+                    >
+                      <Button
+                        variant="ghost"
+                        className={
+                          previewVersion === "before"
+                            ? styles.previewCompareButtonActive
+                            : undefined
+                        }
+                        aria-pressed={previewVersion === "before"}
+                        onClick={() => setPreviewVersion("before")}
+                      >
+                        {strings.sitesAiPreviewBefore}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className={
+                          previewVersion === "after"
+                            ? styles.previewCompareButtonActive
+                            : undefined
+                        }
+                        aria-pressed={previewVersion === "after"}
+                        onClick={() => setPreviewVersion("after")}
+                      >
+                        {strings.sitesAiPreviewAfter}
+                      </Button>
+                    </div>
+                  )}
+                  <div className={styles.previewToggle}>
+                    <IconButton
+                      size="sm"
+                      label={strings.sitesPreviewDesktop}
+                      icon={<Monitor size={15} />}
+                      active={!previewMobile}
+                      onClick={() => setPreviewMobile(false)}
+                    />
+                    <IconButton
+                      size="sm"
+                      label={strings.sitesPreviewMobile}
+                      icon={<Smartphone size={15} />}
+                      active={previewMobile}
+                      onClick={() => setPreviewMobile(true)}
+                    />
+                  </div>
+                </div>
+              </div>
+              {previewError !== null && <ErrorBanner message={previewError} />}
+              <div
+                className={
+                  previewMobile
+                    ? styles.previewViewportMobile
+                    : styles.previewViewport
                 }
-              />
-            </div>
-          </aside>
-        </div>
+              >
+                {/* Sandboxed: scripts may run (the menu toggle), but the draft
+                  document never touches this origin or navigates the app. */}
+                <iframe
+                  className={styles.previewFrame}
+                  title={strings.sitesPreviewTitle}
+                  sandbox="allow-scripts"
+                  srcDoc={
+                    previewVersion === "after" && proposedPreviewHtml !== null
+                      ? proposedPreviewHtml
+                      : (previewHtml ?? "")
+                  }
+                />
+              </div>
+            </aside>
+          </div>
+        </>
       )}
 
       {themeOpen && (
@@ -439,7 +739,7 @@ export function PageEditorView() {
           }}
           onSave={(section) => void save(form, section)}
           copyContext={
-            form.index === null
+            locale !== null || form.index === null
               ? undefined
               : {
                   siteId,

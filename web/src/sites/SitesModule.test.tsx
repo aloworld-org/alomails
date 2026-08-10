@@ -54,7 +54,13 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
 
 /** The lists a screen loads before anything interesting happens. */
 function fallback(url: string): Reply {
-  const body = url.includes("/posts")
+  const body = url.includes("/translation-readiness")
+    ? {
+        defaultLocale: "en",
+        totalPages: 0,
+        languages: [{ locale: "en", translatedPages: 0, ready: true }],
+      }
+    : url.includes("/posts")
     ? { posts: [] }
     : url.includes("/pages")
       ? { pages: [] }
@@ -82,8 +88,22 @@ vi.mock("../jmap/useJmapClient", () => ({
   useJmapClient: () => fakeJmap,
 }));
 
-const ALPHA: Site = { id: "site-1", name: "Alpha Bakery", subdomain: "alpha", status: "live" };
-const BETA: Site = { id: "site-2", name: "Beta Atelier", subdomain: "beta", status: "draft" };
+const ALPHA: Site = {
+  id: "site-1",
+  name: "Alpha Bakery",
+  subdomain: "alpha",
+  status: "live",
+  defaultLocale: "en",
+  enabledLocales: ["en"],
+};
+const BETA: Site = {
+  id: "site-2",
+  name: "Beta Atelier",
+  subdomain: "beta",
+  status: "draft",
+  defaultLocale: "en",
+  enabledLocales: ["en"],
+};
 const HOME: SitePage = {
   id: "page-1",
   slug: "",
@@ -791,6 +811,83 @@ describe("one site", () => {
     expect(screen.getByText(strings.sitesHomeBadge)).toBeTruthy();
     expect(screen.getByText("About us")).toBeTruthy();
     expect(screen.getByText("/about")).toBeTruthy();
+  });
+
+  test("shows translation readiness and adds a visitor language on the surface", async () => {
+    const multilingual = {
+      ...ALPHA,
+      defaultLocale: "en",
+      enabledLocales: ["en", "fr"],
+      publish: null,
+      theme: {},
+    };
+    const readiness = {
+      defaultLocale: "en",
+      totalPages: 2,
+      languages: [
+        { locale: "en", translatedPages: 2, ready: true },
+        { locale: "fr", translatedPages: 1, ready: false },
+      ],
+    };
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: multilingual,
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: { pages: [HOME, ABOUT] },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/translation-readiness"),
+        status: 200,
+        body: readiness,
+      },
+      {
+        match: (url, method) => method === "PUT" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: { status: "ok" },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: { ...multilingual, enabledLocales: ["en", "fr", "nl"] },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: { pages: [HOME, ABOUT] },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/translation-readiness"),
+        status: 200,
+        body: {
+          ...readiness,
+          languages: [
+            ...readiness.languages,
+            { locale: "nl", translatedPages: 0, ready: false },
+          ],
+        },
+      },
+    ];
+    ui("/sites/site-1");
+
+    expect(await screen.findByText(strings.sitesTranslationProgress(1, 2))).toBeTruthy();
+    fireEvent.change(screen.getByPlaceholderText(strings.sitesLanguagePlaceholder), {
+      target: { value: "nl" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesAddLanguageAction }));
+
+    await waitFor(() => expect(calls.some((call) =>
+      call.method === "PUT" && call.url.endsWith("/sites/site-1") &&
+      JSON.stringify(call.body) === JSON.stringify({
+        defaultLocale: "en",
+        enabledLocales: ["en", "fr", "nl"],
+      })
+    )).toBe(true));
+    expect(await screen.findByText("NL")).toBeTruthy();
   });
 
   test("a foreign or stale id reads as not-found with the way back", async () => {
