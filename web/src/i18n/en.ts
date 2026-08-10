@@ -1813,6 +1813,14 @@ export const en = {
   chatLoadFailed: "Those conversations couldn’t be loaded.",
   chatSendFailed: "That message couldn’t be sent — your words are still here.",
   chatCreateFailed: "That channel couldn’t be created.",
+  agentActWhatsOn: "Read your calendar",
+  agentActAmIFree: "Check for a clash",
+  agentActCatchUp: "Read what was said",
+  agentActFindInChat: "Search conversations",
+  agentActFindFile: "Search your Drive",
+  agentActFindContact: "Look up a contact",
+  agentFieldRoom: "Conversation",
+  agentFieldLookingFor: "Looking for",
   agentProposedAction: "alo would like to do this — approve to continue.",
   agentApprove: "Approve",
   agentDiscard: "Discard",
@@ -1960,7 +1968,9 @@ export const en = {
   agentCategoriseConsidered: (count: number): string =>
     count === 1 ? "1 claim looked at" : `${count} claims looked at`,
   agentCategoriseEvidence: (times: number): string =>
-    times === 1 ? "booked here once before" : `booked here ${times} times before`,
+    times === 1
+      ? "booked here once before"
+      : `booked here ${times} times before`,
   agentCategoriseAccept: "Accept",
   agentCategoriseDecline: "No",
   agentCategoriseAccepted: "Accepted",

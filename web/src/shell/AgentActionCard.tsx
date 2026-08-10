@@ -20,6 +20,7 @@ import {
   Handshake,
   ListChecks,
   MailOpen,
+  MessagesSquare,
   MoveRight,
   PenLine,
   Reply,
@@ -65,6 +66,18 @@ function isTrue(args: Record<string, unknown>, key: string): boolean {
 }
 
 /** Format an ISO datetime for display; falls back to the raw value if unparseable. */
+/** A calendar day, for a tool that takes YYYY-MM-DD rather than an instant. */
+function dayAt(day: string): string {
+  if (day === "") return "";
+  const at = new Date(`${day}T00:00:00`);
+  if (Number.isNaN(at.getTime())) return day;
+  return at.toLocaleDateString(getLocale(), {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
+
 function whenAt(iso: string): string {
   if (iso === "") return "";
   const d = new Date(iso);
@@ -375,6 +388,75 @@ function describeAction(action: AgentActionDto): ActionView {
         fields.push({ label: strings.agentFieldWhen, value: start });
       return { icon: CalendarPlus, title: strings.agentActEvent, fields };
     }
+    // The reading tools. They change nothing, but they are still shown with
+    // what they will look at: approving without seeing the arguments is
+    // approving blind, and a card that merely repeats the sentence above it
+    // has told the reader nothing they did not already know.
+    case "whats_on": {
+      const from = str(a, "from");
+      const to = str(a, "to");
+      return {
+        icon: CalendarRange,
+        title: strings.agentActWhatsOn,
+        fields: [
+          {
+            label: strings.agentFieldWhen,
+            value:
+              to === "" || to === from
+                ? dayAt(from)
+                : `${dayAt(from)} — ${dayAt(to)}`,
+          },
+        ],
+      };
+    }
+    case "am_i_free": {
+      const start = whenAt(str(a, "start"));
+      const end = whenAt(str(a, "end"));
+      const fields: Field[] = [];
+      if (start !== "")
+        fields.push({
+          label: strings.agentFieldWhen,
+          value: end === "" ? start : `${start} — ${end}`,
+        });
+      return { icon: CalendarRange, title: strings.agentActAmIFree, fields };
+    }
+    case "catch_up_room":
+      return {
+        icon: MessagesSquare,
+        title: strings.agentActCatchUp,
+        fields: [
+          { label: strings.agentFieldRoom, value: `#${str(a, "room")}` },
+        ],
+      };
+    case "find_in_chat": {
+      const fields: Field[] = [
+        { label: strings.agentFieldLookingFor, value: str(a, "query") },
+      ];
+      const room = str(a, "room");
+      if (room !== "")
+        fields.push({ label: strings.agentFieldRoom, value: `#${room}` });
+      return {
+        icon: MessagesSquare,
+        title: strings.agentActFindInChat,
+        fields,
+      };
+    }
+    case "find_file":
+      return {
+        icon: FileText,
+        title: strings.agentActFindFile,
+        fields: [
+          { label: strings.agentFieldLookingFor, value: str(a, "query") },
+        ],
+      };
+    case "find_contact":
+      return {
+        icon: Handshake,
+        title: strings.agentActFindContact,
+        fields: [
+          { label: strings.agentFieldLookingFor, value: str(a, "query") },
+        ],
+      };
     default:
       return {
         icon: Sparkles,
