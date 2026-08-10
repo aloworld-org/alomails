@@ -229,6 +229,7 @@ fn singular(segment: &str) -> &str {
             "companies" => "company",
             "entries" => "entry",
             "categories" => "category",
+            "deliveries" => "delivery",
             other => other,
         };
     }
@@ -358,6 +359,7 @@ mod tests {
     fn singularisation_only_touches_collections() {
         assert_eq!(singular("invoices"), "invoice");
         assert_eq!(singular("activities"), "activity");
+        assert_eq!(singular("deliveries"), "delivery");
         assert_eq!(singular("next-steps"), "next-step");
         assert_eq!(singular("issue"), "issue");
         assert_eq!(singular("status"), "status");

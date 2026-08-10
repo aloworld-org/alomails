@@ -25,11 +25,11 @@ use crate::{
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
     insights_gallery, inventory_locations, inventory_moves, inventory_po, inventory_po_print,
-    inventory_po_receipts, inventory_po_send, inventory_stock, inventory_supplier_prices,
-    inventory_suppliers, meet_routes, projects_clients, projects_invoices, projects_plan,
-    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
-    schedule, scoped_roles, security, session, settings, share, signup_route, sites, snooze,
-    spaces, tasks, unsubscribe, wopi, workspace_search,
+    inventory_po_receipts, inventory_po_send, inventory_so, inventory_so_deliveries,
+    inventory_stock, inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
+    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
+    projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
+    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -512,6 +512,37 @@ pub fn app_with_site_domain_dns(
         .route(
             "/inventory/purchase-orders/{id}/pdf",
             get(inventory_po_print::pdf_purchase_order),
+        )
+        // Sales orders (B5.06a) — the purchase order mirrored: what a customer
+        // asked US for. Confirming draws the number and freezes the document;
+        // it moves no stock, because an order is a promise and goods move when
+        // they are picked.
+        .route(
+            "/inventory/sales-orders",
+            get(inventory_so::list_sales_orders).post(inventory_so::create_sales_order),
+        )
+        .route(
+            "/inventory/sales-orders/{id}",
+            get(inventory_so::get_sales_order)
+                .patch(inventory_so::update_sales_order)
+                .delete(inventory_so::delete_sales_order),
+        )
+        .route(
+            "/inventory/sales-orders/{id}/confirm",
+            post(inventory_so::confirm_sales_order),
+        )
+        .route(
+            "/inventory/sales-orders/{id}/cancel",
+            post(inventory_so::cancel_sales_order),
+        )
+        // Delivering (B5.06a): the movements out of stock and the order's new
+        // state, in one act, with the delivery note that describes them. A
+        // sub-resource, so the audit trail files it against the order it
+        // happened to.
+        .route(
+            "/inventory/sales-orders/{id}/deliveries",
+            get(inventory_so_deliveries::list_deliveries)
+                .post(inventory_so_deliveries::create_delivery),
         )
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the

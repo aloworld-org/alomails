@@ -58,6 +58,19 @@ pub const PURCHASE_ORDER_SEQUENCE_KIND: &str = "purchase_order";
 /// The prefix printed on a purchase-order number.
 pub const PURCHASE_ORDER_NUMBER_PREFIX: &str = "PO";
 
+/// The series sales orders draw from (B5.06a) — its own again, and for the
+/// quote's reason: an order a customer has confirmed is not yet a ledger entry,
+/// and numbering it alongside invoices would leave a visible hole in the
+/// invoice series for every order that is cancelled before it is billed.
+///
+/// The number matters more here than on a purchase order: it is printed on the
+/// delivery note that travels in the box, so it is the thing a customer quotes
+/// back when a carton is missing.
+pub const SALES_ORDER_SEQUENCE_KIND: &str = "sales_order";
+
+/// The prefix printed on a sales-order number.
+pub const SALES_ORDER_NUMBER_PREFIX: &str = "SO";
+
 /// The smallest number of digits a counter is printed with. A tenant issuing
 /// more than 99 999 documents in one year simply gets a sixth digit — numbers
 /// grow, they are never truncated or reused.
@@ -180,12 +193,26 @@ mod tests {
         );
         assert_ne!(PURCHASE_ORDER_SEQUENCE_KIND, INVOICE_SEQUENCE_KIND);
         assert_ne!(PURCHASE_ORDER_SEQUENCE_KIND, QUOTE_SEQUENCE_KIND);
+        // And an order a customer places with us is a fourth: cancelling one
+        // before it is billed must leave no hole in the invoice series.
+        assert_eq!(
+            document_number(SALES_ORDER_NUMBER_PREFIX, 2026, 1),
+            "SO-2026-00001"
+        );
+        for other in [
+            INVOICE_SEQUENCE_KIND,
+            QUOTE_SEQUENCE_KIND,
+            PURCHASE_ORDER_SEQUENCE_KIND,
+        ] {
+            assert_ne!(SALES_ORDER_SEQUENCE_KIND, other);
+        }
         // Every kind satisfies the table's shape check (lowercase, ≤ 32 chars),
         // which is what lets a new series be a row rather than a migration.
         for kind in [
             INVOICE_SEQUENCE_KIND,
             QUOTE_SEQUENCE_KIND,
             PURCHASE_ORDER_SEQUENCE_KIND,
+            SALES_ORDER_SEQUENCE_KIND,
         ] {
             assert!(
                 !kind.is_empty()

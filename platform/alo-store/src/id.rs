@@ -459,6 +459,23 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One order a customer placed with us (alo Inventory, ADR 0035, wave
+    /// B5.06a) — what they asked for, at what price, and what has gone out
+    /// against it. Distinct from a [`BillingInvoiceId`], which is what we later
+    /// charge them: the order is the promise, the invoice is the bill for
+    /// keeping it (`docs/design/inventory.md`, "Sales orders").
+    InvSalesOrderId
+);
+
+opaque_id!(
+    /// One delivery against one sales order (alo Inventory, ADR 0035, wave
+    /// B5.06a) — what left, where it was picked from, and the movements it
+    /// wrote. An order has as many of these as we sent vans
+    /// (`docs/design/inventory.md`, "Delivery").
+    InvSoDeliveryId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.
