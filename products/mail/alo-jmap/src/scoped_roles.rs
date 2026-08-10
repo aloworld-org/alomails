@@ -46,7 +46,11 @@ use crate::state::{AppState, authenticate};
 /// The modules a scoped reader may read and may not write. `/finance` is
 /// absent on purpose (see the module docs); mail, calendar, drive, tasks and
 /// the rest are an accountant's own data and are governed by owning it.
-const READ_ONLY_FOR_ACCOUNTANT: [&str; 2] = ["billing", "crm"];
+/// `inventory` joined at B5.04b: an accountant values the stock on a balance
+/// sheet and must be able to see what is on the shelves and why it moved, and
+/// must not be able to adjust it — the write that can make theft look like
+/// paperwork is not one a books-only role has any reason to make.
+const READ_ONLY_FOR_ACCOUNTANT: [&str; 3] = ["billing", "crm", "inventory"];
 
 /// The first path segment of a matched route template, e.g. `billing` for
 /// `/billing/invoices/{id}/issue`.
@@ -115,5 +119,17 @@ mod tests {
         assert!(!READ_ONLY_FOR_ACCOUNTANT.contains(&"finance"));
         assert!(READ_ONLY_FOR_ACCOUNTANT.contains(&"billing"));
         assert!(READ_ONLY_FOR_ACCOUNTANT.contains(&"crm"));
+    }
+
+    #[test]
+    fn a_stock_adjustment_is_not_an_accountants_to_make() {
+        // The write that can make theft look like paperwork (B5.04b): an
+        // accountant reads the shelves and the ledger, and changes neither.
+        assert!(READ_ONLY_FOR_ACCOUNTANT.contains(&"inventory"));
+        assert_eq!(module_of("/inventory/moves"), Some("inventory"));
+        assert_eq!(
+            module_of("/inventory/locations/{id}/archive"),
+            Some("inventory")
+        );
     }
 }

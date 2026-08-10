@@ -24,11 +24,11 @@ use crate::{
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, inventory_supplier_prices, inventory_suppliers, meet_routes,
-    projects_clients, projects_invoices, projects_plan, projects_reports, projects_templates,
-    projects_time, projects_weeks, push, reset_route, schedule, scoped_roles, security, session,
-    settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
-    workspace_search,
+    insights_gallery, inventory_locations, inventory_moves, inventory_stock,
+    inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
+    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
+    projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
+    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -433,8 +433,43 @@ pub fn app_with_site_domain_dns(
         )
         .route(
             "/inventory/suppliers/{id}/products/{product_id}",
-            axum::routing::put(inventory_supplier_prices::set_supplier_product)
+            // Spelled `put(…)` rather than `axum::routing::put(…)` so
+            // `tests/audit_routes.rs` can see the verb: it reads this file's
+            // source, and a qualified path hides a mutating route from the
+            // promise that every one of them is audited (B5.04b).
+            put(inventory_supplier_prices::set_supplier_product)
                 .delete(inventory_supplier_prices::remove_supplier_product),
+        )
+        // Locations, on-hand and the move ledger (B5.04b). The list SEEDS a
+        // tenant's starting places on first read, in the caller's language, so
+        // receiving the first purchase order books itself instead of failing
+        // with "there is nowhere to put it".
+        //
+        // `POST /inventory/moves` is the one door that writes a movement by
+        // hand — a transfer, or an adjustment with a reason code — and it is
+        // the route that brings `inventory` into
+        // `audit_action::AUDITED_MODULES`: "who adjusted this stock down by
+        // forty, and when" is what the audit trail exists for. There is
+        // deliberately no PATCH and no DELETE on a movement: a mistake is
+        // corrected by a movement in the other direction.
+        .route(
+            "/inventory/locations",
+            get(inventory_locations::list_locations).post(inventory_locations::create_location),
+        )
+        .route(
+            "/inventory/locations/{id}",
+            get(inventory_locations::get_location)
+                .patch(inventory_locations::update_location)
+                .delete(inventory_locations::delete_location),
+        )
+        .route(
+            "/inventory/locations/{id}/archive",
+            post(inventory_locations::archive_location),
+        )
+        .route("/inventory/stock", get(inventory_stock::list_stock))
+        .route(
+            "/inventory/moves",
+            get(inventory_moves::list_moves).post(inventory_moves::create_move),
         )
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the

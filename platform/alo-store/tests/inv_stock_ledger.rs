@@ -34,6 +34,7 @@ mod common;
 
 use std::collections::BTreeMap;
 
+use alo_store::inv_adjust::AdjustReason;
 use alo_store::inv_locations::{Location, LocationKind, LocationSeed, NewLocation};
 use alo_store::inv_moves::{MoveFilter, MoveReason, MoveRefKind, MoveReference, NewMove};
 use alo_store::inv_stock::{StockBalance, StockFilter, stock_value_cents};
@@ -72,6 +73,14 @@ impl Rng {
         &values
             [usize::try_from(self.upto(u64::try_from(values.len() - 1).unwrap_or(0))).unwrap_or(0)]
     }
+}
+
+/// The reason code a movement of this reason must carry: one for an
+/// adjustment, none for anything else (B5.04b). `correction` is the neutral
+/// choice for a generated month — the suite is about quantities, not about
+/// which of the seven words a warehouse would have picked.
+fn adjust_code(reason: MoveReason) -> Option<AdjustReason> {
+    matches!(reason, MoveReason::Adjustment).then_some(AdjustReason::Correction)
 }
 
 /// Asserts a result is the clean not-found denial — never data, never an
@@ -187,6 +196,9 @@ impl Warehouse {
                 to_location_id: to.clone(),
                 qty_milli,
                 reason,
+                // A code is required exactly when the reason is `adjustment`
+                // (B5.04b) — every other reason names a document instead.
+                reason_code: adjust_code(reason),
                 note: String::new(),
                 reference: None,
                 occurred_at: None,
@@ -249,6 +261,7 @@ async fn a_movement_is_recorded_whole_and_the_balances_follow_it() {
             to_location_id: w.main.clone(),
             qty_milli: 12_000,
             reason: MoveReason::Purchase,
+            reason_code: None,
             note: "Pallet 4, one box dented".to_owned(),
             reference: Some(MoveReference {
                 kind: MoveRefKind::PurchaseOrder,
@@ -704,6 +717,7 @@ async fn a_generated_month_sums_to_zero_per_product() {
                 to_location_id: to.clone(),
                 qty_milli: rng.qty(1, 5_000),
                 reason,
+                reason_code: adjust_code(reason),
                 note: String::new(),
                 reference: None,
                 // Back-dated across the month, which the ledger allows and the
@@ -940,6 +954,7 @@ async fn two_shipments_of_the_last_unit_produce_exactly_one_success() {
             to_location_id: w.customer.clone(),
             qty_milli: 1_000,
             reason: MoveReason::Sale,
+            reason_code: None,
             note: String::new(),
             reference: None,
             occurred_at: None,

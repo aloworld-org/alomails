@@ -51,7 +51,12 @@ pub struct AuditEvent {
 /// sharper version of it: an expense claim is money somebody is owed, decided
 /// by somebody else, and "who approved this, and when" is a question an auditor
 /// asks as readily as the claimant does.
-const AUDITED_MODULES: [&str; 4] = ["billing", "crm", "projects", "finance"];
+/// `inventory` joined at B5.04b (`docs/design/inventory.md` § Tenancy) with the
+/// first route that writes a movement by hand. A stock adjustment is the most
+/// abusable write in the business modules — it is the one that can make theft
+/// look like paperwork — and "who adjusted this down by forty, and when" is
+/// precisely the question this trail exists to answer.
+const AUDITED_MODULES: [&str; 5] = ["billing", "crm", "projects", "finance", "inventory"];
 
 /// `POST` routes that mutate nothing — a dry run whose whole point is to answer
 /// "what *would* this do". Auditing them would file a paper trail for looking.

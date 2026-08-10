@@ -1,8 +1,10 @@
 //! Coverage of the business audit trail over the router's own source (B2.13).
 //!
 //! The item's promise is "every mutating billing/CRM route writes exactly one
-//! entry" — and, since B3.04, every mutating `/projects` route too, and since
-//! B4.05b every mutating `/finance` route.
+//! entry" — and, since B3.04, every mutating `/projects` route too, since
+//! B4.05b every mutating `/finance` route, and since B5.04b every mutating
+//! `/inventory` route (a stock adjustment being the write that can make theft
+//! look like paperwork).
 //! `audit_http.rs` proves the *writing* on a live service, one route at a time;
 //! what cannot be proved that way is **every**. axum's router does not hand back
 //! the routes it holds, so this suite reads the source that registers them —
@@ -102,7 +104,13 @@ fn methods_of(call: &str) -> Vec<String> {
 /// `audit_action::AUDITED_MODULES`, spelled out here rather than imported so
 /// adding a module to that list without deciding what its trail says fails
 /// loudly instead of quietly widening the promise.
-const AUDITED_PREFIXES: [&str; 4] = ["/billing/", "/crm/", "/finance/", "/projects/"];
+const AUDITED_PREFIXES: [&str; 5] = [
+    "/billing/",
+    "/crm/",
+    "/finance/",
+    "/inventory/",
+    "/projects/",
+];
 
 /// Every `(method, template)` the router registers under an audited module.
 fn business_routes() -> Vec<(String, String)> {
@@ -225,6 +233,8 @@ DELETE /crm/stages/{id} -> crm.stage.delete
 DELETE /finance/accounts/{id} -> finance.account.delete
 DELETE /finance/expenses/{id} -> finance.expense.delete
 DELETE /finance/mileage/{id} -> finance.mileage.delete
+DELETE /inventory/locations/{id} -> inventory.location.delete
+DELETE /inventory/suppliers/{id}/products/{product_id} -> inventory.supplier.product.delete
 DELETE /projects/clients/{id} -> projects.client.delete
 DELETE /projects/milestones/{id} -> projects.milestone.delete
 DELETE /projects/tasks/{task_id}/milestone -> projects.task.milestone.delete
@@ -241,6 +251,8 @@ PATCH /crm/pipelines/{id} -> crm.pipeline.update
 PATCH /crm/stages/{id} -> crm.stage.update
 PATCH /finance/accounts/{id} -> finance.account.update
 PATCH /finance/expenses/{id} -> finance.expense.update
+PATCH /inventory/locations/{id} -> inventory.location.update
+PATCH /inventory/suppliers/{id} -> inventory.supplier.update
 PATCH /projects/milestones/{id} -> projects.milestone.update
 PATCH /projects/time/{id} -> projects.time.update
 POST /billing/bills/import -> billing.bill.import
@@ -299,6 +311,11 @@ POST /finance/mileage -> finance.mileage.create
 POST /finance/periods -> finance.period.create
 POST /finance/periods/{id}/close -> finance.period.close
 POST /finance/periods/{id}/reopen -> finance.period.reopen
+POST /inventory/locations -> inventory.location.create
+POST /inventory/locations/{id}/archive -> inventory.location.archive
+POST /inventory/moves -> inventory.move.create
+POST /inventory/suppliers -> inventory.supplier.create
+POST /inventory/suppliers/{id}/archive -> inventory.supplier.archive
 POST /projects/approvals/{id}/approve -> projects.approval.approve
 POST /projects/approvals/{id}/reject -> projects.approval.reject
 POST /projects/approvals/{id}/reopen -> projects.approval.reopen
@@ -316,6 +333,7 @@ POST /projects/weeks/{monday}/submit -> projects.week.submit
 POST /projects/weeks/{monday}/withdraw -> projects.week.withdraw
 PUT /billing/fx/rates -> billing.fx.rates.update
 PUT /finance/mileage/rates -> finance.mileage.rates.update
+PUT /inventory/suppliers/{id}/products/{product_id} -> inventory.supplier.product.update
 PUT /projects/clients/{id} -> projects.client.update
 PUT /projects/tasks/{task_id}/milestone -> projects.task.milestone.update
 "#;

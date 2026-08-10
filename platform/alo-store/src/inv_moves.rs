@@ -70,6 +70,7 @@ use crate::billing_field::bounded;
 use crate::billing_line::QTY_MAX_MILLI;
 use crate::error::{Result, StoreError};
 use crate::id::{BillingProductId, InvLocationId, InvMoveId};
+use crate::inv_adjust::{AdjustReason, reason_code_required};
 use crate::inv_locations::Location;
 
 /// What a person typed about a movement — a sentence about a correction, not a
@@ -85,8 +86,8 @@ pub const MOVES_PAGE_MAX: i64 = 500;
 /// The columns every read of a movement selects, in `MoveRow` order.
 const MOVE_COLS: &str = "m.id, m.product_id, p.name AS product_name, m.from_location_id, \
      f.code AS from_code, f.name AS from_name, m.to_location_id, t.code AS to_code, \
-     t.name AS to_name, m.qty_milli, m.reason, m.note, m.ref_kind, m.ref_id, m.occurred_at, \
-     m.created_by, m.created_at";
+     t.name AS to_name, m.qty_milli, m.reason, m.reason_code, m.note, m.ref_kind, m.ref_id, \
+     m.occurred_at, m.created_by, m.created_at";
 
 /// The joins those columns need: a movement always reads with the names of what
 /// it moved and where, because an id is not an explanation.
@@ -221,6 +222,9 @@ pub struct NewMove {
     pub qty_milli: i64,
     /// Why.
     pub reason: MoveReason,
+    /// Why the shelf disagreed — present exactly when `reason` is
+    /// [`MoveReason::Adjustment`] ([`crate::inv_adjust`]).
+    pub reason_code: Option<AdjustReason>,
     /// What a person wrote about it; empty is normal for a document movement.
     pub note: String,
     /// The document that caused it, if any.
@@ -256,6 +260,9 @@ pub struct Move {
     pub qty_milli: i64,
     /// Why it moved.
     pub reason: MoveReason,
+    /// Why the shelf disagreed, on an adjustment; `None` on every other
+    /// movement.
+    pub reason_code: Option<AdjustReason>,
     /// What a person wrote about it.
     pub note: String,
     /// The document that caused it, if any.
@@ -288,6 +295,7 @@ pub struct MoveFilter {
 #[derive(Debug)]
 struct Normalized {
     qty_milli: i64,
+    reason_code: &'static str,
     note: String,
     ref_kind: &'static str,
     ref_id: String,
@@ -313,6 +321,21 @@ fn normalize(input: &NewMove) -> Result<Normalized> {
             "a movement must have two different locations".to_owned(),
         ));
     }
+    // A reason code says why the shelf disagreed, which is a question only an
+    // adjustment raises: a receipt is explained by its order, a delivery by
+    // its own, a transfer by the two places it names. Enforcing the pairing
+    // *here* rather than at the manual door means no future caller can write a
+    // coded purchase or an unexplained adjustment.
+    let reason_code = match (input.reason, input.reason_code) {
+        (MoveReason::Adjustment, Some(code)) => code.as_str(),
+        (MoveReason::Adjustment, None) => return Err(reason_code_required()),
+        (_, Some(_)) => {
+            return Err(StoreError::Validation(
+                "only an adjustment carries a reason code".to_owned(),
+            ));
+        }
+        (_, None) => "",
+    };
     let (ref_kind, ref_id) = match input.reference.as_ref() {
         Some(reference) => {
             let id = bounded("reference id", &reference.id, MOVE_REF_ID_MAX_CHARS)?;
@@ -327,6 +350,7 @@ fn normalize(input: &NewMove) -> Result<Normalized> {
     };
     Ok(Normalized {
         qty_milli: input.qty_milli,
+        reason_code,
         note: bounded("note", &input.note, MOVE_NOTE_MAX_CHARS)?,
         ref_kind,
         ref_id,
@@ -420,9 +444,9 @@ impl AccountStore {
         let occurred_at = input.occurred_at.unwrap_or_else(OffsetDateTime::now_utc);
         sqlx::query(
             "INSERT INTO inv_moves (tenant_id, id, product_id, from_location_id, \
-                 to_location_id, qty_milli, reason, note, ref_kind, ref_id, occurred_at, \
-                 created_by) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+                 to_location_id, qty_milli, reason, reason_code, note, ref_kind, ref_id, \
+                 occurred_at, created_by) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
         )
         .bind(self.tenant.as_str())
         .bind(id.as_str())
@@ -431,6 +455,7 @@ impl AccountStore {
         .bind(to.id.as_str())
         .bind(m.qty_milli)
         .bind(input.reason.as_str())
+        .bind(m.reason_code)
         .bind(&m.note)
         .bind(m.ref_kind)
         .bind(&m.ref_id)
@@ -590,6 +615,7 @@ struct MoveRow {
     to_name: String,
     qty_milli: i64,
     reason: String,
+    reason_code: String,
     note: String,
     ref_kind: String,
     ref_id: String,
@@ -612,6 +638,10 @@ impl MoveRow {
             to_name: self.to_name,
             qty_milli: self.qty_milli,
             reason: MoveReason::parse(&self.reason)?,
+            reason_code: match self.reason_code.as_str() {
+                "" => None,
+                code => Some(AdjustReason::parse(code)?),
+            },
             note: self.note,
             reference: match self.ref_kind.as_str() {
                 "" => None,
@@ -639,6 +669,7 @@ mod tests {
             to_location_id: InvLocationId::new("l2".to_owned()),
             qty_milli: 1_000,
             reason: MoveReason::Transfer,
+            reason_code: None,
             note: String::new(),
             reference: None,
             occurred_at: None,
@@ -760,6 +791,53 @@ mod tests {
             ..parcel()
         };
         assert!(invalid(normalize(&blank)).contains("name the document"));
+    }
+
+    #[test]
+    fn a_reason_code_belongs_to_an_adjustment_and_to_nothing_else() {
+        let adjusted = normalize(&NewMove {
+            reason: MoveReason::Adjustment,
+            reason_code: Some(AdjustReason::Damaged),
+            ..parcel()
+        })
+        .unwrap_or_else(|e| panic!("rejected: {e}"));
+        assert_eq!(adjusted.reason_code, "damaged");
+
+        let uncoded = NewMove {
+            reason: MoveReason::Adjustment,
+            reason_code: None,
+            ..parcel()
+        };
+        assert!(invalid(normalize(&uncoded)).contains("an adjustment needs a reason code"));
+
+        // The pairing is enforced here rather than at the door a person
+        // reaches, so a receipt written by B5.05b cannot carry one either.
+        for reason in [
+            MoveReason::Purchase,
+            MoveReason::Sale,
+            MoveReason::Transfer,
+            MoveReason::Count,
+            MoveReason::ReturnIn,
+            MoveReason::ReturnOut,
+        ] {
+            let coded = NewMove {
+                reason,
+                reason_code: Some(AdjustReason::Lost),
+                ..parcel()
+            };
+            assert!(invalid(normalize(&coded)).contains("only an adjustment"));
+            let plain = NewMove {
+                reason,
+                reason_code: None,
+                ..parcel()
+            };
+            assert_eq!(
+                normalize(&plain)
+                    .unwrap_or_else(|e| panic!("rejected: {e}"))
+                    .reason_code,
+                ""
+            );
+        }
     }
 
     #[test]

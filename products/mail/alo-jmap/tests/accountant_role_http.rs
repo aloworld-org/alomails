@@ -470,6 +470,47 @@ async fn billing_and_crm_are_readable_and_unwritable() {
     assert_eq!(status, StatusCode::OK, "{body}");
     assert_eq!(body["customer"]["name"], "Kunde GmbH");
 
+    // Inventory joined the same boundary at B5.04b, and for a sharper reason:
+    // an accountant values the stock on a balance sheet, so they must see what
+    // is on the shelves and why it moved — and a stock adjustment is the write
+    // that can make theft look like paperwork, which is not a books-only role's
+    // to make.
+    for uri in [
+        "/inventory/locations",
+        "/inventory/stock",
+        "/inventory/moves",
+    ] {
+        let (status, body) = get(&h.app, &accountant, uri).await;
+        assert_eq!(status, StatusCode::OK, "{uri}: {body}");
+    }
+    let (status, body) = post(
+        &h.app,
+        &accountant,
+        "/inventory/moves",
+        json!({
+            "productId": "whatever",
+            "fromLocationId": "a",
+            "toLocationId": "b",
+            "qtyMilli": 40_000,
+            "reason": "adjustment",
+            "reasonCode": "lost",
+        }),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::FORBIDDEN,
+        "the refusal comes before the ledger is even reached: {body}"
+    );
+    let (status, _) = post(
+        &h.app,
+        &accountant,
+        "/inventory/locations",
+        json!({ "code": "THEIRS", "name": "Not yours" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+
     // A dry run writes nothing, so it is not a write: refusing it would be a
     // rule about the HTTP method rather than about the data.
     let (status, body) = post(
