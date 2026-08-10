@@ -27,7 +27,6 @@ fn signup_app(store: Arc<Store>, identity: Identity, domains: Vec<String>) -> Ro
         store,
         identity,
         push: PushHub::new(),
-        media: None,
         limits: Limits::default(),
         base_url: "http://test".into(),
         submission_addr: None,

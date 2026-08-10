@@ -172,7 +172,6 @@ async fn bcc_stripped_on_wire_delivered_by_envelope_kept_in_sent() {
         store: Arc::clone(&store),
         identity,
         push: PushHub::new(),
-        media: None,
         limits: Limits::default(),
         base_url: "http://test".into(),
         submission_addr: Some(sink_addr),
