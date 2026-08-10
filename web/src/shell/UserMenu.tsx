@@ -63,7 +63,8 @@ export function UserMenu() {
   useEffect(() => {
     if (!open) return;
     function onPointerDown(e: PointerEvent) {
-      if (ref.current !== null && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current !== null && !ref.current.contains(e.target as Node))
+        setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -81,8 +82,13 @@ export function UserMenu() {
 
   // Which capability gates are satisfied — decides which product consoles
   // (admin, control-plane) show in the menu.
-  const has: Record<Capability, boolean> = { admin: isAdmin, operator: isOperator };
-  const consoleLinks = surface.consoles.filter((c) => c.menu !== undefined && has[c.menu.requires]);
+  const has: Record<Capability, boolean> = {
+    admin: isAdmin,
+    operator: isOperator,
+  };
+  const consoleLinks = surface.consoles.filter(
+    (c) => c.menu !== undefined && has[c.menu.requires],
+  );
 
   return (
     <div className={styles.wrap} ref={ref}>
@@ -190,7 +196,10 @@ export function UserMenu() {
         </div>
       )}
       {settingsOpen && (
-        <SettingsModal isAdmin={isAdmin} onClose={() => setSettingsOpen(false)} />
+        <SettingsModal
+          isAdmin={isAdmin}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
       {contactsOpen && <ContactsModal onClose={() => setContactsOpen(false)} />}
       {importOpen && <ImportModal onClose={() => setImportOpen(false)} />}

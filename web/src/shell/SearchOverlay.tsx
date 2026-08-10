@@ -124,7 +124,12 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
       .askAgent(question)
       .then((a) => setAnswer({ ...a, sources: openable(a.sources) }))
       .catch(() =>
-        setAnswer({ answer: null, action: null, reason: "unreachable", sources: [] }),
+        setAnswer({
+          answer: null,
+          action: null,
+          reason: "unreachable",
+          sources: [],
+        }),
       )
       .finally(() => setAsking(false));
   }
@@ -191,20 +196,34 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
               if (e.key === "Enter") ask();
             }}
           />
-          <button type="button" className={styles.close} onClick={onClose} aria-label={strings.close}>
+          <button
+            type="button"
+            className={styles.close}
+            onClick={onClose}
+            aria-label={strings.close}
+          >
             <X size={18} />
           </button>
         </div>
         {q.trim() !== "" && (
-          <button type="button" className={styles.askRow} onClick={ask} disabled={asking}>
+          <button
+            type="button"
+            className={styles.askRow}
+            onClick={ask}
+            disabled={asking}
+          >
             <Sparkles size={16} className={styles.askIcon} />
-            <span className={styles.askLabel}>{strings.aiAskAbout(q.trim())}</span>
+            <span className={styles.askLabel}>
+              {strings.aiAskAbout(q.trim())}
+            </span>
             {asking && <Spinner size={14} />}
           </button>
         )}
         {answer && (
           <div className={styles.answer}>
-            {answer.answer && <p className={styles.answerText}>{answer.answer}</p>}
+            {answer.answer && (
+              <p className={styles.answerText}>{answer.answer}</p>
+            )}
             {/* A proposed action — the agent never acts without this approval. */}
             {answer.action && (
               <AgentActionCard
@@ -220,25 +239,37 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
               ) : (
                 <AgentResultCard result={outcome} />
               ))}
-            {exec === "error" && <p className={styles.answerNote}>{strings.agentFailed}</p>}
+            {exec === "error" && (
+              <p className={styles.answerNote}>{strings.agentFailed}</p>
+            )}
             {answer.answer === null && answer.action === null && (
               <p className={styles.answerNote}>
-                {answer.reason === "unconfigured" ? strings.aiUnconfigured : strings.aiUnreachable}
+                {answer.reason === "unconfigured"
+                  ? strings.aiUnconfigured
+                  : strings.aiUnreachable}
               </p>
             )}
             {answer.sources.length > 0 && (
               <>
-                <div className={styles.answerSourcesLabel}>{strings.aiSources}</div>
+                <div className={styles.answerSourcesLabel}>
+                  {strings.aiSources}
+                </div>
                 <ul className={styles.list}>
                   {answer.sources.map((h, i) => {
                     const Icon = hitIcon(h.kind);
                     return (
                       <li key={`src:${h.kind}:${h.id}`}>
-                        <button type="button" className={styles.hit} onClick={() => open(h)}>
+                        <button
+                          type="button"
+                          className={styles.hit}
+                          onClick={() => open(h)}
+                        >
                           <span className={styles.citeNum}>{i + 1}</span>
                           <Icon size={16} className={styles.hitIcon} />
                           <span className={styles.hitTitle}>{h.title}</span>
-                          <span className={styles.hitKind}>{strings.searchKind(h.kind)}</span>
+                          <span className={styles.hitKind}>
+                            {strings.searchKind(h.kind)}
+                          </span>
                         </button>
                       </li>
                     );
@@ -263,10 +294,16 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
                 const Icon = hitIcon(h.kind);
                 return (
                   <li key={`${h.kind}:${h.id}`}>
-                    <button type="button" className={styles.hit} onClick={() => open(h)}>
+                    <button
+                      type="button"
+                      className={styles.hit}
+                      onClick={() => open(h)}
+                    >
                       <Icon size={16} className={styles.hitIcon} />
                       <span className={styles.hitTitle}>{h.title}</span>
-                      <span className={styles.hitKind}>{strings.searchKind(h.kind)}</span>
+                      <span className={styles.hitKind}>
+                        {strings.searchKind(h.kind)}
+                      </span>
                     </button>
                   </li>
                 );

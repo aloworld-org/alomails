@@ -29,3 +29,32 @@
   justify-content: flex-end;
   padding: var(--space-3);
 }
+
+/* ---- a phone ---------------------------------------------------------- */
+
+/* The rail becomes a bar along the bottom. It kept its 72px column at every
+   size, which on a 390px screen is a fifth of the display spent on navigation
+   before a single module has drawn anything.
+   
+   A bar rather than a drawer behind a button: every destination stays one tap
+   away and reachable by scrolling, and no module has to grow a menu control it
+   does not need on a desktop. */
+@media (max-width: 768px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+    grid-template-areas:
+      "main"
+      "rail";
+  }
+
+  /* A side panel becomes the whole screen: 340px beside a 390px phone leaves
+     nothing for what it is a panel about. */
+  .panel {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    width: auto;
+    border-left: 0;
+  }
+}

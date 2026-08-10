@@ -42,7 +42,12 @@ export function AppShell() {
       {aiOpen && (
         <aside className={styles.panel} aria-label={strings.moduleAi}>
           <div className={styles.panelHead}>
-            <IconButton size="sm" label="Close" icon={<X />} onClick={() => setAiOpen(false)} />
+            <IconButton
+              size="sm"
+              label="Close"
+              icon={<X />}
+              onClick={() => setAiOpen(false)}
+            />
           </div>
           <ComingSoon title={strings.moduleAi} Icon={Sparkles} />
         </aside>

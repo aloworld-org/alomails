@@ -42,7 +42,10 @@ const FIELD_LABELS: Record<FilterField, string> = {
 /** A one-line human summary of a rule for the list. */
 function summarize(rule: MailFilterRule): string {
   const conds = rule.conditions
-    .map((c) => `${FIELD_LABELS[c.field]} ${c.op === "is" ? "=" : "∋"} "${c.value}"`)
+    .map(
+      (c) =>
+        `${FIELD_LABELS[c.field]} ${c.op === "is" ? "=" : "∋"} "${c.value}"`,
+    )
     .join(rule.match === "all" ? " · " : ` ${strings.filterOr} `);
   const acts = rule.actions
     .map((a) => {
@@ -89,7 +92,8 @@ export function FiltersSection() {
 
   // Folders offered as "file into" targets (skip virtual/managed roles).
   const folderTargets = useMemo(
-    () => mailboxes.filter((m) => m.role !== "snoozed" && m.role !== "scheduled"),
+    () =>
+      mailboxes.filter((m) => m.role !== "snoozed" && m.role !== "scheduled"),
     [mailboxes],
   );
 
@@ -109,7 +113,9 @@ export function FiltersSection() {
 
   function saveDraft() {
     if (draft === null) return;
-    const conditions = draft.conditions.filter((c) => c.value.trim().length > 0);
+    const conditions = draft.conditions.filter(
+      (c) => c.value.trim().length > 0,
+    );
     if (conditions.length === 0) {
       setError(strings.filterNeedsCondition);
       return;
@@ -120,12 +126,17 @@ export function FiltersSection() {
     }
     const clean: MailFilterRule = { ...draft, conditions };
     const idx = rules.findIndex((r) => r.id === clean.id);
-    const next = idx >= 0 ? rules.map((r) => (r.id === clean.id ? clean : r)) : [...rules, clean];
+    const next =
+      idx >= 0
+        ? rules.map((r) => (r.id === clean.id ? clean : r))
+        : [...rules, clean];
     void persist(next);
   }
 
   function toggle(rule: MailFilterRule) {
-    void persist(rules.map((r) => (r.id === rule.id ? { ...r, enabled: !r.enabled } : r)));
+    void persist(
+      rules.map((r) => (r.id === rule.id ? { ...r, enabled: !r.enabled } : r)),
+    );
   }
 
   function remove(rule: MailFilterRule) {
@@ -147,7 +158,11 @@ export function FiltersSection() {
           {rules.map((rule) => (
             <li key={rule.id} className={styles.rule}>
               <label className={styles.enable}>
-                <input type="checkbox" checked={rule.enabled} onChange={() => toggle(rule)} />
+                <input
+                  type="checkbox"
+                  checked={rule.enabled}
+                  onChange={() => toggle(rule)}
+                />
               </label>
               <button
                 type="button"
@@ -214,26 +229,42 @@ interface RuleEditorProps {
   onCancel: () => void;
 }
 
-function RuleEditor({ draft, folders, busy, onChange, onSave, onCancel }: RuleEditorProps) {
+function RuleEditor({
+  draft,
+  folders,
+  busy,
+  onChange,
+  onSave,
+  onCancel,
+}: RuleEditorProps) {
   function setCondition(i: number, patch: Partial<FilterCondition>) {
     onChange({
       ...draft,
-      conditions: draft.conditions.map((c, j) => (j === i ? { ...c, ...patch } : c)),
+      conditions: draft.conditions.map((c, j) =>
+        j === i ? { ...c, ...patch } : c,
+      ),
     });
   }
   function addCondition() {
     onChange({
       ...draft,
-      conditions: [...draft.conditions, { field: "from", op: "contains", value: "" }],
+      conditions: [
+        ...draft.conditions,
+        { field: "from", op: "contains", value: "" },
+      ],
     });
   }
   function removeCondition(i: number) {
-    onChange({ ...draft, conditions: draft.conditions.filter((_, j) => j !== i) });
+    onChange({
+      ...draft,
+      conditions: draft.conditions.filter((_, j) => j !== i),
+    });
   }
 
   // Actions are edited as a small set of toggles; delete is exclusive.
   const fileInto = draft.actions.find((a) => a.type === "fileInto");
-  const has = (t: FilterAction["type"]) => draft.actions.some((a) => a.type === t);
+  const has = (t: FilterAction["type"]) =>
+    draft.actions.some((a) => a.type === t);
   function setActions(next: FilterAction[]) {
     onChange({ ...draft, actions: next });
   }
@@ -243,7 +274,9 @@ function RuleEditor({ draft, folders, busy, onChange, onSave, onCancel }: RuleEd
       setActions(has("delete") ? [] : [{ type: "delete" }]);
       return;
     }
-    const without = draft.actions.filter((a) => a.type !== action.type && a.type !== "delete");
+    const without = draft.actions.filter(
+      (a) => a.type !== action.type && a.type !== "delete",
+    );
     setActions(has(action.type) ? without : [...without, action]);
   }
   function setFolder(mailbox: string) {
@@ -285,7 +318,9 @@ function RuleEditor({ draft, folders, busy, onChange, onSave, onCancel }: RuleEd
           <select
             className={styles.select}
             value={c.field}
-            onChange={(e) => setCondition(i, { field: e.target.value as FilterField })}
+            onChange={(e) =>
+              setCondition(i, { field: e.target.value as FilterField })
+            }
           >
             <option value="from">{strings.filterFieldFrom}</option>
             <option value="to">{strings.filterFieldTo}</option>
@@ -295,7 +330,9 @@ function RuleEditor({ draft, folders, busy, onChange, onSave, onCancel }: RuleEd
           <select
             className={styles.select}
             value={c.op}
-            onChange={(e) => setCondition(i, { op: e.target.value as FilterOp })}
+            onChange={(e) =>
+              setCondition(i, { op: e.target.value as FilterOp })
+            }
           >
             <option value="contains">{strings.filterOpContains}</option>
             <option value="is">{strings.filterOpIs}</option>
@@ -332,7 +369,12 @@ function RuleEditor({ draft, folders, busy, onChange, onSave, onCancel }: RuleEd
             type="checkbox"
             checked={fileInto !== undefined}
             disabled={has("delete")}
-            onChange={() => toggleAction({ type: "fileInto", mailbox: fileInto?.mailbox ?? firstFolder })}
+            onChange={() =>
+              toggleAction({
+                type: "fileInto",
+                mailbox: fileInto?.mailbox ?? firstFolder,
+              })
+            }
           />
           <span>{strings.filterActionFileInto}</span>
           {fileInto !== undefined && (

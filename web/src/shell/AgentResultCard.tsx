@@ -12,7 +12,14 @@
 // language (CLAUDE.md). Every word around them is written here, in the
 // catalogue, so the summary is in the reader's language.
 import { useState } from "react";
-import { CalendarClock, CalendarRange, Gauge, Percent, ScanSearch, Tags } from "lucide-react";
+import {
+  CalendarClock,
+  CalendarRange,
+  Gauge,
+  Percent,
+  ScanSearch,
+  Tags,
+} from "lucide-react";
 
 import { formatAmount, formatRate } from "../billing";
 import { Button } from "../ds";
@@ -34,42 +41,72 @@ import styles from "./AgentResultCard.module.css";
 
 /** A `projectStatus` result, checked at runtime: the `kind` alone is a string
  *  the server could widen, so the shape is what is trusted. */
-function isProjectStatus(result: AgentResultDto): result is ProjectStatusResultDto {
-  return result.kind === "projectStatus" && "hours" in result && "milestones" in result;
+function isProjectStatus(
+  result: AgentResultDto,
+): result is ProjectStatusResultDto {
+  return (
+    result.kind === "projectStatus" &&
+    "hours" in result &&
+    "milestones" in result
+  );
 }
 
 /** A `timeEntry` result — always a proposal on this path (`log_time` writes no
  *  other kind), and the card says so rather than implying the hour is counted. */
 function isTimeEntry(result: AgentResultDto): result is TimeEntryResultDto {
-  return result.kind === "timeEntry" && "minutes" in result && "workDate" in result;
+  return (
+    result.kind === "timeEntry" && "minutes" in result && "workDate" in result
+  );
 }
 
 /** A `timesheetDraft` result — a batch drafted from the caller's Agenda. Both
  *  lists may be empty (a diary with nothing in it), so the shape is what is
  *  checked, not their contents. */
-function isTimesheetDraft(result: AgentResultDto): result is TimesheetDraftResultDto {
-  return result.kind === "timesheetDraft" && "drafted" in result && "skipped" in result;
+function isTimesheetDraft(
+  result: AgentResultDto,
+): result is TimesheetDraftResultDto {
+  return (
+    result.kind === "timesheetDraft" &&
+    "drafted" in result &&
+    "skipped" in result
+  );
 }
 
 /** A `categoryProposals` result — the finance agent's suggestions (B4.14a).
  *  Both lists may be empty (a period with nothing unclassified in it), so the
  *  shape is what is checked, not their contents. */
-function isCategoryProposals(result: AgentResultDto): result is CategoryProposalsResultDto {
-  return result.kind === "categoryProposals" && "proposed" in result && "skipped" in result;
+function isCategoryProposals(
+  result: AgentResultDto,
+): result is CategoryProposalsResultDto {
+  return (
+    result.kind === "categoryProposals" &&
+    "proposed" in result &&
+    "skipped" in result
+  );
 }
 
 /** A `vatSummary` result — the VAT figures the books carry (B4.14b). Both sides
  *  are always present, however empty the period was, so the shape is what is
  *  checked. */
 function isVatSummary(result: AgentResultDto): result is VatSummaryResultDto {
-  return result.kind === "vatSummary" && "output" in result && "netPayableCents" in result;
+  return (
+    result.kind === "vatSummary" &&
+    "output" in result &&
+    "netPayableCents" in result
+  );
 }
 
 /** A `journalAnomalies` result — what a scan of the journal found (B4.14b). An
  *  empty `findings` is a real and useful answer ("nothing stood out"), so the
  *  shape is what is checked, not its contents. */
-function isJournalAnomalies(result: AgentResultDto): result is JournalAnomaliesResultDto {
-  return result.kind === "journalAnomalies" && "findings" in result && "scanned" in result;
+function isJournalAnomalies(
+  result: AgentResultDto,
+): result is JournalAnomaliesResultDto {
+  return (
+    result.kind === "journalAnomalies" &&
+    "findings" in result &&
+    "scanned" in result
+  );
 }
 
 /** One labelled figure. `aside` is a second fact on the same line ("3 open ·
@@ -89,7 +126,9 @@ function Row({
       <span className={styles.label}>{label}</span>
       <span className={styles.value}>
         {value}
-        {aside !== undefined && aside !== "" && <span className={styles.aside}> · {aside}</span>}
+        {aside !== undefined && aside !== "" && (
+          <span className={styles.aside}> · {aside}</span>
+        )}
       </span>
     </div>
   );
@@ -106,10 +145,17 @@ function TimeEntryResult({ entry }: { entry: TimeEntryResultDto }) {
       <div className={styles.rows}>
         <Row label={strings.agentFieldProject} value={entry.title ?? ""} />
         <Row label={strings.agentFieldDay} value={dayLabel(entry.workDate)} />
-        <Row label={strings.agentFieldDuration} value={durationLabel(entry.minutes)} />
-        {entry.note !== "" && <Row label={strings.projectsNote} value={entry.note} />}
+        <Row
+          label={strings.agentFieldDuration}
+          value={durationLabel(entry.minutes)}
+        />
+        {entry.note !== "" && (
+          <Row label={strings.projectsNote} value={entry.note} />
+        )}
       </div>
-      <p className={styles.note}>{strings.agentTimeLogged(entry.title ?? "")}</p>
+      <p className={styles.note}>
+        {strings.agentTimeLogged(entry.title ?? "")}
+      </p>
     </div>
   );
 }
@@ -132,7 +178,10 @@ function TimesheetDraftResult({ draft }: { draft: TimesheetDraftResultDto }) {
         <Row label={strings.agentFieldProject} value={draft.title ?? ""} />
         <Row
           label={strings.agentFieldDay}
-          value={strings.agentDraftedRange(dayLabel(draft.from), dayLabel(draft.to))}
+          value={strings.agentDraftedRange(
+            dayLabel(draft.from),
+            dayLabel(draft.to),
+          )}
         />
         <Row
           label={strings.agentDraftedTotal}
@@ -156,17 +205,24 @@ function TimesheetDraftResult({ draft }: { draft: TimesheetDraftResultDto }) {
               <span className={styles.itemName}>
                 {entry.note}
                 {entry.overlaps && (
-                  <span className={styles.aside}> · {strings.agentDraftedOverlap}</span>
+                  <span className={styles.aside}>
+                    {" "}
+                    · {strings.agentDraftedOverlap}
+                  </span>
                 )}
               </span>
-              <span className={styles.itemMinutes}>{durationLabel(entry.minutes)}</span>
+              <span className={styles.itemMinutes}>
+                {durationLabel(entry.minutes)}
+              </span>
             </li>
           ))}
         </ul>
       )}
       {draft.skipped.length > 0 && (
         <>
-          <span className={styles.groupLabel}>{strings.agentDraftedLeftOut}</span>
+          <span className={styles.groupLabel}>
+            {strings.agentDraftedLeftOut}
+          </span>
           <ul className={styles.list}>
             {draft.skipped.map((skipped, i) => (
               <li
@@ -189,10 +245,14 @@ function TimesheetDraftResult({ draft }: { draft: TimesheetDraftResultDto }) {
         </>
       )}
       {draft.overlaps > 0 && (
-        <p className={styles.note}>{strings.agentDraftedOverlaps(draft.overlaps)}</p>
+        <p className={styles.note}>
+          {strings.agentDraftedOverlaps(draft.overlaps)}
+        </p>
       )}
       {draft.drafted.length > 0 && (
-        <p className={styles.note}>{strings.agentDraftedNote(draft.title ?? "")}</p>
+        <p className={styles.note}>
+          {strings.agentDraftedNote(draft.title ?? "")}
+        </p>
       )}
     </div>
   );
@@ -213,25 +273,38 @@ function ProjectStatusResult({ status }: { status: ProjectStatusResultDto }) {
       <div className={styles.rows}>
         <Row
           label={strings.agentStatusHours}
-          value={hours.minutes === 0 ? strings.agentStatusNeverWorked : durationLabel(hours.minutes)}
+          value={
+            hours.minutes === 0
+              ? strings.agentStatusNeverWorked
+              : durationLabel(hours.minutes)
+          }
           aside={
             hours.billableMinutes > 0
-              ? strings.agentStatusBillable(durationLabel(hours.billableMinutes))
+              ? strings.agentStatusBillable(
+                  durationLabel(hours.billableMinutes),
+                )
               : undefined
           }
         />
         {hours.lastWorkedOn !== null && (
-          <Row label={strings.agentStatusLastWorked} value={dayLabel(hours.lastWorkedOn)} />
+          <Row
+            label={strings.agentStatusLastWorked}
+            value={dayLabel(hours.lastWorkedOn)}
+          />
         )}
         {budget.isClientWork ? (
           <>
             {budget.customer !== undefined && budget.customer !== null && (
-              <Row label={strings.agentStatusCustomer} value={budget.customer} />
+              <Row
+                label={strings.agentStatusCustomer}
+                value={budget.customer}
+              />
             )}
             <Row
               label={strings.agentStatusBudget}
               value={
-                budget.budgetMinutes === undefined || budget.budgetMinutes === null
+                budget.budgetMinutes === undefined ||
+                budget.budgetMinutes === null
                   ? strings.agentStatusNoBudget
                   : durationLabel(budget.budgetMinutes)
               }
@@ -243,17 +316,25 @@ function ProjectStatusResult({ status }: { status: ProjectStatusResultDto }) {
             />
           </>
         ) : (
-          <Row label={strings.agentStatusBudget} value={strings.agentStatusInternal} />
+          <Row
+            label={strings.agentStatusBudget}
+            value={strings.agentStatusInternal}
+          />
         )}
         <Row
           label={strings.agentStatusMilestones}
           value={
             milestones.total === 0
               ? strings.agentStatusNoMilestones
-              : strings.agentStatusMilestonesDone(milestones.done, milestones.total)
+              : strings.agentStatusMilestonesDone(
+                  milestones.done,
+                  milestones.total,
+                )
           }
           aside={
-            milestones.late > 0 ? strings.agentStatusMilestonesLate(milestones.late) : undefined
+            milestones.late > 0
+              ? strings.agentStatusMilestonesLate(milestones.late)
+              : undefined
           }
         />
         {milestones.next !== null && (
@@ -266,7 +347,11 @@ function ProjectStatusResult({ status }: { status: ProjectStatusResultDto }) {
         <Row
           label={strings.agentStatusTasks}
           value={strings.agentStatusTasksOpen(tasks.open)}
-          aside={tasks.overdue > 0 ? strings.agentStatusTasksOverdue(tasks.overdue) : undefined}
+          aside={
+            tasks.overdue > 0
+              ? strings.agentStatusTasksOverdue(tasks.overdue)
+              : undefined
+          }
         />
       </div>
       <p className={styles.note}>{strings.agentProjectStatusNote}</p>
@@ -284,9 +369,15 @@ function ProjectStatusResult({ status }: { status: ProjectStatusResultDto }) {
  *
  *  An answered line keeps its place and says what was answered — removing it
  *  would move every line below it under the reader's cursor. */
-function CategoryProposalsResult({ proposals }: { proposals: CategoryProposalsResultDto }) {
+function CategoryProposalsResult({
+  proposals,
+}: {
+  proposals: CategoryProposalsResultDto;
+}) {
   const api = useFinanceApi();
-  const [answered, setAnswered] = useState<Record<string, "accepted" | "declined">>({});
+  const [answered, setAnswered] = useState<
+    Record<string, "accepted" | "declined">
+  >({});
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -316,7 +407,10 @@ function CategoryProposalsResult({ proposals }: { proposals: CategoryProposalsRe
       <div className={styles.rows}>
         <Row
           label={strings.agentCategoriseFieldPeriod}
-          value={strings.agentDraftedRange(dayLabel(proposals.from), dayLabel(proposals.to))}
+          value={strings.agentDraftedRange(
+            dayLabel(proposals.from),
+            dayLabel(proposals.to),
+          )}
         />
         <Row
           label={strings.agentDraftedTotal}
@@ -381,10 +475,15 @@ function CategoryProposalsResult({ proposals }: { proposals: CategoryProposalsRe
       )}
       {proposals.skipped.length > 0 && (
         <>
-          <span className={styles.groupLabel}>{strings.agentCategoriseLeftOut}</span>
+          <span className={styles.groupLabel}>
+            {strings.agentCategoriseLeftOut}
+          </span>
           <ul className={styles.list}>
             {proposals.skipped.map((skipped) => (
-              <li key={skipped.id} className={`${styles.item} ${styles.itemSkipped}`}>
+              <li
+                key={skipped.id}
+                className={`${styles.item} ${styles.itemSkipped}`}
+              >
                 <span className={styles.itemDay}>
                   {skipped.spentOn === null ? "" : dayLabel(skipped.spentOn)}
                 </span>
@@ -446,7 +545,11 @@ function VatSide({
             aside={money(side.unratedBaseCents)}
           />
         )}
-        <Row label={base} value={money(side.vatCents)} aside={money(side.baseCents)} />
+        <Row
+          label={base}
+          value={money(side.vatCents)}
+          aside={money(side.baseCents)}
+        />
       </div>
     </>
   );
@@ -455,7 +558,8 @@ function VatSide({
 /** The VAT figures, read back. Nothing was filed, and the card says so at the
  *  end rather than leaving a person to assume it. */
 function VatSummaryResult({ report }: { report: VatSummaryResultDto }) {
-  const money = (cents: number) => formatAmount(cents, getLocale(), report.currency);
+  const money = (cents: number) =>
+    formatAmount(cents, getLocale(), report.currency);
   const owed = report.netPayableCents >= 0;
   const empty =
     report.output.rates.length === 0 &&
@@ -470,7 +574,10 @@ function VatSummaryResult({ report }: { report: VatSummaryResultDto }) {
       <div className={styles.rows}>
         <Row
           label={strings.agentVatFieldPeriod}
-          value={strings.agentDraftedRange(dayLabel(report.from), dayLabel(report.to))}
+          value={strings.agentDraftedRange(
+            dayLabel(report.from),
+            dayLabel(report.to),
+          )}
         />
       </div>
       {empty ? (
@@ -514,7 +621,10 @@ function AnomalyFinding({
   currency: string;
 }) {
   const money = (cents: number) => formatAmount(cents, getLocale(), currency);
-  const where = [finding.accountName ?? finding.accountCode, finding.counterparty?.name]
+  const where = [
+    finding.accountName ?? finding.accountCode,
+    finding.counterparty?.name,
+  ]
     .filter((part) => part !== null && part !== undefined && part !== "")
     .join(" · ");
   return (
@@ -527,7 +637,10 @@ function AnomalyFinding({
         {finding.missingMonth === null
           ? money(finding.amountCents)
           : strings.agentAnomalyMissingMonth(
-              dayLabel(finding.missingMonth, { month: "long", year: "numeric" }),
+              dayLabel(finding.missingMonth, {
+                month: "long",
+                year: "numeric",
+              }),
             )}
         {finding.typicalCents !== null && (
           <span className={styles.aside}>
@@ -543,7 +656,9 @@ function AnomalyFinding({
           <li key={entry.id} className={`${styles.item} ${styles.itemSkipped}`}>
             <span className={styles.itemDay}>{dayLabel(entry.entryDate)}</span>
             <span className={styles.itemName}>{entry.memo}</span>
-            <span className={styles.itemMinutes}>{money(entry.amountCents)}</span>
+            <span className={styles.itemMinutes}>
+              {money(entry.amountCents)}
+            </span>
           </li>
         ))}
       </ul>
@@ -563,11 +678,16 @@ function JournalAnomaliesResult({ scan }: { scan: JournalAnomaliesResultDto }) {
       <div className={styles.rows}>
         <Row
           label={strings.agentAnomalyFieldPeriod}
-          value={strings.agentDraftedRange(dayLabel(scan.from), dayLabel(scan.to))}
+          value={strings.agentDraftedRange(
+            dayLabel(scan.from),
+            dayLabel(scan.to),
+          )}
         />
         <Row
           label={
-            scan.found === 0 ? strings.agentAnomalyNone : strings.agentAnomalyFound(scan.found)
+            scan.found === 0
+              ? strings.agentAnomalyNone
+              : strings.agentAnomalyFound(scan.found)
           }
           value={strings.agentAnomalyScanned(scan.scanned)}
           aside={
@@ -591,9 +711,13 @@ function JournalAnomaliesResult({ scan }: { scan: JournalAnomaliesResultDto }) {
           ))}
         </ul>
       )}
-      {scan.truncated && <p className={styles.note}>{strings.agentAnomalyTruncated}</p>}
+      {scan.truncated && (
+        <p className={styles.note}>{strings.agentAnomalyTruncated}</p>
+      )}
       {scan.notComparable > 0 && (
-        <p className={styles.note}>{strings.agentAnomalyNotComparable(scan.notComparable)}</p>
+        <p className={styles.note}>
+          {strings.agentAnomalyNotComparable(scan.notComparable)}
+        </p>
       )}
       <p className={styles.note}>{strings.agentAnomalyFooter}</p>
     </div>
@@ -604,9 +728,11 @@ export function AgentResultCard({ result }: { result: AgentResultDto }) {
   if (isProjectStatus(result)) return <ProjectStatusResult status={result} />;
   if (isTimeEntry(result)) return <TimeEntryResult entry={result} />;
   if (isTimesheetDraft(result)) return <TimesheetDraftResult draft={result} />;
-  if (isCategoryProposals(result)) return <CategoryProposalsResult proposals={result} />;
+  if (isCategoryProposals(result))
+    return <CategoryProposalsResult proposals={result} />;
   if (isVatSummary(result)) return <VatSummaryResult report={result} />;
-  if (isJournalAnomalies(result)) return <JournalAnomaliesResult scan={result} />;
+  if (isJournalAnomalies(result))
+    return <JournalAnomaliesResult scan={result} />;
   // Every other tool: the confirmation this overlay has always shown.
   return <p className={styles.note}>{strings.agentDone}</p>;
 }

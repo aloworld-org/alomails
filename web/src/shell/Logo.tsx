@@ -14,12 +14,25 @@ interface LogoProps {
   onDark?: boolean;
 }
 
-export function Logo({ size = 32, withWordmark = false, onDark = false }: LogoProps) {
+export function Logo({
+  size = 32,
+  withWordmark = false,
+  onDark = false,
+}: LogoProps) {
   return (
     <span className={styles.logo}>
-      <Hand size={size} className={styles.mark} strokeWidth={2} aria-label="alo" />
+      <Hand
+        size={size}
+        className={styles.mark}
+        strokeWidth={2}
+        aria-label="alo"
+      />
       {withWordmark && (
-        <span className={onDark ? `${styles.wordmark} ${styles.onDark}` : styles.wordmark}>
+        <span
+          className={
+            onDark ? `${styles.wordmark} ${styles.onDark}` : styles.wordmark
+          }
+        >
           alo
         </span>
       )}

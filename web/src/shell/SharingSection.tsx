@@ -44,7 +44,8 @@ export function SharingSection() {
   }, [client]);
   useEffect(load, [load]);
 
-  const folderName = (id: string) => folders.find((f) => f.id === id)?.name ?? id;
+  const folderName = (id: string) =>
+    folders.find((f) => f.id === id)?.name ?? id;
 
   async function share(
     e: string,
@@ -66,7 +67,12 @@ export function SharingSection() {
   async function add(e: FormEvent) {
     e.preventDefault();
     if (email.trim().length === 0 || busy) return;
-    await share(email.trim(), canWrite, sendMode, limitFolders ? [...scope] : []);
+    await share(
+      email.trim(),
+      canWrite,
+      sendMode,
+      limitFolders ? [...scope] : [],
+    );
     setEmail("");
     setCanWrite(true);
     setSendMode("none");
@@ -162,7 +168,11 @@ export function SharingSection() {
             setSendMode(s);
           }}
         />
-        <button type="submit" className={styles.add} disabled={busy || email.trim().length === 0}>
+        <button
+          type="submit"
+          className={styles.add}
+          disabled={busy || email.trim().length === 0}
+        >
           {strings.sharingAdd}
         </button>
       </form>
@@ -246,7 +256,12 @@ function FolderScope({
         ))}
       </div>
       <div className={styles.editActions}>
-        <button type="button" className={styles.add} disabled={disabled} onClick={() => onSave([...set])}>
+        <button
+          type="button"
+          className={styles.add}
+          disabled={disabled}
+          onClick={() => onSave([...set])}
+        >
           {strings.delegateFoldersSave}
         </button>
         <button type="button" className={styles.cancel} onClick={onCancel}>

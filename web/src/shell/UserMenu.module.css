@@ -107,3 +107,14 @@
   background: var(--border-subtle);
   margin: var(--space-2) 0;
 }
+
+/* On a phone the rail is a bar along the bottom, so a menu anchored to the
+   right of a 72px column would open off the side of the screen. */
+@media (max-width: 768px) {
+  .menu {
+    left: var(--space-2);
+    right: var(--space-2);
+    bottom: 64px;
+    width: auto;
+  }
+}

@@ -78,11 +78,29 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
   }
 
   const nav: { key: Tab; label: string; icon: ReactNode }[] = [
-    { key: "general", label: strings.settingsTabGeneral, icon: <PenLine size={16} /> },
-    { key: "filters", label: strings.settingsFilters, icon: <SlidersHorizontal size={16} /> },
-    { key: "sharing", label: strings.settingsSharing, icon: <Users size={16} /> },
+    {
+      key: "general",
+      label: strings.settingsTabGeneral,
+      icon: <PenLine size={16} />,
+    },
+    {
+      key: "filters",
+      label: strings.settingsFilters,
+      icon: <SlidersHorizontal size={16} />,
+    },
+    {
+      key: "sharing",
+      label: strings.settingsSharing,
+      icon: <Users size={16} />,
+    },
     ...(isAdmin
-      ? [{ key: "org" as Tab, label: strings.settingsTabOrg, icon: <Building2 size={16} /> }]
+      ? [
+          {
+            key: "org" as Tab,
+            label: strings.settingsTabOrg,
+            icon: <Building2 size={16} />,
+          },
+        ]
       : []),
   ];
 
@@ -135,8 +153,12 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
               {tab === "general" && (
                 <>
                   <section className={styles.section}>
-                    <h3 className={styles.sectionTitle}>{strings.settingsSignature}</h3>
-                    <p className={styles.sectionDesc}>{strings.settingsSignatureHint}</p>
+                    <h3 className={styles.sectionTitle}>
+                      {strings.settingsSignature}
+                    </h3>
+                    <p className={styles.sectionDesc}>
+                      {strings.settingsSignatureHint}
+                    </p>
                     <div className={styles.editorCard}>
                       <RichTextEditor
                         initialHtml={signature}
@@ -147,11 +169,15 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
                   </section>
 
                   <section className={styles.section}>
-                    <h3 className={styles.sectionTitle}>{strings.settingsOutOfOffice}</h3>
+                    <h3 className={styles.sectionTitle}>
+                      {strings.settingsOutOfOffice}
+                    </h3>
                     <div className={styles.oooCard}>
                       <label className={styles.oooRow}>
                         <span className={styles.oooRowText}>
-                          <span className={styles.oooRowTitle}>{strings.settingsOooToggle}</span>
+                          <span className={styles.oooRowTitle}>
+                            {strings.settingsOooToggle}
+                          </span>
                           <span className={styles.oooRowHint}>
                             {strings.settingsOutOfOfficeHint}
                           </span>
@@ -189,24 +215,36 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
 
               {tab === "filters" && (
                 <section className={styles.section}>
-                  <h3 className={styles.sectionTitle}>{strings.settingsFilters}</h3>
-                  <p className={styles.sectionDesc}>{strings.settingsFiltersHint}</p>
+                  <h3 className={styles.sectionTitle}>
+                    {strings.settingsFilters}
+                  </h3>
+                  <p className={styles.sectionDesc}>
+                    {strings.settingsFiltersHint}
+                  </p>
                   <FiltersSection />
                 </section>
               )}
 
               {tab === "sharing" && (
                 <section className={styles.section}>
-                  <h3 className={styles.sectionTitle}>{strings.settingsSharing}</h3>
-                  <p className={styles.sectionDesc}>{strings.settingsSharingHint}</p>
+                  <h3 className={styles.sectionTitle}>
+                    {strings.settingsSharing}
+                  </h3>
+                  <p className={styles.sectionDesc}>
+                    {strings.settingsSharingHint}
+                  </p>
                   <SharingSection />
                 </section>
               )}
 
               {tab === "org" && isAdmin && (
                 <section className={styles.section}>
-                  <h3 className={styles.sectionTitle}>{strings.settingsOrgFooter}</h3>
-                  <p className={styles.sectionDesc}>{strings.settingsOrgFooterHint}</p>
+                  <h3 className={styles.sectionTitle}>
+                    {strings.settingsOrgFooter}
+                  </h3>
+                  <p className={styles.sectionDesc}>
+                    {strings.settingsOrgFooterHint}
+                  </p>
                   <div className={styles.editorCard}>
                     <RichTextEditor
                       initialHtml={orgFooter}
