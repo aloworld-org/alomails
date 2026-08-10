@@ -38,6 +38,7 @@ import {
   SmilePlus,
   Trash2,
   Users,
+  Video,
   X,
 } from "lucide-react";
 
@@ -60,6 +61,9 @@ import type {
   Message,
   Proposal,
 } from "./types";
+import { useMeetApi } from "../meet";
+import type { Meeting } from "../meet";
+import { MeetRoom } from "../meet";
 import { EMOJI, searchEmoji } from "./emoji";
 import { renderBody } from "./richText";
 import styles from "./ChatModule.module.css";
@@ -605,6 +609,11 @@ export function ChatModule() {
   // already does it: the list until you pick a room, the room until you come
   // back. Two columns on a 390px screen gave the conversation 58 pixels.
   const isMobile = useIsMobile();
+  // A meeting belongs to the room it was started from, so the room is where
+  // starting one lives. Whoever is in the conversation is who it is for.
+  const meet = useMeetApi();
+  const [inMeeting, setInMeeting] = useState<string | null>(null);
+  const [liveMeeting, setLiveMeeting] = useState<Meeting | null>(null);
   const [rowMenu, setRowMenu] = useState<string | null>(null);
   const rowMenuRef = useRef<HTMLDivElement | null>(null);
   const closeRowMenu = useCallback(() => setRowMenu(null), []);
@@ -696,6 +705,10 @@ export function ChatModule() {
     setReplies(null);
     setTurns([]);
     setDraft(drafts.current.get(openId) ?? "");
+    void meet
+      .liveIn(openId)
+      .then((live) => setLiveMeeting(live[0] ?? null))
+      .catch(() => setLiveMeeting(null));
     setReadUpTo(channels?.find((c) => c.id === openId)?.lastReadSeq ?? null);
     void loadMessages(openId);
     void loadTurns(openId);
@@ -1604,6 +1617,29 @@ export function ChatModule() {
               <div className={styles.roomActions}>
                 <button
                   type="button"
+                  className={styles.roomMeet}
+                  onClick={() => {
+                    if (liveMeeting !== null) {
+                      setInMeeting(liveMeeting.id);
+                      return;
+                    }
+                    void meet
+                      .start({ channel: open.id, title: channelLabel(open) })
+                      .then((m) => {
+                        setLiveMeeting(m);
+                        setInMeeting(m.id);
+                      })
+                      .catch(() => setError(strings.meetJoinFailed));
+                  }}
+                  title={
+                    liveMeeting !== null ? strings.meetJoin : strings.meetStart
+                  }
+                >
+                  <Video size={15} />
+                  {liveMeeting !== null ? strings.meetLive : strings.meetStart}
+                </button>
+                <button
+                  type="button"
                   className={styles.roomPeople}
                   onClick={() => setShowingPeople(true)}
                   title={strings.chatMembersAndAgents}
@@ -2150,6 +2186,21 @@ export function ChatModule() {
           </>
         )}
       </section>
+
+      {inMeeting !== null && (
+        <MeetRoom
+          meetingId={inMeeting}
+          onLeft={() => {
+            setInMeeting(null);
+            if (openId !== null) {
+              void meet
+                .liveIn(openId)
+                .then((live) => setLiveMeeting(live[0] ?? null))
+                .catch(() => setLiveMeeting(null));
+            }
+          }}
+        />
+      )}
 
       {switcher !== null && (
         <div

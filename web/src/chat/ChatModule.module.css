@@ -307,6 +307,30 @@
   color: var(--text-primary);
 }
 
+/* A meeting in progress is the loudest thing a room header can say, so it
+   carries the accent while nothing is running keeps it quiet. */
+.roomMeet {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.roomMeet:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
 .roomPeople {
   display: inline-flex;
   align-items: center;

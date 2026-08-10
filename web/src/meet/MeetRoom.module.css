@@ -1,0 +1,67 @@
+/* The meeting takes the screen. A call in a panel is a call nobody can see. */
+
+.room {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  background: #101012;
+}
+
+.livekit {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Our own way out, above the engine's UI: leaving is ours to guarantee, not
+   something to depend on a third party's control for. */
+.leave {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 18px;
+  background: var(--danger, #d14343);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.leave:hover {
+  filter: brightness(0.94);
+}
+
+.notice {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.noticeMark {
+  color: var(--text-tertiary);
+}
+
+.noticeText {
+  margin: 0;
+  max-width: 42ch;
+  text-align: center;
+  color: var(--text-secondary);
+}
