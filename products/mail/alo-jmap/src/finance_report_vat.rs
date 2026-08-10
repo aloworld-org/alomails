@@ -33,7 +33,7 @@ use crate::billing::{iso_date, map_store_err};
 use crate::billing_xml::{amount, percent};
 use crate::csv;
 use crate::error::Problem;
-use crate::finance_reports::{PeriodQuery, admin};
+use crate::finance_reports::{PeriodQuery, reader};
 use crate::state::AppState;
 
 /// One side of the return as JSON: the rates, their totals, and what is on
@@ -167,7 +167,7 @@ async fn read(
     headers: &HeaderMap,
     query: &PeriodQuery,
 ) -> Result<VatReturn, Problem> {
-    let account = admin(state, headers).await?;
+    let account = reader(state, headers).await?;
     let (from, to) = query.days()?;
     account
         .acc
@@ -186,9 +186,10 @@ async fn read(
 /// through the national portal (ADR 0035).
 ///
 /// # Errors
-/// `401` without a valid bearer token; `403` for a non-admin; `422` when an end
-/// of the period is missing, malformed, the period ends before it starts, or the
-/// period states more rates than one read can carry; `500` on a store failure.
+/// `401` without a valid bearer token; `403` for a member who is neither an
+/// admin nor an accountant; `422` when an end of the period is missing,
+/// malformed, the period ends before it starts, or the period states more rates
+/// than one read can carry; `500` on a store failure.
 pub async fn vat_return_report(
     State(state): State<AppState>,
     headers: HeaderMap,

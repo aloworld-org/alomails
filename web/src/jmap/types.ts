@@ -263,11 +263,18 @@ export interface AiProvider {
   hasKey: boolean;
 }
 
-/** A user in the admin console: identity + read-only usage + aliases. */
+/** A tenant-wide scoped role (ADR 0035, B4.12). `accountant` is the only one
+ * today: the books and nothing else — every finance report, the approvals
+ * inbox and the period lock, billing and CRM read-only, no admin console. */
+export type TenantRole = "accountant";
+
+/** A user in the admin console: identity + read-only usage + aliases + the
+ * scoped roles they hold (separate from `isAdmin`, which is the console). */
 export interface AdminUser {
   id: string;
   email: string;
   isAdmin: boolean;
+  roles: TenantRole[];
   createdAt: string;
   messageCount: number;
   storageBytes: number;

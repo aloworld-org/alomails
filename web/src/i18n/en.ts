@@ -1006,6 +1006,11 @@ export const en = {
   userResetDone: "Password reset.",
   userAdminRole: "Tenant admin",
   userAdminHint: "Admins can manage users, aliases, and settings.",
+  userRoles: "Roles",
+  userAccountantRole: "Accountant",
+  userAccountantHint:
+    "Reads the books — reports, expense approvals, and closing a period — and can open invoices and deals without changing them. No admin console, and no access to anyone else's mail or files.",
+  userAccountantBadge: "Accountant",
   userAliases: "Aliases",
   userAliasesHint: "Extra addresses that deliver to this mailbox.",
   userAliasPlaceholder: "alias@namel3ss.com",

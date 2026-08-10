@@ -10,12 +10,14 @@
 //!
 //! Four decisions, each taken in `docs/design/finance.md` rather than here:
 //!
-//! - **`require_admin` gates every route**, the same gate `/admin/*` and the
-//!   timesheet approvals inbox use. Deriving an approver from something smaller
+//! - **`require_finance` gates every route** — a tenant admin, or the
+//!   accountant role B4.12 added. Deriving an approver from something smaller
 //!   — a project owner, a team lead — was rejected for hours in
 //!   `docs/design/projects.md` and is rejected here for the same reason: a
-//!   claim is a *person's*, not a project's. When B6.02 brings the org chart the
-//!   check widens additively and nothing already decided moves.
+//!   claim is a *person's*, not a project's. The accountant was added because
+//!   deciding what the company reimburses is bookkeeping, which is the whole
+//!   of what that role is for. When B6.02 brings the org chart the check
+//!   widens additively again and nothing already decided moves.
 //! - **An admin may decide their own claim.** A one-person tenant has nobody
 //!   else, and the audit entry records who it was.
 //! - **The queue is the narrowest cross-user read the module has**: the claims
@@ -81,18 +83,19 @@ fn decision_note(body: &axum::body::Bytes) -> Result<String, Problem> {
     Ok(req.note.unwrap_or_default())
 }
 
-/// `GET /finance/expenses/pending` → `{"expenses": [ … ]}` — **admin only**:
-/// every claim of this tenant awaiting a decision, oldest purchase first.
+/// `GET /finance/expenses/pending` → `{"expenses": [ … ]}` — **admin or
+/// accountant**: every claim of this tenant awaiting a decision, oldest
+/// purchase first.
 ///
 /// # Errors
-/// `401` without a valid bearer token; `403` when the caller is not a tenant
-/// admin.
+/// `401` without a valid bearer token; `403` when the caller is neither a
+/// tenant admin nor an accountant.
 pub async fn list_pending_expenses(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    account.require_admin()?;
+    account.require_finance()?;
     let waiting = state
         .store
         .for_tenant(account.tenant.clone())
@@ -105,8 +108,8 @@ pub async fn list_pending_expenses(
 }
 
 /// `POST /finance/expenses/{id}/approve` `{note?}` → `{"expense": {…}}` —
-/// **admin only**: the cost is the company's, and (when the employee's own
-/// money paid) so is the debt to them.
+/// **admin or accountant**: the cost is the company's, and (when the
+/// employee's own money paid) so is the debt to them.
 ///
 /// # Errors
 /// `401`/`403` as above; `404` when the claim is not this tenant's; `409` when
@@ -121,8 +124,8 @@ pub async fn approve_expense(
 }
 
 /// `POST /finance/expenses/{id}/reject` `{note?}` → `{"expense": {…}}` —
-/// **admin only**: the claim goes back to its claimant, editable, so they can
-/// correct it and hand it in again.
+/// **admin or accountant**: the claim goes back to its claimant, editable, so
+/// they can correct it and hand it in again.
 ///
 /// # Errors
 /// `401`/`403` as above; `404` when the claim is not this tenant's; `409` when
@@ -147,7 +150,7 @@ async fn decide(
     body: &axum::body::Bytes,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    account.require_admin()?;
+    account.require_finance()?;
     let note = decision_note(body)?;
     let claim = state
         .store
@@ -159,7 +162,7 @@ async fn decide(
 }
 
 /// `POST /finance/expenses/{id}/reimburse` `{reimbursedOn}` →
-/// `{"expense": {…}}` — **admin only**: the money has been paid back.
+/// `{"expense": {…}}` — **admin or accountant**: the money has been paid back.
 ///
 /// The day is required and is the payer's, never the server's clock: it is the
 /// date the reimbursement books on, and a day chosen by whichever zone a
@@ -181,7 +184,7 @@ pub async fn reimburse_expense(
     body: axum::body::Bytes,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    account.require_admin()?;
+    account.require_finance()?;
     let req: ReimburseBody = parse_body(&body)?;
     let stated = req
         .reimbursed_on

@@ -137,6 +137,7 @@ pub mod snooze;
 pub mod spaces;
 pub mod store;
 pub mod tasks;
+pub mod tenant_roles;
 pub mod thread;
 pub mod time_entries;
 pub mod time_hours;
@@ -353,6 +354,7 @@ pub use store::{CATEGORY_KEYWORD_PREFIX, SEEN, Store, TenantStore, category_keyw
 pub use tasks::{
     NewTask, Subtask, Task, TaskActivity, TaskComment, TaskDepRef, TaskEdit, TaskLabel, TaskProject,
 };
+pub use tenant_roles::{AccessFacts, TenantRole};
 pub use time_entries::{
     MINUTES_MAX, MINUTES_MIN, NOTE_MAX as TIME_NOTE_MAX, NewTimeEntry, TimeEntry, TimeEntryEdit,
     TimeTotals, week_totals,

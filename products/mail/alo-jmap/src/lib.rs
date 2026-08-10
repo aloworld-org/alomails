@@ -110,6 +110,7 @@ pub mod projects_weeks;
 pub mod push;
 pub mod reset_route;
 pub mod schedule;
+pub mod scoped_roles;
 pub mod security;
 pub mod server;
 pub mod session;

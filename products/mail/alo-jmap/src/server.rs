@@ -25,8 +25,8 @@ use crate::{
     finance_report_aged, finance_report_balance, finance_report_pl, finance_report_vat, flagdue,
     imap_import_route, insights, insights_ask, insights_eval, insights_gallery, projects_clients,
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
-    projects_weeks, push, reset_route, schedule, security, session, settings, share, signup_route,
-    sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
+    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -1275,6 +1275,11 @@ pub fn app_with_site_domain_dns(
         )
         .route("/admin/users/password", post(admin::reset_password))
         .route("/admin/users/admin", post(admin::set_user_admin))
+        // Tenant-wide scoped roles (B4.12) — today only `accountant`. Its own
+        // route rather than a field beside `isAdmin`, because the admin flag is
+        // the console and a role is a scope; a body that could set both would
+        // make "make them an accountant" and "make them an admin" one call.
+        .route("/admin/users/roles", post(admin::set_user_role))
         .route("/admin/users/alias", post(admin::add_alias))
         .route("/admin/users/alias/remove", post(admin::remove_alias))
         .route(
@@ -1334,6 +1339,16 @@ pub fn app_with_site_domain_dns(
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             audit_record::audit_business_mutations,
+        ))
+        // The scoped-role gate (B4.12), outside the audit layer so it runs
+        // first: an accountant may read every billing and CRM record — they
+        // must see the document behind a posting — and may change none of
+        // them. One layer rather than a gate in sixty handlers, for the reason
+        // the audit trail is one layer. It also short circuits for everything
+        // that is not a mutating call into those two modules.
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            scoped_roles::enforce_scoped_roles,
         ))
         .layer(Extension(site_domain_dns))
         .with_state(state);

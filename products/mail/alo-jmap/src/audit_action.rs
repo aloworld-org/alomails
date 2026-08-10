@@ -69,6 +69,18 @@ const READ_ONLY_POSTS: [&str; 3] = [
     "/finance/imports/bank/preview",
 ];
 
+/// Whether the route matched as `template` writes nothing despite its method —
+/// a dry run whose whole point is to answer "what *would* this do".
+///
+/// Public because two layers need the same list and a second copy of it would
+/// drift: the audit trail must not file a line for looking, and
+/// [`crate::scoped_roles`]' read-only gate must not refuse a preview to a
+/// reader who is allowed to look.
+#[must_use]
+pub fn writes_nothing(template: &str) -> bool {
+    READ_ONLY_POSTS.contains(&template)
+}
+
 /// Whether `method` can change stored state at all. `GET`/`HEAD`/`OPTIONS`
 /// never reach the audit log.
 #[must_use]
@@ -83,7 +95,7 @@ pub fn is_mutating(method: &str) -> bool {
 /// too short to name a kind of record (`/billing` alone).
 #[must_use]
 pub fn event_for(method: &str, template: &str, path: &str) -> Option<AuditEvent> {
-    if !is_mutating(method) || READ_ONLY_POSTS.contains(&template) {
+    if !is_mutating(method) || writes_nothing(template) {
         return None;
     }
     let template_segments: Vec<&str> = segments(template);

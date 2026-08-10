@@ -42,7 +42,7 @@ use crate::billing::{iso_date, map_store_err};
 use crate::billing_xml::amount;
 use crate::csv;
 use crate::error::Problem;
-use crate::finance_reports::{OnQuery, admin, text};
+use crate::finance_reports::{OnQuery, reader, text};
 use crate::state::AppState;
 
 /// One account's line as JSON. `role` is the posting-rule job the account does,
@@ -152,7 +152,7 @@ async fn read(
     headers: &HeaderMap,
     query: &OnQuery,
 ) -> Result<BalanceSheet, Problem> {
-    let account = admin(state, headers).await?;
+    let account = reader(state, headers).await?;
     let on = query.day()?;
     account
         .acc
@@ -170,8 +170,9 @@ async fn read(
 /// P&L read.
 ///
 /// # Errors
-/// `401` without a valid bearer token; `403` for a non-admin; `422` when `on` is
-/// missing or malformed; `500` on a store failure.
+/// `401` without a valid bearer token; `403` for a member who is neither an
+/// admin nor an accountant; `422` when `on` is missing or malformed; `500` on a
+/// store failure.
 pub async fn balance_report(
     State(state): State<AppState>,
     headers: HeaderMap,

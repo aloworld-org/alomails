@@ -35,6 +35,7 @@ export {
   type FilterMatch,
   type AiProvider,
   type AdminUser,
+  type TenantRole,
   type AdminGroup,
   type SecurityCheck,
   type AuditEntry,

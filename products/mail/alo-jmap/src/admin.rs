@@ -6,7 +6,7 @@
 //! Secrets never leave the server: a provider's API key is stored but only its
 //! presence (`hasKey`) is returned, and it is never logged.
 
-use alo_store::{AiProviderRow, GroupId, Page, StoreError, UserId};
+use alo_store::{AiProviderRow, GroupId, Page, StoreError, TenantRole, UserId};
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::{Json, body::Bytes};
@@ -245,16 +245,29 @@ pub async fn list_users(
     account.require_admin()?;
     let ts = state.store.for_tenant(account.tenant.clone());
     let users = ts.list_users().await.map_err(|_| Problem::server_error())?;
+    // Every role grant in the tenant in ONE read, not one per row: the console
+    // lists a whole company, and a query per user is how a page of forty people
+    // becomes forty round trips (B4.12).
+    let grants = ts
+        .role_grants()
+        .await
+        .map_err(|_| Problem::server_error())?;
     let mut list = Vec::with_capacity(users.len());
     for u in &users {
         let aliases = ts
             .aliases_of(&UserId::new(u.id.clone()))
             .await
             .unwrap_or_default();
+        let roles: Vec<&str> = grants
+            .iter()
+            .filter(|(holder, _)| holder.as_str() == u.id)
+            .map(|(_, role)| role.as_str())
+            .collect();
         list.push(json!({
             "id": u.id,
             "email": u.email,
             "isAdmin": u.is_admin,
+            "roles": roles,
             "createdAt": utc_date(u.created_at),
             "messageCount": u.message_count,
             "storageBytes": u.storage_bytes,
@@ -373,6 +386,57 @@ pub async fn set_user_admin(
         "user.admin",
         Some(&user_id),
         Some(if is_admin { "granted" } else { "revoked" }),
+    )
+    .await;
+    Ok(Json(json!({ "ok": true })))
+}
+
+/// `POST /admin/users/roles` — grant or revoke a tenant-wide scoped role
+/// (ADR 0035, B4.12). Body `{ userId, role, granted }`.
+///
+/// Separate from `/admin/users/admin` rather than a field beside `isAdmin`,
+/// because they are different kinds of fact: the admin flag is the console, a
+/// role is a scope. Granting is idempotent, and so is revoking — the caller's
+/// intent is a state, not an event.
+///
+/// # Errors
+/// `401` without a valid bearer token; `403` for a non-admin; `422` for a
+/// missing `userId` or a role this build does not know; `404` when the user is
+/// not a member of this tenant — including when they are a member of another
+/// one, which is the same answer an id that was never issued gets.
+pub async fn set_user_role(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account.require_admin()?;
+    let v: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let user_id = str_field(&v, "userId").ok_or_else(|| bad("userId required"))?;
+    let role_name = str_field(&v, "role").ok_or_else(|| bad("role required"))?;
+    // The store's own message names the accepted set, so the refusal tells the
+    // caller what to send instead of that a word was wrong.
+    let role = TenantRole::parse(&role_name)
+        .map_err(|e| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, e.to_string()))?;
+    let granted = v.get("granted").and_then(Value::as_bool).unwrap_or(false);
+    let ts = state.store.for_tenant(account.tenant.clone());
+    let user = UserId::new(user_id.clone());
+    if granted {
+        ts.grant_role(&user, role, &account.user)
+            .await
+            .map_err(store_admin_err)?;
+    } else {
+        ts.revoke_role(&user, role).await.map_err(store_admin_err)?;
+    }
+    audit(
+        &state,
+        &account,
+        "user.role",
+        Some(&user_id),
+        Some(&format!(
+            "{} {role}",
+            if granted { "granted" } else { "revoked" }
+        )),
     )
     .await;
     Ok(Json(json!({ "ok": true })))

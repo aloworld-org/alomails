@@ -26,12 +26,13 @@
 //!   copied into a year-end must not do. Rules about a *pair* of dates (a period
 //!   may not end before it starts) belong to the store, so the two doors into it
 //!   cannot drift.
-//! - **Admin only, for now.** A finance report is the whole tenant's position,
-//!   not the reader's own work: unlike `GET /finance/periods` (which any member
-//!   may read, because knowing the books are shut stops them typing into them),
-//!   this is the figure a company keeps to its officers. B4.12's accountant role
-//!   widens the gate **additively** — a decision recorded in
-//!   `docs/design/finance.md`, not re-taken here.
+//! - **Admins and accountants.** A finance report is the whole tenant's
+//!   position, not the reader's own work: unlike `GET /finance/periods` (which
+//!   any member may read, because knowing the books are shut stops them typing
+//!   into them), this is the figure a company keeps to its officers. B4.12
+//!   widened the gate **additively** to the accountant role ([`reader`]) — the
+//!   person who is paid to read exactly these four numbers — and to nobody
+//!   else.
 //! - **The CSV columns are a contract, in English.** They are read by scripts
 //!   and by an accountant's own tooling, so they do not move with the reader's
 //!   interface language; what a *person* reads is the screen, which is
@@ -127,19 +128,19 @@ pub fn day(name: &str, raw: Option<&str>) -> Result<Date, Problem> {
     })
 }
 
-/// The one gate every finance report is behind: a valid token, and an admin
-/// holding it.
+/// The one gate every finance report is behind: a valid token, and an **admin
+/// or an accountant** holding it.
 ///
 /// One function rather than two lines in each handler, so a report added later
-/// cannot be the one that forgot — and so B4.12 widens the gate in a single
-/// place.
+/// cannot be the one that forgot — which is what let B4.12 widen the gate to
+/// the accountant role in a single place, exactly as this comment promised.
 ///
 /// # Errors
 /// [`Problem`] with `401` without a valid bearer token, `403` for a member who
-/// is not an admin.
-pub async fn admin(state: &AppState, headers: &HeaderMap) -> Result<Account, Problem> {
+/// is neither an admin nor an accountant.
+pub async fn reader(state: &AppState, headers: &HeaderMap) -> Result<Account, Problem> {
     let account = authenticate(state, headers).await?;
-    account.require_admin()?;
+    account.require_finance()?;
     Ok(account)
 }
 

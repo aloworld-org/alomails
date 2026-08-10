@@ -11,6 +11,7 @@ import {
   categoryKeyword,
   type AdminGroup,
   type AdminUser,
+  type TenantRole,
   type AiProvider,
   type AuditEntry,
   type Calendar,
@@ -873,6 +874,13 @@ export class JmapClient {
   /** Grant or revoke a user's tenant-admin flag (admin). */
   async setUserAdmin(userId: string, isAdmin: boolean): Promise<void> {
     await this.#adminPost("/admin/users/admin", { userId, isAdmin });
+  }
+
+  /** Grant or revoke a tenant-wide scoped role, e.g. the accountant
+   * (ADR 0035, B4.12). Its own call rather than a field beside `isAdmin`:
+   * the admin flag is the console, a role is a scope. */
+  async setUserRole(userId: string, role: TenantRole, granted: boolean): Promise<void> {
+    await this.#adminPost("/admin/users/roles", { userId, role, granted });
   }
 
   /** Delete a user and their mail (admin). */

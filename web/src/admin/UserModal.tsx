@@ -24,6 +24,7 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [aliases, setAliases] = useState<string[]>(user?.aliases ?? []);
+  const [accountant, setAccountant] = useState(user?.roles.includes("accountant") ?? false);
   const [aliasDraft, setAliasDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +57,26 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
       setPassword("");
       setNote(strings.userResetDone);
     } catch {
+      setError(strings.userActionError);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Grant or revoke the accountant role. Optimistic, and put back if the
+   * server refuses — an access control that lies about its state is worse than
+   * one that is slow. */
+  async function toggleAccountant() {
+    if (user === undefined || busy) return;
+    const next = !accountant;
+    setAccountant(next);
+    setBusy(true);
+    setError(null);
+    try {
+      await client.setUserRole(user.id, "accountant", next);
+      onChanged();
+    } catch {
+      setAccountant(!next);
       setError(strings.userActionError);
     } finally {
       setBusy(false);
@@ -196,6 +217,27 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
               </button>
             </div>
             {note !== null && <span className={styles.hintOk}>{note}</span>}
+          </div>
+
+          {/* Scoped roles (ADR 0035, B4.12). A named checkbox with the whole
+              rule written beside it, not a bare switch: an access grant is the
+              one control where "what does this do?" must be answerable without
+              trying it. */}
+          <div className={styles.field}>
+            <span className={styles.label}>{strings.userRoles}</span>
+            <div className={styles.keyRow}>
+              <label className={styles.toggle} aria-label={strings.userAccountantRole}>
+                <input
+                  type="checkbox"
+                  checked={accountant}
+                  disabled={busy}
+                  onChange={() => void toggleAccountant()}
+                />
+                <span className={styles.track} />
+              </label>
+              <span>{strings.userAccountantRole}</span>
+            </div>
+            <span className={styles.hint}>{strings.userAccountantHint}</span>
           </div>
 
           <div className={styles.field}>

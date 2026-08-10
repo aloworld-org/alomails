@@ -21,7 +21,7 @@ use crate::billing::{iso_date, map_store_err};
 use crate::billing_xml::amount;
 use crate::csv;
 use crate::error::Problem;
-use crate::finance_reports::{PeriodQuery, admin, text};
+use crate::finance_reports::{PeriodQuery, reader, text};
 use crate::state::AppState;
 
 /// One account's line as JSON. `postings` is the current period's count — zero
@@ -167,7 +167,7 @@ async fn read(
     headers: &HeaderMap,
     query: &PeriodQuery,
 ) -> Result<ProfitAndLoss, Problem> {
-    let account = admin(state, headers).await?;
+    let account = reader(state, headers).await?;
     let (from, to) = query.days()?;
     account
         .acc
@@ -185,9 +185,9 @@ async fn read(
 /// ledger and the balance sheet read.
 ///
 /// # Errors
-/// `401` without a valid bearer token; `403` for a non-admin; `422` when an end
-/// of the period is missing, malformed, or the period ends before it starts;
-/// `500` on a store failure.
+/// `401` without a valid bearer token; `403` for a member who is neither an
+/// admin nor an accountant; `422` when an end of the period is missing,
+/// malformed, or the period ends before it starts; `500` on a store failure.
 pub async fn pl_report(
     State(state): State<AppState>,
     headers: HeaderMap,

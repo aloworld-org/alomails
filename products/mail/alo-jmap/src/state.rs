@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use alo_identity::Identity;
-use alo_store::{AccountStore, Page, Store, TenantId, UserId};
+use alo_store::{AccountStore, Page, Store, TenantId, TenantRole, UserId};
 use axum::http::HeaderMap;
 use axum::http::header::AUTHORIZATION;
 
@@ -90,6 +90,11 @@ pub struct Account {
     pub acc: AccountStore,
     /// Whether this user is a tenant admin (gates admin-only surfaces).
     pub is_admin: bool,
+    /// The tenant-wide scoped roles this user holds (ADR 0035, B4.12) — today
+    /// only [`TenantRole::Accountant`]. A role is never an admin flag: it opens
+    /// the surfaces its own gates name and nothing else, and a delegated handle
+    /// carries none for the same reason it carries no admin.
+    pub roles: Vec<TenantRole>,
     /// Delegation status of THIS account handle (ADR 0017). `None` when it is
     /// the signed-in user's own account (full rights). `Some(..)` when it is
     /// another user's mailbox the signed-in user was granted access to — the
@@ -187,6 +192,33 @@ impl Account {
             ))
         }
     }
+
+    /// Whether this account holds a tenant-wide scoped role.
+    pub fn has_role(&self, role: TenantRole) -> bool {
+        self.roles.contains(&role)
+    }
+
+    /// Guard for the privileged finance surfaces — the reports, the approvals
+    /// inbox and the period lock (ADR 0035, B4.12).
+    ///
+    /// Widens [`Account::require_admin`] by exactly one role: an **accountant**
+    /// passes it too. It is the whole point of the role — the books belong to
+    /// the person who keeps them, and until now keeping them meant holding the
+    /// admin console, the mail and the files as well.
+    ///
+    /// # Errors
+    /// [`Problem`] 403 when the user is neither a tenant admin nor an
+    /// accountant.
+    pub fn require_finance(&self) -> Result<(), Problem> {
+        if self.is_admin || self.has_role(TenantRole::Accountant) {
+            Ok(())
+        } else {
+            Err(Problem::with(
+                axum::http::StatusCode::FORBIDDEN,
+                "admin or accountant only",
+            ))
+        }
+    }
 }
 
 /// Resolves the `Authorization: Bearer` token to an [`Account`] via
@@ -207,12 +239,19 @@ pub async fn authenticate(state: &AppState, headers: &HeaderMap) -> Result<Accou
     let acc = state
         .store
         .for_account(principal.tenant.clone(), principal.user.clone());
-    let is_admin = acc.is_admin().await.unwrap_or(false);
+    // The admin flag and the scoped roles in ONE read: `authenticate` runs on
+    // every request in the product, and a second round trip to learn a fact
+    // almost nobody has would be paid by the mail hot path forever. A store
+    // failure is read as no access rather than as an error, exactly as the
+    // admin flag alone was — a request that cannot learn its caller's rights
+    // proceeds with none of them.
+    let facts = acc.access_facts().await.unwrap_or_default();
     Ok(Account {
         tenant: principal.tenant,
         user: principal.user,
         acc,
-        is_admin,
+        is_admin: facts.is_admin,
+        roles: facts.roles,
         delegated: None,
     })
 }
@@ -224,7 +263,8 @@ pub async fn authenticate(state: &AppState, headers: &HeaderMap) -> Result<Accou
 ///
 /// - the signed-in user's own id → their own account (full rights);
 /// - another user's id they hold a delegation grant on (same tenant) → that
-///   user's mailbox as a delegated handle (`is_admin` forced false);
+///   user's mailbox as a delegated handle (`is_admin` forced false, and no
+///   scoped roles);
 /// - anything else → `None`.
 pub async fn resolve_target(
     signed_in: &Account,
@@ -239,6 +279,7 @@ pub async fn resolve_target(
                 .store
                 .for_account(signed_in.tenant.clone(), signed_in.user.clone()),
             is_admin: signed_in.is_admin,
+            roles: signed_in.roles.clone(),
             delegated: None,
         });
     }
@@ -272,6 +313,10 @@ pub async fn resolve_target(
         acc,
         user: owner,
         is_admin: false,
+        // A delegated handle confers neither the admin flag nor a scoped role:
+        // the grant is about one mailbox, and the roles belong to the person
+        // who was signed in, not to the mailbox they were let into.
+        roles: Vec::new(),
         delegated: Some(Delegation {
             can_write,
             send_mode: SendMode::parse(&send_mode),

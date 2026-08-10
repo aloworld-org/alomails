@@ -46,7 +46,7 @@ use crate::billing::{iso_date, map_store_err};
 use crate::billing_xml::amount;
 use crate::csv;
 use crate::error::Problem;
-use crate::finance_reports::{admin, day, text};
+use crate::finance_reports::{day, reader, text};
 use crate::state::AppState;
 
 /// What an aged listing is asked for: the day it stands on, and which side of
@@ -283,7 +283,7 @@ async fn read(
     headers: &HeaderMap,
     query: &AgedQuery,
 ) -> Result<AgedReport, Problem> {
-    let account = admin(state, headers).await?;
+    let account = reader(state, headers).await?;
     let (on, side) = query.read()?;
     account.acc.fin_aged(on, side).await.map_err(map_store_err)
 }
@@ -295,8 +295,9 @@ async fn read(
 /// states; every document also carries what it says in its own.
 ///
 /// # Errors
-/// `401` without a valid bearer token; `403` for a non-admin; `422` when `on` or
-/// `side` is missing or malformed; `500` on a store failure.
+/// `401` without a valid bearer token; `403` for a member who is neither an
+/// admin nor an accountant; `422` when `on` or `side` is missing or malformed;
+/// `500` on a store failure.
 pub async fn aged_report(
     State(state): State<AppState>,
     headers: HeaderMap,

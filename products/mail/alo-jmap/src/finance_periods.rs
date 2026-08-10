@@ -4,13 +4,14 @@
 //!
 //! Four routes and three decisions this file makes rather than the store:
 //!
-//! - **Everybody reads, only an admin writes.** A bookkeeper about to date an
-//!   expense into last quarter needs to know the quarter is closed *before* the
-//!   journal refuses them, so the list is open to any authenticated member of
-//!   the tenant. Defining, closing and reopening are `require_admin` — the same
-//!   gate the approvals inbox and the mileage rate table use — because closing
-//!   the books is the act that makes a report final. (B4.12's accountant role
-//!   widens the write gate additively; nothing decided here moves.)
+//! - **Everybody reads, only the books' keepers write.** A bookkeeper about to
+//!   date an expense into last quarter needs to know the quarter is closed
+//!   *before* the journal refuses them, so the list is open to any
+//!   authenticated member of the tenant. Defining, closing and reopening are
+//!   `require_finance` — an admin or B4.12's accountant, the same gate the
+//!   approvals inbox and the four reports use — because closing the books is
+//!   the act that makes a report final, and it is the accountant who says a
+//!   period is finished.
 //! - **The lock date travels with the list**, computed by the store from the
 //!   closed periods. A client never derives it: the journal enforces one
 //!   number, and a screen that computed its own would eventually disagree with
@@ -118,8 +119,8 @@ pub async fn list_periods(
 }
 
 /// `POST /finance/periods` `{fromDate, toDate}` → `{"period": {…}}` — **admin
-/// only**: defines a period. It starts open; closing it is a separate act on a
-/// separate day.
+/// or accountant**: defines a period. It starts open; closing it is a separate
+/// act on a separate day.
 ///
 /// # Errors
 /// `401`/`403` as above; `422` when a day is missing, malformed, the wrong way
@@ -131,7 +132,7 @@ pub async fn create_period(
     body: axum::body::Bytes,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    account.require_admin()?;
+    account.require_finance()?;
     let req: PeriodBody = parse_body(&body)?;
     let from_date = required_day("fromDate", req.from_date.as_deref())?;
     let to_date = required_day("toDate", req.to_date.as_deref())?;
@@ -144,8 +145,8 @@ pub async fn create_period(
 }
 
 /// `POST /finance/periods/{id}/close` `{note?}` → `{"period": {…}}` — **admin
-/// only**: the books are shut through this period's last day, and every entry
-/// dated on or before it is refused until somebody reopens it.
+/// or accountant**: the books are shut through this period's last day, and
+/// every entry dated on or before it is refused until somebody reopens it.
 ///
 /// # Errors
 /// `401`/`403` as above; `404` when the period is not this tenant's; `409` when
@@ -158,7 +159,7 @@ pub async fn close_period(
     body: axum::body::Bytes,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    account.require_admin()?;
+    account.require_finance()?;
     let note = stated_note(&body)?;
     let period = account
         .acc
@@ -169,7 +170,8 @@ pub async fn close_period(
 }
 
 /// `POST /finance/periods/{id}/reopen` `{note}` → `{"period": {…}}` — **admin
-/// only**: a reported period is opened again, with the reason it had to be.
+/// or accountant**: a reported period is opened again, with the reason it had
+/// to be.
 ///
 /// The reason is required. It replaces the closing note, because a period
 /// carries the note of the state it is in; the audit trail carries the history.
@@ -185,7 +187,7 @@ pub async fn reopen_period(
     body: axum::body::Bytes,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    account.require_admin()?;
+    account.require_finance()?;
     let note = stated_note(&body)?;
     let period = account
         .acc

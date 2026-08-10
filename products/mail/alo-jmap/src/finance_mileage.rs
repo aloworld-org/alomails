@@ -7,11 +7,15 @@
 //! - **`/finance/mileage/rates`** is tenant-wide configuration. Everybody
 //!   **reads** it, because a traveller needs to know what a kilometre is worth
 //!   before deciding to drive; only an **admin writes** it
-//!   (`Account::require_admin`, the gate the approvals inbox uses), because a
-//!   rate table anybody could raise is a self-service pay rise. That gate is a
-//!   decision this file makes and the store deliberately does not: the store's
-//!   job is that the write is the tenant's, the edge's job is that it is the
-//!   right person's.
+//!   (`Account::require_admin`), because a rate table anybody could raise is a
+//!   self-service pay rise. This is the one privileged finance write B4.12
+//!   deliberately did NOT widen to the accountant: the rate a company pays its
+//!   people for driving is a pay decision the company takes, not a bookkeeping
+//!   one — the accountant records journeys at it, and the design note's list of
+//!   accountant writes (manual entries, matches, expense decisions, the period
+//!   lock) does not include it. That gate is a decision this file makes and the
+//!   store deliberately does not: the store's job is that the write is the
+//!   tenant's, the edge's job is that it is the right person's.
 //! - **`/finance/mileage`** is the caller's own journeys. There is no `userId`
 //!   anywhere in this module, exactly as in [`crate::finance_expenses`]: a
 //!   journey places a named person at an address on a date, and the store has no

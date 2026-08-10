@@ -152,6 +152,12 @@ pub async fn session(
         "alo:aiEnabled": ai_enabled,
         // Whether the signed-in user is a tenant admin (gates the admin console).
         "alo:isAdmin": account.is_admin,
+        // The tenant-wide scoped roles this user holds (ADR 0035, B4.12) —
+        // today only `accountant`. Advertised so a client can show the surfaces
+        // the role opens instead of offering every module and letting the
+        // server refuse; the server refuses regardless, because a client is
+        // never an access decision.
+        "alo:roles": account.roles.iter().map(|role| role.as_str()).collect::<Vec<_>>(),
         // The addresses this user may send from (canonical + aliases), for the
         // compose From picker. Authorized identically in the submission path.
         "alo:sendAs": send_as

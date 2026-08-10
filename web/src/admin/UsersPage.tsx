@@ -97,6 +97,9 @@ export function UsersPage() {
                 <div className={styles.userName}>
                   <strong>{u.email}</strong>
                   {u.isAdmin && <span className={styles.defaultBadge}>{strings.userAdminBadge}</span>}
+                  {u.roles.includes("accountant") && (
+                    <span className={styles.defaultBadge}>{strings.userAccountantBadge}</span>
+                  )}
                 </div>
                 <div className={styles.userMeta}>
                   {strings.userUsage(u.messageCount, formatBytes(u.storageBytes))}
