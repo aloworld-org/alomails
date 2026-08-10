@@ -496,6 +496,16 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One stocktake: a count of one location, its snapshot of what was
+    /// expected there, and what was actually found (alo Inventory, ADR 0035,
+    /// wave B5.08a). A worksheet rather than a record of stock — what it
+    /// produces when applied is ordinary adjustment movements, so the ledger
+    /// stays the only account of what is where
+    /// (`docs/design/inventory.md`, "Stocktake").
+    InvCountId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

@@ -254,6 +254,7 @@ PATCH /crm/pipelines/{id} -> crm.pipeline.update
 PATCH /crm/stages/{id} -> crm.stage.update
 PATCH /finance/accounts/{id} -> finance.account.update
 PATCH /finance/expenses/{id} -> finance.expense.update
+PATCH /inventory/counts/{id} -> inventory.count.update
 PATCH /inventory/locations/{id} -> inventory.location.update
 PATCH /inventory/purchase-orders/{id} -> inventory.purchase_order.update
 PATCH /inventory/reorder-rules/{id} -> inventory.reorder_rule.update
@@ -317,6 +318,8 @@ POST /finance/mileage -> finance.mileage.create
 POST /finance/periods -> finance.period.create
 POST /finance/periods/{id}/close -> finance.period.close
 POST /finance/periods/{id}/reopen -> finance.period.reopen
+POST /inventory/counts -> inventory.count.create
+POST /inventory/counts/{id}/cancel -> inventory.count.cancel
 POST /inventory/locations -> inventory.location.create
 POST /inventory/locations/{id}/archive -> inventory.location.archive
 POST /inventory/moves -> inventory.move.create
@@ -349,6 +352,7 @@ POST /projects/weeks/{monday}/submit -> projects.week.submit
 POST /projects/weeks/{monday}/withdraw -> projects.week.withdraw
 PUT /billing/fx/rates -> billing.fx.rates.update
 PUT /finance/mileage/rates -> finance.mileage.rates.update
+PUT /inventory/counts/{id}/lines/{product_id} -> inventory.count.line.update
 PUT /inventory/suppliers/{id}/products/{product_id} -> inventory.supplier.product.update
 PUT /projects/clients/{id} -> projects.client.update
 PUT /projects/tasks/{task_id}/milestone -> projects.task.milestone.update

@@ -24,8 +24,8 @@ use crate::{
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, inventory_locations, inventory_moves, inventory_po, inventory_po_print,
-    inventory_po_receipts, inventory_po_send, inventory_reorder, inventory_so,
+    insights_gallery, inventory_counts, inventory_locations, inventory_moves, inventory_po,
+    inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder, inventory_so,
     inventory_so_deliveries, inventory_so_invoice, inventory_stock, inventory_supplier_prices,
     inventory_suppliers, meet_routes, projects_clients, projects_invoices, projects_plan,
     projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
@@ -588,6 +588,28 @@ pub fn app_with_site_domain_dns(
         .route(
             "/inventory/shortages.csv",
             get(inventory_reorder::shortages_csv),
+        )
+        // Stocktakes (B5.08a). A count is a worksheet over one location: it
+        // snapshots what the ledger says is there, a person works down the
+        // sheet, and applying it (B5.08b) writes ordinary adjustment
+        // movements. A row is PUT rather than POSTed because its identity is
+        // the pair (count, product) — a wedge scanner that fires twice on one
+        // barcode must record one row, not two.
+        .route(
+            "/inventory/counts",
+            get(inventory_counts::list_counts).post(inventory_counts::open_count),
+        )
+        .route(
+            "/inventory/counts/{id}",
+            get(inventory_counts::get_count).patch(inventory_counts::update_count),
+        )
+        .route(
+            "/inventory/counts/{id}/lines/{product_id}",
+            put(inventory_counts::set_count_line),
+        )
+        .route(
+            "/inventory/counts/{id}/cancel",
+            post(inventory_counts::cancel_count),
         )
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the
