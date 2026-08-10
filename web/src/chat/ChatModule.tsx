@@ -20,10 +20,12 @@ import {
   MessagesSquare,
   Paperclip,
   Pencil,
+  Plus,
   Reply,
   Search,
   Send,
   Sparkles,
+  Smile,
   SmilePlus,
   Trash2,
   Users,
@@ -505,6 +507,8 @@ export function ChatModule() {
   const composerRef = useRef<HTMLInputElement | null>(null);
   const [caret, setCaret] = useState(0);
   const [showingPeople, setShowingPeople] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [emoji, setEmoji] = useState(false);
   // Whether anything remains behind the oldest line held. Derived from the
   // last page's size rather than a count, because a count would be a second
   // truth about the same thing.
@@ -694,6 +698,20 @@ export function ChatModule() {
     }
   }
 
+  /** Put `text` where the caret is and keep typing there — used by the share
+   *  menu and the emoji picker, so neither has to know how the composer
+   *  works. */
+  function insertAtCaret(text: string) {
+    const at = composerRef.current?.selectionStart ?? draft.length;
+    setDraft(`${draft.slice(0, at)}${text}${draft.slice(at)}`);
+    const next = at + text.length;
+    requestAnimationFrame(() => {
+      composerRef.current?.focus();
+      composerRef.current?.setSelectionRange(next, next);
+      setCaret(next);
+    });
+  }
+
   /** Put the chosen handle where the `@token` was, and carry on typing. */
   function complete(choice: Nameable) {
     const found = mentionAt(draft, caret);
@@ -764,6 +782,47 @@ export function ChatModule() {
       setOpenId(room.id);
     } catch (failure) {
       setError(chatMessage(failure, strings.chatDmFailed));
+    }
+  }
+
+  async function renameRoom(room: ChannelSummary) {
+    const name = (
+      await dialogs.prompt({
+        title: strings.chatRename,
+        message: strings.chatRenamePrompt,
+        defaultValue: room.name ?? "",
+        confirmLabel: strings.chatRenameSave,
+      })
+    )?.trim();
+    if (
+      name === undefined ||
+      name === null ||
+      name === "" ||
+      name === room.name
+    )
+      return;
+    try {
+      await api.renameChannel(room.id, { name });
+      await loadChannels();
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatRenameFailed));
+    }
+  }
+
+  async function archiveRoom(room: ChannelSummary) {
+    // Confirmed, because it changes the room for everyone in it — and said in
+    // terms of what actually happens, since nothing is deleted.
+    const sure = await dialogs.confirm({
+      title: strings.chatArchiveTitle(room.name ?? strings.chatDirectMessage),
+      message: strings.chatArchiveWarning,
+      confirmLabel: strings.chatArchiveConfirm,
+    });
+    if (!sure) return;
+    try {
+      await api.archiveChannel(room.id);
+      await loadChannels();
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatArchiveFailed));
     }
   }
 
@@ -1183,15 +1242,39 @@ export function ChatModule() {
                   <p className={styles.roomTopic}>{open.topic}</p>
                 )}
               </div>
-              <button
-                type="button"
-                className={styles.roomPeople}
-                onClick={() => setShowingPeople(true)}
-                title={strings.chatMembersAndAgents}
-              >
-                <Users size={15} />
-                {strings.chatMembersAndAgents}
-              </button>
+              <div className={styles.roomActions}>
+                <button
+                  type="button"
+                  className={styles.roomPeople}
+                  onClick={() => setShowingPeople(true)}
+                  title={strings.chatMembersAndAgents}
+                >
+                  <Users size={15} />
+                  {strings.chatMembersAndAgents}
+                </button>
+                {open.kind === "channel" && open.archivedAt === null && (
+                  <>
+                    <button
+                      type="button"
+                      className={styles.roomIcon}
+                      onClick={() => void renameRoom(open)}
+                      aria-label={strings.chatRename}
+                      title={strings.chatRename}
+                    >
+                      <Pencil size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.roomIcon}
+                      onClick={() => void archiveRoom(open)}
+                      aria-label={strings.chatArchiveAction}
+                      title={strings.chatArchiveAction}
+                    >
+                      <Archive size={15} />
+                    </button>
+                  </>
+                )}
+              </div>
             </header>
 
             <div className={styles.feed} ref={feedRef}>
@@ -1297,15 +1380,112 @@ export function ChatModule() {
                     ))}
                   </ul>
                 )}
-                <button
-                  type="button"
-                  className={styles.attachButton}
-                  onClick={() => setPicking(true)}
-                  aria-label={strings.chatAttach}
-                  title={strings.chatAttach}
-                >
-                  <Paperclip size={16} />
-                </button>
+                <span className={styles.shareWrap}>
+                  <button
+                    type="button"
+                    className={styles.composerTool}
+                    onClick={() => setSharing((open) => !open)}
+                    aria-label={strings.chatShare}
+                    title={strings.chatShare}
+                    aria-expanded={sharing}
+                  >
+                    <Plus size={18} />
+                  </button>
+                  {sharing && (
+                    <div className={styles.shareMenu} role="menu">
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className={styles.shareItem}
+                        onClick={() => {
+                          setSharing(false);
+                          setPicking(true);
+                        }}
+                      >
+                        <Paperclip size={15} className={styles.shareIcon} />
+                        <span>
+                          <span className={styles.shareName}>
+                            {strings.chatShareFile}
+                          </span>
+                          <span className={styles.shareHint}>
+                            {strings.chatShareFileHint}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className={styles.shareItem}
+                        onClick={() => {
+                          setSharing(false);
+                          // Open the '@' list by typing the character the
+                          // composer already understands, rather than
+                          // inventing a second way to name someone.
+                          insertAtCaret("@");
+                        }}
+                      >
+                        <Users size={15} className={styles.shareIcon} />
+                        <span>
+                          <span className={styles.shareName}>
+                            {strings.chatShareMention}
+                          </span>
+                          <span className={styles.shareHint}>
+                            {strings.chatShareMentionHint}
+                          </span>
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className={styles.shareItem}
+                        onClick={() => {
+                          setSharing(false);
+                          insertAtCaret("@alo ");
+                        }}
+                      >
+                        <Sparkles size={15} className={styles.shareIcon} />
+                        <span>
+                          <span className={styles.shareName}>
+                            {strings.chatShareAsk}
+                          </span>
+                          <span className={styles.shareHint}>
+                            {strings.chatShareAskHint}
+                          </span>
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </span>
+                <span className={styles.shareWrap}>
+                  <button
+                    type="button"
+                    className={styles.composerTool}
+                    onClick={() => setEmoji((open) => !open)}
+                    aria-label={strings.chatInsertEmoji}
+                    title={strings.chatInsertEmoji}
+                    aria-expanded={emoji}
+                  >
+                    <Smile size={18} />
+                  </button>
+                  {emoji && palette.length > 0 && (
+                    <div className={styles.emojiMenu} role="menu">
+                      {palette.map((glyph) => (
+                        <button
+                          key={glyph}
+                          type="button"
+                          role="menuitem"
+                          className={styles.pickerOption}
+                          onClick={() => {
+                            setEmoji(false);
+                            insertAtCaret(glyph);
+                          }}
+                        >
+                          {glyph}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </span>
                 {suggestions.length > 0 && (
                   <ul className={styles.suggestions} role="listbox">
                     {suggestions.map((choice, i) => (
@@ -1385,14 +1565,15 @@ export function ChatModule() {
                   aria-label={strings.chatComposerLabel}
                   autoComplete="off"
                 />
-                <Button
+                <button
                   type="submit"
-                  variant="primary"
+                  className={styles.send}
                   disabled={draft.trim() === "" || sending}
+                  aria-label={strings.chatSend}
+                  title={strings.chatSend}
                 >
-                  <Send size={15} />
-                  {strings.chatSend}
-                </Button>
+                  <Send size={17} />
+                </button>
               </form>
             )}
           </>

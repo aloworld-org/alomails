@@ -170,6 +170,30 @@ export class ChatApi {
     return body.messages;
   }
 
+  /** Rename a channel, or give it a topic. Owner only — the server refuses
+   *  anyone else with a plain 403. */
+  async renameChannel(
+    id: string,
+    change: { name?: string; topic?: string },
+  ): Promise<Channel> {
+    return this.#write<Channel>(
+      "PATCH",
+      `/chat/channels/${encodeURIComponent(id)}`,
+      change,
+    );
+  }
+
+  /** Archive a channel: out of the live lists, history still readable, no new
+   *  messages. There is no hard delete — a team's conversation is not one
+   *  person's to erase. */
+  async archiveChannel(id: string): Promise<void> {
+    await this.#send(`/chat/channels/${encodeURIComponent(id)}/archive`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    }).then(ChatApi.#rejectFailed);
+  }
+
   /** Colleagues whose address matches. A search, never a listing: the server
    *  wants two characters and caps what it returns, so this cannot be used to
    *  pull the staff directory. */

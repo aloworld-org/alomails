@@ -194,6 +194,31 @@
 /* Always visible, not hover-revealed: this is how an agent gets into a room,
    and a discovery path that only appears on approach is one most people never
    find. */
+.roomActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.roomIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.roomIcon:hover {
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
 .roomPeople {
   display: inline-flex;
   align-items: center;
@@ -247,14 +272,18 @@
 
 /* A message starting a run gets air above it; one continuing gets almost
    none. That rhythm is what separates people speaking from a list of rows. */
+/* Text has a comfortable measure and stops there. A line running the full
+   width of a 1900px monitor is unreadable, and the empty half of the row is
+   what made this look unfinished. */
 .message,
 .messageForMe {
   position: relative;
   display: flex;
   flex-direction: column;
-  padding: 2px 0 2px calc(var(--gutter) + var(--gutter-gap));
+  max-width: 760px;
+  padding: 6px var(--space-3) 8px calc(var(--gutter) + var(--gutter-gap));
   margin-top: var(--space-3);
-  border-radius: var(--radius-sm);
+  border-radius: 12px;
 }
 
 .message.grouped,
@@ -262,9 +291,12 @@
   margin-top: 0;
 }
 
+/* The whole block lifts on approach, as a card — not a grey band bleeding to
+   the edge of the screen. */
 .message:hover,
 .messageForMe:hover {
-  background: var(--bg-raised);
+  background: var(--bg-surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 6%);
 }
 
 /* The avatar sits in the gutter, out of the text flow, so every line of every
@@ -347,11 +379,13 @@
 .composer {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 4px;
+  /* Same measure as the messages it produces. */
+  max-width: 760px;
   margin: 0 var(--space-4) var(--space-4);
-  padding: 6px 6px 6px var(--space-3);
+  padding: 5px 5px 5px 6px;
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg, 12px);
+  border-radius: 14px;
   background: var(--bg-surface);
   transition: border-color 120ms ease;
 }
@@ -531,6 +565,125 @@
   color: var(--accent);
 }
 
+/* ---- the composer's own controls ------------------------------------- */
+
+.composerTool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.composerTool:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+
+/* Filled and accented only when there is something to send, flat and quiet
+   when there is not — the button says whether pressing it will do anything. */
+.send {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-accent, #fff);
+  cursor: pointer;
+}
+
+.send:hover:not(:disabled) {
+  filter: brightness(0.94);
+}
+
+.send:disabled {
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: default;
+}
+
+.shareWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.shareMenu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 4;
+  width: 268px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised, var(--bg-surface));
+  box-shadow: var(--shadow-lg, 0 12px 32px rgb(0 0 0 / 22%));
+}
+
+.shareItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 8px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.shareItem:hover {
+  background: var(--accent-tint);
+}
+
+.shareIcon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--accent);
+}
+
+.shareName {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* What it actually does, said once, so the menu teaches instead of guessing. */
+.shareHint {
+  display: block;
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.emojiMenu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: repeat(5, 32px);
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised, var(--bg-surface));
+  box-shadow: var(--shadow-lg, 0 12px 32px rgb(0 0 0 / 22%));
+}
+
 /* ---- finding a room to join ------------------------------------------ */
 
 .browseButton {
@@ -620,8 +773,8 @@
    every message is what a debug view looks like. */
 .tools {
   position: absolute;
-  top: -14px;
-  right: var(--space-3);
+  top: -16px;
+  right: var(--space-2);
   z-index: 3;
   display: flex;
   gap: 2px;
@@ -784,6 +937,16 @@
 
 .composer {
   flex-wrap: wrap;
+}
+
+/* Nothing inside the row may wrap its own contents — that is what turned the
+   send button into an icon stacked on top of a word. */
+.composer > * {
+  flex: none;
+}
+
+.composer > .input {
+  flex: 1 1 auto;
 }
 
 .staged {
