@@ -2610,7 +2610,26 @@ export const en = {
   sitesStatusDraft: "Draft",
   sitesStatusLive: "Live",
   sitesNewSiteTitle: "New website",
-  sitesNewSiteSubtitle: "Pick a name, and claim the address it will live at.",
+  sitesNewSiteSubtitle: "Start from a description or choose a ready-made style.",
+  sitesStartingPoint: "How to start",
+  sitesGenerateChoice: "Generate from a description",
+  sitesTemplateChoice: "Start with a template",
+  sitesBusinessDescription: "Describe your business",
+  sitesBusinessDescriptionHint:
+    "Include what you offer, who it is for, and the tone you want. You can edit everything before publishing.",
+  sitesBusinessDescriptionPlaceholder:
+    "A neighborhood bakery making sourdough and celebration cakes for local families…",
+  sitesGenerateSite: "Generate website",
+  sitesGenerating: "Preparing your draft…",
+  sitesCreatingSite: "Creating website…",
+  sitesGenerationFailed:
+    "Your draft could not be prepared. Check the server message and try again.",
+  sitesGenerationEmpty: "The generated draft did not contain a page. Try a fuller description.",
+  sitesGenerationUnavailable:
+    "Generation is not configured for this workspace. Start with a blank site or choose a style below.",
+  sitesChooseTemplate: "Choose a starting style",
+  sitesBlankTemplate: "Blank site",
+  sitesHomePageTitle: "Home",
   sitesFieldName: "Site name",
   sitesFieldSubdomain: "Address",
   sitesSubdomainHint:

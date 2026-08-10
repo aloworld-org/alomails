@@ -2652,4 +2652,24 @@ export const nl: Partial<Catalog> = {
   sitesSeoSave: "Zoekgegevens opslaan",
   sitesSeoSaveFailed:
     "De zoekgegevens konden niet worden opgeslagen. Probeer het opnieuw.",
+  sitesStartingPoint: "Hoe wilt u beginnen",
+  sitesGenerateChoice: "Genereren vanuit een beschrijving",
+  sitesTemplateChoice: "Beginnen met een sjabloon",
+  sitesBusinessDescription: "Beschrijf uw bedrijf",
+  sitesBusinessDescriptionHint:
+    "Vertel wat u aanbiedt, voor wie het is en welke uitstraling u wilt. U kunt alles bewerken voordat u publiceert.",
+  sitesBusinessDescriptionPlaceholder:
+    "Een buurtbakkerij met zuurdesembrood en feesttaarten voor lokale gezinnen…",
+  sitesGenerateSite: "Website genereren",
+  sitesGenerating: "Uw concept wordt voorbereid…",
+  sitesCreatingSite: "Website maken…",
+  sitesGenerationFailed:
+    "Uw concept kon niet worden voorbereid. Bekijk het serverbericht en probeer opnieuw.",
+  sitesGenerationEmpty:
+    "Het gegenereerde concept bevatte geen pagina. Probeer een uitgebreidere beschrijving.",
+  sitesGenerationUnavailable:
+    "Genereren is niet ingesteld voor deze werkruimte. Begin met een lege site of kies hieronder een stijl.",
+  sitesChooseTemplate: "Kies een beginstijl",
+  sitesBlankTemplate: "Lege site",
+  sitesHomePageTitle: "Home",
 };

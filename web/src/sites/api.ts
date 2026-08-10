@@ -27,6 +27,7 @@ import type {
   SiteAnalyticsReport,
   SiteDetail,
   SiteDraft,
+  GeneratedSiteDraft,
   SitePage,
   SitePageDetail,
   SitePost,
@@ -49,12 +50,14 @@ type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
 export class SitesError extends Error {
   readonly status: number;
   readonly detail: string | null;
+  readonly reason: string | null;
 
-  constructor(status: number, detail: string | null) {
+  constructor(status: number, detail: string | null, reason: string | null = null) {
     super(detail ?? `sites request failed (${status})`);
     this.name = "SitesError";
     this.status = status;
     this.detail = detail;
+    this.reason = reason;
   }
 }
 
@@ -84,6 +87,12 @@ export class SitesApi {
    *  only, never who holds it. */
   createSite(draft: SiteDraft): Promise<Site> {
     return this.#write<Site>("POST", "/sites", draft);
+  }
+
+  /** Turns a plain-language business description into one complete private
+   *  site draft. Publishing remains a separate, explicit owner action. */
+  generateSite(description: string): Promise<GeneratedSiteDraft> {
+    return this.#write<GeneratedSiteDraft>("POST", "/sites/generate", { description });
   }
 
   /** One site with its current publish (`null` while unpublished). */
@@ -352,9 +361,13 @@ export class SitesApi {
   /** Turns a non-2xx answer into the shaped [`SitesError`]. */
   static async #rejectFailed(res: Response): Promise<void> {
     if (!res.ok) {
-      const problem = (await res.json().catch(() => ({}))) as { detail?: unknown };
+      const problem = (await res.json().catch(() => ({}))) as {
+        detail?: unknown;
+        reason?: unknown;
+      };
       const detail = typeof problem.detail === "string" ? problem.detail : null;
-      throw new SitesError(res.status, detail);
+      const reason = typeof problem.reason === "string" ? problem.reason : null;
+      throw new SitesError(res.status, detail, reason);
     }
   }
 }

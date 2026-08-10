@@ -2678,4 +2678,24 @@ export const fr: Partial<Catalog> = {
   sitesSeoSave: "Enregistrer les détails",
   sitesSeoSaveFailed:
     "Les détails de recherche n’ont pas pu être enregistrés. Réessayez.",
+  sitesStartingPoint: "Comment commencer",
+  sitesGenerateChoice: "Générer à partir d’une description",
+  sitesTemplateChoice: "Commencer avec un modèle",
+  sitesBusinessDescription: "Décrivez votre activité",
+  sitesBusinessDescriptionHint:
+    "Indiquez votre offre, votre public et le ton souhaité. Vous pourrez tout modifier avant la publication.",
+  sitesBusinessDescriptionPlaceholder:
+    "Une boulangerie de quartier proposant du pain au levain et des gâteaux de fête aux familles locales…",
+  sitesGenerateSite: "Générer le site",
+  sitesGenerating: "Préparation de votre brouillon…",
+  sitesCreatingSite: "Création du site…",
+  sitesGenerationFailed:
+    "Votre brouillon n’a pas pu être préparé. Consultez le message du serveur et réessayez.",
+  sitesGenerationEmpty:
+    "Le brouillon généré ne contient aucune page. Essayez une description plus complète.",
+  sitesGenerationUnavailable:
+    "La génération n’est pas configurée pour cet espace. Commencez avec un site vierge ou choisissez un style ci-dessous.",
+  sitesChooseTemplate: "Choisissez un style de départ",
+  sitesBlankTemplate: "Site vierge",
+  sitesHomePageTitle: "Accueil",
 };

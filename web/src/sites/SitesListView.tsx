@@ -11,7 +11,7 @@ import { Button, Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { NewSiteDialog } from "./NewSiteDialog";
 import { EmptyState, ErrorBanner } from "./parts";
-import type { Site } from "./types";
+import type { Site, SitePage } from "./types";
 import styles from "./SitesModule.module.css";
 
 /** The live/draft state chip of a site row. */
@@ -104,9 +104,9 @@ export function SitesListView() {
       {creating && (
         <NewSiteDialog
           onClose={() => setCreating(false)}
-          onCreated={(site) => {
+          onCreated={(site: Site, page: SitePage) => {
             setCreating(false);
-            void navigate(site.id);
+            void navigate(`${site.id}/pages/${page.id}`);
           }}
         />
       )}

@@ -323,6 +323,87 @@
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
 }
+.onboardingChoices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.onboardingChoice {
+  min-height: var(--control-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+.onboardingChoice svg {
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
+}
+.onboardingChoice:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.onboardingChoiceActive {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.onboardingNotice {
+  margin: 0;
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.onboardingDescription {
+  min-height: calc(var(--control-height) * 3);
+  resize: vertical;
+  font-family: inherit;
+  line-height: var(--leading-relaxed);
+}
+.templatePicker {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.templatePicker legend {
+  margin-bottom: var(--space-2);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.templateBlank {
+  min-height: calc(var(--control-height) * 2);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width-strong) solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  cursor: pointer;
+}
+.templateBlank svg {
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
+  color: var(--accent);
+}
 .hint {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
@@ -1055,7 +1136,7 @@
 .presetCardActive {
   /* The preset's own border color is overridden by the selection ring. */
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: var(--focus-ring);
 }
 .presetName {
   font-size: var(--text-base);

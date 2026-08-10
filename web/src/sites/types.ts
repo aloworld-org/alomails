@@ -134,6 +134,14 @@ export interface SiteDraft {
   subdomain: string;
 }
 
+/** The atomic draft returned by the description-to-site endpoint. Every page
+ *  already carries its generated section stack, and the site is always a
+ *  private draft until its owner explicitly publishes it. */
+export interface GeneratedSiteDraft {
+  site: Site;
+  pages: SitePageDetail[];
+}
+
 /** What the create-page form sends. The empty slug is only accepted by the
  *  server together with `home: true` — it is the home page's spelling. */
 export interface PageDraft {

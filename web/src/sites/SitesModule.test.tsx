@@ -359,9 +359,107 @@ describe("the site analytics desk", () => {
 });
 
 describe("creating a site", () => {
+  function chooseTemplatePath() {
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesTemplateChoice }));
+  }
+
+  test("a description generates a private draft and opens its Home page", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites/generate"),
+        status: 200,
+        body: {
+          site: { ...BETA, id: "site-generated", name: "Acme Bakery", subdomain: "acme-bakery" },
+          pages: [{ ...HOME, id: "page-generated", sections: { schema_version: 1, sections: [] } }],
+        },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-generated/pages/page-generated"),
+        status: 200,
+        body: { ...HOME, id: "page-generated", sections: { schema_version: 1, sections: [] } },
+      },
+    ];
+
+    ui("/sites");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.change(screen.getByLabelText(strings.sitesBusinessDescription), {
+      target: { value: "A neighborhood bakery for local families" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesGenerateSite }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId("location").textContent).toBe(
+        "/sites/site-generated/pages/page-generated",
+      ),
+    );
+    expect(calls.find((call) => call.url.endsWith("/sites/generate"))?.body).toEqual({
+      description: "A neighborhood bakery for local families",
+    });
+  });
+
+  test("an unconfigured workspace reveals the complete manual template path", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites/generate"),
+        status: 503,
+        body: { reason: "unconfigured", detail: "AI is not configured for this tenant" },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/theme-presets"),
+        status: 200,
+        body: { presets: [] },
+      },
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites"),
+        status: 200,
+        body: { ...BETA, id: "site-manual", name: "Manual Studio", subdomain: "manual-studio" },
+      },
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites/site-manual/pages"),
+        status: 200,
+        body: { ...HOME, id: "page-manual", title: strings.sitesHomePageTitle },
+      },
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-manual/pages/page-manual"),
+        status: 200,
+        body: {
+          ...HOME,
+          id: "page-manual",
+          title: strings.sitesHomePageTitle,
+          sections: { schema_version: 1, sections: [] },
+        },
+      },
+    ];
+
+    ui("/sites");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.change(screen.getByLabelText(strings.sitesBusinessDescription), {
+      target: { value: "A useful business website" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesGenerateSite }));
+
+    expect(await screen.findByText(strings.sitesGenerationUnavailable)).toBeTruthy();
+    expect(screen.getByLabelText(strings.sitesFieldName)).toBeTruthy();
+    expect(screen.getByRole("radio", { name: strings.sitesBlankTemplate })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
+      target: { value: "Manual Studio" },
+    });
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
+      target: { value: "manual-studio" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
+    await waitFor(() =>
+      expect(screen.getByTestId("location").textContent).toBe(
+        "/sites/site-manual/pages/page-manual",
+      ),
+    );
+  });
+
   test("the typed address is checked live against the server", async () => {
     ui("/sites");
     fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    chooseTemplatePath();
     const dialog = screen.getByRole("dialog");
     expect(dialog).toBeTruthy();
 
@@ -386,6 +484,7 @@ describe("creating a site", () => {
   test("a taken address, and a rule the server names, are both shown", async () => {
     ui("/sites");
     fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    chooseTemplatePath();
 
     replies = [
       {
@@ -421,13 +520,25 @@ describe("creating a site", () => {
         body: { ...ALPHA, id: "site-9", name: "Acme", subdomain: "acme", status: "draft" },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/site-9"),
+        match: (url, method) => method === "POST" && url.endsWith("/sites/site-9/pages"),
         status: 200,
-        body: { id: "site-9", name: "Acme", subdomain: "acme", status: "draft", publish: null },
+        body: { ...HOME, id: "page-9", title: strings.sitesHomePageTitle },
+      },
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-9/pages/page-9"),
+        status: 200,
+        body: {
+          ...HOME,
+          id: "page-9",
+          title: strings.sitesHomePageTitle,
+          sections: { schema_version: 1, sections: [] },
+        },
       },
     ];
     ui("/sites");
     fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    chooseTemplatePath();
     fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
       target: { value: "Acme" },
     });
@@ -437,13 +548,17 @@ describe("creating a site", () => {
     fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
 
     // The write carried exactly what was typed…
-    await waitFor(() => expect(lastWrite()).toBeTruthy());
-    expect(lastWrite()).toMatchObject({
+    await waitFor(() => expect(calls.some((call) => call.url.endsWith("/sites/site-9/pages"))).toBe(true));
+    expect(
+      calls.find((call) => call.method === "POST" && call.url.endsWith("/sites")),
+    ).toMatchObject({
       method: "POST",
       body: { name: "Acme", subdomain: "acme" },
     });
-    // …and the module navigated into the created site.
-    expect(await screen.findByText(strings.sitesNoPagesTitle)).toBeTruthy();
+    // …and the module navigated directly into its new Home page.
+    await waitFor(() =>
+      expect(screen.getByTestId("location").textContent).toContain("/sites/site-9/pages/"),
+    );
   });
 
   test("the server's refusal is shown in the dialog, which stays open", async () => {
@@ -456,6 +571,7 @@ describe("creating a site", () => {
     ];
     ui("/sites");
     fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    chooseTemplatePath();
     fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
       target: { value: "Acme" },
     });
@@ -571,6 +687,7 @@ describe("publishing a site", () => {
     replies = [config];
     ui("/sites");
     fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesTemplateChoice }));
     fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
       target: { value: "Acme" },
     });
