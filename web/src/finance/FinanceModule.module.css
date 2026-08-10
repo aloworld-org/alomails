@@ -561,3 +561,41 @@
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- the chart and the reports (B4.13c) ------------------------------- */
+/* A quiet verb inside a row or a toolbar: "Edit", "This quarter". It is a
+   button and not a link — nothing navigates — but it must not carry a
+   button's weight beside the one action a screen actually leads with. */
+.linkAction {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+}
+.linkAction:hover {
+  color: var(--accent);
+  background: var(--bg-raised);
+}
+/* A caption a screen reader reads and a sighted reader does not need: every
+   report table says which report it is, without repeating the heading above
+   it on screen. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+/* A heading row inside a report table — "Income", "What is owned". A row of
+   the table rather than a table of its own, so both sides of a result share
+   one column width and read as one document. */
+.table .sectionTitle {
+  padding-top: var(--space-3);
+  text-align: left;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

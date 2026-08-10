@@ -52,3 +52,27 @@ export function previousQuarterOf(today: Date): Period {
   firstOfThis.setUTCDate(0); // the last day of the previous quarter
   return quarterOf(firstOfThis);
 }
+
+/**
+ * The calendar year `today` falls in — the period a profit and loss is read
+ * for, and the one the chart of accounts shows movements over (B4.13c).
+ *
+ * A whole year, never "the year so far": a period that ended on the day
+ * somebody happened to look would put a figure under a heading that means
+ * something different tomorrow. The journal has nothing in the months that have
+ * not happened, so the two look identical today and only the honest one still
+ * says what it covers in December.
+ */
+export function yearOf(today: Date): Period {
+  const year = today.getUTCFullYear();
+  return {
+    from: day(new Date(Date.UTC(year, 0, 1))),
+    to: day(new Date(Date.UTC(year, 11, 31))),
+  };
+}
+
+/** The year before the one `today` falls in — what a result is compared with,
+ *  and the period a set of books is finally closed for. */
+export function previousYearOf(today: Date): Period {
+  return yearOf(new Date(Date.UTC(today.getUTCFullYear() - 1, 0, 1)));
+}

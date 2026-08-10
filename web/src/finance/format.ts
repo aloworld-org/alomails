@@ -13,6 +13,8 @@
 import { formatAmount, formatDocumentDate } from "../billing";
 import { getLocale, strings } from "../i18n";
 import type {
+  AccountRole,
+  AccountType,
   BankLineStatus,
   BankSource,
   ExpenseMethod,
@@ -94,6 +96,68 @@ export function methodLabel(method: ExpenseMethod): string {
       return strings.financeMethodCash;
     default:
       return method;
+  }
+}
+
+// ---- the chart of accounts ------------------------------------------------
+
+/** What kind of thing an account holds, in words. An unknown kind — a category
+ *  the server learned before this client did — is shown verbatim rather than
+ *  blanked, exactly as a status is. */
+export function accountTypeLabel(kind: AccountType): string {
+  switch (kind) {
+    case "asset":
+      return strings.financeAccountTypeAsset;
+    case "liability":
+      return strings.financeAccountTypeLiability;
+    case "equity":
+      return strings.financeAccountTypeEquity;
+    case "income":
+      return strings.financeAccountTypeIncome;
+    case "expense":
+      return strings.financeAccountTypeExpense;
+    default:
+      return kind;
+  }
+}
+
+/**
+ * The job an account does in a posting rule, in words.
+ *
+ * These are the sentences that make the chart editable by somebody who is not
+ * an accountant: "the bank account money actually moves through" is what a role
+ * *means*, and `bank` is only what it is called on the wire.
+ */
+export function accountRoleLabel(role: AccountRole): string {
+  switch (role) {
+    case "ar":
+      return strings.financeRoleAr;
+    case "ap":
+      return strings.financeRoleAp;
+    case "bank":
+      return strings.financeRoleBank;
+    case "cash":
+      return strings.financeRoleCash;
+    case "vat_output":
+      return strings.financeRoleVatOutput;
+    case "vat_input":
+      return strings.financeRoleVatInput;
+    case "revenue":
+      return strings.financeRoleRevenue;
+    case "expense_default":
+      return strings.financeRoleExpenseDefault;
+    case "employee_payable":
+      return strings.financeRoleEmployeePayable;
+    case "fx_diff":
+      return strings.financeRoleFxDiff;
+    case "rounding":
+      return strings.financeRoleRounding;
+    case "opening_balance":
+      return strings.financeRoleOpeningBalance;
+    case "suspense":
+      return strings.financeRoleSuspense;
+    default:
+      return role;
   }
 }
 

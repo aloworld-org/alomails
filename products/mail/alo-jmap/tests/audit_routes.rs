@@ -222,6 +222,7 @@ DELETE /crm/activities/{id} -> crm.activity.delete
 DELETE /crm/deals/{id} -> crm.deal.delete
 DELETE /crm/deals/{id}/threads/{threadId} -> crm.deal.thread.delete
 DELETE /crm/stages/{id} -> crm.stage.delete
+DELETE /finance/accounts/{id} -> finance.account.delete
 DELETE /finance/expenses/{id} -> finance.expense.delete
 DELETE /finance/mileage/{id} -> finance.mileage.delete
 DELETE /projects/clients/{id} -> projects.client.delete
@@ -238,6 +239,7 @@ PATCH /billing/settings -> billing.setting.update
 PATCH /crm/deals/{id} -> crm.deal.update
 PATCH /crm/pipelines/{id} -> crm.pipeline.update
 PATCH /crm/stages/{id} -> crm.stage.update
+PATCH /finance/accounts/{id} -> finance.account.update
 PATCH /finance/expenses/{id} -> finance.expense.update
 PATCH /projects/milestones/{id} -> projects.milestone.update
 PATCH /projects/time/{id} -> projects.time.update
@@ -279,6 +281,7 @@ POST /crm/pipelines/{id}/archive -> crm.pipeline.archive
 POST /crm/pipelines/{id}/stages -> crm.pipeline.stage.create
 POST /crm/stages/{id}/archive -> crm.stage.archive
 POST /crm/stages/{id}/move -> crm.stage.move
+POST /finance/accounts -> finance.account.create
 POST /finance/bank/lines/{id}/ignore -> finance.bank.lines.ignore
 POST /finance/bank/lines/{id}/match -> finance.bank.lines.match
 POST /finance/bank/lines/{id}/unignore -> finance.bank.lines.unignore

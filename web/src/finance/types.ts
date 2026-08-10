@@ -294,3 +294,219 @@ export interface ConfirmedMatch {
   /** Whether this act is what put the invoice itself into the books. */
   invoiceBookedNow: boolean;
 }
+
+// ---- the chart of accounts (B4.13c) ---------------------------------------
+
+/** What kind of thing an account holds — the five categories every
+ *  double-entry chart has had since Pacioli, and what decides whether a line
+ *  belongs on the balance sheet or in the result. */
+export type AccountType = "asset" | "liability" | "equity" | "income" | "expense";
+
+/** The job an account does in a posting rule, as opposed to the number an
+ *  accountant calls it by. A closed set the server owns; at most one account
+ *  per tenant holds each. */
+export type AccountRole =
+  | "ar"
+  | "ap"
+  | "bank"
+  | "cash"
+  | "vat_output"
+  | "vat_input"
+  | "revenue"
+  | "expense_default"
+  | "employee_payable"
+  | "fx_diff"
+  | "rounding"
+  | "opening_balance"
+  | "suspense";
+
+/** One account of the tenant's chart.
+ *
+ *  The four movement fields are the **journal's**, present only when the list
+ *  was asked for over a period and `null` otherwise: a zero where nothing was
+ *  read would be a claim about the books nobody made. */
+export interface ChartAccount {
+  id: string;
+  code: string;
+  name: string;
+  type: AccountType;
+  role: AccountRole | null;
+  /** Whether it takes new postings and offers itself in the pickers. */
+  active: boolean;
+  /** Whether alo seeded it — renameable and recodeable, never deletable. */
+  system: boolean;
+  balanceCents: number | null;
+  debitCents: number | null;
+  creditCents: number | null;
+  postings: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** The chart as the list door answers it. `seeded` is true when this very read
+ *  is what wrote the default chart, which is what lets the screen say where
+ *  twenty accounts nobody typed came from. */
+export interface Chart {
+  accounts: ChartAccount[];
+  seeded: boolean;
+  /** The accounting currency the movements are in, or `null` when no period was
+   *  asked for and there are therefore no movements to state it about. */
+  currency: string | null;
+}
+
+/** What a create or an edit sends. Every field is optional because a `PATCH`
+ *  merges: what is absent is left exactly as it was, which is what stops a
+ *  rename clearing the role and unhooking a posting rule. `role: ""` is how a
+ *  form says "an ordinary account". */
+export interface AccountDraft {
+  code?: string;
+  name?: string;
+  type?: AccountType;
+  role?: AccountRole | "";
+  active?: boolean;
+}
+
+// ---- the four reports (B4.11, drawn at B4.13c) -----------------------------
+
+/** One account's line in the profit and loss, with the same account's figure
+ *  for the period before it. */
+export interface PlLine {
+  accountId: string;
+  code: string;
+  name: string;
+  type: AccountType;
+  amountCents: number;
+  previousCents: number;
+  postings: number;
+}
+
+/** What the business earned and spent between two days, and the comparative
+ *  period the **server** chose — never one the browser derived. */
+export interface PlReport {
+  from: string;
+  to: string;
+  previousFrom: string;
+  previousTo: string;
+  currency: string;
+  income: PlLine[];
+  expense: PlLine[];
+  incomeCents: number;
+  expenseCents: number;
+  resultCents: number;
+  previousIncomeCents: number;
+  previousExpenseCents: number;
+  previousResultCents: number;
+}
+
+/** One account's balance on the sheet. */
+export interface BalanceLine {
+  accountId: string;
+  code: string;
+  name: string;
+  type: AccountType;
+  role: AccountRole | null;
+  amountCents: number;
+  postings: number;
+}
+
+/** What the business owns, owes and is worth on one day.
+ *
+ *  `balances` is stated by the server and shown by the screen: a sheet that
+ *  does not balance prints exactly like one that does, so the screen says so
+ *  out loud rather than rounding the difference into equity. */
+export interface BalanceSheet {
+  on: string;
+  currency: string;
+  assets: BalanceLine[];
+  liabilities: BalanceLine[];
+  equity: BalanceLine[];
+  assetCents: number;
+  liabilityCents: number;
+  equityCents: number;
+  /** Income less expense to the date, which no entry has closed into equity. */
+  resultCents: number;
+  liabilityEquityCents: number;
+  differenceCents: number;
+  balances: boolean;
+}
+
+/** Which side of the ledger an ageing is of. Stated, never guessed: the two are
+ *  chased by different people. */
+export type AgedSide = "receivable" | "payable";
+
+/** The five bands, in the accounting currency. */
+export interface AgedBuckets {
+  currentCents: number;
+  d1_30Cents: number;
+  d31_60Cents: number;
+  d61_90Cents: number;
+  d90_plusCents: number;
+  totalCents: number;
+}
+
+/** One document still open on the day the listing stands. */
+export interface AgedDocument {
+  documentId: string;
+  number: string;
+  issueDate: string;
+  dueDate: string;
+  daysOverdue: number;
+  bucket: string;
+  currency: string;
+  openCents: number;
+  /** The same amount in the accounting currency, or `null` when it cannot be
+   *  restated honestly — such a document is in no band. */
+  baseOpenCents: number | null;
+  creditNote: boolean;
+}
+
+/** One counterparty's ageing, and the documents behind it. */
+export interface AgedParty {
+  partyId: string;
+  name: string;
+  buckets: AgedBuckets;
+  unconvertedCount: number;
+  documents: AgedDocument[];
+}
+
+/** Who owes us, or whom we owe, by how overdue it is. */
+export interface AgedReport {
+  on: string;
+  side: AgedSide;
+  currency: string;
+  parties: AgedParty[];
+  buckets: AgedBuckets;
+  /** Documents in no band at all, because they could not be restated. */
+  unconvertedCount: number;
+  documentCount: number;
+}
+
+/** One rate of one side of the VAT return. */
+export interface VatReturnRate {
+  rateBp: number;
+  baseCents: number;
+  vatCents: number;
+}
+
+/** One side of the return: the rates, their totals, and what is on neither. */
+export interface VatReturnSide {
+  rates: VatReturnRate[];
+  baseCents: number;
+  vatCents: number;
+  unratedBaseCents: number;
+  unratedVatCents: number;
+}
+
+/** The figures a VAT return is filed from — the **journal's**, which is what
+ *  makes them include the purchase side no invoice of ours knows about.
+ *
+ *  `netPayableCents` is positive when the tenant owes the authority and
+ *  negative when it is owed a refund; the screen says which in words. */
+export interface VatReturn {
+  from: string;
+  to: string;
+  currency: string;
+  output: VatReturnSide;
+  input: VatReturnSide;
+  netPayableCents: number;
+}

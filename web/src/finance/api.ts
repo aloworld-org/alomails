@@ -24,21 +24,42 @@
 import { useMemo } from "react";
 
 import { useAuth } from "../auth";
+import { getLocale } from "../i18n";
 import { API_BASE } from "../platform/runtime";
 import { RestError, problemDetail, restMessage } from "../platform/rest";
 import type {
+  AccountDraft,
+  AgedReport,
+  AgedSide,
+  BalanceSheet,
   BankImportOptions,
   BankImportReport,
   BankLine,
   BankLineStatus,
   BankStatement,
   BankSuggestions,
+  Chart,
+  ChartAccount,
   ConfirmedMatch,
   Expense,
   ExpenseDraft,
   ExpenseStatus,
   PendingExpense,
+  PlReport,
+  VatReturn,
 } from "./types";
+
+/** The two days a report is asked over, as the server takes them. Both are
+ *  required there — a report that quietly defaulted to a period would put a
+ *  figure under a heading nobody asked for — so neither is defaulted here. */
+function period(from: string, to: string): string {
+  return new URLSearchParams({ from, to }).toString();
+}
+
+/** One day, encoded for a query string. */
+function day(on: string): string {
+  return encodeURIComponent(on);
+}
 
 type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -301,6 +322,127 @@ export class FinanceApi {
     ).then((r) => r.line);
   }
 
+  // ---- the chart of accounts ---------------------------------------------
+  //
+  // **Admin or accountant**, reads included: the chart says what the company
+  // owes, is owed and earns, and the list is also what seeds it on first use.
+
+  /**
+   * The tenant's chart in code order, **seeding the default one on first use**.
+   *
+   * It carries the language for that reason and only that one: the server
+   * writes the twenty default accounts once, in the language of whoever opened
+   * the chart first, and they are ordinary tenant data from that moment on
+   * (`finance_chart_names.rs`).
+   *
+   * `from`/`to` add each account's movement over that period, folded from the
+   * journal by the server. Both or neither — the server refuses half a period
+   * rather than folding open-ended.
+   */
+  chart(options: { includeInactive?: boolean; from?: string; to?: string } = {}): Promise<Chart> {
+    const query = new URLSearchParams({ lang: getLocale() });
+    if (options.includeInactive === true) query.set("includeInactive", "true");
+    if (options.from !== undefined && options.from !== "") query.set("from", options.from);
+    if (options.to !== undefined && options.to !== "") query.set("to", options.to);
+    return this.#read<{ accounts?: ChartAccount[]; seeded?: boolean; currency?: string | null }>(
+      `/finance/accounts?${query.toString()}`,
+    ).then((r) => ({
+      accounts: r.accounts ?? [],
+      seeded: r.seeded === true,
+      currency: r.currency ?? null,
+    }));
+  }
+
+  /** Adds the tenant's own line to their own chart. */
+  createAccount(draft: AccountDraft): Promise<ChartAccount> {
+    return this.#write<{ account: ChartAccount }>("POST", "/finance/accounts", draft).then(
+      (r) => r.account,
+    );
+  }
+
+  /**
+   * Renames, recodes, reclassifies, rehooks or retires an account — a seeded
+   * one included, because a tenant whose accountant wants `1400` for
+   * receivables must be able to say so.
+   *
+   * Only what is sent changes. The posting rules follow the account's role, so
+   * a code is safe to change and a role is not something a rename may drop.
+   */
+  updateAccount(id: string, draft: AccountDraft): Promise<ChartAccount> {
+    return this.#write<{ account: ChartAccount }>(
+      "PATCH",
+      `/finance/accounts/${encodeURIComponent(id)}`,
+      draft,
+    ).then((r) => r.account);
+  }
+
+  /** Removes a custom account that never carried a posting. The server answers
+   *  `409` for a seeded one and for one with history — deactivating is what a
+   *  tenant who has stopped using an account actually wants. */
+  async deleteAccount(id: string): Promise<void> {
+    await this.#discard(`/finance/accounts/${encodeURIComponent(id)}`);
+  }
+
+  // ---- the four reports --------------------------------------------------
+  //
+  // Each is served twice by the server — the JSON for the screen and a `.csv`
+  // of the same read for the accountant's own tooling — so a file somebody
+  // opens and a table somebody is looking at cannot disagree about a cent.
+  // Both are fetched with the session's token: the routes are authenticated,
+  // and a plain `<a href>` would download a `401`.
+
+  /** What the business earned and spent between two days, with the comparative
+   *  period the server chose beside every figure. */
+  plReport(from: string, to: string): Promise<PlReport> {
+    return this.#read<{ report: PlReport }>(`/finance/reports/pl?${period(from, to)}`).then(
+      (r) => r.report,
+    );
+  }
+
+  /** The same report as a file. */
+  plReportCsv(from: string, to: string): Promise<string> {
+    return this.#text(`/finance/reports/pl.csv?${period(from, to)}`);
+  }
+
+  /** What the business owns, owes and is worth on one day. */
+  balanceSheet(on: string): Promise<BalanceSheet> {
+    return this.#read<{ report: BalanceSheet }>(`/finance/reports/balance?on=${day(on)}`).then(
+      (r) => r.report,
+    );
+  }
+
+  /** The same sheet as a file. */
+  balanceSheetCsv(on: string): Promise<string> {
+    return this.#text(`/finance/reports/balance.csv?on=${day(on)}`);
+  }
+
+  /** Who owes us, or whom we owe, by how overdue it is. The side is required by
+   *  the server: defaulting it would put what we owe under a heading that says
+   *  what we are owed. */
+  agedReport(on: string, side: AgedSide): Promise<AgedReport> {
+    return this.#read<{ report: AgedReport }>(
+      `/finance/reports/aged?on=${day(on)}&side=${side}`,
+    ).then((r) => r.report);
+  }
+
+  /** The same listing as a file. */
+  agedReportCsv(on: string, side: AgedSide): Promise<string> {
+    return this.#text(`/finance/reports/aged.csv?on=${day(on)}&side=${side}`);
+  }
+
+  /** The VAT-return figures — the journal's, including the purchase side no
+   *  invoice of ours knows about. */
+  vatReturn(from: string, to: string): Promise<VatReturn> {
+    return this.#read<{ report: VatReturn }>(`/finance/reports/vat?${period(from, to)}`).then(
+      (r) => r.report,
+    );
+  }
+
+  /** The same return as a file. */
+  vatReturnCsv(from: string, to: string): Promise<string> {
+    return this.#text(`/finance/reports/vat.csv?${period(from, to)}`);
+  }
+
   // ---- plumbing ----------------------------------------------------------
 
   /** A file as the body — the shape both import doors take, because what a
@@ -328,6 +470,15 @@ export class FinanceApi {
 
   async #read<T>(path: string): Promise<T> {
     return this.#json<T>(await this.#send(path, { method: "GET" }));
+  }
+
+  /** A response whose body is a file rather than a resource — a report's CSV.
+   *  Read as text and handed to the caller, who saves it under the name the
+   *  server would have used. */
+  async #text(path: string): Promise<string> {
+    const res = await this.#send(path, { method: "GET" });
+    if (!res.ok) throw await failure(res);
+    return res.text();
   }
 
   async #write<T>(method: string, path: string, body: unknown): Promise<T> {

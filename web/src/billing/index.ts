@@ -19,7 +19,11 @@ export { formatDocumentDate } from "./dates";
 // a billing one, and the pipeline report (B2.08) asks for exactly the same two
 // days as the VAT summary — so the second caller reads these rather than
 // growing a second definition of "last quarter" that disagrees at a boundary.
-export { previousQuarterOf, quarterOf, type Period } from "./period";
+// `yearOf`/`previousYearOf` joined at B4.13c for the same reason: a profit and
+// loss and a chart of accounts are read for a year, and a second definition of
+// "this year" would disagree with this one at a boundary for a reader west of
+// Greenwich.
+export { previousQuarterOf, previousYearOf, quarterOf, yearOf, type Period } from "./period";
 
 // Who a tenant bills. A module outside Billing that has to name a customer —
 // the engagement form in Projects (B3.07) — reads the list from here rather

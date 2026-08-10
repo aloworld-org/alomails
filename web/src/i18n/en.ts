@@ -3649,6 +3649,169 @@ export const en = {
   financeBankSetAsideNote: "Transactions somebody decided are not ours to book.",
   financeBankUndoIgnore: "Back to the pile",
 
+  // ---- alo Finance: the chart of accounts (B4.13c) ------------------------
+  //
+  // The words here have one job the rest of the module does not: they have to
+  // make a double-entry chart editable by somebody who is not an accountant.
+  // So a role is offered as the sentence it means ("what customers owe us"),
+  // never as the word the wire uses, and the two rules that actually matter —
+  // the posting rules follow the role and not the code, and an account with
+  // history is retired rather than deleted — are said where somebody is about
+  // to need them rather than in a manual nobody opens.
+  financeTabAccounts: "Accounts",
+  financeChartLoadFailed: "The chart of accounts could not be loaded.",
+  financeChartSeeded:
+    "We started you off with a neutral chart of accounts. Every one of these is yours to rename or renumber — your accountant's numbering will not break anything, because the bookkeeping follows each account's job and not its number.",
+  financeChartEmptyTitle: "No accounts yet",
+  financeChartEmptyBody:
+    "The chart of accounts is the list of places money can be: the bank, what customers owe you, what you earn, what you spend. Nothing can be booked until there is one.",
+
+  financeAccountAdd: "Add an account",
+  financeAccountEdit: "Edit",
+  financeAccountDelete: "Delete",
+  financeAccountCode: "Number",
+  financeAccountCodeHint: "What your accountant calls it. Letters and digits, no spaces.",
+  financeAccountName: "Name",
+  financeAccountRole: "Job",
+  financeAccountRoleHint:
+    "What this account is used for automatically. Invoices, payments and claims find their account by its job, never by its number — so renumbering is safe, and taking a job away stops those documents booking until another account has it.",
+  financeAccountType: "Kind",
+  financeAccountTypeHint: "What the account holds. It decides which report the account appears on.",
+  financeAccountTypeUnset: "Choose one…",
+  financeAccountActive: "In use",
+  financeAccountActiveHint:
+    "A retired account keeps its history and its balance and stops being offered on new documents.",
+  financeAccountInUse: "In use",
+  financeAccountRetired: "Retired",
+  financeAccountShowRetired: "Show retired",
+  financeAccountMovement: "Movement",
+  financeAccountPostings: "Entries",
+  financeAccountSystemNote:
+    "We created this account, so it cannot be deleted — the bookkeeping resolves through it. Rename it, renumber it, or retire it.",
+  financeAccountNewTitle: "Add an account",
+  financeAccountNewBody: "Your own line in your own chart.",
+  financeAccountEditTitle: "Edit the account",
+  financeAccountEditBody: "Renaming and renumbering are safe at any time.",
+  financeAccountSaveFailed: "The account was not saved.",
+  financeAccountDeleteFailed: "The account was not deleted.",
+
+  // The five kinds, twice: the short word for a table heading, and the sentence
+  // somebody choosing one is actually answering.
+  financeAccountTypeAsset: "What we own",
+  financeAccountTypeLiability: "What we owe",
+  financeAccountTypeEquity: "Equity",
+  financeAccountTypeIncome: "What we earn",
+  financeAccountTypeExpense: "What we spend",
+  financeAccountTypeAssetLong: "Something we own or are owed — a bank account, cash, customers' debts",
+  financeAccountTypeLiabilityLong: "Something we owe — suppliers, tax, money owed to staff",
+  financeAccountTypeEquityLong: "The owners' stake, and the balances the books opened with",
+  financeAccountTypeIncomeLong: "Something we earn",
+  financeAccountTypeExpenseLong: "Something we spend",
+
+  // The jobs a posting rule resolves through, each said as what it is for.
+  financeRoleNone: "No particular job",
+  financeRoleAr: "What customers owe us",
+  financeRoleAp: "What we owe suppliers",
+  financeRoleBank: "The bank account money moves through",
+  financeRoleCash: "Petty cash",
+  financeRoleVatOutput: "VAT we charged and owe",
+  financeRoleVatInput: "VAT we paid and can reclaim",
+  financeRoleRevenue: "Sales revenue",
+  financeRoleExpenseDefault: "Costs with no category of their own",
+  financeRoleEmployeePayable: "Expense claims we owe staff",
+  financeRoleFxDiff: "Exchange differences",
+  financeRoleRounding: "Rounding differences",
+  financeRoleOpeningBalance: "The balances the books opened with",
+  financeRoleSuspense: "Money we cannot place yet",
+
+  // ---- alo Finance: the four reports (B4.13c) -----------------------------
+  //
+  // Every figure on these screens is the server's fold of the journal, in
+  // integer cents; nothing here is a total a browser added up, and no heading
+  // names a period the server did not state. The words are a business owner's
+  // where they can be ("What we own") and an accountant's where they must be
+  // ("Equity"), because a balance sheet is read by both.
+  financeTabReports: "Reports",
+  financeReportPl: "Profit and loss",
+  financeReportBalance: "Balance sheet",
+  financeReportAged: "Who owes what",
+  financeReportVat: "VAT return",
+  financeReportFrom: "From",
+  financeReportTo: "To",
+  financeReportOn: "On",
+  financeReportShow: "Show",
+  financeReportToday: "Today",
+  financeReportThisYear: "This year",
+  financeReportThisQuarter: "This quarter",
+  financeReportLastQuarter: "Last quarter",
+  financeReportLastYearEnd: "End of last year",
+  financeReportDownloadCsv: "Download CSV",
+  financeReportDownloadFailed: "The file could not be downloaded.",
+  financeReportLoadFailed: "The report could not be loaded.",
+  financeReportBasis: (from: string, to: string) => `Everything booked between ${from} and ${to}, both days included.`,
+  financeReportBasisOn: (on: string) => `Everything booked up to and including ${on}.`,
+  financeReportEmptyTitle: "Nothing booked yet",
+  financeReportEmptyBody:
+    "Issued invoices, payments and approved expense claims book themselves. As soon as one does, it shows up here.",
+  financeReportAmount: "Amount",
+  financeReportTotal: "Total",
+  financeReportPrevious: (from: string, to: string) => `${from} – ${to}`,
+
+  // The profit and loss.
+  financeReportIncome: "What we earned",
+  financeReportIncomeTotal: "Earned in total",
+  financeReportExpense: "What we spent",
+  financeReportExpenseTotal: "Spent in total",
+  financeReportProfit: "Profit",
+  financeReportLoss: "Loss",
+
+  // The balance sheet.
+  financeReportAssets: "What we own",
+  financeReportAssetsTotal: "Owned in total",
+  financeReportLiabilities: "What we owe",
+  financeReportLiabilitiesTotal: "Owed in total",
+  financeReportEquity: "Equity",
+  financeReportEquityTotal: "Equity in total",
+  financeReportResultToDate: "Profit or loss so far, not yet closed into equity",
+  financeReportLiabilitiesEquityTotal: "Owed, equity and result together",
+  financeReportDifference: "Difference",
+  financeReportUnbalanced: (amount: string) =>
+    `These books do not balance: ${amount} is unaccounted for. Do not file anything from this sheet — send it to us instead.`,
+
+  // Who owes what.
+  financeReportSide: "Showing",
+  financeReportReceivable: "What we are owed",
+  financeReportPayable: "What we owe",
+  financeReportParty: "Who",
+  financeReportBandCurrent: "Not yet due",
+  financeReportBand1To30: "1–30 days",
+  financeReportBand31To60: "31–60 days",
+  financeReportBand61To90: "61–90 days",
+  financeReportBand90Plus: "Over 90 days",
+  financeReportOpenDocuments: (count: number) =>
+    count === 1 ? "1 open document" : `${count} open documents`,
+  financeReportNothingOwedToUs: "Nobody owes you anything",
+  financeReportNothingWeOwe: "You owe nobody anything",
+  financeReportAgedEmptyBody: "Every issued document on this side has been settled in full.",
+  financeReportUnconverted: (count: number) =>
+    count === 1
+      ? "1 document is in none of these columns: we have no exchange rate to state it in your own currency."
+      : `${count} documents are in none of these columns: we have no exchange rate to state them in your own currency.`,
+
+  // The VAT return.
+  financeReportVatRate: "Rate",
+  financeReportVatBase: "Amount before VAT",
+  financeReportVatTax: "VAT",
+  financeReportVatOutput: "VAT we charged",
+  financeReportVatOutputTotal: "Charged in total",
+  financeReportVatInput: "VAT we paid",
+  financeReportVatInputTotal: "Paid in total",
+  financeReportVatUnrated: "On no stated rate",
+  financeReportVatPayable: "To pay",
+  financeReportVatRefund: "To reclaim",
+  financeReportVatNote:
+    "These are your books' figures — sales and purchases both — which is what a return is filed from. The VAT summary under Billing shows what you invoiced, which is a different question.",
+
   mailAttachmentErrorDetail: (reason: string) =>
     `That file was not attached. Try adding it again. Server: ${reason}`,
   mailDraftCreateErrorDetail: (reason: string) =>

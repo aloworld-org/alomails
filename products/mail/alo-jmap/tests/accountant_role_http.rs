@@ -102,7 +102,12 @@ async fn colleague(h: &Harness, tag: &str) -> (String, alo_store::UserId) {
 /// counterparty the company paid and was paid by, and the suggestions read
 /// lists every open invoice beside them. That is the tenant's business and not
 /// an employee's, so it is the bookkeeper's door like the reports are.
-const FINANCE_READS: [&str; 8] = [
+///
+/// `/finance/accounts` joined with B4.13c: the chart says what the company owes,
+/// is owed and earns, and the read is also what SEEDS it — so a read here
+/// writes, which is a second reason it is not an ordinary member's.
+const FINANCE_READS: [&str; 9] = [
+    "/finance/accounts",
     "/finance/reports/pl?from=2026-01-01&to=2026-12-31",
     "/finance/reports/pl.csv?from=2026-01-01&to=2026-12-31",
     "/finance/reports/balance?on=2026-12-31",
@@ -124,6 +129,15 @@ const BANK_WRITES: [&str; 6] = [
     "/finance/bank/lines/nosuchline/unmatch",
     "/finance/bank/lines/nosuchline/ignore",
     "/finance/bank/lines/nosuchline/unignore",
+];
+
+/// The chart's own writes (B4.13c), each on an id that does not exist: an
+/// ordinary member is refused **before** the store is asked, so the refusal is a
+/// `403` and never a `404` telling them which accounts a company keeps.
+const CHART_WRITES: [(&str, &str); 3] = [
+    ("POST", "/finance/accounts"),
+    ("PATCH", "/finance/accounts/nosuchaccount"),
+    ("DELETE", "/finance/accounts/nosuchaccount"),
 ];
 
 /// Doors the role must never open. The admin console is the company, not the
@@ -201,6 +215,61 @@ async fn the_bank_is_the_bookkeepers_and_every_act_on_a_line_is_shut_before_it_i
     for uri in BANK_WRITES {
         let (status, _) = post(&h.app, &clerk, uri, json!({})).await;
         assert_eq!(status, StatusCode::FORBIDDEN, "{uri} after revoke");
+    }
+}
+
+#[tokio::test]
+async fn the_chart_is_the_bookkeepers_and_editing_it_is_shut_before_it_is_looked_up() {
+    let h = harness("acctchart").await;
+    let (clerk, clerk_id) = colleague(&h, "clerk").await;
+
+    for (method, uri) in CHART_WRITES {
+        let (status, _) = send(
+            &h.app,
+            with_json(
+                method,
+                uri,
+                &clerk,
+                json!({ "code": "9999", "name": "Mine", "type": "asset" }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{method} {uri}");
+    }
+
+    // The bookkeeper gets past the gate — to the store's own refusal on an id
+    // that is not there, which is what proves the `403`s above were the gate.
+    h.ts.grant_role(&clerk_id, TenantRole::Accountant, &h.user)
+        .await
+        .unwrap();
+    let (status, _) = patch(
+        &h.app,
+        &clerk,
+        "/finance/accounts/nosuchaccount",
+        json!({ "name": "Anything" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    // …and to a chart of their own, which the read seeds.
+    let (status, body) = get(&h.app, &clerk, "/finance/accounts").await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert!(body["accounts"].as_array().is_some_and(|a| a.len() >= 20));
+
+    h.ts.revoke_role(&clerk_id, TenantRole::Accountant)
+        .await
+        .unwrap();
+    for (method, uri) in CHART_WRITES {
+        let (status, _) = send(
+            &h.app,
+            with_json(
+                method,
+                uri,
+                &clerk,
+                json!({ "code": "9999", "name": "Mine", "type": "asset" }),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{method} {uri} after revoke");
     }
 }
 

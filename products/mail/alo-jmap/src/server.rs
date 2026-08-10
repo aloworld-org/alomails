@@ -21,12 +21,13 @@ use crate::{
     billing_settings, blob, calendar, carddav, chat, chat_agent_routes, contacts, crm_activities,
     crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages,
     crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
-    finance_bank_match, finance_expenses, finance_mileage, finance_periods, finance_receipts,
-    finance_report_aged, finance_report_balance, finance_report_pl, finance_report_vat, flagdue,
-    imap_import_route, insights, insights_ask, insights_eval, insights_gallery, projects_clients,
-    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
-    projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
-    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
+    finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
+    finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
+    insights_gallery, projects_clients, projects_invoices, projects_plan, projects_reports,
+    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, scoped_roles,
+    security, session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe,
+    wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -1112,6 +1113,31 @@ pub fn app_with_site_domain_dns(
         .route(
             "/finance/periods/{id}/reopen",
             post(finance_periods::reopen_period),
+        )
+        // The chart of accounts (B4.13c) — the list of places money can be, and
+        // the doors a tenant edits it through. Admin or accountant on every one
+        // of them, the reads included: the chart says what the company owes, is
+        // owed and earns, and the list is also what SEEDS it on first use, so a
+        // read here writes.
+        //
+        // `/finance/accounts` before `{id}` for the reason `pending` is
+        // registered before `/finance/expenses/{id}`: matchit prefers the
+        // static segment, and an id — a base64url'd 16-byte token — can never
+        // spell one.
+        //
+        // Retiring an account is a field of the `PATCH` rather than a named act
+        // (unlike the period close beside it): it is reversible, it decides
+        // nothing, and the design note's own routes table says `deactivate` is
+        // what an edit does.
+        .route(
+            "/finance/accounts",
+            get(finance_chart::list_accounts).post(finance_chart::create_account),
+        )
+        .route(
+            "/finance/accounts/{id}",
+            get(finance_chart::get_account)
+                .patch(finance_chart::update_account)
+                .delete(finance_chart::delete_account),
         )
         // The reports (B4.11) — folds over the journal, each with a `.csv`
         // twin serving the same store read as a file. Admin only: a P&L is the
