@@ -11,12 +11,17 @@ mod common;
 
 use std::sync::{Arc, Mutex};
 
+use alo_sites::serve::{AppState as PublicAppState, app as public_app};
+use alo_store::{BlobStore, Page, SitePublicStore};
 use axum::Router;
 use axum::body::Body;
-use axum::http::{Request, StatusCode};
+use axum::http::{Request, StatusCode, header};
 use serde_json::{Value, json};
+use sqlx::postgres::PgPoolOptions;
+use tokio::time::{Duration, sleep};
+use tower::ServiceExt;
 
-use common::{Harness, harness, harness_on, send};
+use common::{Harness, database_url, harness, harness_on, send};
 
 type Seen = Arc<Mutex<Vec<Value>>>;
 
@@ -159,6 +164,18 @@ fn subdomain(tag: &str, h: &Harness) -> String {
 fn valid_fixture(subdomain: &str) -> String {
     include_str!("../../../../platform/alo-ai/tests/fixtures/sites/valid_full_site.json")
         .replace("juniper-bakery", subdomain)
+}
+
+async fn public_text(state: &Arc<PublicAppState>, request: Request<Body>) -> (StatusCode, String) {
+    let response = public_app(Arc::clone(state))
+        .oneshot(request)
+        .await
+        .unwrap();
+    let status = response.status();
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    (status, String::from_utf8(bytes.to_vec()).unwrap())
 }
 
 #[tokio::test]
@@ -423,5 +440,174 @@ async fn page_edit_is_a_reviewable_proposal_until_approved_and_tenant_scoped() {
     assert_eq!(
         stored["sections"]["sections"][0]["heading"],
         "A clearer welcome"
+    );
+}
+
+#[tokio::test]
+async fn generated_site_reaches_public_form_notification_and_owner_inbox() {
+    let owner = harness("sites-final-forms").await;
+    let outsider = harness_on(Arc::clone(&owner.store), "sites-final-forms-other").await;
+    let generated_subdomain = subdomain("final-forms", &owner);
+    let (base_url, _) = scripted_model(vec![valid_fixture(&generated_subdomain)]).await;
+    use_model(&owner, &base_url).await;
+
+    // Fixture-backed AI generation persists one private, complete draft. Its
+    // contact section is linked to a real form inside the same transaction.
+    let (status, generated) = post(
+        &owner.app,
+        Some(&owner.token),
+        "/sites/generate",
+        json!({ "description": "A bakery with a public contact form" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{generated}");
+    let site = generated["site"]["id"].as_str().unwrap();
+    let pages = generated["pages"].as_array().unwrap();
+    let home = pages.iter().find(|page| page["home"] == true).unwrap();
+    let contact = pages.iter().find(|page| page["slug"] == "contact").unwrap();
+    let home_id = home["id"].as_str().unwrap();
+    let form_id = contact["sections"]["sections"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|section| section["type"] == "contact_form")
+        .and_then(|section| section["form_id"].as_str())
+        .expect("generated contact section has a working form");
+
+    // The owner edits a section and picks a different shipped theme before
+    // publishing. These are the same authenticated doors the web editor uses.
+    let (status, edited) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/pages/{home_id}/sections/1"),
+        json!({ "section": {
+            "type": "hero",
+            "heading": "Bread ready when Utrecht wakes",
+            "subheading": "Baked before sunrise and served all morning.",
+            "image": null,
+            "primary_cta": { "label": "Visit the bakery", "href": "/contact" },
+            "secondary_cta": null
+        }}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{edited}");
+    assert_eq!(
+        edited["sections"]["sections"][1]["heading"],
+        "Bread ready when Utrecht wakes"
+    );
+    let (status, theme) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/theme"),
+        json!({ "schema_version": 1, "preset": "midnight" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{theme}");
+    let (status, published) = post(
+        &owner.app,
+        Some(&owner.token),
+        &format!("/sites/{site}/publish"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{published}");
+
+    // The separate anonymous service sees the committed publish by Host and
+    // serves both the edited snapshot and the selected theme stylesheet.
+    let pool = PgPoolOptions::new()
+        .max_connections(4)
+        .connect(&database_url())
+        .await
+        .unwrap();
+    let public = PublicAppState::new(
+        SitePublicStore::new(pool, BlobStore::in_memory(1024 * 1024)),
+        "sites.test".to_owned(),
+        b"sites-final-forms-analytics-secret",
+    );
+    let host = format!("{generated_subdomain}.sites.test");
+    let (status, html) = public_text(
+        &public,
+        Request::builder()
+            .uri("/")
+            .header(header::HOST, &host)
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{html}");
+    assert!(html.contains("Bread ready when Utrecht wakes"));
+    let (status, css) = public_text(
+        &public,
+        Request::builder()
+            .uri("/assets/site.css")
+            .header(header::HOST, &host)
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{css}");
+    assert!(css.contains("#f0b653"), "midnight theme reached public CSS");
+
+    // A visitor submits through the rendered form target. The authenticated
+    // submissions route (the UI's data source) and internal inbox see the
+    // same tenant-owned row; the outsider sees neither.
+    let (status, response) = public_text(
+        &public,
+        Request::builder()
+            .method("POST")
+            .uri(format!("/f/{form_id}"))
+            .header(header::HOST, &host)
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header("x-forwarded-for", "203.0.113.132")
+            .body(Body::from(
+                "name=Ada+Lovelace&email=ada%40example.test&message=Please+reserve+two+loaves.&website=",
+            ))
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{response}");
+    assert!(response.contains("Message sent"));
+
+    let submissions_path = format!("/sites/{site}/submissions");
+    let (status, submissions) = get(&owner.app, &owner.token, &submissions_path).await;
+    assert_eq!(status, StatusCode::OK, "{submissions}");
+    assert_eq!(submissions["submissions"].as_array().unwrap().len(), 1);
+    assert_eq!(submissions["submissions"][0]["senderName"], "Ada Lovelace");
+    assert_eq!(
+        submissions["submissions"][0]["message"],
+        "Please reserve two loaves."
+    );
+    let (status, _) = get(&outsider.app, &outsider.token, &submissions_path).await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    alo_jmap::site_notify::run_due(&owner.store).await;
+    let inbox = owner.acc.inbox().await.unwrap();
+    let mut messages = Vec::new();
+    for _ in 0..20 {
+        messages = owner
+            .acc
+            .list_mailbox(&inbox, Page::default())
+            .await
+            .unwrap();
+        if !messages.is_empty() {
+            break;
+        }
+        sleep(Duration::from_millis(25)).await;
+    }
+    assert_eq!(
+        messages.len(),
+        1,
+        "owner receives one internal notification"
+    );
+    assert!(messages[0].subject.contains("Ada Lovelace"));
+    let outsider_inbox = outsider.acc.inbox().await.unwrap();
+    assert!(
+        outsider
+            .acc
+            .list_mailbox(&outsider_inbox, Page::default())
+            .await
+            .unwrap()
+            .is_empty(),
+        "another tenant receives no message"
     );
 }

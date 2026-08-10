@@ -17,7 +17,7 @@ use crate::id::{SiteFormId, SiteFormSubmissionId, SiteId};
 /// enough that a runaway loop cannot bloat a tenant.
 pub const MAX_FORMS_PER_SITE: i64 = 50;
 /// A form's owner-facing label — a short name, not prose.
-const FORM_NAME_MAX_CHARS: usize = 100;
+pub(crate) const FORM_NAME_MAX_CHARS: usize = 100;
 /// Cap on a submitted sender name.
 pub const SUBMISSION_NAME_MAX_CHARS: usize = 200;
 /// Cap on a submitted email address (the SMTP path limit).

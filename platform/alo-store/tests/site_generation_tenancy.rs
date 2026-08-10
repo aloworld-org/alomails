@@ -29,6 +29,12 @@ fn proposal(subdomain: String) -> NewGeneratedSite {
                     "image": null,
                     "primary_cta": null,
                     "secondary_cta": null
+                }, {
+                    "type": "contact_form",
+                    "heading": "Talk to the bakery",
+                    "body": null,
+                    "form_id": null,
+                    "success_message": "Thanks"
                 }]
             }))
             .unwrap(),
@@ -65,11 +71,20 @@ async fn generated_draft_is_atomic_unpublished_and_wrong_tenant_invisible() {
     assert_eq!(pages.len(), 1);
     assert!(pages[0].is_home);
     assert_eq!(pages[0].sections["sections"][0]["type"], "hero");
+    let generated_form = pages[0].sections["sections"][1]["form_id"]
+        .as_str()
+        .unwrap_or_default();
+    assert!(!generated_form.is_empty(), "generated form is linked");
+    let forms = a.site_forms(&created.site).await.unwrap();
+    assert_eq!(forms.len(), 1);
+    assert_eq!(forms[0].id.as_str(), generated_form);
+    assert_eq!(forms[0].name, "Talk to the bakery");
 
     // Mandatory wrong-tenant proof: both the site and every generated page
     // disappear behind another account door.
     assert!(b.site(&created.site).await.unwrap().is_none());
     assert!(b.site_pages(&created.site).await.unwrap().is_empty());
+    assert!(b.site_forms(&created.site).await.unwrap().is_empty());
     assert!(
         b.site_page(&created.site, &created.pages[0])
             .await

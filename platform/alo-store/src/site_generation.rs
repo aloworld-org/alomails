@@ -10,8 +10,9 @@ use std::collections::HashSet;
 
 use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
-use crate::id::{SiteId, SitePageId};
-use crate::site_model::SectionsEnvelope;
+use crate::id::{SiteFormId, SiteId, SitePageId};
+use crate::site_forms::{FORM_NAME_MAX_CHARS, MAX_FORMS_PER_SITE};
+use crate::site_model::{Section, SectionsEnvelope};
 use crate::site_pages::{
     MAX_PAGES_PER_SITE, map_page_constraints, normalize_seo, validate_page_slug,
     validate_page_title,
@@ -57,6 +58,12 @@ struct PreparedPage {
     seo_title: Option<String>,
     seo_description: Option<String>,
     sections: serde_json::Value,
+    forms: Vec<PreparedForm>,
+}
+
+struct PreparedForm {
+    id: SiteFormId,
+    name: String,
 }
 
 impl AccountStore {
@@ -90,6 +97,7 @@ impl AccountStore {
         let mut homes = 0_usize;
         let mut slugs = HashSet::with_capacity(draft.pages.len());
         let mut pages = Vec::with_capacity(draft.pages.len());
+        let mut form_count = 0_i64;
         for page in draft.pages {
             validate_page_title(&page.title)?;
             if page.is_home {
@@ -114,11 +122,40 @@ impl AccountStore {
                 SEO_DESCRIPTION_MAX_CHARS,
                 "SEO description",
             )?;
-            page.sections
+            let mut sections = page.sections;
+            sections
                 .validate()
                 .map_err(|error| StoreError::Conflict(error.to_string()))?;
-            let sections = page
-                .sections
+            let mut forms = Vec::new();
+            for section in &mut sections.sections {
+                let Section::ContactForm(contact) = section else {
+                    continue;
+                };
+                if contact.form_id.is_some() {
+                    return Err(StoreError::Conflict(
+                        "generated contact forms may not carry a form id".to_owned(),
+                    ));
+                }
+                form_count += 1;
+                if form_count > MAX_FORMS_PER_SITE {
+                    return Err(StoreError::Conflict(format!(
+                        "a site may have at most {MAX_FORMS_PER_SITE} forms"
+                    )));
+                }
+                let id = SiteFormId::generate();
+                let name: String = contact
+                    .heading
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|heading| !heading.is_empty())
+                    .unwrap_or("Contact form")
+                    .chars()
+                    .take(FORM_NAME_MAX_CHARS)
+                    .collect();
+                contact.form_id = Some(id.to_string());
+                forms.push(PreparedForm { id, name });
+            }
+            let sections = sections
                 .to_value()
                 .map_err(|error| StoreError::Conflict(error.to_string()))?;
             pages.push(PreparedPage {
@@ -129,6 +166,7 @@ impl AccountStore {
                 seo_title,
                 seo_description,
                 sections,
+                forms,
             });
         }
         if homes != 1 {
@@ -152,6 +190,22 @@ impl AccountStore {
         .execute(&mut *tx)
         .await
         .map_err(map_subdomain_unique)?;
+
+        for page in &pages {
+            for form in &page.forms {
+                sqlx::query(
+                    "INSERT INTO site_forms (tenant_id, site_id, id, name) \
+                     VALUES ($1, $2, $3, $4)",
+                )
+                .bind(self.tenant.as_str())
+                .bind(site.as_str())
+                .bind(form.id.as_str())
+                .bind(&form.name)
+                .execute(&mut *tx)
+                .await
+                .map_err(StoreError::Db)?;
+            }
+        }
 
         for (nav_order, page) in pages.iter().enumerate() {
             let nav_order = i32::try_from(nav_order)
