@@ -108,6 +108,7 @@ pub mod insight_tiles;
 pub mod inv_adjust;
 pub mod inv_barcode;
 pub mod inv_count;
+pub mod inv_count_apply;
 pub mod inv_locations;
 pub mod inv_moves;
 pub mod inv_po;

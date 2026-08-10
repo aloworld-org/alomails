@@ -589,12 +589,13 @@ pub fn app_with_site_domain_dns(
             "/inventory/shortages.csv",
             get(inventory_reorder::shortages_csv),
         )
-        // Stocktakes (B5.08a). A count is a worksheet over one location: it
-        // snapshots what the ledger says is there, a person works down the
-        // sheet, and applying it (B5.08b) writes ordinary adjustment
-        // movements. A row is PUT rather than POSTed because its identity is
-        // the pair (count, product) — a wedge scanner that fires twice on one
-        // barcode must record one row, not two.
+        // Stocktakes (B5.08a, B5.08b). A count is a worksheet over one
+        // location: it snapshots what the ledger says is there, a person works
+        // down the sheet, and applying it writes ordinary adjustment movements
+        // — recomputed against on-hand at that moment, skipping any row whose
+        // shelf moved underneath the counter. A row is PUT rather than POSTed
+        // because its identity is the pair (count, product) — a wedge scanner
+        // that fires twice on one barcode must record one row, not two.
         .route(
             "/inventory/counts",
             get(inventory_counts::list_counts).post(inventory_counts::open_count),
@@ -606,6 +607,10 @@ pub fn app_with_site_domain_dns(
         .route(
             "/inventory/counts/{id}/lines/{product_id}",
             put(inventory_counts::set_count_line),
+        )
+        .route(
+            "/inventory/counts/{id}/apply",
+            post(inventory_counts::apply_count),
         )
         .route(
             "/inventory/counts/{id}/cancel",

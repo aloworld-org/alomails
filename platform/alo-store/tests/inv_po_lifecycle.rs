@@ -242,7 +242,10 @@ async fn a_draft_order_is_written_read_and_edited_as_a_whole() {
     assert_eq!(listed[0].supplier_name, "Hoffmann draft");
     assert_eq!(listed[0].totals.net_cents, 4_000);
     assert_eq!(
-        a.inv_purchase_orders(Some(PoStatus::Draft)).await.unwrap().len(),
+        a.inv_purchase_orders(Some(PoStatus::Draft))
+            .await
+            .unwrap()
+            .len(),
         1
     );
     assert!(
@@ -305,7 +308,10 @@ async fn what_an_order_refuses_it_refuses_by_rule() {
     let message = assert_validation(
         a.set_inv_purchase_order_lines(
             &id,
-            &[goods(&chair, 1_000, 4_300), goods(&discontinued, 1_000, 100)],
+            &[
+                goods(&chair, 1_000, 4_300),
+                goods(&discontinued, 1_000, 100),
+            ],
         )
         .await,
     );
@@ -399,7 +405,14 @@ async fn a_placed_order_is_frozen_and_a_cancelled_one_is_final() {
         ))
         .await
         .unwrap();
-    place(&pool, &t, &partly, PoStatus::PartiallyReceived, "PO-2026-09002").await;
+    place(
+        &pool,
+        &t,
+        &partly,
+        PoStatus::PartiallyReceived,
+        "PO-2026-09002",
+    )
+    .await;
     let message = assert_conflict(a.cancel_inv_purchase_order(&partly, false).await);
     assert!(message.contains("short delivery"), "{message}");
     let closed = a.cancel_inv_purchase_order(&partly, true).await.unwrap();
@@ -412,7 +425,10 @@ async fn a_placed_order_is_frozen_and_a_cancelled_one_is_final() {
         ))
         .await
         .unwrap();
-    let dropped = a.cancel_inv_purchase_order(&abandoned, false).await.unwrap();
+    let dropped = a
+        .cancel_inv_purchase_order(&abandoned, false)
+        .await
+        .unwrap();
     assert_eq!(dropped.order.status, PoStatus::Cancelled);
     assert!(
         dropped.order.number.is_none(),
@@ -505,7 +521,10 @@ async fn a_number_belongs_to_the_tenant_that_drew_it() {
         "blanks trimmed, case ignored, otherwise exact"
     );
     assert!(
-        a.inv_purchase_order_id_by_number("   ").await.unwrap().is_none(),
+        a.inv_purchase_order_id_by_number("   ")
+            .await
+            .unwrap()
+            .is_none(),
         "no number was asked for"
     );
     assert!(

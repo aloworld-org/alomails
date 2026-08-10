@@ -319,6 +319,7 @@ POST /finance/periods -> finance.period.create
 POST /finance/periods/{id}/close -> finance.period.close
 POST /finance/periods/{id}/reopen -> finance.period.reopen
 POST /inventory/counts -> inventory.count.create
+POST /inventory/counts/{id}/apply -> inventory.count.apply
 POST /inventory/counts/{id}/cancel -> inventory.count.cancel
 POST /inventory/locations -> inventory.location.create
 POST /inventory/locations/{id}/archive -> inventory.location.archive

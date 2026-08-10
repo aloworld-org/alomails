@@ -1,8 +1,9 @@
-//! The stocktake over HTTP (alo Inventory, ADR 0035, wave B5.08a) — over
-//! [`alo_store::inv_count`].
+//! The stocktake over HTTP (alo Inventory, ADR 0035, waves B5.08a and B5.08b) —
+//! over [`alo_store::inv_count`] and [`alo_store::inv_count_apply`].
 //!
-//! Six routes, one document: a count is opened for a place, its sheet is worked
-//! down a row at a time, and it ends either applied (B5.08b) or walked away
+//! Seven routes, one document: a count is opened for a place, its sheet is
+//! worked down a row at a time, and it ends either applied — the variances
+//! written into the ledger as ordinary adjustment movements — or walked away
 //! from.
 //!
 //! Two shapes are worth stating here rather than leaving to be inferred.
@@ -24,7 +25,10 @@
 //! `moved_since` is the field the design note is really about: a warehouse does
 //! not stop while it is counted, so a row whose shelf moved under the counter is
 //! flagged here and skipped by the apply, rather than having a frozen difference
-//! written over a delivery that went out at the far end of the room.
+//! written over a delivery that went out at the far end of the room. The apply
+//! says so out loud: its answer lists every row it corrected **and** every row
+//! it left alone with the reason, so the person re-counts a few items instead of
+//! wondering what happened to the rest.
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
@@ -34,6 +38,7 @@ use serde_json::{Value, json};
 
 use alo_store::AccountStore;
 use alo_store::inv_count::{Count, CountEntry, CountFilter, CountLine, CountStatus, NewCount};
+use alo_store::inv_count_apply::{AppliedLine, ApplyOutcome, SkippedLine};
 use alo_store::{BillingProductId, InvCountId, InvLocationId};
 
 use crate::billing::{iso, map_store_err, parse_body};
@@ -272,6 +277,80 @@ pub async fn set_count_line(
     })))
 }
 
+/// A corrected row as JSON: what was there, what was found, and the movement
+/// that closed the gap.
+fn applied_json(l: &AppliedLine) -> Value {
+    json!({
+        "productId": l.product_id.as_str(),
+        "productName": l.product_name,
+        "onHandQtyMilli": l.on_hand_qty_milli,
+        "countedQtyMilli": l.counted_qty_milli,
+        "varianceQtyMilli": l.variance_qty_milli,
+        "moveId": l.move_id.as_str(),
+    })
+}
+
+/// A row the apply left alone, and why — `uncounted`, `moved` or `unchanged`.
+fn skipped_json(l: &SkippedLine) -> Value {
+    json!({
+        "productId": l.product_id.as_str(),
+        "productName": l.product_name,
+        "reason": l.reason.as_str(),
+        "expectedQtyMilli": l.expected_qty_milli,
+        "countedQtyMilli": l.counted_qty_milli,
+        "onHandQtyMilli": l.on_hand_qty_milli,
+    })
+}
+
+/// `POST /inventory/counts/{id}/apply` →
+/// `{"count":{…},"lines":[…],"applied":[…],"skipped":[…]}` — turns the sheet
+/// into the ledger.
+///
+/// Every counted row that still disagrees with its shelf becomes an adjustment
+/// movement against the tenant's `adjustment` location, referencing this count,
+/// in one transaction; the count closes as `applied`. The rows that were **not**
+/// applied come back with the reason — nobody counted them, the shelf moved
+/// underneath them, or they were simply right — because a person who pressed
+/// apply needs to know which few items to re-count, not a number of successes.
+///
+/// The sheet rides along, as it does everywhere else here, so a screen showing
+/// the stocktake refreshes from one call.
+///
+/// A `404` when the count is not this tenant's; a `409` when it is already
+/// closed, when nothing on it has been counted, or when a correction would leave
+/// a shelf holding less than nothing; a `422` for a workspace with no adjustment
+/// location.
+pub async fn apply_count(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let id = InvCountId::new(id);
+    let outcome = account
+        .acc
+        .apply_inv_count(&id)
+        .await
+        .map_err(map_store_err)?;
+    let lines = account
+        .acc
+        .inv_count_sheet(&id)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(apply_json(&outcome, &lines)))
+}
+
+/// What an apply answers: the closed count, its sheet as it now reads, and the
+/// two halves of what the apply did.
+fn apply_json(outcome: &ApplyOutcome, lines: &[CountLine]) -> Value {
+    json!({
+        "count": count_json(&outcome.count),
+        "lines": lines.iter().map(line_json).collect::<Vec<_>>(),
+        "applied": outcome.applied.iter().map(applied_json).collect::<Vec<_>>(),
+        "skipped": outcome.skipped.iter().map(skipped_json).collect::<Vec<_>>(),
+    })
+}
+
 /// `POST /inventory/counts/{id}/cancel` → `{"count":{…},"lines":[…]}` — walks
 /// away from a count. The sheet is kept exactly as it was; the ledger is
 /// untouched, and the place is free to be counted again.
@@ -413,6 +492,62 @@ mod tests {
         assert!(serde_json::from_value::<LineBody>(json!({"countedQtyMilli": 1.5})).is_err());
         assert!(serde_json::from_value::<LineBody>(json!({"countedQtyMilli": "4"})).is_err());
         assert!(serde_json::from_value::<OpenBody>(json!({"locationId": 7})).is_err());
+    }
+
+    #[test]
+    fn an_apply_states_both_halves_of_what_it_did() {
+        let outcome = ApplyOutcome {
+            count: Count {
+                status: CountStatus::Applied,
+                closed_at: Some(OffsetDateTime::UNIX_EPOCH),
+                closed_by: Some("u".to_owned()),
+                ..stocktake()
+            },
+            applied: vec![AppliedLine {
+                product_id: BillingProductId::new("p1"),
+                product_name: "Blue chair".to_owned(),
+                on_hand_qty_milli: 5_000,
+                counted_qty_milli: 4_000,
+                variance_qty_milli: -1_000,
+                move_id: alo_store::InvMoveId::new("mv-1"),
+            }],
+            skipped: vec![SkippedLine {
+                product_id: BillingProductId::new("p2"),
+                product_name: "Oak desk".to_owned(),
+                reason: alo_store::inv_count_apply::SkipReason::Moved,
+                expected_qty_milli: 3_000,
+                counted_qty_milli: Some(2_000),
+                on_hand_qty_milli: 6_000,
+            }],
+        };
+        let rendered = apply_json(&outcome, &[counted(Some(4_000))]);
+        assert_eq!(rendered["count"]["status"], "applied");
+        assert_eq!(rendered["applied"][0]["varianceQtyMilli"], -1_000);
+        assert_eq!(rendered["applied"][0]["moveId"], "mv-1");
+        assert_eq!(
+            rendered["skipped"][0]["reason"], "moved",
+            "a person who pressed apply is told which rows to re-count, not a count of successes"
+        );
+        assert_eq!(rendered["skipped"][0]["onHandQtyMilli"], 6_000);
+        assert_eq!(
+            rendered["lines"].as_array().map(Vec::len),
+            Some(1),
+            "the sheet rides along, so a screen refreshes from one call"
+        );
+    }
+
+    #[test]
+    fn a_skipped_row_that_nobody_counted_claims_nothing() {
+        let rendered = skipped_json(&SkippedLine {
+            product_id: BillingProductId::new("p3"),
+            product_name: "Lamp".to_owned(),
+            reason: alo_store::inv_count_apply::SkipReason::Uncounted,
+            expected_qty_milli: 2_000,
+            counted_qty_milli: None,
+            on_hand_qty_milli: 2_000,
+        });
+        assert_eq!(rendered["reason"], "uncounted");
+        assert_eq!(rendered["countedQtyMilli"], Value::Null);
     }
 
     #[test]
