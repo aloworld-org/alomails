@@ -69,6 +69,13 @@ export class MeetApi {
     return (await res.json()) as Meeting;
   }
 
+  /** Everything live this person can walk into. */
+  async mine(): Promise<Meeting[]> {
+    const res = await this.#send("/meet");
+    if (!res.ok) return [];
+    return ((await res.json()) as { meetings: Meeting[] }).meetings;
+  }
+
   /** Meetings still running in a room. */
   async liveIn(channel: string): Promise<Meeting[]> {
     const res = await this.#send(

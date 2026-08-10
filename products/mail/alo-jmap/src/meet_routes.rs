@@ -112,6 +112,25 @@ pub async fn in_channel(
     })))
 }
 
+/// `GET /meet` — everything live that the caller can walk into.
+///
+/// # Errors
+/// 401 unauthenticated.
+pub async fn mine(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let live = account
+        .acc
+        .my_live_meetings()
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "meetings": live.iter().map(meeting_json).collect::<Vec<_>>()
+    })))
+}
+
 /// `GET /meet/events/{id}` — the meeting on a calendar event, if any.
 ///
 /// Answers `null` rather than 404 when there is none: "this invitation has no

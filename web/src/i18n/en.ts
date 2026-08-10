@@ -1715,6 +1715,13 @@ export const en = {
   chatQuoteAction: "Quote",
   chatFormatHint: "text",
   meetTitle: "Meeting",
+  meetStartNow: "Start a meeting",
+  meetInstantTitle: "Instant meeting",
+  meetNothingLive: "No meetings are running",
+  meetWhereFrom:
+    "Meetings usually start where the people are — in a conversation, or on a calendar invitation. Anything running that you can join appears here.",
+  meetUntitled: "Untitled meeting",
+  meetNotStarted: "Not started yet",
   meetAddToEvent: "Add a meeting",
   meetStart: "Start a meeting",
   meetJoin: "Join the meeting",

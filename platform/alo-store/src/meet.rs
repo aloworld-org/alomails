@@ -297,3 +297,39 @@ impl AccountStore {
         }
     }
 }
+
+impl AccountStore {
+    /// Meetings this person can currently walk into: everything live that is
+    /// theirs to see.
+    ///
+    /// A meeting in a room they read, or one they started themselves. The room
+    /// membership check happens per row rather than in the query, because the
+    /// rule about who can see a channel lives in one place and should not be
+    /// restated in SQL that will drift from it.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn my_live_meetings(&self) -> Result<Vec<Meeting>> {
+        let rows: Vec<MeetingRow> = sqlx::query_as(&format!(
+            "SELECT {COLUMNS} FROM meetings \
+             WHERE tenant_id = $1 AND ended_at IS NULL \
+             ORDER BY created_at DESC LIMIT 100"
+        ))
+        .bind(self.tenant.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let mut mine = Vec::new();
+        for row in rows {
+            let meeting = to_meeting(row);
+            let visible = match &meeting.channel_id {
+                Some(channel) => self.channel(channel).await.is_ok(),
+                None => meeting.created_by.as_str() == self.user.as_str(),
+            };
+            if visible {
+                mine.push(meeting);
+            }
+        }
+        Ok(mine)
+    }
+}
