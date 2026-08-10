@@ -100,6 +100,17 @@ function continues(message: Message, before: Message | undefined): boolean {
   return gap >= 0 && gap < GROUP_MINUTES * 60_000;
 }
 
+/** Hour and minute only, for the gutter beside a grouped line. The full
+ *  locale time ("10:05 AM") is wider than the gutter and was rendering
+ *  clipped against the words. */
+function shortTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 /** Local time of day, for the line beside an author. */
 function timeOf(iso: string): string {
   const at = new Date(iso);
@@ -217,6 +228,7 @@ function MessageLine({
   onDecide,
   onEdit,
   onWithdraw,
+  onReply,
   grouped = false,
   children,
 }: {
@@ -236,6 +248,9 @@ function MessageLine({
    *  refuses anyone else's and an offer that ends in 403 is a lie. */
   onEdit: (message: Message, body: string) => void;
   onWithdraw: (message: Message) => void;
+  /** Open this message's thread. In the toolbar, not the flow: an affordance
+   *  that is invisible until hover must not occupy space while invisible. */
+  onReply?: ((message: Message) => void) | undefined;
   /** This message continues the previous author's run: no avatar, no name, no
    *  timestamp — just the words, aligned under the ones above. */
   grouped?: boolean;
@@ -305,6 +320,17 @@ function MessageLine({
               )}
             </span>
           )}
+          {onReply !== undefined && message.deletedAt === null && (
+            <button
+              type="button"
+              className={styles.tool}
+              onClick={() => onReply(message)}
+              aria-label={strings.chatReplyInThread}
+              title={strings.chatReplyInThread}
+            >
+              <Reply size={15} />
+            </button>
+          )}
           {mine && (
             <>
               <button
@@ -333,7 +359,9 @@ function MessageLine({
       {grouped ? (
         // The time still exists for the reader who wants it, on approach only,
         // in the gutter the avatar would occupy.
-        <span className={styles.gutterTime}>{timeOf(message.createdAt)}</span>
+        <span className={styles.gutterTime}>
+          {shortTime(message.createdAt)}
+        </span>
       ) : (
         <div className={styles.messageMeta}>
           {isAgent ? (
@@ -1411,8 +1439,13 @@ export function ChatModule() {
                     onDecide={(p, ok) => void decide(p, ok)}
                     onEdit={(m, body) => void editMessage(m, body)}
                     onWithdraw={(m) => void withdrawMessage(m)}
+                    onReply={
+                      open.archivedAt === null
+                        ? (m) => setThreadSeq(m.seq)
+                        : undefined
+                    }
                   >
-                    {message.replyCount > 0 ? (
+                    {message.replyCount > 0 && (
                       <button
                         type="button"
                         className={styles.threadLink}
@@ -1421,20 +1454,6 @@ export function ChatModule() {
                         <MessagesSquare size={13} />
                         {strings.chatReplies(message.replyCount)}
                       </button>
-                    ) : (
-                      // Offered only when the room can still take words —
-                      // an archived room must not invite a reply it will
-                      // refuse.
-                      open.archivedAt === null && (
-                        <button
-                          type="button"
-                          className={styles.replyLink}
-                          onClick={() => setThreadSeq(message.seq)}
-                        >
-                          <Reply size={13} />
-                          {strings.chatReplyInThread}
-                        </button>
-                      )
                     )}
                   </MessageLine>
                 ))
