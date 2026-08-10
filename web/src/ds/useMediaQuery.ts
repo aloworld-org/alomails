@@ -11,13 +11,20 @@ export const MOBILE_MAX_WIDTH = 768;
  */
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState(() =>
-    typeof window !== "undefined" && "matchMedia" in window
+    // `in window` is not enough: an environment can declare the property
+    // without implementing it (jsdom does), and the call then throws where a
+    // missing feature should simply mean "no".
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
       ? window.matchMedia(query).matches
       : false,
   );
 
   useEffect(() => {
-    if (typeof window === "undefined" || !("matchMedia" in window)) return;
+    if (
+      typeof window === "undefined" ||
+      typeof window.matchMedia !== "function"
+    )
+      return;
     const mql = window.matchMedia(query);
     const onChange = (e: MediaQueryListEvent) => setMatches(e.matches);
     // Sync in case it changed between the initial render and this effect.

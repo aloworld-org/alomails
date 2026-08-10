@@ -916,6 +916,92 @@
   opacity: 1;
 }
 
+/* ---- a phone ---------------------------------------------------------- */
+
+/* One screen at a time. Two columns on a 390px screen left the conversation
+   58 pixels wide, with the composer rendered as a vertical sliver. */
+@media (max-width: 768px) {
+  .module {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: 0;
+  }
+
+  /* The feed's gutter and the message measure both give way: on a phone the
+     screen IS the measure. */
+  .feed {
+    --gutter: 30px;
+    --gutter-gap: 8px;
+
+    padding: var(--space-3) var(--space-2);
+  }
+
+  .message,
+  .messageForMe,
+  .composer,
+  .day,
+  .unread,
+  .beginning {
+    max-width: none;
+  }
+
+  .composer {
+    margin: 0 var(--space-2) var(--space-2);
+  }
+
+  /* Hover has no meaning here, so the per-message tools would never appear.
+     They are always visible instead, and small. */
+  .tools {
+    position: static;
+    align-self: flex-end;
+    margin-top: 2px;
+    opacity: 1;
+    pointer-events: auto;
+    box-shadow: none;
+    background: transparent;
+    border: 0;
+  }
+
+  .gutterTime {
+    display: none;
+  }
+
+  /* The room's own actions collapse to what fits; the title takes the room. */
+  .roomPeople span,
+  .roomPeople {
+    font-size: 0;
+  }
+
+  .roomPeople svg {
+    font-size: initial;
+  }
+
+  .switcher {
+    width: calc(100vw - 24px);
+  }
+}
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  margin-left: -6px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.backButton:hover {
+  background: var(--bg-raised);
+}
+
 /* ---- the formatting bar ---------------------------------------------- */
 
 /* Always visible above the field. Hiding it behind a menu is how "how do I

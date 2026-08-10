@@ -1714,6 +1714,7 @@ export const en = {
   chatBulletList: "Bulleted list",
   chatQuoteAction: "Quote",
   chatFormatHint: "text",
+  chatBackToList: "Back to conversations",
   chatJumpTo: "Jump to a conversation",
   chatNoRoom: "No conversation matches that.",
   chatDropFiles: "Drop to share from your computer",
