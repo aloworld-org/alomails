@@ -22,11 +22,11 @@ use crate::{
     crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages,
     crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
     finance_bank_match, finance_expenses, finance_mileage, finance_periods, finance_receipts,
-    finance_report_aged, finance_report_balance, finance_report_pl, flagdue, imap_import_route,
-    insights, insights_ask, insights_eval, insights_gallery, projects_clients, projects_invoices,
-    projects_plan, projects_reports, projects_templates, projects_time, projects_weeks, push,
-    reset_route, schedule, security, session, settings, share, signup_route, sites, snooze, spaces,
-    tasks, unsubscribe, wopi, workspace_search,
+    finance_report_aged, finance_report_balance, finance_report_pl, finance_report_vat, flagdue,
+    imap_import_route, insights, insights_ask, insights_eval, insights_gallery, projects_clients,
+    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
+    projects_weeks, push, reset_route, schedule, security, session, settings, share, signup_route,
+    sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -1122,6 +1122,14 @@ pub fn app_with_site_domain_dns(
         .route(
             "/finance/reports/aged.csv",
             get(finance_report_aged::aged_report_csv),
+        )
+        .route(
+            "/finance/reports/vat",
+            get(finance_report_vat::vat_return_report),
+        )
+        .route(
+            "/finance/reports/vat.csv",
+            get(finance_report_vat::vat_return_report_csv),
         )
         // Drive — the file tree (ADR 0027). Static paths before /nodes/{id}.
         .route("/drive/list", get(drive::list))

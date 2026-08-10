@@ -90,6 +90,7 @@ pub mod fin_pl;
 pub mod fin_receipt;
 pub mod fin_receipt_read;
 pub mod fin_rules;
+pub mod fin_vat_return;
 pub mod iban;
 pub mod ical;
 pub mod id;
@@ -274,6 +275,7 @@ pub use fin_rules::{
     InvoiceAccounts, PaymentAccounts, credit_note_entry, credit_note_original, invoice_issue_entry,
     payment_settle_entry, payment_settlement_role, settlement_needs_exchange_account,
 };
+pub use fin_vat_return::{VatReturn, VatReturnRate, VatReturnSide};
 pub use id::{
     AttachmentId, BankLineId, BankMatchId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId,
     BaseViewId, BillingBillId, BillingCustomerId, BillingInvoiceId, BillingLineId,

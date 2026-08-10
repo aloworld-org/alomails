@@ -240,17 +240,25 @@ pub enum LedgerScope {
     /// receivables by customer is `Role(Ar)`, and it stays right after an
     /// accountant recodes the chart.
     Role(AccountRole),
+    /// Every account of one of the five categories — the VAT return's taxable
+    /// base is `Type(Income)` by rate, because a rate travels on the *revenue*
+    /// posting as well as on the tax one and a tenant's own expense accounts
+    /// carry no role to name them by.
+    Type(AccountType),
     /// One named account.
     Account(FinAccountId),
 }
 
 impl LedgerScope {
     /// The predicate and the value it binds. `All` binds `NULL` against a
-    /// tautology, so all three variants share one statement and one bind slot.
+    /// tautology, so all four variants share one statement and one bind slot.
     fn predicate(&self) -> (&'static str, Option<String>) {
         match self {
             Self::All => ("($4::text IS NULL OR $4::text IS NOT NULL)", None),
             Self::Role(role) => ("a.role = $4", Some(role.as_str().to_owned())),
+            // `type` is the chart's own column name (0129) and a keyword worth
+            // quoting, as [`AccountStore::fin_trial_balance`] quotes it.
+            Self::Type(kind) => ("a.\"type\" = $4", Some(kind.as_str().to_owned())),
             Self::Account(id) => ("p.account_id = $4", Some(id.as_str().to_owned())),
         }
     }
@@ -714,6 +722,10 @@ mod tests {
         let (predicate, key) = LedgerScope::Role(AccountRole::Ar).predicate();
         assert_eq!(predicate, "a.role = $4");
         assert_eq!(key.as_deref(), Some("ar"));
+
+        let (predicate, key) = LedgerScope::Type(AccountType::Income).predicate();
+        assert_eq!(predicate, "a.\"type\" = $4");
+        assert_eq!(key.as_deref(), Some("income"));
 
         let (predicate, key) =
             LedgerScope::Account(FinAccountId::new("acc-1'; DROP TABLE fin_postings--"))
