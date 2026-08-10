@@ -24,6 +24,10 @@ pub struct SitePublish {
     pub id: SitePublishId,
     /// The site's theme envelope as it was when this publish was made.
     pub theme: Value,
+    /// The site's default language frozen with this publish.
+    pub default_locale: String,
+    /// The language choices frozen with this publish, in editor order.
+    pub enabled_locales: Vec<String>,
     pub published_by: String,
     pub published_at: OffsetDateTime,
 }
@@ -35,6 +39,8 @@ pub struct SitePublish {
 pub struct SitePageSnapshot {
     /// The draft page this snapshot froze (no longer guaranteed to exist).
     pub page_id: SitePageId,
+    /// The exact language this immutable page snapshot contains.
+    pub locale: String,
     /// URL path segment; empty exactly when this is the home page.
     pub slug: String,
     pub title: String,
@@ -62,17 +68,16 @@ impl AccountStore {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         // Lock the site row so concurrent publishes serialize instead of
         // racing on the pointer flip.
-        let exists: Option<bool> = sqlx::query_scalar(
-            "SELECT true FROM sites WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
+        let settings: Option<(String, Vec<String>)> = sqlx::query_as(
+            "SELECT default_locale, enabled_locales FROM sites \
+             WHERE tenant_id = $1 AND id = $2 FOR UPDATE",
         )
         .bind(self.tenant.as_str())
         .bind(site.as_str())
         .fetch_optional(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
-        if exists.is_none() {
-            return Err(StoreError::NotFound);
-        }
+        let (default_locale, enabled_locales) = settings.ok_or(StoreError::NotFound)?;
         let (pages, homes): (i64, i64) = sqlx::query_as(
             "SELECT count(*), count(*) FILTER (WHERE is_home) \
              FROM site_pages WHERE tenant_id = $1 AND site_id = $2",
@@ -95,27 +100,49 @@ impl AccountStore {
         // round-trips through the application, so the snapshot is exactly
         // what the write gates already admitted to the draft tables.
         sqlx::query(
-            "INSERT INTO site_publishes (tenant_id, site_id, id, theme, published_by) \
-             SELECT tenant_id, id, $3, theme, $4 FROM sites WHERE tenant_id = $1 AND id = $2",
+            "INSERT INTO site_publishes \
+                (tenant_id, site_id, id, theme, default_locale, enabled_locales, published_by) \
+             SELECT tenant_id, id, $3, theme, $4, $5, $6 \
+             FROM sites WHERE tenant_id = $1 AND id = $2",
         )
         .bind(self.tenant.as_str())
         .bind(site.as_str())
         .bind(id.as_str())
+        .bind(&default_locale)
+        .bind(&enabled_locales)
         .bind(self.user.as_str())
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
         sqlx::query(
             "INSERT INTO site_page_snapshots \
-                 (tenant_id, publish_id, page_id, slug, title, sections, \
+                 (tenant_id, publish_id, page_id, locale, slug, title, sections, \
                   seo_title, seo_description, nav_order, is_home) \
-             SELECT tenant_id, $3, id, slug, title, sections, \
+             SELECT tenant_id, $3, id, content_locale, slug, title, sections, \
                     seo_title, seo_description, nav_order, is_home \
              FROM site_pages WHERE tenant_id = $1 AND site_id = $2",
         )
         .bind(self.tenant.as_str())
         .bind(site.as_str())
         .bind(id.as_str())
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+        sqlx::query(
+            "INSERT INTO site_page_snapshots \
+                 (tenant_id, publish_id, page_id, locale, slug, title, sections, \
+                  seo_title, seo_description, nav_order, is_home) \
+             SELECT l.tenant_id, $3, l.page_id, l.locale, l.slug, l.title, l.sections, \
+                    l.seo_title, l.seo_description, p.nav_order, p.is_home \
+             FROM site_page_locales l \
+             JOIN site_pages p \
+               ON p.tenant_id = l.tenant_id AND p.site_id = l.site_id AND p.id = l.page_id \
+             WHERE l.tenant_id = $1 AND l.site_id = $2 AND l.locale = ANY($4)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .bind(id.as_str())
+        .bind(&enabled_locales)
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -167,7 +194,8 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn current_site_publish(&self, site: &SiteId) -> Result<Option<SitePublish>> {
         let row = sqlx::query_as::<_, SitePublishRow>(
-            "SELECT p.id, p.theme, p.published_by, p.published_at \
+            "SELECT p.id, p.theme, p.default_locale, p.enabled_locales, \
+                    p.published_by, p.published_at \
              FROM sites s \
              JOIN site_publishes p \
                ON p.tenant_id = s.tenant_id AND p.id = s.published_publish_id \
@@ -193,12 +221,12 @@ impl AccountStore {
         publish: &SitePublishId,
     ) -> Result<Vec<SitePageSnapshot>> {
         let rows = sqlx::query_as::<_, SitePageSnapshotRow>(
-            "SELECT sn.page_id, sn.slug, sn.title, sn.sections, \
+            "SELECT sn.page_id, sn.locale, sn.slug, sn.title, sn.sections, \
                     sn.seo_title, sn.seo_description, sn.nav_order, sn.is_home \
              FROM site_page_snapshots sn \
              JOIN site_publishes p ON p.tenant_id = sn.tenant_id AND p.id = sn.publish_id \
              WHERE sn.tenant_id = $1 AND p.site_id = $2 AND sn.publish_id = $3 \
-             ORDER BY sn.nav_order, sn.page_id",
+             ORDER BY sn.nav_order, sn.page_id, sn.locale",
         )
         .bind(self.tenant.as_str())
         .bind(site.as_str())
@@ -219,6 +247,8 @@ impl AccountStore {
 struct SitePublishRow {
     id: String,
     theme: sqlx::types::Json<Value>,
+    default_locale: String,
+    enabled_locales: Vec<String>,
     published_by: String,
     published_at: OffsetDateTime,
 }
@@ -227,6 +257,8 @@ impl SitePublishRow {
         SitePublish {
             id: SitePublishId::new(self.id),
             theme: self.theme.0,
+            default_locale: self.default_locale,
+            enabled_locales: self.enabled_locales,
             published_by: self.published_by,
             published_at: self.published_at,
         }
@@ -236,6 +268,7 @@ impl SitePublishRow {
 #[derive(sqlx::FromRow)]
 pub(crate) struct SitePageSnapshotRow {
     page_id: String,
+    locale: String,
     slug: String,
     title: String,
     sections: sqlx::types::Json<Value>,
@@ -248,6 +281,7 @@ impl SitePageSnapshotRow {
     pub(crate) fn into_snapshot(self) -> SitePageSnapshot {
         SitePageSnapshot {
             page_id: SitePageId::new(self.page_id),
+            locale: self.locale,
             slug: self.slug,
             title: self.title,
             sections: self.sections.0,

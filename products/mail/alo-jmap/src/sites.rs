@@ -1444,6 +1444,7 @@ async fn render_preview_html(
     let site_ctx = SiteRenderContext {
         name: &site.name,
         base_url: &base_url,
+        locale: &page.content_locale,
         theme: &theme,
         strings: &EN,
         images: ImageSources::Inline(&images),

@@ -1719,10 +1719,9 @@ async fn site_forms_and_submissions_scope_by_tenant_and_site() {
     assert!(a.site_forms(&site).await.unwrap().is_empty());
 }
 
-/// Site publishing (ADR 0036): a publish freezes the pages and theme into
-/// immutable snapshots and flips the site live atomically; editing, adding,
-/// or deleting draft pages afterwards never changes the published set — only
-/// a republish does, and it creates a NEW set while the old one survives.
+/// Site publishing (ADR 0036): a publish freezes pages, exact language drafts,
+/// the locale contract, and the theme into immutable snapshots. Later edits
+/// never change the published set — only a republish creates the next set.
 /// An outsider tenant gets the clean denial on every path, and a publish
 /// cannot be addressed through another site of the same tenant.
 #[tokio::test]
@@ -1758,6 +1757,10 @@ async fn site_publishes_freeze_immutable_snapshots_and_scope_by_tenant() {
         )
     };
     let site = a.create_site("Acme", &unique("pub")).await.unwrap();
+    let published_languages = vec!["en".to_owned(), "fr".to_owned(), "nl".to_owned()];
+    a.set_site_locales(&site, "en", &published_languages)
+        .await
+        .unwrap();
 
     // An empty site must not go live; neither may one without a home page.
     let conflict = |result: Result<alo_store::SitePublishId, StoreError>| match result {
@@ -1780,6 +1783,34 @@ async fn site_publishes_freeze_immutable_snapshots_and_scope_by_tenant() {
     a.set_page_sections(&site, &home, hero.clone())
         .await
         .unwrap();
+    let french_hero = json!({
+        "schema_version": 1,
+        "sections": [{"type": "hero", "heading": "Bienvenue"}]
+    });
+    a.set_site_page_locale(
+        &site,
+        &home,
+        "fr",
+        "Accueil",
+        "",
+        french_hero.clone(),
+        Some("Accueil Acme"),
+        Some("Bienvenue chez Acme"),
+    )
+    .await
+    .unwrap();
+    a.set_site_page_locale(
+        &site,
+        &about,
+        "fr",
+        "Notre histoire",
+        "notre-histoire",
+        json!({"schema_version": 1, "sections": []}),
+        None,
+        None,
+    )
+    .await
+    .unwrap();
     let terra = json!({"schema_version": 1, "preset": "terra"});
     a.set_site_theme(&site, terra.clone()).await.unwrap();
     let p1 = a.publish_site(&site).await.unwrap();
@@ -1791,16 +1822,24 @@ async fn site_publishes_freeze_immutable_snapshots_and_scope_by_tenant() {
     assert_eq!(current.id, p1);
     assert_eq!(current.published_by, ua_id);
     assert_eq!(current.theme, terra);
+    assert_eq!(current.default_locale, "en");
+    assert_eq!(current.enabled_locales, published_languages);
     let frozen = a.site_publish_snapshots(&site, &p1).await.unwrap();
-    assert_eq!(frozen.len(), 2);
-    // Nav order: About was created first (0), Home second (1).
-    assert_eq!(frozen[0].page_id, about);
-    assert_eq!(frozen[0].slug, "about");
-    assert!(!frozen[0].is_home);
-    assert_eq!(frozen[1].page_id, home);
-    assert_eq!(frozen[1].slug, "");
-    assert!(frozen[1].is_home);
-    assert_eq!(frozen[1].sections, hero);
+    assert_eq!(frozen.len(), 4, "only exact en/fr drafts are frozen");
+    let frozen_home_en = frozen
+        .iter()
+        .find(|page| page.page_id == home && page.locale == "en")
+        .unwrap();
+    assert_eq!(frozen_home_en.slug, "");
+    assert!(frozen_home_en.is_home);
+    assert_eq!(frozen_home_en.sections, hero);
+    let frozen_home_fr = frozen
+        .iter()
+        .find(|page| page.page_id == home && page.locale == "fr")
+        .unwrap();
+    assert_eq!(frozen_home_fr.title, "Accueil");
+    assert_eq!(frozen_home_fr.sections, french_hero);
+    assert!(frozen.iter().all(|page| page.locale != "nl"));
 
     // Drafts never leak: edit, add, delete, and retheme AFTER publishing —
     // the published set must not move by a single byte.
@@ -1819,6 +1858,18 @@ async fn site_publishes_freeze_immutable_snapshots_and_scope_by_tenant() {
     .await
     .unwrap();
     a.set_page_title(&site, &about, "Team").await.unwrap();
+    a.set_site_page_locale(
+        &site,
+        &home,
+        "fr",
+        "Nouvel accueil",
+        "",
+        json!({"schema_version": 1, "sections": []}),
+        None,
+        None,
+    )
+    .await
+    .unwrap();
     a.create_site_page(&site, "Pricing", "pricing", false)
         .await
         .unwrap();
@@ -1828,15 +1879,21 @@ async fn site_publishes_freeze_immutable_snapshots_and_scope_by_tenant() {
         .unwrap();
     assert_eq!(a.current_site_publish(&site).await.unwrap().unwrap().id, p1);
     let still = a.site_publish_snapshots(&site, &p1).await.unwrap();
-    assert_eq!(still.len(), 2);
-    assert_eq!(still[0].title, "About", "snapshot must survive the retitle");
+    assert_eq!(still.len(), 4);
+    assert!(still.iter().any(|page| page.title == "About"));
     assert_eq!(
-        still[0].page_id, about,
-        "snapshot must survive the page deletion"
+        still.iter().filter(|page| page.page_id == about).count(),
+        2,
+        "both language snapshots must survive the page deletion"
     );
     assert_eq!(
-        still[1].sections, hero,
-        "snapshot must not follow draft edits"
+        still
+            .iter()
+            .find(|page| page.page_id == home && page.locale == "fr")
+            .unwrap()
+            .sections,
+        french_hero,
+        "localized snapshots must not follow draft edits"
     );
     assert_eq!(
         a.current_site_publish(&site).await.unwrap().unwrap().theme,
@@ -1846,19 +1903,39 @@ async fn site_publishes_freeze_immutable_snapshots_and_scope_by_tenant() {
 
     // Republish: a NEW set reflecting today's draft; the old set survives
     // untouched (immutable history).
+    let next_languages = vec!["en".to_owned(), "nl".to_owned()];
+    a.set_site_locales(&site, "en", &next_languages)
+        .await
+        .unwrap();
+    a.set_site_page_locale(
+        &site,
+        &home,
+        "nl",
+        "Start",
+        "",
+        json!({"schema_version": 1, "sections": []}),
+        None,
+        None,
+    )
+    .await
+    .unwrap();
     let p2 = a.publish_site(&site).await.unwrap();
     assert_ne!(p2, p1);
     assert_eq!(a.current_site_publish(&site).await.unwrap().unwrap().id, p2);
     let republished = a.site_publish_snapshots(&site, &p2).await.unwrap();
-    assert_eq!(republished.len(), 2);
+    assert_eq!(republished.len(), 3);
     assert!(
         republished.iter().all(|s| s.page_id != about),
         "the deleted page must not be in the new set"
     );
     assert!(republished.iter().any(|s| s.slug == "pricing"));
+    assert!(republished.iter().any(|s| s.locale == "nl"));
+    assert!(republished.iter().all(|s| s.locale != "fr"));
+    let current = a.current_site_publish(&site).await.unwrap().unwrap();
+    assert_eq!(current.enabled_locales, next_languages);
     let old = a.site_publish_snapshots(&site, &p1).await.unwrap();
-    assert_eq!(old.len(), 2);
-    assert_eq!(old[1].sections, hero);
+    assert_eq!(old.len(), 4);
+    assert!(old.iter().any(|page| page.locale == "fr"));
 
     // An outsider tenant gets the clean denial on every path — never data,
     // never an internal error — and A's published state is untouched.
@@ -1890,8 +1967,8 @@ async fn site_publishes_freeze_immutable_snapshots_and_scope_by_tenant() {
         alo_store::SiteStatus::Draft
     );
     assert!(a.current_site_publish(&site).await.unwrap().is_none());
-    assert_eq!(a.site_publish_snapshots(&site, &p1).await.unwrap().len(), 2);
-    assert_eq!(a.site_publish_snapshots(&site, &p2).await.unwrap().len(), 2);
+    assert_eq!(a.site_publish_snapshots(&site, &p1).await.unwrap().len(), 4);
+    assert_eq!(a.site_publish_snapshots(&site, &p2).await.unwrap().len(), 3);
     let p3 = a.publish_site(&site).await.unwrap();
     assert_eq!(a.current_site_publish(&site).await.unwrap().unwrap().id, p3);
 

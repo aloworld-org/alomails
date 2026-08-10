@@ -41,6 +41,10 @@ pub struct PublishedSite {
     pub publish: SitePublishId,
     /// The theme envelope frozen by that publish.
     pub theme: Value,
+    /// The default language frozen by the publish.
+    pub default_locale: String,
+    /// The language choices frozen by the publish, in editor order.
+    pub enabled_locales: Vec<String>,
 }
 
 /// Public metadata for one published blog post. The document id and tenant
@@ -120,7 +124,8 @@ impl SitePublicStore {
     /// [`StoreError::Db`] on failure.
     pub async fn resolve_published(&self, subdomain: &str) -> Result<Option<PublishedSite>> {
         let row = sqlx::query_as::<_, PublishedSiteRow>(
-            "SELECT s.tenant_id, s.id AS site_id, s.name, p.id AS publish_id, p.theme \
+            "SELECT s.tenant_id, s.id AS site_id, s.name, p.id AS publish_id, p.theme, \
+                    p.default_locale, p.enabled_locales \
              FROM sites s \
              JOIN site_publishes p \
                ON p.tenant_id = s.tenant_id AND p.id = s.published_publish_id \
@@ -146,7 +151,8 @@ impl SitePublicStore {
     /// [`StoreError::Db`] on failure.
     pub async fn resolve_custom_published(&self, domain: &str) -> Result<Option<PublishedSite>> {
         let row = sqlx::query_as::<_, PublishedSiteRow>(
-            "SELECT s.tenant_id, s.id AS site_id, s.name, p.id AS publish_id, p.theme \
+            "SELECT s.tenant_id, s.id AS site_id, s.name, p.id AS publish_id, p.theme, \
+                    p.default_locale, p.enabled_locales \
              FROM site_domains d \
              JOIN sites s ON s.tenant_id = d.tenant_id AND s.id = d.site_id \
              JOIN site_publishes p \
@@ -168,11 +174,11 @@ impl SitePublicStore {
     /// [`StoreError::Db`] on failure.
     pub async fn published_pages(&self, site: &PublishedSite) -> Result<Vec<SitePageSnapshot>> {
         let rows = sqlx::query_as::<_, SitePageSnapshotRow>(
-            "SELECT page_id, slug, title, sections, \
+            "SELECT page_id, locale, slug, title, sections, \
                     seo_title, seo_description, nav_order, is_home \
              FROM site_page_snapshots \
              WHERE tenant_id = $1 AND publish_id = $2 \
-             ORDER BY nav_order, page_id",
+             ORDER BY nav_order, page_id, locale",
         )
         .bind(site.tenant.as_str())
         .bind(site.publish.as_str())
@@ -333,6 +339,8 @@ struct PublishedSiteRow {
     name: String,
     publish_id: String,
     theme: sqlx::types::Json<Value>,
+    default_locale: String,
+    enabled_locales: Vec<String>,
 }
 impl PublishedSiteRow {
     fn into_site(self) -> PublishedSite {
@@ -342,6 +350,8 @@ impl PublishedSiteRow {
             name: self.name,
             publish: SitePublishId::new(self.publish_id),
             theme: self.theme.0,
+            default_locale: self.default_locale,
+            enabled_locales: self.enabled_locales,
         }
     }
 }
