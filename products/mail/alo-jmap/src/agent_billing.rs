@@ -392,6 +392,7 @@ mod tests {
             stocked: false,
             purchase_price_cents: 0,
             photo_node_id: None,
+            default_supplier_id: None,
             archived_at: None,
             created_by: "u1".to_owned(),
             created_at: OffsetDateTime::UNIX_EPOCH,

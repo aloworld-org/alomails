@@ -285,6 +285,9 @@ async fn product_catalog_is_unique_within_a_tenant_and_never_across_them() {
         stocked: true,
         purchase_price_cents: 2_150,
         photo_node_id: None,
+        // B5.03 made this writable; the catalog's own rules are unchanged by
+        // it, and a product bought from nobody in particular is the norm.
+        default_supplier_id: None,
     };
 
     // ---- round trip: every new column survives, separators do not ---------

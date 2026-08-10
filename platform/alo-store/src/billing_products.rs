@@ -45,13 +45,20 @@
 //! The photo is a Drive node referenced by id and never copied, gated on write
 //! by [`AccountStore::drive_require_read`] — the caller must be able to see
 //! the node they attach, so a guessed id attaches nothing (B4.05a's rule).
+//!
+//! `default_supplier_id` — reserved by B5.02 and deliberately unwritable until
+//! there was a supplier table to point at — is **writable as of B5.03**. It is
+//! held to the same rule as the photo: the id must be one of this tenant's own
+//! suppliers ([`crate::inv_suppliers`]), checked before the write and made
+//! structural by a composite foreign key, so a guessed id links nothing and
+//! answers [`StoreError::NotFound`].
 
 use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::billing_field::{bounded, required, unit_price_cents, vat_rate_bp};
 use crate::error::{Result, StoreError};
-use crate::id::{BillingProductId, DriveNodeId};
+use crate::id::{BillingProductId, DriveNodeId, InvSupplierId};
 use crate::inv_barcode;
 
 /// A product name is what lands in the line description — generous but
@@ -66,8 +73,8 @@ pub const PRODUCT_SKU_MAX_CHARS: usize = 64;
 
 /// The columns every read of a product selects, in `ProductRow` order.
 const PRODUCT_COLS: &str = "id, name, unit, unit_price_cents, vat_rate_bp, sku, barcode, \
-     stocked, purchase_price_cents, photo_node_id, archived_at, created_by, created_at, \
-     updated_at";
+     stocked, purchase_price_cents, photo_node_id, default_supplier_id, archived_at, \
+     created_by, created_at, updated_at";
 
 /// The writable shape of a product, used for both create and update (an
 /// update is a full replace — the route layer merges a partial `PATCH` onto
@@ -101,6 +108,9 @@ pub struct NewProduct {
     /// The product photo in Drive, referenced and never copied. The caller
     /// must be able to read the node.
     pub photo_node_id: Option<DriveNodeId>,
+    /// Who we usually buy it from — the seed of a reorder proposal (B5.07).
+    /// Must be one of **this tenant's** suppliers (B5.03).
+    pub default_supplier_id: Option<InvSupplierId>,
 }
 
 /// A stored product.
@@ -126,6 +136,8 @@ pub struct Product {
     pub purchase_price_cents: i64,
     /// The product photo in Drive, if one is attached.
     pub photo_node_id: Option<DriveNodeId>,
+    /// The supplier we usually buy it from, if one is set.
+    pub default_supplier_id: Option<InvSupplierId>,
     /// When the product was archived; `None` while active.
     pub archived_at: Option<OffsetDateTime>,
     /// The user who created the record.
@@ -184,6 +196,14 @@ fn normalize(input: &NewProduct) -> Result<Normalized> {
 /// **this** tenant's own other product — never a signal about somebody else's
 /// catalog.
 fn map_product_conflict(error: sqlx::Error) -> StoreError {
+    // The default-supplier key is the race window: the supplier existed when
+    // the write checked and was gone (with its tenant) before the row landed.
+    // Same answer as an id that was never this tenant's.
+    if let sqlx::Error::Database(ref db) = error
+        && db.constraint() == Some("billing_products_default_supplier_fk")
+    {
+        return StoreError::NotFound;
+    }
     match error {
         sqlx::Error::Database(ref db) if db.code().as_deref() == Some("23505") => {
             match db.constraint().unwrap_or_default() {
@@ -203,9 +223,11 @@ fn map_product_conflict(error: sqlx::Error) -> StoreError {
 impl AccountStore {
     /// Confirms every thing a product points at is one the caller can reach.
     ///
-    /// Today that is the photo: a Drive node they may **read**, so a guessed
-    /// node id attaches nothing. Answers [`StoreError::NotFound`] when the node
-    /// is somebody else's, never a refusal that would confirm it exists.
+    /// Two pointers today. The photo is a Drive node they may **read**, so a
+    /// guessed node id attaches nothing; the default supplier must be one of
+    /// **this tenant's** suppliers (B5.03), so a guessed supplier id links
+    /// nothing. Both answer [`StoreError::NotFound`] when the target is
+    /// somebody else's — never a refusal that would confirm it exists.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] / [`StoreError::Db`].
@@ -213,6 +235,8 @@ impl AccountStore {
         if let Some(photo) = input.photo_node_id.as_ref() {
             self.drive_require_read(photo).await?;
         }
+        self.require_tenant_supplier(input.default_supplier_id.as_ref())
+            .await?;
         Ok(())
     }
 
@@ -224,7 +248,8 @@ impl AccountStore {
     /// rate outside 0–10 000 bp, a barcode whose check digit does not match);
     /// [`StoreError::Conflict`] when the SKU or barcode is already another of
     /// this tenant's products'; [`StoreError::NotFound`] when the photo is not
-    /// a node the caller can read; [`StoreError::Db`] on failure.
+    /// a node the caller can read or the default supplier is not this tenant's;
+    /// [`StoreError::Db`] on failure.
     pub async fn create_billing_product(&self, input: &NewProduct) -> Result<BillingProductId> {
         let p = normalize(input)?;
         self.require_product_links(input).await?;
@@ -232,8 +257,8 @@ impl AccountStore {
         sqlx::query(
             "INSERT INTO billing_products (tenant_id, id, name, unit, unit_price_cents, \
                  vat_rate_bp, sku, barcode, stocked, purchase_price_cents, photo_node_id, \
-                 created_by) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+                 default_supplier_id, created_by) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
         )
         .bind(self.tenant.as_str())
         .bind(id.as_str())
@@ -246,6 +271,12 @@ impl AccountStore {
         .bind(p.stocked)
         .bind(p.purchase_price_cents)
         .bind(input.photo_node_id.as_ref().map(DriveNodeId::as_str))
+        .bind(
+            input
+                .default_supplier_id
+                .as_ref()
+                .map(InvSupplierId::as_str),
+        )
         .bind(self.user.as_str())
         .execute(&self.pool)
         .await
@@ -339,7 +370,8 @@ impl AccountStore {
         let done = sqlx::query(
             "UPDATE billing_products SET name = $3, unit = $4, unit_price_cents = $5, \
                  vat_rate_bp = $6, sku = $7, barcode = $8, stocked = $9, \
-                 purchase_price_cents = $10, photo_node_id = $11, updated_at = now() \
+                 purchase_price_cents = $10, photo_node_id = $11, \
+                 default_supplier_id = $12, updated_at = now() \
              WHERE tenant_id = $1 AND id = $2",
         )
         .bind(self.tenant.as_str())
@@ -353,6 +385,12 @@ impl AccountStore {
         .bind(p.stocked)
         .bind(p.purchase_price_cents)
         .bind(input.photo_node_id.as_ref().map(DriveNodeId::as_str))
+        .bind(
+            input
+                .default_supplier_id
+                .as_ref()
+                .map(InvSupplierId::as_str),
+        )
         .execute(&self.pool)
         .await
         .map_err(map_product_conflict)?;
@@ -407,6 +445,7 @@ struct ProductRow {
     stocked: bool,
     purchase_price_cents: i64,
     photo_node_id: Option<String>,
+    default_supplier_id: Option<String>,
     archived_at: Option<OffsetDateTime>,
     created_by: String,
     created_at: OffsetDateTime,
@@ -426,6 +465,7 @@ impl ProductRow {
             stocked: self.stocked,
             purchase_price_cents: self.purchase_price_cents,
             photo_node_id: self.photo_node_id.map(DriveNodeId::new),
+            default_supplier_id: self.default_supplier_id.map(InvSupplierId::new),
             archived_at: self.archived_at,
             created_by: self.created_by,
             created_at: self.created_at,
@@ -461,6 +501,7 @@ mod tests {
             stocked: true,
             purchase_price_cents: 2_150,
             photo_node_id: None,
+            default_supplier_id: None,
         }
     }
 
@@ -484,6 +525,8 @@ mod tests {
         assert!(d.barcode.is_empty());
         assert_eq!(d.purchase_price_cents, 0);
         assert!(d.photo_node_id.is_none());
+        // Nothing points at a supplier until somebody picks one (B5.03).
+        assert!(d.default_supplier_id.is_none());
     }
 
     #[test]

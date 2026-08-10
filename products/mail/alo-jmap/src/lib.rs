@@ -101,6 +101,8 @@ pub mod insights;
 pub mod insights_ask;
 pub mod insights_eval;
 pub mod insights_gallery;
+pub mod inventory_supplier_prices;
+pub mod inventory_suppliers;
 pub mod jtypes;
 pub mod junk_learn;
 pub mod meet_routes;

@@ -24,10 +24,11 @@ use crate::{
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, meet_routes, projects_clients, projects_invoices, projects_plan,
-    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
-    schedule, scoped_roles, security, session, settings, share, signup_route, sites, snooze,
-    spaces, tasks, unsubscribe, wopi, workspace_search,
+    insights_gallery, inventory_supplier_prices, inventory_suppliers, meet_routes,
+    projects_clients, projects_invoices, projects_plan, projects_reports, projects_templates,
+    projects_time, projects_weeks, push, reset_route, schedule, scoped_roles, security, session,
+    settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi,
+    workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -406,6 +407,34 @@ pub fn app_with_site_domain_dns(
         .route(
             "/billing/products/{id}/archive",
             post(billing_products::archive_product),
+        )
+        // alo Inventory (ADR 0035, wave B5.03) — the suppliers a tenant buys
+        // from, and the price list THEY quote us. `/inventory` is a NEW
+        // top-level prefix: the production Caddyfile needs it added at the next
+        // deploy (docs/design/inventory.md § Routes), exactly as `/billing`
+        // did. Archiving is its own POST, never a field on the PATCH; the
+        // offer under a supplier is an idempotent PUT on the pair, so a form
+        // saves in one call and a retry cannot produce two quotes.
+        .route(
+            "/inventory/suppliers",
+            get(inventory_suppliers::list_suppliers).post(inventory_suppliers::create_supplier),
+        )
+        .route(
+            "/inventory/suppliers/{id}",
+            get(inventory_suppliers::get_supplier).patch(inventory_suppliers::update_supplier),
+        )
+        .route(
+            "/inventory/suppliers/{id}/archive",
+            post(inventory_suppliers::archive_supplier),
+        )
+        .route(
+            "/inventory/suppliers/{id}/products",
+            get(inventory_supplier_prices::list_supplier_products),
+        )
+        .route(
+            "/inventory/suppliers/{id}/products/{product_id}",
+            axum::routing::put(inventory_supplier_prices::set_supplier_product)
+                .delete(inventory_supplier_prices::remove_supplier_product),
         )
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the

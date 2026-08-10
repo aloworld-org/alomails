@@ -24,7 +24,8 @@ use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::billing_field::{
-    bounded, country as validate_country, currency, payment_terms_days, required,
+    bounded, country as validate_country, currency, email as validate_email, payment_terms_days,
+    required,
 };
 use crate::error::{Result, StoreError};
 use crate::id::{BillingCustomerId, ContactId};
@@ -42,9 +43,6 @@ pub const CUSTOMER_NAME_MAX_CHARS: usize = 200;
 const ADDRESS_LINE_MAX_CHARS: usize = 200;
 const POSTAL_CODE_MAX_CHARS: usize = 20;
 const CITY_MAX_CHARS: usize = 120;
-/// RFC 5321 caps a path at 256 octets; 320 is the everyday local@domain
-/// ceiling and is what every validator in the wild uses.
-const EMAIL_MAX_CHARS: usize = 320;
 
 /// The columns every read of a customer selects, in `CustomerRow` order.
 const CUSTOMER_COLS: &str = "id, name, address_line1, address_line2, postal_code, city, \
@@ -161,40 +159,6 @@ struct Normalized {
     payment_terms_days: i32,
     currency: String,
     contact_id: Option<String>,
-}
-
-/// Validates an optional invoice email address: one `@`, non-empty local and
-/// domain parts, a dot in the domain, no whitespace, bounded. Blank is `None`
-/// (a customer without an email address is normal — the invoice is printed).
-fn validate_email(email: Option<&str>) -> Result<Option<String>> {
-    let Some(raw) = email else { return Ok(None) };
-    let raw = raw.trim();
-    if raw.is_empty() {
-        return Ok(None);
-    }
-    if raw.chars().count() > EMAIL_MAX_CHARS {
-        return Err(StoreError::Validation(format!(
-            "email must be at most {EMAIL_MAX_CHARS} characters"
-        )));
-    }
-    let mut parts = raw.split('@');
-    let ok = match (parts.next(), parts.next(), parts.next()) {
-        (Some(local), Some(domain), None) => {
-            !local.is_empty()
-                && !domain.is_empty()
-                && domain.contains('.')
-                && !domain.starts_with('.')
-                && !domain.ends_with('.')
-                && !raw.chars().any(char::is_whitespace)
-        }
-        _ => false,
-    };
-    if !ok {
-        return Err(StoreError::Validation(
-            "email must be a single address of the form local@domain".to_owned(),
-        ));
-    }
-    Ok(Some(raw.to_owned()))
 }
 
 /// Validates and canonicalises an optional VAT id for a customer in
@@ -613,32 +577,35 @@ mod tests {
 
     #[test]
     fn email_is_optional_but_well_formed_when_present() {
-        assert_eq!(validate_email(None).unwrap_or_default(), None);
-        assert_eq!(validate_email(Some("   ")).unwrap_or_default(), None);
+        // The rule itself is `billing_field::email`'s (and is tested there);
+        // what is pinned here is that a customer actually goes through it —
+        // blank is the printed-invoice customer, malformed is a refusal.
+        let blank = NewCustomer {
+            email: Some("   ".to_owned()),
+            ..valid()
+        };
         assert_eq!(
-            validate_email(Some("a@b.test")).unwrap_or_default(),
-            Some("a@b.test".to_owned())
+            normalize(&blank)
+                .unwrap_or_else(|e| panic!("rejected: {e}"))
+                .email,
+            None
         );
-        for bad in [
-            "no-at-sign",
-            "@domain.test",
-            "local@",
-            "two@at@signs.test",
-            "local@nodot",
-            "local@.leading.test",
-            "local@trailing.",
-            "spa ce@domain.test",
-        ] {
-            assert!(
-                matches!(validate_email(Some(bad)), Err(StoreError::Validation(_))),
-                "expected rejection: {bad:?}"
-            );
-        }
-        let too_long = format!("{}@domain.test", "x".repeat(EMAIL_MAX_CHARS));
-        assert!(matches!(
-            validate_email(Some(&too_long)),
-            Err(StoreError::Validation(_))
-        ));
+        let good = NewCustomer {
+            email: Some("  billing@acme.test ".to_owned()),
+            ..valid()
+        };
+        assert_eq!(
+            normalize(&good)
+                .unwrap_or_else(|e| panic!("rejected: {e}"))
+                .email
+                .as_deref(),
+            Some("billing@acme.test")
+        );
+        let bad = NewCustomer {
+            email: Some("two@at@signs.test".to_owned()),
+            ..valid()
+        };
+        assert!(invalid(normalize(&bad)).contains("email"));
     }
 
     #[test]

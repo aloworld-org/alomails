@@ -122,6 +122,48 @@ pub(crate) fn country(value: &str) -> Result<String> {
     Ok(value.to_ascii_uppercase())
 }
 
+/// RFC 5321 caps a path at 256 octets; 320 is the everyday `local@domain`
+/// ceiling and is what every validator in the wild uses.
+pub const EMAIL_MAX_CHARS: usize = 320;
+
+/// Validates an optional address a document is sent to: one `@`, non-empty
+/// local and domain parts, a dot in the domain, no whitespace, bounded.
+///
+/// Blank is `None` rather than an error — a customer whose invoice is printed
+/// and a supplier who takes orders by phone are both ordinary. Deliberately
+/// shape-only: the authority on whether an address exists is the SMTP
+/// conversation, and a stricter grammar here would reject real addresses.
+pub(crate) fn email(value: Option<&str>) -> Result<Option<String>> {
+    let Some(raw) = value else { return Ok(None) };
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return Ok(None);
+    }
+    if raw.chars().count() > EMAIL_MAX_CHARS {
+        return Err(StoreError::Validation(format!(
+            "email must be at most {EMAIL_MAX_CHARS} characters"
+        )));
+    }
+    let mut parts = raw.split('@');
+    let ok = match (parts.next(), parts.next(), parts.next()) {
+        (Some(local), Some(domain), None) => {
+            !local.is_empty()
+                && !domain.is_empty()
+                && domain.contains('.')
+                && !domain.starts_with('.')
+                && !domain.ends_with('.')
+                && !raw.chars().any(char::is_whitespace)
+        }
+        _ => false,
+    };
+    if !ok {
+        return Err(StoreError::Validation(
+            "email must be a single address of the form local@domain".to_owned(),
+        ));
+    }
+    Ok(Some(raw.to_owned()))
+}
+
 /// Validates payment terms in days: how long after issue an invoice is due.
 /// Zero is valid — "due on receipt".
 pub(crate) fn payment_terms_days(value: i32) -> Result<i32> {
@@ -234,6 +276,41 @@ mod tests {
                 "expected rejection: {bad}"
             );
         }
+    }
+
+    #[test]
+    fn an_email_is_optional_but_well_formed_when_present() {
+        // Absent and blank are the same fact — no address was given, which is
+        // ordinary for a printed invoice and for a supplier taking orders by
+        // phone.
+        assert_eq!(email(None).unwrap_or_default(), None);
+        assert_eq!(email(Some("   ")).unwrap_or_default(), None);
+        assert_eq!(
+            email(Some("  a@b.test ")).unwrap_or_default(),
+            Some("a@b.test".to_owned()),
+            "trimmed, so the same address never stores two ways"
+        );
+        for bad in [
+            "no-at-sign",
+            "@domain.test",
+            "local@",
+            "two@at@signs.test",
+            "local@nodot",
+            "local@.leading.test",
+            "local@trailing.",
+            "spa ce@domain.test",
+        ] {
+            assert!(
+                matches!(email(Some(bad)), Err(StoreError::Validation(_))),
+                "expected rejection: {bad:?}"
+            );
+        }
+        let too_long = format!("{}@domain.test", "x".repeat(EMAIL_MAX_CHARS));
+        assert!(message(email(Some(&too_long))).contains("at most"));
+        // The message names the rule and never the address itself (law 1).
+        let refused = message(email(Some("two@at@signs.test")));
+        assert!(refused.contains("email"), "{refused}");
+        assert!(!refused.contains("signs.test"), "{refused}");
     }
 
     #[test]

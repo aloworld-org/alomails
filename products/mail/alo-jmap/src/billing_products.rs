@@ -34,7 +34,7 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use alo_store::billing_products::{NewProduct, Product};
-use alo_store::{AccountStore, BillingProductId, DriveNodeId};
+use alo_store::{AccountStore, BillingProductId, DriveNodeId, InvSupplierId};
 
 use crate::billing::{absent_or_null, blank_to_none, flag, iso, map_store_err, parse_body};
 use crate::error::Problem;
@@ -58,6 +58,9 @@ fn product_json(p: &Product) -> Value {
         "stocked": p.stocked,
         "purchasePriceCents": p.purchase_price_cents,
         "photoNodeId": p.photo_node_id.as_ref().map(DriveNodeId::as_str),
+        // Who we usually buy it from (B5.03). Writable since there is a
+        // supplier table to point at; a supplier of another tenant is a `404`.
+        "defaultSupplierId": p.default_supplier_id.as_ref().map(InvSupplierId::as_str),
         "archived": p.is_archived(),
         "archivedAt": p.archived_at.map(iso),
         "createdBy": p.created_by,
@@ -78,6 +81,7 @@ fn editable(p: &Product) -> NewProduct {
         stocked: p.stocked,
         purchase_price_cents: p.purchase_price_cents,
         photo_node_id: p.photo_node_id.clone(),
+        default_supplier_id: p.default_supplier_id.clone(),
     }
 }
 
@@ -110,6 +114,10 @@ struct ProductBody {
     /// three-way absent/`null`/value the plain `Option` cannot express.
     #[serde(default, deserialize_with = "absent_or_null")]
     photo_node_id: Option<Option<String>>,
+    /// Nullable for the same reason: a default supplier can be taken off a
+    /// product without picking another one.
+    #[serde(default, deserialize_with = "absent_or_null")]
+    default_supplier_id: Option<Option<String>>,
 }
 
 impl ProductBody {
@@ -129,6 +137,11 @@ impl ProductBody {
             photo_node_id: self.photo_node_id.map_or(base.photo_node_id, |v| {
                 blank_to_none(v).map(DriveNodeId::new)
             }),
+            default_supplier_id: self
+                .default_supplier_id
+                .map_or(base.default_supplier_id, |v| {
+                    blank_to_none(v).map(InvSupplierId::new)
+                }),
         }
     }
 }
@@ -291,6 +304,7 @@ mod tests {
             stocked: true,
             purchase_price_cents: 2_150,
             photo_node_id: Some(alo_store::DriveNodeId::new("node-1".to_owned())),
+            default_supplier_id: Some(InvSupplierId::new("supplier-1".to_owned())),
         }
     }
 
@@ -332,6 +346,13 @@ mod tests {
     #[test]
     fn an_empty_patch_leaves_the_catalog_fields_alone() {
         let merged = body(json!({})).apply(stored_chair());
+        assert_eq!(
+            merged
+                .default_supplier_id
+                .as_ref()
+                .map(InvSupplierId::as_str),
+            Some("supplier-1")
+        );
         assert_eq!(merged.sku, "CH-BLUE-01");
         assert_eq!(merged.barcode, "4006381333931");
         assert!(merged.stocked);
@@ -374,9 +395,31 @@ mod tests {
     }
 
     #[test]
+    fn a_default_supplier_can_be_set_and_taken_off_again() {
+        // The same three-way absent/null/value the photo has (B5.03): a
+        // product bought from nobody in particular is ordinary.
+        for cleared in [
+            json!({"defaultSupplierId": null}),
+            json!({"defaultSupplierId": ""}),
+        ] {
+            let merged = body(cleared.clone()).apply(stored_chair());
+            assert!(
+                merged.default_supplier_id.is_none(),
+                "not cleared by {cleared}"
+            );
+        }
+        let set = body(json!({"defaultSupplierId": "supplier-2"})).apply(stored_chair());
+        assert_eq!(
+            set.default_supplier_id.as_ref().map(InvSupplierId::as_str),
+            Some("supplier-2")
+        );
+    }
+
+    #[test]
     fn create_starts_from_a_service_with_no_codes() {
         let merged = body(json!({ "name": "Consulting" })).apply(NewProduct::default());
         assert!(!merged.stocked, "nothing is stocked until somebody says so");
+        assert!(merged.default_supplier_id.is_none());
         assert_eq!(merged.purchase_price_cents, 0);
         assert!(merged.sku.is_empty());
         assert!(merged.barcode.is_empty());

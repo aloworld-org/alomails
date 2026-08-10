@@ -417,6 +417,14 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// A supplier — a company a tenant buys from (alo Inventory, ADR 0035,
+    /// wave B5.03). Deliberately not a [`BillingCustomerId`] with a flag: the
+    /// failure mode of a wrong flag is invoicing a supplier
+    /// (`docs/design/inventory.md`, "Suppliers").
+    InvSupplierId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.
