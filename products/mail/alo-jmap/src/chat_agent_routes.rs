@@ -63,8 +63,12 @@ pub async fn list_agents(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let agents = account.acc.agents().await.map_err(map_store_err)?;
+    let records = account.acc.agent_records().await.unwrap_or_default();
     Ok(Json(json!({
-        "agents": agents.iter().map(agent_json).collect::<Vec<_>>()
+        "agents": agents
+            .iter()
+            .map(|a| agent_json(a, records.get(a.id.as_str())))
+            .collect::<Vec<_>>()
     })))
 }
 
@@ -91,7 +95,7 @@ pub async fn create_agent(
         .await
         .map_err(map_store_err)?;
     let agent = account.acc.agent(&id).await.map_err(map_store_err)?;
-    Ok(Json(agent_json(&agent)))
+    Ok(Json(agent_json(&agent, None)))
 }
 
 /// `GET /chat/channels/{id}/agents` → the agents in a room.
@@ -109,8 +113,12 @@ pub async fn list_channel_agents(
         .channel_agents(&ChatChannelId::new(id))
         .await
         .map_err(map_store_err)?;
+    let records = account.acc.agent_records().await.unwrap_or_default();
     Ok(Json(json!({
-        "agents": agents.iter().map(agent_json).collect::<Vec<_>>()
+        "agents": agents
+            .iter()
+            .map(|a| agent_json(a, records.get(a.id.as_str())))
+            .collect::<Vec<_>>()
     })))
 }
 
@@ -142,9 +150,13 @@ pub async fn add_channel_agent(
         .channel_agents(&channel)
         .await
         .map_err(map_store_err)?;
+    let records = account.acc.agent_records().await.unwrap_or_default();
     notify(&state, &account, &channel).await;
     Ok(Json(json!({
-        "agents": agents.iter().map(agent_json).collect::<Vec<_>>()
+        "agents": agents
+            .iter()
+            .map(|a| agent_json(a, records.get(a.id.as_str())))
+            .collect::<Vec<_>>()
     })))
 }
 

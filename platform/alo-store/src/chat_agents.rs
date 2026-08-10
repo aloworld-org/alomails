@@ -312,3 +312,69 @@ impl AccountStore {
         .await
     }
 }
+
+/// What an agent has actually done — the difference between a feature and a
+/// colleague.
+#[derive(Debug, Clone, Default)]
+pub struct AgentRecord {
+    /// Times it has answered.
+    pub answers: i64,
+    /// Actions it proposed that someone approved and that therefore ran.
+    pub actions: i64,
+    /// When it last said anything.
+    pub last_at: Option<OffsetDateTime>,
+}
+
+impl AccountStore {
+    /// What each agent has done, keyed by agent id.
+    ///
+    /// **Counted only within rooms the caller can see** — a member of one
+    /// channel must not learn from a tally that an agent is busy in a private
+    /// room they were never in. Aggregates leak too, just more slowly, and the
+    /// rule everywhere else in chat is that you see what you could already
+    /// read.
+    ///
+    /// One query for every agent rather than one each: this is drawn beside a
+    /// list.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn agent_records(&self) -> Result<std::collections::HashMap<String, AgentRecord>> {
+        let rows: Vec<(String, i64, i64, Option<OffsetDateTime>)> = sqlx::query_as(
+            "SELECT m.author_id, \
+                    count(*) FILTER (WHERE m.deleted_at IS NULL) AS answers, \
+                    count(p.id) FILTER (WHERE p.state = 'approved') AS actions, \
+                    max(m.created_at) AS last_at \
+             FROM chat_messages m \
+             JOIN chat_channels c \
+               ON c.tenant_id = m.tenant_id AND c.id = m.channel_id \
+             LEFT JOIN chat_proposals p \
+               ON p.tenant_id = m.tenant_id AND p.message_id = m.id \
+             WHERE m.tenant_id = $1 AND m.author_kind = 'agent' \
+               AND ( \
+                 EXISTS (SELECT 1 FROM chat_members mm \
+                         WHERE mm.tenant_id = c.tenant_id AND mm.channel_id = c.id \
+                           AND mm.user_id = $2) \
+                 OR (c.visibility = 'public' AND c.archived_at IS NULL)) \
+             GROUP BY m.author_id",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(rows
+            .into_iter()
+            .map(|(agent, answers, actions, last_at)| {
+                (
+                    agent,
+                    AgentRecord {
+                        answers,
+                        actions,
+                        last_at,
+                    },
+                )
+            })
+            .collect())
+    }
+}

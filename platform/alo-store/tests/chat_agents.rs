@@ -360,3 +360,59 @@ async fn people_can_be_searched_for_but_never_listed() {
         "nor by their domain"
     );
 }
+
+/// An agent's record counts only what the reader could already have read.
+/// An aggregate leaks too — slower, but it still answers "is that agent busy
+/// somewhere I cannot see?".
+#[tokio::test]
+async fn an_agents_record_counts_only_rooms_the_reader_can_see() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("record-t").await.unwrap();
+    let ts = store.for_tenant(t.clone());
+    let ua = ts.create_user("anna@record.test").await.unwrap();
+    let ub = ts.create_user("ben@record.test").await.unwrap();
+    let a = store.for_account(t.clone(), ua);
+    let b = store.for_account(t.clone(), ub);
+
+    let alo = a.create_agent("alo", "alo", None).await.unwrap();
+    let open = a
+        .create_channel("open", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
+    let closed = a
+        .create_channel("closed", None, ChannelVisibility::Private)
+        .await
+        .unwrap();
+    a.add_agent_to_channel(&open, &alo).await.unwrap();
+    a.add_agent_to_channel(&closed, &alo).await.unwrap();
+
+    a.post_as_agent(&open, &alo, "in the open", None)
+        .await
+        .unwrap();
+    let secret = a
+        .post_as_agent(&closed, &alo, "behind a door", None)
+        .await
+        .unwrap();
+    let proposal = a
+        .propose_action(&secret.id, "create_task", &json!({ "title": "x" }))
+        .await
+        .unwrap();
+    a.decide_proposal(&proposal, true).await.unwrap();
+
+    // Anna is in both rooms: she sees both answers and the approved action.
+    let hers = a.agent_records().await.unwrap();
+    let mine = hers.get(alo.as_str()).expect("a record");
+    assert_eq!(mine.answers, 2);
+    assert_eq!(mine.actions, 1);
+    assert!(mine.last_at.is_some());
+
+    // Ben may read the live public room and is in no private one. He sees the
+    // one answer said where he could read it, and nothing of the other.
+    let theirs = b.agent_records().await.unwrap();
+    let seen = theirs.get(alo.as_str()).expect("a record");
+    assert_eq!(seen.answers, 1, "only what he could have read");
+    assert_eq!(
+        seen.actions, 0,
+        "an action taken out of sight is not counted"
+    );
+}

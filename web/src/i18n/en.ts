@@ -1715,6 +1715,12 @@ export const en = {
   chatClose: "Close",
   chatOwner: "owner",
   chatAgentsHere: "Agents in this conversation",
+  chatAgentNothingYet: "Hasn’t been asked anything yet",
+  chatAgentRecord: (answers: number, actions: number): string => {
+    const said = answers === 1 ? "1 answer" : `${answers} answers`;
+    if (actions === 0) return said;
+    return `${said} · ${actions === 1 ? "1 action" : `${actions} actions`} approved`;
+  },
   chatAgentsAvailable: "Available to add",
   chatNoAgentsHere: "No agents here yet. Add one and mention it by name.",
   chatPeopleHere: "People",

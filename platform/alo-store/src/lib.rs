@@ -204,7 +204,7 @@ pub use blob::GarageConfig;
 pub use blob::{BlobStore, ShareStream};
 pub use changes::Changes;
 pub use chat::{ChannelKind, ChannelVisibility, ChatChannel, ChatMember, MemberRole};
-pub use chat_agents::{ChatAgent, ChatProposal, ProposalState};
+pub use chat_agents::{AgentRecord, ChatAgent, ChatProposal, ProposalState};
 pub use chat_attachments::{ATTACHMENTS_MAX, ChatAttachment};
 pub use chat_mentions::parse_handles;
 pub use chat_messages::{

@@ -18,7 +18,9 @@
 use serde_json::{Value, json};
 
 use alo_ai::{AgentDecision, AiConfig, InferenceError, WorkspaceSource};
-use alo_store::{AccountStore, ChatAgent, ChatChannelId, TenantId, parse_handles};
+use alo_store::{
+    AccountStore, AgentRecord, ChatAgent, ChatChannelId, TenantId, parse_handles,
+};
 
 use crate::push;
 use crate::state::AppState;
@@ -199,14 +201,24 @@ pub(crate) fn answer_if_named(
     });
 }
 
-/// The wire shape of an agent.
+/// The wire shape of an agent, with what it has actually done.
+///
+/// The record is counted only over rooms the caller can see, so two people
+/// can legitimately be shown different numbers for the same agent — that is
+/// the same rule the rest of chat follows, not an inconsistency.
 #[must_use]
-pub(crate) fn agent_json(a: &ChatAgent) -> Value {
+pub(crate) fn agent_json(a: &ChatAgent, record: Option<&AgentRecord>) -> Value {
     json!({
         "id": a.id.as_str(),
         "handle": a.handle,
         "name": a.name,
         "description": a.description,
         "disabled": a.disabled,
+        "answers": record.map_or(0, |r| r.answers),
+        "actions": record.map_or(0, |r| r.actions),
+        "lastAt": record.and_then(|r| r.last_at).map(|at| {
+            at.format(&time::format_description::well_known::Rfc3339)
+                .unwrap_or_default()
+        }),
     })
 }

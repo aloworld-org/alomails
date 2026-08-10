@@ -96,6 +96,13 @@ export interface Agent {
   description: string | null;
   /** Retired: keeps its past messages, takes no new turns. */
   disabled: boolean;
+  /** Times it has answered, counted only across rooms you can see — so two
+   *  people may legitimately see different numbers for the same agent. */
+  answers: number;
+  /** Actions it proposed that someone approved, and which therefore ran. */
+  actions: number;
+  /** When it last said anything here. */
+  lastAt: string | null;
 }
 
 /** An action an agent proposed, waiting for a tap. */

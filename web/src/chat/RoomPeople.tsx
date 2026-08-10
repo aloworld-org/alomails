@@ -119,9 +119,14 @@ export function RoomPeople({
                   </span>
                   <span className={styles.who}>
                     <span className={styles.name}>@{agent.handle}</span>
-                    {agent.description !== null && (
-                      <span className={styles.detail}>{agent.description}</span>
-                    )}
+                    {/* What it has actually done, not what it is for. An
+                        agent with a record reads as a colleague; one with
+                        only a description reads as a setting. */}
+                    <span className={styles.detail}>
+                      {agent.answers === 0
+                        ? strings.chatAgentNothingYet
+                        : strings.chatAgentRecord(agent.answers, agent.actions)}
+                    </span>
                   </span>
                   <button
                     type="button"
