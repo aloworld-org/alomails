@@ -521,7 +521,7 @@ export function ChatModule() {
   // Which room's row menu is open, by id — one at a time, same reason.
   const [emojiQuery, setEmojiQuery] = useState("");
   const [rowMenu, setRowMenu] = useState<string | null>(null);
-  const rowMenuRef = useRef<HTMLUListElement | null>(null);
+  const rowMenuRef = useRef<HTMLDivElement | null>(null);
   const closeRowMenu = useCallback(() => setRowMenu(null), []);
   useDismiss(rowMenu !== null, rowMenuRef, closeRowMenu);
   const closeComposerMenu = useCallback(() => setComposerMenu(null), []);
@@ -990,6 +990,23 @@ export function ChatModule() {
   }
 
   const open = channels?.find((c) => c.id === openId) ?? null;
+  // Channels, then people, then what is archived — the order a person looks
+  // in. One flat list is what hid direct messages entirely.
+  const rooms = channels ?? [];
+  const sections: { label: string; rooms: ChannelSummary[] }[] = [
+    {
+      label: strings.chatSectionChannels,
+      rooms: rooms.filter((c) => c.kind === "channel" && c.archivedAt === null),
+    },
+    {
+      label: strings.chatSectionDirect,
+      rooms: rooms.filter((c) => c.kind === "dm" && c.archivedAt === null),
+    },
+    {
+      label: strings.chatSectionArchived,
+      rooms: rooms.filter((c) => c.archivedAt !== null),
+    },
+  ].filter((section) => section.rooms.length > 0);
   // Derived, not stored: the list is a function of what is typed and where
   // the caret is, so it can never disagree with the composer.
   // Null while nothing is being searched for: the picker shows its groups.
@@ -1192,106 +1209,120 @@ export function ChatModule() {
             <p className={styles.emptyHint}>{strings.chatNoChannelsHint}</p>
           </div>
         ) : (
-          <ul className={styles.channelList} ref={rowMenuRef}>
-            {channels.map((channel) => (
-              // The row is the target; its menu sits beside the button rather
-              // than inside it, because a button inside a button is invalid
-              // and swallows the click.
-              <li key={channel.id} className={styles.channelRow}>
-                <button
-                  type="button"
-                  className={[
-                    channel.id === openId ? styles.channelOpen : styles.channel,
-                    // An archived room stays reachable (its history is still
-                    // the team's), but it must not read as a live one.
-                    channel.archivedAt !== null ? styles.channelArchived : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" ")}
-                  onClick={() => setOpenId(channel.id)}
-                >
-                  {channel.kind === "dm" ? (
-                    <Users size={15} className={styles.channelIcon} />
-                  ) : channel.visibility === "private" ? (
-                    <Lock size={15} className={styles.channelIcon} />
-                  ) : (
-                    <Hash size={15} className={styles.channelIcon} />
-                  )}
-                  <span className={styles.channelName}>
-                    {channelLabel(channel)}
-                  </span>
-                  {channel.archivedAt !== null && (
-                    <Archive
-                      size={13}
-                      className={styles.channelIcon}
-                      aria-label={strings.chatArchived}
-                    />
-                  )}
-                  {channel.mentions > 0 ? (
-                    // A room with something addressed to you says so, rather
-                    // than hiding it inside a larger unread number.
-                    <span
-                      className={styles.badgeMention}
-                      title={strings.chatMentionsYou(channel.mentions)}
-                    >
-                      @{channel.mentions}
-                    </span>
-                  ) : (
-                    channel.unread > 0 && (
-                      <span className={styles.badge}>{channel.unread}</span>
-                    )
-                  )}
-                </button>
-                {channel.kind === "channel" && channel.archivedAt === null && (
-                  <span className={styles.rowMenuWrap}>
-                    <button
-                      type="button"
-                      className={styles.rowMenuButton}
-                      onClick={() =>
-                        setRowMenu((at) =>
-                          at === channel.id ? null : channel.id,
-                        )
-                      }
-                      aria-label={strings.chatChannelActions(
-                        channelLabel(channel),
-                      )}
-                      aria-expanded={rowMenu === channel.id}
-                    >
-                      <MoreHorizontal size={16} />
-                    </button>
-                    {rowMenu === channel.id && (
-                      <span className={styles.rowMenu} role="menu">
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className={styles.rowMenuItem}
-                          onClick={() => {
-                            setRowMenu(null);
-                            void renameRoom(channel);
-                          }}
-                        >
-                          <Pencil size={14} />
-                          {strings.chatRename}
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className={styles.rowMenuItem}
-                          onClick={() => {
-                            setRowMenu(null);
-                            void archiveRoom(channel);
-                          }}
-                        >
-                          <Archive size={14} />
-                          {strings.chatArchiveAction}
-                        </button>
-                      </span>
-                    )}
-                  </span>
-                )}
-              </li>
+          <div className={styles.channelList} ref={rowMenuRef}>
+            {sections.map((section) => (
+              <section key={section.label}>
+                <h3 className={styles.sectionLabel}>{section.label}</h3>
+                <ul className={styles.sectionList}>
+                  {section.rooms.map((channel) => (
+                    // The row is the target; its menu sits beside the button rather
+                    // than inside it, because a button inside a button is invalid
+                    // and swallows the click.
+                    <li key={channel.id} className={styles.channelRow}>
+                      <button
+                        type="button"
+                        className={[
+                          channel.id === openId
+                            ? styles.channelOpen
+                            : styles.channel,
+                          // An archived room stays reachable (its history is still
+                          // the team's), but it must not read as a live one.
+                          channel.archivedAt !== null
+                            ? styles.channelArchived
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        onClick={() => setOpenId(channel.id)}
+                      >
+                        {channel.kind === "dm" ? (
+                          <Users size={15} className={styles.channelIcon} />
+                        ) : channel.visibility === "private" ? (
+                          <Lock size={15} className={styles.channelIcon} />
+                        ) : (
+                          <Hash size={15} className={styles.channelIcon} />
+                        )}
+                        <span className={styles.channelName}>
+                          {channelLabel(channel)}
+                        </span>
+                        {channel.archivedAt !== null && (
+                          <Archive
+                            size={13}
+                            className={styles.channelIcon}
+                            aria-label={strings.chatArchived}
+                          />
+                        )}
+                        {channel.mentions > 0 ? (
+                          // A room with something addressed to you says so, rather
+                          // than hiding it inside a larger unread number.
+                          <span
+                            className={styles.badgeMention}
+                            title={strings.chatMentionsYou(channel.mentions)}
+                          >
+                            @{channel.mentions}
+                          </span>
+                        ) : (
+                          channel.unread > 0 && (
+                            <span className={styles.badge}>
+                              {channel.unread}
+                            </span>
+                          )
+                        )}
+                      </button>
+                      {channel.kind === "channel" &&
+                        channel.archivedAt === null && (
+                          <span className={styles.rowMenuWrap}>
+                            <button
+                              type="button"
+                              className={styles.rowMenuButton}
+                              onClick={() =>
+                                setRowMenu((at) =>
+                                  at === channel.id ? null : channel.id,
+                                )
+                              }
+                              aria-label={strings.chatChannelActions(
+                                channelLabel(channel),
+                              )}
+                              aria-expanded={rowMenu === channel.id}
+                            >
+                              <MoreHorizontal size={16} />
+                            </button>
+                            {rowMenu === channel.id && (
+                              <span className={styles.rowMenu} role="menu">
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  className={styles.rowMenuItem}
+                                  onClick={() => {
+                                    setRowMenu(null);
+                                    void renameRoom(channel);
+                                  }}
+                                >
+                                  <Pencil size={14} />
+                                  {strings.chatRename}
+                                </button>
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  className={styles.rowMenuItem}
+                                  onClick={() => {
+                                    setRowMenu(null);
+                                    void archiveRoom(channel);
+                                  }}
+                                >
+                                  <Archive size={14} />
+                                  {strings.chatArchiveAction}
+                                </button>
+                              </span>
+                            )}
+                          </span>
+                        )}
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ))}
-          </ul>
+          </div>
         )}
       </aside>
 
