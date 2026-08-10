@@ -62,6 +62,12 @@ pub async fn agent(
     // The browser's own zone, when it sends one. Optional on purpose: a
     // caller that omits it still works, and is told so in the prompt.
     let tz = req.get("tz").and_then(Value::as_str).map(str::to_owned);
+    // Remembered on sight. A preference nobody is prompted for is right far
+    // more often than one they have to go and find, and a chat agent turn has
+    // no browser to ask.
+    if let Some(zone) = tz.as_deref() {
+        let _ = account.acc.set_user_timezone(zone).await;
+    }
     if request.is_empty() {
         return Err(Problem::with(StatusCode::BAD_REQUEST, "q required"));
     }
@@ -115,11 +121,17 @@ pub async fn agent(
     // only, so it can't propose a folder that does not exist (internal roles
     // like Snoozed/Scheduled are excluded; Archive/Trash have their own tools).
     let folders = movable_folder_names(&account).await;
+    // Whatever the caller sent, else whatever this person's browser told us
+    // last time. Unknown stays unknown rather than becoming the server's zone.
+    let known_tz = match tz {
+        Some(zone) => Some(zone),
+        None => account.acc.user_timezone().await.unwrap_or_default(),
+    };
     match alo_ai::run_agent(
         &config,
         &request,
         &ground,
-        &today_where(tz.as_deref()),
+        &today_where(known_tz.as_deref()),
         &folders,
     )
     .await

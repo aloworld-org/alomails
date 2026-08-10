@@ -1821,3 +1821,49 @@ impl AccountStore {
         Ok(())
     }
 }
+
+impl AccountStore {
+    /// The IANA timezone this person reads clocks in, if it is known.
+    ///
+    /// `None` means nobody has told us. That is deliberately different from a
+    /// default: an agent that assumes a zone puts meetings an hour out twice a
+    /// year, and silently.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn user_timezone(&self) -> Result<Option<String>> {
+        let row: Option<(Option<String>,)> =
+            sqlx::query_as("SELECT timezone FROM users WHERE tenant_id = $1 AND id = $2")
+                .bind(self.tenant.as_str())
+                .bind(self.user.as_str())
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(StoreError::Db)?;
+        Ok(row.and_then(|(tz,)| tz).filter(|tz| !tz.trim().is_empty()))
+    }
+
+    /// Remember the zone this person's browser reports.
+    ///
+    /// Written on sight rather than asked for in a settings page: the browser
+    /// already knows, and a preference nobody is prompted for is one that is
+    /// right far more often than one they have to find.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn set_user_timezone(&self, tz: &str) -> Result<()> {
+        let tz = tz.trim();
+        // A zone is an IANA name; anything else is a caller's bug and must not
+        // be stored, because a stored wrong zone is worse than no zone.
+        if tz.is_empty() || tz.len() > 64 || !tz.contains('/') {
+            return Ok(());
+        }
+        sqlx::query("UPDATE users SET timezone = $3 WHERE tenant_id = $1 AND id = $2")
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(tz)
+            .execute(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+        Ok(())
+    }
+}

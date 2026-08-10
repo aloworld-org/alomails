@@ -101,7 +101,20 @@ async fn take_turn(
         }
     };
 
-    let today = time::OffsetDateTime::now_utc().date().to_string();
+    // A room turn has no browser to ask, so it uses what the person's own
+    // sessions have already told us. Unknown stays unknown: the prompt then
+    // makes the model declare which hour it assumed.
+    let today = {
+        let date = time::OffsetDateTime::now_utc().date().to_string();
+        match acc.user_timezone().await.unwrap_or_default() {
+            Some(zone) => format!(
+                "{date}, and the person asking is in the {zone} timezone. Every datetime                  you produce must be an instant that means the time THEY said on THEIR clock."
+            ),
+            None => format!(
+                "{date}. The person's timezone is unknown, so any datetime you produce is                  read as UTC — say which hour you assumed in your `say` line."
+            ),
+        }
+    };
     let decided = alo_ai::run_agent(&config, question, &ground, &today, &[]).await;
     // Stopped while it was thinking: the call cannot be un-made, but its words
     // can be kept out of the room, which is what someone pressing Stop wants.

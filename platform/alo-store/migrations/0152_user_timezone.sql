@@ -1,0 +1,15 @@
+-- The clock a person reads.
+--
+-- An agent asked "am I free on Thursday at 10?" has to turn a wall-clock hour
+-- into an instant, and it can only do that if it knows whose clock. The web
+-- app can send its own zone on a request it makes, but a chat agent turn runs
+-- server-side from somebody's message with no browser in the loop — so the
+-- zone has to be a fact about the person, stored once.
+--
+-- Nullable on purpose. A user who has never opened the app has no known zone,
+-- and guessing one (the server's, the tenant's, the last person's) is how a
+-- meeting lands an hour out. Unknown stays unknown, and the prompt says so.
+--
+-- An IANA name, not an offset: "Europe/Amsterdam" survives daylight saving,
+-- "+02:00" does not.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS timezone text;

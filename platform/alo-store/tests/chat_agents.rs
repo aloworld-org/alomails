@@ -474,3 +474,48 @@ async fn the_agent_finds_only_the_askers_own_files() {
     // Nor may a wildcard mean everything.
     assert!(a.drive_find("%", 10).await.unwrap().is_empty());
 }
+
+/// A person's timezone is remembered so an agent turn with no browser in the
+/// loop still knows whose clock "Thursday at 10" is on. Unknown must stay
+/// unknown: a guessed zone puts meetings an hour out, silently, twice a year.
+#[tokio::test]
+async fn a_timezone_is_remembered_but_never_guessed() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("tz-t").await.unwrap();
+    let ts = store.for_tenant(t.clone());
+    let ua = ts.create_user("anna@tz.test").await.unwrap();
+    let ub = ts.create_user("ben@tz.test").await.unwrap();
+    let a = store.for_account(t.clone(), ua);
+    let b = store.for_account(t.clone(), ub);
+
+    // Nobody has said anything yet.
+    assert_eq!(a.user_timezone().await.unwrap(), None);
+
+    a.set_user_timezone("Europe/Amsterdam").await.unwrap();
+    assert_eq!(
+        a.user_timezone().await.unwrap().as_deref(),
+        Some("Europe/Amsterdam")
+    );
+
+    // One person's clock is not another's.
+    assert_eq!(b.user_timezone().await.unwrap(), None, "not shared");
+
+    // Anything that is not an IANA name is a caller's bug. Storing it would be
+    // worse than storing nothing, because the prompt would then state a zone
+    // with confidence and be wrong.
+    for rubbish in ["", "   ", "UTC+2", "+02:00", "CEST", "Europe"] {
+        a.set_user_timezone(rubbish).await.unwrap();
+        assert_eq!(
+            a.user_timezone().await.unwrap().as_deref(),
+            Some("Europe/Amsterdam"),
+            "{rubbish:?} must not overwrite a good zone"
+        );
+    }
+
+    // A real zone does replace a real zone: people move.
+    a.set_user_timezone("America/New_York").await.unwrap();
+    assert_eq!(
+        a.user_timezone().await.unwrap().as_deref(),
+        Some("America/New_York")
+    );
+}
