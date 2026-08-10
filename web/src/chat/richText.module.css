@@ -1,0 +1,134 @@
+/* Formatting inside a message. Restrained on purpose: a room is a
+   conversation, not a document, so nothing here should shout louder than the
+   words around it. */
+
+.code {
+  padding: 1px 5px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  background: var(--bg-raised);
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    monospace
+  );
+  font-size: 0.9em;
+  overflow-wrap: anywhere;
+}
+
+.pre {
+  margin: 6px 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  /* Code does not wrap — a broken line is a different line. It scrolls in its
+     own box so the conversation column never widens. */
+  overflow-x: auto;
+}
+
+.preCode {
+  font-family: var(
+    --font-mono,
+    ui-monospace,
+    "SFMono-Regular",
+    Menlo,
+    monospace
+  );
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre;
+  color: var(--text-primary);
+}
+
+.list {
+  margin: 4px 0;
+  padding-left: 22px;
+  /* The app's reset strips markers globally. A list without them is indented
+     text pretending to be a list. */
+  list-style: disc outside;
+}
+
+ol.list {
+  list-style: decimal outside;
+}
+
+.list li {
+  margin: 1px 0;
+}
+
+.quote {
+  margin: 6px 0;
+  padding: 2px 0 2px var(--space-3);
+  border-left: 3px solid var(--border-default);
+  color: var(--text-secondary);
+}
+
+.link {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.mathInline {
+  font-size: 1.02em;
+}
+
+/* Display maths gets its own line and scrolls rather than stretching the
+   column, for the same reason code does. */
+.mathBlock {
+  display: block;
+  margin: 8px 0;
+  overflow-x: auto;
+  text-align: center;
+}
+
+/* Prism tokens, matching the authoring module's palette (ADR 0015) so code
+   looks the same wherever it appears in alo. */
+.pre :global(.token.comment),
+.pre :global(.token.prolog),
+.pre :global(.token.doctype),
+.pre :global(.token.cdata) {
+  color: var(--code-dim, var(--text-tertiary));
+  font-style: italic;
+}
+
+.pre :global(.token.punctuation) {
+  color: var(--code-punct, var(--text-secondary));
+}
+
+.pre :global(.token.keyword),
+.pre :global(.token.atrule),
+.pre :global(.token.rule),
+.pre :global(.token.important),
+.pre :global(.token.operator) {
+  color: var(--code-kw, #9b5de5);
+}
+
+.pre :global(.token.string),
+.pre :global(.token.char),
+.pre :global(.token.attr-value),
+.pre :global(.token.regex) {
+  color: var(--code-str, #2a9d5c);
+}
+
+.pre :global(.token.number),
+.pre :global(.token.boolean),
+.pre :global(.token.constant),
+.pre :global(.token.symbol) {
+  color: var(--code-num, #c2410c);
+}
+
+.pre :global(.token.function),
+.pre :global(.token.class-name),
+.pre :global(.token.builtin) {
+  color: var(--code-fn, #1d4ed8);
+}
+
+.pre :global(.token.property),
+.pre :global(.token.tag),
+.pre :global(.token.attr-name),
+.pre :global(.token.selector) {
+  color: var(--code-attr, #0e7490);
+}

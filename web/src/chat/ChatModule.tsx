@@ -53,6 +53,7 @@ import type {
   Proposal,
 } from "./types";
 import { EMOJI, searchEmoji } from "./emoji";
+import { renderBody } from "./richText";
 import styles from "./ChatModule.module.css";
 
 /** The ceiling the server enforces (`ATTACHMENTS_MAX` in the store). Kept in
@@ -452,7 +453,7 @@ function MessageLine({
           }
         >
           {message.deletedAt === null
-            ? withHandlesMarked(message.body)
+            ? renderBody(message.body, withHandlesMarked)
             : strings.chatWithdrawn}
         </p>
       )}
@@ -557,7 +558,7 @@ export function ChatModule() {
   const [nameable, setNameable] = useState<Nameable[]>([]);
   const [highlighted, setHighlighted] = useState(0);
   const feedRef = useRef<HTMLDivElement | null>(null);
-  const composerRef = useRef<HTMLInputElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const [caret, setCaret] = useState(0);
   const [showingPeople, setShowingPeople] = useState(false);
   // One composer popover at a time: opening either closes the other, so two
@@ -571,6 +572,14 @@ export function ChatModule() {
   // Agent turns running in the open room. Refetched on every push, so it
   // follows the same signal the messages do rather than polling on a timer.
   const [turns, setTurns] = useState<Turn[]>([]);
+  // What was half-typed in each room. Switching rooms to check something and
+  // losing a sentence is a small betrayal every chat app learned to avoid.
+  const drafts = useRef<Map<string, string>>(new Map());
+  const [switcher, setSwitcher] = useState<string | null>(null);
+  const [dropping, setDropping] = useState(false);
+  // Where reading stopped when this room was opened. Held still afterwards:
+  // the line must not creep down as new messages land while you are looking.
+  const [readUpTo, setReadUpTo] = useState<number | null>(null);
   const [rowMenu, setRowMenu] = useState<string | null>(null);
   const rowMenuRef = useRef<HTMLDivElement | null>(null);
   const closeRowMenu = useCallback(() => setRowMenu(null), []);
@@ -661,6 +670,8 @@ export function ChatModule() {
     setThreadSeq(null);
     setReplies(null);
     setTurns([]);
+    setDraft(drafts.current.get(openId) ?? "");
+    setReadUpTo(channels?.find((c) => c.id === openId)?.lastReadSeq ?? null);
     void loadMessages(openId);
     void loadTurns(openId);
   }, [openId, loadMessages, loadTurns]);
@@ -910,6 +921,29 @@ export function ChatModule() {
     }
   }
 
+  async function shareDropped(files: FileList) {
+    setDropping(false);
+    if (files.length === 0) return;
+    setError(null);
+    try {
+      for (const file of Array.from(files).slice(0, ATTACHMENTS_MAX)) {
+        // Into Drive first, then staged as a pointer: dropping a file into a
+        // room should leave it somewhere the person can find again, not only
+        // inside a conversation.
+        const id = await client.driveUpload(null, null, file);
+        const node = await client.driveNode(id);
+        if (node === null) continue;
+        setStaged((held) =>
+          held.length >= ATTACHMENTS_MAX || held.some((h) => h.id === node.id)
+            ? held
+            : [...held, node],
+        );
+      }
+    } catch (failure) {
+      setError(chatMessage(failure, strings.chatAttachFailed));
+    }
+  }
+
   async function browse() {
     setError(null);
     try {
@@ -1056,6 +1090,40 @@ export function ChatModule() {
     }
   }
 
+  // Typing anywhere types into the composer. Nobody should have to find the
+  // field first; in a room, keystrokes mean a message unless they plainly mean
+  // something else.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key.length !== 1) return;
+      const at = document.activeElement;
+      const editable =
+        at instanceof HTMLInputElement ||
+        at instanceof HTMLTextAreaElement ||
+        (at instanceof HTMLElement && at.isContentEditable);
+      if (editable) return;
+      const box = composerRef.current;
+      if (box === null) return;
+      box.focus();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  // Ctrl/Cmd+K anywhere in the module. Registered on the document because a
+  // switcher you must first click into is not a switcher.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSwitcher((at) => (at === null ? "" : null));
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
   const open = channels?.find((c) => c.id === openId) ?? null;
   // Channels, then people, then what is archived — the order a person looks
   // in. One flat list is what hid direct messages entirely.
@@ -1078,6 +1146,16 @@ export function ChatModule() {
   // the caret is, so it can never disagree with the composer.
   // Null while nothing is being searched for: the picker shows its groups.
   const emojiHits = emojiQuery.trim() === "" ? null : searchEmoji(emojiQuery);
+  // Every room, filtered by what has been typed — including archived ones,
+  // because jumping to something old is exactly when you cannot find it in
+  // the list.
+  const switcherHits = (channels ?? [])
+    .filter((c) =>
+      channelLabel(c)
+        .toLowerCase()
+        .includes((switcher ?? "").toLowerCase()),
+    )
+    .slice(0, 8);
   const mention = mentionAt(draft, caret);
   const suggestions =
     mention === null ? [] : candidatesFor(mention.token, nameable);
@@ -1393,7 +1471,33 @@ export function ChatModule() {
         )}
       </aside>
 
-      <section className={styles.room}>
+      <section
+        className={styles.room}
+        onDragOver={(event) => {
+          if (!event.dataTransfer.types.includes("Files")) return;
+          event.preventDefault();
+          setDropping(true);
+        }}
+        onDragLeave={(event) => {
+          // Only when the pointer has truly left the room, not merely
+          // crossed onto a child of it.
+          if (!event.currentTarget.contains(event.relatedTarget as Node))
+            setDropping(false);
+        }}
+        onDrop={(event) => {
+          if (!event.dataTransfer.types.includes("Files")) return;
+          event.preventDefault();
+          void shareDropped(event.dataTransfer.files);
+        }}
+      >
+        {dropping && (
+          <div className={styles.dropVeil}>
+            <span className={styles.dropWord}>
+              <Paperclip size={16} />
+              {strings.chatDropFiles}
+            </span>
+          </div>
+        )}
         {open === null ? (
           <div className={styles.emptyRoom}>
             <Hash size={28} className={styles.emptyRoomIcon} />
@@ -1511,6 +1615,16 @@ export function ChatModule() {
               ) : (
                 messages.map((message, i) => (
                   <Fragment key={message.id}>
+                    {readUpTo !== null &&
+                      message.seq > readUpTo &&
+                      (messages[i - 1]?.seq ?? 0) <= readUpTo &&
+                      i > 0 && (
+                        <div className={styles.unread}>
+                          <span className={styles.unreadLabel}>
+                            {strings.chatNewMessages}
+                          </span>
+                        </div>
+                      )}
                     {(i === 0 ||
                       dayOf(message.createdAt) !==
                         dayOf(messages[i - 1]!.createdAt)) && (
@@ -1789,12 +1903,15 @@ export function ChatModule() {
                     ))}
                   </ul>
                 )}
-                <input
+                <textarea
                   ref={composerRef}
+                  rows={1}
                   className={styles.input}
                   value={draft}
                   onChange={(event) => {
                     setDraft(event.target.value);
+                    if (openId !== null)
+                      drafts.current.set(openId, event.target.value);
                     setCaret(event.target.selectionStart ?? 0);
                     setHighlighted(0);
                   }}
@@ -1802,6 +1919,15 @@ export function ChatModule() {
                     setCaret(event.currentTarget.selectionStart ?? 0)
                   }
                   onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" &&
+                      !event.shiftKey &&
+                      suggestions.length === 0
+                    ) {
+                      event.preventDefault();
+                      void send();
+                      return;
+                    }
                     if (suggestions.length === 0) return;
                     // While the list is open it owns these keys, so Enter
                     // completes a name instead of sending a half-typed one.
@@ -1846,6 +1972,67 @@ export function ChatModule() {
           </>
         )}
       </section>
+
+      {switcher !== null && (
+        <div
+          className={styles.switcherBackdrop}
+          role="dialog"
+          aria-modal="true"
+          aria-label={strings.chatJumpTo}
+          onClick={() => setSwitcher(null)}
+        >
+          <div
+            className={styles.switcher}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <input
+              className={styles.switcherInput}
+              value={switcher}
+              onChange={(event) => setSwitcher(event.target.value)}
+              placeholder={strings.chatJumpTo}
+              aria-label={strings.chatJumpTo}
+              autoFocus
+              onKeyDown={(event) => {
+                if (event.key === "Escape") setSwitcher(null);
+                if (event.key === "Enter") {
+                  const first = switcherHits[0];
+                  if (first !== undefined) {
+                    setOpenId(first.id);
+                    setSwitcher(null);
+                  }
+                }
+              }}
+            />
+            <ul className={styles.switcherList}>
+              {switcherHits.length === 0 ? (
+                <li className={styles.switcherNone}>{strings.chatNoRoom}</li>
+              ) : (
+                switcherHits.map((room, i) => (
+                  <li key={room.id}>
+                    <button
+                      type="button"
+                      className={
+                        i === 0 ? styles.switcherFirst : styles.switcherItem
+                      }
+                      onClick={() => {
+                        setOpenId(room.id);
+                        setSwitcher(null);
+                      }}
+                    >
+                      {room.kind === "dm" ? (
+                        <Users size={15} className={styles.channelIcon} />
+                      ) : (
+                        <Hash size={15} className={styles.channelIcon} />
+                      )}
+                      {channelLabel(room)}
+                    </button>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
+        </div>
+      )}
 
       {showingPeople && openId !== null && (
         <RoomPeople

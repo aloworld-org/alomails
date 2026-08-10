@@ -257,6 +257,7 @@
 /* ---- the conversation --------------------------------------------- */
 
 .room {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -500,8 +501,14 @@
 .input {
   flex: 1;
   min-width: 0;
+  /* Grows with what is written, up to a point, then scrolls — a composer that
+     can swallow the whole room is its own problem. */
   min-height: 36px;
-  padding: 0;
+  max-height: 40vh;
+  padding: 8px 0 0;
+  resize: none;
+  line-height: 1.45;
+  font-family: inherit;
   border: 0;
   background: transparent;
   font: inherit;
@@ -879,6 +886,145 @@
 
 .channel:hover .joinHint {
   opacity: 1;
+}
+
+/* ---- jumping, dropping, and where you left off ------------------------ */
+
+.switcherBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  background: rgb(0 0 0 / 35%);
+}
+
+.switcher {
+  width: min(520px, calc(100vw - 32px));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg, 0 20px 48px rgb(0 0 0 / 28%));
+  overflow: hidden;
+}
+
+.switcherInput {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: transparent;
+  font: inherit;
+  font-size: 17px;
+  color: var(--text-primary);
+}
+
+.switcherInput:focus-visible {
+  outline: none;
+}
+
+.switcherList {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.switcherItem,
+.switcherFirst {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 40px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+/* The first hit is what Enter takes, so it must look chosen before you press. */
+.switcherFirst {
+  background: var(--accent-tint);
+}
+
+.switcherItem:hover,
+.switcherFirst:hover {
+  background: var(--bg-raised);
+}
+
+.switcherNone {
+  padding: var(--space-3);
+  font-size: 14px;
+  color: var(--text-tertiary);
+}
+
+/* The whole room is the drop target: aiming at a text field to share a file is
+   a precision task nobody should be set. */
+.dropVeil {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--accent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--bg-app) 82%, transparent);
+  pointer-events: none;
+}
+
+.dropWord {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 10px 16px;
+  border-radius: 20px;
+  background: var(--bg-surface);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md, 0 4px 16px rgb(0 0 0 / 14%));
+}
+
+/* Where reading stopped. Accented rather than grey — this is the one line in
+   a long room a returning reader is actually looking for. */
+.unread {
+  position: relative;
+  display: flex;
+  justify-content: flex-start;
+  max-width: 760px;
+  margin: var(--space-3) 0 var(--space-2);
+}
+
+.unread::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent);
+}
+
+.unreadLabel {
+  position: relative;
+  padding: 1px var(--space-2);
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--on-accent, #fff);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 /* ---- an agent thinking ----------------------------------------------- */

@@ -1705,6 +1705,10 @@ export const en = {
   chatMembersAndAgents: "Members & agents",
   chatThinking: (handle: string): string => `@${handle} is thinking`,
   chatStop: "Stop",
+  chatJumpTo: "Jump to a conversation",
+  chatNoRoom: "No conversation matches that.",
+  chatDropFiles: "Drop to share from your computer",
+  chatNewMessages: "New messages",
   chatToday: "Today",
   chatYesterday: "Yesterday",
   chatBeginning: (name: string): string => `This is the beginning of ${name}`,
@@ -3700,13 +3704,15 @@ export const en = {
   financeAccountEdit: "Edit",
   financeAccountDelete: "Delete",
   financeAccountCode: "Number",
-  financeAccountCodeHint: "What your accountant calls it. Letters and digits, no spaces.",
+  financeAccountCodeHint:
+    "What your accountant calls it. Letters and digits, no spaces.",
   financeAccountName: "Name",
   financeAccountRole: "Job",
   financeAccountRoleHint:
     "What this account is used for automatically. Invoices, payments and claims find their account by its job, never by its number — so renumbering is safe, and taking a job away stops those documents booking until another account has it.",
   financeAccountType: "Kind",
-  financeAccountTypeHint: "What the account holds. It decides which report the account appears on.",
+  financeAccountTypeHint:
+    "What the account holds. It decides which report the account appears on.",
   financeAccountTypeUnset: "Choose one…",
   financeAccountActive: "In use",
   financeAccountActiveHint:
@@ -3732,9 +3738,12 @@ export const en = {
   financeAccountTypeEquity: "Equity",
   financeAccountTypeIncome: "What we earn",
   financeAccountTypeExpense: "What we spend",
-  financeAccountTypeAssetLong: "Something we own or are owed — a bank account, cash, customers' debts",
-  financeAccountTypeLiabilityLong: "Something we owe — suppliers, tax, money owed to staff",
-  financeAccountTypeEquityLong: "The owners' stake, and the balances the books opened with",
+  financeAccountTypeAssetLong:
+    "Something we own or are owed — a bank account, cash, customers' debts",
+  financeAccountTypeLiabilityLong:
+    "Something we owe — suppliers, tax, money owed to staff",
+  financeAccountTypeEquityLong:
+    "The owners' stake, and the balances the books opened with",
   financeAccountTypeIncomeLong: "Something we earn",
   financeAccountTypeExpenseLong: "Something we spend",
 
@@ -3778,8 +3787,10 @@ export const en = {
   financeReportDownloadCsv: "Download CSV",
   financeReportDownloadFailed: "The file could not be downloaded.",
   financeReportLoadFailed: "The report could not be loaded.",
-  financeReportBasis: (from: string, to: string) => `Everything booked between ${from} and ${to}, both days included.`,
-  financeReportBasisOn: (on: string) => `Everything booked up to and including ${on}.`,
+  financeReportBasis: (from: string, to: string) =>
+    `Everything booked between ${from} and ${to}, both days included.`,
+  financeReportBasisOn: (on: string) =>
+    `Everything booked up to and including ${on}.`,
   financeReportEmptyTitle: "Nothing booked yet",
   financeReportEmptyBody:
     "Issued invoices, payments and approved expense claims book themselves. As soon as one does, it shows up here.",
@@ -3802,7 +3813,8 @@ export const en = {
   financeReportLiabilitiesTotal: "Owed in total",
   financeReportEquity: "Equity",
   financeReportEquityTotal: "Equity in total",
-  financeReportResultToDate: "Profit or loss so far, not yet closed into equity",
+  financeReportResultToDate:
+    "Profit or loss so far, not yet closed into equity",
   financeReportLiabilitiesEquityTotal: "Owed, equity and result together",
   financeReportDifference: "Difference",
   financeReportUnbalanced: (amount: string) =>
@@ -3822,7 +3834,8 @@ export const en = {
     count === 1 ? "1 open document" : `${count} open documents`,
   financeReportNothingOwedToUs: "Nobody owes you anything",
   financeReportNothingWeOwe: "You owe nobody anything",
-  financeReportAgedEmptyBody: "Every issued document on this side has been settled in full.",
+  financeReportAgedEmptyBody:
+    "Every issued document on this side has been settled in full.",
   financeReportUnconverted: (count: number) =>
     count === 1
       ? "1 document is in none of these columns: we have no exchange rate to state it in your own currency."
