@@ -1664,7 +1664,9 @@ export const en = {
   aiUnreachable: "The AI couldn’t be reached. Here’s what matched:",
   // alo Chat (ADR 0038).
   chatNewChannel: "New channel",
-  chatNewChannelPrompt: "Name the channel",
+  chatNewChannelPrompt: "Give it a short, obvious name — people join by it.",
+  chatNewChannelPlaceholder: "e.g. product-launch",
+  chatCreate: "Create",
   chatDirectMessage: "Direct message",
   chatLoading: "Loading…",
   chatSend: "Send",
@@ -1695,6 +1697,7 @@ export const en = {
   chatEditFailed: "That edit couldn’t be saved.",
   chatWithdrawFailed: "That message couldn’t be withdrawn.",
   chatWhoIsHere: "Who's here",
+  chatMembersAndAgents: "Members & agents",
   chatClose: "Close",
   chatOwner: "owner",
   chatAgentsHere: "Agents in this conversation",
@@ -2610,7 +2613,8 @@ export const en = {
   sitesStatusDraft: "Draft",
   sitesStatusLive: "Live",
   sitesNewSiteTitle: "New website",
-  sitesNewSiteSubtitle: "Start from a description or choose a ready-made style.",
+  sitesNewSiteSubtitle:
+    "Start from a description or choose a ready-made style.",
   sitesStartingPoint: "How to start",
   sitesGenerateChoice: "Generate from a description",
   sitesTemplateChoice: "Start with a template",
@@ -2624,7 +2628,8 @@ export const en = {
   sitesCreatingSite: "Creating website…",
   sitesGenerationFailed:
     "Your draft could not be prepared. Check the server message and try again.",
-  sitesGenerationEmpty: "The generated draft did not contain a page. Try a fuller description.",
+  sitesGenerationEmpty:
+    "The generated draft did not contain a page. Try a fuller description.",
   sitesGenerationUnavailable:
     "Generation is not configured for this workspace. Start with a blank site or choose a style below.",
   sitesChooseTemplate: "Choose a starting style",

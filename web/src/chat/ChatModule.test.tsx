@@ -20,9 +20,21 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
+import { DialogProvider } from "../ds";
 import { strings } from "../i18n";
 import { ChatModule } from "./ChatModule";
 import type { ChannelSummary, FeedMessage } from "./types";
+
+/** The module asks for dialogs, so it must be mounted the way the app mounts
+ *  it — inside the provider. Rendering it bare tested a shape that never
+ *  ships. */
+function mount() {
+  return render(
+    <DialogProvider>
+      <ChatModule />
+    </DialogProvider>,
+  );
+}
 
 const ME = "user-anna";
 const THEM = "user-ben";
@@ -133,7 +145,7 @@ test("an agent's message is marked as an agent, not shown as a colleague", async
       body: "Here is what I found.",
     }),
   ]);
-  render(<ChatModule />);
+  mount();
 
   await screen.findByText("Here is what I found.");
   // The word that stops an agent being mistaken for a person.
@@ -162,7 +174,7 @@ test("the person who asked sees a live Approve button", async () => {
       },
     }),
   ]);
-  render(<ChatModule />);
+  mount();
 
   const approve = await screen.findByText(strings.agentApprove);
   expect(approve).toBeTruthy();
@@ -206,7 +218,7 @@ test("everyone else sees the proposal and no way to decide it", async () => {
       },
     }),
   ]);
-  render(<ChatModule />);
+  mount();
 
   // The proposal is visible — a room where actions happen invisibly is worse.
   await screen.findByText("I can create that task.");
@@ -238,7 +250,7 @@ test("a settled proposal keeps its card and says what it became", async () => {
       },
     }),
   ]);
-  render(<ChatModule />);
+  mount();
 
   await screen.findByText(strings.chatProposalSettled("approved"));
   // Even for the asker: decided is decided, and a second tap must be
@@ -248,7 +260,7 @@ test("a settled proposal keeps its card and says what it became", async () => {
 
 test("a person's message is not marked as an agent", async () => {
   withMessages([message({ body: "just me talking" })]);
-  render(<ChatModule />);
+  mount();
 
   await screen.findByText("just me talking");
   expect(screen.queryByText(strings.chatAgentTag)).toBeNull();
@@ -300,7 +312,7 @@ const AGENT = {
 
 test("typing @ offers the room's agents and people, agents first", async () => {
   withRoomPeople([message({ body: "hi" })]);
-  render(<ChatModule />);
+  mount();
   const box = await screen.findByLabelText(strings.chatComposerLabel);
 
   // Nothing offered until an '@' opens a mention.
@@ -316,7 +328,7 @@ test("typing @ offers the room's agents and people, agents first", async () => {
 
 test("an address typed inline is not a mention, so nothing is offered", async () => {
   withRoomPeople([message({ body: "hi" })]);
-  render(<ChatModule />);
+  mount();
   const box = await screen.findByLabelText(strings.chatComposerLabel);
 
   // The token after this '@' is exactly "alo", which IS an agent handle — so
@@ -333,7 +345,7 @@ test("an address typed inline is not a mention, so nothing is offered", async ()
 
 test("choosing a name puts it in the message", async () => {
   withRoomPeople([message({ body: "hi" })]);
-  render(<ChatModule />);
+  mount();
   const box = await screen.findByLabelText(strings.chatComposerLabel);
 
   fireEvent.change(box, { target: { value: "@al", selectionStart: 3 } });
@@ -359,9 +371,9 @@ test("an agent can be put into a room from the UI", async () => {
     },
     { match: "/chat/channels", body: { channels: [ROOM] } },
   ];
-  render(<ChatModule />);
+  mount();
 
-  fireEvent.click(await screen.findByTitle(strings.chatWhoIsHere));
+  fireEvent.click(await screen.findByText(strings.chatMembersAndAgents));
   // It is offered because it is not in the room yet.
   const add = await screen.findByTitle(strings.chatAgentAdd("alo"));
   fireEvent.click(add);
@@ -402,24 +414,27 @@ test("only my own standing words offer Edit and Withdraw", async () => {
       deletedAt: "2026-08-09T10:00:00Z",
     }),
   ]);
-  render(<ChatModule />);
+  mount();
   await screen.findByText("my words");
 
   // One Edit and one Withdraw in the whole feed: mine, still standing.
   // Not someone else's (the server refuses), not the agent's (its message is
   // a record of what it said, not a draft), not an already-withdrawn one.
-  expect(screen.getAllByText(strings.chatEditAction)).toHaveLength(1);
-  expect(screen.getAllByText(strings.chatWithdrawAction)).toHaveLength(1);
+  // Asserted on the accessible label, because the controls are icons — if the
+  // label ever goes missing the control is unusable by anyone not using a
+  // mouse, and this test says so.
+  expect(screen.getAllByLabelText(strings.chatEditAction)).toHaveLength(1);
+  expect(screen.getAllByLabelText(strings.chatWithdrawAction)).toHaveLength(1);
 });
 
 test("editing sends the new words, and an unchanged edit sends nothing", async () => {
   withMessages([
     message({ id: "m-mine", seq: 1, author: ME, body: "teh plan" }),
   ]);
-  render(<ChatModule />);
+  mount();
   await screen.findByText("teh plan");
 
-  fireEvent.click(screen.getByText(strings.chatEditAction));
+  fireEvent.click(screen.getByLabelText(strings.chatEditAction));
   const box = screen.getByLabelText(strings.chatEditLabel);
 
   // Saving it untouched must not stamp "edited" on words nobody changed.
@@ -428,7 +443,7 @@ test("editing sends the new words, and an unchanged edit sends nothing", async (
     expect(calls.some((c) => c.method === "PATCH")).toBe(false);
   });
 
-  fireEvent.click(screen.getByText(strings.chatEditAction));
+  fireEvent.click(screen.getByLabelText(strings.chatEditAction));
   const again = screen.getByLabelText(strings.chatEditLabel);
   fireEvent.change(again, { target: { value: "the plan" } });
   fireEvent.submit(again);
@@ -452,7 +467,7 @@ function page(n: number, from: number) {
 test("a full page offers to show earlier messages; a short one does not", async () => {
   // 50 back = exactly one page, so something is probably behind it.
   withMessages(page(50, 50));
-  render(<ChatModule />);
+  mount();
   await screen.findByText("line 50");
   expect(screen.getByText(strings.chatOlder)).toBeTruthy();
 
@@ -460,14 +475,14 @@ test("a full page offers to show earlier messages; a short one does not", async 
   calls.length = 0;
   // A short page is the beginning of the room.
   withMessages(page(3, 3));
-  render(<ChatModule />);
+  mount();
   await screen.findByText("line 3");
   expect(screen.queryByText(strings.chatOlder)).toBeNull();
 });
 
 test("showing earlier messages asks for what is behind the oldest held", async () => {
   withMessages(page(50, 50));
-  render(<ChatModule />);
+  mount();
   await screen.findByText("line 50");
 
   fireEvent.click(screen.getByText(strings.chatOlder));
@@ -489,9 +504,9 @@ test("browsing lists open channels and joining opens the one chosen", async () =
     { match: "/messages", body: { messages: [] } },
     { match: "/chat/channels", body: { channels: [ROOM] } },
   ];
-  render(<ChatModule />);
+  mount();
 
-  fireEvent.click(await screen.findByTitle(strings.chatBrowse));
+  fireEvent.click(await screen.findByText(strings.chatBrowse));
   fireEvent.click(await screen.findByText("open-room"));
 
   await waitFor(() => {
@@ -515,9 +530,9 @@ test("a colleague is searched for, never listed, and one letter asks nothing", a
     { match: "/messages", body: { messages: [] } },
     { match: "/chat/channels", body: { channels: [ROOM] } },
   ];
-  render(<ChatModule />);
+  mount();
 
-  fireEvent.click(await screen.findByTitle(strings.chatNewDm));
+  fireEvent.click(await screen.findByText(strings.chatNewDm));
   const box = screen.getByLabelText(strings.chatFindPerson);
 
   // One letter must not reach the server: it would ask a question whose only

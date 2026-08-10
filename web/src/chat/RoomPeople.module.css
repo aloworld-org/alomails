@@ -3,7 +3,9 @@
 .backdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  /* Above the rail and its menus (1000): a modal the user opened is the
+     thing they are looking at. */
+  z-index: 1100;
   display: flex;
   align-items: center;
   justify-content: center;

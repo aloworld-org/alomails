@@ -12,17 +12,22 @@
   box-shadow: 0 0 0 2px var(--bg-rail-hover);
 }
 
+/* Fixed, not absolute: the rail clips its children (`overflow: hidden`), so an
+   absolutely-positioned menu is cut off at the rail's edge and reads as though
+   it opened behind the app. The rail's app launcher already escapes the same
+   way; this is the same fix, and it must sit at the launcher's layer so the
+   two never fight. */
 .menu {
-  position: absolute;
-  bottom: 0;
-  left: calc(100% + var(--space-3));
+  position: fixed;
+  bottom: var(--space-3);
+  left: calc(var(--rail-width) + var(--space-2));
   width: 220px;
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: var(--space-2);
-  z-index: var(--z-overlay);
+  z-index: 1000;
 }
 
 .identity {

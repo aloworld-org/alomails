@@ -19,11 +19,13 @@ import {
   MessageSquarePlus,
   MessagesSquare,
   Paperclip,
+  Pencil,
   Reply,
   Search,
   Send,
   Sparkles,
   SmilePlus,
+  Trash2,
   Users,
   X,
 } from "lucide-react";
@@ -34,7 +36,7 @@ import { FilePicker, fileSize, saveBlob } from "../drive";
 import { AgentActionCard } from "../shell/AgentActionCard";
 import { RoomPeople } from "./RoomPeople";
 import { useJmapClient } from "../jmap";
-import { Avatar, Button } from "../ds";
+import { Avatar, Button, useDialogs } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
 import type { DriveNodeDto } from "../jmap/types";
 import type {
@@ -262,6 +264,65 @@ function MessageLine({
         .filter(Boolean)
         .join(" ")}
     >
+      {editing === null && (
+        <div className={styles.tools}>
+          {reactable && (
+            <span className={styles.pickerWrap}>
+              <button
+                type="button"
+                className={styles.tool}
+                onClick={() => setPicking((open) => !open)}
+                aria-label={strings.chatAddReaction}
+                title={strings.chatAddReaction}
+                aria-expanded={picking}
+              >
+                <SmilePlus size={16} />
+              </button>
+              {picking && (
+                <span className={styles.picker} role="menu">
+                  {palette.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      role="menuitem"
+                      className={styles.pickerOption}
+                      onClick={() => {
+                        setPicking(false);
+                        onReact(emoji);
+                      }}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </span>
+              )}
+            </span>
+          )}
+          {mine && (
+            <>
+              <button
+                type="button"
+                className={styles.tool}
+                onClick={() => setEditing(message.body)}
+                aria-label={strings.chatEditAction}
+                title={strings.chatEditAction}
+              >
+                <Pencil size={15} />
+              </button>
+              <button
+                type="button"
+                className={styles.tool}
+                onClick={() => onWithdraw(message)}
+                aria-label={strings.chatWithdrawAction}
+                title={strings.chatWithdrawAction}
+              >
+                <Trash2 size={15} />
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {grouped ? (
         // The time still exists for the reader who wants it, on approach only,
         // in the gutter the avatar would occupy.
@@ -341,25 +402,6 @@ function MessageLine({
         </p>
       )}
 
-      {mine && editing === null && (
-        <span className={styles.ownControls}>
-          <button
-            type="button"
-            className={styles.ownAction}
-            onClick={() => setEditing(message.body)}
-          >
-            {strings.chatEditAction}
-          </button>
-          <button
-            type="button"
-            className={styles.ownAction}
-            onClick={() => onWithdraw(message)}
-          >
-            {strings.chatWithdrawAction}
-          </button>
-        </span>
-      )}
-
       {message.proposal !== null && (
         <div className={styles.proposal}>
           <AgentActionCard
@@ -403,7 +445,7 @@ function MessageLine({
         </ul>
       )}
 
-      {(message.reactions.length > 0 || reactable) && (
+      {message.reactions.length > 0 && (
         <div className={styles.chips}>
           {message.reactions.map((reaction) => (
             <button
@@ -419,38 +461,6 @@ function MessageLine({
               <span className={styles.chipCount}>{reaction.count}</span>
             </button>
           ))}
-
-          {reactable && (
-            <span className={styles.pickerWrap}>
-              <button
-                type="button"
-                className={styles.chipAdd}
-                onClick={() => setPicking((open) => !open)}
-                aria-label={strings.chatAddReaction}
-                aria-expanded={picking}
-              >
-                <SmilePlus size={14} />
-              </button>
-              {picking && (
-                <span className={styles.picker} role="menu">
-                  {palette.map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      role="menuitem"
-                      className={styles.pickerOption}
-                      onClick={() => {
-                        setPicking(false);
-                        onReact(emoji);
-                      }}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </span>
-              )}
-            </span>
-          )}
         </div>
       )}
 
@@ -464,6 +474,7 @@ export function ChatModule() {
   const client = useJmapClient();
   // The reader's own id, for marking the messages addressed to them.
   const { identity } = useAuth();
+  const dialogs = useDialogs();
   const me = identity?.sub ?? null;
   const [channels, setChannels] = useState<ChannelSummary[] | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -878,8 +889,17 @@ export function ChatModule() {
   }
 
   async function createChannel() {
-    const name = window.prompt(strings.chatNewChannelPrompt)?.trim();
-    if (name === undefined || name === "") return;
+    // The app's own dialog, not the browser's: a native prompt says
+    // "localhost:5173 says" and looks nothing like the product it is part of.
+    const name = (
+      await dialogs.prompt({
+        title: strings.chatNewChannel,
+        message: strings.chatNewChannelPrompt,
+        placeholder: strings.chatNewChannelPlaceholder,
+        confirmLabel: strings.chatCreate,
+      })
+    )?.trim();
+    if (name === undefined || name === null || name === "") return;
     setCreating(true);
     setError(null);
     try {
@@ -912,32 +932,37 @@ export function ChatModule() {
       <aside className={styles.sidebar}>
         <header className={styles.sidebarHeader}>
           <h2 className={styles.sidebarTitle}>{strings.moduleChat}</h2>
-          <Button
-            variant="primary"
-            size="sm"
+        </header>
+
+        {/* Named, not iconographic. Three unlabelled glyphs in a corner is how
+            "start a DM" and "add an agent" became things nobody could find. */}
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.action}
             onClick={() => void createChannel()}
             disabled={creating}
           >
-            <MessageSquarePlus size={15} />
+            <MessageSquarePlus size={16} className={styles.actionIcon} />
             {strings.chatNewChannel}
-          </Button>
-          <button
-            type="button"
-            className={styles.browseButton}
-            onClick={() => void browse()}
-            title={strings.chatBrowse}
-          >
-            <Hash size={15} />
           </button>
           <button
             type="button"
-            className={styles.browseButton}
+            className={styles.action}
             onClick={() => setDmQuery("")}
-            title={strings.chatNewDm}
           >
-            <Users size={15} />
+            <Users size={16} className={styles.actionIcon} />
+            {strings.chatNewDm}
           </button>
-        </header>
+          <button
+            type="button"
+            className={styles.action}
+            onClick={() => void browse()}
+          >
+            <Hash size={16} className={styles.actionIcon} />
+            {strings.chatBrowse}
+          </button>
+        </div>
         <div className={styles.searchRow}>
           <Search size={14} className={styles.channelIcon} />
           <input
@@ -1162,10 +1187,10 @@ export function ChatModule() {
                 type="button"
                 className={styles.roomPeople}
                 onClick={() => setShowingPeople(true)}
-                title={strings.chatWhoIsHere}
+                title={strings.chatMembersAndAgents}
               >
                 <Users size={15} />
-                {strings.chatWhoIsHere}
+                {strings.chatMembersAndAgents}
               </button>
             </header>
 
