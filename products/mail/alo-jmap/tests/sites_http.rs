@@ -16,14 +16,17 @@ mod common;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use alo_store::{DriveLocation, NewDriveFile, SiteId};
+use alo_sites::serve::{AppState as PublicAppState, app as public_app};
+use alo_store::{DriveLocation, NewDriveFile, SiteId, SitePublicStore};
 use axum::Router;
 use axum::body::Body;
-use axum::http::{Request, StatusCode};
+use axum::http::{Request, StatusCode, header};
 use futures::future::BoxFuture;
 use serde_json::{Value, json};
+use sqlx::postgres::PgPoolOptions;
+use tower::ServiceExt;
 
-use common::{Harness, harness, send};
+use common::{Harness, database_url, harness, harness_on, harness_with_blobs, send};
 
 struct FakeSiteDomainDns {
     answers: HashMap<String, Vec<String>>,
@@ -86,6 +89,18 @@ async fn delete(app: &Router, token: &str, uri: &str) -> (StatusCode, Value) {
         .body(Body::empty())
         .unwrap();
     send(app, req).await
+}
+
+async fn public_text(state: &Arc<PublicAppState>, request: Request<Body>) -> (StatusCode, String) {
+    let response = public_app(Arc::clone(state))
+        .oneshot(request)
+        .await
+        .unwrap();
+    let status = response.status();
+    let bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
+    (status, String::from_utf8(bytes.to_vec()).unwrap())
 }
 
 /// A subdomain unique to this harness run: the tenant id is random per test,
@@ -1202,6 +1217,219 @@ async fn blog_post_routes_keep_the_body_in_drive_and_metadata_on_the_site() {
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "missing doc: {body}");
+}
+
+#[tokio::test]
+async fn final_blog_domain_and_privacy_arc_uses_a_real_drive_document() {
+    let (owner, blobs) = harness_with_blobs("sites-final-blog").await;
+    let outsider = harness_on(Arc::clone(&owner.store), "sites-final-blog-other").await;
+    let site = created_id(
+        "site",
+        post(
+            &owner.app,
+            &owner.token,
+            "/sites",
+            json!({ "name": "Field journal", "subdomain": sub("field-journal", &owner) }),
+        )
+        .await,
+    );
+    created_id(
+        "home page",
+        post(
+            &owner.app,
+            &owner.token,
+            &format!("/sites/{site}/pages"),
+            json!({ "title": "Home", "home": true }),
+        )
+        .await,
+    );
+    let (status, published) = post(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/publish"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "site publish failed: {published}");
+
+    // Create the article exactly as Docs does: upload BlockNote JSON, then
+    // create a Drive node whose current blob is that document.
+    let document =
+        include_str!("../../../sites/alo-sites/tests/fixtures/blocknote/core_document.json");
+    let upload_request = Request::builder()
+        .method("POST")
+        .uri(format!("/jmap/upload/{}", owner.account_id))
+        .header("authorization", format!("Bearer {}", owner.token))
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(document))
+        .unwrap();
+    let (status, uploaded) = send(&owner.app, upload_request).await;
+    assert_eq!(status, StatusCode::OK, "document upload failed: {uploaded}");
+    let blob_id = uploaded["blobId"].as_str().unwrap();
+    let doc_node = created_id(
+        "document",
+        post(
+            &owner.app,
+            &owner.token,
+            "/drive/files",
+            json!({
+                "space": null,
+                "parent": null,
+                "name": "A field guide to Utrecht mornings",
+                "blobId": blob_id,
+                "size": document.len(),
+                "contentType": "application/json",
+                "kind": "doc"
+            }),
+        )
+        .await,
+    );
+    let post_base = format!("/sites/{site}/posts");
+    let article = created_id(
+        "post",
+        post(
+            &owner.app,
+            &owner.token,
+            &post_base,
+            json!({
+                "docNodeId": doc_node,
+                "slug": "utrecht-mornings",
+                "title": "A field guide to Utrecht mornings",
+                "excerpt": "Notes from before the city wakes"
+            }),
+        )
+        .await,
+    );
+    let (status, article_state) = post(
+        &owner.app,
+        &owner.token,
+        &format!("{post_base}/{article}/publish"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "post publish failed: {article_state}"
+    );
+
+    // Claim and verify a customer address through the same DNS seam used in
+    // production. A live site promotes a successful proof directly to live.
+    let custom_host = format!("journal-{}.example.test", sub("host", &owner));
+    let domain_base = format!("/sites/{site}/domains");
+    let (status, claim) = post(
+        &owner.app,
+        &owner.token,
+        &domain_base,
+        json!({ "domain": custom_host }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "domain claim failed: {claim}");
+    let record_name = claim["verifyRecord"]["name"].as_str().unwrap().to_owned();
+    let record_value = claim["verifyRecord"]["value"].as_str().unwrap().to_owned();
+    let dns_app = app_with_dns(&owner, HashMap::from([(record_name, vec![record_value])]));
+    let (status, verified) = post(
+        &dns_app,
+        &owner.token,
+        &format!("{domain_base}/{custom_host}/verify"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "domain verify failed: {verified}");
+    assert_eq!(verified["status"], json!("live"));
+
+    // The anonymous service shares the real blob backend. One custom-Host
+    // article request renders the BlockNote body and records only safe,
+    // reduced analytics dimensions.
+    let pool = PgPoolOptions::new()
+        .max_connections(4)
+        .connect(&database_url())
+        .await
+        .unwrap();
+    let public = PublicAppState::new(
+        SitePublicStore::new(pool.clone(), blobs),
+        "sites.test".to_owned(),
+        b"sites-final-blog-analytics-secret",
+    );
+    let sensitive_ip = "203.0.113.132";
+    let sensitive_agent = "PrivateBrowser/tenant-secret";
+    let sensitive_referrer =
+        "https://NEWS.Example/private/customer?token=must-not-be-stored#account";
+    let (status, html) = public_text(
+        &public,
+        Request::builder()
+            .uri("/blog/utrecht-mornings?campaign=private-token")
+            .header(header::HOST, &custom_host)
+            .header("x-forwarded-for", sensitive_ip)
+            .header(header::USER_AGENT, sensitive_agent)
+            .header(header::REFERER, sensitive_referrer)
+            .body(Body::empty())
+            .unwrap(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "custom Host did not serve: {html}");
+    assert!(html.contains("A field guide to Utrecht mornings"));
+    assert!(html.contains("Great work is <strong><em>clear &amp; deliberate</em></strong>"));
+
+    let (status, report) = get(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/analytics?days=7"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "analytics failed: {report}");
+    assert_eq!(report["totals"]["visits"], json!(1));
+    assert_eq!(report["totals"]["uniqueVisitors"], json!(1));
+    assert_eq!(
+        report["topPages"][0]["path"],
+        json!("/blog/utrecht-mornings")
+    );
+    assert_eq!(report["topReferrers"][0]["domain"], json!("news.example"));
+    let report_text = report.to_string();
+    assert!(!report_text.contains(sensitive_ip));
+    assert!(!report_text.contains(sensitive_agent));
+    assert!(!report_text.contains("must-not-be-stored"));
+    let (status, _) = get(
+        &outsider.app,
+        &outsider.token,
+        &format!("/sites/{site}/analytics?days=7"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    let stored: Vec<(String, String)> =
+        sqlx::query_as("SELECT path, referrer_domain FROM site_analytics_daily WHERE site_id = $1")
+            .bind(&site)
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+    assert_eq!(
+        stored,
+        vec![(
+            "/blog/utrecht-mornings".to_owned(),
+            "news.example".to_owned()
+        )]
+    );
+    let hashes: Vec<Vec<u8>> = sqlx::query_scalar(
+        "SELECT visitor_hash FROM site_analytics_daily_visitors WHERE site_id = $1",
+    )
+    .bind(&site)
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(hashes.len(), 1);
+    assert_eq!(hashes[0].len(), 32);
+    assert_ne!(hashes[0], sensitive_ip.as_bytes());
+    let unsafe_columns: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM information_schema.columns \
+         WHERE table_schema = 'public' AND table_name LIKE 'site_analytics%' \
+           AND column_name IN ('ip', 'ip_address', 'user_agent', 'query_string', \
+                               'referrer_url', 'raw_referrer')",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(unsafe_columns, 0, "analytics schema has a raw-PII column");
 }
 
 // ---- the wrong-tenant test (mandatory: CLAUDE.md law 1) ----------------------

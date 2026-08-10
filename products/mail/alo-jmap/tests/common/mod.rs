@@ -40,14 +40,23 @@ pub struct Harness {
 /// A fresh tenant + logged-in user over the shared Postgres, with the
 /// JMAP router wired up.
 pub async fn harness(tag: &str) -> Harness {
+    let (harness, _) = harness_with_blobs(tag).await;
+    harness
+}
+
+/// A fresh harness plus the exact blob backend attached to its store. Public
+/// service integration tests use the clone to prove that bytes uploaded
+/// through JMAP are the bytes served anonymously by Sites.
+pub async fn harness_with_blobs(tag: &str) -> (Harness, BlobStore) {
     let pool = PgPoolOptions::new()
         .max_connections(4)
         .connect(&database_url())
         .await
         .expect("connect to test postgres");
-    let store = Arc::new(Store::new(pool, BlobStore::in_memory(50 * 1024 * 1024)));
+    let blobs = BlobStore::in_memory(50 * 1024 * 1024);
+    let store = Arc::new(Store::new(pool, blobs.clone()));
     store.migrate().await.unwrap();
-    harness_on(store, tag).await
+    (harness_on(store, tag).await, blobs)
 }
 
 /// A fresh tenant + logged-in user on an EXISTING store handle — for tests
