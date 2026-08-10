@@ -1,4 +1,3 @@
-#![allow(clippy::unwrap_used, clippy::expect_used)]
 //! Meetings: who may see one, who may join, and what the media engine is told.
 
 mod common;

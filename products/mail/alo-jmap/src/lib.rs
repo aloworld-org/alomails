@@ -104,6 +104,7 @@ pub mod insights_gallery;
 pub mod inventory_location_names;
 pub mod inventory_locations;
 pub mod inventory_moves;
+pub mod inventory_po;
 pub mod inventory_stock;
 pub mod inventory_supplier_prices;
 pub mod inventory_suppliers;

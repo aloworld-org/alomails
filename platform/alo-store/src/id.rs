@@ -442,6 +442,15 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One order placed with a supplier (alo Inventory, ADR 0035, wave B5.05a)
+    /// — what we asked for, at what price, and what has arrived against it.
+    /// Distinct from a [`BillingBillId`], which is what they later charge us:
+    /// the order is our document, the bill is theirs
+    /// (`docs/design/inventory.md`, "Purchase orders").
+    InvPurchaseOrderId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

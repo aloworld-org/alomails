@@ -234,6 +234,7 @@ DELETE /finance/accounts/{id} -> finance.account.delete
 DELETE /finance/expenses/{id} -> finance.expense.delete
 DELETE /finance/mileage/{id} -> finance.mileage.delete
 DELETE /inventory/locations/{id} -> inventory.location.delete
+DELETE /inventory/purchase-orders/{id} -> inventory.purchase_order.delete
 DELETE /inventory/suppliers/{id}/products/{product_id} -> inventory.supplier.product.delete
 DELETE /projects/clients/{id} -> projects.client.delete
 DELETE /projects/milestones/{id} -> projects.milestone.delete
@@ -252,6 +253,7 @@ PATCH /crm/stages/{id} -> crm.stage.update
 PATCH /finance/accounts/{id} -> finance.account.update
 PATCH /finance/expenses/{id} -> finance.expense.update
 PATCH /inventory/locations/{id} -> inventory.location.update
+PATCH /inventory/purchase-orders/{id} -> inventory.purchase_order.update
 PATCH /inventory/suppliers/{id} -> inventory.supplier.update
 PATCH /projects/milestones/{id} -> projects.milestone.update
 PATCH /projects/time/{id} -> projects.time.update
@@ -314,6 +316,8 @@ POST /finance/periods/{id}/reopen -> finance.period.reopen
 POST /inventory/locations -> inventory.location.create
 POST /inventory/locations/{id}/archive -> inventory.location.archive
 POST /inventory/moves -> inventory.move.create
+POST /inventory/purchase-orders -> inventory.purchase_order.create
+POST /inventory/purchase-orders/{id}/cancel -> inventory.purchase_order.cancel
 POST /inventory/suppliers -> inventory.supplier.create
 POST /inventory/suppliers/{id}/archive -> inventory.supplier.archive
 POST /projects/approvals/{id}/approve -> projects.approval.approve
