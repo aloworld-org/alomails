@@ -6,6 +6,11 @@
 import type { Catalog } from "./en";
 
 export const nl: Partial<Catalog> = {
+  sitesAddressAvailable: "Beschikbaar",
+  sitesAddressTaken: "Al in gebruik",
+  sitesAddressNotChecked: "Voer een geldig adres in om de beschikbaarheid te controleren",
+  sitesNameRequired: "Geef je website een naam om door te gaan.",
+  sitesAddressRequired: "Voer een websiteadres in om door te gaan.",
   driveEmpty: "Deze map is leeg. Upload een bestand of maak een map.",
   driveEmptyTitle: "Hier staat nog niets",
   driveEmptyReadOnly: "Deze ruimte bevat nog geen bestanden.",

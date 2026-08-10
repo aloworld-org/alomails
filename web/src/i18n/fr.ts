@@ -6,6 +6,11 @@
 import type { Catalog } from "./en";
 
 export const fr: Partial<Catalog> = {
+  sitesAddressAvailable: "Disponible",
+  sitesAddressTaken: "Déjà utilisée",
+  sitesAddressNotChecked: "Saisissez une adresse valide pour vérifier sa disponibilité",
+  sitesNameRequired: "Nommez votre site pour continuer.",
+  sitesAddressRequired: "Saisissez une adresse de site pour continuer.",
   driveEmpty: "Ce dossier est vide. Téléversez un fichier ou créez un dossier.",
   driveEmptyTitle: "Rien ici pour l’instant",
   driveEmptyReadOnly: "Cet espace ne contient encore aucun fichier.",

@@ -2719,6 +2719,11 @@ export const en = {
   sitesSubdomainAvailable: (subdomain: string) => `“${subdomain}” is free.`,
   sitesSubdomainTaken: (subdomain: string) =>
     `“${subdomain}” is already taken.`,
+  sitesAddressAvailable: "Available",
+  sitesAddressTaken: "Already taken",
+  sitesAddressNotChecked: "Enter a valid address to check availability",
+  sitesNameRequired: "Name your website to continue.",
+  sitesAddressRequired: "Enter a site address to continue.",
   sitesCreateSite: "Create website",
   sitesCancel: "Cancel",
   sitesBack: "All websites",

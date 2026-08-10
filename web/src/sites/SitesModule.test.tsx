@@ -457,6 +457,13 @@ describe("creating a site", () => {
   });
 
   test("the typed address is checked live against the server", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/config"),
+        status: 200,
+        body: { domain: "alosites.com" },
+      },
+    ];
     ui("/sites");
     fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
     chooseTemplatePath();
@@ -474,11 +481,54 @@ describe("creating a site", () => {
       target: { value: "acme" },
     });
     await waitFor(
-      () => expect(screen.getByText(strings.sitesSubdomainAvailable("acme"))).toBeTruthy(),
+      () => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(),
       { timeout: 3000 },
     );
+    expect(screen.getByText("acme.alosites.com")).toBeTruthy();
     const check = calls.find((c) => c.url.includes("/sites/subdomain-check"));
     expect(check?.url).toContain("subdomain=acme");
+  });
+
+  test("the site name suggests an editable full address and explains a disabled Create", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/config"),
+        status: 200,
+        body: { domain: "alosites.com" },
+      },
+      {
+        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        status: 200,
+        body: { subdomain: "axon-studio", available: true },
+      },
+    ];
+    ui("/sites");
+    fireEvent.click(await screen.findByRole("button", { name: strings.sitesNewSite }));
+    chooseTemplatePath();
+
+    expect(screen.getByText(strings.sitesNameRequired)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
+      target: { value: "Axón Studio" },
+    });
+
+    expect(screen.getByLabelText(strings.sitesFieldSubdomain)).toHaveProperty(
+      "value",
+      "axon-studio",
+    );
+    expect(await screen.findByText("axon-studio.alosites.com")).toBeTruthy();
+    expect(screen.queryByText(strings.sitesNameRequired)).toBeNull();
+    await waitFor(() => expect(screen.getByText(strings.sitesAddressAvailable)).toBeTruthy(), {
+      timeout: 3000,
+    });
+
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
+      target: { value: "" },
+    });
+    expect(screen.getByText(strings.sitesAddressRequired)).toBeTruthy();
+    expect(screen.getByRole("button", { name: strings.sitesCreateSite })).toHaveProperty(
+      "disabled",
+      true,
+    );
   });
 
   test("a taken address, and a rule the server names, are both shown", async () => {
@@ -495,7 +545,7 @@ describe("creating a site", () => {
     ];
     const address = screen.getByLabelText(strings.sitesFieldSubdomain);
     fireEvent.change(address, { target: { value: "taken" } });
-    await waitFor(() => expect(screen.getByText(strings.sitesSubdomainTaken("taken"))).toBeTruthy(), {
+    await waitFor(() => expect(screen.getByText(strings.sitesAddressTaken)).toBeTruthy(), {
       timeout: 3000,
     });
 
@@ -512,8 +562,18 @@ describe("creating a site", () => {
     });
   });
 
-  test("submitting sends what was typed and opens the new site", async () => {
+  test("a pasted full address is normalized before check and create", async () => {
     replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/config"),
+        status: 200,
+        body: { domain: "alosites.com" },
+      },
+      {
+        match: (url, method) => method === "GET" && url.includes("/sites/subdomain-check"),
+        status: 200,
+        body: { subdomain: "acme", available: true },
+      },
       {
         match: (url, method) => method === "POST" && url.endsWith("/sites"),
         status: 200,
@@ -543,11 +603,18 @@ describe("creating a site", () => {
       target: { value: "Acme" },
     });
     fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
-      target: { value: "acme" },
+      target: { value: "https://acme.alosites.com/" },
     });
+    await waitFor(() =>
+      expect(screen.getByLabelText(strings.sitesFieldSubdomain)).toHaveProperty("value", "acme"),
+    );
+    await waitFor(
+      () => expect(calls.some((call) => call.url.includes("subdomain=acme"))).toBe(true),
+      { timeout: 3000 },
+    );
     fireEvent.click(screen.getByRole("button", { name: strings.sitesCreateSite }));
 
-    // The write carried exactly what was typed…
+    // The write carries the label behind the displayed complete address…
     await waitFor(() => expect(calls.some((call) => call.url.endsWith("/sites/site-9/pages"))).toBe(true));
     expect(
       calls.find((call) => call.method === "POST" && call.url.endsWith("/sites")),
@@ -691,8 +758,8 @@ describe("publishing a site", () => {
     fireEvent.change(screen.getByLabelText(strings.sitesFieldSubdomain), {
       target: { value: "Acme" },
     });
-    // The preview composes the typed label (lowercased) with the domain.
-    expect(await screen.findByText(strings.sitesAddressPreview("acme.alosites.com"))).toBeTruthy();
+    // The live status composes the typed label (lowercased) with the domain.
+    expect(await screen.findByText("acme.alosites.com")).toBeTruthy();
   });
 });
 

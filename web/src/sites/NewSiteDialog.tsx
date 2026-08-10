@@ -23,25 +23,66 @@ type Check =
   | { kind: "taken"; subdomain: string }
   | { kind: "invalid"; message: string };
 
-function CheckLine({ check }: { check: Check }) {
-  if (check.kind === "idle") return null;
+/** The address suggestion is deliberately syntax-only. The store remains the
+ *  one authority on validity and reserved words. */
+export function siteAddressSuggestion(name: string): string {
+  return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40)
+    .replace(/-+$/g, "");
+}
+
+/** Accept the label owners expect as well as the complete address they often
+ *  paste from a browser. Matching the configured suffix is presentation
+ *  normalization, not a second copy of the server's validation rules. */
+export function normalizeSiteAddress(value: string, domain: string | null): string {
+  const host = value
+    .trim()
+    .replace(/^[a-z][a-z0-9+.-]*:\/\//i, "")
+    .split(/[/?#]/, 1)[0]!
+    .replace(/\.$/, "")
+    .toLowerCase();
+  if (domain === null) return host;
+  const suffix = `.${domain.toLowerCase()}`;
+  return host.endsWith(suffix) ? host.slice(0, -suffix.length) : host;
+}
+
+function AddressStatus({
+  check,
+  subdomain,
+  domain,
+}: {
+  check: Check;
+  subdomain: string;
+  domain: string | null;
+}) {
+  if (subdomain === "") return null;
+  const address = domain === null ? subdomain : `${subdomain}.${domain}`;
   const text =
     check.kind === "checking"
       ? strings.sitesSubdomainChecking
       : check.kind === "available"
-        ? strings.sitesSubdomainAvailable(check.subdomain)
+        ? strings.sitesAddressAvailable
         : check.kind === "taken"
-          ? strings.sitesSubdomainTaken(check.subdomain)
-          : check.message;
+          ? strings.sitesAddressTaken
+          : check.kind === "invalid"
+            ? check.message
+            : strings.sitesAddressNotChecked;
   const tone =
     check.kind === "available"
       ? styles.checkOk
-      : check.kind === "checking"
+      : check.kind === "checking" || check.kind === "idle"
         ? styles.checkPending
         : styles.checkBad;
   return (
-    <p className={`${styles.checkLine} ${tone}`} role="status">
-      {text}
+    <p className={`${styles.addressStatus} ${tone}`} role="status">
+      <Globe aria-hidden="true" />
+      <span className={styles.addressValue}>{address}</span>
+      <span>{text}</span>
     </p>
   );
 }
@@ -66,12 +107,17 @@ export function NewSiteDialog({
   const [presets, setPresets] = useState<ThemePreset[] | null>(null);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   const checkSeq = useRef(0);
+  const addressEdited = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
     api.config().then(
       (c) => {
-        if (!cancelled && c.domain !== "") setDomain(c.domain);
+        if (!cancelled && typeof c.domain === "string" && c.domain.trim() !== "") {
+          const nextDomain = c.domain.trim().toLowerCase();
+          setDomain(nextDomain);
+          setSubdomain((current) => normalizeSiteAddress(current, nextDomain));
+        }
       },
       () => undefined,
     );
@@ -153,7 +199,10 @@ export function NewSiteDialog({
     setBusy(true);
     setError(null);
     try {
-      const site = await api.createSite({ name: name.trim(), subdomain: subdomain.trim() });
+      const site = await api.createSite({
+        name: name.trim(),
+        subdomain: normalizeSiteAddress(subdomain, domain),
+      });
       if (selectedPreset !== null) {
         await api.setTheme(site.id, { schema_version: 1, preset: selectedPreset });
       }
@@ -169,6 +218,12 @@ export function NewSiteDialog({
     mode === "generate"
       ? description.trim() !== ""
       : name.trim() !== "" && subdomain.trim() !== "";
+  const missingTemplateValue =
+    mode !== "template" || canSubmit
+      ? null
+      : name.trim() === ""
+        ? strings.sitesNameRequired
+        : strings.sitesAddressRequired;
 
   return (
     <DialogFrame
@@ -226,23 +281,33 @@ export function NewSiteDialog({
       ) : (
         <>
           <Field label={strings.sitesFieldName}>
-            <input className={styles.input} value={name} onChange={(event) => setName(event.target.value)} autoFocus />
+            <input
+              className={styles.input}
+              value={name}
+              onChange={(event) => {
+                const nextName = event.target.value;
+                setName(nextName);
+                if (!addressEdited.current) setSubdomain(siteAddressSuggestion(nextName));
+              }}
+              autoFocus
+            />
           </Field>
           <Field label={strings.sitesFieldSubdomain} hint={strings.sitesSubdomainHint}>
             <input
               className={styles.input}
               value={subdomain}
-              onChange={(event) => setSubdomain(event.target.value)}
+              onChange={(event) => {
+                addressEdited.current = true;
+                setSubdomain(normalizeSiteAddress(event.target.value, domain));
+              }}
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
             />
           </Field>
-          <CheckLine check={check} />
-          {domain !== null && subdomain.trim() !== "" && (
-            <p className={styles.addressPreview}>
-              {strings.sitesAddressPreview(`${subdomain.trim().toLowerCase()}.${domain}`)}
-            </p>
+          <AddressStatus check={check} subdomain={subdomain.trim()} domain={domain} />
+          {missingTemplateValue !== null && (
+            <p className={styles.submitRequirement} role="status">{missingTemplateValue}</p>
           )}
           <fieldset className={styles.templatePicker}>
             <legend>{strings.sitesChooseTemplate}</legend>
