@@ -25,6 +25,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use alo_ai::{InferenceError, SiteDraftError};
 use axum::Json;
 use axum::extract::{Extension, Path, Query, State};
 use axum::http::{HeaderMap, StatusCode, header};
@@ -40,12 +41,13 @@ use alo_sites::render::{
 };
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
-    BlobId, DriveNodeId, NewSitePost, Section, SectionsEnvelope, Site, SiteDomain,
-    SiteDomainStatus, SiteFormId, SiteFormSubmissionId, SiteId, SitePage, SitePageId, SitePost,
-    SitePostId, SitePostUpdate, SiteTheme, StoreError, normalize_site_domain,
-    site_theme::THEME_PRESETS,
+    BlobId, DriveNodeId, NewGeneratedSite, NewGeneratedSitePage, NewSitePost, Section,
+    SectionsEnvelope, Site, SiteDomain, SiteDomainStatus, SiteFormId, SiteFormSubmissionId, SiteId,
+    SitePage, SitePageId, SitePost, SitePostId, SitePostUpdate, SiteTheme, StoreError,
+    normalize_site_domain, site_theme::THEME_PRESETS,
 };
 
+use crate::ai::tenant_ai_config;
 use crate::error::Problem;
 use crate::state::{Account, AppState, authenticate};
 
@@ -74,6 +76,11 @@ impl SiteDomainTxtLookup for SystemSiteDomainTxtLookup {
 /// DNS label and value used to prove control of a custom site host.
 const SITE_DOMAIN_VERIFY_PREFIX: &str = "_alo-sites";
 const SITE_DOMAIN_VERIFY_VALUE_PREFIX: &str = "alo-site-verification=";
+
+/// A business description is prompt input, not a document upload. Bound it
+/// before buffering independently of the server's larger upload ceiling.
+pub const MAX_SITE_GENERATE_BYTES: usize = 16 * 1024;
+const MAX_SITE_DESCRIPTION_CHARS: usize = 8_000;
 
 // ---- JSON shaping -----------------------------------------------------------
 
@@ -172,6 +179,119 @@ pub async fn list_sites(
     Ok(Json(
         json!({ "sites": sites.iter().map(site_json).collect::<Vec<_>>() }),
     ))
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct GenerateSiteBody {
+    description: String,
+}
+
+fn generation_problem(error: &SiteDraftError) -> Problem {
+    match error {
+        SiteDraftError::Inference(InferenceError::Disabled | InferenceError::NotConfigured) =>
+            Problem::with(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Website generation is not configured. You can create a blank site instead.",
+            )
+            .with_extra(json!({ "reason": "unconfigured" })),
+        SiteDraftError::Inference(
+            InferenceError::Backend(_) | InferenceError::Transport | InferenceError::Empty,
+        ) => Problem::with(
+            StatusCode::BAD_GATEWAY,
+            "Website generation could not reach the configured AI service. Try again shortly.",
+        )
+        .with_extra(json!({ "reason": "unreachable" })),
+        SiteDraftError::MissingObject
+        | SiteDraftError::UnsupportedVersion(_)
+        | SiteDraftError::Shape(_)
+        | SiteDraftError::Invalid(_)
+        | SiteDraftError::RepairFailed(_) => Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "AI could not create a valid website. Nothing was changed; refine the description and try again.",
+        )
+        .with_extra(json!({ "reason": "invalid_generation" })),
+    }
+}
+
+/// `POST /sites/generate` `{description}` creates one complete draft site.
+///
+/// The model may propose content, but it never owns persistence. Its complete
+/// envelope passes the strict alo-ai parser, is translated to store-owned
+/// inputs, and is committed atomically. This route never publishes.
+pub async fn generate_site(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: GenerateSiteBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let description = req.description.trim();
+    if description.is_empty() {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "Describe the business or website to generate.",
+        ));
+    }
+    if description.chars().count() > MAX_SITE_DESCRIPTION_CHARS {
+        return Err(Problem::with(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "The website description is too long. Shorten it and try again.",
+        ));
+    }
+
+    let config = tenant_ai_config(&account).await.map_err(|problem| {
+        if problem.status == StatusCode::SERVICE_UNAVAILABLE {
+            Problem::with(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Website generation is not configured. You can create a blank site instead.",
+            )
+            .with_extra(json!({ "reason": "unconfigured" }))
+        } else {
+            problem
+        }
+    })?;
+    let proposal = alo_ai::generate_site_draft(&config, description)
+        .await
+        .map_err(|error| generation_problem(&error))?;
+    let draft = NewGeneratedSite {
+        name: proposal.site.name,
+        subdomain: proposal.site.subdomain,
+        theme: proposal.site.theme,
+        pages: proposal
+            .pages
+            .into_iter()
+            .map(|page| NewGeneratedSitePage {
+                title: page.title,
+                slug: page.slug,
+                is_home: page.is_home,
+                seo_title: page.seo_title,
+                seo_description: page.seo_description,
+                sections: page.sections,
+            })
+            .collect(),
+    };
+    let created = account
+        .acc
+        .create_generated_site(draft)
+        .await
+        .map_err(map_store_err)?;
+    let site = account
+        .acc
+        .site(&created.site)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(Problem::server_error)?;
+    let pages = account
+        .acc
+        .site_pages(&created.site)
+        .await
+        .map_err(map_store_err)?;
+
+    Ok(Json(json!({
+        "site": site_json(&site),
+        "pages": pages.iter().map(|page| page_json(page, true)).collect::<Vec<_>>(),
+    })))
 }
 
 // ---- custom domains --------------------------------------------------------

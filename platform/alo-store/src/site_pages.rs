@@ -89,7 +89,7 @@ pub fn validate_page_slug(slug: &str) -> Result<()> {
 }
 
 /// Validates a page's display title: non-blank after trimming, bounded.
-fn validate_page_title(title: &str) -> Result<()> {
+pub(crate) fn validate_page_title(title: &str) -> Result<()> {
     if title.trim().is_empty() {
         return Err(StoreError::Conflict(
             "page title must not be empty".to_owned(),
@@ -105,7 +105,11 @@ fn validate_page_title(title: &str) -> Result<()> {
 
 /// Normalizes an optional SEO override: trims, treats blank as absent, and
 /// bounds the length.
-fn normalize_seo(value: Option<&str>, cap: usize, field: &str) -> Result<Option<String>> {
+pub(crate) fn normalize_seo(
+    value: Option<&str>,
+    cap: usize,
+    field: &str,
+) -> Result<Option<String>> {
     match value.map(str::trim) {
         None | Some("") => Ok(None),
         Some(text) => {
@@ -121,7 +125,7 @@ fn normalize_seo(value: Option<&str>, cap: usize, field: &str) -> Result<Option<
 
 /// Translates the table's named constraints into caller-facing conflicts.
 /// Anything else passes through the standard mapping.
-fn map_page_constraints(error: sqlx::Error) -> StoreError {
+pub(crate) fn map_page_constraints(error: sqlx::Error) -> StoreError {
     if let sqlx::Error::Database(ref db) = error {
         match db.constraint() {
             Some("site_pages_slug_unique") => {

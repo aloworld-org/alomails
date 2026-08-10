@@ -266,6 +266,10 @@ pub fn app_with_site_domain_dns(
         )
         .route("/chat/messages/{id}/reactions", post(chat::toggle_reaction))
         .route("/sites", get(sites::list_sites).post(sites::create_site))
+        .route(
+            "/sites/generate",
+            post(sites::generate_site).layer(DefaultBodyLimit::max(sites::MAX_SITE_GENERATE_BYTES)),
+        )
         .route("/sites/subdomain-check", get(sites::check_subdomain))
         .route("/sites/theme-presets", get(sites::list_theme_presets))
         .route("/sites/config", get(sites::sites_config))

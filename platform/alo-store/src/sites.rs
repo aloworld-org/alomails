@@ -184,7 +184,7 @@ pub fn validate_subdomain(subdomain: &str) -> Result<()> {
 }
 
 /// Validates a site's display name: non-blank after trimming, bounded.
-fn validate_site_name(name: &str) -> Result<()> {
+pub(crate) fn validate_site_name(name: &str) -> Result<()> {
     if name.trim().is_empty() {
         return Err(StoreError::Conflict(
             "site name must not be empty".to_owned(),
@@ -201,7 +201,7 @@ fn validate_site_name(name: &str) -> Result<()> {
 /// Translates a unique-index violation on the global subdomain namespace into
 /// the taken/free answer — the only information the cross-tenant surface may
 /// reveal. Anything else passes through the standard mapping.
-fn map_subdomain_unique(error: sqlx::Error) -> StoreError {
+pub(crate) fn map_subdomain_unique(error: sqlx::Error) -> StoreError {
     if let sqlx::Error::Database(ref db) = error
         && db.constraint() == Some("sites_subdomain_unique")
     {

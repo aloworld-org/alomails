@@ -122,6 +122,7 @@ pub mod site_assets;
 pub mod site_domains;
 pub mod site_form_notify;
 pub mod site_forms;
+pub mod site_generation;
 pub mod site_model;
 pub mod site_pages;
 pub mod site_posts;
@@ -332,6 +333,7 @@ pub use site_form_notify::FormNotification;
 pub use site_forms::{
     MAX_FORMS_PER_SITE, SiteForm, SiteFormSubmission, SubmissionContent, normalize_submission,
 };
+pub use site_generation::{GeneratedSiteDraft, NewGeneratedSite, NewGeneratedSitePage};
 pub use site_model::{SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope};
 pub use site_pages::{SitePage, validate_page_slug};
 pub use site_posts::{NewSitePost, SitePost, SitePostStatus, SitePostUpdate};
