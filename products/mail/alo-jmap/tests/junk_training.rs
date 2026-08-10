@@ -133,6 +133,7 @@ async fn junk_moves_train_rspamd_and_keyword_changes_do_not() {
         store: Arc::clone(&store),
         identity: identity.clone(),
         push: alo_jmap::push::PushHub::new(),
+        media: None,
         limits: alo_jmap::state::Limits::default(),
         base_url: "http://test".into(),
         submission_addr: None,

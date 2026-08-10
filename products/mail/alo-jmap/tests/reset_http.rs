@@ -25,6 +25,7 @@ fn reset_app(store: Arc<Store>, identity: Identity, domains: Vec<String>) -> Rou
         store,
         identity,
         push: PushHub::new(),
+        media: None,
         limits: Limits::default(),
         base_url: "http://test".into(),
         // No submission listener: `request` for a KNOWN address reaches the
