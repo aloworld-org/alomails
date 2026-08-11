@@ -10,7 +10,8 @@ export const nl: Partial<Catalog> = {
   sitesAddFirstSection: "Voeg je eerste sectie toe",
   sitesAddressAvailable: "Beschikbaar",
   sitesAddressTaken: "Al in gebruik",
-  sitesAddressNotChecked: "Voer een geldig adres in om de beschikbaarheid te controleren",
+  sitesAddressNotChecked:
+    "Voer een geldig adres in om de beschikbaarheid te controleren",
   sitesNameRequired: "Geef je website een naam om door te gaan.",
   sitesAddressRequired: "Voer een websiteadres in om door te gaan.",
   driveEmpty: "Deze map is leeg. Upload een bestand of maak een map.",
@@ -41,16 +42,21 @@ export const nl: Partial<Catalog> = {
   driveViewExtensions: "Bestandsnaamextensies",
   taskCreating: "Aanmaken…",
   taskFilesAttachTo: "Toevoegen aan taak",
-  taskFilesDropHint: "Sleep afbeeldingen of bestanden hierheen, of kies Bijlage toevoegen.",
-  taskFilesNeedTask: "Maak eerst een taak en voeg er daarna afbeeldingen en bestanden aan toe.",
-  taskFilesUploadError: "Deze bestanden konden niet worden toegevoegd. Probeer opnieuw.",
+  taskFilesDropHint:
+    "Sleep afbeeldingen of bestanden hierheen, of kies Bijlage toevoegen.",
+  taskFilesNeedTask:
+    "Maak eerst een taak en voeg er daarna afbeeldingen en bestanden aan toe.",
+  taskFilesUploadError:
+    "Deze bestanden konden niet worden toegevoegd. Probeer opnieuw.",
   taskChooseFromDrive: "Kiezen uit Drive",
-  taskChooseFromDriveHint: "Voeg bestaande bestanden toe zonder ze opnieuw te uploaden.",
+  taskChooseFromDriveHint:
+    "Voeg bestaande bestanden toe zonder ze opnieuw te uploaden.",
   taskSearchDrive: "Zoeken in deze map",
   taskDriveBack: "Terug naar de vorige map",
   taskNoDriveFiles: "Geen bestanden in deze map.",
   taskAttachSelected: "Selectie toevoegen",
-  taskFilesSelected: (count: number) => count === 1 ? "1 bestand geselecteerd" : `${count} bestanden geselecteerd`,
+  taskFilesSelected: (count: number) =>
+    count === 1 ? "1 bestand geselecteerd" : `${count} bestanden geselecteerd`,
   taskCreateOnDate: (date: string) => `Taak maken met vervaldatum ${date}`,
   // brand
   appName: "alo",
@@ -114,7 +120,8 @@ export const nl: Partial<Catalog> = {
   homeUploadFile: "Bestand uploaden",
   homeCreateDoc: "Document maken",
   homeToday: "Vandaag",
-  homeAgendaComingSoon: "Uw agenda verschijnt hier zodra de kalender beschikbaar is.",
+  homeAgendaComingSoon:
+    "Uw agenda verschijnt hier zodra de kalender beschikbaar is.",
   homeAskTitle: "Vraag alo alles",
   homeAskBody: "Uw AI-assistent voor al uw werk.",
   homeAskCta: "Vraag alo",
@@ -162,7 +169,8 @@ export const nl: Partial<Catalog> = {
   contactSave: "Opslaan",
   contactCancel: "Annuleren",
   contactDelete: "Verwijderen",
-  contactDeleteConfirm: (name: string) => `${name} verwijderen? Dit kan niet ongedaan worden gemaakt.`,
+  contactDeleteConfirm: (name: string) =>
+    `${name} verwijderen? Dit kan niet ongedaan worden gemaakt.`,
   contactNeedsName: "Voeg een naam of ten minste één e-mailadres toe.",
   contactSaveError: "Kon dit contact niet opslaan.",
   contactDeleteError: "Kon dit contact niet verwijderen.",
@@ -174,7 +182,8 @@ export const nl: Partial<Catalog> = {
     skipped > 0
       ? `${n} contact${n === 1 ? "" : "en"} geïmporteerd (${skipped} overgeslagen).`
       : `${n} contact${n === 1 ? "" : "en"} geïmporteerd.`,
-  contactsImportError: "Kon dat bestand niet importeren. Is het een .vcf-export?",
+  contactsImportError:
+    "Kon dat bestand niet importeren. Is het een .vcf-export?",
   contactsExportError: "Kon uw contacten niet exporteren.",
   contactsExportEmpty: "U hebt nog geen contacten om te exporteren.",
 
@@ -203,7 +212,8 @@ export const nl: Partial<Catalog> = {
   importClose: "Sluiten",
   signedInAs: "Aangemeld als",
   comingSoonTitle: "Binnenkort",
-  comingSoonBody: "Dit deel van uw werkomgeving komt eraan. E-mail is nu al klaar.",
+  comingSoonBody:
+    "Dit deel van uw werkomgeving komt eraan. E-mail is nu al klaar.",
 
   // auth — brand panel
   brandHeadline: "Uw werkomgeving.\nUw servers.\nUw regels.",
@@ -225,7 +235,8 @@ export const nl: Partial<Catalog> = {
   hidePassword: "Wachtwoord verbergen",
   rememberMe: "Aangemeld blijven",
   forgotPassword: "Wachtwoord vergeten?",
-  forgotPasswordNote: "Neem contact op met uw beheerder om uw wachtwoord te herstellen.",
+  forgotPasswordNote:
+    "Neem contact op met uw beheerder om uw wachtwoord te herstellen.",
   signInButton: "Aanmelden",
   signingIn: "Bezig met aanmelden…",
   orDivider: "of",
@@ -246,12 +257,14 @@ export const nl: Partial<Catalog> = {
   backToSignIn: "Terug naar aanmelden",
 
   // auth — errors
-  errorBadCredentials: "Dit e-mailadres of wachtwoord klopt niet. Probeer het opnieuw.",
+  errorBadCredentials:
+    "Dit e-mailadres of wachtwoord klopt niet. Probeer het opnieuw.",
   errorSecondFactor: "Voer uw authenticatiecode in om verder te gaan.",
   errorBadOtp: "Deze code klopt niet. Probeer het opnieuw.",
   errorRateLimited: "Te veel pogingen. Wacht even en probeer het opnieuw.",
   errorGeneric: "Er ging iets mis bij het aanmelden. Probeer het opnieuw.",
-  errorNetwork: "Kan de server niet bereiken. Controleer uw verbinding en probeer opnieuw.",
+  errorNetwork:
+    "Kan de server niet bereiken. Controleer uw verbinding en probeer opnieuw.",
   signingOut: "Bezig met afmelden…",
 
   // signup — personal accounts
@@ -291,7 +304,8 @@ export const nl: Partial<Catalog> = {
 
   // auth — password reset
   resetHeading: "Uw wachtwoord herstellen",
-  resetSubtitle: "Voer uw alo-adres in — we mailen een herstelcode naar uw herstel-postvak.",
+  resetSubtitle:
+    "Voer uw alo-adres in — we mailen een herstelcode naar uw herstel-postvak.",
   resetAddressLabel: "Uw alo-adres",
   resetSendCode: "Herstelcode versturen",
   resetSending: "Versturen…",
@@ -339,7 +353,8 @@ export const nl: Partial<Catalog> = {
   cancelledAbsent: "Deze afspraak stond niet in uw agenda.",
   agendaEventGuests: "Genodigden",
   agendaGuestsPlaceholder: "naam@voorbeeld.com, andere@voorbeeld.com",
-  agendaGuestsHint: "We mailen elke genodigde een uitnodiging die ze in hun eigen agenda kunnen accepteren.",
+  agendaGuestsHint:
+    "We mailen elke genodigde een uitnodiging die ze in hun eigen agenda kunnen accepteren.",
   agendaEventDescription: "Notities",
   agendaSave: "Opslaan",
   agendaSaveThis: "Deze afspraak",
@@ -409,12 +424,23 @@ export const nl: Partial<Catalog> = {
   taskEmpty: "Nog geen taken. Voeg er hierboven een toe.",
   taskPlateEmpty: "Niets te doen. U bent helemaal bij.",
   taskNoProposalsTitle: "U bent helemaal bij",
-  taskNoProposals: "Suggesties verschijnen hier wanneer alo actiepunten in een e-mail vindt.",
+  taskNoProposals:
+    "Suggesties verschijnen hier wanneer alo actiepunten in een e-mail vindt.",
   taskAiSuggested: "Voorgesteld door AI",
   taskAccept: "Accepteren",
   taskReject: "Negeren",
   taskActivityKind: (kind: string) =>
-    ({ created: "heeft deze taak gemaakt", status_changed: "heeft ze verplaatst", assigned: "heeft de toegewezene gewijzigd", due_changed: "heeft de vervaldatum gewijzigd", commented: "heeft gereageerd", accepted: "heeft de suggestie geaccepteerd", proposed: "is voorgesteld door AI" } as Record<string, string>)[kind] ?? kind,
+    (
+      ({
+        created: "heeft deze taak gemaakt",
+        status_changed: "heeft ze verplaatst",
+        assigned: "heeft de toegewezene gewijzigd",
+        due_changed: "heeft de vervaldatum gewijzigd",
+        commented: "heeft gereageerd",
+        accepted: "heeft de suggestie geaccepteerd",
+        proposed: "is voorgesteld door AI",
+      }) as Record<string, string>
+    )[kind] ?? kind,
   agendaReminder: "Herinnering",
   agendaReminderNone: "Geen herinnering",
   agendaReminderAtStart: "Op het tijdstip van de afspraak",
@@ -432,7 +458,8 @@ export const nl: Partial<Catalog> = {
   agendaAvailChecking: "Controleren…",
   agendaAvailAllFree: "Iedereen is dan vrij.",
   agendaAvailBusy: (names: string) => `Dan bezet: ${names}`,
-  agendaAvailNoGuests: "Voeg genodigden toe om hun beschikbaarheid te controleren.",
+  agendaAvailNoGuests:
+    "Voeg genodigden toe om hun beschikbaarheid te controleren.",
   agendaAvailError: "Kon de beschikbaarheid niet controleren.",
   agendaClose: "Sluiten",
   agendaReadOnly: "U hebt alleen-lezen toegang tot deze kalender.",
@@ -469,8 +496,10 @@ export const nl: Partial<Catalog> = {
   flagDueLabel: (when: string) => `Te doen ${when}`,
   flagDueOverdue: (when: string) => `Te laat — moest klaar zijn ${when}`,
   flagDueSet: "Een opvolgdatum instellen",
-  resizeFolders: "Grootte van het mappenpaneel wijzigen (sleep, of pijltoetsen; dubbelklik om te herstellen)",
-  resizeMessages: "Grootte van de berichtenlijst wijzigen (sleep, of pijltoetsen; dubbelklik om te herstellen)",
+  resizeFolders:
+    "Grootte van het mappenpaneel wijzigen (sleep, of pijltoetsen; dubbelklik om te herstellen)",
+  resizeMessages:
+    "Grootte van de berichtenlijst wijzigen (sleep, of pijltoetsen; dubbelklik om te herstellen)",
   collapseFolders: "Mappen verbergen",
   expandFolders: "Mappen tonen",
   mailEmpty: "Nog geen berichten hier.",
@@ -503,7 +532,8 @@ export const nl: Partial<Catalog> = {
   markUnread: "Markeren als ongelezen",
   selectAll: "Alles selecteren",
   selectNone: "Selectie wissen",
-  selectedCount: (n: number) => (n === 1 ? "1 geselecteerd" : `${n} geselecteerd`),
+  selectedCount: (n: number) =>
+    n === 1 ? "1 geselecteerd" : `${n} geselecteerd`,
   snoozeUntil: "Sluimeren tot…",
   snoozeLaterToday: "Later vandaag",
   snoozeTomorrow: "Morgen",
@@ -572,7 +602,8 @@ export const nl: Partial<Catalog> = {
   composeSent: "Bericht verzonden.",
   composeUndoWindow: "Verzenden…",
   composeUndoSend: "Ongedaan maken",
-  composeSendUndone: "Verzenden ongedaan gemaakt — uw bericht staat in Concepten.",
+  composeSendUndone:
+    "Verzenden ongedaan gemaakt — uw bericht staat in Concepten.",
   scheduleSend: "Verzenden plannen",
   scheduleTomorrowMorning: "Morgenochtend",
   scheduleTomorrowAfternoon: "Morgenmiddag",
@@ -581,7 +612,8 @@ export const nl: Partial<Catalog> = {
   mailScheduled: (when: string) => `Verzending gepland voor ${when}.`,
   scheduleError: "Kon uw bericht niet plannen. Probeer het opnieuw.",
   cancelSend: "Verzenden annuleren",
-  sendCancelled: "Geplande verzending geannuleerd — uw bericht staat weer in Concepten.",
+  sendCancelled:
+    "Geplande verzending geannuleerd — uw bericht staat weer in Concepten.",
   contactSuggestions: "Overeenkomende contacten",
   labelColor: "Labelkleur",
   labelColorHint: "rechtsklik om te kleuren",
@@ -591,21 +623,24 @@ export const nl: Partial<Catalog> = {
   folderRename: "Naam wijzigen",
   folderDelete: "Map verwijderen",
   folderNamePlaceholder: "Mapnaam",
-  folderDeleteConfirm: (name: string) => `De map "${name}" verwijderen? De berichten worden niet verwijderd.`,
+  folderDeleteConfirm: (name: string) =>
+    `De map "${name}" verwijderen? De berichten worden niet verwijderd.`,
   folderActionFailed: "Die mapwijziging lukte niet — probeer het opnieuw.",
   folderActions: (name: string) => `Opties voor de map ${name}`,
   sharedMailboxLabel: "Postvak",
   sharedMailboxesHeading: "Gedeelde postvakken",
   sharedMyMailbox: "Mijn postvak",
   sharedReadOnly: "alleen-lezen",
-  sharedNoSend: "U kunt niet verzenden vanuit dit gedeelde postvak — u kreeg geen verzendrecht.",
+  sharedNoSend:
+    "U kunt niet verzenden vanuit dit gedeelde postvak — u kreeg geen verzendrecht.",
   settingsSharing: "Delen",
   settingsSharingHint:
     "Laat collega's uw postvak openen en beheren. Geef verzendrecht om ze ook namens u te laten verzenden.",
   sharingNone: "U hebt uw postvak met niemand gedeeld.",
   sharingEmailPlaceholder: "E-mailadres van collega",
   sharingAdd: "Delen",
-  sharingAddError: "Kon niet delen — controleer of het adres een collega in uw organisatie is.",
+  sharingAddError:
+    "Kon niet delen — controleer of het adres een collega in uw organisatie is.",
   userShareAccess: "Gedeelde toegang",
   delegateTitle: (email: string) => `Wie ${email} kan openen`,
   delegateIntro:
@@ -636,17 +671,21 @@ export const nl: Partial<Catalog> = {
   categoryNoneHint: "Nog geen categorieën — voeg er een toe via de zijbalk.",
   categoryDeleteConfirm: (name: string) =>
     `De categorie "${name}" verwijderen? Ze wordt van elk bericht met deze categorie verwijderd.`,
-  categoryActionFailed: "Die categoriewijziging lukte niet — probeer het opnieuw.",
+  categoryActionFailed:
+    "Die categoriewijziging lukte niet — probeer het opnieuw.",
   categoryActions: (name: string) => `Opties voor de categorie ${name}`,
   categoryClearFilter: "Alle berichten tonen",
   transferLink: "koppeling",
   transferSharedFile: "📎 Gedeeld bestand",
   transferDownload: "Downloaden",
   transferExpires: (date: string) => `koppeling verloopt ${date}`,
-  transferExpiryTitle: "Hoe lang koppelingen voor grote bestanden actief blijven",
-  transferExpiryOption: (days: number) => (days === 1 ? "1 dag" : `${days} dagen`),
+  transferExpiryTitle:
+    "Hoe lang koppelingen voor grote bestanden actief blijven",
+  transferExpiryOption: (days: number) =>
+    days === 1 ? "1 dag" : `${days} dagen`,
   blockSenderNamed: (email: string) => `${email} blokkeren`,
-  senderBlocked: (email: string) => `${email} geblokkeerd — hun e-mail gaat nu naar Ongewenst.`,
+  senderBlocked: (email: string) =>
+    `${email} geblokkeerd — hun e-mail gaat nu naar Ongewenst.`,
   settingsFilters: "Filters en regels",
   settingsFiltersHint:
     "Regels draaien op uw server zodra e-mail binnenkomt — ook als u offline bent. De eerste passende regel wordt toegepast.",
@@ -693,18 +732,21 @@ export const nl: Partial<Catalog> = {
   spamBannerTitle: "Dit bericht staat in Spam",
   spamReasonDmarc: (domain: string) =>
     `We konden niet bevestigen dat het echt van ${domain} kwam — het faalde de DMARC-authenticatie, een veelvoorkomend teken van vervalsing.`,
-  spamReasonDkim: "De cryptografische handtekening (DKIM) klopte niet, dus de afzender kon niet worden geverifieerd.",
+  spamReasonDkim:
+    "De cryptografische handtekening (DKIM) klopte niet, dus de afzender kon niet worden geverifieerd.",
   spamReasonSpf: (domain: string) =>
     `De server die het verzond, mag geen e-mail versturen voor ${domain} (SPF gefaald).`,
   spamReasonNone:
     "We ontdekten geen bezorgprobleem met dit bericht — het lijkt mogelijk op e-mail die u of een filterregel eerder als spam markeerde.",
-  spamBannerHint: "Als dit geen spam is, verplaats het terug naar uw Postvak IN.",
+  spamBannerHint:
+    "Als dit geen spam is, verplaats het terug naar uw Postvak IN.",
   spamSenderFallback: "het domein van de afzender",
   unsubscribe: "Uitschrijven",
   unsubscribeConfirm: (sender: string) =>
     `Uitschrijven bij ${sender}? We vragen de afzender u geen e-mail meer te sturen.`,
   unsubscribed: "Uitgeschreven — de afzender is gevraagd te stoppen.",
-  unsubscribeFailed: "Kon niet automatisch uitschrijven — probeer de koppeling in het bericht.",
+  unsubscribeFailed:
+    "Kon niet automatisch uitschrijven — probeer de koppeling in het bericht.",
   unsubscribeOpened: "De uitschrijfpagina is in een nieuw tabblad geopend.",
   forwardAsAttachment: "Doorsturen als bijlage",
   blockSender: "Afzender blokkeren",
@@ -728,13 +770,18 @@ export const nl: Partial<Catalog> = {
   settingsSignature: "Uw handtekening",
   settingsSignatureHint: "Onderaan de berichten die u verzendt…",
   settingsOrgFooter: "Organisatievoettekst",
-  settingsOrgFooterHint: "Toegevoegd aan de uitgaande e-mail van elke gebruiker, na hun handtekening.",
-  settingsOrgFooterPlaceholder: "bv. bedrijfsnaam, adres, wettelijke vermelding…",
+  settingsOrgFooterHint:
+    "Toegevoegd aan de uitgaande e-mail van elke gebruiker, na hun handtekening.",
+  settingsOrgFooterPlaceholder:
+    "bv. bedrijfsnaam, adres, wettelijke vermelding…",
   settingsOutOfOffice: "Afwezigheid",
-  settingsOutOfOfficeHint: "Antwoord automatisch één keer aan iedereen die u mailt terwijl u afwezig bent.",
+  settingsOutOfOfficeHint:
+    "Antwoord automatisch één keer aan iedereen die u mailt terwijl u afwezig bent.",
   settingsOooSubjectPlaceholder: "Onderwerp (optioneel) — bv. Afwezig",
-  settingsOooMessagePlaceholder: "bv. Ik ben afwezig tot maandag en antwoord bij mijn terugkeer.",
-  settingsOooNeedsMessage: "Voeg een bericht toe om afwezigheid in te schakelen.",
+  settingsOooMessagePlaceholder:
+    "bv. Ik ben afwezig tot maandag en antwoord bij mijn terugkeer.",
+  settingsOooNeedsMessage:
+    "Voeg een bericht toe om afwezigheid in te schakelen.",
   settingsSave: "Opslaan",
   settingsSaved: "Opgeslagen.",
   settingsSaveError: "Kon uw instellingen niet opslaan.",
@@ -756,7 +803,8 @@ export const nl: Partial<Catalog> = {
   overviewOff: "Uit",
   overviewManage: "Beheren",
   adminDomains: "Domeinen",
-  adminDomainsIntro: "Domeinen waarvoor deze organisatie e-mail verzendt en ontvangt, en hun verificatie.",
+  adminDomainsIntro:
+    "Domeinen waarvoor deze organisatie e-mail verzendt en ontvangt, en hun verificatie.",
   adminDomainsError: "Kon domeinen niet laden.",
   adminDomainsEmpty: "Nog geen domeinen. Voeg er een toe om het te verifiëren.",
   adminAddDomain: "Domein toevoegen",
@@ -764,7 +812,8 @@ export const nl: Partial<Catalog> = {
   dkimRotate: "DKIM roteren",
   dkimRotateConfirm: (domain: string) =>
     `De DKIM-sleutel voor ${domain} roteren? Publiceer het nieuwe record; behoud het oude tot de e-mail het niet meer gebruikt.`,
-  dkimRotated: (domain: string) => `Nieuwe DKIM-sleutel voor ${domain} — publiceer het bijgewerkte record.`,
+  dkimRotated: (domain: string) =>
+    `Nieuwe DKIM-sleutel voor ${domain} — publiceer het bijgewerkte record.`,
   adminAudit: "Auditlogboek",
   adminAuditIntro: "Wie wat wijzigde, en wanneer. Nieuwste eerst.",
   adminAuditError: "Kon het auditlogboek niet laden.",
@@ -797,7 +846,8 @@ export const nl: Partial<Catalog> = {
   controlTenantsError: "Kon organisaties niet laden.",
   controlTenantsEmpty: "Nog geen organisaties. Maak de eerste aan.",
   controlDomains: "Domeinen",
-  controlDomainsIntro: "Domeinen waarvoor elke organisatie e-mail mag verzenden en ontvangen, en hun verificatie.",
+  controlDomainsIntro:
+    "Domeinen waarvoor elke organisatie e-mail mag verzenden en ontvangen, en hun verificatie.",
   controlDomainsError: "Kon domeinen niet laden.",
   controlDomainsEmpty: "Nog geen domeinen geregistreerd.",
   tenantAdd: "Nieuwe organisatie",
@@ -807,7 +857,8 @@ export const nl: Partial<Catalog> = {
   tenantAdminPassword: "Wachtwoord eerste beheerder",
   tenantAdminPasswordHint: "minstens 12 tekens",
   tenantCreate: "Organisatie aanmaken",
-  tenantInvalid: "Een naam, een geldig beheerders-e-mailadres en een wachtwoord van 12+ tekens zijn vereist.",
+  tenantInvalid:
+    "Een naam, een geldig beheerders-e-mailadres en een wachtwoord van 12+ tekens zijn vereist.",
   tenantCreateError: "Kon die organisatie niet aanmaken.",
   tenantActive: "Actief",
   tenantSuspended: "Opgeschort",
@@ -816,7 +867,8 @@ export const nl: Partial<Catalog> = {
   tenantDelete: "Organisatie verwijderen",
   tenantDeleteConfirm: (name: string) =>
     `"${name}" en al haar gegevens definitief verwijderen? Dit kan niet ongedaan worden gemaakt.`,
-  tenantUsage: (n: number, size: string) => `${n === 1 ? "1 gebruiker" : `${n} gebruikers`} · ${size}`,
+  tenantUsage: (n: number, size: string) =>
+    `${n === 1 ? "1 gebruiker" : `${n} gebruikers`} · ${size}`,
   tenantQuota: "Quota",
   tenantQuotaPrompt: "Opslagquota in GB (laat leeg voor onbeperkt):",
   tenantQuotaUnlimited: "onbeperkt",
@@ -833,7 +885,8 @@ export const nl: Partial<Catalog> = {
   domainVerify: "Verifiëren",
   domainDelete: "Domein verwijderen",
   domainOwnedBy: (tenant: string) => `Eigendom van ${tenant}`,
-  domainDeleteConfirm: (domain: string) => `${domain} van deze installatie verwijderen?`,
+  domainDeleteConfirm: (domain: string) =>
+    `${domain} van deze installatie verwijderen?`,
   domainVerifiedOk: (domain: string) => `${domain} is geverifieerd.`,
   domainVerifyPending: (domain: string) =>
     `Nog geen passend DNS-TXT-record gevonden voor ${domain} — publiceer het en probeer opnieuw.`,
@@ -859,7 +912,8 @@ export const nl: Partial<Catalog> = {
   securityWarn: "Aandacht",
   securityFail: "Actie nodig",
   adminGroups: "Groepen en lijsten",
-  adminGroupsIntro: "Groepen voor gedeelde toegang, en distributielijsten die e-mail naar hun leden verspreiden.",
+  adminGroupsIntro:
+    "Groepen voor gedeelde toegang, en distributielijsten die e-mail naar hun leden verspreiden.",
   adminNewGroup: "Nieuwe groep",
   adminGroupsError: "Kon groepen niet laden.",
   groupName: "Groepsnaam",
@@ -876,9 +930,12 @@ export const nl: Partial<Catalog> = {
   groupAddressClear: "Lijst uitschakelen",
   groupAddMember: "Lid toevoegen",
   groupDelete: "Groep verwijderen",
-  groupDeleteConfirm: (name: string) => `De groep „${name}” verwijderen? Leden behouden hun postvakken.`,
-  groupCreateError: "Kon die groep niet aanmaken — de naam is mogelijk al in gebruik.",
-  groupAddressError: "Kon dat adres niet instellen — het is mogelijk al in gebruik.",
+  groupDeleteConfirm: (name: string) =>
+    `De groep „${name}” verwijderen? Leden behouden hun postvakken.`,
+  groupCreateError:
+    "Kon die groep niet aanmaken — de naam is mogelijk al in gebruik.",
+  groupAddressError:
+    "Kon dat adres niet instellen — het is mogelijk al in gebruik.",
   groupActionError: "Dat lukte niet — probeer het opnieuw.",
   groupClose: "Sluiten",
   adminUsers: "Gebruikers en postvakken",
@@ -887,18 +944,22 @@ export const nl: Partial<Catalog> = {
   adminUsersError: "Kon gebruikers niet laden.",
   userAdminBadge: "Beheerder",
   userManage: "Beheren",
-  userUsage: (n: number, size: string) => `${n === 1 ? "1 bericht" : `${n} berichten`} · ${size}`,
+  userUsage: (n: number, size: string) =>
+    `${n === 1 ? "1 bericht" : `${n} berichten`} · ${size}`,
   userEmail: "E-mail",
   userPassword: "Wachtwoord",
   userNewPassword: "Nieuw wachtwoord",
   userPasswordHint: "Minstens 8 tekens.",
   userCreate: "Gebruiker aanmaken",
-  userInvalid: "Voer een geldig e-mailadres en een wachtwoord van minstens 8 tekens in.",
-  userCreateError: "Kon die gebruiker niet aanmaken — het e-mailadres is mogelijk al in gebruik.",
+  userInvalid:
+    "Voer een geldig e-mailadres en een wachtwoord van minstens 8 tekens in.",
+  userCreateError:
+    "Kon die gebruiker niet aanmaken — het e-mailadres is mogelijk al in gebruik.",
   userReset: "Wachtwoord herstellen",
   userResetDone: "Wachtwoord hersteld.",
   userAdminRole: "Organisatiebeheerder",
-  userAdminHint: "Beheerders kunnen gebruikers, aliassen en instellingen beheren.",
+  userAdminHint:
+    "Beheerders kunnen gebruikers, aliassen en instellingen beheren.",
   userAliases: "Aliassen",
   userAliasesHint: "Extra adressen die naar dit postvak worden bezorgd.",
   userAliasPlaceholder: "alias@namel3ss.com",
@@ -908,16 +969,19 @@ export const nl: Partial<Catalog> = {
   userActionError: "Dat lukte niet — probeer het opnieuw.",
   userClose: "Sluiten",
   adminAiProviders: "AI-providers",
-  adminAiIntro: "Kies welke modellen alo aandrijven — zelf gehost, of uw eigen API-sleutels.",
+  adminAiIntro:
+    "Kies welke modellen alo aandrijven — zelf gehost, of uw eigen API-sleutels.",
   adminAddProvider: "Provider toevoegen",
   adminManage: "Beheren",
   adminDefaultBadge: "Standaard",
   adminMakeDefault: "Als standaard instellen",
   adminProvidersError: "Kon providers niet laden.",
   adminAiSelfHosted: "Zelf gehost (aanbevolen)",
-  adminAiSelfHostedHint: "Draait op uw eigen infrastructuur — geen data verlaat uw servers.",
+  adminAiSelfHostedHint:
+    "Draait op uw eigen infrastructuur — geen data verlaat uw servers.",
   adminAiOwnKeys: "Uw eigen API-sleutels",
-  adminAiOwnKeysHint: "Verbind een externe provider met uw sleutel. Verzoeken verlaten uw server naar die provider.",
+  adminAiOwnKeysHint:
+    "Verbind een externe provider met uw sleutel. Verzoeken verlaten uw server naar die provider.",
   adminAiFootnote:
     "Zelf gehoste providers houden alle data op uw infrastructuur. Externe API-sleutels sturen verzoeken en inhoud naar die provider — kies volgens uw databeleid.",
   providerConnected: "Verbonden",
@@ -933,11 +997,16 @@ export const nl: Partial<Catalog> = {
   kindAnthropic: "Anthropic",
   kindCustom: "Aangepast eindpunt",
   builtInTag: "Ingebouwd",
-  ollamaDesc: "Lokale modellen op uw server — Llama 3, Mistral en meer. Volledig privé.",
-  aloDesc: "Ingebouwd, EU-gehost model afgestemd op alo — richt het op uw alo AI-eindpunt.",
-  openaiDesc: "GPT-4o, GPT-4o mini. Voeg uw OpenAI-sleutel toe om in te schakelen.",
-  anthropicDesc: "Claude-modellen. Voeg uw Anthropic API-sleutel toe om in te schakelen.",
-  customDesc: "Elke OpenAI-compatibele API — zelf gehoste vLLM, Together, Groq, OpenRouter…",
+  ollamaDesc:
+    "Lokale modellen op uw server — Llama 3, Mistral en meer. Volledig privé.",
+  aloDesc:
+    "Ingebouwd, EU-gehost model afgestemd op alo — richt het op uw alo AI-eindpunt.",
+  openaiDesc:
+    "GPT-4o, GPT-4o mini. Voeg uw OpenAI-sleutel toe om in te schakelen.",
+  anthropicDesc:
+    "Claude-modellen. Voeg uw Anthropic API-sleutel toe om in te schakelen.",
+  customDesc:
+    "Elke OpenAI-compatibele API — zelf gehoste vLLM, Together, Groq, OpenRouter…",
   connectTitle: (name: string) => `${name} verbinden`,
   configureTitle: (name: string) => `${name} configureren`,
   providerBaseUrl: "API-eindpunt",
@@ -949,13 +1018,16 @@ export const nl: Partial<Catalog> = {
   providerApiKey: "API-sleutel",
   providerShowKey: "Sleutel tonen",
   providerHideKey: "Sleutel verbergen",
-  providerApiKeyKept: "Opgeslagen — laat leeg om de huidige sleutel te behouden",
+  providerApiKeyKept:
+    "Opgeslagen — laat leeg om de huidige sleutel te behouden",
   providerApiKeyOptional: "Niet nodig voor een lokale Ollama",
   providerTest: "Verbinding testen",
   providerTestAgain: "Opnieuw testen",
   providerTesting: "Testen…",
   providerTestOk: (n: number) =>
-    n === 1 ? "Verbinding geverifieerd — 1 model bereikbaar" : `Verbinding geverifieerd — ${n} modellen bereikbaar`,
+    n === 1
+      ? "Verbinding geverifieerd — 1 model bereikbaar"
+      : `Verbinding geverifieerd — ${n} modellen bereikbaar`,
   providerTestFail: "Kon dat eindpunt niet bereiken.",
   providerCancel: "Annuleren",
   providerSave: "Opslaan en inschakelen",
@@ -1057,8 +1129,10 @@ export const nl: Partial<Catalog> = {
   docEquationHint: "Wiskundige formule (LaTeX)",
   docBlockGroupAdvanced: "Geavanceerd",
   driveImporting: (name: string): string => `${name} importeren…`,
-  driveImportNote: "We openen dit als een alo Sheet. Sommige opmaak kan afwijken — je oorspronkelijke bestand blijft ongewijzigd in Drive.",
-  driveImportFailed: (name: string): string => `Kon ${name} niet importeren. Je kunt het origineel nog steeds downloaden.`,
+  driveImportNote:
+    "We openen dit als een alo Sheet. Sommige opmaak kan afwijken — je oorspronkelijke bestand blijft ongewijzigd in Drive.",
+  driveImportFailed: (name: string): string =>
+    `Kon ${name} niet importeren. Je kunt het origineel nog steeds downloaden.`,
   sheetDownloadXlsx: "Downloaden als Excel (.xlsx)",
   sheetDownloadXlsxShort: "Excel",
   sheetName: "Bladnaam",
@@ -1075,7 +1149,8 @@ export const nl: Partial<Catalog> = {
   sheetTabData: "Gegevens",
   sheetTabReview: "Controleren",
   sheetTabView: "Beeld",
-  sheetTabSoon: (name: string): string => `${name}-hulpmiddelen komen binnenkort.`,
+  sheetTabSoon: (name: string): string =>
+    `${name}-hulpmiddelen komen binnenkort.`,
   sheetGroupCellSize: "Celgrootte",
   sheetRowHeight: "Rijhoogte",
   sheetColumnWidth: "Kolombreedte",
@@ -1331,12 +1406,14 @@ export const nl: Partial<Catalog> = {
   blockMoveUp: "Blok omhoog verplaatsen",
   blockMoveDown: "Blok omlaag verplaatsen",
   blockDelete: "Blok verwijderen",
-  blockEmptyHint: "Voeg een kop, tekst, vergelijking, code of tabel toe om te beginnen.",
+  blockEmptyHint:
+    "Voeg een kop, tekst, vergelijking, code of tabel toe om te beginnen.",
   headingH1: "Kop 1",
   headingH2: "Kop 2",
   headingPlaceholder: "Sectiekop",
   headingLabel: "Koptekst",
-  paraPlaceholder: "Schrijf hier. Gebruik de werkbalk om inline-wiskunde of een kruisverwijzing in te voegen.",
+  paraPlaceholder:
+    "Schrijf hier. Gebruik de werkbalk om inline-wiskunde of een kruisverwijzing in te voegen.",
   paraLabel: "Alineatekst",
   paraInlineMath: "Inline-wiskunde",
   paraReference: "Verwijzing",
@@ -1369,8 +1446,10 @@ export const nl: Partial<Catalog> = {
   driveLoadingFile: (name: string) => `${name} openen…`,
   driveOpeningEditor: "je bestand",
   driveFileOpenFailedTitle: "Dit bestand is niet geopend",
-  driveFileUnavailable: "Het bestand is mogelijk verplaatst of verwijderd. Ga terug naar je bestanden en kies een ander item.",
-  driveEditorLoadFailed: (reason: string) => `Drive kon dit bestand niet openen. ${reason}`,
+  driveFileUnavailable:
+    "Het bestand is mogelijk verplaatst of verwijderd. Ga terug naar je bestanden en kies een ander item.",
+  driveEditorLoadFailed: (reason: string) =>
+    `Drive kon dit bestand niet openen. ${reason}`,
   driveBackToFiles: "Terug naar bestanden",
 
   // Facturatiegereedschap van de agent (ADR 0035, B1.25). Elk levert een
@@ -1383,9 +1462,12 @@ export const nl: Partial<Catalog> = {
   agentFieldQuote: "Offerte",
   agentFieldInvoice: "Factuur",
   agentLineCount: (n: number): string => (n === 1 ? "1 regel" : `${n} regels`),
-  agentInvoiceDraftNote: "Maakt een concept — er wordt niets uitgegeven, genummerd of verstuurd.",
-  agentQuoteToInvoiceNote: "Sluit de offerte als geaccepteerd en maakt een conceptfactuur.",
-  agentReminderNote: "Schrijft een herinnering in uw Concepten — er wordt niets verstuurd.",
+  agentInvoiceDraftNote:
+    "Maakt een concept — er wordt niets uitgegeven, genummerd of verstuurd.",
+  agentQuoteToInvoiceNote:
+    "Sluit de offerte als geaccepteerd en maakt een conceptfactuur.",
+  agentReminderNote:
+    "Schrijft een herinnering in uw Concepten — er wordt niets verstuurd.",
 
   // alo Facturatie (ADR 0035, golf B1) — klanten en de prijslijst. De module
   // spreekt over documenten ("een factuur opmaken"), niet over rijen, en
@@ -1406,7 +1488,8 @@ export const nl: Partial<Catalog> = {
   billingEditCustomer: "Klant bewerken",
   billingEditProduct: "Artikel bewerken",
   billingCustomerSubtitle: "Aan wie uw facturen zijn gericht.",
-  billingProductSubtitle: "Een artikel dat u kunt kiezen wanneer u een document opmaakt.",
+  billingProductSubtitle:
+    "Een artikel dat u kunt kiezen wanneer u een document opmaakt.",
   billingArchiveCustomerConfirm: (name: string) =>
     `${name} archiveren? Ze verdwijnen uit de keuzelijsten; elk document dat al is opgemaakt blijft ze noemen.`,
   billingArchiveProductConfirm: (name: string) =>
@@ -1414,8 +1497,10 @@ export const nl: Partial<Catalog> = {
   billingCreate: "Aanmaken",
   billingSave: "Opslaan",
   billingCancel: "Annuleren",
-  billingLoadFailed: "Deze lijst kon niet worden geladen. Controleer uw verbinding en probeer opnieuw.",
-  billingSaveFailed: "Opslaan is niet gelukt. Controleer uw verbinding en probeer opnieuw.",
+  billingLoadFailed:
+    "Deze lijst kon niet worden geladen. Controleer uw verbinding en probeer opnieuw.",
+  billingSaveFailed:
+    "Opslaan is niet gelukt. Controleer uw verbinding en probeer opnieuw.",
   billingNoMatches: "Niets komt overeen met die zoekopdracht.",
   billingNoCustomersTitle: "Nog geen klanten",
   billingNoCustomersBody:
@@ -1501,10 +1586,12 @@ export const nl: Partial<Catalog> = {
   billingInvoiceGone: "Dit document bestaat niet meer.",
   billingFieldCustomer: "Klant",
   billingChooseCustomer: "Kies een klant…",
-  billingCustomerFixedHint: "Hun valuta en betaaltermijn worden op het document overgenomen.",
+  billingCustomerFixedHint:
+    "Hun valuta en betaaltermijn worden op het document overgenomen.",
   billingFieldReference: "Hun referentie",
   billingReferencePlaceholder: "PO-1234",
-  billingReferenceHint: "Het ordernummer van de klant zelf, gedrukt op het document.",
+  billingReferenceHint:
+    "Het ordernummer van de klant zelf, gedrukt op het document.",
   billingFieldNote: "Notitie",
   billingNotePlaceholder: "Wat de klant op het document moet lezen.",
   billingNoteHint: "Gedrukt onder de regels.",
@@ -1543,8 +1630,10 @@ export const nl: Partial<Catalog> = {
   // document, dus de bevestiging zegt wat ze DOET — een nummer verbruiken, de
   // prijzen vastzetten, de offerte sluiten — in plaats van te vragen of u het
   // zeker weet. Geen ervan belooft een e-mail.
-  billingActionFailed: "Dat is niet gelukt. Controleer uw verbinding en probeer opnieuw.",
-  billingActionsWaitForSave: "Deze wachten tot uw laatste wijziging is opgeslagen.",
+  billingActionFailed:
+    "Dat is niet gelukt. Controleer uw verbinding en probeer opnieuw.",
+  billingActionsWaitForSave:
+    "Deze wachten tot uw laatste wijziging is opgeslagen.",
   billingIssue: "Uitgeven",
   billingIssueTitle: "Deze factuur uitgeven?",
   billingIssueConfirm:
@@ -1553,7 +1642,8 @@ export const nl: Partial<Catalog> = {
   billingVoidTitle: "Deze factuur annuleren?",
   billingVoidConfirm:
     "Een geannuleerde factuur houdt haar nummer en blijft leesbaar, maar is niets meer waard. Annuleer er een die niemand heeft gezien; heeft de klant dit document al, maak dan een creditnota.",
-  billingVoidNotice: "Deze factuur is geannuleerd. Ze houdt haar nummer en is niets waard.",
+  billingVoidNotice:
+    "Deze factuur is geannuleerd. Ze houdt haar nummer en is niets waard.",
   billingCreditNoteAction: "Creditnota",
   billingCreditNoteTitle: "Een creditnota opmaken?",
   billingCreditNoteConfirm:
@@ -1583,9 +1673,11 @@ export const nl: Partial<Catalog> = {
   billingColPaymentReference: "Bankreferentie",
   billingColAmount: "Bedrag",
   billingFieldAmount: (currency: string) => `Bedrag (${currency})`,
-  billingFieldAmountHint: "Wat er werkelijk binnenkwam, wat minder kan zijn dan de factuur.",
+  billingFieldAmountHint:
+    "Wat er werkelijk binnenkwam, wat minder kan zijn dan de factuur.",
   billingFieldPaidOn: "Ontvangen op",
-  billingFieldPaidOnHint: "De dag die uw bank laat zien. Laat leeg voor vandaag.",
+  billingFieldPaidOnHint:
+    "De dag die uw bank laat zien. Laat leeg voor vandaag.",
   billingFieldMethod: "Hoe het binnenkwam",
   billingFieldMethodHint: "Vrije tekst — hoe uw boekhouding het ook noemt.",
   billingMethodPlaceholder: "Overboeking",
@@ -1606,7 +1698,8 @@ export const nl: Partial<Catalog> = {
   billingReportThisQuarter: "Dit kwartaal",
   billingReportLastQuarter: "Vorig kwartaal",
   billingReportDownloadCsv: "CSV downloaden",
-  billingReportDownloadFailed: "Het bestand kon niet worden klaargezet. Probeer opnieuw.",
+  billingReportDownloadFailed:
+    "Het bestand kon niet worden klaargezet. Probeer opnieuw.",
   billingReportBasis: (from: string, to: string) =>
     `Uitgegeven en betaalde documenten gedateerd ${from} tot en met ${to}. Creditnota’s worden afgetrokken; concepten en geannuleerde documenten tellen niet mee.`,
   billingReportColVat: "Btw",
@@ -1654,7 +1747,8 @@ export const nl: Partial<Catalog> = {
     "Dit concept verwijderen? Het draagt geen nummer en is nooit aan iemand aangeboden — en er kan niets worden teruggehaald.",
   billingQuoteSentNotice:
     "Deze offerte is verstuurd en kan niet meer worden gewijzigd. Verandert de prijs, maak dan een nieuwe offerte.",
-  billingQuoteClosedNotice: "Deze offerte is gesloten en kan niet meer worden gewijzigd.",
+  billingQuoteClosedNotice:
+    "Deze offerte is gesloten en kan niet meer worden gewijzigd.",
   billingSendQuote: "Als verstuurd markeren",
   billingSendQuoteTitle: "Deze offerte versturen?",
   billingSendQuoteConfirm:
@@ -1680,7 +1774,8 @@ export const nl: Partial<Catalog> = {
   billingPrint: "Afdrukken",
   billingPrintUnsaved:
     "Dit drukt het opgeslagen document af en wacht dus op uw laatste wijziging.",
-  billingPrintFailed: "Het document kon niet worden klaargezet om af te drukken. Probeer opnieuw.",
+  billingPrintFailed:
+    "Het document kon niet worden klaargezet om af te drukken. Probeer opnieuw.",
   billingSettings: "Uw gegevens",
   billingSettingsIntro:
     "Dit is van wie uw facturen, creditnota’s en offertes komen: de naam en nummers bovenaan, en de rekening waar het geld heen gaat.",
@@ -1690,10 +1785,13 @@ export const nl: Partial<Catalog> = {
   billingSettingsContact: "Hoe klanten u bereiken",
   billingSettingsBank: "Waar het geld heen gaat",
   billingSettingsFooter: "De regel onder de totalen",
-  billingSettingsSaved: "Opgeslagen. Elk document dat u vanaf nu afdrukt draagt dit.",
-  billingSettingsLoadFailed: "Uw facturatiegegevens konden niet worden geladen.",
+  billingSettingsSaved:
+    "Opgeslagen. Elk document dat u vanaf nu afdrukt draagt dit.",
+  billingSettingsLoadFailed:
+    "Uw facturatiegegevens konden niet worden geladen.",
   billingFieldLegalName: "Statutaire naam",
-  billingLegalNameHint: "De naam waaronder u handelt en factureert, zoals ingeschreven.",
+  billingLegalNameHint:
+    "De naam waaronder u handelt en factureert, zoals ingeschreven.",
   billingIssuerVatIdHint:
     "Laat leeg als u niet btw-plichtig bent. Vul eerst uw land in.",
   billingFieldRegistrationNo: "Registratienummer",
@@ -1709,7 +1807,8 @@ export const nl: Partial<Catalog> = {
   billingBicPlaceholder: "ABNANL2A",
   billingFieldBankName: "Bank",
   billingFieldAccountHolder: "Rekeninghouder",
-  billingAccountHolderHint: "Alleen als de rekening niet op uw statutaire naam staat.",
+  billingAccountHolderHint:
+    "Alleen als de rekening niet op uw statutaire naam staat.",
   billingFieldFooterNote: "Voettekst",
   billingFooterNoteHint:
     "Onder de totalen van elk document afgedrukt — eigendomsvoorbehoud, betalingsvoorwaarden, een bedankje.",
@@ -1760,7 +1859,11 @@ export const nl: Partial<Catalog> = {
   billingRemind: "Herinneren",
   billingRemindHint:
     "Schrijf een betalingsherinnering aan deze klant en laat hem in uw Concepten staan.",
-  billingReminderDrafted: (invoice: string, outstanding: string, days: number) =>
+  billingReminderDrafted: (
+    invoice: string,
+    outstanding: string,
+    days: number,
+  ) =>
     days === 1
       ? `Een herinnering voor ${invoice} — ${outstanding} nog verschuldigd, 1 dag over de datum — staat klaar in uw Concepten. Er is niets verstuurd: lees hem, wijzig wat u wilt, en verstuur hem zelf.`
       : `Een herinnering voor ${invoice} — ${outstanding} nog verschuldigd, ${days} dagen over de datum — staat klaar in uw Concepten. Er is niets verstuurd: lees hem, wijzig wat u wilt, en verstuur hem zelf.`,
@@ -1775,7 +1878,8 @@ export const nl: Partial<Catalog> = {
   billingRecurring: "Terugkerend",
   billingRecurringTitle: "Terugkerende facturen",
   billingRecurringChip: "Terugkerend",
-  billingRecurringChipHint: "Een terugkerende factuur heeft dit concept aangemaakt.",
+  billingRecurringChipHint:
+    "Een terugkerende factuur heeft dit concept aangemaakt.",
   billingNoSchedulesTitle: "Nog geen terugkerende facturen",
   billingNoSchedulesBody:
     "Stel er een in voor alles wat u met een vaste regelmaat factureert — een abonnement, een vast maandbedrag, hosting. Telkens als het zover is, maakt alo een concept dat u zelf controleert en uitgeeft.",
@@ -1784,7 +1888,8 @@ export const nl: Partial<Catalog> = {
   billingScheduleFromHint:
     "Stel een terugkerende factuur in die deze regels met een vaste regelmaat opnieuw factureert. Elke keer verschijnt als concept — er wordt nooit iets voor u uitgegeven.",
   billingScheduleName: "Naam",
-  billingScheduleNameHint: "Hoe u deze afspraak noemt. Staat nooit op de factuur.",
+  billingScheduleNameHint:
+    "Hoe u deze afspraak noemt. Staat nooit op de factuur.",
   billingScheduleCadence: "Frequentie",
   billingCadenceWeekly: "Elke week",
   billingCadenceMonthly: "Elke maand",
@@ -2029,13 +2134,15 @@ export const nl: Partial<Catalog> = {
   agentFieldDuration: "Duur",
   agentLogTimeNote:
     "Stelt een regel voor in uw urenstaat — die telt zodra u hem daar accepteert.",
-  agentProjectStatusNote: "Leest alleen het project — er wordt niets gewijzigd.",
+  agentProjectStatusNote:
+    "Leest alleen het project — er wordt niets gewijzigd.",
   // De cijfers van de projectstatus. De server stuurt getallen, nooit een zin:
   // elk woord dat een lezer ziet, staat hier.
   agentTimeLogged: (project: string): string =>
     `Voorgesteld in uw urenstaat op ${project} — accepteer het in Projecten om het te laten meetellen.`,
   agentStatusHours: "Geregistreerde uren",
-  agentStatusBillable: (formatted: string): string => `waarvan ${formatted} factureerbaar`,
+  agentStatusBillable: (formatted: string): string =>
+    `waarvan ${formatted} factureerbaar`,
   agentStatusBudget: "Budget",
   agentStatusBudgetUsed: (percent: string): string => `${percent} verbruikt`,
   agentStatusNoBudget: "Geen urenbudget ingesteld",
@@ -2051,7 +2158,8 @@ export const nl: Partial<Catalog> = {
   agentStatusTasks: "Taken",
   agentStatusTasksOpen: (open: number): string =>
     open === 1 ? "1 open" : `${open} open`,
-  agentStatusTasksOverdue: (overdue: number): string => `${overdue} over de datum`,
+  agentStatusTasksOverdue: (overdue: number): string =>
+    `${overdue} over de datum`,
   agentStatusLastWorked: "Laatst gewerkt",
   agentStatusNeverWorked: "Nog geen uren",
   // Het concept uit de agenda (B3.10b). Een reeks voorstellen, plus wat eruit
@@ -2160,13 +2268,15 @@ export const nl: Partial<Catalog> = {
   insightsNoBoardsBody:
     "Een dashboard bundelt de cijfers die u in één oogopslag wilt zien: wat u factureerde, wat u nog krijgt, wat er in de pipeline zit.",
   insightsNoTilesTitle: "Niets op dit dashboard vastgezet",
-  insightsNoTilesBody: "Grafieken die u op dit dashboard vastzet, verschijnen hier.",
+  insightsNoTilesBody:
+    "Grafieken die u op dit dashboard vastzet, verschijnen hier.",
   insightsAddChart: "Grafiek toevoegen",
   insightsGalleryTitle: "Kant-en-klare grafieken",
   insightsGallerySubtitle:
     "Kies er een om ze op dit dashboard vast te zetten. U kunt ze daarna hernoemen of verwijderen.",
   insightsGalleryClose: "Sluiten",
-  insightsGalleryLoadFailed: "De kant-en-klare grafieken konden niet worden geladen.",
+  insightsGalleryLoadFailed:
+    "De kant-en-klare grafieken konden niet worden geladen.",
   insightsGalleryRevenueByMonth: "Omzet per maand",
   insightsGalleryRevenueByMonthBody:
     "Wat u factureerde, maand na maand over het afgelopen jaar — exclusief btw.",
@@ -2186,9 +2296,11 @@ export const nl: Partial<Catalog> = {
   insightsGalleryPaymentsByMonthBody:
     "Geld dat werkelijk binnenkwam, maand na maand, in de valuta waarin het binnenkwam.",
   insightsGalleryPipelineByStage: "Pipeline per fase",
-  insightsGalleryPipelineByStageBody: "De waarde van open deals in elke kolom van uw trechter.",
+  insightsGalleryPipelineByStageBody:
+    "De waarde van open deals in elke kolom van uw trechter.",
   insightsGalleryWonThisMonth: "Gewonnen deze maand",
-  insightsGalleryWonThisMonthBody: "De waarde van de deals die deze maand als gewonnen sloten.",
+  insightsGalleryWonThisMonthBody:
+    "De waarde van de deals die deze maand als gewonnen sloten.",
   insightsGalleryWinRateByQuarter: "Winstpercentage per kwartaal",
   insightsGalleryWinRateByQuarterBody:
     "Hoe vaak een besliste deal werd gewonnen, kwartaal na kwartaal.",
@@ -2289,7 +2401,8 @@ export const nl: Partial<Catalog> = {
   // De projectenlijst.
   projectsProject: "Project",
   projectsCustomer: "Klant",
-  projectsCustomerHint: "De klant aan wie de uren van dit project worden gefactureerd.",
+  projectsCustomerHint:
+    "De klant aan wie de uren van dit project worden gefactureerd.",
   projectsCustomerPick: "Kies een klant…",
   projectsCustomerUnknown: "Onbekende klant",
   projectsInternal: "Intern",
@@ -2299,14 +2412,16 @@ export const nl: Partial<Catalog> = {
   projectsRateInvalid: "Schrijf het tarief als bedrag, bijvoorbeeld 95,00.",
   projectsHoursLogged: "Uren",
   projectsBillableHours: "Factureerbaar",
-  projectsOfWhichBillable: (duration: string) => `waarvan ${duration} factureerbaar`,
+  projectsOfWhichBillable: (duration: string) =>
+    `waarvan ${duration} factureerbaar`,
   projectsBudget: "Budget",
   projectsBudgetUsed: "Budget verbruikt",
   projectsBudgetHours: "Budget (uren)",
   projectsBudgetAmount: "Budget (bedrag)",
   projectsBudgetHint: "Richtinggevend. Niets houdt een uur erboven tegen.",
   projectsBudgetHoursInvalid: "Schrijf het budget als een heel aantal uren.",
-  projectsBudgetAmountInvalid: "Schrijf het budget als bedrag, bijvoorbeeld 7600,00.",
+  projectsBudgetAmountInvalid:
+    "Schrijf het budget als bedrag, bijvoorbeeld 7600,00.",
   projectsLastWorked: "Laatst gewerkt",
   projectsNeverWorked: "Nooit",
   projectsStartsOn: "Start op",
@@ -2358,7 +2473,8 @@ export const nl: Partial<Catalog> = {
   projectsWeekEmptyTitle: "Deze week nog niets geregistreerd",
   projectsWeekEmptyBody:
     "Start de timer op een project, of voeg hieronder een regel toe en schrijf de uren rechtstreeks in een dag.",
-  projectsBillableOfWeek: (duration: string) => `waarvan ${duration} factureerbaar`,
+  projectsBillableOfWeek: (duration: string) =>
+    `waarvan ${duration} factureerbaar`,
   projectsProposedInWeek: (duration: string) =>
     `${duration} voorgesteld, nog niet geaccepteerd`,
   // Beslissen over een voorstel (B3.10b). Pas door te accepteren wordt het een
@@ -2432,7 +2548,8 @@ export const nl: Partial<Catalog> = {
   projectsTemplateNoCustomer: "Intern werk",
   projectsTemplateNoPlan:
     "Dit sjabloon heeft geen mijlpalen, dus zijn data worden precies zo gekopieerd.",
-  projectsTemplateMarkOn: (project: string) => `Maak van ${project} een sjabloon`,
+  projectsTemplateMarkOn: (project: string) =>
+    `Maak van ${project} een sjabloon`,
   projectsTemplateUnmarkOn: (project: string) =>
     `${project} is een sjabloon — markering weghalen`,
   projectsTemplateEmptyTitle: "Nog geen sjablonen",
@@ -2454,7 +2571,8 @@ export const nl: Partial<Catalog> = {
   projectsApprove: "Goedkeuren",
   projectsReject: "Terugsturen",
   projectsRejectTitle: "Deze week terugsturen?",
-  projectsRejectBody: (person: string) => `${person} leest wat u hier schrijft.`,
+  projectsRejectBody: (person: string) =>
+    `${person} leest wat u hier schrijft.`,
   projectsRejectPlaceholder: "Wat er moet worden verbeterd",
   projectsApprovalsEmptyTitle: "Niets goed te keuren",
   projectsApprovalsEmptyBody:
@@ -2508,34 +2626,45 @@ export const nl: Partial<Catalog> = {
   driveLoading: "Uw bestanden worden geladen…",
   driveLocations: "Drive-locaties",
   driveFolderLoading: (name: string) => `${name} wordt geladen…`,
-  driveFolderLoadFailed: (reason: string) => `Deze map is niet geladen. Server: ${reason}`,
-  driveSpacesLoadFailed: (reason: string) => `Uw ruimtes zijn niet geladen. Probeer het opnieuw. Server: ${reason}`,
+  driveFolderLoadFailed: (reason: string) =>
+    `Deze map is niet geladen. Server: ${reason}`,
+  driveSpacesLoadFailed: (reason: string) =>
+    `Uw ruimtes zijn niet geladen. Probeer het opnieuw. Server: ${reason}`,
   driveRetry: "Opnieuw proberen",
   driveUnknownError: "De server gaf geen reden op.",
   driveLoadFailedTitle: "Uw bestanden zijn niet geladen",
   driveLoadFailed: (reason: string) => `Probeer het opnieuw. Server: ${reason}`,
-  driveActionFailed: (action: string, reason: string) => `${action} is niet voltooid. Probeer het opnieuw. Server: ${reason}`,
-  driveMovedToTrash: (name: string) => `${name} is naar de prullenbak verplaatst.`,
+  driveActionFailed: (action: string, reason: string) =>
+    `${action} is niet voltooid. Probeer het opnieuw. Server: ${reason}`,
+  driveMovedToTrash: (name: string) =>
+    `${name} is naar de prullenbak verplaatst.`,
   driveRestoredFromTrash: (name: string) => `${name} is hersteld.`,
   driveUndo: "Ongedaan maken",
-  driveSelected: (count: number) => count === 1 ? "1 item geselecteerd" : `${count} items geselecteerd`,
+  driveSelected: (count: number) =>
+    count === 1 ? "1 item geselecteerd" : `${count} items geselecteerd`,
   driveSelectItem: (name: string) => `${name} selecteren`,
   driveSelectAll: "Alle zichtbare items selecteren",
   driveClearSelection: "Selectie wissen",
   driveSelectionActions: "Acties voor geselecteerde items",
-  driveItemsMovedToTrash: (count: number) => `${count} items zijn naar de prullenbak verplaatst.`,
+  driveItemsMovedToTrash: (count: number) =>
+    `${count} items zijn naar de prullenbak verplaatst.`,
   driveItemsRestored: (count: number) => `${count} items zijn hersteld.`,
-  drivePurgeManyConfirm: (count: number) => `${count} items permanent verwijderen? Dit kan niet ongedaan worden gemaakt.`,
-  driveVersionsLoadFailed: (reason: string) => `De versiegeschiedenis is niet geladen. Probeer het opnieuw. Server: ${reason}`,
-  driveMembersLoadFailed: (reason: string) => `De leden zijn niet geladen. Probeer het opnieuw. Server: ${reason}`,
+  drivePurgeManyConfirm: (count: number) =>
+    `${count} items permanent verwijderen? Dit kan niet ongedaan worden gemaakt.`,
+  driveVersionsLoadFailed: (reason: string) =>
+    `De versiegeschiedenis is niet geladen. Probeer het opnieuw. Server: ${reason}`,
+  driveMembersLoadFailed: (reason: string) =>
+    `De leden zijn niet geladen. Probeer het opnieuw. Server: ${reason}`,
   baseCalendarPreviousMonth: "Vorige maand",
   baseCalendarNextMonth: "Volgende maand",
   baseCalendarAddOnDate: (date: string) => `Een record toevoegen op ${date}`,
   baseLoading: "Uw base wordt geladen…",
   baseBoardEmptyTitle: "Records in een bord groeperen",
   baseCalendarEmptyTitle: "Records op een kalender plaatsen",
-  baseBoardEmptyBody: "Borden groeperen records via een keuzeveld. Voeg een gebruiksklaar Statusveld toe om door te gaan.",
-  baseCalendarEmptyBody: "Kalenders plaatsen records via een Datumveld. Voeg er een toe om door te gaan.",
+  baseBoardEmptyBody:
+    "Borden groeperen records via een keuzeveld. Voeg een gebruiksklaar Statusveld toe om door te gaan.",
+  baseCalendarEmptyBody:
+    "Kalenders plaatsen records via een Datumveld. Voeg er een toe om door te gaan.",
   baseAddStatusField: "Statusveld toevoegen",
   baseAddDateField: "Datumveld toevoegen",
   baseStatusField: "Status",
@@ -2545,24 +2674,31 @@ export const nl: Partial<Catalog> = {
   baseStatusDone: "Klaar",
   baseLoadFailedTitle: "Deze base is niet geladen",
   baseEmptyTitle: "Begin met uw eerste tabel",
-  baseEmptyBody: "Tabellen houden verwante records bij elkaar. Maak er een om velden en records toe te voegen.",
+  baseEmptyBody:
+    "Tabellen houden verwante records bij elkaar. Maak er een om velden en records toe te voegen.",
   baseDefaultTableName: (number: number) => `Tabel ${number}`,
   baseView: "Weergave",
   baseSaveChanges: "Wijzigingen opslaan",
   officeLoading: "De Office-editor wordt geopend…",
-  officeDiscoveryMissing: "De Office-editor heeft geen editoradres gepubliceerd.",
-  officeLoadFailed: (reason: string) => `Probeer het opnieuw. Server: ${reason}`,
+  officeDiscoveryMissing:
+    "De Office-editor heeft geen editoradres gepubliceerd.",
+  officeLoadFailed: (reason: string) =>
+    `Probeer het opnieuw. Server: ${reason}`,
   sheetLoading: "Uw sheet wordt geladen…",
   sheetLoadFailedTitle: "Deze sheet is niet geladen",
   docLoading: "Uw document wordt geladen…",
   docLoadFailedTitle: "Dit document is niet geladen",
-  docSaveFailed: (reason: string) => `Uw laatste wijzigingen zijn nog niet opgeslagen. Kies Opnieuw proberen om ze op te slaan. Server: ${reason}`,
-  sheetSaveFailed: (reason: string) => `Uw laatste wijzigingen zijn nog niet opgeslagen. We blijven het proberen. Server: ${reason}`,
+  docSaveFailed: (reason: string) =>
+    `Uw laatste wijzigingen zijn nog niet opgeslagen. Kies Opnieuw proberen om ze op te slaan. Server: ${reason}`,
+  sheetSaveFailed: (reason: string) =>
+    `Uw laatste wijzigingen zijn nog niet opgeslagen. We blijven het proberen. Server: ${reason}`,
   sitesSubmissions: "Inzendingen",
-  sitesSubmissionsLoadFailed: "Uw formulierinzendingen konden niet worden geladen.",
+  sitesSubmissionsLoadFailed:
+    "Uw formulierinzendingen konden niet worden geladen.",
   sitesSubmissionSaveFailed: "Deze inzending kon niet worden bijgewerkt.",
   sitesNoSubmissionsTitle: "Nog geen berichten",
-  sitesNoSubmissionsBody: "Voeg een contactformulier aan een pagina toe. Nieuwe bezoekersberichten verschijnen hier.",
+  sitesNoSubmissionsBody:
+    "Voeg een contactformulier aan een pagina toe. Nieuwe bezoekersberichten verschijnen hier.",
   sitesOpenPages: "Pagina’s openen",
   sitesSubmissionList: "Bezoekersberichten",
   sitesSubmissionDetail: "Geselecteerd bezoekersbericht",
@@ -2606,7 +2742,8 @@ export const nl: Partial<Catalog> = {
   sitesWriteInDocs: "Schrijven in alo Docs",
   sitesOpeningDocs: "alo Docs openen…",
   sitesUntitledArticle: "Naamloos artikel",
-  sitesPostCreateFailed: "Het artikel kon niet worden gemaakt. Probeer het opnieuw.",
+  sitesPostCreateFailed:
+    "Het artikel kon niet worden gemaakt. Probeer het opnieuw.",
   sitesNoPostsTitle: "Nog geen artikelen",
   sitesNoPostsBody:
     "Begin een artikel in alo Docs. Het blijft privé totdat u het publiceert.",
@@ -2624,8 +2761,10 @@ export const nl: Partial<Catalog> = {
   sitesEditArticleSubtitle: "Werk bij wat lezers op uw website zien.",
   sitesEditArticleDetails: "Gegevens bewerken",
   sitesSaveArticle: "Wijzigingen opslaan",
-  sitesPostSaveFailed: "De artikelgegevens konden niet worden opgeslagen. Probeer het opnieuw.",
-  sitesPostUnpublishFailed: "Het artikel kon niet offline worden gehaald. Probeer het opnieuw.",
+  sitesPostSaveFailed:
+    "De artikelgegevens konden niet worden opgeslagen. Probeer het opnieuw.",
+  sitesPostUnpublishFailed:
+    "Het artikel kon niet offline worden gehaald. Probeer het opnieuw.",
   sitesUnpublishArticle: "Offline halen",
   sitesUnpublishingArticle: "Offline halen…",
   sitesFieldPostTitle: "Artikeltitel",
@@ -2635,14 +2774,16 @@ export const nl: Partial<Catalog> = {
   sitesFieldPostExcerpt: "Samenvatting",
   sitesPostExcerptHint: "Een korte inleiding voor de blogpagina en RSS-feed.",
   sitesFieldPostCover: "Omslagafbeelding",
-  sitesPostCoverHint: "Wordt op de blogpagina en boven het artikel weergegeven.",
+  sitesPostCoverHint:
+    "Wordt op de blogpagina en boven het artikel weergegeven.",
   sitesPostNoCover: "Geen omslag",
   sitesPostCoverAdded: "Omslag toegevoegd",
   sitesAddPostCover: "Afbeelding toevoegen",
   sitesReplacePostCover: "Afbeelding vervangen",
   sitesRemovePostCover: "Verwijderen",
   sitesUploadingPostCover: "Uploaden…",
-  sitesPostCoverUploadFailed: "De omslagafbeelding kon niet worden geüpload. Probeer het opnieuw.",
+  sitesPostCoverUploadFailed:
+    "De omslagafbeelding kon niet worden geüpload. Probeer het opnieuw.",
   sitesSeoAction: "Zoeken en delen",
   sitesSeoTitle: "Zoeken en delen",
   sitesSeoSubtitle:
@@ -2681,7 +2822,8 @@ export const nl: Partial<Catalog> = {
   sitesBlankTemplate: "Lege site",
   sitesHomePageTitle: "Home",
   sitesAiEditTitle: "Beschrijf een paginawijziging",
-  sitesAiEditBody: "alo maakt een controleerbare lijst. Er verandert niets tot u goedkeurt.",
+  sitesAiEditBody:
+    "alo maakt een controleerbare lijst. Er verandert niets tot u goedkeurt.",
   sitesAiInstruction: "Paginawijziging",
   sitesAiInstructionPlaceholder:
     "Maak het welkom warmer en zet ervaringen boven de prijzen…",
@@ -2689,8 +2831,11 @@ export const nl: Partial<Catalog> = {
   sitesAiPreparing: "Wijzigingen voorbereiden…",
   sitesAiProposalTitle: "Voorgestelde wijzigingen",
   sitesAiProposalCount: (count: number) =>
-    count === 1 ? "1 voorgestelde wijziging" : `${count} voorgestelde wijzigingen`,
-  sitesAiPreviewHint: "Vergelijk de pagina voor en na en kies daarna wat er gebeurt.",
+    count === 1
+      ? "1 voorgestelde wijziging"
+      : `${count} voorgestelde wijzigingen`,
+  sitesAiPreviewHint:
+    "Vergelijk de pagina voor en na en kies daarna wat er gebeurt.",
   sitesAiPreviewCompare: "Voorgestelde paginawijzigingen vergelijken",
   sitesAiPreviewBefore: "Voor",
   sitesAiPreviewAfter: "Na",
@@ -2706,7 +2851,8 @@ export const nl: Partial<Catalog> = {
   sitesAiRemoveChange: (section: string) => `${section} verwijderen`,
   sitesAiMoveChange: (section: string, position: number) =>
     `${section} verplaatsen naar positie ${position}`,
-  sitesAiSettingChange: (section: string) => `Een instelling in ${section} bijwerken`,
+  sitesAiSettingChange: (section: string) =>
+    `Een instelling in ${section} bijwerken`,
   sitesAiCopyChange: (section: string) => `Tekst in ${section} herschrijven`,
   sitesAiImproveCopy: "Deze tekst verbeteren",
   sitesAiCopyActions: "Tekstverbeteringen",
@@ -2741,8 +2887,10 @@ export const nl: Partial<Catalog> = {
   sitesSubdomainHint:
     "Kleine letters, cijfers en koppeltekens, 3–40 tekens — dit wordt het webadres van de site.",
   sitesSubdomainChecking: "Beschikbaarheid controleren…",
-  sitesSubdomainAvailable: (subdomain: string) => `‘${subdomain}’ is beschikbaar.`,
-  sitesSubdomainTaken: (subdomain: string) => `‘${subdomain}’ is al in gebruik.`,
+  sitesSubdomainAvailable: (subdomain: string) =>
+    `‘${subdomain}’ is beschikbaar.`,
+  sitesSubdomainTaken: (subdomain: string) =>
+    `‘${subdomain}’ is al in gebruik.`,
   sitesCreateSite: "Website maken",
   sitesCancel: "Annuleren",
   sitesBack: "Alle websites",
@@ -2774,13 +2922,15 @@ export const nl: Partial<Catalog> = {
   sitesTranslationReady: "Gereed",
   sitesTranslationProgress: (translated: number, total: number) =>
     `${translated} van ${total} pagina’s vertaald`,
-  sitesTranslationAllReady: "Elke ingeschakelde taal is klaar om te publiceren.",
+  sitesTranslationAllReady:
+    "Elke ingeschakelde taal is klaar om te publiceren.",
   sitesTranslationPublishHint: (count: number) =>
     `${count} ${count === 1 ? "vertaling gebruikt" : "vertalingen gebruiken"} nog reservetekst.`,
   sitesContinueTranslating: "Doorgaan met vertalen",
   sitesTranslationSaveFailed:
     "Deze vertaling kon niet worden opgeslagen. Corrigeer de gemarkeerde gegevens en probeer opnieuw.",
-  sitesTranslationMissingTitle: (locale: string) => `${locale} heeft een vertaling nodig`,
+  sitesTranslationMissingTitle: (locale: string) =>
+    `${locale} heeft een vertaling nodig`,
   sitesTranslationMissingBody: (requested: string, source: string) =>
     `Je ziet de versie ${source} als voorbeeld. Kopieer deze naar ${requested} om te vertalen zonder de bronpagina te wijzigen.`,
   sitesCopyTranslation: (source: string, target: string) =>
@@ -2899,9 +3049,11 @@ export const nl: Partial<Catalog> = {
   sitesThemeLoadFailed: "De thema-opties konden niet worden geladen.",
   sitesThemePresets: "Kleuren en lettertypen",
   sitesThemeLogo: "Logo",
-  sitesThemeLogoHint: "Wordt in de navigatiebalk getoond in plaats van de sitenaam.",
+  sitesThemeLogoHint:
+    "Wordt in de navigatiebalk getoond in plaats van de sitenaam.",
   sitesThemeFavicon: "Favicon",
-  sitesThemeFaviconHint: "Het kleine pictogram dat browsers op het tabblad tonen.",
+  sitesThemeFaviconHint:
+    "Het kleine pictogram dat browsers op het tabblad tonen.",
   sitesThemeUpload: "Afbeelding uploaden",
   sitesThemeReplace: "Afbeelding vervangen",
   sitesThemeRemove: "Afbeelding verwijderen",
@@ -2949,8 +3101,7 @@ export const nl: Partial<Catalog> = {
   financeEditClaim: "Declaratie bewerken",
   financeClaimSubtitle: "Wat u hebt uitgegeven, en wiens geld betaalde.",
   financeSpentOn: "Datum",
-  financeSpentOnHint:
-    "De dag waarop het geld wegging, in uw eigen tijdzone.",
+  financeSpentOnHint: "De dag waarop het geld wegging, in uw eigen tijdzone.",
   financeMerchant: "Leverancier",
   financeMerchantHint: "Wie er betaald is — de naam op de bon.",
   financeNoMerchant: "Geen leverancier",
@@ -2958,8 +3109,7 @@ export const nl: Partial<Catalog> = {
   financeDescription: "Waarvoor het was",
   financeGross: "Totaal",
   financeVat: "Btw",
-  financeVatHint:
-    "De btw die op de bon staat. Laat leeg als er geen op staat.",
+  financeVatHint: "De btw die op de bon staat. Laat leeg als er geen op staat.",
   financeNoVat: "—",
   financeVatRate: "Btw-tarief %",
   financeVatRateHint: "Zoals afgedrukt: 19, 21, 5,5.",
@@ -3536,7 +3686,8 @@ export const nl: Partial<Catalog> = {
 
   // De bewegingsgeschiedenis: van → naar, hoeveel, waarom, welk document.
   inventoryHistoryTitle: (product: string) => `${product} — bewegingen`,
-  inventoryHistorySubtitle: (place: string) => `Alles wat ${place} in of uit ging.`,
+  inventoryHistorySubtitle: (place: string) =>
+    `Alles wat ${place} in of uit ging.`,
   inventoryHistoryEmpty: "Er is nog niets deze plaats in of uit gegaan.",
   inventoryHistoryCapped: (limit: number) =>
     `De ${limit} recentste bewegingen worden getoond. Oudere blijven vastgelegd.`,
@@ -3635,8 +3786,10 @@ export const nl: Partial<Catalog> = {
     "Deze order is geplaatst. Ze draagt een nummer dat de leverancier in handen heeft, dus ze kan niet meer worden bewerkt — boek af wat er binnenkomt, of annuleer ze.",
   inventorySalesOrderFrozenNotice:
     "Deze order is bevestigd. Ze draagt een nummer dat de klant in handen heeft, dus ze kan niet meer worden bewerkt — boek elke zending af zodra ze buitengaat.",
-  inventoryFixLinesFirst: "Een van de regels is niet af. Corrigeer die en sla opnieuw op.",
-  inventoryOrderNeedsSupplier: "Kies de leverancier bij wie deze order wordt geplaatst.",
+  inventoryFixLinesFirst:
+    "Een van de regels is niet af. Corrigeer die en sla opnieuw op.",
+  inventoryOrderNeedsSupplier:
+    "Kies de leverancier bij wie deze order wordt geplaatst.",
   inventoryOrderNeedsCustomer: "Kies de klant voor wie deze order is.",
   inventoryPickSupplier: "Kies een leverancier",
   inventoryPickCustomer: "Kies een klant",
@@ -3703,7 +3856,8 @@ export const nl: Partial<Catalog> = {
   // Een zending boeken, in beide richtingen.
   inventoryReceiveGoods: "Aankomst boeken",
   inventoryDeliverGoods: "Zending boeken",
-  inventoryReceiveTitle: (order: string) => `Wat er is binnengekomen op ${order}`,
+  inventoryReceiveTitle: (order: string) =>
+    `Wat er is binnengekomen op ${order}`,
   inventoryDeliverTitle: (order: string) => `Wat er buitengaat op ${order}`,
   inventoryReceiveSubtitle:
     "Elke regel opent op wat nog openstaat. Wijzig wat u tekortkomt; de rest blijft in bestelling. Voor wat is binnengekomen wordt een conceptinkoopfactuur opgemaakt.",
@@ -3762,12 +3916,15 @@ export const nl: Partial<Catalog> = {
   inventoryScanCameraStop: "Camera stoppen",
   inventoryScanCameraFailed:
     "De camera kon niet worden gestart. Geef er toegang toe, of typ de code — een handscanner heeft helemaal geen toestemming nodig.",
-  inventoryScanAiming: "Richt de camera op de streepjescode. Ze stopt zodra er een is gelezen.",
+  inventoryScanAiming:
+    "Richt de camera op de streepjescode. Ze stopt zodra er een is gelezen.",
   inventoryScanNoCamera:
     "Deze browser kan geen streepjescode van een camera lezen. Een handscanner werkt hier wel: die typt in het veld hierboven.",
-  inventoryScanOnHand: (quantity: string) => `${quantity} op voorraad, over alle plaatsen samen.`,
+  inventoryScanOnHand: (quantity: string) =>
+    `${quantity} op voorraad, over alle plaatsen samen.`,
   inventoryScanNowhere: "Er ligt er nog nergens een.",
-  inventoryScanServiceNote: "Dit is een dienst, dus er is geen aantal van te vinden.",
+  inventoryScanServiceNote:
+    "Dit is een dienst, dus er is geen aantal van te vinden.",
   inventoryScanOpenProduct: "Dit product openen",
   inventoryScanShowInStock: "In de lijst tonen",
   inventoryScanAddProduct: "Met deze streepjescode aan de catalogus toevoegen",
@@ -3791,7 +3948,8 @@ export const nl: Partial<Catalog> = {
   agentReorderNothingShort: "Niets zit onder zijn minimum",
   agentReorderDrafted: (count: number): string =>
     count === 1 ? "1 conceptorder" : `${count} conceptorders`,
-  agentReorderLines: (count: number): string => (count === 1 ? "1 regel" : `${count} regels`),
+  agentReorderLines: (count: number): string =>
+    count === 1 ? "1 regel" : `${count} regels`,
   agentReorderLeftOut: "Niets besteld voor",
   agentReorderReason: (reason: string): string => {
     switch (reason) {
@@ -3836,7 +3994,8 @@ export const nl: Partial<Catalog> = {
   sitesTranslationPageKind: "Pagina",
   sitesTranslationPostKind: "Bericht",
   sitesCollections: "Collecties",
-  sitesCollectionsHint: "Maak van een alo Base-tabel herbruikbare kaarten voor uw website.",
+  sitesCollectionsHint:
+    "Maak van een alo Base-tabel herbruikbare kaarten voor uw website.",
   sitesConnectTable: "Tabel koppelen",
   sitesCollectionsLoading: "Collecties laden...",
   sitesCollectionsLoadFailed:
@@ -3853,8 +4012,10 @@ export const nl: Partial<Catalog> = {
   sitesCollectionTable: "Tabel",
   sitesCollectionChooseBase: "Kies een Base",
   sitesCollectionChooseTable: "Kies een tabel",
-  sitesCollectionRows: (count: number) => (count === 1 ? "1 rij" : `${count} rijen`),
-  sitesCollectionConnectedTo: (base: string, table: string) => `${base} / ${table}`,
+  sitesCollectionRows: (count: number) =>
+    count === 1 ? "1 rij" : `${count} rijen`,
+  sitesCollectionConnectedTo: (base: string, table: string) =>
+    `${base} / ${table}`,
   sitesCollectionSourceUnavailable:
     "Kies de Base en tabel waarvan de rijen op de website moeten verschijnen.",
   sitesCollectionEdit: (name: string) => `${name} bewerken`,
@@ -3877,7 +4038,8 @@ export const nl: Partial<Catalog> = {
     "De collectie is niet opgeslagen. Er is niets gewijzigd; controleer de koppeling en probeer opnieuw.",
   sitesCollectionDisconnect: "Loskoppelen",
   sitesCollectionDisconnectConfirm: "Nu loskoppelen",
-  sitesCollectionDisconnectHint: "De Base en alle rijen blijven in Drive staan.",
+  sitesCollectionDisconnectHint:
+    "De Base en alle rijen blijven in Drive staan.",
   sitesCollectionDisconnectFailed:
     "De collectie is nog gekoppeld. Verwijder haar van de pagina's die haar gebruiken en probeer opnieuw.",
   sitesCollectionPreview: "Huidige rijen",
@@ -3897,7 +4059,103 @@ export const nl: Partial<Catalog> = {
   sitesSectionCollectionDesc: "Een herbruikbaar raster met rijen uit alo Base.",
   sitesCollectionSectionHeading: "Sectiekop",
   sitesCollectionSectionChoose: "Te tonen collectie",
-  sitesCollectionSectionNoConnections: "Koppel een tabel voordat u deze sectie toevoegt",
+  sitesCollectionSectionNoConnections:
+    "Koppel een tabel voordat u deze sectie toevoegt",
   sitesCollectionSectionNoConnectionsHint:
     "De collectie blijft herbruikbaar, zodat dezelfde Base meerdere pagina's kan voeden.",
+  appLauncherAutoHint:
+    "De apps die u het meest gebruikt, automatisch bijgehouden",
+  meetTitle: "Vergadering",
+  meetInstantTitle: "Directe vergadering",
+  meetNothingLive: "Er zijn geen vergaderingen bezig",
+  meetWhereFrom:
+    "Vergaderingen beginnen meestal waar de mensen zijn — in een gesprek of op een agenda-uitnodiging. Alles wat loopt en waaraan u kunt deelnemen, verschijnt hier.",
+  meetUntitled: "Naamloze vergadering",
+  meetNotStarted: "Nog niet begonnen",
+  meetAddToEvent: "Vergadering toevoegen",
+  meetStart: "Een vergadering starten",
+  meetStartNow: "Een vergadering starten",
+  meetStartedHere: "is een vergadering gestart in dit gesprek",
+  meetJoin: "Deelnemen aan de vergadering",
+  meetLive: "Vergadering bezig",
+  meetJoinNow: "Nu deelnemen",
+  meetMicrophone: "Microfoon",
+  meetCamera: "Camera",
+  meetJoining: "Bezig met deelnemen…",
+  meetLeave: "Verlaten",
+  meetClose: "Sluiten",
+  meetJoinFailed: "Deelnemen aan die vergadering is niet gelukt.",
+  meetNoEngine:
+    "Vergaderingen zijn nog niet ingeschakeld voor deze werkruimte. De vergadering is vastgelegd en iedereen die is uitgenodigd kan haar zien — er is alleen nog geen plek om haar te houden totdat een beheerder de vergaderserver instelt.",
+  agendaAgenda: "Agenda",
+  agendaCreateEvent: "Afspraak maken",
+  agendaDay: "Dag",
+  agendaDescriptionPlaceholder: "Voeg notities, agenda of andere details toe…",
+  agendaEditEventSubtitle: "Werk de details van uw afspraak bij",
+  agendaLocationPlaceholder: "Voeg een locatie of videogesprekslink toe",
+  agendaMyCalendars: "Mijn agenda's",
+  agendaNewEventSubtitle: "Maak een nieuwe afspraak in uw agenda",
+  agendaNothingUpcoming: "Niets gepland.",
+  agendaOtherCalendars: "Andere agenda's",
+  agendaTomorrow: "Morgen",
+  agendaUntitledEvent: "Naamloze afspraak",
+  agendaUpcoming: "Binnenkort",
+  driveActions: "Acties",
+  driveAdd: "Toevoegen",
+  driveAddMemberPlaceholder: "Voeg iemand toe via e-mail",
+  driveColModified: "Gewijzigd",
+  driveColName: "Naam",
+  driveColSize: "Grootte",
+  driveCopy: "Een kopie maken",
+  driveCopyTo: "Kopiëren naar…",
+  driveCurrent: "Huidige",
+  driveDeleteForever: "Definitief verwijderen",
+  driveDestHint: "Het item neemt de toegang over van de plek waar u het zet.",
+  driveDownload: "Downloaden",
+  driveKindDoc: "Document",
+  driveKindExcel: "Excel-spreadsheet",
+  driveKindFolder: "Map",
+  driveKindSheet: "Sheet",
+  driveKindSlides: "Slides (PowerPoint)",
+  driveKindWord: "Word-document",
+  driveMemberError:
+    "Kon die persoon niet toevoegen — controleer het e-mailadres en uw rol.",
+  driveMembers: "Leden",
+  driveMove: "Verplaatsen",
+  driveMoveTo: "Verplaatsen naar…",
+  driveMyFiles: "Mijn bestanden",
+  driveNew: "Nieuw",
+  driveNewBase: "Nieuwe base",
+  driveNewBasePrompt: "Geef de nieuwe base een naam",
+  driveNewDoc: "Nieuw doc",
+  driveNewDocPrompt: "Geef het nieuwe doc een naam",
+  driveNewFolder: "Nieuwe map",
+  driveNewFolderPrompt: "Geef de nieuwe map een naam",
+  driveNewSheetPrompt: "Geef de nieuwe sheet een naam",
+  driveNewSpace: "Nieuwe Space",
+  driveNewSpacePrompt: "Geef de nieuwe Space een naam",
+  driveNoVersions: "Geen eerdere versies.",
+  driveOpen: "Openen",
+  driveRemoveMember: "Verwijderen",
+  driveRename: "Naam wijzigen",
+  driveRenamePrompt: "Nieuwe naam",
+  driveRestore: "Herstellen",
+  driveSpaces: "Spaces",
+  driveTrash: "Prullenbak",
+  driveTrashAction: "Naar prullenbak verplaatsen",
+  driveUpload: "Uploaden",
+  driveUploading: "Bezig met uploaden…",
+  driveVersionHistory: "Versiegeschiedenis",
+  agendaEventCount: (n: number) => (n === 1 ? "1 afspraak" : `${n} afspraken`),
+  driveMembersOf: (name: string) => `Leden van ${name}`,
+  driveNameNew: (kind: string): string =>
+    `Geef uw ${kind.toLowerCase()} een naam`,
+  drivePurgeConfirm: (name: string) =>
+    `“${name}” definitief verwijderen? Dit kan niet ongedaan worden gemaakt.`,
+  driveRemoveMemberConfirm: (who: string) =>
+    `${who} uit deze Space verwijderen?`,
+  driveTrashConfirm: (name: string) =>
+    `“${name}” naar de prullenbak verplaatsen?`,
+  driveRole: (role: string) =>
+    role === "manager" ? "Beheerder" : role === "editor" ? "Bewerker" : "Lezer",
 };

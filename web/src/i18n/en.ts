@@ -1429,7 +1429,11 @@ export const en = {
   driveNoVersions: "No previous versions.",
   driveCurrent: "Current",
   driveMembersOf: (name: string) => `Members of ${name}`,
-  driveRole: (role: string) =>
+  // The return is annotated rather than inferred. Without it TypeScript reads
+  // the type as the literal union `"Manager" | "Editor" | "Viewer"`, and since
+  // the catalog's shape comes from this file, no translation of the three words
+  // can satisfy it — the English is the type. A label is a string.
+  driveRole: (role: string): string =>
     role === "manager" ? "Manager" : role === "editor" ? "Editor" : "Viewer",
   driveAddMemberPlaceholder: "Add someone by email",
   driveAdd: "Add",

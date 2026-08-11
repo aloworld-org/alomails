@@ -10,7 +10,8 @@ export const fr: Partial<Catalog> = {
   sitesAddFirstSection: "Ajouter votre première section",
   sitesAddressAvailable: "Disponible",
   sitesAddressTaken: "Déjà utilisée",
-  sitesAddressNotChecked: "Saisissez une adresse valide pour vérifier sa disponibilité",
+  sitesAddressNotChecked:
+    "Saisissez une adresse valide pour vérifier sa disponibilité",
   sitesNameRequired: "Nommez votre site pour continuer.",
   sitesAddressRequired: "Saisissez une adresse de site pour continuer.",
   driveEmpty: "Ce dossier est vide. Téléversez un fichier ou créez un dossier.",
@@ -41,16 +42,20 @@ export const fr: Partial<Catalog> = {
   driveViewExtensions: "Extensions de noms de fichiers",
   taskCreating: "Création…",
   taskFilesAttachTo: "Joindre à la tâche",
-  taskFilesDropHint: "Déposez des images ou fichiers ici, ou utilisez Ajouter une pièce jointe.",
-  taskFilesNeedTask: "Créez d’abord une tâche, puis joignez-y des images et des fichiers.",
+  taskFilesDropHint:
+    "Déposez des images ou fichiers ici, ou utilisez Ajouter une pièce jointe.",
+  taskFilesNeedTask:
+    "Créez d’abord une tâche, puis joignez-y des images et des fichiers.",
   taskFilesUploadError: "Impossible de joindre ces fichiers. Réessayez.",
   taskChooseFromDrive: "Choisir dans Drive",
-  taskChooseFromDriveHint: "Joignez des fichiers existants sans les téléverser à nouveau.",
+  taskChooseFromDriveHint:
+    "Joignez des fichiers existants sans les téléverser à nouveau.",
   taskSearchDrive: "Rechercher dans ce dossier",
   taskDriveBack: "Revenir au dossier précédent",
   taskNoDriveFiles: "Aucun fichier dans ce dossier.",
   taskAttachSelected: "Joindre la sélection",
-  taskFilesSelected: (count: number) => count === 1 ? "1 fichier sélectionné" : `${count} fichiers sélectionnés`,
+  taskFilesSelected: (count: number) =>
+    count === 1 ? "1 fichier sélectionné" : `${count} fichiers sélectionnés`,
   taskCreateOnDate: (date: string) => `Créer une tâche pour le ${date}`,
   // brand
   appName: "alo",
@@ -114,7 +119,8 @@ export const fr: Partial<Catalog> = {
   homeUploadFile: "Téléverser un fichier",
   homeCreateDoc: "Créer un document",
   homeToday: "Aujourd’hui",
-  homeAgendaComingSoon: "Votre agenda apparaîtra ici dès que le calendrier sera disponible.",
+  homeAgendaComingSoon:
+    "Votre agenda apparaîtra ici dès que le calendrier sera disponible.",
   homeAskTitle: "Demandez tout à alo",
   homeAskBody: "Votre assistant IA pour tout votre travail.",
   homeAskCta: "Demander à alo",
@@ -162,7 +168,8 @@ export const fr: Partial<Catalog> = {
   contactSave: "Enregistrer",
   contactCancel: "Annuler",
   contactDelete: "Supprimer",
-  contactDeleteConfirm: (name: string) => `Supprimer ${name} ? Cette action est irréversible.`,
+  contactDeleteConfirm: (name: string) =>
+    `Supprimer ${name} ? Cette action est irréversible.`,
   contactNeedsName: "Ajoutez un nom ou au moins un e-mail.",
   contactSaveError: "Impossible d’enregistrer ce contact.",
   contactDeleteError: "Impossible de supprimer ce contact.",
@@ -174,7 +181,8 @@ export const fr: Partial<Catalog> = {
     skipped > 0
       ? `${n} contact${n === 1 ? "" : "s"} importé${n === 1 ? "" : "s"} (${skipped} ignoré${skipped === 1 ? "" : "s"}).`
       : `${n} contact${n === 1 ? "" : "s"} importé${n === 1 ? "" : "s"}.`,
-  contactsImportError: "Impossible d’importer ce fichier. S’agit-il d’un export .vcf ?",
+  contactsImportError:
+    "Impossible d’importer ce fichier. S’agit-il d’un export .vcf ?",
   contactsExportError: "Impossible d’exporter vos contacts.",
   contactsExportEmpty: "Vous n’avez pas encore de contacts à exporter.",
 
@@ -199,11 +207,13 @@ export const fr: Partial<Catalog> = {
     skipped > 0
       ? `${imported} message${imported === 1 ? "" : "s"} importé${imported === 1 ? "" : "s"} (${skipped} déjà présent${skipped === 1 ? "" : "s"}).`
       : `${imported} message${imported === 1 ? "" : "s"} importé${imported === 1 ? "" : "s"}.`,
-  importNeedsFields: "Saisissez le serveur, votre e-mail et votre mot de passe.",
+  importNeedsFields:
+    "Saisissez le serveur, votre e-mail et votre mot de passe.",
   importClose: "Fermer",
   signedInAs: "Connecté en tant que",
   comingSoonTitle: "Bientôt disponible",
-  comingSoonBody: "Cette partie de votre espace de travail arrive bientôt. Le Courrier est déjà prêt.",
+  comingSoonBody:
+    "Cette partie de votre espace de travail arrive bientôt. Le Courrier est déjà prêt.",
 
   // auth — brand panel
   brandHeadline: "Votre espace de travail.\nVos serveurs.\nVos règles.",
@@ -227,7 +237,8 @@ export const fr: Partial<Catalog> = {
   hidePassword: "Masquer le mot de passe",
   rememberMe: "Se souvenir de moi",
   forgotPassword: "Mot de passe oublié ?",
-  forgotPasswordNote: "Pour réinitialiser votre mot de passe, contactez votre administrateur.",
+  forgotPasswordNote:
+    "Pour réinitialiser votre mot de passe, contactez votre administrateur.",
   signInButton: "Se connecter",
   signingIn: "Connexion…",
   orDivider: "ou",
@@ -236,7 +247,8 @@ export const fr: Partial<Catalog> = {
 
   // auth — two-factor
   twoFactorTitle: "Authentification à deux facteurs",
-  twoFactorSubtitle: "Saisissez le code à 6 chiffres de votre application d’authentification",
+  twoFactorSubtitle:
+    "Saisissez le code à 6 chiffres de votre application d’authentification",
   twoFactorRecoverySubtitle: "Saisissez l’un de vos codes de récupération",
   twoFactorCodeLabel: "Code d’authentification",
   recoveryCodeLabel: "Code de récupération",
@@ -248,17 +260,21 @@ export const fr: Partial<Catalog> = {
   backToSignIn: "Retour à la connexion",
 
   // auth — errors
-  errorBadCredentials: "Cette adresse e-mail ou ce mot de passe est incorrect. Veuillez réessayer.",
+  errorBadCredentials:
+    "Cette adresse e-mail ou ce mot de passe est incorrect. Veuillez réessayer.",
   errorSecondFactor: "Saisissez votre code d’authentification pour continuer.",
   errorBadOtp: "Ce code est incorrect. Veuillez réessayer.",
   errorRateLimited: "Trop de tentatives. Patientez un instant et réessayez.",
-  errorGeneric: "Une erreur s’est produite lors de la connexion. Veuillez réessayer.",
-  errorNetwork: "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
+  errorGeneric:
+    "Une erreur s’est produite lors de la connexion. Veuillez réessayer.",
+  errorNetwork:
+    "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez.",
   signingOut: "Déconnexion…",
 
   // signup — comptes personnels (ADR 0018)
   signupHeading: "Créez votre adresse alo personnelle",
-  signupSubtitle: "Une messagerie privée et souveraine — sans publicité ni pistage.",
+  signupSubtitle:
+    "Une messagerie privée et souveraine — sans publicité ni pistage.",
   signupAddressLabel: "Choisissez votre adresse",
   signupPickPlaceholder: "votrenom",
   signupRecoveryLabel: "Votre e-mail actuel",
@@ -286,7 +302,8 @@ export const fr: Partial<Catalog> = {
   signupDoneBody: (email: string) =>
     `${email} est prête. Connectez-vous avec votre nouvelle adresse et votre mot de passe.`,
   signupGoToLogin: "Aller à la connexion",
-  signupUnavailable: "Les inscriptions personnelles ne sont pas ouvertes pour le moment.",
+  signupUnavailable:
+    "Les inscriptions personnelles ne sont pas ouvertes pour le moment.",
   signupHaveAccount: "Vous avez déjà un compte ?",
   signupBackToLogin: "Se connecter",
   signupCreateLink: "Créer un compte personnel",
@@ -305,8 +322,10 @@ export const fr: Partial<Catalog> = {
   resetSubmit: "Définir le mot de passe",
   resetSubmitting: "Enregistrement…",
   resetDoneHeading: "Mot de passe mis à jour",
-  resetDoneBody: "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
-  resetRequestError: "Impossible de démarrer la réinitialisation. Veuillez réessayer.",
+  resetDoneBody:
+    "Vous pouvez maintenant vous connecter avec votre nouveau mot de passe.",
+  resetRequestError:
+    "Impossible de démarrer la réinitialisation. Veuillez réessayer.",
   resetVerifyError: "Cela n'a pas fonctionné — vérifiez le code et réessayez.",
 
   // agenda (calendrier)
@@ -342,7 +361,8 @@ export const fr: Partial<Catalog> = {
   cancelledAbsent: "Cet évènement n'était pas dans votre agenda.",
   agendaEventGuests: "Invités",
   agendaGuestsPlaceholder: "nom@exemple.com, autre@exemple.com",
-  agendaGuestsHint: "Nous enverrons à chaque invité une invitation qu'il pourra accepter dans son propre agenda.",
+  agendaGuestsHint:
+    "Nous enverrons à chaque invité une invitation qu'il pourra accepter dans son propre agenda.",
   agendaEventDescription: "Notes",
   agendaSave: "Enregistrer",
   agendaSaveThis: "Cet évènement",
@@ -412,12 +432,23 @@ export const fr: Partial<Catalog> = {
   taskEmpty: "Aucune tâche. Ajoutez-en une ci-dessus.",
   taskPlateEmpty: "Rien à faire. Vous êtes à jour.",
   taskNoProposalsTitle: "Vous êtes à jour",
-  taskNoProposals: "Les suggestions apparaissent ici quand alo détecte des actions dans un e-mail.",
+  taskNoProposals:
+    "Les suggestions apparaissent ici quand alo détecte des actions dans un e-mail.",
   taskAiSuggested: "Suggéré par l’IA",
   taskAccept: "Accepter",
   taskReject: "Ignorer",
   taskActivityKind: (kind: string) =>
-    ({ created: "a créé cette tâche", status_changed: "l’a déplacée", assigned: "a changé le responsable", due_changed: "a changé l’échéance", commented: "a commenté", accepted: "a accepté la suggestion", proposed: "a été suggérée par l’IA" } as Record<string, string>)[kind] ?? kind,
+    (
+      ({
+        created: "a créé cette tâche",
+        status_changed: "l’a déplacée",
+        assigned: "a changé le responsable",
+        due_changed: "a changé l’échéance",
+        commented: "a commenté",
+        accepted: "a accepté la suggestion",
+        proposed: "a été suggérée par l’IA",
+      }) as Record<string, string>
+    )[kind] ?? kind,
   agendaReminder: "Rappel",
   agendaReminderNone: "Aucun rappel",
   agendaReminderAtStart: "À l’heure de l’événement",
@@ -472,14 +503,17 @@ export const fr: Partial<Catalog> = {
   flagDueLabel: (when: string) => `À faire ${when}`,
   flagDueOverdue: (when: string) => `En retard — échéance ${when}`,
   flagDueSet: "Définir une date de suivi",
-  resizeFolders: "Redimensionner le panneau des dossiers (glisser, ou touches fléchées ; double-clic pour réinitialiser)",
-  resizeMessages: "Redimensionner la liste des messages (glisser, ou touches fléchées ; double-clic pour réinitialiser)",
+  resizeFolders:
+    "Redimensionner le panneau des dossiers (glisser, ou touches fléchées ; double-clic pour réinitialiser)",
+  resizeMessages:
+    "Redimensionner la liste des messages (glisser, ou touches fléchées ; double-clic pour réinitialiser)",
   collapseFolders: "Masquer les dossiers",
   expandFolders: "Afficher les dossiers",
   mailEmpty: "Aucun message ici pour l’instant.",
   mailSearchEmpty: "Aucun message ne correspond à votre recherche.",
   mailSelectPrompt: "Votre boîte de réception est prête",
-  mailSelectBody: "Choisissez un message dans la liste pour ouvrir la conversation.",
+  mailSelectBody:
+    "Choisissez un message dans la liste pour ouvrir la conversation.",
   mailListError: "Impossible de charger les messages.",
   mailFolderError: "Impossible de charger vos dossiers.",
   mailRetry: "Réessayer",
@@ -506,7 +540,8 @@ export const fr: Partial<Catalog> = {
   markUnread: "Marquer comme non lu",
   selectAll: "Tout sélectionner",
   selectNone: "Effacer la sélection",
-  selectedCount: (n: number) => (n === 1 ? "1 sélectionné" : `${n} sélectionnés`),
+  selectedCount: (n: number) =>
+    n === 1 ? "1 sélectionné" : `${n} sélectionnés`,
   snoozeUntil: "Reporter jusqu’à…",
   snoozeLaterToday: "Plus tard aujourd’hui",
   snoozeTomorrow: "Demain",
@@ -534,7 +569,8 @@ export const fr: Partial<Catalog> = {
   bccLabel: "cci",
   recipientsNone: "—",
   senderVerified: "Vérifié",
-  senderVerifiedTitle: "Expéditeur authentifié — SPF, DKIM et DMARC tous validés",
+  senderVerifiedTitle:
+    "Expéditeur authentifié — SPF, DKIM et DMARC tous validés",
   replyTo: "Répondre à",
   quickReplyTo: (name: string) => `Réponse rapide à ${name}`,
   replyToName: (name: string) => `Répondre à ${name}…`,
@@ -584,7 +620,8 @@ export const fr: Partial<Catalog> = {
   mailScheduled: (when: string) => `Envoi programmé pour ${when}.`,
   scheduleError: "Impossible de programmer votre message. Veuillez réessayer.",
   cancelSend: "Annuler l’envoi",
-  sendCancelled: "Envoi programmé annulé — votre message est de retour dans les brouillons.",
+  sendCancelled:
+    "Envoi programmé annulé — votre message est de retour dans les brouillons.",
   contactSuggestions: "Contacts correspondants",
   labelColor: "Couleur de l’étiquette",
   labelColorHint: "clic droit pour colorer",
@@ -594,8 +631,10 @@ export const fr: Partial<Catalog> = {
   folderRename: "Renommer",
   folderDelete: "Supprimer le dossier",
   folderNamePlaceholder: "Nom du dossier",
-  folderDeleteConfirm: (name: string) => `Supprimer le dossier « ${name} » ? Ses messages ne sont pas supprimés.`,
-  folderActionFailed: "Cette modification de dossier n’a pas fonctionné — veuillez réessayer.",
+  folderDeleteConfirm: (name: string) =>
+    `Supprimer le dossier « ${name} » ? Ses messages ne sont pas supprimés.`,
+  folderActionFailed:
+    "Cette modification de dossier n’a pas fonctionné — veuillez réessayer.",
   folderActions: (name: string) => `Options du dossier ${name}`,
 
   // Shared mailboxes / delegation
@@ -603,14 +642,16 @@ export const fr: Partial<Catalog> = {
   sharedMailboxesHeading: "Boîtes partagées",
   sharedMyMailbox: "Ma boîte aux lettres",
   sharedReadOnly: "lecture seule",
-  sharedNoSend: "Vous ne pouvez pas envoyer depuis cette boîte partagée — l’accès en envoi ne vous a pas été accordé.",
+  sharedNoSend:
+    "Vous ne pouvez pas envoyer depuis cette boîte partagée — l’accès en envoi ne vous a pas été accordé.",
   settingsSharing: "Partage",
   settingsSharingHint:
     "Laissez vos collègues ouvrir et gérer votre boîte aux lettres. Accordez l’accès en envoi pour qu’ils puissent aussi envoyer en votre nom.",
   sharingNone: "Vous n’avez partagé votre boîte aux lettres avec personne.",
   sharingEmailPlaceholder: "Adresse d’un collègue",
   sharingAdd: "Partager",
-  sharingAddError: "Partage impossible — vérifiez que l’adresse correspond à un collègue de votre organisation.",
+  sharingAddError:
+    "Partage impossible — vérifiez que l’adresse correspond à un collègue de votre organisation.",
   userShareAccess: "Accès partagé",
   delegateTitle: (email: string) => `Qui peut accéder à ${email}`,
   delegateIntro:
@@ -626,7 +667,8 @@ export const fr: Partial<Catalog> = {
   delegateSendAs: "Envoyer en tant que",
   delegateSendOnBehalf: "Envoyer au nom de",
   delegateRemove: "Retirer l’accès",
-  delegateError: "Cette modification d’accès n’a pas fonctionné — veuillez réessayer.",
+  delegateError:
+    "Cette modification d’accès n’a pas fonctionné — veuillez réessayer.",
   delegateFoldersLabel: "Limiter à des dossiers",
   delegateWholeMailbox: "Toute la boîte aux lettres",
   delegateLimitFolders: "Limiter l’accès à des dossiers précis",
@@ -640,10 +682,12 @@ export const fr: Partial<Catalog> = {
   categoryRename: "Renommer",
   categoryDelete: "Supprimer la catégorie",
   categoryNamePlaceholder: "Nom de la catégorie",
-  categoryNoneHint: "Aucune catégorie pour l’instant — ajoutez-en une depuis la barre latérale.",
+  categoryNoneHint:
+    "Aucune catégorie pour l’instant — ajoutez-en une depuis la barre latérale.",
   categoryDeleteConfirm: (name: string) =>
     `Supprimer la catégorie « ${name} » ? Elle est retirée de tous les messages qui la portent.`,
-  categoryActionFailed: "Cette modification de catégorie n’a pas fonctionné — veuillez réessayer.",
+  categoryActionFailed:
+    "Cette modification de catégorie n’a pas fonctionné — veuillez réessayer.",
   categoryActions: (name: string) => `Options de la catégorie ${name}`,
   categoryClearFilter: "Afficher tous les messages",
 
@@ -653,9 +697,11 @@ export const fr: Partial<Catalog> = {
   transferDownload: "Télécharger",
   transferExpires: (date: string) => `le lien expire ${date}`,
   transferExpiryTitle: "Durée de validité des liens de gros fichiers",
-  transferExpiryOption: (days: number) => (days === 1 ? "1 jour" : `${days} jours`),
+  transferExpiryOption: (days: number) =>
+    days === 1 ? "1 jour" : `${days} jours`,
   blockSenderNamed: (email: string) => `Bloquer ${email}`,
-  senderBlocked: (email: string) => `${email} bloqué — ses messages vont désormais dans les indésirables.`,
+  senderBlocked: (email: string) =>
+    `${email} bloqué — ses messages vont désormais dans les indésirables.`,
 
   // Filters & rules
   settingsFilters: "Filtres et règles",
@@ -704,18 +750,21 @@ export const fr: Partial<Catalog> = {
   spamBannerTitle: "Ce message est dans les indésirables",
   spamReasonDmarc: (domain: string) =>
     `Nous n’avons pas pu confirmer qu’il provenait réellement de ${domain} — il a échoué à l’authentification DMARC, signe fréquent d’usurpation.`,
-  spamReasonDkim: "Sa signature cryptographique (DKIM) n’a pas pu être validée, l’expéditeur n’a donc pas pu être vérifié.",
+  spamReasonDkim:
+    "Sa signature cryptographique (DKIM) n’a pas pu être validée, l’expéditeur n’a donc pas pu être vérifié.",
   spamReasonSpf: (domain: string) =>
     `Le serveur qui l’a envoyé n’est pas autorisé à envoyer du courrier pour ${domain} (échec SPF).`,
   spamReasonNone:
     "Nous n’avons détecté aucun problème de distribution avec ce message — il ressemble peut-être à du courrier que vous, ou une règle de filtrage, avez marqué comme indésirable auparavant.",
-  spamBannerHint: "Si ce n’est pas un indésirable, remettez-le dans votre boîte de réception.",
+  spamBannerHint:
+    "Si ce n’est pas un indésirable, remettez-le dans votre boîte de réception.",
   spamSenderFallback: "le domaine de l’expéditeur",
   unsubscribe: "Se désabonner",
   unsubscribeConfirm: (sender: string) =>
     `Se désabonner de ${sender} ? Nous demanderons à l’expéditeur de cesser de vous écrire.`,
   unsubscribed: "Désabonné — l’expéditeur a été prié de cesser.",
-  unsubscribeFailed: "Désabonnement automatique impossible — essayez le lien dans le message.",
+  unsubscribeFailed:
+    "Désabonnement automatique impossible — essayez le lien dans le message.",
   unsubscribeOpened: "Page de désabonnement ouverte dans un nouvel onglet.",
   forwardAsAttachment: "Transférer en pièce jointe",
   blockSender: "Bloquer l’expéditeur",
@@ -739,13 +788,18 @@ export const fr: Partial<Catalog> = {
   settingsSignature: "Votre signature",
   settingsSignatureHint: "Ajoutée au bas des messages que vous envoyez…",
   settingsOrgFooter: "Pied de page de l’organisation",
-  settingsOrgFooterHint: "Ajouté au courrier sortant de chaque utilisateur, après sa signature.",
-  settingsOrgFooterPlaceholder: "ex. nom de l’entreprise, adresse, mentions légales…",
+  settingsOrgFooterHint:
+    "Ajouté au courrier sortant de chaque utilisateur, après sa signature.",
+  settingsOrgFooterPlaceholder:
+    "ex. nom de l’entreprise, adresse, mentions légales…",
   settingsOutOfOffice: "Absence du bureau",
-  settingsOutOfOfficeHint: "Répond automatiquement une fois à toute personne qui vous écrit pendant votre absence.",
+  settingsOutOfOfficeHint:
+    "Répond automatiquement une fois à toute personne qui vous écrit pendant votre absence.",
   settingsOooSubjectPlaceholder: "Objet (facultatif) — ex. Absent du bureau",
-  settingsOooMessagePlaceholder: "ex. Je suis absent jusqu’à lundi et vous répondrai à mon retour.",
-  settingsOooNeedsMessage: "Ajoutez un message pour activer la réponse d’absence.",
+  settingsOooMessagePlaceholder:
+    "ex. Je suis absent jusqu’à lundi et vous répondrai à mon retour.",
+  settingsOooNeedsMessage:
+    "Ajoutez un message pour activer la réponse d’absence.",
   settingsSave: "Enregistrer",
   settingsSaved: "Enregistré.",
   settingsSaveError: "Impossible d’enregistrer vos paramètres.",
@@ -767,15 +821,19 @@ export const fr: Partial<Catalog> = {
   overviewOff: "Désactivée",
   overviewManage: "Gérer",
   adminDomains: "Domaines",
-  adminDomainsIntro: "Les domaines pour lesquels cette organisation envoie et reçoit du courrier, et leur vérification.",
+  adminDomainsIntro:
+    "Les domaines pour lesquels cette organisation envoie et reçoit du courrier, et leur vérification.",
   adminDomainsError: "Impossible de charger les domaines.",
-  adminDomainsEmpty: "Aucun domaine pour l’instant. Ajoutez-en un pour le vérifier.",
+  adminDomainsEmpty:
+    "Aucun domaine pour l’instant. Ajoutez-en un pour le vérifier.",
   adminAddDomain: "Ajouter un domaine",
-  dkimPublish: "Publiez cet enregistrement DKIM pour que votre courrier soit signé",
+  dkimPublish:
+    "Publiez cet enregistrement DKIM pour que votre courrier soit signé",
   dkimRotate: "Renouveler la clé DKIM",
   dkimRotateConfirm: (domain: string) =>
     `Renouveler la clé DKIM pour ${domain} ? Publiez le nouvel enregistrement ; conservez l’ancien jusqu’à ce que le courrier ne l’utilise plus.`,
-  dkimRotated: (domain: string) => `Nouvelle clé DKIM pour ${domain} — publiez l’enregistrement mis à jour.`,
+  dkimRotated: (domain: string) =>
+    `Nouvelle clé DKIM pour ${domain} — publiez l’enregistrement mis à jour.`,
   adminAudit: "Journal d’audit",
   adminAuditIntro: "Qui a modifié quoi, et quand. Les plus récents d’abord.",
   adminAuditError: "Impossible de charger le journal d’audit.",
@@ -819,7 +877,8 @@ export const fr: Partial<Catalog> = {
   tenantAdminPassword: "Mot de passe du premier administrateur",
   tenantAdminPasswordHint: "au moins 12 caractères",
   tenantCreate: "Créer l’organisation",
-  tenantInvalid: "Un nom, une adresse d’administrateur valide et un mot de passe d’au moins 12 caractères sont requis.",
+  tenantInvalid:
+    "Un nom, une adresse d’administrateur valide et un mot de passe d’au moins 12 caractères sont requis.",
   tenantCreateError: "Impossible de créer cette organisation.",
   tenantActive: "Active",
   tenantSuspended: "Suspendue",
@@ -828,7 +887,8 @@ export const fr: Partial<Catalog> = {
   tenantDelete: "Supprimer l’organisation",
   tenantDeleteConfirm: (name: string) =>
     `Supprimer définitivement « ${name} » et toutes ses données ? Cette action est irréversible.`,
-  tenantUsage: (n: number, size: string) => `${n === 1 ? "1 utilisateur" : `${n} utilisateurs`} · ${size}`,
+  tenantUsage: (n: number, size: string) =>
+    `${n === 1 ? "1 utilisateur" : `${n} utilisateurs`} · ${size}`,
   tenantQuota: "Quota",
   tenantQuotaPrompt: "Quota de stockage en Go (laisser vide pour illimité) :",
   tenantQuotaUnlimited: "illimité",
@@ -845,7 +905,8 @@ export const fr: Partial<Catalog> = {
   domainVerify: "Vérifier",
   domainDelete: "Retirer le domaine",
   domainOwnedBy: (tenant: string) => `Appartient à ${tenant}`,
-  domainDeleteConfirm: (domain: string) => `Retirer ${domain} de ce déploiement ?`,
+  domainDeleteConfirm: (domain: string) =>
+    `Retirer ${domain} de ce déploiement ?`,
   domainVerifiedOk: (domain: string) => `${domain} est vérifié.`,
   domainVerifyPending: (domain: string) =>
     `Aucun enregistrement DNS TXT correspondant trouvé pour ${domain} pour l’instant — publiez-le puis réessayez.`,
@@ -871,7 +932,8 @@ export const fr: Partial<Catalog> = {
   securityWarn: "Attention",
   securityFail: "Action requise",
   adminGroups: "Groupes et listes",
-  adminGroupsIntro: "Groupes d’accès partagé et listes de diffusion qui distribuent le courrier à leurs membres.",
+  adminGroupsIntro:
+    "Groupes d’accès partagé et listes de diffusion qui distribuent le courrier à leurs membres.",
   adminNewGroup: "Nouveau groupe",
   adminGroupsError: "Impossible de charger les groupes.",
   groupName: "Nom du groupe",
@@ -888,13 +950,17 @@ export const fr: Partial<Catalog> = {
   groupAddressClear: "Désactiver la liste",
   groupAddMember: "Ajouter un membre",
   groupDelete: "Supprimer le groupe",
-  groupDeleteConfirm: (name: string) => `Supprimer le groupe « ${name} » ? Les membres conservent leur boîte aux lettres.`,
-  groupCreateError: "Impossible de créer ce groupe — le nom est peut-être déjà pris.",
-  groupAddressError: "Impossible de définir cette adresse — elle est peut-être déjà utilisée.",
+  groupDeleteConfirm: (name: string) =>
+    `Supprimer le groupe « ${name} » ? Les membres conservent leur boîte aux lettres.`,
+  groupCreateError:
+    "Impossible de créer ce groupe — le nom est peut-être déjà pris.",
+  groupAddressError:
+    "Impossible de définir cette adresse — elle est peut-être déjà utilisée.",
   groupActionError: "Cela n’a pas fonctionné — veuillez réessayer.",
   groupClose: "Fermer",
   adminUsers: "Utilisateurs et boîtes aux lettres",
-  adminUsersIntro: "Les personnes de votre organisation et leurs boîtes aux lettres.",
+  adminUsersIntro:
+    "Les personnes de votre organisation et leurs boîtes aux lettres.",
   adminAddUser: "Ajouter un utilisateur",
   adminUsersError: "Impossible de charger les utilisateurs.",
   userAdminBadge: "Administrateur",
@@ -906,14 +972,18 @@ export const fr: Partial<Catalog> = {
   userNewPassword: "Nouveau mot de passe",
   userPasswordHint: "Au moins 8 caractères.",
   userCreate: "Créer l’utilisateur",
-  userInvalid: "Saisissez une adresse valide et un mot de passe d’au moins 8 caractères.",
-  userCreateError: "Impossible de créer cet utilisateur — l’adresse est peut-être déjà utilisée.",
+  userInvalid:
+    "Saisissez une adresse valide et un mot de passe d’au moins 8 caractères.",
+  userCreateError:
+    "Impossible de créer cet utilisateur — l’adresse est peut-être déjà utilisée.",
   userReset: "Réinitialiser le mot de passe",
   userResetDone: "Mot de passe réinitialisé.",
   userAdminRole: "Administrateur de l’organisation",
-  userAdminHint: "Les administrateurs peuvent gérer les utilisateurs, les alias et les paramètres.",
+  userAdminHint:
+    "Les administrateurs peuvent gérer les utilisateurs, les alias et les paramètres.",
   userAliases: "Alias",
-  userAliasesHint: "Adresses supplémentaires qui aboutissent à cette boîte aux lettres.",
+  userAliasesHint:
+    "Adresses supplémentaires qui aboutissent à cette boîte aux lettres.",
   userAliasPlaceholder: "alias@namel3ss.com",
   userDelete: "Supprimer l’utilisateur",
   userDeleteConfirm: (email: string) =>
@@ -921,16 +991,19 @@ export const fr: Partial<Catalog> = {
   userActionError: "Cela n’a pas fonctionné — veuillez réessayer.",
   userClose: "Fermer",
   adminAiProviders: "Fournisseurs d’IA",
-  adminAiIntro: "Choisissez les modèles qui font fonctionner alo — auto-hébergés, ou vos propres clés d’API.",
+  adminAiIntro:
+    "Choisissez les modèles qui font fonctionner alo — auto-hébergés, ou vos propres clés d’API.",
   adminAddProvider: "Ajouter un fournisseur",
   adminManage: "Gérer",
   adminDefaultBadge: "Par défaut",
   adminMakeDefault: "Définir par défaut",
   adminProvidersError: "Impossible de charger les fournisseurs.",
   adminAiSelfHosted: "Auto-hébergé (recommandé)",
-  adminAiSelfHostedHint: "Fonctionne sur votre propre infrastructure — aucune donnée ne quitte vos serveurs.",
+  adminAiSelfHostedHint:
+    "Fonctionne sur votre propre infrastructure — aucune donnée ne quitte vos serveurs.",
   adminAiOwnKeys: "Vos propres clés d’API",
-  adminAiOwnKeysHint: "Connectez un fournisseur externe avec votre clé. Les requêtes quittent votre serveur vers ce fournisseur.",
+  adminAiOwnKeysHint:
+    "Connectez un fournisseur externe avec votre clé. Les requêtes quittent votre serveur vers ce fournisseur.",
   adminAiFootnote:
     "Les fournisseurs auto-hébergés conservent toutes les données sur votre infrastructure. Les clés d’API externes envoient les requêtes et le contenu à ce fournisseur — choisissez selon votre politique de données.",
   providerConnected: "Connecté",
@@ -946,11 +1019,15 @@ export const fr: Partial<Catalog> = {
   kindAnthropic: "Anthropic",
   kindCustom: "Point de terminaison personnalisé",
   builtInTag: "Intégré",
-  ollamaDesc: "Modèles locaux sur votre serveur — Llama 3, Mistral, et plus. Entièrement privé.",
-  aloDesc: "Modèle intégré, hébergé en UE et optimisé pour alo — pointez-le vers votre point de terminaison alo IA.",
+  ollamaDesc:
+    "Modèles locaux sur votre serveur — Llama 3, Mistral, et plus. Entièrement privé.",
+  aloDesc:
+    "Modèle intégré, hébergé en UE et optimisé pour alo — pointez-le vers votre point de terminaison alo IA.",
   openaiDesc: "GPT-4o, GPT-4o mini. Ajoutez votre clé OpenAI pour activer.",
-  anthropicDesc: "Modèles Claude. Ajoutez votre clé d’API Anthropic pour activer.",
-  customDesc: "Toute API compatible OpenAI — vLLM auto-hébergé, Together, Groq, OpenRouter…",
+  anthropicDesc:
+    "Modèles Claude. Ajoutez votre clé d’API Anthropic pour activer.",
+  customDesc:
+    "Toute API compatible OpenAI — vLLM auto-hébergé, Together, Groq, OpenRouter…",
   connectTitle: (name: string) => `Connecter ${name}`,
   configureTitle: (name: string) => `Configurer ${name}`,
   providerBaseUrl: "Point de terminaison de l’API",
@@ -962,27 +1039,32 @@ export const fr: Partial<Catalog> = {
   providerApiKey: "Clé d’API",
   providerShowKey: "Afficher la clé",
   providerHideKey: "Masquer la clé",
-  providerApiKeyKept: "Enregistré — laissez vide pour conserver la clé actuelle",
+  providerApiKeyKept:
+    "Enregistré — laissez vide pour conserver la clé actuelle",
   providerApiKeyOptional: "Inutile pour un Ollama local",
   providerTest: "Tester la connexion",
   providerTestAgain: "Tester à nouveau",
   providerTesting: "Test en cours…",
   providerTestOk: (n: number) =>
-    n === 1 ? "Connexion vérifiée — 1 modèle accessible" : `Connexion vérifiée — ${n} modèles accessibles`,
+    n === 1
+      ? "Connexion vérifiée — 1 modèle accessible"
+      : `Connexion vérifiée — ${n} modèles accessibles`,
   providerTestFail: "Impossible de joindre ce point de terminaison.",
   providerCancel: "Annuler",
   providerSave: "Enregistrer et activer",
   providerSaveError: "Impossible d’enregistrer ce fournisseur.",
   providerRequired: "Un point de terminaison et un modèle sont requis.",
   removeRecipient: (name: string) => `Retirer ${name}`,
-  recipientCount: (n: number) => (n === 1 ? "1 destinataire" : `${n} destinataires`),
+  recipientCount: (n: number) =>
+    n === 1 ? "1 destinataire" : `${n} destinataires`,
 
   aiComingSoon: "L’assistant IA arrive bientôt.",
   archiveUnavailable: "Aucun dossier d’archives où déplacer ce message.",
 
   // Docs
   docTitle: "Offre T3 — Proceq",
-  docSaved: "Enregistré dans les fichiers · toutes les modifications sont enregistrées",
+  docSaved:
+    "Enregistré dans les fichiers · toutes les modifications sont enregistrées",
   docViewMode: "Affichage du document",
   docCanvasView: "Canevas",
   docCanvasViewHint: "Affichage flexible en canevas",
@@ -1070,8 +1152,10 @@ export const fr: Partial<Catalog> = {
   docEquationHint: "Formule mathématique (LaTeX)",
   docBlockGroupAdvanced: "Avancé",
   driveImporting: (name: string): string => `Importation de ${name}…`,
-  driveImportNote: "Nous l’ouvrons en tant que alo Sheet. La mise en forme peut différer — votre fichier d’origine reste dans Drive, inchangé.",
-  driveImportFailed: (name: string): string => `Impossible d’importer ${name}. Vous pouvez toujours télécharger l’original.`,
+  driveImportNote:
+    "Nous l’ouvrons en tant que alo Sheet. La mise en forme peut différer — votre fichier d’origine reste dans Drive, inchangé.",
+  driveImportFailed: (name: string): string =>
+    `Impossible d’importer ${name}. Vous pouvez toujours télécharger l’original.`,
   sheetDownloadXlsx: "Télécharger en Excel (.xlsx)",
   sheetDownloadXlsxShort: "Excel",
   sheetName: "Nom de la feuille",
@@ -1088,7 +1172,8 @@ export const fr: Partial<Catalog> = {
   sheetTabData: "Données",
   sheetTabReview: "Révision",
   sheetTabView: "Affichage",
-  sheetTabSoon: (name: string): string => `Les outils ${name} arrivent bientôt.`,
+  sheetTabSoon: (name: string): string =>
+    `Les outils ${name} arrivent bientôt.`,
   sheetGroupCellSize: "Taille des cellules",
   sheetRowHeight: "Hauteur de ligne",
   sheetColumnWidth: "Largeur de colonne",
@@ -1264,7 +1349,8 @@ export const fr: Partial<Catalog> = {
   sheetBordersDiagonalDown: "Bordure diagonale descendante",
   sheetBordersDiagonalUp: "Bordure diagonale montante",
   sheetBordersDiagonalDownCenter: "Diagonale descendante avec lignes centrales",
-  sheetBordersDiagonalDownBoth: "Diagonale descendante avec les deux lignes centrales",
+  sheetBordersDiagonalDownBoth:
+    "Diagonale descendante avec les deux lignes centrales",
   sheetBordersDiagonalUpCenter: "Diagonale montante avec lignes centrales",
   sheetRotation: "Rotation",
   sheetRotationNone: "Aucune rotation",
@@ -1344,7 +1430,8 @@ export const fr: Partial<Catalog> = {
   insertConfirm: "Insérer",
   docsTitle: "alo Documents",
   docsNew: "Nouveau document",
-  docsEmpty: "Aucun document pour l’instant. Créez-en un pour commencer à écrire.",
+  docsEmpty:
+    "Aucun document pour l’instant. Créez-en un pour commencer à écrire.",
   docsDelete: (title: string) => `Supprimer ${title}`,
   docsAll: "Tous les documents",
   docsUntitled: "Document sans titre",
@@ -1356,12 +1443,14 @@ export const fr: Partial<Catalog> = {
   blockMoveUp: "Déplacer le bloc vers le haut",
   blockMoveDown: "Déplacer le bloc vers le bas",
   blockDelete: "Supprimer le bloc",
-  blockEmptyHint: "Ajoutez un titre, du texte, une équation, du code ou un tableau pour commencer.",
+  blockEmptyHint:
+    "Ajoutez un titre, du texte, une équation, du code ou un tableau pour commencer.",
   headingH1: "Titre 1",
   headingH2: "Titre 2",
   headingPlaceholder: "Titre de section",
   headingLabel: "Texte du titre",
-  paraPlaceholder: "Écrivez ici. Utilisez la barre d’outils pour insérer des maths en ligne ou un renvoi.",
+  paraPlaceholder:
+    "Écrivez ici. Utilisez la barre d’outils pour insérer des maths en ligne ou un renvoi.",
   paraLabel: "Texte du paragraphe",
   paraInlineMath: "Maths en ligne",
   paraReference: "Référence",
@@ -1394,8 +1483,10 @@ export const fr: Partial<Catalog> = {
   driveLoadingFile: (name: string) => `Ouverture de ${name}…`,
   driveOpeningEditor: "votre fichier",
   driveFileOpenFailedTitle: "Ce fichier ne s’est pas ouvert",
-  driveFileUnavailable: "Il a peut-être été déplacé ou supprimé. Revenez à vos fichiers et choisissez un autre élément.",
-  driveEditorLoadFailed: (reason: string) => `Drive n’a pas pu ouvrir ce fichier. ${reason}`,
+  driveFileUnavailable:
+    "Il a peut-être été déplacé ou supprimé. Revenez à vos fichiers et choisissez un autre élément.",
+  driveEditorLoadFailed: (reason: string) =>
+    `Drive n’a pas pu ouvrir ce fichier. ${reason}`,
   driveBackToFiles: "Retour aux fichiers",
 
   // Outils de facturation de l’agent (ADR 0035, B1.25). Chacun produit un
@@ -1408,9 +1499,12 @@ export const fr: Partial<Catalog> = {
   agentFieldQuote: "Devis",
   agentFieldInvoice: "Facture",
   agentLineCount: (n: number): string => (n === 1 ? "1 ligne" : `${n} lignes`),
-  agentInvoiceDraftNote: "Crée un brouillon — rien n’est émis, numéroté ni envoyé.",
-  agentQuoteToInvoiceNote: "Clôture le devis comme accepté et crée une facture en brouillon.",
-  agentReminderNote: "Écrit une relance dans vos Brouillons — rien n’est envoyé.",
+  agentInvoiceDraftNote:
+    "Crée un brouillon — rien n’est émis, numéroté ni envoyé.",
+  agentQuoteToInvoiceNote:
+    "Clôture le devis comme accepté et crée une facture en brouillon.",
+  agentReminderNote:
+    "Écrit une relance dans vos Brouillons — rien n’est envoyé.",
 
   // alo Facturation (ADR 0035, vague B1) — clients et tarifs. Le module parle
   // de documents (« établir une facture »), jamais de lignes de base de
@@ -1430,8 +1524,10 @@ export const fr: Partial<Catalog> = {
   billingNewProduct: "Nouvel article",
   billingEditCustomer: "Modifier le client",
   billingEditProduct: "Modifier l’article",
-  billingCustomerSubtitle: "La personne ou l’entreprise au nom de qui vos factures sont établies.",
-  billingProductSubtitle: "Un article que vous pouvez choisir en établissant un document.",
+  billingCustomerSubtitle:
+    "La personne ou l’entreprise au nom de qui vos factures sont établies.",
+  billingProductSubtitle:
+    "Un article que vous pouvez choisir en établissant un document.",
   billingArchiveCustomerConfirm: (name: string) =>
     `Archiver ${name} ? Ce client disparaît des listes de choix ; tous les documents déjà établis continuent de le nommer.`,
   billingArchiveProductConfirm: (name: string) =>
@@ -1439,8 +1535,10 @@ export const fr: Partial<Catalog> = {
   billingCreate: "Créer",
   billingSave: "Enregistrer",
   billingCancel: "Annuler",
-  billingLoadFailed: "Impossible de charger cette liste. Vérifiez votre connexion et réessayez.",
-  billingSaveFailed: "Impossible d’enregistrer. Vérifiez votre connexion et réessayez.",
+  billingLoadFailed:
+    "Impossible de charger cette liste. Vérifiez votre connexion et réessayez.",
+  billingSaveFailed:
+    "Impossible d’enregistrer. Vérifiez votre connexion et réessayez.",
   billingNoMatches: "Aucun résultat pour cette recherche.",
   billingNoCustomersTitle: "Aucun client pour l’instant",
   billingNoCustomersBody:
@@ -1526,10 +1624,12 @@ export const fr: Partial<Catalog> = {
   billingInvoiceGone: "Ce document n’existe plus.",
   billingFieldCustomer: "Client",
   billingChooseCustomer: "Choisissez un client…",
-  billingCustomerFixedHint: "Sa devise et son délai de paiement sont recopiés sur le document.",
+  billingCustomerFixedHint:
+    "Sa devise et son délai de paiement sont recopiés sur le document.",
   billingFieldReference: "Sa référence",
   billingReferencePlaceholder: "BC-1234",
-  billingReferenceHint: "Le numéro de commande du client, imprimé sur le document.",
+  billingReferenceHint:
+    "Le numéro de commande du client, imprimé sur le document.",
   billingFieldNote: "Note",
   billingNotePlaceholder: "Ce que le client doit lire sur le document.",
   billingNoteHint: "Imprimée sous les lignes.",
@@ -1568,8 +1668,10 @@ export const fr: Partial<Catalog> = {
   // document légal : la confirmation dit ce qu’elle VA FAIRE — consommer un
   // numéro, figer les prix, clore l’offre — plutôt que de demander si l’on est
   // sûr. Aucune ne promet de courriel.
-  billingActionFailed: "Cela n’a pas abouti. Vérifiez votre connexion et réessayez.",
-  billingActionsWaitForSave: "Ces actions attendent l’enregistrement de votre dernière modification.",
+  billingActionFailed:
+    "Cela n’a pas abouti. Vérifiez votre connexion et réessayez.",
+  billingActionsWaitForSave:
+    "Ces actions attendent l’enregistrement de votre dernière modification.",
   billingIssue: "Émettre",
   billingIssueTitle: "Émettre cette facture ?",
   billingIssueConfirm:
@@ -1578,7 +1680,8 @@ export const fr: Partial<Catalog> = {
   billingVoidTitle: "Annuler cette facture ?",
   billingVoidConfirm:
     "Une facture annulée garde son numéro et reste lisible, mais ne vaut plus rien. N’annulez qu’un document que personne n’a vu ; si le client détient déjà celui-ci, établissez plutôt un avoir.",
-  billingVoidNotice: "Cette facture a été annulée. Elle garde son numéro et ne vaut plus rien.",
+  billingVoidNotice:
+    "Cette facture a été annulée. Elle garde son numéro et ne vaut plus rien.",
   billingCreditNoteAction: "Avoir",
   billingCreditNoteTitle: "Établir un avoir ?",
   billingCreditNoteConfirm:
@@ -1608,9 +1711,11 @@ export const fr: Partial<Catalog> = {
   billingColPaymentReference: "Référence bancaire",
   billingColAmount: "Montant",
   billingFieldAmount: (currency: string) => `Montant (${currency})`,
-  billingFieldAmountHint: "Ce qui est réellement arrivé, qui peut être moins que la facture.",
+  billingFieldAmountHint:
+    "Ce qui est réellement arrivé, qui peut être moins que la facture.",
   billingFieldPaidOn: "Reçu le",
-  billingFieldPaidOnHint: "Le jour indiqué par votre banque. Laissez vide pour aujourd’hui.",
+  billingFieldPaidOnHint:
+    "Le jour indiqué par votre banque. Laissez vide pour aujourd’hui.",
   billingFieldMethod: "Comment il est arrivé",
   billingFieldMethodHint: "Texte libre — le mot qu’emploie votre comptabilité.",
   billingMethodPlaceholder: "Virement",
@@ -1637,7 +1742,8 @@ export const fr: Partial<Catalog> = {
   billingReportColVat: "TVA",
   billingReportTotal: "Total",
   billingReportGross: "TTC",
-  billingReportCaption: (currency: string) => `Récapitulatif de TVA en ${currency}`,
+  billingReportCaption: (currency: string) =>
+    `Récapitulatif de TVA en ${currency}`,
   billingReportCounts: (invoices: number, creditNotes: number) =>
     `À partir de ${invoices} facture${invoices === 1 ? "" : "s"} et ${creditNotes} avoir${
       creditNotes === 1 ? "" : "s"
@@ -1671,13 +1777,16 @@ export const fr: Partial<Catalog> = {
   billingFieldSentDate: "Envoyé le",
   billingFieldValidUntil: "Valable jusqu’au",
   billingValidForDays: (days: number) =>
-    days === 1 ? "Valable 1 jour à compter de son envoi." : `Valable ${days} jours à compter de son envoi.`,
+    days === 1
+      ? "Valable 1 jour à compter de son envoi."
+      : `Valable ${days} jours à compter de son envoi.`,
   billingDeleteQuoteDraft: "Supprimer le brouillon",
   billingDeleteQuoteDraftConfirm:
     "Supprimer ce brouillon ? Il ne porte aucun numéro et n’a jamais été proposé à personne — et rien ne pourra être récupéré.",
   billingQuoteSentNotice:
     "Cette offre a été envoyée et ne peut plus être modifiée. Si le prix change, faites un nouveau devis.",
-  billingQuoteClosedNotice: "Cette offre est close et ne peut plus être modifiée.",
+  billingQuoteClosedNotice:
+    "Cette offre est close et ne peut plus être modifiée.",
   billingSendQuote: "Marquer comme envoyé",
   billingSendQuoteTitle: "Envoyer ce devis ?",
   billingSendQuoteConfirm:
@@ -1702,7 +1811,8 @@ export const fr: Partial<Catalog> = {
   billingPrint: "Imprimer",
   billingPrintUnsaved:
     "Ceci imprime le document enregistré : il attend donc votre dernière modification.",
-  billingPrintFailed: "Le document n’a pas pu être préparé pour l’impression. Réessayez.",
+  billingPrintFailed:
+    "Le document n’a pas pu être préparé pour l’impression. Réessayez.",
   billingSettings: "Vos coordonnées",
   billingSettingsIntro:
     "Voici de qui viennent vos factures, avoirs et devis : le nom et les numéros en haut, et le compte sur lequel l’argent arrive.",
@@ -1712,10 +1822,13 @@ export const fr: Partial<Catalog> = {
   billingSettingsContact: "Comment vos clients vous joignent",
   billingSettingsBank: "Où va l’argent",
   billingSettingsFooter: "La ligne sous les totaux",
-  billingSettingsSaved: "Enregistré. Chaque document imprimé désormais porte ceci.",
-  billingSettingsLoadFailed: "Vos coordonnées de facturation n’ont pas pu être chargées.",
+  billingSettingsSaved:
+    "Enregistré. Chaque document imprimé désormais porte ceci.",
+  billingSettingsLoadFailed:
+    "Vos coordonnées de facturation n’ont pas pu être chargées.",
   billingFieldLegalName: "Raison sociale",
-  billingLegalNameHint: "Le nom sous lequel vous exercez et facturez, tel qu’immatriculé.",
+  billingLegalNameHint:
+    "Le nom sous lequel vous exercez et facturez, tel qu’immatriculé.",
   billingIssuerVatIdHint:
     "Laissez vide si vous n’êtes pas assujetti à la TVA. Indiquez d’abord votre pays.",
   billingFieldRegistrationNo: "Numéro d’immatriculation",
@@ -1731,7 +1844,8 @@ export const fr: Partial<Catalog> = {
   billingBicPlaceholder: "PSSTFRPP",
   billingFieldBankName: "Banque",
   billingFieldAccountHolder: "Titulaire du compte",
-  billingAccountHolderHint: "Uniquement si le compte n’est pas à votre raison sociale.",
+  billingAccountHolderHint:
+    "Uniquement si le compte n’est pas à votre raison sociale.",
   billingFieldFooterNote: "Mention de pied de page",
   billingFooterNoteHint:
     "Imprimée sous les totaux de chaque document — réserve de propriété, pénalités de retard, un remerciement.",
@@ -1782,7 +1896,11 @@ export const fr: Partial<Catalog> = {
   billingRemind: "Relancer",
   billingRemindHint:
     "Écrire une relance de paiement à ce client, et la laisser dans vos Brouillons.",
-  billingReminderDrafted: (invoice: string, outstanding: string, days: number) =>
+  billingReminderDrafted: (
+    invoice: string,
+    outstanding: string,
+    days: number,
+  ) =>
     days === 1
       ? `Une relance pour ${invoice} — ${outstanding} restant dû, 1 jour après l’échéance — attend dans vos Brouillons. Rien n’a été envoyé : lisez-la, changez ce que vous voulez, et envoyez-la vous-même.`
       : `Une relance pour ${invoice} — ${outstanding} restant dû, ${days} jours après l’échéance — attend dans vos Brouillons. Rien n’a été envoyé : lisez-la, changez ce que vous voulez, et envoyez-la vous-même.`,
@@ -1858,8 +1976,7 @@ export const fr: Partial<Catalog> = {
   crmLoadFailed: "Vos affaires n’ont pas pu être chargées.",
   crmSaveFailed: "La modification n’a pas pu être enregistrée.",
   crmDeleteFailed: "Cet élément n’a pas pu être supprimé.",
-  crmSuggestFailed:
-    "Aucune conversation n’a pu être proposée pour le moment.",
+  crmSuggestFailed: "Aucune conversation n’a pu être proposée pour le moment.",
   crmNoBoardTitle: "Aucun pipeline",
   crmNoBoardBody:
     "Tous vos tableaux ont été archivés. Restaurez-en un pour travailler à nouveau vos affaires.",
@@ -1972,8 +2089,7 @@ export const fr: Partial<Catalog> = {
   crmReportDownloadFailed: "Le rapport n’a pas pu être téléchargé.",
   crmReportBasis: (from: string, to: string) =>
     `Gagné et perdu entre le ${from} et le ${to}.`,
-  crmReportOpenAsOf: (at: string) =>
-    `Le pipeline en cours est celui du ${at}.`,
+  crmReportOpenAsOf: (at: string) => `Le pipeline en cours est celui du ${at}.`,
   crmReportOpenCaption: (currency: string) =>
     `Pipeline en cours par étape (${currency})`,
   crmReportClosedCaption: (currency: string) =>
@@ -2026,7 +2142,8 @@ export const fr: Partial<Catalog> = {
 
   // Les propositions de l’agent (ADR 0034) : le cadre commun, puis les
   // actions CRM (B2.10). Rien n’est fait avant l’approbation.
-  agentProposedAction: "alo souhaite effectuer ceci — approuvez pour continuer.",
+  agentProposedAction:
+    "alo souhaite effectuer ceci — approuvez pour continuer.",
   agentApprove: "Approuver",
   agentDiscard: "Écarter",
   agentDone: "C’est fait.",
@@ -2040,8 +2157,7 @@ export const fr: Partial<Catalog> = {
   agentFieldStage: "Étape",
   agentFieldLostReason: "Perdue car",
   agentDealFromEmailNote: "Lie cette conversation à la nouvelle affaire.",
-  agentFollowupNote:
-    "Écrit l’e-mail dans vos Brouillons — rien n’est envoyé.",
+  agentFollowupNote: "Écrit l’e-mail dans vos Brouillons — rien n’est envoyé.",
 
   // Les actions Projets (B3.10a, B3.10b). Une heure proposée n’est une heure
   // que le jour où la personne concernée l’accepte dans sa feuille de temps :
@@ -2060,7 +2176,8 @@ export const fr: Partial<Catalog> = {
   agentTimeLogged: (project: string): string =>
     `Proposé dans votre feuille de temps sur ${project} — acceptez-le dans Projets pour qu’il compte.`,
   agentStatusHours: "Heures saisies",
-  agentStatusBillable: (formatted: string): string => `dont ${formatted} facturables`,
+  agentStatusBillable: (formatted: string): string =>
+    `dont ${formatted} facturables`,
   agentStatusBudget: "Budget",
   agentStatusBudgetUsed: (percent: string): string => `${percent} consommé`,
   agentStatusNoBudget: "Aucun budget d’heures défini",
@@ -2187,13 +2304,15 @@ export const fr: Partial<Catalog> = {
   insightsNoBoardsBody:
     "Un tableau de bord réunit les chiffres que vous voulez voir d’un coup d’œil : ce que vous avez facturé, ce qu’on vous doit, ce qu’il y a dans le pipeline.",
   insightsNoTilesTitle: "Rien d’épinglé sur ce tableau de bord",
-  insightsNoTilesBody: "Les graphiques épinglés sur ce tableau de bord apparaissent ici.",
+  insightsNoTilesBody:
+    "Les graphiques épinglés sur ce tableau de bord apparaissent ici.",
   insightsAddChart: "Ajouter un graphique",
   insightsGalleryTitle: "Graphiques prêts à l’emploi",
   insightsGallerySubtitle:
     "Choisissez-en un pour l’épingler à ce tableau de bord. Vous pourrez le renommer ou le retirer ensuite.",
   insightsGalleryClose: "Fermer",
-  insightsGalleryLoadFailed: "Les graphiques prêts à l’emploi n’ont pas pu être chargés.",
+  insightsGalleryLoadFailed:
+    "Les graphiques prêts à l’emploi n’ont pas pu être chargés.",
   insightsGalleryRevenueByMonth: "Chiffre d’affaires par mois",
   insightsGalleryRevenueByMonthBody:
     "Ce que vous avez facturé, mois par mois, sur l’année écoulée — hors TVA.",
@@ -2216,7 +2335,8 @@ export const fr: Partial<Catalog> = {
   insightsGalleryPipelineByStageBody:
     "La valeur des affaires en cours dans chaque colonne de votre pipeline.",
   insightsGalleryWonThisMonth: "Gagné ce mois-ci",
-  insightsGalleryWonThisMonthBody: "La valeur des affaires conclues comme gagnées ce mois-ci.",
+  insightsGalleryWonThisMonthBody:
+    "La valeur des affaires conclues comme gagnées ce mois-ci.",
   insightsGalleryWinRateByQuarter: "Taux de réussite par trimestre",
   insightsGalleryWinRateByQuarterBody:
     "À quelle fréquence une affaire tranchée a été gagnée, trimestre par trimestre.",
@@ -2227,7 +2347,8 @@ export const fr: Partial<Catalog> = {
   insightsAskSubtitle:
     "Décrivez ce que vous voulez voir. Vous obtenez d’abord le graphique à regarder — rien n’est ajouté à ce tableau de bord tant que vous ne l’épinglez pas.",
   insightsAskLabel: "Votre question",
-  insightsAskPlaceholder: "Combien avons-nous facturé chaque mois cette année ?",
+  insightsAskPlaceholder:
+    "Combien avons-nous facturé chaque mois cette année ?",
   insightsAskSubmit: "Demander",
   insightsAskClose: "Fermer",
   insightsAskPreview: "Le graphique proposé",
@@ -2235,8 +2356,10 @@ export const fr: Partial<Catalog> = {
   insightsAskDiscard: "Abandonner",
   insightsAskRepaired:
     "La première tentative ne correspondait pas aux données ; elle a été corrigée avant le tracé.",
-  insightsAskFailed: "Aucun graphique n’a pu être construit à partir de cette question.",
-  insightsAskUnavailable: "L’assistant n’est pas activé pour cet espace de travail.",
+  insightsAskFailed:
+    "Aucun graphique n’a pu être construit à partir de cette question.",
+  insightsAskUnavailable:
+    "L’assistant n’est pas activé pour cet espace de travail.",
   insightsTileActions: (title: string) => `Options pour ${title}`,
   insightsRenameTile: "Renommer le graphique",
   insightsRenameTilePrompt: "Comment ce graphique doit-il s’appeler ?",
@@ -2317,13 +2440,16 @@ export const fr: Partial<Catalog> = {
   // La liste des projets.
   projectsProject: "Projet",
   projectsCustomer: "Client",
-  projectsCustomerHint: "Le client à qui les heures de ce projet sont facturées.",
+  projectsCustomerHint:
+    "Le client à qui les heures de ce projet sont facturées.",
   projectsCustomerPick: "Choisissez un client…",
   projectsCustomerUnknown: "Client inconnu",
   projectsInternal: "Interne",
   projectsRate: "Taux horaire",
-  projectsRateHint: "Laissé vide, les heures sont comptées mais non valorisées.",
-  projectsRateInvalid: "Écrivez le taux sous forme de montant, par exemple 95,00.",
+  projectsRateHint:
+    "Laissé vide, les heures sont comptées mais non valorisées.",
+  projectsRateInvalid:
+    "Écrivez le taux sous forme de montant, par exemple 95,00.",
   projectsHoursLogged: "Heures",
   projectsBillableHours: "Facturables",
   projectsOfWhichBillable: (duration: string) => `dont ${duration} facturables`,
@@ -2339,7 +2465,8 @@ export const fr: Partial<Catalog> = {
   projectsNeverWorked: "Jamais",
   projectsStartsOn: "Commence le",
   projectsMakeClientWork: "Passer en travail client",
-  projectsStartTimerOn: (project: string) => `Démarrer le chronomètre sur ${project}`,
+  projectsStartTimerOn: (project: string) =>
+    `Démarrer le chronomètre sur ${project}`,
   projectsEmptyTitle: "Aucun projet pour l’instant",
   projectsEmptyBody:
     "Un projet, ici, est un tableau de Tâches vu comme du travail client. Créez-en un dans Tâches, puis dites pour qui il est réalisé.",
@@ -2481,7 +2608,8 @@ export const fr: Partial<Catalog> = {
   projectsApprove: "Valider",
   projectsReject: "Renvoyer",
   projectsRejectTitle: "Renvoyer cette semaine ?",
-  projectsRejectBody: (person: string) => `${person} lira ce que vous écrivez ici.`,
+  projectsRejectBody: (person: string) =>
+    `${person} lira ce que vous écrivez ici.`,
   projectsRejectPlaceholder: "Ce qui est à corriger",
   projectsApprovalsEmptyTitle: "Rien à valider",
   projectsApprovalsEmptyBody:
@@ -2535,34 +2663,45 @@ export const fr: Partial<Catalog> = {
   driveLoading: "Chargement de vos fichiers…",
   driveLocations: "Emplacements du Drive",
   driveFolderLoading: (name: string) => `Chargement de ${name}…`,
-  driveFolderLoadFailed: (reason: string) => `Ce dossier ne s’est pas chargé. Serveur : ${reason}`,
-  driveSpacesLoadFailed: (reason: string) => `Vos espaces ne se sont pas chargés. Réessayez. Serveur : ${reason}`,
+  driveFolderLoadFailed: (reason: string) =>
+    `Ce dossier ne s’est pas chargé. Serveur : ${reason}`,
+  driveSpacesLoadFailed: (reason: string) =>
+    `Vos espaces ne se sont pas chargés. Réessayez. Serveur : ${reason}`,
   driveRetry: "Réessayer",
   driveUnknownError: "Le serveur n’a fourni aucune raison.",
   driveLoadFailedTitle: "Vos fichiers ne se sont pas chargés",
   driveLoadFailed: (reason: string) => `Réessayez. Serveur : ${reason}`,
-  driveActionFailed: (action: string, reason: string) => `${action} ne s’est pas terminé. Réessayez. Serveur : ${reason}`,
+  driveActionFailed: (action: string, reason: string) =>
+    `${action} ne s’est pas terminé. Réessayez. Serveur : ${reason}`,
   driveMovedToTrash: (name: string) => `${name} a été placé dans la corbeille.`,
   driveRestoredFromTrash: (name: string) => `${name} a été restauré.`,
   driveUndo: "Annuler",
-  driveSelected: (count: number) => count === 1 ? "1 élément sélectionné" : `${count} éléments sélectionnés`,
+  driveSelected: (count: number) =>
+    count === 1 ? "1 élément sélectionné" : `${count} éléments sélectionnés`,
   driveSelectItem: (name: string) => `Sélectionner ${name}`,
   driveSelectAll: "Sélectionner tous les éléments visibles",
   driveClearSelection: "Effacer la sélection",
   driveSelectionActions: "Actions sur les éléments sélectionnés",
-  driveItemsMovedToTrash: (count: number) => `${count} éléments ont été placés dans la corbeille.`,
+  driveItemsMovedToTrash: (count: number) =>
+    `${count} éléments ont été placés dans la corbeille.`,
   driveItemsRestored: (count: number) => `${count} éléments ont été restaurés.`,
-  drivePurgeManyConfirm: (count: number) => `Supprimer définitivement ${count} éléments ? Cette action est irréversible.`,
-  driveVersionsLoadFailed: (reason: string) => `L’historique des versions ne s’est pas chargé. Réessayez. Serveur : ${reason}`,
-  driveMembersLoadFailed: (reason: string) => `Les membres ne se sont pas chargés. Réessayez. Serveur : ${reason}`,
+  drivePurgeManyConfirm: (count: number) =>
+    `Supprimer définitivement ${count} éléments ? Cette action est irréversible.`,
+  driveVersionsLoadFailed: (reason: string) =>
+    `L’historique des versions ne s’est pas chargé. Réessayez. Serveur : ${reason}`,
+  driveMembersLoadFailed: (reason: string) =>
+    `Les membres ne se sont pas chargés. Réessayez. Serveur : ${reason}`,
   baseCalendarPreviousMonth: "Mois précédent",
   baseCalendarNextMonth: "Mois suivant",
-  baseCalendarAddOnDate: (date: string) => `Ajouter un enregistrement le ${date}`,
+  baseCalendarAddOnDate: (date: string) =>
+    `Ajouter un enregistrement le ${date}`,
   baseLoading: "Chargement de votre base…",
   baseBoardEmptyTitle: "Regrouper les enregistrements dans un tableau",
   baseCalendarEmptyTitle: "Placer les enregistrements dans un calendrier",
-  baseBoardEmptyBody: "Les tableaux regroupent les enregistrements selon un champ de sélection. Ajoutez un champ Statut prêt à l’emploi pour continuer.",
-  baseCalendarEmptyBody: "Les calendriers placent les enregistrements selon un champ Date. Ajoutez-en un pour continuer.",
+  baseBoardEmptyBody:
+    "Les tableaux regroupent les enregistrements selon un champ de sélection. Ajoutez un champ Statut prêt à l’emploi pour continuer.",
+  baseCalendarEmptyBody:
+    "Les calendriers placent les enregistrements selon un champ Date. Ajoutez-en un pour continuer.",
   baseAddStatusField: "Ajouter le champ Statut",
   baseAddDateField: "Ajouter le champ Date",
   baseStatusField: "Statut",
@@ -2572,24 +2711,30 @@ export const fr: Partial<Catalog> = {
   baseStatusDone: "Terminé",
   baseLoadFailedTitle: "Cette base ne s’est pas chargée",
   baseEmptyTitle: "Commencez par votre première table",
-  baseEmptyBody: "Les tables regroupent les enregistrements associés. Créez-en une pour ajouter des champs et des enregistrements.",
+  baseEmptyBody:
+    "Les tables regroupent les enregistrements associés. Créez-en une pour ajouter des champs et des enregistrements.",
   baseDefaultTableName: (number: number) => `Table ${number}`,
   baseView: "Vue",
   baseSaveChanges: "Enregistrer les modifications",
   officeLoading: "Ouverture de l’éditeur Office…",
-  officeDiscoveryMissing: "L’éditeur Office n’a pas publié d’adresse d’éditeur.",
+  officeDiscoveryMissing:
+    "L’éditeur Office n’a pas publié d’adresse d’éditeur.",
   officeLoadFailed: (reason: string) => `Réessayez. Serveur : ${reason}`,
   sheetLoading: "Chargement de votre feuille…",
   sheetLoadFailedTitle: "Cette feuille ne s’est pas chargée",
   docLoading: "Chargement de votre document…",
   docLoadFailedTitle: "Ce document ne s’est pas chargé",
-  docSaveFailed: (reason: string) => `Vos dernières modifications ne sont pas encore enregistrées. Choisissez Réessayer pour les enregistrer. Serveur : ${reason}`,
-  sheetSaveFailed: (reason: string) => `Vos dernières modifications ne sont pas encore enregistrées. Nous continuerons d’essayer. Serveur : ${reason}`,
+  docSaveFailed: (reason: string) =>
+    `Vos dernières modifications ne sont pas encore enregistrées. Choisissez Réessayer pour les enregistrer. Serveur : ${reason}`,
+  sheetSaveFailed: (reason: string) =>
+    `Vos dernières modifications ne sont pas encore enregistrées. Nous continuerons d’essayer. Serveur : ${reason}`,
   sitesSubmissions: "Messages reçus",
-  sitesSubmissionsLoadFailed: "Les messages de vos formulaires n’ont pas pu être chargés.",
+  sitesSubmissionsLoadFailed:
+    "Les messages de vos formulaires n’ont pas pu être chargés.",
   sitesSubmissionSaveFailed: "Ce message n’a pas pu être mis à jour.",
   sitesNoSubmissionsTitle: "Aucun message pour le moment",
-  sitesNoSubmissionsBody: "Ajoutez un formulaire de contact à une page. Les messages des visiteurs apparaîtront ici.",
+  sitesNoSubmissionsBody:
+    "Ajoutez un formulaire de contact à une page. Les messages des visiteurs apparaîtront ici.",
   sitesOpenPages: "Ouvrir les pages",
   sitesSubmissionList: "Messages des visiteurs",
   sitesSubmissionDetail: "Message sélectionné",
@@ -2648,11 +2793,14 @@ export const fr: Partial<Catalog> = {
   sitesPublishArticleSubtitle:
     "Choisissez la présentation de l’article sur votre site public.",
   sitesEditArticleTitle: "Détails de l’article",
-  sitesEditArticleSubtitle: "Modifiez ce que les lecteurs voient sur votre site.",
+  sitesEditArticleSubtitle:
+    "Modifiez ce que les lecteurs voient sur votre site.",
   sitesEditArticleDetails: "Modifier les détails",
   sitesSaveArticle: "Enregistrer",
-  sitesPostSaveFailed: "Les détails de l’article n’ont pas pu être enregistrés. Réessayez.",
-  sitesPostUnpublishFailed: "L’article n’a pas pu être retiré du site. Réessayez.",
+  sitesPostSaveFailed:
+    "Les détails de l’article n’ont pas pu être enregistrés. Réessayez.",
+  sitesPostUnpublishFailed:
+    "L’article n’a pas pu être retiré du site. Réessayez.",
   sitesUnpublishArticle: "Retirer du site",
   sitesUnpublishingArticle: "Retrait en cours…",
   sitesFieldPostTitle: "Titre de l’article",
@@ -2660,7 +2808,8 @@ export const fr: Partial<Catalog> = {
   sitesPostSlugHint: "Lettres minuscules, chiffres et traits d’union.",
   sitesPostSlugPlaceholder: "mon-article",
   sitesFieldPostExcerpt: "Résumé",
-  sitesPostExcerptHint: "Une courte introduction affichée sur le blog et dans le flux RSS.",
+  sitesPostExcerptHint:
+    "Une courte introduction affichée sur le blog et dans le flux RSS.",
   sitesFieldPostCover: "Image de couverture",
   sitesPostCoverHint: "Affichée sur le blog et au-dessus de l’article.",
   sitesPostNoCover: "Aucune image",
@@ -2669,18 +2818,21 @@ export const fr: Partial<Catalog> = {
   sitesReplacePostCover: "Remplacer l’image",
   sitesRemovePostCover: "Retirer",
   sitesUploadingPostCover: "Téléversement…",
-  sitesPostCoverUploadFailed: "L’image de couverture n’a pas pu être téléversée. Réessayez.",
+  sitesPostCoverUploadFailed:
+    "L’image de couverture n’a pas pu être téléversée. Réessayez.",
   sitesSeoAction: "Recherche et partage",
   sitesSeoTitle: "Recherche et partage",
   sitesSeoSubtitle:
     "Choisissez comment cette page apparaît dans les résultats et les liens partagés.",
   sitesSeoPreview: "Aperçu du résultat de recherche",
   sitesSeoFieldTitle: "Titre de recherche",
-  sitesSeoTitleHint: "Laissez vide pour utiliser le titre de la page et le nom du site.",
+  sitesSeoTitleHint:
+    "Laissez vide pour utiliser le titre de la page et le nom du site.",
   sitesSeoFieldDescription: "Description",
   sitesSeoDescriptionHint:
     "Un résumé court et utile pour la recherche et les liens partagés.",
-  sitesSeoDescriptionDefault: "Ajoutez une description pour présenter cette page.",
+  sitesSeoDescriptionDefault:
+    "Ajoutez une description pour présenter cette page.",
   sitesSeoImageHint:
     "Les liens partagés utilisent d’abord l’image principale, puis le logo du site.",
   sitesSeoSave: "Enregistrer les détails",
@@ -2707,7 +2859,8 @@ export const fr: Partial<Catalog> = {
   sitesBlankTemplate: "Site vierge",
   sitesHomePageTitle: "Accueil",
   sitesAiEditTitle: "Décrivez une modification de page",
-  sitesAiEditBody: "alo prépare une liste à vérifier. Rien ne change avant votre approbation.",
+  sitesAiEditBody:
+    "alo prépare une liste à vérifier. Rien ne change avant votre approbation.",
   sitesAiInstruction: "Modification de la page",
   sitesAiInstructionPlaceholder:
     "Rendez l’accueil plus chaleureux et placez les témoignages avant les tarifs…",
@@ -2715,8 +2868,11 @@ export const fr: Partial<Catalog> = {
   sitesAiPreparing: "Préparation des modifications…",
   sitesAiProposalTitle: "Modifications proposées",
   sitesAiProposalCount: (count: number) =>
-    count === 1 ? "1 modification proposée" : `${count} modifications proposées`,
-  sitesAiPreviewHint: "Comparez la page avant et après, puis choisissez la suite.",
+    count === 1
+      ? "1 modification proposée"
+      : `${count} modifications proposées`,
+  sitesAiPreviewHint:
+    "Comparez la page avant et après, puis choisissez la suite.",
   sitesAiPreviewCompare: "Comparer les modifications proposées",
   sitesAiPreviewBefore: "Avant",
   sitesAiPreviewAfter: "Après",
@@ -2732,7 +2888,8 @@ export const fr: Partial<Catalog> = {
   sitesAiRemoveChange: (section: string) => `Supprimer ${section}`,
   sitesAiMoveChange: (section: string, position: number) =>
     `Déplacer ${section} en position ${position}`,
-  sitesAiSettingChange: (section: string) => `Mettre à jour un réglage dans ${section}`,
+  sitesAiSettingChange: (section: string) =>
+    `Mettre à jour un réglage dans ${section}`,
   sitesAiCopyChange: (section: string) => `Réécrire le texte dans ${section}`,
   sitesAiImproveCopy: "Améliorer ce texte",
   sitesAiCopyActions: "Améliorations du texte",
@@ -2767,8 +2924,10 @@ export const fr: Partial<Catalog> = {
   sitesSubdomainHint:
     "Lettres minuscules, chiffres et traits d’union, 3 à 40 caractères — cette adresse deviendra celle du site.",
   sitesSubdomainChecking: "Vérification de la disponibilité…",
-  sitesSubdomainAvailable: (subdomain: string) => `« ${subdomain} » est disponible.`,
-  sitesSubdomainTaken: (subdomain: string) => `« ${subdomain} » est déjà utilisé.`,
+  sitesSubdomainAvailable: (subdomain: string) =>
+    `« ${subdomain} » est disponible.`,
+  sitesSubdomainTaken: (subdomain: string) =>
+    `« ${subdomain} » est déjà utilisé.`,
   sitesCreateSite: "Créer le site web",
   sitesCancel: "Annuler",
   sitesBack: "Tous les sites web",
@@ -2800,13 +2959,15 @@ export const fr: Partial<Catalog> = {
   sitesTranslationReady: "Prête",
   sitesTranslationProgress: (translated: number, total: number) =>
     `${translated} page(s) sur ${total} traduite(s)`,
-  sitesTranslationAllReady: "Toutes les langues activées sont prêtes à être publiées.",
+  sitesTranslationAllReady:
+    "Toutes les langues activées sont prêtes à être publiées.",
   sitesTranslationPublishHint: (count: number) =>
     `${count} traduction(s) utilise(nt) encore le contenu de secours.`,
   sitesContinueTranslating: "Continuer la traduction",
   sitesTranslationSaveFailed:
     "Cette traduction n’a pas pu être enregistrée. Corrigez les détails indiqués et réessayez.",
-  sitesTranslationMissingTitle: (locale: string) => `La traduction ${locale} est manquante`,
+  sitesTranslationMissingTitle: (locale: string) =>
+    `La traduction ${locale} est manquante`,
   sitesTranslationMissingBody: (requested: string, source: string) =>
     `La version ${source} est affichée comme référence. Copiez-la vers ${requested} pour commencer sans modifier la page source.`,
   sitesCopyTranslation: (source: string, target: string) =>
@@ -2920,14 +3081,17 @@ export const fr: Partial<Catalog> = {
     "Le formulaire apparaît déjà sur la page ; l’envoi fonctionnera lorsque les formulaires seront disponibles.",
   sitesTheme: "Thème",
   sitesThemeTitle: "Thème du site",
-  sitesThemeSubtitle: "Choisissez un style, puis ajoutez votre logo et votre favicon.",
+  sitesThemeSubtitle:
+    "Choisissez un style, puis ajoutez votre logo et votre favicon.",
   sitesThemeApply: "Appliquer le thème",
   sitesThemeLoadFailed: "Les thèmes n’ont pas pu être chargés.",
   sitesThemePresets: "Couleurs et typographie",
   sitesThemeLogo: "Logo",
-  sitesThemeLogoHint: "Affiché dans la barre de navigation à la place du nom du site.",
+  sitesThemeLogoHint:
+    "Affiché dans la barre de navigation à la place du nom du site.",
   sitesThemeFavicon: "Favicon",
-  sitesThemeFaviconHint: "La petite icône affichée dans l’onglet du navigateur.",
+  sitesThemeFaviconHint:
+    "La petite icône affichée dans l’onglet du navigateur.",
   sitesThemeUpload: "Téléverser une image",
   sitesThemeReplace: "Remplacer l’image",
   sitesThemeRemove: "Supprimer l’image",
@@ -2998,8 +3162,7 @@ export const fr: Partial<Catalog> = {
     "Rattachez la note de frais au travail d’un client, pour qu’elle apparaisse dans le coût de ce projet.",
   financeNoProject: "Aucun projet",
   financeMethod: "Payé avec",
-  financeMethodHint:
-    "Seul votre propre argent donne lieu à un remboursement.",
+  financeMethodHint: "Seul votre propre argent donne lieu à un remboursement.",
   financeMethodPersonal: "Argent personnel",
   financeMethodCard: "Carte de l’entreprise",
   financeMethodCash: "Caisse",
@@ -3104,7 +3267,8 @@ export const fr: Partial<Catalog> = {
   financeBankUnbooked: "Pas encore comptabilisées par la banque",
   financeBankPeriod: "Période",
   financeBankEncoding: "Encodage",
-  financeBankSampleTitle: "Les premières opérations, telles que nous les lisons",
+  financeBankSampleTitle:
+    "Les premières opérations, telles que nous les lisons",
   financeBankSampleTruncated:
     "Seules les premières opérations sont affichées ici. Toutes sont importées.",
   financeBankRowsRefused: (count: number) =>
@@ -3182,8 +3346,7 @@ export const fr: Partial<Catalog> = {
   financeBankWhyCustomerNamed: (percent: number) =>
     `le nom sur le paiement ressemble à celui du client (${percent} %)`,
   financeBankWhyWholeAmount: "le montant correspond exactement à ce qui est dû",
-  financeBankWhyOnlyDocument:
-    "c’est la seule facture ouverte pour ce montant",
+  financeBankWhyOnlyDocument: "c’est la seule facture ouverte pour ce montant",
   financeBankWhyBeforeDue: (days: number) =>
     days === 1
       ? "il est arrivé la veille de l’échéance"
@@ -3569,7 +3732,8 @@ export const fr: Partial<Catalog> = {
 
   // L’historique des mouvements : de → vers, combien, pourquoi, quel document.
   inventoryHistoryTitle: (product: string) => `${product} — mouvements`,
-  inventoryHistorySubtitle: (place: string) => `Tout ce qui est entré ou sorti de ${place}.`,
+  inventoryHistorySubtitle: (place: string) =>
+    `Tout ce qui est entré ou sorti de ${place}.`,
   inventoryHistoryEmpty: "Rien n’est encore entré ni sorti de cet endroit.",
   inventoryHistoryCapped: (limit: number) =>
     `Les ${limit} mouvements les plus récents sont affichés. Les plus anciens restent enregistrés.`,
@@ -3640,7 +3804,8 @@ export const fr: Partial<Catalog> = {
   inventorySoStatusDelivered: "Livrée",
 
   // Les deux listes.
-  inventorySearchPurchaseOrders: "Rechercher par numéro, fournisseur ou référence",
+  inventorySearchPurchaseOrders:
+    "Rechercher par numéro, fournisseur ou référence",
   inventorySearchSalesOrders: "Rechercher par numéro, client ou référence",
   inventoryNewPurchaseOrder: "Nouvelle commande d’achat",
   inventoryNewSalesOrder: "Nouvelle commande client",
@@ -3670,9 +3835,12 @@ export const fr: Partial<Catalog> = {
     "Cette commande a été passée. Elle porte un numéro que le fournisseur détient : elle ne peut plus être modifiée — enregistrez ce qui arrive en face, ou annulez-la.",
   inventorySalesOrderFrozenNotice:
     "Cette commande a été confirmée. Elle porte un numéro que le client détient : elle ne peut plus être modifiée — enregistrez chaque expédition à mesure qu’elle part.",
-  inventoryFixLinesFirst: "Une des lignes n’est pas terminée. Corrigez-la et enregistrez à nouveau.",
-  inventoryOrderNeedsSupplier: "Choisissez le fournisseur auprès de qui cette commande est passée.",
-  inventoryOrderNeedsCustomer: "Choisissez le client pour qui cette commande est établie.",
+  inventoryFixLinesFirst:
+    "Une des lignes n’est pas terminée. Corrigez-la et enregistrez à nouveau.",
+  inventoryOrderNeedsSupplier:
+    "Choisissez le fournisseur auprès de qui cette commande est passée.",
+  inventoryOrderNeedsCustomer:
+    "Choisissez le client pour qui cette commande est établie.",
   inventoryPickSupplier: "Choisir un fournisseur",
   inventoryPickCustomer: "Choisir un client",
   inventorySupplierHint:
@@ -3689,7 +3857,8 @@ export const fr: Partial<Catalog> = {
   inventoryFieldOrdered: "Passée le",
   inventoryFieldConfirmed: "Confirmée le",
   inventoryFieldNote: "Note",
-  inventoryOrderNoteHint: "Ce que l’autre partie doit lire. C’est imprimé sur la commande.",
+  inventoryOrderNoteHint:
+    "Ce que l’autre partie doit lire. C’est imprimé sur la commande.",
 
   // La grille des lignes. Le vocabulaire est celui d’un document, parce que
   // ces lignes en deviennent un.
@@ -3773,7 +3942,8 @@ export const fr: Partial<Catalog> = {
   inventoryConsignmentNo: (n: number) => `Expédition ${n}`,
   inventoryRaiseInvoice: "Facturer ce qui est parti",
   inventoryRaisedInvoices: "Factures",
-  inventoryNoRaisedInvoices: "Rien n’a encore été facturé depuis cette commande.",
+  inventoryNoRaisedInvoices:
+    "Rien n’a encore été facturé depuis cette commande.",
   inventoryInvoiceDrafted:
     "Une facture en brouillon a été établie pour ce qui est parti. Elle ne porte aucun numéro tant que personne ne l’émet dans Facturation.",
 
@@ -3796,12 +3966,15 @@ export const fr: Partial<Catalog> = {
   inventoryScanCameraStop: "Arrêter l’appareil photo",
   inventoryScanCameraFailed:
     "L’appareil photo n’a pas pu être démarré. Autorisez-y l’accès, ou saisissez le code — une douchette, elle, ne demande aucune autorisation.",
-  inventoryScanAiming: "Visez le code-barres. La lecture s’arrête dès qu’un code est reconnu.",
+  inventoryScanAiming:
+    "Visez le code-barres. La lecture s’arrête dès qu’un code est reconnu.",
   inventoryScanNoCamera:
     "Ce navigateur ne sait pas lire un code-barres avec l’appareil photo. Une douchette fonctionne ici : elle saisit dans le champ ci-dessus.",
-  inventoryScanOnHand: (quantity: string) => `${quantity} en stock, tous endroits confondus.`,
+  inventoryScanOnHand: (quantity: string) =>
+    `${quantity} en stock, tous endroits confondus.`,
   inventoryScanNowhere: "Il n’y en a encore nulle part.",
-  inventoryScanServiceNote: "C’est un service : il n’y en a aucune quantité à trouver.",
+  inventoryScanServiceNote:
+    "C’est un service : il n’y en a aucune quantité à trouver.",
   inventoryScanOpenProduct: "Ouvrir ce produit",
   inventoryScanShowInStock: "L’afficher dans la liste",
   inventoryScanAddProduct: "L’ajouter au catalogue avec ce code-barres",
@@ -3825,7 +3998,8 @@ export const fr: Partial<Catalog> = {
   agentReorderNothingShort: "Rien n’est sous son minimum",
   agentReorderDrafted: (count: number): string =>
     count === 1 ? "1 commande en brouillon" : `${count} commandes en brouillon`,
-  agentReorderLines: (count: number): string => (count === 1 ? "1 ligne" : `${count} lignes`),
+  agentReorderLines: (count: number): string =>
+    count === 1 ? "1 ligne" : `${count} lignes`,
   agentReorderLeftOut: "Rien commandé pour",
   agentReorderReason: (reason: string): string => {
     switch (reason) {
@@ -3872,7 +4046,8 @@ export const fr: Partial<Catalog> = {
   sitesTranslationPageKind: "Page",
   sitesTranslationPostKind: "Article",
   sitesCollections: "Collections",
-  sitesCollectionsHint: "Transformez une table alo Base en cartes réutilisables pour votre site.",
+  sitesCollectionsHint:
+    "Transformez une table alo Base en cartes réutilisables pour votre site.",
   sitesConnectTable: "Connecter une table",
   sitesCollectionsLoading: "Chargement des collections...",
   sitesCollectionsLoadFailed:
@@ -3889,8 +4064,10 @@ export const fr: Partial<Catalog> = {
   sitesCollectionTable: "Table",
   sitesCollectionChooseBase: "Choisir une Base",
   sitesCollectionChooseTable: "Choisir une table",
-  sitesCollectionRows: (count: number) => (count === 1 ? "1 ligne" : `${count} lignes`),
-  sitesCollectionConnectedTo: (base: string, table: string) => `${base} / ${table}`,
+  sitesCollectionRows: (count: number) =>
+    count === 1 ? "1 ligne" : `${count} lignes`,
+  sitesCollectionConnectedTo: (base: string, table: string) =>
+    `${base} / ${table}`,
   sitesCollectionSourceUnavailable:
     "Choisissez la Base et la table dont les lignes doivent apparaître sur le site.",
   sitesCollectionEdit: (name: string) => `Modifier ${name}`,
@@ -3899,7 +4076,8 @@ export const fr: Partial<Catalog> = {
     "Le titre est obligatoire. Tout le reste est facultatif et peut être ajouté plus tard.",
   sitesCollectionOptional: "Facultatif",
   sitesCollectionNotMapped: "Ne pas afficher",
-  sitesCollectionNoCompatibleField: "Cette table a besoin d'une colonne de texte",
+  sitesCollectionNoCompatibleField:
+    "Cette table a besoin d'une colonne de texte",
   sitesCollectionTitleField: "Titre",
   sitesCollectionSlugField: "Chemin de page",
   sitesCollectionSummaryField: "Résumé",
@@ -3913,7 +4091,8 @@ export const fr: Partial<Catalog> = {
     "La collection n'a pas été enregistrée. Rien n'a changé ; vérifiez l'association et réessayez.",
   sitesCollectionDisconnect: "Déconnecter",
   sitesCollectionDisconnectConfirm: "Déconnecter maintenant",
-  sitesCollectionDisconnectHint: "La Base et toutes ses lignes restent dans Drive.",
+  sitesCollectionDisconnectHint:
+    "La Base et toutes ses lignes restent dans Drive.",
   sitesCollectionDisconnectFailed:
     "La collection est toujours connectée. Retirez-la des pages qui l'utilisent, puis réessayez.",
   sitesCollectionPreview: "Lignes actuelles",
@@ -3925,15 +4104,116 @@ export const fr: Partial<Catalog> = {
   sitesCollectionPreviewSaveTitle: "Enregistrez pour prévisualiser les lignes",
   sitesCollectionPreviewSaveBody:
     "Une fois connectée, chaque ligne est vérifiée ici avec les mêmes règles que le site public.",
-  sitesCollectionPreviewEmptyTitle: "Cette table n'a pas encore de ligne complète",
+  sitesCollectionPreviewEmptyTitle:
+    "Cette table n'a pas encore de ligne complète",
   sitesCollectionPreviewEmptyBody:
     "Ajoutez un titre à une ligne dans Base et elle apparaîtra ici automatiquement.",
   sitesCollectionPreviewLinked: "Ouvre un lien",
   sitesSectionCollection: "Collection",
-  sitesSectionCollectionDesc: "Une grille réutilisable de lignes provenant d'alo Base.",
+  sitesSectionCollectionDesc:
+    "Une grille réutilisable de lignes provenant d'alo Base.",
   sitesCollectionSectionHeading: "Titre de la section",
   sitesCollectionSectionChoose: "Collection à afficher",
-  sitesCollectionSectionNoConnections: "Connectez une table avant d'ajouter cette section",
+  sitesCollectionSectionNoConnections:
+    "Connectez une table avant d'ajouter cette section",
   sitesCollectionSectionNoConnectionsHint:
     "La collection reste réutilisable : la même Base peut alimenter plusieurs pages.",
+  appLauncherAutoHint:
+    "Les applications que vous utilisez le plus, tenues à jour automatiquement",
+  meetTitle: "Réunion",
+  meetInstantTitle: "Réunion instantanée",
+  meetNothingLive: "Aucune réunion en cours",
+  meetWhereFrom:
+    "Les réunions commencent généralement là où sont les personnes — dans une conversation ou sur une invitation d’agenda. Tout ce qui est en cours et que vous pouvez rejoindre apparaît ici.",
+  meetUntitled: "Réunion sans titre",
+  meetNotStarted: "Pas encore commencée",
+  meetAddToEvent: "Ajouter une réunion",
+  meetStart: "Démarrer une réunion",
+  meetStartNow: "Démarrer une réunion",
+  meetStartedHere: "a démarré une réunion dans cette conversation",
+  meetJoin: "Rejoindre la réunion",
+  meetLive: "Réunion en cours",
+  meetJoinNow: "Rejoindre maintenant",
+  meetMicrophone: "Microphone",
+  meetCamera: "Caméra",
+  meetJoining: "Connexion en cours…",
+  meetLeave: "Quitter",
+  meetClose: "Fermer",
+  meetJoinFailed: "Impossible de rejoindre cette réunion.",
+  meetNoEngine:
+    "Les réunions ne sont pas encore activées pour cet espace de travail. La réunion est enregistrée et toutes les personnes invitées peuvent la voir — il n’y a simplement pas encore d’endroit où la tenir tant qu’un administrateur n’a pas configuré le serveur de réunion.",
+  agendaAgenda: "Agenda",
+  agendaCreateEvent: "Créer un événement",
+  agendaDay: "Jour",
+  agendaDescriptionPlaceholder:
+    "Ajoutez des notes, un ordre du jour ou d’autres détails…",
+  agendaEditEventSubtitle: "Modifiez les détails de votre événement",
+  agendaLocationPlaceholder: "Ajoutez un lieu ou un lien de visioconférence",
+  agendaMyCalendars: "Mes agendas",
+  agendaNewEventSubtitle: "Créez un nouvel événement dans votre agenda",
+  agendaNothingUpcoming: "Rien à venir.",
+  agendaOtherCalendars: "Autres agendas",
+  agendaTomorrow: "Demain",
+  agendaUntitledEvent: "Événement sans titre",
+  agendaUpcoming: "À venir",
+  driveActions: "Actions",
+  driveAdd: "Ajouter",
+  driveAddMemberPlaceholder: "Ajoutez quelqu’un par e-mail",
+  driveColModified: "Modifié",
+  driveColName: "Nom",
+  driveColSize: "Taille",
+  driveCopy: "Faire une copie",
+  driveCopyTo: "Copier vers…",
+  driveCurrent: "Actuelle",
+  driveDeleteForever: "Supprimer définitivement",
+  driveDestHint: "L’élément prend les accès de l’endroit où vous le placez.",
+  driveDownload: "Télécharger",
+  driveKindDoc: "Document",
+  driveKindExcel: "Classeur Excel",
+  driveKindFolder: "Dossier",
+  driveKindSheet: "Sheet",
+  driveKindSlides: "Slides (PowerPoint)",
+  driveKindWord: "Document Word",
+  driveMemberError:
+    "Impossible d’ajouter cette personne — vérifiez l’adresse e-mail et votre rôle.",
+  driveMembers: "Membres",
+  driveMove: "Déplacer",
+  driveMoveTo: "Déplacer vers…",
+  driveMyFiles: "Mes fichiers",
+  driveNew: "Nouveau",
+  driveNewBase: "Nouvelle base",
+  driveNewBasePrompt: "Nommez la nouvelle base",
+  driveNewDoc: "Nouveau doc",
+  driveNewDocPrompt: "Nommez le nouveau doc",
+  driveNewFolder: "Nouveau dossier",
+  driveNewFolderPrompt: "Nommez le nouveau dossier",
+  driveNewSheetPrompt: "Nommez le nouveau sheet",
+  driveNewSpace: "Nouveau Space",
+  driveNewSpacePrompt: "Nommez le nouveau Space",
+  driveNoVersions: "Aucune version précédente.",
+  driveOpen: "Ouvrir",
+  driveRemoveMember: "Retirer",
+  driveRename: "Renommer",
+  driveRenamePrompt: "Nouveau nom",
+  driveRestore: "Restaurer",
+  driveSpaces: "Spaces",
+  driveTrash: "Corbeille",
+  driveTrashAction: "Mettre à la corbeille",
+  driveUpload: "Importer",
+  driveUploading: "Importation…",
+  driveVersionHistory: "Historique des versions",
+  agendaEventCount: (n: number) =>
+    n === 1 ? "1 événement" : `${n} événements`,
+  driveMembersOf: (name: string) => `Membres de ${name}`,
+  driveNameNew: (kind: string): string => `Nommez votre ${kind.toLowerCase()}`,
+  drivePurgeConfirm: (name: string) =>
+    `Supprimer définitivement « ${name} » ? Cette action est irréversible.`,
+  driveRemoveMemberConfirm: (who: string) => `Retirer ${who} de ce Space ?`,
+  driveTrashConfirm: (name: string) => `Mettre « ${name} » à la corbeille ?`,
+  driveRole: (role: string) =>
+    role === "manager"
+      ? "Gestionnaire"
+      : role === "editor"
+        ? "Éditeur"
+        : "Lecteur",
 };
