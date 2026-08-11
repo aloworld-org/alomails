@@ -257,6 +257,8 @@ PATCH /crm/stages/{id} -> crm.stage.update
 PATCH /finance/accounts/{id} -> finance.account.update
 PATCH /finance/expenses/{id} -> finance.expense.update
 PATCH /hr/employees/{id} -> hr.employee.update
+PATCH /hr/leave-policies/{id} -> hr.leave_policy.update
+PATCH /hr/leave-requests/{id} -> hr.leave_request.update
 PATCH /inventory/counts/{id} -> inventory.count.update
 PATCH /inventory/locations/{id} -> inventory.location.update
 PATCH /inventory/purchase-orders/{id} -> inventory.purchase_order.update
@@ -324,6 +326,13 @@ POST /finance/periods/{id}/reopen -> finance.period.reopen
 POST /hr/employees -> hr.employee.create
 POST /hr/employees/{id}/archive -> hr.employee.archive
 POST /hr/employees/{id}/documents -> hr.employee.document.create
+POST /hr/leave-policies -> hr.leave_policy.create
+POST /hr/leave-policies/{id}/archive -> hr.leave_policy.archive
+POST /hr/leave-requests -> hr.leave_request.create
+POST /hr/leave-requests/{id}/approve -> hr.leave_request.approve
+POST /hr/leave-requests/{id}/cancel -> hr.leave_request.cancel
+POST /hr/leave-requests/{id}/reject -> hr.leave_request.reject
+POST /hr/leave-requests/{id}/withdraw -> hr.leave_request.withdraw
 POST /inventory/counts -> inventory.count.create
 POST /inventory/counts/{id}/apply -> inventory.count.apply
 POST /inventory/counts/{id}/cancel -> inventory.count.cancel

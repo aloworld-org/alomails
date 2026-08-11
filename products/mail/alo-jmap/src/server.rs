@@ -23,11 +23,12 @@ use crate::{
     crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
-    finance_report_vat, flagdue, hr_documents, hr_employees, hr_org, imap_import_route, insights,
-    insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
-    inventory_moves, inventory_po, inventory_po_print, inventory_po_receipts, inventory_po_send,
-    inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice,
-    inventory_stock, inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
+    finance_report_vat, flagdue, hr_documents, hr_employees, hr_leave_balances, hr_leave_policies,
+    hr_leave_requests, hr_org, imap_import_route, insights, insights_ask, insights_eval,
+    insights_gallery, inventory_counts, inventory_locations, inventory_moves, inventory_po,
+    inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
+    inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice, inventory_stock,
+    inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
@@ -664,6 +665,63 @@ pub fn app_with_site_domain_dns(
             "/hr/employees/{id}/documents/{document_id}",
             delete(hr_documents::detach_document),
         )
+        // Leave (B6.03b). The policies a tenant runs are readable by every
+        // member — somebody asking for time off has to choose what kind, and a
+        // picker they may not read is a form they cannot fill in — and writable
+        // only through the HR door. There is no DELETE: a balance is only
+        // explicable beside the policy that produced it, so a policy is
+        // archived (`docs/design/hr.md` § Leave).
+        //
+        // The four verbs on a request are POSTs rather than a status field on
+        // the PATCH, for the reason /billing/invoices/{id}/issue established:
+        // a decision must never happen because an editor sent a stale form.
+        // Who may take each of them is `hr_leave_door` — mine, my team's, or
+        // HR's — and nobody approves their own leave unless they are the
+        // tenant's admin.
+        //
+        // `/hr/absences` is the module's one read every member gets about
+        // other people: a name and a day, never the reason. The Agenda draws
+        // it as a layer rather than as events, because a calendar event has an
+        // owner who could delete an approval, and a title somebody could type a
+        // diagnosis into (`docs/design/hr.md` § The absence layer).
+        .route(
+            "/hr/leave-policies",
+            get(hr_leave_policies::list_policies).post(hr_leave_policies::create_policy),
+        )
+        .route(
+            "/hr/leave-policies/{id}",
+            get(hr_leave_policies::get_policy).patch(hr_leave_policies::update_policy),
+        )
+        .route(
+            "/hr/leave-policies/{id}/archive",
+            post(hr_leave_policies::archive_policy),
+        )
+        .route(
+            "/hr/leave-requests",
+            get(hr_leave_requests::list_requests).post(hr_leave_requests::create_request),
+        )
+        .route(
+            "/hr/leave-requests/{id}",
+            get(hr_leave_requests::get_request).patch(hr_leave_requests::update_request),
+        )
+        .route(
+            "/hr/leave-requests/{id}/withdraw",
+            post(hr_leave_requests::withdraw_request),
+        )
+        .route(
+            "/hr/leave-requests/{id}/approve",
+            post(hr_leave_requests::approve_request),
+        )
+        .route(
+            "/hr/leave-requests/{id}/reject",
+            post(hr_leave_requests::reject_request),
+        )
+        .route(
+            "/hr/leave-requests/{id}/cancel",
+            post(hr_leave_requests::cancel_request),
+        )
+        .route("/hr/leave-balances", get(hr_leave_balances::list_balances))
+        .route("/hr/absences", get(hr_leave_balances::list_absences))
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the
         // document, so it can never happen because an editor sent a stale

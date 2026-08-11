@@ -93,11 +93,14 @@ pub mod fin_receipt;
 pub mod fin_receipt_read;
 pub mod fin_rules;
 pub mod fin_vat_return;
+pub mod hr_absences;
 pub mod hr_documents;
 pub mod hr_employees;
 pub mod hr_employments;
+pub mod hr_leave_balances;
 pub mod hr_leave_math;
 pub mod hr_leave_policies;
+pub mod hr_leave_requests;
 pub mod hr_org;
 pub mod hr_statutory_leave;
 pub mod iban;
@@ -319,11 +322,16 @@ pub use fin_rules::{
     payment_settle_entry, payment_settlement_role, settlement_needs_exchange_account,
 };
 pub use fin_vat_return::{VatReturn, VatReturnRate, VatReturnSide};
+pub use hr_absences::{AbsenceDay, AbsentPerson};
 pub use hr_documents::{HrDocument, HrDocumentKind};
 pub use hr_employees::{DirectoryEntry, Employee, NewEmployee};
 pub use hr_employments::{ContractKind, Employment, NewEmployment, PayPeriod};
+pub use hr_leave_balances::{PolicyBalance, fold_leave_year};
 pub use hr_leave_math::{Accrual, Balance, LeaveLedger, LeaveYear, RequestCost, RequestedDay};
 pub use hr_leave_policies::{LeaveKind, LeavePolicy, NewLeavePolicy};
+pub use hr_leave_requests::{
+    LeaveRequest, LeaveRequestQuery, LeaveStatus, NewLeaveRequest, leave_request_cost,
+};
 pub use hr_org::{ORG_CHART_MAX_DEPTH, OrgNode, fold_org_chart};
 pub use id::{
     AttachmentId, BankLineId, BankMatchId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId,
@@ -333,11 +341,11 @@ pub use id::{
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
     FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
     FinMileageRateId, FinPeriodId, FinPostingId, GroupId, HrDocumentId, HrEmployeeId,
-    HrEmploymentId, HrLeavePolicyId, InsightDashboardId, InsightTileId, InvCountId, InvLocationId,
-    InvMoveId, InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId,
-    InvSoDeliveryId, InvSoInvoiceId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId,
-    ProjectId, ProjectMilestoneId, SiteCollectionId, SiteFormId, SiteFormSubmissionId, SiteId,
-    SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
+    HrEmploymentId, HrLeavePolicyId, HrLeaveRequestId, InsightDashboardId, InsightTileId,
+    InvCountId, InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId,
+    InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId, InvSupplierId, LabelId, MailboxId, MeetingId,
+    MessageId, ProjectId, ProjectMilestoneId, SiteCollectionId, SiteFormId, SiteFormSubmissionId,
+    SiteId, SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
     TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{

@@ -278,7 +278,12 @@ impl DirectoryEntry {
 
 /// The one naming rule, in one place, so the directory and the record can never
 /// disagree about what somebody is called.
-fn display_name(preferred: &str, given: &str, family: &str) -> String {
+///
+/// `pub(crate)` because the leave surfaces name people too — a request queue,
+/// the absence layer — and a second rule spelled into SQL would be a second
+/// answer to "what is this person called" the first time somebody uses their
+/// preferred name (`hr_leave_requests`, `hr_absences`).
+pub(crate) fn display_name(preferred: &str, given: &str, family: &str) -> String {
     let first = if preferred.is_empty() {
         given
     } else {

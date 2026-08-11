@@ -547,6 +547,16 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One absence somebody asked for, and the decision on it (alo HR, ADR
+    /// 0035, wave B6.03b). The record carries the days, never what they cost:
+    /// the cost is folded at read time from the working pattern in force on
+    /// each day, so a corrected pattern corrects every figure that was ever
+    /// shown from it (`docs/design/hr.md`, "The request, and its state
+    /// machine").
+    HrLeaveRequestId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

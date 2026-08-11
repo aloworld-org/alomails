@@ -238,6 +238,7 @@ fn singular(segment: &str) -> &str {
             "entries" => "entry",
             "categories" => "category",
             "deliveries" => "delivery",
+            "leave-policies" => "leave-policy",
             other => other,
         };
     }
