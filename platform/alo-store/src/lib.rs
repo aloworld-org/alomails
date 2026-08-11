@@ -176,6 +176,8 @@ pub mod site_publish;
 pub mod site_theme;
 pub mod site_translations;
 pub mod sites;
+
+pub use site_editors::{SiteEditorCollaborator, SiteEditorInviteOutcome, SiteEditorInviteTarget};
 pub mod snooze;
 pub mod spaces;
 pub mod store;

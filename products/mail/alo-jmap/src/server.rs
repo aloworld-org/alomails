@@ -288,6 +288,10 @@ pub fn app_with_site_domain_dns(
         .route("/sites/theme-presets", get(sites::list_theme_presets))
         .route("/sites/config", get(sites::sites_config))
         .route(
+            "/sites/invitations/{token}",
+            get(sites::get_collaborator_invitation).post(sites::accept_collaborator_invitation),
+        )
+        .route(
             "/sites/{id}",
             get(sites::get_site)
                 .put(sites::update_site)
@@ -297,6 +301,14 @@ pub fn app_with_site_domain_dns(
         .route("/sites/{id}/publish", post(sites::publish_site))
         .route("/sites/{id}/unpublish", post(sites::unpublish_site))
         .route("/sites/{id}/analytics", get(sites::get_analytics))
+        .route(
+            "/sites/{id}/collaborators",
+            get(sites::list_collaborators).post(sites::invite_collaborator),
+        )
+        .route(
+            "/sites/{id}/collaborators/{user}",
+            delete(sites::revoke_collaborator),
+        )
         .route(
             "/sites/{id}/collections",
             get(sites::list_collections).post(sites::create_collection),

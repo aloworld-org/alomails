@@ -42,6 +42,9 @@ import type {
   SiteCollectionDraft,
   SiteCollectionPreview,
   SiteCollectionSource,
+  SiteCollaborator,
+  SiteCollaboratorInvite,
+  SiteInvitation,
   SitesConfig,
   SubdomainCheck,
   ThemeEnvelope,
@@ -108,6 +111,30 @@ export class SitesApi {
   /** One site with its current publish (`null` while unpublished). */
   site(id: string): Promise<SiteDetail> {
     return this.#read<SiteDetail>(`/sites/${encodeURIComponent(id)}`);
+  }
+
+  /** The restricted collaborators of one site. This route never exposes the
+   * workspace user directory. */
+  collaborators(siteId: string): Promise<SiteCollaborator[]> {
+    return this.#read<{ collaborators?: SiteCollaborator[] }>(
+      `/sites/${encodeURIComponent(siteId)}/collaborators`,
+    ).then((response) => response.collaborators ?? []);
+  }
+
+  inviteCollaborator(siteId: string, email: string): Promise<SiteCollaboratorInvite> {
+    return this.#write<SiteCollaboratorInvite>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/collaborators`,
+      { email },
+    );
+  }
+
+  async revokeCollaborator(siteId: string, userId: string): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "DELETE",
+      `/sites/${encodeURIComponent(siteId)}/collaborators/${encodeURIComponent(userId)}`,
+      undefined,
+    );
   }
 
   /** Replaces the visible language set; normalization and validation live on the server. */
@@ -604,6 +631,40 @@ export class SitesApi {
       throw new SitesError(res.status, detail, reason);
     }
   }
+}
+
+async function publicInvitationResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    let detail: string | null = null;
+    try {
+      const body = (await response.json()) as { detail?: unknown };
+      detail = typeof body.detail === "string" ? body.detail : null;
+    } catch {
+      // A dropped proxy or non-JSON response uses the localized caller fallback.
+    }
+    throw new SitesError(response.status, detail);
+  }
+  return response.json() as Promise<T>;
+}
+
+/** Public token-gated invitation facts. The token is the authority; no user
+ * directory or tenant metadata is returned. */
+export function siteInvitation(token: string): Promise<SiteInvitation> {
+  return fetch(`${API_BASE}/sites/invitations/${encodeURIComponent(token)}`).then(
+    publicInvitationResponse<SiteInvitation>,
+  );
+}
+
+/** Sets the invited collaborator's first password and spends the token. */
+export function acceptSiteInvitation(
+  token: string,
+  password: string,
+): Promise<SiteInvitation & { status: "accepted" }> {
+  return fetch(`${API_BASE}/sites/invitations/${encodeURIComponent(token)}`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ password }),
+  }).then(publicInvitationResponse<SiteInvitation & { status: "accepted" }>);
 }
 
 /** The sites client bound to the current session. Memoized per auth context,

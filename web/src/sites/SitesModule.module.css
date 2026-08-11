@@ -10,6 +10,110 @@
   background: var(--bg-surface);
 }
 
+/* ---- public collaborator setup (S2.03b) ---- */
+.invitationPage {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-6);
+  background: var(--bg-sunken);
+}
+.invitationCard {
+  width: min(100%, var(--overlay-width-lg));
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+}
+.invitationMark {
+  display: inline-flex;
+  width: var(--control-height);
+  height: var(--control-height);
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.invitationMark svg,
+.invitationIdentity svg {
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
+}
+.invitationCard h1,
+.invitationCard p {
+  margin: 0;
+}
+.invitationCard h1 {
+  color: var(--text-primary);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+}
+.invitationCard > p {
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  line-height: var(--leading-relaxed);
+}
+.invitationIdentity,
+.invitationLoading {
+  display: flex;
+  min-height: var(--control-height);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.invitationForm,
+.invitationForm label {
+  display: flex;
+  flex-direction: column;
+}
+.invitationForm {
+  gap: var(--space-4);
+}
+.invitationForm label {
+  gap: var(--space-1);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.invitationForm small {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+}
+.invitationError {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--danger-tint);
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+.invitationSignIn {
+  min-height: var(--control-height);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+.invitationSignIn:hover {
+  background: var(--accent-hover);
+}
+
 /* ---- header ---- */
 .header {
   display: flex;
@@ -689,6 +793,164 @@
 .publishError {
   font-size: var(--text-sm);
   color: var(--danger);
+}
+
+/* ---- restricted collaborators (S2.03b) ---- */
+.collaboratorPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(var(--overlay-width-md), 1fr);
+  gap: var(--space-4) var(--space-6);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+.collaboratorIntro {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+.collaboratorIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  flex: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+.collaboratorIcon svg {
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
+}
+.collaboratorTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.collaboratorHint {
+  max-width: var(--overlay-width-lg);
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+.collaboratorInvite {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+.collaboratorEmail {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+.collaboratorRows,
+.collaboratorStatus,
+.collaboratorNotice,
+.collaboratorUndo,
+.collaboratorEmpty {
+  grid-column: 1 / -1;
+}
+.collaboratorRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.collaboratorRow {
+  display: flex;
+  min-height: var(--control-height);
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.collaboratorRow:hover {
+  background: var(--bg-raised);
+}
+.collaboratorAvatar {
+  display: inline-flex;
+  width: var(--control-height);
+  height: var(--control-height);
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.collaboratorIdentity {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.collaboratorIdentity strong {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.collaboratorIdentity span,
+.collaboratorEmpty,
+.collaboratorStatus {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+.collaboratorActions,
+.collaboratorStatus,
+.collaboratorUndo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.collaboratorNotice,
+.collaboratorUndo,
+.collaboratorEmpty {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+.collaboratorNotice {
+  border-left: var(--border-width-strong) solid var(--success);
+  background: var(--bg-raised);
+  color: var(--success);
+}
+.collaboratorUndo {
+  justify-content: space-between;
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+}
+.collaboratorEmpty {
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+}
+
+@media (max-width: 56rem) {
+  .collaboratorPanel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .collaboratorInvite {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .collaboratorActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
 
 /* ---- translation readiness and manual editing (S2.01d) ---- */

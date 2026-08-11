@@ -25,6 +25,7 @@ import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { NewPageDialog } from "./NewPageDialog";
+import { SiteCollaborators } from "./SiteCollaborators";
 import { ThemeDialog } from "./ThemeDialog";
 import { EmptyState, ErrorBanner } from "./parts";
 import type {
@@ -318,6 +319,8 @@ export function SiteView() {
               </Button>
             </div>
           </div>
+
+          {site.canManageCollaborators && <SiteCollaborators siteId={site.id} />}
 
           <section
             className={styles.languagePanel}

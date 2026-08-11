@@ -49,10 +49,10 @@ use alo_store::{
     BaseFieldId, BaseTableId, BlobId, DriveNodeId, LocalizedSitePage, NewGeneratedSite,
     NewGeneratedSitePage, NewSitePost, Section, SectionsEnvelope, Site, SiteCollection,
     SiteCollectionFieldMapping, SiteCollectionId, SiteCollectionInput, SiteCollectionItem,
-    SiteCollectionSnapshot, SiteDomain, SiteDomainStatus, SiteFormId, SiteFormSubmissionId, SiteId,
-    SitePage, SitePageId, SitePost, SitePostId, SitePostUpdate, SiteTheme,
-    SiteTranslationPageContent, SiteTranslationPageWrite, SiteTranslationPostContent,
-    SiteTranslationPostWrite, StoreError, normalize_site_domain, site_theme::THEME_PRESETS,
+    SiteCollectionSnapshot, SiteDomain, SiteDomainStatus, SiteEditorInviteOutcome, SiteFormId,
+    SiteFormSubmissionId, SiteId, SitePage, SitePageId, SitePost, SitePostId, SitePostUpdate,
+    SiteTheme, SiteTranslationPageContent, SiteTranslationPageWrite, SiteTranslationPostContent,
+    SiteTranslationPostWrite, StoreError, UserId, normalize_site_domain, site_theme::THEME_PRESETS,
 };
 
 use crate::ai::tenant_ai_config;
@@ -1020,6 +1020,10 @@ pub async fn get_site(
     let mut j = site_json(&site);
     if let Some(obj) = j.as_object_mut() {
         obj.insert(
+            "canManageCollaborators".to_owned(),
+            json!(account.is_admin || site.created_by == account.user.as_str()),
+        );
+        obj.insert(
             "publish".to_owned(),
             publish.map_or(
                 Value::Null,
@@ -1028,6 +1032,242 @@ pub async fn get_site(
         );
     }
     Ok(Json(j))
+}
+
+fn require_site_manager(account: &Account, site: &Site) -> Result<(), Problem> {
+    if account.is_admin || site.created_by == account.user.as_str() {
+        Ok(())
+    } else {
+        Err(Problem::with(
+            StatusCode::FORBIDDEN,
+            "Only this website's owner can manage its collaborators.",
+        ))
+    }
+}
+
+fn collaborator_json(collaborator: &alo_store::SiteEditorCollaborator) -> Value {
+    json!({
+        "id": collaborator.user.as_str(),
+        "email": collaborator.email,
+        "status": if collaborator.pending { "pending" } else { "active" },
+    })
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct InviteSiteEditorBody {
+    email: String,
+}
+
+/// `GET /sites/:id/collaborators` lists only this site's restricted editors.
+/// It never returns the workspace user directory.
+pub async fn list_collaborators(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let site_id = SiteId::new(id);
+    let site = account
+        .acc
+        .site(&site_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such site"))?;
+    require_site_manager(&account, &site)?;
+    let collaborators = state
+        .store
+        .for_tenant(account.tenant)
+        .site_editors(&site_id)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "collaborators": collaborators.iter().map(collaborator_json).collect::<Vec<_>>()
+    })))
+}
+
+/// `POST /sites/:id/collaborators` `{email}` creates a restricted collaborator
+/// and answers a one-time setup link, or grants another site to an already
+/// active restricted collaborator. No workspace user list is exposed.
+pub async fn invite_collaborator(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    const INVITE_TTL_HOURS: i64 = 72;
+    let account = authenticate(&state, &headers).await?;
+    let site_id = SiteId::new(id);
+    let site = account
+        .acc
+        .site(&site_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such site"))?;
+    require_site_manager(&account, &site)?;
+    let req: InviteSiteEditorBody =
+        serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let email = req.email.trim().to_ascii_lowercase();
+    let plausible_email = email
+        .rsplit_once('@')
+        .is_some_and(|(local, domain)| !local.is_empty() && domain.contains('.'))
+        && !email.contains(char::is_whitespace);
+    if !plausible_email {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "Enter a valid collaborator email address.",
+        ));
+    }
+    if email.eq_ignore_ascii_case(
+        &state
+            .store
+            .for_tenant(account.tenant.clone())
+            .email_of(&account.user)
+            .await
+            .map_err(map_store_err)?
+            .unwrap_or_default(),
+    ) {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "You already own this website.",
+        ));
+    }
+    if let Some((existing_tenant, _)) = state
+        .store
+        .account_by_email(&email)
+        .await
+        .map_err(map_store_err)?
+        && existing_tenant != account.tenant
+    {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "That address already signs in to another alo workspace. Use a different address.",
+        ));
+    }
+
+    let token = alo_identity::secret::random_token().map_err(|_| Problem::server_error())?;
+    let token_hash = alo_identity::secret::hash_at_rest(token.reveal());
+    let outcome = state
+        .store
+        .for_tenant(account.tenant)
+        .invite_site_editor(
+            &email,
+            &site_id,
+            &account.user,
+            &token_hash,
+            INVITE_TTL_HOURS,
+        )
+        .await
+        .map_err(map_store_err)?;
+    let (collaborator, invite_url) = match outcome {
+        SiteEditorInviteOutcome::Active(collaborator) => (collaborator, None),
+        SiteEditorInviteOutcome::Pending(collaborator) => (
+            collaborator,
+            Some(format!(
+                "{}/sites/invite/{}",
+                state.base_url.trim_end_matches('/'),
+                token.reveal()
+            )),
+        ),
+    };
+    Ok(Json(json!({
+        "collaborator": collaborator_json(&collaborator),
+        "inviteUrl": invite_url,
+        "expiresInHours": invite_url.as_ref().map(|_| INVITE_TTL_HOURS),
+    })))
+}
+
+/// `DELETE /sites/:id/collaborators/:user` removes one site grant. The
+/// invitation-created account disappears when this was its final site.
+pub async fn revoke_collaborator(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, user)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let site_id = SiteId::new(id);
+    let site = account
+        .acc
+        .site(&site_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such site"))?;
+    require_site_manager(&account, &site)?;
+    state
+        .store
+        .for_tenant(account.tenant)
+        .revoke_site_editor(&UserId::new(user), &site_id)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "revoked" })))
+}
+
+/// Public, token-gated invitation facts for the setup screen.
+pub async fn get_collaborator_invitation(
+    State(state): State<AppState>,
+    Path(token): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let token_hash = alo_identity::secret::hash_at_rest(&token);
+    let invitation = state
+        .store
+        .site_editor_invite(&token_hash)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| {
+            Problem::with(
+                StatusCode::NOT_FOUND,
+                "This invitation has expired or has already been used.",
+            )
+        })?;
+    Ok(Json(json!({
+        "email": invitation.email,
+        "siteName": invitation.site_name,
+    })))
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AcceptSiteEditorBody {
+    password: String,
+}
+
+/// Public invitation acceptance: set the collaborator's first password and
+/// spend the setup token in one transaction.
+pub async fn accept_collaborator_invitation(
+    State(state): State<AppState>,
+    Path(token): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let req: AcceptSiteEditorBody =
+        serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    if req.password.len() < 8 {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "Use at least 8 characters for the password.",
+        ));
+    }
+    if req.password.len() > 256 {
+        return Err(Problem::with(
+            StatusCode::BAD_REQUEST,
+            "The password is too long.",
+        ));
+    }
+    let invitation = state
+        .identity
+        .accept_site_editor_invite(&token, &req.password)
+        .await
+        .map_err(|_| Problem::server_error())?
+        .ok_or_else(|| {
+            Problem::with(
+                StatusCode::NOT_FOUND,
+                "This invitation has expired or has already been used.",
+            )
+        })?;
+    Ok(Json(json!({
+        "status": "accepted",
+        "email": invitation.email,
+        "siteName": invitation.site_name,
+    })))
 }
 
 #[derive(Deserialize)]

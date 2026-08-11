@@ -4,7 +4,7 @@
 
 mod common;
 
-use alo_store::{StoreError, TenantRole};
+use alo_store::{SiteEditorInviteOutcome, StoreError, TenantRole};
 
 use common::test_store;
 
@@ -132,4 +132,132 @@ async fn a_grant_cannot_cross_either_the_user_or_site_tenant_boundary() {
             .await
             .unwrap()
     );
+}
+
+#[tokio::test]
+async fn an_invitation_is_one_time_and_its_final_revoke_removes_the_restricted_account() {
+    let store = test_store().await;
+    let tenant = store.create_tenant("site-editor-invites").await.unwrap();
+    let ts = store.for_tenant(tenant.clone());
+    let owner = ts.create_user("owner@invites.test").await.unwrap();
+    let owner_door = store.for_account(tenant.clone(), owner.clone());
+    let first = owner_door
+        .create_site("First", &subdomain("invitefirst", &tenant))
+        .await
+        .unwrap();
+    let second = owner_door
+        .create_site("Second", &subdomain("invitesecond", &tenant))
+        .await
+        .unwrap();
+
+    let invited = ts
+        .invite_site_editor(
+            "Editor@Example.Test",
+            &first,
+            &owner,
+            "first-token-hash",
+            72,
+        )
+        .await
+        .unwrap();
+    let SiteEditorInviteOutcome::Pending(collaborator) = invited else {
+        panic!("a new collaborator must need setup");
+    };
+    assert_eq!(collaborator.email, "editor@example.test");
+    assert!(collaborator.pending);
+    assert_eq!(
+        ts.site_editors(&first).await.unwrap(),
+        vec![collaborator.clone()]
+    );
+
+    let target = store
+        .site_editor_invite("first-token-hash")
+        .await
+        .unwrap()
+        .expect("live invitation");
+    assert_eq!(target.tenant, tenant);
+    assert_eq!(target.user, collaborator.user);
+    assert_eq!(target.site_name, "First");
+    let accepted = store
+        .accept_site_editor_invite("first-token-hash", "not-a-plaintext-password")
+        .await
+        .unwrap()
+        .expect("first acceptance");
+    assert_eq!(accepted.user, collaborator.user);
+    assert!(
+        store
+            .accept_site_editor_invite("first-token-hash", "another-hash")
+            .await
+            .unwrap()
+            .is_none(),
+        "the setup token is spent exactly once"
+    );
+    assert!(!ts.site_editors(&first).await.unwrap()[0].pending);
+
+    let existing = ts
+        .invite_site_editor(
+            "editor@example.test",
+            &second,
+            &owner,
+            "unused-token-hash",
+            72,
+        )
+        .await
+        .unwrap();
+    assert!(matches!(existing, SiteEditorInviteOutcome::Active(_)));
+    ts.revoke_site_editor(&collaborator.user, &first)
+        .await
+        .unwrap();
+    assert!(ts.email_of(&collaborator.user).await.unwrap().is_some());
+    ts.revoke_site_editor(&collaborator.user, &second)
+        .await
+        .unwrap();
+    assert!(
+        ts.email_of(&collaborator.user).await.unwrap().is_none(),
+        "the final revoke must not leave a Sites-only account as an ordinary member"
+    );
+}
+
+#[tokio::test]
+async fn invitations_refuse_foreign_sites_and_existing_workspace_members() {
+    let store = test_store().await;
+    let ours = store.create_tenant("site-invite-ours").await.unwrap();
+    let theirs = store.create_tenant("site-invite-theirs").await.unwrap();
+    let our_ts = store.for_tenant(ours.clone());
+    let their_ts = store.for_tenant(theirs.clone());
+    let owner = our_ts.create_user("owner@invite-ours.test").await.unwrap();
+    let member = our_ts.create_user("member@invite-ours.test").await.unwrap();
+    let outsider = their_ts
+        .create_user("owner@invite-theirs.test")
+        .await
+        .unwrap();
+    let our_site = store
+        .for_account(ours.clone(), owner.clone())
+        .create_site("Ours", &subdomain("inviteours", &ours))
+        .await
+        .unwrap();
+    let their_site = store
+        .for_account(theirs.clone(), outsider)
+        .create_site("Theirs", &subdomain("invitetheirs", &theirs))
+        .await
+        .unwrap();
+
+    assert_not_found(
+        our_ts
+            .invite_site_editor("new@example.test", &their_site, &owner, "foreign-site", 72)
+            .await,
+    );
+    assert!(matches!(
+        our_ts
+            .invite_site_editor(
+                "member@invite-ours.test",
+                &our_site,
+                &owner,
+                "member-token",
+                72,
+            )
+            .await,
+        Err(StoreError::Conflict(_))
+    ));
+    assert!(our_ts.site_editor_grants(&member).await.unwrap().is_empty());
 }

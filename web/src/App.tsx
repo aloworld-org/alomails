@@ -24,6 +24,7 @@ import {
 import { surface } from "./product";
 import type { ProductModule } from "./product";
 import { DialogProvider } from "./ds";
+import { SiteInvitationView } from "./sites/SiteInvitationView";
 
 /**
  * One module's route, with its per-user switch honoured (migration 0208).
@@ -67,6 +68,13 @@ export function App() {
                 personal domains are configured. */}
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/reset" element={<ForgotPasswordPage />} />
+              {/* Accepting a collaborator invitation. Public by design: the
+                  token is the credential, and the person holding it may not
+                  have an account yet. */}
+              <Route
+                path="/sites/invite/:token"
+                element={<SiteInvitationView />}
+              />
               {/* The OIDC redirect target; the login flow reads the code inline, so
                 a stray navigation here just returns to the app. */}
               <Route

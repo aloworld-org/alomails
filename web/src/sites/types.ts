@@ -22,9 +22,30 @@ export interface Site {
  *  stored theme envelope. */
 export interface SiteDetail extends Site {
   publish: { id: string; publishedAt: string } | null;
+  /** True only for the creator or a workspace admin. Restricted editors can
+   * edit the site but never see or operate its sharing controls. */
+  canManageCollaborators: boolean;
   /** The stored theme. A site that never set one stores `{}`, so every
    *  field reads as possibly absent; absent means the default. */
   theme: StoredTheme;
+}
+
+export interface SiteCollaborator {
+  id: string;
+  email: string;
+  status: "pending" | "active";
+}
+
+export interface SiteCollaboratorInvite {
+  collaborator: SiteCollaborator;
+  /** Present only for a new or refreshed pending invitation. */
+  inviteUrl: string | null;
+  expiresInHours: number | null;
+}
+
+export interface SiteInvitation {
+  email: string;
+  siteName: string;
 }
 
 /** The theme envelope as stored — `{}` until the first save. */

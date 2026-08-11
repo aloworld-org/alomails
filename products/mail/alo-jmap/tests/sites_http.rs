@@ -179,6 +179,17 @@ async fn every_route_family_requires_a_bearer_token() {
         ("GET", "/sites/some-id/submissions.csv".to_owned(), None),
         ("GET", "/sites/some-id/posts".to_owned(), None),
         ("GET", "/sites/some-id/collections".to_owned(), None),
+        ("GET", "/sites/some-id/collaborators".to_owned(), None),
+        (
+            "POST",
+            "/sites/some-id/collaborators".to_owned(),
+            Some(json!({ "email": "editor@example.test" })),
+        ),
+        (
+            "DELETE",
+            "/sites/some-id/collaborators/editor".to_owned(),
+            None,
+        ),
         (
             "POST",
             "/sites/some-id/collections".to_owned(),
