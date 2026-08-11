@@ -8,18 +8,29 @@
 // behind a role would make that a question you ask a person. What varies by
 // door is the tabs.
 //
-// Today there is exactly one tab, **Hiring**, and it is the admin-or-HR door.
+// Today there are two tabs and neither is every member's:
+//
+//   - **Hiring** — the admin-or-HR door, and what HR still lands on: an
+//     approvals inbox is usually empty, and a module that opened on an empty
+//     screen would read as a module with nothing in it.
+//   - **Approvals** — the one inbox (B6.07), drawn for anybody who has
+//     something to decide: HR, a tenant admin, an accountant, or simply
+//     somebody with a direct report. It is deliberately not an HR-role tab,
+//     because most of what it holds is not HR's (`queues.ts`). A manager who is
+//     not HR has this tab and no other, and lands on it.
+//
 // The member-facing tabs (My leave, Team, Directory) are the wave's later web
 // items and are not drawn as empty promises: a member who opens HR now is told
 // what this module is and what is not here yet, in the module's own words,
 // rather than shown a tab that answers nothing.
 //
-// The tab is hidden, not disabled, for anybody who is not HR — the pattern
-// Finance set for its bookkeeper tabs. The route stays mounted, so a bookmark
+// Tabs are hidden, not disabled, for anybody without the door — the pattern
+// Finance set for its bookkeeper tabs. The routes stay mounted, so a bookmark
 // works for the people who hold the door, and everybody else gets the server's
-// own `403` on the read rather than a page pretending a hiring board is empty.
+// own `403` on the read rather than a page pretending a queue is empty.
 // **The client is never the access decision**: every `/hr` route asks
-// `require_hr` again for itself.
+// `require_hr` again for itself, and the three approval queues each ask their
+// own.
 import { useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { Users } from "lucide-react";
@@ -28,7 +39,9 @@ import { Spinner } from "../ds";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { ComingSoon } from "../shell";
+import { ApprovalsView } from "./ApprovalsView";
 import { HiringView } from "./HiringView";
+import { useApprovalQueues } from "./queues";
 import styles from "./hr.module.css";
 
 /**
@@ -47,6 +60,11 @@ export function HrModule() {
   // would flash the member's page at a recruiter on every load, and starting at
   // "HR" would flash a board at somebody who has no business seeing one.
   const [hr, setHr] = useState<boolean | null>(null);
+  // The same reasoning for the inbox: `ready` is false until every door has
+  // answered, and a tab is drawn from the answer rather than from a guess.
+  const approvals = useApprovalQueues();
+  const canApprove = approvals.ready && approvals.queues.length > 0;
+  const settled = hr !== null && approvals.ready;
 
   useEffect(() => {
     let live = true;
@@ -69,17 +87,29 @@ export function HrModule() {
     <div className={styles.hr}>
       <header className={styles.header}>
         <h1 className={styles.title}>{strings.moduleHr}</h1>
-        {hr === null && <Spinner size={16} />}
-        {hr === true && (
+        {!settled && <Spinner size={16} />}
+        {settled && (hr === true || canApprove) && (
           <nav className={styles.tabs}>
-            <NavLink
-              to={`${HR_ROOT}/hiring`}
-              className={({ isActive }) =>
-                isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
-              }
-            >
-              {strings.hrTabHiring}
-            </NavLink>
+            {hr === true && (
+              <NavLink
+                to={`${HR_ROOT}/hiring`}
+                className={({ isActive }) =>
+                  isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+                }
+              >
+                {strings.hrTabHiring}
+              </NavLink>
+            )}
+            {canApprove && (
+              <NavLink
+                to={`${HR_ROOT}/approvals`}
+                className={({ isActive }) =>
+                  isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+                }
+              >
+                {strings.hrTabApprovals}
+              </NavLink>
+            )}
           </nav>
         )}
       </header>
@@ -88,8 +118,15 @@ export function HrModule() {
         <Route
           index
           element={
-            hr === null ? null : hr ? (
+            // The first tab this person actually has, in the order they are
+            // drawn. HR keeps landing on the board it has always landed on —
+            // an approvals inbox is usually empty, and a module that opened on
+            // an empty screen would read as a module with nothing in it. A
+            // manager who is not HR has only the inbox, and lands there.
+            !settled ? null : hr ? (
               <Navigate to={`${HR_ROOT}/hiring`} replace />
+            ) : canApprove ? (
+              <Navigate to={`${HR_ROOT}/approvals`} replace />
             ) : (
               <ComingSoon
                 Icon={Users}
@@ -99,6 +136,7 @@ export function HrModule() {
             )
           }
         />
+        <Route path="approvals" element={<ApprovalsView />} />
         <Route path="hiring" element={<HiringView />} />
         {/* An unknown HR path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to={HR_ROOT} replace />} />

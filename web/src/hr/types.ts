@@ -97,6 +97,64 @@ export interface HrApplicantDetail {
   stages: string[];
 }
 
+/** Where a leave request has got to. `requested` is the only state an approver
+ *  can act on; the other four are the record of what happened. */
+export type LeaveStatus = "requested" | "approved" | "rejected" | "withdrawn" | "cancelled";
+
+/** One person's ask for time off, as `/hr/leave-requests` serves it.
+ *
+ *  `costMinutes`, `workingDays` and `holidayMinutes` are **the server's fold**
+ *  over the person's working pattern and the tenant's public holidays. Nothing
+ *  in the browser recomputes them: a week that costs four days rather than five
+ *  has a reason, and the reason lives where the calendar does. */
+export interface HrLeaveRequest {
+  id: string;
+  employeeId: string;
+  /** Who is asking, as the directory names them. */
+  employeeName: string;
+  policyId: string;
+  /** Which policy the days come off — "Annual leave", "Sick leave". */
+  policyName: string;
+  /** `YYYY-MM-DD`, both ends inclusive. */
+  fromDay: string;
+  toDay: string;
+  status: LeaveStatus;
+  /** What the person wrote for whoever decides. Personal, and never logged. */
+  note: string;
+  costMinutes: number;
+  workingDays: number;
+  /** What the tenant's public holidays saved inside the dates. */
+  holidayMinutes: number;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  decisionNote: string;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** One person as the directory shows them: the public fields only. The inbox
+ *  reads exactly one of them — `managerId`, to know whose leave is its
+ *  caller's to decide. */
+export interface HrDirectoryEntry {
+  id: string;
+  name: string;
+  workEmail: string;
+  managerId: string | null;
+  jobTitle: string;
+  team: string;
+  archived: boolean;
+}
+
+/** The caller's own HR standing: their employee record when the tenant has one
+ *  for them, and whether they hold the HR door. */
+export interface HrMe {
+  /** `null` for a login with no employee record — a contractor with a mailbox,
+   *  an admin who is not on the payroll. An ordinary answer, not an error. */
+  employee: { id: string; name: string } | null;
+  isHr: boolean;
+}
+
 /** The writable fields of an opening. An absent field keeps what is stored. */
 export interface OpeningDraft {
   title?: string;

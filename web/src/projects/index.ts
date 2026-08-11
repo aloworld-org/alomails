@@ -13,3 +13,10 @@ export { TimerWidget } from "./TimerWidget";
 // expense claim form in Finance (B4.13a). The list and nothing else: the hours,
 // the budgets and the weeks stay inside the module.
 export { useProjects } from "./pickers";
+
+// The handed-in weeks in the shared words of `platform/approvals`, for the one
+// inbox that shows them beside leave and expense claims (B6.07). The queue and
+// nothing else: the hours, the budgets and the reports stay inside the module,
+// and every decision it takes still travels this module's own admin-gated
+// routes.
+export { useWeekApprovals } from "./approvals";

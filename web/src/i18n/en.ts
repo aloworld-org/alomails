@@ -3466,6 +3466,9 @@ export const en = {
   projectsNextWeek: "Next",
   projectsThisWeek: "This week",
   projectsWeekOf: (from: string, to: string) => `${from} – ${to}`,
+  // How a handed-in week reads in the one approvals inbox (B6.07), where it
+  // sits beside claims and time off and cannot rely on a column heading.
+  projectsBillableOf: (hours: string) => `${hours} billable`,
   projectsWeek: "Week",
   projectsDay: "Day",
   projectsDuration: "Duration",
@@ -3670,6 +3673,9 @@ export const en = {
   financeMerchant: "Merchant",
   financeMerchantHint: "Who was paid — the name on the receipt.",
   financeNoMerchant: "No merchant",
+  // How a waiting claim reads in the one approvals inbox (B6.07): what was
+  // bought and the day it was bought, in one line.
+  financeClaimOf: (merchant: string, day: string) => `${merchant}, ${day}`,
   financeDescription: "What it was for",
   financeGross: "Total",
   financeVat: "VAT",
@@ -4601,6 +4607,44 @@ export const en = {
   sitesCollectionSectionNoConnections: "Connect a table before adding this section",
   sitesCollectionSectionNoConnectionsHint:
     "The collection stays reusable, so the same Base can power more than one page.",
+
+  // The one approvals inbox (B6.07) — leave, expense claims and timesheet weeks
+  // in one list. The words are the approver's, not the system's: what is
+  // waiting is "time off", "a claim", "a week", and the person who handed it in
+  // is waiting for an answer rather than sitting in a queue. "Send back" rather
+  // than "reject", because that is what actually happens: the record returns to
+  // its owner, editable, with the sentence that says what to fix.
+  hrTabApprovals: "Approvals",
+  hrQueueLeave: "Time off",
+  hrQueueExpense: "Claim",
+  hrQueueTimesheet: "Week",
+  hrPerson: "Person",
+  hrWhat: "Waiting for you",
+  hrQueue: "Kind",
+  hrFigure: "Amount",
+  hrWaitingSince: "Handed in",
+  hrActions: "Decision",
+  hrApprove: "Approve",
+  hrSendBack: "Send back",
+  hrSendBackTitle: "Send this back?",
+  hrSendBackBody: (person: string) =>
+    `${person} will see this again, editable, with what you write here. Say what needs correcting.`,
+  hrSendBackPlaceholder: "What needs correcting",
+  hrWaitingCount: (count: number) => (count === 1 ? "1 waiting" : `${count} waiting`),
+  hrCountOf: (kind: string, count: number) => `${kind}: ${count}`,
+  hrWorkingDays: (days: number) => (days === 1 ? "1 day" : `${days} days`),
+  hrLeaveOf: (policy: string, from: string, to: string) =>
+    from === to ? `${policy}, ${from}` : `${policy}, ${from} – ${to}`,
+  hrApprovalsEmptyTitle: "Nothing is waiting",
+  hrApprovalsEmptyBody:
+    "Time off, expense claims and timesheet weeks people hand in land here together, oldest first — so nobody waits because their request was in the module you opened last.",
+  hrApprovalsNoneTitle: "Nothing comes to you for a decision",
+  hrApprovalsNoneBody:
+    "This is where leave, expense claims and timesheet weeks wait for the person who decides them. You will see it when somebody reports to you, or when you look after the books.",
+  hrApprovalsQueueFailed: (kinds: string) =>
+    `Some of what is waiting could not be read (${kinds}), so this list is not complete. Everything else is shown.`,
+  hrApprovalsWidgetLabel: "waiting",
+  hrApprovalsWidgetTitle: "Time off, claims and weeks waiting for your decision",
 } as const;
 
 /** Every string key in the catalog. */

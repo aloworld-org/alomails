@@ -8,3 +8,10 @@ export { FinanceModule } from "./FinanceModule";
 // one session, one error shape, one set of rules — rather than by growing a
 // second client for two routes. Nothing else of the API surface is exported.
 export { financeMessage, useFinanceApi } from "./api";
+
+// The claims queue in the shared words of `platform/approvals`, for the one
+// inbox that shows it beside leave and timesheet weeks (B6.07). The queue and
+// nothing else: the claim form, the reports and the reimbursement stay inside
+// the module, and every decision it takes still travels this module's own
+// already-gated routes.
+export { useExpenseApprovals } from "./approvals";

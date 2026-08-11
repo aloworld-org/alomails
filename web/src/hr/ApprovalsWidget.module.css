@@ -1,0 +1,36 @@
+/* The waiting-approvals badge, in the rail's dark chrome — the sibling of
+   `projects/TimerWidget.module.css` and styled from the same rail tokens for
+   the same reason: a light card in a charcoal rail reads as an alert, and this
+   is not an alert. It is a standing count of somebody else's waiting. */
+
+.widget {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 6px;
+  border-radius: var(--radius-md);
+  background: var(--bg-rail-active);
+  color: var(--text-on-rail);
+  text-decoration: none;
+  font-size: var(--text-xs);
+}
+.widget:hover {
+  background: var(--bg-rail-hover);
+}
+
+/* The number itself: tabular so a count that changes from 9 to 10 does not
+   shift the word beside it. */
+.count {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  color: var(--text-on-rail-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

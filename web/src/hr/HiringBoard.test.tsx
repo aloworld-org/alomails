@@ -100,13 +100,26 @@ const fakeFetch = vi.fn((url: string, init?: RequestInit) => {
   );
 });
 
+// A fresh function per test, because the module caches what the approvals doors
+// answered against the session's own fetch (`queues.ts`): one signed-in person,
+// one answer. Rotating it here is what makes each test a different session
+// rather than the same one with a different role bolted on.
+let session = fakeFetch as (url: string, init?: RequestInit) => Promise<Response>;
+
 vi.mock("../auth", () => ({
-  useAuth: () => ({ authorizedFetch: fakeFetch, identity: { sub: "u-1", email: "", name: "" } }),
+  // `session` itself, never a wrapper: a new function per render would re-create
+  // every module client and loop the effects keyed on them.
+  useAuth: () => ({ authorizedFetch: session, identity: { sub: "u-1", email: "", name: "" } }),
 }));
 
 vi.mock("../jmap", () => ({
   useJmapClient: () => ({
     canWorkHr: () => Promise.resolve(isHr),
+    // The module resolves the approvals doors too (B6.07). This user works
+    // neither the books nor the tenant, so the only queue they could have is
+    // leave, and the hiring screens below are unaffected either way.
+    canWorkTheBooks: () => Promise.resolve(false),
+    isAdmin: () => Promise.resolve(false),
     driveDownload: () => Promise.resolve(new Blob(["cv"])),
   }),
 }));
@@ -138,6 +151,7 @@ function column(stage: string): HTMLElement {
 beforeEach(() => {
   calls.length = 0;
   isHr = true;
+  session = (url: string, init?: RequestInit) => fakeFetch(url, init);
   fakeFetch.mockClear();
 });
 

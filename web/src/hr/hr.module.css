@@ -551,3 +551,101 @@
     flex-direction: column;
   }
 }
+
+/* ---- the one approvals inbox (B6.07) ---------------------------------- */
+
+/* Its own container rather than `.page`, which the board uses for a full-height
+   scrolling column of columns. This is a document: it scrolls vertically, it
+   has margins, and its rows are of one kind however many modules they came
+   from. */
+.inbox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-6);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* The counts line: the total said once, loudly, and the split behind it —
+   because "six waiting" is what a person acts on and "two of them are claims"
+   is what they plan with. */
+.counts {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+.countTotal {
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+.count {
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The table. Copied in shape from Finance's approver screen, deliberately: a
+   manager who has decided claims there must not have to learn a second layout
+   to decide the same kind of thing here. */
+.tableWrap {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+.table th {
+  text-align: left;
+  padding: 10px 14px;
+  color: var(--text-tertiary);
+  font-weight: var(--weight-medium);
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+.table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+.table tbody tr:hover {
+  background: var(--bg-raised);
+}
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+.muted {
+  color: var(--text-tertiary);
+}
+/* A second line under a cell's own value: the sentence somebody wrote when they
+   asked, what a claim was for. Quiet, because it qualifies the line above it. */
+.subtle {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+/* The way from a row to the record it stands for — the module's own screen,
+   where the context of the decision lives. */
+.rowLink {
+  color: var(--text-primary);
+  text-decoration: none;
+}
+.rowLink:hover {
+  text-decoration: underline;
+}

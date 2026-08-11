@@ -22,8 +22,12 @@ import type {
   HrApplicant,
   HrApplicantDetail,
   HrApplicantNote,
+  HrDirectoryEntry,
+  HrLeaveRequest,
+  HrMe,
   HrOpening,
   HrPipeline,
+  LeaveStatus,
   OpeningDraft,
 } from "./types";
 
@@ -42,8 +46,9 @@ export function hrMessage(error: unknown, fallback: string): string {
   return restMessage(error, fallback);
 }
 
-/** The tenant's openings, the people who applied for them, and the notes on
- *  those people. One instance per auth context. */
+/** The tenant's openings, the people who applied for them, the notes on those
+ *  people — and the leave somebody has asked for, with the two decisions that
+ *  answer it. One instance per auth context. */
 export class HrApi {
   readonly #fetch: AuthorizedFetch;
 
@@ -159,6 +164,58 @@ export class HrApi {
     await this.#json<unknown>(
       await this.#send(`/hr/applicants/${encodeURIComponent(id)}`, { method: "DELETE" }),
     );
+  }
+
+  /** The caller's own HR standing. Two facts, and there is no argument by which
+   *  this route could ask about a colleague. */
+  me(): Promise<HrMe> {
+    return this.#read<HrMe>("/hr/me");
+  }
+
+  /** The people list, public fields only — every member's read. The approvals
+   *  inbox uses it for exactly one thing: whether anybody's `managerId` is the
+   *  caller, which is what makes them somebody's approver. */
+  directory(): Promise<HrDirectoryEntry[]> {
+    return this.#read<{ employees?: HrDirectoryEntry[] }>("/hr/employees").then(
+      (r) => r.employees ?? [],
+    );
+  }
+
+  /** Leave the caller may see, in the scope they are asking as: `mine` is their
+   *  own, `team` is the people who report to them, `all` is HR's.
+   *
+   *  **The scope is the server's rule, not a filter applied here**: asking for
+   *  `all` without the HR role is a `403`, and asking for `team` names the
+   *  caller's own reports server-side. `statuses` narrows what comes back —
+   *  `requested` is the approvals inbox's, because it is the only state
+   *  anybody can act on. */
+  leaveRequests(scope: "mine" | "team" | "all", statuses: LeaveStatus[] = []): Promise<
+    HrLeaveRequest[]
+  > {
+    const query = new URLSearchParams({ scope });
+    if (statuses.length > 0) query.set("status", statuses.join(","));
+    return this.#read<{ requests?: HrLeaveRequest[] }>(
+      `/hr/leave-requests?${query.toString()}`,
+    ).then((r) => r.requests ?? []);
+  }
+
+  /** Yes to somebody's time off. The balance, the overlap and who may decide
+   *  are all the server's — this sends the act and shows what came back. */
+  approveLeaveRequest(id: string, note?: string): Promise<HrLeaveRequest> {
+    return this.#decideLeave(id, "approve", note);
+  }
+
+  /** No, with the sentence the person is going to read. */
+  rejectLeaveRequest(id: string, note: string): Promise<HrLeaveRequest> {
+    return this.#decideLeave(id, "reject", note);
+  }
+
+  #decideLeave(id: string, verb: string, note?: string): Promise<HrLeaveRequest> {
+    return this.#write<{ request: HrLeaveRequest }>(
+      "POST",
+      `/hr/leave-requests/${encodeURIComponent(id)}/${verb}`,
+      { note: note ?? "" },
+    ).then((r) => r.request);
   }
 
   async #read<T>(path: string): Promise<T> {
