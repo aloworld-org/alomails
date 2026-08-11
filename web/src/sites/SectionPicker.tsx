@@ -126,6 +126,19 @@ function thumbnail(kind: SectionKind): ReactNode {
           <rect x="40" y="33" width="16" height="5" rx="2.5" opacity="0.7" />
         </>
       );
+    case "collection":
+      return (
+        <>
+          {[3, 24, 45].map((x) => (
+            <g key={x}>
+              <rect x={x} y="6" width="16" height="28" rx="2" opacity="0.3" />
+              <rect x={x + 3} y="10" width="10" height="8" rx="1" opacity="0.7" />
+              <rect x={x + 3} y="22" width="10" height="2" rx="1" />
+              <rect x={x + 3} y="27" width="7" height="2" rx="1" opacity="0.5" />
+            </g>
+          ))}
+        </>
+      );
     case "footer":
       return (
         <>

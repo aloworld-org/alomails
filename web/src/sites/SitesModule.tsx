@@ -5,6 +5,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { PageEditorView } from "./PageEditorView";
+import { CollectionsView } from "./CollectionsView";
 import { PostsView } from "./PostsView";
 import { SiteView } from "./SiteView";
 import { AnalyticsView } from "./AnalyticsView";
@@ -19,6 +20,7 @@ export function SitesModule() {
         <Route index element={<SitesListView />} />
         <Route path=":siteId" element={<SiteView />} />
         <Route path=":siteId/analytics" element={<AnalyticsView />} />
+        <Route path=":siteId/collections" element={<CollectionsView />} />
         <Route path=":siteId/submissions" element={<SubmissionsView />} />
         <Route path=":siteId/posts" element={<PostsView />} />
         <Route path=":siteId/pages/:pageId" element={<PageEditorView />} />

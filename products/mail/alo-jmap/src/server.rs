@@ -298,6 +298,18 @@ pub fn app_with_site_domain_dns(
         .route("/sites/{id}/unpublish", post(sites::unpublish_site))
         .route("/sites/{id}/analytics", get(sites::get_analytics))
         .route(
+            "/sites/{id}/collections",
+            get(sites::list_collections).post(sites::create_collection),
+        )
+        .route(
+            "/sites/{id}/collections/{collection}",
+            put(sites::update_collection).delete(sites::delete_collection),
+        )
+        .route(
+            "/sites/{id}/collections/{collection}/preview",
+            get(sites::preview_collection),
+        )
+        .route(
             "/sites/{id}/domains",
             get(sites::list_domains).post(sites::create_domain),
         )

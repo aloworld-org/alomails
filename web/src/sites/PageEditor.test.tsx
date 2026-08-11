@@ -386,7 +386,7 @@ describe("search and sharing details", () => {
 });
 
 describe("adding a section", () => {
-  test("the picker offers all twelve types; saving the form POSTs exactly the typed section", async () => {
+  test("the picker offers all thirteen types; saving the form POSTs exactly the typed section", async () => {
     replies = [pageReply([])];
     ui();
     // Empty page → empty state; its CTA opens the picker.
@@ -404,6 +404,7 @@ describe("adding a section", () => {
       strings.sitesSectionFaq,
       strings.sitesSectionCta,
       strings.sitesSectionContactForm,
+      strings.sitesSectionCollection,
       strings.sitesSectionFooter,
     ]) {
       expect(screen.getByText(label)).toBeTruthy();

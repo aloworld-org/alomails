@@ -207,6 +207,145 @@ describe("the site list", () => {
   });
 });
 
+describe("the Base-backed collections workspace", () => {
+  const baseReplies = (): Reply[] => [
+    {
+      match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/collections"),
+      status: 200,
+      body: { collections: [] },
+    },
+    {
+      match: (url, method) => method === "GET" && url.endsWith("/spaces"),
+      status: 200,
+      body: { spaces: [] },
+    },
+  ];
+
+  test("an account without a Base gets one visible next step", async () => {
+    replies = [
+      ...baseReplies(),
+      {
+        match: (url, method) => method === "GET" && url.includes("/drive/list?"),
+        status: 200,
+        body: { nodes: [] },
+      },
+    ];
+    ui("/sites/site-1/collections");
+
+    expect(await screen.findByText(strings.sitesCollectionNoBasesTitle)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesCollectionOpenDrive }));
+    expect(screen.getByTestId("location").textContent).toBe("/drive");
+  });
+
+  test("connects a readable table, previews its rows, and disconnects without hidden steps", async () => {
+    replies = [
+      ...baseReplies(),
+      {
+        match: (url, method) => method === "GET" && url.includes("/drive/list?"),
+        status: 200,
+        body: { nodes: [{ id: "base-1", kind: "base", name: "Roasts" }] },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/drive/base/base-1"),
+        status: 200,
+        body: {
+          nodeId: "base-1",
+          tables: [{
+            id: "table-1",
+            name: "Seasonal roasts",
+            records: [{ id: "record-1" }],
+            fields: [
+              { id: "title-1", name: "Name", type: "text" },
+              { id: "summary-1", name: "Tasting notes", type: "text" },
+              { id: "image-1", name: "Photo", type: "attachment" },
+              { id: "date-1", name: "Published", type: "date" },
+              { id: "ignored-1", name: "Score", type: "number" },
+            ],
+          }],
+        },
+      },
+    ];
+    ui("/sites/site-1/collections");
+
+    expect(await screen.findByDisplayValue("Seasonal roasts")).toBeTruthy();
+    expect(screen.getByText(strings.sitesCollectionMapping)).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Photo" })).toBeTruthy();
+    expect(screen.getByRole("option", { name: "Published" })).toBeTruthy();
+    expect(screen.queryByRole("option", { name: "Score" })).toBeNull();
+
+    const stored = {
+      id: "collection-1",
+      name: "Seasonal roasts",
+      baseNodeId: "base-1",
+      baseTableId: "table-1",
+      mapping: {
+        title: "title-1",
+        slug: null,
+        summary: null,
+        body: null,
+        image: null,
+        link: null,
+        publishedAt: null,
+      },
+      createdAt: "2026-08-11T09:00:00Z",
+      updatedAt: "2026-08-11T09:00:00Z",
+    };
+    replies.push(
+      {
+        match: (url, method) => method === "POST" && url.endsWith("/sites/site-1/collections"),
+        status: 200,
+        body: stored,
+      },
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/collections/collection-1/preview"),
+        status: 200,
+        body: {
+          id: "collection-1",
+          name: "Seasonal roasts",
+          items: [{
+            title: "Harbour Blend",
+            slug: "harbour-blend",
+            summary: "Chocolate and red apple",
+            body: null,
+            imageBlobId: null,
+            link: null,
+            publishedAt: null,
+          }],
+        },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesCollectionSave }));
+
+    await waitFor(() => {
+      const write = lastWrite();
+      expect(write?.url.endsWith("/sites/site-1/collections")).toBe(true);
+      expect(write?.method).toBe("POST");
+      expect(write?.body).toEqual({
+        name: "Seasonal roasts",
+        baseNodeId: "base-1",
+        baseTableId: "table-1",
+        mapping: stored.mapping,
+      });
+    });
+    expect(await screen.findByText("Harbour Blend")).toBeTruthy();
+    expect(screen.getByText("Chocolate and red apple")).toBeTruthy();
+
+    replies.push({
+      match: (url, method) =>
+        method === "DELETE" && url.endsWith("/sites/site-1/collections/collection-1"),
+      status: 200,
+      body: { status: "ok" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesCollectionDisconnect }));
+    expect(screen.getByText(strings.sitesCollectionDisconnectHint)).toBeTruthy();
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesCollectionDisconnectConfirm }),
+    );
+    await waitFor(() => expect(lastWrite()?.method).toBe("DELETE"));
+  });
+});
+
 describe("the contact submissions inbox", () => {
   const detail = { ...ALPHA, publish: null, theme: {} };
   const submission = {

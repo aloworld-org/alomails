@@ -4536,6 +4536,71 @@ export const en = {
   hrErase: "Erase this record",
   hrEraseConfirm: (name: string) =>
     `Erase everything about ${name}? Their details, every note written about them and their CV are removed for good. This cannot be undone.`,
+  sitesCollections: "Collections",
+  sitesCollectionsHint: "Turn an alo Base table into reusable cards for your website.",
+  sitesConnectTable: "Connect a table",
+  sitesCollectionsLoading: "Loading collections...",
+  sitesCollectionsLoadFailed:
+    "Collections could not be loaded. Check your connection and try again.",
+  sitesCollectionEmptyTitle: "Connect your first table",
+  sitesCollectionEmptyBody:
+    "Choose an alo Base, match its columns once, and reuse those rows on any page.",
+  sitesCollectionNoBasesTitle: "Create an alo Base first",
+  sitesCollectionNoBasesBody:
+    "Collections read rows from alo Base. Create a Base in Drive, then return here to connect it.",
+  sitesCollectionOpenDrive: "Open Drive",
+  sitesCollectionName: "Collection name",
+  sitesCollectionBase: "alo Base",
+  sitesCollectionTable: "Table",
+  sitesCollectionChooseBase: "Choose a Base",
+  sitesCollectionChooseTable: "Choose a table",
+  sitesCollectionRows: (count: number) => (count === 1 ? "1 row" : `${count} rows`),
+  sitesCollectionConnectedTo: (base: string, table: string) => `${base} / ${table}`,
+  sitesCollectionSourceUnavailable:
+    "Choose the Base and table whose rows should appear on the website.",
+  sitesCollectionEdit: (name: string) => `Edit ${name}`,
+  sitesCollectionMapping: "Match columns to website content",
+  sitesCollectionMappingHint:
+    "The title is required. Everything else is optional and can be added later.",
+  sitesCollectionOptional: "Optional",
+  sitesCollectionNotMapped: "Do not show",
+  sitesCollectionNoCompatibleField: "This table needs a text column",
+  sitesCollectionTitleField: "Title",
+  sitesCollectionSlugField: "Page path",
+  sitesCollectionSummaryField: "Summary",
+  sitesCollectionBodyField: "Body",
+  sitesCollectionImageField: "Image",
+  sitesCollectionLinkField: "Link",
+  sitesCollectionDateField: "Published date",
+  sitesCollectionSave: "Save collection",
+  sitesCollectionSaving: "Saving...",
+  sitesCollectionSaveFailed:
+    "The collection was not saved. Nothing changed; check the highlighted mapping and try again.",
+  sitesCollectionDisconnect: "Disconnect",
+  sitesCollectionDisconnectConfirm: "Disconnect now",
+  sitesCollectionDisconnectHint: "The Base and all its rows stay in Drive.",
+  sitesCollectionDisconnectFailed:
+    "The collection is still connected. Remove it from any pages that use it, then try again.",
+  sitesCollectionPreview: "Current rows",
+  sitesCollectionPreviewHint:
+    "This is exactly what the next publish will read from Base.",
+  sitesCollectionPreviewLoading: "Loading the current Base rows",
+  sitesCollectionPreviewFailed:
+    "These rows could not be previewed. Fix the Base value named by the server, then try again.",
+  sitesCollectionPreviewSaveTitle: "Save to preview these rows",
+  sitesCollectionPreviewSaveBody:
+    "Once connected, the same publish rules used by the live site will check every row here.",
+  sitesCollectionPreviewEmptyTitle: "This table has no complete rows yet",
+  sitesCollectionPreviewEmptyBody:
+    "Add a title to a row in Base and it will appear here automatically.",
+  sitesCollectionPreviewLinked: "Opens a link",
+  sitesSectionCollection: "Collection",
+  sitesSectionCollectionDesc: "A reusable grid of rows from alo Base.",
+  sitesCollectionSectionHeading: "Section heading",
+  sitesCollectionSectionChoose: "Collection to show",
+  sitesCollectionSectionNoConnections: "Connect a table before adding this section",
+  sitesCollectionSectionNoConnectionsHint:
+    "The collection stays reusable, so the same Base can power more than one page.",
 } as const;
 
 /** Every string key in the catalog. */

@@ -133,6 +133,12 @@ export interface ContactFormDraft {
   form_id?: string | undefined;
 }
 
+export interface CollectionDraft {
+  type: "collection";
+  collection_id: string;
+  heading: string;
+}
+
 export interface FooterDraft {
   type: "footer";
   text: string;
@@ -152,6 +158,7 @@ export type SectionDraft =
   | FaqDraft
   | CtaDraft
   | ContactFormDraft
+  | CollectionDraft
   | FooterDraft;
 
 export const blankLink = (): SectionLink => ({ label: "", href: "" });
@@ -323,6 +330,14 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         form_id: s?.form_id,
       };
     }
+    case "collection": {
+      const s = from as Section & { type: "collection" } | undefined;
+      return {
+        type: "collection",
+        collection_id: s?.collection_id ?? "",
+        heading: s?.heading ?? "",
+      };
+    }
     case "footer": {
       const s = from as Section & { type: "footer" } | undefined;
       return { type: "footer", text: s?.text ?? "", links: seeded(s?.links ?? [], blankLink) };
@@ -478,6 +493,12 @@ export function toSection(draft: SectionDraft): Section {
         body: opt(draft.body),
         form_id: draft.form_id,
         success_message: opt(draft.success_message),
+      };
+    case "collection":
+      return {
+        type: "collection",
+        collection_id: req(draft.collection_id),
+        heading: opt(draft.heading),
       };
     case "footer":
       return {

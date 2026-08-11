@@ -38,6 +38,10 @@ import type {
   SiteTranslationEnvelope,
   SitePost,
   SiteSubmission,
+  SiteCollection,
+  SiteCollectionDraft,
+  SiteCollectionPreview,
+  SiteCollectionSource,
   SitesConfig,
   SubdomainCheck,
   ThemeEnvelope,
@@ -246,6 +250,90 @@ export class SitesApi {
     ).then((r) => r.pages ?? []);
   }
 
+  collections(siteId: string): Promise<SiteCollection[]> {
+    return this.#read<{ collections?: SiteCollection[] }>(
+      `/sites/${encodeURIComponent(siteId)}/collections`,
+    ).then((response) => response.collections ?? []);
+  }
+
+  createCollection(siteId: string, draft: SiteCollectionDraft): Promise<SiteCollection> {
+    return this.#write<SiteCollection>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/collections`,
+      draft,
+    );
+  }
+
+  updateCollection(
+    siteId: string,
+    collectionId: string,
+    draft: SiteCollectionDraft,
+  ): Promise<SiteCollection> {
+    return this.#write<SiteCollection>(
+      "PUT",
+      `/sites/${encodeURIComponent(siteId)}/collections/${encodeURIComponent(collectionId)}`,
+      draft,
+    );
+  }
+
+  async disconnectCollection(siteId: string, collectionId: string): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "DELETE",
+      `/sites/${encodeURIComponent(siteId)}/collections/${encodeURIComponent(collectionId)}`,
+      undefined,
+    );
+  }
+
+  collectionPreview(siteId: string, collectionId: string): Promise<SiteCollectionPreview> {
+    return this.#read<SiteCollectionPreview>(
+      `/sites/${encodeURIComponent(siteId)}/collections/${encodeURIComponent(collectionId)}/preview`,
+    );
+  }
+
+  /** Every readable personal or Space Base, discovered through Drive's own
+   *  access-scoped list route. Sites never receives a second permission
+   *  vocabulary and never asks the user to paste an opaque id. */
+  async collectionSources(): Promise<SiteCollectionSource[]> {
+    const spaces = await this.#read<{
+      spaces?: Array<{ id: string; archived: boolean }>;
+    }>("/spaces").then((response) => response.spaces ?? []);
+    const locations: Array<string | null> = [
+      null,
+      ...spaces.filter((space) => !space.archived).map((space) => space.id),
+    ];
+    const baseNodes = (
+      await Promise.all(locations.map((space) => this.#baseNodes(space, null)))
+    ).flat();
+    const sources = await Promise.all(
+      baseNodes.map(async (node) => {
+        const base = await this.#read<{
+          nodeId: string;
+          tables?: Array<{
+            id: string;
+            name: string;
+            fields?: Array<{ id: string; name: string; type: string }>;
+            records?: unknown[];
+          }>;
+        }>(`/drive/base/${encodeURIComponent(node.id)}`);
+        return {
+          nodeId: node.id,
+          name: node.name,
+          tables: (base.tables ?? []).map((table) => ({
+            id: table.id,
+            name: table.name,
+            recordCount: table.records?.length ?? 0,
+            fields: (table.fields ?? []).flatMap((field) =>
+              field.type === "text" || field.type === "date" || field.type === "attachment"
+                ? [{ id: field.id, name: field.name, type: field.type }]
+                : [],
+            ),
+          })),
+        } satisfies SiteCollectionSource;
+      }),
+    );
+    return sources.sort((left, right) => left.name.localeCompare(right.name));
+  }
+
   /** Creates a page at the end of the navigation order, with an empty section
    *  stack; answers the stored page. */
   createPage(siteId: string, draft: PageDraft): Promise<SitePage> {
@@ -450,6 +538,29 @@ export class SitesApi {
   /** Every section op answers `{"sections": <envelope>}` — unwraps it. */
   async #sections(answer: Promise<{ sections: SectionsEnvelope }>): Promise<SectionsEnvelope> {
     return (await answer).sections;
+  }
+
+  async #baseNodes(
+    space: string | null,
+    parent: string | null,
+  ): Promise<Array<{ id: string; name: string }>> {
+    const query = new URLSearchParams();
+    if (space !== null) query.set("space", space);
+    if (parent !== null) query.set("parent", parent);
+    const nodes = await this.#read<{
+      nodes?: Array<{ id: string; kind: string; name: string }>;
+    }>(`/drive/list?${query.toString()}`).then((response) => response.nodes ?? []);
+    const nested = await Promise.all(
+      nodes
+        .filter((node) => node.kind === "folder")
+        .map((folder) => this.#baseNodes(space, folder.id)),
+    );
+    return [
+      ...nodes
+        .filter((node) => node.kind === "base")
+        .map(({ id, name }) => ({ id, name })),
+      ...nested.flat(),
+    ];
   }
 
   async #read<T>(path: string): Promise<T> {

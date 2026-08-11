@@ -4,13 +4,14 @@
 // SERVER rules on content (blank required text, bad hrefs, empty lists) and
 // its 422 sentence is shown here verbatim, so there is exactly one copy of
 // every rule.
-import { createContext, useContext, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Blocks, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
-import { Button, IconButton } from "../ds";
+import { Button, IconButton, Spinner } from "../ds";
 import { kindDescription, kindLabel } from "./sectionInfo";
 import {
   blankFaqItem,
@@ -25,6 +26,7 @@ import {
 } from "./sectionDrafts";
 import type {
   ContactFormDraft,
+  CollectionDraft,
   CtaDraft,
   FaqDraft,
   FeaturesDraft,
@@ -41,6 +43,7 @@ import type {
 import type { Section, SectionImage, SectionKind, SectionLink } from "./sections";
 import type { SectionsEnvelope } from "./sections";
 import type { SiteCopyAction, SiteEditEnvelope, SiteEditTarget } from "./types";
+import type { SiteCollection } from "./types";
 import { sitesMessage, useSitesApi } from "./api";
 import { DialogFrame, Field } from "./parts";
 import styles from "./SitesModule.module.css";
@@ -821,6 +824,82 @@ function ContactFormFields({ draft, onChange }: { draft: ContactFormDraft; onCha
   );
 }
 
+function CollectionFields({ draft, onChange }: { draft: CollectionDraft; onChange: Change }) {
+  const { siteId = "" } = useParams();
+  const navigate = useNavigate();
+  const api = useSitesApi();
+  const [collections, setCollections] = useState<SiteCollection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void api.collections(siteId).then(
+      (connected) => {
+        if (cancelled) return;
+        setCollections(connected);
+        setError(null);
+      },
+      (reason: unknown) => {
+        if (!cancelled) setError(sitesMessage(reason, strings.sitesCollectionsLoadFailed));
+      },
+    ).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, siteId]);
+
+  const firstCollectionId = collections[0]?.id;
+  useEffect(() => {
+    if (draft.collection_id === "" && firstCollectionId !== undefined) {
+      onChange({ ...draft, collection_id: firstCollectionId });
+    }
+  }, [draft, firstCollectionId, onChange]);
+
+  return (
+    <>
+      <TextField
+        label={strings.sitesCollectionSectionHeading}
+        value={draft.heading}
+        onChange={(heading) => onChange({ ...draft, heading })}
+        autoFocus
+        copyPointer="/heading"
+      />
+      {loading ? (
+        <div className={styles.collectionFieldLoading} role="status">
+          <Spinner size={16} />
+          <span>{strings.sitesCollectionsLoading}</span>
+        </div>
+      ) : collections.length === 0 ? (
+        <div className={styles.collectionFieldEmpty}>
+          <strong>{strings.sitesCollectionSectionNoConnections}</strong>
+          <span>{strings.sitesCollectionSectionNoConnectionsHint}</span>
+          <Button variant="ghost" onClick={() => navigate(`/sites/${siteId}/collections`)}>
+            {strings.sitesConnectTable}
+          </Button>
+        </div>
+      ) : (
+        <label className={styles.field}>
+          <span>{strings.sitesCollectionSectionChoose}</span>
+          <select
+            className={styles.input}
+            value={draft.collection_id}
+            onChange={(event) => onChange({ ...draft, collection_id: event.target.value })}
+          >
+            {collections.map((collection) => (
+              <option key={collection.id} value={collection.id}>{collection.name}</option>
+            ))}
+          </select>
+        </label>
+      )}
+      {error !== null && <p className={styles.aiEditError} role="alert">{error}</p>}
+    </>
+  );
+}
+
 function FooterFields({ draft, onChange }: { draft: FooterDraft; onChange: Change }) {
   return (
     <>
@@ -866,6 +945,8 @@ function FormFields({ draft, onChange }: { draft: SectionDraft; onChange: Change
       return <CtaFields draft={draft} onChange={onChange} />;
     case "contact_form":
       return <ContactFormFields draft={draft} onChange={onChange} />;
+    case "collection":
+      return <CollectionFields draft={draft} onChange={onChange} />;
     case "footer":
       return <FooterFields draft={draft} onChange={onChange} />;
   }
@@ -910,7 +991,7 @@ export function SectionFormDialog({
       subtitle={kindDescription(kind)}
       error={error}
       busy={busy}
-      canSubmit
+      canSubmit={draft.type !== "collection" || draft.collection_id !== ""}
       submitLabel={strings.sitesSaveSection}
       onClose={onClose}
       onSubmit={() => onSave(toSection(draft))}

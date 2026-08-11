@@ -3833,4 +3833,69 @@ export const nl: Partial<Catalog> = {
   sitesWholeTranslationApprove: "Vertaling goedkeuren",
   sitesTranslationPageKind: "Pagina",
   sitesTranslationPostKind: "Bericht",
+  sitesCollections: "Collecties",
+  sitesCollectionsHint: "Maak van een alo Base-tabel herbruikbare kaarten voor uw website.",
+  sitesConnectTable: "Tabel koppelen",
+  sitesCollectionsLoading: "Collecties laden...",
+  sitesCollectionsLoadFailed:
+    "De collecties konden niet worden geladen. Controleer uw verbinding en probeer opnieuw.",
+  sitesCollectionEmptyTitle: "Koppel uw eerste tabel",
+  sitesCollectionEmptyBody:
+    "Kies een alo Base, koppel de kolommen eenmaal en hergebruik de rijen op elke pagina.",
+  sitesCollectionNoBasesTitle: "Maak eerst een alo Base",
+  sitesCollectionNoBasesBody:
+    "Collecties lezen rijen uit alo Base. Maak een Base in Drive en kom dan terug om die te koppelen.",
+  sitesCollectionOpenDrive: "Drive openen",
+  sitesCollectionName: "Collectienaam",
+  sitesCollectionBase: "alo Base",
+  sitesCollectionTable: "Tabel",
+  sitesCollectionChooseBase: "Kies een Base",
+  sitesCollectionChooseTable: "Kies een tabel",
+  sitesCollectionRows: (count: number) => (count === 1 ? "1 rij" : `${count} rijen`),
+  sitesCollectionConnectedTo: (base: string, table: string) => `${base} / ${table}`,
+  sitesCollectionSourceUnavailable:
+    "Kies de Base en tabel waarvan de rijen op de website moeten verschijnen.",
+  sitesCollectionEdit: (name: string) => `${name} bewerken`,
+  sitesCollectionMapping: "Kolommen aan website-inhoud koppelen",
+  sitesCollectionMappingHint:
+    "De titel is verplicht. Al het andere is optioneel en kan later worden toegevoegd.",
+  sitesCollectionOptional: "Optioneel",
+  sitesCollectionNotMapped: "Niet tonen",
+  sitesCollectionNoCompatibleField: "Deze tabel heeft een tekstkolom nodig",
+  sitesCollectionTitleField: "Titel",
+  sitesCollectionSlugField: "Paginapad",
+  sitesCollectionSummaryField: "Samenvatting",
+  sitesCollectionBodyField: "Inhoud",
+  sitesCollectionImageField: "Afbeelding",
+  sitesCollectionLinkField: "Link",
+  sitesCollectionDateField: "Publicatiedatum",
+  sitesCollectionSave: "Collectie opslaan",
+  sitesCollectionSaving: "Opslaan...",
+  sitesCollectionSaveFailed:
+    "De collectie is niet opgeslagen. Er is niets gewijzigd; controleer de koppeling en probeer opnieuw.",
+  sitesCollectionDisconnect: "Loskoppelen",
+  sitesCollectionDisconnectConfirm: "Nu loskoppelen",
+  sitesCollectionDisconnectHint: "De Base en alle rijen blijven in Drive staan.",
+  sitesCollectionDisconnectFailed:
+    "De collectie is nog gekoppeld. Verwijder haar van de pagina's die haar gebruiken en probeer opnieuw.",
+  sitesCollectionPreview: "Huidige rijen",
+  sitesCollectionPreviewHint:
+    "Dit is precies wat de volgende publicatie uit Base zal lezen.",
+  sitesCollectionPreviewLoading: "Huidige Base-rijen laden",
+  sitesCollectionPreviewFailed:
+    "Deze rijen konden niet worden bekeken. Herstel in Base de waarde die de server noemt en probeer opnieuw.",
+  sitesCollectionPreviewSaveTitle: "Sla op om deze rijen te bekijken",
+  sitesCollectionPreviewSaveBody:
+    "Na het koppelen controleert dezelfde publicatieregel van de live site elke rij hier.",
+  sitesCollectionPreviewEmptyTitle: "Deze tabel heeft nog geen volledige rijen",
+  sitesCollectionPreviewEmptyBody:
+    "Voeg in Base een titel aan een rij toe en die verschijnt hier automatisch.",
+  sitesCollectionPreviewLinked: "Opent een link",
+  sitesSectionCollection: "Collectie",
+  sitesSectionCollectionDesc: "Een herbruikbaar raster met rijen uit alo Base.",
+  sitesCollectionSectionHeading: "Sectiekop",
+  sitesCollectionSectionChoose: "Te tonen collectie",
+  sitesCollectionSectionNoConnections: "Koppel een tabel voordat u deze sectie toevoegt",
+  sitesCollectionSectionNoConnectionsHint:
+    "De collectie blijft herbruikbaar, zodat dezelfde Base meerdere pagina's kan voeden.",
 };

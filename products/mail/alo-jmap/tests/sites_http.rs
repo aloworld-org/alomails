@@ -178,6 +178,27 @@ async fn every_route_family_requires_a_bearer_token() {
         ),
         ("GET", "/sites/some-id/submissions.csv".to_owned(), None),
         ("GET", "/sites/some-id/posts".to_owned(), None),
+        ("GET", "/sites/some-id/collections".to_owned(), None),
+        (
+            "POST",
+            "/sites/some-id/collections".to_owned(),
+            Some(json!({})),
+        ),
+        (
+            "PUT",
+            "/sites/some-id/collections/collection".to_owned(),
+            Some(json!({})),
+        ),
+        (
+            "DELETE",
+            "/sites/some-id/collections/collection".to_owned(),
+            Some(json!({})),
+        ),
+        (
+            "GET",
+            "/sites/some-id/collections/collection/preview".to_owned(),
+            None,
+        ),
         (
             "POST",
             "/sites/some-id/posts".to_owned(),
@@ -221,6 +242,191 @@ async fn every_route_family_requires_a_bearer_token() {
         let (status, _) = send(&h.app, req).await;
         assert_eq!(status, StatusCode::UNAUTHORIZED, "{method} {uri}");
     }
+}
+
+// ---- Base-backed collections ------------------------------------------------
+
+#[tokio::test]
+async fn collection_routes_map_preview_disconnect_and_hide_other_tenants() {
+    let owner = harness("sites-collections-http").await;
+    let outsider = harness_on(Arc::clone(&owner.store), "sites-collections-other").await;
+    let site = created_id(
+        "site",
+        post(
+            &owner.app,
+            &owner.token,
+            "/sites",
+            json!({ "name": "Roastery", "subdomain": sub("collection", &owner) }),
+        )
+        .await,
+    );
+    let page = created_id(
+        "page",
+        post(
+            &owner.app,
+            &owner.token,
+            &format!("/sites/{site}/pages"),
+            json!({ "title": "Home", "home": true }),
+        )
+        .await,
+    );
+
+    let base_node = owner
+        .acc
+        .create_base(&DriveLocation::Personal, None, "Roasts")
+        .await
+        .unwrap();
+    let base = owner.acc.base(&base_node).await.unwrap().unwrap();
+    let table = base.tables[0].id.clone();
+    let title = base.tables[0].fields[0].id.clone();
+    let summary = base.tables[0].fields[1].id.clone();
+    let mut cells = serde_json::Map::new();
+    cells.insert(title.as_str().to_owned(), json!("Harbour Blend"));
+    cells.insert(
+        summary.as_str().to_owned(),
+        json!("Chocolate and red apple"),
+    );
+    owner
+        .acc
+        .base_add_record(&table, &Value::Object(cells))
+        .await
+        .unwrap();
+
+    let connection = json!({
+        "name": "Seasonal roasts",
+        "baseNodeId": base_node.as_str(),
+        "baseTableId": table.as_str(),
+        "mapping": {
+            "title": title.as_str(),
+            "summary": summary.as_str()
+        }
+    });
+    let collection = created_id(
+        "collection",
+        post(
+            &owner.app,
+            &owner.token,
+            &format!("/sites/{site}/collections"),
+            connection.clone(),
+        )
+        .await,
+    );
+
+    let (status, listed) = get(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/collections"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(listed["collections"][0]["name"], json!("Seasonal roasts"));
+
+    let (status, preview) = get(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/collections/{collection}/preview"),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "collection preview failed: {preview}"
+    );
+    assert_eq!(preview["items"][0]["title"], json!("Harbour Blend"));
+    assert_eq!(
+        preview["items"][0]["summary"],
+        json!("Chocolate and red apple")
+    );
+
+    let (status, section) = post(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/pages/{page}/sections"),
+        json!({
+            "section": {
+                "type": "collection",
+                "collection_id": collection,
+                "heading": "Fresh from the roaster"
+            }
+        }),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "collection section failed: {section}"
+    );
+    let (status, _, html) = get_text(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/pages/{page}/preview"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(html.contains("Fresh from the roaster"));
+    assert!(html.contains("Harbour Blend"));
+    assert!(html.contains("Chocolate and red apple"));
+
+    let mut renamed = connection;
+    renamed["name"] = json!("Featured roasts");
+    let (status, updated) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/collections/{collection}"),
+        renamed.clone(),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::OK,
+        "collection update failed: {updated}"
+    );
+    assert_eq!(updated["name"], json!("Featured roasts"));
+
+    let foreign_attempts = [
+        ("GET", format!("/sites/{site}/collections"), json!({})),
+        (
+            "POST",
+            format!("/sites/{site}/collections"),
+            renamed.clone(),
+        ),
+        (
+            "PUT",
+            format!("/sites/{site}/collections/{collection}"),
+            renamed,
+        ),
+        (
+            "GET",
+            format!("/sites/{site}/collections/{collection}/preview"),
+            json!({}),
+        ),
+        (
+            "DELETE",
+            format!("/sites/{site}/collections/{collection}"),
+            json!({}),
+        ),
+    ];
+    for (method, uri, body) in foreign_attempts {
+        let (status, answer) = send(
+            &outsider.app,
+            with_json(method, &uri, Some(&outsider.token), body),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{method} {uri}: {answer}");
+        assert!(!answer.to_string().contains("Featured roasts"));
+    }
+
+    let (status, body) = delete(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/collections/{collection}"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "disconnect failed: {body}");
+    assert!(
+        owner.acc.base(&base_node).await.unwrap().is_some(),
+        "disconnect deleted the source Base"
+    );
 }
 
 // ---- form submissions inbox ------------------------------------------------

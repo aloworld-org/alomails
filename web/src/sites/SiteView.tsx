@@ -17,6 +17,7 @@ import {
   Newspaper,
   Palette,
   Sparkles,
+  Rows3,
   X,
 } from "lucide-react";
 
@@ -541,6 +542,14 @@ export function SiteView() {
           <div className={styles.sectionBar}>
             <h2 className={styles.sectionTitle}>{strings.sitesPages}</h2>
             <div className={styles.sectionBarActions}>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Rows3 size="var(--icon-size-inline)" />}
+                onClick={() => navigate("collections")}
+              >
+                {strings.sitesCollections}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

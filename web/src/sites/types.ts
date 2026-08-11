@@ -159,6 +159,70 @@ export interface SiteSubmission {
   receivedAt: string;
 }
 
+export interface SiteCollectionFieldMapping {
+  title: string;
+  slug: string | null;
+  summary: string | null;
+  body: string | null;
+  image: string | null;
+  link: string | null;
+  publishedAt: string | null;
+}
+
+/** One saved connection from this site to a readable alo Base table. */
+export interface SiteCollection {
+  id: string;
+  name: string;
+  baseNodeId: string;
+  baseTableId: string;
+  mapping: SiteCollectionFieldMapping;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SiteCollectionDraft {
+  name: string;
+  baseNodeId: string;
+  baseTableId: string;
+  mapping: SiteCollectionFieldMapping;
+}
+
+export interface SiteCollectionSourceField {
+  id: string;
+  name: string;
+  type: "text" | "date" | "attachment";
+}
+
+export interface SiteCollectionSourceTable {
+  id: string;
+  name: string;
+  fields: SiteCollectionSourceField[];
+  recordCount: number;
+}
+
+/** A Base the caller can already read in Drive, ready to connect in Sites. */
+export interface SiteCollectionSource {
+  nodeId: string;
+  name: string;
+  tables: SiteCollectionSourceTable[];
+}
+
+export interface SiteCollectionPreviewItem {
+  title: string;
+  slug: string | null;
+  summary: string | null;
+  body: string | null;
+  imageBlobId: string | null;
+  link: string | null;
+  publishedAt: string | null;
+}
+
+export interface SiteCollectionPreview {
+  id: string;
+  name: string;
+  items: SiteCollectionPreviewItem[];
+}
+
 /** Privacy-preserving traffic aggregates for one inclusive period. */
 export interface SiteAnalyticsReport {
   from: string;

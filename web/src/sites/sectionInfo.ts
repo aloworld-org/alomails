@@ -31,6 +31,8 @@ export function kindLabel(kind: SectionKind): string {
       return strings.sitesSectionCta;
     case "contact_form":
       return strings.sitesSectionContactForm;
+    case "collection":
+      return strings.sitesSectionCollection;
     case "footer":
       return strings.sitesSectionFooter;
   }
@@ -61,6 +63,8 @@ export function kindDescription(kind: SectionKind): string {
       return strings.sitesSectionCtaDesc;
     case "contact_form":
       return strings.sitesSectionContactFormDesc;
+    case "collection":
+      return strings.sitesSectionCollectionDesc;
     case "footer":
       return strings.sitesSectionFooterDesc;
   }
@@ -99,6 +103,8 @@ export function sectionSummary(section: Section): string {
       return clip(section.heading);
     case "contact_form":
       return section.heading ?? "";
+    case "collection":
+      return section.heading ?? strings.sitesSectionCollection;
     case "footer":
       return section.text ?? strings.sitesCountLinks(section.links.length);
   }

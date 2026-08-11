@@ -290,6 +290,27 @@ impl AccountStore {
             .collect()
     }
 
+    /// Resolves one connected collection through the same normalization and
+    /// validation path publishing uses, without writing a snapshot. The
+    /// authenticated editor uses this for an honest draft preview: Base
+    /// remains the editable source, while publishing still freezes its own
+    /// immutable copy.
+    pub async fn site_collection_preview(
+        &self,
+        site: &SiteId,
+        collection: &SiteCollectionId,
+    ) -> Result<SiteCollectionSnapshot> {
+        // The publish path intentionally turns a dangling page reference into
+        // a validation refusal. The direct editor endpoint is different: an
+        // absent or foreign connection is an ordinary tenant-hidden 404.
+        if self.site_collection(site, collection).await?.is_none() {
+            return Err(StoreError::NotFound);
+        }
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        self.resolve_collection_snapshot(site, collection, &mut tx)
+            .await
+    }
+
     async fn freeze_referenced_collections(
         &self,
         site: &SiteId,

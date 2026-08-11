@@ -46,10 +46,12 @@ use alo_sites::render::{
 };
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
-    BlobId, DriveNodeId, LocalizedSitePage, NewGeneratedSite, NewGeneratedSitePage, NewSitePost,
-    Section, SectionsEnvelope, Site, SiteDomain, SiteDomainStatus, SiteFormId,
-    SiteFormSubmissionId, SiteId, SitePage, SitePageId, SitePost, SitePostId, SitePostUpdate,
-    SiteTheme, SiteTranslationPageContent, SiteTranslationPageWrite, SiteTranslationPostContent,
+    BaseFieldId, BaseTableId, BlobId, DriveNodeId, LocalizedSitePage, NewGeneratedSite,
+    NewGeneratedSitePage, NewSitePost, Section, SectionsEnvelope, Site, SiteCollection,
+    SiteCollectionFieldMapping, SiteCollectionId, SiteCollectionInput, SiteCollectionItem,
+    SiteCollectionSnapshot, SiteDomain, SiteDomainStatus, SiteFormId, SiteFormSubmissionId, SiteId,
+    SitePage, SitePageId, SitePost, SitePostId, SitePostUpdate, SiteTheme,
+    SiteTranslationPageContent, SiteTranslationPageWrite, SiteTranslationPostContent,
     SiteTranslationPostWrite, StoreError, normalize_site_domain, site_theme::THEME_PRESETS,
 };
 
@@ -175,6 +177,46 @@ fn post_json(post: &SitePost) -> Value {
         "publishedAt": post.published_at.map(iso),
         "createdAt": iso(post.created_at),
         "updatedAt": iso(post.updated_at),
+    })
+}
+
+fn collection_json(collection: &SiteCollection) -> Value {
+    json!({
+        "id": collection.id.as_str(),
+        "name": collection.name,
+        "baseNodeId": collection.base_node_id.as_str(),
+        "baseTableId": collection.base_table_id.as_str(),
+        "mapping": {
+            "title": collection.mapping.title.as_str(),
+            "slug": collection.mapping.slug.as_ref().map(BaseFieldId::as_str),
+            "summary": collection.mapping.summary.as_ref().map(BaseFieldId::as_str),
+            "body": collection.mapping.body.as_ref().map(BaseFieldId::as_str),
+            "image": collection.mapping.image.as_ref().map(BaseFieldId::as_str),
+            "link": collection.mapping.link.as_ref().map(BaseFieldId::as_str),
+            "publishedAt": collection.mapping.published_at.as_ref().map(BaseFieldId::as_str),
+        },
+        "createdAt": iso(collection.created_at),
+        "updatedAt": iso(collection.updated_at),
+    })
+}
+
+fn collection_item_json(item: &SiteCollectionItem) -> Value {
+    json!({
+        "title": item.title,
+        "slug": item.slug,
+        "summary": item.summary,
+        "body": item.body,
+        "imageBlobId": item.image.as_ref().map(BlobId::as_str),
+        "link": item.link,
+        "publishedAt": item.published_at,
+    })
+}
+
+fn collection_preview_json(snapshot: &SiteCollectionSnapshot) -> Value {
+    json!({
+        "id": snapshot.collection_id.as_str(),
+        "name": snapshot.name,
+        "items": snapshot.items.iter().map(collection_item_json).collect::<Vec<_>>(),
     })
 }
 
@@ -508,7 +550,7 @@ pub async fn propose_page_edit(
         alo_ai::apply_site_edit(&current, &proposal).map_err(|error| site_edit_problem(&error))?;
     let proposed_value = proposed.to_value().map_err(|_| Problem::server_error())?;
     let site = require_site(&account, &sid).await?;
-    let preview_html = render_preview_html(&account, &site, &page, &proposed_value).await;
+    let preview_html = render_preview_html(&account, &site, &page, &proposed_value).await?;
     Ok(Json(json!({
         "proposal": proposal,
         "previewHtml": preview_html,
@@ -982,6 +1024,179 @@ pub async fn get_site(
         );
     }
     Ok(Json(j))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct CollectionMappingBody {
+    title: String,
+    #[serde(default)]
+    slug: Option<String>,
+    #[serde(default)]
+    summary: Option<String>,
+    #[serde(default)]
+    body: Option<String>,
+    #[serde(default)]
+    image: Option<String>,
+    #[serde(default)]
+    link: Option<String>,
+    #[serde(default)]
+    published_at: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct CollectionBody {
+    name: String,
+    base_node_id: String,
+    base_table_id: String,
+    mapping: CollectionMappingBody,
+}
+
+impl CollectionBody {
+    fn mapping(&self) -> SiteCollectionFieldMapping {
+        SiteCollectionFieldMapping {
+            title: BaseFieldId::new(self.mapping.title.trim().to_owned()),
+            slug: field_id(self.mapping.slug.as_deref()),
+            summary: field_id(self.mapping.summary.as_deref()),
+            body: field_id(self.mapping.body.as_deref()),
+            image: field_id(self.mapping.image.as_deref()),
+            link: field_id(self.mapping.link.as_deref()),
+            published_at: field_id(self.mapping.published_at.as_deref()),
+        }
+    }
+}
+
+fn field_id(value: Option<&str>) -> Option<BaseFieldId> {
+    value
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| BaseFieldId::new(value.to_owned()))
+}
+
+/// `GET /sites/:id/collections` lists the site's connected Base tables.
+pub async fn list_collections(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let site = SiteId::new(id);
+    require_site(&account, &site).await?;
+    let collections = account
+        .acc
+        .site_collections(&site)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "collections": collections.iter().map(collection_json).collect::<Vec<_>>()
+    })))
+}
+
+/// `POST /sites/:id/collections` connects one readable Base table. The Base
+/// and every mapped field remain server-validated through the account door.
+pub async fn create_collection(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: CollectionBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let site = SiteId::new(id);
+    let base_node_id = DriveNodeId::new(req.base_node_id.trim().to_owned());
+    let base_table_id = BaseTableId::new(req.base_table_id.trim().to_owned());
+    let mapping = req.mapping();
+    let collection_id = account
+        .acc
+        .create_site_collection(
+            &site,
+            &SiteCollectionInput {
+                name: &req.name,
+                base_node_id: &base_node_id,
+                base_table_id: &base_table_id,
+                mapping: &mapping,
+            },
+        )
+        .await
+        .map_err(map_store_err)?;
+    let collection = account
+        .acc
+        .site_collection(&site, &collection_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(Problem::server_error)?;
+    Ok(Json(collection_json(&collection)))
+}
+
+/// `PUT /sites/:id/collections/:collection` atomically replaces the complete
+/// source and mapping after validating it against the current Base schema.
+pub async fn update_collection(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, collection)): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: CollectionBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let site = SiteId::new(id);
+    let collection = SiteCollectionId::new(collection);
+    let base_node_id = DriveNodeId::new(req.base_node_id.trim().to_owned());
+    let base_table_id = BaseTableId::new(req.base_table_id.trim().to_owned());
+    let mapping = req.mapping();
+    account
+        .acc
+        .update_site_collection(
+            &site,
+            &collection,
+            &SiteCollectionInput {
+                name: &req.name,
+                base_node_id: &base_node_id,
+                base_table_id: &base_table_id,
+                mapping: &mapping,
+            },
+        )
+        .await
+        .map_err(map_store_err)?;
+    let stored = account
+        .acc
+        .site_collection(&site, &collection)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(Problem::server_error)?;
+    Ok(Json(collection_json(&stored)))
+}
+
+/// `DELETE /sites/:id/collections/:collection` removes only the connection;
+/// the Base table and its rows are never changed.
+pub async fn delete_collection(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, collection)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .delete_site_collection(&SiteId::new(id), &SiteCollectionId::new(collection))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({ "status": "ok" })))
+}
+
+/// `GET /sites/:id/collections/:collection/preview` resolves the current Base
+/// rows through the exact publish normalization path without writing.
+pub async fn preview_collection(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, collection)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let preview = account
+        .acc
+        .site_collection_preview(&SiteId::new(id), &SiteCollectionId::new(collection))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(collection_preview_json(&preview)))
 }
 
 #[derive(Deserialize)]
@@ -1626,10 +1841,11 @@ const PREVIEW_INLINE_IMAGE_MAX_BYTES: usize = 4 * 1024 * 1024;
 /// logo/favicon plus every section image, read tenant-scoped through the
 /// account door. Ids that don't resolve, aren't images, or are oversized are
 /// simply absent (the renderer then falls back to the public path).
-async fn preview_image_map(
+async fn preview_image_map<'a>(
     account: &Account,
     theme: &SiteTheme,
     sections: &Value,
+    collections: impl Iterator<Item = &'a SiteCollectionSnapshot>,
 ) -> std::collections::HashMap<String, String> {
     use base64::Engine;
 
@@ -1643,6 +1859,15 @@ async fn preview_image_map(
             section
                 .image_blob_ids()
                 .into_iter()
+                .map(|blob| blob.as_str().to_owned()),
+        );
+    }
+    for collection in collections {
+        ids.extend(
+            collection
+                .items
+                .iter()
+                .filter_map(|item| item.image.as_ref())
                 .map(|blob| blob.as_str().to_owned()),
         );
     }
@@ -1685,7 +1910,7 @@ pub async fn preview_page(
     let sid = SiteId::new(id);
     let site = require_site(&account, &sid).await?;
     let page = page_record(&account, &sid, &SitePageId::new(pid)).await?;
-    let html = render_preview_html(&account, &site, &page, &page.sections).await;
+    let html = render_preview_html(&account, &site, &page, &page.sections).await?;
     Ok((
         [
             (header::CONTENT_TYPE, "text/html; charset=utf-8"),
@@ -1716,7 +1941,7 @@ pub async fn preview_localized_page(
         .map_err(map_store_err)?
         .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such page"))?;
     let html =
-        render_preview_html(&account, &site, &localized.page, &localized.page.sections).await;
+        render_preview_html(&account, &site, &localized.page, &localized.page.sections).await?;
     Ok((
         [
             (header::CONTENT_TYPE, "text/html; charset=utf-8"),
@@ -1736,9 +1961,24 @@ async fn render_preview_html(
     site: &Site,
     page: &SitePage,
     sections: &Value,
-) -> String {
+) -> Result<String, Problem> {
     let theme = SiteTheme::from_stored(site.theme.clone());
-    let images = preview_image_map(account, &theme, sections).await;
+    let mut collections = HashMap::new();
+    for section in sections_lenient(sections) {
+        if let Section::Collection(collection) = section {
+            let id = collection.collection_id.as_str().to_owned();
+            if collections.contains_key(&id) {
+                continue;
+            }
+            let preview = account
+                .acc
+                .site_collection_preview(&site.id, &collection.collection_id)
+                .await
+                .map_err(map_store_err)?;
+            collections.insert(id, preview);
+        }
+    }
+    let images = preview_image_map(account, &theme, sections, collections.values()).await;
     let base_url = format!("https://{}.{}", site.subdomain, sites_domain());
     let site_ctx = SiteRenderContext {
         name: &site.name,
@@ -1762,10 +2002,6 @@ async fn render_preview_html(
     } else {
         format!("{language_prefix}/{}", page.slug)
     };
-    // Collection rows are attached to the authenticated preview in S2.02c;
-    // until then the schema remains safely previewable with the public empty
-    // state rather than reaching around the account door into Base here.
-    let collections = HashMap::new();
     let page_ctx = PageRenderContext {
         path: &path,
         title: &page.title,
@@ -1774,7 +2010,11 @@ async fn render_preview_html(
         sections,
         collections: &collections,
     };
-    render_page_preview(&site_ctx, &page_ctx, &stylesheet(&theme))
+    Ok(render_page_preview(
+        &site_ctx,
+        &page_ctx,
+        &stylesheet(&theme),
+    ))
 }
 
 #[derive(Deserialize)]

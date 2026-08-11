@@ -3869,4 +3869,69 @@ export const fr: Partial<Catalog> = {
   sitesWholeTranslationApprove: "Approuver la traduction",
   sitesTranslationPageKind: "Page",
   sitesTranslationPostKind: "Article",
+  sitesCollections: "Collections",
+  sitesCollectionsHint: "Transformez une table alo Base en cartes réutilisables pour votre site.",
+  sitesConnectTable: "Connecter une table",
+  sitesCollectionsLoading: "Chargement des collections...",
+  sitesCollectionsLoadFailed:
+    "Les collections n'ont pas pu être chargées. Vérifiez votre connexion et réessayez.",
+  sitesCollectionEmptyTitle: "Connectez votre première table",
+  sitesCollectionEmptyBody:
+    "Choisissez une alo Base, associez ses colonnes une fois, puis réutilisez ses lignes sur toutes les pages.",
+  sitesCollectionNoBasesTitle: "Créez d'abord une alo Base",
+  sitesCollectionNoBasesBody:
+    "Les collections lisent les lignes d'alo Base. Créez une Base dans Drive, puis revenez la connecter.",
+  sitesCollectionOpenDrive: "Ouvrir Drive",
+  sitesCollectionName: "Nom de la collection",
+  sitesCollectionBase: "alo Base",
+  sitesCollectionTable: "Table",
+  sitesCollectionChooseBase: "Choisir une Base",
+  sitesCollectionChooseTable: "Choisir une table",
+  sitesCollectionRows: (count: number) => (count === 1 ? "1 ligne" : `${count} lignes`),
+  sitesCollectionConnectedTo: (base: string, table: string) => `${base} / ${table}`,
+  sitesCollectionSourceUnavailable:
+    "Choisissez la Base et la table dont les lignes doivent apparaître sur le site.",
+  sitesCollectionEdit: (name: string) => `Modifier ${name}`,
+  sitesCollectionMapping: "Associer les colonnes au contenu du site",
+  sitesCollectionMappingHint:
+    "Le titre est obligatoire. Tout le reste est facultatif et peut être ajouté plus tard.",
+  sitesCollectionOptional: "Facultatif",
+  sitesCollectionNotMapped: "Ne pas afficher",
+  sitesCollectionNoCompatibleField: "Cette table a besoin d'une colonne de texte",
+  sitesCollectionTitleField: "Titre",
+  sitesCollectionSlugField: "Chemin de page",
+  sitesCollectionSummaryField: "Résumé",
+  sitesCollectionBodyField: "Corps",
+  sitesCollectionImageField: "Image",
+  sitesCollectionLinkField: "Lien",
+  sitesCollectionDateField: "Date de publication",
+  sitesCollectionSave: "Enregistrer la collection",
+  sitesCollectionSaving: "Enregistrement...",
+  sitesCollectionSaveFailed:
+    "La collection n'a pas été enregistrée. Rien n'a changé ; vérifiez l'association et réessayez.",
+  sitesCollectionDisconnect: "Déconnecter",
+  sitesCollectionDisconnectConfirm: "Déconnecter maintenant",
+  sitesCollectionDisconnectHint: "La Base et toutes ses lignes restent dans Drive.",
+  sitesCollectionDisconnectFailed:
+    "La collection est toujours connectée. Retirez-la des pages qui l'utilisent, puis réessayez.",
+  sitesCollectionPreview: "Lignes actuelles",
+  sitesCollectionPreviewHint:
+    "Voici exactement ce que la prochaine publication lira dans Base.",
+  sitesCollectionPreviewLoading: "Chargement des lignes actuelles de Base",
+  sitesCollectionPreviewFailed:
+    "Ces lignes n'ont pas pu être prévisualisées. Corrigez dans Base la valeur indiquée par le serveur, puis réessayez.",
+  sitesCollectionPreviewSaveTitle: "Enregistrez pour prévisualiser les lignes",
+  sitesCollectionPreviewSaveBody:
+    "Une fois connectée, chaque ligne est vérifiée ici avec les mêmes règles que le site public.",
+  sitesCollectionPreviewEmptyTitle: "Cette table n'a pas encore de ligne complète",
+  sitesCollectionPreviewEmptyBody:
+    "Ajoutez un titre à une ligne dans Base et elle apparaîtra ici automatiquement.",
+  sitesCollectionPreviewLinked: "Ouvre un lien",
+  sitesSectionCollection: "Collection",
+  sitesSectionCollectionDesc: "Une grille réutilisable de lignes provenant d'alo Base.",
+  sitesCollectionSectionHeading: "Titre de la section",
+  sitesCollectionSectionChoose: "Collection à afficher",
+  sitesCollectionSectionNoConnections: "Connectez une table avant d'ajouter cette section",
+  sitesCollectionSectionNoConnectionsHint:
+    "La collection reste réutilisable : la même Base peut alimenter plusieurs pages.",
 };

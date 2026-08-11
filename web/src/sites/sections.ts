@@ -1,5 +1,5 @@
 // The TypeScript mirror of the sections schema v1 — the closed vocabulary of
-// twelve section types a page is stacked from, exactly as the server's
+// thirteen section types a page is stacked from, exactly as the server's
 // `site_model` speaks it on the wire (`type`-tagged, snake_case props,
 // absent optionals as absent keys). This file changes only when the schema
 // version does; it carries NO validation — the store rules on every write and
@@ -152,6 +152,13 @@ export interface ContactFormSection {
   success_message?: string | undefined;
 }
 
+/** A live grid resolved from one connected alo Base collection. */
+export interface CollectionSection {
+  type: "collection";
+  collection_id: string;
+  heading?: string | undefined;
+}
+
 /** The page footer. */
 export interface FooterSection {
   type: "footer";
@@ -172,12 +179,13 @@ export type Section =
   | FaqSection
   | CtaSection
   | ContactFormSection
+  | CollectionSection
   | FooterSection;
 
 /** A section's wire tag. */
 export type SectionKind = Section["type"];
 
-/** The twelve kinds in their natural page order — the picker's order. */
+/** The thirteen kinds in their natural page order — the picker's order. */
 export const SECTION_KINDS: readonly SectionKind[] = [
   "nav",
   "hero",
@@ -190,6 +198,7 @@ export const SECTION_KINDS: readonly SectionKind[] = [
   "faq",
   "cta",
   "contact_form",
+  "collection",
   "footer",
 ];
 
