@@ -29,10 +29,10 @@ use crate::{
     inventory_counts, inventory_locations, inventory_moves, inventory_po, inventory_po_print,
     inventory_po_receipts, inventory_po_send, inventory_reorder, inventory_scan, inventory_so,
     inventory_so_deliveries, inventory_so_invoice, inventory_stock, inventory_supplier_prices,
-    inventory_suppliers, meet_routes, module_access, projects_clients, projects_invoices,
-    projects_plan, projects_reports, projects_templates, projects_time, projects_weeks, push,
-    reset_route, schedule, scoped_roles, security, session, settings, share, signup_route, sites,
-    snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    inventory_suppliers, invite_route, meet_routes, module_access, projects_clients,
+    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
+    projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
+    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -1801,7 +1801,21 @@ pub fn app_with_site_domain_dns(
         // make "make them an accountant" and "make them an admin" one call.
         .route("/admin/users/roles", post(admin::set_user_role))
         .route("/admin/users/modules", post(admin::set_user_module))
+        .route("/admin/users/invite", post(admin::invite_user))
         .route("/admin/users/{id}/modules", get(admin::user_modules))
+        // Accepting a workspace invitation: unauthenticated by design, because
+        // the holder has no account until they spend the token.
+        //
+        // Under `/jmap/*` rather than a bare `/invite/*` on purpose. The SPA
+        // owns `/invite/:token` — that is the page somebody opens from the
+        // mail — and Caddy proxies whole prefixes, so an API route at the same
+        // path would take the page away from the browser and answer it with
+        // JSON. The same reason the other action routes moved under this
+        // prefix.
+        .route(
+            "/jmap/invite/{token}",
+            get(invite_route::get_invitation).post(invite_route::accept_invitation),
+        )
         .route("/admin/users/alias", post(admin::add_alias))
         .route("/admin/users/alias/remove", post(admin::remove_alias))
         .route(

@@ -113,6 +113,10 @@ export function MeetRoom({
               // by choice.
               audioEnabled: true,
               videoEnabled: false,
+              // LiveKit requires a non-empty display name before enabling its
+              // submit button. alo's signed token owns the real identity, so
+              // this internal placeholder is never shown or sent as identity.
+              username: "alo",
             }}
             onSubmit={setChoices}
             onError={() => setProblem(strings.meetJoinFailed)}

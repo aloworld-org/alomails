@@ -29,6 +29,7 @@ pub mod signup;
 pub mod site_invites;
 pub mod token;
 pub mod totp;
+mod user_invites;
 
 pub use config::{ConfigError, IdentityConfig};
 pub use oauth::router;

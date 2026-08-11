@@ -4107,6 +4107,15 @@ export const nl: Partial<Catalog> = {
   appLauncherAutoHint:
     "De apps die u het meest gebruikt, automatisch bijgehouden",
   meetTitle: "Vergadering",
+  meetEyebrow: "Uw vergaderruimte",
+  meetSubtitle: "Start een gesprek of stap binnen bij een vergadering die al bezig is.",
+  meetHeroTitle: "Samen in één klik",
+  meetHeroText: "Microfoon aan, camera naar keuze. Controleer beide voordat iemand u ziet of hoort.",
+  meetHappeningNow: "Nu bezig",
+  meetHappeningHint: "Vergaderingen waaraan u zonder link kunt deelnemen.",
+  meetLiveCount: (count: number) => count === 1 ? "1 vergadering" : `${count} vergaderingen`,
+  meetReady: "Klaar",
+  meetStartedAt: (time: string) => `Begonnen om ${time}`,
   meetInstantTitle: "Directe vergadering",
   meetNothingLive: "Er zijn geen vergaderingen bezig",
   meetWhereFrom:

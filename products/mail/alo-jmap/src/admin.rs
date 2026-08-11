@@ -444,6 +444,85 @@ pub async fn set_user_role(
     Ok(Json(json!({ "ok": true })))
 }
 
+/// `POST /admin/users/invite` — create a colleague and hand back a one-time
+/// setup link. Body `{ email }`.
+///
+/// The alternative this replaces is `create_user`, where an admin chooses a
+/// password and tells the person over WhatsApp. Three things are wrong with
+/// that: the password crosses a channel nobody controls, the admin knows it
+/// afterwards for ever with nothing forcing a change, and the account never
+/// captures a recovery address — so `/reset/*` cannot help anybody an admin
+/// added. Here the account is created with **no credential**, and the person
+/// sets their own password and their own recovery address by spending the
+/// link.
+///
+/// The link is returned to the admin rather than mailed, exactly as the site
+/// collaborator invitation is, and for a reason particular to this case: the
+/// invited mailbox is the one they cannot open yet. An admin passing a
+/// one-time, expiring link along a chat app is still a different thing from
+/// passing a permanent password — it can be spent once, it dies in seven days,
+/// and it never tells them what the person chose.
+///
+/// `create_user` is deliberately left in place. A shared mailbox nobody signs
+/// into, or an account whose owner has no second address, still wants a
+/// password set for it.
+///
+/// # Errors
+/// `401` without a valid bearer token; `403` for a non-admin; `422` for a
+/// malformed address or one outside the tenant's domains.
+pub async fn invite_user(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account.require_admin()?;
+    let v: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let email = str_field(&v, "email").ok_or_else(|| bad("email required"))?;
+    if !email.contains('@') {
+        return Err(bad("valid email required"));
+    }
+    require_domain_owned(&state, &account.tenant, &email).await?;
+    let ts = state.store.for_tenant(account.tenant.clone());
+    let user = ts.create_user(&email).await.map_err(store_admin_err)?;
+    // The inbox and the invitation are separate writes; if either fails, roll
+    // the user row back rather than leave an account that owns the address and
+    // can neither receive mail nor be claimed. The same care `create_user`
+    // takes, for the same reason — no credential is set here, so a half-made
+    // account would be unreachable by every route.
+    let token = alo_identity::secret::random_token().map_err(|_| Problem::server_error())?;
+    let token_hash = alo_identity::secret::hash_at_rest(token.reveal());
+    let provisioned = async {
+        state
+            .store
+            .for_account(account.tenant.clone(), user.clone())
+            .inbox()
+            .await
+            .map_err(|_| Problem::server_error())?;
+        ts.invite_user(&user, &email, &token_hash, &account.user)
+            .await
+            .map_err(store_admin_err)?;
+        Ok::<(), Problem>(())
+    }
+    .await;
+    if let Err(e) = provisioned {
+        if let Err(cleanup) = ts.delete_user(&user).await {
+            tracing::warn!(%cleanup, "failed to roll back a half-invited user");
+        }
+        return Err(e);
+    }
+    audit(&state, &account, "user.invite", Some(&email), None).await;
+    Ok(Json(json!({
+        "id": user.as_str(),
+        "inviteUrl": format!(
+            "{}/invite/{}",
+            state.base_url.trim_end_matches('/'),
+            token.reveal()
+        ),
+        "expiresInDays": alo_store::INVITE_TTL_DAYS,
+    })))
+}
+
 /// `GET /admin/users/{id}/modules` — which apps this person has.
 ///
 /// Answers the whole picture rather than just the denials, because that is

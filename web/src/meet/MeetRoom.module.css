@@ -14,6 +14,12 @@
   min-height: 0;
 }
 
+/* Leaving is owned by the persistent alo control above the engine. Showing
+   LiveKit's second Leave button creates two equally prominent exits. */
+.livekit :global(.lk-disconnect-button) {
+  display: none;
+}
+
 /* Our own way out, above the engine's UI: leaving is ours to guarantee, not
    something to depend on a third party's control for. */
 .leave {
@@ -98,6 +104,23 @@
    silently ignored. */
 .prejoin :global(.lk-username-container input[type="text"]) {
   display: none;
+}
+
+.prejoin :global(.lk-join-button) {
+  min-height: var(--control-height);
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.prejoin :global(.lk-join-button:hover:not(:disabled)) {
+  background: var(--accent-hover);
+}
+
+.prejoin :global(button:focus-visible),
+.leave:focus-visible,
+.back:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .prejoin {

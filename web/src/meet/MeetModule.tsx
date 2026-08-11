@@ -5,7 +5,7 @@
 // page is for the two cases those do not cover: walking into something already
 // running, and starting a call that belongs to nothing in particular.
 import { useCallback, useEffect, useState } from "react";
-import { AlertCircle, RefreshCw, Video } from "lucide-react";
+import { AlertCircle, ArrowRight, RefreshCw, Video } from "lucide-react";
 
 import { Button } from "../ds";
 import { strings } from "../i18n";
@@ -45,6 +45,25 @@ export function MeetModule() {
     void load();
   }, [load]);
 
+  const startMeeting = () => {
+    setStarting(true);
+    setStartProblem(false);
+    void api
+      .start({ title: strings.meetInstantTitle })
+      .then((meeting) => setInMeeting(meeting.id))
+      .catch(() => setStartProblem(true))
+      .finally(() => {
+        setStarting(false);
+        void load();
+      });
+  };
+  const liveCount =
+    live === null
+      ? ""
+      : typeof strings.meetLiveCount === "function"
+        ? strings.meetLiveCount(live.length)
+        : `${live.length} ${strings.meetTitle}`;
+
   return (
     <div className={styles.module}>
       {inMeeting !== null && (
@@ -57,37 +76,51 @@ export function MeetModule() {
         />
       )}
 
-      <header className={styles.header}>
-        <h1 className={styles.title}>{strings.moduleMeet}</h1>
-        <Button
-          variant="primary"
-          disabled={starting}
-          onClick={() => {
-            setStarting(true);
-            setStartProblem(false);
-            void api
-              .start({ title: strings.meetInstantTitle })
-              .then((m) => setInMeeting(m.id))
-              .catch(() => setStartProblem(true))
-              .finally(() => {
-                setStarting(false);
-                void load();
-              });
-          }}
-        >
-          <Video aria-hidden="true" />
-          {starting ? strings.meetStarting : strings.meetStartNow}
-        </Button>
-      </header>
+      <div className={styles.content}>
+        <header className={styles.header}>
+          <span className={styles.eyebrow}>{strings.meetEyebrow}</span>
+          <h1 className={styles.title}>{strings.moduleMeet}</h1>
+          <p className={styles.subtitle}>{strings.meetSubtitle}</p>
+        </header>
 
-      {startProblem && (
-        <div className={styles.inlineError} role="alert">
-          <AlertCircle aria-hidden="true" />
-          <span>{strings.meetStartFailed}</span>
+        <section className={styles.hero} aria-labelledby="meet-hero-title">
+          <div className={styles.heroCopy}>
+            <span className={styles.heroMark}><Video aria-hidden="true" /></span>
+            <h2 id="meet-hero-title" className={styles.heroTitle}>{strings.meetHeroTitle}</h2>
+            <p className={styles.heroText}>{strings.meetHeroText}</p>
+            <Button
+              className={styles.startButton}
+              disabled={starting}
+              onClick={startMeeting}
+              icon={<Video aria-hidden="true" />}
+            >
+              {starting ? strings.meetStarting : strings.meetStartNow}
+            </Button>
+          </div>
+          <div className={styles.heroVisual} aria-hidden="true">
+            <span className={styles.person}><span /></span>
+            <span className={styles.signal}><i /><i /><i /></span>
+          </div>
+        </section>
+
+        {startProblem && (
+          <div className={styles.inlineError} role="alert">
+            <AlertCircle aria-hidden="true" />
+            <span>{strings.meetStartFailed}</span>
+          </div>
+        )}
+
+        <div className={styles.sectionHeading}>
+          <div>
+            <h2>{strings.meetHappeningNow}</h2>
+            <p>{strings.meetHappeningHint}</p>
+          </div>
+          {live !== null && !loadProblem && (
+            <span className={styles.count}>{liveCount}</span>
+          )}
         </div>
-      )}
 
-      {loadProblem ? (
+        {loadProblem ? (
         <div className={styles.state} role="alert">
           <span className={styles.stateMark}>
             <AlertCircle aria-hidden="true" />
@@ -104,7 +137,7 @@ export function MeetModule() {
           <span />
           <span />
         </div>
-      ) : live.length === 0 ? (
+        ) : live.length === 0 ? (
         <div className={styles.empty}>
           <span className={styles.emptyMark}>
             <Video aria-hidden="true" />
@@ -114,26 +147,34 @@ export function MeetModule() {
               only one button teaches that one button is all there is. */}
           <p className={styles.emptyHint}>{strings.meetWhereFrom}</p>
         </div>
-      ) : (
+        ) : (
         <ul className={styles.list}>
           {live.map((m) => (
             <li key={m.id} className={styles.row}>
-              <span className={styles.rowMark}>
-                <Video aria-hidden="true" />
-              </span>
+              <div className={styles.cardTop}>
+                <span className={styles.rowMark}><Video aria-hidden="true" /></span>
+                <span className={m.startedAt === null ? styles.readyPill : styles.livePill}>
+                  <i />
+                  {m.startedAt === null ? strings.meetReady : strings.meetLive}
+                </span>
+              </div>
               <span className={styles.rowText}>
                 <span className={styles.rowTitle}>
                   {m.title.trim() === "" ? strings.meetUntitled : m.title}
                 </span>
-                <span className={styles.rowWhen}>{since(m.startedAt)}</span>
+                <span className={styles.rowWhen}>
+                  {m.startedAt === null ? strings.meetNotStarted : strings.meetStartedAt(since(m.startedAt))}
+                </span>
               </span>
-              <Button size="sm" onClick={() => setInMeeting(m.id)}>
+              <Button className={styles.joinButton} onClick={() => setInMeeting(m.id)}>
                 {strings.meetJoin}
+                <ArrowRight aria-hidden="true" />
               </Button>
             </li>
           ))}
         </ul>
-      )}
+        )}
+      </div>
     </div>
   );
 }

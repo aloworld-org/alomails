@@ -232,10 +232,19 @@ async fn post_form_auth(
     if let Some(t) = bearer {
         b = b.header("authorization", format!("Bearer {t}"));
     }
-    let resp = app.clone().oneshot(b.body(Body::from(body)).unwrap()).await.unwrap();
+    let resp = app
+        .clone()
+        .oneshot(b.body(Body::from(body)).unwrap())
+        .await
+        .unwrap();
     let status = resp.status();
-    let bytes = axum::body::to_bytes(resp.into_body(), 1 << 20).await.unwrap();
-    (status, serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null))
+    let bytes = axum::body::to_bytes(resp.into_body(), 1 << 20)
+        .await
+        .unwrap();
+    (
+        status,
+        serde_json::from_slice(&bytes).unwrap_or(serde_json::Value::Null),
+    )
 }
 
 /// RFC 7662 introspection is the SSO seam standalone products use: it must
@@ -262,12 +271,21 @@ async fn token_introspection_returns_tenant_and_is_guarded() {
     let access = tok["access_token"].as_str().unwrap().to_owned();
 
     // With the RS secret, a live token resolves to its principal — tenant + sub.
-    let (status, doc) =
-        post_form_auth(&app, "/oauth/introspect", form(&[("token", &access)]), Some(RS_SECRET)).await;
+    let (status, doc) = post_form_auth(
+        &app,
+        "/oauth/introspect",
+        form(&[("token", &access)]),
+        Some(RS_SECRET),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(doc["active"], true);
     assert_eq!(doc["sub"], u.user.as_str());
-    assert_eq!(doc["tenant"], u.tenant.as_str(), "the tenant userinfo omits");
+    assert_eq!(
+        doc["tenant"],
+        u.tenant.as_str(),
+        "the tenant userinfo omits"
+    );
     assert_eq!(doc["username"], u.email);
 
     // A bogus token is a normal {active:false}, not an error, not an oracle.
@@ -280,11 +298,19 @@ async fn token_introspection_returns_tenant_and_is_guarded() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(doc["active"], false);
-    assert!(doc["tenant"].is_null(), "no principal leaked for an invalid token");
+    assert!(
+        doc["tenant"].is_null(),
+        "no principal leaked for an invalid token"
+    );
 
     // Wrong RS secret → 401; missing → 401. The endpoint is not a public oracle.
-    let (status, _d) =
-        post_form_auth(&app, "/oauth/introspect", form(&[("token", &access)]), Some("wrong")).await;
+    let (status, _d) = post_form_auth(
+        &app,
+        "/oauth/introspect",
+        form(&[("token", &access)]),
+        Some("wrong"),
+    )
+    .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
     let (status, _d) =
         post_form_auth(&app, "/oauth/introspect", form(&[("token", &access)]), None).await;
@@ -293,8 +319,13 @@ async fn token_introspection_returns_tenant_and_is_guarded() {
     // After revocation the same token introspects inactive.
     let (status, _b, _l) = post_form(&app, "/oauth/revoke", form(&[("token", &access)])).await;
     assert_eq!(status, StatusCode::OK);
-    let (status, doc) =
-        post_form_auth(&app, "/oauth/introspect", form(&[("token", &access)]), Some(RS_SECRET)).await;
+    let (status, doc) = post_form_auth(
+        &app,
+        "/oauth/introspect",
+        form(&[("token", &access)]),
+        Some(RS_SECRET),
+    )
+    .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(doc["active"], false, "revoked token is inactive");
 }
@@ -304,8 +335,13 @@ async fn token_introspection_returns_tenant_and_is_guarded() {
 #[tokio::test]
 async fn token_introspection_disabled_without_secret() {
     let (app, _u) = setup_app().await;
-    let (status, _d) =
-        post_form_auth(&app, "/oauth/introspect", form(&[("token", "x")]), Some("anything")).await;
+    let (status, _d) = post_form_auth(
+        &app,
+        "/oauth/introspect",
+        form(&[("token", "x")]),
+        Some("anything"),
+    )
+    .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
 

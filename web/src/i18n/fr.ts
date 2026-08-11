@@ -4162,6 +4162,15 @@ export const fr: Partial<Catalog> = {
   appLauncherAutoHint:
     "Les applications que vous utilisez le plus, tenues à jour automatiquement",
   meetTitle: "Réunion",
+  meetEyebrow: "Votre espace de réunion",
+  meetSubtitle: "Démarrez un appel ou rejoignez une réunion déjà en cours.",
+  meetHeroTitle: "Réunis en un clic",
+  meetHeroText: "Microphone activé, caméra au choix. Vérifiez-les avant que quiconque ne vous voie ou ne vous entende.",
+  meetHappeningNow: "En cours",
+  meetHappeningHint: "Les réunions que vous pouvez rejoindre sans demander de lien.",
+  meetLiveCount: (count: number) => count === 1 ? "1 réunion" : `${count} réunions`,
+  meetReady: "Prête",
+  meetStartedAt: (time: string) => `Démarrée à ${time}`,
   meetInstantTitle: "Réunion instantanée",
   meetNothingLive: "Aucune réunion en cours",
   meetWhereFrom:

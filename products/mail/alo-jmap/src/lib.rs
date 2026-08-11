@@ -132,6 +132,7 @@ pub mod inventory_so_invoice;
 pub mod inventory_stock;
 pub mod inventory_supplier_prices;
 pub mod inventory_suppliers;
+pub mod invite_route;
 pub mod jtypes;
 pub mod junk_learn;
 pub mod meet_routes;
