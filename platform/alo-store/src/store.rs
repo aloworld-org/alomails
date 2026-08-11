@@ -117,6 +117,17 @@ impl Store {
     /// `(tenant, user)`. Pure — no I/O; every operation it exposes bakes
     /// both ids, so cross-account access is unrepresentable (see
     /// [`crate::account::AccountStore`]).
+    /// Reads and spends workspace invitations (migration 0209).
+    ///
+    /// Not tenant-scoped, unlike every other handle here, and deliberately:
+    /// the person opening an invitation link is not signed in, so there is no
+    /// tenant to scope by. The token is the claim, and the row it matches is
+    /// what says which tenant they are joining.
+    #[must_use]
+    pub fn invites(&self) -> crate::user_invites::InviteStore {
+        crate::user_invites::InviteStore::new(self.pool.clone())
+    }
+
     pub fn for_account(&self, tenant: TenantId, user: UserId) -> crate::account::AccountStore {
         crate::account::AccountStore {
             pool: self.pool.clone(),

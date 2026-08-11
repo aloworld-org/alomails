@@ -18,7 +18,7 @@ import {
   formatChatMessageLinks,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
-import { PhoneOff, Video } from "lucide-react";
+import { ArrowLeft, PhoneOff, RefreshCw, Video } from "lucide-react";
 
 import { Button } from "../ds";
 import { strings } from "../i18n";
@@ -46,9 +46,12 @@ export function MeetRoom({
   // discovered after. Somebody who joins broken usually leaves rather than
   // hunting for a settings menu mid-meeting.
   const [choices, setChoices] = useState<LocalUserChoices | null>(null);
+  const [joinAttempt, setJoinAttempt] = useState(0);
 
   useEffect(() => {
+    if (choices === null) return;
     let joined = true;
+    setGrant(null);
     void (async () => {
       try {
         const g = await api.join(meetingId);
@@ -67,27 +70,42 @@ export function MeetRoom({
     return () => {
       joined = false;
     };
-  }, [api, meetingId]);
+  }, [api, choices, joinAttempt, meetingId]);
 
   if (problem !== null) {
     return (
       <div className={styles.notice}>
         <Video size={20} className={styles.noticeMark} />
         <p className={styles.noticeText}>{problem}</p>
-        <Button variant="ghost" onClick={onLeft}>
-          {strings.meetClose}
-        </Button>
+        <div className={styles.noticeActions}>
+          {!(problem === strings.meetNoEngine) && (
+            <Button
+              icon={<RefreshCw aria-hidden="true" />}
+              onClick={() => {
+                setProblem(null);
+                setJoinAttempt((attempt) => attempt + 1);
+              }}
+            >
+              {strings.meetRetry}
+            </Button>
+          )}
+          <Button variant="ghost" onClick={onLeft}>{strings.meetClose}</Button>
+        </div>
       </div>
     );
-  }
-
-  if (grant === null) {
-    return <div className={styles.notice}>{strings.meetJoining}</div>;
   }
 
   if (choices === null) {
     return (
       <div className={styles.room} data-lk-theme="default">
+        <Button
+          variant="ghost"
+          className={styles.back}
+          icon={<ArrowLeft aria-hidden="true" />}
+          onClick={onLeft}
+        >
+          {strings.meetBack}
+        </Button>
         <div className={styles.prejoin}>
           <PreJoin
             defaults={{
@@ -104,6 +122,15 @@ export function MeetRoom({
             persistUserChoices
           />
         </div>
+      </div>
+    );
+  }
+
+  if (grant === null) {
+    return (
+      <div className={styles.notice} aria-live="polite" aria-busy="true">
+        <span className={styles.joiningMark}><Video aria-hidden="true" /></span>
+        <p className={styles.noticeText}>{strings.meetJoining}</p>
       </div>
     );
   }
@@ -132,16 +159,16 @@ export function MeetRoom({
       >
         <VideoConference chatMessageFormatter={formatChatMessageLinks} />
       </LiveKitRoom>
-      <button
-        type="button"
+      <Button
+        variant="danger"
         className={styles.leave}
         onClick={onLeft}
         aria-label={strings.meetLeave}
         title={strings.meetLeave}
+        icon={<PhoneOff aria-hidden="true" />}
       >
-        <PhoneOff size={16} />
         {strings.meetLeave}
-      </button>
+      </Button>
     </div>
   );
 }

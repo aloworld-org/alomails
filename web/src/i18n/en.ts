@@ -1735,6 +1735,13 @@ export const en = {
   chatFormatHint: "text",
   meetTitle: "Meeting",
   meetStartNow: "Start a meeting",
+  meetStarting: "Starting…",
+  meetStartFailed: "The meeting couldn’t be started. Check your connection and try again.",
+  meetLoading: "Loading meetings",
+  meetLoadFailed: "Meetings couldn’t be loaded",
+  meetLoadFailedHint: "Check your connection, then try again. Starting a new meeting is still available.",
+  meetRetry: "Try again",
+  meetBack: "Back to Meet",
   meetInstantTitle: "Instant meeting",
   meetNothingLive: "No meetings are running",
   meetWhereFrom:

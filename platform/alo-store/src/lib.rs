@@ -190,6 +190,7 @@ pub mod time_invoice;
 pub mod time_report;
 pub mod time_timer;
 pub mod time_weeks;
+pub mod user_invites;
 pub mod user_modules;
 pub mod vat_id;
 pub mod vcard;
@@ -488,4 +489,5 @@ pub use time_weeks::{
     DECISION_NOTE_MAX, PendingWeek, TimesheetWeek, WeekDecision, WeekStatus, require_monday,
     week_end, week_start,
 };
+pub use user_invites::{INVITE_TTL_DAYS, InviteStore, UserInviteTarget};
 pub use user_modules::{ALL_MODULES, AppModule};

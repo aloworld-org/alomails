@@ -5,7 +5,7 @@
 // page is for the two cases those do not cover: walking into something already
 // running, and starting a call that belongs to nothing in particular.
 import { useCallback, useEffect, useState } from "react";
-import { Video } from "lucide-react";
+import { AlertCircle, RefreshCw, Video } from "lucide-react";
 
 import { Button } from "../ds";
 import { strings } from "../i18n";
@@ -28,15 +28,16 @@ export function MeetModule() {
   const [live, setLive] = useState<Meeting[] | null>(null);
   const [inMeeting, setInMeeting] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [loadProblem, setLoadProblem] = useState(false);
+  const [startProblem, setStartProblem] = useState(false);
 
   const load = useCallback(async () => {
     try {
       setLive(await api.mine());
+      setLoadProblem(false);
     } catch {
-      // An empty list and a failed list look the same here on purpose: there
-      // is nothing useful a person can do about the difference, and a page
-      // that shouts about a hiccup teaches people to ignore it.
-      setLive([]);
+      setLive(null);
+      setLoadProblem(true);
     }
   }, [api]);
 
@@ -63,25 +64,50 @@ export function MeetModule() {
           disabled={starting}
           onClick={() => {
             setStarting(true);
+            setStartProblem(false);
             void api
               .start({ title: strings.meetInstantTitle })
               .then((m) => setInMeeting(m.id))
-              .catch(() => undefined)
+              .catch(() => setStartProblem(true))
               .finally(() => {
                 setStarting(false);
                 void load();
               });
           }}
         >
-          <Video size={16} />
-          {strings.meetStartNow}
+          <Video aria-hidden="true" />
+          {starting ? strings.meetStarting : strings.meetStartNow}
         </Button>
       </header>
 
-      {live === null ? null : live.length === 0 ? (
+      {startProblem && (
+        <div className={styles.inlineError} role="alert">
+          <AlertCircle aria-hidden="true" />
+          <span>{strings.meetStartFailed}</span>
+        </div>
+      )}
+
+      {loadProblem ? (
+        <div className={styles.state} role="alert">
+          <span className={styles.stateMark}>
+            <AlertCircle aria-hidden="true" />
+          </span>
+          <p className={styles.stateTitle}>{strings.meetLoadFailed}</p>
+          <p className={styles.stateHint}>{strings.meetLoadFailedHint}</p>
+          <Button variant="ghost" icon={<RefreshCw aria-hidden="true" />} onClick={() => void load()}>
+            {strings.meetRetry}
+          </Button>
+        </div>
+      ) : live === null ? (
+        <div className={styles.loading} aria-label={strings.meetLoading} aria-busy="true">
+          <span />
+          <span />
+          <span />
+        </div>
+      ) : live.length === 0 ? (
         <div className={styles.empty}>
           <span className={styles.emptyMark}>
-            <Video size={22} />
+            <Video aria-hidden="true" />
           </span>
           <p className={styles.emptyTitle}>{strings.meetNothingLive}</p>
           {/* Says where meetings actually come from, because a page offering
@@ -93,7 +119,7 @@ export function MeetModule() {
           {live.map((m) => (
             <li key={m.id} className={styles.row}>
               <span className={styles.rowMark}>
-                <Video size={16} />
+                <Video aria-hidden="true" />
               </span>
               <span className={styles.rowText}>
                 <span className={styles.rowTitle}>
