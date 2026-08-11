@@ -44,7 +44,11 @@ export function UsersPage() {
   }, [load, client]);
 
   async function toggleAdmin(u: AdminUser) {
-    setUsers((prev) => (prev ?? []).map((x) => (x.id === u.id ? { ...x, isAdmin: !x.isAdmin } : x)));
+    setUsers((prev) =>
+      (prev ?? []).map((x) =>
+        x.id === u.id ? { ...x, isAdmin: !x.isAdmin } : x,
+      ),
+    );
     try {
       await client.setUserAdmin(u.id, !u.isAdmin);
     } finally {
@@ -53,7 +57,13 @@ export function UsersPage() {
   }
 
   async function remove(u: AdminUser) {
-    if (!(await confirm({ message: strings.userDeleteConfirm(u.email), danger: true }))) return;
+    if (
+      !(await confirm({
+        message: strings.userDeleteConfirm(u.email),
+        danger: true,
+      }))
+    )
+      return;
     try {
       await client.deleteUser(u.id);
     } finally {
@@ -68,7 +78,11 @@ export function UsersPage() {
           <h1>{strings.adminUsers}</h1>
           <p className={styles.pageIntro}>{strings.adminUsersIntro}</p>
         </div>
-        <button type="button" className={styles.primary} onClick={() => setEditing({})}>
+        <button
+          type="button"
+          className={styles.primary}
+          onClick={() => setEditing({})}
+        >
           <Plus size={16} />
           <span>{strings.adminAddUser}</span>
         </button>
@@ -96,21 +110,38 @@ export function UsersPage() {
               <div className={styles.userText}>
                 <div className={styles.userName}>
                   <strong>{u.email}</strong>
-                  {u.isAdmin && <span className={styles.defaultBadge}>{strings.userAdminBadge}</span>}
+                  {u.isAdmin && (
+                    <span className={styles.defaultBadge}>
+                      {strings.userAdminBadge}
+                    </span>
+                  )}
                   {u.roles.includes("accountant") && (
-                    <span className={styles.defaultBadge}>{strings.userAccountantBadge}</span>
+                    <span className={styles.defaultBadge}>
+                      {strings.userAccountantBadge}
+                    </span>
                   )}
                 </div>
                 <div className={styles.userMeta}>
-                  {strings.userUsage(u.messageCount, formatBytes(u.storageBytes))}
+                  {strings.userUsage(
+                    u.messageCount,
+                    formatBytes(u.storageBytes),
+                  )}
                   {u.aliases.length > 0 && ` · ${u.aliases.join(", ")}`}
                 </div>
               </div>
               <div className={styles.userActions}>
-                <button type="button" className={styles.ghost} onClick={() => setEditing({ user: u })}>
+                <button
+                  type="button"
+                  className={styles.ghost}
+                  onClick={() => setEditing({ user: u })}
+                >
                   {strings.userManage}
                 </button>
-                <button type="button" className={styles.ghost} onClick={() => setSharing(u)}>
+                <button
+                  type="button"
+                  className={styles.ghost}
+                  onClick={() => setSharing(u)}
+                >
                   {strings.userShareAccess}
                 </button>
                 <label className={styles.toggle} title={strings.userAdminRole}>
@@ -146,6 +177,11 @@ export function UsersPage() {
             setEditing(null);
             load();
           }}
+          // Reload the list but leave the dialog open. `onChanged` dismisses
+          // it, which is right after creating or deleting somebody and wrong
+          // for an invitation: the setup link is minted once and only its hash
+          // is kept, so closing the dialog loses it for good.
+          onSaved={load}
         />
       )}
 

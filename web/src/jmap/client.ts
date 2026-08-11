@@ -923,6 +923,23 @@ export class JmapClient {
     await this.#adminPost("/admin/users/roles", { userId, role, granted });
   }
 
+  /** Creates a colleague with no password and returns a one-time setup link
+   * (admin, migration 0209).
+   *
+   * The link is handed back rather than mailed, because the mailbox it would
+   * be sent to is the one they cannot open yet. It is spent on first use and
+   * expires, so passing it along a chat app is a different thing from passing
+   * a permanent password — and the admin never learns what they choose. */
+  async inviteUser(
+    email: string,
+  ): Promise<{ id: string; inviteUrl: string; expiresInDays: number }> {
+    return (await this.#adminPost("/admin/users/invite", { email })) as {
+      id: string;
+      inviteUrl: string;
+      expiresInDays: number;
+    };
+  }
+
   /** Which apps a person has, for the admin console (admin).
    *
    * Every switchable module with its switch, not just the ones taken away —

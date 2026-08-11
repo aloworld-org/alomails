@@ -1012,6 +1012,34 @@ export const en = {
   // promise is being made: "hidden" and "refused" are very different, and an
   // administrator switching something off is entitled to know which one they
   // are getting.
+  // Inviting somebody instead of choosing their password (migration 0209).
+  // The hint says what the admin gets *and* what they deliberately do not.
+  userInvite: "Create an invitation",
+  userInviteReady: "Setup link",
+  userInviteCopy: "Copy",
+  userInviteCopied: "Copied",
+  userInviteHint:
+    "Send this link to your colleague. It works once, expires after seven days, and they choose their own password and recovery address — you never learn either. This link is shown only once.",
+  // The account-claiming page. The first screen of alo anybody outside the
+  // admin console sees, so it explains rather than instructs.
+  inviteTitle: "Set up your account",
+  inviteUnavailable: "This invitation no longer works",
+  inviteAskAdmin: "Ask your workspace administrator for a new one.",
+  inviteLoadFailed: "This invitation has expired or has already been used.",
+  inviteFailed: "That could not be saved. Try again.",
+  invitePassword: "Choose a password",
+  invitePasswordHint: "At least 8 characters. Only you will know it.",
+  inviteRecovery: "Recovery address",
+  inviteRecoveryPlaceholder: "you@somewhere-else.com",
+  inviteRecoveryHint:
+    "An address you can read somewhere else — not this new one. If you ever forget your password, this is the only way back in without asking an administrator.",
+  inviteSubmit: "Set up the account",
+  inviteWorking: "Setting up…",
+  inviteDoneTitle: "All set",
+  inviteGoToSignIn: "Go to sign in",
+  inviteFor: (email: string): string => `For ${email}`,
+  inviteDoneBody: (email: string): string =>
+    `You can sign in as ${email} now, with the password you just chose.`,
   userApps: "Apps",
   userAppsHint:
     "Only the ticked apps appear in this person's navigation, and the server refuses the rest — this does not just hide, it closes. Mail and Home cannot be switched off. Ticking an app does not grant everything inside it: Finance still wants the accountant role, and a Space still wants membership.",
@@ -1767,8 +1795,12 @@ export const en = {
   meetCamera: "Camera",
   meetJoining: "Joining…",
   meetLeave: "Leave",
+  meetPresentingTitle: "You’re presenting",
+  meetPresentingBody: "Everyone else sees your shared screen. You see this calm reminder instead of a hall of mirrors.",
   meetClose: "Close",
   meetJoinFailed: "That meeting couldn’t be joined.",
+  meetJoinProblemTitle: "We couldn’t connect you",
+  meetUnavailableTitle: "Meet needs one last connection",
   meetNoEngine:
     "Meetings aren’t switched on for this workspace yet. The meeting is recorded and everyone invited can see it — there is just nowhere to hold it until an administrator configures the meeting server.",
   chatBackToList: "Back to conversations",

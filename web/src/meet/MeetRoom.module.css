@@ -12,6 +12,124 @@
 .livekit {
   flex: 1;
   min-height: 0;
+  --lk-bg: var(--navy-700);
+  --lk-bg2: var(--bg-rail);
+  --lk-bg3: var(--bg-rail-hover);
+  --lk-bg4: var(--bg-rail-active);
+  --lk-bg5: var(--navy-400);
+  --lk-accent-bg: var(--accent);
+  --lk-accent2: var(--accent-hover);
+  --lk-accent3: var(--accent-active);
+  --lk-control-bg: var(--bg-rail-active);
+  --lk-control-hover-bg: var(--navy-400);
+  --lk-control-active-bg: var(--bg-rail-active);
+  --lk-control-active-hover-bg: var(--navy-400);
+  --lk-border-color: var(--navy-400);
+  --lk-border-radius: var(--radius-md);
+  --lk-font-family: var(--font-ui);
+}
+
+.roomHeader {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: var(--z-overlay);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+  border: var(--border-width) solid var(--navy-400);
+  border-radius: var(--radius-lg);
+  background: var(--bg-rail);
+  box-shadow: var(--shadow-md);
+  color: var(--text-on-rail);
+}
+
+.roomBrand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-height);
+  height: var(--control-height);
+  border-radius: var(--radius-md);
+  background: var(--accent);
+}
+
+.roomBrand svg {
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
+}
+
+.roomIdentity {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.roomIdentity strong {
+  max-width: var(--overlay-width-md);
+  overflow: hidden;
+  font-size: var(--text-base);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roomIdentity > span {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-on-rail-muted);
+  font-size: var(--text-xs);
+}
+
+.roomIdentity i {
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--success);
+}
+
+.roomIdentity b { font-weight: var(--weight-regular); }
+.roomIdentity time { font-variant-numeric: tabular-nums; }
+
+.presenting {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(calc(100% - var(--space-8)), var(--overlay-width-md));
+  transform: translate(-50%, -50%);
+  padding: var(--space-6);
+  border: var(--border-width) solid var(--navy-400);
+  border-radius: var(--radius-xl);
+  background: var(--bg-rail);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-on-rail);
+  text-align: center;
+}
+
+.presenting > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-12);
+  height: var(--space-12);
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.presenting svg { width: var(--icon-size-control); height: var(--icon-size-control); }
+.presenting strong { font-size: var(--text-lg); }
+.presenting p {
+  margin: var(--space-1) 0 0;
+  color: var(--text-on-rail-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 }
 
 /* Leaving is owned by the persistent alo control above the engine. Showing
@@ -20,14 +138,141 @@
   display: none;
 }
 
+.livekit :global(.lk-grid-layout-wrapper),
+.livekit :global(.lk-focus-layout-wrapper) {
+  height: 100%;
+  padding-bottom: var(--space-16);
+}
+
+.livekit :global(.lk-participant-tile) {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.livekit :global(.lk-participant-placeholder) {
+  background: var(--navy-600);
+}
+
+.livekit :global(.lk-participant-placeholder svg) {
+  width: 38%;
+  height: 48%;
+  color: var(--text-on-rail-muted);
+  opacity: 0.65;
+}
+
+.livekit :global(.lk-control-bar) {
+  position: absolute;
+  bottom: var(--space-4);
+  left: 50%;
+  z-index: var(--z-overlay);
+  width: max-content;
+  max-width: calc(100% - var(--space-8));
+  max-height: none;
+  transform: translateX(-50%);
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--navy-400);
+  border-radius: var(--radius-xl);
+  background: var(--bg-rail);
+  box-shadow: var(--shadow-lg);
+}
+
+.livekit :global(.lk-control-bar .lk-button),
+.livekit :global(.lk-control-bar .lk-chat-toggle) {
+  min-height: var(--control-height);
+  border-radius: var(--radius-md);
+  font-weight: var(--weight-medium);
+}
+
+.livekit :global(.lk-control-bar .lk-button[data-lk-source="microphone"][data-lk-enabled="false"]),
+.livekit :global(.lk-control-bar .lk-button[data-lk-source="camera"][data-lk-enabled="false"]) {
+  background: var(--danger);
+  color: var(--text-on-accent);
+}
+
+.livekit :global(.lk-control-bar button:focus-visible),
+.livekit :global(.lk-device-menu button:focus-visible),
+.livekit :global(.lk-chat button:focus-visible),
+.livekit :global(.lk-chat input:focus-visible) {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.livekit :global(.lk-device-menu) {
+  padding: var(--space-2);
+  border: var(--border-width) solid var(--navy-400);
+  border-radius: var(--radius-lg);
+  background: var(--bg-rail);
+  box-shadow: var(--shadow-lg);
+}
+
+.livekit :global(.lk-media-device-select [data-lk-active="true"] > .lk-button) {
+  background: var(--accent);
+  color: var(--text-on-accent);
+}
+
+.livekit :global(.lk-chat) {
+  align-self: stretch;
+  width: min(var(--overlay-width-lg), 34vw);
+  height: calc(100% - var(--space-16) - var(--space-4));
+  margin: var(--space-16) var(--space-4) var(--space-4) 0;
+  overflow: hidden;
+  border: var(--border-width) solid var(--navy-400);
+  border-radius: var(--radius-xl);
+  background: var(--bg-rail);
+  box-shadow: var(--shadow-lg);
+}
+
+.livekit :global(.lk-chat-header) {
+  justify-content: flex-start;
+  padding: var(--space-4);
+  border-bottom: var(--border-width) solid var(--navy-400);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.livekit :global(.lk-chat-messages) {
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.livekit :global(.lk-chat-entry .lk-message-body) {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-lg);
+}
+
+.livekit :global(.lk-chat-form) {
+  max-height: none;
+  padding: var(--space-3);
+  border-top: var(--border-width) solid var(--navy-400);
+}
+
+.livekit :global(.lk-chat-form-input) {
+  min-height: var(--control-height);
+  border-radius: var(--radius-md);
+}
+
 /* Our own way out, above the engine's UI: leaving is ours to guarantee, not
    something to depend on a third party's control for. */
 .leave {
   position: absolute;
-  top: var(--space-3);
-  right: var(--space-3);
+  top: var(--space-4);
+  right: var(--space-4);
   z-index: var(--z-overlay);
   min-height: var(--control-height);
+}
+
+@media (max-width: 48rem) {
+  .roomHeader { top: var(--space-2); left: var(--space-2); }
+  .leave { top: var(--space-2); right: var(--space-2); }
+  .roomIdentity strong { max-width: var(--overlay-width-sm); }
+  .livekit :global(.lk-control-bar) { bottom: var(--space-2); }
+  .livekit :global(.lk-chat) {
+    width: 100%;
+    height: calc(100% - var(--space-16));
+    margin: var(--space-16) 0 0;
+    border-radius: 0;
+  }
 }
 
 .back {
@@ -44,30 +289,82 @@
   inset: 0;
   z-index: var(--z-modal);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--bg-app);
+  padding: var(--space-6);
+  background:
+    radial-gradient(circle at 50% 35%, var(--accent-tint), transparent 32%),
+    var(--bg-app);
   color: var(--text-primary);
   font-size: var(--text-md);
 }
 
+.noticeCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(100%, var(--overlay-width-lg));
+  overflow: hidden;
+  padding: var(--space-10) var(--space-8) var(--space-8);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.noticeCard::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--space-1);
+  background: var(--accent);
+  content: "";
+}
+
 .noticeMark {
-  color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-16);
+  height: var(--space-16);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--accent-tint);
+  color: var(--accent-active);
+}
+
+.noticeMark svg {
+  width: var(--icon-size-rail-hero);
+  height: var(--icon-size-rail-hero);
+}
+
+.noticeEyebrow {
+  color: var(--accent-active);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.noticeTitle {
+  margin: var(--space-1) 0 var(--space-3);
+  color: var(--text-primary);
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
 }
 
 .noticeText {
   margin: 0;
-  max-width: 42ch;
-  text-align: center;
+  max-width: 48ch;
   color: var(--text-secondary);
+  line-height: var(--leading-normal);
 }
 
 .noticeActions {
   display: flex;
   gap: var(--space-2);
+  margin-top: var(--space-6);
 }
 
 .joiningMark {

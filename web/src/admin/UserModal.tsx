@@ -36,7 +36,10 @@ interface UserModalProps {
   user?: AdminUser;
   isSelf: boolean;
   onClose: () => void;
+  /** Something changed and this dialog's work is finished — reload and close. */
   onChanged: () => void;
+  /** Something changed and the dialog must stay open. */
+  onSaved: () => void;
 }
 
 export function UserModal({
@@ -44,6 +47,7 @@ export function UserModal({
   isSelf,
   onClose,
   onChanged,
+  onSaved,
 }: UserModalProps) {
   const { confirm } = useDialogs();
   const client = useJmapClient();
@@ -62,6 +66,11 @@ export function UserModal({
   // screen that renders "no access to anything" while it is still asking is
   // the one wrong answer here.
   const [modules, setModules] = useState<UserModuleAccess[] | null>(null);
+  // The setup link, once an invitation has been created. Held rather than
+  // shown-and-forgotten: it is minted once, the server keeps only its hash,
+  // and closing the dialog without copying it means sending another.
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const userId = user?.id;
   useEffect(() => {
@@ -105,6 +114,33 @@ export function UserModal({
           prev?.map((m) => (m.id === id ? { ...m, allowed: !allowed } : m)) ??
           prev,
       );
+      setError(strings.userActionError);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Creates the colleague with no password and shows their setup link.
+   *
+   * The better of the two paths, and the default the copy points at: the
+   * person chooses their own password and names their own recovery address,
+   * and the admin learns neither. Setting a password here instead is still
+   * offered, for a shared mailbox nobody signs into or somebody with no second
+   * address to be reached at. */
+  async function invite() {
+    if (!email.includes("@")) {
+      setError(strings.userInvalid);
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const created = await client.inviteUser(email);
+      setInviteUrl(created.inviteUrl);
+      // Not `onChanged()`: that closes the dialog, and this link cannot be
+      // shown again — the server keeps only its hash.
+      onSaved();
+    } catch {
       setError(strings.userActionError);
     } finally {
       setBusy(false);
@@ -253,6 +289,34 @@ export function UserModal({
                   placeholder={strings.userPasswordHint}
                 />
               </label>
+              {inviteUrl !== null && (
+                <div className={styles.field}>
+                  <span className={styles.label}>
+                    {strings.userInviteReady}
+                  </span>
+                  <div className={styles.keyRow}>
+                    <input
+                      className={styles.input}
+                      readOnly
+                      value={inviteUrl}
+                      onFocus={(e) => e.currentTarget.select()}
+                    />
+                    <button
+                      type="button"
+                      className={styles.textBtn}
+                      onClick={() => {
+                        void navigator.clipboard.writeText(inviteUrl);
+                        setCopied(true);
+                      }}
+                    >
+                      {copied
+                        ? strings.userInviteCopied
+                        : strings.userInviteCopy}
+                    </button>
+                  </div>
+                  <span className={styles.hint}>{strings.userInviteHint}</span>
+                </div>
+              )}
               {error !== null && (
                 <p className={styles.error} role="alert">
                   {error}
@@ -267,6 +331,17 @@ export function UserModal({
                 onClick={onClose}
               >
                 {strings.providerCancel}
+              </button>
+              {/* Two ways to make an account, and the invitation is the one
+                  the copy recommends: it is the only one where the admin does
+                  not end up knowing somebody else's password. */}
+              <button
+                type="button"
+                className={styles.textBtn}
+                onClick={() => void invite()}
+                disabled={busy}
+              >
+                {strings.userInvite}
               </button>
               <Button type="submit" disabled={busy}>
                 {busy ? <Spinner size={16} /> : strings.userCreate}

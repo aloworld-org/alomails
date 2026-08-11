@@ -14,6 +14,7 @@ import {
   RequireAuth,
 } from "./auth";
 import { SignupPage } from "./signup";
+import { InvitationView } from "./invite";
 import {
   AppShell,
   ComingSoon,
@@ -68,6 +69,10 @@ export function App() {
                 personal domains are configured. */}
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/reset" element={<ForgotPasswordPage />} />
+              {/* Claiming an account from an invitation. Public by design: the
+                token is the credential, and the holder has no account until
+                they spend it. */}
+              <Route path="/invite/:token" element={<InvitationView />} />
               {/* Accepting a collaborator invitation. Public by design: the
                   token is the credential, and the person holding it may not
                   have an account yet. */}

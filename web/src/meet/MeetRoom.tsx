@@ -16,15 +16,63 @@ import {
   PreJoin,
   VideoConference,
   formatChatMessageLinks,
+  useLocalParticipant,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
-import { ArrowLeft, PhoneOff, RefreshCw, Video } from "lucide-react";
+import { ArrowLeft, MonitorUp, PhoneOff, RefreshCw, ServerOff, Video } from "lucide-react";
 
 import { Button } from "../ds";
 import { strings } from "../i18n";
 import { MeetUnavailable, useMeetApi } from "./api";
 import type { JoinGrant } from "./api";
 import styles from "./MeetRoom.module.css";
+
+function useMeetingDuration(startedAt: string | null): string {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
+  if (startedAt === null) return "00:00";
+  const seconds = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 1_000));
+  const hours = Math.floor(seconds / 3_600);
+  const minutes = Math.floor((seconds % 3_600) / 60);
+  const rest = seconds % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`
+    : `${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
+}
+
+function MeetingHeader({ grant }: { grant: JoinGrant }) {
+  const duration = useMeetingDuration(grant.meeting.startedAt);
+  const title = grant.meeting.title.trim() === "" ? strings.meetUntitled : grant.meeting.title;
+  return (
+    <div className={styles.roomHeader}>
+      <span className={styles.roomBrand}><Video aria-hidden="true" /></span>
+      <div className={styles.roomIdentity}>
+        <strong>{title}</strong>
+        <span>
+          <i />
+          {strings.meetLive}
+          <b aria-hidden="true">·</b>
+          <time>{duration}</time>
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function PresentingNotice() {
+  const { isScreenShareEnabled } = useLocalParticipant();
+  if (!isScreenShareEnabled) return null;
+  return (
+    <div className={styles.presenting} role="status">
+      <span><MonitorUp aria-hidden="true" /></span>
+      <strong>{strings.meetPresentingTitle}</strong>
+      <p>{strings.meetPresentingBody}</p>
+    </div>
+  );
+}
 
 /**
  * Join a meeting and hold it until the person leaves.
@@ -41,7 +89,7 @@ export function MeetRoom({
 }) {
   const api = useMeetApi();
   const [grant, setGrant] = useState<JoinGrant | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
+  const [problem, setProblem] = useState<{ kind: "join" | "unavailable"; message: string } | null>(null);
   // Which camera and microphone, checked before joining rather than
   // discovered after. Somebody who joins broken usually leaves rather than
   // hunting for a settings menu mid-meeting.
@@ -60,11 +108,9 @@ export function MeetRoom({
         if (joined) setGrant(g);
       } catch (failure) {
         if (!joined) return;
-        setProblem(
-          failure instanceof MeetUnavailable
-            ? strings.meetNoEngine
-            : strings.meetJoinFailed,
-        );
+        setProblem(failure instanceof MeetUnavailable
+          ? { kind: "unavailable", message: strings.meetNoEngine }
+          : { kind: "join", message: strings.meetJoinFailed });
       }
     })();
     return () => {
@@ -75,21 +121,31 @@ export function MeetRoom({
   if (problem !== null) {
     return (
       <div className={styles.notice}>
-        <Video size={20} className={styles.noticeMark} />
-        <p className={styles.noticeText}>{problem}</p>
-        <div className={styles.noticeActions}>
-          {!(problem === strings.meetNoEngine) && (
-            <Button
-              icon={<RefreshCw aria-hidden="true" />}
-              onClick={() => {
-                setProblem(null);
-                setJoinAttempt((attempt) => attempt + 1);
-              }}
-            >
-              {strings.meetRetry}
-            </Button>
-          )}
-          <Button variant="ghost" onClick={onLeft}>{strings.meetClose}</Button>
+        <div className={styles.noticeCard} role="alert">
+          <span className={styles.noticeMark}>
+            {problem.kind === "unavailable"
+              ? <ServerOff aria-hidden="true" />
+              : <Video aria-hidden="true" />}
+          </span>
+          <span className={styles.noticeEyebrow}>{strings.meetTitle}</span>
+          <h1 className={styles.noticeTitle}>
+            {problem.kind === "unavailable" ? strings.meetUnavailableTitle : strings.meetJoinProblemTitle}
+          </h1>
+          <p className={styles.noticeText}>{problem.message}</p>
+          <div className={styles.noticeActions}>
+            {problem.kind === "join" && (
+              <Button
+                icon={<RefreshCw aria-hidden="true" />}
+                onClick={() => {
+                  setProblem(null);
+                  setJoinAttempt((attempt) => attempt + 1);
+                }}
+              >
+                {strings.meetRetry}
+              </Button>
+            )}
+            <Button variant="ghost" onClick={onLeft}>{strings.meetClose}</Button>
+          </div>
         </div>
       </div>
     );
@@ -119,7 +175,7 @@ export function MeetRoom({
               username: "alo",
             }}
             onSubmit={setChoices}
-            onError={() => setProblem(strings.meetJoinFailed)}
+            onError={() => setProblem({ kind: "join", message: strings.meetJoinFailed })}
             joinLabel={strings.meetJoinNow}
             micLabel={strings.meetMicrophone}
             camLabel={strings.meetCamera}
@@ -141,6 +197,7 @@ export function MeetRoom({
 
   return (
     <div className={styles.room}>
+      <MeetingHeader grant={grant} />
       <LiveKitRoom
         serverUrl={grant.url}
         token={grant.token}
@@ -162,6 +219,7 @@ export function MeetRoom({
         data-lk-theme="default"
       >
         <VideoConference chatMessageFormatter={formatChatMessageLinks} />
+        <PresentingNotice />
       </LiveKitRoom>
       <Button
         variant="danger"
