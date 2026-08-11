@@ -5,6 +5,7 @@ import { fr } from "./fr";
 import { nl } from "./nl";
 import { buildCatalog, getLocale, setLocale } from "./locale";
 import { strings } from "./strings";
+import { UNTRANSLATED } from "./untranslated";
 
 afterEach(() => {
   setLocale("en");
@@ -59,7 +60,10 @@ describe("alo Billing is fully translated (B1.27)", () => {
     "agentReminderNote",
   ];
   const billingKeys = Object.keys(en).filter(
-    (key) => key.startsWith("billing") || key === "moduleBilling" || BILLING_AGENT_KEYS.includes(key),
+    (key) =>
+      key.startsWith("billing") ||
+      key === "moduleBilling" ||
+      BILLING_AGENT_KEYS.includes(key),
   );
 
   test("the key list is the real billing surface, not an empty filter", () => {
@@ -79,21 +83,24 @@ describe("alo Billing is fully translated (B1.27)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
-  ])("%s keeps every interpolation a function of the same shape", (locale, catalog) => {
-    for (const key of billingKeys) {
-      const source = (en as Record<string, unknown>)[key];
-      const translated = (catalog as Record<string, unknown>)[key];
-      expect(typeof translated).toBe(typeof source);
-      if (typeof source === "function" && typeof translated === "function") {
-        // A translation that dropped an argument would silently print a
-        // sentence with the number or the date missing.
-        expect(translated.length).toBe(source.length);
-      } else {
-        expect(String(translated).trim()).not.toBe("");
+  ])(
+    "%s keeps every interpolation a function of the same shape",
+    (locale, catalog) => {
+      for (const key of billingKeys) {
+        const source = (en as Record<string, unknown>)[key];
+        const translated = (catalog as Record<string, unknown>)[key];
+        expect(typeof translated).toBe(typeof source);
+        if (typeof source === "function" && typeof translated === "function") {
+          // A translation that dropped an argument would silently print a
+          // sentence with the number or the date missing.
+          expect(translated.length).toBe(source.length);
+        } else {
+          expect(String(translated).trim()).not.toBe("");
+        }
       }
-    }
-    expect(locale).toMatch(/^(fr|nl)$/);
-  });
+      expect(locale).toMatch(/^(fr|nl)$/);
+    },
+  );
 
   test("the translated strings really are different words", () => {
     // Guards against a "translation" pasted from English: the labels a person
@@ -158,19 +165,22 @@ describe("alo CRM and the record history are fully translated (B2.14)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
-  ])("%s keeps every interpolation a function of the same shape", (locale, catalog) => {
-    for (const key of waveKeys) {
-      const source = (en as Record<string, unknown>)[key];
-      const translated = (catalog as Record<string, unknown>)[key];
-      expect(typeof translated).toBe(typeof source);
-      if (typeof source === "function" && typeof translated === "function") {
-        expect(translated.length).toBe(source.length);
-      } else {
-        expect(String(translated).trim()).not.toBe("");
+  ])(
+    "%s keeps every interpolation a function of the same shape",
+    (locale, catalog) => {
+      for (const key of waveKeys) {
+        const source = (en as Record<string, unknown>)[key];
+        const translated = (catalog as Record<string, unknown>)[key];
+        expect(typeof translated).toBe(typeof source);
+        if (typeof source === "function" && typeof translated === "function") {
+          expect(translated.length).toBe(source.length);
+        } else {
+          expect(String(translated).trim()).not.toBe("");
+        }
       }
-    }
-    expect(locale).toMatch(/^(fr|nl)$/);
-  });
+      expect(locale).toMatch(/^(fr|nl)$/);
+    },
+  );
 
   test("the translated strings really are different words", () => {
     expect(buildCatalog("fr").moduleCrm).toBe("Ventes");
@@ -182,14 +192,22 @@ describe("alo CRM and the record history are fully translated (B2.14)", () => {
     // …including the ones built by a function. The French draft-document
     // noun is masculine in both branches on purpose: the sentences that
     // interpolate it ("Votre … est prêt") stay grammatical either way.
-    expect(buildCatalog("fr").crmRaisedTitle(buildCatalog("fr").crmDocumentDraft("invoice"))).toBe(
-      "Votre brouillon de facture est prêt",
+    expect(
+      buildCatalog("fr").crmRaisedTitle(
+        buildCatalog("fr").crmDocumentDraft("invoice"),
+      ),
+    ).toBe("Votre brouillon de facture est prêt");
+    expect(
+      buildCatalog("fr").crmRaisedTitle(
+        buildCatalog("fr").crmDocumentDraft("quote"),
+      ),
+    ).toBe("Votre brouillon de devis est prêt");
+    expect(buildCatalog("nl").crmDocumentDraft("invoice")).toBe(
+      "conceptfactuur",
     );
-    expect(buildCatalog("fr").crmRaisedTitle(buildCatalog("fr").crmDocumentDraft("quote"))).toBe(
-      "Votre brouillon de devis est prêt",
+    expect(buildCatalog("nl").billingScheduleRunDrafted(2)).toContain(
+      "2 concepten",
     );
-    expect(buildCatalog("nl").crmDocumentDraft("invoice")).toBe("conceptfactuur");
-    expect(buildCatalog("nl").billingScheduleRunDrafted(2)).toContain("2 concepten");
   });
 });
 
@@ -219,19 +237,22 @@ describe("alo Insights is fully translated (BI1.08)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
-  ])("%s keeps every interpolation a function of the same shape", (locale, catalog) => {
-    for (const key of insightsKeys) {
-      const source = (en as Record<string, unknown>)[key];
-      const translated = (catalog as Record<string, unknown>)[key];
-      expect(typeof translated).toBe(typeof source);
-      if (typeof source === "function" && typeof translated === "function") {
-        expect(translated.length).toBe(source.length);
-      } else {
-        expect(String(translated).trim()).not.toBe("");
+  ])(
+    "%s keeps every interpolation a function of the same shape",
+    (locale, catalog) => {
+      for (const key of insightsKeys) {
+        const source = (en as Record<string, unknown>)[key];
+        const translated = (catalog as Record<string, unknown>)[key];
+        expect(typeof translated).toBe(typeof source);
+        if (typeof source === "function" && typeof translated === "function") {
+          expect(translated.length).toBe(source.length);
+        } else {
+          expect(String(translated).trim()).not.toBe("");
+        }
       }
-    }
-    expect(locale).toMatch(/^(fr|nl)$/);
-  });
+      expect(locale).toMatch(/^(fr|nl)$/);
+    },
+  );
 
   test("the translated strings really are different words", () => {
     expect(buildCatalog("fr").moduleInsights).toBe("Analyses");
@@ -245,10 +266,18 @@ describe("alo Insights is fully translated (BI1.08)", () => {
     expect(buildCatalog("fr").insightsWeek(3, 2026)).toBe("S3 2026");
     // …and the plural branch of the unconverted-documents note, which the
     // English catalog builds from two separate sentences.
-    expect(buildCatalog("fr").insightsNoteUnconverted(1)).toContain("1 document n’a pas pu");
-    expect(buildCatalog("fr").insightsNoteUnconverted(3)).toContain("3 documents n’ont pas pu");
-    expect(buildCatalog("nl").insightsNoteUnconverted(1)).toContain("1 document kon niet");
-    expect(buildCatalog("nl").insightsNoteUnconverted(3)).toContain("3 documenten konden niet");
+    expect(buildCatalog("fr").insightsNoteUnconverted(1)).toContain(
+      "1 document n’a pas pu",
+    );
+    expect(buildCatalog("fr").insightsNoteUnconverted(3)).toContain(
+      "3 documents n’ont pas pu",
+    );
+    expect(buildCatalog("nl").insightsNoteUnconverted(1)).toContain(
+      "1 document kon niet",
+    );
+    expect(buildCatalog("nl").insightsNoteUnconverted(3)).toContain(
+      "3 documenten konden niet",
+    );
   });
 
   test("the overview's chart titles match the words the server seeds", () => {
@@ -256,22 +285,46 @@ describe("alo Insights is fully translated (BI1.08)", () => {
     // reader's language, and the gallery offers the same seven charts from
     // this catalog. If the two disagree, pinning a chart a tenant already has
     // looks like a different chart. Keep this list in step with SeedWords.
-    expect(buildCatalog("fr").insightsGalleryOutstanding).toBe("Créances en cours");
-    expect(buildCatalog("fr").insightsGalleryWonThisMonth).toBe("Gagné ce mois-ci");
-    expect(buildCatalog("fr").insightsGalleryRevenueByMonth).toBe("Chiffre d’affaires par mois");
-    expect(buildCatalog("fr").insightsGalleryOverdueAging).toBe("Retards par ancienneté");
-    expect(buildCatalog("fr").insightsGalleryPipelineByStage).toBe("Pipeline par étape");
-    expect(buildCatalog("fr").insightsGalleryVatByQuarter).toBe("TVA par trimestre");
+    expect(buildCatalog("fr").insightsGalleryOutstanding).toBe(
+      "Créances en cours",
+    );
+    expect(buildCatalog("fr").insightsGalleryWonThisMonth).toBe(
+      "Gagné ce mois-ci",
+    );
+    expect(buildCatalog("fr").insightsGalleryRevenueByMonth).toBe(
+      "Chiffre d’affaires par mois",
+    );
+    expect(buildCatalog("fr").insightsGalleryOverdueAging).toBe(
+      "Retards par ancienneté",
+    );
+    expect(buildCatalog("fr").insightsGalleryPipelineByStage).toBe(
+      "Pipeline par étape",
+    );
+    expect(buildCatalog("fr").insightsGalleryVatByQuarter).toBe(
+      "TVA par trimestre",
+    );
     expect(buildCatalog("fr").insightsGalleryWinRateByQuarter).toBe(
       "Taux de réussite par trimestre",
     );
     expect(buildCatalog("nl").insightsGalleryOutstanding).toBe("Openstaand");
-    expect(buildCatalog("nl").insightsGalleryWonThisMonth).toBe("Gewonnen deze maand");
-    expect(buildCatalog("nl").insightsGalleryRevenueByMonth).toBe("Omzet per maand");
-    expect(buildCatalog("nl").insightsGalleryOverdueAging).toBe("Achterstand per ouderdom");
-    expect(buildCatalog("nl").insightsGalleryPipelineByStage).toBe("Pipeline per fase");
-    expect(buildCatalog("nl").insightsGalleryVatByQuarter).toBe("Btw per kwartaal");
-    expect(buildCatalog("nl").insightsGalleryWinRateByQuarter).toBe("Winstpercentage per kwartaal");
+    expect(buildCatalog("nl").insightsGalleryWonThisMonth).toBe(
+      "Gewonnen deze maand",
+    );
+    expect(buildCatalog("nl").insightsGalleryRevenueByMonth).toBe(
+      "Omzet per maand",
+    );
+    expect(buildCatalog("nl").insightsGalleryOverdueAging).toBe(
+      "Achterstand per ouderdom",
+    );
+    expect(buildCatalog("nl").insightsGalleryPipelineByStage).toBe(
+      "Pipeline per fase",
+    );
+    expect(buildCatalog("nl").insightsGalleryVatByQuarter).toBe(
+      "Btw per kwartaal",
+    );
+    expect(buildCatalog("nl").insightsGalleryWinRateByQuarter).toBe(
+      "Winstpercentage per kwartaal",
+    );
   });
 });
 
@@ -342,19 +395,22 @@ describe("alo Projects is fully translated (B3.11)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
-  ])("%s keeps every interpolation a function of the same shape", (locale, catalog) => {
-    for (const key of projectsKeys) {
-      const source = (en as Record<string, unknown>)[key];
-      const translated = (catalog as Record<string, unknown>)[key];
-      expect(typeof translated).toBe(typeof source);
-      if (typeof source === "function" && typeof translated === "function") {
-        expect(translated.length).toBe(source.length);
-      } else {
-        expect(String(translated).trim()).not.toBe("");
+  ])(
+    "%s keeps every interpolation a function of the same shape",
+    (locale, catalog) => {
+      for (const key of projectsKeys) {
+        const source = (en as Record<string, unknown>)[key];
+        const translated = (catalog as Record<string, unknown>)[key];
+        expect(typeof translated).toBe(typeof source);
+        if (typeof source === "function" && typeof translated === "function") {
+          expect(translated.length).toBe(source.length);
+        } else {
+          expect(String(translated).trim()).not.toBe("");
+        }
       }
-    }
-    expect(locale).toMatch(/^(fr|nl)$/);
-  });
+      expect(locale).toMatch(/^(fr|nl)$/);
+    },
+  );
 
   test("the translated strings really are different words", () => {
     expect(buildCatalog("fr").moduleProjects).toBe("Projets");
@@ -364,10 +420,18 @@ describe("alo Projects is fully translated (B3.11)", () => {
     expect(buildCatalog("fr").projectsWeekRejected).toBe("Renvoyée");
     expect(buildCatalog("nl").projectsWeekRejected).toBe("Teruggestuurd");
     // …including the ones built by a function, and both branches of a plural.
-    expect(buildCatalog("fr").projectsSuggestionsWaiting(1)).toContain("1 proposition");
-    expect(buildCatalog("fr").projectsSuggestionsWaiting(3)).toContain("3 propositions");
-    expect(buildCatalog("nl").projectsSuggestionsWaiting(1)).toContain("1 voorstel wacht");
-    expect(buildCatalog("nl").projectsSuggestionsWaiting(3)).toContain("3 voorstellen wachten");
+    expect(buildCatalog("fr").projectsSuggestionsWaiting(1)).toContain(
+      "1 proposition",
+    );
+    expect(buildCatalog("fr").projectsSuggestionsWaiting(3)).toContain(
+      "3 propositions",
+    );
+    expect(buildCatalog("nl").projectsSuggestionsWaiting(1)).toContain(
+      "1 voorstel wacht",
+    );
+    expect(buildCatalog("nl").projectsSuggestionsWaiting(3)).toContain(
+      "3 voorstellen wachten",
+    );
   });
 
   test("a duration is written in the reader's own units", () => {
@@ -454,19 +518,22 @@ describe("alo Finance is fully translated (B4.15)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
-  ])("%s keeps every interpolation a function of the same shape", (locale, catalog) => {
-    for (const key of financeKeys) {
-      const source = (en as Record<string, unknown>)[key];
-      const translated = (catalog as Record<string, unknown>)[key];
-      expect(typeof translated).toBe(typeof source);
-      if (typeof source === "function" && typeof translated === "function") {
-        expect(translated.length).toBe(source.length);
-      } else {
-        expect(String(translated).trim()).not.toBe("");
+  ])(
+    "%s keeps every interpolation a function of the same shape",
+    (locale, catalog) => {
+      for (const key of financeKeys) {
+        const source = (en as Record<string, unknown>)[key];
+        const translated = (catalog as Record<string, unknown>)[key];
+        expect(typeof translated).toBe(typeof source);
+        if (typeof source === "function" && typeof translated === "function") {
+          expect(translated.length).toBe(source.length);
+        } else {
+          expect(String(translated).trim()).not.toBe("");
+        }
       }
-    }
-    expect(locale).toMatch(/^(fr|nl)$/);
-  });
+      expect(locale).toMatch(/^(fr|nl)$/);
+    },
+  );
 
   test("the translated strings really are different words", () => {
     expect(buildCatalog("fr").moduleFinance).toBe("Finance");
@@ -476,13 +543,25 @@ describe("alo Finance is fully translated (B4.15)", () => {
     expect(buildCatalog("nl").financeReportPl).toBe("Winst-en-verliesrekening");
     expect(buildCatalog("fr").financeReportVat).toBe("Déclaration de TVA");
     expect(buildCatalog("nl").financeReportVat).toBe("Btw-aangifte");
-    expect(buildCatalog("fr").financeChartLoadFailed).toContain("plan comptable");
-    expect(buildCatalog("nl").financeChartLoadFailed).toContain("rekeningschema");
+    expect(buildCatalog("fr").financeChartLoadFailed).toContain(
+      "plan comptable",
+    );
+    expect(buildCatalog("nl").financeChartLoadFailed).toContain(
+      "rekeningschema",
+    );
     // …including the ones built by a function, and both branches of a plural.
-    expect(buildCatalog("fr").financeReportOpenDocuments(1)).toBe("1 document ouvert");
-    expect(buildCatalog("fr").financeReportOpenDocuments(3)).toBe("3 documents ouverts");
-    expect(buildCatalog("nl").financeReportOpenDocuments(1)).toBe("1 openstaand document");
-    expect(buildCatalog("nl").financeReportOpenDocuments(3)).toBe("3 openstaande documenten");
+    expect(buildCatalog("fr").financeReportOpenDocuments(1)).toBe(
+      "1 document ouvert",
+    );
+    expect(buildCatalog("fr").financeReportOpenDocuments(3)).toBe(
+      "3 documents ouverts",
+    );
+    expect(buildCatalog("nl").financeReportOpenDocuments(1)).toBe(
+      "1 openstaand document",
+    );
+    expect(buildCatalog("nl").financeReportOpenDocuments(3)).toBe(
+      "3 openstaande documenten",
+    );
   });
 
   test("no sentence makes a participle agree with an interpolated amount", () => {
@@ -498,9 +577,9 @@ describe("alo Finance is fully translated (B4.15)", () => {
     expect(buildCatalog("fr").financeReportUnbalanced("1,00 €")).toContain(
       "un écart de 1,00 € n’est pas expliqué",
     );
-    expect(buildCatalog("fr").financeMarkPaidBackSubtitle("Marie", "1,00 €")).toBe(
-      "Retour de 1,00 € à Marie.",
-    );
+    expect(
+      buildCatalog("fr").financeMarkPaidBackSubtitle("Marie", "1,00 €"),
+    ).toBe("Retour de 1,00 € à Marie.");
   });
 
   test("the words the two modules share stay one word", () => {
@@ -508,10 +587,16 @@ describe("alo Finance is fully translated (B4.15)", () => {
     // If "issued" is one word under Billing and another under Finance, the
     // same document appears to have two states.
     expect(buildCatalog("fr").billingStatusIssued).toBe("Émise");
-    expect(buildCatalog("fr").financeBankNoOpenInvoices).toContain("facture émise");
+    expect(buildCatalog("fr").financeBankNoOpenInvoices).toContain(
+      "facture émise",
+    );
     expect(buildCatalog("nl").billingStatusIssued).toBe("Uitgegeven");
-    expect(buildCatalog("nl").financeBankNoOpenInvoices).toContain("uitgegeven factuur");
-    expect(buildCatalog("nl").financeReportAgedEmptyBody).toContain("uitgegeven document");
+    expect(buildCatalog("nl").financeBankNoOpenInvoices).toContain(
+      "uitgegeven factuur",
+    );
+    expect(buildCatalog("nl").financeReportAgedEmptyBody).toContain(
+      "uitgegeven document",
+    );
   });
 
   test("every reason and kind the agent cards render has words in each language", () => {
@@ -534,7 +619,9 @@ describe("alo Finance is fully translated (B4.15)", () => {
     for (const locale of ["fr", "nl"] as const) {
       const say = buildCatalog(locale);
       for (const reason of reasons) {
-        expect(say.agentCategoriseReason(reason)).not.toBe(en.agentCategoriseReason(reason));
+        expect(say.agentCategoriseReason(reason)).not.toBe(
+          en.agentCategoriseReason(reason),
+        );
         expect(say.agentCategoriseReason(reason).trim()).not.toBe("");
       }
       for (const kind of kinds) {
@@ -593,33 +680,44 @@ describe("alo Inventory is fully translated (B5.11)", () => {
   test.each([
     ["fr", fr],
     ["nl", nl],
-  ])("%s keeps every interpolation a function of the same shape", (locale, catalog) => {
-    for (const key of inventoryKeys) {
-      const source = (en as Record<string, unknown>)[key];
-      const translated = (catalog as Record<string, unknown>)[key];
-      expect(typeof translated).toBe(typeof source);
-      if (typeof source === "function" && typeof translated === "function") {
-        expect(translated.length).toBe(source.length);
-      } else {
-        expect(String(translated).trim()).not.toBe("");
+  ])(
+    "%s keeps every interpolation a function of the same shape",
+    (locale, catalog) => {
+      for (const key of inventoryKeys) {
+        const source = (en as Record<string, unknown>)[key];
+        const translated = (catalog as Record<string, unknown>)[key];
+        expect(typeof translated).toBe(typeof source);
+        if (typeof source === "function" && typeof translated === "function") {
+          expect(translated.length).toBe(source.length);
+        } else {
+          expect(String(translated).trim()).not.toBe("");
+        }
       }
-    }
-    expect(locale).toMatch(/^(fr|nl)$/);
-  });
+      expect(locale).toMatch(/^(fr|nl)$/);
+    },
+  );
 
   test("the translated strings really are different words", () => {
     expect(buildCatalog("fr").moduleInventory).toBe("Inventaire");
     expect(buildCatalog("nl").moduleInventory).toBe("Voorraad");
     // The two order documents are what a stranger reads.
-    expect(buildCatalog("fr").inventoryNewPurchaseOrder).toBe("Nouvelle commande d’achat");
-    expect(buildCatalog("nl").inventoryNewPurchaseOrder).toBe("Nieuwe inkooporder");
+    expect(buildCatalog("fr").inventoryNewPurchaseOrder).toBe(
+      "Nouvelle commande d’achat",
+    );
+    expect(buildCatalog("nl").inventoryNewPurchaseOrder).toBe(
+      "Nieuwe inkooporder",
+    );
     expect(buildCatalog("fr").inventoryPoStatusSent).toBe("Passée");
     expect(buildCatalog("nl").inventoryPoStatusSent).toBe("Geplaatst");
     // …including the ones built by a function.
     expect(buildCatalog("fr").inventoryArrivalNo(2)).toBe("Arrivée 2");
     expect(buildCatalog("nl").inventoryConsignmentNo(2)).toBe("Zending 2");
-    expect(buildCatalog("fr").agentReorderDrafted(1)).toBe("1 commande en brouillon");
-    expect(buildCatalog("fr").agentReorderDrafted(3)).toBe("3 commandes en brouillon");
+    expect(buildCatalog("fr").agentReorderDrafted(1)).toBe(
+      "1 commande en brouillon",
+    );
+    expect(buildCatalog("fr").agentReorderDrafted(3)).toBe(
+      "3 commandes en brouillon",
+    );
     expect(buildCatalog("nl").agentReorderDrafted(1)).toBe("1 conceptorder");
     expect(buildCatalog("nl").agentReorderDrafted(3)).toBe("3 conceptorders");
   });
@@ -649,8 +747,12 @@ describe("alo Inventory is fully translated (B5.11)", () => {
     expect(buildCatalog("fr").inventorySoStatusDelivered).toBe("Livrée");
     // And the quantity an agent card asks for is invariable, because the
     // number arrives already formatted: "1 pièce nécessaire" cannot agree.
-    expect(buildCatalog("fr").agentReorderNeeded("1", "pièce")).toBe("1 pièce à commander");
-    expect(buildCatalog("fr").agentReorderNeeded("12", "")).toBe("12 à commander");
+    expect(buildCatalog("fr").agentReorderNeeded("1", "pièce")).toBe(
+      "1 pièce à commander",
+    );
+    expect(buildCatalog("fr").agentReorderNeeded("12", "")).toBe(
+      "12 à commander",
+    );
   });
 
   test("Dutch uses the warehouse's own verbs, not loanwords", () => {
@@ -671,7 +773,9 @@ describe("alo Inventory is fully translated (B5.11)", () => {
       buildCatalog("fr").moduleBilling,
     );
     expect(buildCatalog("nl").inventoryDraftInvoice).toBe("Conceptfactuur");
-    expect(buildCatalog("nl").crmDocumentDraft("invoice")).toBe("conceptfactuur");
+    expect(buildCatalog("nl").crmDocumentDraft("invoice")).toBe(
+      "conceptfactuur",
+    );
     expect(buildCatalog("nl").inventoryInvoiceDrafted).toContain(
       buildCatalog("nl").moduleBilling,
     );
@@ -726,5 +830,50 @@ describe("runtime switching", () => {
     setLocale("en");
     expect(store.get("alo.locale")).toBe("en");
     vi.unstubAllGlobals();
+  });
+});
+
+describe("the ratchet: no new key drifts out of Dutch or French", () => {
+  // The catalog falls back to English for a missing key, which is right at
+  // runtime — a blank screen would be worse — and is exactly why 588 keys
+  // drifted without anyone noticing. Nothing surfaces an untranslated string
+  // except a Dutch user reading English.
+  //
+  // So the check is here instead. `UNTRANSLATED` is the debt as it stood when
+  // this was written; anything outside it must exist in all three languages.
+  const nlKeys = new Set(Object.keys(nl));
+  const frKeys = new Set(Object.keys(fr));
+  const allowed = new Set(UNTRANSLATED);
+
+  test("a new English key is translated, or the build says which is not", () => {
+    const drifted = Object.keys(en).filter(
+      (key) => !allowed.has(key) && (!nlKeys.has(key) || !frKeys.has(key)),
+    );
+    expect(
+      drifted,
+      `These keys need Dutch and French, or an explicit line in untranslated.ts:\n  ${drifted.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  test("the list only shrinks — a translated key must be removed from it", () => {
+    // Otherwise the debt list quietly becomes a permanent exemption, and the
+    // number stops meaning anything.
+    const stale = UNTRANSLATED.filter(
+      (key) => nlKeys.has(key) && frKeys.has(key),
+    );
+    expect(
+      stale,
+      `Translated now — delete these lines from untranslated.ts:\n  ${stale.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  test("the list names only keys that exist", () => {
+    // A renamed or deleted key leaves a line behind that would silently
+    // exempt nothing, and the count would overstate the debt.
+    const gone = UNTRANSLATED.filter((key) => !(key in en));
+    expect(
+      gone,
+      `No longer in en.ts — remove:\n  ${gone.join("\n  ")}`,
+    ).toEqual([]);
   });
 });
