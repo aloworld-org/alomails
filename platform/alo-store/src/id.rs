@@ -220,6 +220,10 @@ opaque_id!(
     SitePostId
 );
 opaque_id!(
+    /// One alo Sites collection backed by a table in alo Base.
+    SiteCollectionId
+);
+opaque_id!(
     /// A billing customer — the company or person a tenant invoices
     /// (alo Billing, ADR 0035).
     BillingCustomerId

@@ -146,6 +146,7 @@ pub mod share;
 pub mod signup;
 pub mod site_analytics;
 pub mod site_assets;
+pub mod site_collections;
 pub mod site_domains;
 pub mod site_form_notify;
 pub mod site_forms;
@@ -330,8 +331,9 @@ pub use id::{
     HrEmploymentId, InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId,
     InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId,
     InvSoInvoiceId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId,
-    ProjectMilestoneId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId,
-    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    ProjectMilestoneId, SiteCollectionId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId,
+    SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId,
+    TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -384,6 +386,9 @@ pub use share::{ShareCreated, ShareTarget};
 pub use signup::PendingSignup;
 pub use site_analytics::{SiteAnalyticsDay, SiteAnalyticsRank, SiteAnalyticsReport};
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
+pub use site_collections::{
+    SITE_COLLECTION_NAME_MAX_CHARS, SiteCollection, SiteCollectionFieldMapping, SiteCollectionInput,
+};
 pub use site_domains::{SITE_DOMAIN_MAX_LEN, SiteDomain, SiteDomainStatus, normalize_site_domain};
 pub use site_form_notify::FormNotification;
 pub use site_forms::{
