@@ -551,6 +551,153 @@ describe("alo Finance is fully translated (B4.15)", () => {
   });
 });
 
+describe("alo Inventory is fully translated (B5.11)", () => {
+  /** The B5 surface: the catalog, the stock list and the movement history, the
+   *  purchase and sales orders with the sentences that precede an irreversible
+   *  act, the barcode scanner, and the two agent cards that propose orders.
+   *  Same rule as billing, CRM, Insights, Projects and Finance above — a
+   *  sentence that says "this draws a number and freezes the order" must not be
+   *  the one thing on the screen left in English. */
+  const INVENTORY_AGENT_KEYS = Object.keys(en).filter(
+    (key) =>
+      key.startsWith("agentReorder") ||
+      key.startsWith("agentStock") ||
+      key === "agentActReorderProposals" ||
+      key === "agentActStockAnswer" ||
+      key === "agentFieldSupplier" ||
+      key === "agentFieldLocation" ||
+      key === "agentFieldProduct",
+  );
+  const inventoryKeys = Object.keys(en).filter(
+    (key) =>
+      key.startsWith("inventory") ||
+      key === "moduleInventory" ||
+      INVENTORY_AGENT_KEYS.includes(key),
+  );
+
+  test("the key list is the real Inventory surface, not an empty filter", () => {
+    // A typo in the filter above would make every assertion below vacuous.
+    expect(inventoryKeys.length).toBeGreaterThan(240);
+    expect(INVENTORY_AGENT_KEYS.length).toBeGreaterThan(20);
+    expect(en).toHaveProperty("moduleInventory");
+  });
+
+  test.each([
+    ["fr", fr],
+    ["nl", nl],
+  ])("%s translates every Inventory string", (_locale, catalog) => {
+    const missing = inventoryKeys.filter((key) => !(key in catalog));
+    expect(missing).toEqual([]);
+  });
+
+  test.each([
+    ["fr", fr],
+    ["nl", nl],
+  ])("%s keeps every interpolation a function of the same shape", (locale, catalog) => {
+    for (const key of inventoryKeys) {
+      const source = (en as Record<string, unknown>)[key];
+      const translated = (catalog as Record<string, unknown>)[key];
+      expect(typeof translated).toBe(typeof source);
+      if (typeof source === "function" && typeof translated === "function") {
+        expect(translated.length).toBe(source.length);
+      } else {
+        expect(String(translated).trim()).not.toBe("");
+      }
+    }
+    expect(locale).toMatch(/^(fr|nl)$/);
+  });
+
+  test("the translated strings really are different words", () => {
+    expect(buildCatalog("fr").moduleInventory).toBe("Inventaire");
+    expect(buildCatalog("nl").moduleInventory).toBe("Voorraad");
+    // The two order documents are what a stranger reads.
+    expect(buildCatalog("fr").inventoryNewPurchaseOrder).toBe("Nouvelle commande d’achat");
+    expect(buildCatalog("nl").inventoryNewPurchaseOrder).toBe("Nieuwe inkooporder");
+    expect(buildCatalog("fr").inventoryPoStatusSent).toBe("Passée");
+    expect(buildCatalog("nl").inventoryPoStatusSent).toBe("Geplaatst");
+    // …including the ones built by a function.
+    expect(buildCatalog("fr").inventoryArrivalNo(2)).toBe("Arrivée 2");
+    expect(buildCatalog("nl").inventoryConsignmentNo(2)).toBe("Zending 2");
+    expect(buildCatalog("fr").agentReorderDrafted(1)).toBe("1 commande en brouillon");
+    expect(buildCatalog("fr").agentReorderDrafted(3)).toBe("3 commandes en brouillon");
+    expect(buildCatalog("nl").agentReorderDrafted(1)).toBe("1 conceptorder");
+    expect(buildCatalog("nl").agentReorderDrafted(3)).toBe("3 conceptorders");
+  });
+
+  test("no French label makes a participle agree with goods it cannot see", () => {
+    // A movement reason and an adjustment reason describe *goods* whose gender
+    // the sentence never learns, so every one of them is a noun. A status, by
+    // contrast, always has "la commande" for a subject and agrees on purpose —
+    // the same split B4.15 found between Finance's sentences and its statuses.
+    for (const key of [
+      "inventoryReasonReceipt",
+      "inventoryReasonDelivery",
+      "inventoryReasonTransfer",
+      "inventoryReasonAdjustment",
+      "inventoryReasonReturn",
+      "inventoryReasonShrinkage",
+      "inventoryReasonCount",
+      "inventoryAdjustDamaged",
+      "inventoryAdjustLost",
+      "inventoryAdjustFound",
+      "inventoryAdjustExpired",
+    ] as const) {
+      expect(buildCatalog("fr")[key]).not.toMatch(/(é|ée|és|ées)$/);
+    }
+    expect(buildCatalog("fr").inventoryAdjustDamaged).toBe("Casse");
+    expect(buildCatalog("fr").inventoryPoStatusReceived).toBe("Reçue");
+    expect(buildCatalog("fr").inventorySoStatusDelivered).toBe("Livrée");
+    // And the quantity an agent card asks for is invariable, because the
+    // number arrives already formatted: "1 pièce nécessaire" cannot agree.
+    expect(buildCatalog("fr").agentReorderNeeded("1", "pièce")).toBe("1 pièce à commander");
+    expect(buildCatalog("fr").agentReorderNeeded("12", "")).toBe("12 à commander");
+  });
+
+  test("Dutch uses the warehouse's own verbs, not loanwords", () => {
+    // Goods are *ingeslagen* and *uitgeslagen*. "Gepickt" on the one screen a
+    // warehouse worker opens all day is the tell that a product was translated
+    // rather than written — the same finding as B4.15's "afletteren".
+    expect(buildCatalog("nl").inventoryReceiveWhere).toBe("Ingeslagen op");
+    expect(buildCatalog("nl").inventoryDeliverWhere).toBe("Uitgeslagen van");
+    expect(buildCatalog("nl").inventoryReasonShrinkage).toBe("Derving");
+  });
+
+  test("the words Inventory shares with Billing stay one word", () => {
+    // A sales order raises a *billing* invoice and a receipt raises a *billing*
+    // bill. If a draft is one word here and another there, the same document
+    // appears to have two states.
+    expect(buildCatalog("fr").inventoryInvoiceDrafted).toContain("brouillon");
+    expect(buildCatalog("fr").inventoryInvoiceDrafted).toContain(
+      buildCatalog("fr").moduleBilling,
+    );
+    expect(buildCatalog("nl").inventoryDraftInvoice).toBe("Conceptfactuur");
+    expect(buildCatalog("nl").crmDocumentDraft("invoice")).toBe("conceptfactuur");
+    expect(buildCatalog("nl").inventoryInvoiceDrafted).toContain(
+      buildCatalog("nl").moduleBilling,
+    );
+  });
+
+  test("every reason a product was left out of an order has words in each language", () => {
+    // The server sends reason codes, so an untranslated branch is a French card
+    // that explains itself in English. The default branch matters most: a newer
+    // server's reason must still read as "left out", never as nothing.
+    const codes = ["noSupplier", "nothingToBuy", "somethingNewerServersKnow"];
+    for (const locale of ["fr", "nl"] as const) {
+      const say = buildCatalog(locale).agentReorderReason;
+      for (const code of codes) {
+        expect(say(code)).not.toBe(en.agentReorderReason(code));
+        expect(say(code).trim()).not.toBe("");
+      }
+    }
+    expect(buildCatalog("fr").agentReorderReason("noSupplier")).toBe(
+      "personne ne vous l’a chiffré",
+    );
+    expect(buildCatalog("nl").agentReorderReason("noSupplier")).toBe(
+      "niemand heeft er u een prijs voor gegeven",
+    );
+  });
+});
+
 describe("runtime switching", () => {
   test("strings proxy reflects the active locale live", () => {
     expect(getLocale()).toBe("en");

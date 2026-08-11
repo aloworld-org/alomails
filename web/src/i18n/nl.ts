@@ -3450,4 +3450,373 @@ export const nl: Partial<Catalog> = {
   agentAnomalyEvidence: "De boekingen die erachter zitten",
   agentAnomalyFooter:
     "Er is niets gewijzigd en niets als nagekeken gemarkeerd — elk hiervan is een vraag over boekingen, en het antwoord op één is een corrigerende boeking.",
+
+  // ---- alo Voorraad (B5.09a–c, B5.10; vertaald bij B5.11) -------------------
+  //
+  // De woorden zijn die van een magazijn, niet van een grootboek: "op
+  // voorraad", "wij betalen". Twee keuzes gelden overal in dit blok. Goederen
+  // worden *ingeslagen* en *uitgeslagen* — de eigen werkwoorden van een
+  // magazijn, niet "gepickt"; en niets hier noemt een aantal, een waarde of een
+  // regel die van de server is: een weigering wordt in de zin van de server
+  // zelf getoond.
+  moduleInventory: "Voorraad",
+  inventoryTabCatalog: "Catalogus",
+  inventoryTabStock: "Voorraadstand",
+  inventoryLoadFailed: "Uw catalogus kon niet worden geladen.",
+  inventorySaveFailed: "De wijziging kon niet worden opgeslagen.",
+  inventoryHistoryFailed: "Die geschiedenis kon niet worden geladen.",
+  inventoryClose: "Sluiten",
+  inventoryEdit: "Bewerken",
+  inventoryArchive: "Archiveren",
+  inventoryRestore: "Terugzetten",
+  inventoryArchived: "gearchiveerd",
+  inventoryColActions: "Acties",
+  inventoryNoMatches: "Niets hier komt overeen met wat u hebt getypt.",
+
+  // De catalogus: de prijslijst, gezien als dingen.
+  inventoryNewProduct: "Nieuw product",
+  inventorySearchCatalog: "Zoek op naam, code of streepjescode",
+  inventoryStockedOnly: "Alleen voorraadartikelen",
+  inventoryShowArchived: "Gearchiveerde tonen",
+  inventoryCatalogEmptyTitle: "Uw catalogus is leeg",
+  inventoryCatalogEmptyBody:
+    "Een product is hier één record: wat u ervoor rekent, wat u ervoor betaalt en — als het iets is dat u op een schap bewaart — hoeveel u ervan hebt. Voeg het eerste toe en het kan diezelfde dag op een factuur en in een magazijn staan.",
+  inventoryColProduct: "Product",
+  inventoryColSku: "Code",
+  inventoryColBarcode: "Streepjescode",
+  inventoryColOnHand: "Op voorraad",
+  inventoryColPurchasePrice: "Wij betalen",
+  inventoryColSalePrice: "Wij rekenen",
+  inventoryColVatRate: "Btw",
+  inventoryTypeStocked: "Voorraadartikel",
+  inventoryTypeService: "Dienst",
+  inventoryNotStocked: "—",
+  inventoryArchiveProductConfirm: (name: string) =>
+    `${name} archiveren? Het blijft op elk document staan dat er al mee is opgemaakt en wordt niet meer aangeboden op nieuwe. U kunt het altijd terugzetten.`,
+
+  // De velden van de productfiche, die de prijslijst van Facturatie en deze
+  // catalogus delen. De twee aanwijzingen die ertoe doen gaan over een regel
+  // van de server: het controlecijfer van een streepjescode, en wat
+  // "voorraadartikel" beslist.
+  inventoryFieldSku: "Code (SKU)",
+  inventorySkuHint:
+    "Uw eigen code voor dit artikel. Uniek binnen uw producten; laat het leeg als u er geen hebt.",
+  inventoryFieldBarcode: "Streepjescode",
+  inventoryBarcodeHint:
+    "De GTIN op de doos. Het controlecijfer wordt nagerekend, dus een verkeerd getypte code wordt hier geweigerd in plaats van ontdekt wanneer het verkeerde artikel vertrekt.",
+  inventoryFieldPurchasePrice: "Inkoopprijs",
+  inventoryPurchasePriceHint: "Wat u ervoor betaalt, in uw eigen valuta.",
+  inventoryFieldDefaultSupplier: "Vaste leverancier",
+  inventoryDefaultSupplierHint:
+    "Bij wie dit normaal wordt gekocht. Een bestelvoorstel vertrekt hiervan.",
+  inventoryNoSupplier: "Niemand in het bijzonder",
+  inventoryFieldStocked: "Voorraad",
+  inventoryStockedLabel: "Hiervan een aantal bijhouden",
+  inventoryStockedHint:
+    "Alleen een voorraadartikel kan zich tussen plaatsen verplaatsen. Een dienst kan niet worden ontvangen, geleverd of geteld — en zodra er iets is verplaatst, kan dit niet meer worden uitgezet.",
+
+  // De voorraadlijst, en wat haar cijfers betekenen.
+  inventorySearchStock: "Zoek op product, code of plaats",
+  inventoryFilterLocation: "Plaats",
+  inventoryAllLocations: "Overal",
+  inventoryShowCounterparties: "Tegenpartijen tonen",
+  inventoryCounterpartiesNote:
+    "Leveranciers, klanten, aanpassingen en productie zijn tegenpartijen, geen plaatsen: zij zijn het andere eind van elke beweging. Met hen erbij telt het totaal hieronder op tot ongeveer niets — zo ziet een grootboek eruit dat sluit, niet een leeg magazijn.",
+  inventoryStockEmptyTitle: "Er ligt nog niets op het schap",
+  inventoryStockEmptyBody:
+    "Voorraad verschijnt hier zodra er iets beweegt: een inkooporder die u ontvangt, een levering die u verstuurt, of een aanpassing die u met de hand maakt. Er valt geen aantal te typen — wat hier staat is de som van alles wat er is gebeurd.",
+  inventoryColLocation: "Plaats",
+  inventoryColValue: "Waarde",
+  inventoryColLastMove: "Laatste beweging",
+  inventoryOpenHistory: "Geschiedenis",
+  inventoryReferenceValue: (total: string) =>
+    `${total} tegen de inkoopprijzen van vandaag — een richtbedrag voor wat hier staat, geen boekhoudkundig saldo.`,
+
+  // De bewegingsgeschiedenis: van → naar, hoeveel, waarom, welk document.
+  inventoryHistoryTitle: (product: string) => `${product} — bewegingen`,
+  inventoryHistorySubtitle: (place: string) => `Alles wat ${place} in of uit ging.`,
+  inventoryHistoryEmpty: "Er is nog niets deze plaats in of uit gegaan.",
+  inventoryHistoryCapped: (limit: number) =>
+    `De ${limit} recentste bewegingen worden getoond. Oudere blijven vastgelegd.`,
+  inventoryColWhen: "Wanneer",
+  inventoryColMovement: "Van → naar",
+  inventoryColQuantity: "Aantal",
+  inventoryColWhy: "Reden",
+  inventoryColDocument: "Document",
+  inventoryNoDocument: "Met de hand",
+
+  // Wat een plaats is. De vier tegenpartijen heten wat ze voor een magazijn
+  // betekenen, niet wat de draad ze noemt.
+  inventoryKindStock: "Magazijn",
+  inventoryKindTransit: "Onderweg",
+  inventoryKindSupplier: "Leverancier",
+  inventoryKindCustomer: "Klant",
+  inventoryKindAdjust: "Aanpassing",
+  inventoryKindProduction: "Productie",
+
+  // Waarom er iets bewoog.
+  inventoryReasonReceipt: "Ontvangst",
+  inventoryReasonDelivery: "Levering",
+  inventoryReasonTransfer: "Verplaatsing",
+  inventoryReasonAdjustment: "Aanpassing",
+  inventoryReasonReturn: "Retour",
+  inventoryReasonShrinkage: "Derving",
+  inventoryReasonCount: "Telling",
+
+  // De reden die iemand opgaf voor een aanpassing met de hand.
+  inventoryAdjustDamaged: "Breuk",
+  inventoryAdjustLost: "Verlies",
+  inventoryAdjustFound: "Overschot",
+  inventoryAdjustExpired: "Verlopen",
+  inventoryAdjustTheft: "Diefstal",
+  inventoryAdjustSample: "Monster",
+  inventoryAdjustCorrection: "Correctie",
+
+  // ---- de twee orderdocumenten (B5.09b) -------------------------------------
+  //
+  // Een zin die aan een onomkeerbare daad voorafgaat zegt wat ze zal doen, niet
+  // "weet u het zeker". Een order plaatsen trekt een nummer uit een reeks
+  // zonder gaten en schrijft een brief; een aankomst boeken verplaatst echte
+  // goederen en maakt een inkoopfactuur op. Geen van beide kan ongedaan.
+  inventoryTabPurchasing: "Inkoop",
+  inventoryTabSales: "Verkooporders",
+  inventoryOrdersLoadFailed: "Die orders konden niet worden geladen.",
+  inventoryOrderLoadFailed: "Die order kon niet worden geladen.",
+  inventoryDraftOrder: "Concept",
+  inventoryDraftInvoice: "Conceptfactuur",
+  inventoryOrderLate: "Te laat",
+  inventoryFilterStatus: "Status",
+  inventoryAllStatuses: "Elke status",
+  inventoryNoOrdersInState: "Geen orders met die status",
+  inventoryCancelAction: "Annuleren",
+
+  // Hoe een status heet. "Geannuleerd" is gedeeld: een opgegeven order is
+  // opgegeven, welke kant de goederen ook op gingen.
+  inventoryOrderStatusCancelled: "Geannuleerd",
+  inventoryPoStatusDraft: "Concept",
+  inventoryPoStatusSent: "Geplaatst",
+  inventoryPoStatusPartial: "Deels ontvangen",
+  inventoryPoStatusReceived: "Ontvangen",
+  inventorySoStatusDraft: "Concept",
+  inventorySoStatusConfirmed: "Bevestigd",
+  inventorySoStatusPartial: "Deels geleverd",
+  inventorySoStatusDelivered: "Geleverd",
+
+  // De twee lijsten.
+  inventorySearchPurchaseOrders: "Zoek op nummer, leverancier of referentie",
+  inventorySearchSalesOrders: "Zoek op nummer, klant of referentie",
+  inventoryNewPurchaseOrder: "Nieuwe inkooporder",
+  inventoryNewSalesOrder: "Nieuwe verkooporder",
+  inventoryPurchaseOrdersEmptyTitle: "U hebt nog niets besteld",
+  inventoryPurchaseOrdersEmptyBody:
+    "Een inkooporder legt vast wat u een leverancier hebt gevraagd. Maak er een als concept, plaats ze wanneer u zover bent, en boek wat binnenkomt ertegen af — het voorraadgrootboek wordt voor u geschreven.",
+  inventorySalesOrdersEmptyTitle: "Nog geen klant heeft iets besteld",
+  inventorySalesOrdersEmptyBody:
+    "Een verkooporder legt vast wat een klant u heeft gevraagd. Maak er een als concept, bevestig ze om ze een nummer te geven, en boek elke zending af zodra ze buitengaat — de factuur brengt in rekening wat er werkelijk is gegaan.",
+  inventoryColOrder: "Order",
+  inventoryColSupplier: "Leverancier",
+  inventoryColCustomer: "Klant",
+  inventoryColExpected: "Verwacht op",
+  inventoryColPromised: "Beloofd op",
+  inventoryColState: "Status",
+  inventoryColTotal: "Totaal",
+
+  // Het document.
+  inventoryBackToPurchaseOrders: "Alle inkooporders",
+  inventoryBackToSalesOrders: "Alle verkooporders",
+  inventoryCreateDraft: "Concept aanmaken",
+  inventorySaveDraft: "Opslaan",
+  inventoryPrintOrder: "Afdrukken",
+  inventoryUnsavedNotice:
+    "Deze wijzigingen zijn nog niet opgeslagen, dus de totalen hieronder zijn de laatste die de server heeft uitgerekend.",
+  inventoryOrderFrozenNotice:
+    "Deze order is geplaatst. Ze draagt een nummer dat de leverancier in handen heeft, dus ze kan niet meer worden bewerkt — boek af wat er binnenkomt, of annuleer ze.",
+  inventorySalesOrderFrozenNotice:
+    "Deze order is bevestigd. Ze draagt een nummer dat de klant in handen heeft, dus ze kan niet meer worden bewerkt — boek elke zending af zodra ze buitengaat.",
+  inventoryFixLinesFirst: "Een van de regels is niet af. Corrigeer die en sla opnieuw op.",
+  inventoryOrderNeedsSupplier: "Kies de leverancier bij wie deze order wordt geplaatst.",
+  inventoryOrderNeedsCustomer: "Kies de klant voor wie deze order is.",
+  inventoryPickSupplier: "Kies een leverancier",
+  inventoryPickCustomer: "Kies een klant",
+  inventorySupplierHint:
+    "Bij wie u bestelt. Dit kan niet meer worden gewijzigd zodra de order is geplaatst.",
+  inventoryCustomerHint:
+    "Voor wie de order is. Dit kan niet meer worden gewijzigd zodra de order is bevestigd.",
+  inventoryExpectedHint:
+    "De dag waarop u de goederen verwacht. Een order die daaroverheen gaat, wordt als te laat gemarkeerd.",
+  inventoryPromisedHint:
+    "De dag waarop u de goederen hebt beloofd. Een order die daaroverheen gaat, wordt als te laat gemarkeerd.",
+  inventoryFieldReference: "Referentie",
+  inventoryReferenceHint:
+    "Uw eigen referentie voor deze order — een project, een werf, een dossiernummer.",
+  inventoryFieldOrdered: "Geplaatst op",
+  inventoryFieldConfirmed: "Bevestigd op",
+  inventoryFieldNote: "Notitie",
+  inventoryOrderNoteHint:
+    "Alles wat de andere partij moet lezen. Het wordt op de order afgedrukt.",
+
+  // Het regelraster. De woorden zijn die van een document, want deze regels
+  // worden er een.
+  inventoryLines: "Regels",
+  inventoryAddLine: "Regel toevoegen",
+  inventoryNoLines: "Nog geen regels.",
+  inventoryColDescription: "Omschrijving",
+  inventoryColUnit: "Eenheid",
+  inventoryColUnitPrice: "Stukprijs",
+  inventoryColNet: "Netto",
+  inventoryColReceived: "Ontvangen",
+  inventoryColDelivered: "Geleverd",
+  inventoryColOutstanding: "Openstaand",
+  inventoryColToBill: "Te factureren",
+  inventoryPickProduct: "Uit de catalogus",
+  inventoryDescriptionPlaceholder: "Wat er wordt besteld",
+  inventoryUnitPlaceholder: "stuk",
+  inventoryQtyPlaceholder: "1",
+  inventoryAmountPlaceholder: "0,00",
+  inventoryRatePlaceholder: "0",
+  inventoryRemoveLine: "Regel verwijderen",
+  inventoryLineNeedsDescription: "Zeg waarvoor deze regel is.",
+  inventoryNotAQuantity: "Dat is geen aantal.",
+  inventoryNotAnAmount: "Dat is geen bedrag.",
+  inventoryNotARate: "Dat is geen percentage.",
+
+  // De order plaatsen: één daad, en de zin noemt alle drie de delen ervan.
+  inventorySendOrder: "Order plaatsen",
+  inventorySendOrderConfirm:
+    "Dit geeft de order haar nummer, bevriest ze voorgoed, en zet de begeleidende brief met de afgedrukte order als bijlage in uw Concepten. Er wordt niets verstuurd tot u het zelf verstuurt.",
+  inventoryOrderPlacedNotice: (to: string, file: string) =>
+    `De order is geplaatst. Een begeleidende brief aan ${to} met ${file} als bijlage wacht in uw Concepten — er is niets verstuurd.`,
+  inventoryConfirmOrder: "Order bevestigen",
+  inventoryConfirmOrderConfirm:
+    "Dit geeft de order haar nummer en bevriest ze voorgoed. Er wordt geen bericht geschreven: de klant inlichten is een gewone brief die u zelf verstuurt.",
+  inventoryCancelOrder: "Order annuleren",
+  inventoryCancelOrderConfirm:
+    "De order blijft bewaard en leesbaar, maar er wordt niets meer tegen verwacht.",
+  inventoryCancelShortConfirm:
+    "Een deel van deze order is al bewogen. Ze annuleren betekent dat wat tot nu toe is afgehandeld als het geheel wordt aanvaard, en dat er niets meer wordt verwacht. De order blijft leesbaar.",
+  inventoryDiscardDraft: "Concept weggooien",
+  inventoryDiscardDraftConfirm:
+    "Dit concept heeft geen nummer en is aan niemand getoond, dus het wordt verwijderd in plaats van geannuleerd.",
+
+  // Een zending boeken, in beide richtingen.
+  inventoryReceiveGoods: "Aankomst boeken",
+  inventoryDeliverGoods: "Zending boeken",
+  inventoryReceiveTitle: (order: string) => `Wat er is binnengekomen op ${order}`,
+  inventoryDeliverTitle: (order: string) => `Wat er buitengaat op ${order}`,
+  inventoryReceiveSubtitle:
+    "Elke regel opent op wat nog openstaat. Wijzig wat u tekortkomt; de rest blijft in bestelling. Voor wat is binnengekomen wordt een conceptinkoopfactuur opgemaakt.",
+  inventoryDeliverSubtitle:
+    "Elke regel opent op wat nog openstaat. Wijzig wat er nu buitengaat; de rest blijft op de order staan.",
+  inventoryReceiveWhere: "Ingeslagen op",
+  inventoryReceiveWhereHint:
+    "Waar de goederen werkelijk zijn weggezet. Het voorraadgrootboek wordt op deze plaats geschreven.",
+  inventoryDeliverWhere: "Uitgeslagen van",
+  inventoryDeliverWhereHint:
+    "Waar de goederen zijn weggehaald. Het voorraadgrootboek wordt op deze plaats geschreven.",
+  inventoryColThisConsignment: "Deze keer",
+  inventoryFulfilNoteHint:
+    "Wat degene die het afhandelde erbij schreef — een beschadigde krat, een deelzending.",
+  inventoryFulfilNeedsPlace: "Kies eerst de plaats.",
+  inventoryFulfilNeedsSomething:
+    "Op geen enkele regel staat iets, dus er valt niets te boeken.",
+  inventoryNoPlaces: "Nog geen plaatsen",
+  inventoryBookArrival: "Inboeken",
+  inventoryBookConsignment: "Uitboeken",
+  inventoryArrivalBooked:
+    "De aankomst is geboekt, het voorraadgrootboek is geschreven, en een conceptinkoopfactuur wacht op goedkeuring.",
+  inventoryConsignmentBooked:
+    "De zending is geboekt en het voorraadgrootboek is geschreven.",
+
+  // Wat er al bewoog, en wat ervoor is gefactureerd.
+  inventoryArrivals: "Aankomsten",
+  inventoryNoArrivals: "Er is nog niets binnengekomen op deze order.",
+  inventoryArrivalNo: (n: number) => `Aankomst ${n}`,
+  inventoryBillDrafted: "Inkoopfactuur in concept",
+  inventoryConsignments: "Zendingen",
+  inventoryNoConsignments: "Er is nog niets buitengegaan op deze order.",
+  inventoryConsignmentNo: (n: number) => `Zending ${n}`,
+  inventoryRaiseInvoice: "Factureren wat is gegaan",
+  inventoryRaisedInvoices: "Facturen",
+  inventoryNoRaisedInvoices: "Er is nog niets gefactureerd vanuit deze order.",
+  inventoryInvoiceDrafted:
+    "Er is een conceptfactuur opgemaakt voor wat er is buitengegaan. Ze draagt geen nummer tot iemand haar in Facturatie uitgeeft.",
+
+  // ---- streepjescodes lezen (B5.09c) ----------------------------------------
+  //
+  // De woorden volgen de hardware: een handscanner is een toetsenbord, dus het
+  // veld is de hoofdzaak en de camera is slechts een tweede manier.
+  inventoryScan: "Scannen",
+  inventoryScanTitle: "Een streepjescode scannen",
+  inventoryScanSubtitle:
+    "Scan in het veld met een handscanner, of typ de code. Op een telefoon kunt u in plaats daarvan de camera gebruiken.",
+  inventoryScanFieldCode: "Streepjescode",
+  inventoryScanPlaceholder: "4006381333931",
+  inventoryScanHint:
+    "Een handscanner typt de code hier en drukt Enter voor u. Spaties en koppeltekens worden genegeerd.",
+  inventoryScanLookup: "Zoek hem op",
+  inventoryScanFailed: "Die code kon niet worden opgezocht.",
+  inventoryScanWaiting: "Wacht op een code.",
+  inventoryScanCameraStart: "Camera gebruiken",
+  inventoryScanCameraStop: "Camera stoppen",
+  inventoryScanCameraFailed:
+    "De camera kon niet worden gestart. Geef er toegang toe, of typ de code — een handscanner heeft helemaal geen toestemming nodig.",
+  inventoryScanAiming: "Richt de camera op de streepjescode. Ze stopt zodra er een is gelezen.",
+  inventoryScanNoCamera:
+    "Deze browser kan geen streepjescode van een camera lezen. Een handscanner werkt hier wel: die typt in het veld hierboven.",
+  inventoryScanOnHand: (quantity: string) => `${quantity} op voorraad, over alle plaatsen samen.`,
+  inventoryScanNowhere: "Er ligt er nog nergens een.",
+  inventoryScanServiceNote: "Dit is een dienst, dus er is geen aantal van te vinden.",
+  inventoryScanOpenProduct: "Dit product openen",
+  inventoryScanShowInStock: "In de lijst tonen",
+  inventoryScanAddProduct: "Met deze streepjescode aan de catalogus toevoegen",
+
+  // De voorraadagent (ADR 0035, B5.10). Elk woord houdt een concept een
+  // concept: de kaart mag een lezer nooit laten geloven dat een leverancier is
+  // benaderd.
+  agentActReorderProposals: "Bestellingen voorbereiden",
+  agentReorderNote:
+    "Kijkt naar alles waarvan u onder uw eigen minimum zit en schrijft één conceptinkooporder per leverancier. Er wordt niets verstuurd — elk concept wacht bij uw inkooporders tot u het nakijkt en verstuurt.",
+  agentActStockAnswer: "Voorraad nakijken",
+  agentStockAnswerNote:
+    "Leest hoe één product er nu voor staat: op uw schappen, in bestelling, aan klanten beloofd. Wijzigt niets en reserveert niets.",
+  agentFieldSupplier: "Leverancier",
+  agentFieldLocation: "Plaats",
+  agentFieldProduct: "Product",
+  agentReorderEverySupplier: "Elke leverancier",
+  agentReorderEverywhere: "Overal",
+  agentReorderShortages: (count: number): string =>
+    count === 1 ? "1 onder minimum" : `${count} onder minimum`,
+  agentReorderNothingShort: "Niets zit onder zijn minimum",
+  agentReorderDrafted: (count: number): string =>
+    count === 1 ? "1 conceptorder" : `${count} conceptorders`,
+  agentReorderLines: (count: number): string => (count === 1 ? "1 regel" : `${count} regels`),
+  agentReorderLeftOut: "Niets besteld voor",
+  agentReorderReason: (reason: string): string => {
+    switch (reason) {
+      case "noSupplier":
+        return "niemand heeft er u een prijs voor gegeven";
+      case "nothingToBuy":
+        return "de regel vraagt om niets";
+      default:
+        // Een reden die een nieuwere server kent en deze client niet: nog
+        // altijd zichtbaar weggelaten, nooit stilzwijgend geschrapt.
+        return "weggelaten";
+    }
+  },
+  agentReorderNeeded: (qty: string, unit: string): string =>
+    unit === "" ? `${qty} te bestellen` : `${qty} ${unit} te bestellen`,
+  agentReorderFooter:
+    "Dit zijn concepten. Er is geen leverancier benaderd en er is geen ordernummer getrokken — open er een in Voorraad om ze na te kijken en te versturen.",
+  agentStockOnHand: "Op de schappen",
+  agentStockOnOrder: "In bestelling",
+  agentStockCommitted: "Aan klanten beloofd",
+  agentStockAvailable: "Dat laat over",
+  agentStockNoShelf: "Een dienst — hiervan wordt niets bijgehouden",
+  agentStockNowhere: "Nergens",
+  agentStockWatched: "Voorraadregel",
+  agentStockMinimum: (min: string, target: string): string =>
+    `minimum ${min}, aanvullen tot ${target}`,
+  agentStockBelowMinimum: "onder minimum",
+  agentStockFooter:
+    "Cijfers zoals ze er nu voor staan. Er is niets besteld en er is niets apart gezet.",
 };

@@ -3481,4 +3481,378 @@ export const fr: Partial<Catalog> = {
   agentAnomalyEvidence: "Les écritures qui sont derrière",
   agentAnomalyFooter:
     "Rien n’a été modifié et rien n’a été marqué comme vérifié — chacun de ces points est une question sur des écritures, et la réponse à une question est une écriture de correction.",
+
+  // ---- alo Inventaire (B5.09a–c, B5.10 ; traduit en B5.11) ------------------
+  //
+  // Le vocabulaire est celui d’un magasin, pas d’un grand livre : « en stock »,
+  // « nous payons ». Trois choix tenus partout dans ce bloc. Les motifs d’un
+  // mouvement et d’un ajustement sont des **noms** (« Réception », « Casse »)
+  // et non des participes, parce qu’un participe devrait s’accorder avec une
+  // marchandise dont le genre n’est pas connu de la phrase. Les **états d’une
+  // commande** s’accordent, eux, au féminin : leur sujet est toujours « la
+  // commande ». Et rien ici n’énonce une quantité, une valeur ou une règle qui
+  // appartient au serveur — un refus est affiché dans la phrase du serveur.
+  moduleInventory: "Inventaire",
+  inventoryTabCatalog: "Catalogue",
+  inventoryTabStock: "Stock",
+  inventoryLoadFailed: "Votre catalogue n’a pas pu être chargé.",
+  inventorySaveFailed: "La modification n’a pas pu être enregistrée.",
+  inventoryHistoryFailed: "Cet historique n’a pas pu être chargé.",
+  inventoryClose: "Fermer",
+  inventoryEdit: "Modifier",
+  inventoryArchive: "Archiver",
+  inventoryRestore: "Restaurer",
+  inventoryArchived: "archivé",
+  inventoryColActions: "Actions",
+  inventoryNoMatches: "Rien ici ne correspond à ce que vous avez saisi.",
+
+  // Le catalogue : la liste de prix vue comme des choses.
+  inventoryNewProduct: "Nouveau produit",
+  inventorySearchCatalog: "Rechercher par nom, code ou code-barres",
+  inventoryStockedOnly: "Articles stockés seulement",
+  inventoryShowArchived: "Afficher les archivés",
+  inventoryCatalogEmptyTitle: "Votre catalogue est vide",
+  inventoryCatalogEmptyBody:
+    "Un produit est ici une seule fiche : ce que vous le facturez, ce que vous le payez et — si c’est quelque chose que vous gardez en rayon — la quantité que vous en avez. Ajoutez le premier et il pourra figurer sur une facture et entrer en magasin le jour même.",
+  inventoryColProduct: "Produit",
+  inventoryColSku: "Code",
+  inventoryColBarcode: "Code-barres",
+  inventoryColOnHand: "En stock",
+  inventoryColPurchasePrice: "Nous payons",
+  inventoryColSalePrice: "Nous facturons",
+  inventoryColVatRate: "TVA",
+  inventoryTypeStocked: "Stocké",
+  inventoryTypeService: "Service",
+  inventoryNotStocked: "—",
+  inventoryArchiveProductConfirm: (name: string) =>
+    `Archiver ${name} ? Le produit reste sur tous les documents déjà établis et cesse d’être proposé sur les nouveaux. Vous pouvez le restaurer à tout moment.`,
+
+  // Les champs de la fiche produit, partagés avec la liste de prix de
+  // Facturation. Les deux indications qui comptent sont celles qui portent sur
+  // une règle du serveur : la clé de contrôle d’un code-barres, et ce que
+  // « stocké » décide.
+  inventoryFieldSku: "Code (SKU)",
+  inventorySkuHint:
+    "Votre propre code pour cet article. Unique parmi vos produits ; laissez-le vide si vous n’en avez pas.",
+  inventoryFieldBarcode: "Code-barres",
+  inventoryBarcodeHint:
+    "Le GTIN inscrit sur le carton. Sa clé de contrôle est vérifiée : un code mal saisi est refusé ici plutôt que découvert quand le mauvais article part.",
+  inventoryFieldPurchasePrice: "Prix d’achat",
+  inventoryPurchasePriceHint: "Ce que vous le payez, dans votre propre devise.",
+  inventoryFieldDefaultSupplier: "Fournisseur habituel",
+  inventoryDefaultSupplierHint:
+    "Auprès de qui cet article est normalement acheté. C’est le point de départ d’une proposition de réapprovisionnement.",
+  inventoryNoSupplier: "Personne en particulier",
+  inventoryFieldStocked: "Stock",
+  inventoryStockedLabel: "Suivre une quantité de cet article",
+  inventoryStockedHint:
+    "Seul un produit stocké peut se déplacer d’un endroit à un autre. Un service ne peut être ni réceptionné, ni livré, ni compté — et dès qu’un mouvement a eu lieu, cette case ne peut plus être décochée.",
+
+  // La liste des stocks, et ce que ses chiffres veulent dire.
+  inventorySearchStock: "Rechercher par produit, code ou endroit",
+  inventoryFilterLocation: "Endroit",
+  inventoryAllLocations: "Partout",
+  inventoryShowCounterparties: "Afficher les contreparties",
+  inventoryCounterpartiesNote:
+    "Les fournisseurs, les clients, les ajustements et la production sont des contreparties, pas des endroits : ils sont l’autre bout de chaque mouvement. Quand ils sont affichés, le total ci-dessous s’approche de zéro — c’est à cela que ressemble un grand livre qui se boucle, pas un entrepôt vide.",
+  inventoryStockEmptyTitle: "Rien n’est encore en rayon",
+  inventoryStockEmptyBody:
+    "Le stock apparaît ici dès que quelque chose bouge : une commande d’achat que vous réceptionnez, une livraison que vous expédiez, ou un ajustement que vous saisissez à la main. Il n’y a aucune quantité à taper — ce qui est ici est la somme de tout ce qui s’est passé.",
+  inventoryColLocation: "Endroit",
+  inventoryColValue: "Valeur",
+  inventoryColLastMove: "Dernier mouvement",
+  inventoryOpenHistory: "Historique",
+  inventoryReferenceValue: (total: string) =>
+    `${total} aux prix d’achat du jour — un chiffre de référence pour ce qui est listé, pas un solde comptable.`,
+
+  // L’historique des mouvements : de → vers, combien, pourquoi, quel document.
+  inventoryHistoryTitle: (product: string) => `${product} — mouvements`,
+  inventoryHistorySubtitle: (place: string) => `Tout ce qui est entré ou sorti de ${place}.`,
+  inventoryHistoryEmpty: "Rien n’est encore entré ni sorti de cet endroit.",
+  inventoryHistoryCapped: (limit: number) =>
+    `Les ${limit} mouvements les plus récents sont affichés. Les plus anciens restent enregistrés.`,
+  inventoryColWhen: "Quand",
+  inventoryColMovement: "De → vers",
+  inventoryColQuantity: "Quantité",
+  inventoryColWhy: "Motif",
+  inventoryColDocument: "Document",
+  inventoryNoDocument: "À la main",
+
+  // Ce qu’est un endroit. Les quatre contreparties portent le nom qu’elles ont
+  // pour un magasin, pas celui qu’emploie le protocole.
+  inventoryKindStock: "Entrepôt",
+  inventoryKindTransit: "En transit",
+  inventoryKindSupplier: "Fournisseur",
+  inventoryKindCustomer: "Client",
+  inventoryKindAdjust: "Ajustement",
+  inventoryKindProduction: "Production",
+
+  // Pourquoi quelque chose a bougé. Des noms, jamais des participes.
+  inventoryReasonReceipt: "Réception",
+  inventoryReasonDelivery: "Livraison",
+  inventoryReasonTransfer: "Transfert",
+  inventoryReasonAdjustment: "Ajustement",
+  inventoryReasonReturn: "Retour",
+  inventoryReasonShrinkage: "Démarque",
+  inventoryReasonCount: "Comptage",
+
+  // Le motif donné pour un ajustement saisi à la main. Des noms, pour la même
+  // raison : « Endommagé » devrait s’accorder avec une marchandise que la
+  // phrase ne connaît pas.
+  inventoryAdjustDamaged: "Casse",
+  inventoryAdjustLost: "Perte",
+  inventoryAdjustFound: "Excédent",
+  inventoryAdjustExpired: "Péremption",
+  inventoryAdjustTheft: "Vol",
+  inventoryAdjustSample: "Échantillon",
+  inventoryAdjustCorrection: "Correction",
+
+  // ---- les deux documents de commande (B5.09b) ------------------------------
+  //
+  // Une phrase qui précède un acte irréversible dit ce qu’elle va faire, jamais
+  // « êtes-vous sûr ». Passer une commande tire un numéro d’une série sans trou
+  // et écrit une lettre ; enregistrer une arrivée déplace de la marchandise
+  // réelle et établit une facture fournisseur. Aucun de ces actes ne s’annule.
+  inventoryTabPurchasing: "Achats",
+  inventoryTabSales: "Commandes clients",
+  inventoryOrdersLoadFailed: "Ces commandes n’ont pas pu être chargées.",
+  inventoryOrderLoadFailed: "Cette commande n’a pas pu être chargée.",
+  inventoryDraftOrder: "Brouillon",
+  inventoryDraftInvoice: "Facture en brouillon",
+  inventoryOrderLate: "En retard",
+  inventoryFilterStatus: "État",
+  inventoryAllStatuses: "Tous les états",
+  inventoryNoOrdersInState: "Aucune commande dans cet état",
+  inventoryCancelAction: "Annuler",
+
+  // Le nom d’un état. « Annulée » est partagé : une commande abandonnée est
+  // abandonnée, quel que soit le sens dans lequel allait la marchandise.
+  inventoryOrderStatusCancelled: "Annulée",
+  inventoryPoStatusDraft: "Brouillon",
+  inventoryPoStatusSent: "Passée",
+  inventoryPoStatusPartial: "Partiellement reçue",
+  inventoryPoStatusReceived: "Reçue",
+  inventorySoStatusDraft: "Brouillon",
+  inventorySoStatusConfirmed: "Confirmée",
+  inventorySoStatusPartial: "Partiellement livrée",
+  inventorySoStatusDelivered: "Livrée",
+
+  // Les deux listes.
+  inventorySearchPurchaseOrders: "Rechercher par numéro, fournisseur ou référence",
+  inventorySearchSalesOrders: "Rechercher par numéro, client ou référence",
+  inventoryNewPurchaseOrder: "Nouvelle commande d’achat",
+  inventoryNewSalesOrder: "Nouvelle commande client",
+  inventoryPurchaseOrdersEmptyTitle: "Vous n’avez encore rien commandé",
+  inventoryPurchaseOrdersEmptyBody:
+    "Une commande d’achat enregistre ce que vous avez demandé à un fournisseur. Établissez-la en brouillon, passez-la quand vous êtes prêt, puis enregistrez ce qui arrive en face — le grand livre des stocks s’écrit pour vous.",
+  inventorySalesOrdersEmptyTitle: "Aucun client n’a encore commandé",
+  inventorySalesOrdersEmptyBody:
+    "Une commande client enregistre ce qu’un client vous a demandé. Établissez-la en brouillon, confirmez-la pour lui donner un numéro, puis enregistrez chaque expédition à mesure qu’elle part — la facture ne porte que ce qui est réellement parti.",
+  inventoryColOrder: "Commande",
+  inventoryColSupplier: "Fournisseur",
+  inventoryColCustomer: "Client",
+  inventoryColExpected: "Date attendue",
+  inventoryColPromised: "Date promise",
+  inventoryColState: "État",
+  inventoryColTotal: "Total",
+
+  // Le document.
+  inventoryBackToPurchaseOrders: "Toutes les commandes d’achat",
+  inventoryBackToSalesOrders: "Toutes les commandes clients",
+  inventoryCreateDraft: "Créer le brouillon",
+  inventorySaveDraft: "Enregistrer",
+  inventoryPrintOrder: "Imprimer",
+  inventoryUnsavedNotice:
+    "Ces modifications ne sont pas encore enregistrées : les totaux ci-dessous sont les derniers que le serveur a calculés.",
+  inventoryOrderFrozenNotice:
+    "Cette commande a été passée. Elle porte un numéro que le fournisseur détient : elle ne peut plus être modifiée — enregistrez ce qui arrive en face, ou annulez-la.",
+  inventorySalesOrderFrozenNotice:
+    "Cette commande a été confirmée. Elle porte un numéro que le client détient : elle ne peut plus être modifiée — enregistrez chaque expédition à mesure qu’elle part.",
+  inventoryFixLinesFirst: "Une des lignes n’est pas terminée. Corrigez-la et enregistrez à nouveau.",
+  inventoryOrderNeedsSupplier: "Choisissez le fournisseur auprès de qui cette commande est passée.",
+  inventoryOrderNeedsCustomer: "Choisissez le client pour qui cette commande est établie.",
+  inventoryPickSupplier: "Choisir un fournisseur",
+  inventoryPickCustomer: "Choisir un client",
+  inventorySupplierHint:
+    "Auprès de qui vous commandez. Cela ne peut plus être changé une fois la commande passée.",
+  inventoryCustomerHint:
+    "Pour qui la commande est établie. Cela ne peut plus être changé une fois la commande confirmée.",
+  inventoryExpectedHint:
+    "Le jour où vous attendez la marchandise. Une commande qui le dépasse est signalée en retard.",
+  inventoryPromisedHint:
+    "Le jour où vous avez promis la marchandise. Une commande qui le dépasse est signalée en retard.",
+  inventoryFieldReference: "Référence",
+  inventoryReferenceHint:
+    "Votre propre référence pour cette commande — un chantier, un projet, un numéro de dossier.",
+  inventoryFieldOrdered: "Passée le",
+  inventoryFieldConfirmed: "Confirmée le",
+  inventoryFieldNote: "Note",
+  inventoryOrderNoteHint: "Ce que l’autre partie doit lire. C’est imprimé sur la commande.",
+
+  // La grille des lignes. Le vocabulaire est celui d’un document, parce que
+  // ces lignes en deviennent un.
+  inventoryLines: "Lignes",
+  inventoryAddLine: "Ajouter une ligne",
+  inventoryNoLines: "Aucune ligne pour l’instant.",
+  inventoryColDescription: "Désignation",
+  inventoryColUnit: "Unité",
+  inventoryColUnitPrice: "Prix unitaire",
+  inventoryColNet: "Net",
+  inventoryColReceived: "Reçu",
+  inventoryColDelivered: "Livré",
+  inventoryColOutstanding: "Reste",
+  inventoryColToBill: "À facturer",
+  inventoryPickProduct: "Depuis le catalogue",
+  inventoryDescriptionPlaceholder: "Ce qui est commandé",
+  inventoryUnitPlaceholder: "pièce",
+  inventoryQtyPlaceholder: "1",
+  inventoryAmountPlaceholder: "0,00",
+  inventoryRatePlaceholder: "0",
+  inventoryRemoveLine: "Supprimer la ligne",
+  inventoryLineNeedsDescription: "Indiquez à quoi correspond cette ligne.",
+  inventoryNotAQuantity: "Ce n’est pas une quantité.",
+  inventoryNotAnAmount: "Ce n’est pas un montant.",
+  inventoryNotARate: "Ce n’est pas un taux.",
+
+  // Passer la commande : un seul acte, et la phrase en énonce les trois parts.
+  inventorySendOrder: "Passer la commande",
+  inventorySendOrderConfirm:
+    "Ceci attribue son numéro à la commande, la fige définitivement, et dépose dans vos brouillons la lettre d’accompagnement avec la commande imprimée en pièce jointe. Rien n’est envoyé tant que vous ne l’envoyez pas vous-même.",
+  inventoryOrderPlacedNotice: (to: string, file: string) =>
+    `La commande est passée. Une lettre d’accompagnement pour ${to}, avec ${file} en pièce jointe, attend dans vos brouillons — rien n’a été envoyé.`,
+  inventoryConfirmOrder: "Confirmer la commande",
+  inventoryConfirmOrderConfirm:
+    "Ceci attribue son numéro à la commande et la fige définitivement. Aucun message n’est écrit : prévenir le client est une lettre ordinaire que vous envoyez vous-même.",
+  inventoryCancelOrder: "Annuler la commande",
+  inventoryCancelOrderConfirm:
+    "La commande est conservée et reste consultable, mais plus rien n’est attendu en face.",
+  inventoryCancelShortConfirm:
+    "Une partie de cette commande a déjà bougé. L’annuler revient à accepter ce qui a été traité jusqu’ici comme étant la totalité, et plus rien ne sera attendu. La commande reste consultable.",
+  inventoryDiscardDraft: "Supprimer le brouillon",
+  inventoryDiscardDraftConfirm:
+    "Ce brouillon n’a pas de numéro et n’a été montré à personne : il est supprimé plutôt qu’annulé.",
+
+  // Enregistrer une expédition, dans un sens comme dans l’autre.
+  inventoryReceiveGoods: "Enregistrer une arrivée",
+  inventoryDeliverGoods: "Enregistrer une expédition",
+  inventoryReceiveTitle: (order: string) => `Ce qui est arrivé pour ${order}`,
+  inventoryDeliverTitle: (order: string) => `Ce qui part pour ${order}`,
+  inventoryReceiveSubtitle:
+    "Chaque ligne s’ouvre sur ce qui reste attendu. Modifiez ce qui manque ; le reste demeure en commande. Une facture fournisseur en brouillon est établie pour ce qui est arrivé.",
+  inventoryDeliverSubtitle:
+    "Chaque ligne s’ouvre sur ce qui reste à livrer. Modifiez ce qui part maintenant ; le reste demeure sur la commande.",
+  inventoryReceiveWhere: "Rangé à",
+  inventoryReceiveWhereHint:
+    "Où la marchandise a réellement été rangée. Le grand livre des stocks est écrit sur cet endroit.",
+  inventoryDeliverWhere: "Prélevé à",
+  inventoryDeliverWhereHint:
+    "Où la marchandise a été prélevée. Le grand livre des stocks est écrit sur cet endroit.",
+  inventoryColThisConsignment: "Cette fois",
+  inventoryFulfilNoteHint:
+    "Ce qu’a noté la personne qui s’en est occupée — une caisse abîmée, une expédition partielle.",
+  inventoryFulfilNeedsPlace: "Choisissez d’abord l’endroit.",
+  inventoryFulfilNeedsSomething:
+    "Aucune ligne n’indique quoi que ce soit : il n’y a rien à enregistrer.",
+  inventoryNoPlaces: "Aucun endroit pour l’instant",
+  inventoryBookArrival: "Enregistrer l’entrée",
+  inventoryBookConsignment: "Enregistrer la sortie",
+  inventoryArrivalBooked:
+    "L’arrivée est enregistrée, le grand livre des stocks est écrit, et une facture fournisseur en brouillon attend d’être approuvée.",
+  inventoryConsignmentBooked:
+    "L’expédition est enregistrée et le grand livre des stocks est écrit.",
+
+  // Ce qui a déjà bougé, et ce qui en a été facturé.
+  inventoryArrivals: "Arrivées",
+  inventoryNoArrivals: "Rien n’est encore arrivé pour cette commande.",
+  inventoryArrivalNo: (n: number) => `Arrivée ${n}`,
+  inventoryBillDrafted: "Facture fournisseur en brouillon",
+  inventoryConsignments: "Expéditions",
+  inventoryNoConsignments: "Rien n’est encore parti pour cette commande.",
+  inventoryConsignmentNo: (n: number) => `Expédition ${n}`,
+  inventoryRaiseInvoice: "Facturer ce qui est parti",
+  inventoryRaisedInvoices: "Factures",
+  inventoryNoRaisedInvoices: "Rien n’a encore été facturé depuis cette commande.",
+  inventoryInvoiceDrafted:
+    "Une facture en brouillon a été établie pour ce qui est parti. Elle ne porte aucun numéro tant que personne ne l’émet dans Facturation.",
+
+  // ---- la lecture de code-barres (B5.09c) -----------------------------------
+  //
+  // Les mots suivent le matériel : une douchette est un clavier, donc le champ
+  // est l’essentiel et l’appareil photo n’est qu’une seconde façon de faire.
+  inventoryScan: "Scanner",
+  inventoryScanTitle: "Scanner un code-barres",
+  inventoryScanSubtitle:
+    "Scannez dans le champ avec une douchette, ou saisissez le code. Sur un téléphone, vous pouvez utiliser l’appareil photo à la place.",
+  inventoryScanFieldCode: "Code-barres",
+  inventoryScanPlaceholder: "4006381333931",
+  inventoryScanHint:
+    "Une douchette saisit le code ici et appuie sur Entrée pour vous. Les espaces et les traits d’union sont ignorés.",
+  inventoryScanLookup: "Le trouver",
+  inventoryScanFailed: "Ce code n’a pas pu être recherché.",
+  inventoryScanWaiting: "En attente d’un code.",
+  inventoryScanCameraStart: "Utiliser l’appareil photo",
+  inventoryScanCameraStop: "Arrêter l’appareil photo",
+  inventoryScanCameraFailed:
+    "L’appareil photo n’a pas pu être démarré. Autorisez-y l’accès, ou saisissez le code — une douchette, elle, ne demande aucune autorisation.",
+  inventoryScanAiming: "Visez le code-barres. La lecture s’arrête dès qu’un code est reconnu.",
+  inventoryScanNoCamera:
+    "Ce navigateur ne sait pas lire un code-barres avec l’appareil photo. Une douchette fonctionne ici : elle saisit dans le champ ci-dessus.",
+  inventoryScanOnHand: (quantity: string) => `${quantity} en stock, tous endroits confondus.`,
+  inventoryScanNowhere: "Il n’y en a encore nulle part.",
+  inventoryScanServiceNote: "C’est un service : il n’y en a aucune quantité à trouver.",
+  inventoryScanOpenProduct: "Ouvrir ce produit",
+  inventoryScanShowInStock: "L’afficher dans la liste",
+  inventoryScanAddProduct: "L’ajouter au catalogue avec ce code-barres",
+
+  // L’agent d’inventaire (ADR 0035, B5.10). Chaque mot maintient qu’un
+  // brouillon est un brouillon : la carte ne doit jamais laisser croire qu’un
+  // fournisseur a été contacté.
+  agentActReorderProposals: "Préparer les réapprovisionnements",
+  agentReorderNote:
+    "Examine tout ce sur quoi vous êtes sous votre propre minimum et écrit une commande d’achat en brouillon par fournisseur. Rien n’est envoyé — chaque brouillon attend dans vos commandes d’achat que vous le vérifiiez et l’envoyiez.",
+  agentActStockAnswer: "Vérifier le stock",
+  agentStockAnswerNote:
+    "Lit où en est un produit à l’instant : en rayon, en commande, promis à des clients. N’écrit rien et ne réserve rien.",
+  agentFieldSupplier: "Fournisseur",
+  agentFieldLocation: "Endroit",
+  agentFieldProduct: "Produit",
+  agentReorderEverySupplier: "Tous les fournisseurs",
+  agentReorderEverywhere: "Partout",
+  agentReorderShortages: (count: number): string =>
+    count === 1 ? "1 sous le minimum" : `${count} sous le minimum`,
+  agentReorderNothingShort: "Rien n’est sous son minimum",
+  agentReorderDrafted: (count: number): string =>
+    count === 1 ? "1 commande en brouillon" : `${count} commandes en brouillon`,
+  agentReorderLines: (count: number): string => (count === 1 ? "1 ligne" : `${count} lignes`),
+  agentReorderLeftOut: "Rien commandé pour",
+  agentReorderReason: (reason: string): string => {
+    switch (reason) {
+      case "noSupplier":
+        return "personne ne vous l’a chiffré";
+      case "nothingToBuy":
+        return "la règle ne demande rien";
+      default:
+        // Un motif qu’un serveur plus récent connaît et pas ce client : encore
+        // visiblement écarté, jamais silencieusement oublié.
+        return "écarté";
+    }
+  },
+  // Invariable à dessein : la quantité arrive déjà mise en forme, donc
+  // « 1 pièce nécessaire » / « 5 pièces nécessaires » ne peut pas s’accorder.
+  agentReorderNeeded: (qty: string, unit: string): string =>
+    unit === "" ? `${qty} à commander` : `${qty} ${unit} à commander`,
+  agentReorderFooter:
+    "Ce sont des brouillons. Aucun fournisseur n’a été contacté et aucun numéro de commande n’a été tiré — ouvrez-en un dans Inventaire pour le vérifier et l’envoyer.",
+  agentStockOnHand: "En rayon",
+  agentStockOnOrder: "En commande",
+  agentStockCommitted: "Promis à des clients",
+  agentStockAvailable: "Il reste",
+  agentStockNoShelf: "Un service — rien n’est stocké",
+  agentStockNowhere: "Nulle part",
+  agentStockWatched: "Seuils",
+  agentStockMinimum: (min: string, target: string): string =>
+    `minimum ${min}, objectif ${target}`,
+  agentStockBelowMinimum: "sous le minimum",
+  agentStockFooter:
+    "Des chiffres à l’instant présent. Rien n’a été commandé et rien n’a été mis de côté.",
 };
