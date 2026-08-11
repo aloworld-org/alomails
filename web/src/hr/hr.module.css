@@ -95,6 +95,134 @@
   font-size: var(--text-sm);
 }
 
+.templatesHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-6) var(--space-5) var(--space-4);
+}
+.templatesHead h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-xl);
+}
+.templatesHead p {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  max-width: 680px;
+}
+.center {
+  flex: 1;
+  display: grid;
+  place-items: center;
+}
+.templateGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-3);
+  padding: 0 var(--space-5) var(--space-5);
+  overflow: auto;
+}
+.templateCard {
+  position: relative;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+.templateCard:hover {
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-md);
+}
+.templateOpen {
+  width: 100%;
+  min-height: 170px;
+  padding: var(--space-5);
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  text-align: left;
+  cursor: pointer;
+}
+.templateOpen > svg {
+  color: var(--accent);
+}
+.templateOpen strong {
+  font-size: var(--text-md);
+}
+.templateOpen span {
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+.templateOpen small {
+  margin-top: auto;
+  color: var(--text-tertiary);
+}
+.templateDelete {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+.templateDelete:hover {
+  background: var(--danger-tint);
+  color: var(--danger);
+}
+.templateBody {
+  min-height: 180px;
+  resize: vertical;
+  line-height: 1.55;
+}
+.fieldPicker {
+  display: grid;
+  gap: var(--space-2);
+}
+.fieldPicker > span {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+.fieldPicker > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.fieldPicker button {
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: var(--bg-raised);
+  color: var(--accent-active);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.fieldPicker button:hover {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+@media (max-width: 44rem) {
+  .templatesHead {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .templateGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ---- the board ------------------------------------------------------- */
 
 .board {

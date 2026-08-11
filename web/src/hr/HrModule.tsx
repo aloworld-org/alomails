@@ -51,6 +51,7 @@ import { AwayView } from "./AwayView";
 import { DirectoryView } from "./DirectoryView";
 import { HiringView } from "./HiringView";
 import { LeaveView } from "./LeaveView";
+import { LetterTemplatesView } from "./LetterTemplatesView";
 import { useApprovalQueues } from "./queues";
 import styles from "./hr.module.css";
 
@@ -128,6 +129,16 @@ export function HrModule() {
             </NavLink>
             {hr === true && (
               <NavLink
+                to={`${HR_ROOT}/templates`}
+                className={({ isActive }) =>
+                  isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+                }
+              >
+                {strings.hrTabTemplates}
+              </NavLink>
+            )}
+            {hr === true && (
+              <NavLink
                 to={`${HR_ROOT}/hiring`}
                 className={({ isActive }) =>
                   isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
@@ -175,6 +186,9 @@ export function HrModule() {
         <Route path="directory" element={<DirectoryView />} />
         <Route path="leave" element={<LeaveView />} />
         <Route path="hiring" element={<HiringView />} />
+        {hr === true && (
+          <Route path="templates" element={<LetterTemplatesView />} />
+        )}
         {/* An unknown HR path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to={HR_ROOT} replace />} />
       </Routes>

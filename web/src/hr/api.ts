@@ -30,6 +30,9 @@ import type {
   HrHoliday,
   HrLeaveBalances,
   HrLeaveRequest,
+  HrLetterTemplate,
+  HrLetterTemplateCatalog,
+  HrLetterTemplateDraft,
   HrMe,
   HrOpening,
   HrOrgNode,
@@ -76,9 +79,11 @@ export class HrApi {
   /** Writes down a role. It starts as a draft — a company writes the role
    *  before it decides to run it. */
   createOpening(draft: OpeningDraft): Promise<HrOpening> {
-    return this.#write<{ opening: HrOpening }>("POST", "/hr/openings", draft).then(
-      (r) => r.opening,
-    );
+    return this.#write<{ opening: HrOpening }>(
+      "POST",
+      "/hr/openings",
+      draft,
+    ).then((r) => r.opening);
   }
 
   /** Corrects a role. A closed round refuses: rewriting the title of a role
@@ -120,7 +125,10 @@ export class HrApi {
 
   /** Somebody applied. They land at the first stage whatever this form says —
    *  every move after that is a person's act. */
-  recordApplicant(openingId: string, draft: ApplicantDraft): Promise<HrApplicant> {
+  recordApplicant(
+    openingId: string,
+    draft: ApplicantDraft,
+  ): Promise<HrApplicant> {
     return this.#write<{ applicant: HrApplicant }>(
       "POST",
       `/hr/openings/${encodeURIComponent(openingId)}/applicants`,
@@ -132,7 +140,9 @@ export class HrApi {
    *  to. A candidate of another tenant is the same `404` an id that never
    *  existed gets. */
   applicant(id: string): Promise<HrApplicantDetail> {
-    return this.#read<HrApplicantDetail>(`/hr/applicants/${encodeURIComponent(id)}`);
+    return this.#read<HrApplicantDetail>(
+      `/hr/applicants/${encodeURIComponent(id)}`,
+    );
   }
 
   /** Corrects what was recorded. It cannot move anybody: a fixed telephone
@@ -170,7 +180,9 @@ export class HrApi {
    *  it on a timer — a person presses the button. */
   async eraseApplicant(id: string): Promise<void> {
     await this.#json<unknown>(
-      await this.#send(`/hr/applicants/${encodeURIComponent(id)}`, { method: "DELETE" }),
+      await this.#send(`/hr/applicants/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
     );
   }
 
@@ -185,9 +197,11 @@ export class HrApi {
    *  into identity would make a badly-scoped HR permission into an
    *  account-creation capability (`docs/design/hr.md` § Out of scope). */
   createEmployee(draft: EmployeeDraft): Promise<HrCreatedEmployee> {
-    return this.#write<{ employee: HrCreatedEmployee }>("POST", "/hr/employees", draft).then(
-      (r) => r.employee,
-    );
+    return this.#write<{ employee: HrCreatedEmployee }>(
+      "POST",
+      "/hr/employees",
+      draft,
+    ).then((r) => r.employee);
   }
 
   /** The caller's own HR standing. Two facts, and there is no argument by which
@@ -218,7 +232,9 @@ export class HrApi {
    *  left is a root in that answer, and re-deriving it in a browser is how a
    *  branch goes missing. */
   orgChart(): Promise<HrOrgNode[]> {
-    return this.#read<{ chart?: HrOrgNode[] }>("/hr/org").then((r) => r.chart ?? []);
+    return this.#read<{ chart?: HrOrgNode[] }>("/hr/org").then(
+      (r) => r.chart ?? [],
+    );
   }
 
   /** Leave the caller may see, in the scope they are asking as: `mine` is their
@@ -229,9 +245,10 @@ export class HrApi {
    *  caller's own reports server-side. `statuses` narrows what comes back —
    *  `requested` is the approvals inbox's, because it is the only state
    *  anybody can act on. */
-  leaveRequests(scope: "mine" | "team" | "all", statuses: LeaveStatus[] = []): Promise<
-    HrLeaveRequest[]
-  > {
+  leaveRequests(
+    scope: "mine" | "team" | "all",
+    statuses: LeaveStatus[] = [],
+  ): Promise<HrLeaveRequest[]> {
     const query = new URLSearchParams({ scope });
     if (statuses.length > 0) query.set("status", statuses.join(","));
     return this.#read<{ requests?: HrLeaveRequest[] }>(
@@ -255,9 +272,11 @@ export class HrApi {
    *  outside somebody's employment — is the server's, and its sentence is what
    *  the form shows. */
   createLeaveRequest(draft: LeaveDraft): Promise<HrLeaveRequest> {
-    return this.#write<{ request: HrLeaveRequest }>("POST", "/hr/leave-requests", draft).then(
-      (r) => r.request,
-    );
+    return this.#write<{ request: HrLeaveRequest }>(
+      "POST",
+      "/hr/leave-requests",
+      draft,
+    ).then((r) => r.request);
   }
 
   /** Taking back a request nobody has decided. The person who asked, and
@@ -281,10 +300,13 @@ export class HrApi {
    *  or HR's read and the server decides which. */
   leaveBalances(employeeId?: string, on?: string): Promise<HrLeaveBalances> {
     const query = new URLSearchParams();
-    if (employeeId !== undefined && employeeId !== "") query.set("employeeId", employeeId);
+    if (employeeId !== undefined && employeeId !== "")
+      query.set("employeeId", employeeId);
     if (on !== undefined && on !== "") query.set("on", on);
     const suffix = query.toString() === "" ? "" : `?${query.toString()}`;
-    return this.#read<Partial<HrLeaveBalances>>(`/hr/leave-balances${suffix}`).then((r) => ({
+    return this.#read<Partial<HrLeaveBalances>>(
+      `/hr/leave-balances${suffix}`,
+    ).then((r) => ({
       employeeId: r.employeeId ?? "",
       on: r.on ?? "",
       balances: r.balances ?? [],
@@ -296,21 +318,64 @@ export class HrApi {
    *  not served, so the answer is short even for a month. */
   absences(from: string, to: string): Promise<HrAbsenceDay[]> {
     const query = new URLSearchParams({ from, to });
-    return this.#read<{ days?: HrAbsenceDay[] }>(`/hr/absences?${query.toString()}`).then(
-      (r) => r.days ?? [],
-    );
+    return this.#read<{ days?: HrAbsenceDay[] }>(
+      `/hr/absences?${query.toString()}`,
+    ).then((r) => r.days ?? []);
   }
 
   /** The days the tenant does not work in one year, on its own calendar. A
    *  company that observes nothing answers an empty list rather than an error,
    *  and the calendar simply marks nothing. */
   holidays(year: number): Promise<HrHoliday[]> {
-    return this.#read<{ holidays?: HrHoliday[] }>(`/hr/holidays?year=${year}`).then(
-      (r) => r.holidays ?? [],
+    return this.#read<{ holidays?: HrHoliday[] }>(
+      `/hr/holidays?year=${year}`,
+    ).then((r) => r.holidays ?? []);
+  }
+
+  /** The tenant's approved letter patterns and the merge vocabulary. */
+  letterTemplates(): Promise<HrLetterTemplateCatalog> {
+    return this.#read<Partial<HrLetterTemplateCatalog>>(
+      "/hr/letter-templates",
+    ).then((r) => ({
+      templates: r.templates ?? [],
+      fields: r.fields ?? [],
+    }));
+  }
+
+  createLetterTemplate(
+    draft: HrLetterTemplateDraft,
+  ): Promise<HrLetterTemplate> {
+    return this.#write<{ template: HrLetterTemplate }>(
+      "POST",
+      "/hr/letter-templates",
+      draft,
+    ).then((r) => r.template);
+  }
+
+  updateLetterTemplate(
+    id: string,
+    draft: HrLetterTemplateDraft,
+  ): Promise<HrLetterTemplate> {
+    return this.#write<{ template: HrLetterTemplate }>(
+      "PATCH",
+      `/hr/letter-templates/${encodeURIComponent(id)}`,
+      draft,
+    ).then((r) => r.template);
+  }
+
+  async deleteLetterTemplate(id: string): Promise<void> {
+    await this.#write<{ deleted: boolean }>(
+      "DELETE",
+      `/hr/letter-templates/${encodeURIComponent(id)}`,
+      {},
     );
   }
 
-  #decideLeave(id: string, verb: string, note?: string): Promise<HrLeaveRequest> {
+  #decideLeave(
+    id: string,
+    verb: string,
+    note?: string,
+  ): Promise<HrLeaveRequest> {
     return this.#write<{ request: HrLeaveRequest }>(
       "POST",
       `/hr/leave-requests/${encodeURIComponent(id)}/${verb}`,

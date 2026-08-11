@@ -99,7 +99,8 @@ export interface HrApplicantDetail {
 
 /** Where a leave request has got to. `requested` is the only state an approver
  *  can act on; the other four are the record of what happened. */
-export type LeaveStatus = "requested" | "approved" | "rejected" | "withdrawn" | "cancelled";
+export type LeaveStatus =
+  "requested" | "approved" | "rejected" | "withdrawn" | "cancelled";
 
 /** One person's ask for time off, as `/hr/leave-requests` serves it.
  *
@@ -377,4 +378,29 @@ export interface HrCreatedEmployee {
   /** How the tenant writes their name, preferred name applied — the server's
    *  own projection, never joined together here. */
   name: string;
+}
+
+/** A company-authored letter pattern and the merge fields it currently uses. */
+export interface HrLetterTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  fields: string[];
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** The three editable parts of a letter template. */
+export interface HrLetterTemplateDraft {
+  name: string;
+  subject: string;
+  body: string;
+}
+
+/** Templates plus the server-owned placeholder vocabulary. */
+export interface HrLetterTemplateCatalog {
+  templates: HrLetterTemplate[];
+  fields: string[];
 }
