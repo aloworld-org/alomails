@@ -538,6 +538,15 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One kind of leave a tenant grants — annual, sick, unpaid, or whatever
+    /// else they give time off for (alo HR, ADR 0035, wave B6.03a). The policy
+    /// carries the entitlement, how it accrues and what carries over; a
+    /// person's balance is folded from it and never stored
+    /// (`docs/design/hr.md`, "Leave").
+    HrLeavePolicyId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.
