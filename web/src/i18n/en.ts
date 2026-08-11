@@ -3017,6 +3017,20 @@ export const en = {
   sitesTranslationDetailsHint: (locale: string) =>
     `These title, path, and search details are shown only to ${locale} visitors.`,
   sitesSaveTranslation: "Save translation details",
+  sitesTranslateWholeSite: "Translate whole site",
+  sitesWholeTranslationPreparing:
+    "Preparing a complete translation for review…",
+  sitesWholeTranslationPrepareFailed:
+    "The translation could not be prepared. Nothing changed; translate pages manually or try again.",
+  sitesWholeTranslationApplyFailed:
+    "The translation could not be applied. Nothing changed; prepare a fresh review and try again.",
+  sitesWholeTranslationReview: (language: string) =>
+    `Review the ${language} translation`,
+  sitesWholeTranslationReviewHint:
+    "Compare every page and post. Nothing is saved until you approve this review.",
+  sitesWholeTranslationApprove: "Approve translation",
+  sitesTranslationPageKind: "Page",
+  sitesTranslationPostKind: "Post",
   sitesSlugHint:
     "Lowercase letters, digits and hyphens. The home page leaves this empty.",
   sitesFieldHome: "This is the home page",

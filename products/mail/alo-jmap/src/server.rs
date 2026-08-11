@@ -322,6 +322,10 @@ pub fn app_with_site_domain_dns(
             get(sites::translation_readiness),
         )
         .route(
+            "/sites/{id}/translation-proposals",
+            post(sites::propose_site_translation).put(sites::apply_site_translation),
+        )
+        .route(
             "/sites/{id}/posts",
             get(sites::list_posts).post(sites::create_post),
         )

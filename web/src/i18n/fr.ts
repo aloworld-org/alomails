@@ -3855,4 +3855,18 @@ export const fr: Partial<Catalog> = {
   agentStockBelowMinimum: "sous le minimum",
   agentStockFooter:
     "Des chiffres à l’instant présent. Rien n’a été commandé et rien n’a été mis de côté.",
+  sitesTranslateWholeSite: "Traduire tout le site",
+  sitesWholeTranslationPreparing:
+    "Préparation de la traduction complète à vérifier…",
+  sitesWholeTranslationPrepareFailed:
+    "La traduction n’a pas pu être préparée. Rien n’a changé ; traduisez les pages manuellement ou réessayez.",
+  sitesWholeTranslationApplyFailed:
+    "La traduction n’a pas pu être appliquée. Rien n’a changé ; préparez une nouvelle vérification et réessayez.",
+  sitesWholeTranslationReview: (language: string) =>
+    `Vérifier la traduction en ${language}`,
+  sitesWholeTranslationReviewHint:
+    "Comparez chaque page et article. Rien n’est enregistré avant votre approbation.",
+  sitesWholeTranslationApprove: "Approuver la traduction",
+  sitesTranslationPageKind: "Page",
+  sitesTranslationPostKind: "Article",
 };

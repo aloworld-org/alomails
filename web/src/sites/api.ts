@@ -35,6 +35,7 @@ import type {
   SitePageDetail,
   LocalizedSitePageDetail,
   SiteTranslationReadiness,
+  SiteTranslationEnvelope,
   SitePost,
   SiteSubmission,
   SitesConfig,
@@ -121,6 +122,29 @@ export class SitesApi {
   translationReadiness(siteId: string): Promise<SiteTranslationReadiness> {
     return this.#read<SiteTranslationReadiness>(
       `/sites/${encodeURIComponent(siteId)}/translation-readiness`,
+    );
+  }
+
+  proposeSiteTranslation(
+    siteId: string,
+    sourceLocale: string,
+    targetLocale: string,
+  ): Promise<SiteTranslationEnvelope> {
+    return this.#write<{ proposal: SiteTranslationEnvelope }>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/translation-proposals`,
+      { sourceLocale, targetLocale },
+    ).then((response) => response.proposal);
+  }
+
+  async applySiteTranslation(
+    siteId: string,
+    proposal: SiteTranslationEnvelope,
+  ): Promise<void> {
+    await this.#write(
+      "PUT",
+      `/sites/${encodeURIComponent(siteId)}/translation-proposals`,
+      { proposal },
     );
   }
 

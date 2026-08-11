@@ -27,7 +27,8 @@ use std::sync::Arc;
 
 use alo_ai::{
     InferenceError, SiteDraftError, SiteEditEnvelope, SiteEditError, SiteEditOperation,
-    SiteSectionTarget,
+    SiteSectionTarget, SiteTranslationEnvelope, SiteTranslationError, SiteTranslationPageSnapshot,
+    SiteTranslationPostSnapshot, SiteTranslationSource,
 };
 use axum::Json;
 use axum::extract::{Extension, Path, Query, State};
@@ -48,7 +49,8 @@ use alo_store::{
     BlobId, DriveNodeId, LocalizedSitePage, NewGeneratedSite, NewGeneratedSitePage, NewSitePost,
     Section, SectionsEnvelope, Site, SiteDomain, SiteDomainStatus, SiteFormId,
     SiteFormSubmissionId, SiteId, SitePage, SitePageId, SitePost, SitePostId, SitePostUpdate,
-    SiteTheme, StoreError, normalize_site_domain, site_theme::THEME_PRESETS,
+    SiteTheme, SiteTranslationPageContent, SiteTranslationPageWrite, SiteTranslationPostContent,
+    SiteTranslationPostWrite, StoreError, normalize_site_domain, site_theme::THEME_PRESETS,
 };
 
 use crate::ai::tenant_ai_config;
@@ -531,6 +533,245 @@ pub async fn apply_page_edit(
     let result = alo_ai::apply_site_edit(&current, &req.proposal)
         .map_err(|error| site_edit_problem(&error))?;
     store_sections(&account, &sid, &page_id, &result).await
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct ProposeSiteTranslationBody {
+    source_locale: String,
+    target_locale: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ApplySiteTranslationBody {
+    proposal: SiteTranslationEnvelope,
+}
+
+fn translation_problem(error: &SiteTranslationError) -> Problem {
+    match error {
+        SiteTranslationError::Inference(InferenceError::Disabled | InferenceError::NotConfigured) =>
+            Problem::with(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "AI translation is not configured. You can still copy and translate each language manually.",
+            ).with_extra(json!({ "reason": "unconfigured" })),
+        SiteTranslationError::Inference(
+            InferenceError::Backend(_) | InferenceError::Transport | InferenceError::Empty,
+        ) => Problem::with(
+            StatusCode::BAD_GATEWAY,
+            "AI translation could not reach the configured service. Nothing changed; try again shortly.",
+        ).with_extra(json!({ "reason": "unreachable" })),
+        _ => Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!("The proposed translation is not safe to apply: {error}"),
+        ).with_extra(json!({ "reason": "invalid_proposal" })),
+    }
+}
+
+async fn translation_source(
+    account: &Account,
+    site: &Site,
+    source_locale: &str,
+    target_locale: &str,
+) -> Result<SiteTranslationSource, Problem> {
+    let source_locale = alo_store::normalize_locale_tag(source_locale).map_err(map_store_err)?;
+    let target_locale = alo_store::normalize_locale_tag(target_locale).map_err(map_store_err)?;
+    if source_locale == target_locale {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Choose two different languages.",
+        ));
+    }
+    if source_locale != site.default_locale {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Whole-site translation starts from the website's default language.",
+        ));
+    }
+    if !site.enabled_locales.contains(&source_locale)
+        || !site.enabled_locales.contains(&target_locale)
+    {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "Enable both languages before translating.",
+        ));
+    }
+    let base_pages = account
+        .acc
+        .site_pages(&site.id)
+        .await
+        .map_err(map_store_err)?;
+    let mut pages = Vec::with_capacity(base_pages.len());
+    for base in base_pages {
+        let localized = account
+            .acc
+            .localized_site_page(&site.id, &base.id, &source_locale)
+            .await
+            .map_err(map_store_err)?
+            .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "not found"))?;
+        if localized.fallback {
+            return Err(Problem::with(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                format!(
+                    "{} has no {} source draft. Translate or copy that page first.",
+                    base.title, source_locale
+                ),
+            ));
+        }
+        let page = localized.page;
+        let sections =
+            SectionsEnvelope::from_value(page.sections).map_err(|_| Problem::server_error())?;
+        pages.push(SiteTranslationPageSnapshot {
+            id: page.id.to_string(),
+            title: page.title,
+            slug: page.slug,
+            seo_title: page.seo_title,
+            seo_description: page.seo_description,
+            sections,
+        });
+    }
+    let base_posts = account
+        .acc
+        .site_posts(&site.id)
+        .await
+        .map_err(map_store_err)?;
+    let localized_posts = account
+        .acc
+        .site_posts_in_locale_exact(&site.id, &source_locale)
+        .await
+        .map_err(map_store_err)?;
+    if localized_posts.len() != base_posts.len() {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            format!(
+                "One or more posts have no {source_locale} source draft. Translate their metadata first."
+            ),
+        ));
+    }
+    let posts = localized_posts
+        .into_iter()
+        .map(|post| SiteTranslationPostSnapshot {
+            id: post.id.to_string(),
+            title: post.title,
+            slug: post.slug,
+            excerpt: post.excerpt,
+        })
+        .collect();
+    Ok(SiteTranslationSource {
+        source_locale,
+        target_locale,
+        pages,
+        posts,
+    })
+}
+
+/// `POST /sites/:id/translation-proposals` prepares a complete before/after
+/// review. The model has no persistence handle and this route writes nothing.
+pub async fn propose_site_translation(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let request: ProposeSiteTranslationBody =
+        serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let site = require_site(&account, &SiteId::new(id)).await?;
+    let source = translation_source(
+        &account,
+        &site,
+        &request.source_locale,
+        &request.target_locale,
+    )
+    .await?;
+    let config = tenant_ai_config(&account).await.map_err(|problem| {
+        if problem.status == StatusCode::SERVICE_UNAVAILABLE {
+            Problem::with(StatusCode::SERVICE_UNAVAILABLE, "AI translation is not configured. You can still copy and translate each language manually.")
+                .with_extra(json!({ "reason": "unconfigured" }))
+        } else { problem }
+    })?;
+    let proposal = alo_ai::propose_site_translation(&config, &source)
+        .await
+        .map_err(|error| translation_problem(&error))?;
+    Ok(Json(json!({ "proposal": proposal })))
+}
+
+/// `PUT /sites/:id/translation-proposals` applies an explicitly approved
+/// proposal. It rebuilds and compares the complete source, then the store
+/// locks every source row and repeats the stale check inside one transaction.
+pub async fn apply_site_translation(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let request: ApplySiteTranslationBody =
+        serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let site = require_site(&account, &SiteId::new(id)).await?;
+    let source = translation_source(
+        &account,
+        &site,
+        &request.proposal.source_locale,
+        &request.proposal.target_locale,
+    )
+    .await?;
+    alo_ai::validate_site_translation(&source, &request.proposal)
+        .map_err(|error| translation_problem(&error))?;
+    let pages = request
+        .proposal
+        .pages
+        .iter()
+        .map(|item| SiteTranslationPageWrite {
+            id: SitePageId::new(item.before.id.clone()),
+            before: SiteTranslationPageContent {
+                title: item.before.title.clone(),
+                slug: item.before.slug.clone(),
+                seo_title: item.before.seo_title.clone(),
+                seo_description: item.before.seo_description.clone(),
+                sections: serde_json::to_value(&item.before.sections).unwrap_or(Value::Null),
+            },
+            after: SiteTranslationPageContent {
+                title: item.after.title.clone(),
+                slug: item.after.slug.clone(),
+                seo_title: item.after.seo_title.clone(),
+                seo_description: item.after.seo_description.clone(),
+                sections: serde_json::to_value(&item.after.sections).unwrap_or(Value::Null),
+            },
+        })
+        .collect::<Vec<_>>();
+    let posts = request
+        .proposal
+        .posts
+        .iter()
+        .map(|item| SiteTranslationPostWrite {
+            id: SitePostId::new(item.before.id.clone()),
+            before: SiteTranslationPostContent {
+                title: item.before.title.clone(),
+                slug: item.before.slug.clone(),
+                excerpt: item.before.excerpt.clone(),
+            },
+            after: SiteTranslationPostContent {
+                title: item.after.title.clone(),
+                slug: item.after.slug.clone(),
+                excerpt: item.after.excerpt.clone(),
+            },
+        })
+        .collect::<Vec<_>>();
+    account
+        .acc
+        .apply_site_translation(
+            &site.id,
+            &request.proposal.source_locale,
+            &request.proposal.target_locale,
+            &pages,
+            &posts,
+        )
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(
+        json!({ "applied": true, "pages": pages.len(), "posts": posts.len() }),
+    ))
 }
 
 // ---- custom domains --------------------------------------------------------

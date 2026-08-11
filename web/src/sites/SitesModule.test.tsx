@@ -890,6 +890,145 @@ describe("one site", () => {
     expect(await screen.findByText("NL")).toBeTruthy();
   });
 
+  test("reviews a complete page and post translation before approval", async () => {
+    const multilingual = {
+      ...ALPHA,
+      defaultLocale: "en",
+      enabledLocales: ["en", "fr"],
+      publish: null,
+      theme: {},
+    };
+    const readiness = {
+      defaultLocale: "en",
+      totalPages: 1,
+      languages: [
+        { locale: "en", translatedPages: 1, ready: true },
+        { locale: "fr", translatedPages: 0, ready: false },
+      ],
+    };
+    const proposal = {
+      schema_version: 1,
+      source_locale: "en",
+      target_locale: "fr",
+      pages: [
+        {
+          before: {
+            id: "page-1",
+            title: "Welcome",
+            slug: "",
+            seo_title: null,
+            seo_description: null,
+            sections: { schema_version: 1, sections: [] },
+          },
+          after: {
+            id: "page-1",
+            title: "Bienvenue",
+            slug: "",
+            seo_title: null,
+            seo_description: null,
+            sections: { schema_version: 1, sections: [] },
+          },
+        },
+      ],
+      posts: [
+        {
+          before: { id: "post-1", title: "News", slug: "news", excerpt: "Latest" },
+          after: {
+            id: "post-1",
+            title: "Actualités",
+            slug: "actualites",
+            excerpt: "Dernières nouvelles",
+          },
+        },
+      ],
+    };
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: multilingual,
+      },
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: { pages: [HOME] },
+      },
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/translation-readiness"),
+        status: 200,
+        body: readiness,
+      },
+      {
+        match: (url, method) =>
+          method === "POST" && url.endsWith("/translation-proposals"),
+        status: 200,
+        body: { proposal },
+      },
+      {
+        match: (url, method) =>
+          method === "PUT" && url.endsWith("/translation-proposals"),
+        status: 200,
+        body: { applied: true },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: multilingual,
+      },
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: { pages: [HOME] },
+      },
+      {
+        match: (url, method) =>
+          method === "GET" && url.endsWith("/translation-readiness"),
+        status: 200,
+        body: {
+          ...readiness,
+          languages: readiness.languages.map((language) => ({
+            ...language,
+            translatedPages: 1,
+            ready: true,
+          })),
+        },
+      },
+    ];
+    ui("/sites/site-1");
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.sitesTranslateWholeSite }),
+    );
+    expect(await screen.findByText("Bienvenue")).toBeTruthy();
+    expect(screen.getByText("Actualités")).toBeTruthy();
+    expect(
+      calls.some(
+        (call) =>
+          call.method === "POST" &&
+          JSON.stringify(call.body) ===
+            JSON.stringify({ sourceLocale: "en", targetLocale: "fr" }),
+      ),
+    ).toBe(true);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesWholeTranslationApprove }),
+    );
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (call) =>
+            call.method === "PUT" &&
+            call.url.endsWith("/translation-proposals") &&
+            JSON.stringify(call.body) === JSON.stringify({ proposal }),
+        ),
+      ).toBe(true),
+    );
+    await waitFor(() => expect(screen.queryByText("Bienvenue")).toBeNull());
+  });
+
   test("a foreign or stale id reads as not-found with the way back", async () => {
     replies = [
       {

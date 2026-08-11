@@ -10,10 +10,13 @@ import {
   BarChart3,
   FileText,
   Globe2,
+  ArrowRight,
+  Check,
   Inbox,
   Languages,
   Newspaper,
   Palette,
+  Sparkles,
   X,
 } from "lucide-react";
 
@@ -23,7 +26,12 @@ import { sitesMessage, useSitesApi } from "./api";
 import { NewPageDialog } from "./NewPageDialog";
 import { ThemeDialog } from "./ThemeDialog";
 import { EmptyState, ErrorBanner } from "./parts";
-import type { SiteDetail, SitePage, SiteTranslationReadiness } from "./types";
+import type {
+  SiteDetail,
+  SitePage,
+  SiteTranslationEnvelope,
+  SiteTranslationReadiness,
+} from "./types";
 import styles from "./SitesModule.module.css";
 
 export function SiteView() {
@@ -47,6 +55,10 @@ export function SiteView() {
   const [languageInput, setLanguageInput] = useState("");
   const [languageBusy, setLanguageBusy] = useState(false);
   const [languageError, setLanguageError] = useState<string | null>(null);
+  const [translationBusy, setTranslationBusy] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
+  const [translationProposal, setTranslationProposal] =
+    useState<SiteTranslationEnvelope | null>(null);
   // Taking a live site off the air asks for a second click, like deleting a
   // section does: the first click arms, the second one acts.
   const [confirmingOffline, setConfirmingOffline] = useState(false);
@@ -146,6 +158,45 @@ export function SiteView() {
       site.defaultLocale,
       site.enabledLocales.filter((enabled) => enabled !== locale),
     );
+  }
+
+  async function prepareTranslation(targetLocale: string) {
+    if (site === null) return;
+    setTranslationBusy(true);
+    setTranslationError(null);
+    setTranslationProposal(null);
+    try {
+      setTranslationProposal(
+        await api.proposeSiteTranslation(
+          siteId,
+          site.defaultLocale,
+          targetLocale,
+        ),
+      );
+    } catch (err) {
+      setTranslationError(
+        sitesMessage(err, strings.sitesWholeTranslationPrepareFailed),
+      );
+    } finally {
+      setTranslationBusy(false);
+    }
+  }
+
+  async function approveTranslation() {
+    if (translationProposal === null) return;
+    setTranslationBusy(true);
+    setTranslationError(null);
+    try {
+      await api.applySiteTranslation(siteId, translationProposal);
+      setTranslationProposal(null);
+      await load();
+    } catch (err) {
+      setTranslationError(
+        sitesMessage(err, strings.sitesWholeTranslationApplyFailed),
+      );
+    } finally {
+      setTranslationBusy(false);
+    }
   }
 
   async function publish() {
@@ -314,17 +365,28 @@ export function SiteView() {
                         )}
                   </span>
                   {language.locale !== site.defaultLocale && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      icon={<X size="var(--icon-size-inline)" />}
-                      disabled={languageBusy}
-                      onClick={() => removeLanguage(language.locale)}
-                    >
-                      {strings.sitesRemoveLanguage(
-                        languageName(language.locale),
-                      )}
-                    </Button>
+                    <span className={styles.languageRowActions}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<Sparkles size="var(--icon-size-inline)" />}
+                        disabled={languageBusy || translationBusy}
+                        onClick={() => void prepareTranslation(language.locale)}
+                      >
+                        {strings.sitesTranslateWholeSite}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon={<X size="var(--icon-size-inline)" />}
+                        disabled={languageBusy || translationBusy}
+                        onClick={() => removeLanguage(language.locale)}
+                      >
+                        {strings.sitesRemoveLanguage(
+                          languageName(language.locale),
+                        )}
+                      </Button>
+                    </span>
                   )}
                 </div>
               ))}
@@ -393,6 +455,86 @@ export function SiteView() {
               <span className={styles.publishError} role="alert">
                 {languageError}
               </span>
+            )}
+            {translationError !== null && (
+              <span className={styles.publishError} role="alert">
+                {translationError}
+              </span>
+            )}
+            {translationBusy && translationProposal === null && (
+              <div className={styles.translationPreparing} role="status">
+                <Spinner size={16} />
+                <span>{strings.sitesWholeTranslationPreparing}</span>
+              </div>
+            )}
+            {translationProposal !== null && (
+              <section
+                className={styles.translationReview}
+                aria-labelledby="translation-review-title"
+              >
+                <div className={styles.translationReviewHead}>
+                  <div>
+                    <h3 id="translation-review-title">
+                      {strings.sitesWholeTranslationReview(
+                        languageName(translationProposal.target_locale),
+                      )}
+                    </h3>
+                    <p>{strings.sitesWholeTranslationReviewHint}</p>
+                  </div>
+                  <div className={styles.translationReviewActions}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={translationBusy}
+                      onClick={() => setTranslationProposal(null)}
+                    >
+                      {strings.cancel}
+                    </Button>
+                    <Button
+                      size="sm"
+                      icon={<Check size="var(--icon-size-inline)" />}
+                      disabled={translationBusy}
+                      onClick={() => void approveTranslation()}
+                    >
+                      {strings.sitesWholeTranslationApprove}
+                    </Button>
+                  </div>
+                </div>
+                <div className={styles.translationReviewList}>
+                  {translationProposal.pages.map(({ before, after }) => (
+                    <article
+                      className={styles.translationReviewItem}
+                      key={`page-${before.id}`}
+                    >
+                      <span className={styles.translationReviewKind}>
+                        {strings.sitesTranslationPageKind}
+                      </span>
+                      <span>{before.title}</span>
+                      <ArrowRight aria-hidden="true" />
+                      <strong>{after.title}</strong>
+                      <span className={styles.translationReviewSlug}>
+                        /{after.slug}
+                      </span>
+                    </article>
+                  ))}
+                  {translationProposal.posts.map(({ before, after }) => (
+                    <article
+                      className={styles.translationReviewItem}
+                      key={`post-${before.id}`}
+                    >
+                      <span className={styles.translationReviewKind}>
+                        {strings.sitesTranslationPostKind}
+                      </span>
+                      <span>{before.title}</span>
+                      <ArrowRight aria-hidden="true" />
+                      <strong>{after.title}</strong>
+                      <span className={styles.translationReviewSlug}>
+                        /{after.slug}
+                      </span>
+                    </article>
+                  ))}
+                </div>
+              </section>
             )}
           </section>
 

@@ -29,6 +29,7 @@ pub mod agent_inventory;
 pub mod agent_projects;
 pub mod insights;
 pub mod site_edits;
+pub mod site_translation;
 pub mod sites;
 pub use agent::{
     AGENT_TOOLS, AgentDecision, ProposedAction, agent_messages, is_agent_tool, parse_decision,
@@ -47,6 +48,12 @@ pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, re
 pub use site_edits::{
     SITE_EDIT_SCHEMA_VERSION, SiteEditEnvelope, SiteEditError, SiteEditOperation,
     SiteSectionTarget, apply_site_edit, parse_site_edit, propose_site_edit, site_edit_messages,
+};
+pub use site_translation::{
+    SITE_TRANSLATION_SCHEMA_VERSION, SiteTranslationEnvelope, SiteTranslationError,
+    SiteTranslationPageProposal, SiteTranslationPageSnapshot, SiteTranslationPostProposal,
+    SiteTranslationPostSnapshot, SiteTranslationSource, parse_site_translation,
+    propose_site_translation, site_translation_messages, validate_site_translation,
 };
 pub use sites::{
     SITE_DRAFT_SCHEMA_VERSION, SiteDraft, SiteDraftError, SiteDraftPage, SiteDraftSite,

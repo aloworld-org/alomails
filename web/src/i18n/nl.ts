@@ -3819,4 +3819,18 @@ export const nl: Partial<Catalog> = {
   agentStockBelowMinimum: "onder minimum",
   agentStockFooter:
     "Cijfers zoals ze er nu voor staan. Er is niets besteld en er is niets apart gezet.",
+  sitesTranslateWholeSite: "Hele website vertalen",
+  sitesWholeTranslationPreparing:
+    "Volledige vertaling wordt voorbereid ter controle…",
+  sitesWholeTranslationPrepareFailed:
+    "De vertaling kon niet worden voorbereid. Er is niets gewijzigd; vertaal pagina’s handmatig of probeer opnieuw.",
+  sitesWholeTranslationApplyFailed:
+    "De vertaling kon niet worden toegepast. Er is niets gewijzigd; maak een nieuwe controle en probeer opnieuw.",
+  sitesWholeTranslationReview: (language: string) =>
+    `Controleer de ${language}-vertaling`,
+  sitesWholeTranslationReviewHint:
+    "Vergelijk elke pagina en elk bericht. Er wordt niets opgeslagen voordat u dit goedkeurt.",
+  sitesWholeTranslationApprove: "Vertaling goedkeuren",
+  sitesTranslationPageKind: "Pagina",
+  sitesTranslationPostKind: "Bericht",
 };

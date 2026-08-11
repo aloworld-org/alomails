@@ -444,6 +444,128 @@ async fn page_edit_is_a_reviewable_proposal_until_approved_and_tenant_scoped() {
 }
 
 #[tokio::test]
+async fn whole_site_translation_is_reviewed_approve_only_stale_safe_and_tenant_scoped() {
+    let owner = harness("sites-translation-proposal").await;
+    let outsider = harness_on(Arc::clone(&owner.store), "sites-translation-outsider").await;
+    let site = owner
+        .acc
+        .create_site("Atlas", &subdomain("translation", &owner))
+        .await
+        .unwrap();
+    owner
+        .acc
+        .set_site_locales(&site, "en", &["en".into(), "fr".into()])
+        .await
+        .unwrap();
+    let page = owner
+        .acc
+        .create_site_page(&site, "Home", "", true)
+        .await
+        .unwrap();
+    let before = json!({
+        "id": page.as_str(), "title": "Home", "slug": "", "seo_title": null,
+        "seo_description": null, "sections": { "schema_version": 1, "sections": [] }
+    });
+    let after = json!({
+        "id": page.as_str(), "title": "Accueil", "slug": "", "seo_title": null,
+        "seo_description": "Bienvenue", "sections": { "schema_version": 1, "sections": [] }
+    });
+    let fixture = json!({
+        "schema_version": 1, "source_locale": "en", "target_locale": "fr",
+        "pages": [{ "before": before, "after": after }], "posts": []
+    })
+    .to_string();
+    let (base_url, seen) = scripted_model(vec![fixture.clone(), fixture]).await;
+    use_model(&owner, &base_url).await;
+    let uri = format!("/sites/{site}/translation-proposals");
+
+    let (status, proposed) = post(
+        &owner.app,
+        Some(&owner.token),
+        &uri,
+        json!({ "sourceLocale": "en", "targetLocale": "fr" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{proposed}");
+    assert_eq!(proposed["proposal"]["pages"][0]["before"]["title"], "Home");
+    assert_eq!(
+        proposed["proposal"]["pages"][0]["after"]["title"],
+        "Accueil"
+    );
+    assert_eq!(seen.lock().unwrap().len(), 1);
+    let fallback = owner
+        .acc
+        .localized_site_page(&site, &page, "fr")
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(fallback.fallback, "preparing a review must write nothing");
+
+    let (status, _) = post(
+        &outsider.app,
+        Some(&outsider.token),
+        &uri,
+        json!({ "sourceLocale": "en", "targetLocale": "fr" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    let (status, _) = put(
+        &outsider.app,
+        &outsider.token,
+        &uri,
+        json!({ "proposal": proposed["proposal"].clone() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    let (status, applied) = put(
+        &owner.app,
+        &owner.token,
+        &uri,
+        json!({ "proposal": proposed["proposal"].clone() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    assert_eq!(applied["pages"], 1);
+    let french = owner
+        .acc
+        .localized_site_page(&site, &page, "fr")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(french.page.title, "Accueil");
+    assert!(!french.fallback);
+
+    let (status, stale_proposal) = post(
+        &owner.app,
+        Some(&owner.token),
+        &uri,
+        json!({ "sourceLocale": "en", "targetLocale": "fr" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{stale_proposal}");
+    owner
+        .acc
+        .set_page_title(&site, &page, "Welcome")
+        .await
+        .unwrap();
+    let (status, stale) = put(
+        &owner.app,
+        &owner.token,
+        &uri,
+        json!({ "proposal": stale_proposal["proposal"].clone() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{stale}");
+    assert!(
+        stale["detail"]
+            .as_str()
+            .unwrap()
+            .contains("source snapshot")
+    );
+}
+
+#[tokio::test]
 async fn generated_site_reaches_public_form_notification_and_owner_inbox() {
     let owner = harness("sites-final-forms").await;
     let outsider = harness_on(Arc::clone(&owner.store), "sites-final-forms-other").await;

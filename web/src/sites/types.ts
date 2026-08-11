@@ -102,6 +102,36 @@ export interface SiteTranslationReadiness {
   languages: SiteTranslationLanguage[];
 }
 
+export interface SiteTranslationPageSnapshot {
+  id: string;
+  title: string;
+  slug: string;
+  seo_title: string | null;
+  seo_description: string | null;
+  sections: SectionsEnvelope;
+}
+
+export interface SiteTranslationPostSnapshot {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+}
+
+export interface SiteTranslationEnvelope {
+  schema_version: number;
+  source_locale: string;
+  target_locale: string;
+  pages: {
+    before: SiteTranslationPageSnapshot;
+    after: SiteTranslationPageSnapshot;
+  }[];
+  posts: {
+    before: SiteTranslationPostSnapshot;
+    after: SiteTranslationPostSnapshot;
+  }[];
+}
+
 /** One blog post linked to its source alo Doc. The document remains the
  *  authoring source; Sites stores only the public metadata and publish state. */
 export interface SitePost {
@@ -136,7 +166,11 @@ export interface SiteAnalyticsReport {
   totals: { visits: number; uniqueVisitors: number };
   daily: Array<{ date: string; visits: number; uniqueVisitors: number }>;
   topPages: Array<{ path: string; visits: number; uniqueVisitors: number }>;
-  topReferrers: Array<{ domain: string; visits: number; uniqueVisitors: number }>;
+  topReferrers: Array<{
+    domain: string;
+    visits: number;
+    uniqueVisitors: number;
+  }>;
 }
 
 /** The deployment-wide sites config: published sites serve at
@@ -177,7 +211,12 @@ export type SiteEditOperation =
   | { op: "remove_section"; target: SiteEditTarget }
   | { op: "reorder_section"; target: SiteEditTarget; to: number }
   | { op: "set_prop"; target: SiteEditTarget; pointer: string; value: unknown }
-  | { op: "rewrite_copy"; target: SiteEditTarget; pointer: string; text: string };
+  | {
+      op: "rewrite_copy";
+      target: SiteEditTarget;
+      pointer: string;
+      text: string;
+    };
 
 export interface SiteEditEnvelope {
   schema_version: number;

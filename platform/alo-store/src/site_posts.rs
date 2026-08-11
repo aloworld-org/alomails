@@ -48,6 +48,7 @@ pub struct SitePost {
     pub slug: String,
     pub title: String,
     pub excerpt: String,
+    pub content_locale: String,
     pub cover_blob_id: Option<BlobId>,
     pub status: SitePostStatus,
     pub published_at: Option<OffsetDateTime>,
@@ -73,7 +74,7 @@ pub struct SitePostUpdate<'a> {
     pub cover_blob_id: Option<&'a BlobId>,
 }
 
-fn validate_text(title: &str, excerpt: &str) -> Result<()> {
+pub(crate) fn validate_text(title: &str, excerpt: &str) -> Result<()> {
     if title.trim().is_empty() {
         return Err(StoreError::Conflict(
             "post title must not be empty".to_owned(),
@@ -92,7 +93,7 @@ fn validate_text(title: &str, excerpt: &str) -> Result<()> {
     Ok(())
 }
 
-fn map_constraints(error: sqlx::Error) -> StoreError {
+pub(crate) fn map_constraints(error: sqlx::Error) -> StoreError {
     if let sqlx::Error::Database(ref db) = error {
         match db.constraint() {
             Some("site_posts_slug_unique") => {
@@ -152,8 +153,8 @@ impl AccountStore {
         let id = SitePostId::generate();
         let done = sqlx::query(
             "INSERT INTO site_posts \
-                (tenant_id, site_id, id, doc_node_id, slug, title, excerpt, cover_blob_id) \
-             SELECT $1, $2, $3, $4, $5, $6, $7, $8 \
+                (tenant_id, site_id, id, doc_node_id, slug, title, excerpt, cover_blob_id, content_locale) \
+             SELECT $1, $2, $3, $4, $5, $6, $7, $8, default_locale \
              FROM sites WHERE tenant_id = $1 AND id = $2",
         )
         .bind(self.tenant.as_str())
@@ -177,7 +178,7 @@ impl AccountStore {
     /// empty list, matching the rest of the Sites read surface.
     pub async fn site_posts(&self, site: &SiteId) -> Result<Vec<SitePost>> {
         let rows = sqlx::query_as::<_, SitePostRow>(
-            "SELECT id, doc_node_id, slug, title, excerpt, cover_blob_id, status, \
+            "SELECT id, doc_node_id, slug, title, excerpt, content_locale, cover_blob_id, status, \
                     published_at, created_at, updated_at \
              FROM site_posts WHERE tenant_id = $1 AND site_id = $2 \
              ORDER BY created_at DESC, id",
@@ -190,10 +191,36 @@ impl AccountStore {
         rows.into_iter().map(SitePostRow::into_post).collect()
     }
 
+    /// Lists only posts with an exact draft in `locale`; there is no fallback.
+    /// Stable post/document identity and publication state come from the base
+    /// row while the site-facing metadata comes from the requested language.
+    pub async fn site_posts_in_locale_exact(
+        &self,
+        site: &SiteId,
+        locale: &str,
+    ) -> Result<Vec<SitePost>> {
+        let locale = crate::sites::normalize_locale_tag(locale)?;
+        let rows = sqlx::query_as::<_, SitePostRow>(
+            "SELECT p.id, p.doc_node_id, \
+                    CASE WHEN p.content_locale=$3 THEN p.slug ELSE l.slug END AS slug, \
+                    CASE WHEN p.content_locale=$3 THEN p.title ELSE l.title END AS title, \
+                    CASE WHEN p.content_locale=$3 THEN p.excerpt ELSE l.excerpt END AS excerpt, \
+                    $3 AS content_locale, p.cover_blob_id, p.status, p.published_at, \
+                    p.created_at, GREATEST(p.updated_at, COALESCE(l.updated_at,p.updated_at)) AS updated_at \
+             FROM site_posts p LEFT JOIN site_post_locales l \
+               ON l.tenant_id=p.tenant_id AND l.site_id=p.site_id AND l.post_id=p.id AND l.locale=$3 \
+             WHERE p.tenant_id=$1 AND p.site_id=$2 \
+               AND (p.content_locale=$3 OR l.post_id IS NOT NULL) \
+             ORDER BY p.created_at DESC,p.id",
+        ).bind(self.tenant.as_str()).bind(site.as_str()).bind(&locale)
+            .fetch_all(&self.pool).await.map_err(StoreError::Db)?;
+        rows.into_iter().map(SitePostRow::into_post).collect()
+    }
+
     /// Returns one tenant/site-scoped post.
     pub async fn site_post(&self, site: &SiteId, post: &SitePostId) -> Result<Option<SitePost>> {
         let row = sqlx::query_as::<_, SitePostRow>(
-            "SELECT id, doc_node_id, slug, title, excerpt, cover_blob_id, status, \
+            "SELECT id, doc_node_id, slug, title, excerpt, content_locale, cover_blob_id, status, \
                     published_at, created_at, updated_at \
              FROM site_posts WHERE tenant_id = $1 AND site_id = $2 AND id = $3",
         )
@@ -296,6 +323,7 @@ struct SitePostRow {
     slug: String,
     title: String,
     excerpt: String,
+    content_locale: String,
     cover_blob_id: Option<String>,
     status: String,
     published_at: Option<OffsetDateTime>,
@@ -311,6 +339,7 @@ impl SitePostRow {
             slug: self.slug,
             title: self.title,
             excerpt: self.excerpt,
+            content_locale: self.content_locale,
             cover_blob_id: self.cover_blob_id.map(BlobId::new),
             status: SitePostStatus::parse(&self.status)?,
             published_at: self.published_at,
