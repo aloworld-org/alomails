@@ -24,15 +24,15 @@ use crate::{
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, hr_checklists, hr_documents, hr_employees, hr_holidays,
-    hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_letters, hr_org, hr_recruitment,
-    imap_import_route, insights, insights_ask, insights_eval, insights_gallery, inventory_counts,
-    inventory_locations, inventory_moves, inventory_po, inventory_po_print, inventory_po_receipts,
-    inventory_po_send, inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries,
-    inventory_so_invoice, inventory_stock, inventory_supplier_prices, inventory_suppliers,
-    meet_routes, projects_clients, projects_invoices, projects_plan, projects_reports,
-    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, scoped_roles,
-    security, session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe,
-    wopi, workspace_search,
+    hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_letters, hr_org, hr_payroll,
+    hr_recruitment, imap_import_route, insights, insights_ask, insights_eval, insights_gallery,
+    inventory_counts, inventory_locations, inventory_moves, inventory_po, inventory_po_print,
+    inventory_po_receipts, inventory_po_send, inventory_reorder, inventory_scan, inventory_so,
+    inventory_so_deliveries, inventory_so_invoice, inventory_stock, inventory_supplier_prices,
+    inventory_suppliers, meet_routes, projects_clients, projects_invoices, projects_plan,
+    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
+    schedule, scoped_roles, security, session, settings, share, signup_route, sites, snooze,
+    spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -793,6 +793,20 @@ pub fn app_with_site_domain_dns(
                 .patch(hr_letters::update_template)
                 .delete(hr_letters::delete_template),
         )
+        // The payroll export (B6.10): the period's file, and the receipt for
+        // having drawn it.
+        //
+        // A POST rather than the GET every other export in the suite is,
+        // because the audit trail records mutations and THIS read deserves a
+        // line: it returns every employee's pay, national identifier and bank
+        // account in one response (`docs/design/hr.md` § The payroll export is
+        // a POST — the decision). The two GETs beside it carry no payroll data
+        // at all — the receipts, and the sheets this build can write.
+        .route(
+            "/hr/payroll-exports",
+            get(hr_payroll::list_exports).post(hr_payroll::draw_export),
+        )
+        .route("/hr/payroll-mappings", get(hr_payroll::list_mappings))
         // Hiring (B6.06a): the openings, and the people who applied for them.
         // Every route is HR's — there is no employee-facing or manager-facing
         // view of a candidate at all.

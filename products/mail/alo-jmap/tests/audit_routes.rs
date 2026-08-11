@@ -349,6 +349,7 @@ POST /hr/openings -> hr.opening.create
 POST /hr/openings/{id}/applicants -> hr.opening.applicant.create
 POST /hr/openings/{id}/close -> hr.opening.close
 POST /hr/openings/{id}/publish -> hr.opening.publish
+POST /hr/payroll-exports -> hr.payroll_export.create
 POST /inventory/counts -> inventory.count.create
 POST /inventory/counts/{id}/apply -> inventory.count.apply
 POST /inventory/counts/{id}/cancel -> inventory.count.cancel

@@ -611,6 +611,15 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// The receipt for one draw of the payroll file (alo HR, ADR 0035, wave
+    /// B6.10). It names a period, a column mapping and the person who asked —
+    /// never a figure and never an employee: the file itself is folded from the
+    /// records each time it is drawn and is not kept (`docs/design/hr.md`,
+    /// "Payroll export").
+    HrPayrollExportId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

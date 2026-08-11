@@ -32,12 +32,13 @@ use axum::response::{IntoResponse, Response};
 /// The record separator RFC 4180 specifies.
 const CRLF: &str = "\r\n";
 
-/// The characters that force a field to be quoted.
-const MUST_QUOTE: [char; 4] = [',', '"', '\r', '\n'];
+/// The characters that force a field to be quoted, whatever the delimiter is.
+const MUST_QUOTE: [char; 3] = ['"', '\r', '\n'];
 
-/// One field, quoted only when it has to be.
-fn field(value: &str) -> String {
-    if value.contains(MUST_QUOTE) {
+/// One field, quoted only when it has to be — including when it contains the
+/// delimiter in force.
+fn field(value: &str, delimiter: char) -> String {
+    if value.contains(MUST_QUOTE) || value.contains(delimiter) {
         format!("\"{}\"", value.replace('"', "\"\""))
     } else {
         value.to_owned()
@@ -49,12 +50,28 @@ fn field(value: &str) -> String {
 /// An empty slice writes an empty record — a blank line — which is what a
 /// caller asking for one means; it is never used to mean "no record".
 pub fn row(fields: &[&str]) -> String {
+    row_delimited(',', fields)
+}
+
+/// One record under a stated delimiter, CRLF-terminated.
+///
+/// RFC 4180 knows only the comma, and every export here writes one — with one
+/// exception the payroll file made unavoidable (B6.10): a sheet whose figures
+/// carry a **decimal comma**, which every country alo ships payroll conventions
+/// for uses, is read by that country's payroll software as a **semicolon**-
+/// separated file. Quoting would be enough for a parser and is not enough for
+/// the humans and the import wizards in between.
+///
+/// So the delimiter travels with the mapping that chose it, and the quoting rule
+/// follows it: a field containing the delimiter in force is quoted, exactly as a
+/// field containing a comma is in an ordinary file.
+pub fn row_delimited(delimiter: char, fields: &[&str]) -> String {
     let mut line = String::new();
     for (at, value) in fields.iter().enumerate() {
         if at > 0 {
-            line.push(',');
+            line.push(delimiter);
         }
-        line.push_str(&field(value));
+        line.push_str(&field(value, delimiter));
     }
     line.push_str(CRLF);
     line
@@ -140,6 +157,27 @@ mod tests {
         assert_eq!(
             row(&["plain", "with, comma", "plain again"]),
             "plain,\"with, comma\",plain again\r\n"
+        );
+    }
+
+    #[test]
+    fn a_stated_delimiter_takes_the_quoting_rule_with_it() {
+        // A German payroll sheet: semicolons between fields, and a comma is then
+        // an ordinary character inside one.
+        assert_eq!(
+            row_delimited(';', &["Byron", "3200,50", "8,00"]),
+            "Byron;3200,50;8,00\r\n"
+        );
+        // …and a semicolon inside a field is what gets quoted instead.
+        assert_eq!(
+            row_delimited(';', &["Acme; GmbH", "1,00"]),
+            "\"Acme; GmbH\";1,00\r\n"
+        );
+        // The comma file is unchanged, and is the same function.
+        assert_eq!(row_delimited(',', &["a", "b"]), row(&["a", "b"]));
+        assert_eq!(
+            row_delimited(';', &["say \"hi\""]),
+            "\"say \"\"hi\"\"\"\r\n"
         );
     }
 }

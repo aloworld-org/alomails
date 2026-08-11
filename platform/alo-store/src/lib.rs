@@ -108,6 +108,8 @@ pub mod hr_leave_requests;
 pub mod hr_letters;
 pub mod hr_openings;
 pub mod hr_org;
+pub mod hr_payroll_export;
+pub mod hr_payroll_mapping;
 pub mod hr_statutory_leave;
 pub mod iban;
 pub mod ical;
@@ -353,6 +355,13 @@ pub use hr_letters::{
 };
 pub use hr_openings::{NewOpening, Opening, OpeningStatus};
 pub use hr_org::{ORG_CHART_MAX_DEPTH, OrgNode, fold_org_chart};
+pub use hr_payroll_export::{
+    PAYROLL_PERIOD_MAX_DAYS, PayrollExport, PayrollLine, terms_for_period,
+};
+pub use hr_payroll_mapping::{
+    ColumnMapping, MAPPINGS as PAYROLL_MAPPINGS, PayrollColumn, mapping as payroll_mapping,
+    mapping_for_country as payroll_mapping_for_country,
+};
 pub use id::{
     AttachmentId, BankLineId, BankMatchId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId,
     BaseViewId, BillingBillId, BillingCustomerId, BillingInvoiceId, BillingLineId,
@@ -362,12 +371,12 @@ pub use id::{
     FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
     FinMileageRateId, FinPeriodId, FinPostingId, GroupId, HrApplicantId, HrApplicantNoteId,
     HrChecklistStepId, HrChecklistTemplateId, HrDocumentId, HrEmployeeId, HrEmploymentId,
-    HrLeavePolicyId, HrLeaveRequestId, HrLetterTemplateId, HrOpeningId, InsightDashboardId,
-    InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId,
-    InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId, InvSupplierId, LabelId,
-    MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId, SiteCollectionId, SiteFormId,
-    SiteFormSubmissionId, SiteId, SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId,
-    TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    HrLeavePolicyId, HrLeaveRequestId, HrLetterTemplateId, HrOpeningId, HrPayrollExportId,
+    InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId,
+    InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
+    InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
+    SiteCollectionId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId,
+    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
