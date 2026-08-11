@@ -94,6 +94,12 @@ export function MeetRoom({
         audio
         onDisconnected={onLeft}
         className={styles.livekit}
+        // The engine's own theme attribute. Without it none of its CSS
+        // variables exist, and `.lk-grid-layout-wrapper`'s
+        // `height: calc(100% - var(--lk-control-bar-height))` becomes invalid
+        // — so the video area collapsed to zero and the call rendered as an
+        // empty black screen. A day of CSS guesses; one missing attribute.
+        data-lk-theme="default"
       >
         <VideoConference chatMessageFormatter={formatChatMessageLinks} />
       </LiveKitRoom>
