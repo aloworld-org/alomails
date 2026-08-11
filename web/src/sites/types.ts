@@ -310,6 +310,35 @@ export interface SitePublishComparison {
   unchangedCollections: number;
 }
 
+/** Where one scheduled publish is in its life. `scheduled` is waiting,
+ *  `publishing` is happening right now; the other three are terminal and are
+ *  kept so the owner reads what happened instead of watching an entry vanish. */
+export type SitePublishScheduleStatus =
+  | "scheduled"
+  | "publishing"
+  | "published"
+  | "cancelled"
+  | "failed";
+
+/** One intention to publish a website at a chosen moment. `publishAt` is an
+ *  RFC 3339 instant in UTC — every screen turns it into the reader's own
+ *  time, and never shows the raw string. */
+export interface SitePublishSchedule {
+  id: string;
+  siteId: string;
+  publishAt: string;
+  status: SitePublishScheduleStatus;
+  requestedBy: string;
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+  attempts: number;
+  /** The version it produced, once it produced one. */
+  publishId: string | null;
+  /** Why it could not publish, in the server's own words. */
+  lastError: string | null;
+}
+
 /** The answer to a restore: the NEW version now live, and the one it copied. */
 export interface SitePublishRestore {
   publishId: string;

@@ -160,6 +160,8 @@ pub mod share;
 pub mod sieve;
 pub mod signup_route;
 pub mod site_notify;
+pub mod site_publish_worker;
+pub mod site_schedule;
 pub mod site_version_preview;
 pub mod site_versions;
 pub mod sites;

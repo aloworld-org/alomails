@@ -40,6 +40,7 @@ import type {
   SitePublishComparison,
   SitePublishPage,
   SitePublishRestore,
+  SitePublishSchedule,
   SitePublishVersion,
   SiteSubmission,
   SiteCollection,
@@ -272,6 +273,40 @@ export class SitesApi {
     return this.#write<SitePublishRestore>(
       "POST",
       `${this.#publishPath(siteId, publishId)}/restore`,
+      {},
+    );
+  }
+
+  /** When this website is going to publish itself (`null` when nothing is
+   *  waiting), and what previous intentions did. */
+  publishSchedule(siteId: string): Promise<{
+    schedule: SitePublishSchedule | null;
+    history: SitePublishSchedule[];
+  }> {
+    return this.#read<{
+      schedule?: SitePublishSchedule | null;
+      history?: SitePublishSchedule[];
+    }>(`${this.#schedulePath(siteId)}`).then((r) => ({
+      schedule: r.schedule ?? null,
+      history: r.history ?? [],
+    }));
+  }
+
+  /** Chooses the moment this website goes live, or moves the moment already
+   *  chosen (the schedule keeps its id). `publishAt` is an RFC 3339 instant —
+   *  the caller sends a real moment, never a wall-clock string. */
+  scheduleSitePublish(siteId: string, publishAt: string): Promise<SitePublishSchedule> {
+    return this.#write<SitePublishSchedule>("POST", this.#schedulePath(siteId), {
+      publishAt,
+    });
+  }
+
+  /** Calls off a scheduled publish. The site is not touched; the row survives
+   *  as `cancelled` so the screen can say what happened to it. */
+  cancelSitePublish(siteId: string, scheduleId: string): Promise<SitePublishSchedule> {
+    return this.#write<SitePublishSchedule>(
+      "DELETE",
+      `${this.#schedulePath(siteId)}/${encodeURIComponent(scheduleId)}`,
       {},
     );
   }
@@ -621,6 +656,10 @@ export class SitesApi {
 
   #publishPath(siteId: string, publishId: string): string {
     return `/sites/${encodeURIComponent(siteId)}/publishes/${encodeURIComponent(publishId)}`;
+  }
+
+  #schedulePath(siteId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/schedule`;
   }
 
   #postPath(siteId: string, postId: string): string {

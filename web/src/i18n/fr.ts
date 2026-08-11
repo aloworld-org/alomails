@@ -2815,6 +2815,38 @@ export const fr: Partial<Catalog> = {
   sitesHistoryEmptyTitle: "Rien n’est encore publié",
   sitesHistoryEmptyBody:
     "Publiez ce site une fois, et chaque version publiée restera ici — à consulter, et à remettre en ligne.",
+
+  // Sites — publication à un moment choisi (S2.05b).
+  sitesScheduleTitle: "Publier à un moment choisi",
+  sitesScheduleHint:
+    "Choisissez une date et une heure : ce site se mettra en ligne tout seul. Vous n’avez pas besoin d’être là.",
+  sitesScheduleLoading: "Vérification de ce qui est programmé",
+  sitesScheduleLoadFailed:
+    "La publication programmée n’a pas pu être chargée.",
+  sitesScheduleOpen: "Programmer la publication",
+  sitesScheduleChange: "Changer le moment",
+  sitesScheduleWhen: "Date et heure",
+  sitesScheduleGoesLive: (moment: string) => `En ligne le ${moment}.`,
+  sitesScheduleTimeZone: (zone: string) =>
+    `C’est votre heure locale (${zone}), pas celle du serveur.`,
+  sitesScheduleSave: "Programmer la publication",
+  sitesScheduleMove: "Déplacer à ce moment",
+  sitesScheduleSaving: "Enregistrement…",
+  sitesScheduleMissingMoment: "Choisissez d’abord une date et une heure.",
+  sitesScheduleSaveFailed: "Ce site n’a pas pu être programmé.",
+  sitesSchedulePending: (moment: string) =>
+    `Ce site se publiera le ${moment}. Tout ce que vous enregistrez d’ici là partira en ligne avec lui.`,
+  sitesSchedulePublishingNow: "Ce site est en cours de publication.",
+  sitesScheduleCancel: "Annuler",
+  sitesScheduleCancelling: "Annulation…",
+  sitesScheduleCancelFailed:
+    "La publication programmée n’a pas pu être annulée.",
+  sitesScheduleCancelled: (moment: string) =>
+    `Annulé. Ce site ne sera pas publié le ${moment}, et rien de ce qui est en ligne n’a changé.`,
+  sitesScheduleDone: (moment: string) =>
+    `Ce site s’est publié tout seul le ${moment}.`,
+  sitesScheduleFailed: (moment: string, reason: string) =>
+    `Ce site n’a pas pu être publié le ${moment} : ${reason}`,
   sitesPosts: "Articles du blog",
   sitesBackToWebsite: "Site web",
   sitesPostsLoadFailed: "Les articles de votre blog n’ont pas pu être chargés.",

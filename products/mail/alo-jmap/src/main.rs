@@ -143,6 +143,24 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Background scheduled-publish sweeper (alo Sites, ADR 0036): put each
+    // website whose chosen moment has arrived on the internet, through the
+    // scheduling user's own account door. Every 30 seconds, so "09:00" means
+    // 09:00 to the person who chose it.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(30));
+            loop {
+                tick.tick().await;
+                let published = alo_jmap::site_publish_worker::run_due(&store).await;
+                if published > 0 {
+                    tracing::info!(published, "scheduled publish sweep");
+                }
+            }
+        });
+    }
+
     // Background share-expiry sweeper (alo Transfer): drop expired share links
     // and reclaim any blob no live share still holds.
     {

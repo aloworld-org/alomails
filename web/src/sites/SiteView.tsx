@@ -26,6 +26,7 @@ import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { NewPageDialog } from "./NewPageDialog";
+import { SchedulePublish } from "./SchedulePublish";
 import { SiteCollaborators } from "./SiteCollaborators";
 import { ThemeDialog } from "./ThemeDialog";
 import { EmptyState, ErrorBanner } from "./parts";
@@ -330,6 +331,10 @@ export function SiteView() {
               </Button>
             </div>
           </div>
+
+          {/* Publishing later belongs directly under publishing now: they are
+              the same decision, one of them with a moment attached. */}
+          <SchedulePublish siteId={site.id} onPublished={() => void load()} />
 
           {site.canManageCollaborators && <SiteCollaborators siteId={site.id} />}
 

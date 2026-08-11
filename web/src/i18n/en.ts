@@ -3394,6 +3394,39 @@ export const en = {
   sitesHistoryEmptyBody:
     "Publish this website once, and every version you publish stays here — to look back at, and to put back online.",
 
+  // Sites — publishing at a chosen moment (S2.05b). Every moment shown here
+  // is in the reader's own time, and the zone is named beside the picker:
+  // someone scheduling a launch from another country must be able to see
+  // which nine o'clock they picked.
+  sitesScheduleTitle: "Publish at a chosen moment",
+  sitesScheduleHint:
+    "Pick a date and time, and this website goes live by itself. You do not have to be here when it does.",
+  sitesScheduleLoading: "Checking what is scheduled",
+  sitesScheduleLoadFailed: "The scheduled publishing could not be loaded.",
+  sitesScheduleOpen: "Schedule publishing",
+  sitesScheduleChange: "Change the moment",
+  sitesScheduleWhen: "Date and time",
+  sitesScheduleGoesLive: (moment: string) => `Goes live on ${moment}.`,
+  sitesScheduleTimeZone: (zone: string) =>
+    `That is your own time (${zone}) — not the server's.`,
+  sitesScheduleSave: "Schedule publishing",
+  sitesScheduleMove: "Move to this moment",
+  sitesScheduleSaving: "Saving…",
+  sitesScheduleMissingMoment: "Choose a date and time first.",
+  sitesScheduleSaveFailed: "This website could not be scheduled.",
+  sitesSchedulePending: (moment: string) =>
+    `This website publishes itself on ${moment}. Everything you save until then goes live with it.`,
+  sitesSchedulePublishingNow: "This website is being published right now.",
+  sitesScheduleCancel: "Call it off",
+  sitesScheduleCancelling: "Calling it off…",
+  sitesScheduleCancelFailed: "The scheduled publishing could not be called off.",
+  sitesScheduleCancelled: (moment: string) =>
+    `Called off. This website will not publish on ${moment}, and nothing that is online has changed.`,
+  sitesScheduleDone: (moment: string) =>
+    `This website published itself on ${moment}.`,
+  sitesScheduleFailed: (moment: string, reason: string) =>
+    `This website could not publish on ${moment}: ${reason}`,
+
   // Audit trail — a record's own history (B2.13). The labels are VERBS, not
   // sentences: the record kind is the page the reader is already on, so an
   // invoice's history says "Issued" rather than "Invoice issued". Keep them

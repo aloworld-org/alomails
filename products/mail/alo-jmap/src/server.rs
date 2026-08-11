@@ -32,8 +32,8 @@ use crate::{
     inventory_suppliers, invite_route, meet_routes, module_access, projects_clients,
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
-    signup_route, site_version_preview, site_versions, sites, snooze, spaces, tasks, unsubscribe,
-    wopi, workspace_search,
+    signup_route, site_schedule, site_version_preview, site_versions, sites, snooze, spaces, tasks,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -301,6 +301,16 @@ pub fn app_with_site_domain_dns(
         .route("/sites/{id}/theme", put(sites::set_theme))
         .route("/sites/{id}/publish", post(sites::publish_site))
         .route("/sites/{id}/unpublish", post(sites::unpublish_site))
+        // Publishing at a chosen moment (S2.05b): the intention, and calling
+        // it off. The sweep that runs a due one is `site_publish_worker`.
+        .route(
+            "/sites/{id}/schedule",
+            get(site_schedule::get_schedule).post(site_schedule::set_schedule),
+        )
+        .route(
+            "/sites/{id}/schedule/{schedule}",
+            delete(site_schedule::cancel_schedule),
+        )
         // Version history (S2.04a): the immutable publishes, a metadata
         // comparison, and putting one back online as a new publish.
         .route("/sites/{id}/publishes", get(site_versions::list_publishes))

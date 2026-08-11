@@ -2778,6 +2778,38 @@ export const nl: Partial<Catalog> = {
   sitesHistoryEmptyTitle: "Nog niets gepubliceerd",
   sitesHistoryEmptyBody:
     "Publiceer deze site één keer, en elke versie die u publiceert blijft hier — om terug te kijken, en om weer online te zetten.",
+
+  // Sites — publiceren op een gekozen moment (S2.05b).
+  sitesScheduleTitle: "Publiceren op een gekozen moment",
+  sitesScheduleHint:
+    "Kies een datum en tijd, dan gaat deze site vanzelf online. U hoeft er niet bij te zijn.",
+  sitesScheduleLoading: "Controleren wat er gepland staat",
+  sitesScheduleLoadFailed:
+    "De geplande publicatie kon niet worden geladen.",
+  sitesScheduleOpen: "Publicatie plannen",
+  sitesScheduleChange: "Moment wijzigen",
+  sitesScheduleWhen: "Datum en tijd",
+  sitesScheduleGoesLive: (moment: string) => `Gaat online op ${moment}.`,
+  sitesScheduleTimeZone: (zone: string) =>
+    `Dat is uw eigen tijd (${zone}), niet die van de server.`,
+  sitesScheduleSave: "Publicatie plannen",
+  sitesScheduleMove: "Naar dit moment verplaatsen",
+  sitesScheduleSaving: "Opslaan…",
+  sitesScheduleMissingMoment: "Kies eerst een datum en tijd.",
+  sitesScheduleSaveFailed: "Deze site kon niet worden ingepland.",
+  sitesSchedulePending: (moment: string) =>
+    `Deze site publiceert zichzelf op ${moment}. Alles wat u tot dan opslaat, gaat mee online.`,
+  sitesSchedulePublishingNow: "Deze site wordt nu gepubliceerd.",
+  sitesScheduleCancel: "Afzeggen",
+  sitesScheduleCancelling: "Afzeggen…",
+  sitesScheduleCancelFailed:
+    "De geplande publicatie kon niet worden afgezegd.",
+  sitesScheduleCancelled: (moment: string) =>
+    `Afgezegd. Deze site wordt niet gepubliceerd op ${moment}, en er is niets veranderd aan wat online staat.`,
+  sitesScheduleDone: (moment: string) =>
+    `Deze site heeft zichzelf gepubliceerd op ${moment}.`,
+  sitesScheduleFailed: (moment: string, reason: string) =>
+    `Deze site kon niet worden gepubliceerd op ${moment}: ${reason}`,
   sitesPosts: "Blogartikelen",
   sitesBackToWebsite: "Website",
   sitesPostsLoadFailed: "Uw blogartikelen konden niet worden geladen.",
