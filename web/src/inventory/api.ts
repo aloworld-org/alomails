@@ -24,7 +24,14 @@ import { useAuth } from "../auth";
 import { getLocale } from "../i18n";
 import { API_BASE } from "../platform/runtime";
 import { RestError, problemDetail, restMessage } from "../platform/rest";
-import type { InvLocation, InvMove, InvSupplier, StockRead } from "./types";
+import type {
+  InvLocation,
+  InvMove,
+  InvSupplier,
+  ScanResult,
+  StockLevel,
+  StockRead,
+} from "./types";
 
 type AuthorizedFetch = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -123,6 +130,32 @@ export class InventoryApi {
     return this.#read<{ moves?: InvMove[]; limit?: number }>(
       `/inventory/moves${rendered === "" ? "" : `?${rendered}`}`,
     ).then((r) => ({ moves: r.moves ?? [], limit: r.limit ?? 0 }));
+  }
+
+  /**
+   * What the code on a box is, and how much of it there is (B5.09c).
+   *
+   * The one call behind both scanners: a keyboard-wedge reader types the digits
+   * into a field and a phone camera detects them, and neither is a different
+   * question. The server decides what a code even is — a mangled scan is a
+   * `422` carrying the rule it broke, and a well-formed code nobody stocks is a
+   * `404` — so this method validates nothing and passes the sentence on.
+   */
+  scan(code: string): Promise<ScanResult> {
+    const query = new URLSearchParams({ code });
+    return this.#read<{
+      code?: string;
+      product: ScanResult["product"];
+      stock?: StockLevel[];
+      onHandQtyMilli?: number;
+    }>(`/inventory/scan?${query.toString()}`).then((r) => ({
+      // The canonical code is the server's, not the one that was typed: it is
+      // what the record actually carries.
+      code: r.code ?? code,
+      product: r.product,
+      stock: r.stock ?? [],
+      onHandQtyMilli: r.onHandQtyMilli ?? 0,
+    }));
   }
 
   /** Who this tenant buys from, for the catalog's default-supplier picker.

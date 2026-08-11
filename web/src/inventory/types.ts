@@ -19,7 +19,7 @@
 // its way to the server (`DocumentTotals`, `LineDraft`): an order's money is
 // the same money, computed by the same server code, and a second declaration of
 // it here would be a second thing to keep in step.
-import type { DocumentTotals, LineDraft } from "../billing";
+import type { BillingProduct, DocumentTotals, LineDraft } from "../billing";
 
 /**
  * What a place *is*.
@@ -140,6 +140,26 @@ export interface InvMove {
   occurredAt: string;
   createdBy: string;
   createdAt: string;
+}
+
+/**
+ * What a scanned code turned out to be (B5.09c).
+ *
+ * One shape for both machines that read a code — a keyboard-wedge scanner and
+ * a phone camera — because they are two ways of typing the same thirteen
+ * digits. It carries the product **and** where it is, since that is one
+ * question asked at a shelf; `onHandQtyMilli` is the server's sum over the rows
+ * it sent, never added up here. A service carries no rows at all: the ledger
+ * refuses to move one, so an empty list would read as "none left".
+ */
+export interface ScanResult {
+  /** The code as the server canonicalised it: digits only, leading zeros kept.
+   *  A code read off a box in groups scans as the same code. */
+  code: string;
+  product: BillingProduct;
+  /** Real places only, zero rows left out — what is on a shelf right now. */
+  stock: StockLevel[];
+  onHandQtyMilli: number;
 }
 
 /** A supplier, as the catalog's default-supplier picker and the purchase-order

@@ -43,7 +43,12 @@ use crate::state::{AppState, authenticate};
 /// A product as JSON. No currency field: a price list is quoted in the
 /// tenant's own currency, and the document carries the currency it was raised
 /// in (`docs/design/billing.md`).
-fn product_json(p: &Product) -> Value {
+///
+/// Shared with [`crate::inventory_scan`] so a product read by scanning its
+/// barcode is byte-for-byte the product read by its id — a scanner that
+/// answered with a second shape of the same record would drift from this one
+/// the first time a field was added.
+pub(crate) fn product_json(p: &Product) -> Value {
     json!({
         "id": p.id.as_str(),
         "name": p.name,

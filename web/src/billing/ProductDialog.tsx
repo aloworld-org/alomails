@@ -45,12 +45,22 @@ interface Props {
    * B5.09a's"), and the field appears only where there is something to pick.
    */
   suppliers?: SupplierChoice[];
+  /**
+   * The barcode a **new** product opens with (B5.09c).
+   *
+   * The one caller is the scanner: a code that matched nothing in the catalog
+   * offers to add the thing it is on, and re-typing thirteen digits that were
+   * just read by a machine is exactly the kind of manual step this product does
+   * not ask for. Ignored when `product` is given — an existing record's barcode
+   * is its own.
+   */
+  initialBarcode?: string | undefined;
   onClose: () => void;
   /** The list reloads from the server, so the saved record is not passed on. */
   onSaved: () => void;
 }
 
-export function ProductDialog({ product, suppliers, onClose, onSaved }: Props) {
+export function ProductDialog({ product, suppliers, initialBarcode, onClose, onSaved }: Props) {
   const api = useBillingApi();
   const [name, setName] = useState(product?.name ?? "");
   const [unit, setUnit] = useState(product?.unit ?? "");
@@ -59,8 +69,13 @@ export function ProductDialog({ product, suppliers, onClose, onSaved }: Props) {
   );
   const [rate, setRate] = useState(product === null ? "" : hundredthsToInput(product.vatRateBp));
   const [sku, setSku] = useState(product?.sku ?? "");
-  const [barcode, setBarcode] = useState(product?.barcode ?? "");
-  const [stocked, setStocked] = useState(product?.stocked ?? false);
+  const [barcode, setBarcode] = useState(product?.barcode ?? initialBarcode ?? "");
+  // A thing that was scanned is a thing on a shelf. The box is still a
+  // checkbox — a scanned code can belong to something a tenant never stocks —
+  // but the form opens on the answer that is right nearly every time.
+  const [stocked, setStocked] = useState(
+    product?.stocked ?? (initialBarcode !== undefined && initialBarcode !== ""),
+  );
   const [purchase, setPurchase] = useState(
     product === null ? "" : hundredthsToInput(product.purchasePriceCents),
   );

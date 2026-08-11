@@ -19,14 +19,15 @@
 // cost us at today's purchase price and the screen says so where it is shown
 // rather than in a manual nobody opens.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Boxes } from "lucide-react";
+import { Boxes, ScanLine } from "lucide-react";
 
-import { Spinner } from "../ds";
+import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { inventoryMessage, useInventoryApi } from "./api";
 import { MoveHistory } from "./MoveHistory";
 import { locationKindLabel, momentLabel, qtyLabel, valueLabel } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
+import { ScanInput } from "./ScanInput";
 import type { InvLocation, StockLevel } from "./types";
 import styles from "./InventoryModule.module.css";
 
@@ -48,6 +49,7 @@ export function StockView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [opened, setOpened] = useState<Opened | null>(null);
+  const [scanning, setScanning] = useState(false);
   const [revision, setRevision] = useState(0);
 
   const reload = useCallback(() => setRevision((r) => r + 1), []);
@@ -149,6 +151,9 @@ export function StockView() {
         </label>
         <span className={styles.toolbarSpacer} />
         {loading && <Spinner size={16} />}
+        <Button variant="ghost" onClick={() => setScanning(true)}>
+          <ScanLine size={16} /> {strings.inventoryScan}
+        </Button>
       </div>
 
       {error !== null && <ErrorBanner message={error} />}
@@ -224,6 +229,27 @@ export function StockView() {
             {strings.inventoryReferenceValue(valueLabel(totalValueCents))}
           </p>
         </>
+      )}
+
+      {scanning && (
+        <ScanInput
+          onClose={() => setScanning(false)}
+          // The scan already answered "how many, and where" — what this screen
+          // adds is the rest of the row: the value, the last movement, and the
+          // history behind each place. Filtering by the product's own code is
+          // how this list is searched by hand, so a scan does what a person
+          // would have done with the box in front of them.
+          action={{
+            label: strings.inventoryScanShowInStock,
+            run: (found) => {
+              setScanning(false);
+              setSearch(found.product.sku === "" ? found.product.name : found.product.sku);
+              // The scan looked at every place; the list must not be showing
+              // one, or the row it just found would be filtered out.
+              setLocation("");
+            },
+          }}
+        />
       )}
 
       {opened !== null && (

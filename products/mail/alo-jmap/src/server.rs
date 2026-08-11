@@ -25,12 +25,12 @@ use crate::{
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
     insights_gallery, inventory_counts, inventory_locations, inventory_moves, inventory_po,
-    inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder, inventory_so,
-    inventory_so_deliveries, inventory_so_invoice, inventory_stock, inventory_supplier_prices,
-    inventory_suppliers, meet_routes, projects_clients, projects_invoices, projects_plan,
-    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
-    schedule, scoped_roles, security, session, settings, share, signup_route, sites, snooze,
-    spaces, tasks, unsubscribe, wopi, workspace_search,
+    inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
+    inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice, inventory_stock,
+    inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
+    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
+    projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
+    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -477,6 +477,12 @@ pub fn app_with_site_domain_dns(
             post(inventory_locations::archive_location),
         )
         .route("/inventory/stock", get(inventory_stock::list_stock))
+        // `GET /inventory/scan?code=` (B5.09c) is the read behind pointing a
+        // machine at a box: a wedge scanner and a phone camera both end here,
+        // because they are two ways of typing the same thirteen digits. A code
+        // that is not a GTIN is a `422` carrying the reason, so a misread scan
+        // is never reported as a product nobody stocks.
+        .route("/inventory/scan", get(inventory_scan::scan))
         .route(
             "/inventory/moves",
             get(inventory_moves::list_moves).post(inventory_moves::create_move),

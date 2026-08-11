@@ -4300,6 +4300,40 @@ export const en = {
   inventoryInvoiceDrafted:
     "A draft invoice has been raised for what has gone out. It carries no number until somebody issues it in Billing.",
 
+  // ---- scanning (B5.09c) ----------------------------------------------------
+  //
+  // The words follow the hardware. A keyboard-wedge scanner is a keyboard, so
+  // the field is the headline and the copy tells a person they can simply
+  // scan into it; the camera is named as a second way and offered only where
+  // the browser has one, because a button that appears and then apologises is
+  // worse than no button. Nothing here explains what a barcode is: the
+  // sentences a person actually needs — the check digit, the length — are the
+  // server's, and they are shown verbatim.
+  inventoryScan: "Scan",
+  inventoryScanTitle: "Scan a barcode",
+  inventoryScanSubtitle:
+    "Scan into the field with a handheld reader, or type the code. On a phone you can use the camera instead.",
+  inventoryScanFieldCode: "Barcode",
+  inventoryScanPlaceholder: "4006381333931",
+  inventoryScanHint:
+    "A handheld scanner types the code here and presses Enter for you. Spaces and hyphens are ignored.",
+  inventoryScanLookup: "Find it",
+  inventoryScanFailed: "That code could not be looked up.",
+  inventoryScanWaiting: "Waiting for a code.",
+  inventoryScanCameraStart: "Use the camera",
+  inventoryScanCameraStop: "Stop the camera",
+  inventoryScanCameraFailed:
+    "The camera could not be started. Allow access to it, or type the code — a handheld scanner needs no permission at all.",
+  inventoryScanAiming: "Point the camera at the barcode. It stops as soon as it reads one.",
+  inventoryScanNoCamera:
+    "This browser cannot read a barcode from a camera. A handheld scanner works here: it types into the field above.",
+  inventoryScanOnHand: (quantity: string) => `${quantity} on hand, across every place.`,
+  inventoryScanNowhere: "None of it is anywhere yet.",
+  inventoryScanServiceNote: "This is a service, so there is no quantity of it to find.",
+  inventoryScanOpenProduct: "Open this product",
+  inventoryScanShowInStock: "Show it in the list",
+  inventoryScanAddProduct: "Add it to the catalog with this barcode",
+
   mailAttachmentErrorDetail: (reason: string) =>
     `That file was not attached. Try adding it again. Server: ${reason}`,
   mailDraftCreateErrorDetail: (reason: string) =>

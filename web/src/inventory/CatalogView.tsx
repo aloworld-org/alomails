@@ -21,7 +21,7 @@
 // filled in later: the move ledger refuses to move a service, so a number there
 // would describe something that cannot exist.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Package, Plus } from "lucide-react";
+import { Package, Plus, ScanLine } from "lucide-react";
 
 import {
   ProductDialog,
@@ -36,11 +36,14 @@ import { getLocale, strings } from "../i18n";
 import { inventoryMessage, useInventoryApi } from "./api";
 import { qtyLabel } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
+import { ScanInput } from "./ScanInput";
 import type { InvSupplier } from "./types";
 import styles from "./InventoryModule.module.css";
 
-/** What is being edited: an existing product, or the new one being added. */
-type Editing = { product: BillingProduct | null };
+/** What is being edited: an existing product, or the new one being added —
+ *  which the scanner opens with the code it just read (B5.09c), so a thing
+ *  nobody has catalogued yet is added by scanning it once. */
+type Editing = { product: BillingProduct | null; barcode?: string };
 
 export function CatalogView() {
   const billing = useBillingApi();
@@ -59,6 +62,7 @@ export function CatalogView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [scanning, setScanning] = useState(false);
   const [revision, setRevision] = useState(0);
 
   const reload = useCallback(() => setRevision((r) => r + 1), []);
@@ -179,6 +183,9 @@ export function CatalogView() {
         </label>
         <span className={styles.toolbarSpacer} />
         {loading && <Spinner size={16} />}
+        <Button variant="ghost" onClick={() => setScanning(true)}>
+          <ScanLine size={16} /> {strings.inventoryScan}
+        </Button>
         <Button onClick={() => setEditing({ product: null })}>
           <Plus size={16} /> {strings.inventoryNewProduct}
         </Button>
@@ -277,9 +284,36 @@ export function CatalogView() {
         </div>
       )}
 
+      {scanning && (
+        <ScanInput
+          onClose={() => setScanning(false)}
+          // The scanned product is opened in the same editor as a clicked one:
+          // the answer to "what is this box" is the record, and a second view
+          // of it would drift from this one.
+          action={{
+            label: strings.inventoryScanOpenProduct,
+            run: (found) => {
+              setScanning(false);
+              setEditing({ product: found.product });
+            },
+          }}
+          // A real code nobody carries is the catalog's own empty state: the
+          // thing in somebody's hand is added by scanning it, with the digits
+          // already filled in.
+          onUnknown={{
+            label: strings.inventoryScanAddProduct,
+            run: (code) => {
+              setScanning(false);
+              setEditing({ product: null, barcode: code });
+            },
+          }}
+        />
+      )}
+
       {editing !== null && (
         <ProductDialog
           product={editing.product}
+          initialBarcode={editing.barcode}
           suppliers={suppliers.map((supplier) => ({ id: supplier.id, name: supplier.name }))}
           onClose={() => setEditing(null)}
           onSaved={() => {

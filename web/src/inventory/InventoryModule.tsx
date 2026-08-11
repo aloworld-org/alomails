@@ -7,11 +7,16 @@
 // **Four tabs today, and the rest are not hidden — they are not built yet.**
 // B5.09a shipped the catalog and the stock list with a product's movement
 // history behind a click; B5.09b adds the two order documents and the acts that
-// move goods through them. The scanner, the shortage list and the stocktake are
-// B5.09c and later in `docs/autonomy/QUEUE.md`; a tab that only apologised for
-// itself would be worse than a module that grows one tab per item. The routes
-// they will need are already served (`server.rs`) — what is missing is the
-// screen, and nothing else.
+// move goods through them. The shortage list and the stocktake are later items
+// in `docs/autonomy/QUEUE.md`; a tab that only apologised for itself would be
+// worse than a module that grows one tab per item. The routes they will need
+// are already served (`server.rs`) — what is missing is the screen, and nothing
+// else.
+//
+// **The scanner (B5.09c) is not a tab and should not be**: reading the code on
+// a box is how a person addresses a product, not a place they go. It is a
+// button on the two screens that are about products — the catalog and the stock
+// list — and each says what to do with what was scanned.
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 
 import { strings } from "../i18n";

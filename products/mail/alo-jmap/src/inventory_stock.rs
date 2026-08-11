@@ -36,7 +36,11 @@ use crate::state::{AppState, authenticate};
 
 /// One product at one place as JSON. `qtyMilli` is signed — negative is
 /// legitimate on a virtual counterparty and impossible on a real location.
-fn level_json(level: &StockLevel) -> Value {
+///
+/// Shared with [`crate::inventory_scan`], which answers a scanned code with
+/// this same row: "how many are there, and where" is one shape whichever
+/// question asked it.
+pub(crate) fn level_json(level: &StockLevel) -> Value {
     json!({
         "productId": level.product_id.as_str(),
         "productName": level.product_name,

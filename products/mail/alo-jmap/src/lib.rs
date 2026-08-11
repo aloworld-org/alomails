@@ -111,6 +111,7 @@ pub mod inventory_po_print;
 pub mod inventory_po_receipts;
 pub mod inventory_po_send;
 pub mod inventory_reorder;
+pub mod inventory_scan;
 pub mod inventory_so;
 pub mod inventory_so_deliveries;
 pub mod inventory_so_invoice;
