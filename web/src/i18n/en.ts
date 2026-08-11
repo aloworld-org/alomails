@@ -1726,6 +1726,9 @@ export const en = {
   meetStart: "Start a meeting",
   meetJoin: "Join the meeting",
   meetLive: "Meeting in progress",
+  meetJoinNow: "Join now",
+  meetMicrophone: "Microphone",
+  meetCamera: "Camera",
   meetJoining: "Joining…",
   meetLeave: "Leave",
   meetClose: "Close",
@@ -4123,13 +4126,16 @@ export const en = {
   // module's catalog share. The two hints that matter are the ones about rules
   // the server enforces: a barcode's check digit, and what "stocked" decides.
   inventoryFieldSku: "Code (SKU)",
-  inventorySkuHint: "Your own code for this item. Unique among your products; leave it empty if you have none.",
+  inventorySkuHint:
+    "Your own code for this item. Unique among your products; leave it empty if you have none.",
   inventoryFieldBarcode: "Barcode",
-  inventoryBarcodeHint: "The GTIN on the box. Its check digit is verified, so a mistyped code is refused here rather than found when the wrong thing ships.",
+  inventoryBarcodeHint:
+    "The GTIN on the box. Its check digit is verified, so a mistyped code is refused here rather than found when the wrong thing ships.",
   inventoryFieldPurchasePrice: "Purchase price",
   inventoryPurchasePriceHint: "What you pay for it, in your own currency.",
   inventoryFieldDefaultSupplier: "Usual supplier",
-  inventoryDefaultSupplierHint: "Who this is normally bought from. It is what a reorder proposal starts from.",
+  inventoryDefaultSupplierHint:
+    "Who this is normally bought from. It is what a reorder proposal starts from.",
   inventoryNoSupplier: "Nobody in particular",
   inventoryFieldStocked: "Stock",
   inventoryStockedLabel: "Keep a quantity of this",
@@ -4155,7 +4161,8 @@ export const en = {
 
   // The movement history: from → to, how many, why, and which document.
   inventoryHistoryTitle: (product: string) => `${product} — movements`,
-  inventoryHistorySubtitle: (place: string) => `Everything that moved in or out of ${place}.`,
+  inventoryHistorySubtitle: (place: string) =>
+    `Everything that moved in or out of ${place}.`,
   inventoryHistoryEmpty: "Nothing has moved in or out of this place yet.",
   inventoryHistoryCapped: (limit: number) =>
     `Showing the most recent ${limit} movements. Older ones are still recorded.`,
@@ -4251,26 +4258,34 @@ export const en = {
   inventoryCreateDraft: "Create draft",
   inventorySaveDraft: "Save",
   inventoryPrintOrder: "Print",
-  inventoryUnsavedNotice: "These changes are not saved yet, so the totals below are the last ones the server worked out.",
+  inventoryUnsavedNotice:
+    "These changes are not saved yet, so the totals below are the last ones the server worked out.",
   inventoryOrderFrozenNotice:
     "This order has been placed. It carries a number the supplier holds, so it can no longer be edited — book what arrives against it, or cancel it.",
   inventorySalesOrderFrozenNotice:
     "This order has been confirmed. It carries a number the customer holds, so it can no longer be edited — book each consignment as it goes out.",
-  inventoryFixLinesFirst: "One of the lines is not finished. Fix it and save again.",
+  inventoryFixLinesFirst:
+    "One of the lines is not finished. Fix it and save again.",
   inventoryOrderNeedsSupplier: "Choose the supplier this order is placed with.",
   inventoryOrderNeedsCustomer: "Choose the customer this order is for.",
   inventoryPickSupplier: "Choose a supplier",
   inventoryPickCustomer: "Choose a customer",
-  inventorySupplierHint: "Who you are ordering from. It cannot be changed once the order is placed.",
-  inventoryCustomerHint: "Who the order is for. It cannot be changed once the order is confirmed.",
-  inventoryExpectedHint: "The day you expect the goods. An order past it is flagged as late.",
-  inventoryPromisedHint: "The day you promised the goods. An order past it is flagged as late.",
+  inventorySupplierHint:
+    "Who you are ordering from. It cannot be changed once the order is placed.",
+  inventoryCustomerHint:
+    "Who the order is for. It cannot be changed once the order is confirmed.",
+  inventoryExpectedHint:
+    "The day you expect the goods. An order past it is flagged as late.",
+  inventoryPromisedHint:
+    "The day you promised the goods. An order past it is flagged as late.",
   inventoryFieldReference: "Reference",
-  inventoryReferenceHint: "Your own reference for this order — a project, a site, a job number.",
+  inventoryReferenceHint:
+    "Your own reference for this order — a project, a site, a job number.",
   inventoryFieldOrdered: "Placed",
   inventoryFieldConfirmed: "Confirmed",
   inventoryFieldNote: "Note",
-  inventoryOrderNoteHint: "Anything the other side should read. It is printed on the order.",
+  inventoryOrderNoteHint:
+    "Anything the other side should read. It is printed on the order.",
 
   // The line grid. The words are a document's, because these lines become one.
   inventoryLines: "Lines",
@@ -4318,24 +4333,31 @@ export const en = {
   inventoryReceiveGoods: "Book arrival",
   inventoryDeliverGoods: "Book consignment",
   inventoryReceiveTitle: (order: string) => `What arrived against ${order}`,
-  inventoryDeliverTitle: (order: string) => `What is going out against ${order}`,
+  inventoryDeliverTitle: (order: string) =>
+    `What is going out against ${order}`,
   inventoryReceiveSubtitle:
     "Each line opens on what is still outstanding. Change what you are short of; the rest stays on order. A draft bill is raised for what arrived.",
   inventoryDeliverSubtitle:
     "Each line opens on what is still outstanding. Change what is going now; the rest stays on the order.",
   inventoryReceiveWhere: "Put away at",
-  inventoryReceiveWhereHint: "Where the goods were actually put. The stock ledger is written against this place.",
+  inventoryReceiveWhereHint:
+    "Where the goods were actually put. The stock ledger is written against this place.",
   inventoryDeliverWhere: "Picked from",
-  inventoryDeliverWhereHint: "Where the goods were picked from. The stock ledger is written against this place.",
+  inventoryDeliverWhereHint:
+    "Where the goods were picked from. The stock ledger is written against this place.",
   inventoryColThisConsignment: "This time",
-  inventoryFulfilNoteHint: "What the person handling it wrote — a damaged crate, a part shipment.",
+  inventoryFulfilNoteHint:
+    "What the person handling it wrote — a damaged crate, a part shipment.",
   inventoryFulfilNeedsPlace: "Choose the place first.",
-  inventoryFulfilNeedsSomething: "Nothing is stated on any line, so there is nothing to book.",
+  inventoryFulfilNeedsSomething:
+    "Nothing is stated on any line, so there is nothing to book.",
   inventoryNoPlaces: "No places yet",
   inventoryBookArrival: "Book it in",
   inventoryBookConsignment: "Book it out",
-  inventoryArrivalBooked: "The arrival is booked, the stock ledger is written, and a draft bill is waiting for approval.",
-  inventoryConsignmentBooked: "The consignment is booked and the stock ledger is written.",
+  inventoryArrivalBooked:
+    "The arrival is booked, the stock ledger is written, and a draft bill is waiting for approval.",
+  inventoryConsignmentBooked:
+    "The consignment is booked and the stock ledger is written.",
 
   // What has already moved, and what has been billed for it.
   inventoryArrivals: "Arrivals",
@@ -4375,12 +4397,15 @@ export const en = {
   inventoryScanCameraStop: "Stop the camera",
   inventoryScanCameraFailed:
     "The camera could not be started. Allow access to it, or type the code — a handheld scanner needs no permission at all.",
-  inventoryScanAiming: "Point the camera at the barcode. It stops as soon as it reads one.",
+  inventoryScanAiming:
+    "Point the camera at the barcode. It stops as soon as it reads one.",
   inventoryScanNoCamera:
     "This browser cannot read a barcode from a camera. A handheld scanner works here: it types into the field above.",
-  inventoryScanOnHand: (quantity: string) => `${quantity} on hand, across every place.`,
+  inventoryScanOnHand: (quantity: string) =>
+    `${quantity} on hand, across every place.`,
   inventoryScanNowhere: "None of it is anywhere yet.",
-  inventoryScanServiceNote: "This is a service, so there is no quantity of it to find.",
+  inventoryScanServiceNote:
+    "This is a service, so there is no quantity of it to find.",
   inventoryScanOpenProduct: "Open this product",
   inventoryScanShowInStock: "Show it in the list",
   inventoryScanAddProduct: "Add it to the catalog with this barcode",

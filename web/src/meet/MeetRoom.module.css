@@ -66,6 +66,25 @@
   color: var(--text-secondary);
 }
 
+/* The check before you join: which camera, which microphone, do you look
+   right. Centred and unhurried, because this is the one screen where somebody
+   should take their time. */
+/* The engine's name INPUT only — its container also holds the join button,
+   and hiding that leaves a screen nobody can leave. Who you are is decided by
+   the workspace and carried in the token, so anything typed here would be
+   silently ignored. */
+.prejoin :global(.lk-username-container input[type="text"]) {
+  display: none;
+}
+
+.prejoin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--space-4);
+}
+
 /* ---- sharing your screen ---------------------------------------------- */
 
 /* Do not show somebody their own screen share.

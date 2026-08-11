@@ -13,9 +13,11 @@ import { useEffect, useState } from "react";
 import "@livekit/components-styles";
 import {
   LiveKitRoom,
+  PreJoin,
   VideoConference,
   formatChatMessageLinks,
 } from "@livekit/components-react";
+import type { LocalUserChoices } from "@livekit/components-react";
 import { PhoneOff, Video } from "lucide-react";
 
 import { Button } from "../ds";
@@ -40,6 +42,10 @@ export function MeetRoom({
   const api = useMeetApi();
   const [grant, setGrant] = useState<JoinGrant | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  // Which camera and microphone, checked before joining rather than
+  // discovered after. Somebody who joins broken usually leaves rather than
+  // hunting for a settings menu mid-meeting.
+  const [choices, setChoices] = useState<LocalUserChoices | null>(null);
 
   useEffect(() => {
     let joined = true;
@@ -79,6 +85,29 @@ export function MeetRoom({
     return <div className={styles.notice}>{strings.meetJoining}</div>;
   }
 
+  if (choices === null) {
+    return (
+      <div className={styles.room} data-lk-theme="default">
+        <div className={styles.prejoin}>
+          <PreJoin
+            defaults={{
+              // The same default the call itself uses: heard, and seen only
+              // by choice.
+              audioEnabled: true,
+              videoEnabled: false,
+            }}
+            onSubmit={setChoices}
+            onError={() => setProblem(strings.meetJoinFailed)}
+            joinLabel={strings.meetJoinNow}
+            micLabel={strings.meetMicrophone}
+            camLabel={strings.meetCamera}
+            persistUserChoices
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.room}>
       <LiveKitRoom
@@ -90,8 +119,8 @@ export function MeetRoom({
         // Camera off, microphone on. Somebody joining a call expects to be
         // heard and to choose to be seen — the reverse surprises people in a
         // way that is hard to undo.
-        video={false}
-        audio
+        video={choices.videoEnabled}
+        audio={choices.audioEnabled}
         onDisconnected={onLeft}
         className={styles.livekit}
         // The engine's own theme attribute. Without it none of its CSS
