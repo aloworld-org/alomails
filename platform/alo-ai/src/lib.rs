@@ -25,6 +25,7 @@ pub mod agent_contacts;
 pub mod agent_crm;
 pub mod agent_drive;
 pub mod agent_finance;
+pub mod agent_inventory;
 pub mod agent_projects;
 pub mod insights;
 pub mod site_edits;
@@ -40,6 +41,7 @@ pub use agent_contacts::CONTACTS_TOOLS;
 pub use agent_crm::CRM_TOOLS;
 pub use agent_drive::DRIVE_TOOLS;
 pub use agent_finance::FINANCE_TOOLS;
+pub use agent_inventory::INVENTORY_TOOLS;
 pub use agent_projects::PROJECTS_TOOLS;
 pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, repair_messages};
 pub use site_edits::{

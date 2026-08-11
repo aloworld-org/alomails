@@ -79,6 +79,8 @@ export {
   type AnomalyFindingDto,
   type CategoryProposalsResultDto,
   type JournalAnomaliesResultDto,
+  type ReorderProposalsResultDto,
+  type StockAnswerResultDto,
   type VatSummaryResultDto,
   type VatSummarySideDto,
   type ProjectStatusResultDto,

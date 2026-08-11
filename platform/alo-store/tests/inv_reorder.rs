@@ -13,6 +13,7 @@
 //! | the report counts the shelf, the open orders and the promises | `the_report_counts_the_shelf_the_open_orders_and_the_promises` |
 //! | a parked rule, an archived product and an archived place report nothing | `a_parked_rule_and_an_archived_end_report_nothing` |
 //! | one tenant's shortages are only ever their own | `one_tenants_shortages_are_never_another_tenants` |
+//! | one product's pipeline reads without a rule, and never crosses a tenant | `the_pipeline_of_one_product_is_read_without_a_rule_and_never_crosses_a_tenant` |
 //!
 //! The third is the one the item is really about: two tenants set up
 //! identically, and every number in the report has to come from the caller's own
@@ -744,5 +745,63 @@ async fn one_tenants_shortages_are_never_another_tenants() {
     assert!(
         b.shortages().await.is_empty(),
         "A's promises are invisible to B"
+    );
+}
+
+#[tokio::test]
+async fn the_pipeline_of_one_product_is_read_without_a_rule_and_never_crosses_a_tenant() {
+    let store = common::test_store().await;
+    let a = Buying::open(&store, "pipe-own").await;
+    let b = Buying::open(&store, "pipe-other").await;
+
+    // Nobody watches this chair — which is the whole point of the read: the
+    // agent's stock answer is asked about products that have no rule at all
+    // (B5.10), and a fold that only worked for watched items would answer half
+    // the catalog.
+    assert!(
+        a.door
+            .inv_reorder_rules(&ReorderRuleFilter::default())
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    let quiet = a.door.inv_product_pipeline(&a.chair).await.unwrap();
+    assert_eq!(quiet.on_order_qty_milli, 0);
+    assert_eq!(quiet.committed_qty_milli, 0);
+
+    // A places one order and promises some away; B does the same, larger.
+    a.order_chairs(30_000).await;
+    a.promise_chairs(7_000).await;
+    b.order_chairs(900_000).await;
+    b.promise_chairs(800_000).await;
+
+    let mine = a.door.inv_product_pipeline(&a.chair).await.unwrap();
+    assert_eq!(mine.on_order_qty_milli, 30_000);
+    assert_eq!(mine.committed_qty_milli, 7_000);
+    // The same two numbers the shortage report states, from the same folds: two
+    // readings of "on order" that disagreed would be two truths about one
+    // warehouse. Promising forty more takes A under their minimum, which is
+    // what puts a row in the report to compare against.
+    a.watch_chairs().await;
+    a.promise_chairs(40_000).await;
+    let reported = a.only_shortage().await;
+    let after = a.door.inv_product_pipeline(&a.chair).await.unwrap();
+    assert_eq!(after.committed_qty_milli, 47_000);
+    assert_eq!(reported.on_order_qty_milli, after.on_order_qty_milli);
+    assert_eq!(reported.committed_qty_milli, after.committed_qty_milli);
+
+    // Wrong tenant: A asking about B's chair — a real id, in another tenant's
+    // catalog — folds none of B's lines. Two zeroes, never B's figures and
+    // never a 500.
+    let foreign = a.door.inv_product_pipeline(&b.chair).await.unwrap();
+    assert_eq!(foreign.on_order_qty_milli, 0);
+    assert_eq!(foreign.committed_qty_milli, 0);
+    // And the mirror, so the isolation is not an accident of who asked first.
+    let theirs = b.door.inv_product_pipeline(&b.chair).await.unwrap();
+    assert_eq!(theirs.on_order_qty_milli, 900_000);
+    assert_eq!(theirs.committed_qty_milli, 800_000);
+    assert_eq!(
+        b.door.inv_product_pipeline(&a.chair).await.unwrap(),
+        alo_store::inv_reorder::ProductPipeline::default()
     );
 }

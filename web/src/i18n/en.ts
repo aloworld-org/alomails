@@ -2071,6 +2071,57 @@ export const en = {
   agentAnomalyEvidence: "The entries behind it",
   agentAnomalyFooter:
     "Nothing was changed and nothing was marked as reviewed — each of these is a question about entries, and the answer to one is a correcting entry.",
+  // The inventory agent (ADR 0035, B5.10). Every word here keeps a draft a
+  // draft: the card must never let a reader believe a supplier has been
+  // contacted, because a purchase order is a document that goes to another
+  // company and there is no unsending one.
+  agentActReorderProposals: "Draft the reorders",
+  agentReorderNote:
+    "Looks at everything you are under your own minimum on and writes one draft purchase order per supplier. Nothing is sent — each draft waits in your purchase orders for you to check and send.",
+  agentActStockAnswer: "Check stock",
+  agentStockAnswerNote:
+    "Reads where one product stands right now: on your shelves, on order, promised to customers. It changes nothing and reserves nothing.",
+  agentFieldSupplier: "Supplier",
+  agentFieldLocation: "Place",
+  agentFieldProduct: "Product",
+  agentReorderEverySupplier: "Every supplier",
+  agentReorderEverywhere: "Everywhere",
+  agentReorderShortages: (count: number): string =>
+    count === 1 ? "1 under minimum" : `${count} under minimum`,
+  agentReorderNothingShort: "Nothing is under its minimum",
+  agentReorderDrafted: (count: number): string =>
+    count === 1 ? "1 draft order" : `${count} draft orders`,
+  agentReorderLines: (count: number): string =>
+    count === 1 ? "1 line" : `${count} lines`,
+  agentReorderLeftOut: "Ordered nothing for",
+  agentReorderReason: (reason: string): string => {
+    switch (reason) {
+      case "noSupplier":
+        return "nobody has quoted you for it";
+      case "nothingToBuy":
+        return "the rule asks for nothing";
+      default:
+        // A reason a newer server knows and this client does not: still
+        // visibly left out, never silently dropped.
+        return "left out";
+    }
+  },
+  agentReorderNeeded: (qty: string, unit: string): string =>
+    unit === "" ? `${qty} needed` : `${qty} ${unit} needed`,
+  agentReorderFooter:
+    "These are drafts. No supplier has been contacted and no order number has been drawn — open one in Inventory to check it and send it.",
+  agentStockOnHand: "On the shelves",
+  agentStockOnOrder: "On order",
+  agentStockCommitted: "Promised out",
+  agentStockAvailable: "That leaves",
+  agentStockNoShelf: "A service — nothing is stocked",
+  agentStockNowhere: "None anywhere",
+  agentStockWatched: "Kept at",
+  agentStockMinimum: (min: string, target: string): string =>
+    `minimum ${min}, back up to ${target}`,
+  agentStockBelowMinimum: "under minimum",
+  agentStockFooter:
+    "Figures as they stand right now. Nothing was ordered and nothing was set aside.",
   searchKind: (kind: string): string =>
     kind === "task"
       ? "Task"

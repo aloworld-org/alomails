@@ -908,6 +908,91 @@ export interface JournalAnomaliesResultDto extends AgentResultDto {
   notComparable: number;
 }
 
+/** What `reorder_proposals` wrote (B5.10): one **draft** purchase order per
+ *  supplier for everything the tenant is under their own minimum on — and, just
+ *  as much part of the answer, the shortages it ordered nothing for.
+ *
+ *  Nothing here has been sent: a draft carries no `number` and no `orderedDate`,
+ *  and drawing both is the send button on the purchase-orders screen. Every
+ *  figure — quantities, prices, totals — is the server's; the browser adds up
+ *  none of it.
+ *
+ *  `supplier` and `location` echo what the run was narrowed to, so the card can
+ *  say what it looked at rather than implying it looked everywhere. */
+export interface ReorderProposalsResultDto extends AgentResultDto {
+  supplier: { supplierId: string; supplierName: string } | null;
+  location: {
+    locationId: string;
+    locationCode: string;
+    locationName: string;
+  } | null;
+  /** The drafts. The server answers each in the full shape the purchase-order
+   *  screens read; spelled out here is the part this card shows — including
+   *  `number`, which is `null` on every one of them and is the proof that
+   *  nothing has been sent. */
+  drafted: {
+    id: string;
+    supplierId: string;
+    supplierName: string;
+    status: string;
+    currency: string;
+    number: string | null;
+    lineCount: number;
+    totals: { netCents: number; vatCents: number; grossCents: number };
+  }[];
+  /** A shortage no draft was written for, with a machine-readable reason the
+   *  catalogue writes words for — `noSupplier` when nobody has quoted us for
+   *  it, which is never an order placed blind. */
+  skipped: {
+    productId: string;
+    productName: string;
+    sku: string;
+    locationCode: string;
+    buyQtyMilli: number;
+    reason: string;
+  }[];
+  /** How many shortages were looked at, as the server counted them. */
+  shortages: number;
+  /** How many of them became a line on a draft. */
+  ordered: number;
+}
+
+/** What `stock_answer` read (B5.10): where one product stands right now — on
+ *  the shelves, on order, promised out, and against the minimums the tenant set.
+ *
+ *  It wrote nothing, ordered nothing and reserved nothing. `stock` is the real
+ *  locations only; a service carries an empty one with no quantity at all,
+ *  because a service has no shelf. `availableQtyMilli` is the server's own sum
+ *  (`on hand + on order − committed`), never re-derived here. */
+export interface StockAnswerResultDto extends AgentResultDto {
+  /** The catalog item, in the shape the catalog screens read; named here is the
+   *  part this card shows. */
+  product: { id: string; name: string; unit: string; sku: string; stocked: boolean };
+  stock: {
+    locationId: string;
+    locationCode: string;
+    locationName: string;
+    qtyMilli: number;
+    valueCents: number;
+  }[];
+  onHandQtyMilli: number;
+  onOrderQtyMilli: number;
+  committedQtyMilli: number;
+  availableQtyMilli: number;
+  valueCents: number;
+  /** Each place this product is watched, and whether that shelf is under the
+   *  minimum set for it. */
+  watched: {
+    locationId: string;
+    locationCode: string;
+    locationName: string;
+    minQtyMilli: number;
+    targetQtyMilli: number;
+    onHandQtyMilli: number;
+    belowMinimum: boolean;
+  }[];
+}
+
 /** What `project_status_summary` read: figures only. The server composes no
  *  sentence — every label around these numbers comes from the UI's own
  *  catalogue, so the summary is in the reader's language. */

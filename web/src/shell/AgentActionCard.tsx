@@ -22,11 +22,13 @@ import {
   MailOpen,
   MessagesSquare,
   MoveRight,
+  PackageSearch,
   PenLine,
   Percent,
   Reply,
   ScanSearch,
   Send,
+  ShoppingCart,
   Sparkles,
   Tags,
   Trash2,
@@ -418,6 +420,39 @@ function describeAction(action: AgentActionDto): ActionView {
         note: strings.agentAnomalyNote,
       };
     }
+    // The inventory agent (ADR 0035, B5.10). What the user is approving is a
+    // *set of draft orders being written*, so the card previews the two
+    // narrowings and nothing else — there is no quantity and no price on it
+    // because there is none to approve: both come from the tenant's own
+    // minimums, shelves and agreed price list.
+    case "reorder_proposals": {
+      const supplier = str(a, "supplier");
+      const place = str(a, "location");
+      return {
+        icon: ShoppingCart,
+        title: strings.agentActReorderProposals,
+        fields: [
+          {
+            label: strings.agentFieldSupplier,
+            value: supplier === "" ? strings.agentReorderEverySupplier : supplier,
+          },
+          {
+            label: strings.agentFieldLocation,
+            value: place === "" ? strings.agentReorderEverywhere : place,
+          },
+        ],
+        note: strings.agentReorderNote,
+      };
+    }
+    case "stock_answer":
+      return {
+        icon: PackageSearch,
+        title: strings.agentActStockAnswer,
+        fields: [
+          { label: strings.agentFieldProduct, value: str(a, "product") },
+        ],
+        note: strings.agentStockAnswerNote,
+      };
     case "create_event": {
       const fields: Field[] = [
         { label: strings.agentFieldEvent, value: str(a, "title") },

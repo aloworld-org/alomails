@@ -218,6 +218,29 @@ pub struct Shortage {
     pub estimated_cost_cents: i64,
 }
 
+/// The pipeline behind one product: what is on its way in, and what is already
+/// promised out.
+///
+/// The same two folds a shortage row states ([`Shortage::on_order_qty_milli`],
+/// [`Shortage::committed_qty_milli`]) — read on their own, for a product that
+/// may have no rule at all. "How many are left, and is more coming" is the
+/// question a person asks about an item nobody happens to be watching, and
+/// answering it from the rules alone would answer it only for the watched half
+/// of the catalog (B5.10).
+///
+/// Both are tenant-wide and per product, never per location, for the reason
+/// stated in this module's header: neither document names a shelf until the
+/// goods actually move.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ProductPipeline {
+    /// The open remainder of every placed purchase order for the product, in
+    /// milli-units.
+    pub on_order_qty_milli: i64,
+    /// The undelivered remainder of every confirmed sales order for the
+    /// product, in milli-units.
+    pub committed_qty_milli: i64,
+}
+
 /// Which shortages to read.
 #[derive(Debug, Clone, Default)]
 pub struct ShortageFilter {
@@ -523,6 +546,42 @@ impl AccountStore {
         Ok(rows.into_iter().map(ShortageRow::into_shortage).collect())
     }
 
+    /// What is on order and what is committed for one product, whether or not
+    /// anybody watches it.
+    ///
+    /// The two folds are the shortage query's own, spliced in rather than
+    /// restated: a second reading of "on order" that disagreed with the buyer's
+    /// report by a line would be two different truths about the same warehouse.
+    ///
+    /// A product that is not this tenant's simply has no lines and reads as two
+    /// zeroes — which is the right answer and not a disclosure: the caller
+    /// resolved the product through their own catalog before asking, and every
+    /// row folded here is bound to `tenant_id`.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn inv_product_pipeline(
+        &self,
+        product_id: &BillingProductId,
+    ) -> Result<ProductPipeline> {
+        let row = sqlx::query_as::<_, PipelineRow>(&format!(
+            "SELECT COALESCE(oo.qty_milli, 0) AS on_order_qty_milli, \
+                 COALESCE(cm.qty_milli, 0) AS committed_qty_milli \
+             FROM (SELECT $2::text AS product_id) w \
+             LEFT JOIN ({ON_ORDER_SQL}) oo ON oo.product_id = w.product_id \
+             LEFT JOIN ({COMMITTED_SQL}) cm ON cm.product_id = w.product_id"
+        ))
+        .bind(self.tenant.as_str())
+        .bind(product_id.as_str())
+        .fetch_one(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(ProductPipeline {
+            on_order_qty_milli: row.on_order_qty_milli,
+            committed_qty_milli: row.committed_qty_milli,
+        })
+    }
+
     /// Checks that both ends of a rule are this tenant's and can carry one.
     ///
     /// A guessed id from another tenant is a [`StoreError::NotFound`], the same
@@ -604,6 +663,12 @@ impl RuleRow {
             updated_at: self.updated_at,
         }
     }
+}
+
+#[derive(sqlx::FromRow)]
+struct PipelineRow {
+    on_order_qty_milli: i64,
+    committed_qty_milli: i64,
 }
 
 #[derive(sqlx::FromRow)]

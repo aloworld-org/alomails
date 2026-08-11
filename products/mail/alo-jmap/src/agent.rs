@@ -21,6 +21,7 @@ use crate::agent_billing as billing;
 use crate::agent_crm as crm;
 use crate::agent_finance as finance;
 use crate::agent_finance_answers as finance_answers;
+use crate::agent_inventory as inventory;
 use crate::agent_projects as projects;
 use crate::agent_timesheet as timesheet;
 use crate::ai::MAX_ASK_BYTES;
@@ -258,6 +259,12 @@ pub(crate) async fn execute_tool(
         // personal one.
         "vat_summary" => finance_answers::execute_vat_summary(account, args).await,
         "flag_anomalies" => finance_answers::execute_flag_anomalies(account, args).await,
+        // alo Inventory's tools (B5.10), on the same seam. What
+        // `reorder_proposals` writes is a **draft** order per supplier: it
+        // carries no number and has been sent to nobody until a person
+        // presses send on the purchase-orders screen.
+        "reorder_proposals" => inventory::execute_reorder_proposals(account, args).await,
+        "stock_answer" => inventory::execute_stock_answer(account, args).await,
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
     }

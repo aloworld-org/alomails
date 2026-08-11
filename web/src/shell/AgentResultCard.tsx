@@ -16,8 +16,10 @@ import {
   CalendarClock,
   CalendarRange,
   Gauge,
+  PackageSearch,
   Percent,
   ScanSearch,
+  ShoppingCart,
   Tags,
 } from "lucide-react";
 
@@ -31,11 +33,14 @@ import type {
   CategoryProposalsResultDto,
   JournalAnomaliesResultDto,
   ProjectStatusResultDto,
+  ReorderProposalsResultDto,
+  StockAnswerResultDto,
   TimeEntryResultDto,
   TimesheetDraftResultDto,
   VatSummaryResultDto,
   VatSummarySideDto,
 } from "../jmap";
+import { qtyLabel } from "../inventory/format";
 import { dayLabel, durationLabel, percentLabel } from "../projects/format";
 import styles from "./AgentResultCard.module.css";
 
@@ -106,6 +111,29 @@ function isJournalAnomalies(
     result.kind === "journalAnomalies" &&
     "findings" in result &&
     "scanned" in result
+  );
+}
+
+/** A `reorderProposals` result — the drafts the inventory agent wrote (B5.10).
+ *  Both lists may be empty (a warehouse with nothing under its minimum), so the
+ *  shape is what is checked, not their contents. */
+function isReorderProposals(
+  result: AgentResultDto,
+): result is ReorderProposalsResultDto {
+  return (
+    result.kind === "reorderProposals" &&
+    "drafted" in result &&
+    "skipped" in result
+  );
+}
+
+/** A `stockAnswer` result — where one product stands (B5.10). A product with
+ *  nothing anywhere is a real answer, so the shape is what is checked. */
+function isStockAnswer(result: AgentResultDto): result is StockAnswerResultDto {
+  return (
+    result.kind === "stockAnswer" &&
+    "stock" in result &&
+    "availableQtyMilli" in result
   );
 }
 
@@ -724,6 +752,196 @@ function JournalAnomaliesResult({ scan }: { scan: JournalAnomaliesResultDto }) {
   );
 }
 
+/** The drafts, and — just as much part of the answer — what was left out.
+ *
+ *  Every amount and every quantity here is the server's. The card's whole job
+ *  is to keep a draft a draft: the footer says no supplier has been contacted,
+ *  and it is the last thing on the card because it is the one sentence a reader
+ *  must not miss. */
+function ReorderProposalsResult({
+  proposals,
+}: {
+  proposals: ReorderProposalsResultDto;
+}) {
+  const money = (cents: number, currency: string) =>
+    formatAmount(cents, getLocale(), currency);
+  return (
+    <div className={styles.card}>
+      <div className={styles.header}>
+        <ShoppingCart size={16} aria-hidden />
+        <span>{strings.agentActReorderProposals}</span>
+      </div>
+      <div className={styles.rows}>
+        <Row
+          label={strings.agentFieldSupplier}
+          value={
+            proposals.supplier?.supplierName ?? strings.agentReorderEverySupplier
+          }
+        />
+        <Row
+          label={strings.agentFieldLocation}
+          value={
+            proposals.location === null
+              ? strings.agentReorderEverywhere
+              : `${proposals.location.locationCode} · ${proposals.location.locationName}`
+          }
+        />
+        <Row
+          label={
+            proposals.shortages === 0
+              ? strings.agentReorderNothingShort
+              : strings.agentReorderShortages(proposals.shortages)
+          }
+          value={strings.agentReorderDrafted(proposals.drafted.length)}
+        />
+      </div>
+      {proposals.drafted.length > 0 && (
+        <ul className={styles.list}>
+          {proposals.drafted.map((draft) => (
+            <li key={draft.id} className={styles.item}>
+              <span className={styles.itemName}>
+                {draft.supplierName}
+                <span className={styles.aside}>
+                  {" "}
+                  · {strings.agentReorderLines(draft.lineCount)}
+                </span>
+              </span>
+              <span className={styles.itemMinutes}>
+                {money(draft.totals.grossCents, draft.currency)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {proposals.skipped.length > 0 && (
+        <>
+          <span className={styles.groupLabel}>
+            {strings.agentReorderLeftOut}
+          </span>
+          <ul className={styles.list}>
+            {proposals.skipped.map((skipped) => (
+              <li
+                key={`${skipped.productId}-${skipped.locationCode}`}
+                className={`${styles.item} ${styles.itemSkipped}`}
+              >
+                <span className={styles.itemName}>
+                  {skipped.productName}
+                  <span className={styles.aside}>
+                    {" "}
+                    · {strings.agentReorderReason(skipped.reason)}
+                  </span>
+                </span>
+                <span className={styles.itemMinutes}>
+                  {qtyLabel(skipped.buyQtyMilli)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {proposals.drafted.length > 0 && (
+        <p className={styles.note}>{strings.agentReorderFooter}</p>
+      )}
+    </div>
+  );
+}
+
+/** Where one product stands. The four quantities are shown together because
+ *  each explains the next: what is on the shelf, what is coming, what is
+ *  promised away, and what that leaves. */
+function StockAnswerResult({ answer }: { answer: StockAnswerResultDto }) {
+  const unit = answer.product.unit;
+  const qty = (milli: number) =>
+    unit === "" ? qtyLabel(milli) : `${qtyLabel(milli)} ${unit}`;
+  if (!answer.product.stocked) {
+    return (
+      <div className={styles.card}>
+        <div className={styles.header}>
+          <PackageSearch size={16} aria-hidden />
+          <span>{answer.title ?? strings.agentActStockAnswer}</span>
+        </div>
+        <p className={styles.note}>{strings.agentStockNoShelf}</p>
+      </div>
+    );
+  }
+  return (
+    <div className={styles.card}>
+      <div className={styles.header}>
+        <PackageSearch size={16} aria-hidden />
+        <span>{answer.title ?? strings.agentActStockAnswer}</span>
+      </div>
+      <div className={styles.rows}>
+        <Row
+          label={strings.agentStockOnHand}
+          value={
+            answer.stock.length === 0
+              ? strings.agentStockNowhere
+              : qty(answer.onHandQtyMilli)
+          }
+        />
+        {answer.onOrderQtyMilli !== 0 && (
+          <Row
+            label={strings.agentStockOnOrder}
+            value={qty(answer.onOrderQtyMilli)}
+          />
+        )}
+        {answer.committedQtyMilli !== 0 && (
+          <Row
+            label={strings.agentStockCommitted}
+            value={qty(answer.committedQtyMilli)}
+          />
+        )}
+        <Row
+          label={strings.agentStockAvailable}
+          value={qty(answer.availableQtyMilli)}
+        />
+      </div>
+      {answer.stock.length > 0 && (
+        <ul className={styles.list}>
+          {answer.stock.map((level) => (
+            <li key={level.locationId} className={styles.item}>
+              <span className={styles.itemDay}>{level.locationCode}</span>
+              <span className={styles.itemName}>{level.locationName}</span>
+              <span className={styles.itemMinutes}>{qty(level.qtyMilli)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {answer.watched.length > 0 && (
+        <>
+          <span className={styles.groupLabel}>{strings.agentStockWatched}</span>
+          <ul className={styles.list}>
+            {answer.watched.map((watch) => (
+              <li
+                key={watch.locationId}
+                className={`${styles.item}${watch.belowMinimum ? "" : ` ${styles.itemSkipped}`}`}
+              >
+                <span className={styles.itemDay}>{watch.locationCode}</span>
+                <span className={styles.itemName}>
+                  {strings.agentStockMinimum(
+                    qtyLabel(watch.minQtyMilli),
+                    qtyLabel(watch.targetQtyMilli),
+                  )}
+                  {watch.belowMinimum && (
+                    <span className={styles.aside}>
+                      {" "}
+                      · {strings.agentStockBelowMinimum}
+                    </span>
+                  )}
+                </span>
+                <span className={styles.itemMinutes}>
+                  {qty(watch.onHandQtyMilli)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <p className={styles.note}>{strings.agentStockFooter}</p>
+    </div>
+  );
+}
+
 export function AgentResultCard({ result }: { result: AgentResultDto }) {
   if (isProjectStatus(result)) return <ProjectStatusResult status={result} />;
   if (isTimeEntry(result)) return <TimeEntryResult entry={result} />;
@@ -733,6 +951,9 @@ export function AgentResultCard({ result }: { result: AgentResultDto }) {
   if (isVatSummary(result)) return <VatSummaryResult report={result} />;
   if (isJournalAnomalies(result))
     return <JournalAnomaliesResult scan={result} />;
+  if (isReorderProposals(result))
+    return <ReorderProposalsResult proposals={result} />;
+  if (isStockAnswer(result)) return <StockAnswerResult answer={result} />;
   // Every other tool: the confirmation this overlay has always shown.
   return <p className={styles.note}>{strings.agentDone}</p>;
 }
