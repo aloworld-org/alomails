@@ -185,6 +185,7 @@ async fn bcc_stripped_on_wire_delivered_by_envelope_kept_in_sent() {
         acc: acc.clone(),
         is_admin: false,
         roles: Vec::new(),
+        denied_modules: Vec::new(),
         delegated: None,
     };
 

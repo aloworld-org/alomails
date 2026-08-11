@@ -29,10 +29,10 @@ use crate::{
     inventory_counts, inventory_locations, inventory_moves, inventory_po, inventory_po_print,
     inventory_po_receipts, inventory_po_send, inventory_reorder, inventory_scan, inventory_so,
     inventory_so_deliveries, inventory_so_invoice, inventory_stock, inventory_supplier_prices,
-    inventory_suppliers, meet_routes, projects_clients, projects_invoices, projects_plan,
-    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
-    schedule, scoped_roles, security, session, settings, share, signup_route, sites, snooze,
-    spaces, tasks, unsubscribe, wopi, workspace_search,
+    inventory_suppliers, meet_routes, module_access, projects_clients, projects_invoices,
+    projects_plan, projects_reports, projects_templates, projects_time, projects_weeks, push,
+    reset_route, schedule, scoped_roles, security, session, settings, share, signup_route, sites,
+    snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -1788,6 +1788,8 @@ pub fn app_with_site_domain_dns(
         // the console and a role is a scope; a body that could set both would
         // make "make them an accountant" and "make them an admin" one call.
         .route("/admin/users/roles", post(admin::set_user_role))
+        .route("/admin/users/modules", post(admin::set_user_module))
+        .route("/admin/users/{id}/modules", get(admin::user_modules))
         .route("/admin/users/alias", post(admin::add_alias))
         .route("/admin/users/alias/remove", post(admin::remove_alias))
         .route(
@@ -1857,6 +1859,15 @@ pub fn app_with_site_domain_dns(
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             scoped_roles::enforce_scoped_roles,
+        ))
+        // The per-user app switches (migration 0207), outside the scoped-role
+        // layer so it runs first: an app an admin switched off is refused
+        // before anything asks what the caller may do inside it. The rail
+        // hides the same modules, but a hidden link is not a closed door —
+        // the URL is typeable and the API is callable with curl.
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            module_access::enforce_module_access,
         ))
         .layer(Extension(site_domain_dns))
         .with_state(state);

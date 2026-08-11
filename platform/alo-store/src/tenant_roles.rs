@@ -36,6 +36,7 @@ use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
 use crate::id::UserId;
 use crate::store::TenantStore;
+use crate::user_modules::AppModule;
 
 /// A tenant-wide role a user may hold in addition to being (or not being) a
 /// tenant admin.
@@ -104,17 +105,21 @@ impl std::fmt::Display for TenantRole {
     }
 }
 
-/// The two access facts a request needs about its caller, read together.
+/// The access facts a request needs about its caller, read together.
 ///
-/// One query rather than two: `authenticate` runs on every single request in
-/// the product, and a second round trip per request to learn a fact almost
-/// nobody has would be paid by the mail hot path forever.
+/// One query rather than three: `authenticate` runs on every single request in
+/// the product, and a round trip per request to learn a fact almost nobody has
+/// would be paid by the mail hot path forever.
 #[derive(Debug, Clone, Default)]
 pub struct AccessFacts {
     /// Whether the user is a tenant admin.
     pub is_admin: bool,
     /// The tenant-wide roles they hold, sorted and without duplicates.
     pub roles: Vec<TenantRole>,
+    /// The rail modules an admin has switched off for this person, sorted
+    /// (migration 0207). Ordinarily empty — the common case is somebody who
+    /// has been denied nothing.
+    pub denied_modules: Vec<AppModule>,
 }
 
 impl AccessFacts {
@@ -122,6 +127,22 @@ impl AccessFacts {
     #[must_use]
     pub fn has(&self, role: TenantRole) -> bool {
         self.roles.contains(&role)
+    }
+
+    /// Whether this caller may open `module`.
+    ///
+    /// Answers only the admin's per-user switch. A `true` here is not
+    /// permission to use the module — Finance still wants an admin or an
+    /// accountant, a Space still wants membership — it only says this
+    /// particular door was not shut.
+    ///
+    /// A tenant admin is never denied. An administrator who switched an app
+    /// off for themselves and then could not reach the console to switch it
+    /// back on would be a support call, and the console is where the switch
+    /// lives.
+    #[must_use]
+    pub fn may_open(&self, module: AppModule) -> bool {
+        self.is_admin || !self.denied_modules.contains(&module)
     }
 }
 
@@ -152,24 +173,31 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure — never a partial answer, because a
     /// swallowed error here would silently downgrade a caller's access.
     pub async fn access_facts(&self) -> Result<AccessFacts> {
-        let row: Option<(bool, Vec<String>)> = sqlx::query_as(
+        // Scalar subqueries rather than a second LEFT JOIN: joining two
+        // one-to-many tables multiplies the rows, and each `array_agg` would
+        // then count the other table's rows — three roles would report every
+        // denial three times. Correct with DISTINCT, but only accidentally.
+        let row: Option<(bool, Vec<String>, Vec<String>)> = sqlx::query_as(
             "SELECT u.is_admin, \
-                    coalesce(array_agg(r.role) FILTER (WHERE r.role IS NOT NULL), '{}') \
-                      AS roles \
+                    coalesce((SELECT array_agg(r.role) FROM tenant_user_roles r \
+                               WHERE r.tenant_id = u.tenant_id AND r.user_id = u.id), \
+                             '{}') AS roles, \
+                    coalesce((SELECT array_agg(d.module) \
+                                FROM tenant_user_module_denials d \
+                               WHERE d.tenant_id = u.tenant_id AND d.user_id = u.id), \
+                             '{}') AS denied \
                FROM users u \
-               LEFT JOIN tenant_user_roles r \
-                 ON r.tenant_id = u.tenant_id AND r.user_id = u.id \
-              WHERE u.tenant_id = $1 AND u.id = $2 \
-              GROUP BY u.is_admin",
+              WHERE u.tenant_id = $1 AND u.id = $2",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
         .fetch_optional(&self.pool)
         .await?;
         Ok(match row {
-            Some((is_admin, words)) => AccessFacts {
+            Some((is_admin, roles, denied)) => AccessFacts {
                 is_admin,
-                roles: roles_from_words(words),
+                roles: roles_from_words(roles),
+                denied_modules: crate::user_modules::modules_from_words(&denied),
             },
             None => AccessFacts::default(),
         })
@@ -322,6 +350,7 @@ mod tests {
         let facts = AccessFacts {
             is_admin: false,
             roles,
+            ..Default::default()
         };
         assert!(facts.has(TenantRole::Accountant));
         assert!(!facts.is_admin, "a role is never an admin flag");
@@ -335,12 +364,14 @@ mod tests {
         let books = AccessFacts {
             is_admin: false,
             roles: roles_from_words(vec!["accountant".to_owned()]),
+            ..Default::default()
         };
         assert!(books.has(TenantRole::Accountant));
         assert!(!books.has(TenantRole::Hr), "the books are not the people");
         let people = AccessFacts {
             is_admin: false,
             roles: roles_from_words(vec!["hr".to_owned()]),
+            ..Default::default()
         };
         assert!(people.has(TenantRole::Hr));
         assert!(!people.has(TenantRole::Accountant));

@@ -6,7 +6,9 @@
 //! Secrets never leave the server: a provider's API key is stored but only its
 //! presence (`hasKey`) is returned, and it is never logged.
 
-use alo_store::{AiProviderRow, GroupId, Page, StoreError, TenantRole, UserId};
+use alo_store::{
+    ALL_MODULES, AiProviderRow, AppModule, GroupId, Page, StoreError, TenantRole, UserId,
+};
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::{Json, body::Bytes};
@@ -436,6 +438,98 @@ pub async fn set_user_role(
         Some(&format!(
             "{} {role}",
             if granted { "granted" } else { "revoked" }
+        )),
+    )
+    .await;
+    Ok(Json(json!({ "ok": true })))
+}
+
+/// `GET /admin/users/{id}/modules` — which apps this person has.
+///
+/// Answers the whole picture rather than just the denials, because that is
+/// what the console renders: every switchable module, and whether its switch
+/// is on. A client that had to subtract one list from another to draw a row of
+/// checkboxes would be reimplementing this endpoint, slightly differently.
+///
+/// Reports what was **stored**, not what applies. A tenant admin is never
+/// denied at the gate, but their switches are shown as they were set — an
+/// admin who is looking at their own row should see what they did, and
+/// `may_open` is the thing that ignores it.
+///
+/// # Errors
+/// `401` without a valid bearer token; `403` for a non-admin; `404` when the
+/// user is not a member of this tenant.
+pub async fn user_modules(
+    State(state): State<AppState>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account.require_admin()?;
+    let denied = state
+        .store
+        .for_tenant(account.tenant.clone())
+        .denied_modules(&UserId::new(id))
+        .await
+        .map_err(store_admin_err)?;
+    Ok(Json(json!({
+        "modules": ALL_MODULES
+            .iter()
+            .map(|module| json!({
+                "id": module.as_str(),
+                "allowed": !denied.contains(module),
+            }))
+            .collect::<Vec<_>>()
+    })))
+}
+
+/// `POST /admin/users/modules` — switch one app on or off for one person.
+/// Body `{ userId, module, allowed }`.
+///
+/// One switch per call rather than a whole set, so two administrators editing
+/// the same person do not silently undo each other: a PUT of the full list
+/// would make the last writer's snapshot win, including the switches they
+/// never touched. Idempotent in both directions — the caller's intent is a
+/// state, not an event.
+///
+/// # Errors
+/// `401` without a valid bearer token; `403` for a non-admin; `422` for a
+/// missing `userId` or a module this build does not know; `404` when the user
+/// is not a member of this tenant.
+pub async fn set_user_module(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account.require_admin()?;
+    let v: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let user_id = str_field(&v, "userId").ok_or_else(|| bad("userId required"))?;
+    let module_name = str_field(&v, "module").ok_or_else(|| bad("module required"))?;
+    // The store's own message names the accepted set, so the refusal tells the
+    // caller what to send instead of that a word was wrong.
+    let module = AppModule::parse(&module_name)
+        .map_err(|e| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, e.to_string()))?;
+    let allowed = v.get("allowed").and_then(Value::as_bool).unwrap_or(true);
+    state
+        .store
+        .for_tenant(account.tenant.clone())
+        .set_module_access(
+            &UserId::new(user_id.clone()),
+            module,
+            allowed,
+            &account.user,
+        )
+        .await
+        .map_err(store_admin_err)?;
+    audit(
+        &state,
+        &account,
+        "user.module",
+        Some(&user_id),
+        Some(&format!(
+            "{} {module}",
+            if allowed { "granted" } else { "removed" }
         )),
     )
     .await;

@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use alo_identity::Identity;
-use alo_store::{AccountStore, Page, Store, TenantId, TenantRole, UserId};
+use alo_store::{AccountStore, AppModule, Page, Store, TenantId, TenantRole, UserId};
 use axum::http::HeaderMap;
 use axum::http::header::AUTHORIZATION;
 
@@ -99,6 +99,14 @@ pub struct Account {
     /// the surfaces its own gates name and nothing else, and a delegated handle
     /// carries none for the same reason it carries no admin.
     pub roles: Vec<TenantRole>,
+    /// The rail modules a tenant admin has switched off for this person
+    /// (migration 0207). Ordinarily empty.
+    ///
+    /// This only ever **narrows**. An app that is not denied still needs
+    /// whatever its own gate wants — Finance an accountant, a Space its
+    /// membership — and an admin is never denied, because the switch lives in
+    /// the console an admin would need to reach to undo it.
+    pub denied_modules: Vec<AppModule>,
     /// Delegation status of THIS account handle (ADR 0017). `None` when it is
     /// the signed-in user's own account (full rights). `Some(..)` when it is
     /// another user's mailbox the signed-in user was granted access to — the
@@ -202,6 +210,16 @@ impl Account {
         self.roles.contains(&role)
     }
 
+    /// Whether a tenant admin has left this app switched on for this person
+    /// (migration 0207).
+    ///
+    /// Answers only that one question. A `true` is not permission to use the
+    /// module — every gate the module already had still applies — it says the
+    /// per-user switch is not shut. An admin always passes.
+    pub fn may_open(&self, module: AppModule) -> bool {
+        self.is_admin || !self.denied_modules.contains(&module)
+    }
+
     /// Guard for the privileged finance surfaces — the reports, the approvals
     /// inbox and the period lock (ADR 0035, B4.12).
     ///
@@ -283,6 +301,7 @@ pub async fn authenticate(state: &AppState, headers: &HeaderMap) -> Result<Accou
         acc,
         is_admin: facts.is_admin,
         roles: facts.roles,
+        denied_modules: facts.denied_modules,
         delegated: None,
     })
 }
@@ -311,6 +330,7 @@ pub async fn resolve_target(
                 .for_account(signed_in.tenant.clone(), signed_in.user.clone()),
             is_admin: signed_in.is_admin,
             roles: signed_in.roles.clone(),
+            denied_modules: signed_in.denied_modules.clone(),
             delegated: None,
         });
     }
@@ -348,6 +368,11 @@ pub async fn resolve_target(
         // the grant is about one mailbox, and the roles belong to the person
         // who was signed in, not to the mailbox they were let into.
         roles: Vec::new(),
+        // A delegated handle carries the *delegate's* app switches, not the
+        // mailbox owner's: the person acting is the one being restricted, and
+        // reading the owner's would let somebody borrow an app they were
+        // denied by being let into a mailbox.
+        denied_modules: signed_in.denied_modules.clone(),
         delegated: Some(Delegation {
             can_write,
             send_mode: SendMode::parse(&send_mode),

@@ -158,6 +158,25 @@ pub async fn session(
         // server refuse; the server refuses regardless, because a client is
         // never an access decision.
         "alo:roles": account.roles.iter().map(|role| role.as_str()).collect::<Vec<_>>(),
+        // The rail modules a tenant admin has switched off for this person
+        // (migration 0207). The client hides them, because offering an app
+        // that answers 403 is worse than not offering it. As with the roles
+        // above, this is advertised so the UI can be honest and is never the
+        // decision: `module_access` refuses the routes regardless, and a
+        // client is never an access decision.
+        //
+        // Empty for an admin even when rows exist — an admin is not denied —
+        // so the console reads its switches from `/admin/users/modules`
+        // instead, which reports what was stored rather than what applies.
+        "alo:deniedModules": if account.is_admin {
+            Vec::new()
+        } else {
+            account
+                .denied_modules
+                .iter()
+                .map(|module| module.as_str())
+                .collect::<Vec<_>>()
+        },
         // The addresses this user may send from (canonical + aliases), for the
         // compose From picker. Authorized identically in the submission path.
         "alo:sendAs": send_as

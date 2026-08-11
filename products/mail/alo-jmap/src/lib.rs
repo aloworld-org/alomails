@@ -138,6 +138,7 @@ pub mod meet_routes;
 pub mod meet_token;
 pub mod mime;
 pub mod mime_read;
+pub mod module_access;
 pub mod projects;
 pub mod projects_clients;
 pub mod projects_invoices;

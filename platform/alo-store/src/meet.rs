@@ -134,7 +134,11 @@ impl AccountStore {
         // a large one.
         if let Some(channel) = &meeting.channel_id {
             let _ = self
-                .post_message(channel, &format!("__meeting__:{}", meeting.id.as_str()), None)
+                .post_message(
+                    channel,
+                    &format!("__meeting__:{}", meeting.id.as_str()),
+                    None,
+                )
                 .await;
         }
         Ok(meeting)
