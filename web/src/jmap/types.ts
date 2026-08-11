@@ -267,10 +267,17 @@ export interface AiProvider {
   hasKey: boolean;
 }
 
-/** A tenant-wide scoped role (ADR 0035, B4.12). `accountant` is the only one
- * today: the books and nothing else — every finance report, the approvals
- * inbox and the period lock, billing and CRM read-only, no admin console. */
-export type TenantRole = "accountant";
+/** A tenant-wide scoped role (ADR 0035). Two today, and neither implies the
+ * other:
+ *
+ * - `accountant` (B4.12) — the books and nothing else: every finance report,
+ *   the approvals inbox and the period lock, billing and CRM read-only, no
+ *   admin console.
+ * - `hr` (B6) — the workforce: the directory including its private fields,
+ *   leave decisions, hiring and the payroll export. An external bookkeeper
+ *   reading everybody's contract is exactly the failure `accountant` exists to
+ *   prevent, so somebody who genuinely runs both is granted both. */
+export type TenantRole = "accountant" | "hr";
 
 /** A user in the admin console: identity + read-only usage + aliases + the
  * scoped roles they hold (separate from `isAdmin`, which is the console). */

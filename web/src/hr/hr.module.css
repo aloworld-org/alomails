@@ -1,0 +1,553 @@
+/* The HR module's own styles. The board deliberately reads as the Tasks and CRM
+   boards — same column width, same card shape, same drop outline — because it
+   IS the same interaction with hiring stages instead of statuses; the drawer and
+   the forms read as CRM's, because they are the same kind of screen.
+
+   Everything here is layout over `ds` tokens. No colour is invented except the
+   two state tints the other business modules already use for a good and a bad
+   outcome. */
+
+.hr {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-app);
+  position: relative;
+}
+
+/* ---- chrome ---------------------------------------------------------- */
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5) 0;
+  flex-wrap: wrap;
+}
+.title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+.tab {
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+}
+.tab:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+.tabActive {
+  background: var(--accent-tint);
+  color: var(--accent-active);
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.toolbar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-4) var(--space-5) 0;
+}
+.filterSelect {
+  padding: 8px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  max-width: 320px;
+}
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.openingFacts {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+.notice {
+  margin: var(--space-3) var(--space-5) 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* ---- the board ------------------------------------------------------- */
+
+.board {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  align-items: flex-start;
+  overflow-x: auto;
+  min-height: 0;
+  flex: 1;
+}
+.column {
+  width: 264px;
+  flex-shrink: 0;
+  background: var(--bg-sunken);
+  border-radius: var(--radius-lg);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.columnOver {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+.columnHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+}
+.columnDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--accent);
+}
+.dotHired {
+  background: var(--success);
+}
+.dotClosed {
+  background: var(--text-tertiary);
+}
+.columnName {
+  color: var(--text-primary);
+}
+.columnCount {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-regular);
+}
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 8px;
+}
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.04);
+  cursor: pointer;
+}
+.card:hover {
+  border-color: var(--border-default);
+  box-shadow: 0 2px 6px rgba(40, 30, 20, 0.08);
+}
+.cardDragging {
+  opacity: 0.4;
+}
+.cardTitle {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+  line-height: 1.35;
+}
+.cardLine {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  overflow-wrap: anywhere;
+}
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cardCv {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+.cardSpacer {
+  flex: 1;
+}
+.cardAdd {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+.cardAdd:hover {
+  background: var(--bg-surface);
+  color: var(--accent);
+}
+
+/* ---- states ---------------------------------------------------------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+.chipInfo {
+  background: var(--navy-50);
+  color: var(--navy-600);
+}
+.chipGood {
+  background: #e3f3e9;
+  color: #1f6b45;
+}
+.chipBad {
+  background: #fbe6e2;
+  color: #9b3222;
+}
+
+.error {
+  margin: var(--space-3) var(--space-5);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: #fbe6e2;
+  color: #9b3222;
+  font-size: var(--text-sm);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-5);
+  text-align: center;
+  color: var(--text-secondary);
+}
+.emptyArt {
+  color: var(--text-tertiary);
+}
+.emptyTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+.emptyBody {
+  max-width: 46ch;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+/* ---- the drawer ------------------------------------------------------ */
+
+.drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(440px, 100%);
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border-default);
+  box-shadow: -8px 0 24px rgba(40, 30, 20, 0.08);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  z-index: 20;
+}
+.drawerHead {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.drawerTitleRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.drawerTitle {
+  flex: 1;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+.drawerFacts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.drawerFact {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  margin: 0;
+}
+.drawerLink {
+  font-size: var(--text-sm);
+  color: var(--text-link);
+}
+.drawerLink:hover {
+  text-decoration: underline;
+}
+.drawerActions {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.stagePicker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.drawerBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+.panelTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+  margin: 0;
+}
+.panelEmpty {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  margin: 0;
+}
+.composer {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.entries {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+.entry {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.entryHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.entryWhen {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+.entryBody {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+.linkAction {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--text-link);
+  font-size: var(--text-sm);
+  align-self: flex-start;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+.linkAction:hover {
+  text-decoration: underline;
+}
+
+/* ---- the two forms --------------------------------------------------- */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 60;
+}
+.modal {
+  width: min(560px, 100%);
+  max-height: 90vh;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  box-shadow: 0 18px 48px rgba(16, 42, 67, 0.24);
+}
+.modalHead {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.modalIcon {
+  color: var(--accent);
+}
+.modalHeadText {
+  flex: 1;
+}
+.modalHeadText h2 {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.modalHeadText p {
+  margin: 2px 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+.modalClose {
+  color: var(--text-tertiary);
+}
+.modalClose:hover {
+  color: var(--text-primary);
+}
+.modalBody {
+  padding: var(--space-4);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+}
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-top: 1px solid var(--border-subtle);
+}
+.row {
+  display: flex;
+  gap: var(--space-3);
+}
+.row > * {
+  flex: 1;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+}
+.input {
+  padding: 8px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  width: 100%;
+}
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.textarea {
+  flex: 1 1 200px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-family: inherit;
+  resize: vertical;
+}
+.hint {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+.fieldError {
+  font-size: var(--text-xs);
+  color: #9b3222;
+}
+
+@media (max-width: 720px) {
+  .drawer {
+    width: 100%;
+  }
+  .row {
+    flex-direction: column;
+  }
+}

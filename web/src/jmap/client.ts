@@ -790,6 +790,22 @@ export class JmapClient {
     );
   }
 
+  /**
+   * Whether this user may work HR: a tenant admin, or the holder of the `hr`
+   * role (ADR 0035, wave B6) — the server's own `require_hr`, asked here only
+   * to decide whether to *draw* the hiring tab.
+   *
+   * It is never an access decision, exactly as [`canWorkTheBooks`] is not.
+   * Every `/hr` route asks `require_hr` again for itself and answers `403`, so
+   * a stale session hides a tab at worst and opens nothing at all.
+   */
+  async canWorkHr(): Promise<boolean> {
+    const session = await this.session();
+    return (
+      session["alo:isAdmin"] === true || (session["alo:roles"] ?? []).includes("hr")
+    );
+  }
+
   /** The addresses this user may send from (canonical + aliases), for the
    * compose From picker. Empty if the session doesn't carry the list. */
   async sendableAddresses(): Promise<string[]> {

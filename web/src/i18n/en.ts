@@ -4433,6 +4433,109 @@ export const en = {
     `Your message was not sent. It remains in Drafts so you can open it and try again. Server: ${reason}`,
   mailScheduleErrorDetail: (reason: string) =>
     `Your message was not scheduled. It remains in Drafts so you can open it and try again. Server: ${reason}`,
+
+  // ---- alo HR (ADR 0035, wave B6) --------------------------------------
+  //
+  // The words of a module that holds people's records rather than a company's
+  // documents, and three rules follow from that. **Nothing here judges a
+  // person**: there is no word for a score, a rank, a fit or a shortlist,
+  // because none of those is a thing this product computes and the vocabulary
+  // is where that promise is kept or quietly broken (`docs/design/hr.md` § The
+  // EU AI Act posture). **Nothing here states a rule the server owns**: which
+  // stages exist, whether a record is past its retention date and whether a
+  // round still takes applications are all read from the API — these strings
+  // only name them. And **a candidate is spoken of as a person**, not as a
+  // record moving through a funnel: they applied, somebody met them, somebody
+  // decided.
+  moduleHr: "People",
+  hrTabHiring: "Hiring",
+  hrMemberSoonTitle: "Your own HR screens are on their way",
+  hrMemberSoonBody:
+    "Your leave and its balance, the team directory and your own onboarding list will live here. Hiring, the part that is built, belongs to HR.",
+  hrLoadFailed: "That could not be loaded.",
+  hrSaveFailed: "That change was not saved.",
+  hrClose: "Close",
+  hrCancel: "Cancel",
+  hrCreate: "Create",
+  hrSave: "Save",
+
+  // Openings — a role written down, then run, then ended.
+  hrOpening: "Role",
+  hrNewOpening: "New role",
+  hrEditOpening: "Edit role",
+  hrOpeningSubtitle:
+    "A role written down. Publishing says the round is running; closing ends it and freezes what the role said.",
+  hrPublishOpening: "Publish",
+  hrCloseOpening: "Close round",
+  hrCloseConfirm: (title: string) =>
+    `Close the round for ${title}? The people who applied stay as the record of what happened, and the round cannot be reopened.`,
+  hrIncludeClosed: "Include closed rounds",
+  hrClosedNotice:
+    "This round is closed. Its board still reads, and the people on it can still be moved — but nobody new can be added.",
+  hrOpenedOn: (day: string) => `open since ${day}`,
+  hrClosedOn: (day: string) => `closed ${day}`,
+  hrStatusDraft: "Draft",
+  hrStatusOpen: "Open",
+  hrStatusClosed: "Closed",
+  hrFieldRole: "Role",
+  hrFieldTeam: "Team",
+  hrFieldLocation: "Location",
+  hrLocationHint: "A city, an office, or “remote”.",
+  hrFieldEmployment: "Employment",
+  hrKindPermanent: "Permanent",
+  hrKindFixedTerm: "Fixed term",
+  hrKindPartTime: "Part time",
+  hrKindApprentice: "Apprenticeship",
+  hrKindContractor: "Contractor",
+  hrKindIntern: "Internship",
+  hrNoOpeningsTitle: "No roles written down yet",
+  hrNoOpeningsBody:
+    "Write down the role you are hiring for. Record the people who apply as they come in, and move them along the board as you meet them.",
+
+  // The board — the seven stages the store serves, and a candidate's card.
+  hrStage: "Stage",
+  hrStageApplied: "Applied",
+  hrStageReviewing: "Reviewing",
+  hrStageInterview: "Interview",
+  hrStageOffer: "Offer",
+  hrStageHired: "Hired",
+  hrStageRejected: "Not taken further",
+  hrStageWithdrawn: "Withdrew",
+
+  // Candidates.
+  hrCandidate: "Candidate",
+  hrAddCandidate: "Add a candidate",
+  hrEditCandidate: "Edit details",
+  hrCandidateSubtitle:
+    "What the application said. Nothing here is read by a machine — no screening, no ranking, no score.",
+  hrFieldName: "Name",
+  hrFieldEmail: "Email",
+  hrFieldPhone: "Phone",
+  hrFieldSource: "Where they came from",
+  hrSourceHint: "A job board, a referral, an agency — however the application reached you.",
+  hrAppliedOn: (moment: string) => `Applied ${moment}`,
+  hrNotes: "Interview notes",
+  hrNotesEmpty: "Nothing written down yet.",
+  hrNotePlaceholder: "What was said in the room…",
+  hrAddNote: "Add note",
+  hrCv: "CV",
+  hrCvNone: "No CV on file.",
+  hrCvDownload: "Download the CV",
+  hrCvTrashed: "The CV that was on file has been moved to the HR trash.",
+  hrCvFailed: "That file could not be downloaded.",
+
+  // Retention — a deadline a person acts on, never a job that runs.
+  hrRetention: "How long we keep this",
+  hrRetentionUntil: (day: string) => `Kept until ${day}.`,
+  hrRetentionExpired: "Past its date",
+  hrRetentionExplainer:
+    "Nothing is erased automatically. When the date has passed, somebody here decides — and what goes, goes: the details, every note, and the CV.",
+  hrFieldRetainUntil: "Keep until",
+  hrRetainHint:
+    "Six months from the application unless you say otherwise. After this date the record can be erased.",
+  hrErase: "Erase this record",
+  hrEraseConfirm: (name: string) =>
+    `Erase everything about ${name}? Their details, every note written about them and their CV are removed for good. This cannot be undone.`,
 } as const;
 
 /** Every string key in the catalog. */
