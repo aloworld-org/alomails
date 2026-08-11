@@ -207,6 +207,11 @@ opaque_id!(
     SitePublishId
 );
 opaque_id!(
+    /// One intention to publish an alo Sites website at a chosen moment —
+    /// distinct from the [`SitePublishId`] it eventually produces.
+    SitePublishScheduleId
+);
+opaque_id!(
     /// A contact form on an alo Sites website — the object a `contact_form`
     /// section references by id.
     SiteFormId

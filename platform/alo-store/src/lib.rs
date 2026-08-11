@@ -173,6 +173,7 @@ pub mod site_public;
 mod site_public_analytics;
 pub mod site_public_forms;
 pub mod site_publish;
+pub mod site_publish_schedule;
 pub mod site_theme;
 pub mod site_translations;
 pub mod site_versions;
@@ -381,7 +382,8 @@ pub use id::{
     InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
     InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
     SiteCollectionId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId,
-    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
+    TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -454,6 +456,11 @@ pub use site_public::{
     PublishedSite, PublishedSitePost, PublishedSitePostBody, PublishedSitePostPage, SitePublicStore,
 };
 pub use site_publish::{SitePageSnapshot, SitePublish};
+pub use site_publish_schedule::{
+    DueSitePublish, MAX_SITE_PUBLISH_SCHEDULE_HISTORY, SITE_PUBLISH_CLAIM_STALE_MINUTES,
+    SITE_PUBLISH_INTERRUPTED, SITE_PUBLISH_MAX_ATTEMPTS, SITE_PUBLISH_SCHEDULE_ERROR_MAX_CHARS,
+    SITE_PUBLISH_SCHEDULE_MAX_AHEAD_DAYS, SitePublishSchedule, SitePublishScheduleStatus,
+};
 pub use site_theme::{
     DEFAULT_THEME_PRESET, SiteTheme, THEME_PRESETS, THEME_SCHEMA_VERSION, ThemePreset,
     ThemeSchemaError, theme_preset,
