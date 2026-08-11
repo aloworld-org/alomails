@@ -9,6 +9,7 @@ import { CollectionsView } from "./CollectionsView";
 import { PostsView } from "./PostsView";
 import { SiteView } from "./SiteView";
 import { AnalyticsView } from "./AnalyticsView";
+import { HistoryView } from "./HistoryView";
 import { SitesListView } from "./SitesListView";
 import { SubmissionsView } from "./SubmissionsView";
 import styles from "./SitesModule.module.css";
@@ -21,6 +22,7 @@ export function SitesModule() {
         <Route path=":siteId" element={<SiteView />} />
         <Route path=":siteId/analytics" element={<AnalyticsView />} />
         <Route path=":siteId/collections" element={<CollectionsView />} />
+        <Route path=":siteId/history" element={<HistoryView />} />
         <Route path=":siteId/submissions" element={<SubmissionsView />} />
         <Route path=":siteId/posts" element={<PostsView />} />
         <Route path=":siteId/pages/:pageId" element={<PageEditorView />} />

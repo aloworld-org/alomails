@@ -37,6 +37,10 @@ import type {
   SiteTranslationReadiness,
   SiteTranslationEnvelope,
   SitePost,
+  SitePublishComparison,
+  SitePublishPage,
+  SitePublishRestore,
+  SitePublishVersion,
   SiteSubmission,
   SiteCollection,
   SiteCollectionDraft,
@@ -211,6 +215,63 @@ export class SitesApi {
     await this.#write<{ status?: string }>(
       "POST",
       `/sites/${encodeURIComponent(siteId)}/unpublish`,
+      {},
+    );
+  }
+
+  /** Every version this site has ever published, newest first, with the id of
+   *  the one on the internet (`null` while the site is offline). */
+  publishes(siteId: string): Promise<{
+    publishes: SitePublishVersion[];
+    current: string | null;
+  }> {
+    return this.#read<{ publishes?: SitePublishVersion[]; current?: string | null }>(
+      `/sites/${encodeURIComponent(siteId)}/publishes`,
+    ).then((r) => ({ publishes: r.publishes ?? [], current: r.current ?? null }));
+  }
+
+  /** The pages one version froze — one entry per page and language. */
+  publishPages(siteId: string, publishId: string): Promise<SitePublishPage[]> {
+    return this.#read<{ pages?: SitePublishPage[] }>(
+      `${this.#publishPath(siteId, publishId)}/pages`,
+    ).then((r) => r.pages ?? []);
+  }
+
+  /** What a visitor would see differently between two versions (metadata). */
+  comparePublishes(
+    siteId: string,
+    from: string,
+    to: string,
+  ): Promise<SitePublishComparison> {
+    return this.#read<SitePublishComparison>(
+      `/sites/${encodeURIComponent(siteId)}/publishes/compare?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    );
+  }
+
+  /** One frozen page rendered by the server as a complete, self-contained
+   *  HTML document — the history preview. Answers text, not JSON; the caller
+   *  puts it in a sandboxed iframe via `srcdoc`. */
+  async publishPreview(
+    siteId: string,
+    publishId: string,
+    pageId: string,
+    locale?: string,
+  ): Promise<string> {
+    const path = `${this.#publishPath(siteId, publishId)}/pages/${encodeURIComponent(pageId)}/preview`;
+    const res = await this.#send(
+      locale === undefined ? path : `${path}?locale=${encodeURIComponent(locale)}`,
+      { method: "GET" },
+    );
+    await SitesApi.#rejectFailed(res);
+    return res.text();
+  }
+
+  /** Puts an earlier version back on the internet as a NEW version holding a
+   *  copy of it. History is never rewritten, and the draft is never touched. */
+  restorePublish(siteId: string, publishId: string): Promise<SitePublishRestore> {
+    return this.#write<SitePublishRestore>(
+      "POST",
+      `${this.#publishPath(siteId, publishId)}/restore`,
       {},
     );
   }
@@ -556,6 +617,10 @@ export class SitesApi {
 
   #localizedPagePath(siteId: string, pageId: string, locale: string): string {
     return `${this.#pagePath(siteId, pageId)}/locales/${encodeURIComponent(locale)}`;
+  }
+
+  #publishPath(siteId: string, publishId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/publishes/${encodeURIComponent(publishId)}`;
   }
 
   #postPath(siteId: string, postId: string): string {

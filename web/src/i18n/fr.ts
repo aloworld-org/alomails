@@ -2771,6 +2771,50 @@ export const fr: Partial<Catalog> = {
   sitesAnalyticsEmptyBody:
     "Ouvrez ou partagez votre site publié. Ses premières visites apparaîtront ici automatiquement.",
   sitesAnalyticsOpenSite: "Ouvrir le site publié",
+  // Sites — l'historique des versions publiées (S2.04b).
+  sitesHistory: "Historique des versions",
+  sitesHistorySubtitle:
+    "Chaque version de ce site que vous avez publiée. Consultez-en une, et remettez-la en ligne en un clic.",
+  sitesHistoryLoadFailed:
+    "L’historique des versions n’a pas pu être chargé.",
+  sitesHistoryVersions: "Versions publiées",
+  sitesHistoryLiveNow: "En ligne",
+  sitesHistoryVersionOf: (date: string) => `Version du ${date}`,
+  sitesHistoryPagesCount: (pages: number) =>
+    `${pages} ${pages === 1 ? "page" : "pages"}`,
+  sitesHistoryLanguages: (languages: string) => `Langues : ${languages}`,
+  sitesHistoryRestoredCopy: (date: string) =>
+    `Une copie de la version du ${date}`,
+  sitesHistoryRestore: "Remettre cette version en ligne",
+  sitesHistoryRestoring: "Remise en ligne…",
+  sitesHistoryRestoreFailed:
+    "Cette version n’a pas pu être remise en ligne.",
+  sitesHistoryRestored: (date: string) =>
+    `La version du ${date} est de nouveau en ligne.`,
+  sitesHistoryUndo: "Annuler",
+  sitesHistoryUndone: (date: string) =>
+    `Retour à la version du ${date}. Rien n’est perdu : toutes les versions sont toujours là.`,
+  sitesHistoryPage: "Page",
+  sitesHistoryPreviewLoadFailed: "Cette version n’a pas pu être affichée.",
+  sitesHistoryPreviewLoading: "Chargement de cette version",
+  sitesHistoryPreviewTitle: "Aperçu de la version publiée",
+  sitesHistoryDraftSafe:
+    "Votre travail en cours reste intact : remettre une version en ligne ne change jamais ce que vous êtes en train de modifier.",
+  sitesHistoryIfRestored: "Si vous remettez cette version en ligne",
+  sitesHistoryIdentical: "C’est exactement ce qui est en ligne actuellement.",
+  sitesHistoryThemeChange: "L’apparence du site changerait.",
+  sitesHistoryLanguagesBack: (languages: string) =>
+    `Ces langues reviendraient : ${languages}`,
+  sitesHistoryLanguagesGone: (languages: string) =>
+    `Ces langues disparaîtraient : ${languages}`,
+  sitesHistoryPageBack: (page: string) => `${page} reviendrait`,
+  sitesHistoryPageGone: (page: string) => `${page} disparaîtrait`,
+  sitesHistoryPageChanged: (page: string) => `${page} changerait`,
+  sitesHistoryUnchangedPages: (pages: number) =>
+    `${pages} ${pages === 1 ? "page reste identique" : "pages restent identiques"}`,
+  sitesHistoryEmptyTitle: "Rien n’est encore publié",
+  sitesHistoryEmptyBody:
+    "Publiez ce site une fois, et chaque version publiée restera ici — à consulter, et à remettre en ligne.",
   sitesPosts: "Articles du blog",
   sitesBackToWebsite: "Site web",
   sitesPostsLoadFailed: "Les articles de votre blog n’ont pas pu être chargés.",

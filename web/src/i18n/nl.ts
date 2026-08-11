@@ -2735,6 +2735,49 @@ export const nl: Partial<Catalog> = {
   sitesAnalyticsEmptyBody:
     "Open of deel uw gepubliceerde site. De eerste bezoeken verschijnen hier automatisch.",
   sitesAnalyticsOpenSite: "Live site openen",
+  // Sites — de geschiedenis van gepubliceerde versies (S2.04b).
+  sitesHistory: "Versiegeschiedenis",
+  sitesHistorySubtitle:
+    "Elke versie van deze site die u hebt gepubliceerd. Bekijk er een, en zet er een met één klik weer online.",
+  sitesHistoryLoadFailed: "De versiegeschiedenis kon niet worden geladen.",
+  sitesHistoryVersions: "Gepubliceerde versies",
+  sitesHistoryLiveNow: "Nu online",
+  sitesHistoryVersionOf: (date: string) => `Versie van ${date}`,
+  sitesHistoryPagesCount: (pages: number) =>
+    `${pages} ${pages === 1 ? "pagina" : "pagina's"}`,
+  sitesHistoryLanguages: (languages: string) => `Talen: ${languages}`,
+  sitesHistoryRestoredCopy: (date: string) =>
+    `Een kopie van de versie van ${date}`,
+  sitesHistoryRestore: "Deze versie weer online zetten",
+  sitesHistoryRestoring: "Weer online zetten…",
+  sitesHistoryRestoreFailed:
+    "Deze versie kon niet weer online worden gezet.",
+  sitesHistoryRestored: (date: string) =>
+    `De versie van ${date} staat weer online.`,
+  sitesHistoryUndo: "Ongedaan maken",
+  sitesHistoryUndone: (date: string) =>
+    `Terug naar de versie van ${date}. Er is niets verloren — alle versies staan er nog.`,
+  sitesHistoryPage: "Pagina",
+  sitesHistoryPreviewLoadFailed: "Deze versie kon niet worden getoond.",
+  sitesHistoryPreviewLoading: "Deze versie laden",
+  sitesHistoryPreviewTitle: "Voorbeeld van gepubliceerde versie",
+  sitesHistoryDraftSafe:
+    "Uw werk in uitvoering blijft onaangeroerd: een versie weer online zetten verandert nooit wat u aan het bewerken bent.",
+  sitesHistoryIfRestored: "Als u deze versie weer online zet",
+  sitesHistoryIdentical: "Dit is precies wat nu online staat.",
+  sitesHistoryThemeChange: "Het uiterlijk van de site zou veranderen.",
+  sitesHistoryLanguagesBack: (languages: string) =>
+    `Deze talen zouden terugkomen: ${languages}`,
+  sitesHistoryLanguagesGone: (languages: string) =>
+    `Deze talen zouden verdwijnen: ${languages}`,
+  sitesHistoryPageBack: (page: string) => `${page} zou terugkomen`,
+  sitesHistoryPageGone: (page: string) => `${page} zou verdwijnen`,
+  sitesHistoryPageChanged: (page: string) => `${page} zou veranderen`,
+  sitesHistoryUnchangedPages: (pages: number) =>
+    `${pages} ${pages === 1 ? "pagina blijft" : "pagina's blijven"} hetzelfde`,
+  sitesHistoryEmptyTitle: "Nog niets gepubliceerd",
+  sitesHistoryEmptyBody:
+    "Publiceer deze site één keer, en elke versie die u publiceert blijft hier — om terug te kijken, en om weer online te zetten.",
   sitesPosts: "Blogartikelen",
   sitesBackToWebsite: "Website",
   sitesPostsLoadFailed: "Uw blogartikelen konden niet worden geladen.",

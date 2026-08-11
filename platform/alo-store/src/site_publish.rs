@@ -233,6 +233,37 @@ impl AccountStore {
         Ok(row.map(SitePublishRow::into_publish))
     }
 
+    /// One publish of the tenant's `site` — the frozen envelope (theme and
+    /// language contract) behind a past or present published set. A publish of
+    /// another tenant, or of another site, reads as `None`, exactly as an
+    /// unknown id does.
+    ///
+    /// [`Self::current_site_publish`] answers the same shape for whichever
+    /// publish is on the internet; this one answers for a named version, which
+    /// is what previewing history needs.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn site_publish(
+        &self,
+        site: &SiteId,
+        publish: &SitePublishId,
+    ) -> Result<Option<SitePublish>> {
+        let row = sqlx::query_as::<_, SitePublishRow>(
+            "SELECT p.id, p.theme, p.default_locale, p.enabled_locales, \
+                    p.published_by, p.published_at \
+             FROM site_publishes p \
+             WHERE p.tenant_id = $1 AND p.site_id = $2 AND p.id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .bind(publish.as_str())
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(row.map(SitePublishRow::into_publish))
+    }
+
     /// The page snapshots of one publish of the tenant's `site`, in
     /// navigation order. Empty when the publish isn't the tenant's or isn't
     /// this site's — indistinguishable from an unknown publish, by design.

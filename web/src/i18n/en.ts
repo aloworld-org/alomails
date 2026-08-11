@@ -3349,6 +3349,50 @@ export const en = {
   sitesAnalyticsEmptyBody:
     "Open or share your published site. Its first visits will appear here automatically.",
   sitesAnalyticsOpenSite: "Open live site",
+  // Sites — every version this website has published (S2.04b). The list is
+  // dates, never version ids: a person recognises "yesterday at 14:20", not
+  // an opaque token.
+  sitesHistory: "Version history",
+  sitesHistorySubtitle:
+    "Every version of this website you have published. Look at any of them, and put one back online in one click.",
+  sitesHistoryLoadFailed: "The version history could not be loaded.",
+  sitesHistoryVersions: "Published versions",
+  sitesHistoryLiveNow: "Live now",
+  sitesHistoryVersionOf: (date: string) => `Version of ${date}`,
+  sitesHistoryPagesCount: (pages: number) =>
+    `${pages} ${pages === 1 ? "page" : "pages"}`,
+  sitesHistoryLanguages: (languages: string) => `Languages: ${languages}`,
+  sitesHistoryRestoredCopy: (date: string) =>
+    `A copy of the version of ${date}`,
+  sitesHistoryRestore: "Put this version back online",
+  sitesHistoryRestoring: "Putting it back online…",
+  sitesHistoryRestoreFailed: "That version could not be put back online.",
+  sitesHistoryRestored: (date: string) =>
+    `The version of ${date} is back online.`,
+  sitesHistoryUndo: "Undo",
+  sitesHistoryUndone: (date: string) =>
+    `Back to the version of ${date}. Nothing was lost — every version is still here.`,
+  sitesHistoryPage: "Page",
+  sitesHistoryPreviewLoadFailed: "That version could not be shown.",
+  sitesHistoryPreviewLoading: "Loading this version",
+  sitesHistoryPreviewTitle: "Published version preview",
+  sitesHistoryDraftSafe:
+    "Your work in progress is untouched: putting a version back online never changes what you are editing.",
+  sitesHistoryIfRestored: "If you put this version back online",
+  sitesHistoryIdentical: "This is exactly what is live now.",
+  sitesHistoryThemeChange: "The look of the site would change.",
+  sitesHistoryLanguagesBack: (languages: string) =>
+    `These languages would come back: ${languages}`,
+  sitesHistoryLanguagesGone: (languages: string) =>
+    `These languages would go away: ${languages}`,
+  sitesHistoryPageBack: (page: string) => `${page} would come back`,
+  sitesHistoryPageGone: (page: string) => `${page} would go away`,
+  sitesHistoryPageChanged: (page: string) => `${page} would change`,
+  sitesHistoryUnchangedPages: (pages: number) =>
+    `${pages} ${pages === 1 ? "page stays" : "pages stay"} the same`,
+  sitesHistoryEmptyTitle: "Nothing published yet",
+  sitesHistoryEmptyBody:
+    "Publish this website once, and every version you publish stays here — to look back at, and to put back online.",
 
   // Audit trail — a record's own history (B2.13). The labels are VERBS, not
   // sentences: the record kind is the page the reader is already on, so an

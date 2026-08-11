@@ -244,6 +244,78 @@ export interface SiteCollectionPreview {
   items: SiteCollectionPreviewItem[];
 }
 
+/** One version of a website: a publish that happened, and what it froze.
+ *  `pages` and `collections` are counts — the paths themselves are a separate
+ *  read, because a history list has no use for every path in every version. */
+export interface SitePublishVersion {
+  id: string;
+  publishedAt: string;
+  /** The user id that published it (the server never sends an address here). */
+  publishedBy: string;
+  defaultLocale: string;
+  enabledLocales: string[];
+  /** The version this one is a copy of, when it was made by a restore. */
+  restoredFrom: string | null;
+  /** True for the version currently on the internet. */
+  current: boolean;
+  pages: number;
+  /** The languages this version actually froze pages for. */
+  locales: string[];
+  collections: number;
+}
+
+/** One page a version froze, as the preview switcher lists them. */
+export interface SitePublishPage {
+  pageId: string;
+  locale: string;
+  slug: string;
+  title: string;
+  home: boolean;
+  navOrder: number;
+}
+
+/** How one page differs between two versions. `fields` is empty unless the
+ *  page exists in both and its frozen content differs. */
+export interface SitePublishPageChange {
+  pageId: string;
+  locale: string;
+  slug: string;
+  title: string;
+  change: "added" | "removed" | "changed";
+  fields: string[];
+}
+
+/** How one collection differs between two versions. */
+export interface SitePublishCollectionChange {
+  collectionId: string;
+  name: string;
+  change: "added" | "removed" | "changed";
+  itemsBefore: number;
+  itemsAfter: number;
+}
+
+/** What a visitor would see differently between two versions — metadata
+ *  only; the section content itself is what the preview shows. */
+export interface SitePublishComparison {
+  from: SitePublishVersion;
+  to: SitePublishVersion;
+  identical: boolean;
+  themeChanged: boolean;
+  defaultLocaleChanged: boolean;
+  localesAdded: string[];
+  localesRemoved: string[];
+  pages: SitePublishPageChange[];
+  unchangedPages: number;
+  collections: SitePublishCollectionChange[];
+  unchangedCollections: number;
+}
+
+/** The answer to a restore: the NEW version now live, and the one it copied. */
+export interface SitePublishRestore {
+  publishId: string;
+  restoredFrom: string;
+}
+
 /** Privacy-preserving traffic aggregates for one inclusive period. */
 export interface SiteAnalyticsReport {
   from: string;

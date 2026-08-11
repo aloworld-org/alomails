@@ -12,6 +12,7 @@ import {
   Globe2,
   ArrowRight,
   Check,
+  History,
   Inbox,
   Languages,
   Newspaper,
@@ -298,6 +299,16 @@ export function SiteView() {
               )}
             </div>
             <div className={styles.publishActions}>
+              {/* History belongs beside Publish: it is the question "what did
+                  the last publish look like, and can I have it back?". */}
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<History size="var(--icon-size-inline)" />}
+                onClick={() => navigate("history")}
+              >
+                {strings.sitesHistory}
+              </Button>
               {live && (
                 <Button
                   variant={confirmingOffline ? "danger" : "ghost"}

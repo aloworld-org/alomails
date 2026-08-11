@@ -2085,7 +2085,7 @@ const PREVIEW_INLINE_IMAGE_MAX_BYTES: usize = 4 * 1024 * 1024;
 /// logo/favicon plus every section image, read tenant-scoped through the
 /// account door. Ids that don't resolve, aren't images, or are oversized are
 /// simply absent (the renderer then falls back to the public path).
-async fn preview_image_map<'a>(
+pub(crate) async fn preview_image_map<'a>(
     account: &Account,
     theme: &SiteTheme,
     sections: &Value,

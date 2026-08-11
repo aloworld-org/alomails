@@ -349,6 +349,193 @@ async fn another_tenants_version_is_invisible_and_unrestorable() {
     assert_eq!(body["current"], json!(b_publish));
 }
 
+/// GETs a route that answers a document rather than JSON.
+async fn get_text(
+    app: &Router,
+    token: Option<&str>,
+    uri: &str,
+) -> (StatusCode, axum::http::HeaderMap, String) {
+    use tower::ServiceExt;
+    let mut req = Request::builder().method("GET").uri(uri);
+    if let Some(token) = token {
+        req = req.header("authorization", format!("Bearer {token}"));
+    }
+    let resp = app
+        .clone()
+        .oneshot(req.body(Body::empty()).unwrap())
+        .await
+        .unwrap();
+    let status = resp.status();
+    let headers = resp.headers().clone();
+    let bytes = axum::body::to_bytes(resp.into_body(), 8 * 1024 * 1024)
+        .await
+        .unwrap();
+    (status, headers, String::from_utf8(bytes.to_vec()).unwrap())
+}
+
+/// What the visible history surface (S2.04b) reads: the pages one version
+/// froze, and each of them rendered as the document that version served —
+/// never the draft, and never today's theme.
+#[tokio::test]
+async fn a_version_lists_and_renders_the_pages_it_froze() {
+    let h = harness("site-versions-preview").await;
+    let (site, page, first) = site_with_home(&h, "verpv", "Bread & butter").await;
+
+    let (status, body) = get(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/publishes/{first}/pages"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let pages = body["pages"].as_array().unwrap();
+    assert_eq!(pages.len(), 1);
+    assert_eq!(pages[0]["pageId"], json!(page));
+    assert_eq!(pages[0]["locale"], json!("en"));
+    assert_eq!(pages[0]["slug"], json!(""));
+    assert_eq!(pages[0]["title"], json!("Home"));
+    assert_eq!(pages[0]["home"], json!(true));
+
+    // Move the draft on: new copy, another page, another theme, published.
+    let (status, body) = put(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/pages/{page}/sections/0"),
+        json!({ "section": hero("Sourdough, daily") }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, body) = put(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/theme"),
+        json!({ "schema_version": 1, "preset": "midnight" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let (status, about) = post(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/pages"),
+        json!({ "title": "About", "slug": "about" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{about}");
+    let about_page = about["id"].as_str().unwrap().to_owned();
+    let (status, published) = post(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/publish"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{published}");
+    let second = published["publishId"].as_str().unwrap().to_owned();
+
+    // The first version still renders what it froze, theme included.
+    let (status, headers, html) = get_text(
+        &h.app,
+        Some(&h.token),
+        &format!("/sites/{site}/publishes/{first}/pages/{page}/preview"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{html}");
+    assert_eq!(headers["content-type"], "text/html; charset=utf-8");
+    assert_eq!(headers["cache-control"], "no-store");
+    assert!(html.contains("Bread &amp; butter"), "{html}");
+    assert!(
+        !html.contains("Sourdough, daily"),
+        "a version preview must never render the draft: {html}"
+    );
+    assert!(
+        html.contains("<style>"),
+        "the preview is self-contained: {html}"
+    );
+
+    // The newer version renders the newer copy, and lists both its pages.
+    let (status, _, html) = get_text(
+        &h.app,
+        Some(&h.token),
+        &format!("/sites/{site}/publishes/{second}/pages/{page}/preview"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(html.contains("Sourdough, daily"), "{html}");
+    let (status, body) = get(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/publishes/{second}/pages"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["pages"].as_array().unwrap().len(), 2);
+
+    // A page the older version never froze is not in it, and says so.
+    let (status, problem) = get(
+        &h.app,
+        &h.token,
+        &format!("/sites/{site}/publishes/{first}/pages/{about_page}/preview"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{problem}");
+    assert_eq!(problem["detail"], json!("no such page in this version"));
+
+    // A language this version never froze falls back to the one it did.
+    let (status, _, html) = get_text(
+        &h.app,
+        Some(&h.token),
+        &format!("/sites/{site}/publishes/{first}/pages/{page}/preview?locale=fr"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(html.contains("Bread &amp; butter"), "{html}");
+
+    // An unknown version is a refusal on both routes, and neither is open.
+    for uri in [
+        format!("/sites/{site}/publishes/no-such-version/pages"),
+        format!("/sites/{site}/publishes/no-such-version/pages/{page}/preview"),
+    ] {
+        let (status, problem) = get(&h.app, &h.token, &uri).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{uri}: {problem}");
+        let (status, _, _) = get_text(&h.app, None, &uri).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED, "{uri} unauthenticated");
+    }
+}
+
+/// Another tenant cannot list or render what a version of a foreign site
+/// froze, even holding the real ids.
+#[tokio::test]
+async fn a_foreign_tenant_cannot_read_a_versions_pages() {
+    let a = harness("site-versions-pv-a").await;
+    let b = harness_on(Arc::clone(&a.store), "site-versions-pv-b").await;
+    let (a_site, a_page, a_publish) = site_with_home(&a, "verpva", "Owned by A").await;
+    let (b_site, _, _) = site_with_home(&b, "verpvb", "Owned by B").await;
+
+    for uri in [
+        format!("/sites/{a_site}/publishes/{a_publish}/pages"),
+        format!("/sites/{a_site}/publishes/{a_publish}/pages/{a_page}/preview"),
+        // A's real version id addressed through B's own site.
+        format!("/sites/{b_site}/publishes/{a_publish}/pages"),
+        format!("/sites/{b_site}/publishes/{a_publish}/pages/{a_page}/preview"),
+    ] {
+        let (status, headers, body) = get_text(&b.app, Some(&b.token), &uri).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{uri}: {body}");
+        assert!(
+            !body.contains("Owned by A"),
+            "{uri} leaked another tenant's content: {body}"
+        );
+        assert!(
+            !body.contains(a_publish.as_str()),
+            "{uri} echoed another tenant's id: {body}"
+        );
+        assert_ne!(
+            headers.get("content-type").map(|v| v.to_str().unwrap()),
+            Some("text/html; charset=utf-8"),
+            "{uri} answered a document to an outsider"
+        );
+    }
+}
+
 /// A comparison needs both ends: a malformed request is a refusal, not a
 /// half-answer.
 #[tokio::test]

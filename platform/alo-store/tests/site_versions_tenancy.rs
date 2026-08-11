@@ -140,6 +140,40 @@ async fn history_lists_every_version_and_restoring_appends_a_copy() {
         2
     );
 
+    // ---- each version's own frozen envelope ---------------------------------
+    // What previewing a version renders with: the theme and language contract
+    // as that publish froze them, never today's draft theme.
+    account
+        .set_site_theme(&site, json!({"schema_version": 1, "preset": "fern"}))
+        .await
+        .unwrap();
+    let frozen_first = account
+        .site_publish(&site, &first)
+        .await
+        .unwrap()
+        .expect("the first version is readable after two more theme changes");
+    assert_eq!(frozen_first.id, first);
+    assert_eq!(frozen_first.theme["preset"], json!("terra"));
+    assert_eq!(frozen_first.default_locale, "en");
+    assert_eq!(frozen_first.published_by, user.as_str());
+    assert_eq!(
+        account
+            .site_publish(&site, &second)
+            .await
+            .unwrap()
+            .unwrap()
+            .theme["preset"],
+        json!("ink"),
+        "each version keeps the theme it was published with"
+    );
+    assert!(
+        account
+            .site_publish(&site, &SitePublishId::new("no-such-version"))
+            .await
+            .unwrap()
+            .is_none()
+    );
+
     // ---- comparing the two versions -----------------------------------------
     let diff = account
         .compare_site_publishes(&site, &first, &second)
@@ -343,6 +377,10 @@ async fn versions_scope_by_tenant_and_by_site() {
             .unwrap()
             .is_none()
     );
+    assert!(
+        a.site_publish(&other, &first).await.unwrap().is_none(),
+        "a version addressed through the tenant's other site is not readable"
+    );
     assert_not_found(
         a.compare_site_publishes(&other, &first, &other_publish)
             .await,
@@ -356,6 +394,17 @@ async fn versions_scope_by_tenant_and_by_site() {
             .await
             .unwrap()
             .is_none()
+    );
+    assert!(
+        b.site_publish(&site, &first).await.unwrap().is_none(),
+        "the frozen envelope of another tenant's version is unreadable"
+    );
+    assert!(
+        b.site_publish_snapshots(&site, &first)
+            .await
+            .unwrap()
+            .is_empty(),
+        "and so are the pages it froze"
     );
     assert_not_found(b.compare_site_publishes(&site, &first, &second).await);
     assert_not_found(b.restore_site_publish(&site, &first).await);

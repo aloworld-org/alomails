@@ -164,6 +164,57 @@ pub async fn list_publishes(
     })))
 }
 
+/// `GET /sites/:id/publishes/:publish/pages` → `{"pages":[…]}` — what one
+/// version froze, in navigation order: one entry per page *and language*, each
+/// naming the draft page it came from (which may since have been renamed or
+/// deleted without touching this row).
+///
+/// This is the index the visible history surface previews from
+/// ([`crate::site_version_preview`]); the list read carries a page *count*,
+/// because a history list has no use for every path in every version.
+pub async fn list_publish_pages(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, publish)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let site = SiteId::new(id);
+    require_site(&account, &site).await?;
+    let version = SitePublishId::new(publish);
+    // The version read is the guard: an unknown or foreign version must be a
+    // `404`, not an empty page list that reads like a version with no pages.
+    if account
+        .acc
+        .site_publish_version(&site, &version)
+        .await
+        .map_err(map_store_err)?
+        .is_none()
+    {
+        return Err(Problem::with(
+            StatusCode::NOT_FOUND,
+            "no such version of this website",
+        ));
+    }
+    let snapshots = account
+        .acc
+        .site_publish_snapshots(&site, &version)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "pages": snapshots
+            .iter()
+            .map(|snapshot| json!({
+                "pageId": snapshot.page_id.as_str(),
+                "locale": snapshot.locale,
+                "slug": snapshot.slug,
+                "title": snapshot.title,
+                "home": snapshot.is_home,
+                "navOrder": snapshot.nav_order,
+            }))
+            .collect::<Vec<_>>(),
+    })))
+}
+
 /// The two ends of a comparison. Both are optional in the type and required
 /// by the handler, so a caller who omits one gets this module's `Problem`
 /// rather than axum's plain-text query rejection.
