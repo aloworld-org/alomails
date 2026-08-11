@@ -1008,6 +1008,20 @@ export const en = {
   userAdminRole: "Tenant admin",
   userAdminHint: "Admins can manage users, aliases, and settings.",
   userRoles: "Roles",
+  // The per-user app switches (migration 0208). The hint has to say which
+  // promise is being made: "hidden" and "refused" are very different, and an
+  // administrator switching something off is entitled to know which one they
+  // are getting.
+  userApps: "Apps",
+  userAppsHint:
+    "Only the ticked apps appear in this person's navigation, and the server refuses the rest — this does not just hide, it closes. Mail and Home cannot be switched off. Ticking an app does not grant everything inside it: Finance still wants the accountant role, and a Space still wants membership.",
+  userAppsSelfHint:
+    "This is your own account. An admin is never locked out, so these switches change nothing about what you can open — they are kept in case this account ever stops being an admin.",
+  // Shown where a module would have rendered, when it is switched off for
+  // this person. Says who can undo it, because the person reading it cannot.
+  accessModuleOff: "This app is switched off for your account.",
+  accessModuleOffHint: "A workspace administrator can switch it back on.",
+  accessBackHome: "Back to Home",
   userAccountantRole: "Accountant",
   userAccountantHint:
     "Reads the books — reports, expense approvals, and closing a period — and can open invoices and deals without changing them. No admin console, and no access to anyone else's mail or files.",

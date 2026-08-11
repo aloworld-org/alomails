@@ -39,3 +39,16 @@
   font-size: var(--text-base);
   line-height: var(--leading-relaxed);
 }
+
+/* The way back from a switched-off app. A link rather than a button: it
+   navigates, and the person did nothing that needs undoing. */
+.action {
+  margin-top: var(--space-4);
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.action:hover {
+  text-decoration: underline;
+}

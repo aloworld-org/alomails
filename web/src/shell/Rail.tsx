@@ -11,6 +11,7 @@ import { strings } from "../i18n";
 import { cx } from "../ds";
 import { surface } from "../product";
 import { mostUsedApps } from "./appUsage";
+import { isModuleAllowed, useDeniedModules } from "./moduleAccess";
 import { Logo } from "./Logo";
 import { UserMenu } from "./UserMenu";
 import styles from "./Rail.module.css";
@@ -21,7 +22,13 @@ interface RailProps {
 }
 
 export function Rail({ onAskAi }: RailProps) {
-  const apps = surface.modules.filter((module) => module.id !== "home");
+  // Apps this person was actually given (migration 0208). Filtered before the
+  // favourites are computed, so a switched-off app cannot occupy one of the
+  // six shortcut slots and cannot be "recently used" into the top of the rail.
+  const denied = useDeniedModules();
+  const apps = surface.modules.filter(
+    (module) => module.id !== "home" && isModuleAllowed(denied, module.id),
+  );
   const home = surface.modules.find((module) => module.id === "home");
   // Derived, never stored: the six you have been using, recomputed whenever
   // the rail mounts. There is no saved list because there is nothing to save —

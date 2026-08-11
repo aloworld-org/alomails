@@ -1,15 +1,36 @@
 // Create a user, or manage an existing one (reset password, aliases, delete).
 // Admin-gated on the server; the calling page also hides self-destructive
 // actions for the signed-in admin.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { X } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button, Spinner, useDialogs } from "../ds";
 import { useJmapClient } from "../jmap";
-import type { AdminUser } from "../jmap";
+import type { AdminUser, AppModuleId, UserModuleAccess } from "../jmap";
 import styles from "./admin.module.css";
+
+/** The label each switchable module shows, in the console's own order.
+ *
+ * A record rather than a lookup function, so adding a module to the union and
+ * forgetting its label is a type error here rather than a blank checkbox in
+ * production. */
+const MODULE_LABEL: Record<AppModuleId, () => string> = {
+  agenda: () => strings.moduleAgenda,
+  billing: () => strings.moduleBilling,
+  chat: () => strings.moduleChat,
+  crm: () => strings.moduleCrm,
+  drive: () => strings.moduleDrive,
+  finance: () => strings.moduleFinance,
+  hr: () => strings.moduleHr,
+  insights: () => strings.moduleInsights,
+  inventory: () => strings.moduleInventory,
+  meet: () => strings.moduleMeet,
+  projects: () => strings.moduleProjects,
+  sites: () => strings.moduleSites,
+  tasks: () => strings.moduleTasks,
+};
 
 interface UserModalProps {
   user?: AdminUser;
@@ -18,17 +39,77 @@ interface UserModalProps {
   onChanged: () => void;
 }
 
-export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) {
+export function UserModal({
+  user,
+  isSelf,
+  onClose,
+  onChanged,
+}: UserModalProps) {
   const { confirm } = useDialogs();
   const client = useJmapClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [aliases, setAliases] = useState<string[]>(user?.aliases ?? []);
-  const [accountant, setAccountant] = useState(user?.roles.includes("accountant") ?? false);
+  const [accountant, setAccountant] = useState(
+    user?.roles.includes("accountant") ?? false,
+  );
   const [aliasDraft, setAliasDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  // The per-user app switches (migration 0208). `null` until they load, which
+  // is drawn as a spinner rather than as thirteen unchecked boxes — an access
+  // screen that renders "no access to anything" while it is still asking is
+  // the one wrong answer here.
+  const [modules, setModules] = useState<UserModuleAccess[] | null>(null);
+
+  const userId = user?.id;
+  useEffect(() => {
+    if (userId === undefined) return;
+    let live = true;
+    void (async () => {
+      try {
+        const list = await client.userModules(userId);
+        if (live) setModules(list);
+      } catch {
+        // Leave the section as a spinner rather than showing switches that
+        // might not be this person's. The rest of the modal still works.
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [client, userId]);
+
+  /** Switch one app on or off. Optimistic, and put back if the server refuses
+   * — an access control that lies about its state is worse than one that is
+   * slow, the same rule the role toggle above follows. */
+  async function toggleModule(id: AppModuleId, allowed: boolean) {
+    if (user === undefined || busy) return;
+    setModules(
+      (prev) => prev?.map((m) => (m.id === id ? { ...m, allowed } : m)) ?? prev,
+    );
+    setBusy(true);
+    setError(null);
+    try {
+      await client.setUserModule(user.id, id, allowed);
+      // Deliberately no `onChanged()`. That closes the modal, which is right
+      // after creating or deleting somebody and wrong here: an admin setting
+      // up a new colleague switches several apps in a row, and a dialog that
+      // shut after the first one would make thirteen checkboxes unusable.
+      // Nothing in the user list shows app access, so there is nothing to
+      // refresh either.
+    } catch {
+      setModules(
+        (prev) =>
+          prev?.map((m) => (m.id === id ? { ...m, allowed: !allowed } : m)) ??
+          prev,
+      );
+      setError(strings.userActionError);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function create(e: FormEvent) {
     e.preventDefault();
@@ -111,7 +192,14 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
   }
 
   async function del() {
-    if (user === undefined || !(await confirm({ message: strings.userDeleteConfirm(user.email), danger: true }))) return;
+    if (
+      user === undefined ||
+      !(await confirm({
+        message: strings.userDeleteConfirm(user.email),
+        danger: true,
+      }))
+    )
+      return;
     setBusy(true);
     try {
       await client.deleteUser(user.id);
@@ -135,7 +223,12 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
           <form onSubmit={create}>
             <div className={styles.modalHead}>
               <h2>{strings.adminAddUser}</h2>
-              <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.userClose}>
+              <button
+                type="button"
+                className={styles.iconBtn}
+                onClick={onClose}
+                aria-label={strings.userClose}
+              >
                 <X size={18} />
               </button>
             </div>
@@ -168,7 +261,11 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
             </div>
             <div className={styles.modalFoot}>
               <div className={styles.footSpacer} />
-              <button type="button" className={styles.textBtn} onClick={onClose}>
+              <button
+                type="button"
+                className={styles.textBtn}
+                onClick={onClose}
+              >
                 {strings.providerCancel}
               </button>
               <Button type="submit" disabled={busy}>
@@ -192,7 +289,12 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
       >
         <div className={styles.modalHead}>
           <h2>{user.email}</h2>
-          <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.userClose}>
+          <button
+            type="button"
+            className={styles.iconBtn}
+            onClick={onClose}
+            aria-label={strings.userClose}
+          >
             <X size={18} />
           </button>
         </div>
@@ -226,7 +328,10 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
           <div className={styles.field}>
             <span className={styles.label}>{strings.userRoles}</span>
             <div className={styles.keyRow}>
-              <label className={styles.toggle} aria-label={strings.userAccountantRole}>
+              <label
+                className={styles.toggle}
+                aria-label={strings.userAccountantRole}
+              >
                 <input
                   type="checkbox"
                   checked={accountant}
@@ -238,6 +343,45 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
               <span>{strings.userAccountantRole}</span>
             </div>
             <span className={styles.hint}>{strings.userAccountantHint}</span>
+          </div>
+
+          {/* The apps this person gets (migration 0208). Checked means they
+              have it, which is the sentence an administrator thinks in — the
+              server stores the complement, and neither side has to know.
+
+              The rail hides what is switched off and the API refuses it, so
+              this is a real decision rather than a tidy-up of somebody's
+              sidebar. The hint says so, because "hidden" and "refused" are
+              very different promises and an admin is entitled to know which
+              one they are making. */}
+          <div className={styles.field}>
+            <span className={styles.label}>{strings.userApps}</span>
+            {modules === null ? (
+              <Spinner />
+            ) : (
+              <div className={styles.appGrid}>
+                {modules.map((m) => (
+                  <div key={m.id} className={styles.keyRow}>
+                    <label
+                      className={styles.toggle}
+                      aria-label={MODULE_LABEL[m.id]()}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={m.allowed}
+                        disabled={busy}
+                        onChange={() => void toggleModule(m.id, !m.allowed)}
+                      />
+                      <span className={styles.track} />
+                    </label>
+                    <span>{MODULE_LABEL[m.id]()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <span className={styles.hint}>
+              {isSelf ? strings.userAppsSelfHint : strings.userAppsHint}
+            </span>
           </div>
 
           <div className={styles.field}>
@@ -268,7 +412,11 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
                 }}
                 placeholder={strings.userAliasPlaceholder}
               />
-              <button type="button" className={styles.addChip} onClick={() => void addAlias()}>
+              <button
+                type="button"
+                className={styles.addChip}
+                onClick={() => void addAlias()}
+              >
                 {strings.providerAddModel}
               </button>
             </div>
@@ -281,7 +429,12 @@ export function UserModal({ user, isSelf, onClose, onChanged }: UserModalProps) 
           )}
         </div>
         <div className={styles.modalFoot}>
-          <button type="button" className={styles.dangerBtn} onClick={() => void del()} disabled={busy || isSelf}>
+          <button
+            type="button"
+            className={styles.dangerBtn}
+            onClick={() => void del()}
+            disabled={busy || isSelf}
+          >
             {strings.userDelete}
           </button>
           <div className={styles.footSpacer} />

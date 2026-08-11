@@ -57,6 +57,14 @@ export interface Session {
    * B4.12) — separate from `alo:isAdmin`, which is the console. Absent on a
    * server that predates the roles, which reads as "none". */
   "alo:roles"?: TenantRole[];
+  /** alo extension: the rail modules a tenant admin has switched off for this
+   * person (migration 0208). The shell hides them, because offering an app
+   * that answers 403 is worse than not offering it — but the server refuses
+   * the routes regardless, and a client is never an access decision. Absent
+   * on a server that predates the switches, which reads as "none denied".
+   *
+   * Always empty for an admin, who is never denied. */
+  "alo:deniedModules"?: AppModuleId[];
   /** alo extension: addresses this user may send from (canonical + aliases). */
   "alo:sendAs"?: string[];
   /** RFC 8620 accounts map: the user's own account plus any shared mailboxes
@@ -278,6 +286,39 @@ export interface AiProvider {
  *   reading everybody's contract is exactly the failure `accountant` exists to
  *   prevent, so somebody who genuinely runs both is granted both. */
 export type TenantRole = "accountant" | "hr";
+
+/** A rail module whose access an admin can switch off per person
+ * (migration 0208).
+ *
+ * Mail and Home are absent and cannot be switched off: `/jmap` carries the
+ * session, uploads and the event stream every other surface needs, so a
+ * denial there would read as a broken login rather than as a missing app.
+ *
+ * The same set, spelled the same way, as the store's CHECK and the API's
+ * route table — those two hold each other honest in Rust; this one is the
+ * third copy and is why `AppModuleId` is a union rather than `string`. */
+export type AppModuleId =
+  | "agenda"
+  | "billing"
+  | "chat"
+  | "crm"
+  | "drive"
+  | "finance"
+  | "hr"
+  | "insights"
+  | "inventory"
+  | "meet"
+  | "projects"
+  | "sites"
+  | "tasks";
+
+/** One app switch as the admin console reads it: the module, and whether this
+ * person has it. Reports what was **stored** — an admin is never denied at the
+ * gate, but their own switches are shown as they were set. */
+export interface UserModuleAccess {
+  id: AppModuleId;
+  allowed: boolean;
+}
 
 /** A user in the admin console: identity + read-only usage + aliases + the
  * scoped roles they hold (separate from `isAdmin`, which is the console). */
@@ -632,7 +673,8 @@ export interface SpaceDetailDto {
 
 // ---- Drive (ADR 0027) -------------------------------------------------------
 
-export type DriveNodeKind = "folder" | "file" | "doc" | "sheet" | "slides" | "base";
+export type DriveNodeKind =
+  "folder" | "file" | "doc" | "sheet" | "slides" | "base";
 
 /** A node in the Drive tree. `space` is the Space id when it lives in a Space,
  *  or null for the caller's personal My Files. */
@@ -665,8 +707,15 @@ export interface DriveVersionDto {
 // ---- alo Base (ADR 0032) ----------------------------------------------------
 
 export type BaseFieldType =
-  | "text" | "number" | "date" | "checkbox" | "select"
-  | "multiselect" | "attachment" | "person" | "link";
+  | "text"
+  | "number"
+  | "date"
+  | "checkbox"
+  | "select"
+  | "multiselect"
+  | "attachment"
+  | "person"
+  | "link";
 
 export type BaseViewKind = "grid" | "board" | "calendar" | "gallery";
 
@@ -824,7 +873,12 @@ export interface CategoryProposalsResultDto extends AgentResultDto {
      *  the suggestion, and the reason it is worth showing at all. */
     evidence: number;
   }[];
-  skipped: { id: string; merchant: string | null; spentOn: string | null; reason: string }[];
+  skipped: {
+    id: string;
+    merchant: string | null;
+    spentOn: string | null;
+    reason: string;
+  }[];
   /** How many suggestions were written, as the server counted them. */
   suggested: number;
   /** How many claims were looked at in total. */
@@ -974,7 +1028,13 @@ export interface ReorderProposalsResultDto extends AgentResultDto {
 export interface StockAnswerResultDto extends AgentResultDto {
   /** The catalog item, in the shape the catalog screens read; named here is the
    *  part this card shows. */
-  product: { id: string; name: string; unit: string; sku: string; stocked: boolean };
+  product: {
+    id: string;
+    name: string;
+    unit: string;
+    sku: string;
+    stocked: boolean;
+  };
   stock: {
     locationId: string;
     locationCode: string;

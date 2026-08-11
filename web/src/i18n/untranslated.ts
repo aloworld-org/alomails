@@ -24,4 +24,5 @@
 // them. Both languages address people formally — "u", "vous" — throughout.
 // And the product's own type names are not translated: Space, Base, Sheet and
 // Doc are called that in every language, while the words around them move.
-export const UNTRANSLATED: readonly string[] = [] as const;
+export const UNTRANSLATED: readonly string[] = [
+] as const;

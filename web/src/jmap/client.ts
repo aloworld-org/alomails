@@ -11,6 +11,7 @@ import {
   categoryKeyword,
   type AdminGroup,
   type AdminUser,
+  type AppModuleId,
   type TenantRole,
   type AiProvider,
   type AuditEntry,
@@ -59,6 +60,7 @@ import {
   type AiAnswerDto,
   type AgentAnswerDto,
   type AgentExecuteResultDto,
+  type UserModuleAccess,
 } from "./types";
 import { API_BASE } from "../platform/runtime";
 
@@ -802,7 +804,8 @@ export class JmapClient {
   async canWorkHr(): Promise<boolean> {
     const session = await this.session();
     return (
-      session["alo:isAdmin"] === true || (session["alo:roles"] ?? []).includes("hr")
+      session["alo:isAdmin"] === true ||
+      (session["alo:roles"] ?? []).includes("hr")
     );
   }
 
@@ -918,6 +921,33 @@ export class JmapClient {
     granted: boolean,
   ): Promise<void> {
     await this.#adminPost("/admin/users/roles", { userId, role, granted });
+  }
+
+  /** Which apps a person has, for the admin console (admin).
+   *
+   * Every switchable module with its switch, not just the ones taken away —
+   * a caller that had to subtract one list from another to draw a row of
+   * checkboxes would be reimplementing the endpoint, slightly differently. */
+  async userModules(userId: string): Promise<UserModuleAccess[]> {
+    const out = (await this.#admin(
+      `/admin/users/${encodeURIComponent(userId)}/modules`,
+      { method: "GET" },
+    )) as { modules: UserModuleAccess[] };
+    return out.modules;
+  }
+
+  /** Switch one app on or off for one person (admin, migration 0208).
+   *
+   * One switch per call rather than the whole set, so two administrators
+   * editing the same person cannot silently undo each other: a PUT of the full
+   * list would make the last writer's snapshot win, including the switches
+   * they never touched. */
+  async setUserModule(
+    userId: string,
+    module: AppModuleId,
+    allowed: boolean,
+  ): Promise<void> {
+    await this.#adminPost("/admin/users/modules", { userId, module, allowed });
   }
 
   /** Delete a user and their mail (admin). */

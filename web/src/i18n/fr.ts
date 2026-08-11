@@ -4788,4 +4788,10 @@ export const fr: Partial<Catalog> = {
   hrWaitingCount: (count: number) =>
     count === 1 ? "1 en attente" : `${count} en attente`,
   hrWorkingDays: (days: number) => (days === 1 ? "1 jour" : `${days} jours`),
+  userApps: "Applications",
+  userAppsHint: "Seules les applications cochées apparaissent dans la navigation de cette personne, et le serveur refuse les autres — ceci ne masque pas, ceci ferme. Le courrier et l’accueil ne peuvent pas être désactivés. Cocher une application ne donne pas accès à tout ce qu’elle contient : Finance demande toujours le rôle de comptable, et un Space toujours d’en être membre.",
+  userAppsSelfHint: "Ceci est votre propre compte. Un administrateur n’est jamais exclu, donc ces interrupteurs ne changent rien à ce que vous pouvez ouvrir — ils sont conservés au cas où ce compte cesserait un jour d’être administrateur.",
+  accessModuleOff: "Cette application est désactivée pour votre compte.",
+  accessModuleOffHint: "Un administrateur de l’espace de travail peut la réactiver.",
+  accessBackHome: "Retour à l’accueil",
 };

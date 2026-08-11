@@ -1091,3 +1091,14 @@
 .accessSelect:disabled {
   opacity: 0.55;
 }
+
+/* The per-user app switches (migration 0208). Thirteen rows stacked would push
+   the aliases and the delete button below the fold of the modal, so they wrap
+   into columns that fit whatever width the dialog has — `auto-fill` rather than
+   a fixed count, because the labels are translated and Dutch runs longer than
+   English. */
+.appGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--space-2) var(--space-4);
+}

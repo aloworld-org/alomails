@@ -4738,4 +4738,10 @@ export const nl: Partial<Catalog> = {
   hrWaitingCount: (count: number) =>
     count === 1 ? "1 wachtend" : `${count} wachtend`,
   hrWorkingDays: (days: number) => (days === 1 ? "1 dag" : `${days} dagen`),
+  userApps: "Apps",
+  userAppsHint: "Alleen de aangevinkte apps staan in de navigatie van deze persoon, en de server weigert de rest — dit verbergt niet alleen, het sluit ook af. E-mail en Start kunnen niet worden uitgezet. Een app aanvinken geeft nog geen toegang tot alles erin: Finance vraagt nog steeds om de boekhoudersrol en een Space nog steeds om lidmaatschap.",
+  userAppsSelfHint: "Dit is uw eigen account. Beheerders worden nooit buitengesloten, dus deze schakelaars veranderen niets aan wat u kunt openen — ze worden bewaard voor als dit account ooit geen beheerder meer is.",
+  accessModuleOff: "Deze app is uitgezet voor uw account.",
+  accessModuleOffHint: "Een beheerder van de werkruimte kan hem weer aanzetten.",
+  accessBackHome: "Terug naar Start",
 };

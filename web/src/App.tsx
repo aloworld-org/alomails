@@ -7,11 +7,48 @@ import { Fragment } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { useLocale } from "./i18n";
-import { AuthProvider, ForgotPasswordPage, LoginPage, RequireAuth } from "./auth";
+import {
+  AuthProvider,
+  ForgotPasswordPage,
+  LoginPage,
+  RequireAuth,
+} from "./auth";
 import { SignupPage } from "./signup";
-import { AppShell, ComingSoon } from "./shell";
+import {
+  AppShell,
+  ComingSoon,
+  ModuleSwitchedOff,
+  isModuleAllowed,
+  useDeniedModules,
+} from "./shell";
 import { surface } from "./product";
+import type { ProductModule } from "./product";
 import { DialogProvider } from "./ds";
+
+/**
+ * One module's route, with its per-user switch honoured (migration 0208).
+ *
+ * The rail already leaves a switched-off app out, so this is reached by a
+ * typed URL, an old bookmark or a colleague's link. Rendering the module
+ * anyway would mount a screen whose every request answers 403 — a wall of
+ * error states instead of a sentence.
+ *
+ * It waits rather than guessing while the answer is unknown. The alternative,
+ * rendering the module and swapping it for the notice a moment later, means
+ * firing the module's requests before finding out they were not wanted.
+ */
+function ModuleRoute({ module }: { module: ProductModule }) {
+  const denied = useDeniedModules();
+  if (denied === null) return null;
+  if (!isModuleAllowed(denied, module.id)) {
+    return <ModuleSwitchedOff />;
+  }
+  return module.element ? (
+    module.element()
+  ) : (
+    <ComingSoon title={module.label} Icon={module.Icon} />
+  );
+}
 
 export function App() {
   // Subscribe to the active language. Keying the route tree on the locale
@@ -23,39 +60,46 @@ export function App() {
     <BrowserRouter>
       <AuthProvider>
         <DialogProvider>
-        <Fragment key={locale}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            {/* Public personal signup (ADR 0018); the page hides itself when no
+          <Fragment key={locale}>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              {/* Public personal signup (ADR 0018); the page hides itself when no
                 personal domains are configured. */}
-            <Route path="/signup" element={<SignupPage />} />
-            <Route path="/reset" element={<ForgotPasswordPage />} />
-            {/* The OIDC redirect target; the login flow reads the code inline, so
+              <Route path="/signup" element={<SignupPage />} />
+              <Route path="/reset" element={<ForgotPasswordPage />} />
+              {/* The OIDC redirect target; the login flow reads the code inline, so
                 a stray navigation here just returns to the app. */}
-            <Route path="/auth/callback" element={<Navigate to={surface.defaultPath} replace />} />
+              <Route
+                path="/auth/callback"
+                element={<Navigate to={surface.defaultPath} replace />}
+              />
 
-            <Route element={<RequireAuth />}>
-              {/* Full-screen consoles (own shell, gated internally) — e.g. tenant
+              <Route element={<RequireAuth />}>
+                {/* Full-screen consoles (own shell, gated internally) — e.g. tenant
                   admin, and the control plane in the workspace product. */}
-              {surface.consoles.map((c) => (
-                <Route key={c.path} path={c.path} element={c.element()} />
-              ))}
-              <Route element={<AppShell />}>
-                <Route index element={<Navigate to={surface.defaultPath} replace />} />
-                {surface.modules.map((m) => (
-                  <Route
-                    key={m.id}
-                    path={`${m.path}/*`}
-                    element={
-                      m.element ? m.element() : <ComingSoon title={m.label} Icon={m.Icon} />
-                    }
-                  />
+                {surface.consoles.map((c) => (
+                  <Route key={c.path} path={c.path} element={c.element()} />
                 ))}
-                <Route path="*" element={<Navigate to={surface.defaultPath} replace />} />
+                <Route element={<AppShell />}>
+                  <Route
+                    index
+                    element={<Navigate to={surface.defaultPath} replace />}
+                  />
+                  {surface.modules.map((m) => (
+                    <Route
+                      key={m.id}
+                      path={`${m.path}/*`}
+                      element={<ModuleRoute module={m} />}
+                    />
+                  ))}
+                  <Route
+                    path="*"
+                    element={<Navigate to={surface.defaultPath} replace />}
+                  />
+                </Route>
               </Route>
-            </Route>
-          </Routes>
-        </Fragment>
+            </Routes>
+          </Fragment>
         </DialogProvider>
       </AuthProvider>
     </BrowserRouter>
