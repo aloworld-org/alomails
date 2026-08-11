@@ -3,17 +3,29 @@
 // ＋New and ✦AI surfaces (placeholders this pass). Nothing here is
 // mail-specific — every module lives inside this same frame.
 import { useEffect, useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { Sparkles, X } from "lucide-react";
 
 import { strings } from "../i18n";
 import { IconButton } from "../ds";
 import { Rail } from "./Rail";
 import { ComingSoon } from "./ComingSoon";
+import { surface } from "../product";
+import { recordAppVisit } from "./appUsage";
 import { SearchOverlay } from "./SearchOverlay";
 import styles from "./AppShell.module.css";
 
 export function AppShell() {
+  const location = useLocation();
+  useEffect(() => {
+    const id = surface.modules.find(
+      (module) =>
+        location.pathname === module.path ||
+        location.pathname.startsWith(`${module.path}/`),
+    )?.id;
+    if (id !== undefined) recordAppVisit(id);
+  }, [location.pathname]);
+
   const [aiOpen, setAiOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 

@@ -434,7 +434,8 @@ function describeAction(action: AgentActionDto): ActionView {
         fields: [
           {
             label: strings.agentFieldSupplier,
-            value: supplier === "" ? strings.agentReorderEverySupplier : supplier,
+            value:
+              supplier === "" ? strings.agentReorderEverySupplier : supplier,
           },
           {
             label: strings.agentFieldLocation,

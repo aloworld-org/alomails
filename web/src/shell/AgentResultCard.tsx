@@ -775,7 +775,8 @@ function ReorderProposalsResult({
         <Row
           label={strings.agentFieldSupplier}
           value={
-            proposals.supplier?.supplierName ?? strings.agentReorderEverySupplier
+            proposals.supplier?.supplierName ??
+            strings.agentReorderEverySupplier
           }
         />
         <Row

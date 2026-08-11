@@ -18,6 +18,7 @@ import { NavLink } from "react-router-dom";
 import { strings } from "../i18n";
 import { cx } from "../ds";
 import { surface } from "../product";
+import { mostUsedApps } from "./appUsage";
 import { Logo } from "./Logo";
 import { UserMenu } from "./UserMenu";
 import styles from "./Rail.module.css";
@@ -32,7 +33,17 @@ const FAVORITES_KEY = "alo-rail-favorites";
 export function Rail({ onAskAi }: RailProps) {
   const apps = surface.modules.filter((module) => module.id !== "home");
   const home = surface.modules.find((module) => module.id === "home");
-  const defaultFavorites = apps.slice(0, 6).map((module) => module.id);
+  // What this person actually opens, strongest first. Only when they have
+  // used nothing yet do we fall back to declaration order, which is a guess
+  // about somebody made before they did anything.
+  const used = mostUsedApps(6).filter((id) => apps.some((a) => a.id === id));
+  const defaultFavorites =
+    used.length > 0
+      ? [
+          ...used,
+          ...apps.map((m) => m.id).filter((id) => !used.includes(id)),
+        ].slice(0, 6)
+      : apps.slice(0, 6).map((module) => module.id);
   const [favorites, setFavorites] = useState<string[]>(() => {
     try {
       const saved = JSON.parse(
