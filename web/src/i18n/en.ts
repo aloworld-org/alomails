@@ -71,6 +71,7 @@ export const en = {
   // shell
   newButton: "New",
   appLauncher: "Apps",
+  appLauncherAutoHint: "The apps you use most, kept up to date automatically",
   appLauncherFavorites: "Your favorites",
   appLauncherAll: "All apps",
   appLauncherEdit: "Edit favorites",

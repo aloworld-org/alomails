@@ -4,15 +4,7 @@
 // scrolls and never changes between modules; only the panel to its right does.
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import {
-  Check,
-  Grip,
-  GripVertical,
-  Pencil,
-  Plus,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { Grip, Sparkles } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 import { strings } from "../i18n";
@@ -28,43 +20,19 @@ interface RailProps {
   onAskAi: () => void;
 }
 
-const FAVORITES_KEY = "alo-rail-favorites";
-
 export function Rail({ onAskAi }: RailProps) {
   const apps = surface.modules.filter((module) => module.id !== "home");
   const home = surface.modules.find((module) => module.id === "home");
-  // What this person actually opens, strongest first. Only when they have
-  // used nothing yet do we fall back to declaration order, which is a guess
-  // about somebody made before they did anything.
+  // Derived, never stored: the six you have been using, recomputed whenever
+  // the rail mounts. There is no saved list because there is nothing to save —
+  // a shortcut list you have to maintain is a chore, and this one maintains
+  // itself.
   const used = mostUsedApps(6).filter((id) => apps.some((a) => a.id === id));
-  const defaultFavorites =
-    used.length > 0
-      ? [
-          ...used,
-          ...apps.map((m) => m.id).filter((id) => !used.includes(id)),
-        ].slice(0, 6)
-      : apps.slice(0, 6).map((module) => module.id);
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    try {
-      const saved = JSON.parse(
-        window.localStorage.getItem(FAVORITES_KEY) ?? "[]",
-      ) as unknown;
-      if (Array.isArray(saved)) {
-        const valid = saved.filter(
-          (id): id is string =>
-            typeof id === "string" && apps.some((app) => app.id === id),
-        );
-        if (valid.length > 0) return [...new Set(valid)].slice(0, 6);
-      }
-    } catch {
-      // A corrupt preference should never prevent navigation from rendering.
-    }
-    return defaultFavorites;
-  });
+  const favorites = [
+    ...used,
+    ...apps.map((m) => m.id).filter((id) => !used.includes(id)),
+  ].slice(0, 6);
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(favorites);
-  const draggedRef = useRef<string | null>(null);
   const launcherTriggerRef = useRef<HTMLLIElement>(null);
   const launcherPanelRef = useRef<HTMLDivElement>(null);
 
@@ -77,13 +45,11 @@ export function Rail({ onAskAi }: RailProps) {
         !launcherPanelRef.current?.contains(target)
       ) {
         setOpen(false);
-        setEditing(false);
       }
     };
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
-        setEditing(false);
       }
     };
     document.addEventListener("pointerdown", close);
@@ -98,42 +64,6 @@ export function Rail({ onAskAi }: RailProps) {
     const module = apps.find((app) => app.id === id);
     return module === undefined ? [] : [module];
   });
-  const draftModules = draft.flatMap((id) => {
-    const module = apps.find((app) => app.id === id);
-    return module === undefined ? [] : [module];
-  });
-
-  const saveFavorites = () => {
-    setFavorites(draft);
-    window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(draft));
-    setEditing(false);
-  };
-
-  const toggleFavorite = (id: string) => {
-    setDraft((current) =>
-      current.includes(id)
-        ? current.filter((favorite) => favorite !== id)
-        : current.length < 6
-          ? [...current, id]
-          : current,
-    );
-  };
-
-  const moveFavorite = (target: string) => {
-    const dragged = draggedRef.current;
-    if (dragged === null || dragged === target) return;
-    setDraft((current) => {
-      const from = current.indexOf(dragged);
-      const to = current.indexOf(target);
-      if (from < 0 || to < 0) return current;
-      const next = [...current];
-      const [moved] = next.splice(from, 1);
-      if (moved === undefined) return current;
-      next.splice(to, 0, moved);
-      return next;
-    });
-    draggedRef.current = null;
-  };
 
   return (
     <nav className={styles.rail} aria-label={strings.appName}>
@@ -168,7 +98,6 @@ export function Rail({ onAskAi }: RailProps) {
             className={cx(styles.item, open && styles.active)}
             onClick={() => {
               setOpen((current) => !current);
-              setEditing(false);
             }}
             aria-expanded={open}
             aria-haspopup="dialog"
@@ -186,117 +115,17 @@ export function Rail({ onAskAi }: RailProps) {
                 aria-label={strings.appLauncher}
               >
                 <div className={styles.launcherHead}>
-                  {editing ? (
-                    <>
-                      <button
-                        type="button"
-                        className={styles.launcherSecondary}
-                        onClick={() => {
-                          setDraft(favorites);
-                          setEditing(false);
-                        }}
-                      >
-                        {strings.appLauncherCancel}
-                      </button>
-                      <strong>{strings.appLauncherDragHint}</strong>
-                      <button
-                        type="button"
-                        className={styles.launcherPrimary}
-                        onClick={saveFavorites}
-                        disabled={draft.length !== 6}
-                      >
-                        <Check size={15} />
-                        {strings.appLauncherDone}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <strong>{strings.appLauncherFavorites}</strong>
-                      <button
-                        type="button"
-                        className={styles.launcherEdit}
-                        onClick={() => {
-                          setDraft(favorites);
-                          setEditing(true);
-                        }}
-                        aria-label={strings.appLauncherEdit}
-                        title={strings.appLauncherEdit}
-                      >
-                        <Pencil size={17} />
-                      </button>
-                    </>
-                  )}
+                  <strong>{strings.appLauncherFavorites}</strong>
+                  {/* Said once, because a list that rearranges itself is
+                      confusing until somebody knows why it does. */}
+                  <span className={styles.launcherHint}>
+                    {strings.appLauncherAutoHint}
+                  </span>
                 </div>
                 <div className={styles.launcherScroll}>
                   <div className={styles.favoriteCard}>
                     <div className={styles.appGrid}>
-                      {(editing ? draftModules : favoriteModules).map((app) =>
-                        editing ? (
-                          <button
-                            key={app.id}
-                            type="button"
-                            className={styles.appTile}
-                            draggable
-                            onDragStart={() => {
-                              draggedRef.current = app.id;
-                            }}
-                            onDragEnd={() => {
-                              draggedRef.current = null;
-                            }}
-                            onDragOver={(event) => event.preventDefault()}
-                            onDrop={() => moveFavorite(app.id)}
-                            onClick={() => toggleFavorite(app.id)}
-                            title={strings.appLauncherRemoveFavorite}
-                          >
-                            <GripVertical
-                              className={styles.dragHandle}
-                              size={14}
-                            />
-                            <app.Icon />
-                            <span>{app.label}</span>
-                            <X className={styles.removeFavorite} size={13} />
-                          </button>
-                        ) : (
-                          <NavLink
-                            key={app.id}
-                            to={app.path}
-                            className={cx(styles.appTile)}
-                            onClick={() => setOpen(false)}
-                          >
-                            <app.Icon />
-                            <span>{app.label}</span>
-                          </NavLink>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                  <h3>{strings.appLauncherAll}</h3>
-                  <div className={styles.appGrid}>
-                    {apps.map((app) =>
-                      editing ? (
-                        <button
-                          key={app.id}
-                          type="button"
-                          className={cx(
-                            styles.appTile,
-                            draft.includes(app.id) && styles.appTileFavorite,
-                          )}
-                          onClick={() => toggleFavorite(app.id)}
-                          title={
-                            draft.includes(app.id)
-                              ? strings.appLauncherRemoveFavorite
-                              : strings.appLauncherAddFavorite
-                          }
-                        >
-                          <app.Icon />
-                          <span>{app.label}</span>
-                          {draft.includes(app.id) ? (
-                            <Check className={styles.favoriteMark} size={14} />
-                          ) : (
-                            <Plus className={styles.favoriteMark} size={14} />
-                          )}
-                        </button>
-                      ) : (
+                      {favoriteModules.map((app) => (
                         <NavLink
                           key={app.id}
                           to={app.path}
@@ -306,8 +135,22 @@ export function Rail({ onAskAi }: RailProps) {
                           <app.Icon />
                           <span>{app.label}</span>
                         </NavLink>
-                      ),
-                    )}
+                      ))}
+                    </div>
+                  </div>
+                  <h3>{strings.appLauncherAll}</h3>
+                  <div className={styles.appGrid}>
+                    {apps.map((app) => (
+                      <NavLink
+                        key={app.id}
+                        to={app.path}
+                        className={cx(styles.appTile)}
+                        onClick={() => setOpen(false)}
+                      >
+                        <app.Icon />
+                        <span>{app.label}</span>
+                      </NavLink>
+                    ))}
                   </div>
                 </div>
               </div>,
