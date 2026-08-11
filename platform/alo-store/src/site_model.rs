@@ -3,7 +3,7 @@
 //! A page's `sections` JSON is the envelope [`SectionsEnvelope`] —
 //! `{ "schema_version": 1, "sections": [ … ] }` — where every entry is one
 //! variant of [`Section`], an internally-tagged serde enum with a closed
-//! vocabulary of twelve section types. The schema is **strict on write**:
+//! vocabulary of thirteen section types. The schema is **strict on write**:
 //! unknown section types and unknown props are validation errors here, because
 //! the only writers (the editor UI and the AI ops path) speak this schema
 //! exactly. Read-side tolerance (skip-with-log on unknown sections, so an old
@@ -16,7 +16,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::id::BlobId;
+use crate::id::{BlobId, SiteCollectionId};
 
 /// The current sections schema version. Version bumps ship an explicit pure
 /// upgrade function (v1 → v2) applied on read; stored JSON is rewritten
@@ -343,6 +343,17 @@ pub struct FooterSection {
     pub links: Vec<Link>,
 }
 
+/// A reusable card collection whose rows are frozen from alo Base at
+/// publish time. The section stores only the stable binding id and optional
+/// presentation heading; public rendering never reads the live Base.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CollectionSection {
+    pub collection_id: SiteCollectionId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heading: Option<String>,
+}
+
 /// One section of a page — the closed v1 vocabulary. The wire tag is the
 /// `type` prop (`{"type": "hero", …}`); unknown tags and unknown props are
 /// rejected on write.
@@ -371,6 +382,8 @@ pub enum Section {
     Cta(CtaSection),
     /// Contact form.
     ContactForm(ContactFormSection),
+    /// Cards resolved from an alo Base collection at publish time.
+    Collection(CollectionSection),
     /// Page footer.
     Footer(FooterSection),
 }
@@ -390,6 +403,7 @@ impl Section {
             Section::Faq(_) => "faq",
             Section::Cta(_) => "cta",
             Section::ContactForm(_) => "contact_form",
+            Section::Collection(_) => "collection",
             Section::Footer(_) => "footer",
         }
     }
@@ -416,6 +430,7 @@ impl Section {
             | Section::Faq(_)
             | Section::Cta(_)
             | Section::ContactForm(_)
+            | Section::Collection(_)
             | Section::Footer(_) => Vec::new(),
         }
     }
@@ -524,6 +539,10 @@ impl Section {
                     check_token(kind, "form_id", form_id)?;
                 }
                 check_opt_short(kind, "success_message", s.success_message.as_deref())
+            }
+            Section::Collection(s) => {
+                check_token(kind, "collection_id", s.collection_id.as_str())?;
+                check_opt_short(kind, "heading", s.heading.as_deref())
             }
             Section::Footer(s) => {
                 check_opt_short(kind, "text", s.text.as_deref())?;
@@ -895,6 +914,10 @@ mod tests {
                 form_id: Some("f4K9sL2wN7qR5tYx8vB1cA".to_owned()),
                 success_message: Some("Thanks — talk soon.".to_owned()),
             }),
+            Section::Collection(CollectionSection {
+                collection_id: SiteCollectionId::new("seasonal-roasts"),
+                heading: Some("Seasonal roasts".to_owned()),
+            }),
             Section::Footer(FooterSection {
                 text: Some("© Nordwind Coffee Roasters".to_owned()),
                 links: vec![link("Imprint", "/imprint"), link("Privacy", "/privacy")],
@@ -912,7 +935,7 @@ mod tests {
     #[test]
     fn every_variant_round_trips_fully_populated() {
         let before = envelope(full_sections());
-        assert_eq!(before.sections.len(), 12, "corpus must cover all variants");
+        assert_eq!(before.sections.len(), 13, "corpus must cover all variants");
         before.validate().unwrap();
         let value = before.to_value().unwrap();
         let after = SectionsEnvelope::from_value(value).unwrap();
@@ -996,7 +1019,7 @@ mod tests {
     }
 
     #[test]
-    fn wire_tags_are_the_twelve_snake_case_tokens() {
+    fn wire_tags_are_the_thirteen_snake_case_tokens() {
         let expected = [
             "nav",
             "hero",
@@ -1009,6 +1032,7 @@ mod tests {
             "faq",
             "cta",
             "contact_form",
+            "collection",
             "footer",
         ];
         for (section, expected) in full_sections().iter().zip(expected) {

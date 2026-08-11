@@ -392,7 +392,9 @@ pub use signup::PendingSignup;
 pub use site_analytics::{SiteAnalyticsDay, SiteAnalyticsRank, SiteAnalyticsReport};
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
 pub use site_collections::{
-    SITE_COLLECTION_NAME_MAX_CHARS, SiteCollection, SiteCollectionFieldMapping, SiteCollectionInput,
+    SITE_COLLECTION_BODY_MAX_CHARS, SITE_COLLECTION_MAX_ITEMS, SITE_COLLECTION_NAME_MAX_CHARS,
+    SITE_COLLECTION_TITLE_MAX_CHARS, SiteCollection, SiteCollectionFieldMapping,
+    SiteCollectionInput, SiteCollectionItem, SiteCollectionSnapshot,
 };
 pub use site_domains::{SITE_DOMAIN_MAX_LEN, SiteDomain, SiteDomainStatus, normalize_site_domain};
 pub use site_form_notify::FormNotification;

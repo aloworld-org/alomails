@@ -56,7 +56,7 @@ async fn collection_bindings_validate_table_membership_and_field_roles() {
         .await
         .unwrap();
     let link = account
-        .base_add_field(&table, "Profile", "link", &json!({}))
+        .base_add_field(&table, "Profile URL", "text", &json!({}))
         .await
         .unwrap();
     let published_at = account

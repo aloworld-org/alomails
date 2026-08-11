@@ -23,7 +23,8 @@ use crate::blob::BlobStore;
 use crate::error::{Result, StoreError};
 use crate::id::{BlobId, SiteId, SitePublishId, TenantId};
 use crate::site_assets::{SiteImageData, site_image_content_type};
-use crate::site_publish::{SitePageSnapshot, SitePageSnapshotRow};
+use crate::site_collections::SiteCollectionSnapshot;
+use crate::site_publish::{SiteCollectionSnapshotRow, SitePageSnapshot, SitePageSnapshotRow};
 
 /// A site resolved for public serving: the current publish of a live site.
 /// Only the [`SitePublicStore`] Host resolvers construct this — the private
@@ -189,6 +190,27 @@ impl SitePublicStore {
             .into_iter()
             .map(SitePageSnapshotRow::into_snapshot)
             .collect())
+    }
+
+    /// The immutable Base-backed collections frozen beside the resolved
+    /// pages. The caller cannot supply tenant or publish identifiers, so a
+    /// live host can reach only its own current collection rows.
+    pub async fn published_collections(
+        &self,
+        site: &PublishedSite,
+    ) -> Result<Vec<SiteCollectionSnapshot>> {
+        let rows = sqlx::query_as::<_, SiteCollectionSnapshotRow>(
+            "SELECT collection_id, name, items FROM site_collection_snapshots \
+             WHERE tenant_id = $1 AND publish_id = $2 ORDER BY collection_id",
+        )
+        .bind(site.tenant.as_str())
+        .bind(site.publish.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        rows.into_iter()
+            .map(SiteCollectionSnapshotRow::into_snapshot)
+            .collect()
     }
 
     /// A bounded page of published blog metadata for a resolved live site,

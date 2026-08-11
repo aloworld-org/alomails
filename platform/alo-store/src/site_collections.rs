@@ -15,6 +15,39 @@ use crate::id::{BaseFieldId, BaseTableId, DriveNodeId, SiteCollectionId, SiteId}
 
 /// Maximum length of the editor-facing collection name.
 pub const SITE_COLLECTION_NAME_MAX_CHARS: usize = 120;
+/// Maximum number of Base rows one collection may freeze in one publish.
+pub const SITE_COLLECTION_MAX_ITEMS: usize = 200;
+/// Maximum display length of one collection card title.
+pub const SITE_COLLECTION_TITLE_MAX_CHARS: usize = 300;
+/// Maximum length of collection summary/body values.
+pub const SITE_COLLECTION_BODY_MAX_CHARS: usize = 5_000;
+
+/// One normalized public card frozen from a Base record.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SiteCollectionItem {
+    pub title: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub slug: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub summary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image: Option<crate::id::BlobId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub link: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub published_at: Option<String>,
+}
+
+/// One immutable collection snapshot belonging to a site publish.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SiteCollectionSnapshot {
+    pub collection_id: SiteCollectionId,
+    pub name: String,
+    pub items: Vec<SiteCollectionItem>,
+}
 
 /// Stable semantic roles used by collection cards and detail pages.
 ///
@@ -226,13 +259,18 @@ fn validate_collection_name(name: &str) -> Result<()> {
     Ok(())
 }
 
-fn validate_mapping(table: &BaseTable, mapping: &SiteCollectionFieldMapping) -> Result<()> {
+pub(crate) fn validate_mapping(
+    table: &BaseTable,
+    mapping: &SiteCollectionFieldMapping,
+) -> Result<()> {
     require_field(table, &mapping.title, "title", &["text"])?;
     require_optional_field(table, mapping.slug.as_ref(), "slug", &["text"])?;
     require_optional_field(table, mapping.summary.as_ref(), "summary", &["text"])?;
     require_optional_field(table, mapping.body.as_ref(), "body", &["text"])?;
     require_optional_field(table, mapping.image.as_ref(), "image", &["attachment"])?;
-    require_optional_field(table, mapping.link.as_ref(), "link", &["link", "text"])?;
+    // Base's `link` field is relational (an array of record ids), not a URL.
+    // Public card destinations therefore intentionally map from plain text.
+    require_optional_field(table, mapping.link.as_ref(), "link", &["text"])?;
     require_optional_field(
         table,
         mapping.published_at.as_ref(),

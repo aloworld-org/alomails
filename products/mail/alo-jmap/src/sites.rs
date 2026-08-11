@@ -22,7 +22,7 @@
 //! schema write gate; the editor is single-writer per page by design, so no
 //! optimistic-concurrency header exists yet (recorded as an S2 seam).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 use alo_ai::{
@@ -1762,12 +1762,17 @@ async fn render_preview_html(
     } else {
         format!("{language_prefix}/{}", page.slug)
     };
+    // Collection rows are attached to the authenticated preview in S2.02c;
+    // until then the schema remains safely previewable with the public empty
+    // state rather than reaching around the account door into Base here.
+    let collections = HashMap::new();
     let page_ctx = PageRenderContext {
         path: &path,
         title: &page.title,
         seo_title: page.seo_title.as_deref(),
         seo_description: page.seo_description.as_deref(),
         sections,
+        collections: &collections,
     };
     render_page_preview(&site_ctx, &page_ctx, &stylesheet(&theme))
 }
