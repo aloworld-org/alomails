@@ -1000,6 +1000,31 @@ export interface StockAnswerResultDto extends AgentResultDto {
   }[];
 }
 
+/** What `who_is_off` read (B6.09): which colleagues are away over the days it
+ *  was asked about — a name, an employee id and a day, and deliberately nothing
+ *  else. The absence layer never loads the policy, the kind of leave or the
+ *  note, so there is no reason here to render and none to infer.
+ *
+ *  `awayDays` is a **count of days**, not a span: somebody off on Monday and on
+ *  Friday has `awayDays: 2` with `firstDay` Monday and `lastDay` Friday, and
+ *  worked the days between. `days` carries the layer's own per-day shape (days
+ *  with nobody away are omitted), so an empty one over a real `daysInRange` is
+ *  the useful answer "nobody is off". */
+export interface WhoIsOffResultDto extends AgentResultDto {
+  from: string;
+  to: string;
+  /** How many days the window covered, as the server counted them. */
+  daysInRange: number;
+  people: {
+    employeeId: string;
+    name: string;
+    awayDays: number;
+    firstDay: string;
+    lastDay: string;
+  }[];
+  days: { day: string; people: { employeeId: string; name: string }[] }[];
+}
+
 /** What `project_status_summary` read: figures only. The server composes no
  *  sentence — every label around these numbers comes from the UI's own
  *  catalogue, so the summary is in the reader's language. */

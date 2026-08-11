@@ -21,6 +21,7 @@ use crate::agent_billing as billing;
 use crate::agent_crm as crm;
 use crate::agent_finance as finance;
 use crate::agent_finance_answers as finance_answers;
+use crate::agent_hr as hr;
 use crate::agent_inventory as inventory;
 use crate::agent_projects as projects;
 use crate::agent_timesheet as timesheet;
@@ -265,6 +266,10 @@ pub(crate) async fn execute_tool(
         // presses send on the purchase-orders screen.
         "reorder_proposals" => inventory::execute_reorder_proposals(account, args).await,
         "stock_answer" => inventory::execute_stock_answer(account, args).await,
+        // alo HR's one tool so far (B6.09). It **answers**: who is away over a
+        // stated range, from the same layer the Agenda draws — names and days,
+        // never a reason, and nothing is written, booked or announced.
+        "who_is_off" => hr::execute_who_is_off(account, args, state).await,
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
     }

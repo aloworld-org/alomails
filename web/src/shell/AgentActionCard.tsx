@@ -32,6 +32,7 @@ import {
   Sparkles,
   Tags,
   Trash2,
+  UserMinus,
   type LucideIcon,
 } from "lucide-react";
 
@@ -532,6 +533,28 @@ function describeAction(action: AgentActionDto): ActionView {
           { label: strings.agentFieldLookingFor, value: str(a, "query") },
         ],
       };
+    // The HR agent's one read (B6.09). The days are shown because they are the
+    // whole of what is being approved — "who is off" over the wrong week is a
+    // different question — and the note says what the answer will and will not
+    // contain, before it is read rather than after.
+    case "who_is_off": {
+      const from = str(a, "from");
+      const to = str(a, "to");
+      return {
+        icon: UserMinus,
+        title: strings.agentActWhoIsOff,
+        fields: [
+          {
+            label: strings.agentFieldWhen,
+            value:
+              to === "" || to === from
+                ? dayAt(from)
+                : `${dayAt(from)} — ${dayAt(to)}`,
+          },
+        ],
+        note: strings.agentWhoIsOffNote,
+      };
+    }
     default:
       return {
         icon: Sparkles,

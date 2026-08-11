@@ -81,6 +81,7 @@ export {
   type JournalAnomaliesResultDto,
   type ReorderProposalsResultDto,
   type StockAnswerResultDto,
+  type WhoIsOffResultDto,
   type VatSummaryResultDto,
   type VatSummarySideDto,
   type ProjectStatusResultDto,

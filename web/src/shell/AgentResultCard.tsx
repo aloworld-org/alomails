@@ -21,6 +21,7 @@ import {
   ScanSearch,
   ShoppingCart,
   Tags,
+  UserMinus,
 } from "lucide-react";
 
 import { formatAmount, formatRate } from "../billing";
@@ -39,6 +40,7 @@ import type {
   TimesheetDraftResultDto,
   VatSummaryResultDto,
   VatSummarySideDto,
+  WhoIsOffResultDto,
 } from "../jmap";
 import { qtyLabel } from "../inventory/format";
 import { dayLabel, durationLabel, percentLabel } from "../projects/format";
@@ -134,6 +136,15 @@ function isStockAnswer(result: AgentResultDto): result is StockAnswerResultDto {
     result.kind === "stockAnswer" &&
     "stock" in result &&
     "availableQtyMilli" in result
+  );
+}
+
+/** A `whoIsOff` result — which colleagues are away (B6.09). An empty `people`
+ *  over a real window is the useful answer "nobody is off", so the shape is what
+ *  is checked, not its contents. */
+function isWhoIsOff(result: AgentResultDto): result is WhoIsOffResultDto {
+  return (
+    result.kind === "whoIsOff" && "people" in result && "daysInRange" in result
   );
 }
 
@@ -943,6 +954,76 @@ function StockAnswerResult({ answer }: { answer: StockAnswerResultDto }) {
   );
 }
 
+/** Who is away, and for how much of the window.
+ *
+ *  One line per colleague: their name, the days counted, and — only when it says
+ *  something the count does not — the first and last of them. Two days apart are
+ *  never drawn as the span between them, because the person worked the days in
+ *  between (the server's `awayDays` is a count, not a duration).
+ *
+ *  What the card does not draw is the point of it: there is no reason, no kind
+ *  of leave and no note in this answer, because the layer behind it never loads
+ *  one. The footer says so, so a reader does not go looking. */
+function WhoIsOffResult({ answer }: { answer: WhoIsOffResultDto }) {
+  return (
+    <div className={styles.card}>
+      <div className={styles.header}>
+        <UserMinus size={16} aria-hidden />
+        <span>{strings.agentActWhoIsOff}</span>
+      </div>
+      <div className={styles.rows}>
+        <Row
+          label={strings.agentFieldWhen}
+          value={
+            answer.from === answer.to
+              ? dayLabel(answer.from)
+              : strings.agentDraftedRange(
+                  dayLabel(answer.from),
+                  dayLabel(answer.to),
+                )
+          }
+          aside={strings.agentWhoIsOffDays(answer.daysInRange)}
+        />
+        <Row
+          label={strings.agentWhoIsOffAway}
+          value={
+            answer.people.length === 0
+              ? strings.agentWhoIsOffNobody
+              : strings.agentWhoIsOffCount(answer.people.length)
+          }
+        />
+      </div>
+      {answer.people.length > 0 && (
+        <ul className={styles.list}>
+          {answer.people.map((person) => (
+            <li key={person.employeeId} className={styles.item}>
+              <span className={styles.itemName}>
+                {person.name}
+                {person.firstDay !== person.lastDay && (
+                  <span className={styles.aside}>
+                    {" "}
+                    ·{" "}
+                    {strings.agentDraftedRange(
+                      dayLabel(person.firstDay),
+                      dayLabel(person.lastDay),
+                    )}
+                  </span>
+                )}
+              </span>
+              <span className={styles.itemMinutes}>
+                {person.awayDays === 1 && person.firstDay === person.lastDay
+                  ? dayLabel(person.firstDay)
+                  : strings.agentWhoIsOffDays(person.awayDays)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className={styles.note}>{strings.agentWhoIsOffFooter}</p>
+    </div>
+  );
+}
+
 export function AgentResultCard({ result }: { result: AgentResultDto }) {
   if (isProjectStatus(result)) return <ProjectStatusResult status={result} />;
   if (isTimeEntry(result)) return <TimeEntryResult entry={result} />;
@@ -955,6 +1036,7 @@ export function AgentResultCard({ result }: { result: AgentResultDto }) {
   if (isReorderProposals(result))
     return <ReorderProposalsResult proposals={result} />;
   if (isStockAnswer(result)) return <StockAnswerResult answer={result} />;
+  if (isWhoIsOff(result)) return <WhoIsOffResult answer={result} />;
   // Every other tool: the confirmation this overlay has always shown.
   return <p className={styles.note}>{strings.agentDone}</p>;
 }

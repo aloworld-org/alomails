@@ -20,6 +20,7 @@ pub mod agent_crm;
 pub mod agent_drive;
 pub mod agent_finance;
 pub mod agent_finance_answers;
+pub mod agent_hr;
 pub mod agent_inventory;
 pub mod agent_projects;
 pub mod agent_reads;

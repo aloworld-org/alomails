@@ -68,7 +68,11 @@ fn balance_json(entry: &PolicyBalance) -> Value {
 }
 
 /// One day of the absence layer.
-fn absence_json(day: &AbsenceDay) -> Value {
+///
+/// Shared with the agent's `who_is_off` ([`crate::agent_hr`]) so the two
+/// surfaces that state who is away state it in one shape — and so a field the
+/// layer is careful not to load can never be added to one of them alone.
+pub(crate) fn absence_json(day: &AbsenceDay) -> Value {
     json!({
         "day": iso_date(day.day),
         "people": day.people.iter().map(|person| json!({

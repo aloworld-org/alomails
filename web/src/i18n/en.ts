@@ -2127,6 +2127,21 @@ export const en = {
   agentStockBelowMinimum: "under minimum",
   agentStockFooter:
     "Figures as they stand right now. Nothing was ordered and nothing was set aside.",
+  // The HR agent's one read (B6.09). Every string here is written so that the
+  // card says names and days and nothing else: sickness, holiday and unpaid
+  // leave are indistinguishable in what the server sends, by design, and the
+  // footer tells the reader that rather than leaving them to wonder.
+  agentActWhoIsOff: "See who is off",
+  agentWhoIsOffNote:
+    "Reads the team absence view everybody here already sees: who is away, and on which days. It changes nothing, books nothing and tells nobody.",
+  agentWhoIsOffAway: "Away",
+  agentWhoIsOffNobody: "Nobody",
+  agentWhoIsOffCount: (count: number): string =>
+    count === 1 ? "1 person" : `${count} people`,
+  agentWhoIsOffDays: (count: number): string =>
+    count === 1 ? "1 day" : `${count} days`,
+  agentWhoIsOffFooter:
+    "Names and days only — approved leave never says why somebody is away. Anyone not listed may still be out for a reason this does not cover.",
   searchKind: (kind: string): string =>
     kind === "task"
       ? "Task"

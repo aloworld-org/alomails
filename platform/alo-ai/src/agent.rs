@@ -16,6 +16,7 @@ use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS
 use crate::agent_crm::{CRM_GUIDANCE, CRM_TOOL_DOC, CRM_TOOLS};
 use crate::agent_drive::{DRIVE_GUIDANCE, DRIVE_TOOL_DOC, DRIVE_TOOLS};
 use crate::agent_finance::{FINANCE_GUIDANCE, FINANCE_TOOL_DOC, FINANCE_TOOLS};
+use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
 use crate::agent_inventory::{INVENTORY_GUIDANCE, INVENTORY_TOOL_DOC, INVENTORY_TOOLS};
 use crate::agent_projects::{PROJECTS_GUIDANCE, PROJECTS_TOOL_DOC, PROJECTS_TOOLS};
 use crate::{AiConfig, ChatMessage, InferenceError, WorkspaceSource, chat, render_sources};
@@ -103,10 +104,10 @@ If the request needs an action no tool covers, ANSWER instead and say you cannot
 pub fn system_prompt() -> String {
     format!(
         "{AGENT_SYSTEM_HEAD}{AGENT_SYSTEM_TOOLS}{BILLING_TOOL_DOC}{CRM_TOOL_DOC}{PROJECTS_TOOL_DOC}\
-         {FINANCE_TOOL_DOC}{INVENTORY_TOOL_DOC}{DRIVE_TOOL_DOC}{AGENDA_TOOL_DOC}{CHAT_TOOL_DOC}\
-         {CONTACTS_TOOL_DOC}\
+         {FINANCE_TOOL_DOC}{INVENTORY_TOOL_DOC}{HR_TOOL_DOC}{DRIVE_TOOL_DOC}{AGENDA_TOOL_DOC}\
+         {CHAT_TOOL_DOC}{CONTACTS_TOOL_DOC}\
          {BILLING_GUIDANCE}{CRM_GUIDANCE}{PROJECTS_GUIDANCE}{FINANCE_GUIDANCE}{INVENTORY_GUIDANCE}\
-         {DRIVE_GUIDANCE}{AGENDA_GUIDANCE}{CHAT_GUIDANCE}{CONTACTS_GUIDANCE}\
+         {HR_GUIDANCE}{DRIVE_GUIDANCE}{AGENDA_GUIDANCE}{CHAT_GUIDANCE}{CONTACTS_GUIDANCE}\
          {AGENT_SYSTEM_RULES}"
     )
 }
@@ -124,6 +125,7 @@ pub fn is_agent_tool(tool: &str) -> bool {
         || PROJECTS_TOOLS.contains(&tool)
         || FINANCE_TOOLS.contains(&tool)
         || INVENTORY_TOOLS.contains(&tool)
+        || HR_TOOLS.contains(&tool)
         || DRIVE_TOOLS.contains(&tool)
         || AGENDA_TOOLS.contains(&tool)
         || CHAT_TOOLS.contains(&tool)
@@ -325,6 +327,7 @@ mod tests {
             .chain(PROJECTS_TOOLS)
             .chain(FINANCE_TOOLS)
             .chain(INVENTORY_TOOLS)
+            .chain(HR_TOOLS)
             .chain(DRIVE_TOOLS)
             .chain(AGENDA_TOOLS)
             .chain(CHAT_TOOLS)
@@ -341,6 +344,7 @@ mod tests {
                 + PROJECTS_TOOLS.len()
                 + FINANCE_TOOLS.len()
                 + INVENTORY_TOOLS.len()
+                + HR_TOOLS.len()
                 + DRIVE_TOOLS.len()
                 + AGENDA_TOOLS.len()
                 + CHAT_TOOLS.len()
@@ -371,13 +375,15 @@ mod tests {
         assert!(at("- create_deal:") < at("- log_time:"));
         assert!(at("- log_time:") < at("- categorise_transactions:"));
         assert!(at("- categorise_transactions:") < at("- reorder_proposals:"));
+        assert!(at("- reorder_proposals:") < at("- who_is_off:"));
         // Every tool line comes before every product's guidance, so a model
         // reads the whole menu before it reads how to fill an order from it.
-        assert!(at("- reorder_proposals:") < at("For a billing tool"));
+        assert!(at("- who_is_off:") < at("For a billing tool"));
         assert!(at("For a billing tool") < at("For a CRM tool"));
         assert!(at("For a CRM tool") < at("For a projects tool"));
         assert!(at("For a projects tool") < at("For a finance tool"));
         assert!(at("For a finance tool") < at("For an inventory tool"));
-        assert!(at("For an inventory tool") < at("Output ONLY the JSON object"));
+        assert!(at("For an inventory tool") < at("For an HR tool"));
+        assert!(at("For an HR tool") < at("Output ONLY the JSON object"));
     }
 }
