@@ -802,6 +802,129 @@ describe("alo Inventory is fully translated (B5.11)", () => {
   });
 });
 
+describe("alo HR is fully translated (B6.11)", () => {
+  /** The B6 surface: the staff directory and the org chart, the leave a person
+   *  asks for and a manager decides, the month that says who is away, the
+   *  hiring board a candidate is moved across, the approvals inbox that
+   *  gathers three queues, and the one agent card that reads absences.
+   *
+   *  The ratchet below checks that a key *exists* in all three catalogs and
+   *  lets `UNTRANSLATED` exempt one. This describe exists because no HR key
+   *  may ever take that exemption: these strings are read by a person about
+   *  their own employment — the day they asked for, the answer they were
+   *  given, the record their employer keeps — and a half-English sentence
+   *  there is not a cosmetic gap. It also pins arity, non-emptiness, and the
+   *  four vocabulary decisions below, none of which the ratchet can see. */
+  const HR_AGENT_KEYS = Object.keys(en).filter(
+    (key) => key.startsWith("agentWhoIsOff") || key === "agentActWhoIsOff",
+  );
+  const hrKeys = Object.keys(en).filter(
+    (key) =>
+      /^hr[A-Z]/.test(key) ||
+      key === "moduleHr" ||
+      HR_AGENT_KEYS.includes(key),
+  );
+
+  test("the key list is the real HR surface, not an empty filter", () => {
+    // A typo in the filter above would make every assertion below vacuous.
+    expect(hrKeys.length).toBeGreaterThan(190);
+    expect(HR_AGENT_KEYS.length).toBeGreaterThan(6);
+    expect(en).toHaveProperty("moduleHr");
+  });
+
+  test.each([
+    ["fr", fr],
+    ["nl", nl],
+  ])("%s translates every HR string", (_locale, catalog) => {
+    const missing = hrKeys.filter((key) => !(key in catalog));
+    expect(missing).toEqual([]);
+  });
+
+  test("no HR key may be exempted from translation", () => {
+    // The ratchet's escape hatch is deliberately unavailable here: a Dutch
+    // employee reading their own leave balance in English is the failure this
+    // whole wave is about.
+    expect(hrKeys.filter((key) => UNTRANSLATED.includes(key))).toEqual([]);
+  });
+
+  test.each([
+    ["fr", fr],
+    ["nl", nl],
+  ])(
+    "%s keeps every interpolation a function of the same shape",
+    (locale, catalog) => {
+      for (const key of hrKeys) {
+        const source = (en as Record<string, unknown>)[key];
+        const translated = (catalog as Record<string, unknown>)[key];
+        expect(typeof translated).toBe(typeof source);
+        if (typeof source === "function" && typeof translated === "function") {
+          expect(translated.length).toBe(source.length);
+        } else {
+          expect(String(translated).trim()).not.toBe("");
+        }
+      }
+      expect(locale).toMatch(/^(fr|nl)$/);
+    },
+  );
+
+  test("the translated strings really are different words", () => {
+    expect(buildCatalog("fr").moduleHr).toBe("Personnes");
+    expect(buildCatalog("nl").moduleHr).toBe("Mensen");
+    // …including the ones built by a function, in both branches.
+    expect(buildCatalog("fr").hrWorkingDays(1)).toBe("1 jour");
+    expect(buildCatalog("fr").hrWorkingDays(4)).toBe("4 jours");
+    expect(buildCatalog("nl").hrPeopleCount(1)).toBe("1 persoon");
+    expect(buildCatalog("nl").hrPeopleCount(9)).toBe("9 mensen");
+    expect(buildCatalog("fr").agentWhoIsOffCount(1)).toBe("1 personne");
+    expect(buildCatalog("nl").agentWhoIsOffDays(3)).toBe("3 dagen");
+  });
+
+  test("no string in any language says WHY somebody is away", () => {
+    // The design note's EU AI Act and health-data posture: the absence layer
+    // carries names and days and no reason at all, and translating it is
+    // exactly where a reason would creep back in — a Dutch "ziekteverlof" on
+    // a screen whose English says only "away" would invent health data the
+    // server never sent. Public holidays are a different thing and stay.
+    const reason =
+      /\bsick|\billness|\bmalad|\bziek|\bmatern|\bparental\b|ouderschap|zwangerschap/i;
+    for (const catalog of [en, fr, nl]) {
+      const named = hrKeys
+        .filter((key) => key in catalog)
+        .filter((key) => {
+          const value = (catalog as Record<string, unknown>)[key];
+          return typeof value === "string" && reason.test(value);
+        });
+      expect(named).toEqual([]);
+    }
+  });
+
+  test("French names an employment by its term, and Dutch by the trade's own word", () => {
+    // A French contract is a *durée indéterminée* or a *durée déterminée* —
+    // that is what the paper itself says, and "Permanent" is a translation of
+    // our English rather than the name of the thing. In Dutch a self-employed
+    // person is a *zelfstandige*, never an *aannemer*, which is a builder.
+    expect(buildCatalog("fr").hrKindPermanent).toBe("Durée indéterminée");
+    expect(buildCatalog("fr").hrKindFixedTerm).toBe("Durée déterminée");
+    expect(buildCatalog("nl").hrKindPermanent).toBe("Vast");
+    expect(buildCatalog("nl").hrKindContractor).toBe("Zelfstandige");
+  });
+
+  test("a candidate who did not get the job is told so without an insult", () => {
+    // *Non retenu* is what a French rejection letter says; *Rejeté* is what a
+    // form says about a row. Dutch takes the same care: *niet verder*, the
+    // process ending, rather than *afgewezen* aimed at the person.
+    expect(buildCatalog("fr").hrStageRejected).toBe("Non retenu");
+    expect(buildCatalog("nl").hrStageRejected).toBe("Niet verder");
+  });
+
+  test("having left is said plainly, in every language", () => {
+    // No euphemism: not "transitioned", not "no longer with us". A record
+    // that a person's employment ended is a fact the directory states.
+    expect(buildCatalog("fr").hrLeft).toBe("Parti");
+    expect(buildCatalog("nl").hrLeft).toBe("Vertrokken");
+  });
+});
+
 describe("runtime switching", () => {
   test("strings proxy reflects the active locale live", () => {
     expect(getLocale()).toBe("en");
