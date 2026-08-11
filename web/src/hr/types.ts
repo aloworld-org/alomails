@@ -133,17 +133,61 @@ export interface HrLeaveRequest {
   updatedAt: string;
 }
 
-/** One person as the directory shows them: the public fields only. The inbox
- *  reads exactly one of them — `managerId`, to know whose leave is its
- *  caller's to decide. */
+/** One person as the directory shows them: **the public fields only**, and
+ *  structurally so — the server folds this from a type that has no home address
+ *  on it to leak (`hr_employees::directory_json`). What is missing here is the
+ *  point of the type.
+ *
+ *  The inbox reads exactly one of them — `managerId`, to know whose leave is its
+ *  caller's to decide; the directory screen reads the rest. */
 export interface HrDirectoryEntry {
   id: string;
+  /** How the tenant writes their name, preferred name applied. */
   name: string;
+  givenName: string;
+  familyName: string;
+  preferredName: string;
   workEmail: string;
+  workPhone: string;
   managerId: string | null;
+  /** The Drive node their photo is, when the tenant filed one. Nothing renders
+   *  it yet — the directory draws initials (`ds/Avatar`). */
+  photoNodeId: string | null;
   jobTitle: string;
   team: string;
+  /** `YYYY-MM-DD`, the day their current employment began, or `null` for
+   *  somebody with no terms written down. */
+  startedOn: string | null;
   archived: boolean;
+}
+
+/** The people list as `/hr/employees` answers it: the rows, and whether the
+ *  caller asked through the HR door.
+ *
+ *  `hr` is what draws the "include people who have left" control and nothing
+ *  else. It is **not** the access decision: the route ignores `includeArchived`
+ *  for anybody else rather than refusing it, so a stale `true` here shows a
+ *  checkbox that quietly changes nothing instead of opening a record. */
+export interface HrDirectory {
+  employees: HrDirectoryEntry[];
+  hr: boolean;
+}
+
+/** One person in the reporting tree, with the people beneath them.
+ *
+ *  The tree is **the server's**, not a fold of `managerId` done here: somebody
+ *  whose manager has left is served as a root rather than dropped, and the store
+ *  refuses a reporting line that would close a cycle — so this structure is
+ *  finite by construction and a browser never has to defend against one that is
+ *  not. Active people only; archived colleagues are in the list, never in the
+ *  chart. */
+export interface HrOrgNode {
+  id: string;
+  name: string;
+  jobTitle: string;
+  team: string;
+  managerId: string | null;
+  reports: HrOrgNode[];
 }
 
 /** The caller's own HR standing: their employee record when the tenant has one

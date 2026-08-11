@@ -236,7 +236,9 @@ describe("the hiring board", () => {
   test("a member who is not HR is shown no board and reads no hiring data", async () => {
     isHr = false;
     ui();
-    await screen.findByText(strings.hrMemberSoonTitle);
+    // They land on the directory, which is every member's (B6.08a) — and this
+    // recorded network serves it nobody, so it says so.
+    await screen.findByText(strings.hrDirectoryEmptyTitle);
     expect(screen.queryByText(strings.hrTabHiring)).toBeNull();
     expect(calls.some((c) => c.url.includes("/hr/openings"))).toBe(false);
   });

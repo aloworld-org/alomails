@@ -8,8 +8,12 @@
 // behind a role would make that a question you ask a person. What varies by
 // door is the tabs.
 //
-// Today there are two tabs and neither is every member's:
+// Today there are three tabs, and the first of them is everybody's:
 //
+//   - **Directory** — the people list and the org chart (B6.08a), drawn for
+//     every member and read with no door at all. It is what a member lands on
+//     when nothing else is theirs, which is why the module no longer promises a
+//     screen it does not have.
 //   - **Hiring** — the admin-or-HR door, and what HR still lands on: an
 //     approvals inbox is usually empty, and a module that opened on an empty
 //     screen would read as a module with nothing in it.
@@ -17,12 +21,10 @@
 //     something to decide: HR, a tenant admin, an accountant, or simply
 //     somebody with a direct report. It is deliberately not an HR-role tab,
 //     because most of what it holds is not HR's (`queues.ts`). A manager who is
-//     not HR has this tab and no other, and lands on it.
+//     not HR has this tab and the directory, and lands on the inbox.
 //
-// The member-facing tabs (My leave, Team, Directory) are the wave's later web
-// items and are not drawn as empty promises: a member who opens HR now is told
-// what this module is and what is not here yet, in the module's own words,
-// rather than shown a tab that answers nothing.
+// The remaining member-facing tabs (My leave, Team) are the wave's later web
+// items and are not drawn as empty promises.
 //
 // Tabs are hidden, not disabled, for anybody without the door — the pattern
 // Finance set for its bookkeeper tabs. The routes stay mounted, so a bookmark
@@ -33,13 +35,12 @@
 // own.
 import { useEffect, useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { Users } from "lucide-react";
 
 import { Spinner } from "../ds";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
-import { ComingSoon } from "../shell";
 import { ApprovalsView } from "./ApprovalsView";
+import { DirectoryView } from "./DirectoryView";
 import { HiringView } from "./HiringView";
 import { useApprovalQueues } from "./queues";
 import styles from "./hr.module.css";
@@ -88,8 +89,18 @@ export function HrModule() {
       <header className={styles.header}>
         <h1 className={styles.title}>{strings.moduleHr}</h1>
         {!settled && <Spinner size={16} />}
-        {settled && (hr === true || canApprove) && (
+        {settled && (
           <nav className={styles.tabs}>
+            {/* Everybody's, and first: the one HR screen that is not about a
+                door but about the company. */}
+            <NavLink
+              to={`${HR_ROOT}/directory`}
+              className={({ isActive }) =>
+                isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+              }
+            >
+              {strings.hrTabDirectory}
+            </NavLink>
             {hr === true && (
               <NavLink
                 to={`${HR_ROOT}/hiring`}
@@ -118,25 +129,24 @@ export function HrModule() {
         <Route
           index
           element={
-            // The first tab this person actually has, in the order they are
-            // drawn. HR keeps landing on the board it has always landed on —
-            // an approvals inbox is usually empty, and a module that opened on
-            // an empty screen would read as a module with nothing in it. A
-            // manager who is not HR has only the inbox, and lands there.
+            // The screen this person came for, which is not the first tab they
+            // have. HR keeps landing on the board it has always landed on — an
+            // approvals inbox is usually empty, and a module that opened on an
+            // empty screen would read as a module with nothing in it. Somebody
+            // who has decisions waiting lands on them. Everybody else lands on
+            // the directory, because looking a colleague up is what most people
+            // open HR to do.
             !settled ? null : hr ? (
               <Navigate to={`${HR_ROOT}/hiring`} replace />
             ) : canApprove ? (
               <Navigate to={`${HR_ROOT}/approvals`} replace />
             ) : (
-              <ComingSoon
-                Icon={Users}
-                title={strings.hrMemberSoonTitle}
-                body={strings.hrMemberSoonBody}
-              />
+              <Navigate to={`${HR_ROOT}/directory`} replace />
             )
           }
         />
         <Route path="approvals" element={<ApprovalsView />} />
+        <Route path="directory" element={<DirectoryView />} />
         <Route path="hiring" element={<HiringView />} />
         {/* An unknown HR path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to={HR_ROOT} replace />} />

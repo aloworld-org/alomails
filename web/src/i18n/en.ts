@@ -4455,9 +4455,6 @@ export const en = {
   // decided.
   moduleHr: "People",
   hrTabHiring: "Hiring",
-  hrMemberSoonTitle: "Your own HR screens are on their way",
-  hrMemberSoonBody:
-    "Your leave and its balance, the team directory and your own onboarding list will live here. Hiring, the part that is built, belongs to HR.",
   hrLoadFailed: "That could not be loaded.",
   hrSaveFailed: "That change was not saved.",
   hrClose: "Close",
@@ -4645,6 +4642,35 @@ export const en = {
     `Some of what is waiting could not be read (${kinds}), so this list is not complete. Everything else is shown.`,
   hrApprovalsWidgetLabel: "waiting",
   hrApprovalsWidgetTitle: "Time off, claims and weeks waiting for your decision",
+
+  // The directory and the org chart (B6.08a) — the module's one screen with no
+  // door on it, and the words are a colleague's rather than a system's. Nobody
+  // is an "employee record" here: they are a person, they are here since a day,
+  // and they report to somebody. "Left" is what a person did, said plainly and
+  // without a euphemism, because a directory that hides it is a directory that
+  // sends mail to somebody who is gone.
+  hrTabDirectory: "Directory",
+  hrDirectorySearch: "Search people",
+  hrDirectoryViews: "How to read the directory",
+  hrViewPeople: "People",
+  hrViewOrg: "Org chart",
+  hrIncludeLeavers: "Include people who have left",
+  hrPeopleCount: (count: number) => (count === 1 ? "1 person" : `${count} people`),
+  hrShowingOf: (shown: number, total: number) => `${shown} of ${total}`,
+  hrContact: "Contact",
+  hrManager: "Reports to",
+  hrSince: "Here since",
+  hrYou: "You",
+  hrLeft: "Left",
+  hrShowInChart: "Where they sit",
+  hrReportsCount: (count: number) => (count === 1 ? "1 report" : `${count} reports`),
+  hrDirectoryEmptyTitle: "Nobody is in the directory yet",
+  hrDirectoryEmptyBody:
+    "As soon as HR writes down the first person, this is where everybody finds their colleagues — who they are, how to reach them, and who they report to.",
+  hrNoMatchTitle: (query: string) => `Nobody matches “${query}”`,
+  hrNoMatchBody:
+    "Names, roles, teams, email addresses and telephone numbers are all searched, in any order. Try one word less.",
+  hrClearSearch: "Clear the search",
 } as const;
 
 /** Every string key in the catalog. */

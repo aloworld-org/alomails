@@ -308,12 +308,28 @@ describe("the one approvals inbox", () => {
   test("somebody with no door is shown no inbox and reads no queue", async () => {
     doors = { hr: false, books: false, admin: false };
     // Nobody reports to them: the directory holds one person, managed by
-    // somebody else.
+    // somebody else. It is a whole row, because a member with no door lands on
+    // the directory now (B6.08a) and that screen draws these rows.
+    const colleague = {
+      id: "emp-1",
+      name: "Someone Else",
+      givenName: "Someone",
+      familyName: "Else",
+      preferredName: "",
+      workEmail: "else@example.test",
+      workPhone: "",
+      managerId: "emp-2",
+      photoNodeId: null,
+      jobTitle: "Engineer",
+      team: "Platform",
+      startedOn: null,
+      archived: false,
+    };
     const empty = vi.fn((url: string, init?: RequestInit) => {
       if (url.includes("/hr/employees")) {
         calls.push({ url, method: "GET", body: undefined });
         return Promise.resolve(
-          new Response(JSON.stringify({ employees: [{ id: "emp-1", managerId: "emp-2" }] }), {
+          new Response(JSON.stringify({ employees: [colleague], hr: false }), {
             status: 200,
             headers: { "content-type": "application/json" },
           }),
@@ -324,7 +340,7 @@ describe("the one approvals inbox", () => {
     session = empty;
 
     ui("/hr");
-    await screen.findByText(strings.hrMemberSoonTitle);
+    await screen.findByText(colleague.name);
     expect(screen.queryByText(strings.hrTabApprovals)).toBeNull();
     expect(reads("/hr/leave-requests")).toHaveLength(0);
     expect(reads("/finance/expenses/pending")).toHaveLength(0);

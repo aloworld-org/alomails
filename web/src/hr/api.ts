@@ -22,10 +22,12 @@ import type {
   HrApplicant,
   HrApplicantDetail,
   HrApplicantNote,
+  HrDirectory,
   HrDirectoryEntry,
   HrLeaveRequest,
   HrMe,
   HrOpening,
+  HrOrgNode,
   HrPipeline,
   LeaveStatus,
   OpeningDraft,
@@ -172,13 +174,29 @@ export class HrApi {
     return this.#read<HrMe>("/hr/me");
   }
 
-  /** The people list, public fields only — every member's read. The approvals
-   *  inbox uses it for exactly one thing: whether anybody's `managerId` is the
-   *  caller, which is what makes them somebody's approver. */
-  directory(): Promise<HrDirectoryEntry[]> {
-    return this.#read<{ employees?: HrDirectoryEntry[] }>("/hr/employees").then(
-      (r) => r.employees ?? [],
-    );
+  /** The people list, public fields only — every member's read, and the one the
+   *  directory screen is drawn from. The approvals inbox uses it for exactly one
+   *  thing: whether anybody's `managerId` is the caller, which is what makes
+   *  them somebody's approver.
+   *
+   *  `includeArchived` asks for the people who have left as well. It is **HR's
+   *  read**: the server ignores the flag for anybody else rather than refusing
+   *  it, and answers `hr` so the control that sets it is drawn only for the
+   *  people it does something for. */
+  directory(includeArchived = false): Promise<HrDirectory> {
+    const suffix = includeArchived ? "?includeArchived=1" : "";
+    return this.#read<{ employees?: HrDirectoryEntry[]; hr?: boolean }>(
+      `/hr/employees${suffix}`,
+    ).then((r) => ({ employees: r.employees ?? [], hr: r.hr === true }));
+  }
+
+  /** The reporting tree of this tenant's active people, roots first — every
+   *  member's read, and the whole of the org chart. The shape is the server's
+   *  fold and is never rebuilt here from `managerId`: a person whose manager has
+   *  left is a root in that answer, and re-deriving it in a browser is how a
+   *  branch goes missing. */
+  orgChart(): Promise<HrOrgNode[]> {
+    return this.#read<{ chart?: HrOrgNode[] }>("/hr/org").then((r) => r.chart ?? []);
   }
 
   /** Leave the caller may see, in the scope they are asking as: `mine` is their

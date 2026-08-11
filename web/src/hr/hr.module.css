@@ -649,3 +649,161 @@
 .rowLink:hover {
   text-decoration: underline;
 }
+
+/* ---- the directory and the org chart (B6.08a) -------------------------- */
+
+/* The body under the toolbar: a document that scrolls, with the margins the
+   inbox has. `.page` itself stays a full-height column, because the toolbar
+   must not scroll away from the search box somebody is typing in. */
+.directoryBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-6);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* The search box. The icon sits inside the field rather than beside it, so the
+   whole control is one target and the placeholder reads as its label. */
+.search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-tertiary);
+  min-width: 220px;
+}
+.search:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+.searchInput {
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  width: 100%;
+}
+
+/* Two readings of the same people, as one control: the pair is the choice, so
+   they are drawn joined rather than as two buttons that happen to be adjacent. */
+.segmented {
+  display: inline-flex;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.segment,
+.segmentOn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  font-size: var(--text-sm);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+.segment:hover {
+  background: var(--bg-raised);
+  color: var(--text-primary);
+}
+.segmentOn {
+  background: var(--bg-sunken);
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+/* A person in a row: their mark, their name, and the one chip that qualifies
+   it. */
+.personCell {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.personName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-primary);
+}
+/* "You", against your own row. Quiet: it marks a row, it does not celebrate
+   one. */
+.selfTag {
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+/* The chart. Depth is a rule down the left of each level rather than a line
+   drawn between cards: it survives a branch of forty people without becoming a
+   diagram nobody can follow, and it costs no layout maths. */
+.orgWrap {
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+}
+.orgLoading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-8);
+}
+.orgRoots,
+.orgLevel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.orgLevel {
+  margin: var(--space-2) 0 0 var(--space-4);
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--border-subtle);
+}
+.orgBranch {
+  min-width: max-content;
+}
+.orgCard {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+/* The person the address named. Marked where they stand, never lifted out of
+   the chart: where somebody sits is the people around them. */
+.orgCardFound {
+  border-color: var(--accent);
+  background: var(--bg-raised);
+}
+.orgWho {
+  display: flex;
+  flex-direction: column;
+}
+.orgName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+.orgRole {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+.orgReports {
+  padding-left: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}

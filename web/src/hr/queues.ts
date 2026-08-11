@@ -132,7 +132,7 @@ async function managesSomebody(hr: ReturnType<typeof useHrApi>): Promise<boolean
     const mine = (await hr.me()).employee?.id;
     if (mine === undefined || mine === "") return false;
     const directory = await hr.directory();
-    return directory.some((entry) => entry.managerId === mine && !entry.archived);
+    return directory.employees.some((entry) => entry.managerId === mine && !entry.archived);
   } catch {
     // No employee record, an HR surface that is not there, a dropped
     // connection: none of them is somebody's approver.
