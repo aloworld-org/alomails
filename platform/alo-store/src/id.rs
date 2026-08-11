@@ -601,6 +601,16 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One letter a tenant is willing to write about its own people — an
+    /// employment confirmation, a reference, a letter for a landlord (alo HR,
+    /// ADR 0035, wave B6.09b). The *text*, written by a person in this company:
+    /// the HR agent fills one in and can write nothing else, so a letter this
+    /// table does not hold is a refusal rather than an improvisation
+    /// (`docs/design/hr.md`, "The two tools that do ship").
+    HrLetterTemplateId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

@@ -105,6 +105,7 @@ pub mod hr_leave_balances;
 pub mod hr_leave_math;
 pub mod hr_leave_policies;
 pub mod hr_leave_requests;
+pub mod hr_letters;
 pub mod hr_openings;
 pub mod hr_org;
 pub mod hr_statutory_leave;
@@ -345,6 +346,10 @@ pub use hr_leave_policies::{LeaveKind, LeavePolicy, NewLeavePolicy};
 pub use hr_leave_requests::{
     LeaveRequest, LeaveRequestQuery, LeaveStatus, NewLeaveRequest, leave_request_cost,
 };
+pub use hr_letters::{
+    LetterFacts, LetterTemplate, MergeField, NewLetterTemplate, RenderedLetter, merge_fields,
+    render_letter,
+};
 pub use hr_openings::{NewOpening, Opening, OpeningStatus};
 pub use hr_org::{ORG_CHART_MAX_DEPTH, OrgNode, fold_org_chart};
 pub use id::{
@@ -356,12 +361,12 @@ pub use id::{
     FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
     FinMileageRateId, FinPeriodId, FinPostingId, GroupId, HrApplicantId, HrApplicantNoteId,
     HrChecklistStepId, HrChecklistTemplateId, HrDocumentId, HrEmployeeId, HrEmploymentId,
-    HrLeavePolicyId, HrLeaveRequestId, HrOpeningId, InsightDashboardId, InsightTileId, InvCountId,
-    InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId,
-    InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId, InvSupplierId, LabelId, MailboxId, MeetingId,
-    MessageId, ProjectId, ProjectMilestoneId, SiteCollectionId, SiteFormId, SiteFormSubmissionId,
-    SiteId, SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
-    TimeEntryId, TimeWeekId, UserId,
+    HrLeavePolicyId, HrLeaveRequestId, HrLetterTemplateId, HrOpeningId, InsightDashboardId,
+    InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId,
+    InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId, InvSupplierId, LabelId,
+    MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId, SiteCollectionId, SiteFormId,
+    SiteFormSubmissionId, SiteId, SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId,
+    TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

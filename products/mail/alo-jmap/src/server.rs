@@ -24,7 +24,7 @@ use crate::{
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, hr_checklists, hr_documents, hr_employees, hr_holidays,
-    hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_org, hr_recruitment,
+    hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_letters, hr_org, hr_recruitment,
     imap_import_route, insights, insights_ask, insights_eval, insights_gallery, inventory_counts,
     inventory_locations, inventory_moves, inventory_po, inventory_po_print, inventory_po_receipts,
     inventory_po_send, inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries,
@@ -771,6 +771,27 @@ pub fn app_with_site_domain_dns(
         .route(
             "/hr/employees/{id}/checklists",
             get(hr_checklists::list_checklists).post(hr_checklists::run_checklist),
+        )
+        // The letters this company is willing to write about its own people
+        // (B6.09b) — an employment confirmation, a reference. The whole surface
+        // is HR's, like a checklist template and for the same reason: what the
+        // company will put its name to is a company decision.
+        //
+        // Filling one in is NOT here. That is the agent's
+        // `draft_letter_from_template` under `/ai/agent/execute`, which answers
+        // to a second door — the one on the *person* — so somebody can ask for
+        // their own employment confirmation without being able to browse, edit
+        // or write the letters themselves (`docs/design/hr.md` § The two tools
+        // that do ship).
+        .route(
+            "/hr/letter-templates",
+            get(hr_letters::list_templates).post(hr_letters::create_template),
+        )
+        .route(
+            "/hr/letter-templates/{id}",
+            get(hr_letters::get_template)
+                .patch(hr_letters::update_template)
+                .delete(hr_letters::delete_template),
         )
         // Hiring (B6.06a): the openings, and the people who applied for them.
         // Every route is HR's — there is no employee-facing or manager-facing

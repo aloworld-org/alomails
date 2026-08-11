@@ -30,6 +30,12 @@
 //!   customer, on another country's public holiday, or not an employee at all.
 //!   A model that answered "everybody else is in" would be stating a fact
 //!   nobody read.
+//! - **The company's words, never ours.** `draft_letter_from_template` fills in
+//!   a letter *this tenant wrote*; it has no free-form path, and the wording
+//!   below says so twice because the failure it prevents — a model composing an
+//!   employment confirmation out of its own head, in a company's name, about a
+//!   real person — is a document somebody would act on
+//!   (`docs/design/hr.md` § "The two tools that do ship").
 
 /// The HR tools the agent may propose, by name.
 ///
@@ -37,12 +43,11 @@
 /// every other product's ([`crate::is_agent_tool`]) and owns the execution of
 /// each.
 ///
-/// `draft_letter_from_template` — the second tool the design note names — is
-/// deliberately absent until the tenant-authored templates it merges exist
-/// (item B6.09b): a tool described to a model but refused by the execute route
-/// is a dead proposal, and the invariant test in [`crate::agent`] holds this
-/// list and the prompt to exactly the tools that can act.
-pub const HR_TOOLS: &[&str] = &["who_is_off"];
+/// `draft_letter_from_template` arrived with the templates it merges (B6.09b),
+/// not before: a tool described to a model but refused by the execute route is a
+/// dead proposal, and the invariant test in [`crate::agent`] holds this list and
+/// the prompt to exactly the tools that can act.
+pub const HR_TOOLS: &[&str] = &["who_is_off", "draft_letter_from_template"];
 
 /// The description of each HR tool, spliced into the agent's system prompt
 /// after the Inventory tools ([`crate::agent`]).
@@ -50,7 +55,8 @@ pub const HR_TOOLS: &[&str] = &["who_is_off"];
 /// Every line ends with a newline so the block concatenates into the list above
 /// it without the caller knowing how many tools HR has.
 pub const HR_TOOL_DOC: &str = "\
-- who_is_off: read which colleagues are away from work over a stated range of days — the same team absence view everybody in the workspace already sees. It only READS: it books nothing, approves nothing, cancels nothing and tells nobody. args: {\"from\": string \"YYYY-MM-DD\" (the first day of the range, REQUIRED), \"to\": string \"YYYY-MM-DD\" (the last day, optional — the same single day when left out)}. It returns names and days and NOTHING ELSE. There is no reason, no kind of leave and no note in what it reads, so never state or guess WHY anybody is away — not illness, not holiday, not parental or unpaid leave, not anything. Never answer with who is IN: a colleague this tool does not name may be at a customer, on another country's public holiday, or not an employee at all. Propose this when the user asks who is off, who is away, or whether somebody is around on a given day.\n";
+- who_is_off: read which colleagues are away from work over a stated range of days — the same team absence view everybody in the workspace already sees. It only READS: it books nothing, approves nothing, cancels nothing and tells nobody. args: {\"from\": string \"YYYY-MM-DD\" (the first day of the range, REQUIRED), \"to\": string \"YYYY-MM-DD\" (the last day, optional — the same single day when left out)}. It returns names and days and NOTHING ELSE. There is no reason, no kind of leave and no note in what it reads, so never state or guess WHY anybody is away — not illness, not holiday, not parental or unpaid leave, not anything. Never answer with who is IN: a colleague this tool does not name may be at a customer, on another country's public holiday, or not an employee at all. Propose this when the user asks who is off, who is away, or whether somebody is around on a given day.\n\
+- draft_letter_from_template: fill in one of THIS COMPANY'S OWN letter templates about a colleague — an employment confirmation, a letter for a landlord, a reference — and leave the result in the user's Drafts. It sends nothing and tells nobody: the user reads it, edits it and sends it themselves. args: {\"template\": string (the name of a letter this company has already written, REQUIRED), \"employee\": string (the colleague the letter is about, by name, REQUIRED), \"to\": string (an address to put the draft to, optional — left empty for the user to fill in)}. You can fill in ONLY a letter the company has written: when nothing matches, say which letters exist and stop there. NEVER write, extend, reword or invent a letter about a person — the company's own words are the whole point, and improvising one is the single worst thing this tool set could do. The letter says only what its own template asks for, out of the staff directory and the company's details; it can carry no pay, no bank account, no date of birth, no home address and no national id, so never offer to add one.\n";
 
 /// The HR paragraph of the agent's general instructions.
 ///
@@ -97,6 +103,49 @@ mod tests {
         // automated "X is off today" announcement is a cut, not an oversight
         // (`docs/design/hr.md` § Out of scope for B6).
         assert!(line.contains("tells nobody"), "{line}");
+    }
+
+    #[test]
+    fn the_letter_tool_can_only_fill_in_a_letter_the_company_wrote() {
+        // The one mistake *this* tool can make that nothing downstream catches:
+        // a model that, finding no template, writes the employment confirmation
+        // itself. The executor answers such a proposal with a 422 — these words
+        // are what stop the model getting that far and then arguing with it.
+        let line = HR_TOOL_DOC
+            .lines()
+            .find(|line| line.starts_with("- draft_letter_from_template:"))
+            .expect("draft_letter_from_template is described");
+        assert!(line.contains("THIS COMPANY'S OWN"), "{line}");
+        assert!(
+            line.contains("ONLY a letter the company has written"),
+            "{line}"
+        );
+        assert!(
+            line.contains("NEVER write, extend, reword or invent a letter"),
+            "{line}"
+        );
+        assert!(line.contains("say which letters exist and stop"), "{line}");
+        // It drafts; it does not send, and it does not announce.
+        assert!(line.contains("sends nothing and tells nobody"), "{line}");
+        assert!(line.contains("Drafts"), "{line}");
+    }
+
+    #[test]
+    fn no_letter_this_tool_fills_in_can_state_pay_or_anything_private() {
+        let line = HR_TOOL_DOC
+            .lines()
+            .find(|line| line.starts_with("- draft_letter_from_template:"))
+            .expect("draft_letter_from_template is described");
+        for refused in [
+            "no pay",
+            "no bank account",
+            "no date of birth",
+            "no home address",
+            "no national id",
+        ] {
+            assert!(line.contains(refused), "{refused} is not refused: {line}");
+        }
+        assert!(line.contains("never offer to add one"), "{line}");
     }
 
     #[test]

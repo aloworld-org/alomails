@@ -31,17 +31,28 @@
 //! The roll-up is deliberately *not* a range. Somebody away on Monday and on
 //! Friday is away two days, and a card that drew "Mon–Fri" from those two rows
 //! would put three days of absence on a person who worked them.
+//!
+//! The second tool, `draft_letter_from_template` (B6.09b), obeys the same three
+//! rules and adds a fourth of its own: **the company's words, never ours.** It
+//! merges a template the tenant wrote with facts out of the member directory,
+//! and there is no branch anywhere below that composes prose — a letter nobody
+//! in the company has written is a refusal that names the ones they have.
 
 use axum::Json;
 use serde_json::{Value, json};
 use time::Date;
 
-use alo_store::AbsenceDay;
+use alo_store::hr_letters::{LetterFacts, LetterTemplate, render_letter};
+use alo_store::{AbsenceDay, DirectoryEntry};
 
-use crate::agent_args::{string_arg, unprocessable};
+use crate::agent_args::{pick, string_arg, unprocessable};
 use crate::billing::{iso_date, map_store_err, parse_iso_date};
+use crate::billing_document::today;
+use crate::drafts;
 use crate::error::Problem;
 use crate::hr_leave_balances::absence_json;
+use crate::hr_leave_door::LeaveDoor;
+use crate::mime::{Addr, Outgoing};
 use crate::state::{Account, AppState};
 
 /// `who_is_off` — which colleagues are away over a stated range of days.
@@ -171,6 +182,191 @@ fn person_json(person: &PersonAway) -> Value {
     })
 }
 
+/// `draft_letter_from_template` — fill one of the tenant's **own** letters in
+/// about a colleague and leave it in the caller's Drafts (B6.09b).
+///
+/// The whole act, in order: resolve the colleague over the directory the caller
+/// can already see, check the door on that *person*, resolve the letter over the
+/// tenant's templates, merge the directory facts and the company's letterhead
+/// into the stored text, and save the result as a draft. **Nothing is sent**,
+/// nothing is filed on the person's record, and nobody is told.
+///
+/// Two doors, not one. The template surface itself is HR's
+/// ([`crate::hr_letters`]) — browsing and *writing* the letters this company
+/// will put its name to is an HR screen. Filling one in is subject to the door
+/// on the person ([`LeaveDoor`]): HR, their manager, or themselves, so "draft my
+/// employment confirmation for my landlord" is a thing somebody can ask for
+/// about their own record and about nobody else's.
+///
+/// A name that matches no template is a refusal that **names the letters that
+/// exist** — the one answer that keeps a model from filling the gap itself,
+/// which is the failure this whole design exists to prevent.
+///
+/// # Errors
+/// `422` when the letter or the colleague is not stated, names nothing of this
+/// tenant's, or matches more than one; `422` when the letter states a fact the
+/// person has not got, or when `to` is not an address; `500` on a store failure.
+pub async fn execute_draft_letter_from_template(
+    account: &Account,
+    args: &Value,
+    state: &AppState,
+) -> Result<Json<Value>, Problem> {
+    let wanted_letter = string_arg(args, "template")
+        .or_else(|| string_arg(args, "letter"))
+        .ok_or_else(|| {
+            unprocessable(
+                "which letter is required: this fills in a letter your company has written, \
+                 and never writes one of its own",
+            )
+        })?;
+    let wanted_person = string_arg(args, "employee")
+        .or_else(|| string_arg(args, "person"))
+        .ok_or_else(|| unprocessable("who the letter is about is required"))?;
+    let to = stated_address(args)?;
+
+    // The colleague, resolved over the directory every member already reads —
+    // never over a record — and then the door on that person. A colleague the
+    // caller may not write about is refused in the **same words** as one who
+    // does not exist: an answer that distinguished them would confirm who works
+    // here to somebody who cannot see it.
+    let directory = account.acc.hr_directory().await.map_err(map_store_err)?;
+    let named: Vec<(String, &DirectoryEntry)> = directory
+        .iter()
+        .map(|person| (person.display_name(), person))
+        .collect();
+    let person = pick(
+        &wanted_person,
+        named.iter().map(|(name, e)| (name.as_str(), *e)).collect(),
+        "colleague",
+    )?;
+    let door = LeaveDoor::resolve(account).await?;
+    if !door.may_read(&person.id) {
+        return Err(unprocessable(format!(
+            "no colleague of yours is called {wanted_person}"
+        )));
+    }
+
+    let templates = state
+        .store
+        .for_tenant(account.tenant.clone())
+        .hr_letter_templates()
+        .await
+        .map_err(map_store_err)?;
+    let template = pick_letter(&templates, &wanted_letter)?;
+
+    let company = account
+        .acc
+        .billing_settings()
+        .await
+        .map_err(map_store_err)?;
+    // `today` is the server's own date, never a caller's: a letter dated by an
+    // argument is a letter somebody can back-date by asking.
+    let facts = LetterFacts::of(person, &company, today());
+    let letter = render_letter(template, &facts).map_err(map_store_err)?;
+
+    let from = drafts::from_address(account, state).await?;
+    let outgoing = Outgoing {
+        from: Addr {
+            name: None,
+            email: from.clone(),
+        },
+        // No recipient unless the user named one. A letter for a landlord goes
+        // to an address only they know, and a draft addressed to the *colleague*
+        // by default would eventually be sent to them by somebody clicking send.
+        to: to
+            .iter()
+            .map(|email| Addr {
+                name: None,
+                email: email.clone(),
+            })
+            .collect(),
+        cc: Vec::new(),
+        bcc: Vec::new(),
+        subject: letter.subject.clone(),
+        in_reply_to: Vec::new(),
+        references: Vec::new(),
+        body_text: letter.body,
+        body_html: None,
+        attachments: Vec::new(),
+        message_id_domain: crate::api::domain_of(&from),
+        message_id_token: crate::api::new_message_token(),
+    };
+    let saved = drafts::save(account, &outgoing).await?;
+
+    Ok(Json(json!({
+        "ok": true,
+        "result": {
+            "kind": "letterDraft",
+            "id": saved.as_str(),
+            "template": template.name,
+            "templateId": template.id.as_str(),
+            "employee": person.display_name(),
+            "employeeId": person.id.as_str(),
+            "subject": letter.subject,
+            "to": to.unwrap_or_default(),
+            // What the letter states about them, by field name — so the card can
+            // say what went into it without quoting the letter back at somebody
+            // sitting in an open-plan office.
+            "fields": template.fields.iter().map(|f| f.as_str()).collect::<Vec<_>>(),
+        }
+    })))
+}
+
+/// Resolves the letter the proposal named to exactly one of the tenant's
+/// templates.
+///
+/// The refusal is the point of this function. A miss answers with **the letters
+/// that exist**, and a tenant with none is told who writes the first one —
+/// because "no such template" is the moment a model is most tempted to write the
+/// letter itself, and the only cure is an answer that says what to do instead.
+fn pick_letter<'a>(
+    templates: &'a [LetterTemplate],
+    wanted: &str,
+) -> Result<&'a LetterTemplate, Problem> {
+    let candidates = templates
+        .iter()
+        .map(|template| (template.name.as_str(), template))
+        .collect();
+    match crate::agent_args::pick_name(wanted, candidates, "letter") {
+        Ok(template) => Ok(template),
+        Err(_) if templates.is_empty() => Err(unprocessable(
+            "your company has not written any letter templates yet — somebody in HR writes the \
+             letter once, under HR settings, and this fills it in from then on",
+        )),
+        Err(message) => Err(unprocessable(format!(
+            "{message}. The letters your company has written are: {}",
+            templates
+                .iter()
+                .map(|template| template.name.as_str())
+                .collect::<Vec<_>>()
+                .join(", ")
+        ))),
+    }
+}
+
+/// The address the draft is put to, when the proposal named one.
+///
+/// Absent is ordinary and is the default: a letter for a landlord goes to an
+/// address only the user knows, so the draft waits for it. What is refused is a
+/// *sentence* where an address belongs — "her landlord" in a `To:` header is a
+/// draft that fails on send with a message nobody can act on.
+fn stated_address(args: &Value) -> Result<Option<String>, Problem> {
+    let Some(stated) = string_arg(args, "to") else {
+        return Ok(None);
+    };
+    let parts: Vec<&str> = stated.split('@').collect();
+    let plausible = parts.len() == 2
+        && parts.iter().all(|part| !part.is_empty())
+        && parts[1].contains('.')
+        && !stated.chars().any(char::is_whitespace);
+    if !plausible {
+        return Err(unprocessable(format!(
+            "{stated} is not an email address; leave it out and the draft waits for one"
+        )));
+    }
+    Ok(Some(stated))
+}
+
 /// A day the proposal states. `from` has no default; `to` is only read when the
 /// proposal stated one.
 ///
@@ -209,6 +405,20 @@ mod tests {
         AbsenceDay {
             day: day(iso),
             people,
+        }
+    }
+
+    /// One of the tenant's letters, as the store hands it over.
+    fn letter(name: &str) -> LetterTemplate {
+        LetterTemplate {
+            id: alo_store::HrLetterTemplateId::new(format!("t-{name}")),
+            name: name.to_owned(),
+            subject: "Verklaring voor {{employee.name}}".to_owned(),
+            body: "In dienst sinds {{employee.started_on}}.".to_owned(),
+            fields: Vec::new(),
+            created_by: "u-1".to_owned(),
+            created_at: time::OffsetDateTime::UNIX_EPOCH,
+            updated_at: time::OffsetDateTime::UNIX_EPOCH,
         }
     }
 
@@ -333,6 +543,84 @@ mod tests {
     }
 
     #[test]
+    fn a_letter_nobody_wrote_is_refused_with_the_letters_somebody_did() {
+        // The refusal this whole design turns on: a model that hears "no such
+        // template" and writes the employment confirmation itself. The answer
+        // names what exists, so the next move is picking one rather than
+        // inventing one.
+        let templates = [letter("Werkgeversverklaring"), letter("Reference")];
+        let refused = pick_letter(&templates, "salary certificate").expect_err("invented a letter");
+        assert_eq!(refused.status, axum::http::StatusCode::UNPROCESSABLE_ENTITY);
+        let detail = refused.detail.unwrap_or_default();
+        assert!(detail.contains("no letter of yours"), "{detail}");
+        assert!(
+            detail.contains("Werkgeversverklaring, Reference"),
+            "{detail}"
+        );
+
+        // A tenant with none is told who writes the first one, rather than being
+        // told a list that is empty.
+        let none: [LetterTemplate; 0] = [];
+        let detail = pick_letter(&none, "anything")
+            .expect_err("filled in a letter from an empty company")
+            .detail
+            .unwrap_or_default();
+        assert!(detail.contains("has not written any"), "{detail}");
+        assert!(detail.contains("HR"), "{detail}");
+    }
+
+    #[test]
+    fn a_letter_is_matched_by_name_and_an_ambiguous_one_is_asked_about() {
+        let templates = [
+            letter("Werkgeversverklaring"),
+            letter("Werkgeversverklaring 2026"),
+            letter("Reference"),
+        ];
+        // An exact name wins over the longer one that contains it.
+        assert_eq!(
+            pick_letter(&templates, "werkgeversverklaring")
+                .expect("the exact name")
+                .name,
+            "Werkgeversverklaring"
+        );
+        assert_eq!(
+            pick_letter(&templates, "refer")
+                .expect("one partial match")
+                .name,
+            "Reference"
+        );
+        let detail = pick_letter(&templates, "verklaring")
+            .expect_err("guessed between two")
+            .detail
+            .unwrap_or_default();
+        assert!(detail.contains("more than one"), "{detail}");
+    }
+
+    #[test]
+    fn an_address_is_optional_and_a_sentence_is_not_an_address() {
+        assert_eq!(stated_address(&json!({})).expect("none is ordinary"), None);
+        assert_eq!(
+            stated_address(&json!({ "to": " landlord@example.test " })).expect("an address"),
+            Some("landlord@example.test".to_owned())
+        );
+        for bad in [
+            "her landlord",
+            "landlord@example",
+            "@example.test",
+            "landlord@",
+            "two people@example.test",
+            "a@b.test, c@d.test",
+        ] {
+            let refused = stated_address(&json!({ "to": bad })).expect_err("accepted {bad}");
+            assert_eq!(refused.status, axum::http::StatusCode::UNPROCESSABLE_ENTITY);
+            assert!(
+                refused.detail.unwrap_or_default().contains("not an email"),
+                "{bad}"
+            );
+        }
+    }
+
+    #[test]
     fn this_module_reads_the_absence_layer_and_nothing_else_about_a_person() {
         // The header's second rule, held by the source itself: the widening a
         // later hand would reach for — a record, a balance, a request, a
@@ -358,5 +646,12 @@ mod tests {
             assert!(!source.contains(forbidden), "{forbidden}");
         }
         assert!(source.contains("hr_absences(from, to)"));
+        // The letter tool reads the two things it is allowed to and nothing
+        // else: the member **directory** (which carries no private field at all,
+        // by the type's own construction) and the tenant's letter templates. A
+        // hand that reached for `hr_employee(` to get a home address onto a
+        // letter fails on the list above, which is where that decision belongs.
+        assert!(source.contains("hr_directory()"));
+        assert!(source.contains("hr_letter_templates()"));
     }
 }

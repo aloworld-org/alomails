@@ -270,6 +270,13 @@ pub(crate) async fn execute_tool(
         // stated range, from the same layer the Agenda draws — names and days,
         // never a reason, and nothing is written, booked or announced.
         "who_is_off" => hr::execute_who_is_off(account, args, state).await,
+        // …and its second (B6.09b), which **drafts**: one of the tenant's own
+        // letters filled in about a colleague and left in the caller's Drafts.
+        // A letter nobody in the company has written is a 422 naming the ones
+        // they have — there is no path here that composes a letter.
+        "draft_letter_from_template" => {
+            hr::execute_draft_letter_from_template(account, args, state).await
+        }
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
     }
