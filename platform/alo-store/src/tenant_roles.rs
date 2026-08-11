@@ -62,6 +62,11 @@ pub enum TenantRole {
     /// prevent. Somebody who genuinely runs both is granted both, deliberately,
     /// with each grant's provenance recorded.
     Hr,
+    /// A deliberately restricted alo Sites collaborator. A non-admin holder
+    /// can use only the Sites API, and only for resources named by their
+    /// per-site grants. Unlike additive business roles, this role narrows the
+    /// account so sharing a website never shares the surrounding workspace.
+    SiteEditor,
 }
 
 impl TenantRole {
@@ -71,6 +76,7 @@ impl TenantRole {
         match self {
             Self::Accountant => "accountant",
             Self::Hr => "hr",
+            Self::SiteEditor => "site_editor",
         }
     }
 
@@ -84,8 +90,9 @@ impl TenantRole {
         match value.trim() {
             "accountant" => Ok(Self::Accountant),
             "hr" => Ok(Self::Hr),
+            "site_editor" => Ok(Self::SiteEditor),
             _ => Err(StoreError::Validation(
-                "role must be one of: accountant, hr".to_owned(),
+                "role must be one of: accountant, hr, site_editor".to_owned(),
             )),
         }
     }

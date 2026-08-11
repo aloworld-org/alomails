@@ -33,7 +33,7 @@
 //!   table.
 
 use axum::extract::{MatchedPath, Request, State};
-use axum::http::StatusCode;
+use axum::http::{Method, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 
@@ -42,6 +42,9 @@ use alo_store::TenantRole;
 use crate::audit_action;
 use crate::error::Problem;
 use crate::state::{AppState, authenticate};
+
+const SITE_EDITOR_DENIAL: &str =
+    "this site editor can use only the websites they have been invited to";
 
 /// The modules a scoped reader may read and may not write. `/finance` is
 /// absent on purpose (see the module docs); mail, calendar, drive, tasks and
@@ -71,14 +74,46 @@ pub async fn enforce_scoped_roles(
     request: Request,
     next: Next,
 ) -> Response {
+    let template = request
+        .extensions()
+        .get::<MatchedPath>()
+        .map(|matched| matched.as_str().to_owned());
+
+    // A site editor is unlike the additive accountant and HR roles: it is a
+    // restricted external collaborator. Once authenticated, every route must
+    // therefore prove it belongs to the one surface and resource they were
+    // invited to. One middleware is intentionally the only door.
+    if let Ok(account) = authenticate(&state, request.headers()).await
+        && !account.is_admin
+        && account.has_role(TenantRole::SiteEditor)
+    {
+        let allowed = match template.as_deref() {
+            Some("/sites") => request.method() == Method::GET,
+            Some("/sites/theme-presets" | "/sites/config") => request.method() == Method::GET,
+            Some(value) if value.starts_with("/sites/{id}") => {
+                let site = request
+                    .uri()
+                    .path()
+                    .split('/')
+                    .nth(2)
+                    .map(alo_store::SiteId::new);
+                match site {
+                    Some(site) => account.acc.can_edit_site(&site).await.unwrap_or(false),
+                    None => false,
+                }
+            }
+            _ => false,
+        };
+        if !allowed {
+            return Problem::with(StatusCode::FORBIDDEN, SITE_EDITOR_DENIAL).into_response();
+        }
+        return next.run(request).await;
+    }
+
     if !audit_action::is_mutating(request.method().as_str()) {
         return next.run(request).await;
     }
-    let Some(template) = request
-        .extensions()
-        .get::<MatchedPath>()
-        .map(|matched| matched.as_str().to_owned())
-    else {
+    let Some(template) = template else {
         return next.run(request).await;
     };
     if !module_of(&template).is_some_and(|module| READ_ONLY_FOR_ACCOUNTANT.contains(&module))

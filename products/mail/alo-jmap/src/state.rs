@@ -95,7 +95,7 @@ pub struct Account {
     /// Whether this user is a tenant admin (gates admin-only surfaces).
     pub is_admin: bool,
     /// The tenant-wide scoped roles this user holds (ADR 0035, B4.12) — today
-    /// only [`TenantRole::Accountant`]. A role is never an admin flag: it opens
+    /// scoped roles such as [`TenantRole::Accountant`]. A role is never an admin flag: it opens
     /// the surfaces its own gates name and nothing else, and a delegated handle
     /// carries none for the same reason it carries no admin.
     pub roles: Vec<TenantRole>,

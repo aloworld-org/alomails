@@ -160,6 +160,7 @@ pub mod site_analytics;
 pub mod site_assets;
 pub mod site_collections;
 pub mod site_domains;
+pub mod site_editors;
 pub mod site_form_notify;
 pub mod site_forms;
 pub mod site_generation;

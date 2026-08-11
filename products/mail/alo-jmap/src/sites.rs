@@ -243,7 +243,11 @@ pub async fn list_sites(
     headers: HeaderMap,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    let sites = account.acc.sites().await.map_err(map_store_err)?;
+    let sites = if !account.is_admin && account.has_role(alo_store::TenantRole::SiteEditor) {
+        account.acc.editable_sites().await.map_err(map_store_err)?
+    } else {
+        account.acc.sites().await.map_err(map_store_err)?
+    };
     Ok(Json(
         json!({ "sites": sites.iter().map(site_json).collect::<Vec<_>>() }),
     ))

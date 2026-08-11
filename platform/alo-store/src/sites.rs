@@ -530,7 +530,7 @@ impl AccountStore {
 // ---- row types --------------------------------------------------------------
 
 #[derive(sqlx::FromRow)]
-struct SiteRow {
+pub(crate) struct SiteRow {
     id: String,
     name: String,
     subdomain: String,
@@ -543,7 +543,7 @@ struct SiteRow {
     updated_at: OffsetDateTime,
 }
 impl SiteRow {
-    fn into_site(self) -> Result<Site> {
+    pub(crate) fn into_site(self) -> Result<Site> {
         Ok(Site {
             id: SiteId::new(self.id),
             name: self.name,
