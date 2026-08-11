@@ -11,9 +11,16 @@
 // scaled quantities were first typed and printed there, and a second module
 // that shows either reads them from that module rather than growing a second,
 // slightly different rule about where the decimal point goes.
-import { formatAmount, formatQty } from "../billing";
+import { formatAmount, formatDocumentDate, formatQty } from "../billing";
 import { getLocale, strings } from "../i18n";
-import type { AdjustReasonCode, LocationKind, MoveReason } from "./types";
+import type { ChipTone } from "./parts";
+import type {
+  AdjustReasonCode,
+  LocationKind,
+  MoveReason,
+  PurchaseOrderStatus,
+  SalesOrderStatus,
+} from "./types";
 
 /** A quantity the server stored, in milli-units ("1500" → "1.5"). */
 export function qtyLabel(qtyMilli: number): string {
@@ -25,6 +32,18 @@ export function qtyLabel(qtyMilli: number): string {
  *  same convention the price list uses. */
 export function valueLabel(cents: number): string {
   return formatAmount(cents, getLocale());
+}
+
+/**
+ * A calendar day the server wrote (`YYYY-MM-DD`), read in the interface
+ * language; the em dash when there is none.
+ *
+ * Billing's rule, not a second one: a day means that day in every zone, and
+ * parsing it as an instant is what slides it backwards for a reader west of
+ * Greenwich. An order expected on the 15th is expected on the 15th in Lisbon.
+ */
+export function dayLabel(day: string | null): string {
+  return formatDocumentDate(day, getLocale(), "—");
 }
 
 /** An instant the server wrote (RFC 3339), read in the interface language. */
@@ -74,6 +93,80 @@ export function moveReasonLabel(reason: MoveReason): string {
       return strings.inventoryReasonCount;
     default:
       return reason;
+  }
+}
+
+/**
+ * What to call the state of an order we placed, and how loudly it reads.
+ *
+ * The two live together because they are one decision about one value, and a
+ * list chip that disagreed with the document's chip about the same order is
+ * exactly what splitting them invites. An unknown state — one a newer server
+ * learned first — is shown verbatim rather than blanked, and reads quietly.
+ */
+export function poStatusLabel(status: PurchaseOrderStatus): string {
+  switch (status) {
+    case "draft":
+      return strings.inventoryPoStatusDraft;
+    case "sent":
+      return strings.inventoryPoStatusSent;
+    case "partially_received":
+      return strings.inventoryPoStatusPartial;
+    case "received":
+      return strings.inventoryPoStatusReceived;
+    case "cancelled":
+      return strings.inventoryOrderStatusCancelled;
+    default:
+      return status;
+  }
+}
+
+/** How loudly a purchase order's state reads: one we are waiting on is the one
+ *  to look at, a complete one is good, a cancelled one is greyed out. */
+export function poStatusTone(status: PurchaseOrderStatus): ChipTone {
+  switch (status) {
+    case "sent":
+    case "partially_received":
+      return "info";
+    case "received":
+      return "good";
+    case "cancelled":
+      return "muted";
+    default:
+      return "neutral";
+  }
+}
+
+/** What to call the state of an order a customer placed. */
+export function soStatusLabel(status: SalesOrderStatus): string {
+  switch (status) {
+    case "draft":
+      return strings.inventorySoStatusDraft;
+    case "confirmed":
+      return strings.inventorySoStatusConfirmed;
+    case "partially_delivered":
+      return strings.inventorySoStatusPartial;
+    case "delivered":
+      return strings.inventorySoStatusDelivered;
+    case "cancelled":
+      return strings.inventoryOrderStatusCancelled;
+    default:
+      return status;
+  }
+}
+
+/** How loudly a sales order's state reads. */
+export function soStatusTone(status: SalesOrderStatus): ChipTone {
+  switch (status) {
+    case "confirmed":
+    case "partially_delivered":
+      return "info";
+    case "delivered":
+      return "good";
+    case "cancelled":
+      return "muted";
+    default:
+      return "neutral";
   }
 }
 

@@ -15,7 +15,11 @@
 //
 // The product record itself is Billing's (`BillingProduct`): a product is one
 // row with a price half and a warehouse half, and this module reads that type
-// rather than declaring a second one.
+// rather than declaring a second one. So are a document's totals and a line on
+// its way to the server (`DocumentTotals`, `LineDraft`): an order's money is
+// the same money, computed by the same server code, and a second declaration of
+// it here would be a second thing to keep in step.
+import type { DocumentTotals, LineDraft } from "../billing";
 
 /**
  * What a place *is*.
@@ -138,11 +142,236 @@ export interface InvMove {
   createdAt: string;
 }
 
-/** A supplier, as the catalog's default-supplier picker needs one. The full
- *  record is the suppliers screen's business (B5.09b); a picker needs a name
- *  and an id. */
+/** A supplier, as the catalog's default-supplier picker and the purchase-order
+ *  header need one. The full supplier record — addresses, terms, lead times —
+ *  is a screen this wave has not built; what a picker needs is a name and an
+ *  id, and what an order header needs is the same pair. */
 export interface InvSupplier {
   id: string;
   name: string;
   archived: boolean;
+}
+
+// ---- the two order documents (B5.09b) ------------------------------------
+//
+// A purchase order and a sales order are mirror images: the same header, the
+// same lines, the same totals, pointed at a supplier or at a customer. They are
+// typed separately all the same, because the two things a screen must never
+// confuse are *which way the goods go* and *what a quantity on a line has
+// already done* — received against ordered on one, delivered and invoiced
+// against ordered on the other.
+//
+// Every quantity below is integer milli-units and every amount integer cents,
+// and **each one arrives computed**: outstanding, invoiceable, the line's net
+// and the document's totals are the server's, and no screen in this module
+// subtracts one from another (`docs/design/inventory.md`).
+
+/** What both documents' lines carry. Shape-identical to a billing line, which
+ *  is what it is: the order line model is the document line model, plus the
+ *  catalog link that lets a receipt or a delivery move real goods. */
+export interface OrderLine {
+  id: string;
+  /** The catalog item this line moves, or `null` for a charge in words —
+   *  freight, assembly — which no consignment ever carries. */
+  productId: string | null;
+  description: string;
+  unit: string;
+  qtyMilli: number;
+  unitPriceCents: number;
+  vatRateBp: number;
+  netCents: number;
+}
+
+/** An ordered line, and how much of it has arrived. */
+export interface PurchaseOrderLine extends OrderLine {
+  receivedQtyMilli: number;
+  /** Still to come. `0` on a charge in words, which must not hold an order
+   *  open. */
+  outstandingQtyMilli: number;
+}
+
+/** A sold line, and how much of it has gone out and been billed. */
+export interface SalesOrderLine extends OrderLine {
+  deliveredQtyMilli: number;
+  /** Still to go. */
+  outstandingQtyMilli: number;
+  invoicedQtyMilli: number;
+  /** What an invoice raised **right now** would take from this line — the
+   *  store's own rule, not a subtraction, so the number a screen offers and the
+   *  number the button bills are the same one. */
+  invoiceableQtyMilli: number;
+}
+
+/** Where an order we placed has got to. */
+export type PurchaseOrderStatus =
+  | "draft"
+  | "sent"
+  | "partially_received"
+  | "received"
+  | "cancelled";
+
+/** Where an order a customer placed has got to. */
+export type SalesOrderStatus =
+  | "draft"
+  | "confirmed"
+  | "partially_delivered"
+  | "delivered"
+  | "cancelled";
+
+/** A purchase order without its lines — what the list reads. */
+export interface PurchaseOrderSummary {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  status: PurchaseOrderStatus;
+  currency: string;
+  /** `null` until the order is placed: a draft has drawn no number. */
+  number: string | null;
+  /** The day it was placed (`YYYY-MM-DD`), `null` while it is a draft. */
+  orderedDate: string | null;
+  expectedDate: string | null;
+  /** The day it was received or given up on. */
+  closedDate: string | null;
+  /** The server's own reading of "past the day we expected them", computed
+   *  against the server's today and never against the browser's. */
+  late: boolean;
+  reference: string;
+  note: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  totals: DocumentTotals;
+}
+
+/** A whole purchase order: the header, its lines in print order, its totals. */
+export interface PurchaseOrder extends PurchaseOrderSummary {
+  lines: PurchaseOrderLine[];
+}
+
+/** A sales order without its lines. */
+export interface SalesOrderSummary {
+  id: string;
+  customerId: string;
+  customerName: string;
+  status: SalesOrderStatus;
+  currency: string;
+  number: string | null;
+  /** The day we confirmed it, `null` while it is a draft. */
+  confirmedDate: string | null;
+  expectedDate: string | null;
+  closedDate: string | null;
+  late: boolean;
+  reference: string;
+  note: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  totals: DocumentTotals;
+}
+
+/** A whole sales order. */
+export interface SalesOrder extends SalesOrderSummary {
+  lines: SalesOrderLine[];
+}
+
+/** One line of a consignment, either direction: what moved, and the ledger row
+ *  that recorded it. */
+export interface FulfilmentLine {
+  lineId: string;
+  productId: string | null;
+  description: string;
+  qtyMilli: number;
+  moveId: string;
+}
+
+/** An arrival booked against a purchase order. */
+export interface Receipt {
+  id: string;
+  /** Its place in the order's own sequence, from one. */
+  sequenceNo: number;
+  locationId: string;
+  locationCode: string;
+  locationName: string;
+  receivedDate: string;
+  note: string;
+  /** The draft bill this arrival raised; `null` when that bill has since been
+   *  thrown away, which is a thing a person may do to an undecided bill. */
+  billId: string | null;
+  createdBy: string;
+  createdAt: string;
+  lines: FulfilmentLine[];
+}
+
+/** A consignment booked against a sales order. */
+export interface Delivery {
+  id: string;
+  sequenceNo: number;
+  /** The delivery note's number, `null` for a consignment against an order
+   *  that has none. */
+  noteNumber: string | null;
+  locationId: string;
+  locationCode: string;
+  locationName: string;
+  deliveredDate: string;
+  note: string;
+  createdBy: string;
+  createdAt: string;
+  lines: (FulfilmentLine & { unit: string })[];
+}
+
+/** An invoice raised from a sales order, and where that invoice has got to. */
+export interface SalesOrderInvoice {
+  id: string;
+  invoiceId: string;
+  /** `null` while the invoice is still a draft — it has consumed nothing from
+   *  the gapless series. */
+  invoiceNumber: string | null;
+  invoiceStatus: string;
+  createdBy: string;
+  createdAt: string;
+  lines: { lineId: string; qtyMilli: number }[];
+}
+
+/** The covering letter a placed order wrote: a draft in the user's own Drafts,
+ *  never a sent message. */
+export interface OrderDraftMail {
+  id: string;
+  to: string;
+  subject: string;
+  attachment: { name: string; sizeBytes: number };
+}
+
+/** What a client states about a line when booking a consignment. Absent lines
+ *  altogether mean "everything still outstanding"; an empty list is refused by
+ *  the server rather than widened into that. */
+export interface FulfilmentLineDraft {
+  lineId: string;
+  qtyMilli: number;
+}
+
+/** What a client states when booking one. */
+export interface FulfilmentDraft {
+  locationId: string;
+  lines?: FulfilmentLineDraft[];
+  note?: string;
+}
+
+/** A line on its way to the server. It carries the catalog link (what makes
+ *  goods move later) and nothing derived. */
+export interface OrderLineDraft extends LineDraft {
+  /** `""` for a charge in words — the server reads a blank id as no product. */
+  productId: string;
+}
+
+/** The writable parts of an order header. Every field is optional: the same
+ *  body raises a document and edits one, and an absent field is left alone
+ *  rather than blanked. */
+export interface OrderPatch {
+  supplierId?: string;
+  customerId?: string;
+  /** `null` clears the expectation; absent leaves it as it was. */
+  expectedDate?: string | null;
+  reference?: string;
+  note?: string;
+  lines?: OrderLineDraft[];
 }

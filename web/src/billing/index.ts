@@ -56,6 +56,29 @@ export type { SupplierChoice } from "./ProductDialog";
 export type { BillingProduct, ProductDraft } from "./types";
 export { billingMessage, useBillingApi } from "./api";
 
+// The document machinery the two Inventory order screens read (B5.09b).
+//
+// A purchase order and a sales order are billing documents pointed at a
+// supplier and at a customer: the same lines, the same scaled integers, the
+// same server-computed totals. So they reuse the **rules** rather than the
+// screens — the pure row model that turns typed text into a line and reports a
+// row that is not one yet, and the totals panel that prints the server's
+// figures without adding anything up. What Inventory writes of its own is what
+// is genuinely its own: the catalog link on a line (which is what makes goods
+// move), and the columns that say how much of a line has already arrived or
+// gone.
+export { blankRow, isBlankRow, rowDraft, rowProblem } from "./lineRows";
+export type { LineRow, RowProblem } from "./lineRows";
+export { milliToInput, parseMilli } from "./money";
+export { TotalsPanel } from "./TotalsPanel";
+// Handing a server-rendered document to the browser's print dialog. The
+// printed purchase order is rendered by the same code as a printed invoice
+// (`inventory_po_print.rs` is the party generalisation of `billing_print.rs`),
+// and it must reach the printer the same way: a `srcdoc` iframe, because the
+// route is bearer-authenticated and our own CSP forbids `blob:`.
+export { printSheet } from "./printSheet";
+export type { DocumentTotals, LineDraft } from "./types";
+
 // The documents that can still take money. Finance's reconciliation screen
 // (B4.13b) has to let a bookkeeper say by hand which invoice a bank line
 // settled, and the list of candidates is Billing's — the same argument as

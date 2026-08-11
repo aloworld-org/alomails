@@ -4142,6 +4142,164 @@ export const en = {
   inventoryAdjustSample: "Sample",
   inventoryAdjustCorrection: "Correction",
 
+  // ---- the two order documents (B5.09b) ------------------------------------
+  //
+  // Purchasing and sales orders. The copy follows the same three rules as the
+  // rest of this module, plus one the documents make necessary: **a sentence
+  // that precedes an irreversible act says what it will do, not "are you
+  // sure"**. Placing an order draws a number from a gapless series and writes a
+  // letter; booking an arrival moves real goods and raises a bill. A person who
+  // reads the words should be able to predict the consequence exactly, because
+  // there is no undo for any of them.
+  inventoryTabPurchasing: "Purchasing",
+  inventoryTabSales: "Sales orders",
+  inventoryOrdersLoadFailed: "Those orders could not be loaded.",
+  inventoryOrderLoadFailed: "That order could not be loaded.",
+  inventoryDraftOrder: "Draft",
+  inventoryDraftInvoice: "Draft invoice",
+  inventoryOrderLate: "Late",
+  inventoryFilterStatus: "State",
+  inventoryAllStatuses: "Any state",
+  inventoryNoOrdersInState: "No orders in that state",
+  inventoryCancelAction: "Cancel",
+
+  // What a state is called. "Cancelled" is shared: an order given up on is
+  // given up on, whichever way the goods were going.
+  inventoryOrderStatusCancelled: "Cancelled",
+  inventoryPoStatusDraft: "Draft",
+  inventoryPoStatusSent: "Placed",
+  inventoryPoStatusPartial: "Part received",
+  inventoryPoStatusReceived: "Received",
+  inventorySoStatusDraft: "Draft",
+  inventorySoStatusConfirmed: "Confirmed",
+  inventorySoStatusPartial: "Part delivered",
+  inventorySoStatusDelivered: "Delivered",
+
+  // The two lists.
+  inventorySearchPurchaseOrders: "Search by number, supplier or reference",
+  inventorySearchSalesOrders: "Search by number, customer or reference",
+  inventoryNewPurchaseOrder: "New purchase order",
+  inventoryNewSalesOrder: "New sales order",
+  inventoryPurchaseOrdersEmptyTitle: "You have not ordered anything yet",
+  inventoryPurchaseOrdersEmptyBody:
+    "A purchase order records what you asked a supplier for. Raise one as a draft, place it when you are ready, and book what arrives against it — the stock ledger is written for you.",
+  inventorySalesOrdersEmptyTitle: "No customer has ordered anything yet",
+  inventorySalesOrdersEmptyBody:
+    "A sales order records what a customer asked you for. Raise one as a draft, confirm it to give it a number, and book each consignment as it goes out — the invoice bills what has actually gone.",
+  inventoryColOrder: "Order",
+  inventoryColSupplier: "Supplier",
+  inventoryColCustomer: "Customer",
+  inventoryColExpected: "Expected",
+  inventoryColPromised: "Promised",
+  inventoryColState: "State",
+  inventoryColTotal: "Total",
+
+  // The document.
+  inventoryBackToPurchaseOrders: "All purchase orders",
+  inventoryBackToSalesOrders: "All sales orders",
+  inventoryCreateDraft: "Create draft",
+  inventorySaveDraft: "Save",
+  inventoryPrintOrder: "Print",
+  inventoryUnsavedNotice: "These changes are not saved yet, so the totals below are the last ones the server worked out.",
+  inventoryOrderFrozenNotice:
+    "This order has been placed. It carries a number the supplier holds, so it can no longer be edited — book what arrives against it, or cancel it.",
+  inventorySalesOrderFrozenNotice:
+    "This order has been confirmed. It carries a number the customer holds, so it can no longer be edited — book each consignment as it goes out.",
+  inventoryFixLinesFirst: "One of the lines is not finished. Fix it and save again.",
+  inventoryOrderNeedsSupplier: "Choose the supplier this order is placed with.",
+  inventoryOrderNeedsCustomer: "Choose the customer this order is for.",
+  inventoryPickSupplier: "Choose a supplier",
+  inventoryPickCustomer: "Choose a customer",
+  inventorySupplierHint: "Who you are ordering from. It cannot be changed once the order is placed.",
+  inventoryCustomerHint: "Who the order is for. It cannot be changed once the order is confirmed.",
+  inventoryExpectedHint: "The day you expect the goods. An order past it is flagged as late.",
+  inventoryPromisedHint: "The day you promised the goods. An order past it is flagged as late.",
+  inventoryFieldReference: "Reference",
+  inventoryReferenceHint: "Your own reference for this order — a project, a site, a job number.",
+  inventoryFieldOrdered: "Placed",
+  inventoryFieldConfirmed: "Confirmed",
+  inventoryFieldNote: "Note",
+  inventoryOrderNoteHint: "Anything the other side should read. It is printed on the order.",
+
+  // The line grid. The words are a document's, because these lines become one.
+  inventoryLines: "Lines",
+  inventoryAddLine: "Add line",
+  inventoryNoLines: "No lines yet.",
+  inventoryColDescription: "Description",
+  inventoryColUnit: "Unit",
+  inventoryColUnitPrice: "Unit price",
+  inventoryColNet: "Net",
+  inventoryColReceived: "Received",
+  inventoryColDelivered: "Delivered",
+  inventoryColOutstanding: "Outstanding",
+  inventoryColToBill: "To bill",
+  inventoryPickProduct: "From the catalog",
+  inventoryDescriptionPlaceholder: "What is being ordered",
+  inventoryUnitPlaceholder: "piece",
+  inventoryQtyPlaceholder: "1",
+  inventoryAmountPlaceholder: "0.00",
+  inventoryRatePlaceholder: "0",
+  inventoryRemoveLine: "Remove line",
+  inventoryLineNeedsDescription: "Say what this line is for.",
+  inventoryNotAQuantity: "That is not a quantity.",
+  inventoryNotAnAmount: "That is not an amount.",
+  inventoryNotARate: "That is not a rate.",
+
+  // Placing an order: one act, and the words say all three parts of it.
+  inventorySendOrder: "Place order",
+  inventorySendOrderConfirm:
+    "This gives the order its number, freezes it for good, and writes the covering letter with the printed order attached to your Drafts. Nothing is sent until you send it yourself.",
+  inventoryOrderPlacedNotice: (to: string, file: string) =>
+    `The order is placed. A covering letter to ${to} with ${file} attached is waiting in your Drafts — nothing has been sent.`,
+  inventoryConfirmOrder: "Confirm order",
+  inventoryConfirmOrderConfirm:
+    "This gives the order its number and freezes it for good. It writes no message: telling the customer is an ordinary letter you send yourself.",
+  inventoryCancelOrder: "Cancel order",
+  inventoryCancelOrderConfirm:
+    "The order is kept and stays readable, but nothing more is expected against it.",
+  inventoryCancelShortConfirm:
+    "Some of this order has already moved. Cancelling it accepts what has been handled so far as the whole of it, and nothing more will be expected. The order stays readable.",
+  inventoryDiscardDraft: "Discard draft",
+  inventoryDiscardDraftConfirm:
+    "This draft has no number and has been shown to nobody, so it is deleted rather than cancelled.",
+
+  // Booking a consignment, either direction.
+  inventoryReceiveGoods: "Book arrival",
+  inventoryDeliverGoods: "Book consignment",
+  inventoryReceiveTitle: (order: string) => `What arrived against ${order}`,
+  inventoryDeliverTitle: (order: string) => `What is going out against ${order}`,
+  inventoryReceiveSubtitle:
+    "Each line opens on what is still outstanding. Change what you are short of; the rest stays on order. A draft bill is raised for what arrived.",
+  inventoryDeliverSubtitle:
+    "Each line opens on what is still outstanding. Change what is going now; the rest stays on the order.",
+  inventoryReceiveWhere: "Put away at",
+  inventoryReceiveWhereHint: "Where the goods were actually put. The stock ledger is written against this place.",
+  inventoryDeliverWhere: "Picked from",
+  inventoryDeliverWhereHint: "Where the goods were picked from. The stock ledger is written against this place.",
+  inventoryColThisConsignment: "This time",
+  inventoryFulfilNoteHint: "What the person handling it wrote — a damaged crate, a part shipment.",
+  inventoryFulfilNeedsPlace: "Choose the place first.",
+  inventoryFulfilNeedsSomething: "Nothing is stated on any line, so there is nothing to book.",
+  inventoryNoPlaces: "No places yet",
+  inventoryBookArrival: "Book it in",
+  inventoryBookConsignment: "Book it out",
+  inventoryArrivalBooked: "The arrival is booked, the stock ledger is written, and a draft bill is waiting for approval.",
+  inventoryConsignmentBooked: "The consignment is booked and the stock ledger is written.",
+
+  // What has already moved, and what has been billed for it.
+  inventoryArrivals: "Arrivals",
+  inventoryNoArrivals: "Nothing has arrived against this order yet.",
+  inventoryArrivalNo: (n: number) => `Arrival ${n}`,
+  inventoryBillDrafted: "Bill drafted",
+  inventoryConsignments: "Consignments",
+  inventoryNoConsignments: "Nothing has gone out against this order yet.",
+  inventoryConsignmentNo: (n: number) => `Consignment ${n}`,
+  inventoryRaiseInvoice: "Invoice what has gone",
+  inventoryRaisedInvoices: "Invoices",
+  inventoryNoRaisedInvoices: "Nothing has been invoiced from this order yet.",
+  inventoryInvoiceDrafted:
+    "A draft invoice has been raised for what has gone out. It carries no number until somebody issues it in Billing.",
+
   mailAttachmentErrorDetail: (reason: string) =>
     `That file was not attached. Try adding it again. Server: ${reason}`,
   mailDraftCreateErrorDetail: (reason: string) =>
