@@ -604,7 +604,13 @@ fn share(whole: i64, parts_elapsed: i64, parts: i64) -> i64 {
 ///
 /// `time` has no month arithmetic, and the naive "add 30 days" would drift a
 /// 15-month carryover rule by a fortnight.
-fn add_months(day: Date, months: i64) -> Date {
+///
+/// `pub(crate)` since B6.06a: an applicant's retention deadline is six calendar
+/// months from the day they applied ([`crate::hr_applicants`]), which is the
+/// same arithmetic with the same end-of-month trap — 31 August plus six months
+/// is the end of February, not the 3rd of March. A second copy would be a
+/// second chance to get that wrong.
+pub(crate) fn add_months(day: Date, months: i64) -> Date {
     let total =
         i64::from(day.year()) * MONTHS_PER_YEAR + i64::from(u8::from(day.month())) - 1 + months;
     let year = i32::try_from(total.div_euclid(MONTHS_PER_YEAR)).unwrap_or(day.year());

@@ -94,6 +94,7 @@ pub mod fin_receipt_read;
 pub mod fin_rules;
 pub mod fin_vat_return;
 pub mod hr_absences;
+pub mod hr_applicants;
 pub mod hr_checklists;
 pub mod hr_documents;
 pub mod hr_employees;
@@ -104,6 +105,7 @@ pub mod hr_leave_balances;
 pub mod hr_leave_math;
 pub mod hr_leave_policies;
 pub mod hr_leave_requests;
+pub mod hr_openings;
 pub mod hr_org;
 pub mod hr_statutory_leave;
 pub mod iban;
@@ -326,6 +328,7 @@ pub use fin_rules::{
 };
 pub use fin_vat_return::{VatReturn, VatReturnRate, VatReturnSide};
 pub use hr_absences::{AbsenceDay, AbsentPerson};
+pub use hr_applicants::{Applicant, ApplicantNote, ApplicantStage, NewApplicant};
 pub use hr_checklists::{
     ChecklistKind, ChecklistOwners, ChecklistProgress, ChecklistRun, ChecklistStep,
     ChecklistTemplate, NewChecklistRun, NewChecklistStep, NewChecklistTemplate, PlannedStep,
@@ -342,6 +345,7 @@ pub use hr_leave_policies::{LeaveKind, LeavePolicy, NewLeavePolicy};
 pub use hr_leave_requests::{
     LeaveRequest, LeaveRequestQuery, LeaveStatus, NewLeaveRequest, leave_request_cost,
 };
+pub use hr_openings::{NewOpening, Opening, OpeningStatus};
 pub use hr_org::{ORG_CHART_MAX_DEPTH, OrgNode, fold_org_chart};
 pub use id::{
     AttachmentId, BankLineId, BankMatchId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId,
@@ -350,13 +354,14 @@ pub use id::{
     CategoryId, ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, CommentId, ContactId,
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
     FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
-    FinMileageRateId, FinPeriodId, FinPostingId, GroupId, HrChecklistStepId, HrChecklistTemplateId,
-    HrDocumentId, HrEmployeeId, HrEmploymentId, HrLeavePolicyId, HrLeaveRequestId,
-    InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId,
-    InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
-    InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
-    SiteCollectionId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId,
-    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    FinMileageRateId, FinPeriodId, FinPostingId, GroupId, HrApplicantId, HrApplicantNoteId,
+    HrChecklistStepId, HrChecklistTemplateId, HrDocumentId, HrEmployeeId, HrEmploymentId,
+    HrLeavePolicyId, HrLeaveRequestId, HrOpeningId, InsightDashboardId, InsightTileId, InvCountId,
+    InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId,
+    InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId, InvSupplierId, LabelId, MailboxId, MeetingId,
+    MessageId, ProjectId, ProjectMilestoneId, SiteCollectionId, SiteFormId, SiteFormSubmissionId,
+    SiteId, SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
+    TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

@@ -24,14 +24,15 @@ use crate::{
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
     finance_report_vat, flagdue, hr_checklists, hr_documents, hr_employees, hr_holidays,
-    hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_org, imap_import_route, insights,
-    insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
-    inventory_moves, inventory_po, inventory_po_print, inventory_po_receipts, inventory_po_send,
-    inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice,
-    inventory_stock, inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
-    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
-    projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
-    signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_org, hr_recruitment,
+    imap_import_route, insights, insights_ask, insights_eval, insights_gallery, inventory_counts,
+    inventory_locations, inventory_moves, inventory_po, inventory_po_print, inventory_po_receipts,
+    inventory_po_send, inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries,
+    inventory_so_invoice, inventory_stock, inventory_supplier_prices, inventory_suppliers,
+    meet_routes, projects_clients, projects_invoices, projects_plan, projects_reports,
+    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, scoped_roles,
+    security, session, settings, share, signup_route, sites, snooze, spaces, tasks, unsubscribe,
+    wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -759,6 +760,56 @@ pub fn app_with_site_domain_dns(
             "/hr/employees/{id}/checklists",
             get(hr_checklists::list_checklists).post(hr_checklists::run_checklist),
         )
+        // Hiring (B6.06a): the openings, and the people who applied for them.
+        // Every route is HR's — there is no employee-facing or manager-facing
+        // view of a candidate at all.
+        //
+        // `publish` and `close` are POSTs of their own rather than a status
+        // field on the PATCH, the shape `issue` and `archive` already have: a
+        // transition is a decision, and it must not happen because an editor
+        // sent back a stale form. A closed opening is terminal — a role being
+        // hired for again is next year's opening.
+        //
+        // `move` is the ONLY way a stage changes, deliberately (the PATCH will
+        // not write one), so every decision about a person is one audited act
+        // with a human's id on it. Nothing in this service reads a CV: no
+        // screening, ranking or scoring exists to be routed to
+        // (`docs/design/hr.md` § The EU AI Act posture).
+        //
+        // DELETE on an applicant is a real erasure — the row, its notes and the
+        // CV — because an unsuccessful applicant has no statutory retention
+        // behind them, and it is a person's act rather than a scheduled job.
+        .route(
+            "/hr/openings",
+            get(hr_recruitment::list_openings).post(hr_recruitment::create_opening),
+        )
+        .route(
+            "/hr/openings/{id}",
+            get(hr_recruitment::get_opening).patch(hr_recruitment::update_opening),
+        )
+        .route(
+            "/hr/openings/{id}/publish",
+            post(hr_recruitment::publish_opening),
+        )
+        .route(
+            "/hr/openings/{id}/close",
+            post(hr_recruitment::close_opening),
+        )
+        .route(
+            "/hr/openings/{id}/applicants",
+            get(hr_recruitment::list_applicants).post(hr_recruitment::record_applicant),
+        )
+        .route(
+            "/hr/applicants/{id}",
+            get(hr_recruitment::get_applicant)
+                .patch(hr_recruitment::update_applicant)
+                .delete(hr_recruitment::delete_applicant),
+        )
+        .route(
+            "/hr/applicants/{id}/move",
+            post(hr_recruitment::move_applicant),
+        )
+        .route("/hr/applicants/{id}/notes", post(hr_recruitment::add_note))
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the
         // document, so it can never happen because an editor sent a stale

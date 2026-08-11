@@ -234,6 +234,7 @@ DELETE /crm/stages/{id} -> crm.stage.delete
 DELETE /finance/accounts/{id} -> finance.account.delete
 DELETE /finance/expenses/{id} -> finance.expense.delete
 DELETE /finance/mileage/{id} -> finance.mileage.delete
+DELETE /hr/applicants/{id} -> hr.applicant.delete
 DELETE /hr/checklist-templates/{id} -> hr.checklist_template.delete
 DELETE /hr/employees/{id}/documents/{document_id} -> hr.employee.document.delete
 DELETE /inventory/locations/{id} -> inventory.location.delete
@@ -257,10 +258,12 @@ PATCH /crm/pipelines/{id} -> crm.pipeline.update
 PATCH /crm/stages/{id} -> crm.stage.update
 PATCH /finance/accounts/{id} -> finance.account.update
 PATCH /finance/expenses/{id} -> finance.expense.update
+PATCH /hr/applicants/{id} -> hr.applicant.update
 PATCH /hr/checklist-templates/{id} -> hr.checklist_template.update
 PATCH /hr/employees/{id} -> hr.employee.update
 PATCH /hr/leave-policies/{id} -> hr.leave_policy.update
 PATCH /hr/leave-requests/{id} -> hr.leave_request.update
+PATCH /hr/openings/{id} -> hr.opening.update
 PATCH /inventory/counts/{id} -> inventory.count.update
 PATCH /inventory/locations/{id} -> inventory.location.update
 PATCH /inventory/purchase-orders/{id} -> inventory.purchase_order.update
@@ -325,6 +328,8 @@ POST /finance/mileage -> finance.mileage.create
 POST /finance/periods -> finance.period.create
 POST /finance/periods/{id}/close -> finance.period.close
 POST /finance/periods/{id}/reopen -> finance.period.reopen
+POST /hr/applicants/{id}/move -> hr.applicant.move
+POST /hr/applicants/{id}/notes -> hr.applicant.note.create
 POST /hr/checklist-templates -> hr.checklist_template.create
 POST /hr/employees -> hr.employee.create
 POST /hr/employees/{id}/archive -> hr.employee.archive
@@ -337,6 +342,10 @@ POST /hr/leave-requests/{id}/approve -> hr.leave_request.approve
 POST /hr/leave-requests/{id}/cancel -> hr.leave_request.cancel
 POST /hr/leave-requests/{id}/reject -> hr.leave_request.reject
 POST /hr/leave-requests/{id}/withdraw -> hr.leave_request.withdraw
+POST /hr/openings -> hr.opening.create
+POST /hr/openings/{id}/applicants -> hr.opening.applicant.create
+POST /hr/openings/{id}/close -> hr.opening.close
+POST /hr/openings/{id}/publish -> hr.opening.publish
 POST /inventory/counts -> inventory.count.create
 POST /inventory/counts/{id}/apply -> inventory.count.apply
 POST /inventory/counts/{id}/cancel -> inventory.count.cancel

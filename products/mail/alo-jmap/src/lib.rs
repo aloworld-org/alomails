@@ -106,6 +106,7 @@ pub mod hr_leave_door;
 pub mod hr_leave_policies;
 pub mod hr_leave_requests;
 pub mod hr_org;
+pub mod hr_recruitment;
 pub mod imap_import;
 pub mod imap_import_route;
 pub mod insights;

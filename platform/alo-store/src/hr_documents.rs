@@ -294,7 +294,12 @@ impl TenantStore {
     /// another tenant's node, a node in somebody's personal files, a node in a
     /// Space and a node already in the trash are all [`StoreError::NotFound`],
     /// because each of them is equally not a document HR may file.
-    async fn assert_hr_area_node(&self, node: &DriveNodeId) -> Result<()> {
+    ///
+    /// `pub(crate)` since B6.06a: an applicant's CV is the same promise about
+    /// the same area ([`crate::hr_applicants`]), and a second copy of this read
+    /// would be a second chance for the two to disagree about what "in the HR
+    /// area" means.
+    pub(crate) async fn assert_hr_area_node(&self, node: &DriveNodeId) -> Result<()> {
         let row: Option<(String, String, bool)> = sqlx::query_as(
             "SELECT location_kind, location_id, trashed FROM drive_nodes \
               WHERE tenant_id = $1 AND id = $2",

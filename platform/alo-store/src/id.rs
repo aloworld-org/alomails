@@ -575,6 +575,32 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One job a tenant is hiring for (alo HR, ADR 0035, wave B6.06a). Draft
+    /// until somebody publishes it, closed once the round is over, and terminal
+    /// there — an opening that reopens is next year's opening, and pretending
+    /// otherwise loses the dates of the first round
+    /// (`docs/design/hr.md`, "Recruitment-lite").
+    HrOpeningId
+);
+
+opaque_id!(
+    /// One person who applied for an opening (alo HR, ADR 0035, wave B6.06a).
+    /// Their CV is a Drive node in the tenant's HR area and **is never read by
+    /// us**: nothing in this suite scores, ranks, shortlists or otherwise
+    /// evaluates a candidate, which is a refusal rather than a scheduling cut
+    /// (`docs/design/hr.md`, "The EU AI Act posture").
+    HrApplicantId
+);
+
+opaque_id!(
+    /// One thing somebody wrote down about a candidate they met (alo HR, ADR
+    /// 0035, wave B6.06a). Carries its author, because "who wrote this about
+    /// me" is a question a candidate exercising a subject-access right is
+    /// entitled to have answered (`docs/design/hr.md`, "Recruitment-lite").
+    HrApplicantNoteId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.
