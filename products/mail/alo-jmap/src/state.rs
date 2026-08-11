@@ -100,7 +100,7 @@ pub struct Account {
     /// carries none for the same reason it carries no admin.
     pub roles: Vec<TenantRole>,
     /// The rail modules a tenant admin has switched off for this person
-    /// (migration 0207). Ordinarily empty.
+    /// (migration 0208). Ordinarily empty.
     ///
     /// This only ever **narrows**. An app that is not denied still needs
     /// whatever its own gate wants — Finance an accountant, a Space its
@@ -211,7 +211,7 @@ impl Account {
     }
 
     /// Whether a tenant admin has left this app switched on for this person
-    /// (migration 0207).
+    /// (migration 0208).
     ///
     /// Answers only that one question. A `true` is not permission to use the
     /// module — every gate the module already had still applies — it says the

@@ -1,5 +1,5 @@
 //! Which apps a person may open — the admin console's per-user app switches
-//! (migration 0207).
+//! (migration 0208).
 //!
 //! A tenant admin decides, per user, which of the rail's modules that person
 //! gets. Everybody starts with all of them; a switch turned off writes a
@@ -12,7 +12,7 @@
 //! administrator thinks in; the table holds the complement, because the empty
 //! table then means what is actually true today — everybody can open
 //! everything — and a module added next month needs no backfill for every
-//! existing account. Migration 0207 argues this at length, including what it
+//! existing account. Migration 0208 argues this at length, including what it
 //! costs.
 //!
 //! # This narrows and never widens
@@ -36,7 +36,7 @@ use crate::store::TenantStore;
 
 /// A rail module whose access can be switched off for one person.
 ///
-/// Closed, and deliberately the same set as the CHECK in migration 0207: a
+/// Closed, and deliberately the same set as the CHECK in migration 0208: a
 /// denial naming a module no gate reads would show as switched off in the
 /// console while every route still answered it, which is worse than a refusal
 /// because it looks like it worked.

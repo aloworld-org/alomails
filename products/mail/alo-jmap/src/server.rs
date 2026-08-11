@@ -1860,7 +1860,7 @@ pub fn app_with_site_domain_dns(
             state.clone(),
             scoped_roles::enforce_scoped_roles,
         ))
-        // The per-user app switches (migration 0207), outside the scoped-role
+        // The per-user app switches (migration 0208), outside the scoped-role
         // layer so it runs first: an app an admin switched off is refused
         // before anything asks what the caller may do inside it. The rail
         // hides the same modules, but a hidden link is not a closed door —

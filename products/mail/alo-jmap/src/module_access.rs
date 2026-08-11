@@ -1,5 +1,5 @@
 //! The middleware behind the admin console's per-user app switches
-//! (migration 0207; `platform/alo-store/src/user_modules.rs`).
+//! (migration 0208; `platform/alo-store/src/user_modules.rs`).
 //!
 //! An administrator decides which apps each person gets, and the rail shows
 //! only those. Hiding a rail entry is not access control — the URL is still

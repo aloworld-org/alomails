@@ -159,7 +159,7 @@ pub async fn session(
         // never an access decision.
         "alo:roles": account.roles.iter().map(|role| role.as_str()).collect::<Vec<_>>(),
         // The rail modules a tenant admin has switched off for this person
-        // (migration 0207). The client hides them, because offering an app
+        // (migration 0208). The client hides them, because offering an app
         // that answers 403 is worse than not offering it. As with the roles
         // above, this is advertised so the UI can be honest and is never the
         // decision: `module_access` refuses the routes regardless, and a

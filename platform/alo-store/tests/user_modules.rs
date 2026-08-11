@@ -1,5 +1,5 @@
 //! Tenancy and behaviour proof for the admin console's per-user app switches
-//! (migration 0207; `platform/alo-store/src/user_modules.rs`).
+//! (migration 0208; `platform/alo-store/src/user_modules.rs`).
 //!
 //! A denial row is an **access fact** like a role, so the same sharpness
 //! applies: a leak here does not show somebody a number, it hands them a door —

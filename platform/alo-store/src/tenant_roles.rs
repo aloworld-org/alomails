@@ -117,7 +117,7 @@ pub struct AccessFacts {
     /// The tenant-wide roles they hold, sorted and without duplicates.
     pub roles: Vec<TenantRole>,
     /// The rail modules an admin has switched off for this person, sorted
-    /// (migration 0207). Ordinarily empty — the common case is somebody who
+    /// (migration 0208). Ordinarily empty — the common case is somebody who
     /// has been denied nothing.
     pub denied_modules: Vec<AppModule>,
 }
