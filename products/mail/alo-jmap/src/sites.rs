@@ -224,7 +224,7 @@ fn collection_preview_json(snapshot: &SiteCollectionSnapshot) -> Value {
 /// store spells every rule violation as `Conflict` with a message naming the
 /// violated rule and never echoing another tenant's data, and the design note
 /// publishes all of them — subdomain-taken included — as `422`.
-fn map_store_err(e: StoreError) -> Problem {
+pub(crate) fn map_store_err(e: StoreError) -> Problem {
     match e {
         StoreError::NotFound => Problem::with(StatusCode::NOT_FOUND, "not found"),
         StoreError::Forbidden => Problem::with(StatusCode::FORBIDDEN, "forbidden"),
@@ -1897,7 +1897,7 @@ pub async fn unpublish_site(
 
 /// Resolves the caller's site or answers `404` — used where the store read
 /// alone could not distinguish another tenant's site from an empty one.
-async fn require_site(account: &Account, site: &SiteId) -> Result<Site, Problem> {
+pub(crate) async fn require_site(account: &Account, site: &SiteId) -> Result<Site, Problem> {
     account
         .acc
         .site(site)

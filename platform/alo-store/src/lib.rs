@@ -175,6 +175,7 @@ pub mod site_public_forms;
 pub mod site_publish;
 pub mod site_theme;
 pub mod site_translations;
+pub mod site_versions;
 pub mod sites;
 
 pub use site_editors::{SiteEditorCollaborator, SiteEditorInviteOutcome, SiteEditorInviteTarget};
@@ -460,6 +461,10 @@ pub use site_theme::{
 pub use site_translations::{
     SiteTranslationPageContent, SiteTranslationPageWrite, SiteTranslationPostContent,
     SiteTranslationPostWrite,
+};
+pub use site_versions::{
+    MAX_SITE_PUBLISH_HISTORY, SiteCollectionVersionChange, SitePageVersionChange,
+    SitePageVersionField, SitePublishComparison, SitePublishVersion, SiteVersionChange,
 };
 pub use sites::{
     DEFAULT_SITE_LOCALE, MAX_SITE_LOCALES, Site, SiteStatus, normalize_locale_tag,
