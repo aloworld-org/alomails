@@ -1725,6 +1725,7 @@ export const en = {
   meetNotStarted: "Not started yet",
   meetAddToEvent: "Add a meeting",
   meetStart: "Start a meeting",
+  meetStartedHere: "started a meeting in this conversation",
   meetJoin: "Join the meeting",
   meetLive: "Meeting in progress",
   meetJoinNow: "Join now",
@@ -4515,7 +4516,8 @@ export const en = {
   hrFieldEmail: "Email",
   hrFieldPhone: "Phone",
   hrFieldSource: "Where they came from",
-  hrSourceHint: "A job board, a referral, an agency — however the application reached you.",
+  hrSourceHint:
+    "A job board, a referral, an agency — however the application reached you.",
   hrAppliedOn: (moment: string) => `Applied ${moment}`,
   hrNotes: "Interview notes",
   hrNotesEmpty: "Nothing written down yet.",
@@ -4540,7 +4542,8 @@ export const en = {
   hrEraseConfirm: (name: string) =>
     `Erase everything about ${name}? Their details, every note written about them and their CV are removed for good. This cannot be undone.`,
   sitesCollections: "Collections",
-  sitesCollectionsHint: "Turn an alo Base table into reusable cards for your website.",
+  sitesCollectionsHint:
+    "Turn an alo Base table into reusable cards for your website.",
   sitesConnectTable: "Connect a table",
   sitesCollectionsLoading: "Loading collections...",
   sitesCollectionsLoadFailed:
@@ -4557,8 +4560,10 @@ export const en = {
   sitesCollectionTable: "Table",
   sitesCollectionChooseBase: "Choose a Base",
   sitesCollectionChooseTable: "Choose a table",
-  sitesCollectionRows: (count: number) => (count === 1 ? "1 row" : `${count} rows`),
-  sitesCollectionConnectedTo: (base: string, table: string) => `${base} / ${table}`,
+  sitesCollectionRows: (count: number) =>
+    count === 1 ? "1 row" : `${count} rows`,
+  sitesCollectionConnectedTo: (base: string, table: string) =>
+    `${base} / ${table}`,
   sitesCollectionSourceUnavailable:
     "Choose the Base and table whose rows should appear on the website.",
   sitesCollectionEdit: (name: string) => `Edit ${name}`,
@@ -4601,7 +4606,8 @@ export const en = {
   sitesSectionCollectionDesc: "A reusable grid of rows from alo Base.",
   sitesCollectionSectionHeading: "Section heading",
   sitesCollectionSectionChoose: "Collection to show",
-  sitesCollectionSectionNoConnections: "Connect a table before adding this section",
+  sitesCollectionSectionNoConnections:
+    "Connect a table before adding this section",
   sitesCollectionSectionNoConnectionsHint:
     "The collection stays reusable, so the same Base can power more than one page.",
 
@@ -4627,7 +4633,8 @@ export const en = {
   hrSendBackBody: (person: string) =>
     `${person} will see this again, editable, with what you write here. Say what needs correcting.`,
   hrSendBackPlaceholder: "What needs correcting",
-  hrWaitingCount: (count: number) => (count === 1 ? "1 waiting" : `${count} waiting`),
+  hrWaitingCount: (count: number) =>
+    count === 1 ? "1 waiting" : `${count} waiting`,
   hrCountOf: (kind: string, count: number) => `${kind}: ${count}`,
   hrWorkingDays: (days: number) => (days === 1 ? "1 day" : `${days} days`),
   hrLeaveOf: (policy: string, from: string, to: string) =>
@@ -4641,7 +4648,8 @@ export const en = {
   hrApprovalsQueueFailed: (kinds: string) =>
     `Some of what is waiting could not be read (${kinds}), so this list is not complete. Everything else is shown.`,
   hrApprovalsWidgetLabel: "waiting",
-  hrApprovalsWidgetTitle: "Time off, claims and weeks waiting for your decision",
+  hrApprovalsWidgetTitle:
+    "Time off, claims and weeks waiting for your decision",
 
   // The directory and the org chart (B6.08a) — the module's one screen with no
   // door on it, and the words are a colleague's rather than a system's. Nobody
@@ -4655,7 +4663,8 @@ export const en = {
   hrViewPeople: "People",
   hrViewOrg: "Org chart",
   hrIncludeLeavers: "Include people who have left",
-  hrPeopleCount: (count: number) => (count === 1 ? "1 person" : `${count} people`),
+  hrPeopleCount: (count: number) =>
+    count === 1 ? "1 person" : `${count} people`,
   hrShowingOf: (shown: number, total: number) => `${shown} of ${total}`,
   hrContact: "Contact",
   hrManager: "Reports to",
@@ -4663,7 +4672,8 @@ export const en = {
   hrYou: "You",
   hrLeft: "Left",
   hrShowInChart: "Where they sit",
-  hrReportsCount: (count: number) => (count === 1 ? "1 report" : `${count} reports`),
+  hrReportsCount: (count: number) =>
+    count === 1 ? "1 report" : `${count} reports`,
   hrDirectoryEmptyTitle: "Nobody is in the directory yet",
   hrDirectoryEmptyBody:
     "As soon as HR writes down the first person, this is where everybody finds their colleagues — who they are, how to reach them, and who they report to.",

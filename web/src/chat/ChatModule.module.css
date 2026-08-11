@@ -1940,3 +1940,46 @@
     animation: none;
   }
 }
+
+/* ---- a meeting, announced where it belongs ---------------------------- */
+
+/* Not a message. An invitation, in the conversation it concerns — which is
+   the seam Teams leaves open, where the call happens somewhere else and the
+   room never learns of it. */
+.meetingCard {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 10px 8px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border-subtle));
+  border-radius: 12px;
+  background: var(--accent-tint);
+}
+
+.meetingMark {
+  flex: none;
+  color: var(--accent);
+}
+
+.meetingText {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.meetingJoin {
+  flex: none;
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: 15px;
+  background: var(--accent);
+  color: var(--on-accent, #fff);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.meetingJoin:hover {
+  filter: brightness(0.94);
+}

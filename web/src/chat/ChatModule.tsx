@@ -262,6 +262,7 @@ function MessageLine({
   onEdit,
   onWithdraw,
   onReply,
+  onJoinMeeting,
   grouped = false,
   children,
 }: {
@@ -284,6 +285,8 @@ function MessageLine({
   /** Open this message's thread. In the toolbar, not the flow: an affordance
    *  that is invisible until hover must not occupy space while invisible. */
   onReply?: ((message: Message) => void) | undefined;
+  /** Join the meeting this message announces. */
+  onJoinMeeting?: ((id: string) => void) | undefined;
   /** This message continues the previous author's run: no avatar, no name, no
    *  timestamp — just the words, aligned under the ones above. */
   grouped?: boolean;
@@ -426,7 +429,23 @@ function MessageLine({
           )}
         </div>
       )}
-      {editing !== null ? (
+      {message.body.startsWith("__meeting__:") ? (
+        // The seam Teams leaves open, closed: the room knows a call is
+        // happening and you join from where the conversation already is.
+        <span className={styles.meetingCard}>
+          <Video size={16} className={styles.meetingMark} />
+          <span className={styles.meetingText}>{strings.meetStartedHere}</span>
+          <button
+            type="button"
+            className={styles.meetingJoin}
+            onClick={() =>
+              onJoinMeeting?.(message.body.slice("__meeting__:".length))
+            }
+          >
+            {strings.meetJoin}
+          </button>
+        </span>
+      ) : editing !== null ? (
         <form
           className={styles.editRow}
           onSubmit={(event) => {

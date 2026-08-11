@@ -121,7 +121,23 @@ impl AccountStore {
         .fetch_one(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-        Ok(to_meeting(row))
+        let meeting = to_meeting(row);
+
+        // A meeting announces itself in the room it belongs to. This is the
+        // seam Teams leaves open: there, a call happens somewhere else and the
+        // conversation it concerns never learns it happened. Here the room is
+        // told, everyone in it can join from where they already are, and the
+        // transcript has a place to come back to.
+        //
+        // Best-effort: a meeting that exists but was not announced is a small
+        // loss, and refusing to start a call because a message failed would be
+        // a large one.
+        if let Some(channel) = &meeting.channel_id {
+            let _ = self
+                .post_message(channel, &format!("__meeting__:{}", meeting.id.as_str()), None)
+                .await;
+        }
+        Ok(meeting)
     }
 
     /// One meeting, if it is the caller's to see.
