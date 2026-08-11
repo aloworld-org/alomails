@@ -223,6 +223,33 @@ impl Account {
             ))
         }
     }
+
+    /// Guard for the HR door — the whole employee record including the private
+    /// fields, the terms and pay, and the papers on somebody's file (alo HR,
+    /// ADR 0035, wave B6.02b; `docs/design/hr.md`, "The HR role").
+    ///
+    /// Widens [`Account::require_admin`] by exactly one role, and deliberately
+    /// **not** by the accountant's: an external bookkeeper reading everybody's
+    /// contract and home address is precisely the failure the scoped roles
+    /// exist to prevent, so somebody who genuinely runs both is granted both.
+    ///
+    /// It gates the *record*, never the directory: the people list and the org
+    /// chart are every member's read, and narrowing them to HR would put the
+    /// company's org chart back in a filing cabinet.
+    ///
+    /// # Errors
+    /// [`Problem`] 403 naming the role when the caller is neither a tenant
+    /// admin nor an HR user.
+    pub fn require_hr(&self) -> Result<(), Problem> {
+        if self.is_admin || self.has_role(TenantRole::Hr) {
+            Ok(())
+        } else {
+            Err(Problem::with(
+                axum::http::StatusCode::FORBIDDEN,
+                "admin or hr only",
+            ))
+        }
+    }
 }
 
 /// Resolves the `Authorization: Bearer` token to an [`Account`] via

@@ -234,6 +234,7 @@ DELETE /crm/stages/{id} -> crm.stage.delete
 DELETE /finance/accounts/{id} -> finance.account.delete
 DELETE /finance/expenses/{id} -> finance.expense.delete
 DELETE /finance/mileage/{id} -> finance.mileage.delete
+DELETE /hr/employees/{id}/documents/{document_id} -> hr.employee.document.delete
 DELETE /inventory/locations/{id} -> inventory.location.delete
 DELETE /inventory/purchase-orders/{id} -> inventory.purchase_order.delete
 DELETE /inventory/reorder-rules/{id} -> inventory.reorder_rule.delete
@@ -255,6 +256,7 @@ PATCH /crm/pipelines/{id} -> crm.pipeline.update
 PATCH /crm/stages/{id} -> crm.stage.update
 PATCH /finance/accounts/{id} -> finance.account.update
 PATCH /finance/expenses/{id} -> finance.expense.update
+PATCH /hr/employees/{id} -> hr.employee.update
 PATCH /inventory/counts/{id} -> inventory.count.update
 PATCH /inventory/locations/{id} -> inventory.location.update
 PATCH /inventory/purchase-orders/{id} -> inventory.purchase_order.update
@@ -319,6 +321,9 @@ POST /finance/mileage -> finance.mileage.create
 POST /finance/periods -> finance.period.create
 POST /finance/periods/{id}/close -> finance.period.close
 POST /finance/periods/{id}/reopen -> finance.period.reopen
+POST /hr/employees -> hr.employee.create
+POST /hr/employees/{id}/archive -> hr.employee.archive
+POST /hr/employees/{id}/documents -> hr.employee.document.create
 POST /inventory/counts -> inventory.count.create
 POST /inventory/counts/{id}/apply -> inventory.count.apply
 POST /inventory/counts/{id}/cancel -> inventory.count.cancel

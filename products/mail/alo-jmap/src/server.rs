@@ -23,11 +23,11 @@ use crate::{
     crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
-    finance_report_vat, flagdue, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, inventory_counts, inventory_locations, inventory_moves, inventory_po,
-    inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
-    inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice, inventory_stock,
-    inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
+    finance_report_vat, flagdue, hr_documents, hr_employees, hr_org, imap_import_route, insights,
+    insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
+    inventory_moves, inventory_po, inventory_po_print, inventory_po_receipts, inventory_po_send,
+    inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice,
+    inventory_stock, inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
@@ -625,6 +625,44 @@ pub fn app_with_site_domain_dns(
         .route(
             "/inventory/counts/{id}/cancel",
             post(inventory_counts::cancel_count),
+        )
+        // alo HR (B6.02b), the module's first routes. `/hr` is a NEW top-level
+        // prefix: the production Caddyfile needs it added at the next deploy,
+        // and it joins `API_PATHS` in `web/vite.config.ts` in the same commit.
+        //
+        // Two doors, and which one answers is decided by calling a different
+        // store function rather than by filtering a response: the directory and
+        // the chart are every member's read and carry public fields only; the
+        // record, the terms and the papers are HR's (or a tenant admin's), and
+        // are the only place a national identifier, an IBAN or a pay figure is
+        // returned about somebody else (`docs/design/hr.md` § Three doors).
+        //
+        // The archive is its own POST for the reason /billing/customers set:
+        // an ordinary edit must never drop somebody out of the directory
+        // because a stale form carried a flag. Documents are a sub-resource of
+        // the person, so the audit trail files them against the record they are
+        // on (`hr.employee.document.create`, audit_action::event_for).
+        .route("/hr/me", get(hr_org::me))
+        .route("/hr/org", get(hr_org::org_chart))
+        .route(
+            "/hr/employees",
+            get(hr_employees::list_employees).post(hr_employees::create_employee),
+        )
+        .route(
+            "/hr/employees/{id}",
+            get(hr_employees::get_employee).patch(hr_employees::update_employee),
+        )
+        .route(
+            "/hr/employees/{id}/archive",
+            post(hr_employees::archive_employee),
+        )
+        .route(
+            "/hr/employees/{id}/documents",
+            get(hr_documents::list_documents).post(hr_documents::file_document),
+        )
+        .route(
+            "/hr/employees/{id}/documents/{document_id}",
+            delete(hr_documents::detach_document),
         )
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the

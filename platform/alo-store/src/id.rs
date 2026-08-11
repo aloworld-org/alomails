@@ -525,6 +525,15 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One paper filed against a person: a contract, an amendment, a letter
+    /// (alo HR, ADR 0035, wave B6.02b). The filing, not the file — the bytes
+    /// are a Drive node in the tenant's HR area, and this id names the fact
+    /// that the node is on somebody's employment file
+    /// (`docs/design/hr.md`, "Routes").
+    HrDocumentId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

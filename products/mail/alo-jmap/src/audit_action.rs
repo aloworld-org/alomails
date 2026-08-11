@@ -64,14 +64,7 @@ pub struct AuditEvent {
 /// auditor each have standing to ask, and the answer must not be a
 /// reconstruction. Listing the module first means the suite demands an audited
 /// route from the moment one is registered.
-const AUDITED_MODULES: [&str; 6] = [
-    "billing",
-    "crm",
-    "projects",
-    "finance",
-    "inventory",
-    "hr",
-];
+const AUDITED_MODULES: [&str; 6] = ["billing", "crm", "projects", "finance", "inventory", "hr"];
 
 /// `POST` routes that mutate nothing — a dry run whose whole point is to answer
 /// "what *would* this do". Auditing them would file a paper trail for looking.

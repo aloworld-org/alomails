@@ -4,7 +4,10 @@
 //! per-node permission:
 //!
 //! - personal → only the owning user may read or write;
-//! - space → any member may read, an `editor`+ may write (ADR 0026).
+//! - space → any member may read, an `editor`+ may write (ADR 0026);
+//! - hr → the tenant's HR area: a tenant admin or a holder of
+//!   [`TenantRole::Hr`] may read and write, and everybody else cannot see that
+//!   it exists (alo HR, ADR 0035, wave B6.02b).
 //!
 //! A node the caller cannot read is [`StoreError::NotFound`] (existence hidden);
 //! a node they can read but not write is [`StoreError::Forbidden`]. Bytes live
@@ -16,6 +19,13 @@ use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
 use crate::id::{DriveNodeId, SpaceId};
 use crate::spaces::SpaceRole;
+use crate::tenant_roles::TenantRole;
+
+/// The stored `location_kind` of the tenant's HR area — see
+/// [`DriveLocation::Hr`]. A constant because three places must agree on the
+/// word: the two permission gates here, and `hr_documents.rs`, which refuses to
+/// file a node that is not in it.
+pub(crate) const HR_AREA: &str = "hr";
 
 /// Largest file we pull back to build a content index. Bigger files stay
 /// name-searchable; we just don't read the whole blob to index its text. Office
@@ -30,6 +40,24 @@ pub enum DriveLocation {
     Personal,
     /// A Space the caller belongs to.
     Space(SpaceId),
+    /// **The tenant's HR area** — one per tenant, holding the papers HR keeps
+    /// about the people it employs: contracts, amendments, letters (alo HR,
+    /// ADR 0035, wave B6.02b; `docs/design/hr.md`).
+    ///
+    /// Read *and* write are the same gate here, and it is neither ownership nor
+    /// a Space membership but the tenant-wide [`TenantRole::Hr`] (or being a
+    /// tenant admin). That is the whole point: a contract must be a Drive node
+    /// — one file tree, one version history, one download path — **and** must
+    /// not be reachable by the colleague who happens to know its id. A person
+    /// without the role is answered [`StoreError::NotFound`] rather than
+    /// [`StoreError::Forbidden`], because on this location even the knowledge
+    /// that a file exists is part of what is being kept.
+    ///
+    /// It is deliberately not a Space with a careful membership list: a Space's
+    /// members are managed per Space by whoever manages it, and an HR area
+    /// whose access could drift away from the HR role is an access rule with
+    /// two sources of truth.
+    Hr,
 }
 
 /// A node in the tree: a folder, an uploaded file, or a document.
@@ -83,6 +111,28 @@ impl AccountStore {
         match loc {
             DriveLocation::Personal => ("personal".to_owned(), self.user.as_str().to_owned()),
             DriveLocation::Space(id) => ("space".to_owned(), id.as_str().to_owned()),
+            // One HR area per tenant, named by the tenant itself. The id comes
+            // from the handle, never from a caller, so "the HR area" is not a
+            // thing a request can ask to be a different one of.
+            DriveLocation::Hr => (HR_AREA.to_owned(), self.tenant.as_str().to_owned()),
+        }
+    }
+
+    /// Ok if the caller may use the tenant's HR area, else [`StoreError::NotFound`].
+    ///
+    /// `NotFound` and not `Forbidden`, and the same answer for reading and for
+    /// writing: on this location the existence of a file is itself the thing
+    /// being kept, so a colleague who guesses a node id must learn nothing at
+    /// all — not that it exists, not that they lack a role.
+    async fn require_hr_area(&self, id: &str) -> Result<()> {
+        if id != self.tenant.as_str() {
+            return Err(StoreError::NotFound);
+        }
+        let facts = self.access_facts().await?;
+        if facts.is_admin || facts.has(TenantRole::Hr) {
+            Ok(())
+        } else {
+            Err(StoreError::NotFound)
         }
     }
 
@@ -96,6 +146,7 @@ impl AccountStore {
                     .await?;
                 Ok(())
             }
+            HR_AREA => self.require_hr_area(id).await,
             _ => Err(StoreError::NotFound),
         }
     }
@@ -111,6 +162,9 @@ impl AccountStore {
                     .await?;
                 Ok(())
             }
+            // Reading and writing the HR area are one gate: there is no viewer
+            // of somebody's contract who is not also the person who files it.
+            HR_AREA => self.require_hr_area(id).await,
             _ => Err(StoreError::NotFound),
         }
     }
