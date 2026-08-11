@@ -506,6 +506,25 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One person a tenant employs (alo HR, ADR 0035, wave B6.02a). Deliberately
+    /// not a [`UserId`]: not every employee has a login — a warehouse hand or a
+    /// seasonal picker is employed, takes leave and appears on the payroll
+    /// export without ever opening a mailbox — and the org chart links these,
+    /// not accounts, so the chart is complete where the accounts are not
+    /// (`docs/design/hr.md`, "`user_id` is nullable").
+    HrEmployeeId
+);
+
+opaque_id!(
+    /// One period of employment on one set of terms — job title, team, contract
+    /// kind, working pattern and pay (alo HR, ADR 0035, wave B6.02a). Appended,
+    /// never edited in place: a balance computed last March is folded from the
+    /// pattern that was in force then, so a change ends the current row and
+    /// starts the next (`docs/design/hr.md`, "Why two tables").
+    HrEmploymentId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

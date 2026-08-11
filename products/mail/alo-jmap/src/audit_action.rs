@@ -56,7 +56,22 @@ pub struct AuditEvent {
 /// abusable write in the business modules — it is the one that can make theft
 /// look like paperwork — and "who adjusted this down by forty, and when" is
 /// precisely the question this trail exists to answer.
-const AUDITED_MODULES: [&str; 5] = ["billing", "crm", "projects", "finance", "inventory"];
+/// `hr` joined at B6.02a (`docs/design/hr.md` § Audit), before the first
+/// `/hr/*` route existed rather than after it — this module has the strongest
+/// claim on the trail of any so far. "Who approved my leave, and when", "who
+/// changed my pay", "who opened my record" and "who drew the payroll file" are
+/// questions an employee, a works council, a data-protection officer and an
+/// auditor each have standing to ask, and the answer must not be a
+/// reconstruction. Listing the module first means the suite demands an audited
+/// route from the moment one is registered.
+const AUDITED_MODULES: [&str; 6] = [
+    "billing",
+    "crm",
+    "projects",
+    "finance",
+    "inventory",
+    "hr",
+];
 
 /// `POST` routes that mutate nothing — a dry run whose whole point is to answer
 /// "what *would* this do". Auditing them would file a paper trail for looking.

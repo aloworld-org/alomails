@@ -104,10 +104,11 @@ fn methods_of(call: &str) -> Vec<String> {
 /// `audit_action::AUDITED_MODULES`, spelled out here rather than imported so
 /// adding a module to that list without deciding what its trail says fails
 /// loudly instead of quietly widening the promise.
-const AUDITED_PREFIXES: [&str; 5] = [
+const AUDITED_PREFIXES: [&str; 6] = [
     "/billing/",
     "/crm/",
     "/finance/",
+    "/hr/",
     "/inventory/",
     "/projects/",
 ];

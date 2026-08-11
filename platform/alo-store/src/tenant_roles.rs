@@ -50,6 +50,18 @@ pub enum TenantRole {
     /// the period lock), billing and CRM read-only, and nothing else — no mail
     /// of anyone else's, no files, no admin console.
     Accountant,
+    /// The workforce: the whole employee directory including the private
+    /// fields, employments and pay, HR documents, leave policies and every
+    /// leave decision, hiring, and the payroll export (alo HR, ADR 0035, wave
+    /// B6; `docs/design/hr.md`, "The HR role").
+    ///
+    /// This role only ever **adds**. Holding it does not narrow anything an
+    /// ordinary member could already do, and it is not implied by
+    /// [`Self::Accountant`] — an external bookkeeper reading everybody's
+    /// contract and home address is exactly the failure that role exists to
+    /// prevent. Somebody who genuinely runs both is granted both, deliberately,
+    /// with each grant's provenance recorded.
+    Hr,
 }
 
 impl TenantRole {
@@ -58,6 +70,7 @@ impl TenantRole {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Accountant => "accountant",
+            Self::Hr => "hr",
         }
     }
 
@@ -70,8 +83,9 @@ impl TenantRole {
     pub fn parse(value: &str) -> Result<Self> {
         match value.trim() {
             "accountant" => Ok(Self::Accountant),
+            "hr" => Ok(Self::Hr),
             _ => Err(StoreError::Validation(
-                "role must be one of: accountant".to_owned(),
+                "role must be one of: accountant, hr".to_owned(),
             )),
         }
     }
@@ -257,6 +271,7 @@ mod tests {
     #[test]
     fn a_role_is_the_word_it_is_stored_as() {
         assert_eq!(TenantRole::Accountant.as_str(), "accountant");
+        assert_eq!(TenantRole::Hr.as_str(), "hr");
         assert_eq!(
             TenantRole::parse("accountant").unwrap(),
             TenantRole::Accountant
@@ -265,27 +280,38 @@ mod tests {
             TenantRole::parse("  accountant ").unwrap(),
             TenantRole::Accountant
         );
+        assert_eq!(TenantRole::parse(" hr\n").unwrap(), TenantRole::Hr);
     }
 
     #[test]
     fn a_word_no_gate_knows_is_refused_and_named() {
         let err = TenantRole::parse("admin").unwrap_err();
+        let message = format!("{err}");
         assert!(
-            format!("{err}").contains("accountant"),
-            "the refusal names the accepted set: {err}"
+            message.contains("accountant") && message.contains("hr"),
+            "the refusal names the whole accepted set: {message}"
         );
         assert!(TenantRole::parse("").is_err());
         assert!(TenantRole::parse("Accountant").is_err(), "stored lowercase");
+        assert!(TenantRole::parse("HR").is_err(), "stored lowercase");
+        assert!(
+            TenantRole::parse("payroll").is_err(),
+            "a role no gate knows is refused, not stored"
+        );
     }
 
     #[test]
     fn unknown_stored_words_fail_closed_rather_than_widen_access() {
         let roles = roles_from_words(vec![
             "accountant".to_owned(),
-            "hr".to_owned(),
+            "payroll".to_owned(),
             "accountant".to_owned(),
         ]);
-        assert_eq!(roles, vec![TenantRole::Accountant], "deduped, `hr` dropped");
+        assert_eq!(
+            roles,
+            vec![TenantRole::Accountant],
+            "deduped, `payroll` dropped"
+        );
         let facts = AccessFacts {
             is_admin: false,
             roles,
@@ -295,9 +321,32 @@ mod tests {
     }
 
     #[test]
+    fn the_two_roles_are_independent_and_never_imply_each_other() {
+        // The books and the workforce are separate grants: the accountant's
+        // role exists to keep an external bookkeeper out of everything that is
+        // not the ledger, and HR's exists to let somebody see the workforce.
+        let books = AccessFacts {
+            is_admin: false,
+            roles: roles_from_words(vec!["accountant".to_owned()]),
+        };
+        assert!(books.has(TenantRole::Accountant));
+        assert!(!books.has(TenantRole::Hr), "the books are not the people");
+        let people = AccessFacts {
+            is_admin: false,
+            roles: roles_from_words(vec!["hr".to_owned()]),
+        };
+        assert!(people.has(TenantRole::Hr));
+        assert!(!people.has(TenantRole::Accountant));
+        // Somebody may hold both, and then holds the union — never a product.
+        let both = roles_from_words(vec!["hr".to_owned(), "accountant".to_owned()]);
+        assert_eq!(both, vec![TenantRole::Accountant, TenantRole::Hr], "sorted");
+    }
+
+    #[test]
     fn holding_no_role_is_the_default() {
         let facts = AccessFacts::default();
         assert!(!facts.is_admin);
         assert!(!facts.has(TenantRole::Accountant));
+        assert!(!facts.has(TenantRole::Hr));
     }
 }
