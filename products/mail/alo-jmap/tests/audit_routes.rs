@@ -237,6 +237,7 @@ DELETE /finance/mileage/{id} -> finance.mileage.delete
 DELETE /hr/applicants/{id} -> hr.applicant.delete
 DELETE /hr/checklist-templates/{id} -> hr.checklist_template.delete
 DELETE /hr/employees/{id}/documents/{document_id} -> hr.employee.document.delete
+DELETE /hr/letter-templates/{id} -> hr.letter_template.delete
 DELETE /inventory/locations/{id} -> inventory.location.delete
 DELETE /inventory/purchase-orders/{id} -> inventory.purchase_order.delete
 DELETE /inventory/reorder-rules/{id} -> inventory.reorder_rule.delete
@@ -263,6 +264,7 @@ PATCH /hr/checklist-templates/{id} -> hr.checklist_template.update
 PATCH /hr/employees/{id} -> hr.employee.update
 PATCH /hr/leave-policies/{id} -> hr.leave_policy.update
 PATCH /hr/leave-requests/{id} -> hr.leave_request.update
+PATCH /hr/letter-templates/{id} -> hr.letter_template.update
 PATCH /hr/openings/{id} -> hr.opening.update
 PATCH /inventory/counts/{id} -> inventory.count.update
 PATCH /inventory/locations/{id} -> inventory.location.update
@@ -342,6 +344,7 @@ POST /hr/leave-requests/{id}/approve -> hr.leave_request.approve
 POST /hr/leave-requests/{id}/cancel -> hr.leave_request.cancel
 POST /hr/leave-requests/{id}/reject -> hr.leave_request.reject
 POST /hr/leave-requests/{id}/withdraw -> hr.leave_request.withdraw
+POST /hr/letter-templates -> hr.letter_template.create
 POST /hr/openings -> hr.opening.create
 POST /hr/openings/{id}/applicants -> hr.opening.applicant.create
 POST /hr/openings/{id}/close -> hr.opening.close
