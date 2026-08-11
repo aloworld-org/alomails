@@ -23,10 +23,10 @@ use crate::{
     crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
-    finance_report_vat, flagdue, hr_documents, hr_employees, hr_leave_balances, hr_leave_policies,
-    hr_leave_requests, hr_org, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, inventory_counts, inventory_locations, inventory_moves, inventory_po,
-    inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
+    finance_report_vat, flagdue, hr_documents, hr_employees, hr_holidays, hr_leave_balances,
+    hr_leave_policies, hr_leave_requests, hr_org, imap_import_route, insights, insights_ask,
+    insights_eval, insights_gallery, inventory_counts, inventory_locations, inventory_moves,
+    inventory_po, inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
     inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice, inventory_stock,
     inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
@@ -722,6 +722,18 @@ pub fn app_with_site_domain_dns(
         )
         .route("/hr/leave-balances", get(hr_leave_balances::list_balances))
         .route("/hr/absences", get(hr_leave_balances::list_absences))
+        // Public holidays (B6.04). The days themselves are a seed table in the
+        // repo, not rows: what is per-tenant is only which calendar a company
+        // observes, and that choice is one value replaced whole — hence a PUT
+        // on the collection rather than a POST that appends. Reading either
+        // route is every member's, because a holiday inside somebody's leave
+        // costs them nothing and they are entitled to know which days those
+        // are (`docs/design/hr.md` § Public holidays).
+        .route("/hr/holidays", get(hr_holidays::list_holidays))
+        .route(
+            "/hr/holiday-calendars",
+            get(hr_holidays::get_calendars).put(hr_holidays::put_calendars),
+        )
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the
         // document, so it can never happen because an editor sent a stale

@@ -59,6 +59,7 @@ use crate::billing_field::bounded;
 use crate::error::{Result, StoreError};
 use crate::hr_employees::display_name;
 use crate::hr_employments::Employment;
+use crate::hr_holidays::TenantHolidays;
 use crate::hr_leave_math::{REQUEST_MAX_DAYS, RequestCost, RequestedDay, request_cost};
 use crate::id::{HrEmployeeId, HrLeavePolicyId, HrLeaveRequestId, UserId};
 use crate::store::TenantStore;
@@ -279,11 +280,19 @@ const REQUEST_FROM: &str = "FROM hr_leave_requests r \
 /// job they did not hold, and the create path refuses such a range outright
 /// rather than silently charging zero for it.
 ///
-/// Public holidays are not resolved yet — B6.04 brings the calendars, and this
-/// is the one place that will learn about them
+/// A public holiday on the tenant's observed calendar costs nothing (B6.04):
+/// somebody who books the week of 25 December spends four days, not five. A
+/// tenant that observes no calendar passes [`TenantHolidays::none`] and the fold
+/// is what it always was — the working pattern alone
 /// (`docs/design/hr.md`, "Public holidays").
 #[must_use]
-pub fn leave_days(employments: &[Employment], from: Date, to: Date) -> Vec<RequestedDay> {
+pub fn leave_days(
+    employments: &[Employment],
+    from: Date,
+    to: Date,
+    holidays: &TenantHolidays,
+) -> Vec<RequestedDay> {
+    let public = holidays.days(from, to);
     let mut days = Vec::new();
     let mut day = from;
     while day <= to {
@@ -294,7 +303,7 @@ pub fn leave_days(employments: &[Employment], from: Date, to: Date) -> Vec<Reque
         days.push(RequestedDay {
             day,
             pattern_minutes: minutes,
-            holiday: false,
+            holiday: public.contains(&day),
             already_covered: false,
         });
         match day.next_day() {
@@ -305,10 +314,16 @@ pub fn leave_days(employments: &[Employment], from: Date, to: Date) -> Vec<Reque
     days
 }
 
-/// What one request costs, folded from the employments in force over its days.
+/// What one request costs, folded from the employments in force over its days
+/// and the tenant's public holidays.
 #[must_use]
-pub fn leave_request_cost(employments: &[Employment], from: Date, to: Date) -> RequestCost {
-    request_cost(&leave_days(employments, from, to))
+pub fn leave_request_cost(
+    employments: &[Employment],
+    from: Date,
+    to: Date,
+    holidays: &TenantHolidays,
+) -> RequestCost {
+    request_cost(&leave_days(employments, from, to, holidays))
 }
 
 /// Validates a range the way both the create and the edit paths need it.
@@ -404,7 +419,12 @@ impl TenantStore {
 
         let employments = self.hr_employments(&input.employee_id).await?;
         within_employment(&employments, input.from_day, input.to_day)?;
-        let cost = leave_request_cost(&employments, input.from_day, input.to_day);
+        // A year the holiday seed has not been reviewed for is refused rather
+        // than folded as if the country had no holidays that year: "none" and
+        // "not checked yet" must not look the same to a balance.
+        let holidays = self.hr_holidays().await?;
+        holidays.covers(input.from_day, input.to_day)?;
+        let cost = leave_request_cost(&employments, input.from_day, input.to_day, &holidays);
         if cost.minutes == 0 {
             return Err(StoreError::Validation(
                 "these days are not working days for this person, so the request costs nothing"
@@ -475,7 +495,8 @@ impl TenantStore {
         let employments = self
             .hr_employments(&HrEmployeeId::new(row.employee_id.clone()))
             .await?;
-        row.into_request(&employments).map(Some)
+        row.into_request(&employments, &self.hr_holidays().await?)
+            .map(Some)
     }
 
     /// The requests a door asks for, newest first.
@@ -526,6 +547,7 @@ impl TenantStore {
     /// Folds the cost of each row, reading every person's terms once however
     /// many requests they have in the list.
     async fn cost_rows(&self, rows: Vec<RequestRow>) -> Result<Vec<LeaveRequest>> {
+        let holidays = self.hr_holidays().await?;
         let mut terms: std::collections::HashMap<String, Vec<Employment>> =
             std::collections::HashMap::new();
         let mut out = Vec::with_capacity(rows.len());
@@ -540,7 +562,7 @@ impl TenantStore {
                     read
                 }
             };
-            out.push(row.into_request(&employments)?);
+            out.push(row.into_request(&employments, &holidays)?);
         }
         Ok(out)
     }
@@ -577,7 +599,9 @@ impl TenantStore {
         }
         let employments = self.hr_employments(&stored.employee_id).await?;
         within_employment(&employments, from_day, to_day)?;
-        if leave_request_cost(&employments, from_day, to_day).minutes == 0 {
+        let holidays = self.hr_holidays().await?;
+        holidays.covers(from_day, to_day)?;
+        if leave_request_cost(&employments, from_day, to_day, &holidays).minutes == 0 {
             return Err(StoreError::Validation(
                 "these days are not working days for this person, so the request costs nothing"
                     .to_owned(),
@@ -853,8 +877,12 @@ impl RequestRow {
     /// Fallible on purpose: a stored status this build does not know is a schema
     /// disagreement, and answering with a guessed state would be worse than
     /// answering with an error.
-    fn into_request(self, employments: &[Employment]) -> Result<LeaveRequest> {
-        let cost = leave_request_cost(employments, self.from_day, self.to_day);
+    fn into_request(
+        self,
+        employments: &[Employment],
+        holidays: &TenantHolidays,
+    ) -> Result<LeaveRequest> {
+        let cost = leave_request_cost(employments, self.from_day, self.to_day, holidays);
         Ok(LeaveRequest {
             id: HrLeaveRequestId::new(self.id),
             employee_id: HrEmployeeId::new(self.employee_id),
@@ -938,17 +966,50 @@ mod tests {
             None,
             FULL_TIME_PATTERN,
         )];
-        let cost = leave_request_cost(&terms, monday, sunday);
+        let cost = leave_request_cost(&terms, monday, sunday, &TenantHolidays::none());
         assert_eq!(cost.minutes, 5 * 480);
         assert_eq!(cost.working_days, 5);
 
         let mut summed = 0;
         let mut one = monday;
         while one <= sunday {
-            summed += leave_request_cost(&terms, one, one).minutes;
+            summed += leave_request_cost(&terms, one, one, &TenantHolidays::none()).minutes;
             one = one.next_day().unwrap();
         }
         assert_eq!(summed, cost.minutes, "booked at once or day by day");
+    }
+
+    /// The week of Christmas costs four days on a Belgian calendar and five on
+    /// none — the whole reason the calendars exist (B6.04).
+    #[test]
+    fn a_public_holiday_inside_the_range_costs_nothing() {
+        // Monday 21 to Friday 25 December 2026; the 25th is Christmas Day.
+        let monday = day(2026, Month::December, 21);
+        let friday = day(2026, Month::December, 25);
+        let terms = vec![employment(
+            day(2020, Month::January, 1),
+            None,
+            FULL_TIME_PATTERN,
+        )];
+        let observed = TenantHolidays::for_calendar("BE");
+        let cost = leave_request_cost(&terms, monday, friday, &observed);
+        assert_eq!(cost.minutes, 4 * 480);
+        assert_eq!(cost.working_days, 4);
+        assert_eq!(cost.holiday_minutes, 480);
+        // Booked day by day, the total is the same: the fold stays additive with
+        // holidays in it.
+        let mut summed = 0;
+        let mut one = monday;
+        while one <= friday {
+            summed += leave_request_cost(&terms, one, one, &observed).minutes;
+            one = one.next_day().unwrap();
+        }
+        assert_eq!(summed, cost.minutes);
+        // A tenant observing nothing is charged the full week, as before B6.04.
+        assert_eq!(
+            leave_request_cost(&terms, monday, friday, &TenantHolidays::none()).minutes,
+            5 * 480
+        );
     }
 
     /// A request spanning a change of terms is folded day by day, so the Friday
@@ -973,6 +1034,7 @@ mod tests {
             &terms,
             day(2026, Month::March, 2),
             day(2026, Month::March, 6),
+            &TenantHolidays::none(),
         );
         assert_eq!(cost.minutes, 4 * 480);
         assert_eq!(cost.working_days, 4);

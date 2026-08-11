@@ -42,6 +42,7 @@ use time::Date;
 
 use crate::error::{Result, StoreError};
 use crate::hr_employments::{Employment, FULL_TIME_PATTERN};
+use crate::hr_holidays::TenantHolidays;
 use crate::hr_leave_math::{
     Balance, LeaveLedger, accrued_minutes, average_working_day_minutes, balance,
     carried_in_minutes, carryover_expires_on, prorated_entitlement_minutes,
@@ -103,6 +104,7 @@ pub fn fold_leave_year(
     year: (Date, Date),
     as_of: Date,
     carried_in: i64,
+    holidays: &TenantHolidays,
 ) -> Balance {
     let weekly = pattern_on(employments, as_of).map_or(0, Employment::weekly_minutes);
     let scaled = scaled_entitlement_minutes(
@@ -138,15 +140,24 @@ pub fn fold_leave_year(
         // Charged day by day rather than as a range, because a request that
         // straddles the leave year's edge must charge each year its own part —
         // and because the pattern can change inside it.
+        let public = holidays.days(from, to);
         let mut day = from;
         while day <= to {
-            let minutes = i64::from(
-                employments
-                    .iter()
-                    .find(|employment| employment.covers(day))
-                    .map_or(0, |employment| employment.minutes_on(day))
-                    .max(0),
-            );
+            // A public holiday inside approved leave costs nothing here for the
+            // same reason it costs nothing in the request (B6.04): the two folds
+            // must agree, or a screen shows one figure and an approval checks
+            // another.
+            let minutes = if public.contains(&day) {
+                0
+            } else {
+                i64::from(
+                    employments
+                        .iter()
+                        .find(|employment| employment.covers(day))
+                        .map_or(0, |employment| employment.minutes_on(day))
+                        .max(0),
+                )
+            };
             match request.status {
                 LeaveStatus::Approved if day <= as_of => ledger.taken_minutes += minutes,
                 LeaveStatus::Approved => ledger.booked_minutes += minutes,
@@ -180,7 +191,10 @@ impl TenantStore {
             .ok_or(StoreError::NotFound)?;
         let employments = self.hr_employments(employee).await?;
         let requests = self.leave_history(employee, &policy, on).await?;
-        Ok(self.fold(&policy, &employments, &requests, on).balance)
+        let holidays = self.hr_holidays().await?;
+        Ok(self
+            .fold(&policy, &employments, &requests, on, &holidays)
+            .balance)
     }
 
     /// What one person has left on **every live policy** the tenant runs, as at
@@ -217,9 +231,10 @@ impl TenantStore {
                 .await?
             }
         };
+        let holidays = self.hr_holidays().await?;
         Ok(policies
             .into_iter()
-            .map(|policy| self.fold(&policy, &employments, &requests, on))
+            .map(|policy| self.fold(&policy, &employments, &requests, on, &holidays))
             .collect())
     }
 
@@ -230,12 +245,21 @@ impl TenantStore {
         employments: &[Employment],
         requests: &[LeaveRequest],
         on: Date,
+        holidays: &TenantHolidays,
     ) -> PolicyBalance {
         let year = policy.leave_year.window(on);
         let previous = previous_year(policy, on);
         // Last year is folded with nothing carried into it (see the module
         // docs): carryover carries one year, not a chain.
-        let last = fold_leave_year(policy, employments, requests, previous, previous.1, 0);
+        let last = fold_leave_year(
+            policy,
+            employments,
+            requests,
+            previous,
+            previous.1,
+            0,
+            holidays,
+        );
         let carried = carried_in_minutes(
             last.remaining_minutes,
             policy.carryover_cap_minutes,
@@ -243,7 +267,7 @@ impl TenantStore {
             on,
         );
         PolicyBalance {
-            balance: fold_leave_year(policy, employments, requests, year, on, carried),
+            balance: fold_leave_year(policy, employments, requests, year, on, carried, holidays),
             average_day_minutes: pattern_on(employments, on).map_or(0, |employment| {
                 average_working_day_minutes(&employment.pattern_minutes)
             }),
@@ -415,6 +439,7 @@ mod tests {
             LeaveYear::calendar().window(as_of),
             as_of,
             0,
+            &TenantHolidays::none(),
         );
         assert_eq!(folded.entitlement_minutes, 25 * 480);
         assert_eq!(folded.accrued_minutes, 25 * 480, "granted up front");
@@ -441,6 +466,7 @@ mod tests {
             LeaveYear::calendar().window(as_of),
             as_of,
             0,
+            &TenantHolidays::none(),
         );
         // Three fifths of 25 eight-hour days, then the 184 days of the year
         // they were employed for — cumulatively, which is what makes a joiner
@@ -479,6 +505,7 @@ mod tests {
             LeaveYear::calendar().window(day(2026, Month::December, 31)),
             day(2026, Month::December, 31),
             0,
+            &TenantHolidays::none(),
         );
         let new = fold_leave_year(
             &annual(),
@@ -487,9 +514,54 @@ mod tests {
             LeaveYear::calendar().window(day(2027, Month::January, 31)),
             day(2027, Month::January, 31),
             0,
+            &TenantHolidays::none(),
         );
         assert_eq!(old.taken_minutes, 4 * 480);
         assert_eq!(new.taken_minutes, 6 * 480);
+    }
+
+    /// Approved leave over a public holiday charges the balance for the working
+    /// days only — and charges exactly what the request itself said it would
+    /// (B6.04). Two folds, one answer.
+    #[test]
+    fn a_public_holiday_inside_approved_leave_is_not_charged() {
+        let terms = vec![employment(
+            day(2020, Month::January, 1),
+            None,
+            FULL_TIME_PATTERN,
+        )];
+        // Monday 21 to Friday 25 December 2026; the 25th is Christmas Day.
+        let from = day(2026, Month::December, 21);
+        let to = day(2026, Month::December, 25);
+        let requests = vec![request(from, to, LeaveStatus::Approved)];
+        let as_of = day(2026, Month::December, 31);
+        let observed = TenantHolidays::for_calendar("BE");
+        let folded = fold_leave_year(
+            &annual(),
+            &terms,
+            &requests,
+            LeaveYear::calendar().window(as_of),
+            as_of,
+            0,
+            &observed,
+        );
+        assert_eq!(folded.taken_minutes, 4 * 480, "Christmas Day costs nothing");
+        assert_eq!(
+            folded.taken_minutes,
+            crate::hr_leave_requests::leave_request_cost(&terms, from, to, &observed).minutes,
+            "the balance charges exactly what the request costs"
+        );
+        // Without a calendar, the same week is five days — the pre-B6.04 fold.
+        let none = fold_leave_year(
+            &annual(),
+            &terms,
+            &requests,
+            LeaveYear::calendar().window(as_of),
+            as_of,
+            0,
+            &TenantHolidays::none(),
+        );
+        assert_eq!(none.taken_minutes, 5 * 480);
     }
 
     /// Carryover is capped by the policy, and a policy that carries nothing
@@ -531,6 +603,7 @@ mod tests {
             LeaveYear::calendar().window(as_of),
             as_of,
             0,
+            &TenantHolidays::none(),
         );
         // Employed for 181 of the year's 365 days.
         assert_eq!(folded.entitlement_minutes, 25 * 480 * 181 / 365);

@@ -368,6 +368,7 @@ POST /projects/weeks/{monday}/submit -> projects.week.submit
 POST /projects/weeks/{monday}/withdraw -> projects.week.withdraw
 PUT /billing/fx/rates -> billing.fx.rates.update
 PUT /finance/mileage/rates -> finance.mileage.rates.update
+PUT /hr/holiday-calendars -> hr.holiday_calendar.update
 PUT /inventory/counts/{id}/lines/{product_id} -> inventory.count.line.update
 PUT /inventory/suppliers/{id}/products/{product_id} -> inventory.supplier.product.update
 PUT /projects/clients/{id} -> projects.client.update

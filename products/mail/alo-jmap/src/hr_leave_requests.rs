@@ -56,6 +56,10 @@ pub(crate) fn request_json(request: &LeaveRequest) -> Value {
         "note": request.note,
         "costMinutes": request.cost.minutes,
         "workingDays": request.cost.working_days,
+        // What the company's public holidays saved inside these dates (B6.04).
+        // A week that costs four days has to be able to say why, or the figure
+        // looks like an arithmetic error to the person it is about.
+        "holidayMinutes": request.cost.holiday_minutes,
         "decidedBy": request.decided_by,
         "decidedAt": request.decided_at.map(iso),
         "decisionNote": request.decision_note,
