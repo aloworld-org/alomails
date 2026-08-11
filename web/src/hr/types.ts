@@ -314,12 +314,67 @@ export interface OpeningDraft {
   employmentKind?: string;
 }
 
+/** A CV on its way to the record: an already-uploaded blob, and the name it
+ *  will read under in the tenant's HR area.
+ *
+ *  The upload is `POST /jmap/upload/{accountId}` like every other file in the
+ *  product; the record route is what turns the blob into a Drive node **in the
+ *  HR area**, which is the only place a client can put one. Nothing reads it —
+ *  see `docs/design/hr.md` § The EU AI Act posture. */
+export interface CvUpload {
+  blobId: string;
+  name: string;
+  size: number;
+  contentType: string | null;
+}
+
 /** The writable fields of an application. `email: null` clears the address;
- *  `stage` is deliberately absent — moving somebody is its own act. */
+ *  `cv: null` takes the one on file off (and trashes it); `stage` is
+ *  deliberately absent — moving somebody is its own act. */
 export interface ApplicantDraft {
   name?: string;
   email?: string | null;
   phone?: string;
   source?: string;
+  cv?: CvUpload | null;
   retainUntil?: string;
+}
+
+/** The terms somebody starts on, as `POST /hr/employees` takes them beside the
+ *  person.
+ *
+ *  `startedOn` is required by the server and never defaulted to today here: a
+ *  start date is a fact about a contract, and every leave balance is folded
+ *  from it. `contractKind` is the same closed vocabulary an opening's
+ *  `employmentKind` is drawn from, which is why a hire can carry the round's
+ *  word across unchanged. */
+export interface EmploymentDraft {
+  /** `YYYY-MM-DD`. */
+  startedOn: string;
+  jobTitle?: string;
+  team?: string;
+  contractKind?: string;
+}
+
+/** A new employee record, as this module writes one.
+ *
+ *  Deliberately a **narrow** view of a wide route: the create route accepts a
+ *  home address, a date of birth, a national id and a bank account, and the
+ *  hire bridge sends none of them. What a hiring board legitimately knows about
+ *  somebody is their name and how to write to them; the rest is HR's to enter
+ *  on the record screen, with the person in front of them. */
+export interface EmployeeDraft {
+  givenName: string;
+  familyName: string;
+  workEmail?: string;
+  employment: EmploymentDraft;
+}
+
+/** The employee a create answered with — the two fields this module needs of a
+ *  record whose other thirty are HR's own screen's. */
+export interface HrCreatedEmployee {
+  id: string;
+  /** How the tenant writes their name, preferred name applied — the server's
+   *  own projection, never joined together here. */
+  name: string;
 }

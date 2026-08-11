@@ -4528,6 +4528,41 @@ export const en = {
   hrCvDownload: "Download the CV",
   hrCvTrashed: "The CV that was on file has been moved to the HR trash.",
   hrCvFailed: "That file could not be downloaded.",
+  hrCvAttach: "Attach a CV",
+  hrCvHint:
+    "Filed in the HR area, where only HR can open it. Nothing reads it — no screening, no ranking, no score.",
+  hrCvReplace: "Replace the CV",
+  hrCvOnFile: (fileName: string) =>
+    fileName === ""
+      ? "There is a CV on file. Choosing a file replaces it; the one it replaces goes to the HR trash."
+      : `${fileName} is on file. Choosing a file replaces it; the one it replaces goes to the HR trash.`,
+  hrCvRemove: "Take the CV off this record",
+  hrCvUploadFailed:
+    "That file was not uploaded, so nothing was saved. Try again, or save the details without it.",
+
+  // They took the job — the one bridge from the hiring board to the directory.
+  hrHired: "They took the job",
+  hrHiredExplainer:
+    "Moving somebody to Hired records what happened. Writing them into the directory is a separate act, taken here.",
+  hrHire: "Add them to the directory",
+  hrHireSubmit: "Add to the directory",
+  hrHireSubtitle:
+    "Their employee record, and the terms they start on. Everything is filled in from the application and the role — correct anything that is not right.",
+  hrHireKnown: (name: string) =>
+    `${name} is already in the directory with this address. Adding this record would make a second colleague with the same email.`,
+  hrHireKnownLeft: (name: string) =>
+    `${name} had this address and has left. If this is the same person coming back, adding them here is right — their old record stays as it was.`,
+  hrHireNameHint: "Split from the name on the application. Correct it if it split wrongly.",
+  hrHireEmailHint: "Their work address, if it is known yet. It can be added later.",
+  hrHireStartHint: "The day their terms begin. Every leave balance is counted from it.",
+  hrHireNoKind: "Not stated",
+  hrHireNoAccount:
+    "This writes a record in People. It does not create a login or a mailbox — an administrator does that, and the onboarding checklist has a task for it.",
+  hrFieldGivenName: "Given name",
+  hrFieldFamilyName: "Family name",
+  hrFieldWorkEmail: "Work email",
+  hrFieldJobTitle: "Job title",
+  hrFieldStartedOn: "Starts on",
 
   // Retention — a deadline a person acts on, never a job that runs.
   hrRetention: "How long we keep this",

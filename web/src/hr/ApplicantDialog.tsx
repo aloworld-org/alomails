@@ -1,20 +1,32 @@
-// Record somebody who applied, or correct what was written down about them.
+// Record somebody who applied, or correct what was written down about them —
+// their paperwork included.
 //
-// Two things this form deliberately cannot do.
+// What this form deliberately cannot do: **it cannot move anybody.** `stage` is
+// not a writable field on the record route, so a corrected telephone number can
+// never reorder a candidacy. Moving is the board, or the drawer's stage picker,
+// and it is audited with the deciding person's id on it.
 //
-//   - **It cannot move anybody.** `stage` is not a writable field on the record
-//     route: a corrected telephone number must never be able to reorder a
-//     candidacy. Moving is the board, or the drawer's stage picker, and it is
-//     audited with the deciding person's id on it.
-//   - **It does not attach a CV.** Uploading one is the record route's own
-//     `cv` field over a Drive blob, and the screen for it belongs with the rest
-//     of the candidate's paperwork (B6.08c). Until then a CV recorded through
-//     the API is shown and can be downloaded here; it is never read by
-//     anything (`docs/design/hr.md` § The EU AI Act posture).
+// What it does do, as of B6.08c, is attach the CV (until then a CV could only
+// arrive through the API). Three decisions there:
+//
+//   - **The file is uploaded when the form is submitted, not when it is
+//     chosen.** A form somebody closes has uploaded nothing, and the record and
+//     its paper are written in one act rather than two that can half-fail.
+//   - **This is the only upload control**, and the drawer sends people here
+//     rather than growing a second one — one path, one set of failure
+//     sentences.
+//   - **Taking a CV off is an explicit `cv: null`**, which trashes the file in
+//     the HR area. Absent would mean "leave what is there", and a form cannot
+//     tell those two apart by looking at an empty file input.
+//
+// **Nothing here reads the file.** It is a blob handed to the record route,
+// which files it in the tenant's HR area — no parse, no extract, no score
+// (`docs/design/hr.md` § The EU AI Act posture).
 import { useState } from "react";
 import { UserPlus } from "lucide-react";
 
 import { strings } from "../i18n";
+import { useJmapClient } from "../jmap";
 import { hrMessage, useHrApi } from "./api";
 import { DialogFrame, Field } from "./parts";
 import type { ApplicantDraft, HrApplicant } from "./types";
@@ -31,19 +43,49 @@ interface Props {
 
 export function ApplicantDialog({ applicant, openingId, onClose, onSaved }: Props) {
   const api = useHrApi();
+  const client = useJmapClient();
   const [name, setName] = useState(applicant?.name ?? "");
   const [email, setEmail] = useState(applicant?.email ?? "");
   const [phone, setPhone] = useState(applicant?.phone ?? "");
   const [source, setSource] = useState(applicant?.source ?? "");
   const [retainUntil, setRetainUntil] = useState(applicant?.retainUntil ?? "");
+  const [cv, setCv] = useState<File | null>(null);
+  const [removeCv, setRemoveCv] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  /** Whether there is a file on this record to replace or take off. A CV that
+   *  has since been trashed through Drive is not one: the record keeps the
+   *  honest statement that there was one, and the only useful act left is
+   *  attaching another. */
+  const hasCv = applicant !== null && applicant.cvNodeId !== null && !applicant.cvTrashed;
 
   async function save() {
     setBusy(true);
     setError(null);
     try {
       const draft: ApplicantDraft = {};
+      // The upload first, and its own sentence when it fails: a candidate whose
+      // details saved but whose CV silently did not is worse than a form that
+      // says which half went wrong.
+      if (cv !== null) {
+        try {
+          const uploaded = await client.uploadFile(cv);
+          draft.cv = {
+            blobId: uploaded.blobId,
+            name: cv.name,
+            // The server's own measurement of what it stored, not the File's:
+            // the two agree, and only one of them is the thing on disk.
+            size: uploaded.size,
+            contentType: uploaded.type === "" ? null : uploaded.type,
+          };
+        } catch {
+          setError(strings.hrCvUploadFailed);
+          return;
+        }
+      } else if (removeCv && hasCv) {
+        draft.cv = null;
+      }
       if (applicant === null || name.trim() !== applicant.name) draft.name = name.trim();
       if (applicant === null ? phone.trim() !== "" : phone.trim() !== applicant.phone) {
         draft.phone = phone.trim();
@@ -125,6 +167,32 @@ export function ApplicantDialog({ applicant, openingId, onClose, onSaved }: Prop
           onChange={(e) => setSource(e.target.value)}
         />
       </Field>
+
+      <Field
+        label={hasCv ? strings.hrCvReplace : strings.hrCv}
+        hint={hasCv ? strings.hrCvOnFile(applicant.cvFileName ?? "") : strings.hrCvHint}
+      >
+        <input
+          className={styles.fileInput}
+          type="file"
+          onChange={(e) => {
+            setCv(e.target.files?.[0] ?? null);
+            setRemoveCv(false);
+          }}
+        />
+      </Field>
+
+      {hasCv && (
+        <label className={styles.toggle}>
+          <input
+            type="checkbox"
+            checked={removeCv}
+            disabled={cv !== null}
+            onChange={(e) => setRemoveCv(e.target.checked)}
+          />
+          {strings.hrCvRemove}
+        </label>
+      )}
 
       <Field label={strings.hrFieldRetainUntil} hint={strings.hrRetainHint}>
         <input

@@ -19,10 +19,12 @@ import { API_BASE } from "../platform/runtime";
 import { RestError, problemDetail, restMessage } from "../platform/rest";
 import type {
   ApplicantDraft,
+  EmployeeDraft,
   HrAbsenceDay,
   HrApplicant,
   HrApplicantDetail,
   HrApplicantNote,
+  HrCreatedEmployee,
   HrDirectory,
   HrDirectoryEntry,
   HrHoliday,
@@ -169,6 +171,22 @@ export class HrApi {
   async eraseApplicant(id: string): Promise<void> {
     await this.#json<unknown>(
       await this.#send(`/hr/applicants/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    );
+  }
+
+  /** Somebody who took the job, written into the directory as a colleague.
+   *
+   *  The person and the terms they start on travel in **one act**, because the
+   *  create route reads `employment` on create only: a second call would be a
+   *  second failure point between a colleague existing and their start date
+   *  existing, and a record with no start date has no leave balance to read.
+   *
+   *  It creates no login and no mailbox, deliberately — a write path from HR
+   *  into identity would make a badly-scoped HR permission into an
+   *  account-creation capability (`docs/design/hr.md` § Out of scope). */
+  createEmployee(draft: EmployeeDraft): Promise<HrCreatedEmployee> {
+    return this.#write<{ employee: HrCreatedEmployee }>("POST", "/hr/employees", draft).then(
+      (r) => r.employee,
     );
   }
 

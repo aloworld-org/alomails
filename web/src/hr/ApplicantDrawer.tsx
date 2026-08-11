@@ -1,7 +1,7 @@
 // One candidate, opened from the board: what the application said, the notes
-// the people who met them wrote, the CV on file, and the two acts a record
-// about a person needs — moving them, and erasing them when its date has
-// passed.
+// the people who met them wrote, the CV on file, and the acts a record about a
+// person needs — moving them, writing them into the directory when they took
+// the job, and erasing them when its date has passed.
 //
 // The stage picker is here **as well as** the drag on the board, and not as a
 // convenience: a board that can only be worked by dragging cannot be worked
@@ -16,7 +16,7 @@
 // **Nothing here reads the CV.** It is downloaded through Drive's own HR-gated
 // path, byte for byte, and never parsed, extracted, indexed or scored.
 import { useCallback, useEffect, useState } from "react";
-import { Download, FileText, Pencil, Trash2, X } from "lucide-react";
+import { Download, FileText, Pencil, Trash2, Upload, UserCheck, X } from "lucide-react";
 
 import { saveBlob } from "../drive";
 import { Button, IconButton, Spinner, useDialogs } from "../ds";
@@ -24,6 +24,7 @@ import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { hrMessage, useHrApi } from "./api";
 import { dayLabel, momentLabel, stageLabel } from "./format";
+import { HIRED_STAGE } from "./hire";
 import { Chip, ErrorBanner } from "./parts";
 import type { HrApplicant, HrApplicantNote } from "./types";
 import styles from "./hr.module.css";
@@ -34,14 +35,25 @@ interface Props {
   /** Something about this candidate changed: the board re-reads. */
   onChanged: () => void;
   /** Correct what was written down — the form the screen owns, opened on the
-   *  record as it stands here. */
+   *  record as it stands here. It is also where a CV is attached, replaced or
+   *  taken off: one upload path, not two. */
   onEdit: (applicant: HrApplicant) => void;
+  /** They took the job: write them into the directory (B6.08c). The form is the
+   *  screen's, because where it lands afterwards is the screen's business. */
+  onHire: (applicant: HrApplicant) => void;
   /** Called after an erasure: the record this drawer is about no longer
    *  exists, so the screen closes it and re-reads the board. */
   onGone: () => void;
 }
 
-export function ApplicantDrawer({ applicantId, onClose, onChanged, onEdit, onGone }: Props) {
+export function ApplicantDrawer({
+  applicantId,
+  onClose,
+  onChanged,
+  onEdit,
+  onHire,
+  onGone,
+}: Props) {
   const api = useHrApi();
   const client = useJmapClient();
   const { confirm } = useDialogs();
@@ -218,7 +230,38 @@ export function ApplicantDrawer({ applicantId, onClose, onChanged, onEdit, onGon
                 {applicant.cvFileName ?? strings.hrCvDownload}
               </button>
             )}
+            {/* Attaching one is the record form's, which is also where it is
+                replaced or taken off: one upload path and one set of failure
+                sentences, rather than a second control here that would have to
+                agree with it. */}
+            {(applicant.cvNodeId === null || applicant.cvTrashed) && (
+              <button
+                type="button"
+                className={styles.linkAction}
+                onClick={() => onEdit(applicant)}
+              >
+                <Upload size={15} />
+                {strings.hrCvAttach}
+              </button>
+            )}
           </section>
+
+          {/* Somebody who took the job is not yet a colleague: moving a card
+              recorded an outcome, and a board that also created people would
+              create them on a mis-drop. The act is offered here and taken by a
+              person (`docs/design/hr.md` § As built (B6.08c)). */}
+          {applicant.stage === HIRED_STAGE && (
+            <section className={styles.panel}>
+              <h3 className={styles.panelTitle}>
+                <UserCheck size={15} aria-hidden="true" />
+                {strings.hrHired}
+              </h3>
+              <p className={styles.panelEmpty}>{strings.hrHiredExplainer}</p>
+              <Button icon={<UserCheck size={15} />} onClick={() => onHire(applicant)}>
+                {strings.hrHire}
+              </Button>
+            </section>
+          )}
 
           <section className={styles.panel}>
             <h3 className={styles.panelTitle}>{strings.hrNotes}</h3>

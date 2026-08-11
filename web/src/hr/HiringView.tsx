@@ -16,13 +16,14 @@
 //     and an act the server would refuse is never drawn.
 import { useCallback, useEffect, useState } from "react";
 import { Briefcase, Plus } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { Button, Spinner, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { hrMessage, useHrApi } from "./api";
 import { ApplicantDialog } from "./ApplicantDialog";
 import { ApplicantDrawer } from "./ApplicantDrawer";
+import { HireDialog } from "./HireDialog";
 import { HiringBoard } from "./HiringBoard";
 import { dayLabel, kindLabel, openingLabel, statusLabel } from "./format";
 import { OpeningDialog } from "./OpeningDialog";
@@ -33,11 +34,13 @@ import styles from "./hr.module.css";
 /** Which form is open, and on what. `null` is the ordinary state. */
 type Editing =
   | { kind: "opening"; opening: HrOpening | null }
-  | { kind: "applicant"; applicant: HrApplicant | null };
+  | { kind: "applicant"; applicant: HrApplicant | null }
+  | { kind: "hire"; applicant: HrApplicant };
 
 export function HiringView() {
   const api = useHrApi();
   const { confirm } = useDialogs();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [openings, setOpenings] = useState<HrOpening[]>([]);
   const [applicants, setApplicants] = useState<HrApplicant[]>([]);
@@ -302,6 +305,7 @@ export function HiringView() {
           onClose={() => setParam("applicant", null)}
           onChanged={bump}
           onEdit={(applicant) => setEditing({ kind: "applicant", applicant })}
+          onHire={(applicant) => setEditing({ kind: "hire", applicant })}
           onGone={() => {
             setParam("applicant", null);
             bump();
@@ -334,6 +338,21 @@ export function HiringView() {
             // which is also where the CV and the notes are.
             if (editing.applicant === null) setParam("applicant", saved.id);
             bump();
+          }}
+        />
+      )}
+
+      {editing?.kind === "hire" && (
+        <HireDialog
+          applicant={editing.applicant}
+          opening={opening}
+          onClose={() => setEditing(null)}
+          onHired={(employee) => {
+            setEditing(null);
+            // The confirmation is the colleague themselves: the directory,
+            // searched for the name that was just written into it. A sentence
+            // saying "done" would be one more thing to believe.
+            navigate(`/hr/directory?q=${encodeURIComponent(employee.name)}`);
           }}
         />
       )}
