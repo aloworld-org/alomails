@@ -19,16 +19,20 @@ import { API_BASE } from "../platform/runtime";
 import { RestError, problemDetail, restMessage } from "../platform/rest";
 import type {
   ApplicantDraft,
+  HrAbsenceDay,
   HrApplicant,
   HrApplicantDetail,
   HrApplicantNote,
   HrDirectory,
   HrDirectoryEntry,
+  HrHoliday,
+  HrLeaveBalances,
   HrLeaveRequest,
   HrMe,
   HrOpening,
   HrOrgNode,
   HrPipeline,
+  LeaveDraft,
   LeaveStatus,
   OpeningDraft,
 } from "./types";
@@ -226,6 +230,66 @@ export class HrApi {
   /** No, with the sentence the person is going to read. */
   rejectLeaveRequest(id: string, note: string): Promise<HrLeaveRequest> {
     return this.#decideLeave(id, "reject", note);
+  }
+
+  /** Asking for time off. Every rule that could refuse it — the balance, days
+   *  another request already covers, a policy that has been retired, dates
+   *  outside somebody's employment — is the server's, and its sentence is what
+   *  the form shows. */
+  createLeaveRequest(draft: LeaveDraft): Promise<HrLeaveRequest> {
+    return this.#write<{ request: HrLeaveRequest }>("POST", "/hr/leave-requests", draft).then(
+      (r) => r.request,
+    );
+  }
+
+  /** Taking back a request nobody has decided. The person who asked, and
+   *  nobody else — a manager who wants different dates rejects with a note. */
+  withdrawLeaveRequest(id: string): Promise<HrLeaveRequest> {
+    return this.#decideLeave(id, "withdraw");
+  }
+
+  /** Approved leave, given back. It returns the balance, which is what makes
+   *  approving undoable and therefore unconfirmed; leave that has already begun
+   *  is the server's `409`. */
+  cancelLeaveRequest(id: string): Promise<HrLeaveRequest> {
+    return this.#decideLeave(id, "cancel");
+  }
+
+  /** What somebody has left, on a day — **and the day the server folded to**,
+   *  which is this module's clock (`HrLeaveBalances.on`).
+   *
+   *  One entry per live policy, each with its whole working. Absent
+   *  `employeeId` means the caller's own; naming somebody else is the manager's
+   *  or HR's read and the server decides which. */
+  leaveBalances(employeeId?: string, on?: string): Promise<HrLeaveBalances> {
+    const query = new URLSearchParams();
+    if (employeeId !== undefined && employeeId !== "") query.set("employeeId", employeeId);
+    if (on !== undefined && on !== "") query.set("on", on);
+    const suffix = query.toString() === "" ? "" : `?${query.toString()}`;
+    return this.#read<Partial<HrLeaveBalances>>(`/hr/leave-balances${suffix}`).then((r) => ({
+      employeeId: r.employeeId ?? "",
+      on: r.on ?? "",
+      balances: r.balances ?? [],
+    }));
+  }
+
+  /** Who is away between two days, both ends inclusive — every member's read,
+   *  and the module's one read about other people. Days with nobody away are
+   *  not served, so the answer is short even for a month. */
+  absences(from: string, to: string): Promise<HrAbsenceDay[]> {
+    const query = new URLSearchParams({ from, to });
+    return this.#read<{ days?: HrAbsenceDay[] }>(`/hr/absences?${query.toString()}`).then(
+      (r) => r.days ?? [],
+    );
+  }
+
+  /** The days the tenant does not work in one year, on its own calendar. A
+   *  company that observes nothing answers an empty list rather than an error,
+   *  and the calendar simply marks nothing. */
+  holidays(year: number): Promise<HrHoliday[]> {
+    return this.#read<{ holidays?: HrHoliday[] }>(`/hr/holidays?year=${year}`).then(
+      (r) => r.holidays ?? [],
+    );
   }
 
   #decideLeave(id: string, verb: string, note?: string): Promise<HrLeaveRequest> {

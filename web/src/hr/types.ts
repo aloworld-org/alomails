@@ -133,6 +133,113 @@ export interface HrLeaveRequest {
   updatedAt: string;
 }
 
+/** A policy leave comes off, as `/hr/leave-policies` and the balances read
+ *  serve it.
+ *
+ *  The screens read four of these fields — the name, whether it needs deciding,
+ *  whether it is paid, and whether the tenant still runs it. The rest are the
+ *  server's working and are named here so the shape is the server's shape and
+ *  not a subset a later screen would have to widen. */
+export interface HrLeavePolicy {
+  id: string;
+  name: string;
+  /** `annual`, `sick`, `unpaid`, … the store's vocabulary, shown verbatim when
+   *  this build does not know the word. */
+  kind: string;
+  entitlementMinutes: number;
+  accrual: string;
+  leaveYearStartMonth: number;
+  leaveYearStartDay: number;
+  carryoverCapMinutes: number;
+  carryoverExpiresAfterMonths: number | null;
+  allowNegative: boolean;
+  /** False for a policy the tenant records rather than decides — sick leave,
+   *  usually. A request on one lands `approved` on the spot. */
+  requiresApproval: boolean;
+  paid: boolean;
+  archived: boolean;
+  archivedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** One policy's balance for one person, **with its working**.
+ *
+ *  Everything here is minutes, plus the same figures in **tenths of a day** as
+ *  integers — `125` is 12.5 days. Both come from the server, and neither is
+ *  divided again here: the divisor is this person's own average working day
+ *  (`averageDayMinutes`), which a browser has no way to know and no business
+ *  guessing. Money learned this in B1 and a holiday balance has the same
+ *  reason — a person told two different numbers about their own leave stops
+ *  believing both. */
+export interface HrPolicyBalance {
+  policy: HrLeavePolicy;
+  entitlementMinutes: number;
+  carriedInMinutes: number;
+  accruedMinutes: number;
+  takenMinutes: number;
+  bookedMinutes: number;
+  pendingMinutes: number;
+  remainingMinutes: number;
+  averageDayMinutes: number;
+  entitlementDaysTenths: number;
+  takenDaysTenths: number;
+  bookedDaysTenths: number;
+  pendingDaysTenths: number;
+  remainingDaysTenths: number;
+}
+
+/** What somebody has left, on a stated day.
+ *
+ *  `on` is **the server's day** — the answer echoes the day it folded to, and
+ *  when the caller named none that day is the server's own today. The leave
+ *  screen uses it as its clock, so whether a booked absence has already begun
+ *  is decided by the same calendar the server would refuse the cancellation
+ *  with, rather than by the reader's device. */
+export interface HrLeaveBalances {
+  employeeId: string;
+  /** `YYYY-MM-DD`. */
+  on: string;
+  balances: HrPolicyBalance[];
+}
+
+/** Somebody who is not here on a given day. A name and an id — the whole of
+ *  what the absence layer says about a person, by construction: the store's
+ *  query does not select the policy, the kind or the note. */
+export interface HrAbsentPerson {
+  employeeId: string;
+  name: string;
+}
+
+/** One day of the absence layer. Days with nobody away are not served at
+ *  all. */
+export interface HrAbsenceDay {
+  /** `YYYY-MM-DD`. */
+  day: string;
+  people: HrAbsentPerson[];
+}
+
+/** A day the tenant does not work, as `/hr/holidays` serves it. */
+export interface HrHoliday {
+  /** `YYYY-MM-DD`. */
+  date: string;
+  /** A stable key for the day — `christmas`, `easter_monday`. */
+  key: string;
+  /** The day's name in the calendar's own language. */
+  name: string;
+}
+
+/** What somebody is asking for. `employeeId` is HR's alone: filing leave for a
+ *  person with no login is the one reason it exists, and the server refuses it
+ *  from anybody else. */
+export interface LeaveDraft {
+  policyId: string;
+  fromDay: string;
+  toDay: string;
+  note?: string;
+  employeeId?: string;
+}
+
 /** One person as the directory shows them: **the public fields only**, and
  *  structurally so — the server folds this from a type that has no home address
  *  on it to leak (`hr_employees::directory_json`). What is missing here is the

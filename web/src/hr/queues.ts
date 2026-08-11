@@ -70,6 +70,46 @@ const RESOLVED = new WeakMap<object, Promise<Access>>();
  * decide — a state most members are in, and not a refusal.
  */
 export function useApprovalQueues(): { ready: boolean; queues: ApprovalQueue[] } {
+  const access = useAccess();
+
+  // The three hooks are called unconditionally — a queue that is not this
+  // caller's is simply left out of the list below, never left uncreated.
+  const leave = useLeaveApprovals(access?.leave === "all" ? "all" : "team");
+  const expenses = useExpenseApprovals();
+  const weeks = useWeekApprovals();
+
+  return useMemo(() => {
+    const doors = access ?? CLOSED;
+    const queues: ApprovalQueue[] = [];
+    if (doors.leave !== null) queues.push(leave);
+    if (doors.expenses) queues.push(expenses);
+    if (doors.timesheets) queues.push(weeks);
+    return { ready: access !== null, queues };
+  }, [access, leave, expenses, weeks]);
+}
+
+/**
+ * Whose leave this caller may read beyond their own: `all` for HR, `team` for
+ * somebody with a direct report, `null` for most members.
+ *
+ * The leave screen's scope switch, and the same answer the inbox's leave queue
+ * is built from — resolved once and shared, so the switch and the queue can
+ * never disagree about who the reader is. Like the queues above it decides only
+ * what to *draw*: `hr_leave_door.rs` resolves the scope again for every read and
+ * refuses `all` from anybody who is not HR.
+ */
+export function useLeaveScope(): { ready: boolean; scope: "all" | "team" | null } {
+  const access = useAccess();
+  return useMemo(
+    () => ({ ready: access !== null, scope: access?.leave ?? null }),
+    [access],
+  );
+}
+
+/** The doors, once per session. `null` until they have all answered — and never
+ *  a guess in the meantime, because a tab drawn from a guess flashes somebody
+ *  else's screen at a reader on every load. */
+function useAccess(): Access | null {
   const { authorizedFetch } = useAuth();
   const client = useJmapClient();
   const hr = useHrApi();
@@ -90,20 +130,7 @@ export function useApprovalQueues(): { ready: boolean; queues: ApprovalQueue[] }
     };
   }, [authorizedFetch, client, hr]);
 
-  // The three hooks are called unconditionally — a queue that is not this
-  // caller's is simply left out of the list below, never left uncreated.
-  const leave = useLeaveApprovals(access?.leave === "all" ? "all" : "team");
-  const expenses = useExpenseApprovals();
-  const weeks = useWeekApprovals();
-
-  return useMemo(() => {
-    const doors = access ?? CLOSED;
-    const queues: ApprovalQueue[] = [];
-    if (doors.leave !== null) queues.push(leave);
-    if (doors.expenses) queues.push(expenses);
-    if (doors.timesheets) queues.push(weeks);
-    return { ready: access !== null, queues };
-  }, [access, leave, expenses, weeks]);
+  return access;
 }
 
 /** Asks the three doors. A door that cannot be asked is a door that is shut:

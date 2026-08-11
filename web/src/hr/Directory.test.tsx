@@ -184,8 +184,10 @@ vi.mock("../jmap", () => ({
 
 vi.mock("../drive", () => ({ saveBlob: vi.fn() }));
 
-/** The module as it is really mounted. */
-function ui(path = "/hr") {
+/** The module as it is really mounted. Every test names the directory path:
+ *  the tab is every member's, but what a member *lands* on is their own leave
+ *  (B6.08b), and this file is about the screen rather than the landing. */
+function ui(path = "/hr/directory") {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <DialogProvider>
@@ -230,8 +232,8 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("the directory", () => {
-  test("is where a member with no door lands, and holds the public fields", async () => {
-    ui();
+  test("is every member's, needs no door, and holds the public fields", async () => {
+    ui("/hr/directory");
     await screen.findByText(strings.hrPeopleCount(3));
 
     // No door was needed for any of it, and no queue was read on the way.
@@ -253,7 +255,7 @@ describe("the directory", () => {
   });
 
   test("one search box narrows the list, in any order and across fields", async () => {
-    ui();
+    ui("/hr/directory");
     await screen.findByText(strings.hrPeopleCount(3));
     const readsSoFar = reads("/hr/employees").length;
 
@@ -277,7 +279,7 @@ describe("the directory", () => {
   });
 
   test("the chart is the server's tree, and a search keeps the managers above a match", async () => {
-    ui();
+    ui("/hr/directory");
     await screen.findByText(strings.hrPeopleCount(3));
 
     fireEvent.click(screen.getByRole("button", { name: strings.hrViewOrg }));
@@ -310,7 +312,7 @@ describe("the directory", () => {
   });
 
   test("a row leads to where that person sits, and the address carries it", async () => {
-    ui();
+    ui("/hr/directory");
     await screen.findByText(strings.hrPeopleCount(3));
 
     fireEvent.click(within(row(BRAM.name)).getByText(strings.hrShowInChart));
@@ -327,7 +329,7 @@ describe("the directory", () => {
   });
 
   test("the people who have left are HR's read alone", async () => {
-    ui();
+    ui("/hr/directory");
     await screen.findByText(strings.hrPeopleCount(3));
     // Not HR: no control for it, and nobody asked the server for leavers.
     expect(screen.queryByText(strings.hrIncludeLeavers)).toBeNull();
@@ -351,7 +353,7 @@ describe("the directory", () => {
 
   test("a refusal is the server's own sentence, not an empty company", async () => {
     brokenDirectory = true;
-    ui();
+    ui("/hr/directory");
 
     await screen.findByText("the directory is closed");
     // Nothing pretends the tenant has nobody in it.

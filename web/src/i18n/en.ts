@@ -4681,6 +4681,85 @@ export const en = {
   hrNoMatchBody:
     "Names, roles, teams, email addresses and telephone numbers are all searched, in any order. Try one word less.",
   hrClearSearch: "Clear the search",
+
+  // Time off (B6.08b) — a person's own leave, the decisions on somebody else's,
+  // and who is away. Two habits run through the words. First, no figure is
+  // written here: every number these strings frame is the server's fold over a
+  // working pattern and the tenant's public holidays, and the balance is shown
+  // with its working because a balance nobody can reproduce is a balance nobody
+  // believes. Second, nothing is called a "leave request" to the person making
+  // one — they are asking for time off, and the record is our word for it.
+  hrTabLeave: "My leave",
+  hrTabAway: "Who’s away",
+  hrLeaveWhose: "Whose time off",
+  hrScopeMine: "Mine",
+  hrScopeTeam: "My team",
+  hrScopeEveryone: "Everyone",
+  hrLeaveShow: "Show",
+  hrShowEverything: "Everything",
+  hrShowWaiting: "Waiting for a decision",
+  hrShowBooked: "Booked",
+  hrAskForLeave: "Ask for time off",
+  hrOneDay: "1 day",
+  hrDaysOf: (days: string) => `${days} days`,
+  hrFactOf: (label: string, value: string) => `${label} ${value}`,
+  hrBalanceLeft: "left",
+  hrBalanceThisYear: "This year",
+  hrBalanceTaken: "Taken",
+  hrBalanceBooked: "Booked",
+  hrBalanceWaiting: "Waiting",
+  hrBalanceAsOf: (day: string) => `Worked out on ${day}, on your own working pattern.`,
+  hrUnpaid: "Unpaid",
+  hrNotDecided: "Recorded, not decided",
+  hrLeaveKind: "Kind",
+  hrLeaveWhen: "When",
+  hrLeaveDays: "Days",
+  hrLeaveWhy: "Why",
+  hrLeaveState: "State",
+  hrLeaveBetween: (from: string, to: string) => `${from} – ${to}`,
+  hrHolidaysInside: "A public holiday falls inside these dates and is not counted.",
+  hrLeaveRequested: "Waiting",
+  hrLeaveApproved: "Booked",
+  hrLeaveRejected: "Not agreed",
+  hrLeaveWithdrawn: "Taken back",
+  hrLeaveCancelled: "Cancelled",
+  hrWithdraw: "Take it back",
+  hrCancelLeave: "Cancel it",
+  hrLeaveEmptyTitle: "You have not asked for any time off",
+  hrLeaveEmptyBody:
+    "Ask for a day or a fortnight here. You will see what it costs your balance before anybody decides, and who else is already off on those days.",
+  hrLeaveTeamEmptyTitle: "Nobody has asked for time off",
+  hrLeaveTeamEmptyBody:
+    "When somebody who reports to you asks for days off, they arrive here and in your approvals inbox — with the dates, what it costs their balance, and who else is away then.",
+  hrLeaveNoneShownTitle: "Nothing in that state",
+  hrLeaveNoneShownBody: "There is time off recorded, but none of it is in the state you asked for.",
+  hrAskSubtitle:
+    "The days come off the balance for the kind you pick, worked out from your own working pattern — you never type a number of days.",
+  hrAskSubmit: "Ask",
+  hrPolicyRecordedHint:
+    "This kind is recorded rather than decided: it is booked as soon as you ask.",
+  hrFieldFirstDay: "First day off",
+  hrFieldLastDay: "Last day off",
+  hrLastDayHint: "The day you come back is not part of it.",
+  hrRangeBackwards: "The last day is before the first one.",
+  hrAlsoAway: "Already off then",
+  hrNobodyAway: "Nobody else is off on those days.",
+  hrWhyHint: "Optional. Only whoever decides this reads it, and it is never logged.",
+
+  // The absence calendar. It says who, and when — and nothing else, because the
+  // route behind it does not carry a reason and never should.
+  hrAwayCalendar: "Who is away, by day",
+  hrPreviousMonth: "The month before",
+  hrNextMonth: "The month after",
+  hrThisMonth: "This month",
+  hrAwayThisMonth: (count: number) =>
+    count === 1 ? "1 person away this month" : `${count} people away this month`,
+  hrMoreAway: (count: number) => `+${count} more`,
+  hrDayAway: (day: string, count: number) =>
+    count === 0 ? `${day}: nobody away` : `${day}: ${count} away`,
+  hrNobodyAwayTitle: (month: string) => `Nobody is away in ${month}`,
+  hrNobodyAwayBody:
+    "Booked time off appears here for everybody in the company, so you can see who is out before you plan around them. Public holidays are marked too.",
 } as const;
 
 /** Every string key in the catalog. */

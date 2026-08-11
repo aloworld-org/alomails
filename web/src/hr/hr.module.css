@@ -807,3 +807,162 @@
   color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
 }
+
+/* ---- time off and the absence calendar (B6.08b) ------------------------ */
+
+/* The balances, side by side. One card per policy the tenant runs, and they
+   wrap rather than scroll: a person with four kinds of leave should see all
+   four figures at once, which is the whole question they came with. */
+.balances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.balanceCard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 200px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+.balanceHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.balanceName {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+/* The figure a person came for, said once and loudly. */
+.balanceFigure {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-tight);
+  margin-top: var(--space-2);
+}
+.balanceLabel {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+/* The working under it — quieter than the figure, and never hidden behind a
+   disclosure: a balance somebody cannot reproduce is a support conversation. */
+.balanceWorking {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The row somebody arrived for, from the approvals inbox. Marked, never
+   filtered to: the decision is easier next to the ones around it. */
+.rowMarked {
+  background: var(--bg-raised);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* Who is already off between the dates being chosen. */
+.awayNames {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+/* The month, and the two ways through it. */
+.monthNav {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.monthName {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  min-width: 9em;
+  text-align: center;
+}
+
+/* The grid. Six weeks always, so paging through the year never moves the rows
+   under the reader's eye. */
+.calendar {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+.calendarHead,
+.calendarWeek {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.weekday {
+  padding: 8px 10px;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 92px;
+  padding: 6px 8px;
+  border-right: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+.calendarWeek > .cell:last-child {
+  border-right: none;
+}
+/* The days that belong to the months either side: shown, because a week does
+   not stop at a month boundary, but plainly not this month's. */
+.cellOutside {
+  background: var(--bg-sunken);
+  color: var(--text-tertiary);
+}
+/* A weekend is not an absence. Toned down so a company that is shut on Saturday
+   does not read as a company where everybody is away. */
+.cellWeekend {
+  background: var(--bg-sunken);
+}
+.cellHoliday {
+  background: var(--accent-tint);
+}
+.cellToday {
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.cellDay {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.cellNote {
+  font-size: var(--text-xs);
+  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cellPerson {
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cellMore {
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}

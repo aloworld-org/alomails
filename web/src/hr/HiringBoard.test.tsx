@@ -236,9 +236,10 @@ describe("the hiring board", () => {
   test("a member who is not HR is shown no board and reads no hiring data", async () => {
     isHr = false;
     ui();
-    // They land on the directory, which is every member's (B6.08a) — and this
-    // recorded network serves it nobody, so it says so.
-    await screen.findByText(strings.hrDirectoryEmptyTitle);
+    // They land on their own leave, which is every member's and the reason the
+    // module is not behind a role at all (B6.08b).
+    await screen.findByText(strings.hrTabLeave);
+    expect(screen.getByText(strings.hrTabDirectory)).toBeTruthy();
     expect(screen.queryByText(strings.hrTabHiring)).toBeNull();
     expect(calls.some((c) => c.url.includes("/hr/openings"))).toBe(false);
   });

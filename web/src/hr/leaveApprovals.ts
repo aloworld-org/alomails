@@ -19,12 +19,18 @@ import { useHrApi } from "./api";
 import { dayLabel } from "./format";
 import type { HrLeaveRequest } from "./types";
 
-/** Where the request itself lives once the member screens exist (B6.08b). The
- *  inbox is the screen today, so the link is the inbox. */
-const LEAVE_HREF = "/hr/approvals";
+/** Where a row leads: the leave screen, asking the same question this queue
+ *  asked, with the request the reader came for marked (B6.08b).
+ *
+ *  The inbox row is deliberately one line — it holds three kinds of decision at
+ *  once — so "open it" has to land somewhere that shows the dates, the working
+ *  behind the days and what else that person's team already has booked. */
+function leaveHref(id: string, scope: "team" | "all"): string {
+  return `/hr/leave?scope=${scope}&request=${encodeURIComponent(id)}`;
+}
 
 /** One asked-for absence as a row of the shared inbox. */
-function asApproval(request: HrLeaveRequest): Approval {
+function asApproval(request: HrLeaveRequest, scope: "team" | "all"): Approval {
   return {
     kind: "leave",
     id: request.id,
@@ -33,7 +39,7 @@ function asApproval(request: HrLeaveRequest): Approval {
     detail: request.note,
     figure: strings.hrWorkingDays(request.workingDays),
     waitingSince: request.createdAt,
-    href: LEAVE_HREF,
+    href: leaveHref(request.id, scope),
   };
 }
 
@@ -52,7 +58,7 @@ export function useLeaveApprovals(scope: "team" | "all"): ApprovalQueue {
       list: () =>
         api
           .leaveRequests(scope, ["requested"])
-          .then((requests) => requests.map(asApproval)),
+          .then((requests) => requests.map((request) => asApproval(request, scope))),
       approve: async (id: string, note?: string) => {
         await api.approveLeaveRequest(id, note);
       },

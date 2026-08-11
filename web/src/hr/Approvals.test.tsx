@@ -308,8 +308,10 @@ describe("the one approvals inbox", () => {
   test("somebody with no door is shown no inbox and reads no queue", async () => {
     doors = { hr: false, books: false, admin: false };
     // Nobody reports to them: the directory holds one person, managed by
-    // somebody else. It is a whole row, because a member with no door lands on
-    // the directory now (B6.08a) and that screen draws these rows.
+    // somebody else. It is a whole row because the screen this test opens draws
+    // these rows — the directory, deliberately, since a member's own leave (the
+    // landing since B6.08b) reads a queue of its own and this test is about the
+    // ones it must not read.
     const colleague = {
       id: "emp-1",
       name: "Someone Else",
@@ -339,7 +341,7 @@ describe("the one approvals inbox", () => {
     });
     session = empty;
 
-    ui("/hr");
+    ui("/hr/directory");
     await screen.findByText(colleague.name);
     expect(screen.queryByText(strings.hrTabApprovals)).toBeNull();
     expect(reads("/hr/leave-requests")).toHaveLength(0);

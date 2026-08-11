@@ -8,12 +8,16 @@
 // behind a role would make that a question you ask a person. What varies by
 // door is the tabs.
 //
-// Today there are three tabs, and the first of them is everybody's:
+// Today there are five tabs, and the first three are everybody's:
 //
-//   - **Directory** — the people list and the org chart (B6.08a), drawn for
-//     every member and read with no door at all. It is what a member lands on
-//     when nothing else is theirs, which is why the module no longer promises a
-//     screen it does not have.
+//   - **My leave** — the balance with its working, the request form, and this
+//     person's own requests (B6.08b); for anybody who decides leave, the same
+//     list one relationship wider. It is what a member lands on, because it is
+//     the reason the rail entry is every member's in the first place.
+//   - **Who's away** — the absence calendar, the module's one screen about
+//     other people and every member's read (B6.08b).
+//   - **Directory** — the people list and the org chart (B6.08a), read with no
+//     door at all.
 //   - **Hiring** — the admin-or-HR door, and what HR still lands on: an
 //     approvals inbox is usually empty, and a module that opened on an empty
 //     screen would read as a module with nothing in it.
@@ -21,10 +25,13 @@
 //     something to decide: HR, a tenant admin, an accountant, or simply
 //     somebody with a direct report. It is deliberately not an HR-role tab,
 //     because most of what it holds is not HR's (`queues.ts`). A manager who is
-//     not HR has this tab and the directory, and lands on the inbox.
+//     not HR lands on the inbox.
 //
-// The remaining member-facing tabs (My leave, Team) are the wave's later web
-// items and are not drawn as empty promises.
+// The design note's separate **Team** tab is deliberately not built: both
+// halves of it — the reports' requests and their booked absence — are the same
+// two screens above asked a different way (a scope switch, and a calendar every
+// member already has), and a third place to decide leave is a third place to
+// forget one.
 //
 // Tabs are hidden, not disabled, for anybody without the door — the pattern
 // Finance set for its bookkeeper tabs. The routes stay mounted, so a bookmark
@@ -40,8 +47,10 @@ import { Spinner } from "../ds";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { ApprovalsView } from "./ApprovalsView";
+import { AwayView } from "./AwayView";
 import { DirectoryView } from "./DirectoryView";
 import { HiringView } from "./HiringView";
+import { LeaveView } from "./LeaveView";
 import { useApprovalQueues } from "./queues";
 import styles from "./hr.module.css";
 
@@ -91,8 +100,24 @@ export function HrModule() {
         {!settled && <Spinner size={16} />}
         {settled && (
           <nav className={styles.tabs}>
-            {/* Everybody's, and first: the one HR screen that is not about a
-                door but about the company. */}
+            {/* Everybody's, and first: a person's own leave is the most-read
+                thing in HR and the reason this module is not behind a role. */}
+            <NavLink
+              to={`${HR_ROOT}/leave`}
+              className={({ isActive }) =>
+                isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+              }
+            >
+              {strings.hrTabLeave}
+            </NavLink>
+            <NavLink
+              to={`${HR_ROOT}/away`}
+              className={({ isActive }) =>
+                isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+              }
+            >
+              {strings.hrTabAway}
+            </NavLink>
             <NavLink
               to={`${HR_ROOT}/directory`}
               className={({ isActive }) =>
@@ -134,19 +159,21 @@ export function HrModule() {
             // approvals inbox is usually empty, and a module that opened on an
             // empty screen would read as a module with nothing in it. Somebody
             // who has decisions waiting lands on them. Everybody else lands on
-            // the directory, because looking a colleague up is what most people
-            // open HR to do.
+            // their own leave: how much have I got left, and can I have next
+            // Thursday off, is what most people open HR to ask.
             !settled ? null : hr ? (
               <Navigate to={`${HR_ROOT}/hiring`} replace />
             ) : canApprove ? (
               <Navigate to={`${HR_ROOT}/approvals`} replace />
             ) : (
-              <Navigate to={`${HR_ROOT}/directory`} replace />
+              <Navigate to={`${HR_ROOT}/leave`} replace />
             )
           }
         />
         <Route path="approvals" element={<ApprovalsView />} />
+        <Route path="away" element={<AwayView />} />
         <Route path="directory" element={<DirectoryView />} />
+        <Route path="leave" element={<LeaveView />} />
         <Route path="hiring" element={<HiringView />} />
         {/* An unknown HR path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to={HR_ROOT} replace />} />
