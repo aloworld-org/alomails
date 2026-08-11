@@ -65,3 +65,37 @@
   text-align: center;
   color: var(--text-secondary);
 }
+
+/* ---- sharing your screen ---------------------------------------------- */
+
+/* Do not show somebody their own screen share.
+ *
+ * Sharing the window that holds the call renders it inside itself, forever —
+ * the hall of mirrors. It happens in Meet, Zoom and Teams too, and it is only
+ * ever seen by ONE person: the sharer, because they are the only one being
+ * shown their own stream back. Others see it once, correctly.
+ *
+ * So the sharer's own screen tile is hidden. The recursion disappears for the
+ * only person it afflicts, and the browser stops decoding a stream nobody
+ * needed. Attribute names read from the rendered DOM, not guessed.
+ */
+.livekit
+  :global(
+    .lk-participant-tile[data-lk-local-participant="true"][data-lk-source="screen_share"]
+  ) {
+  display: none;
+}
+
+/* Chrome puts its own "…is sharing a window — Stop sharing" strip along the
+   bottom. It is browser-owned and unmovable, and it lands squarely on our
+   control bar. Every browser product reserves room for it; we did not. */
+.livekit:has(
+    :global(
+      .lk-participant-tile[data-lk-local-participant="true"][data-lk-source="screen_share"]
+    )
+  )
+  :global(.lk-control-bar) {
+  /* Move the whole bar, rather than padding inside it — padding here
+     misaligns the device buttons against their dropdown chevrons. */
+  margin-bottom: 52px;
+}
