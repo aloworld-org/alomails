@@ -557,6 +557,24 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One onboarding or offboarding checklist a tenant runs (alo HR, ADR 0035,
+    /// wave B6.05). The *shape* of somebody's first or last week — never the
+    /// work itself: instantiating a template creates an ordinary task board, so
+    /// a step arrives where its owner already looks
+    /// (`docs/design/hr.md`, "Onboarding and offboarding checklists").
+    HrChecklistTemplateId
+);
+
+opaque_id!(
+    /// One step of a checklist template (alo HR, ADR 0035, wave B6.05). Carries
+    /// an owner *role* and an offset in days from the anchor date, both resolved
+    /// when the checklist is drawn for a person — a template that stored a user
+    /// id and a date would quietly assign three years of onboarding to somebody
+    /// who left (`docs/design/hr.md`, "Onboarding and offboarding checklists").
+    HrChecklistStepId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

@@ -234,6 +234,7 @@ DELETE /crm/stages/{id} -> crm.stage.delete
 DELETE /finance/accounts/{id} -> finance.account.delete
 DELETE /finance/expenses/{id} -> finance.expense.delete
 DELETE /finance/mileage/{id} -> finance.mileage.delete
+DELETE /hr/checklist-templates/{id} -> hr.checklist_template.delete
 DELETE /hr/employees/{id}/documents/{document_id} -> hr.employee.document.delete
 DELETE /inventory/locations/{id} -> inventory.location.delete
 DELETE /inventory/purchase-orders/{id} -> inventory.purchase_order.delete
@@ -256,6 +257,7 @@ PATCH /crm/pipelines/{id} -> crm.pipeline.update
 PATCH /crm/stages/{id} -> crm.stage.update
 PATCH /finance/accounts/{id} -> finance.account.update
 PATCH /finance/expenses/{id} -> finance.expense.update
+PATCH /hr/checklist-templates/{id} -> hr.checklist_template.update
 PATCH /hr/employees/{id} -> hr.employee.update
 PATCH /hr/leave-policies/{id} -> hr.leave_policy.update
 PATCH /hr/leave-requests/{id} -> hr.leave_request.update
@@ -323,8 +325,10 @@ POST /finance/mileage -> finance.mileage.create
 POST /finance/periods -> finance.period.create
 POST /finance/periods/{id}/close -> finance.period.close
 POST /finance/periods/{id}/reopen -> finance.period.reopen
+POST /hr/checklist-templates -> hr.checklist_template.create
 POST /hr/employees -> hr.employee.create
 POST /hr/employees/{id}/archive -> hr.employee.archive
+POST /hr/employees/{id}/checklists -> hr.employee.checklist.create
 POST /hr/employees/{id}/documents -> hr.employee.document.create
 POST /hr/leave-policies -> hr.leave_policy.create
 POST /hr/leave-policies/{id}/archive -> hr.leave_policy.archive

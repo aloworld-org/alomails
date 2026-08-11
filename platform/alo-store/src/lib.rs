@@ -94,6 +94,7 @@ pub mod fin_receipt_read;
 pub mod fin_rules;
 pub mod fin_vat_return;
 pub mod hr_absences;
+pub mod hr_checklists;
 pub mod hr_documents;
 pub mod hr_employees;
 pub mod hr_employments;
@@ -325,6 +326,11 @@ pub use fin_rules::{
 };
 pub use fin_vat_return::{VatReturn, VatReturnRate, VatReturnSide};
 pub use hr_absences::{AbsenceDay, AbsentPerson};
+pub use hr_checklists::{
+    ChecklistKind, ChecklistOwners, ChecklistProgress, ChecklistRun, ChecklistStep,
+    ChecklistTemplate, NewChecklistRun, NewChecklistStep, NewChecklistTemplate, PlannedStep,
+    StepOwner,
+};
 pub use hr_documents::{HrDocument, HrDocumentKind};
 pub use hr_employees::{DirectoryEntry, Employee, NewEmployee};
 pub use hr_employments::{ContractKind, Employment, NewEmployment, PayPeriod};
@@ -344,13 +350,13 @@ pub use id::{
     CategoryId, ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, CommentId, ContactId,
     CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
     FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
-    FinMileageRateId, FinPeriodId, FinPostingId, GroupId, HrDocumentId, HrEmployeeId,
-    HrEmploymentId, HrLeavePolicyId, HrLeaveRequestId, InsightDashboardId, InsightTileId,
-    InvCountId, InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId,
-    InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId, InvSupplierId, LabelId, MailboxId, MeetingId,
-    MessageId, ProjectId, ProjectMilestoneId, SiteCollectionId, SiteFormId, SiteFormSubmissionId,
-    SiteId, SitePageId, SitePostId, SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
-    TimeEntryId, TimeWeekId, UserId,
+    FinMileageRateId, FinPeriodId, FinPostingId, GroupId, HrChecklistStepId, HrChecklistTemplateId,
+    HrDocumentId, HrEmployeeId, HrEmploymentId, HrLeavePolicyId, HrLeaveRequestId,
+    InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId,
+    InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
+    InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
+    SiteCollectionId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId,
+    SitePublishId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

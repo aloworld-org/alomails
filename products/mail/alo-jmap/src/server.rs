@@ -23,12 +23,12 @@ use crate::{
     crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
     finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
     finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
-    finance_report_vat, flagdue, hr_documents, hr_employees, hr_holidays, hr_leave_balances,
-    hr_leave_policies, hr_leave_requests, hr_org, imap_import_route, insights, insights_ask,
-    insights_eval, insights_gallery, inventory_counts, inventory_locations, inventory_moves,
-    inventory_po, inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
-    inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice, inventory_stock,
-    inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
+    finance_report_vat, flagdue, hr_checklists, hr_documents, hr_employees, hr_holidays,
+    hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_org, imap_import_route, insights,
+    insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
+    inventory_moves, inventory_po, inventory_po_print, inventory_po_receipts, inventory_po_send,
+    inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice,
+    inventory_stock, inventory_supplier_prices, inventory_suppliers, meet_routes, projects_clients,
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, sites, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
@@ -733,6 +733,31 @@ pub fn app_with_site_domain_dns(
         .route(
             "/hr/holiday-calendars",
             get(hr_holidays::get_calendars).put(hr_holidays::put_calendars),
+        )
+        // Onboarding and offboarding checklists (B6.05). The templates are
+        // HR's both ways — unlike a leave policy, a shape nobody may run is of
+        // no use to read — and DELETE is a real delete here, because running a
+        // template *copies* it onto a task board: nothing anybody is working
+        // through depends on the row (`docs/design/hr.md` § Onboarding and
+        // offboarding checklists).
+        //
+        // Running one is a POST on the person, so the audit trail files it
+        // against their record (`hr.employee.checklist.create`); reading the
+        // runs back is the leave door — HR, their manager, or the newcomer
+        // looking at their own first week.
+        .route(
+            "/hr/checklist-templates",
+            get(hr_checklists::list_templates).post(hr_checklists::create_template),
+        )
+        .route(
+            "/hr/checklist-templates/{id}",
+            get(hr_checklists::get_template)
+                .patch(hr_checklists::update_template)
+                .delete(hr_checklists::delete_template),
+        )
+        .route(
+            "/hr/employees/{id}/checklists",
+            get(hr_checklists::list_checklists).post(hr_checklists::run_checklist),
         )
         // Invoices (B1.10). The lifecycle transitions are their own POSTs, not
         // fields on the PATCH: issuing assigns a legal number and freezes the
