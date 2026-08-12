@@ -461,3 +461,19 @@
      misaligns the device buttons against their dropdown chevrons. */
   margin-bottom: var(--space-16);
 }
+
+.meetingActions { position: absolute; z-index: 12; right: var(--space-4); top: var(--space-4); display: flex; gap: var(--space-2); }
+.meetingActions button { min-height: 44px; border: 1px solid rgb(255 255 255 / 16%); border-radius: var(--radius-md); padding: 0 var(--space-3); background: rgb(20 27 31 / 88%); color: white; display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+.meetingActions button:hover, .meetingActions .actionActive { background: var(--accent); }
+.meetingActions svg { width: 18px; }
+.reactions { position: relative; }
+.reactionMenu { display: none; position: absolute; top: calc(100% + var(--space-2)); left: 50%; transform: translateX(-50%); padding: var(--space-2); gap: var(--space-1); border-radius: var(--radius-lg); background: rgb(20 27 31 / 96%); box-shadow: var(--shadow-lg); }
+.reactions:hover .reactionMenu, .reactions:focus-within .reactionMenu { display: flex; }
+.reactionMenu button { min-width: 40px; padding: 0; font-size: 20px; }
+.raisedHands { position: absolute; z-index: 11; top: 76px; right: var(--space-4); display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: 999px; background: var(--accent-tint); color: var(--accent-hover); }
+.raisedHands svg { width: 18px; }
+.reactionBurst { position: absolute; z-index: 15; left: 50%; bottom: 120px; animation: reaction-rise 2.8s ease-out forwards; display: grid; justify-items: center; pointer-events: none; }
+.reactionBurst span { font-size: 64px; }
+.reactionBurst small { color: white; font-weight: 700; }
+@keyframes reaction-rise { from { opacity: 0; transform: translate(-50%, 30px) scale(.7); } 15%, 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -160px) scale(1.15); } }
+@media (max-width: 48rem) { .meetingActions { top: auto; bottom: 90px; left: var(--space-2); right: var(--space-2); justify-content: center; } .meetingActions button { padding: 0 var(--space-2); } .raisedHands { top: var(--space-16); } }

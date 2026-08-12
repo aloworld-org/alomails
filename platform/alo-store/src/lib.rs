@@ -415,7 +415,9 @@ pub use insight_tiles::{NewTile, Tile, TileSpec};
 // Callers reach them by module path (`alo_store::inv_locations::NewLocation`,
 // `alo_store::inv_moves::{NewMove, MoveReason}`, `alo_store::inv_stock::
 // StockFilter`), which keeps every one of them unambiguous at its use site.
-pub use meet::{Meeting, MeetingParticipant, NewMeeting};
+pub use meet::{
+    Meeting, MeetingGuest, MeetingGuestInvitationCreated, MeetingParticipant, NewMeeting,
+};
 pub use model::{
     AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, CalendarGrant, Category,
     Contact, ContactField, DkimKeyRow, DomainRow, EmailFilter, EmailQuery, GroupRow, MAX_PAGE,

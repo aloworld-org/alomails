@@ -20,11 +20,14 @@
 //!   than read back from the engine afterwards, because engines are swappable
 //!   and attendance is evidence.
 
+use sha2::{Digest, Sha256};
 use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
 use crate::id::{ChatChannelId, EventId, MeetingId, UserId};
+use crate::id::{TenantId, generate_token};
+use crate::store::Store;
 
 /// A meeting as the workspace knows it.
 #[derive(Debug, Clone)]
@@ -57,6 +60,37 @@ pub struct NewMeeting {
     pub title: String,
     pub channel_id: Option<ChatChannelId>,
     pub event_id: Option<EventId>,
+}
+
+/// A guest invitation returned to its host. The raw token is present only at creation.
+#[derive(Debug, Clone)]
+pub struct MeetingGuestInvitationCreated {
+    pub id: String,
+    pub token: String,
+    pub expires_at: OffsetDateTime,
+}
+
+/// A guest's lobby state. Public resolution never exposes the tenant or media room.
+#[derive(Debug, Clone)]
+pub struct MeetingGuest {
+    pub id: String,
+    pub tenant: TenantId,
+    pub meeting_id: MeetingId,
+    pub room: String,
+    pub meeting_title: String,
+    pub guest_email: String,
+    pub guest_name: String,
+    pub expires_at: OffsetDateTime,
+    pub requested_at: Option<OffsetDateTime>,
+    pub admitted_at: Option<OffsetDateTime>,
+    pub denied_at: Option<OffsetDateTime>,
+}
+
+fn token_hash(token: &str) -> String {
+    Sha256::digest(token.as_bytes())
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 type MeetingRow = (
@@ -272,6 +306,133 @@ impl AccountStore {
                 joined_at,
             })
             .collect())
+    }
+}
+
+impl AccountStore {
+    fn require_meeting_host(&self, meeting: &Meeting) -> Result<()> {
+        if meeting.created_by.as_str() == self.user.as_str() {
+            Ok(())
+        } else {
+            Err(StoreError::Forbidden)
+        }
+    }
+
+    /// Create a single-use, independently revocable guest link.
+    pub async fn create_meeting_guest_invitation(
+        &self,
+        id: &MeetingId,
+        email: &str,
+        name: &str,
+        expires_at_epoch: i64,
+    ) -> Result<MeetingGuestInvitationCreated> {
+        let meeting = self.meeting(id).await?;
+        self.require_meeting_host(&meeting)?;
+        let expires_at = OffsetDateTime::from_unix_timestamp(expires_at_epoch)
+            .map_err(|_| StoreError::Validation("invalid guest invitation expiry".to_owned()))?;
+        if expires_at <= OffsetDateTime::now_utc()
+            || email.trim().is_empty()
+            || name.trim().is_empty()
+        {
+            return Err(StoreError::Validation(
+                "guest name, email, and future expiry are required".to_owned(),
+            ));
+        }
+        let invitation_id = generate_token();
+        let token = format!("{}{}", generate_token(), generate_token());
+        sqlx::query("INSERT INTO meeting_guest_invitations (tenant_id,id,meeting_id,token_hash,guest_email,guest_name,expires_at) VALUES ($1,$2,$3,$4,$5,$6,$7)")
+            .bind(self.tenant.as_str()).bind(&invitation_id).bind(id.as_str()).bind(token_hash(&token)).bind(email.trim()).bind(name.trim()).bind(expires_at)
+            .execute(&self.pool).await.map_err(StoreError::Db)?;
+        Ok(MeetingGuestInvitationCreated {
+            id: invitation_id,
+            token,
+            expires_at,
+        })
+    }
+
+    /// Admit a waiting guest. Only the meeting creator can moderate the lobby.
+    pub async fn admit_meeting_guest(
+        &self,
+        meeting_id: &MeetingId,
+        invitation_id: &str,
+    ) -> Result<()> {
+        let meeting = self.meeting(meeting_id).await?;
+        self.require_meeting_host(&meeting)?;
+        let changed = sqlx::query("UPDATE meeting_guest_invitations SET admitted_at=now(), denied_at=NULL WHERE tenant_id=$1 AND meeting_id=$2 AND id=$3 AND revoked_at IS NULL AND expires_at>now()")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(invitation_id).execute(&self.pool).await.map_err(StoreError::Db)?.rows_affected();
+        if changed == 0 {
+            Err(StoreError::NotFound)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Revoke a guest link immediately. Only the host may do so.
+    pub async fn revoke_meeting_guest(
+        &self,
+        meeting_id: &MeetingId,
+        invitation_id: &str,
+    ) -> Result<()> {
+        let meeting = self.meeting(meeting_id).await?;
+        self.require_meeting_host(&meeting)?;
+        let changed = sqlx::query("UPDATE meeting_guest_invitations SET revoked_at=now() WHERE tenant_id=$1 AND meeting_id=$2 AND id=$3")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(invitation_id).execute(&self.pool).await.map_err(StoreError::Db)?.rows_affected();
+        if changed == 0 {
+            Err(StoreError::NotFound)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl Store {
+    async fn meeting_guest_by_token(&self, token: &str) -> Result<Option<MeetingGuest>> {
+        type Row = (
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            String,
+            OffsetDateTime,
+            Option<OffsetDateTime>,
+            Option<OffsetDateTime>,
+            Option<OffsetDateTime>,
+        );
+        let row: Option<Row> = sqlx::query_as("SELECT i.id,i.tenant_id,i.meeting_id,m.room,m.title,i.guest_email,i.guest_name,i.expires_at,i.requested_at,i.admitted_at,i.denied_at FROM meeting_guest_invitations i JOIN meetings m ON m.tenant_id=i.tenant_id AND m.id=i.meeting_id WHERE i.token_hash=$1 AND i.expires_at>now() AND i.revoked_at IS NULL AND m.ended_at IS NULL")
+            .bind(token_hash(token)).fetch_optional(self.pool()).await.map_err(StoreError::Db)?;
+        Ok(row.map(|r| MeetingGuest {
+            id: r.0,
+            tenant: TenantId::new(r.1),
+            meeting_id: MeetingId::new(r.2),
+            room: r.3,
+            meeting_title: r.4,
+            guest_email: r.5,
+            guest_name: r.6,
+            expires_at: r.7,
+            requested_at: r.8,
+            admitted_at: r.9,
+            denied_at: r.10,
+        }))
+    }
+
+    /// Resolve an active guest link without revealing expired or revoked rows.
+    pub async fn resolve_meeting_guest(&self, token: &str) -> Result<Option<MeetingGuest>> {
+        self.meeting_guest_by_token(token).await
+    }
+
+    /// Put a valid guest into the lobby. Idempotent across browser retries.
+    pub async fn request_meeting_guest_admission(
+        &self,
+        token: &str,
+    ) -> Result<Option<MeetingGuest>> {
+        let Some(guest) = self.meeting_guest_by_token(token).await? else {
+            return Ok(None);
+        };
+        sqlx::query("UPDATE meeting_guest_invitations SET requested_at=COALESCE(requested_at,now()) WHERE token_hash=$1")
+            .bind(token_hash(token)).execute(self.pool()).await.map_err(StoreError::Db)?;
+        self.meeting_guest_by_token(token).await
     }
 }
 

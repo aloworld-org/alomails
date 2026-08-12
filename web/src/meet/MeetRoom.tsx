@@ -16,10 +16,11 @@ import {
   PreJoin,
   VideoConference,
   formatChatMessageLinks,
+  useDataChannel,
   useLocalParticipant,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
-import { ArrowLeft, MonitorUp, PhoneOff, RefreshCw, ServerOff, Video } from "lucide-react";
+import { ArrowLeft, Copy, Hand, MonitorUp, PhoneOff, RefreshCw, ServerOff, Share2, Smile, Video } from "lucide-react";
 
 import { Button } from "../ds";
 import { strings } from "../i18n";
@@ -71,6 +72,92 @@ function PresentingNotice() {
       <strong>{strings.meetPresentingTitle}</strong>
       <p>{strings.meetPresentingBody}</p>
     </div>
+  );
+}
+
+type MeetSignal =
+  | { kind: "hand"; raised: boolean; name: string }
+  | { kind: "reaction"; emoji: string; name: string };
+
+function MeetingActions({ meetingId }: { meetingId: string }) {
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  const { localParticipant } = useLocalParticipant();
+  const [handRaised, setHandRaised] = useState(false);
+  const [raisedHands, setRaisedHands] = useState<string[]>([]);
+  const [reaction, setReaction] = useState<{ emoji: string; name: string; key: number } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const { send } = useDataChannel("alo-meet-actions", (message) => {
+    try {
+      const signal = JSON.parse(decoder.decode(message.payload)) as MeetSignal;
+      if (signal.kind === "hand") {
+        setRaisedHands((current) => signal.raised
+          ? Array.from(new Set([...current, signal.name]))
+          : current.filter((name) => name !== signal.name));
+      } else if (signal.kind === "reaction") {
+        setReaction({ emoji: signal.emoji, name: signal.name, key: Date.now() });
+      }
+    } catch {
+      // Data-channel topics are shared with older clients. Unknown payloads
+      // are ignored rather than breaking a call already in progress.
+    }
+  });
+  const name = localParticipant.name || strings.meetSomeone;
+
+  const broadcast = async (signal: MeetSignal) => {
+    await send(encoder.encode(JSON.stringify(signal)), { reliable: true });
+  };
+  const toggleHand = () => {
+    const raised = !handRaised;
+    setHandRaised(raised);
+    setRaisedHands((current) => raised
+      ? Array.from(new Set([...current, name]))
+      : current.filter((person) => person !== name));
+    void broadcast({ kind: "hand", raised, name });
+  };
+  const react = (emoji: string) => {
+    setReaction({ emoji, name, key: Date.now() });
+    void broadcast({ kind: "reaction", emoji, name });
+  };
+  const share = async () => {
+    const url = `${window.location.origin}/meet?meeting=${encodeURIComponent(meetingId)}`;
+    if (navigator.share !== undefined) {
+      await navigator.share({ title: strings.meetInviteTitle, text: strings.meetInviteText, url });
+    } else {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2_000);
+    }
+  };
+
+  return (
+    <>
+      <div className={styles.meetingActions}>
+        <button type="button" className={handRaised ? styles.actionActive : undefined} onClick={toggleHand} aria-pressed={handRaised}>
+          <Hand aria-hidden="true" />{handRaised ? strings.meetLowerHand : strings.meetRaiseHand}
+        </button>
+        <div className={styles.reactions}>
+          <button type="button" aria-label={strings.meetReact} title={strings.meetReact}><Smile aria-hidden="true" /></button>
+          <div className={styles.reactionMenu}>
+            {["👍", "👏", "❤️", "😂", "🎉"].map((emoji) => (
+              <button type="button" key={emoji} onClick={() => react(emoji)} aria-label={`${strings.meetReact} ${emoji}`}>{emoji}</button>
+            ))}
+          </div>
+        </div>
+        <button type="button" onClick={() => void share()}>
+          {copied ? <Copy aria-hidden="true" /> : <Share2 aria-hidden="true" />}
+          {copied ? strings.meetLinkCopied : strings.meetInvite}
+        </button>
+      </div>
+      {raisedHands.length > 0 && (
+        <div className={styles.raisedHands} role="status"><Hand aria-hidden="true" />{strings.meetHandsRaised(raisedHands.join(", "))}</div>
+      )}
+      {reaction !== null && (
+        <div key={reaction.key} className={styles.reactionBurst} role="status">
+          <span>{reaction.emoji}</span><small>{reaction.name}</small>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -220,6 +307,7 @@ export function MeetRoom({
       >
         <VideoConference chatMessageFormatter={formatChatMessageLinks} />
         <PresentingNotice />
+        <MeetingActions meetingId={meetingId} />
       </LiveKitRoom>
       <Button
         variant="danger"

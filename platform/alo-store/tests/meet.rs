@@ -4,6 +4,7 @@
 mod common;
 
 use alo_store::{ChannelVisibility, MeetingId, NewMeeting};
+use time::OffsetDateTime;
 
 #[tokio::test]
 async fn a_meeting_in_a_room_is_visible_to_that_room_and_no_one_else() {
@@ -153,6 +154,90 @@ async fn a_meeting_never_crosses_a_tenant() {
     assert!(far.join_meeting(&meeting.id).await.is_err());
     assert!(
         far.meeting(&MeetingId::new(meeting.id.as_str().to_owned()))
+            .await
+            .is_err()
+    );
+}
+
+#[tokio::test]
+async fn guest_link_is_hashed_expires_and_needs_host_admission() {
+    let store = common::test_store().await;
+    let tenant = store.create_tenant("meet-guests").await.unwrap();
+    let user = store
+        .for_tenant(tenant.clone())
+        .create_user("host@meet.test")
+        .await
+        .unwrap();
+    let host = store.for_account(tenant, user);
+    let meeting = host.create_meeting(&NewMeeting::default()).await.unwrap();
+    let invite = host
+        .create_meeting_guest_invitation(
+            &meeting.id,
+            "guest@example.test",
+            "Guest",
+            OffsetDateTime::now_utc().unix_timestamp() + 3600,
+        )
+        .await
+        .unwrap();
+    assert!(!invite.token.is_empty());
+    let waiting = store
+        .request_meeting_guest_admission(&invite.token)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(waiting.requested_at.is_some());
+    assert!(waiting.admitted_at.is_none());
+    host.admit_meeting_guest(&meeting.id, &waiting.id)
+        .await
+        .unwrap();
+    assert!(
+        store
+            .resolve_meeting_guest(&invite.token)
+            .await
+            .unwrap()
+            .unwrap()
+            .admitted_at
+            .is_some()
+    );
+    host.revoke_meeting_guest(&meeting.id, &waiting.id)
+        .await
+        .unwrap();
+    assert!(
+        store
+            .resolve_meeting_guest(&invite.token)
+            .await
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[tokio::test]
+async fn only_the_host_can_moderate_a_guest_lobby() {
+    let store = common::test_store().await;
+    let tenant = store.create_tenant("meet-guest-host").await.unwrap();
+    let ts = store.for_tenant(tenant.clone());
+    let host_user = ts.create_user("host@meet.test").await.unwrap();
+    let other_user = ts.create_user("other@meet.test").await.unwrap();
+    let host = store.for_account(tenant.clone(), host_user);
+    let other = store.for_account(tenant, other_user);
+    let meeting = host.create_meeting(&NewMeeting::default()).await.unwrap();
+    let invite = host
+        .create_meeting_guest_invitation(
+            &meeting.id,
+            "guest@example.test",
+            "Guest",
+            OffsetDateTime::now_utc().unix_timestamp() + 3600,
+        )
+        .await
+        .unwrap();
+    let guest = store
+        .request_meeting_guest_admission(&invite.token)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(
+        other
+            .admit_meeting_guest(&meeting.id, &guest.id)
             .await
             .is_err()
     );

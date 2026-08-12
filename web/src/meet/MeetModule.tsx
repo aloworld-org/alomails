@@ -26,7 +26,7 @@ function since(iso: string | null): string {
 export function MeetModule() {
   const api = useMeetApi();
   const [live, setLive] = useState<Meeting[] | null>(null);
-  const [inMeeting, setInMeeting] = useState<string | null>(null);
+  const [inMeeting, setInMeeting] = useState<string | null>(() => new URLSearchParams(window.location.search).get("meeting"));
   const [starting, setStarting] = useState(false);
   const [loadProblem, setLoadProblem] = useState(false);
   const [startProblem, setStartProblem] = useState(false);
@@ -50,7 +50,10 @@ export function MeetModule() {
     setStartProblem(false);
     void api
       .start({ title: strings.meetInstantTitle })
-      .then((meeting) => setInMeeting(meeting.id))
+      .then((meeting) => {
+        window.history.replaceState(null, "", `/meet?meeting=${encodeURIComponent(meeting.id)}`);
+        setInMeeting(meeting.id);
+      })
       .catch(() => setStartProblem(true))
       .finally(() => {
         setStarting(false);
@@ -70,6 +73,7 @@ export function MeetModule() {
         <MeetRoom
           meetingId={inMeeting}
           onLeft={() => {
+            window.history.replaceState(null, "", "/meet");
             setInMeeting(null);
             void load();
           }}
@@ -166,7 +170,10 @@ export function MeetModule() {
                   {m.startedAt === null ? strings.meetNotStarted : strings.meetStartedAt(since(m.startedAt))}
                 </span>
               </span>
-              <Button className={styles.joinButton} onClick={() => setInMeeting(m.id)}>
+              <Button className={styles.joinButton} onClick={() => {
+                window.history.replaceState(null, "", `/meet?meeting=${encodeURIComponent(m.id)}`);
+                setInMeeting(m.id);
+              }}>
                 {strings.meetJoin}
                 <ArrowRight aria-hidden="true" />
               </Button>
