@@ -550,6 +550,7 @@
    app uses, because it says "this whole area is where you write". */
 .composer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   /* Same measure as the messages it produces. */
@@ -576,6 +577,9 @@
   align-items: flex-start;
   gap: var(--space-3);
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
   padding: var(--space-2) var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
   background: transparent;
@@ -595,6 +599,7 @@
 }
 
 .replyContextCopy {
+  width: 0;
   min-width: 0;
   flex: 1;
   display: flex;
@@ -610,7 +615,10 @@
 }
 
 .replyContextCopy > span {
+  max-width: 100%;
   overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
