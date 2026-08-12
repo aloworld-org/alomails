@@ -107,6 +107,7 @@ fn summary_json(s: &ChatChannelSummary, mentions: &HashMap<String, i64>) -> Valu
         object.insert("lastReadSeq".to_owned(), json!(s.last_read_seq));
         object.insert("lastSeq".to_owned(), json!(s.last_seq));
         object.insert("lastAt".to_owned(), json!(s.last_at.map(iso)));
+        object.insert("counterpart".to_owned(), json!(s.counterpart));
     }
     value
 }

@@ -78,9 +78,9 @@ const ATTACHMENTS_MAX = 10;
  *  it; a short one means we have reached the beginning. */
 const PAGE = 50;
 
-/** A room's label: its `#name`, or the standing of a DM. */
+/** A room's label: its `#name`, the other person in a DM, or a safe fallback. */
 function channelLabel(channel: ChannelSummary): string {
-  return channel.name ?? strings.chatDirectMessage;
+  return channel.name ?? channel.counterpart ?? strings.chatDirectMessage;
 }
 
 /**

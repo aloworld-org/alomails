@@ -28,6 +28,9 @@ export interface Channel {
 /** A room as the sidebar needs it: with what is unread and when it last
  *  had life. */
 export interface ChannelSummary extends Channel {
+  /** The other member's address for a DM; `null` for named rooms or when the
+   * directory can no longer resolve them. */
+  counterpart: string | null;
   /** Messages after my read cursor — my own never count. */
   unread: number;
   /** How many of those name me. Separate from `unread` on purpose: forty new

@@ -2814,6 +2814,24 @@ async fn chat_rooms_are_membership_scoped_and_never_leave_their_tenant() {
     assert_eq!(a.open_dm(&uc).await.unwrap().as_str(), dm.as_str());
     assert_eq!(c.open_dm(&ua).await.unwrap().as_str(), dm.as_str());
     assert_not_found(b.channel(&dm).await);
+    let a_dm = a
+        .channel_summaries()
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|summary| summary.channel.id == dm)
+        .unwrap();
+    let c_dm = c
+        .channel_summaries()
+        .await
+        .unwrap()
+        .into_iter()
+        .find(|summary| summary.channel.id == dm)
+        .unwrap();
+    assert_eq!(a_dm.counterpart.as_deref(), Some("c@chat.test"));
+    assert_eq!(c_dm.counterpart.as_deref(), Some("a@chat.test"));
+    assert_ne!(a_dm.counterpart.as_deref(), Some("a@chat.test"));
+    assert_ne!(c_dm.counterpart.as_deref(), Some("c@chat.test"));
     // ...and it keeps exactly its two people, with no name to change.
     assert!(a.add_member(&dm, &uc).await.is_err());
     assert!(a.remove_member(&dm, &uc).await.is_err());

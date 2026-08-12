@@ -76,6 +76,7 @@ vi.mock("../jmap", () => ({
 }));
 
 const ROOM: ChannelSummary = {
+  counterpart: null,
   id: "room-1",
   kind: "channel",
   name: "planning",
@@ -133,6 +134,32 @@ beforeEach(() => {
   fakeFetch.mockClear();
 });
 afterEach(cleanup);
+
+test("a DM is named for the other participant everywhere", async () => {
+  const dm: ChannelSummary = {
+    ...ROOM,
+    id: "dm-1",
+    kind: "dm",
+    name: null,
+    counterpart: "ben@alo.test",
+    visibility: "private",
+  };
+  answers = [
+    { match: "/turns", body: { turns: [] } },
+    { match: "/chat/reactions", body: { emoji: ["👍"] } },
+    { match: "/messages", body: { messages: [] } },
+    { match: "/chat/channels", body: { channels: [dm] } },
+  ];
+
+  mount();
+
+  expect((await screen.findAllByText("ben@alo.test")).length).toBeGreaterThan(1);
+  expect(
+    screen.getByPlaceholderText(strings.chatComposerPlaceholder("ben@alo.test")),
+  ).toBeTruthy();
+  expect(screen.queryByText("anna@alo.test")).toBeNull();
+  expect(screen.queryByText(strings.chatDirectMessage)).toBeNull();
+});
 
 test("an agent's message is marked as an agent, not shown as a colleague", async () => {
   withMessages([

@@ -98,6 +98,9 @@ pub struct ChatMessage {
 pub struct ChatChannelSummary {
     /// The room itself.
     pub channel: ChatChannel,
+    /// The other member's address for a DM. `None` for named rooms or when
+    /// the directory no longer resolves that member.
+    pub counterpart: Option<String>,
     /// Messages after the caller's read cursor, theirs excluded, tombstones
     /// excluded.
     pub unread: i64,
@@ -575,6 +578,7 @@ impl AccountStore {
             i64,
             Option<i64>,
             Option<OffsetDateTime>,
+            Option<String>,
         );
         let rows: Vec<SummaryRow> = sqlx::query_as(&format!(
             "SELECT {} , \
@@ -586,7 +590,14 @@ impl AccountStore {
                  (SELECT max(x.seq) FROM chat_messages x \
                   WHERE x.tenant_id = c.tenant_id AND x.channel_id = c.id) AS last_seq, \
                  (SELECT max(x.created_at) FROM chat_messages x \
-                  WHERE x.tenant_id = c.tenant_id AND x.channel_id = c.id) AS last_at \
+                  WHERE x.tenant_id = c.tenant_id AND x.channel_id = c.id) AS last_at, \
+                 CASE WHEN c.kind = 'dm' THEN ( \
+                   SELECT u.email FROM chat_members other \
+                   JOIN users u ON u.tenant_id = other.tenant_id AND u.id = other.user_id \
+                   WHERE other.tenant_id = c.tenant_id AND other.channel_id = c.id \
+                     AND other.user_id <> $2 \
+                   ORDER BY other.joined_at LIMIT 1 \
+                 ) END AS counterpart \
              FROM chat_channels c \
              JOIN chat_members m \
                ON m.tenant_id = c.tenant_id AND m.channel_id = c.id AND m.user_id = $2 \
@@ -613,6 +624,7 @@ impl AccountStore {
                     unread: r.9,
                     last_seq: r.10,
                     last_at: r.11,
+                    counterpart: r.12,
                 })
             })
             .collect()
