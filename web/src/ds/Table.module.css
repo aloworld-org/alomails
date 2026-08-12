@@ -1,0 +1,144 @@
+/* The one data table. Ten stylesheets had one; five of them — crm, finance,
+   hr, inventory, projects — were byte-identical, hardcoded `10px 14px`
+   included. That majority build is the base here, with the two hardcoded
+   values replaced by the tokens they were approximating.
+
+   Reconciled, rather than offered as options:
+
+   * **No zebra striping.** Not one of the ten had it. A row separator that is
+     already there does the job, and a striped background fights every status
+     tint a cell puts on top of it.
+   * **The header is quiet.** billing shouted (uppercase, letter-spaced,
+     semibold); the other nine used `--text-sm` in `--weight-medium` and
+     `--text-tertiary`. A column header is a label, not a heading.
+   * **Row hover is opt-in.** Six of the ten highlighted the row under the
+     pointer whether or not the row did anything when clicked. Same rule as
+     `Card.interactive`.
+
+   The base rules target `th` and `td` so ordinary table markup inside
+   `<Table>` is already right, and adopting the component is a deletion. */
+
+.region {
+  overflow: auto;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+
+/* A focusable scroll region needs to show where focus is. */
+.region:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* On a `Card`, which already draws the border, radius and surface. */
+.flat {
+  border: none;
+  border-radius: 0;
+  background: none;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.table th {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  color: var(--text-tertiary);
+  font-weight: var(--weight-medium);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+/* The last row's separator draws a line against the container's own border. */
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Totals. billing's footer sat on `--bg-raised` and read as part of the
+   table's structure rather than as another row, which is right. */
+.table tfoot {
+  background: var(--bg-raised);
+}
+
+.table tfoot th,
+.table tfoot td {
+  border-top: var(--border-width) solid var(--border-default);
+  border-bottom: none;
+  color: var(--text-primary);
+}
+
+/* A table inside a card or a panel, where the rows support the screen rather
+   than being it. insights' 6px/8px, in tokens. */
+.compact th,
+.compact td {
+  padding: var(--space-2) var(--space-3);
+}
+
+/* A header that survives scrolling. Needs its own background or the rows
+   scroll through it. */
+.sticky thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-surface);
+}
+
+.interactive tbody tr:hover {
+  background: var(--bg-raised);
+}
+
+.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.start {
+  text-align: left;
+}
+.center {
+  text-align: center;
+}
+.end {
+  text-align: right;
+}
+
+/* "Nothing here", inside the table rather than beside it. */
+.table td.empty {
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  color: var(--text-tertiary);
+  border-bottom: none;
+}
+
+.caption {
+  padding-bottom: var(--space-2);
+  text-align: left;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* Read aloud, never drawn. `display: none` would remove it from the
+   accessibility tree as well, which is the opposite of the point. */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

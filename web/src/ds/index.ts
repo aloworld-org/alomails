@@ -30,3 +30,11 @@ export { Badge } from "./Badge";
 export type { BadgeProps } from "./Badge";
 export { Chip } from "./Chip";
 export type { ChipProps } from "./Chip";
+export { Table, Th, Td, TableEmpty } from "./Table";
+export type {
+  TableProps,
+  ThProps,
+  TdProps,
+  TableEmptyProps,
+  CellAlign,
+} from "./Table";
