@@ -24,7 +24,7 @@ import { ArrowLeft, Copy, Hand, MonitorUp, PhoneOff, RefreshCw, ServerOff, Share
 
 import { Button } from "../ds";
 import { strings } from "../i18n";
-import { MeetUnavailable, useMeetApi } from "./api";
+import { MeetApiError, MeetUnavailable, useMeetApi } from "./api";
 import type { JoinGrant } from "./api";
 import styles from "./MeetRoom.module.css";
 
@@ -195,6 +195,10 @@ export function MeetRoom({
         if (joined) setGrant(g);
       } catch (failure) {
         if (!joined) return;
+        if (failure instanceof MeetApiError && failure.status === 404) {
+          onLeft();
+          return;
+        }
         setProblem(failure instanceof MeetUnavailable
           ? { kind: "unavailable", message: strings.meetNoEngine }
           : { kind: "join", message: strings.meetJoinFailed });
@@ -203,7 +207,7 @@ export function MeetRoom({
     return () => {
       joined = false;
     };
-  }, [api, choices, joinAttempt, meetingId]);
+  }, [api, choices, joinAttempt, meetingId, onLeft]);
 
   if (problem !== null) {
     return (

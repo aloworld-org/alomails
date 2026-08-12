@@ -32,6 +32,13 @@ export interface JoinGrant {
 /** Raised when meetings are not configured on this deployment. */
 export class MeetUnavailable extends Error {}
 
+/** An API failure whose status callers may need to act on. */
+export class MeetApiError extends Error {
+  constructor(readonly status: number, action: string) {
+    super(`${action} ${status}`);
+  }
+}
+
 export class MeetApi {
   /** The workspace's own fetch: it carries the bearer token and refreshes it,
    *  so this module never handles a credential. */
@@ -108,7 +115,7 @@ export class MeetApi {
     if (res.status === 503) {
       throw new MeetUnavailable("no media engine is configured");
     }
-    if (!res.ok) throw new Error(`join ${res.status}`);
+    if (!res.ok) throw new MeetApiError(res.status, "join");
     return (await res.json()) as JoinGrant;
   }
 

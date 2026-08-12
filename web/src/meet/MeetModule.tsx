@@ -45,6 +45,12 @@ export function MeetModule() {
     void load();
   }, [load]);
 
+  const leaveMeeting = useCallback(() => {
+    window.history.replaceState(null, "", "/meet");
+    setInMeeting(null);
+    void load();
+  }, [load]);
+
   const startMeeting = () => {
     setStarting(true);
     setStartProblem(false);
@@ -72,11 +78,7 @@ export function MeetModule() {
       {inMeeting !== null && (
         <MeetRoom
           meetingId={inMeeting}
-          onLeft={() => {
-            window.history.replaceState(null, "", "/meet");
-            setInMeeting(null);
-            void load();
-          }}
+          onLeft={leaveMeeting}
         />
       )}
 
