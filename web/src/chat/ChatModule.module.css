@@ -573,14 +573,25 @@
   order: -3;
   flex-basis: 100%;
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  align-items: flex-start;
+  gap: var(--space-3);
   min-width: 0;
-  padding: var(--space-2) var(--space-3);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius-sm);
-  background: var(--bg-raised);
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: transparent;
   color: var(--text-secondary);
+}
+
+.replyContextIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--bg-raised);
+  color: var(--accent);
 }
 
 .replyContextCopy {
@@ -588,14 +599,27 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 2px;
   font-size: var(--text-xs);
+  line-height: 1.35;
+}
+
+.replyContextCopy > strong {
+  color: var(--text-primary);
+  font-weight: 650;
 }
 
 .replyContextCopy > span {
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   color: var(--text-tertiary);
+}
+
+.replyContext .searchClear {
+  flex: none;
+  margin-top: 1px;
 }
 
 @media (prefers-reduced-motion: reduce) {

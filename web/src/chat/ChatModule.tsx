@@ -1821,7 +1821,9 @@ export function ChatModule() {
               >
                 {replyContext !== null && (
                   <div className={styles.replyContext}>
-                    <Reply size={15} />
+                    <span className={styles.replyContextIcon} aria-hidden="true">
+                      <Reply size={15} />
+                    </span>
                     <span className={styles.replyContextCopy}>
                       <strong>
                         {replyContext.private
