@@ -16,7 +16,7 @@ import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
 import { formatAmount } from "./money";
-import { EmptyState, ErrorBanner } from "./parts";
+import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
 import { QuoteChips } from "./status";
 import type { BillingCustomer, BillingQuoteSummary, QuoteStatus } from "./types";
 import styles from "./BillingModule.module.css";
@@ -113,7 +113,7 @@ export function QuotesView() {
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {quotes.length === 0 && !loading && filter === "all" ? (
+      {loading ? <BillingLoading /> : quotes.length === 0 && filter === "all" ? (
         <EmptyState
           Icon={FileSignature}
           title={strings.billingNoQuotesTitle}
@@ -121,7 +121,7 @@ export function QuotesView() {
           cta={strings.billingNewQuote}
           onCta={() => void navigate("new")}
         />
-      ) : shown.length === 0 && !loading ? (
+      ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
         <div className={styles.tableWrap}>

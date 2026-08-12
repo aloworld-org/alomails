@@ -28,7 +28,7 @@ import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
 import { saveTextFile } from "../platform/download";
 import { formatAmount, formatRate } from "./money";
-import { EmptyState, ErrorBanner } from "./parts";
+import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
 import { previousQuarterOf, quarterOf, type Period } from "./period";
 import type { VatReport } from "./types";
 import styles from "./BillingModule.module.css";
@@ -154,7 +154,7 @@ export function VatReportView() {
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {report !== null && report.currencies.length === 0 && !loading ? (
+      {loading ? <BillingLoading /> : report !== null && report.currencies.length === 0 ? (
         <EmptyState
           Icon={FileSpreadsheet}
           title={strings.billingReportEmptyTitle}

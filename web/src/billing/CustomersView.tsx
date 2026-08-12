@@ -9,7 +9,7 @@ import { strings } from "../i18n";
 import { useDialogs } from "../ds";
 import { billingMessage, useBillingApi } from "./api";
 import { CustomerDialog } from "./CustomerDialog";
-import { EmptyState, ErrorBanner, Toolbar } from "./parts";
+import { BillingLoading, EmptyState, ErrorBanner, Toolbar } from "./parts";
 import type { BillingCustomer } from "./types";
 import styles from "./BillingModule.module.css";
 
@@ -87,7 +87,7 @@ export function CustomersView() {
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {customers.length === 0 && !loading ? (
+      {loading ? <BillingLoading /> : customers.length === 0 ? (
         <div className={styles.customerEmptyLayout}>
           <div className={styles.customerEmptyCard}>
             <EmptyState Icon={Building2} title={strings.billingNoCustomersTitle} body={strings.billingNoCustomersBody} cta={strings.billingNewCustomer} onCta={() => setEditing(null)} />
@@ -101,7 +101,7 @@ export function CustomersView() {
             </ol>
           </section>
         </div>
-      ) : shown.length === 0 && !loading ? (
+      ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
         <div className={styles.tableWrap}>

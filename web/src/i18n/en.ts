@@ -2341,6 +2341,7 @@ export const en = {
   billingCancel: "Cancel",
   billingLoadFailed:
     "Could not load this list. Check your connection and try again.",
+  billingLoading: "Loading billing data…",
   billingSaveFailed: "Could not save. Check your connection and try again.",
   billingNoMatches: "Nothing matches that search.",
   billingNoCustomersTitle: "No customers yet",

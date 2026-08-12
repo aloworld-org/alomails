@@ -26,7 +26,7 @@ import { cadenceLabel } from "./cadence";
 import { formatDocumentDate } from "./dates";
 import { formatAmount } from "./money";
 import { ScheduleDialog } from "./ScheduleDialog";
-import { EmptyState, ErrorBanner } from "./parts";
+import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
 import { StatusChip } from "./status";
 import type { BillingCustomer, BillingScheduleSummary } from "./types";
 import styles from "./BillingModule.module.css";
@@ -162,7 +162,7 @@ export function SchedulesView() {
         </p>
       )}
 
-      {schedules.length === 0 && !loading ? (
+      {loading ? <BillingLoading /> : schedules.length === 0 ? (
         <EmptyState
           Icon={RefreshCw}
           title={strings.billingNoSchedulesTitle}

@@ -12,7 +12,7 @@ import { useDialogs } from "../ds";
 import { billingMessage, useBillingApi } from "./api";
 import { formatAmount, formatRate } from "./money";
 import { ProductDialog } from "./ProductDialog";
-import { EmptyState, ErrorBanner, Toolbar } from "./parts";
+import { BillingLoading, EmptyState, ErrorBanner, Toolbar } from "./parts";
 import type { BillingProduct } from "./types";
 import styles from "./BillingModule.module.css";
 
@@ -85,7 +85,7 @@ export function ProductsView() {
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {products.length === 0 && !loading ? (
+      {loading ? <BillingLoading /> : products.length === 0 ? (
         <EmptyState
           Icon={Package}
           title={strings.billingNoProductsTitle}
@@ -93,7 +93,7 @@ export function ProductsView() {
           cta={strings.billingNewProduct}
           onCta={() => setEditing(null)}
         />
-      ) : shown.length === 0 && !loading ? (
+      ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
         <div className={styles.tableWrap}>

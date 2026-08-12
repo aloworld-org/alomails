@@ -60,6 +60,17 @@ export function ErrorBanner({ message }: { message: string }) {
   );
 }
 
+/** A stable first-load surface. It prevents an empty data table from flashing
+ * before the backend has answered, without pretending that records exist. */
+export function BillingLoading() {
+  return (
+    <div className={styles.dataLoading} role="status" aria-label={strings.billingLoading}>
+      <Spinner size={24} />
+      <span>{strings.billingLoading}</span>
+    </div>
+  );
+}
+
 /**
  * The first-run state of a list, with the action that ends it.
  *

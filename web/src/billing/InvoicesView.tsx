@@ -23,7 +23,7 @@ import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
 import { formatAmount } from "./money";
-import { EmptyState, ErrorBanner } from "./parts";
+import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
 import { DocumentChips } from "./status";
 import type { BillingCustomer, BillingInvoiceSummary, InvoiceStatus } from "./types";
 import styles from "./BillingModule.module.css";
@@ -171,9 +171,9 @@ export function InvoicesView() {
         </p>
       )}
 
-      {invoices.length === 0 && !loading && filter === "overdue" ? (
+      {loading ? <BillingLoading /> : invoices.length === 0 && filter === "overdue" ? (
         <p className={styles.noMatches}>{strings.billingNothingOverdue}</p>
-      ) : invoices.length === 0 && !loading && filter === "all" ? (
+      ) : invoices.length === 0 && filter === "all" ? (
         <EmptyState
           Icon={FileText}
           title={strings.billingNoInvoicesTitle}
@@ -181,7 +181,7 @@ export function InvoicesView() {
           cta={strings.billingNewInvoice}
           onCta={() => void navigate("new")}
         />
-      ) : shown.length === 0 && !loading ? (
+      ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
         <div className={styles.tableWrap}>

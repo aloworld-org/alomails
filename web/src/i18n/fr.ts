@@ -1537,6 +1537,7 @@ export const fr: Partial<Catalog> = {
   billingCancel: "Annuler",
   billingLoadFailed:
     "Impossible de charger cette liste. Vérifiez votre connexion et réessayez.",
+  billingLoading: "Chargement des données de facturation…",
   billingSaveFailed:
     "Impossible d’enregistrer. Vérifiez votre connexion et réessayez.",
   billingNoMatches: "Aucun résultat pour cette recherche.",

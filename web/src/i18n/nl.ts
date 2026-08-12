@@ -1499,6 +1499,7 @@ export const nl: Partial<Catalog> = {
   billingCancel: "Annuleren",
   billingLoadFailed:
     "Deze lijst kon niet worden geladen. Controleer uw verbinding en probeer opnieuw.",
+  billingLoading: "Factuurgegevens laden…",
   billingSaveFailed:
     "Opslaan is niet gelukt. Controleer uw verbinding en probeer opnieuw.",
   billingNoMatches: "Niets komt overeen met die zoekopdracht.",
