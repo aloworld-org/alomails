@@ -1489,7 +1489,11 @@ export function ChatModule() {
                           onClick={() => setOpenId(channel.id)}
                         >
                           {channel.kind === "dm" ? (
-                            <Users size={15} className={styles.channelIcon} />
+                            <Avatar
+                              name={channelLabel(channel)}
+                              email={channel.counterpart ?? undefined}
+                              size="sm"
+                            />
                           ) : channel.visibility === "private" ? (
                             <Lock size={15} className={styles.channelIcon} />
                           ) : (
