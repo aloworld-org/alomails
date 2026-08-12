@@ -221,6 +221,13 @@ opaque_id!(
     SiteFormSubmissionId
 );
 opaque_id!(
+    /// One handoff of a site form submission to a CRM opportunity — the link
+    /// the attribution funnel is built on (S2.10b). Distinct from the
+    /// [`CrmDealId`] it names: deleting the link unclaims the opportunity for
+    /// the website, it does not delete the opportunity.
+    SiteLeadLinkId
+);
+opaque_id!(
     /// One blog post on an alo Sites website; its body lives in alo Docs.
     SitePostId
 );

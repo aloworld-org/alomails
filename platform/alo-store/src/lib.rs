@@ -160,6 +160,7 @@ pub mod share;
 pub mod signup;
 pub mod site_analytics;
 pub mod site_assets;
+pub mod site_attribution;
 pub mod site_collections;
 pub mod site_conversions;
 pub mod site_domains;
@@ -168,6 +169,7 @@ pub mod site_form_notify;
 pub mod site_forms;
 pub mod site_generation;
 pub mod site_heatmap;
+pub mod site_leads;
 pub mod site_model;
 pub mod site_page_protection;
 pub mod site_pages;
@@ -387,9 +389,9 @@ pub use id::{
     InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId,
     InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
     InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
-    SiteCollectionId, SiteFormId, SiteFormSubmissionId, SiteId, SitePageId, SitePostId,
-    SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
-    TimeEntryId, TimeWeekId, UserId,
+    SiteCollectionId, SiteFormId, SiteFormSubmissionId, SiteId, SiteLeadLinkId, SitePageId,
+    SitePostId, SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId,
+    ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -446,6 +448,7 @@ pub use site_analytics::{
     SiteAnalyticsDay, SiteAnalyticsDimension, SiteAnalyticsRank, SiteAnalyticsReport,
 };
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
+pub use site_attribution::{SiteAttributionMoney, SiteAttributionReport, SiteAttributionSource};
 pub use site_collections::{
     SITE_COLLECTION_BODY_MAX_CHARS, SITE_COLLECTION_MAX_ITEMS, SITE_COLLECTION_NAME_MAX_CHARS,
     SITE_COLLECTION_TITLE_MAX_CHARS, SiteCollection, SiteCollectionFieldMapping,
@@ -462,6 +465,7 @@ pub use site_heatmap::{
     SiteHeatmapCell, SiteHeatmapPath, SiteHeatmapReport, SiteHeatmapScrollBucket,
     SiteHeatmapViewport,
 };
+pub use site_leads::{SiteLeadDeal, SiteLeadDraft, SiteLeadLink};
 pub use site_model::{SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope};
 pub use site_page_protection::{
     SITE_PAGE_PASSWORD_MAX_CHARS, SITE_PAGE_PASSWORD_MIN_CHARS, SitePageProtection,
