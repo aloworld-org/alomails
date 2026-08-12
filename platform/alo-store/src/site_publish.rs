@@ -170,6 +170,7 @@ impl AccountStore {
         .map_err(StoreError::Db)?;
         self.freeze_referenced_collections(site, &id, &mut tx)
             .await?;
+        self.freeze_referenced_catalogs(site, &id, &mut tx).await?;
         sqlx::query(
             "UPDATE sites SET published_publish_id = $3, status = $4, updated_at = now() \
              WHERE tenant_id = $1 AND id = $2",

@@ -236,6 +236,19 @@ opaque_id!(
     SiteCollectionId
 );
 opaque_id!(
+    /// One alo Sites catalog — the tenant's own list of things a site offers
+    /// (dishes, rooms, services), owned here rather than read from Base.
+    SiteCatalogId
+);
+opaque_id!(
+    /// One grouping inside a [`SiteCatalogId`] catalog.
+    SiteCatalogCategoryId
+);
+opaque_id!(
+    /// One item inside a [`SiteCatalogId`] catalog.
+    SiteCatalogItemId
+);
+opaque_id!(
     /// A billing customer — the company or person a tenant invoices
     /// (alo Billing, ADR 0035).
     BillingCustomerId

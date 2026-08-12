@@ -161,6 +161,10 @@ pub mod signup;
 pub mod site_analytics;
 pub mod site_assets;
 pub mod site_attribution;
+pub mod site_catalog;
+pub mod site_catalog_import;
+pub mod site_catalog_items;
+pub mod site_catalog_publish;
 pub mod site_collections;
 pub mod site_conversions;
 pub mod site_domains;
@@ -390,9 +394,10 @@ pub use id::{
     InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId,
     InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
     InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
-    SiteCollectionId, SiteFormId, SiteFormSubmissionId, SiteId, SiteLeadLinkId, SitePageId,
-    SitePostId, SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId,
-    ThreadId, TimeEntryId, TimeWeekId, UserId,
+    SiteCatalogCategoryId, SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteFormId,
+    SiteFormSubmissionId, SiteId, SiteLeadLinkId, SitePageId, SitePostId, SitePublishId,
+    SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId,
+    UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -450,6 +455,20 @@ pub use site_analytics::{
 };
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
 pub use site_attribution::{SiteAttributionMoney, SiteAttributionReport, SiteAttributionSource};
+pub use site_catalog::{
+    SITE_CATALOG_DESCRIPTION_MAX_CHARS, SITE_CATALOG_MAX_CATEGORIES, SITE_CATALOG_MAX_ITEMS,
+    SITE_CATALOG_MAX_PRICE_CENTS, SITE_CATALOG_NAME_MAX_CHARS, SITE_CATALOG_PRICE_NOTE_MAX_CHARS,
+    SITE_CATALOG_SLUG_MAX_CHARS, SiteCatalog, SiteCatalogAvailability, SiteCatalogCategory,
+    SiteCatalogCategoryInput, SiteCatalogInput, SiteCatalogItem, catalog_slug_from_name,
+    currency_exponent, parse_price_minor_units, validate_currency,
+};
+pub use site_catalog_import::{
+    SiteCatalogImport, SiteCatalogImportMapping, SiteCatalogImportReport,
+};
+pub use site_catalog_items::SiteCatalogItemInput;
+pub use site_catalog_publish::{
+    SiteCatalogSnapshot, SiteCatalogSnapshotCategory, SiteCatalogSnapshotItem,
+};
 pub use site_collections::{
     SITE_COLLECTION_BODY_MAX_CHARS, SITE_COLLECTION_MAX_ITEMS, SITE_COLLECTION_NAME_MAX_CHARS,
     SITE_COLLECTION_TITLE_MAX_CHARS, SiteCollection, SiteCollectionFieldMapping,

@@ -48,8 +48,8 @@ use alo_sites::stylesheet::stylesheet;
 use alo_store::{
     BaseFieldId, BaseTableId, BlobId, DriveNodeId, LocalizedSitePage, NewGeneratedSite,
     NewGeneratedSitePage, NewSitePost, Section, SectionsEnvelope, Site, SiteAnalyticsDimension,
-    SiteCollection, SiteCollectionFieldMapping, SiteCollectionId, SiteCollectionInput,
-    SiteCollectionItem, SiteCollectionSnapshot, SiteDomain, SiteDomainStatus,
+    SiteCatalogSnapshot, SiteCollection, SiteCollectionFieldMapping, SiteCollectionId,
+    SiteCollectionInput, SiteCollectionItem, SiteCollectionSnapshot, SiteDomain, SiteDomainStatus,
     SiteEditorInviteOutcome, SiteFormId, SiteFormSubmissionId, SiteId, SitePage, SitePageId,
     SitePost, SitePostId, SitePostUpdate, SiteTheme, SiteTranslationPageContent,
     SiteTranslationPageWrite, SiteTranslationPostContent, SiteTranslationPostWrite, StoreError,
@@ -2170,6 +2170,7 @@ pub(crate) async fn preview_image_map<'a>(
     theme: &SiteTheme,
     sections: &Value,
     collections: impl Iterator<Item = &'a SiteCollectionSnapshot>,
+    catalogs: impl Iterator<Item = &'a SiteCatalogSnapshot>,
 ) -> std::collections::HashMap<String, String> {
     use base64::Engine;
 
@@ -2189,6 +2190,15 @@ pub(crate) async fn preview_image_map<'a>(
     for collection in collections {
         ids.extend(
             collection
+                .items
+                .iter()
+                .filter_map(|item| item.image.as_ref())
+                .map(|blob| blob.as_str().to_owned()),
+        );
+    }
+    for catalog in catalogs {
+        ids.extend(
+            catalog
                 .items
                 .iter()
                 .filter_map(|item| item.image.as_ref())
@@ -2346,7 +2356,32 @@ async fn render_preview_html(
             collections.insert(id, preview);
         }
     }
-    let images = preview_image_map(account, &theme, sections, collections.values()).await;
+    // The same honesty for catalogs: the preview resolves the draft catalog
+    // exactly as publishing would — hidden items already gone — so what the
+    // editor sees is what the next publish freezes.
+    let mut catalogs = HashMap::new();
+    for section in sections_lenient(sections) {
+        if let Section::Catalog(catalog) = section {
+            let id = catalog.catalog_id.as_str().to_owned();
+            if catalogs.contains_key(&id) {
+                continue;
+            }
+            let preview = account
+                .acc
+                .site_catalog_preview(&site.id, &catalog.catalog_id)
+                .await
+                .map_err(map_store_err)?;
+            catalogs.insert(id, preview);
+        }
+    }
+    let images = preview_image_map(
+        account,
+        &theme,
+        sections,
+        collections.values(),
+        catalogs.values(),
+    )
+    .await;
     let base_url = format!("https://{}.{}", site.subdomain, sites_domain());
     let site_ctx = SiteRenderContext {
         name: &site.name,
@@ -2377,6 +2412,7 @@ async fn render_preview_html(
         seo_description: page.seo_description.as_deref(),
         sections,
         collections: &collections,
+        catalogs: &catalogs,
     };
     Ok(render_page_preview(
         &site_ctx,

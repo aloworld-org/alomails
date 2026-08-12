@@ -318,6 +318,9 @@ fn check_section_content(section: &Section) -> Result<(), String> {
         Section::Collection(_) => Err(
             "a template may not bind a collection to a table the tenant has not made".to_owned(),
         ),
+        Section::Catalog(_) => {
+            Err("a template may not ship a catalog the tenant has not made".to_owned())
+        }
         Section::Pricing(pricing) => {
             for tier in &pricing.tiers {
                 if tier.price != TEMPLATE_PLACEHOLDER_PRICE {
@@ -375,6 +378,7 @@ fn section_hrefs(section: &Section) -> Vec<&str> {
         | Section::Team(_)
         | Section::Faq(_)
         | Section::ContactForm(_)
-        | Section::Collection(_) => Vec::new(),
+        | Section::Collection(_)
+        | Section::Catalog(_) => Vec::new(),
     }
 }

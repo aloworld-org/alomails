@@ -34,8 +34,7 @@ use crate::{
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
     sites_attribution, sites_conversions, sites_heatmap, sites_templates, snooze, spaces, tasks,
-    unsubscribe, wopi,
-    workspace_search,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /

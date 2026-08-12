@@ -23,6 +23,7 @@ use crate::blob::BlobStore;
 use crate::error::{Result, StoreError};
 use crate::id::{BlobId, SiteId, SitePublishId, TenantId};
 use crate::site_assets::{SiteImageData, site_image_content_type};
+use crate::site_catalog_publish::{SiteCatalogSnapshot, SiteCatalogSnapshotRow};
 use crate::site_collections::SiteCollectionSnapshot;
 use crate::site_publish::{SiteCollectionSnapshotRow, SitePageSnapshot, SitePageSnapshotRow};
 
@@ -210,6 +211,33 @@ impl SitePublicStore {
         .map_err(StoreError::Db)?;
         rows.into_iter()
             .map(SiteCollectionSnapshotRow::into_snapshot)
+            .collect()
+    }
+
+    /// The immutable catalogs frozen beside the resolved pages — what the
+    /// site offered at publish time, prices included. The caller cannot supply
+    /// tenant or publish identifiers, so a live host can reach only its own
+    /// current catalog rows, and a hidden item was never written here at all.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure; [`StoreError::Conflict`] when a stored
+    /// snapshot cannot be read back.
+    pub async fn published_catalogs(
+        &self,
+        site: &PublishedSite,
+    ) -> Result<Vec<SiteCatalogSnapshot>> {
+        let rows = sqlx::query_as::<_, SiteCatalogSnapshotRow>(
+            "SELECT catalog_id, name, currency, categories, items \
+             FROM site_catalog_snapshots \
+             WHERE tenant_id = $1 AND publish_id = $2 ORDER BY catalog_id",
+        )
+        .bind(site.tenant.as_str())
+        .bind(site.publish.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        rows.into_iter()
+            .map(SiteCatalogSnapshotRow::into_snapshot)
             .collect()
     }
 

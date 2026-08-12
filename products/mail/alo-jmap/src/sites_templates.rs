@@ -124,7 +124,11 @@ pub async fn preview_template(
     // placeholder so canonical and OG URLs are well-formed rather than absent.
     let base_url = format!("https://preview.{}", sites_domain());
     let images = HashMap::new();
+    // A template ships neither a collection nor a catalog (both would bind to
+    // tenant data a template cannot own — `site_templates` refuses them), so
+    // both frozen sets are deliberately empty here.
     let collections = HashMap::new();
+    let catalogs = HashMap::new();
     let site_ctx = SiteRenderContext {
         name: &template.name,
         base_url: &base_url,
@@ -141,6 +145,7 @@ pub async fn preview_template(
         seo_description: page.seo_description.as_deref(),
         sections: &sections,
         collections: &collections,
+        catalogs: &catalogs,
     };
     Ok((
         [

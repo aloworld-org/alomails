@@ -3,7 +3,7 @@
 //! A page's `sections` JSON is the envelope [`SectionsEnvelope`] —
 //! `{ "schema_version": 1, "sections": [ … ] }` — where every entry is one
 //! variant of [`Section`], an internally-tagged serde enum with a closed
-//! vocabulary of thirteen section types. The schema is **strict on write**:
+//! vocabulary of fourteen section types. The schema is **strict on write**:
 //! unknown section types and unknown props are validation errors here, because
 //! the only writers (the editor UI and the AI ops path) speak this schema
 //! exactly. Read-side tolerance (skip-with-log on unknown sections, so an old
@@ -16,7 +16,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::id::{BlobId, SiteCollectionId};
+use crate::id::{BlobId, SiteCatalogId, SiteCollectionId};
 
 /// The current sections schema version. Version bumps ship an explicit pure
 /// upgrade function (v1 → v2) applied on read; stored JSON is rewritten
@@ -502,6 +502,22 @@ pub struct CollectionSection {
     pub heading: Option<String>,
 }
 
+/// A catalog of what the site offers — dishes, rooms, services, courses —
+/// frozen from the tenant's own [catalog](crate::site_catalog) at publish
+/// time. The section stores only the stable catalog id, an optional heading,
+/// and an optional category handle to show one grouping instead of all of
+/// them; prices, names and availability live in the frozen snapshot.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CatalogSection {
+    pub catalog_id: SiteCatalogId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heading: Option<String>,
+    /// Handle of the single category to show; absent shows every category.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+}
+
 /// One section of a page — the closed v1 vocabulary. The wire tag is the
 /// `type` prop (`{"type": "hero", …}`); unknown tags and unknown props are
 /// rejected on write.
@@ -532,6 +548,9 @@ pub enum Section {
     ContactForm(ContactFormSection),
     /// Cards resolved from an alo Base collection at publish time.
     Collection(CollectionSection),
+    /// What the site offers, frozen from the tenant's own catalog at publish
+    /// time.
+    Catalog(CatalogSection),
     /// Page footer.
     Footer(FooterSection),
 }
@@ -552,6 +571,7 @@ impl Section {
             Section::Cta(_) => "cta",
             Section::ContactForm(_) => "contact_form",
             Section::Collection(_) => "collection",
+            Section::Catalog(_) => "catalog",
             Section::Footer(_) => "footer",
         }
     }
@@ -576,6 +596,7 @@ impl Section {
             | Section::Cta(_)
             | Section::ContactForm(_)
             | Section::Collection(_)
+            | Section::Catalog(_)
             | Section::Footer(_) => Vec::new(),
         }
     }
@@ -695,6 +716,14 @@ impl Section {
             Section::Collection(s) => {
                 check_token(kind, "collection_id", s.collection_id.as_str())?;
                 check_opt_short(kind, "heading", s.heading.as_deref())
+            }
+            Section::Catalog(s) => {
+                check_token(kind, "catalog_id", s.catalog_id.as_str())?;
+                check_opt_short(kind, "heading", s.heading.as_deref())?;
+                if let Some(category) = &s.category {
+                    check_token(kind, "category", category)?;
+                }
+                Ok(())
             }
             Section::Footer(s) => {
                 check_opt_short(kind, "text", s.text.as_deref())?;

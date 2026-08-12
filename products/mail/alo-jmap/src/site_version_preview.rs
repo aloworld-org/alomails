@@ -113,9 +113,35 @@ pub async fn preview_version_page(
         .collect();
     collections.retain(|id, _| referenced.iter().any(|wanted| wanted == id));
 
+    // Catalogs frozen with the same publish, filtered the same way: a version
+    // preview shows what that publish served, never what the catalog says now.
+    let mut catalogs = HashMap::new();
+    for catalog in account
+        .acc
+        .site_publish_catalog_snapshots(&sid, &pid)
+        .await
+        .map_err(map_store_err)?
+    {
+        catalogs.insert(catalog.catalog_id.as_str().to_owned(), catalog);
+    }
+    let referenced_catalogs: Vec<String> = sections_lenient(&snapshot.sections)
+        .into_iter()
+        .filter_map(|section| match section {
+            Section::Catalog(catalog) => Some(catalog.catalog_id.as_str().to_owned()),
+            _ => None,
+        })
+        .collect();
+    catalogs.retain(|id, _| referenced_catalogs.iter().any(|wanted| wanted == id));
+
     let theme = SiteTheme::from_stored(version.theme.clone());
-    let images =
-        preview_image_map(&account, &theme, &snapshot.sections, collections.values()).await;
+    let images = preview_image_map(
+        &account,
+        &theme,
+        &snapshot.sections,
+        collections.values(),
+        catalogs.values(),
+    )
+    .await;
     let base_url = format!("https://{}.{}", site.subdomain, sites_domain());
     let site_ctx = SiteRenderContext {
         name: &site.name,
@@ -133,6 +159,7 @@ pub async fn preview_version_page(
         seo_description: snapshot.seo_description.as_deref(),
         sections: &snapshot.sections,
         collections: &collections,
+        catalogs: &catalogs,
     };
     Ok((
         [
