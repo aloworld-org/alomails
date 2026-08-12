@@ -101,6 +101,12 @@ argon2 = "0.5"
 # `futures` for the SSE stream.
 axum = "0.8"
 futures = "0.3"
+# alo-sites: responsive image derivatives (decode → crop → resize → re-encode)
+# for the published `srcset`. Pure Rust, no C: only the raster codecs a site
+# photo actually arrives as. Encoding is JPEG/PNG only — a derivative of a
+# vector, animated or exotic source is simply not produced, and the original
+# is served instead.
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 # alo-sites tests: drive the router in-process (`ServiceExt::oneshot`) so
 # Host-isolation is proven against the real service without a socket.
 tower = { version = "0.5", default-features = false, features = ["util"] }
