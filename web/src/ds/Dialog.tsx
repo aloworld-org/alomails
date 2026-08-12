@@ -6,13 +6,7 @@
 // alert, so call sites read like the natives they replace:
 //   if (!(await confirm({ message }))) return;
 //   const name = (await prompt({ message }))?.trim();
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { strings } from "../i18n";
@@ -69,12 +63,20 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   }, [request]);
 
   if (request === null) {
-    return <DialogContext.Provider value={api}>{children}</DialogContext.Provider>;
+    return (
+      <DialogContext.Provider value={api}>{children}</DialogContext.Provider>
+    );
   }
 
   const cancel = () => settle(request.kind === "prompt" ? null : false);
   const accept = () =>
-    settle(request.kind === "prompt" ? value : request.kind === "alert" ? undefined : true);
+    settle(
+      request.kind === "prompt"
+        ? value
+        : request.kind === "alert"
+          ? undefined
+          : true,
+    );
 
   return (
     <DialogContext.Provider value={api}>
@@ -91,7 +93,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
             else if (e.key === "Enter" && request.kind !== "prompt") accept();
           }}
         >
-          {request.title !== undefined && <h2 className={styles.title}>{request.title}</h2>}
+          {request.title !== undefined && (
+            <h2 className={styles.title}>{request.title}</h2>
+          )}
           <p className={styles.message}>{request.message}</p>
           {request.kind === "prompt" && (
             <input
@@ -114,9 +118,14 @@ export function DialogProvider({ children }: { children: ReactNode }) {
                 {request.cancelLabel ?? strings.dialogCancel}
               </Button>
             )}
-            <Button variant={request.danger === true ? "danger" : "primary"} onClick={accept}>
+            <Button
+              variant={request.danger === true ? "danger" : "primary"}
+              onClick={accept}
+            >
               {request.confirmLabel ??
-                (request.kind === "alert" ? strings.dialogOk : strings.dialogConfirm)}
+                (request.kind === "alert"
+                  ? strings.dialogOk
+                  : strings.dialogConfirm)}
             </Button>
           </div>
         </div>

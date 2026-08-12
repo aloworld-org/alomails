@@ -65,24 +65,24 @@
   --warm-900: #102a43;
 
   /* ---- semantic: backgrounds ---- */
-  --bg-app: #f4f1ec;                   /* warm porcelain workspace canvas */
-  --bg-surface: #fffefc;               /* soft ivory panels and reading panes */
-  --bg-raised: #e9e4dc;                /* controls and hover fills */
-  --bg-sunken: #f0ece6;                /* warm-stone sidebars and lists */
-  --bg-rail: #1f2529;                  /* premium warm charcoal */
-  --bg-rail-hover: #2a3237;            /* graphite hover */
-  --bg-rail-active: #343d42;           /* lifted active surface */
+  --bg-app: #f4f1ec; /* warm porcelain workspace canvas */
+  --bg-surface: #fffefc; /* soft ivory panels and reading panes */
+  --bg-raised: #e9e4dc; /* controls and hover fills */
+  --bg-sunken: #f0ece6; /* warm-stone sidebars and lists */
+  --bg-rail: #1f2529; /* premium warm charcoal */
+  --bg-rail-hover: #2a3237; /* graphite hover */
+  --bg-rail-active: #343d42; /* lifted active surface */
   --bg-selected: var(--verdigris-100); /* selected list row — soft terracotta */
   --bg-overlay: rgba(16, 42, 67, 0.45);
 
   /* ---- semantic: text ---- */
-  --text-primary: var(--ink);          /* navy */
-  --text-secondary: #475569;           /* softened slate */
+  --text-primary: var(--ink); /* navy */
+  --text-secondary: #475569; /* softened slate */
   --text-tertiary: var(--warm-500);
   --text-on-accent: #ffffff;
   --text-on-rail: #f7f3ef;
   --text-on-rail-muted: #aeb8be;
-  --text-link: var(--verdigris-600);   /* links are terracotta */
+  --text-link: var(--verdigris-600); /* links are terracotta */
 
   /* ---- semantic: borders ---- */
   --border-subtle: #e8e2d9;
@@ -94,35 +94,39 @@
   --accent-hover: var(--verdigris-600);
   --accent-active: var(--verdigris-700);
   --accent-tint: var(--verdigris-100);
-  --accent-soft: #fceae3;               /* quiet terracotta ground (AI summary) */
+  --accent-soft: #fceae3; /* quiet terracotta ground (AI summary) */
   --accent-secondary: var(--copper-500);
   --accent-secondary-hover: var(--copper-600);
   --accent-secondary-tint: var(--copper-100);
-  --copper-soft: #f8d6cc;               /* AI pill ground — soft terracotta */
+  --copper-soft: #f8d6cc; /* AI pill ground — soft terracotta */
 
   --danger: #dc2626;
   --danger-tint: #fbe3e3;
   --success: #2e8b57;
   --warning: #f59e0b;
-  --unread: var(--verdigris-500);       /* unread dot — terracotta */
+  --unread: var(--verdigris-500); /* unread dot — terracotta */
 
   /* Focus: a soft terracotta ring (brief, on-brand). */
   --focus-ring: 0 0 0 3px rgba(231, 111, 81, 0.22);
 
   /* ---- typography ---- */
-  --font-ui: "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-ui:
+    "Inter Variable", Inter, system-ui, -apple-system, "Segoe UI", Roboto,
+    sans-serif;
   --font-body: var(--font-ui); /* premium, highly legible default for writing */
-  --font-editorial: "EB Garamond Variable", "EB Garamond", Georgia, "Times New Roman", serif;
-  --font-mono: "Cascadia Code", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --font-editorial:
+    "EB Garamond Variable", "EB Garamond", Georgia, "Times New Roman", serif;
+  --font-mono:
+    "Cascadia Code", ui-monospace, "SFMono-Regular", Consolas, monospace;
 
-  --text-xs: 0.75rem;    /* 12 */
-  --text-sm: 0.8125rem;  /* 13 */
+  --text-xs: 0.75rem; /* 12 */
+  --text-sm: 0.8125rem; /* 13 */
   --text-base: 0.875rem; /* 14 */
-  --text-md: 0.9375rem;  /* 15 */
-  --text-lg: 1.0625rem;  /* 17 */
-  --text-xl: 1.25rem;    /* 20 */
-  --text-2xl: 1.75rem;   /* 28 — page titles */
-  --text-3xl: 2rem;      /* 32 — hero / empty-state display */
+  --text-md: 0.9375rem; /* 15 */
+  --text-lg: 1.0625rem; /* 17 */
+  --text-xl: 1.25rem; /* 20 */
+  --text-2xl: 1.75rem; /* 28 — page titles */
+  --text-3xl: 2rem; /* 32 — hero / empty-state display */
 
   --weight-regular: 400;
   --weight-medium: 500;
@@ -178,8 +182,20 @@
   --color-picker-spectrum-light: #ffffff;
   --color-picker-spectrum-dark: #000000;
   --color-picker-checker: #d8d8d8;
-  --color-picker-hue-gradient: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
-  --color-picker-checker-gradient: repeating-conic-gradient(var(--color-picker-checker) 0 25%, var(--color-picker-spectrum-light) 0 50%);
+  --color-picker-hue-gradient: linear-gradient(
+    to right,
+    #ff0000,
+    #ffff00,
+    #00ff00,
+    #00ffff,
+    #0000ff,
+    #ff00ff,
+    #ff0000
+  );
+  --color-picker-checker-gradient: repeating-conic-gradient(
+    var(--color-picker-checker) 0 25%,
+    var(--color-picker-spectrum-light) 0 50%
+  );
 
   /* ---- radius ---- */
   --radius-sm: 4px;
@@ -189,9 +205,12 @@
   --radius-full: 999px;
 
   /* ---- elevation (navy-tinted shadows) ---- */
-  --shadow-sm: 0 1px 2px rgba(16, 42, 67, 0.06), 0 1px 1px rgba(16, 42, 67, 0.04);
-  --shadow-md: 0 4px 12px rgba(16, 42, 67, 0.08), 0 2px 4px rgba(16, 42, 67, 0.05);
-  --shadow-lg: 0 12px 32px rgba(16, 42, 67, 0.12), 0 4px 8px rgba(16, 42, 67, 0.06);
+  --shadow-sm:
+    0 1px 2px rgba(16, 42, 67, 0.06), 0 1px 1px rgba(16, 42, 67, 0.04);
+  --shadow-md:
+    0 4px 12px rgba(16, 42, 67, 0.08), 0 2px 4px rgba(16, 42, 67, 0.05);
+  --shadow-lg:
+    0 12px 32px rgba(16, 42, 67, 0.12), 0 4px 8px rgba(16, 42, 67, 0.06);
 
   /* ---- motion ---- */
   --transition-fast: 120ms ease;

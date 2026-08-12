@@ -34,7 +34,14 @@ export function IconButton({
     .filter(Boolean)
     .join(" ");
   return (
-    <button type={type} className={classes} aria-label={label} title={label} aria-pressed={active} {...rest}>
+    <button
+      type={type}
+      className={classes}
+      aria-label={label}
+      title={label}
+      aria-pressed={active}
+      {...rest}
+    >
       {icon}
     </button>
   );

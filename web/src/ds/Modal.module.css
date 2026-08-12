@@ -24,7 +24,9 @@
   overflow: hidden;
 }
 
-.wide { max-width: 720px; }
+.wide {
+  max-width: 720px;
+}
 
 .head {
   display: flex;

@@ -22,7 +22,12 @@ interface ResizeHandleProps {
 
 const KEYBOARD_STEP = 16;
 
-export function ResizeHandle({ onResize, onCommit, onReset, ariaLabel }: ResizeHandleProps) {
+export function ResizeHandle({
+  onResize,
+  onCommit,
+  onReset,
+  ariaLabel,
+}: ResizeHandleProps) {
   const [dragging, setDragging] = useState(false);
   const lastX = useRef(0);
 

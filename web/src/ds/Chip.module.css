@@ -1,0 +1,47 @@
+/* A chip is a thing you can act on — usually remove. Fourteen stylesheets had
+   one, differing on gap (3px, 5px, `--space-1`), padding (all hardcoded), and
+   radius (full against sm). The asymmetric padding in several of them was
+   there to make room for a trailing remove button; that is now the component's
+   job rather than each caller's. */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--bg-raised);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+/* Room for the button, so the text does not sit against it. */
+.removable {
+  padding-right: var(--space-1);
+}
+
+.remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.remove:hover {
+  background: var(--bg-sunken, transparent);
+  color: var(--text-primary);
+}
+
+.remove:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}

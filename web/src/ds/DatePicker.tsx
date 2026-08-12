@@ -2,7 +2,11 @@
 // app's own palette — our replacement for the raw <input type="date">, whose
 // native popup can't be themed. Value is an ISO date (YYYY-MM-DD) or "".
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
 import { getLocale, strings } from "../i18n";
 import styles from "./DatePicker.module.css";
@@ -22,7 +26,11 @@ function ymd(d: Date): string {
 }
 
 function sameDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
 }
 
 /** The 6×7 Monday-first grid of Dates covering `anchor`'s month. */
@@ -37,16 +45,24 @@ function monthGrid(anchor: Date): Date[] {
   });
 }
 
-export function DatePicker({ value, onChange, placeholder, icon = true }: Props) {
+export function DatePicker({
+  value,
+  onChange,
+  placeholder,
+  icon = true,
+}: Props) {
   const locale = getLocale();
   const [open, setOpen] = useState(false);
-  const [anchor, setAnchor] = useState<Date>(value !== "" ? new Date(`${value}T00:00`) : new Date());
+  const [anchor, setAnchor] = useState<Date>(
+    value !== "" ? new Date(`${value}T00:00`) : new Date(),
+  );
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return undefined;
     function down(e: PointerEvent) {
-      if (ref.current !== null && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current !== null && !ref.current.contains(e.target as Node))
+        setOpen(false);
     }
     function key(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -67,14 +83,24 @@ export function DatePicker({ value, onChange, placeholder, icon = true }: Props)
   const weekdays = useMemo(() => {
     const fmt = new Intl.DateTimeFormat(locale, { weekday: "short" });
     // Monday-first (2024-01-01 is a Monday).
-    return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2024, 0, 1 + i)));
+    return Array.from({ length: 7 }, (_, i) =>
+      fmt.format(new Date(2024, 0, 1 + i)),
+    );
   }, [locale]);
 
   const label =
     selected !== null
-      ? new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(selected)
+      ? new Intl.DateTimeFormat(locale, {
+          weekday: "short",
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(selected)
       : (placeholder ?? "");
-  const monthLabel = new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(anchor);
+  const monthLabel = new Intl.DateTimeFormat(locale, {
+    month: "long",
+    year: "numeric",
+  }).format(anchor);
 
   function pick(d: Date) {
     onChange(ymd(d));
@@ -103,14 +129,22 @@ export function DatePicker({ value, onChange, placeholder, icon = true }: Props)
             <div className={styles.nav}>
               <button
                 type="button"
-                onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1))}
+                onClick={() =>
+                  setAnchor(
+                    new Date(anchor.getFullYear(), anchor.getMonth() - 1, 1),
+                  )
+                }
                 aria-label={strings.agendaPrev}
               >
                 <ChevronLeft size={16} />
               </button>
               <button
                 type="button"
-                onClick={() => setAnchor(new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1))}
+                onClick={() =>
+                  setAnchor(
+                    new Date(anchor.getFullYear(), anchor.getMonth() + 1, 1),
+                  )
+                }
                 aria-label={strings.agendaNext}
               >
                 <ChevronRight size={16} />
