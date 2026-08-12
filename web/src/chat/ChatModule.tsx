@@ -612,6 +612,9 @@ export function ChatModule() {
     null,
   );
   const composerMenuRef = useRef<HTMLDivElement | null>(null);
+  const [replyMenu, setReplyMenu] = useState(false);
+  const replyMenuRef = useRef<HTMLDivElement | null>(null);
+  const replyComposerRef = useRef<HTMLTextAreaElement | null>(null);
   // Which room's row menu is open, by id — one at a time, same reason.
   const [emojiQuery, setEmojiQuery] = useState("");
   // Agent turns running in the open room. Refetched on every push, so it
@@ -640,6 +643,8 @@ export function ChatModule() {
   useDismiss(rowMenu !== null, rowMenuRef, closeRowMenu);
   const closeComposerMenu = useCallback(() => setComposerMenu(null), []);
   useDismiss(composerMenu !== null, composerMenuRef, closeComposerMenu);
+  const closeReplyMenu = useCallback(() => setReplyMenu(false), []);
+  useDismiss(replyMenu, replyMenuRef, closeReplyMenu);
   // Whether anything remains behind the oldest line held. Derived from the
   // last page's size rather than a count, because a count would be a second
   // truth about the same thing.
@@ -884,6 +889,22 @@ export function ChatModule() {
       composerRef.current?.focus();
       composerRef.current?.setSelectionRange(start, start + body.length);
       setCaret(start + body.length);
+    });
+  }
+
+  function insertReplyBlock(before: string, after: string, sample: string) {
+    const box = replyComposerRef.current;
+    const from = box?.selectionStart ?? replyDraft.length;
+    const to = box?.selectionEnd ?? from;
+    const chosen = replyDraft.slice(from, to);
+    const body = chosen === "" ? sample : chosen;
+    setReplyDraft(
+      `${replyDraft.slice(0, from)}${before}${body}${after}${replyDraft.slice(to)}`,
+    );
+    const start = from + before.length;
+    requestAnimationFrame(() => {
+      replyComposerRef.current?.focus();
+      replyComposerRef.current?.setSelectionRange(start, start + body.length);
     });
   }
 
@@ -1936,30 +1957,6 @@ export function ChatModule() {
                           <span className={styles.stagedName}>{file.name}</span>
                           <X size={13} />
                         </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className={styles.shareItem}
-                          onClick={() => {
-                            setComposerMenu(null);
-                            wrapSelection("```" + String.fromCharCode(10), String.fromCharCode(10) + "```", "code");
-                          }}
-                        >
-                          <SquareCode size={15} className={styles.shareIcon} />
-                          <span><span className={styles.shareName}>{strings.chatCodeBlock}</span><span className={styles.shareHint}>{strings.chatCodeBlockHint}</span></span>
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className={styles.shareItem}
-                          onClick={() => {
-                            setComposerMenu(null);
-                            wrapSelection("$", "$", "e^{i\\pi}+1=0");
-                          }}
-                        >
-                          <Sigma size={15} className={styles.shareIcon} />
-                          <span><span className={styles.shareName}>{strings.chatFormula}</span><span className={styles.shareHint}>{strings.chatFormulaHint}</span></span>
-                        </button>
                       </li>
                     ))}
                   </ul>
@@ -1999,6 +1996,40 @@ export function ChatModule() {
                             <span className={styles.shareHint}>
                               {strings.chatShareFileHint}
                             </span>
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={styles.shareItem}
+                          onClick={() => {
+                            setComposerMenu(null);
+                            wrapSelection(
+                              "```" + String.fromCharCode(10),
+                              String.fromCharCode(10) + "```",
+                              "code",
+                            );
+                          }}
+                        >
+                          <SquareCode size={15} className={styles.shareIcon} />
+                          <span>
+                            <span className={styles.shareName}>{strings.chatCodeBlock}</span>
+                            <span className={styles.shareHint}>{strings.chatCodeBlockHint}</span>
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={styles.shareItem}
+                          onClick={() => {
+                            setComposerMenu(null);
+                            wrapSelection("$", "$", "e^{i\\pi}+1=0");
+                          }}
+                        >
+                          <Sigma size={15} className={styles.shareIcon} />
+                          <span>
+                            <span className={styles.shareName}>{strings.chatFormula}</span>
+                            <span className={styles.shareHint}>{strings.chatFormulaHint}</span>
                           </span>
                         </button>
                         <button
@@ -2402,28 +2433,75 @@ export function ChatModule() {
 
           {open.archivedAt === null && (
             <form
-              className={styles.composer}
+              className={`${styles.composer} ${styles.replyComposer}`}
               onSubmit={(event) => {
                 event.preventDefault();
                 void sendReply();
               }}
             >
-              <input
+              <span className={styles.shareWrap} ref={replyMenuRef}>
+                <button
+                  type="button"
+                  className={styles.composerTool}
+                  onClick={() => setReplyMenu((open) => !open)}
+                  aria-label={strings.chatShare}
+                  title={strings.chatShare}
+                  aria-expanded={replyMenu}
+                >
+                  <Plus size={18} />
+                </button>
+                {replyMenu && (
+                  <div className={`${styles.shareMenu} ${styles.replyShareMenu}`} role="menu">
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={styles.shareItem}
+                      onClick={() => {
+                        setReplyMenu(false);
+                        insertReplyBlock(
+                          "```" + String.fromCharCode(10),
+                          String.fromCharCode(10) + "```",
+                          "code",
+                        );
+                      }}
+                    >
+                      <SquareCode size={15} className={styles.shareIcon} />
+                      <span><span className={styles.shareName}>{strings.chatCodeBlock}</span><span className={styles.shareHint}>{strings.chatCodeBlockHint}</span></span>
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className={styles.shareItem}
+                      onClick={() => {
+                        setReplyMenu(false);
+                        insertReplyBlock("$", "$", "e^{i\\pi}+1=0");
+                      }}
+                    >
+                      <Sigma size={15} className={styles.shareIcon} />
+                      <span><span className={styles.shareName}>{strings.chatFormula}</span><span className={styles.shareHint}>{strings.chatFormulaHint}</span></span>
+                    </button>
+                  </div>
+                )}
+              </span>
+              <textarea
+                ref={replyComposerRef}
                 className={styles.input}
                 value={replyDraft}
                 onChange={(event) => setReplyDraft(event.target.value)}
                 placeholder={strings.chatThreadPlaceholder}
                 aria-label={strings.chatThreadPlaceholder}
                 autoComplete="off"
+                rows={1}
               />
-              <Button
+              <button
                 type="submit"
-                variant="primary"
+                className={styles.send}
                 disabled={replyDraft.trim() === "" || replying}
+                aria-label={strings.chatSend}
+                title={strings.chatSend}
               >
-                <Send size={15} />
-                {strings.chatSend}
-              </Button>
+                <Send size={17} />
+              </button>
             </form>
           )}
         </aside>

@@ -1896,6 +1896,25 @@
   background: var(--border-subtle);
 }
 
+.replyComposer {
+  width: calc(100% - var(--space-6));
+  margin: var(--space-3);
+  padding: 7px 9px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 7%);
+}
+
+.replyComposer .input {
+  min-height: 36px;
+  max-height: 160px;
+  padding-top: 7px;
+}
+
+.replyShareMenu {
+  width: min(23rem, calc(100vw - var(--space-8)));
+  grid-template-columns: 1fr;
+}
+
 /* Narrow screens cannot afford three columns; the thread takes the
    conversation's place rather than squeezing it to nothing. */
 @media (max-width: 900px) {
