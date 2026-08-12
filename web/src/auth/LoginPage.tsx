@@ -9,7 +9,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { surface } from "@product";
 import { strings } from "../i18n";
-import { Button, Spinner } from "../ds";
+import { Button, Spinner, Field, Input } from "../ds";
 import { Logo } from "../shell/Logo";
 import { signupDomains } from "../signup/api";
 import { useAuth } from "./AuthProvider";
@@ -23,7 +23,8 @@ export function LoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? "/mail";
+  const redirectTo =
+    (location.state as { from?: string } | null)?.from ?? "/mail";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -126,49 +127,58 @@ export function LoginPage() {
             <p className={styles.subtitle}>{strings.signInSubtitle}</p>
           </div>
 
-          <label className={styles.field}>
-            <span className={styles.label}>{strings.emailLabel}</span>
-            <input
-              className={styles.input}
-              type="email"
-              autoComplete="username"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder={surface.login.emailPlaceholder()}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoFocus
-            />
-          </label>
-
-          <label className={styles.field}>
-            <span className={styles.label}>{strings.passwordLabel}</span>
-            <div className={styles.passwordWrap}>
-              <input
-                className={`${styles.input} ${styles.passwordInput}`}
-                type={showPassword ? "text" : "password"}
-                autoComplete="current-password"
+          <Field label={strings.emailLabel}>
+            {(control) => (
+              <Input
+                {...control}
+                size="lg"
+                type="email"
+                autoComplete="username"
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                placeholder={surface.login.emailPlaceholder()}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
+                autoFocus
               />
-              <button
-                type="button"
-                className={styles.reveal}
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? strings.hidePassword : strings.showPassword}
-                aria-pressed={showPassword}
-                title={showPassword ? strings.hidePassword : strings.showPassword}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-          </label>
+            )}
+          </Field>
+
+          <Field label={strings.passwordLabel}>
+            {(control) => (
+              <div className={styles.passwordWrap}>
+                <Input
+                  {...control}
+                  size="lg"
+                  className={styles.passwordInput}
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className={styles.reveal}
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={
+                    showPassword ? strings.hidePassword : strings.showPassword
+                  }
+                  aria-pressed={showPassword}
+                  title={
+                    showPassword ? strings.hidePassword : strings.showPassword
+                  }
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            )}
+          </Field>
 
           <div className={styles.row}>
             <label className={styles.remember}>
@@ -192,7 +202,11 @@ export function LoginPage() {
           {note !== null && <p className={styles.note}>{note}</p>}
 
           <Button type="submit" block disabled={submitting}>
-            {submitting ? <Spinner size={16} label={strings.signingIn} /> : strings.signInButton}
+            {submitting ? (
+              <Spinner size={16} label={strings.signingIn} />
+            ) : (
+              strings.signInButton
+            )}
           </Button>
 
           {surface.login.sso && (

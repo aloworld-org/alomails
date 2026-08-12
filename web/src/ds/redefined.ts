@@ -29,7 +29,6 @@
 export const REDEFINES_PRIMITIVES: readonly string[] = [
   "admin/admin.module.css",
   "agenda/AgendaModule.module.css",
-  "auth/LoginPage.module.css",
   "auth/TwoFactorScreen.module.css",
   "authoring/AuthoringInsertModal.module.css",
   "authoring/CodeBlock.module.css",

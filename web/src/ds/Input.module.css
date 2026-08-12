@@ -1,0 +1,55 @@
+/* The one text input. Twenty-two stylesheets had their own; the two most
+   developed disagreed on height (40 vs 46), border (visible vs transparent)
+   and background (surface vs raised). This takes the admin console's build —
+   a visible border on the surface, which reads as an editable field without
+   needing focus — and the login screen's transitions, which the admin's
+   lacked. The 46px version survives as `size="lg"`, because a sign-in screen
+   wanting a larger target is a decision, not a discrepancy. */
+
+.input {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-base);
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.lg {
+  height: 46px;
+  padding: 0 var(--space-4);
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* A real focus ring, not just a border-colour change. Neither implementation
+   this replaces had one: a 1px border shift is easy to miss and fails contrast
+   guidance for a focus indicator. `:focus-visible` keeps it off a mouse
+   click. */
+.input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--border-strong);
+}
+
+.input:disabled {
+  background: var(--bg-raised);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+/* Set by `Field` when it is showing an error, so the control and its message
+   agree without every caller wiring it up. */
+.invalid,
+.invalid:focus-visible {
+  border-color: var(--danger);
+}
