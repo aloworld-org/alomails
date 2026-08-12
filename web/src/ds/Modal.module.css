@@ -28,6 +28,25 @@
   max-width: 720px;
 }
 
+/* A dialog holding a browser — a symbol palette, a language list — whose
+   content resizes with every keystroke. The panel's height stops moving and
+   the body stops scrolling as one piece, so a child that asks for the room
+   (`flex: 1; min-height: 0`) is the thing that scrolls. */
+.tall {
+  height: 620px;
+}
+
+.tall .body {
+  overflow: hidden;
+}
+
+/* The mark before the title. Decoration: the title is the name. */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--accent);
+}
+
 .head {
   display: flex;
   align-items: center;

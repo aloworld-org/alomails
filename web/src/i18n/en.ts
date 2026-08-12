@@ -1330,6 +1330,7 @@ export const en = {
   paraLabel: "Paragraph text",
   paraInlineMath: "Inline math",
   paraReference: "Reference",
+  paraToolbar: "Insert into this paragraph",
 
   // table block
   tableHeaderCell: "Column heading",
@@ -1338,6 +1339,7 @@ export const en = {
   tableAddColumn: "Add column",
   tableRemoveRow: "Remove row",
   tableRemoveColumn: "Remove column",
+  tableBlockLabel: "Editable table",
 
   // code block
   codeSearchLanguage: "Search language…",

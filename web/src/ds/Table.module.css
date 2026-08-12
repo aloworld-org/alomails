@@ -98,6 +98,25 @@
   background: var(--bg-raised);
 }
 
+/* A table you type into rather than read. Two rules change, and both follow
+   from that: every cell is bounded on all four sides, because a value you are
+   editing has to show where it ends and the next begins; and the cells carry
+   no padding of their own, because each one is filled edge to edge by the
+   control that edits it — padding here would be a dead border a click lands in
+   without reaching the field. Added for the Docs table block; a data table is
+   still the default, and this is not a second styling for one. */
+.grid th,
+.grid td {
+  padding: 0;
+  border: var(--border-width) solid var(--border-subtle);
+}
+
+/* The outer edge of a grid is drawn by its own cells, so the last row keeps the
+   bottom border a data table drops. */
+.grid tbody tr:last-child td {
+  border-bottom: var(--border-width) solid var(--border-subtle);
+}
+
 .numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;

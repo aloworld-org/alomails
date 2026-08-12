@@ -54,6 +54,12 @@ export interface TableProps {
   /** Drop the border, radius and background of the scroll region, for a table
    *  that sits directly on a `Card` that already draws them. */
   flat?: boolean | undefined;
+  /** A table that is typed into rather than read: every cell bounded on all
+   *  four sides, and no cell padding, because each cell is filled edge to edge
+   *  by the control that edits it. The Docs table block is the caller — an
+   *  editable table still wants the name, the caption and the reachable scroll
+   *  region a data table gets, and only its cells work differently. */
+  grid?: boolean | undefined;
   /** `<thead>`, `<tbody>`, `<tfoot>` — ordinary table markup. */
   children: ReactNode;
   /** Applied to the scroll region, which is the element that lays out. */
@@ -67,6 +73,7 @@ export function Table({
   stickyHeader,
   interactiveRows,
   flat,
+  grid,
   children,
   className,
 }: TableProps) {
@@ -82,6 +89,7 @@ export function Table({
     density === "compact" ? styles.compact : "",
     stickyHeader === true ? styles.sticky : "",
     interactiveRows === true ? styles.interactive : "",
+    grid === true ? styles.grid : "",
   ]
     .filter(Boolean)
     .join(" ");

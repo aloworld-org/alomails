@@ -18,11 +18,23 @@ export interface ModalProps {
   /** Names the dialog for assistive technology, and renders as its heading. */
   title: string;
   onClose: () => void;
+  /** A glyph before the title. Decoration — the title is the name, so this is
+   *  hidden from assistive technology. Added for the two authoring dialogs,
+   *  which each open with an accent-coloured mark (Σ for an equation, `</>`
+   *  for a code block) that says which editor you are in before the words do. */
+  icon?: ReactNode | undefined;
   /** Header controls — a close button, usually. */
   actions?: ReactNode | undefined;
   footer?: ReactNode | undefined;
   /** 720px instead of 480px, for a dialog that carries a table or two columns. */
   wide?: boolean | undefined;
+  /** A dialog with a browser inside it — a symbol palette, a language list.
+   *  Its content changes size with every keystroke, and a dialog that resizes
+   *  under the pointer while you type is unusable, so the panel takes a fixed
+   *  height and hands the scrolling to whichever child of the body asks for it
+   *  (`flex: 1; min-height: 0`). Without this the body scrolls as one piece and
+   *  the thing you are editing scrolls away from the thing you are picking. */
+  tall?: boolean | undefined;
   children: ReactNode;
 }
 
@@ -33,9 +45,11 @@ const FOCUSABLE =
 export function Modal({
   title,
   onClose,
+  icon,
   actions,
   footer,
   wide,
+  tall,
   children,
 }: ModalProps) {
   const panel = useRef<HTMLDivElement>(null);
@@ -105,13 +119,24 @@ export function Modal({
     >
       <div
         ref={panel}
-        className={`${styles.panel} ${wide === true ? styles.wide : ""}`}
+        className={[
+          styles.panel,
+          wide === true ? styles.wide : "",
+          tall === true ? styles.tall : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
       >
         <div className={styles.head}>
+          {icon !== undefined && (
+            <span className={styles.icon} aria-hidden="true">
+              {icon}
+            </span>
+          )}
           <h2 className={styles.title}>{title}</h2>
           {actions}
         </div>
