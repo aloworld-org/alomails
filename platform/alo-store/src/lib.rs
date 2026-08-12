@@ -166,6 +166,7 @@ pub mod site_editors;
 pub mod site_form_notify;
 pub mod site_forms;
 pub mod site_generation;
+pub mod site_heatmap;
 pub mod site_model;
 pub mod site_page_protection;
 pub mod site_pages;
@@ -173,6 +174,7 @@ pub mod site_posts;
 pub mod site_public;
 mod site_public_analytics;
 pub mod site_public_forms;
+pub mod site_public_heatmap;
 pub mod site_public_protection;
 pub mod site_publish;
 pub mod site_publish_schedule;
@@ -453,6 +455,10 @@ pub use site_forms::{
     MAX_FORMS_PER_SITE, SiteForm, SiteFormSubmission, SubmissionContent, normalize_submission,
 };
 pub use site_generation::{GeneratedSiteDraft, NewGeneratedSite, NewGeneratedSitePage};
+pub use site_heatmap::{
+    SiteHeatmapCell, SiteHeatmapPath, SiteHeatmapReport, SiteHeatmapScrollBucket,
+    SiteHeatmapViewport,
+};
 pub use site_model::{SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope};
 pub use site_page_protection::{
     SITE_PAGE_PASSWORD_MAX_CHARS, SITE_PAGE_PASSWORD_MIN_CHARS, SitePageProtection,
@@ -467,6 +473,10 @@ pub use site_public::{
 };
 pub use site_public_analytics::{
     DeviceClass, OUTBOUND_OVERFLOW, PublicSiteSignal, PublicSiteVisit, ReadTimeBucket,
+};
+pub use site_public_heatmap::{
+    HEATMAP_COLUMNS, HEATMAP_DAILY_PATHS, HEATMAP_ROWS, HeatmapCell, HeatmapSignal,
+    PublicSiteHeatmapReport, SCROLL_DEPTH_BUCKETS, ScrollDepth, ViewportClass,
 };
 pub use site_public_protection::PublishedPageProtection;
 pub use site_publish::{SitePageSnapshot, SitePublish};

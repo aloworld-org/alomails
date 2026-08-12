@@ -33,7 +33,7 @@ use crate::{
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
-    snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    sites_heatmap, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -333,6 +333,7 @@ pub fn app_with_site_domain_dns(
             get(site_version_preview::preview_version_page),
         )
         .route("/sites/{id}/analytics", get(sites::get_analytics))
+        .route("/sites/{id}/heatmap", get(sites_heatmap::get_heatmap))
         .route(
             "/sites/{id}/collaborators",
             get(sites::list_collaborators).post(sites::invite_collaborator),
