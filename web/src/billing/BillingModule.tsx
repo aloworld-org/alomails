@@ -9,6 +9,7 @@
 // spelled out as two flat paths, so that a relative `..` from the editor lands
 // on the list instead of on the module root.
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { Building2, FileText, IdCard, Package, ReceiptText, RefreshCw, Tags } from "lucide-react";
 
 import { strings } from "../i18n";
 import { CustomersView } from "./CustomersView";
@@ -27,22 +28,22 @@ import styles from "./BillingModule.module.css";
  *  of. Invoices stay first — and stay what `/billing` lands on — because they
  *  are what a tenant opens billing to look at. */
 const TABS = [
-  { path: "customers", label: () => strings.billingCustomers },
-  { path: "products", label: () => strings.billingProducts },
-  { path: "quotes", label: () => strings.billingQuotes },
-  { path: "invoices", label: () => strings.billingInvoices },
+  { path: "customers", label: () => strings.billingCustomers, Icon: Building2 },
+  { path: "products", label: () => strings.billingProducts, Icon: Tags },
+  { path: "quotes", label: () => strings.billingQuotes, Icon: FileText },
+  { path: "invoices", label: () => strings.billingInvoices, Icon: ReceiptText },
   // What bills itself again on a rhythm (B2.11). After the documents it
   // raises, because that is what it produces — a reader looks for the invoice
   // first and the arrangement behind it second.
-  { path: "recurring", label: () => strings.billingRecurring },
+  { path: "recurring", label: () => strings.billingRecurring, Icon: RefreshCw },
   // The figures a VAT return is copied from (B1.20). After the records it is
   // computed from, because it is a read over them rather than a thing a tenant
   // keeps.
-  { path: "reports", label: () => strings.billingReports },
+  { path: "reports", label: () => strings.billingReports, Icon: Package },
   // Last, and deliberately not first: it is filled in once and then printed on
   // every document, so it belongs beside the records rather than in front of
   // them. What it holds is who the tenant invoices AS (B1.16).
-  { path: "settings", label: () => strings.billingSettings },
+  { path: "settings", label: () => strings.billingSettings, Icon: IdCard },
 ] as const;
 
 const billingPath = (path: (typeof TABS)[number]["path"]) => `/billing/${path}`;
@@ -59,6 +60,7 @@ export function BillingModule() {
               to={billingPath(t.path)}
               className={({ isActive }) => (isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab)}
             >
+              <t.Icon aria-hidden="true" />
               {t.label()}
             </NavLink>
           ))}

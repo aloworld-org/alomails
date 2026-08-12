@@ -1541,6 +1541,13 @@ export const fr: Partial<Catalog> = {
     "Impossible d’enregistrer. Vérifiez votre connexion et réessayez.",
   billingNoMatches: "Aucun résultat pour cette recherche.",
   billingNoCustomersTitle: "Aucun client pour l’instant",
+  billingGetStarted: "Démarrez en 3 étapes simples",
+  billingStepCustomerTitle: "Ajoutez votre premier client",
+  billingStepCustomerBody: "Créez un profil client avec ses informations de facturation.",
+  billingStepInvoiceTitle: "Créez votre première facture",
+  billingStepInvoiceBody: "Ajoutez des articles, définissez les modalités et émettez la facture.",
+  billingStepPaidTitle: "Soyez payé plus rapidement",
+  billingStepPaidBody: "Enregistrez les paiements et suivez votre trésorerie.",
   billingNoCustomersBody:
     "Un client porte l’adresse, le numéro de TVA et le délai de paiement dont part chaque facture que vous établissez pour lui.",
   billingNoProductsTitle: "Vos tarifs sont vides",

@@ -1503,6 +1503,13 @@ export const nl: Partial<Catalog> = {
     "Opslaan is niet gelukt. Controleer uw verbinding en probeer opnieuw.",
   billingNoMatches: "Niets komt overeen met die zoekopdracht.",
   billingNoCustomersTitle: "Nog geen klanten",
+  billingGetStarted: "Begin in 3 eenvoudige stappen",
+  billingStepCustomerTitle: "Voeg uw eerste klant toe",
+  billingStepCustomerBody: "Maak een klantprofiel met de factuurgegevens.",
+  billingStepInvoiceTitle: "Maak uw eerste factuur",
+  billingStepInvoiceBody: "Voeg artikelen toe, stel betaalvoorwaarden in en verstuur de factuur.",
+  billingStepPaidTitle: "Word sneller betaald",
+  billingStepPaidBody: "Registreer betalingen en houd uw kasstroom bij.",
   billingNoCustomersBody:
     "Een klant draagt het adres, het btw-nummer en de betaaltermijn waarmee elke factuur die u voor hen opmaakt begint.",
   billingNoProductsTitle: "Uw prijslijst is leeg",

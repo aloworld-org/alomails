@@ -2346,6 +2346,13 @@ export const en = {
   billingNoCustomersTitle: "No customers yet",
   billingNoCustomersBody:
     "A customer carries the address, VAT id and payment terms every invoice you raise for them starts from.",
+  billingGetStarted: "Get started in 3 simple steps",
+  billingStepCustomerTitle: "Add your first customer",
+  billingStepCustomerBody: "Create a customer profile with their billing details.",
+  billingStepInvoiceTitle: "Create your first invoice",
+  billingStepInvoiceBody: "Add items, set payment terms and issue it.",
+  billingStepPaidTitle: "Get paid faster",
+  billingStepPaidBody: "Record payments and keep track of your cash flow.",
   billingNoProductsTitle: "Your price list is empty",
   billingNoProductsBody:
     "Add the things you sell once, then pick them when you raise a quote or an invoice.",

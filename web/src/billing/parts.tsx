@@ -2,7 +2,7 @@
 // customers and the price list are visibly one module rather than two screens
 // that drifted apart. Presentational only: no data loading, no rules.
 import type { FormEvent, ReactNode } from "react";
-import { X } from "lucide-react";
+import { Plus, Search, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { strings } from "../i18n";
@@ -31,14 +31,10 @@ export function Toolbar({
 }) {
   return (
     <div className={styles.toolbar}>
-      <input
-        className={styles.search}
-        type="search"
-        value={search}
-        onChange={(e) => onSearch(e.target.value)}
-        placeholder={searchLabel}
-        aria-label={searchLabel}
-      />
+      <label className={styles.searchWrap}>
+        <input className={styles.search} type="search" value={search} onChange={(e) => onSearch(e.target.value)} placeholder={searchLabel} aria-label={searchLabel} />
+        <Search aria-hidden="true" />
+      </label>
       <label className={styles.toggle}>
         <input
           type="checkbox"
@@ -48,7 +44,7 @@ export function Toolbar({
         {strings.billingShowArchived}
       </label>
       {busy && <Spinner size={16} />}
-      <Button onClick={onCreate}>{createLabel}</Button>
+      <Button icon={<Plus aria-hidden="true" />} onClick={onCreate}>{createLabel}</Button>
     </div>
   );
 }

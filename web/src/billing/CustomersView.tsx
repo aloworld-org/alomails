@@ -3,7 +3,7 @@
 // always be able to name the party it was raised for — so the list has an
 // archive action and an "include archived" view, never a delete.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Building2 } from "lucide-react";
+import { Building2, CircleDollarSign, FileText, UserRound } from "lucide-react";
 
 import { strings } from "../i18n";
 import { useDialogs } from "../ds";
@@ -87,13 +87,19 @@ export function CustomersView() {
       {error !== null && <ErrorBanner message={error} />}
 
       {customers.length === 0 && !loading ? (
-        <EmptyState
-          Icon={Building2}
-          title={strings.billingNoCustomersTitle}
-          body={strings.billingNoCustomersBody}
-          cta={strings.billingNewCustomer}
-          onCta={() => setEditing(null)}
-        />
+        <div className={styles.customerEmptyLayout}>
+          <div className={styles.customerEmptyCard}>
+            <EmptyState Icon={Building2} title={strings.billingNoCustomersTitle} body={strings.billingNoCustomersBody} cta={strings.billingNewCustomer} onCta={() => setEditing(null)} />
+          </div>
+          <section className={styles.getStarted} aria-labelledby="billing-get-started">
+            <h2 id="billing-get-started">{strings.billingGetStarted}</h2>
+            <ol>
+              <li><span>1</span><UserRound aria-hidden="true" /><div><strong>{strings.billingStepCustomerTitle}</strong><p>{strings.billingStepCustomerBody}</p></div></li>
+              <li><span>2</span><FileText aria-hidden="true" /><div><strong>{strings.billingStepInvoiceTitle}</strong><p>{strings.billingStepInvoiceBody}</p></div></li>
+              <li><span>3</span><CircleDollarSign aria-hidden="true" /><div><strong>{strings.billingStepPaidTitle}</strong><p>{strings.billingStepPaidBody}</p></div></li>
+            </ol>
+          </section>
+        </div>
       ) : shown.length === 0 && !loading ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
