@@ -227,7 +227,7 @@ impl SitePublicStore {
         site: &PublishedSite,
     ) -> Result<Vec<SiteCatalogSnapshot>> {
         let rows = sqlx::query_as::<_, SiteCatalogSnapshotRow>(
-            "SELECT catalog_id, name, currency, categories, items \
+            "SELECT catalog_id, name, currency, orders_enabled, categories, items \
              FROM site_catalog_snapshots \
              WHERE tenant_id = $1 AND publish_id = $2 ORDER BY catalog_id",
         )

@@ -175,6 +175,8 @@ pub mod site_generation;
 pub mod site_heatmap;
 pub mod site_leads;
 pub mod site_model;
+pub mod site_order_notify;
+pub mod site_orders;
 pub mod site_page_protection;
 pub mod site_pages;
 pub mod site_posts;
@@ -183,6 +185,7 @@ mod site_public_analytics;
 pub mod site_public_conversions;
 pub mod site_public_forms;
 pub mod site_public_heatmap;
+pub mod site_public_orders;
 pub mod site_public_protection;
 pub mod site_publish;
 pub mod site_publish_schedule;
@@ -395,9 +398,9 @@ pub use id::{
     InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
     InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
     SiteCatalogCategoryId, SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteFormId,
-    SiteFormSubmissionId, SiteId, SiteLeadLinkId, SitePageId, SitePostId, SitePublishId,
-    SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId,
-    UserId,
+    SiteFormSubmissionId, SiteId, SiteLeadLinkId, SiteOrderId, SitePageId, SitePostId,
+    SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
+    TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -487,6 +490,12 @@ pub use site_heatmap::{
 };
 pub use site_leads::{SiteLeadDeal, SiteLeadDraft, SiteLeadLink};
 pub use site_model::{SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope};
+pub use site_order_notify::OrderNotification;
+pub use site_orders::{
+    ORDER_EMAIL_MAX_CHARS, ORDER_MAX_LINES, ORDER_MAX_QUANTITY, ORDER_NAME_MAX_CHARS,
+    ORDER_NOTE_MAX_CHARS, ORDER_PHONE_MAX_CHARS, OrderContact, OrderRequestLine, SiteOrder,
+    SiteOrderLine, SiteOrderStatus, normalize_order_contact, normalize_order_lines,
+};
 pub use site_page_protection::{
     SITE_PAGE_PASSWORD_MAX_CHARS, SITE_PAGE_PASSWORD_MIN_CHARS, SitePageProtection,
     validate_site_page_password,

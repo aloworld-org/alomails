@@ -88,6 +88,10 @@ pub struct SiteCatalog {
     pub name: String,
     /// ISO 4217 alphabetic code, uppercase.
     pub currency: String,
+    /// Whether the published pages of this catalog carry an order form
+    /// ([`crate::site_orders`]). Frozen into each publish, so switching it
+    /// takes effect at the next publish — exactly like a price change.
+    pub orders_enabled: bool,
     pub created_at: OffsetDateTime,
     pub updated_at: OffsetDateTime,
 }
@@ -96,6 +100,8 @@ pub struct SiteCatalog {
 pub struct SiteCatalogInput<'a> {
     pub name: &'a str,
     pub currency: &'a str,
+    /// Offer an order form on the published pages that show this catalog.
+    pub orders_enabled: bool,
 }
 
 /// One grouping inside a catalog.
@@ -149,14 +155,15 @@ impl AccountStore {
         let currency = validate_currency(input.currency)?;
         let id = SiteCatalogId::generate();
         let done = sqlx::query(
-            "INSERT INTO site_catalogs (tenant_id, site_id, id, name, currency) \
-             SELECT $1, $2, $3, $4, $5 FROM sites WHERE tenant_id = $1 AND id = $2",
+            "INSERT INTO site_catalogs (tenant_id, site_id, id, name, currency, orders_enabled) \
+             SELECT $1, $2, $3, $4, $5, $6 FROM sites WHERE tenant_id = $1 AND id = $2",
         )
         .bind(self.tenant.as_str())
         .bind(site.as_str())
         .bind(id.as_str())
         .bind(&name)
         .bind(&currency)
+        .bind(input.orders_enabled)
         .execute(&self.pool)
         .await
         .map_err(StoreError::Db)?;
@@ -172,7 +179,8 @@ impl AccountStore {
     /// [`StoreError::Db`] on a database failure.
     pub async fn site_catalogs(&self, site: &SiteId) -> Result<Vec<SiteCatalog>> {
         let rows = sqlx::query_as::<_, SiteCatalogRow>(
-            "SELECT id, name, currency, created_at, updated_at FROM site_catalogs \
+            "SELECT id, name, currency, orders_enabled, created_at, updated_at \
+             FROM site_catalogs \
              WHERE tenant_id = $1 AND site_id = $2 ORDER BY created_at, id",
         )
         .bind(self.tenant.as_str())
@@ -193,7 +201,8 @@ impl AccountStore {
         catalog: &SiteCatalogId,
     ) -> Result<Option<SiteCatalog>> {
         let row = sqlx::query_as::<_, SiteCatalogRow>(
-            "SELECT id, name, currency, created_at, updated_at FROM site_catalogs \
+            "SELECT id, name, currency, orders_enabled, created_at, updated_at \
+             FROM site_catalogs \
              WHERE tenant_id = $1 AND site_id = $2 AND id = $3",
         )
         .bind(self.tenant.as_str())
@@ -221,7 +230,8 @@ impl AccountStore {
         let name = validate_catalog_name(input.name, "catalog name")?;
         let currency = validate_currency(input.currency)?;
         let done = sqlx::query(
-            "UPDATE site_catalogs SET name = $4, currency = $5, updated_at = now() \
+            "UPDATE site_catalogs \
+                SET name = $4, currency = $5, orders_enabled = $6, updated_at = now() \
              WHERE tenant_id = $1 AND site_id = $2 AND id = $3",
         )
         .bind(self.tenant.as_str())
@@ -229,6 +239,7 @@ impl AccountStore {
         .bind(catalog.as_str())
         .bind(&name)
         .bind(&currency)
+        .bind(input.orders_enabled)
         .execute(&self.pool)
         .await
         .map_err(StoreError::Db)?;
@@ -630,6 +641,7 @@ struct SiteCatalogRow {
     id: String,
     name: String,
     currency: String,
+    orders_enabled: bool,
     created_at: OffsetDateTime,
     updated_at: OffsetDateTime,
 }
@@ -640,6 +652,7 @@ impl SiteCatalogRow {
             id: SiteCatalogId::new(self.id),
             name: self.name,
             currency: self.currency,
+            orders_enabled: self.orders_enabled,
             created_at: self.created_at,
             updated_at: self.updated_at,
         }

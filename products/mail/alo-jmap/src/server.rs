@@ -33,8 +33,8 @@ use crate::{
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
-    sites_attribution, sites_conversions, sites_heatmap, sites_templates, snooze, spaces, tasks,
-    unsubscribe, wopi, workspace_search,
+    sites_attribution, sites_conversions, sites_heatmap, sites_orders, sites_templates, snooze,
+    spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -392,6 +392,12 @@ pub fn app_with_site_domain_dns(
         .route(
             "/sites/{id}/domains/{domain}/verify",
             post(sites::verify_domain),
+        )
+        .route("/sites/{id}/orders", get(sites_orders::list_orders))
+        .route("/sites/{id}/orders.csv", get(sites_orders::export_orders))
+        .route(
+            "/sites/{id}/orders/{order}",
+            put(sites_orders::set_order_status).delete(sites_orders::delete_order),
         )
         .route("/sites/{id}/submissions", get(sites::list_submissions))
         .route(

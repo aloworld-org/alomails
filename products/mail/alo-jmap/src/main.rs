@@ -143,6 +143,22 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Background catalog-order notifier (alo Sites, ADR 0036): deliver each
+    // new order request to the site owner's inbox as an internal message.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(30));
+            loop {
+                tick.tick().await;
+                let delivered = alo_jmap::site_order_notify::run_due(&store).await;
+                if delivered > 0 {
+                    tracing::info!(delivered, "catalog-order notification sweep");
+                }
+            }
+        });
+    }
+
     // Background scheduled-publish sweeper (alo Sites, ADR 0036): put each
     // website whose chosen moment has arrived on the internet, through the
     // scheduling user's own account door. Every 30 seconds, so "09:00" means

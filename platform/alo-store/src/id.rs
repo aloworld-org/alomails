@@ -249,6 +249,11 @@ opaque_id!(
     SiteCatalogItemId
 );
 opaque_id!(
+    /// One order request a visitor placed from a published catalog — a
+    /// request the owner confirms by hand, never a paid sale.
+    SiteOrderId
+);
+opaque_id!(
     /// A billing customer — the company or person a tenant invoices
     /// (alo Billing, ADR 0035).
     BillingCustomerId

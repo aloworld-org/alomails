@@ -69,6 +69,7 @@ async fn publishing_freezes_the_catalog_and_hidden_items_never_leave_the_editor(
             &SiteCatalogInput {
                 name: "Harbour menu",
                 currency: "EUR",
+                orders_enabled: false,
             },
         )
         .await
@@ -251,6 +252,7 @@ async fn a_page_pointing_at_a_deleted_catalog_refuses_to_publish() {
             &SiteCatalogInput {
                 name: "Menu",
                 currency: "EUR",
+                orders_enabled: false,
             },
         )
         .await

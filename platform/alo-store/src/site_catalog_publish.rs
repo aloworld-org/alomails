@@ -64,6 +64,10 @@ pub struct SiteCatalogSnapshot {
     pub name: String,
     /// ISO 4217 code the prices in `items` are denominated in.
     pub currency: String,
+    /// Whether this publish offers an order form over the catalog. Frozen
+    /// like everything else here: what the published page shows is what the
+    /// public order door ([`crate::site_public_orders`]) accepts.
+    pub orders_enabled: bool,
     /// Groupings in display order; a category with no visible item is kept so
     /// the frozen structure matches what the editor saw.
     pub categories: Vec<SiteCatalogSnapshotCategory>,
@@ -84,7 +88,8 @@ impl AccountStore {
         publish: &SitePublishId,
     ) -> Result<Vec<SiteCatalogSnapshot>> {
         let rows = sqlx::query_as::<_, SiteCatalogSnapshotRow>(
-            "SELECT sn.catalog_id, sn.name, sn.currency, sn.categories, sn.items \
+            "SELECT sn.catalog_id, sn.name, sn.currency, sn.orders_enabled, \
+                    sn.categories, sn.items \
              FROM site_catalog_snapshots sn \
              JOIN site_publishes p ON p.tenant_id = sn.tenant_id AND p.id = sn.publish_id \
              WHERE sn.tenant_id = $1 AND p.site_id = $2 AND sn.publish_id = $3 \
@@ -165,14 +170,16 @@ impl AccountStore {
             })?;
             sqlx::query(
                 "INSERT INTO site_catalog_snapshots \
-                    (tenant_id, publish_id, catalog_id, name, currency, categories, items) \
-                 VALUES ($1, $2, $3, $4, $5, $6, $7)",
+                    (tenant_id, publish_id, catalog_id, name, currency, orders_enabled, \
+                     categories, items) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
             )
             .bind(self.tenant.as_str())
             .bind(publish.as_str())
             .bind(snapshot.catalog_id.as_str())
             .bind(&snapshot.name)
             .bind(&snapshot.currency)
+            .bind(snapshot.orders_enabled)
             .bind(sqlx::types::Json(categories))
             .bind(sqlx::types::Json(items))
             .execute(&mut **tx)
@@ -188,8 +195,8 @@ impl AccountStore {
         catalog: &SiteCatalogId,
         tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
     ) -> Result<SiteCatalogSnapshot> {
-        let header: Option<(String, String)> = sqlx::query_as(
-            "SELECT name, currency FROM site_catalogs \
+        let header: Option<(String, String, bool)> = sqlx::query_as(
+            "SELECT name, currency, orders_enabled FROM site_catalogs \
              WHERE tenant_id = $1 AND site_id = $2 AND id = $3",
         )
         .bind(self.tenant.as_str())
@@ -198,7 +205,7 @@ impl AccountStore {
         .fetch_optional(&mut **tx)
         .await
         .map_err(StoreError::Db)?;
-        let Some((name, currency)) = header else {
+        let Some((name, currency, orders_enabled)) = header else {
             return Err(StoreError::Conflict(
                 "a page references a catalog that no longer exists".to_owned(),
             ));
@@ -236,6 +243,7 @@ impl AccountStore {
             catalog_id: catalog.clone(),
             name,
             currency,
+            orders_enabled,
             categories: categories
                 .into_iter()
                 .map(|(slug, name)| SiteCatalogSnapshotCategory { slug, name })
@@ -279,6 +287,7 @@ pub(crate) struct SiteCatalogSnapshotRow {
     catalog_id: String,
     name: String,
     currency: String,
+    orders_enabled: bool,
     categories: sqlx::types::Json<Value>,
     items: sqlx::types::Json<Value>,
 }
@@ -295,6 +304,7 @@ impl SiteCatalogSnapshotRow {
             catalog_id: SiteCatalogId::new(self.catalog_id),
             name: self.name,
             currency: self.currency,
+            orders_enabled: self.orders_enabled,
             categories,
             items,
         })

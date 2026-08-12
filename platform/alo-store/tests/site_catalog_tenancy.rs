@@ -76,6 +76,7 @@ async fn a_foreign_tenant_can_neither_read_nor_write_a_catalog() {
             &SiteCatalogInput {
                 name: " Harbour menu ",
                 currency: "eur",
+                orders_enabled: false,
             },
         )
         .await
@@ -125,6 +126,7 @@ async fn a_foreign_tenant_can_neither_read_nor_write_a_catalog() {
                 &SiteCatalogInput {
                     name: "Stolen",
                     currency: "USD",
+                    orders_enabled: false,
                 },
             )
             .await,
@@ -217,6 +219,7 @@ async fn catalog_writes_are_validated_whole() {
             &SiteCatalogInput {
                 name: "Menu",
                 currency: "EUR",
+                orders_enabled: false,
             },
         )
         .await
@@ -227,6 +230,7 @@ async fn catalog_writes_are_validated_whole() {
             &SiteCatalogInput {
                 name: "Rooms",
                 currency: "EUR",
+                orders_enabled: false,
             },
         )
         .await
@@ -238,7 +242,8 @@ async fn catalog_writes_are_validated_whole() {
                 &site,
                 &SiteCatalogInput {
                     name: "Menu",
-                    currency: "EURO"
+                    currency: "EURO",
+                    orders_enabled: false,
                 }
             )
             .await,
@@ -353,6 +358,7 @@ async fn importing_from_base_copies_rows_once_and_refuses_a_price_it_cannot_read
             &SiteCatalogInput {
                 name: "Menu",
                 currency: "EUR",
+                orders_enabled: false,
             },
         )
         .await
