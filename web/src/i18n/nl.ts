@@ -3138,9 +3138,25 @@ export const nl: Partial<Catalog> = {
   sitesGenerationEmpty:
     "Het gegenereerde concept bevatte geen pagina. Probeer een uitgebreidere beschrijving.",
   sitesGenerationUnavailable:
-    "Genereren is niet ingesteld voor deze werkruimte. Begin met een lege site of kies hieronder een stijl.",
-  sitesChooseTemplate: "Kies een beginstijl",
+    "Genereren is niet ingesteld voor deze werkruimte. Begin met een lege site of kies hieronder een sjabloon.",
+  sitesChooseTemplate: "Kies een beginpunt",
   sitesBlankTemplate: "Lege site",
+  sitesBlankTemplateSummary:
+    "Een lege startpagina. U kiest zelf elke sectie.",
+  sitesTemplatePageCount: (count: number) =>
+    count === 1 ? "1 pagina" : `${count} pagina’s`,
+  sitesTemplatesLoading: "De sjablonen worden geladen…",
+  sitesTemplatesLoadFailed:
+    "De sjablonen konden niet worden geladen. U kunt nog steeds met een lege site beginnen.",
+  sitesTemplatePreviewTitle: (name: string) => `Voorbeeld van ${name}`,
+  sitesTemplatePreviewPages: "Pagina’s in dit sjabloon",
+  sitesTemplatePreviewLoading: "Het voorbeeld wordt geladen…",
+  sitesTemplatePreviewFailed:
+    "Dit voorbeeld kon niet worden geladen. U kunt de website nog steeds met dit sjabloon maken.",
+  sitesTemplatePreviewNote:
+    "Een afbeelding van de pagina. Wissel hierboven van pagina; elk woord en elke sectie past u daarna zelf aan.",
+  sitesBlankPreviewNote:
+    "U begint met een lege startpagina en voegt zelf de secties toe die u wilt.",
   sitesHomePageTitle: "Home",
   sitesAiEditTitle: "Beschrijf een paginawijziging",
   sitesAiEditBody:
@@ -3202,7 +3218,7 @@ export const nl: Partial<Catalog> = {
   sitesStatusLive: "Online",
   sitesNewSiteTitle: "Nieuwe website",
   sitesNewSiteSubtitle:
-    "Begin met een beschrijving of kies een kant-en-klare stijl.",
+    "Begin met een beschrijving of kies een van de kant-en-klare sjablonen.",
   sitesFieldName: "Websitenaam",
   sitesFieldSubdomain: "Adres",
   sitesSubdomainHint:

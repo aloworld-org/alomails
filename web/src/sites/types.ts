@@ -576,6 +576,38 @@ export interface GeneratedSiteDraft {
   pages: SitePageDetail[];
 }
 
+/** One page of a shipped template, as the catalog describes it — enough for a
+ *  card to say what the template contains without fetching a preview per
+ *  page. `path` is the address the page would serve at, home being `/`. */
+export interface SiteTemplatePage {
+  title: string;
+  slug: string;
+  home: boolean;
+  path: string;
+  sectionKinds: string[];
+}
+
+/** One shipped template as `/sites/templates` answers it. The catalog is part
+ *  of the build rather than tenant data: every workspace is offered the same
+ *  list, in the same order, and `version` changes only when a release changes
+ *  the template's content. */
+export interface SiteTemplate {
+  id: string;
+  version: number;
+  kind: string;
+  name: string;
+  summary: string;
+  themePreset: string;
+  pages: SiteTemplatePage[];
+}
+
+/** The atomic draft returned by instantiating a template: the same shape the
+ *  description-to-site endpoint answers with, plus the template it came
+ *  from. Like a generated site, it is a private draft until published. */
+export interface TemplateSiteDraft extends GeneratedSiteDraft {
+  template: { id: string; version: number };
+}
+
 export interface SiteEditTarget {
   index: number;
   type: SectionKind;

@@ -2983,7 +2983,7 @@ export const en = {
   sitesStatusLive: "Live",
   sitesNewSiteTitle: "New website",
   sitesNewSiteSubtitle:
-    "Start from a description or choose a ready-made style.",
+    "Start from a description, or choose one of the ready-made templates.",
   sitesStartingPoint: "How to start",
   sitesGenerateChoice: "Generate from a description",
   sitesTemplateChoice: "Start with a template",
@@ -3000,9 +3000,25 @@ export const en = {
   sitesGenerationEmpty:
     "The generated draft did not contain a page. Try a fuller description.",
   sitesGenerationUnavailable:
-    "Generation is not configured for this workspace. Start with a blank site or choose a style below.",
-  sitesChooseTemplate: "Choose a starting style",
+    "Generation is not configured for this workspace. Start with a blank site or choose a template below.",
+  sitesChooseTemplate: "Choose a starting point",
   sitesBlankTemplate: "Blank site",
+  sitesBlankTemplateSummary:
+    "An empty Home page. You choose every section yourself.",
+  sitesTemplatePageCount: (count: number) =>
+    count === 1 ? "1 page" : `${count} pages`,
+  sitesTemplatesLoading: "Loading the templates…",
+  sitesTemplatesLoadFailed:
+    "The templates could not be loaded. You can still start from a blank site.",
+  sitesTemplatePreviewTitle: (name: string) => `Preview of ${name}`,
+  sitesTemplatePreviewPages: "Pages in this template",
+  sitesTemplatePreviewLoading: "Loading the preview…",
+  sitesTemplatePreviewFailed:
+    "This preview could not be loaded. You can still create the website from this template.",
+  sitesTemplatePreviewNote:
+    "A picture of the page. Switch pages above; every word and section is yours to edit afterwards.",
+  sitesBlankPreviewNote:
+    "You start with an empty Home page and add the sections you want.",
   sitesHomePageTitle: "Home",
   sitesAiEditTitle: "Describe a page change",
   sitesAiEditBody:

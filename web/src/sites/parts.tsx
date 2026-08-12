@@ -80,6 +80,7 @@ export function DialogFrame({
   busy,
   canSubmit,
   submitLabel,
+  wide = false,
   onClose,
   onSubmit,
   children,
@@ -91,6 +92,10 @@ export function DialogFrame({
   busy: boolean;
   canSubmit: boolean;
   submitLabel: string;
+  /** Widens the modal for content a form column cannot hold — a gallery of
+   *  cards with a rendered preview beside them. The narrow form stays the
+   *  default, so nothing but the screen that asked for room gets it. */
+  wide?: boolean;
   onClose: () => void;
   onSubmit: () => void;
   children: ReactNode;
@@ -102,7 +107,7 @@ export function DialogFrame({
   return (
     <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
       <form
-        className={styles.modal}
+        className={wide ? `${styles.modal} ${styles.modalWide}` : styles.modal}
         role="dialog"
         aria-modal="true"
         aria-label={title}

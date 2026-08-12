@@ -1,14 +1,16 @@
 // Website onboarding has two complete, visible paths: describe the business
-// and let alo prepare a private draft, or start manually from a shipped style.
-// AI is acceleration, never a gate: an unconfigured tenant moves directly to
-// the manual path, which creates a styled site and Home page end to end.
+// and let alo prepare a private draft, or start manually from a shipped
+// template — a finished three-page site the tenant then edits. AI is
+// acceleration, never a gate: an unconfigured tenant moves directly to the
+// manual path, which creates a real site with its pages end to end.
 import { useEffect, useRef, useState } from "react";
 import { Globe, LayoutTemplate, Sparkles } from "lucide-react";
 
 import { strings } from "../i18n";
 import { SitesError, sitesMessage, useSitesApi } from "./api";
 import { DialogFrame, Field } from "./parts";
-import type { Site, SitePage, ThemePreset } from "./types";
+import { TemplateGallery } from "./TemplateGallery";
+import type { Site, SitePage } from "./types";
 import styles from "./SitesModule.module.css";
 
 /** How long the address field stays still before the availability question is
@@ -104,8 +106,7 @@ export function NewSiteDialog({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [domain, setDomain] = useState<string | null>(null);
-  const [presets, setPresets] = useState<ThemePreset[] | null>(null);
-  const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
+  const [template, setTemplate] = useState<string | null>(null);
   const checkSeq = useRef(0);
   const addressEdited = useRef(false);
 
@@ -125,22 +126,6 @@ export function NewSiteDialog({
       cancelled = true;
     };
   }, [api]);
-
-  useEffect(() => {
-    if (mode !== "template" || presets !== null) return;
-    let cancelled = false;
-    api.themePresets().then(
-      (items) => {
-        if (!cancelled) setPresets(items);
-      },
-      () => {
-        if (!cancelled) setPresets([]);
-      },
-    );
-    return () => {
-      cancelled = true;
-    };
-  }, [api, mode, presets]);
 
   useEffect(() => {
     if (mode !== "template") return;
@@ -195,18 +180,30 @@ export function NewSiteDialog({
     }
   }
 
+  /** The manual path: one shipped template instantiated in a single server
+   *  transaction, or — with no template chosen — a blank site whose Home page
+   *  is created straight away, so both endings land in the editor (S1.30c). */
   async function createFromTemplate() {
     setBusy(true);
     setError(null);
+    const draft = {
+      name: name.trim(),
+      subdomain: normalizeSiteAddress(subdomain, domain),
+    };
     try {
-      const site = await api.createSite({
-        name: name.trim(),
-        subdomain: normalizeSiteAddress(subdomain, domain),
-      });
-      if (selectedPreset !== null) {
-        await api.setTheme(site.id, { schema_version: 1, preset: selectedPreset });
+      if (template !== null) {
+        const created = await api.createSiteFromTemplate(template, draft);
+        const home = created.pages.find((page) => page.home) ?? created.pages[0];
+        if (home === undefined) throw new SitesError(422, strings.sitesGenerationEmpty);
+        onCreated(created.site, home);
+        return;
       }
-      const home = await api.createPage(site.id, { title: strings.sitesHomePageTitle, slug: "", home: true });
+      const site = await api.createSite(draft);
+      const home = await api.createPage(site.id, {
+        title: strings.sitesHomePageTitle,
+        slug: "",
+        home: true,
+      });
       onCreated(site, home);
     } catch (err) {
       setError(sitesMessage(err, strings.sitesSaveFailed));
@@ -227,7 +224,10 @@ export function NewSiteDialog({
 
   return (
     <DialogFrame
-      Icon={mode === "generate" ? Sparkles : Globe}
+      Icon={mode === "generate" ? Sparkles : LayoutTemplate}
+      // The gallery needs the room its cards and preview ask for; the
+      // description path stays the narrow form it always was.
+      wide={mode === "template"}
       title={strings.sitesNewSiteTitle}
       subtitle={strings.sitesNewSiteSubtitle}
       error={error}
@@ -309,41 +309,12 @@ export function NewSiteDialog({
           {missingTemplateValue !== null && (
             <p className={styles.submitRequirement} role="status">{missingTemplateValue}</p>
           )}
-          <fieldset className={styles.templatePicker}>
-            <legend>{strings.sitesChooseTemplate}</legend>
-            <div className={styles.presetGrid}>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={selectedPreset === null}
-                className={selectedPreset === null ? `${styles.templateBlank} ${styles.presetCardActive}` : styles.templateBlank}
-                onClick={() => setSelectedPreset(null)}
-              >
-                <LayoutTemplate aria-hidden="true" />
-                <span>{strings.sitesBlankTemplate}</span>
-              </button>
-              {(presets ?? []).map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  role="radio"
-                  aria-checked={selectedPreset === preset.id}
-                  className={selectedPreset === preset.id ? `${styles.presetCard} ${styles.presetCardActive}` : styles.presetCard}
-                  style={{ background: preset.palette.background, borderColor: preset.palette.border }}
-                  onClick={() => setSelectedPreset(preset.id)}
-                >
-                  <span className={styles.presetName} style={{ color: preset.palette.text, fontFamily: preset.typography.headingFamily, fontWeight: preset.typography.headingWeight }}>
-                    {preset.name}
-                  </span>
-                  <span className={styles.presetSwatches} aria-hidden="true">
-                    {[preset.palette.primary, preset.palette.surface, preset.palette.mutedText].map((color) => (
-                      <span key={color} className={styles.presetSwatch} style={{ background: color }} />
-                    ))}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </fieldset>
+          <TemplateGallery
+            selected={template}
+            onSelect={(choice) =>
+              setTemplate(choice.kind === "blank" ? null : choice.template.id)
+            }
+          />
         </>
       )}
     </DialogFrame>

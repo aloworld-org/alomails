@@ -571,9 +571,9 @@ describe("creating a site", () => {
         body: { reason: "unconfigured", detail: "AI is not configured for this tenant" },
       },
       {
-        match: (url, method) => method === "GET" && url.endsWith("/sites/theme-presets"),
+        match: (url, method) => method === "GET" && url.endsWith("/sites/templates"),
         status: 200,
-        body: { presets: [] },
+        body: { templates: [] },
       },
       {
         match: (url, method) => method === "POST" && url.endsWith("/sites"),
@@ -607,7 +607,9 @@ describe("creating a site", () => {
 
     expect(await screen.findByText(strings.sitesGenerationUnavailable)).toBeTruthy();
     expect(screen.getByLabelText(strings.sitesFieldName)).toBeTruthy();
-    expect(screen.getByRole("radio", { name: strings.sitesBlankTemplate })).toBeTruthy();
+    expect(
+      await screen.findByRole("radio", { name: new RegExp(strings.sitesBlankTemplate, "i") }),
+    ).toBeTruthy();
     fireEvent.change(screen.getByLabelText(strings.sitesFieldName), {
       target: { value: "Manual Studio" },
     });

@@ -3179,9 +3179,25 @@ export const fr: Partial<Catalog> = {
   sitesGenerationEmpty:
     "Le brouillon généré ne contient aucune page. Essayez une description plus complète.",
   sitesGenerationUnavailable:
-    "La génération n’est pas configurée pour cet espace. Commencez avec un site vierge ou choisissez un style ci-dessous.",
-  sitesChooseTemplate: "Choisissez un style de départ",
+    "La génération n’est pas configurée pour cet espace. Commencez avec un site vierge ou choisissez un modèle ci-dessous.",
+  sitesChooseTemplate: "Choisissez un point de départ",
   sitesBlankTemplate: "Site vierge",
+  sitesBlankTemplateSummary:
+    "Une page d’accueil vide. Vous choisissez vous-même chaque section.",
+  sitesTemplatePageCount: (count: number) =>
+    count === 1 ? "1 page" : `${count} pages`,
+  sitesTemplatesLoading: "Chargement des modèles…",
+  sitesTemplatesLoadFailed:
+    "Les modèles n’ont pas pu être chargés. Vous pouvez toujours commencer avec un site vierge.",
+  sitesTemplatePreviewTitle: (name: string) => `Aperçu de ${name}`,
+  sitesTemplatePreviewPages: "Pages de ce modèle",
+  sitesTemplatePreviewLoading: "Chargement de l’aperçu…",
+  sitesTemplatePreviewFailed:
+    "Cet aperçu n’a pas pu être chargé. Vous pouvez tout de même créer le site à partir de ce modèle.",
+  sitesTemplatePreviewNote:
+    "Une image de la page. Changez de page ci-dessus ; chaque mot et chaque section restent modifiables ensuite.",
+  sitesBlankPreviewNote:
+    "Vous commencez avec une page d’accueil vide et ajoutez les sections de votre choix.",
   sitesHomePageTitle: "Accueil",
   sitesAiEditTitle: "Décrivez une modification de page",
   sitesAiEditBody:
@@ -3243,7 +3259,7 @@ export const fr: Partial<Catalog> = {
   sitesStatusLive: "En ligne",
   sitesNewSiteTitle: "Nouveau site web",
   sitesNewSiteSubtitle:
-    "Partez d’une description ou choisissez un style prêt à l’emploi.",
+    "Partez d’une description ou choisissez l’un des modèles prêts à l’emploi.",
   sitesFieldName: "Nom du site",
   sitesFieldSubdomain: "Adresse",
   sitesSubdomainHint:

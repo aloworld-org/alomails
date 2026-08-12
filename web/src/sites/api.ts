@@ -51,6 +51,8 @@ import type {
   SitePublishSchedule,
   SitePublishVersion,
   SiteSubmission,
+  SiteTemplate,
+  TemplateSiteDraft,
   SiteCollection,
   SiteCollectionDraft,
   SiteCollectionPreview,
@@ -141,6 +143,40 @@ export class SitesApi {
    *  site draft. Publishing remains a separate, explicit owner action. */
   generateSite(description: string): Promise<GeneratedSiteDraft> {
     return this.#write<GeneratedSiteDraft>("POST", "/sites/generate", { description });
+  }
+
+  /** The templates this build ships, in gallery order. The catalog is the
+   *  same for every workspace — it carries no tenant data — but the route
+   *  still authenticates, so a failure is treated like any other. */
+  siteTemplates(): Promise<SiteTemplate[]> {
+    return this.#read<{ templates?: SiteTemplate[] }>("/sites/templates").then(
+      (r) => r.templates ?? [],
+    );
+  }
+
+  /** One template page rendered by the server as a complete, self-contained
+   *  HTML document — what the gallery shows. Answers text, not JSON; the
+   *  caller puts it in a sandboxed iframe via `srcdoc`. Without `page` the
+   *  template's home page is rendered. */
+  async templatePreview(templateId: string, page?: string): Promise<string> {
+    const path = `/sites/templates/${encodeURIComponent(templateId)}/preview`;
+    const res = await this.#send(
+      page === undefined ? path : `${path}?page=${encodeURIComponent(page)}`,
+      { method: "GET" },
+    );
+    await SitesApi.#rejectFailed(res);
+    return res.text();
+  }
+
+  /** Creates a draft site holding the template's pages, theme and contact
+   *  form, in one server transaction. Nothing is published: making a template
+   *  live stays an explicit act, exactly as for a generated site. */
+  createSiteFromTemplate(templateId: string, draft: SiteDraft): Promise<TemplateSiteDraft> {
+    return this.#write<TemplateSiteDraft>(
+      "POST",
+      `/sites/templates/${encodeURIComponent(templateId)}`,
+      draft,
+    );
   }
 
   /** One site with its current publish (`null` while unpublished). */
