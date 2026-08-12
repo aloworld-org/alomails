@@ -53,6 +53,12 @@ import type {
   SiteSubmission,
   SiteTemplate,
   TemplateSiteDraft,
+  SiteCatalog,
+  SiteCatalogCategory,
+  SiteCatalogDetail,
+  SiteCatalogDraft,
+  SiteCatalogItem,
+  SiteCatalogItemDraft,
   SiteCollection,
   SiteCollectionDraft,
   SiteCollectionPreview,
@@ -551,6 +557,115 @@ export class SitesApi {
     );
   }
 
+  /** The site's catalogs, without their items: a site with four catalogs must
+   *  not pay for four hundred items to draw a list. */
+  catalogs(siteId: string): Promise<SiteCatalog[]> {
+    return this.#read<{ catalogs?: SiteCatalog[] }>(
+      `/sites/${encodeURIComponent(siteId)}/catalogs`,
+    ).then((response) => response.catalogs ?? []);
+  }
+
+  /** One catalog with its categories and every item, hidden ones included —
+   *  the editor's whole screen in one read. */
+  catalog(siteId: string, catalogId: string): Promise<SiteCatalogDetail> {
+    return this.#read<SiteCatalogDetail>(this.#catalogPath(siteId, catalogId));
+  }
+
+  createCatalog(siteId: string, draft: SiteCatalogDraft): Promise<SiteCatalog> {
+    return this.#write<SiteCatalog>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/catalogs`,
+      draft,
+    );
+  }
+
+  updateCatalog(
+    siteId: string,
+    catalogId: string,
+    draft: SiteCatalogDraft,
+  ): Promise<SiteCatalog> {
+    return this.#write<SiteCatalog>("PUT", this.#catalogPath(siteId, catalogId), draft);
+  }
+
+  deleteCatalog(siteId: string, catalogId: string): Promise<void> {
+    return this.#discard("DELETE", this.#catalogPath(siteId, catalogId));
+  }
+
+  createCatalogCategory(
+    siteId: string,
+    catalogId: string,
+    name: string,
+  ): Promise<SiteCatalogCategory> {
+    return this.#write<SiteCatalogCategory>(
+      "POST",
+      `${this.#catalogPath(siteId, catalogId)}/categories`,
+      { name },
+    );
+  }
+
+  updateCatalogCategory(
+    siteId: string,
+    catalogId: string,
+    categoryId: string,
+    name: string,
+  ): Promise<SiteCatalogCategory> {
+    return this.#write<SiteCatalogCategory>(
+      "PUT",
+      `${this.#catalogPath(siteId, catalogId)}/categories/${encodeURIComponent(categoryId)}`,
+      { name },
+    );
+  }
+
+  /** Removes the grouping. The items it grouped stay, uncategorised. */
+  deleteCatalogCategory(
+    siteId: string,
+    catalogId: string,
+    categoryId: string,
+  ): Promise<void> {
+    return this.#discard(
+      "DELETE",
+      `${this.#catalogPath(siteId, catalogId)}/categories/${encodeURIComponent(categoryId)}`,
+    );
+  }
+
+  createCatalogItem(
+    siteId: string,
+    catalogId: string,
+    draft: SiteCatalogItemDraft,
+  ): Promise<SiteCatalogItem> {
+    return this.#write<SiteCatalogItem>(
+      "POST",
+      `${this.#catalogPath(siteId, catalogId)}/items`,
+      draft,
+    );
+  }
+
+  /** Replaces the item whole — every field the form shows is sent every time,
+   *  so no combination of screens can leave a published card half-written. */
+  updateCatalogItem(
+    siteId: string,
+    catalogId: string,
+    itemId: string,
+    draft: SiteCatalogItemDraft,
+  ): Promise<SiteCatalogItem> {
+    return this.#write<SiteCatalogItem>(
+      "PUT",
+      `${this.#catalogPath(siteId, catalogId)}/items/${encodeURIComponent(itemId)}`,
+      draft,
+    );
+  }
+
+  deleteCatalogItem(siteId: string, catalogId: string, itemId: string): Promise<void> {
+    return this.#discard(
+      "DELETE",
+      `${this.#catalogPath(siteId, catalogId)}/items/${encodeURIComponent(itemId)}`,
+    );
+  }
+
+  #catalogPath(siteId: string, catalogId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/catalogs/${encodeURIComponent(catalogId)}`;
+  }
+
   collectionPreview(siteId: string, collectionId: string): Promise<SiteCollectionPreview> {
     return this.#read<SiteCollectionPreview>(
       `/sites/${encodeURIComponent(siteId)}/collections/${encodeURIComponent(collectionId)}/preview`,
@@ -903,6 +1018,12 @@ export class SitesApi {
         body: JSON.stringify(body),
       }),
     );
+  }
+
+  /** A write whose success carries no body (`204`). Reading one as JSON would
+   *  throw a parse error where the request in fact succeeded. */
+  async #discard(method: string, path: string): Promise<void> {
+    await SitesApi.#rejectFailed(await this.#send(path, { method }));
   }
 
   async #send(path: string, init: RequestInit): Promise<Response> {

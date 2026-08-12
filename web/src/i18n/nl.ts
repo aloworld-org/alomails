@@ -4406,6 +4406,90 @@ export const nl: Partial<Catalog> = {
   sitesWholeTranslationApprove: "Vertaling goedkeuren",
   sitesTranslationPageKind: "Pagina",
   sitesTranslationPostKind: "Bericht",
+  sitesCatalogs: "Aanbod",
+  sitesCatalogsHint:
+    "Wat deze website aanbiedt — gerechten, kamers, diensten, opleidingen. Prijzen liggen vast zodra u publiceert.",
+  sitesCatalogsLoading: "Aanbod laden...",
+  sitesCatalogsLoadFailed:
+    "Het aanbod kon niet worden geladen. Controleer uw verbinding en probeer het opnieuw.",
+  sitesCatalogLoadFailed:
+    "Deze lijst kon niet worden geopend. Controleer uw verbinding en probeer het opnieuw.",
+  sitesNewCatalog: "Nieuwe lijst",
+  sitesCatalogNoneTitle: "Nog niets in het aanbod",
+  sitesCatalogNoneBody:
+    "Een lijst is wat uw website toont — en, als u dat wilt, waaruit besteld wordt. Begin met één naam en één munt; de artikelen volgen daarna.",
+  sitesCatalogOrdersOn: "Neemt bestellingen aan",
+  sitesCatalogOrdersOff: "Geen bestelformulier",
+  sitesCatalogSettings: "Deze lijst",
+  sitesCatalogSettingsHint:
+    "De naam is alleen voor u; bezoekers zien de artikelen. Wijzigingen bereiken de live website bij uw volgende publicatie.",
+  sitesCatalogName: "Naam van de lijst",
+  sitesCatalogCurrency: "Munt",
+  sitesCatalogCurrencyHint:
+    "Drie letters, bijvoorbeeld EUR. Wijzigen leest de al ingevoerde prijzen in de nieuwe munt — het rekent ze niet om.",
+  sitesCatalogOrders: "Bestellingen aannemen uit deze lijst",
+  sitesCatalogOrdersHint:
+    "Bezoekers krijgen een bestelformulier onder de lijst. Er wordt niets betaald op de website: de bestelling komt in uw postvak en u bevestigt ze zelf. Ze verschijnt bij uw volgende publicatie.",
+  sitesCatalogCreate: "Lijst aanmaken",
+  sitesCatalogSave: "Lijst opslaan",
+  sitesCatalogSaveFailed: "De lijst kon niet worden opgeslagen.",
+  sitesCatalogDelete: "Lijst verwijderen",
+  sitesCatalogDeleteConfirm: "Verwijderen, met alles erin",
+  sitesCatalogDeleteHint:
+    "De artikelen en groepen gaan mee. Al gepubliceerde pagina’s tonen wat ze toonden tot u opnieuw publiceert.",
+  sitesCatalogDeleteFailed: "De lijst kon niet worden verwijderd.",
+  sitesCatalogGroups: "Groepen",
+  sitesCatalogGroupsHint:
+    "Optioneel. Een groep is één tussenkop op de pagina — Broden, Kamers, Opleidingen van een halve dag.",
+  sitesCatalogGroupName: "Naam van de groep",
+  sitesCatalogNewGroup: "Nieuwe groep",
+  sitesCatalogNewGroupPlaceholder: "Broden",
+  sitesCatalogAddGroup: "Groep toevoegen",
+  sitesCatalogGroupRemove: (name: string) => `Groep ${name} verwijderen`,
+  sitesCatalogGroupRemoveShort: "Verwijderen",
+  sitesCatalogGroupSaveFailed: "De groep kon niet worden opgeslagen.",
+  sitesCatalogGroupDeleteFailed: "De groep kon niet worden verwijderd.",
+  sitesCatalogItems: "Artikelen",
+  sitesCatalogItemsHint:
+    "Alles wat deze lijst aanbiedt, in de volgorde waarin de pagina het toont.",
+  sitesCatalogAddItem: "Artikel toevoegen",
+  sitesCatalogNoItemsTitle: "Deze lijst is leeg",
+  sitesCatalogNoItemsBody:
+    "Voeg toe wat u aanbiedt. Een naam volstaat om te beginnen — prijs, foto en beschrijving kunnen volgen.",
+  sitesCatalogNoPrice: "Prijs op aanvraag",
+  sitesCatalogEdit: "Bewerken",
+  sitesCatalogEditItem: (name: string) => `${name} bewerken`,
+  sitesCatalogNewItem: "Nieuw artikel",
+  sitesCatalogSaveItem: "Artikel opslaan",
+  sitesCatalogItemSubtitle:
+    "Het verschijnt op de website bij uw volgende publicatie.",
+  sitesCatalogItemName: "Naam",
+  sitesCatalogItemHandle: "Kenmerk",
+  sitesCatalogItemHandlePlaceholder: "Uit de naam",
+  sitesCatalogItemHandleHint:
+    "De korte naam die in links en op bestellingen wordt gebruikt. Laat het leeg en wij maken er een uit de naam.",
+  sitesCatalogItemPrice: (currency: string) => `Prijs (${currency})`,
+  sitesCatalogItemPriceHint:
+    "Schrijf hem zoals op een kaart — 4.50 of 4,50. Laat leeg voor prijs op aanvraag.",
+  sitesCatalogItemPriceNote: "Naast de prijs",
+  sitesCatalogItemPriceNoteHint:
+    "Een korte toevoeging — per nacht, vanaf, per persoon.",
+  sitesCatalogItemGroup: "Groep",
+  sitesCatalogItemNoGroup: "Geen groep",
+  sitesCatalogItemDescription: "Beschrijving",
+  sitesCatalogItemAvailability: "Beschikbaarheid",
+  sitesCatalogAvailabilityHint:
+    "Uitverkocht blijft zichtbaar, gemarkeerd en niet bestelbaar. Verborgen wordt helemaal niet gepubliceerd.",
+  sitesCatalogAvailable: "Beschikbaar",
+  sitesCatalogSoldOut: "Uitverkocht",
+  sitesCatalogHidden: "Verborgen",
+  sitesCatalogItemSaveFailed: "Het artikel kon niet worden opgeslagen.",
+  sitesCatalogItemDelete: "Verwijderen",
+  sitesCatalogItemDeleteConfirm: "Definitief verwijderen",
+  sitesCatalogItemDeleteLabel: (name: string) => `Verwijderen: ${name}`,
+  sitesCatalogItemDeleteConfirmLabel: (name: string) =>
+    `Definitief verwijderen: ${name}`,
+  sitesCatalogItemDeleteFailed: "Het artikel kon niet worden verwijderd.",
   sitesCollections: "Collecties",
   sitesCollectionsHint:
     "Maak van een alo Base-tabel herbruikbare kaarten voor uw website.",

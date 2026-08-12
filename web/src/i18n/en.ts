@@ -5150,6 +5150,93 @@ export const en = {
   hrErase: "Erase this record",
   hrEraseConfirm: (name: string) =>
     `Erase everything about ${name}? Their details, every note written about them and their CV are removed for good. This cannot be undone.`,
+  // What a website offers, and what it may be ordered from (ADR 0041). Two
+  // facts surprise people, so both are said in the screen rather than in a
+  // manual: an edit changes the live site only at the next publish, and
+  // taking orders is a switch on the catalog, not on the page showing it.
+  sitesCatalogs: "Catalog",
+  sitesCatalogsHint:
+    "What this website offers — dishes, rooms, services, courses. Prices are frozen the moment you publish.",
+  sitesCatalogsLoading: "Loading the catalog...",
+  sitesCatalogsLoadFailed:
+    "The catalogs could not be loaded. Check your connection and try again.",
+  sitesCatalogLoadFailed:
+    "This catalog could not be opened. Check your connection and try again.",
+  sitesNewCatalog: "New catalog",
+  sitesCatalogNoneTitle: "Nothing on offer yet",
+  sitesCatalogNoneBody:
+    "A catalog is the list your website shows — and, if you want, takes orders from. Start with one name and one currency; the items come next.",
+  sitesCatalogOrdersOn: "Takes orders",
+  sitesCatalogOrdersOff: "No order form",
+  sitesCatalogSettings: "This catalog",
+  sitesCatalogSettingsHint:
+    "The name is yours alone; visitors see the items. Changes reach the live website at your next publish.",
+  sitesCatalogName: "Catalog name",
+  sitesCatalogCurrency: "Currency",
+  sitesCatalogCurrencyHint:
+    "Three letters, for example EUR. Changing it re-reads the prices you already wrote in the new currency — it does not convert them.",
+  sitesCatalogOrders: "Take orders from this catalog",
+  sitesCatalogOrdersHint:
+    "Visitors get an order form under the list. Nothing is paid on the website — the order arrives in your inbox and you confirm it yourself. It appears at your next publish.",
+  sitesCatalogCreate: "Create catalog",
+  sitesCatalogSave: "Save catalog",
+  sitesCatalogSaveFailed: "The catalog could not be saved.",
+  sitesCatalogDelete: "Delete catalog",
+  sitesCatalogDeleteConfirm: "Delete it, with everything in it",
+  sitesCatalogDeleteHint:
+    "The items and groups go too. Pages already published keep showing what they showed until you publish again.",
+  sitesCatalogDeleteFailed: "The catalog could not be deleted.",
+  sitesCatalogGroups: "Groups",
+  sitesCatalogGroupsHint:
+    "Optional. A group is one heading on the page — Breads, Rooms, Half-day courses.",
+  sitesCatalogGroupName: "Group name",
+  sitesCatalogNewGroup: "New group",
+  sitesCatalogNewGroupPlaceholder: "Breads",
+  sitesCatalogAddGroup: "Add group",
+  sitesCatalogGroupRemove: (name: string) => `Remove the group ${name}`,
+  sitesCatalogGroupRemoveShort: "Remove",
+  sitesCatalogGroupSaveFailed: "The group could not be saved.",
+  sitesCatalogGroupDeleteFailed: "The group could not be removed.",
+  sitesCatalogItems: "Items",
+  sitesCatalogItemsHint:
+    "Everything this catalog offers, in the order the page shows it.",
+  sitesCatalogAddItem: "Add an item",
+  sitesCatalogNoItemsTitle: "This catalog is empty",
+  sitesCatalogNoItemsBody:
+    "Add what you offer. A name is enough to start — a price, a photo and a description can follow.",
+  sitesCatalogNoPrice: "Price on request",
+  sitesCatalogEdit: "Edit",
+  sitesCatalogEditItem: (name: string) => `Edit ${name}`,
+  sitesCatalogNewItem: "New item",
+  sitesCatalogSaveItem: "Save item",
+  sitesCatalogItemSubtitle: "It appears on the website at your next publish.",
+  sitesCatalogItemName: "Name",
+  sitesCatalogItemHandle: "Handle",
+  sitesCatalogItemHandlePlaceholder: "From the name",
+  sitesCatalogItemHandleHint:
+    "The short name used in links and on orders. Leave it empty and we make one from the name.",
+  sitesCatalogItemPrice: (currency: string) => `Price (${currency})`,
+  sitesCatalogItemPriceHint:
+    "Write it as you would on a menu — 4.50 or 4,50. Leave it empty for price on request.",
+  sitesCatalogItemPriceNote: "Beside the price",
+  sitesCatalogItemPriceNoteHint: "A short qualifier — per night, from, per person.",
+  sitesCatalogItemGroup: "Group",
+  sitesCatalogItemNoGroup: "No group",
+  sitesCatalogItemDescription: "Description",
+  sitesCatalogItemAvailability: "Availability",
+  sitesCatalogAvailabilityHint:
+    "Sold out still appears, marked and not orderable. Hidden is not published at all.",
+  sitesCatalogAvailable: "Available",
+  sitesCatalogSoldOut: "Sold out",
+  sitesCatalogHidden: "Hidden",
+  sitesCatalogItemSaveFailed: "The item could not be saved.",
+  sitesCatalogItemDelete: "Delete",
+  sitesCatalogItemDeleteConfirm: "Delete it",
+  // A list of twenty rows must not offer twenty buttons all called "Delete":
+  // the accessible name says which item, and contains the visible word.
+  sitesCatalogItemDeleteLabel: (name: string) => `Delete ${name}`,
+  sitesCatalogItemDeleteConfirmLabel: (name: string) => `Delete it: ${name}`,
+  sitesCatalogItemDeleteFailed: "The item could not be deleted.",
   sitesCollections: "Collections",
   sitesCollectionsHint:
     "Turn an alo Base table into reusable cards for your website.",

@@ -4464,6 +4464,89 @@ export const fr: Partial<Catalog> = {
   sitesWholeTranslationApprove: "Approuver la traduction",
   sitesTranslationPageKind: "Page",
   sitesTranslationPostKind: "Article",
+  sitesCatalogs: "Catalogue",
+  sitesCatalogsHint:
+    "Ce que ce site propose — plats, chambres, services, formations. Les prix sont figés au moment de la publication.",
+  sitesCatalogsLoading: "Chargement du catalogue...",
+  sitesCatalogsLoadFailed:
+    "Les catalogues n’ont pas pu être chargés. Vérifiez votre connexion et réessayez.",
+  sitesCatalogLoadFailed:
+    "Ce catalogue n’a pas pu être ouvert. Vérifiez votre connexion et réessayez.",
+  sitesNewCatalog: "Nouveau catalogue",
+  sitesCatalogNoneTitle: "Rien n’est encore proposé",
+  sitesCatalogNoneBody:
+    "Un catalogue est la liste que votre site affiche — et, si vous le souhaitez, à partir de laquelle il prend des commandes. Commencez par un nom et une devise ; les articles viennent ensuite.",
+  sitesCatalogOrdersOn: "Prend les commandes",
+  sitesCatalogOrdersOff: "Sans bon de commande",
+  sitesCatalogSettings: "Ce catalogue",
+  sitesCatalogSettingsHint:
+    "Le nom n’est visible que par vous ; les visiteurs voient les articles. Vos modifications atteignent le site en ligne à la prochaine publication.",
+  sitesCatalogName: "Nom du catalogue",
+  sitesCatalogCurrency: "Devise",
+  sitesCatalogCurrencyHint:
+    "Trois lettres, par exemple EUR. La changer relit les prix déjà saisis dans la nouvelle devise — elle ne les convertit pas.",
+  sitesCatalogOrders: "Prendre les commandes depuis ce catalogue",
+  sitesCatalogOrdersHint:
+    "Les visiteurs obtiennent un bon de commande sous la liste. Rien n’est payé sur le site : la commande arrive dans votre boîte de réception et vous la confirmez vous-même. Elle apparaît à la prochaine publication.",
+  sitesCatalogCreate: "Créer le catalogue",
+  sitesCatalogSave: "Enregistrer le catalogue",
+  sitesCatalogSaveFailed: "Le catalogue n’a pas pu être enregistré.",
+  sitesCatalogDelete: "Supprimer le catalogue",
+  sitesCatalogDeleteConfirm: "Le supprimer, avec tout son contenu",
+  sitesCatalogDeleteHint:
+    "Les articles et les groupes disparaissent aussi. Les pages déjà publiées continuent d’afficher ce qu’elles affichaient jusqu’à votre prochaine publication.",
+  sitesCatalogDeleteFailed: "Le catalogue n’a pas pu être supprimé.",
+  sitesCatalogGroups: "Groupes",
+  sitesCatalogGroupsHint:
+    "Facultatif. Un groupe est un intertitre sur la page — Pains, Chambres, Formations d’une demi-journée.",
+  sitesCatalogGroupName: "Nom du groupe",
+  sitesCatalogNewGroup: "Nouveau groupe",
+  sitesCatalogNewGroupPlaceholder: "Pains",
+  sitesCatalogAddGroup: "Ajouter le groupe",
+  sitesCatalogGroupRemove: (name: string) => `Retirer le groupe ${name}`,
+  sitesCatalogGroupRemoveShort: "Retirer",
+  sitesCatalogGroupSaveFailed: "Le groupe n’a pas pu être enregistré.",
+  sitesCatalogGroupDeleteFailed: "Le groupe n’a pas pu être retiré.",
+  sitesCatalogItems: "Articles",
+  sitesCatalogItemsHint:
+    "Tout ce que ce catalogue propose, dans l’ordre où la page l’affiche.",
+  sitesCatalogAddItem: "Ajouter un article",
+  sitesCatalogNoItemsTitle: "Ce catalogue est vide",
+  sitesCatalogNoItemsBody:
+    "Ajoutez ce que vous proposez. Un nom suffit pour commencer — le prix, la photo et la description peuvent suivre.",
+  sitesCatalogNoPrice: "Prix sur demande",
+  sitesCatalogEdit: "Modifier",
+  sitesCatalogEditItem: (name: string) => `Modifier ${name}`,
+  sitesCatalogNewItem: "Nouvel article",
+  sitesCatalogSaveItem: "Enregistrer l’article",
+  sitesCatalogItemSubtitle:
+    "Il apparaît sur le site à votre prochaine publication.",
+  sitesCatalogItemName: "Nom",
+  sitesCatalogItemHandle: "Identifiant",
+  sitesCatalogItemHandlePlaceholder: "D’après le nom",
+  sitesCatalogItemHandleHint:
+    "Le nom court utilisé dans les liens et sur les commandes. Laissez-le vide et nous le créons à partir du nom.",
+  sitesCatalogItemPrice: (currency: string) => `Prix (${currency})`,
+  sitesCatalogItemPriceHint:
+    "Écrivez-le comme sur une carte — 4.50 ou 4,50. Laissez vide pour « prix sur demande ».",
+  sitesCatalogItemPriceNote: "À côté du prix",
+  sitesCatalogItemPriceNoteHint:
+    "Une courte précision — par nuit, à partir de, par personne.",
+  sitesCatalogItemGroup: "Groupe",
+  sitesCatalogItemNoGroup: "Sans groupe",
+  sitesCatalogItemDescription: "Description",
+  sitesCatalogItemAvailability: "Disponibilité",
+  sitesCatalogAvailabilityHint:
+    "« Épuisé » reste affiché, signalé et non commandable. « Masqué » n’est pas publié du tout.",
+  sitesCatalogAvailable: "Disponible",
+  sitesCatalogSoldOut: "Épuisé",
+  sitesCatalogHidden: "Masqué",
+  sitesCatalogItemSaveFailed: "L’article n’a pas pu être enregistré.",
+  sitesCatalogItemDelete: "Supprimer",
+  sitesCatalogItemDeleteConfirm: "Le supprimer",
+  sitesCatalogItemDeleteLabel: (name: string) => `Supprimer ${name}`,
+  sitesCatalogItemDeleteConfirmLabel: (name: string) => `Le supprimer : ${name}`,
+  sitesCatalogItemDeleteFailed: "L’article n’a pas pu être supprimé.",
   sitesCollections: "Collections",
   sitesCollectionsHint:
     "Transformez une table alo Base en cartes réutilisables pour votre site.",

@@ -19,6 +19,7 @@ import {
   Lock,
   Newspaper,
   Palette,
+  ShoppingBag,
   Sparkles,
   Rows3,
   X,
@@ -577,6 +578,14 @@ export function SiteView() {
           <div className={styles.sectionBar}>
             <h2 className={styles.sectionTitle}>{strings.sitesPages}</h2>
             <div className={styles.sectionBarActions}>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<ShoppingBag size="var(--icon-size-inline)" />}
+                onClick={() => navigate("catalogs")}
+              >
+                {strings.sitesCatalogs}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"

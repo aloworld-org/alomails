@@ -33,8 +33,8 @@ use crate::{
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
-    sites_attribution, sites_conversions, sites_heatmap, sites_orders, sites_templates, snooze,
-    spaces, tasks, unsubscribe, wopi, workspace_search,
+    sites_attribution, sites_catalogs, sites_conversions, sites_heatmap, sites_orders,
+    sites_templates, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -392,6 +392,32 @@ pub fn app_with_site_domain_dns(
         .route(
             "/sites/{id}/domains/{domain}/verify",
             post(sites::verify_domain),
+        )
+        .route(
+            "/sites/{id}/catalogs",
+            get(sites_catalogs::list_catalogs).post(sites_catalogs::create_catalog),
+        )
+        .route(
+            "/sites/{id}/catalogs/{catalog}",
+            get(sites_catalogs::get_catalog)
+                .put(sites_catalogs::update_catalog)
+                .delete(sites_catalogs::delete_catalog),
+        )
+        .route(
+            "/sites/{id}/catalogs/{catalog}/categories",
+            post(sites_catalogs::create_category),
+        )
+        .route(
+            "/sites/{id}/catalogs/{catalog}/categories/{category}",
+            put(sites_catalogs::update_category).delete(sites_catalogs::delete_category),
+        )
+        .route(
+            "/sites/{id}/catalogs/{catalog}/items",
+            post(sites_catalogs::create_item),
+        )
+        .route(
+            "/sites/{id}/catalogs/{catalog}/items/{item}",
+            put(sites_catalogs::update_item).delete(sites_catalogs::delete_item),
         )
         .route("/sites/{id}/orders", get(sites_orders::list_orders))
         .route("/sites/{id}/orders.csv", get(sites_orders::export_orders))

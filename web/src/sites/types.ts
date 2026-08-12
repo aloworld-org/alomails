@@ -285,6 +285,77 @@ export interface SiteCrmColumn {
   archived: boolean;
 }
 
+/** One catalog of what a site offers. `currencyExponent` travels with the
+ *  currency so a price can be shown from integer minor units without this
+ *  module owning a second copy of the ISO 4217 exception table. */
+export interface SiteCatalog {
+  id: string;
+  name: string;
+  currency: string;
+  currencyExponent: number;
+  /** Whether the pages that show this catalog carry an order form. Frozen
+   *  into each publish, so switching it takes effect at the next publish. */
+  ordersEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** One grouping inside a catalog. */
+export interface SiteCatalogCategory {
+  id: string;
+  name: string;
+  slug: string;
+  position: number;
+}
+
+/** Whether an item is on offer, shown as unavailable, or withheld from the
+ *  published site entirely. */
+export type SiteCatalogAvailability = "available" | "sold_out" | "hidden";
+
+/** One item of a catalog, as the editor sees it — hidden ones included.
+ *  `priceCents` is integer minor units; `null` is an item with no price at
+ *  all (an enquiry-only service), which is not zero. */
+export interface SiteCatalogItem {
+  id: string;
+  categoryId: string | null;
+  name: string;
+  slug: string;
+  description: string | null;
+  priceCents: number | null;
+  priceNote: string | null;
+  imageBlobId: string | null;
+  availability: SiteCatalogAvailability;
+  position: number;
+  sourceKey: string | null;
+}
+
+/** One catalog with everything the editor draws in one read. */
+export interface SiteCatalogDetail {
+  catalog: SiteCatalog;
+  categories: SiteCatalogCategory[];
+  items: SiteCatalogItem[];
+}
+
+export interface SiteCatalogDraft {
+  name: string;
+  currency: string;
+  ordersEnabled: boolean;
+}
+
+/** What an item form sends. `price` is what the owner typed — the server's
+ *  own parser turns it into minor units, so no price arithmetic, and no
+ *  second, weaker price parser, lives in the browser. A blank `slug` asks
+ *  the server to derive the handle from the name. */
+export interface SiteCatalogItemDraft {
+  name: string;
+  slug: string;
+  categoryId: string | null;
+  description: string;
+  price: string;
+  priceNote: string;
+  availability: SiteCatalogAvailability;
+}
+
 export interface SiteCollectionFieldMapping {
   title: string;
   slug: string | null;

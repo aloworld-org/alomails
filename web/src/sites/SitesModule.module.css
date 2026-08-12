@@ -3047,3 +3047,157 @@
   font-size: var(--text-xs);
   white-space: nowrap;
 }
+
+/* ---- what the site offers: catalogs, groups, items (S2.12c) ---- */
+.catalogWorkspace {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 0;
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+.catalogList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-right: var(--border-width) solid var(--border-subtle);
+  background: var(--bg-sunken);
+  flex: 1 1 var(--sidebar-width);
+  max-width: var(--sidebar-width);
+}
+.catalogEditor {
+  display: flex;
+  flex: 1 1 var(--overlay-width-xl);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.catalogPanel,
+.catalogItemsPanel {
+  flex: 1 1 var(--overlay-width-lg);
+  min-width: 0;
+  padding: var(--space-6);
+}
+.catalogItemsPanel {
+  border-left: var(--border-width) solid var(--border-subtle);
+  background: var(--bg-app);
+}
+.catalogPanel h2,
+.catalogItemsPanel h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+}
+.catalogPanel p,
+.catalogItemsPanel p {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+.catalogOrdersToggle {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+}
+.catalogOrdersToggle > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.catalogOrdersToggle strong {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+.catalogOrdersToggle small {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+}
+.catalogGroups {
+  margin: var(--space-5) 0;
+  padding-top: var(--space-4);
+  border-top: var(--border-width) solid var(--border-subtle);
+}
+.catalogGroups h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.catalogGroupRows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.catalogGroupRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.catalogGroupRow .input {
+  flex: 1;
+  min-width: 0;
+}
+.catalogItems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.catalogItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.catalogItemText {
+  display: flex;
+  min-width: var(--overlay-width-sm);
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.catalogItemText strong {
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.catalogItemText small {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+.catalogItemText p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+.catalogItemPrice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+.catalogItemActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}

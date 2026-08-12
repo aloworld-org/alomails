@@ -5,6 +5,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { PageEditorView } from "./PageEditorView";
+import { CatalogsView } from "./CatalogsView";
 import { CollectionsView } from "./CollectionsView";
 import { PostsView } from "./PostsView";
 import { SiteView } from "./SiteView";
@@ -25,6 +26,7 @@ export function SitesModule() {
         <Route path=":siteId/analytics" element={<AnalyticsView />} />
         <Route path=":siteId/heatmap" element={<HeatmapView />} />
         <Route path=":siteId/funnel" element={<FunnelView />} />
+        <Route path=":siteId/catalogs" element={<CatalogsView />} />
         <Route path=":siteId/collections" element={<CollectionsView />} />
         <Route path=":siteId/history" element={<HistoryView />} />
         <Route path=":siteId/submissions" element={<SubmissionsView />} />
