@@ -47,12 +47,13 @@ use alo_sites::render::{
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
     BaseFieldId, BaseTableId, BlobId, DriveNodeId, LocalizedSitePage, NewGeneratedSite,
-    NewGeneratedSitePage, NewSitePost, Section, SectionsEnvelope, Site, SiteCollection,
-    SiteCollectionFieldMapping, SiteCollectionId, SiteCollectionInput, SiteCollectionItem,
-    SiteCollectionSnapshot, SiteDomain, SiteDomainStatus, SiteEditorInviteOutcome, SiteFormId,
-    SiteFormSubmissionId, SiteId, SitePage, SitePageId, SitePost, SitePostId, SitePostUpdate,
-    SiteTheme, SiteTranslationPageContent, SiteTranslationPageWrite, SiteTranslationPostContent,
-    SiteTranslationPostWrite, StoreError, UserId, normalize_site_domain, site_theme::THEME_PRESETS,
+    NewGeneratedSitePage, NewSitePost, Section, SectionsEnvelope, Site, SiteAnalyticsDimension,
+    SiteCollection, SiteCollectionFieldMapping, SiteCollectionId, SiteCollectionInput,
+    SiteCollectionItem, SiteCollectionSnapshot, SiteDomain, SiteDomainStatus,
+    SiteEditorInviteOutcome, SiteFormId, SiteFormSubmissionId, SiteId, SitePage, SitePageId,
+    SitePost, SitePostId, SitePostUpdate, SiteTheme, SiteTranslationPageContent,
+    SiteTranslationPageWrite, SiteTranslationPostContent, SiteTranslationPostWrite, StoreError,
+    UserId, normalize_site_domain, site_theme::THEME_PRESETS,
 };
 
 use crate::ai::tenant_ai_config;
@@ -1575,7 +1576,21 @@ pub async fn get_analytics(
             "visits": row.visits,
             "uniqueVisitors": row.unique_visitors,
         })).collect::<Vec<_>>(),
+        "campaigns": dimension_json(report.campaigns),
+        "countries": dimension_json(report.countries),
+        "devices": dimension_json(report.devices),
+        "entryPages": dimension_json(report.entry_pages),
+        "exitPages": dimension_json(report.exit_pages),
     })))
+}
+
+/// The second-generation dimensions all share one shape: a stored bucket and
+/// a view count. An empty label means "not reported" and stays empty here —
+/// naming it is the interface's job, in the reader's language.
+fn dimension_json(rows: Vec<SiteAnalyticsDimension>) -> Vec<Value> {
+    rows.into_iter()
+        .map(|row| json!({ "label": row.label, "visits": row.visits }))
+        .collect()
 }
 
 #[derive(Deserialize)]

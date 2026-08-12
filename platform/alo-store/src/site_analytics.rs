@@ -26,12 +26,33 @@ pub struct SiteAnalyticsRank {
     pub unique_visitors: u64,
 }
 
+/// One ranked value of a second-generation dimension. These aggregates count
+/// views, not people: no visitor token is kept per campaign, country, or
+/// device, so there is no unique count to report here.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SiteAnalyticsDimension {
+    /// The stored bucket. An empty label means "not reported": no campaign
+    /// on the link, or a country the edge did not name.
+    pub label: String,
+    pub visits: u64,
+}
+
 /// The actionable aggregate report for one owned site and inclusive period.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SiteAnalyticsReport {
     pub daily: Vec<SiteAnalyticsDay>,
     pub top_pages: Vec<SiteAnalyticsRank>,
     pub top_referrers: Vec<SiteAnalyticsRank>,
+    /// `utm_campaign` labels, most-visited first.
+    pub campaigns: Vec<SiteAnalyticsDimension>,
+    /// Two-letter country codes, most-visited first.
+    pub countries: Vec<SiteAnalyticsDimension>,
+    /// Device classes (`phone`, `tablet`, `desktop`, `bot`).
+    pub devices: Vec<SiteAnalyticsDimension>,
+    /// Pages a visitor-day started on.
+    pub entry_pages: Vec<SiteAnalyticsDimension>,
+    /// Pages a visitor-day was last seen on.
+    pub exit_pages: Vec<SiteAnalyticsDimension>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -47,6 +68,17 @@ struct RankRow {
     visits: i64,
     unique_visitors: i64,
 }
+
+#[derive(sqlx::FromRow)]
+struct DimensionRow {
+    dimension: String,
+    label: String,
+    visits: i64,
+}
+
+/// How many values of one dimension a report carries. Beyond this a list
+/// stops being a ranking and starts being a data dump.
+const DIMENSION_LIMIT: usize = 10;
 
 fn count(value: i64) -> u64 {
     u64::try_from(value).unwrap_or_default()
@@ -157,10 +189,57 @@ impl AccountStore {
         })
         .collect();
 
+        // All five second-generation dimensions live in one narrow table, so
+        // one grouped read answers them together and the split happens here
+        // rather than in five round trips.
+        let dimensions = sqlx::query_as::<_, DimensionRow>(
+            "SELECT dimension, value AS label, SUM(hits)::BIGINT AS visits \
+             FROM site_analytics_dimension_daily \
+             WHERE tenant_id = $1 AND site_id = $2 AND day BETWEEN $3 AND $4 \
+             GROUP BY dimension, value \
+             HAVING SUM(hits) > 0 \
+             ORDER BY visits DESC, label",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .bind(from)
+        .bind(to)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let mut campaigns = Vec::new();
+        let mut countries = Vec::new();
+        let mut devices = Vec::new();
+        let mut entry_pages = Vec::new();
+        let mut exit_pages = Vec::new();
+        for row in dimensions {
+            let bucket = match row.dimension.as_str() {
+                "campaign" => &mut campaigns,
+                "country" => &mut countries,
+                "device" => &mut devices,
+                "entry" => &mut entry_pages,
+                "exit" => &mut exit_pages,
+                // The column's check constraint makes this unreachable; a
+                // future dimension is simply not reported until it is read.
+                _ => continue,
+            };
+            if bucket.len() < DIMENSION_LIMIT {
+                bucket.push(SiteAnalyticsDimension {
+                    label: row.label,
+                    visits: count(row.visits),
+                });
+            }
+        }
+
         Ok(Some(SiteAnalyticsReport {
             daily,
             top_pages,
             top_referrers,
+            campaigns,
+            countries,
+            devices,
+            entry_pages,
+            exit_pages,
         }))
     }
 }

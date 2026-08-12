@@ -3,9 +3,32 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
-use alo_store::{AccountStore, BlobStore, SiteId, SitePublicStore, Store};
+use alo_store::{
+    AccountStore, BlobStore, DeviceClass, PublicSiteVisit, SiteId, SitePublicStore, Store,
+};
 use sqlx::postgres::PgPoolOptions;
 use time::{Date, Month};
+
+/// A view with the dimensions a real request would have reduced to.
+fn visit<'a>(
+    day: Date,
+    path: &'a str,
+    referrer_domain: &'a str,
+    campaign: &'a str,
+    country: &'a str,
+    device: DeviceClass,
+    visitor_hash: &'a [u8; 32],
+) -> PublicSiteVisit<'a> {
+    PublicSiteVisit {
+        day,
+        path,
+        referrer_domain,
+        campaign,
+        country,
+        device,
+        visitor_hash,
+    }
+}
 
 fn database_url() -> String {
     std::env::var("DATABASE_URL")
@@ -67,24 +90,54 @@ async fn report_groups_useful_dimensions_and_hides_foreign_sites() {
     let visitor_a = [1_u8; 32];
     let visitor_b = [2_u8; 32];
 
+    for view in [
+        visit(
+            first,
+            "/",
+            "",
+            "spring",
+            "NL",
+            DeviceClass::Phone,
+            &visitor_a,
+        ),
+        visit(
+            first,
+            "/",
+            "",
+            "spring",
+            "NL",
+            DeviceClass::Phone,
+            &visitor_a,
+        ),
+        visit(
+            first,
+            "/about",
+            "news.example",
+            "",
+            "NL",
+            DeviceClass::Phone,
+            &visitor_a,
+        ),
+        visit(
+            second,
+            "/",
+            "news.example",
+            "",
+            "BE",
+            DeviceClass::Desktop,
+            &visitor_b,
+        ),
+    ] {
+        public
+            .record_public_site_view(&published_a, &view)
+            .await
+            .unwrap();
+    }
     public
-        .record_public_site_view(&published_a, first, "/", "", &visitor_a)
-        .await
-        .unwrap();
-    public
-        .record_public_site_view(&published_a, first, "/", "", &visitor_a)
-        .await
-        .unwrap();
-    public
-        .record_public_site_view(&published_a, first, "/about", "news.example", &visitor_a)
-        .await
-        .unwrap();
-    public
-        .record_public_site_view(&published_a, second, "/", "news.example", &visitor_b)
-        .await
-        .unwrap();
-    public
-        .record_public_site_view(&published_b, first, "/", "", &visitor_a)
+        .record_public_site_view(
+            &published_b,
+            &visit(first, "/", "", "", "NL", DeviceClass::Phone, &visitor_a),
+        )
         .await
         .unwrap();
 
@@ -115,6 +168,49 @@ async fn report_groups_useful_dimensions_and_hides_foreign_sites() {
     assert_eq!(report.top_referrers[0].visits, 2);
     assert_eq!(report.top_referrers[1].label, "news.example");
 
+    // Second-generation dimensions: counted per view, ranked, and never
+    // holding more than the bucket they name.
+    let labelled = |rows: &[alo_store::SiteAnalyticsDimension]| {
+        rows.iter()
+            .map(|row| (row.label.clone(), row.visits))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        labelled(&report.campaigns),
+        vec![(String::new(), 2), ("spring".to_owned(), 2)],
+        "an unlabelled visit is its own bucket, not a missing one"
+    );
+    assert_eq!(
+        labelled(&report.countries),
+        vec![("NL".to_owned(), 3), ("BE".to_owned(), 1)]
+    );
+    assert_eq!(
+        labelled(&report.devices),
+        vec![("phone".to_owned(), 3), ("desktop".to_owned(), 1)]
+    );
+    assert_eq!(
+        labelled(&report.entry_pages),
+        vec![("/".to_owned(), 2)],
+        "each visitor-day contributes exactly one entry"
+    );
+    assert_eq!(
+        labelled(&report.exit_pages),
+        vec![("/".to_owned(), 1), ("/about".to_owned(), 1)]
+    );
+
+    // On the first day alone the visitor moved on from "/", so "/" is not an
+    // exit that day and does not linger at zero in the report.
+    let first_day = owner_a
+        .site_analytics(&site_a, first, first)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        labelled(&first_day.exit_pages),
+        vec![("/about".to_owned(), 1)]
+    );
+    assert_eq!(labelled(&first_day.entry_pages), vec![("/".to_owned(), 1)]);
+
     assert!(
         owner_a
             .site_analytics(&site_b, first, second)
@@ -130,4 +226,10 @@ async fn report_groups_useful_dimensions_and_hides_foreign_sites() {
         .unwrap();
     assert_eq!(report_b.daily.len(), 1);
     assert_eq!(report_b.daily[0].visits, 1);
+    assert_eq!(
+        labelled(&report_b.campaigns),
+        vec![(String::new(), 1)],
+        "tenant A's campaign leaked into tenant B's report"
+    );
+    assert_eq!(labelled(&report_b.entry_pages), vec![("/".to_owned(), 1)]);
 }

@@ -438,7 +438,9 @@ pub use schedule::DueSend;
 pub use search::SearchHit;
 pub use share::{ShareCreated, ShareTarget};
 pub use signup::PendingSignup;
-pub use site_analytics::{SiteAnalyticsDay, SiteAnalyticsRank, SiteAnalyticsReport};
+pub use site_analytics::{
+    SiteAnalyticsDay, SiteAnalyticsDimension, SiteAnalyticsRank, SiteAnalyticsReport,
+};
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
 pub use site_collections::{
     SITE_COLLECTION_BODY_MAX_CHARS, SITE_COLLECTION_MAX_ITEMS, SITE_COLLECTION_NAME_MAX_CHARS,
@@ -463,6 +465,7 @@ pub use site_posts::{NewSitePost, SitePost, SitePostStatus, SitePostUpdate};
 pub use site_public::{
     PublishedSite, PublishedSitePost, PublishedSitePostBody, PublishedSitePostPage, SitePublicStore,
 };
+pub use site_public_analytics::{DeviceClass, PublicSiteVisit};
 pub use site_public_protection::PublishedPageProtection;
 pub use site_publish::{SitePageSnapshot, SitePublish};
 pub use site_publish_schedule::{

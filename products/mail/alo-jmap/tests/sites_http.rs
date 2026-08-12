@@ -464,6 +464,17 @@ async fn analytics_answers_a_complete_period_and_validates_the_range() {
     assert_eq!(body["totals"]["uniqueVisitors"], json!(0));
     assert_eq!(body["topPages"], json!([]));
     assert_eq!(body["topReferrers"], json!([]));
+    // The second-generation dimensions answer as empty lists rather than
+    // absent keys, so the interface can render its own empty states.
+    for dimension in [
+        "campaigns",
+        "countries",
+        "devices",
+        "entryPages",
+        "exitPages",
+    ] {
+        assert_eq!(body[dimension], json!([]), "{dimension}");
+    }
 
     let (status, body) = get(&h.app, &h.token, &format!("/sites/{site}/analytics?days=0")).await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
