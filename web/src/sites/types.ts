@@ -339,6 +339,18 @@ export interface SitePublishSchedule {
   lastError: string | null;
 }
 
+/** Whether one page asks its visitors for a password, and when that was last
+ *  decided (S2.06b). The password itself is never part of any answer — the
+ *  server hashes it and reads it back to nobody, so a forgotten one is
+ *  replaced rather than recovered. `pageId` and the timestamps are `null`
+ *  exactly when the page is public: there is nothing to date. */
+export interface SitePageProtection {
+  protected: boolean;
+  pageId: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
 /** The answer to a restore: the NEW version now live, and the one it copied. */
 export interface SitePublishRestore {
   publishId: string;

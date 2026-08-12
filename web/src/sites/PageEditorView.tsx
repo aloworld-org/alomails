@@ -13,6 +13,7 @@ import {
   ChevronUp,
   GripVertical,
   Layers,
+  Lock,
   Monitor,
   Palette,
   Pencil,
@@ -30,6 +31,7 @@ import { SectionPicker } from "./SectionPicker";
 import { ThemeDialog } from "./ThemeDialog";
 import { PageSeoDialog } from "./PageSeoDialog";
 import { PageAiEditPanel } from "./PageAiEditPanel";
+import { PagePassword } from "./PagePassword";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 import type { SitePageDetail } from "./types";
@@ -82,6 +84,10 @@ export function PageEditorView() {
   );
   const [themeOpen, setThemeOpen] = useState(false);
   const [seoOpen, setSeoOpen] = useState(false);
+  // Whether visitors meet an unlock screen before this page (S2.06b). Owned
+  // by the password panel and mirrored here for one reason: a preview that
+  // does not say so is a preview that lies about what the internet sees.
+  const [pageProtected, setPageProtected] = useState(false);
   // Bumped when the theme changes — the preview document depends on the
   // site's theme, not only on this page's sections.
   const [previewEpoch, setPreviewEpoch] = useState(0);
@@ -439,6 +445,15 @@ export function PageEditorView() {
             <ErrorBanner message={translationError} />
           )}
 
+          {/* Who may read this page sits above how it is built: it is a fact
+              about the page itself, not about one language's copy of it. */}
+          <PagePassword
+            siteId={siteId}
+            pageId={pageId}
+            multilingual={enabledLocales.length > 1}
+            onChange={setPageProtected}
+          />
+
           <div className={styles.editorLayout}>
             <div className={styles.stackPane}>
               <div className={styles.sectionBar}>
@@ -667,6 +682,12 @@ export function PageEditorView() {
                   </div>
                 </div>
               </div>
+              {pageProtected && (
+                <p className={styles.previewProtectedNote}>
+                  <Lock size={13} aria-hidden="true" />
+                  {strings.sitesPagePasswordPreviewNote}
+                </p>
+              )}
               {previewError !== null && <ErrorBanner message={previewError} />}
               <div
                 className={

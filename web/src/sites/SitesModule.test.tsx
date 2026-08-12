@@ -952,6 +952,46 @@ describe("one site", () => {
     expect(screen.getByText("/about")).toBeTruthy();
   });
 
+  test("a page behind a password is marked in the list, in one read", async () => {
+    replies = [
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+        status: 200,
+        body: { ...ALPHA, publish: { id: "pub-1", publishedAt: "2026-08-07T10:00:00Z" } },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/pages"),
+        status: 200,
+        body: { pages: [HOME, ABOUT] },
+      },
+      {
+        match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/passwords"),
+        status: 200,
+        body: {
+          pages: [
+            {
+              protected: true,
+              pageId: ABOUT.id,
+              createdAt: "2026-08-12T09:30:00Z",
+              updatedAt: "2026-08-12T09:30:00Z",
+            },
+          ],
+        },
+      },
+    ];
+    ui("/sites/site-1");
+
+    const marked = await screen.findByText(strings.sitesPagePasswordBadge);
+    // The badge belongs to the protected page's row and to no other.
+    const row = marked.closest("tr");
+    expect(within(row as HTMLElement).getByText("About us")).toBeTruthy();
+    expect(screen.getAllByText(strings.sitesPagePasswordBadge)).toHaveLength(1);
+    // One read for the whole list, not one per page.
+    expect(
+      calls.filter((call) => call.url.endsWith("/sites/site-1/passwords")),
+    ).toHaveLength(1);
+  });
+
   test("shows translation readiness and adds a visitor language on the surface", async () => {
     const multilingual = {
       ...ALPHA,

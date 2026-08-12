@@ -905,6 +905,160 @@
   }
 }
 
+/* ---- who can open a page (S2.06b) ---- */
+.protectPanel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  border-bottom: var(--border-width) solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+.protectSummary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.protectIcon,
+.protectIconOn {
+  display: inline-flex;
+  width: var(--control-height);
+  height: var(--control-height);
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+  color: var(--text-tertiary);
+}
+/* A page behind a password is the one state worth spotting from across the
+   screen — it is the difference between published and published-to-nobody. */
+.protectIconOn {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+.protectIcon svg,
+.protectIconOn svg {
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
+}
+.protectCopy {
+  min-width: 0;
+  flex: 1;
+}
+.protectTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+.protectState {
+  max-width: var(--overlay-width-lg);
+  margin: var(--space-1) 0 0;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+.protectHint {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: var(--overlay-width-lg);
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+.protectOutcome {
+  max-width: var(--overlay-width-lg);
+  margin: var(--space-2) 0 0;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+}
+.protectActions,
+.protectFormActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.protectActions {
+  margin-left: auto;
+}
+.protectForm {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-raised);
+}
+.protectField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+.protectFieldRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.protectFieldHint {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+}
+.protectFormActions {
+  margin-left: auto;
+}
+/* The preview shows the page itself; this line is what stands in front of it
+   for everyone who does not have the password. */
+.previewProtectedNote {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+}
+.pageLockBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--accent-tint);
+  border: 1px solid var(--accent);
+  font-size: var(--text-xs);
+  color: var(--accent);
+  vertical-align: middle;
+}
+
+@media (max-width: 56rem) {
+  .protectForm,
+  .protectSummary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .protectActions,
+  .protectFormActions {
+    margin-left: 0;
+  }
+}
+
 /* ---- restricted collaborators (S2.03b) ---- */
 .collaboratorPanel {
   display: grid;

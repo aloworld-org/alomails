@@ -2810,6 +2810,47 @@ export const nl: Partial<Catalog> = {
     `Deze site heeft zichzelf gepubliceerd op ${moment}.`,
   sitesScheduleFailed: (moment: string, reason: string) =>
     `Deze site kon niet worden gepubliceerd op ${moment}: ${reason}`,
+
+  // Sites — een pagina achter een wachtwoord (S2.06b).
+  sitesPagePasswordTitle: "Wie deze pagina kan openen",
+  sitesPagePasswordLoading: "Nagaan wie deze pagina kan openen",
+  sitesPagePasswordLoadFailed:
+    "Er kon niet worden nagegaan of deze pagina om een wachtwoord vraagt.",
+  sitesPagePasswordUnknown:
+    "Het is op dit moment niet bekend of deze pagina bezoekers om een wachtwoord vraagt.",
+  sitesPagePasswordPublic: "Iedereen op internet kan deze pagina openen.",
+  sitesPagePasswordPublicHint:
+    "Geef ze een wachtwoord en alleen de mensen aan wie u het geeft, kunnen ze lezen. De rest van deze website blijft openbaar.",
+  sitesPagePasswordProtected: (moment: string) =>
+    `Alleen wie het wachtwoord heeft, kan deze pagina openen — ingesteld op ${moment}.`,
+  sitesPagePasswordProtectedUndated:
+    "Alleen wie het wachtwoord heeft, kan deze pagina openen.",
+  sitesPagePasswordProtectedHint:
+    "Alle anderen komen op een ontgrendelscherm dat niets van de pagina toont, zelfs de titel niet. Het wachtwoord houdt ze de rest van de dag open.",
+  sitesPagePasswordEveryLanguage:
+    "Dit geldt voor de pagina in elke taal waarin ze gepubliceerd is.",
+  sitesPagePasswordProtect: "Deze pagina beveiligen",
+  sitesPagePasswordChange: "Wachtwoord wijzigen",
+  sitesPagePasswordField: "Wachtwoord",
+  sitesPagePasswordFieldHint:
+    "Niemand kan het u later teruglezen, wij ook niet — een vergeten wachtwoord wordt vervangen, niet teruggehaald.",
+  sitesPagePasswordEffective:
+    "Het werkt meteen. U hoeft de website niet opnieuw te publiceren.",
+  sitesPagePasswordShow: "Tonen",
+  sitesPagePasswordHide: "Verbergen",
+  sitesPagePasswordSaving: "Opslaan…",
+  sitesPagePasswordMissing: "Typ eerst een wachtwoord.",
+  sitesPagePasswordSaveFailed: "Deze pagina kon niet worden beveiligd.",
+  sitesPagePasswordSaved:
+    "Opgeslagen. Bezoekers hebben vanaf nu dit wachtwoord nodig, en wie de pagina met het oude had geopend, wordt opnieuw gevraagd.",
+  sitesPagePasswordRemove: "Wachtwoord verwijderen",
+  sitesPagePasswordRemoveConfirm: "Ja, openbaar maken",
+  sitesPagePasswordRemoveFailed: "Het wachtwoord kon niet worden verwijderd.",
+  sitesPagePasswordRemoved:
+    "Het wachtwoord is weg. Iedereen op internet kan deze pagina weer openen.",
+  sitesPagePasswordPreviewNote:
+    "Bezoekers wordt eerst om het wachtwoord gevraagd. Deze voorvertoning toont de pagina zoals iemand die het heeft ze ziet.",
+  sitesPagePasswordBadge: "Wachtwoord",
   sitesPosts: "Blogartikelen",
   sitesBackToWebsite: "Website",
   sitesPostsLoadFailed: "Uw blogartikelen konden niet worden geladen.",

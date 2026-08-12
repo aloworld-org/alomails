@@ -33,6 +33,7 @@ import type {
   SiteCopyRequest,
   SitePage,
   SitePageDetail,
+  SitePageProtection,
   LocalizedSitePageDetail,
   SiteTranslationReadiness,
   SiteTranslationEnvelope,
@@ -84,6 +85,28 @@ export class SitesError extends Error {
  *  whose reason is not the user's business). */
 export function sitesMessage(error: unknown, fallback: string): string {
   return error instanceof SitesError && error.detail !== null ? error.detail : fallback;
+}
+
+/** The protection answer as the server shapes it: `{"protected": false}`
+ *  carries nothing else, so every field but the flag is optional on the wire. */
+interface RawPageProtection {
+  protected?: unknown;
+  pageId?: unknown;
+  createdAt?: unknown;
+  updatedAt?: unknown;
+}
+
+/** Normalizes one protection answer into the shape screens branch on, so a
+ *  public page and a protected one differ by field VALUES rather than by
+ *  which fields exist. */
+function pageProtection(raw: RawPageProtection): SitePageProtection {
+  const text = (value: unknown) => (typeof value === "string" ? value : null);
+  return {
+    protected: raw.protected === true,
+    pageId: text(raw.pageId),
+    createdAt: text(raw.createdAt),
+    updatedAt: text(raw.updatedAt),
+  };
 }
 
 /** The tenant's websites, their pages, and each page's section stack.
@@ -587,6 +610,48 @@ export class SitesApi {
       seoTitle,
       seoDescription,
     });
+  }
+
+  /** Whether this page asks its visitors for a password, and when that was
+   *  last decided. Never the password: a forgotten one is replaced. */
+  pagePassword(siteId: string, pageId: string): Promise<SitePageProtection> {
+    return this.#read<RawPageProtection>(
+      `${this.#pagePath(siteId, pageId)}/password`,
+    ).then(pageProtection);
+  }
+
+  /** Every page of this site that asks for a password — one read, so a page
+   *  list can mark them without a request per row. */
+  protectedPages(siteId: string): Promise<SitePageProtection[]> {
+    return this.#read<{ pages?: RawPageProtection[] }>(
+      `/sites/${encodeURIComponent(siteId)}/passwords`,
+    ).then((r) => (r.pages ?? []).map(pageProtection));
+  }
+
+  /** Protects the page, or replaces the password it already carries — from
+   *  the owner's side those are one decision. Effective on the next visitor
+   *  request, with no republish, and it closes every session opened with the
+   *  previous password. Password rules belong to the server; a refusal comes
+   *  back as a `422` naming the rule. */
+  setPagePassword(
+    siteId: string,
+    pageId: string,
+    password: string,
+  ): Promise<SitePageProtection> {
+    return this.#write<RawPageProtection>(
+      "PUT",
+      `${this.#pagePath(siteId, pageId)}/password`,
+      { password },
+    ).then(pageProtection);
+  }
+
+  /** Puts the page back in front of everyone. Idempotent. */
+  removePagePassword(siteId: string, pageId: string): Promise<SitePageProtection> {
+    return this.#write<RawPageProtection>(
+      "DELETE",
+      `${this.#pagePath(siteId, pageId)}/password`,
+      {},
+    ).then(pageProtection);
   }
 
   /** The draft page rendered by the server as one complete, self-contained

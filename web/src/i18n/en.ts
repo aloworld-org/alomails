@@ -3427,6 +3427,51 @@ export const en = {
   sitesScheduleFailed: (moment: string, reason: string) =>
     `This website could not publish on ${moment}: ${reason}`,
 
+  // Sites — a page behind a password (S2.06b). The copy says who can READ the
+  // page, never what the setting is called, and it tells the owner what the
+  // visitor meets: an unlock screen that shows nothing of the page, not even
+  // its title. An owner who expects to see the page's own name there would
+  // otherwise think it broke.
+  sitesPagePasswordTitle: "Who can open this page",
+  sitesPagePasswordLoading: "Checking who can open this page",
+  sitesPagePasswordLoadFailed:
+    "Whether this page asks for a password could not be checked.",
+  sitesPagePasswordUnknown:
+    "Whether this page asks visitors for a password is not known right now.",
+  sitesPagePasswordPublic: "Anyone on the internet can open this page.",
+  sitesPagePasswordPublicHint:
+    "Give it a password and only the people you hand it to can read it. The rest of this website stays public.",
+  sitesPagePasswordProtected: (moment: string) =>
+    `Only people with the password can open this page — set on ${moment}.`,
+  sitesPagePasswordProtectedUndated:
+    "Only people with the password can open this page.",
+  sitesPagePasswordProtectedHint:
+    "Everyone else meets an unlock screen carrying nothing of the page, not even its title. The password opens it for the rest of the day.",
+  sitesPagePasswordEveryLanguage:
+    "This holds for the page in every language it is published in.",
+  sitesPagePasswordProtect: "Protect this page",
+  sitesPagePasswordChange: "Change the password",
+  sitesPagePasswordField: "Password",
+  sitesPagePasswordFieldHint:
+    "Nobody can read this back to you afterwards, us included — a forgotten password is replaced, not recovered.",
+  sitesPagePasswordEffective:
+    "It takes effect at once. You do not have to publish the website again.",
+  sitesPagePasswordShow: "Show",
+  sitesPagePasswordHide: "Hide",
+  sitesPagePasswordSaving: "Saving…",
+  sitesPagePasswordMissing: "Type a password first.",
+  sitesPagePasswordSaveFailed: "This page could not be protected.",
+  sitesPagePasswordSaved:
+    "Saved. Visitors need this password from now on, and anyone who opened the page with the old one is asked again.",
+  sitesPagePasswordRemove: "Remove the password",
+  sitesPagePasswordRemoveConfirm: "Yes, make it public",
+  sitesPagePasswordRemoveFailed: "The password could not be removed.",
+  sitesPagePasswordRemoved:
+    "The password is gone. Anyone on the internet can open this page again.",
+  sitesPagePasswordPreviewNote:
+    "Visitors are asked for the password first. This preview shows the page as someone who has it sees it.",
+  sitesPagePasswordBadge: "Password",
+
   // Audit trail — a record's own history (B2.13). The labels are VERBS, not
   // sentences: the record kind is the page the reader is already on, so an
   // invoice's history says "Issued" rather than "Invoice issued". Keep them

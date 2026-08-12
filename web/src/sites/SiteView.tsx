@@ -15,6 +15,7 @@ import {
   History,
   Inbox,
   Languages,
+  Lock,
   Newspaper,
   Palette,
   Sparkles,
@@ -44,6 +45,9 @@ export function SiteView() {
   const api = useSitesApi();
   const [site, setSite] = useState<SiteDetail | null>(null);
   const [pages, setPages] = useState<SitePage[]>([]);
+  // The pages a visitor has to know a password to open (S2.06b), read in one
+  // call so the list can mark them without a request per row.
+  const [protectedPages, setProtectedPages] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -70,14 +74,25 @@ export function SiteView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [detail, pageList, translationReadiness] = await Promise.all([
-        api.site(siteId),
-        api.pages(siteId),
-        api.translationReadiness(siteId),
-      ]);
+      const [detail, pageList, translationReadiness, protections] =
+        await Promise.all([
+          api.site(siteId),
+          api.pages(siteId),
+          api.translationReadiness(siteId),
+          api.protectedPages(siteId),
+        ]);
       setSite(detail);
       setPages(pageList);
       setReadiness(translationReadiness);
+      setProtectedPages(
+        new Set(
+          protections
+            .filter((protection) => protection.protected)
+            .flatMap((protection) =>
+              protection.pageId === null ? [] : [protection.pageId],
+            ),
+        ),
+      );
       setError(null);
     } catch (err) {
       setError(sitesMessage(err, strings.sitesSiteLoadFailed));
@@ -635,6 +650,12 @@ export function SiteView() {
                         {p.home && (
                           <span className={styles.badge}>
                             {strings.sitesHomeBadge}
+                          </span>
+                        )}
+                        {protectedPages.has(p.id) && (
+                          <span className={styles.pageLockBadge}>
+                            <Lock size={11} aria-hidden="true" />
+                            {strings.sitesPagePasswordBadge}
                           </span>
                         )}
                       </td>

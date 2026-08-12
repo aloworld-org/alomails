@@ -2847,6 +2847,48 @@ export const fr: Partial<Catalog> = {
     `Ce site s’est publié tout seul le ${moment}.`,
   sitesScheduleFailed: (moment: string, reason: string) =>
     `Ce site n’a pas pu être publié le ${moment} : ${reason}`,
+
+  // Sites — une page derrière un mot de passe (S2.06b).
+  sitesPagePasswordTitle: "Qui peut ouvrir cette page",
+  sitesPagePasswordLoading: "Vérification de qui peut ouvrir cette page",
+  sitesPagePasswordLoadFailed:
+    "Impossible de vérifier si cette page demande un mot de passe.",
+  sitesPagePasswordUnknown:
+    "On ne sait pas pour l’instant si cette page demande un mot de passe aux visiteurs.",
+  sitesPagePasswordPublic:
+    "N’importe qui sur Internet peut ouvrir cette page.",
+  sitesPagePasswordPublicHint:
+    "Donnez-lui un mot de passe et seules les personnes à qui vous le confiez pourront la lire. Le reste de ce site reste public.",
+  sitesPagePasswordProtected: (moment: string) =>
+    `Seules les personnes qui ont le mot de passe peuvent ouvrir cette page — défini le ${moment}.`,
+  sitesPagePasswordProtectedUndated:
+    "Seules les personnes qui ont le mot de passe peuvent ouvrir cette page.",
+  sitesPagePasswordProtectedHint:
+    "Tous les autres tombent sur un écran de déverrouillage qui ne montre rien de la page, pas même son titre. Le mot de passe l’ouvre pour le reste de la journée.",
+  sitesPagePasswordEveryLanguage:
+    "Cela vaut pour la page dans toutes les langues où elle est publiée.",
+  sitesPagePasswordProtect: "Protéger cette page",
+  sitesPagePasswordChange: "Changer le mot de passe",
+  sitesPagePasswordField: "Mot de passe",
+  sitesPagePasswordFieldHint:
+    "Personne ne pourra vous le relire ensuite, nous compris : un mot de passe oublié se remplace, il ne se récupère pas.",
+  sitesPagePasswordEffective:
+    "L’effet est immédiat. Vous n’avez pas besoin de publier le site à nouveau.",
+  sitesPagePasswordShow: "Afficher",
+  sitesPagePasswordHide: "Masquer",
+  sitesPagePasswordSaving: "Enregistrement…",
+  sitesPagePasswordMissing: "Saisissez d’abord un mot de passe.",
+  sitesPagePasswordSaveFailed: "Cette page n’a pas pu être protégée.",
+  sitesPagePasswordSaved:
+    "Enregistré. Les visiteurs ont désormais besoin de ce mot de passe, et quiconque avait ouvert la page avec l’ancien devra le saisir à nouveau.",
+  sitesPagePasswordRemove: "Retirer le mot de passe",
+  sitesPagePasswordRemoveConfirm: "Oui, la rendre publique",
+  sitesPagePasswordRemoveFailed: "Le mot de passe n’a pas pu être retiré.",
+  sitesPagePasswordRemoved:
+    "Le mot de passe est retiré. N’importe qui sur Internet peut de nouveau ouvrir cette page.",
+  sitesPagePasswordPreviewNote:
+    "Le mot de passe est demandé aux visiteurs avant tout. Cet aperçu montre la page telle que la voit quelqu’un qui l’a.",
+  sitesPagePasswordBadge: "Mot de passe",
   sitesPosts: "Articles du blog",
   sitesBackToWebsite: "Site web",
   sitesPostsLoadFailed: "Les articles de votre blog n’ont pas pu être chargés.",

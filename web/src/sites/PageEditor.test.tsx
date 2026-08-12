@@ -761,3 +761,121 @@ describe("the live preview", () => {
     expect(screen.getByText("Fresh bread daily")).toBeTruthy();
   });
 });
+
+describe("who can open the page", () => {
+  /** The protection read the editor makes on load. */
+  function protectionReply(body: unknown): Reply {
+    return {
+      match: (url, method) =>
+        method === "GET" && url.endsWith("/sites/site-1/pages/page-1/password"),
+      status: 200,
+      body,
+    };
+  }
+
+  test("the panel reads the page's protection and states it in plain words", async () => {
+    replies = [pageReply([HERO]), protectionReply({ protected: false })];
+    ui();
+
+    expect(
+      await screen.findByText(strings.sitesPagePasswordPublic),
+    ).toBeTruthy();
+    // The preview says nothing about a password while there is none.
+    expect(screen.queryByText(strings.sitesPagePasswordPreviewNote)).toBeNull();
+    expect(
+      calls.some(
+        (call) =>
+          call.method === "GET" &&
+          call.url.endsWith("/sites/site-1/pages/page-1/password"),
+      ),
+    ).toBe(true);
+  });
+
+  test("protecting sends the password on the wire-verified route, and the preview says so", async () => {
+    replies = [pageReply([HERO]), protectionReply({ protected: false })];
+    ui();
+    await screen.findByText(strings.sitesPagePasswordPublic);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesPagePasswordProtect }),
+    );
+    fireEvent.change(screen.getByLabelText(strings.sitesPagePasswordField), {
+      target: { value: "open-sesame-2026" },
+    });
+    replies = [
+      {
+        match: (url, method) =>
+          method === "PUT" &&
+          url.endsWith("/sites/site-1/pages/page-1/password"),
+        status: 200,
+        body: {
+          protected: true,
+          pageId: "page-1",
+          createdAt: "2026-08-12T09:30:00Z",
+          updatedAt: "2026-08-12T09:30:00Z",
+        },
+      },
+    ];
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.sitesPagePasswordProtect }),
+    );
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()).toMatchObject({
+      method: "PUT",
+      body: { password: "open-sesame-2026" },
+    });
+    expect(lastWrite()?.url).toMatch(
+      /\/sites\/site-1\/pages\/page-1\/password$/,
+    );
+    // The preview pane stops implying the page is simply online.
+    expect(
+      await screen.findByText(strings.sitesPagePasswordPreviewNote),
+    ).toBeTruthy();
+  });
+
+  test("taking the password off sends a DELETE only after the second click", async () => {
+    replies = [
+      pageReply([HERO]),
+      protectionReply({
+        protected: true,
+        pageId: "page-1",
+        createdAt: "2026-08-12T09:30:00Z",
+        updatedAt: "2026-08-12T09:30:00Z",
+      }),
+    ];
+    ui();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: strings.sitesPagePasswordRemove,
+      }),
+    );
+    expect(lastWrite()).toBeUndefined();
+
+    replies = [
+      {
+        match: (url, method) =>
+          method === "DELETE" &&
+          url.endsWith("/sites/site-1/pages/page-1/password"),
+        status: 200,
+        body: { protected: false },
+      },
+    ];
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: strings.sitesPagePasswordRemoveConfirm,
+      }),
+    );
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()?.method).toBe("DELETE");
+    expect(lastWrite()?.url).toMatch(
+      /\/sites\/site-1\/pages\/page-1\/password$/,
+    );
+    expect(
+      await screen.findByText(strings.sitesPagePasswordRemoved),
+    ).toBeTruthy();
+    expect(screen.queryByText(strings.sitesPagePasswordPreviewNote)).toBeNull();
+  });
+});
