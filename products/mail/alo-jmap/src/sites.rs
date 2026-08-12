@@ -1581,6 +1581,10 @@ pub async fn get_analytics(
         "devices": dimension_json(report.devices),
         "entryPages": dimension_json(report.entry_pages),
         "exitPages": dimension_json(report.exit_pages),
+        // Beacon-reported (S2.08a2): a site whose visitors run no scripts has
+        // these two empty while every other number above stays complete.
+        "readTime": dimension_json(report.read_time),
+        "outboundDomains": dimension_json(report.outbound),
     })))
 }
 

@@ -7,6 +7,7 @@ use time::Date;
 use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
 use crate::id::SiteId;
+use crate::site_public_analytics::ReadTimeBucket;
 
 /// One day in an owner's traffic report.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -53,6 +54,14 @@ pub struct SiteAnalyticsReport {
     pub entry_pages: Vec<SiteAnalyticsDimension>,
     /// Pages a visitor-day was last seen on.
     pub exit_pages: Vec<SiteAnalyticsDimension>,
+    /// How long page views stayed readable, in [`ReadTimeBucket::ORDERED`]
+    /// order rather than by count: a duration histogram read out of sequence
+    /// is not a histogram. Reported by the published page's beacon, so a site
+    /// whose visitors run no scripts has none.
+    pub read_time: Vec<SiteAnalyticsDimension>,
+    /// Domains visitors left for, most-clicked first. The `other` bucket is
+    /// the day's overflow past the distinct-domain cap, never a real host.
+    pub outbound: Vec<SiteAnalyticsDimension>,
 }
 
 #[derive(sqlx::FromRow)]
@@ -212,6 +221,8 @@ impl AccountStore {
         let mut devices = Vec::new();
         let mut entry_pages = Vec::new();
         let mut exit_pages = Vec::new();
+        let mut read_time = Vec::new();
+        let mut outbound = Vec::new();
         for row in dimensions {
             let bucket = match row.dimension.as_str() {
                 "campaign" => &mut campaigns,
@@ -219,6 +230,8 @@ impl AccountStore {
                 "device" => &mut devices,
                 "entry" => &mut entry_pages,
                 "exit" => &mut exit_pages,
+                "read_time" => &mut read_time,
+                "outbound" => &mut outbound,
                 // The column's check constraint makes this unreachable; a
                 // future dimension is simply not reported until it is read.
                 _ => continue,
@@ -231,6 +244,16 @@ impl AccountStore {
             }
         }
 
+        // Every other dimension is a ranking, so the count order the query
+        // returned is the right one. A duration histogram is not: it is only
+        // readable in bucket order, and there are six of them.
+        read_time.sort_by_key(|row: &SiteAnalyticsDimension| {
+            ReadTimeBucket::ORDERED
+                .iter()
+                .position(|bucket| bucket.as_str() == row.label)
+                .unwrap_or(usize::MAX)
+        });
+
         Ok(Some(SiteAnalyticsReport {
             daily,
             top_pages,
@@ -240,6 +263,8 @@ impl AccountStore {
             devices,
             entry_pages,
             exit_pages,
+            read_time,
+            outbound,
         }))
     }
 }

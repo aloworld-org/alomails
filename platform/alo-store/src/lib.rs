@@ -465,7 +465,9 @@ pub use site_posts::{NewSitePost, SitePost, SitePostStatus, SitePostUpdate};
 pub use site_public::{
     PublishedSite, PublishedSitePost, PublishedSitePostBody, PublishedSitePostPage, SitePublicStore,
 };
-pub use site_public_analytics::{DeviceClass, PublicSiteVisit};
+pub use site_public_analytics::{
+    DeviceClass, OUTBOUND_OVERFLOW, PublicSiteSignal, PublicSiteVisit, ReadTimeBucket,
+};
 pub use site_public_protection::PublishedPageProtection;
 pub use site_publish::{SitePageSnapshot, SitePublish};
 pub use site_publish_schedule::{

@@ -3,6 +3,14 @@
 //! path, referrer **domain**, campaign label, country code, device class, and
 //! a one-way 32-byte daily visitor token before this door is called. Raw
 //! connection or request metadata is neither accepted nor representable here.
+//!
+//! Two doors, not one. [`SitePublicStore::record_public_site_view`] takes what
+//! a *request* carried; [`SitePublicStore::record_public_site_signal`] takes
+//! what the published page's own beacon reported — how long the page was read,
+//! and which outside domain the visitor left for. The beacon door deliberately
+//! accepts **no visitor token at all**: nothing a browser says about itself is
+//! trusted with an identity, so these aggregates count events and can never be
+//! joined back to a person.
 
 use time::Date;
 
@@ -14,6 +22,18 @@ use crate::site_public::{PublishedSite, SitePublicStore};
 const PATH_MAX_LEN: usize = 2048;
 const REFERRER_DOMAIN_MAX_LEN: usize = 253;
 const CAMPAIGN_MAX_LEN: usize = 64;
+
+/// How many distinct outbound domains one site may accumulate in one day.
+/// Unlike every other dimension, this value is named by the visitor's browser
+/// rather than derived from something the site itself published, so it is the
+/// one bucket a flood could inflate into a data dump. Past the cap, further
+/// new domains land in [`OUTBOUND_OVERFLOW`] instead of creating rows.
+const OUTBOUND_DAILY_VALUES: i64 = 200;
+
+/// The bucket new outbound domains fold into once a site-day is at its cap.
+/// It cannot be mistaken for a real destination: a stored outbound domain
+/// always contains a dot, and this does not.
+pub const OUTBOUND_OVERFLOW: &str = "other";
 
 /// The class of device a page was read on, as coarse as it can be while
 /// staying useful. Derived at the HTTP boundary from the user agent, which is
@@ -43,6 +63,77 @@ impl DeviceClass {
             Self::Unknown => "unknown",
         }
     }
+}
+
+/// How long one page view stayed readable, as one of six fixed buckets.
+///
+/// The beacon reports a number of seconds; only the bucket is ever stored.
+/// That is the whole privacy argument for the dimension: "between one and
+/// three minutes" says something useful about a page, while "137 seconds"
+/// starts to say something about a reader.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReadTimeBucket {
+    UnderTenSeconds,
+    TenToThirtySeconds,
+    ThirtyToSixtySeconds,
+    OneToThreeMinutes,
+    ThreeToTenMinutes,
+    OverTenMinutes,
+}
+
+impl ReadTimeBucket {
+    /// The buckets in reading order — the order a report shows them in, which
+    /// is not the order their counts happen to rank in.
+    pub const ORDERED: [Self; 6] = [
+        Self::UnderTenSeconds,
+        Self::TenToThirtySeconds,
+        Self::ThirtyToSixtySeconds,
+        Self::OneToThreeMinutes,
+        Self::ThreeToTenMinutes,
+        Self::OverTenMinutes,
+    ];
+
+    /// The bucket a reported duration falls in. Total by construction: a
+    /// hostile or absurd number lands in the top bucket rather than being
+    /// rejected, because the point is that the exact number never matters.
+    #[must_use]
+    pub const fn from_seconds(seconds: u64) -> Self {
+        match seconds {
+            0..=9 => Self::UnderTenSeconds,
+            10..=29 => Self::TenToThirtySeconds,
+            30..=59 => Self::ThirtyToSixtySeconds,
+            60..=179 => Self::OneToThreeMinutes,
+            180..=599 => Self::ThreeToTenMinutes,
+            _ => Self::OverTenMinutes,
+        }
+    }
+
+    /// The stored label. Stable, unit-suffixed, and deliberately not a
+    /// sentence: naming the bucket in the reader's language is the interface's
+    /// job.
+    #[must_use]
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::UnderTenSeconds => "0-10s",
+            Self::TenToThirtySeconds => "10-30s",
+            Self::ThirtyToSixtySeconds => "30-60s",
+            Self::OneToThreeMinutes => "1-3m",
+            Self::ThreeToTenMinutes => "3-10m",
+            Self::OverTenMinutes => "10m+",
+        }
+    }
+}
+
+/// One thing the published page's beacon reported. Both variants are already
+/// reduced by the collect endpoint; neither carries a visitor token, a page
+/// path, or anything else that could turn an aggregate into a journey.
+#[derive(Debug, Clone, Copy)]
+pub enum PublicSiteSignal<'a> {
+    /// How long a page view stayed readable.
+    ReadTime(ReadTimeBucket),
+    /// The DNS host a visitor followed a link to, lowercased and bounded to
+    /// the same shape as a referrer domain.
+    Outbound(&'a str),
 }
 
 /// One safe, already-reduced page view. Every field is a derivative the
@@ -148,7 +239,7 @@ impl SitePublicStore {
             ("device", visit.device.as_str()),
         ] {
             add_dimension_hit(
-                &mut transaction,
+                &mut *transaction,
                 tenant,
                 site_id,
                 visit.day,
@@ -190,7 +281,7 @@ impl SitePublicStore {
                 .await
                 .map_err(StoreError::Db)?;
                 add_dimension_hit(
-                    &mut transaction,
+                    &mut *transaction,
                     tenant,
                     site_id,
                     visit.day,
@@ -199,7 +290,7 @@ impl SitePublicStore {
                 )
                 .await?;
                 add_dimension_hit(
-                    &mut transaction,
+                    &mut *transaction,
                     tenant,
                     site_id,
                     visit.day,
@@ -238,7 +329,7 @@ impl SitePublicStore {
                 .await
                 .map_err(StoreError::Db)?;
                 add_dimension_hit(
-                    &mut transaction,
+                    &mut *transaction,
                     tenant,
                     site_id,
                     visit.day,
@@ -252,6 +343,109 @@ impl SitePublicStore {
         }
 
         transaction.commit().await.map_err(StoreError::Db)
+    }
+
+    /// Adds one page-beacon signal to the resolved published site's daily
+    /// aggregates.
+    ///
+    /// The resolved site's private tenant id is used in the inserted key, so
+    /// a caller cannot choose or cross tenant scope. Nothing here identifies a
+    /// visitor — not even the opaque daily token page views carry — so these
+    /// buckets count events and nothing else.
+    ///
+    /// Outbound domains are the one dimension a *visitor's browser* names, so
+    /// the number of distinct ones a site accumulates in a day is capped: past
+    /// [`OUTBOUND_DAILY_VALUES`], further new domains are counted under
+    /// [`OUTBOUND_OVERFLOW`] rather than creating rows. Two simultaneous first
+    /// sightings can each pass that check, so the true ceiling is the cap plus
+    /// the writer concurrency — a bound, not an exact count, which is all an
+    /// abuse limit needs to be.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] for an outbound domain outside its safe
+    /// bound, or [`StoreError::Db`] if the aggregate write fails.
+    pub async fn record_public_site_signal(
+        &self,
+        site: &PublishedSite,
+        day: Date,
+        signal: PublicSiteSignal<'_>,
+    ) -> Result<()> {
+        let tenant = site.tenant.as_str();
+        let site_id = site.site.as_str();
+        match signal {
+            PublicSiteSignal::ReadTime(bucket) => {
+                add_dimension_hit(
+                    self.pool(),
+                    tenant,
+                    site_id,
+                    day,
+                    "read_time",
+                    bucket.as_str(),
+                )
+                .await
+            }
+            PublicSiteSignal::Outbound(domain) => {
+                validate_outbound(domain)?;
+                // Bumping an existing bucket is the common case and costs one
+                // statement; only a domain this site has not seen today has to
+                // ask whether it may become a new row at all.
+                let bumped = sqlx::query(
+                    "UPDATE site_analytics_dimension_daily SET hits = hits + 1 \
+                     WHERE tenant_id = $1 AND site_id = $2 AND day = $3 \
+                       AND dimension = 'outbound' AND value = $4",
+                )
+                .bind(tenant)
+                .bind(site_id)
+                .bind(day)
+                .bind(domain)
+                .execute(self.pool())
+                .await
+                .map_err(StoreError::Db)?;
+                if bumped.rows_affected() == 1 {
+                    return Ok(());
+                }
+                let distinct = sqlx::query_scalar::<_, i64>(
+                    "SELECT COUNT(*) FROM site_analytics_dimension_daily \
+                     WHERE tenant_id = $1 AND site_id = $2 AND day = $3 \
+                       AND dimension = 'outbound'",
+                )
+                .bind(tenant)
+                .bind(site_id)
+                .bind(day)
+                .fetch_one(self.pool())
+                .await
+                .map_err(StoreError::Db)?;
+                let value = if distinct >= OUTBOUND_DAILY_VALUES {
+                    OUTBOUND_OVERFLOW
+                } else {
+                    domain
+                };
+                add_dimension_hit(self.pool(), tenant, site_id, day, "outbound", value).await
+            }
+        }
+    }
+}
+
+/// The shape an outbound domain must have to be stored: the same bounded DNS
+/// host a referrer is reduced to. The collect endpoint folds the browser's
+/// value into this shape; the door refuses anything that did not arrive in it.
+fn validate_outbound(domain: &str) -> Result<()> {
+    let valid = !domain.is_empty()
+        && domain.len() <= REFERRER_DOMAIN_MAX_LEN
+        && domain.contains('.')
+        && !domain.starts_with(['.', '-'])
+        && !domain.ends_with(['.', '-'])
+        && !domain.contains("..")
+        && domain.bytes().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'.' || byte == b'-'
+        });
+    if valid {
+        Ok(())
+    } else {
+        Err(StoreError::Validation(
+            "analytics outbound domain must be a lowercase DNS host of at most 253 bytes"
+                .to_owned(),
+        ))
     }
 }
 
@@ -294,9 +488,11 @@ fn validate(visit: &PublicSiteVisit<'_>) -> Result<()> {
     Ok(())
 }
 
-/// Adds one hit to a dimension bucket inside the caller's transaction.
-async fn add_dimension_hit(
-    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+/// Adds one hit to a dimension bucket, on whichever executor the caller is
+/// already using — a page view's transaction, or the pool directly for a
+/// beacon signal, which has nothing to stay consistent with.
+async fn add_dimension_hit<'e, E: sqlx::PgExecutor<'e>>(
+    executor: E,
     tenant: &str,
     site: &str,
     day: Date,
@@ -315,7 +511,7 @@ async fn add_dimension_hit(
     .bind(day)
     .bind(dimension)
     .bind(value)
-    .execute(&mut **transaction)
+    .execute(executor)
     .await
     .map(|_| ())
     .map_err(StoreError::Db)
