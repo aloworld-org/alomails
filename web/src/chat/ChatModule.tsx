@@ -278,7 +278,8 @@ function MessageLine({
   onDecide,
   onEdit,
   onWithdraw,
-  onReply,
+  onReplyHere,
+  onReplyPrivate,
   onJoinMeeting,
   grouped = false,
   children,
@@ -299,9 +300,8 @@ function MessageLine({
    *  refuses anyone else's and an offer that ends in 403 is a lie. */
   onEdit: (message: Message, body: string) => void;
   onWithdraw: (message: Message) => void;
-  /** Open this message's thread. In the toolbar, not the flow: an affordance
-   *  that is invisible until hover must not occupy space while invisible. */
-  onReply?: ((message: Message) => void) | undefined;
+  onReplyHere?: ((message: Message) => void) | undefined;
+  onReplyPrivate?: ((message: Message) => void) | undefined;
   /** Join the meeting this message announces. */
   onJoinMeeting?: ((id: string) => void) | undefined;
   /** This message continues the previous author's run: no avatar, no name, no
@@ -373,16 +373,29 @@ function MessageLine({
               )}
             </span>
           )}
-          {onReply !== undefined && message.deletedAt === null && (
-            <button
-              type="button"
-              className={styles.tool}
-              onClick={() => onReply(message)}
-              aria-label={strings.chatReplyInThread}
-              title={strings.chatReplyInThread}
-            >
-              <Reply size={15} />
-            </button>
+          {onReplyHere !== undefined && message.deletedAt === null && (
+            <span className={styles.pickerWrap}>
+              <button
+                type="button"
+                className={styles.tool}
+                onClick={() => onReplyHere(message)}
+                aria-label={strings.chatReplyHere}
+                title={strings.chatReplyHere}
+              >
+                <Reply size={15} />
+              </button>
+              {onReplyPrivate !== undefined && (
+                <button
+                  type="button"
+                  className={styles.tool}
+                  onClick={() => onReplyPrivate(message)}
+                  aria-label={strings.chatReplyPrivately}
+                  title={strings.chatReplyPrivately}
+                >
+                  <MessagesSquare size={15} />
+                </button>
+              )}
+            </span>
           )}
           {mine && (
             <>
@@ -600,13 +613,10 @@ export function ChatModule() {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-  // The open thread, by the seq of the message it hangs under. A seq is the
-  // right handle here: it is what the server addresses a thread by, and it
-  // survives a refetch that replaces every message object.
-  const [threadSeq, setThreadSeq] = useState<number | null>(null);
-  const [replies, setReplies] = useState<Message[] | null>(null);
-  const [replyDraft, setReplyDraft] = useState("");
-  const [replying, setReplying] = useState(false);
+  const [replyContext, setReplyContext] = useState<{
+    message: Message;
+    private: boolean;
+  } | null>(null);
   // What may be left, per the server. Empty until it answers, which simply
   // means no picker yet — never a picker offering emoji it would refuse.
   const [palette, setPalette] = useState<string[]>([]);
@@ -629,12 +639,9 @@ export function ChatModule() {
     null,
   );
   const composerMenuRef = useRef<HTMLDivElement | null>(null);
-  const [replyMenu, setReplyMenu] = useState(false);
-  const replyMenuRef = useRef<HTMLDivElement | null>(null);
-  const replyComposerRef = useRef<HTMLTextAreaElement | null>(null);
   const [authoringInsert, setAuthoringInsert] = useState<{
     kind: "equation" | "code";
-    target: "message" | "reply";
+    target: "message";
   } | null>(null);
   // Which room's row menu is open, by id — one at a time, same reason.
   const [emojiQuery, setEmojiQuery] = useState("");
@@ -664,8 +671,6 @@ export function ChatModule() {
   useDismiss(rowMenu !== null, rowMenuRef, closeRowMenu);
   const closeComposerMenu = useCallback(() => setComposerMenu(null), []);
   useDismiss(composerMenu !== null, composerMenuRef, closeComposerMenu);
-  const closeReplyMenu = useCallback(() => setReplyMenu(false), []);
-  useDismiss(replyMenu, replyMenuRef, closeReplyMenu);
   // Whether anything remains behind the oldest line held. Derived from the
   // last page's size rather than a count, because a count would be a second
   // truth about the same thing.
@@ -719,17 +724,6 @@ export function ChatModule() {
     [api],
   );
 
-  const loadReplies = useCallback(
-    async (id: string, rootSeq: number) => {
-      try {
-        setReplies(await api.thread(id, rootSeq));
-      } catch (failure) {
-        setError(chatMessage(failure, strings.chatThreadFailed));
-      }
-    },
-    [api],
-  );
-
   useEffect(() => {
     void loadChannels();
   }, [loadChannels]);
@@ -745,10 +739,6 @@ export function ChatModule() {
   useEffect(() => {
     if (openId === null) return;
     setMessages(null);
-    // A thread belongs to the room it was opened in; changing rooms closes it
-    // rather than leaving a panel of someone else's replies on screen.
-    setThreadSeq(null);
-    setReplies(null);
     setTurns([]);
     setDraft(drafts.current.get(openId) ?? "");
     void meet
@@ -790,12 +780,6 @@ export function ChatModule() {
     };
   }, [api, openId]);
 
-  useEffect(() => {
-    if (openId === null || threadSeq === null) return;
-    setReplies(null);
-    void loadReplies(openId, threadSeq);
-  }, [openId, threadSeq, loadReplies]);
-
   // Live: a chat signal refreshes the sidebar, the open room, and the open
   // thread — a reply arriving while someone reads the thread is exactly the
   // case the stream exists for.
@@ -810,7 +794,6 @@ export function ChatModule() {
             if (openId !== null) {
               void loadMessages(openId);
               void loadTurns(openId);
-              if (threadSeq !== null) void loadReplies(openId, threadSeq);
             }
           }, controller.signal);
         } catch {
@@ -823,7 +806,7 @@ export function ChatModule() {
       live = false;
       controller.abort();
     };
-  }, [client, openId, threadSeq, loadChannels, loadMessages, loadReplies]);
+  }, [client, openId, loadChannels, loadMessages]);
 
   // Keep the newest line in view as the conversation grows — but only when
   // the newest line actually changed. Scrolling to the bottom after prepending
@@ -835,12 +818,16 @@ export function ChatModule() {
   }, [newestSeq, openId]);
 
   async function send() {
-    const body = draft.trim();
+    const words = draft.trim();
+    const body = replyContext === null
+      ? words
+      : `> ${personName(replyContext.message.authorEmail, replyContext.message.author)}: ${replyContext.message.body.replace(/\n/g, "\n> ")}\n\n${words}`;
     if (body === "" || openId === null || sending) return;
     const files = staged;
     setSending(true);
     setError(null);
     setDraft("");
+    setReplyContext(null);
     setStaged([]);
     try {
       const sent = await api.post(
@@ -910,22 +897,6 @@ export function ChatModule() {
       composerRef.current?.focus();
       composerRef.current?.setSelectionRange(start, start + body.length);
       setCaret(start + body.length);
-    });
-  }
-
-  function insertReplyBlock(before: string, after: string, sample: string) {
-    const box = replyComposerRef.current;
-    const from = box?.selectionStart ?? replyDraft.length;
-    const to = box?.selectionEnd ?? from;
-    const chosen = replyDraft.slice(from, to);
-    const body = chosen === "" ? sample : chosen;
-    setReplyDraft(
-      `${replyDraft.slice(0, from)}${before}${body}${after}${replyDraft.slice(to)}`,
-    );
-    const start = from + before.length;
-    requestAnimationFrame(() => {
-      replyComposerRef.current?.focus();
-      replyComposerRef.current?.setSelectionRange(start, start + body.length);
     });
   }
 
@@ -1134,8 +1105,6 @@ export function ChatModule() {
       setError(chatMessage(failure, strings.chatEditFailed));
     }
     if (openId !== null) void loadMessages(openId);
-    if (openId !== null && threadSeq !== null)
-      void loadReplies(openId, threadSeq);
   }
 
   async function withdrawMessage(message: Message) {
@@ -1146,8 +1115,6 @@ export function ChatModule() {
       setError(chatMessage(failure, strings.chatWithdrawFailed));
     }
     if (openId !== null) void loadMessages(openId);
-    if (openId !== null && threadSeq !== null)
-      void loadReplies(openId, threadSeq);
   }
 
   async function decide(proposal: Proposal, approve: boolean) {
@@ -1174,29 +1141,8 @@ export function ChatModule() {
           m.id === messageId ? { ...m, reactions: tally } : m,
         ) ?? null;
       setMessages(applied);
-      setReplies(applied);
     } catch (failure) {
       setError(chatMessage(failure, strings.chatReactFailed));
-    }
-  }
-
-  async function sendReply() {
-    const body = replyDraft.trim();
-    if (body === "" || openId === null || threadSeq === null || replying)
-      return;
-    setReplying(true);
-    setError(null);
-    setReplyDraft("");
-    try {
-      const sent = await api.post(openId, body, threadSeq);
-      setReplies((current) => [...(current ?? []), sent]);
-      // The feed shows the count, so it has to hear about this too.
-      void loadMessages(openId);
-    } catch (failure) {
-      setReplyDraft(body);
-      setError(chatMessage(failure, strings.chatSendFailed));
-    } finally {
-      setReplying(false);
     }
   }
 
@@ -1294,14 +1240,6 @@ export function ChatModule() {
   const mention = mentionAt(draft, caret);
   const suggestions =
     mention === null ? [] : candidatesFor(mention.token, nameable);
-  // The message a thread hangs under, taken from the feed the panel was opened
-  // from. If a refetch drops it (someone withdrew it), the panel closes with
-  // it rather than floating replies under nothing.
-  const threadRoot =
-    threadSeq === null
-      ? null
-      : (messages?.find((m) => m.seq === threadSeq) ?? null);
-
   return (
     <div className={styles.module}>
       {(!isMobile || openId === null) && (
@@ -1834,22 +1772,30 @@ export function ChatModule() {
                       onDecide={(p, ok) => void decide(p, ok)}
                       onEdit={(m, body) => void editMessage(m, body)}
                       onWithdraw={(m) => void withdrawMessage(m)}
-                      onReply={
+                      onReplyHere={
                         open.archivedAt === null
-                          ? (m) => setThreadSeq(m.seq)
+                          ? (m) => {
+                              setReplyContext({ message: m, private: false });
+                              composerRef.current?.focus();
+                            }
+                          : undefined
+                      }
+                      onReplyPrivate={
+                        open.kind !== "dm" &&
+                        message.authorKind === "user" &&
+                        message.author !== me
+                          ? (m) => {
+                              void openDm({
+                                user: m.author,
+                                email: m.authorEmail ?? m.author,
+                              }).then(() => {
+                                setReplyContext({ message: m, private: true });
+                                composerRef.current?.focus();
+                              });
+                            }
                           : undefined
                       }
                     >
-                      {message.replyCount > 0 && (
-                        <button
-                          type="button"
-                          className={styles.threadLink}
-                          onClick={() => setThreadSeq(message.seq)}
-                        >
-                          <MessagesSquare size={13} />
-                          {strings.chatReplies(message.replyCount)}
-                        </button>
-                      )}
                     </MessageLine>
                   </Fragment>
                 ))
@@ -1873,6 +1819,32 @@ export function ChatModule() {
                   void send();
                 }}
               >
+                {replyContext !== null && (
+                  <div className={styles.replyContext}>
+                    <Reply size={15} />
+                    <span className={styles.replyContextCopy}>
+                      <strong>
+                        {replyContext.private
+                          ? strings.chatReplyingPrivately(
+                              personName(
+                                replyContext.message.authorEmail,
+                                replyContext.message.author,
+                              ),
+                            )
+                          : strings.chatReplyingHere}
+                      </strong>
+                      <span>{replyContext.message.body}</span>
+                    </span>
+                    <button
+                      type="button"
+                      className={styles.searchClear}
+                      onClick={() => setReplyContext(null)}
+                      aria-label={strings.chatCancelReply}
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                )}
                 {hasSelection && <div className={styles.formatBar} role="toolbar" aria-label={strings.chatFormatting}>
                   <button
                     type="button"
@@ -2395,130 +2367,6 @@ export function ChatModule() {
         />
       )}
 
-      {threadRoot !== null && open !== null && (
-        <aside className={styles.thread}>
-          <header className={styles.threadHeader}>
-            <h3 className={styles.roomName}>{strings.chatThread}</h3>
-            <button
-              type="button"
-              className={styles.threadClose}
-              onClick={() => setThreadSeq(null)}
-              aria-label={strings.chatThreadClose}
-            >
-              <X size={16} />
-            </button>
-          </header>
-
-          <div className={styles.threadFeed}>
-            {/* The root is shown first, so a thread is readable on its own
-                without hunting for what it is about. */}
-            <MessageLine
-              message={threadRoot}
-              palette={open.archivedAt === null ? palette : []}
-              me={me}
-              onReact={(emoji) => void react(threadRoot.id, emoji)}
-              onOpenFile={(file) => void openFile(file)}
-              onDecide={(p, ok) => void decide(p, ok)}
-              onEdit={(m, body) => void editMessage(m, body)}
-              onWithdraw={(m) => void withdrawMessage(m)}
-            />
-            <hr className={styles.threadRule} />
-            {replies === null ? (
-              <p className={styles.feedNote}>
-                <Loader2 className={styles.spin} size={14} />{" "}
-                {strings.chatLoading}
-              </p>
-            ) : replies.length === 0 ? (
-              <p className={styles.feedNote}>{strings.chatThreadEmpty}</p>
-            ) : (
-              replies.map((reply, i) => (
-                <MessageLine
-                  key={reply.id}
-                  message={reply}
-                  grouped={continues(reply, replies[i - 1])}
-                  palette={open.archivedAt === null ? palette : []}
-                  me={me}
-                  onReact={(emoji) => void react(reply.id, emoji)}
-                  onOpenFile={(file) => void openFile(file)}
-                  onDecide={(p, ok) => void decide(p, ok)}
-                  onEdit={(m, body) => void editMessage(m, body)}
-                  onWithdraw={(m) => void withdrawMessage(m)}
-                />
-              ))
-            )}
-          </div>
-
-          {open.archivedAt === null && (
-            <form
-              className={`${styles.composer} ${styles.replyComposer}`}
-              onSubmit={(event) => {
-                event.preventDefault();
-                void sendReply();
-              }}
-            >
-              <span className={styles.shareWrap} ref={replyMenuRef}>
-                <button
-                  type="button"
-                  className={styles.composerTool}
-                  onClick={() => setReplyMenu((open) => !open)}
-                  aria-label={strings.chatShare}
-                  title={strings.chatShare}
-                  aria-expanded={replyMenu}
-                >
-                  <Plus size={18} />
-                </button>
-                {replyMenu && (
-                  <div className={`${styles.shareMenu} ${styles.replyShareMenu}`} role="menu">
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className={styles.shareItem}
-                      onClick={() => {
-                        setReplyMenu(false);
-                        setAuthoringInsert({ kind: "code", target: "reply" });
-                      }}
-                    >
-                      <SquareCode size={15} className={styles.shareIcon} />
-                      <span><span className={styles.shareName}>{strings.chatCodeBlock}</span><span className={styles.shareHint}>{strings.chatCodeBlockHint}</span></span>
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className={styles.shareItem}
-                      onClick={() => {
-                        setReplyMenu(false);
-                        setAuthoringInsert({ kind: "equation", target: "reply" });
-                      }}
-                    >
-                      <Sigma size={15} className={styles.shareIcon} />
-                      <span><span className={styles.shareName}>{strings.chatFormula}</span><span className={styles.shareHint}>{strings.chatFormulaHint}</span></span>
-                    </button>
-                  </div>
-                )}
-              </span>
-              <textarea
-                ref={replyComposerRef}
-                className={styles.input}
-                value={replyDraft}
-                onChange={(event) => setReplyDraft(event.target.value)}
-                placeholder={strings.chatThreadPlaceholder}
-                aria-label={strings.chatThreadPlaceholder}
-                autoComplete="off"
-                rows={1}
-              />
-              <button
-                type="submit"
-                className={styles.send}
-                disabled={replyDraft.trim() === "" || replying}
-                aria-label={strings.chatSend}
-                title={strings.chatSend}
-              >
-                <Send size={17} />
-              </button>
-            </form>
-          )}
-        </aside>
-      )}
       {authoringInsert !== null && (
         <Suspense fallback={null}>
           <AuthoringInsertModal
@@ -2526,8 +2374,7 @@ export function ChatModule() {
             onClose={() => setAuthoringInsert(null)}
             onInsert={(html) => {
               const text = chatAuthoringText(html);
-              if (authoringInsert.target === "message") insertAtCaret(text);
-              else insertReplyBlock("", "", text);
+              insertAtCaret(text);
               setAuthoringInsert(null);
             }}
           />
