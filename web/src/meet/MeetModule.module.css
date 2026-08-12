@@ -9,6 +9,7 @@
 .joinForm button:disabled { color: var(--text-disabled); cursor: default; }
 .header { margin: var(--space-5) 0 var(--space-4); }
 .greeting { margin: 0 0 var(--space-1); color: var(--text-primary); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+.greetingIcon { width: var(--icon-size-control); height: var(--icon-size-control); margin-left: var(--space-1); vertical-align: middle; }
 .header h1 { margin: 0; color: var(--text-primary); font-size: var(--text-3xl); line-height: var(--leading-tight); }
 .header h1 em { color: var(--accent); font-style: normal; }
 .header > p:last-child { margin: var(--space-2) 0 0; color: var(--text-secondary); font-size: var(--text-md); }
@@ -26,7 +27,7 @@
 .heroActions > :last-child { border-color: color-mix(in srgb, var(--accent) 20%, var(--border-default)); background: var(--bg-surface); color: var(--accent-active); }
 .heroScene { position: relative; display: flex; align-items: flex-end; justify-content: center; padding-bottom: var(--space-7); }
 .heroScene::before { position: absolute; top: 12%; width: 75%; aspect-ratio: 1; border-radius: var(--radius-full); background: color-mix(in srgb, var(--accent) 13%, var(--bg-surface)); content: ""; }
-.hand { position: absolute; z-index: 1; top: 12%; right: 22%; font-size: 5rem; filter: saturate(.7); transform: rotate(-10deg); }
+.hand { position: absolute; z-index: 1; top: 10%; right: 20%; width: var(--space-16); height: var(--space-16); transform: rotate(-8deg); }
 .mug { position: relative; z-index: 1; width: var(--space-12); height: var(--space-16); margin-right: var(--space-4); border-radius: 0 0 var(--radius-lg) var(--radius-lg); background: var(--accent); box-shadow: inset 0 var(--space-1) color-mix(in srgb, var(--accent) 80%, var(--bg-surface)); }
 .mug::after { position: absolute; top: var(--space-3); right: calc(var(--space-3) * -1); width: var(--space-4); height: var(--space-6); border: var(--space-1) solid var(--accent); border-left: 0; border-radius: 0 var(--radius-full) var(--radius-full) 0; content: ""; }
 .laptop { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; width: 42%; aspect-ratio: 4 / 3; border: var(--space-1) solid var(--navy-700); border-bottom-width: var(--space-2); border-radius: var(--radius-md); background: var(--bg-raised); color: var(--navy-500); transform: skew(-7deg); }
@@ -44,7 +45,8 @@
 .card h3 { margin: 0; overflow: hidden; color: var(--text-primary); font-size: var(--text-base); text-overflow: ellipsis; white-space: nowrap; }
 .card > p { flex: 1; margin: var(--space-1) 0 var(--space-4); color: var(--text-tertiary); font-size: var(--text-sm); }
 .card button { width: 100%; }
-.card button svg { width: var(--icon-size-inline); }
+.card button > span:last-child { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); white-space: nowrap; }
+.card button svg { flex: none; width: var(--icon-size-inline); }
 .empty, .state { display: flex; min-height: var(--content-height-sm); flex-direction: column; align-items: center; justify-content: center; padding: var(--space-6); border: var(--border-width) dashed var(--border-default); border-radius: var(--radius-lg); background: var(--bg-surface); text-align: center; }
 .empty > svg, .state > svg { width: var(--space-10); height: var(--space-10); margin-bottom: var(--space-2); color: var(--accent); }
 .empty p { max-width: 48ch; margin: var(--space-1) 0 0; color: var(--text-secondary); }

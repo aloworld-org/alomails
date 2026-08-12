@@ -665,6 +665,7 @@
   gap: var(--space-2);
   margin-left: auto;
 }
+.modalActionsRight > button:last-child { min-width: var(--control-width-wide); min-height: var(--control-height); border-radius: var(--radius-md); }
 .deleteBtn {
   display: inline-flex;
   align-items: center;
@@ -1082,6 +1083,19 @@
 .emControl input:focus,
 .emControl select:focus {
   outline: none;
+}
+.emControl input[type="date"],
+.emControl input[type="time"] {
+  accent-color: var(--accent);
+  color-scheme: light;
+}
+.emControl input[type="date"]::-webkit-calendar-picker-indicator,
+.emControl input[type="time"]::-webkit-calendar-picker-indicator {
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
 }
 .emControlIcon {
   color: var(--accent);

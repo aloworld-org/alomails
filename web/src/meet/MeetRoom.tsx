@@ -21,8 +21,10 @@ import {
   useLocalParticipant,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
-import { ArrowLeft, Copy, Hand, MonitorUp, PhoneOff, RefreshCw, ServerOff, Share2, Smile, Video } from "lucide-react";
+import { ArrowLeft, Copy, Hand, MonitorUp, PhoneOff, RefreshCw, ServerOff, Share2, ShieldCheck, Smile, Video } from "lucide-react";
 
+import wavingHand from "../assets/alo-waving-hand.svg";
+import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../ds";
 import { strings } from "../i18n";
 import { MeetApiError, MeetUnavailable, useMeetApi } from "./api";
@@ -191,6 +193,7 @@ export function MeetRoom({
   onLeft: () => void;
 }) {
   const api = useMeetApi();
+  const { identity } = useAuth();
   const [grant, setGrant] = useState<JoinGrant | null>(null);
   const [problem, setProblem] = useState<{ kind: "join" | "unavailable"; message: string } | null>(null);
   // Which camera and microphone, checked before joining rather than
@@ -269,8 +272,21 @@ export function MeetRoom({
         >
           {strings.meetBack}
         </Button>
-        <div className={styles.prejoin}>
-          <PreJoin
+        <main className={styles.prejoinShell}>
+          <section className={styles.prejoinIntro}>
+            <p className={styles.readyGreeting}>
+              <img src={wavingHand} alt="" />
+              {strings.meetReadyGreeting(identity?.name.split(" ")[0] ?? "")}
+            </p>
+            <h1>{strings.meetReadyTitle}</h1>
+            <p className={styles.readyCopy}>{strings.meetReadyBody}</p>
+            <div className={styles.readySafety}>
+              <span><ShieldCheck aria-hidden="true" /></span>
+              <div><strong>{strings.meetReadySafetyTitle}</strong><p>{strings.meetReadySafetyBody}</p></div>
+            </div>
+          </section>
+          <section className={styles.prejoin} aria-label={strings.meetReadyTitle}>
+            <PreJoin
             defaults={{
               // The same default the call itself uses: heard, and seen only
               // by choice.
@@ -287,8 +303,9 @@ export function MeetRoom({
             micLabel={strings.meetMicrophone}
             camLabel={strings.meetCamera}
             persistUserChoices
-          />
-        </div>
+            />
+          </section>
+        </main>
       </div>
     );
   }

@@ -771,8 +771,7 @@ export function EventModal({
                   {strings.agendaSaveAll}
                 </Button>
               ) : (
-                <Button type="submit" disabled={busy || summary.trim() === ""}>
-                  <Check size={16} />{" "}
+                <Button type="submit" icon={<Check aria-hidden="true" />} disabled={busy || summary.trim() === ""}>
                   {event ? strings.agendaSave : strings.agendaCreateEvent}
                 </Button>
               ))}

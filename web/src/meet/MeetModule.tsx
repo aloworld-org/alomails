@@ -13,6 +13,7 @@ import {
 
 import { useAuth } from "../auth";
 import { Button } from "../ds";
+import wavingHand from "../assets/alo-waving-hand.svg";
 import { getLocale, strings } from "../i18n";
 import { useJmapClient, type CalendarEvent } from "../jmap";
 import { MeetRoom } from "./MeetRoom";
@@ -146,7 +147,7 @@ export function MeetModule() {
         </div>
 
         <header className={styles.header}>
-          <p className={styles.greeting}>{greeting()}{firstName ? `, ${firstName}` : ""} <span aria-hidden="true">👋</span></p>
+          <p className={styles.greeting}>{greeting()}{firstName ? `, ${firstName}` : ""} <img className={styles.greetingIcon} src={wavingHand} alt="" /></p>
           <h1>{strings.meetYourSpaceLead} <em>{strings.meetYourSpaceAccent}</em></h1>
           <p>{strings.meetSubtitle}</p>
         </header>
@@ -165,7 +166,7 @@ export function MeetModule() {
                   <Button variant="ghost" icon={<CalendarDays aria-hidden="true" />} onClick={() => navigate("/agenda")}>{strings.meetSchedule}</Button>
                 </div>
               </div>
-              <div className={styles.heroScene} aria-hidden="true"><span className={styles.hand}>✋</span><span className={styles.mug} /><span className={styles.laptop}><Video /></span></div>
+              <div className={styles.heroScene} aria-hidden="true"><img className={styles.hand} src={wavingHand} alt="" /><span className={styles.mug} /><span className={styles.laptop}><Video /></span></div>
             </section>
 
             <section className={styles.meetings}>
