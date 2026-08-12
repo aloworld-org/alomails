@@ -213,12 +213,12 @@
 }
 
 .channel:hover {
-  background: var(--bg-raised);
+  background: transparent;
   color: var(--text-primary);
 }
 
 .channelOpen {
-  background: color-mix(in srgb, var(--accent-tint) 82%, var(--bg-surface));
+  background: transparent;
   color: var(--text-primary);
   font-weight: 600;
   box-shadow: inset 3px 0 0 var(--accent);
