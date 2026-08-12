@@ -604,6 +604,7 @@ export function ChatModule() {
   const feedRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const [caret, setCaret] = useState(0);
+  const [hasSelection, setHasSelection] = useState(false);
   const [showingPeople, setShowingPeople] = useState(false);
   // One composer popover at a time: opening either closes the other, so two
   // menus can never sit open over each other.
@@ -1826,10 +1827,7 @@ export function ChatModule() {
                   void send();
                 }}
               >
-                {/* Visible, always. The syntax exists for people who know it; this is
-                for everyone else, who should never have to learn markup to make a
-                word bold. */}
-                <div className={styles.formatBar}>
+                {hasSelection && <div className={styles.formatBar} role="toolbar" aria-label={strings.chatFormatting}>
                   <button
                     type="button"
                     className={styles.formatTool}
@@ -1915,7 +1913,7 @@ export function ChatModule() {
                   >
                     <Quote size={15} />
                   </button>
-                </div>
+                </div>}
                 {staged.length > 0 && (
                   <ul className={styles.staged}>
                     {staged.map((file) => (
@@ -1933,6 +1931,30 @@ export function ChatModule() {
                           <Paperclip size={13} />
                           <span className={styles.stagedName}>{file.name}</span>
                           <X size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={styles.shareItem}
+                          onClick={() => {
+                            setComposerMenu(null);
+                            wrapSelection("```" + String.fromCharCode(10), String.fromCharCode(10) + "```", "code");
+                          }}
+                        >
+                          <SquareCode size={15} className={styles.shareIcon} />
+                          <span><span className={styles.shareName}>{strings.chatCodeBlock}</span><span className={styles.shareHint}>{strings.chatCodeBlockHint}</span></span>
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className={styles.shareItem}
+                          onClick={() => {
+                            setComposerMenu(null);
+                            wrapSelection("$", "$", "e^{i\\pi}+1=0");
+                          }}
+                        >
+                          <Sigma size={15} className={styles.shareIcon} />
+                          <span><span className={styles.shareName}>{strings.chatFormula}</span><span className={styles.shareHint}>{strings.chatFormulaHint}</span></span>
                         </button>
                       </li>
                     ))}
@@ -2146,11 +2168,13 @@ export function ChatModule() {
                     if (openId !== null)
                       drafts.current.set(openId, event.target.value);
                     setCaret(event.target.selectionStart ?? 0);
+                    setHasSelection(event.target.selectionStart !== event.target.selectionEnd);
                     setHighlighted(0);
                   }}
-                  onSelect={(event) =>
-                    setCaret(event.currentTarget.selectionStart ?? 0)
-                  }
+                  onSelect={(event) => {
+                    setCaret(event.currentTarget.selectionStart ?? 0);
+                    setHasSelection(event.currentTarget.selectionStart !== event.currentTarget.selectionEnd);
+                  }}
                   onKeyDown={(event) => {
                     if (
                       event.key === "Enter" &&
