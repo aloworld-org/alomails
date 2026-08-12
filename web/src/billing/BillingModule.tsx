@@ -27,14 +27,14 @@ import styles from "./BillingModule.module.css";
  *  of. Invoices stay first — and stay what `/billing` lands on — because they
  *  are what a tenant opens billing to look at. */
 const TABS = [
-  { path: "invoices", label: () => strings.billingInvoices },
+  { path: "customers", label: () => strings.billingCustomers },
+  { path: "products", label: () => strings.billingProducts },
   { path: "quotes", label: () => strings.billingQuotes },
+  { path: "invoices", label: () => strings.billingInvoices },
   // What bills itself again on a rhythm (B2.11). After the documents it
   // raises, because that is what it produces — a reader looks for the invoice
   // first and the arrangement behind it second.
   { path: "recurring", label: () => strings.billingRecurring },
-  { path: "customers", label: () => strings.billingCustomers },
-  { path: "products", label: () => strings.billingProducts },
   // The figures a VAT return is copied from (B1.20). After the records it is
   // computed from, because it is a read over them rather than a thing a tenant
   // keeps.
@@ -66,7 +66,7 @@ export function BillingModule() {
       </header>
 
       <Routes>
-        <Route index element={<Navigate to="/billing/invoices" replace />} />
+        <Route index element={<Navigate to="/billing/customers" replace />} />
         <Route path="invoices">
           <Route index element={<InvoicesView />} />
           <Route path="new" element={<InvoiceEditor />} />
@@ -83,7 +83,7 @@ export function BillingModule() {
         <Route path="reports" element={<VatReportView />} />
         <Route path="settings" element={<SettingsView />} />
         {/* An unknown billing path is a stale link, not an error page. */}
-        <Route path="*" element={<Navigate to="/billing/invoices" replace />} />
+        <Route path="*" element={<Navigate to="/billing/customers" replace />} />
       </Routes>
     </div>
   );
