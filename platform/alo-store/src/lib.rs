@@ -161,6 +161,7 @@ pub mod signup;
 pub mod site_analytics;
 pub mod site_assets;
 pub mod site_collections;
+pub mod site_conversions;
 pub mod site_domains;
 pub mod site_editors;
 pub mod site_form_notify;
@@ -173,6 +174,7 @@ pub mod site_pages;
 pub mod site_posts;
 pub mod site_public;
 mod site_public_analytics;
+pub mod site_public_conversions;
 pub mod site_public_forms;
 pub mod site_public_heatmap;
 pub mod site_public_protection;
@@ -449,6 +451,7 @@ pub use site_collections::{
     SITE_COLLECTION_TITLE_MAX_CHARS, SiteCollection, SiteCollectionFieldMapping,
     SiteCollectionInput, SiteCollectionItem, SiteCollectionSnapshot,
 };
+pub use site_conversions::{SiteConversionReport, SiteConversionSource};
 pub use site_domains::{SITE_DOMAIN_MAX_LEN, SiteDomain, SiteDomainStatus, normalize_site_domain};
 pub use site_form_notify::FormNotification;
 pub use site_forms::{
@@ -473,6 +476,9 @@ pub use site_public::{
 };
 pub use site_public_analytics::{
     DeviceClass, OUTBOUND_OVERFLOW, PublicSiteSignal, PublicSiteVisit, ReadTimeBucket,
+};
+pub use site_public_conversions::{
+    CONVERSION_SOURCE_ID_MAX_LEN, ConversionSource, ConversionStage,
 };
 pub use site_public_heatmap::{
     HEATMAP_COLUMNS, HEATMAP_DAILY_PATHS, HEATMAP_ROWS, HeatmapCell, HeatmapSignal,

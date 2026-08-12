@@ -166,6 +166,7 @@ pub mod site_schedule;
 pub mod site_version_preview;
 pub mod site_versions;
 pub mod sites;
+pub mod sites_conversions;
 pub mod sites_heatmap;
 pub mod snooze;
 pub mod spaces;

@@ -163,7 +163,10 @@ mod tests {
             ("/calendar/events", "/api/calendar/events"),
         ] {
             assert_eq!(module_of(bare), module_of(under_api), "{under_api}");
-            assert!(module_of(under_api).is_some(), "{under_api} must still gate");
+            assert!(
+                module_of(under_api).is_some(),
+                "{under_api} must still gate"
+            );
         }
         // And an ungated prefix stays ungated under the mount.
         assert_eq!(module_of("/api/jmap/upload/{accountId}"), None);
