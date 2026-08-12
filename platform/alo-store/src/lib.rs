@@ -167,11 +167,13 @@ pub mod site_form_notify;
 pub mod site_forms;
 pub mod site_generation;
 pub mod site_model;
+pub mod site_page_protection;
 pub mod site_pages;
 pub mod site_posts;
 pub mod site_public;
 mod site_public_analytics;
 pub mod site_public_forms;
+pub mod site_public_protection;
 pub mod site_publish;
 pub mod site_publish_schedule;
 pub mod site_theme;
@@ -448,6 +450,10 @@ pub use site_forms::{
 };
 pub use site_generation::{GeneratedSiteDraft, NewGeneratedSite, NewGeneratedSitePage};
 pub use site_model::{SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope};
+pub use site_page_protection::{
+    SITE_PAGE_PASSWORD_MAX_CHARS, SITE_PAGE_PASSWORD_MIN_CHARS, SitePageProtection,
+    validate_site_page_password,
+};
 pub use site_pages::{
     LocalizedSitePage, SiteLocaleReadiness, SitePage, SiteTranslationReadiness, validate_page_slug,
 };
@@ -455,6 +461,7 @@ pub use site_posts::{NewSitePost, SitePost, SitePostStatus, SitePostUpdate};
 pub use site_public::{
     PublishedSite, PublishedSitePost, PublishedSitePostBody, PublishedSitePostPage, SitePublicStore,
 };
+pub use site_public_protection::PublishedPageProtection;
 pub use site_publish::{SitePageSnapshot, SitePublish};
 pub use site_publish_schedule::{
     DueSitePublish, MAX_SITE_PUBLISH_SCHEDULE_HISTORY, SITE_PUBLISH_CLAIM_STALE_MINUTES,
