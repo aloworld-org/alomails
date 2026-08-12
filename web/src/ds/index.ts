@@ -40,6 +40,10 @@ export type {
   TableEmptyProps,
   CellAlign,
 } from "./Table";
+export { Toggle } from "./Toggle";
+export type { ToggleProps } from "./Toggle";
+export { Checkbox } from "./Checkbox";
+export type { CheckboxProps } from "./Checkbox";
 export {
   Toolbar,
   ToolbarGroup,
