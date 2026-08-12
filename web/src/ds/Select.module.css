@@ -1,0 +1,101 @@
+/* The one dropdown. Seven stylesheets declared `.select` and they agreed on
+   nearly everything that matters — a 1px `--border-default` on `--bg-surface`,
+   `--radius-md`, `--text-primary`, `font-family: inherit` — which is what makes
+   the disagreements worth naming.
+
+   The base is `Input`'s, not the majority's. Four of the seven wrote
+   `.input, .select, .textarea` in one rule, which is the codebase saying out
+   loud that these two controls stand side by side in a form row and must be
+   the same height; finance and projects were byte-identical doing it. Since
+   those `.input` rules become `ds/Input` (40px, `--text-base`), the select
+   follows it rather than the ~33px each module had derived from padding. The
+   toolbar copies (billing 6px 8px, inventory 6px 10px, shell's 34px) sit
+   beside a search field that is making the same move, so the row stays level.
+
+   Reconciled rather than offered as options:
+
+   * **One focus treatment.** There were four: an inset `outline` (finance,
+     projects, inventory), `outline: none` traded for a `--focus-ring` shadow
+     (billing), and none at all (both shell sections, left to the UA default).
+     This is `Input`'s ring, because a select is not a different kind of field.
+   * **One disabled state.** shell dimmed the whole control to `opacity: 0.55`,
+     which takes its text below the contrast floor — a control you cannot use
+     still has to be readable. `Input`'s build says it with surface and cursor.
+   * **Room for the arrow.** Every copy padded both sides equally, so the
+     platform's chevron sits on top of a long option's last characters. Nothing
+     here sets `appearance: none`: the native control is the whole reason a
+     select is a select on a phone, and drawing our own chevron would mean
+     taking the platform's away on every device to fix it on one. */
+
+.select {
+  height: var(--control-height);
+  /* Never wider than what holds it. Only billing thought of this, and it is
+     the difference between a long product name and a broken toolbar. */
+  max-width: 100%;
+  padding: 0 var(--space-8) 0 var(--space-3);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-base);
+  cursor: pointer;
+  transition:
+    border-color var(--transition-fast),
+    background-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+/* Matches `Input`'s `lg`, down to the same literal height, so a sign-in-sized
+   form does not mix two control heights. */
+.lg {
+  height: 46px;
+  padding-left: var(--space-4);
+}
+
+/* A select in a form column, where the field's width comes from the column and
+   not from its longest option. The default is the other way round: unlike a
+   text input, a select's natural width carries information. */
+.fullWidth {
+  width: 100%;
+}
+
+/* mail's formatting bar: a dozen controls in a row, where a box around each one
+   would read as a wall rather than a set. Same hover surface as `IconButton`,
+   its neighbour in that bar. */
+.ghost {
+  border-color: transparent;
+  background: transparent;
+  padding-left: var(--space-2);
+  padding-right: var(--space-6);
+}
+
+.ghost:hover:enabled {
+  background: var(--bg-raised);
+}
+
+/* `Input`'s ring: a real indicator rather than a border-colour shift, and
+   `:focus-visible` so it stays off a mouse click. */
+.select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--border-strong);
+}
+
+.select:disabled {
+  background: var(--bg-raised);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+/* A ghost control that is off should not look like one the pointer is over. */
+.ghost:disabled {
+  background: transparent;
+}
+
+/* Set by `Field` when it is showing an error, so the control and its message
+   agree without every caller wiring it up. */
+.invalid,
+.invalid:focus-visible {
+  border-color: var(--danger);
+}
