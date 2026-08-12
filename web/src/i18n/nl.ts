@@ -4295,6 +4295,8 @@ export const nl: Partial<Catalog> = {
   meetInvite: "Uitnodigen",
   meetInviteTitle: "Neem deel aan mijn alo-vergadering",
   meetInviteText: "Gebruik deze alo-link om deel te nemen.",
+  meetChatEmptyTitle: "De ruimte luistert",
+  meetChatEmptyBody: "Deel een gedachte, een link of het detail dat iedereen na het gesprek nodig heeft.",
   meetLinkCopied: "Link gekopieerd",
   meetSomeone: "Iemand",
   meetHandsRaised: (names: string) => `Hand opgestoken: ${names}`,

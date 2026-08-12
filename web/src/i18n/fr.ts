@@ -4353,6 +4353,8 @@ export const fr: Partial<Catalog> = {
   meetInvite: "Inviter",
   meetInviteTitle: "Rejoignez ma réunion alo",
   meetInviteText: "Utilisez ce lien alo pour rejoindre la réunion.",
+  meetChatEmptyTitle: "La salle vous écoute",
+  meetChatEmptyBody: "Partagez une idée, un lien ou le détail dont chacun aura besoin après l’appel.",
   meetLinkCopied: "Lien copié",
   meetSomeone: "Quelqu’un",
   meetHandsRaised: (names: string) => `Main levée : ${names}`,

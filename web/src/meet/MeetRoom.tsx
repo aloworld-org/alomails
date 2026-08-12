@@ -16,6 +16,7 @@ import {
   PreJoin,
   VideoConference,
   formatChatMessageLinks,
+  useChat,
   useDataChannel,
   useLocalParticipant,
 } from "@livekit/components-react";
@@ -75,11 +76,23 @@ function PresentingNotice() {
   );
 }
 
+function ChatWelcome() {
+  const { chatMessages } = useChat();
+  if (chatMessages.length > 0) return null;
+  return (
+    <div className={styles.chatWelcome} aria-hidden="true">
+      <span><Smile aria-hidden="true" /></span>
+      <strong>{strings.meetChatEmptyTitle}</strong>
+      <p>{strings.meetChatEmptyBody}</p>
+    </div>
+  );
+}
+
 type MeetSignal =
   | { kind: "hand"; raised: boolean; name: string }
   | { kind: "reaction"; emoji: string; name: string };
 
-function MeetingActions({ meetingId }: { meetingId: string }) {
+function MeetingActions({ meetingId, onLeave }: { meetingId: string; onLeave: () => void }) {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   const { localParticipant } = useLocalParticipant();
@@ -147,6 +160,9 @@ function MeetingActions({ meetingId }: { meetingId: string }) {
         <button type="button" onClick={() => void share()}>
           {copied ? <Copy aria-hidden="true" /> : <Share2 aria-hidden="true" />}
           {copied ? strings.meetLinkCopied : strings.meetInvite}
+        </button>
+        <button type="button" className={styles.leaveAction} onClick={onLeave}>
+          <PhoneOff aria-hidden="true" />{strings.meetLeave}
         </button>
       </div>
       {raisedHands.length > 0 && (
@@ -311,18 +327,9 @@ export function MeetRoom({
       >
         <VideoConference chatMessageFormatter={formatChatMessageLinks} />
         <PresentingNotice />
-        <MeetingActions meetingId={meetingId} />
+        <ChatWelcome />
+        <MeetingActions meetingId={meetingId} onLeave={onLeft} />
       </LiveKitRoom>
-      <Button
-        variant="danger"
-        className={styles.leave}
-        onClick={onLeft}
-        aria-label={strings.meetLeave}
-        title={strings.meetLeave}
-        icon={<PhoneOff aria-hidden="true" />}
-      >
-        {strings.meetLeave}
-      </Button>
     </div>
   );
 }

@@ -1807,6 +1807,8 @@ export const en = {
   meetInvite: "Invite",
   meetInviteTitle: "Join my alo meeting",
   meetInviteText: "Use this alo link to join the meeting.",
+  meetChatEmptyTitle: "The room is listening",
+  meetChatEmptyBody: "Share a thought, a link, or the detail everyone will want after the call.",
   meetLinkCopied: "Link copied",
   meetSomeone: "Someone",
   meetHandsRaised: (names: string) => `Hand raised: ${names}`,

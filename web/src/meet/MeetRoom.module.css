@@ -261,6 +261,51 @@
   padding: var(--space-4);
 }
 
+.chatWelcome {
+  position: absolute;
+  top: 50%;
+  right: calc(var(--space-4) + min(var(--overlay-width-lg), 34vw) / 2);
+  z-index: var(--z-overlay);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: min(26ch, calc(min(var(--overlay-width-lg), 34vw) - var(--space-8)));
+  transform: translate(50%, -50%);
+  color: var(--text-on-rail-muted);
+  text-align: center;
+  pointer-events: none;
+}
+
+.chatWelcome > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--space-12);
+  height: var(--space-12);
+  margin-bottom: var(--space-3);
+  border: var(--border-width) solid var(--navy-400);
+  border-radius: var(--radius-lg);
+  background: var(--bg-rail);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+
+.chatWelcome svg {
+  width: var(--icon-size-control);
+  height: var(--icon-size-control);
+}
+
+.chatWelcome strong {
+  color: var(--text-on-rail);
+  font-size: var(--text-base);
+}
+
+.chatWelcome p {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
 .livekit :global(.lk-chat-entry) {
   gap: var(--space-2);
 }
@@ -528,11 +573,13 @@
   margin-bottom: var(--space-16);
 }
 
-.meetingActions { position: absolute; z-index: 12; right: calc(var(--space-4) + var(--space-16) + var(--space-12)); top: var(--space-4); display: flex; gap: var(--space-1); padding: var(--space-1); border: var(--border-width) solid var(--navy-400); border-radius: var(--radius-lg); background: var(--bg-rail); box-shadow: var(--shadow-md); }
+.meetingActions { position: absolute; z-index: 12; bottom: var(--space-4); left: calc(50% + var(--space-16) + var(--space-12)); display: flex; gap: var(--space-1); padding: var(--space-1); border: var(--border-width) solid var(--navy-400); border-radius: var(--radius-lg); background: var(--bg-rail); box-shadow: var(--shadow-lg); }
 .meetingActions button { min-height: var(--control-height); border: var(--border-width) solid transparent; border-radius: var(--radius-md); padding: 0 var(--space-3); background: transparent; color: var(--text-on-rail); display: inline-flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-medium); cursor: pointer; transition: background var(--transition-fast), transform var(--transition-fast); }
 .meetingActions button:hover { background: var(--bg-rail-hover); }
 .meetingActions button:active { transform: translateY(var(--border-width)); }
 .meetingActions .actionActive { background: var(--accent); color: var(--text-on-accent); }
+.meetingActions .leaveAction { margin-left: var(--space-1); background: var(--danger); color: var(--text-on-accent); font-weight: var(--weight-semibold); }
+.meetingActions .leaveAction:hover { filter: brightness(1.08); }
 .meetingActions svg { width: var(--icon-size-control); height: var(--icon-size-control); }
 .reactions { position: relative; }
 .reactionMenu { display: none; position: absolute; top: calc(100% + var(--space-2)); left: 50%; transform: translateX(-50%); padding: var(--space-1); gap: var(--space-1); border: var(--border-width) solid var(--navy-400); border-radius: var(--radius-lg); background: var(--bg-rail); box-shadow: var(--shadow-lg); }
@@ -544,4 +591,5 @@
 .reactionBurst span { font-size: 64px; }
 .reactionBurst small { color: var(--text-on-rail); font-weight: var(--weight-bold); }
 @keyframes reaction-rise { from { opacity: 0; transform: translate(-50%, 30px) scale(.7); } 15%, 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -160px) scale(1.15); } }
-@media (max-width: 48rem) { .meetingActions { top: auto; bottom: calc(var(--space-16) + var(--space-8)); left: 50%; right: auto; max-width: calc(100% - var(--space-4)); transform: translateX(-50%); } .meetingActions button { padding: 0 var(--space-2); } .raisedHands { top: var(--space-16); } }
+@media (max-width: 70rem) { .meetingActions { left: auto; right: var(--space-4); bottom: calc(var(--space-16) + var(--space-6)); } }
+@media (max-width: 48rem) { .meetingActions { bottom: calc(var(--space-16) + var(--space-8)); left: 50%; right: auto; max-width: calc(100% - var(--space-4)); overflow-x: auto; transform: translateX(-50%); } .meetingActions button { padding: 0 var(--space-2); } .raisedHands { top: var(--space-16); } .chatWelcome { right: 50%; width: min(28ch, calc(100% - var(--space-8))); } }
