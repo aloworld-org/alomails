@@ -549,6 +549,7 @@
 /* One bordered box holding the field and its actions — the shape every chat
    app uses, because it says "this whole area is where you write". */
 .composer {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1132,28 +1133,35 @@
 /* Contextual by design: it mounts only while the textarea has a selection,
    keeping the everyday composer quiet without hiding tools when needed. */
 .formatBar {
+  position: absolute;
+  z-index: 20;
+  left: var(--space-3);
+  bottom: calc(100% + var(--space-2));
   display: flex;
   align-items: center;
-  gap: 1px;
-  /* Its own row. `flex: none` on the composer's children resets flex-basis,
-     so the width has to be stated outright or the tools crowd the field. */
-  flex: 0 0 100%;
+  gap: 2px;
   width: max-content;
-  max-width: 100%;
-  padding: var(--space-1);
-  margin-bottom: var(--space-1);
+  max-width: calc(100% - (2 * var(--space-3)));
+  padding: 5px;
   border: var(--border-width) solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--bg-surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 14%);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.formatBar::-webkit-scrollbar {
+  display: none;
 }
 
 .formatTool {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 26px;
+  flex: none;
+  width: 30px;
+  height: 30px;
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -1164,6 +1172,11 @@
 .formatTool:hover {
   background: var(--bg-raised);
   color: var(--text-primary);
+}
+
+.formatTool:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
 }
 
 /* ---- jumping, dropping, and where you left off ------------------------ */
