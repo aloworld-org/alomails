@@ -564,6 +564,7 @@ export const en = {
   viewAsConversations: "Show as conversations",
 
   // mail — reading pane
+  conversationActions: "Conversation actions",
   reply: "Reply",
   replyAll: "Reply all",
   forward: "Forward",

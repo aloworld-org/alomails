@@ -26,7 +26,7 @@ import {
 
 import { strings } from "../../i18n";
 import { surface } from "../../product";
-import { useDialogs } from "../../ds";
+import { IconButton, Select, Toolbar, ToolbarDivider, useDialogs } from "../../ds";
 import styles from "./RichTextEditor.module.css";
 
 /** Largest inline image edge (px); wider images are downscaled before embedding. */
@@ -286,30 +286,38 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }
     }
   }
 
-  /** A toolbar button (keeps the editor selection via mousedown preventDefault). */
+  /** A toolbar button (keeps the editor selection via mousedown preventDefault:
+   *  without it the contentEditable blurs and the caret — which is what every
+   *  one of these commands acts on — is gone before the click lands). */
   function tool(key: string, label: string, icon: ReactNode, onClick: () => void) {
     return (
-      <button
+      <IconButton
         key={key}
-        type="button"
-        className={styles.tool}
-        aria-label={label}
-        title={label}
+        label={label}
+        icon={icon}
         onMouseDown={(e) => e.preventDefault()}
         onClick={onClick}
-      >
-        {icon}
-      </button>
+      />
     );
   }
 
-  const divider = (k: string) => <span key={k} className={styles.divider} aria-hidden="true" />;
+  const divider = (k: string) => <ToolbarDivider key={k} />;
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.toolbar} role="toolbar" aria-label={strings.formatting}>
-        <select
-          className={styles.select}
+      <Toolbar
+        label={strings.formatting}
+        surface="bar"
+        density="compact"
+        // `tab`, not `roving`: the row holds two selects and two colour
+        // pickers, and arrow keys inside those belong to the control, not to
+        // the toolbar. It was announced as `role="toolbar"` with no arrow keys
+        // at all, which is the promise `ds/Toolbar` exists to stop making.
+        keyboard="tab"
+      >
+        <Select
+          variant="ghost"
+          className={styles.font}
           aria-label={strings.fontFamily}
           value={font}
           onMouseDown={saveRange}
@@ -323,9 +331,10 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }
               {o.label}
             </option>
           ))}
-        </select>
-        <select
-          className={styles.selectSize}
+        </Select>
+        <Select
+          variant="ghost"
+          className={styles.fontSize}
           aria-label={strings.fontSize}
           value={size}
           onMouseDown={saveRange}
@@ -338,7 +347,7 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }
           <option value="3">{strings.sizeNormal}</option>
           <option value="5">{strings.sizeLarge}</option>
           <option value="7">{strings.sizeHuge}</option>
-        </select>
+        </Select>
         {divider("d0")}
 
         {tool("bold", strings.bold, <Bold size={16} />, () => exec("bold"))}
@@ -393,7 +402,7 @@ export function RichTextEditor({ initialHtml, onChange, placeholder, autoFocus }
           tool(ci.id, ci.label, <ci.Icon size={16} />, () => openInsert(ci.id)),
         )}
         {tool("clear", strings.clearFormatting, <Eraser size={16} />, () => exec("removeFormat"))}
-      </div>
+      </Toolbar>
 
       <input
         ref={fileInput}

@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { CalendarClock } from "lucide-react";
 
 import { strings } from "../../i18n";
-import { cx } from "../../ds";
+import { Chip, Input, cx } from "../../ds";
 import styles from "./FlagDueControl.module.css";
 
 interface FlagDueControlProps {
@@ -75,15 +75,16 @@ export function FlagDueControl({ due, onSet }: FlagDueControlProps) {
 
   return (
     <div className={styles.wrap} ref={ref}>
-      <button
-        type="button"
-        className={cx(styles.chip, dueDate !== null && styles.chipSet, overdue && styles.chipOverdue)}
+      <Chip
         onClick={() => setOpen((v) => !v)}
+        tone={overdue ? "danger" : dueDate !== null ? "accent" : "neutral"}
         title={strings.flagDueSet}
+        aria-haspopup="menu"
+        aria-expanded={open}
       >
         <CalendarClock size={14} />
         <span>{label}</span>
-      </button>
+      </Chip>
       {open && (
         <div className={styles.menu} role="menu">
           <button type="button" className={styles.item} onClick={() => choose(daysFromNow(0))}>
@@ -97,7 +98,7 @@ export function FlagDueControl({ due, onSet }: FlagDueControlProps) {
           </button>
           <label className={styles.pick}>
             <span>{strings.flagDuePick}</span>
-            <input
+            <Input
               type="date"
               className={styles.date}
               onChange={(e) => {

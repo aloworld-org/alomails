@@ -3,38 +3,9 @@
   display: inline-flex;
 }
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--control-height);
-  height: var(--control-height);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.btn:hover {
-  background: var(--bg-raised);
-  color: var(--text-primary);
-}
-
-.compactBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--control-height);
-  height: var(--control-height);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-}
-
-.compactBtn:hover {
-  background: var(--bg-raised);
-  color: var(--text-primary);
-}
+/* The trigger is `ds/IconButton`. The two the file used to draw — one for the
+   toolbar, one for the list's bulk bar — differed only in corner radius and in
+   two pixels of icon, neither of which was a decision anybody made twice. */
 
 .menu {
   position: absolute;

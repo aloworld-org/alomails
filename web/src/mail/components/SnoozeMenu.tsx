@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Clock } from "lucide-react";
 
 import { strings } from "../../i18n";
-import { cx } from "../../ds";
+import { IconButton } from "../../ds";
 import { snoozePresets } from "../snooze";
 import styles from "./SnoozeMenu.module.css";
 
@@ -36,17 +36,14 @@ export function SnoozeMenu({ onPick, compact }: SnoozeMenuProps) {
 
   return (
     <div className={styles.anchor} ref={ref}>
-      <button
-        type="button"
-        className={cx(compact ? styles.compactBtn : styles.btn)}
+      <IconButton
+        size={compact === true ? "sm" : "md"}
+        label={strings.snooze}
+        icon={<Clock />}
         onClick={() => setOpen((v) => !v)}
-        aria-label={strings.snooze}
-        title={strings.snooze}
         aria-haspopup="menu"
         aria-expanded={open}
-      >
-        <Clock size={compact ? 16 : 18} />
-      </button>
+      />
       {open && (
         <div className={styles.menu} role="menu">
           <div className={styles.heading}>{strings.snoozeUntil}</div>

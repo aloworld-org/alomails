@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 
 import { strings } from "../../i18n";
-import { Spinner, cx } from "../../ds";
+import { IconButton, Select, Spinner, cx } from "../../ds";
 import { useJmapClient } from "../../jmap";
 import type { EmailAddress, EmailFull } from "../../jmap";
 import { formatBytes, formatDate, mailErrorReason, senderName } from "../format";
@@ -607,7 +607,7 @@ export function ComposeModal({
     <div className={cx(styles.host, styles[`host_${view}`])}>
       {view === "full" && <div className={styles.backdrop} />}
       <div
-        className={cx(styles.modal, styles[`modal_${view}`])}
+        className={cx(styles.window, styles[`window_${view}`])}
         role="dialog"
         aria-modal={view === "full"}
         aria-label={title(context.mode)}
@@ -623,47 +623,39 @@ export function ComposeModal({
               <span className={styles.countPill}>{strings.recipientCount(recipientTotal)}</span>
             )}
             <div className={styles.headSpacer} />
-            <button
-              type="button"
-              className={styles.iconBtn}
+            <IconButton
+              label={minimized ? strings.composeRestore : strings.composeMinimize}
+              icon={<Minus />}
               onClick={(e) => {
                 e.stopPropagation();
                 setView(minimized ? "normal" : "min");
               }}
-              aria-label={minimized ? strings.composeRestore : strings.composeMinimize}
-            >
-              <Minus size={16} />
-            </button>
-            <button
-              type="button"
-              className={styles.iconBtn}
+            />
+            <IconButton
+              label={view === "full" ? strings.composeCollapse : strings.composeExpand}
+              icon={view === "full" ? <Minimize2 /> : <Maximize2 />}
               onClick={(e) => {
                 e.stopPropagation();
                 setView(view === "full" ? "normal" : "full");
               }}
-              aria-label={view === "full" ? strings.composeCollapse : strings.composeExpand}
-            >
-              {view === "full" ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            </button>
-            <button
-              type="button"
-              className={styles.iconBtn}
+            />
+            <IconButton
+              label={strings.composeDiscard}
+              icon={<X />}
               onClick={(e) => {
                 e.stopPropagation();
                 onClose();
               }}
-              aria-label={strings.composeDiscard}
-            >
-              <X size={18} />
-            </button>
+            />
           </header>
 
-          <div className={styles.fields}>
+          <div className={styles.headers}>
             {fromOptions.length > 1 && (
               <div className={styles.fromRow}>
                 <span className={styles.fromLabel}>{strings.composeFrom}</span>
-                <select
-                  className={styles.fromSelect}
+                <Select
+                  fullWidth
+                  className={styles.fromPicker}
                   value={from}
                   onChange={(e) => setFrom(e.target.value)}
                   aria-label={strings.composeFrom}
@@ -673,7 +665,7 @@ export function ComposeModal({
                       {addr}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
             <RecipientInput
@@ -808,14 +800,11 @@ export function ComposeModal({
             >
               <Trash2 size={17} />
             </button>
-            <button
-              type="button"
-              className={styles.iconBtn}
+            <IconButton
+              label={strings.attach}
+              icon={<Paperclip />}
               onClick={() => fileInput.current?.click()}
-              aria-label={strings.attach}
-            >
-              <Paperclip size={18} />
-            </button>
+            />
             <input
               ref={fileInput}
               type="file"

@@ -16,6 +16,46 @@
   white-space: nowrap;
 }
 
+/* Tones, named and matched to `Badge`'s so the same fact reads the same way
+   whether it is stated or acted on. Mail's follow-up date arrived outlined
+   rather than filled — border in `--accent`, border in `--danger` — which was
+   the only chip in the product drawn that way; it is filled here like the
+   other thirteen. */
+.accent {
+  background: var(--accent-tint);
+  color: var(--accent);
+}
+
+.danger {
+  background: var(--danger-tint, var(--bg-raised));
+  color: var(--danger);
+}
+
+/* The chip that is itself a button. */
+.pressable {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: var(--weight-medium);
+  transition: background-color var(--transition-fast);
+}
+
+.pressable:hover {
+  background: var(--border-default);
+}
+
+.accent.pressable:hover,
+.danger.pressable:hover {
+  /* A toned chip already carries a fill; darkening it would change what the
+     tone says, so the hover is the ring of the surface under it. */
+  box-shadow: inset 0 0 0 var(--border-width) currentColor;
+}
+
+.pressable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 /* Room for the button, so the text does not sit against it. */
 .removable {
   padding-right: var(--space-1);

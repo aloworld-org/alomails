@@ -521,6 +521,7 @@ export const nl: Partial<Catalog> = {
   viewAsConversations: "Als gesprekken tonen",
 
   // mail — reading pane
+  conversationActions: "Acties voor dit gesprek",
   reply: "Beantwoorden",
   replyAll: "Allen beantwoorden",
   forward: "Doorsturen",

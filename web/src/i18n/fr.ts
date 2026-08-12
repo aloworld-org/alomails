@@ -529,6 +529,7 @@ export const fr: Partial<Catalog> = {
   viewAsConversations: "Afficher par conversations",
 
   // mail — reading pane
+  conversationActions: "Actions sur la conversation",
   reply: "Répondre",
   replyAll: "Répondre à tous",
   forward: "Transférer",

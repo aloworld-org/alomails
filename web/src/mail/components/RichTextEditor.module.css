@@ -1,55 +1,23 @@
+/* The formatting bar is `ds/Toolbar` (`surface="bar"`), which brings its own
+   padding and the rule under it — so this wrapper no longer pads its sides and
+   the toolbar and the body each own their own edges. */
 .wrap {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  padding: var(--space-3) var(--space-4) 0;
   border-top: var(--border-width) solid var(--border-subtle);
 }
 
-/* Grey icons, thin dividers, subtle rounded hover; wraps to a second row so
-   every tool is visible without horizontal scrolling. */
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--border-width);
-  row-gap: var(--space-1);
-  padding: var(--border-width-strong) var(--space-1) var(--space-2);
-  border-bottom: var(--border-width) solid var(--border-subtle);
-}
-
-/* text-style dropdown (Gmail's font/style select) */
-.select {
+/* The two dropdowns are `ds/Select variant="ghost"` — the borderless build the
+   component carries for exactly this bar. What stays here is how much of the
+   row each may take: the font name is long and the size is one word, and
+   neither may push the tools off the end. */
+.font,
+.fontSize {
   flex-shrink: 0;
-  height: var(--control-height);
-  padding: 0 var(--space-2);
-  border: none;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-primary);
+  max-width: var(--control-width-wide);
   font-size: var(--text-sm);
-  cursor: pointer;
-}
-
-.select:hover {
-  background: var(--bg-raised);
-}
-
-.selectSize {
-  flex-shrink: 0;
-  height: var(--control-height);
-  padding: 0 var(--space-1);
-  border: none;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
-
-.selectSize:hover {
-  background: var(--bg-raised);
 }
 
 /* colour swatch buttons (an icon over a native colour input) */
@@ -87,37 +55,13 @@
   display: none;
 }
 
-.tool {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--control-height);
-  height: var(--control-height);
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.tool:hover {
-  background: var(--bg-raised);
-  color: var(--text-primary);
-}
-
-.divider {
-  width: var(--border-width);
-  height: var(--icon-size-control);
-  flex-shrink: 0;
-  margin: 0 var(--space-2);
-  background: var(--border-subtle);
-}
+/* The tools themselves are `ds/IconButton` and the rules between them are
+   `ToolbarDivider`. */
 
 .editor {
   flex: 1;
   min-height: var(--content-height-sm);
-  padding: var(--space-3) 0;
+  padding: var(--space-3) var(--space-4);
   overflow-y: auto;
   color: var(--text-primary);
   font-family: var(--font-body);

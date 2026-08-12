@@ -14,13 +14,15 @@
   font-size: var(--text-sm);
 }
 
-.fieldWrap {
+.wrap {
   flex: 1;
   min-width: 0;
   position: relative;
 }
 
-.field {
+/* The recipients and the tail you type into, wrapping across as many lines as
+   the addresses need. The chips are `ds/Chip`. */
+.tokens {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -82,45 +84,28 @@
   white-space: nowrap;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+/* A long display name must not push the field wider than the compose window,
+   and an address that does not fit is elided rather than wrapped: a chip is one
+   token and reads as one line. Both are the caller's, not the component's — a
+   chip in a toolbar wants its natural width. */
+.recipient {
   max-width: 100%;
-  min-height: var(--control-height);
-  padding: 0 var(--space-1) 0 var(--space-1);
-  border-radius: var(--radius-full);
-  background: var(--bg-raised);
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
 }
 
-.chipLabel {
+.recipientName {
   overflow: hidden;
-  font-size: var(--text-sm);
   color: var(--text-primary);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.remove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--control-height);
-  height: var(--control-height);
-  border-radius: var(--radius-full);
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.remove:hover {
-  background: var(--border-default);
-  color: var(--text-primary);
-}
-
-.input {
+/* Where you type the next address. Not a `ds/Input`: the box, the border and
+   the rule under it belong to the row, which is one field holding many
+   recipients — a bordered control inside it would draw a second field inside
+   the first. */
+.entry {
   flex: 1;
   min-width: calc(var(--control-width-medium) + var(--space-6));
   height: var(--control-height);
@@ -130,7 +115,7 @@
   font-size: var(--text-base);
 }
 
-.input:focus {
+.entry:focus {
   outline: none;
 }
 

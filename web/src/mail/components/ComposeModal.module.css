@@ -22,7 +22,16 @@
   pointer-events: auto;
 }
 
-.modal {
+/* The compose window. Deliberately **not** `ds/Modal`, and the reason is not
+   styling: `Modal` is a blocking dialog — one panel, centred, focus trapped
+   inside it, Escape closes it, the page behind is inert. This is the opposite
+   object. It docks in the corner so the rest of mail stays usable while you
+   write, it minimizes to its own title bar, and Escape must not throw a
+   half-written message away. Only its `full` view is modal, and that view
+   already says so with `aria-modal`. A dialog you are meant to work *around*
+   is a different primitive from one you are meant to work *through*; the name
+   is `window` so that nothing about it invites the confusion again. */
+.window {
   pointer-events: auto;
   background: var(--bg-surface);
   box-shadow: var(--shadow-lg);
@@ -32,7 +41,7 @@
 }
 
 /* Docked bottom-right — the default, non-blocking. */
-.modal_normal {
+.window_normal {
   position: absolute;
   right: var(--space-6);
   bottom: 0;
@@ -44,7 +53,7 @@
 }
 
 /* Minimized to its title bar, still docked bottom-right. */
-.modal_min {
+.window_min {
   position: absolute;
   right: var(--space-6);
   bottom: 0;
@@ -53,17 +62,17 @@
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
-.modal_min .form > *:not(header) {
+.window_min .form > *:not(header) {
   display: none;
 }
 
-.modal_min .head {
+.window_min .head {
   cursor: pointer;
   border-bottom: none;
 }
 
 /* Full-screen — a large centered dialog. */
-.modal_full {
+.window_full {
   position: relative;
   width: 100%;
   max-width: var(--overlay-width-xl);
@@ -72,8 +81,8 @@
 }
 
 @media (max-width: 35rem) {
-  .modal_normal,
-  .modal_min {
+  .window_normal,
+  .window_min {
     right: 0;
     left: 0;
     width: auto;
@@ -117,26 +126,13 @@
   flex: 1;
 }
 
-.iconBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--control-height);
-  height: var(--control-height);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
-}
+/* The window's own controls — minimize, expand, discard, attach — are
+   `ds/IconButton`, and the From picker is `ds/Select`. */
 
-.iconBtn:hover {
-  background: var(--bg-raised);
-  color: var(--text-primary);
-}
-
-/* recipient + subject fields */
-.fields {
+/* The recipient and subject rows. Named for the part of a message they carry
+   rather than as a `.fields` container: each row is its own control — three
+   `RecipientInput`s and the subject — and this only decides where they sit. */
+.headers {
   padding: 0 var(--space-4);
 }
 
@@ -157,17 +153,11 @@
   font-size: var(--text-sm);
 }
 
-.fromSelect {
+/* Layout only: the picker takes the rest of the row, and `min-width: 0` keeps
+   a long address from widening the compose window instead of eliding. */
+.fromPicker {
   flex: 1;
   min-width: 0;
-  padding: var(--space-1) var(--space-2);
-  min-height: var(--control-height);
-  border: var(--border-width) solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-base);
-  font-family: inherit;
 }
 
 .ccBtn {

@@ -3,36 +3,8 @@
   display: inline-flex;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-height: var(--control-height);
-  padding: 0 var(--space-2);
-  border: var(--border-width) solid var(--border-subtle);
-  border-radius: var(--radius-full);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  transition:
-    background-color var(--transition-fast),
-    border-color var(--transition-fast);
-}
-
-.chip:hover {
-  background: var(--bg-raised);
-}
-
-.chipSet {
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-.chipOverdue {
-  color: var(--danger);
-  border-color: var(--danger);
-  background: var(--danger-tint);
-}
+/* The pill itself is `ds/Chip` (`accent` once a date is set, `danger` once it
+   is past), and the menu it opens is below. */
 
 .menu {
   position: absolute;
@@ -84,16 +56,10 @@
   background: var(--bg-raised);
 }
 
+/* `ds/Input` brings the box; the menu decides how wide it is, since the row it
+   shares with its label is only as wide as the menu. */
 .date {
   width: calc(var(--control-width-wide) + var(--space-1));
-  min-height: var(--control-height);
-  padding: 0 var(--space-2);
-  border: var(--border-width) solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-family: inherit;
 }
 
 .divider {

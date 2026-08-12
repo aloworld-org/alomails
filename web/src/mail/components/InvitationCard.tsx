@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { CalendarCheck, CalendarX, Check, HelpCircle, X } from "lucide-react";
 
 import { strings } from "../../i18n";
+import { Button, Card } from "../../ds";
 import { useJmapClient } from "../../jmap/useJmapClient";
 import type { CalendarInvitation, RsvpResponse } from "../../jmap";
 import styles from "./InvitationCard.module.css";
@@ -65,7 +66,7 @@ function CancellationCard({ invitation, blobId }: Props) {
   }, [client, blobId]);
 
   return (
-    <div className={styles.card}>
+    <Card pad="sm" className={styles.invitation}>
       <div className={styles.head}>
         <CalendarX size={20} className={styles.icon} aria-hidden="true" />
         <div className={styles.info}>
@@ -80,7 +81,7 @@ function CancellationCard({ invitation, blobId }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -109,7 +110,7 @@ function ReplyCard({ invitation, blobId }: Props) {
     invitation.partstat != null ? doneLabel(invitation.partstat) : strings.replyResponded;
 
   return (
-    <div className={styles.card}>
+    <Card pad="sm" className={styles.invitation}>
       <div className={styles.head}>
         <CalendarCheck size={20} className={styles.icon} aria-hidden="true" />
         <div className={styles.info}>
@@ -122,7 +123,7 @@ function ReplyCard({ invitation, blobId }: Props) {
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -153,7 +154,7 @@ export function InvitationCard({ invitation, blobId }: Props) {
   }
 
   return (
-    <div className={styles.card}>
+    <Card pad="sm" className={styles.invitation}>
       <div className={styles.head}>
         <CalendarCheck size={20} className={styles.icon} aria-hidden="true" />
         <div className={styles.info}>
@@ -174,30 +175,29 @@ export function InvitationCard({ invitation, blobId }: Props) {
         <div className={styles.responded}>{doneLabel(done)}</div>
       ) : (
         <div className={styles.actions}>
-          <button
-            type="button"
-            className={styles.accept}
+          <Button
+            icon={<Check />}
             disabled={busy}
             onClick={() => void respond("accepted")}
           >
-            <Check size={15} /> {strings.rsvpAccept}
-          </button>
-          <button
-            type="button"
-            className={styles.tentative}
+            {strings.rsvpAccept}
+          </Button>
+          <Button
+            variant="ghost"
+            icon={<HelpCircle />}
             disabled={busy}
             onClick={() => void respond("tentative")}
           >
-            <HelpCircle size={15} /> {strings.rsvpMaybe}
-          </button>
-          <button
-            type="button"
-            className={styles.decline}
+            {strings.rsvpMaybe}
+          </Button>
+          <Button
+            variant="ghost"
+            icon={<X />}
             disabled={busy}
             onClick={() => void respond("declined")}
           >
-            <X size={15} /> {strings.rsvpDecline}
-          </button>
+            {strings.rsvpDecline}
+          </Button>
         </div>
       )}
       {error && (
@@ -205,6 +205,6 @@ export function InvitationCard({ invitation, blobId }: Props) {
           {strings.rsvpError}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

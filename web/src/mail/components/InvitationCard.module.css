@@ -1,8 +1,6 @@
-.card {
-  border: var(--border-width) solid var(--border-default);
-  border-radius: var(--radius-lg);
-  background: var(--bg-raised);
-  padding: var(--space-3);
+/* The surface is `ds/Card` (`pad="sm"`); what stays here is how this one sits
+   in the reading pane and stacks its own rows. */
+.invitation {
   margin-bottom: var(--space-3);
   display: flex;
   flex-direction: column;
@@ -50,32 +48,6 @@
   display: flex;
   gap: var(--space-2);
   flex-wrap: wrap;
-}
-
-.actions button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--control-height);
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-md);
-  border: var(--border-width) solid var(--border-default);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font: inherit;
-  font-weight: var(--weight-medium);
-  cursor: pointer;
-}
-
-.actions button:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-.accept {
-  border-color: var(--terracotta) !important;
-  background: var(--terracotta) !important;
-  color: var(--text-on-accent) !important;
 }
 
 .responded {

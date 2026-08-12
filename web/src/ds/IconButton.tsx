@@ -11,6 +11,11 @@ interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon: ReactNode;
   tone?: "default" | "rail";
   size?: "sm" | "md";
+  /** For a button that is genuinely on or off — a flag, a pinned pane. Omit it
+   *  and the button is an action, not a toggle: `aria-pressed` used to be set
+   *  on every icon button this rendered, so the twelve tools of mail's
+   *  formatting bar were each announced as "not pressed" by a control that
+   *  tracks no state at all. A toggle that never toggles is worse than silence. */
   active?: boolean;
 }
 
@@ -19,7 +24,7 @@ export function IconButton({
   icon,
   tone = "default",
   size = "md",
-  active = false,
+  active,
   className,
   type = "button",
   ...rest
@@ -28,7 +33,7 @@ export function IconButton({
     styles.iconButton,
     styles[tone],
     styles[size],
-    active ? styles.active : "",
+    active === true ? styles.active : "",
     className ?? "",
   ]
     .filter(Boolean)
@@ -39,7 +44,7 @@ export function IconButton({
       className={classes}
       aria-label={label}
       title={label}
-      aria-pressed={active}
+      {...(active === undefined ? {} : { "aria-pressed": active })}
       {...rest}
     >
       {icon}

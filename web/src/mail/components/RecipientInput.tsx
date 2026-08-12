@@ -5,10 +5,9 @@
 // drop down for one-click selection. Used for To / Cc / Bcc in compose.
 import { useMemo, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
-import { X } from "lucide-react";
 
 import { strings } from "../../i18n";
-import { Avatar } from "../../ds";
+import { Avatar, Chip } from "../../ds";
 import type { EmailAddress } from "../../jmap";
 import { senderName } from "../format";
 import styles from "./RecipientInput.module.css";
@@ -126,24 +125,21 @@ export function RecipientInput({
   return (
     <div className={styles.row}>
       <span className={styles.label}>{label}</span>
-      <div className={styles.fieldWrap}>
-        <div className={styles.field}>
+      <div className={styles.wrap}>
+        <div className={styles.tokens}>
           {value.map((a, i) => (
-            <span key={`${a.email}-${i}`} className={styles.chip}>
+            <Chip
+              key={`${a.email}-${i}`}
+              className={styles.recipient}
+              onRemove={() => remove(i)}
+              removeLabel={strings.removeRecipient(chipLabel(a))}
+            >
               <Avatar name={senderName({ from: [a] })} email={a.email} size="sm" />
-              <span className={styles.chipLabel}>{chipLabel(a)}</span>
-              <button
-                type="button"
-                className={styles.remove}
-                onClick={() => remove(i)}
-                aria-label={strings.removeRecipient(chipLabel(a))}
-              >
-                <X size={13} />
-              </button>
-            </span>
+              <span className={styles.recipientName}>{chipLabel(a)}</span>
+            </Chip>
           ))}
           <input
-            className={styles.input}
+            className={styles.entry}
             value={draft}
             onChange={(e) => {
               setDraft(e.target.value);

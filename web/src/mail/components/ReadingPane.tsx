@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 
 import { strings } from "../../i18n";
-import { IconButton, Menu } from "../../ds";
+import { Button, IconButton, Menu, Toolbar, ToolbarSpacer } from "../../ds";
 import type { MenuItem } from "../../ds";
 import {
   KEYWORD_FLAGGED,
@@ -428,7 +428,7 @@ export function ReadingPane({
 
   return (
     <article className={styles.pane}>
-      <div className={styles.toolbar}>
+      <Toolbar label={strings.conversationActions} surface="bar" density="compact">
         {onBack !== undefined && (
           <IconButton
             size="sm"
@@ -438,19 +438,16 @@ export function ReadingPane({
             onClick={onBack}
           />
         )}
-        <button type="button" className={styles.replyBtn} onClick={onReply}>
-          <Reply size={16} />
-          <span>{strings.reply}</span>
-        </button>
-        <button type="button" className={styles.textBtn} onClick={onReplyAll}>
-          <ReplyAll size={16} />
-          <span>{strings.replyAll}</span>
-        </button>
-        <button type="button" className={styles.textBtn} onClick={onForward}>
-          <Forward size={16} />
-          <span>{strings.forward}</span>
-        </button>
-        <div className={styles.spacer} />
+        <Button size="sm" icon={<Reply />} onClick={onReply}>
+          {strings.reply}
+        </Button>
+        <Button size="sm" variant="ghost" icon={<ReplyAll />} onClick={onReplyAll}>
+          {strings.replyAll}
+        </Button>
+        <Button size="sm" variant="ghost" icon={<Forward />} onClick={onForward}>
+          {strings.forward}
+        </Button>
+        <ToolbarSpacer />
         {canSnooze && <SnoozeMenu onPick={onSnooze} />}
         <IconButton size="sm" label={strings.archive} icon={<Archive />} onClick={onArchive} />
         <Menu label={strings.moveTo} icon={<FolderInput />} items={moveItems} />
@@ -469,7 +466,7 @@ export function ReadingPane({
         <IconButton size="sm" label={strings.markUnread} icon={<MailOpen />} onClick={onMarkUnread} />
         <IconButton size="sm" label={strings.delete} icon={<Trash2 />} onClick={onDelete} />
         <Menu label={strings.moreActions} icon={<MoreHorizontal />} items={moreItems} />
-      </div>
+      </Toolbar>
 
       <div className={styles.bodyScroll}>
         {isJunk && (
