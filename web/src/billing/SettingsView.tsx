@@ -12,7 +12,7 @@
 // still on screen. **Only what changed is sent**, so a field nobody touched is
 // not written — the surface is last-writer-wins. And **a cleared box sends
 // `null`**, which is how a VAT id or a bank account comes off the record.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BadgeEuro, Building2, Landmark, Mail, MessageSquareText, Save } from "lucide-react";
 
 import { Button, Spinner } from "../ds";
@@ -142,6 +142,11 @@ export function SettingsView() {
     setForm((f) => ({ ...f, [key]: value }));
     setSaved(false);
   };
+
+  const dirty = useMemo(
+    () => stored !== null && Object.keys(draftFrom(form, stored)).length > 0,
+    [form, stored],
+  );
 
   async function save() {
     if (stored === null) return;
@@ -324,9 +329,9 @@ export function SettingsView() {
 
       <div className={styles.createBar}>
         <p className={styles.hint} role="status">
-          {saved ? strings.billingSettingsSaved : ""}
+          {dirty ? strings.billingUnsaved : saved ? strings.billingSaved : ""}
         </p>
-        <Button icon={<Save aria-hidden="true" />} onClick={() => void save()} disabled={busy || form.legalName.trim() === ""}>
+        <Button icon={<Save aria-hidden="true" />} onClick={() => void save()} disabled={busy || !dirty || form.legalName.trim() === ""}>
           {strings.billingSave}
         </Button>
       </div>
