@@ -180,6 +180,111 @@ export interface SiteSubmission {
   receivedAt: string;
 }
 
+/** One currency line of the funnel. Every figure is integer cents, and lines
+ *  are never added together: a forecast in two currencies has no total, which
+ *  is CRM's own rule (`docs/design/crm.md`) inherited here.
+ *
+ *  `invoicedCents` is `null` — not `0` — when alo Billing is switched off for
+ *  the reader: "not yours to see" and "nothing was invoiced" are different
+ *  statements and the screen must be able to say which one it means. */
+export interface SiteAttributionMoney {
+  currency: string;
+  openCents: number;
+  wonCents: number;
+  invoicedCents: number | null;
+}
+
+/** One conversion point of a site — a contact form today — from the first
+ *  page view to the money. `name` is `null` for a form that has since been
+ *  deleted and whose counts remain: history is not rewritten by a deletion. */
+export interface SiteAttributionSource {
+  kind: string;
+  id: string;
+  name: string | null;
+  views: number;
+  starts: number;
+  submits: number;
+  leads: number;
+  dealsOpen: number;
+  dealsWon: number;
+  dealsLost: number;
+  invoices: number | null;
+  money: SiteAttributionMoney[];
+}
+
+/** A site's funnel over an inclusive period, per conversion point and for the
+ *  site as a whole.
+ *
+ *  Two properties of these numbers the screen has to carry rather than hide.
+ *  The site totals are **not** the sum of the sources: one invoice reachable
+ *  from two forms counts once for the site and once under each. And `views`
+ *  and `starts` are reported by the visitor's browser while `submits` is
+ *  counted at the write, so any rate built across that line is a floor. */
+export interface SiteAttributionReport {
+  from: string;
+  to: string;
+  /** The stated rule behind `invoices`. `customerSinceLead` means: documents
+   *  raised for the customer this enquiry became, after it became one — never
+   *  a causal claim about the page. A second rule would arrive as a new word
+   *  here, so a screen branches on it rather than on its own assumption. */
+  invoiceRule: string;
+  /** Whether this reader may see invoice figures at all. */
+  billingVisible: boolean;
+  totals: Omit<SiteAttributionSource, "kind" | "id" | "name">;
+  sources: SiteAttributionSource[];
+}
+
+/** One enquiry that a person handed to the sales board, with the opportunity
+ *  as it stands right now — read live from CRM, never copied. */
+export interface SiteLeadLink {
+  id: string;
+  siteId: string;
+  sourceKind: string;
+  sourceId: string;
+  submissionId: string;
+  linkedBy: string;
+  linkedAt: string;
+  deal: {
+    id: string;
+    title: string;
+    valueCents: number;
+    currency: string;
+    state: "open" | "won" | "lost";
+  };
+}
+
+/** What a person adds to an enquiry to make it an opportunity. The enquirer's
+ *  name and address are taken from the submission by the server and are never
+ *  re-typed here — that is the point of a handoff. */
+export interface SiteLeadHandoff {
+  pipelineId: string;
+  stageId: string;
+  title: string;
+  companyName: string;
+  valueCents: number;
+  currency: string;
+  source: string;
+}
+
+/** A sales board, as the handoff picker needs it. Sites reads CRM's own list
+ *  route and stores nothing about boards. */
+export interface SiteCrmBoard {
+  id: string;
+  name: string;
+  archived: boolean;
+}
+
+/** A column of a sales board. `closed` is the server's own word for a column
+ *  that means won or lost; a new opportunity is never raised in one. */
+export interface SiteCrmColumn {
+  id: string;
+  pipelineId: string;
+  name: string;
+  position: number;
+  closed: boolean;
+  archived: boolean;
+}
+
 export interface SiteCollectionFieldMapping {
   title: string;
   slug: string | null;

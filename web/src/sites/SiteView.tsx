@@ -12,6 +12,7 @@ import {
   Globe2,
   ArrowRight,
   Check,
+  Handshake,
   History,
   Inbox,
   Languages,
@@ -607,6 +608,14 @@ export function SiteView() {
                 onClick={() => navigate("analytics")}
               >
                 {strings.sitesAnalytics}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Handshake size="var(--icon-size-inline)" />}
+                onClick={() => navigate("funnel")}
+              >
+                {strings.sitesFunnel}
               </Button>
               <Button
                 variant="ghost"

@@ -9,6 +9,7 @@ import { CollectionsView } from "./CollectionsView";
 import { PostsView } from "./PostsView";
 import { SiteView } from "./SiteView";
 import { AnalyticsView } from "./AnalyticsView";
+import { FunnelView } from "./FunnelView";
 import { HeatmapView } from "./HeatmapView";
 import { HistoryView } from "./HistoryView";
 import { SitesListView } from "./SitesListView";
@@ -23,6 +24,7 @@ export function SitesModule() {
         <Route path=":siteId" element={<SiteView />} />
         <Route path=":siteId/analytics" element={<AnalyticsView />} />
         <Route path=":siteId/heatmap" element={<HeatmapView />} />
+        <Route path=":siteId/funnel" element={<FunnelView />} />
         <Route path=":siteId/collections" element={<CollectionsView />} />
         <Route path=":siteId/history" element={<HistoryView />} />
         <Route path=":siteId/submissions" element={<SubmissionsView />} />

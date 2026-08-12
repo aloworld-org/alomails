@@ -3544,6 +3544,90 @@ export const en = {
     `${collected} of ${needed} clicks counted on this screen size. A map drawn from a handful of clicks shows the handful, not your visitors — so it is kept back until there are enough.`,
   sitesHeatmapTooFewDepth: (collected: number, needed: number) =>
     `${collected} of ${needed} reading reports counted on this screen size. The curve appears once there are enough for it to mean anything.`,
+  // Sites — what the website was worth (S2.10c): the arc from a page view to
+  // an invoice, read over the CRM/Billing seam built in S2.10b. Every string
+  // here carries one of the four facts that keep these numbers honest — where
+  // each step's number comes from, that the per-form columns are not addends,
+  // that currencies are never converted, and what "invoices" actually counts.
+  sitesFunnel: "Results",
+  sitesFunnelPeriod: "Period",
+  sitesFunnelLoading: "Loading the results",
+  sitesFunnelLoadFailed: "The results could not be loaded. Try again.",
+  sitesFunnelDeniedTitle: "Not part of your access",
+  sitesFunnelDeniedFallback:
+    "This page reads alo CRM and alo Billing, which are not open for this account.",
+  sitesFunnelDeniedWay:
+    "Everything else about this website — its pages, its enquiries and its traffic — is still yours to work on.",
+  sitesFunnelNoSourcesTitle: "No contact form yet",
+  sitesFunnelNoSourcesBody:
+    "Add a contact form to a page, and every enquiry it brings in can be followed from the first page view to the invoice.",
+  sitesFunnelChain: "From visitor to invoice",
+  sitesFunnelStageViews: "Saw the form",
+  sitesFunnelStageStarts: "Started typing",
+  sitesFunnelStageSubmits: "Enquiries",
+  sitesFunnelStageLeads: "Handed to sales",
+  sitesFunnelStageWon: "Won",
+  sitesFunnelStageInvoices: "Invoices",
+  sitesFunnelFromBrowser: "Reported by the browser",
+  sitesFunnelFromRecord: "Counted when it was saved",
+  sitesFunnelFloorNote:
+    "The first two steps are reported by the visitor's browser, and a browser that reports nothing still saw the page. Everything from the enquiry onwards is counted when the record was written. Read these as a floor: a rate across that line is the smallest it could be, not a measurement.",
+  sitesFunnelMoney: "The money behind it",
+  sitesFunnelInvoiceRule:
+    "Invoices raised for the customer an enquiry became, after it was handed over.",
+  sitesFunnelMoneyEmpty: "No opportunity has been raised from this website yet.",
+  sitesFunnelOpen: "Being worked",
+  sitesFunnelWon: "Won",
+  sitesFunnelInvoiced: "Invoiced",
+  sitesFunnelHidden: "Not shown",
+  sitesFunnelBillingOff:
+    "Invoice figures are not shown because alo Billing is not open for this account. That is not the same as nothing having been invoiced.",
+  sitesFunnelCurrencies:
+    "Two currencies are two lines and no total: a forecast has no issue date to convert at.",
+  sitesFunnelSources: "Per contact form",
+  sitesFunnelColSource: "Contact form",
+  sitesFunnelColDeals: "Opportunities",
+  sitesFunnelDealsSummary: (open: number, won: number, lost: number) =>
+    `${open} open · ${won} won · ${lost} lost`,
+  sitesFunnelSumNote:
+    "One invoice reachable from two forms counts once for the website and once under each form, so these columns are a reading per form and do not add up to the totals above.",
+  sitesFunnelDeletedSource: "Deleted form",
+  // Sites — handing one enquiry to the sales board (S2.10c). The dialog asks
+  // for the three things only a person can decide; the enquirer's name,
+  // address and message travel with the handoff and are never retyped.
+  sitesHandoffSection: "Sales",
+  sitesHandoffInvite:
+    "Turn this enquiry into an opportunity on your sales board. Nothing on this screen needs typing again.",
+  sitesHandoffTitle: "Hand this enquiry to sales",
+  sitesHandoffSubtitle:
+    "Raises an opportunity on your sales board and links it to this enquiry.",
+  sitesHandoffSubmit: "Hand to sales",
+  sitesHandoffFrom: "From",
+  sitesHandoffCarried:
+    "The name, the address and the message travel with the handoff — you never retype them.",
+  sitesHandoffTitleFor: (who: string) => `Website enquiry — ${who}`,
+  sitesHandoffBoard: "Board",
+  sitesHandoffColumn: "Column",
+  sitesHandoffCardTitle: "Opportunity",
+  sitesHandoffValue: "Expected value",
+  sitesHandoffValueHint: "Optional — what you think it could be worth.",
+  sitesHandoffCurrency: "Currency",
+  sitesHandoffCurrencyHint: "Leave empty for your workspace currency.",
+  sitesHandoffLoadingBoards: "Loading your sales boards…",
+  sitesHandoffNoBoards:
+    "There is no sales board to hand this to yet. Open alo CRM once and your first board is made for you.",
+  sitesHandoffCrmDenied: "alo CRM is not open for this account.",
+  sitesHandoffBoardsFailed: "Your sales boards could not be loaded. Try again.",
+  sitesHandoffFailed: "This enquiry could not be handed over. Try again.",
+  sitesInSales: "In sales",
+  sitesLeadsLoadFailed: "The sales links for this inbox could not be loaded.",
+  sitesLeadStanding: (state: string, value: string) => `${state} · ${value}`,
+  sitesLeadOpen: "Being worked",
+  sitesLeadWon: "Won",
+  sitesLeadLost: "Lost",
+  sitesUnlinkLead: "Unlink",
+  sitesUnlinkLeadFailed:
+    "The link could not be removed. The opportunity itself is untouched. Try again.",
   // Sites — every version this website has published (S2.04b). The list is
   // dates, never version ids: a person recognises "yesterday at 14:20", not
   // an opaque token.

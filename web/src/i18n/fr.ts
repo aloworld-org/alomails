@@ -2893,6 +2893,91 @@ export const fr: Partial<Catalog> = {
     `${collected} clics sur ${needed} comptés sur cette taille d’écran. Une carte tirée d’une poignée de clics montre cette poignée, pas vos visiteurs : elle est donc gardée jusqu’à ce qu’il y en ait assez.`,
   sitesHeatmapTooFewDepth: (collected: number, needed: number) =>
     `${collected} signalements de lecture sur ${needed} comptés sur cette taille d’écran. La courbe apparaît dès qu’il y en a assez pour qu’elle ait un sens.`,
+  // Sites — ce que le site a rapporté (S2.10c) : de la vue de page à la
+  // facture, via la jonction CRM/Facturation construite en S2.10b.
+  sitesFunnel: "Résultats",
+  sitesFunnelPeriod: "Période",
+  sitesFunnelLoading: "Chargement des résultats",
+  sitesFunnelLoadFailed:
+    "Les résultats n’ont pas pu être chargés. Réessayez.",
+  sitesFunnelDeniedTitle: "En dehors de vos accès",
+  sitesFunnelDeniedFallback:
+    "Cette page lit alo CRM et alo Facturation, qui ne sont pas ouverts pour ce compte.",
+  sitesFunnelDeniedWay:
+    "Tout le reste de ce site — ses pages, ses demandes et son trafic — reste à vous.",
+  sitesFunnelNoSourcesTitle: "Pas encore de formulaire de contact",
+  sitesFunnelNoSourcesBody:
+    "Ajoutez un formulaire de contact à une page : chaque demande qu’il apporte pourra être suivie de la première vue de page jusqu’à la facture.",
+  sitesFunnelChain: "Du visiteur à la facture",
+  sitesFunnelStageViews: "Ont vu le formulaire",
+  sitesFunnelStageStarts: "Ont commencé à écrire",
+  sitesFunnelStageSubmits: "Demandes",
+  sitesFunnelStageLeads: "Transmises aux ventes",
+  sitesFunnelStageWon: "Gagnées",
+  sitesFunnelStageInvoices: "Factures",
+  sitesFunnelFromBrowser: "Signalé par le navigateur",
+  sitesFunnelFromRecord: "Compté à l’enregistrement",
+  sitesFunnelFloorNote:
+    "Les deux premières étapes sont signalées par le navigateur du visiteur, et un navigateur qui ne signale rien a tout de même vu la page. À partir de la demande, tout est compté au moment où l’enregistrement a été écrit. Lisez ces chiffres comme un minimum : un taux qui franchit cette limite est le plus bas possible, pas une mesure.",
+  sitesFunnelMoney: "L’argent derrière",
+  sitesFunnelInvoiceRule:
+    "Factures émises pour le client qu’une demande est devenue, après sa transmission.",
+  sitesFunnelMoneyEmpty:
+    "Aucune opportunité n’a encore été créée depuis ce site.",
+  sitesFunnelOpen: "En cours",
+  sitesFunnelWon: "Gagné",
+  sitesFunnelInvoiced: "Facturé",
+  sitesFunnelHidden: "Non affiché",
+  sitesFunnelBillingOff:
+    "Les montants facturés ne sont pas affichés parce qu’alo Facturation n’est pas ouvert pour ce compte. Ce n’est pas la même chose que « rien n’a été facturé ».",
+  sitesFunnelCurrencies:
+    "Deux devises font deux lignes et aucun total : une prévision n’a pas de date d’émission à laquelle convertir.",
+  sitesFunnelSources: "Par formulaire de contact",
+  sitesFunnelColSource: "Formulaire de contact",
+  sitesFunnelColDeals: "Opportunités",
+  sitesFunnelDealsSummary: (open: number, won: number, lost: number) =>
+    `${open} en cours · ${won} gagnées · ${lost} perdues`,
+  sitesFunnelSumNote:
+    "Une facture atteignable depuis deux formulaires compte une fois pour le site et une fois sous chaque formulaire : ces colonnes sont une lecture par formulaire et ne s’additionnent pas jusqu’aux totaux ci-dessus.",
+  sitesFunnelDeletedSource: "Formulaire supprimé",
+  // Sites — transmettre une demande au tableau des ventes (S2.10c).
+  sitesHandoffSection: "Ventes",
+  sitesHandoffInvite:
+    "Transformez cette demande en opportunité sur votre tableau des ventes. Rien de cet écran n’est à retaper.",
+  sitesHandoffTitle: "Transmettre cette demande aux ventes",
+  sitesHandoffSubtitle:
+    "Crée une opportunité sur votre tableau des ventes et la relie à cette demande.",
+  sitesHandoffSubmit: "Transmettre aux ventes",
+  sitesHandoffFrom: "De",
+  sitesHandoffCarried:
+    "Le nom, l’adresse et le message accompagnent la transmission — vous ne les retapez jamais.",
+  sitesHandoffTitleFor: (who: string) => `Demande du site — ${who}`,
+  sitesHandoffBoard: "Tableau",
+  sitesHandoffColumn: "Colonne",
+  sitesHandoffCardTitle: "Opportunité",
+  sitesHandoffValue: "Valeur estimée",
+  sitesHandoffValueHint: "Facultatif — ce que vous pensez qu’elle vaut.",
+  sitesHandoffCurrency: "Devise",
+  sitesHandoffCurrencyHint:
+    "Laissez vide pour la devise de votre espace de travail.",
+  sitesHandoffLoadingBoards: "Chargement de vos tableaux des ventes…",
+  sitesHandoffNoBoards:
+    "Il n’y a pas encore de tableau des ventes. Ouvrez alo CRM une fois et votre premier tableau est créé pour vous.",
+  sitesHandoffCrmDenied: "alo CRM n’est pas ouvert pour ce compte.",
+  sitesHandoffBoardsFailed:
+    "Vos tableaux des ventes n’ont pas pu être chargés. Réessayez.",
+  sitesHandoffFailed:
+    "Cette demande n’a pas pu être transmise. Réessayez.",
+  sitesInSales: "Aux ventes",
+  sitesLeadsLoadFailed:
+    "Les liens vers les ventes n’ont pas pu être chargés pour cette boîte.",
+  sitesLeadStanding: (state: string, value: string) => `${state} · ${value}`,
+  sitesLeadOpen: "En cours",
+  sitesLeadWon: "Gagnée",
+  sitesLeadLost: "Perdue",
+  sitesUnlinkLead: "Détacher",
+  sitesUnlinkLeadFailed:
+    "Le lien n’a pas pu être retiré. L’opportunité elle-même n’est pas touchée. Réessayez.",
   // Sites — l'historique des versions publiées (S2.04b).
   sitesHistory: "Historique des versions",
   sitesHistorySubtitle:

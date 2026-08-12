@@ -17,6 +17,7 @@
 import { useMemo } from "react";
 
 import { useAuth } from "../auth";
+import { getLocale } from "../i18n";
 import { API_BASE } from "../platform/runtime";
 import type { Section, SectionsEnvelope } from "./sections";
 import type {
@@ -25,6 +26,11 @@ import type {
   PostUpdate,
   Site,
   SiteAnalyticsReport,
+  SiteAttributionReport,
+  SiteCrmBoard,
+  SiteCrmColumn,
+  SiteLeadHandoff,
+  SiteLeadLink,
   SiteDetail,
   SiteDraft,
   SiteHeatmapReport,
@@ -386,6 +392,69 @@ export class SitesApi {
     return this.#read<SiteHeatmapReport>(
       `/sites/${encodeURIComponent(siteId)}/heatmap?${query.toString()}`,
     ).then((report) => ({ ...report, paths: report.paths ?? [] }));
+  }
+
+  /** This site's funnel from page views to invoices over `days`, per
+   *  conversion point and for the site. A reader who may not see the business
+   *  behind the website (a site editor, or someone alo CRM is switched off
+   *  for) gets a `403` carrying the server's own sentence. */
+  attribution(siteId: string, days: number): Promise<SiteAttributionReport> {
+    return this.#read<SiteAttributionReport>(
+      `/sites/${encodeURIComponent(siteId)}/attribution?days=${encodeURIComponent(String(days))}`,
+    ).then((report) => ({ ...report, sources: report.sources ?? [] }));
+  }
+
+  /** Every enquiry of this site that a person handed to the sales board,
+   *  newest first, each with its opportunity as it stands now. */
+  siteLeads(siteId: string): Promise<SiteLeadLink[]> {
+    return this.#read<{ leads?: SiteLeadLink[] }>(
+      `/sites/${encodeURIComponent(siteId)}/leads`,
+    ).then((response) => response.leads ?? []);
+  }
+
+  /** Hands one enquiry to the sales board: raises the opportunity in the
+   *  chosen board and column and links it to the submission, in one server
+   *  transaction. The enquirer's name and address travel from the stored
+   *  submission — they are not in this body and are never re-typed. */
+  createSiteLead(
+    siteId: string,
+    submissionId: string,
+    handoff: SiteLeadHandoff,
+  ): Promise<SiteLeadLink> {
+    return this.#write<SiteLeadLink>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/submissions/${encodeURIComponent(submissionId)}/lead`,
+      handoff,
+    );
+  }
+
+  /** Unclaims an opportunity for this website. The opportunity itself belongs
+   *  to CRM and is left exactly as it is. */
+  async deleteSiteLead(siteId: string, linkId: string): Promise<void> {
+    // Answers `204` with no body, so this one cannot go through `#write`,
+    // which reads the answer as JSON.
+    const response = await this.#send(
+      `/sites/${encodeURIComponent(siteId)}/leads/${encodeURIComponent(linkId)}`,
+      { method: "DELETE" },
+    );
+    await SitesApi.#rejectFailed(response);
+  }
+
+  /** The tenant's sales boards, read through CRM's own route — Sites keeps no
+   *  copy of a board and invents no second permission vocabulary. The `lang`
+   *  parameter is CRM's: a tenant that has never opened CRM has its first
+   *  board seeded in the language of the person looking at it. */
+  crmBoards(): Promise<SiteCrmBoard[]> {
+    return this.#read<{ pipelines?: SiteCrmBoard[] }>(
+      `/crm/pipelines?lang=${encodeURIComponent(getLocale())}`,
+    ).then((response) => (response.pipelines ?? []).filter((board) => !board.archived));
+  }
+
+  /** The columns of one sales board, left to right. */
+  crmColumns(boardId: string): Promise<SiteCrmColumn[]> {
+    return this.#read<{ stages?: SiteCrmColumn[] }>(
+      `/crm/pipelines/${encodeURIComponent(boardId)}/stages`,
+    ).then((response) => (response.stages ?? []).filter((column) => !column.archived));
   }
 
   /** The shipped theme presets, in picker order (the first is the default). */

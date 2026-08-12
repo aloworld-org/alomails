@@ -2856,6 +2856,90 @@ export const nl: Partial<Catalog> = {
     `${collected} van ${needed} kliks geteld op dit schermformaat. Een kaart uit een handvol kliks toont dat handvol, niet uw bezoekers — daarom wordt ze pas getoond als er genoeg zijn.`,
   sitesHeatmapTooFewDepth: (collected: number, needed: number) =>
     `${collected} van ${needed} leesmeldingen geteld op dit schermformaat. De curve verschijnt zodra er genoeg zijn om iets te betekenen.`,
+  // Sites — wat de site heeft opgeleverd (S2.10c): van paginaweergave tot
+  // factuur, via de CRM/Facturatie-naad uit S2.10b.
+  sitesFunnel: "Resultaten",
+  sitesFunnelPeriod: "Periode",
+  sitesFunnelLoading: "Resultaten laden",
+  sitesFunnelLoadFailed:
+    "De resultaten konden niet worden geladen. Probeer het opnieuw.",
+  sitesFunnelDeniedTitle: "Buiten uw toegang",
+  sitesFunnelDeniedFallback:
+    "Deze pagina leest alo CRM en alo Facturatie, die niet open staan voor dit account.",
+  sitesFunnelDeniedWay:
+    "Al het andere van deze site — de pagina’s, de aanvragen en het verkeer — blijft van u.",
+  sitesFunnelNoSourcesTitle: "Nog geen contactformulier",
+  sitesFunnelNoSourcesBody:
+    "Zet een contactformulier op een pagina, dan kunt u elke aanvraag volgen van de eerste paginaweergave tot de factuur.",
+  sitesFunnelChain: "Van bezoeker tot factuur",
+  sitesFunnelStageViews: "Zagen het formulier",
+  sitesFunnelStageStarts: "Begonnen te typen",
+  sitesFunnelStageSubmits: "Aanvragen",
+  sitesFunnelStageLeads: "Doorgegeven aan verkoop",
+  sitesFunnelStageWon: "Gewonnen",
+  sitesFunnelStageInvoices: "Facturen",
+  sitesFunnelFromBrowser: "Gemeld door de browser",
+  sitesFunnelFromRecord: "Geteld bij het opslaan",
+  sitesFunnelFloorNote:
+    "De eerste twee stappen worden gemeld door de browser van de bezoeker, en een browser die niets meldt heeft de pagina toch gezien. Vanaf de aanvraag telt alles op het moment dat het record werd geschreven. Lees deze getallen als een ondergrens: een verhouding over die grens heen is het laagst mogelijke, geen meting.",
+  sitesFunnelMoney: "Het geld erachter",
+  sitesFunnelInvoiceRule:
+    "Facturen opgemaakt voor de klant die een aanvraag werd, ná het doorgeven.",
+  sitesFunnelMoneyEmpty:
+    "Er is nog geen kans aangemaakt vanuit deze website.",
+  sitesFunnelOpen: "In behandeling",
+  sitesFunnelWon: "Gewonnen",
+  sitesFunnelInvoiced: "Gefactureerd",
+  sitesFunnelHidden: "Niet getoond",
+  sitesFunnelBillingOff:
+    "Factuurbedragen worden niet getoond omdat alo Facturatie niet open staat voor dit account. Dat is iets anders dan dat er niets is gefactureerd.",
+  sitesFunnelCurrencies:
+    "Twee valuta’s zijn twee regels en geen totaal: een prognose heeft geen factuurdatum om op om te rekenen.",
+  sitesFunnelSources: "Per contactformulier",
+  sitesFunnelColSource: "Contactformulier",
+  sitesFunnelColDeals: "Kansen",
+  sitesFunnelDealsSummary: (open: number, won: number, lost: number) =>
+    `${open} in behandeling · ${won} gewonnen · ${lost} verloren`,
+  sitesFunnelSumNote:
+    "Eén factuur die vanuit twee formulieren bereikbaar is, telt één keer voor de site en één keer onder elk formulier. Deze kolommen zijn dus een lezing per formulier en tellen niet op tot de totalen hierboven.",
+  sitesFunnelDeletedSource: "Verwijderd formulier",
+  // Sites — één aanvraag doorgeven aan het verkoopbord (S2.10c).
+  sitesHandoffSection: "Verkoop",
+  sitesHandoffInvite:
+    "Maak van deze aanvraag een kans op uw verkoopbord. Niets op dit scherm hoeft opnieuw te worden getypt.",
+  sitesHandoffTitle: "Deze aanvraag doorgeven aan verkoop",
+  sitesHandoffSubtitle:
+    "Maakt een kans op uw verkoopbord en koppelt die aan deze aanvraag.",
+  sitesHandoffSubmit: "Doorgeven aan verkoop",
+  sitesHandoffFrom: "Van",
+  sitesHandoffCarried:
+    "De naam, het adres en het bericht gaan mee met het doorgeven — u typt ze nooit opnieuw.",
+  sitesHandoffTitleFor: (who: string) => `Aanvraag via de website — ${who}`,
+  sitesHandoffBoard: "Bord",
+  sitesHandoffColumn: "Kolom",
+  sitesHandoffCardTitle: "Kans",
+  sitesHandoffValue: "Verwachte waarde",
+  sitesHandoffValueHint: "Optioneel — wat u denkt dat het waard is.",
+  sitesHandoffCurrency: "Valuta",
+  sitesHandoffCurrencyHint: "Laat leeg voor de valuta van uw werkruimte.",
+  sitesHandoffLoadingBoards: "Uw verkoopborden laden…",
+  sitesHandoffNoBoards:
+    "Er is nog geen verkoopbord om dit aan door te geven. Open alo CRM één keer, dan wordt uw eerste bord voor u aangemaakt.",
+  sitesHandoffCrmDenied: "alo CRM staat niet open voor dit account.",
+  sitesHandoffBoardsFailed:
+    "Uw verkoopborden konden niet worden geladen. Probeer het opnieuw.",
+  sitesHandoffFailed:
+    "Deze aanvraag kon niet worden doorgegeven. Probeer het opnieuw.",
+  sitesInSales: "Bij verkoop",
+  sitesLeadsLoadFailed:
+    "De verkoopkoppelingen voor deze inbox konden niet worden geladen.",
+  sitesLeadStanding: (state: string, value: string) => `${state} · ${value}`,
+  sitesLeadOpen: "In behandeling",
+  sitesLeadWon: "Gewonnen",
+  sitesLeadLost: "Verloren",
+  sitesUnlinkLead: "Ontkoppelen",
+  sitesUnlinkLeadFailed:
+    "De koppeling kon niet worden verwijderd. De kans zelf blijft ongemoeid. Probeer het opnieuw.",
   // Sites — de geschiedenis van gepubliceerde versies (S2.04b).
   sitesHistory: "Versiegeschiedenis",
   sitesHistorySubtitle:
