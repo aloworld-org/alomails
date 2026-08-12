@@ -321,6 +321,18 @@ export function MeetRoom({
 
   return (
     <div className={styles.room}>
+      <Button
+        variant="ghost"
+        className={styles.inCallBack}
+        icon={<ArrowLeft aria-hidden="true" />}
+        onClick={onLeft}
+      >
+        {strings.meetBack}
+      </Button>
+      <div className={styles.inCallSafety} role="status">
+        <ShieldCheck aria-hidden="true" />
+        <span>{strings.meetReadySafetyTitle}</span>
+      </div>
       <MeetingHeader grant={grant} />
       <LiveKitRoom
         serverUrl={grant.url}

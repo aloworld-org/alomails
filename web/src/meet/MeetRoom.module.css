@@ -12,6 +12,11 @@
 .livekit {
   flex: 1;
   min-height: 0;
+  margin: calc(var(--space-16) + var(--space-4)) var(--space-4) calc(var(--space-16) + var(--space-6));
+  overflow: hidden;
+  border: var(--border-width) solid var(--navy-400);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
   --lk-bg: var(--navy-700);
   --lk-bg2: var(--bg-rail);
   --lk-bg3: var(--bg-rail-hover);
@@ -30,9 +35,9 @@
 }
 
 .roomHeader {
-  position: absolute;
-  top: var(--space-4);
-  left: var(--space-4);
+  position: fixed;
+  top: calc(var(--space-16) + var(--space-8));
+  left: var(--space-8);
   z-index: var(--z-overlay);
   display: flex;
   align-items: center;
@@ -44,6 +49,39 @@
   box-shadow: var(--shadow-md);
   color: var(--text-on-rail);
 }
+
+.inCallBack {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-4);
+  z-index: var(--z-overlay);
+  min-height: var(--control-height);
+  border-color: var(--navy-400);
+  border-radius: var(--radius-full);
+  background: var(--bg-rail);
+  color: var(--text-on-rail);
+}
+
+.inCallSafety {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  z-index: var(--z-overlay);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--control-height);
+  transform: translateX(-50%);
+  padding: 0 var(--space-4);
+  border: var(--border-width) solid var(--navy-400);
+  border-radius: var(--radius-full);
+  background: var(--bg-rail);
+  color: var(--text-on-rail);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.inCallSafety svg { width: var(--icon-size-inline); height: var(--icon-size-inline); color: var(--accent); }
 
 .roomBrand {
   display: inline-flex;
@@ -141,11 +179,13 @@
 .livekit :global(.lk-grid-layout-wrapper),
 .livekit :global(.lk-focus-layout-wrapper) {
   height: 100%;
-  padding-bottom: var(--space-16);
+  padding: var(--space-3) var(--space-3) calc(var(--space-16) + var(--space-3));
 }
 
 .livekit :global(.lk-participant-tile) {
-  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: var(--border-width) solid var(--navy-400);
+  border-radius: var(--radius-xl);
   box-shadow: var(--shadow-sm);
 }
 
@@ -161,25 +201,25 @@
 }
 
 .livekit :global(.lk-control-bar) {
-  position: absolute;
+  position: fixed;
   bottom: var(--space-4);
-  left: 50%;
+  left: var(--space-4);
   z-index: var(--z-overlay);
   width: max-content;
   max-width: calc(100% - var(--space-8));
   max-height: none;
-  transform: translateX(-50%);
+  transform: none;
   gap: var(--space-1);
   padding: var(--space-1);
   border: var(--border-width) solid var(--navy-400);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   background: var(--bg-rail);
   box-shadow: var(--shadow-lg);
 }
 
 .livekit :global(.lk-control-bar .lk-button),
 .livekit :global(.lk-control-bar .lk-chat-toggle) {
-  min-height: var(--control-height);
+  min-height: var(--control-height-lg);
   padding-inline: var(--space-4);
   border: var(--border-width) solid transparent;
   border-radius: var(--radius-md);
@@ -237,11 +277,11 @@
 .livekit :global(.lk-chat) {
   align-self: stretch;
   width: min(var(--overlay-width-lg), 34vw);
-  height: calc(100% - var(--space-16) - var(--space-4));
-  margin: var(--space-16) var(--space-4) var(--space-4) 0;
+  height: 100%;
+  margin: 0;
   overflow: hidden;
   border: var(--border-width) solid var(--navy-400);
-  border-radius: var(--radius-xl);
+  border-radius: 0 var(--radius-xl) var(--radius-xl) 0;
   background: var(--navy-600);
   box-shadow: var(--shadow-lg);
 }
@@ -610,8 +650,8 @@
   margin-bottom: var(--space-16);
 }
 
-.meetingActions { position: absolute; z-index: 12; bottom: var(--space-4); left: calc(50% + var(--space-16) + var(--space-12)); display: flex; gap: var(--space-1); padding: var(--space-1); border: var(--border-width) solid var(--navy-400); border-radius: var(--radius-lg); background: var(--bg-rail); box-shadow: var(--shadow-lg); }
-.meetingActions button { min-height: var(--control-height); border: var(--border-width) solid transparent; border-radius: var(--radius-md); padding: 0 var(--space-3); background: transparent; color: var(--text-on-rail); display: inline-flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-medium); cursor: pointer; transition: background var(--transition-fast), transform var(--transition-fast); }
+.meetingActions { position: fixed; z-index: 12; bottom: var(--space-4); right: var(--space-4); display: flex; gap: var(--space-1); padding: var(--space-1); border: var(--border-width) solid var(--navy-400); border-radius: var(--radius-xl); background: var(--bg-rail); box-shadow: var(--shadow-lg); }
+.meetingActions button { min-height: var(--control-height-lg); border: var(--border-width) solid transparent; border-radius: var(--radius-md); padding: 0 var(--space-3); background: transparent; color: var(--text-on-rail); display: inline-flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-medium); cursor: pointer; transition: background var(--transition-fast), transform var(--transition-fast); }
 .meetingActions button:hover { background: var(--bg-rail-hover); }
 .meetingActions button:active { transform: translateY(var(--border-width)); }
 .meetingActions .actionActive { background: var(--accent); color: var(--text-on-accent); }
@@ -628,5 +668,5 @@
 .reactionBurst span { font-size: 64px; }
 .reactionBurst small { color: var(--text-on-rail); font-weight: var(--weight-bold); }
 @keyframes reaction-rise { from { opacity: 0; transform: translate(-50%, 30px) scale(.7); } 15%, 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -160px) scale(1.15); } }
-@media (max-width: 70rem) { .meetingActions { left: auto; right: var(--space-4); bottom: calc(var(--space-16) + var(--space-6)); } }
-@media (max-width: 48rem) { .meetingActions { bottom: calc(var(--space-16) + var(--space-8)); left: 50%; right: auto; max-width: calc(100% - var(--space-4)); overflow-x: auto; transform: translateX(-50%); } .meetingActions button { padding: 0 var(--space-2); } .raisedHands { top: var(--space-16); } .chatWelcome { right: 50%; width: min(28ch, calc(100% - var(--space-8))); } }
+@media (max-width: 70rem) { .livekit :global(.lk-control-bar) { left: 50%; transform: translateX(-50%); }.meetingActions { bottom: calc(var(--space-16) + var(--space-5)); } }
+@media (max-width: 48rem) { .livekit { margin: var(--space-16) var(--space-2) calc(var(--space-16) + var(--space-8)); }.inCallSafety { display: none; }.roomHeader { top: calc(var(--space-16) + var(--space-3)); left: var(--space-4); }.meetingActions { bottom: calc(var(--space-16) + var(--space-8)); left: 50%; right: auto; max-width: calc(100% - var(--space-4)); overflow-x: auto; transform: translateX(-50%); } .meetingActions button { padding: 0 var(--space-2); } .raisedHands { top: var(--space-16); } .chatWelcome { right: 50%; width: min(28ch, calc(100% - var(--space-8))); } }
