@@ -3177,7 +3177,34 @@ export const nl: Partial<Catalog> = {
     "Upload een afbeelding of plak een afbeeldings-ID van een eerdere upload.",
   sitesFieldImageAlt: "Afbeeldingsbeschrijving",
   sitesImageAltHint:
-    "Wordt voorgelezen door schermlezers; laat leeg voor een zuiver decoratieve afbeelding.",
+    "Wordt voorgelezen door schermlezers. Zeg wat de afbeelding toont; toont ze niets wat ertoe doet, vink dan hieronder ‘decoratief’ aan.",
+  sitesImageAltMissing:
+    "Deze afbeelding heeft nog geen beschrijving — zeg wat ze toont, of markeer ze als decoratief.",
+  sitesImageDecorative: "Decoratief — schermlezers slaan de afbeelding over",
+  sitesImageDecorativeHint:
+    "Alleen voor afbeeldingen die zelf geen informatie dragen, zoals een achtergrondpatroon.",
+  sitesImageFrameHint:
+    "Sleep over de afbeelding om te kiezen wat zichtbaar blijft. Met het toetsenbord: pijltoetsen verplaatsen het kader, shift met de pijltoetsen maakt het groter of kleiner.",
+  sitesImageFocalHint:
+    "Sleep het ronde punt naar wat in beeld moet blijven wanneer een lay-out de afbeelding verder bijsnijdt.",
+  sitesImageFrameAt: (width: number, height: number, left: number, top: number) =>
+    `Zichtbaar gebied: ${width}% bij ${height}% van de afbeelding, ${left}% vanaf links en ${top}% vanaf boven`,
+  sitesImageFocalAt: (x: number, y: number) => `Aandachtspunt ${x}% horizontaal en ${y}% verticaal`,
+  sitesImageFrameWidth: "Breedte",
+  sitesImageFrameHeight: "Hoogte",
+  sitesImageFrameLeft: "Links",
+  sitesImageFrameTop: "Boven",
+  sitesImageWholePicture: "De hele afbeelding gebruiken",
+  sitesImageWholePictureState: "De hele afbeelding is te zien",
+  sitesImageCentreFocal: "Aandachtspunt centreren",
+  sitesImageNoPreview:
+    "Deze afbeelding kan hier niet worden getoond. De waarden hieronder kadreren ze nog steeds en de beschrijving blijft ongewijzigd.",
+  sitesAiAltWrite: "Een beschrijving voorstellen",
+  sitesAiAltImprove: "Deze beschrijving verbeteren",
+  sitesAiAltProposed: "Voorgestelde beschrijving",
+  sitesAiAltUnseen:
+    "Opgesteld uit de tekst van deze sectie — alo heeft de afbeelding niet gezien. Controleer ze aan de afbeelding voordat u goedkeurt.",
+  sitesAiAltFailed: "De beschrijving kon niet worden opgesteld.",
   sitesFieldImageSide: "Kant van de afbeelding",
   sitesSideLeft: "Links",
   sitesSideRight: "Rechts",

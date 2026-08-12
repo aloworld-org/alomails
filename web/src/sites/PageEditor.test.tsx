@@ -626,8 +626,9 @@ describe("editing a section", () => {
   });
 
   test("how an image is framed survives an edit of the text beside it", async () => {
-    // No prop form offers the crop or the focal point yet (S2.07c does), so
-    // this is the case that would silently unframe every photo on the page.
+    // The image form offers the crop and the focal point now (S2.07c), but
+    // this is the case that does not go near it: editing the text beside a
+    // photo must not silently unframe it.
     const framed: Section = {
       type: "hero",
       heading: "Fresh bread daily",

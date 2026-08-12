@@ -428,7 +428,11 @@ export interface ProposedSiteEdit {
   previewHtml: string;
 }
 
-export type SiteCopyAction = "rewrite" | "tone" | "shorter" | "longer";
+/** `alt_text` is the odd one out: it may start from an empty field, and its
+ *  subject is a photograph the model has not seen — so the server keeps it
+ *  aimed at an image's `alt` and the editor shows the draft beside the real
+ *  picture before anyone approves it. */
+export type SiteCopyAction = "rewrite" | "tone" | "shorter" | "longer" | "alt_text";
 
 /** One deliberately narrow copy request. The server accepts a result only
  *  when it contains one rewrite operation for this exact string leaf. */

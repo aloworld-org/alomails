@@ -92,6 +92,13 @@ const MAX_SITE_DESCRIPTION_CHARS: usize = 8_000;
 pub const MAX_SITE_EDIT_BYTES: usize = 64 * 1024;
 const MAX_SITE_EDIT_INSTRUCTION_CHARS: usize = 4_000;
 
+/// The longest alt text this surface accepts from an AI proposal. The schema
+/// bound on `alt` is far larger (it is the bound on any short text a person
+/// may type); a *proposed* description that runs past a sentence is a screen
+/// reader reading an essay, so the refusal happens here, before the owner is
+/// asked to approve it.
+const MAX_PROPOSED_ALT_TEXT_CHARS: usize = 200;
+
 // ---- JSON shaping -----------------------------------------------------------
 
 fn iso(t: OffsetDateTime) -> String {
@@ -382,13 +389,17 @@ struct SiteCopyRequest {
     tone: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 enum SiteCopyAction {
     Rewrite,
     Tone,
     Shorter,
     Longer,
+    /// Draft the alt text of an image. Unlike the four copy actions it may
+    /// start from an empty field — an image with no description yet is
+    /// exactly the case it exists for.
+    AltText,
 }
 
 #[derive(Deserialize)]
@@ -454,10 +465,12 @@ fn copy_instruction(page: &SectionsEnvelope, request: &SiteCopyRequest) -> Resul
     let current = section_value
         .pointer(&request.pointer)
         .and_then(Value::as_str)
-        .filter(|value| !value.trim().is_empty())
         .ok_or_else(|| invalid_copy_proposal("the selected field does not contain text"))?;
 
     let action = match request.action {
+        // The one action that starts from a field a person has not filled in
+        // yet, and the one whose subject the model cannot see.
+        SiteCopyAction::AltText => return alt_text_instruction(request, current),
         SiteCopyAction::Rewrite => "Rewrite it for clarity while preserving its meaning".to_owned(),
         SiteCopyAction::Shorter => "Make it shorter while preserving its meaning".to_owned(),
         SiteCopyAction::Longer => {
@@ -479,9 +492,43 @@ fn copy_instruction(page: &SectionsEnvelope, request: &SiteCopyRequest) -> Resul
         }
     };
 
+    if current.trim().is_empty() {
+        return Err(invalid_copy_proposal(
+            "the selected field does not contain text",
+        ));
+    }
     Ok(format!(
         "{action}. Change ONLY section {} (`{}`) at JSON pointer `{}`. The current text is {:?}. Return exactly one `rewrite_copy` operation targeting that same section and pointer.",
         request.target.index, request.target.kind, request.pointer, current
+    ))
+}
+
+/// The instruction behind “suggest a description” on an image field.
+///
+/// Nothing in this build shows the model the photograph — `alo-ai` speaks
+/// text — so the prompt says so and confines the draft to what the section's
+/// own words already claim the picture is there to show. That is why this is
+/// a *proposal*: the editor puts the sentence next to the real image and the
+/// owner is the one who can see whether it is true. Alt text that describes
+/// the wrong photograph is worse for a screen-reader user than alt text that
+/// is missing, so inventing detail is forbidden in the prompt and a proposal
+/// past one sentence is refused in [`require_scoped_copy_proposal`].
+fn alt_text_instruction(request: &SiteCopyRequest, current: &str) -> Result<String, Problem> {
+    if !request.pointer.ends_with("/alt") {
+        return Err(invalid_copy_proposal(
+            "a description can only be written for an image",
+        ));
+    }
+    let existing = if current.trim().is_empty() {
+        "The image has no description yet.".to_owned()
+    } else {
+        format!("The current description is {current:?}; improve it.")
+    };
+    Ok(format!(
+        "Write the alt text (the description read aloud to someone who cannot see the picture) for the image at JSON pointer `{pointer}` of section {index} (`{kind}`). {existing} You have NOT seen this photograph: use only what this section's own text says the image is there to show, and invent no visual detail — no colours, no counts, no names, no logos, no words appearing in the picture. Write one plain sentence of at most {MAX_PROPOSED_ALT_TEXT_CHARS} characters in the language of the section, with no \"image of\" or \"photo of\" prefix. Return exactly one `rewrite_copy` operation targeting that same section and pointer.",
+        pointer = request.pointer,
+        index = request.target.index,
+        kind = request.target.kind,
     ))
 }
 
@@ -492,9 +539,23 @@ fn require_scoped_copy_proposal(
     match proposal.operations.as_slice() {
         [
             SiteEditOperation::RewriteCopy {
-                target, pointer, ..
+                target,
+                pointer,
+                text,
             },
-        ] if target == &request.target && pointer == &request.pointer => Ok(()),
+        ] if target == &request.target && pointer == &request.pointer => {
+            if request.action == SiteCopyAction::AltText {
+                if text.trim().is_empty() {
+                    return Err(invalid_copy_proposal("the service wrote no description"));
+                }
+                if text.chars().count() > MAX_PROPOSED_ALT_TEXT_CHARS {
+                    return Err(invalid_copy_proposal(format!(
+                        "a description must be at most {MAX_PROPOSED_ALT_TEXT_CHARS} characters"
+                    )));
+                }
+            }
+            Ok(())
+        }
         _ => Err(invalid_copy_proposal(
             "the service changed more than the selected text field",
         )),
@@ -2136,6 +2197,50 @@ pub(crate) async fn preview_image_map<'a>(
         }
     }
     map
+}
+
+/// `GET /sites/:id/images/:blob` → one of the tenant's own image blobs, so
+/// the editor can show the photograph it is framing (S2.07c). The draft
+/// preview inlines its images as `data:` URIs, which is right for a rendered
+/// document and wrong for a control that has to draw a crop rectangle over
+/// the *source* pixels at their own aspect ratio.
+///
+/// Tenant scope is the account door twice over: the site must resolve for the
+/// caller, and the blob is read through
+/// [`AccountStore::site_image`](alo_store::AccountStore::site_image), whose
+/// SQL is tenant-scoped. Anything that does not resolve — another tenant's
+/// blob, a blob that is not an image, a deleted one — is the same `404`.
+/// Bytes are immutable per blob id, so they may be cached, but only
+/// privately: this is an authenticated origin.
+pub async fn get_site_image(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, blob)): Path<(String, String)>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let sid = SiteId::new(id);
+    require_site(&account, &sid).await?;
+    let image = account
+        .acc
+        .site_image(&BlobId::new(blob))
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such image"))?;
+    Ok((
+        [
+            (header::CONTENT_TYPE, image.content_type),
+            (header::CACHE_CONTROL, "private, max-age=3600, immutable"),
+            (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
+            // Keeps an SVG inert if one is ever opened directly on this
+            // origin — the same defanging the public service applies.
+            (
+                header::CONTENT_SECURITY_POLICY,
+                "default-src 'none'; style-src 'unsafe-inline'",
+            ),
+        ],
+        image.bytes,
+    )
+        .into_response())
 }
 
 /// `GET /sites/:id/pages/:pid/preview` → the DRAFT page as one complete,

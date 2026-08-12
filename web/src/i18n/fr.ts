@@ -3216,7 +3216,35 @@ export const fr: Partial<Catalog> = {
     "Téléversez une image ou collez l’identifiant d’une image déjà téléversée.",
   sitesFieldImageAlt: "Description de l’image",
   sitesImageAltHint:
-    "Lue à voix haute par les lecteurs d’écran ; laissez vide pour une image purement décorative.",
+    "Lue à voix haute par les lecteurs d’écran. Dites ce que montre l’image ; si elle ne montre rien d’important, cochez « décorative » ci-dessous.",
+  sitesImageAltMissing:
+    "Cette image n’a pas encore de description — dites ce qu’elle montre, ou marquez-la comme décorative.",
+  sitesImageDecorative: "Décorative — les lecteurs d’écran l’ignorent",
+  sitesImageDecorativeHint:
+    "Uniquement pour les images qui n’apportent aucune information par elles-mêmes, comme un motif de fond.",
+  sitesImageFrameHint:
+    "Faites glisser sur l’image pour choisir ce qui reste visible. Au clavier : les flèches déplacent le cadre, majuscule et flèches le redimensionnent.",
+  sitesImageFocalHint:
+    "Placez le repère rond sur ce qui doit rester visible lorsqu’une mise en page recadre encore l’image.",
+  sitesImageFrameAt: (width: number, height: number, left: number, top: number) =>
+    `Zone visible : ${width} % sur ${height} % de l’image, à ${left} % du bord gauche et ${top} % du bord supérieur`,
+  sitesImageFocalAt: (x: number, y: number) =>
+    `Point focal à ${x} % horizontalement et ${y} % verticalement`,
+  sitesImageFrameWidth: "Largeur",
+  sitesImageFrameHeight: "Hauteur",
+  sitesImageFrameLeft: "Gauche",
+  sitesImageFrameTop: "Haut",
+  sitesImageWholePicture: "Utiliser toute l’image",
+  sitesImageWholePictureState: "L’image entière est affichée",
+  sitesImageCentreFocal: "Centrer le point focal",
+  sitesImageNoPreview:
+    "Cette image ne peut pas être affichée ici. Les valeurs ci-dessous la cadrent toujours, et sa description reste inchangée.",
+  sitesAiAltWrite: "Proposer une description",
+  sitesAiAltImprove: "Améliorer cette description",
+  sitesAiAltProposed: "Description proposée",
+  sitesAiAltUnseen:
+    "Rédigée à partir des textes de cette section — alo n’a pas vu l’image. Vérifiez-la avant de l’approuver.",
+  sitesAiAltFailed: "La description n’a pas pu être rédigée.",
   sitesFieldImageSide: "Côté de l’image",
   sitesSideLeft: "Gauche",
   sitesSideRight: "Droite",

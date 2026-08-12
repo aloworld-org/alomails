@@ -427,6 +427,7 @@ pub fn app_with_site_domain_dns(
                 .put(site_protection::set_page_password)
                 .delete(site_protection::remove_page_password),
         )
+        .route("/sites/{id}/images/{blob}", get(sites::get_site_image))
         .route("/sites/{id}/pages/{pid}/preview", get(sites::preview_page))
         .route(
             "/sites/{id}/pages/{pid}/ai-edits",

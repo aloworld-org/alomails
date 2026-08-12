@@ -188,8 +188,9 @@ const draftLink = (link?: SectionLink): SectionLink => ({
 });
 
 /** The crop, focal point and decorative flag ride through the editor
- *  untouched: no prop form offers them yet (S2.07c), and a save must never be
- *  the thing that throws away how an image was framed. */
+ *  untouched. The image form now offers all three (S2.07c), but the rule that
+ *  matters is the older one: a save must never be the thing that throws away
+ *  how an image was framed, including by a form that never showed it. */
 const draftImage = (image?: SectionImage): SectionImage => ({
   ...image,
   blob_id: image?.blob_id ?? "",

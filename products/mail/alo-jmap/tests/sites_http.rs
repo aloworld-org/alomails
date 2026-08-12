@@ -238,6 +238,7 @@ async fn every_route_family_requires_a_bearer_token() {
             "/sites/some-id/pages/p/sections/0".to_owned(),
             Some(json!({ "section": {} })),
         ),
+        ("GET", "/sites/some-id/images/blob".to_owned(), None),
         ("GET", "/sites/some-id/pages/p/preview".to_owned(), None),
         ("GET", "/sites/some-id/pages/p/locales/fr".to_owned(), None),
     ];
@@ -2188,6 +2189,155 @@ async fn preview_renders_the_draft_as_a_self_contained_document() {
     let (_, _, html) = get_text(&h.app, &h.token, &uri).await;
     assert!(html.contains("Now even fresher"));
     assert!(!html.contains("Coffee roasted the morning it ships"));
+}
+
+// ---- the editor's own image source (S2.07c) ---------------------------------
+
+/// GETs a route that answers bytes rather than text.
+async fn get_bytes(
+    app: &Router,
+    token: &str,
+    uri: &str,
+) -> (StatusCode, axum::http::HeaderMap, Vec<u8>) {
+    let req = Request::builder()
+        .method("GET")
+        .uri(uri)
+        .header("authorization", format!("Bearer {token}"))
+        .body(Body::empty())
+        .unwrap();
+    let resp = app.clone().oneshot(req).await.unwrap();
+    let status = resp.status();
+    let headers = resp.headers().clone();
+    let bytes = axum::body::to_bytes(resp.into_body(), 8 * 1024 * 1024)
+        .await
+        .unwrap();
+    (status, headers, bytes.to_vec())
+}
+
+/// Uploads bytes through the JMAP upload endpoint and returns the blob id —
+/// the same door the editor's image picker uses.
+async fn upload(h: &Harness, content_type: &str, bytes: Vec<u8>) -> String {
+    let request = Request::builder()
+        .method("POST")
+        .uri(format!("/jmap/upload/{}", h.account_id))
+        .header("authorization", format!("Bearer {}", h.token))
+        .header(header::CONTENT_TYPE, content_type)
+        .body(Body::from(bytes))
+        .unwrap();
+    let (status, body) = send(&h.app, request).await;
+    assert_eq!(status, StatusCode::OK, "upload failed: {body}");
+    body["blobId"].as_str().expect("blob id").to_owned()
+}
+
+/// The framing control needs the SOURCE pixels, not the rendered preview's
+/// `data:` URIs — so the edit surface serves one image blob at a time, and
+/// serves it only to the tenant that owns it. Everything that does not
+/// resolve in the caller's tenant is the same `404`: another tenant's blob,
+/// a blob that is not an image, and an id that never existed.
+#[tokio::test]
+async fn the_editor_reads_its_own_image_blobs_and_no_other_tenants() {
+    let owner = harness("sites-image-owner").await;
+    let outsider = harness_on(Arc::clone(&owner.store), "sites-image-other").await;
+
+    let site = created_id(
+        "site",
+        post(
+            &owner.app,
+            &owner.token,
+            "/sites",
+            json!({ "name": "Framing", "subdomain": sub("framing", &owner) }),
+        )
+        .await,
+    );
+    let other_site = created_id(
+        "site",
+        post(
+            &outsider.app,
+            &outsider.token,
+            "/sites",
+            json!({ "name": "Elsewhere", "subdomain": sub("elsewhere", &outsider) }),
+        )
+        .await,
+    );
+
+    // A one-pixel PNG: the smallest thing that is really an image.
+    let png: Vec<u8> = vec![
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44,
+        0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1F,
+        0x15, 0xC4, 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00,
+        0x01, 0x00, 0x00, 0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+        0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+    let photo = upload(&owner, "image/png", png.clone()).await;
+    let note = upload(&owner, "text/plain", b"not a picture".to_vec()).await;
+    let foreign_photo = upload(&outsider, "image/png", png.clone()).await;
+
+    let (status, headers, bytes) = get_bytes(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/images/{photo}"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(headers.get("content-type").unwrap(), "image/png");
+    assert_eq!(bytes, png, "the editor was served different bytes");
+    // Authenticated origin: cacheable, but never in a shared cache.
+    assert_eq!(
+        headers.get("cache-control").unwrap(),
+        "private, max-age=3600, immutable"
+    );
+    assert_eq!(headers.get("x-content-type-options").unwrap(), "nosniff");
+    assert_eq!(
+        headers.get("content-security-policy").unwrap(),
+        "default-src 'none'; style-src 'unsafe-inline'"
+    );
+
+    // A blob that is not an image, and an id that never existed, are the same
+    // answer as an image that is not yours.
+    for id in [note.as_str(), "Nev3rExisted0000000001"] {
+        let (status, _, _) = get_bytes(
+            &owner.app,
+            &owner.token,
+            &format!("/sites/{site}/images/{id}"),
+        )
+        .await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{id} was served");
+    }
+
+    // The mandatory wrong-tenant proof, from both directions: the outsider
+    // cannot name the owner's site, and cannot smuggle the owner's blob id
+    // through a site of their own.
+    let (status, _, _) = get_bytes(
+        &outsider.app,
+        &outsider.token,
+        &format!("/sites/{site}/images/{photo}"),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "another tenant's site served"
+    );
+    let (status, _, _) = get_bytes(
+        &outsider.app,
+        &outsider.token,
+        &format!("/sites/{other_site}/images/{photo}"),
+    )
+    .await;
+    assert_eq!(
+        status,
+        StatusCode::NOT_FOUND,
+        "another tenant's image bytes were served"
+    );
+    // ...and the owner cannot read the outsider's, so the boundary is not an
+    // accident of who happened to upload first.
+    let (status, _, _) = get_bytes(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/images/{foreign_photo}"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }
 
 // ---- themes (S1.14) ----------------------------------------------------------

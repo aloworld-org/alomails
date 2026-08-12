@@ -666,6 +666,17 @@ export class SitesApi {
     return res.text();
   }
 
+  /** One of the tenant's own image blobs, as bytes — what the framing
+   *  control draws its crop rectangle over. The rendered preview inlines its
+   *  images as `data:` URIs, which is right for a document and wrong for a
+   *  control that needs the source at its own aspect ratio. */
+  async siteImage(siteId: string, blobId: string): Promise<Blob> {
+    const path = `/sites/${encodeURIComponent(siteId)}/images/${encodeURIComponent(blobId)}`;
+    const res = await this.#send(path, { method: "GET" });
+    await SitesApi.#rejectFailed(res);
+    return res.blob();
+  }
+
   /** Inserts a section at `index` (appends when absent); answers the stored
    *  envelope, canonical as the schema gate wrote it. */
   addSection(

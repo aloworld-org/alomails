@@ -3263,7 +3263,36 @@ export const en = {
     "Upload a picture, or paste an image ID from an earlier upload.",
   sitesFieldImageAlt: "Image description",
   sitesImageAltHint:
-    "Read aloud by screen readers; leave empty for a purely decorative image.",
+    "Read aloud by screen readers. Say what the picture shows; if it shows nothing that matters, mark it decorative below.",
+  sitesImageAltMissing:
+    "This picture has no description yet — say what it shows, or mark it decorative.",
+  sitesImageDecorative: "Decorative — screen readers skip it",
+  sitesImageDecorativeHint:
+    "Only for pictures that carry no information of their own, such as a background pattern.",
+  // Sites — framing a picture (crop + focal point).
+  sitesImageFrameHint:
+    "Drag on the picture to choose what stays visible. With the keyboard: arrow keys move the frame, shift with the arrow keys resizes it.",
+  sitesImageFocalHint:
+    "Drag the round marker onto whatever must stay in view when a layout has to crop the picture further.",
+  sitesImageFrameAt: (width: number, height: number, left: number, top: number) =>
+    `Visible area: ${width}% by ${height}% of the picture, ${left}% from the left and ${top}% from the top`,
+  sitesImageFocalAt: (x: number, y: number) => `Focal point ${x}% across and ${y}% down`,
+  sitesImageFrameWidth: "Width",
+  sitesImageFrameHeight: "Height",
+  sitesImageFrameLeft: "Left",
+  sitesImageFrameTop: "Top",
+  sitesImageWholePicture: "Use the whole picture",
+  sitesImageWholePictureState: "The whole picture is shown",
+  sitesImageCentreFocal: "Centre the focal point",
+  sitesImageNoPreview:
+    "This picture cannot be shown here. The numbers below still frame it, and its description is unaffected.",
+  // Sites — the AI draft of an image description.
+  sitesAiAltWrite: "Suggest a description",
+  sitesAiAltImprove: "Improve this description",
+  sitesAiAltProposed: "Suggested description",
+  sitesAiAltUnseen:
+    "Drafted from the words in this section — alo has not seen the picture. Check it against the image before you approve it.",
+  sitesAiAltFailed: "The description could not be drafted.",
   sitesFieldImageSide: "Picture side",
   sitesSideLeft: "Left",
   sitesSideRight: "Right",

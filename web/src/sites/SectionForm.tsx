@@ -4,13 +4,12 @@
 // SERVER rules on content (blank required text, bad hrefs, empty lists) and
 // its 422 sentence is shown here verbatim, so there is exactly one copy of
 // every rule.
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { Blocks, Plus, Sparkles, Trash2, Upload } from "lucide-react";
+import { Blocks, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { strings } from "../i18n";
-import { useJmapClient } from "../jmap";
 import { Button, IconButton, Spinner } from "../ds";
 import { kindDescription, kindLabel } from "./sectionInfo";
 import {
@@ -40,27 +39,20 @@ import type {
   TestimonialsDraft,
   TextImageDraft,
 } from "./sectionDrafts";
-import type { Section, SectionImage, SectionKind, SectionLink } from "./sections";
-import type { SectionsEnvelope } from "./sections";
-import type { SiteCopyAction, SiteEditEnvelope, SiteEditTarget } from "./types";
+import type { Section, SectionKind, SectionLink } from "./sections";
+import type { SiteCopyAction, SiteEditEnvelope } from "./types";
 import type { SiteCollection } from "./types";
 import { sitesMessage, useSitesApi } from "./api";
+import { CopyContext, useCopyContext } from "./copyContext";
+import type { CopyContextValue } from "./copyContext";
+import { ImageFields } from "./ImageFields";
 import { DialogFrame, Field } from "./parts";
 import styles from "./SitesModule.module.css";
 
 // ---- field primitives -------------------------------------------------------
 
-interface CopyContextValue {
-  siteId: string;
-  pageId: string;
-  target: SiteEditTarget;
-  onApplied: (sections: SectionsEnvelope) => void;
-}
-
-const CopyContext = createContext<CopyContextValue | null>(null);
-
 function CopyTools({ pointer, value }: { pointer: string; value: string }) {
-  const context = useContext(CopyContext);
+  const context = useCopyContext();
   const api = useSitesApi();
   const [open, setOpen] = useState(false);
   const [tone, setTone] = useState("");
@@ -292,85 +284,6 @@ function LinkFields({
   );
 }
 
-/** An image's inputs: an upload button (the picture goes through Drive and
- *  the field takes its blob id), the id itself for pasting/clearing, and the
- *  alt text. A blank id means "no image" for optional slots. */
-function ImageFields({
-  legend,
-  value,
-  onChange,
-}: {
-  legend?: string;
-  value: SectionImage;
-  onChange: (patch: Partial<SectionImage>) => void;
-}) {
-  const jmap = useJmapClient();
-  const fileInput = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-
-  function upload(file: File) {
-    setUploading(true);
-    setUploadError(null);
-    jmap.driveUploadBlob(null, null, file).then(
-      ({ blobId }) => {
-        onChange({ blob_id: blobId });
-        setUploading(false);
-      },
-      () => {
-        setUploadError(strings.sitesUploadFailed);
-        setUploading(false);
-      },
-    );
-  }
-
-  return (
-    <fieldset className={styles.subGroup}>
-      {legend !== undefined && <legend className={styles.subLegend}>{legend}</legend>}
-      <Field label={strings.sitesFieldImageId} hint={strings.sitesImageIdHint}>
-        <div className={styles.uploadRow}>
-          <input
-            className={`${styles.input} ${styles.mono}`}
-            value={value.blob_id}
-            onChange={(e) => onChange({ blob_id: e.target.value })}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-          <input
-            ref={fileInput}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              e.target.value = "";
-              if (file !== undefined) upload(file);
-            }}
-          />
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Upload size={14} />}
-            disabled={uploading}
-            onClick={() => fileInput.current?.click()}
-          >
-            {strings.sitesUploadImage}
-          </Button>
-        </div>
-      </Field>
-      {uploadError !== null && <p className={styles.hint} role="alert">{uploadError}</p>}
-      <Field label={strings.sitesFieldImageAlt} hint={strings.sitesImageAltHint}>
-        <input
-          className={styles.input}
-          value={value.alt}
-          onChange={(e) => onChange({ alt: e.target.value })}
-        />
-      </Field>
-    </fieldset>
-  );
-}
-
 /** The repeating-entries editor every list prop shares: numbered groups with
  *  a remove button each, and one add button at the end. Order is the order
  *  on the page; entries left blank are dropped on save, not sent as errors. */
@@ -461,6 +374,7 @@ function HeroFields({ draft, onChange }: { draft: HeroDraft; onChange: Change })
       <ImageFields
         legend={strings.sitesFieldImage}
         value={draft.image}
+        pointer="/image"
         onChange={(patch) => onChange({ ...draft, image: { ...draft.image, ...patch } })}
       />
       <LinkFields
@@ -540,6 +454,7 @@ function TextImageFields({ draft, onChange }: { draft: TextImageDraft; onChange:
       <ImageFields
         legend={strings.sitesFieldImage}
         value={draft.image}
+        pointer="/image"
         onChange={(patch) => onChange({ ...draft, image: { ...draft.image, ...patch } })}
       />
       <Field label={strings.sitesFieldImageSide}>
@@ -573,7 +488,9 @@ function GalleryFields({ draft, onChange }: { draft: GalleryDraft; onChange: Cha
         items={draft.images}
         onChange={(images) => onChange({ ...draft, images })}
         blank={blankImage}
-        render={(image, update) => <ImageFields value={image} onChange={update} />}
+        render={(image, update, index) => (
+          <ImageFields value={image} onChange={update} pointer={`/images/${index}`} />
+        )}
       />
     </>
   );
@@ -721,6 +638,7 @@ function TeamFields({ draft, onChange }: { draft: TeamDraft; onChange: Change })
             <ImageFields
               legend={strings.sitesFieldPhoto}
               value={member.photo}
+              pointer={`/members/${index}/photo`}
               onChange={(patch) => update({ photo: { ...member.photo, ...patch } })}
             />
             <LongTextField

@@ -443,6 +443,153 @@ async fn page_edit_is_a_reviewable_proposal_until_approved_and_tenant_scoped() {
     );
 }
 
+/// Alt text (S2.07c) is the one copy action that starts from an empty field
+/// and the one whose subject the model cannot see. So: the prompt says both
+/// out loud, the proposal is never written without approval, a description
+/// longer than a sentence is refused before the owner is asked to approve it,
+/// and the action cannot be pointed at anything but an image's `alt`.
+#[tokio::test]
+async fn alt_text_is_drafted_from_the_sections_own_words_and_never_written_unapproved() {
+    let a = harness("sites-alt-text").await;
+    let (status, site) = post(
+        &a.app,
+        Some(&a.token),
+        "/sites",
+        json!({ "name": "Alt fixture", "subdomain": subdomain("alt", &a) }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{site}");
+    let site_id = site["id"].as_str().unwrap();
+    let (status, page) = post(
+        &a.app,
+        Some(&a.token),
+        &format!("/sites/{site_id}/pages"),
+        json!({ "title": "Home", "slug": "", "home": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{page}");
+    let page_id = page["id"].as_str().unwrap();
+
+    // A photograph nobody has described yet — the case the tool exists for.
+    let (status, body) = put(
+        &a.app,
+        &a.token,
+        &format!("/sites/{site_id}/pages/{page_id}/sections"),
+        json!({
+            "schema_version": 1,
+            "sections": [{
+                "type": "text_image",
+                "heading": "Roasting on the harbour",
+                "body": "Every batch is roasted the morning it ships.",
+                "image": { "blob_id": "Ph0t0Fixture0000000001", "alt": "" },
+                "image_side": "left"
+            }]
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let good = json!({
+        "schema_version": 1,
+        "operations": [{
+            "op": "rewrite_copy",
+            "target": { "index": 0, "type": "text_image" },
+            "pointer": "/image/alt",
+            "text": "Coffee being roasted at the harbour roastery"
+        }]
+    })
+    .to_string();
+    let too_long = json!({
+        "schema_version": 1,
+        "operations": [{
+            "op": "rewrite_copy",
+            "target": { "index": 0, "type": "text_image" },
+            "pointer": "/image/alt",
+            "text": "A ".repeat(150)
+        }]
+    })
+    .to_string();
+    let (base_url, seen) = scripted_model(vec![good, too_long]).await;
+    use_model(&a, &base_url).await;
+    let edit_uri = format!("/sites/{site_id}/pages/{page_id}/ai-edits");
+    let request = json!({
+        "copy": {
+            "target": { "index": 0, "type": "text_image" },
+            "pointer": "/image/alt",
+            "action": "alt_text"
+        }
+    });
+
+    let (status, proposed) = post(&a.app, Some(&a.token), &edit_uri, request.clone()).await;
+    assert_eq!(status, StatusCode::OK, "{proposed}");
+    assert_eq!(
+        proposed["proposal"]["operations"][0]["text"],
+        "Coffee being roasted at the harbour roastery"
+    );
+    {
+        let requests = seen.lock().unwrap();
+        let instruction = requests[0]["messages"][1]["content"].as_str().unwrap();
+        // The prompt is honest about what the model can and cannot know.
+        assert!(instruction.contains("You have NOT seen this photograph"));
+        assert!(instruction.contains("invent no visual detail"));
+        assert!(instruction.contains("The image has no description yet."));
+    }
+    // Proposing writes nothing: the image is still undescribed.
+    let page_uri = format!("/sites/{site_id}/pages/{page_id}");
+    let (_, unchanged) = get(&a.app, &a.token, &page_uri).await;
+    assert_eq!(unchanged["sections"]["sections"][0]["image"]["alt"], "");
+
+    // An answer past a sentence is refused rather than shown for approval.
+    let (status, refused) = post(&a.app, Some(&a.token), &edit_uri, request).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+    assert_eq!(refused["reason"], "invalid_proposal");
+    assert!(
+        refused["detail"]
+            .as_str()
+            .unwrap()
+            .contains("at most 200 characters")
+    );
+
+    // The action can only be aimed at an image description, and that refusal
+    // costs no model call at all.
+    let (status, misaimed) = post(
+        &a.app,
+        Some(&a.token),
+        &edit_uri,
+        json!({
+            "copy": {
+                "target": { "index": 0, "type": "text_image" },
+                "pointer": "/heading",
+                "action": "alt_text"
+            }
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{misaimed}");
+    assert!(
+        misaimed["detail"]
+            .as_str()
+            .unwrap()
+            .contains("can only be written for an image")
+    );
+    assert_eq!(seen.lock().unwrap().len(), 2, "a refusal called the model");
+
+    // Approval, and only approval, writes it.
+    let (status, applied) = put(
+        &a.app,
+        &a.token,
+        &edit_uri,
+        json!({ "proposal": proposed["proposal"].clone() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    let (_, stored) = get(&a.app, &a.token, &page_uri).await;
+    assert_eq!(
+        stored["sections"]["sections"][0]["image"]["alt"],
+        "Coffee being roasted at the harbour roastery"
+    );
+}
+
 #[tokio::test]
 async fn whole_site_translation_is_reviewed_approve_only_stale_safe_and_tenant_scoped() {
     let owner = harness("sites-translation-proposal").await;
