@@ -42,11 +42,13 @@
 .tab:hover {
   background: var(--bg-raised);
   color: var(--text-primary);
+  text-decoration: none;
 }
 .tabActive {
   color: var(--accent);
   border-bottom-color: var(--accent);
   font-weight: var(--weight-medium);
+  text-decoration: none;
 }
 
 /* ---- a list page ---- */

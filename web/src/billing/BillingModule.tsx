@@ -45,6 +45,8 @@ const TABS = [
   { path: "settings", label: () => strings.billingSettings },
 ] as const;
 
+const billingPath = (path: (typeof TABS)[number]["path"]) => `/billing/${path}`;
+
 export function BillingModule() {
   return (
     <div className={styles.billing}>
@@ -54,7 +56,7 @@ export function BillingModule() {
           {TABS.map((t) => (
             <NavLink
               key={t.path}
-              to={t.path}
+              to={billingPath(t.path)}
               className={({ isActive }) => (isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab)}
             >
               {t.label()}
@@ -64,7 +66,7 @@ export function BillingModule() {
       </header>
 
       <Routes>
-        <Route index element={<Navigate to="invoices" replace />} />
+        <Route index element={<Navigate to="/billing/invoices" replace />} />
         <Route path="invoices">
           <Route index element={<InvoicesView />} />
           <Route path="new" element={<InvoiceEditor />} />
@@ -81,7 +83,7 @@ export function BillingModule() {
         <Route path="reports" element={<VatReportView />} />
         <Route path="settings" element={<SettingsView />} />
         {/* An unknown billing path is a stale link, not an error page. */}
-        <Route path="*" element={<Navigate to="invoices" replace />} />
+        <Route path="*" element={<Navigate to="/billing/invoices" replace />} />
       </Routes>
     </div>
   );

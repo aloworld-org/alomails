@@ -8,11 +8,18 @@
   font-weight: var(--weight-medium);
   line-height: 1;
   white-space: nowrap;
+  text-decoration: none;
   transition:
     background-color var(--transition-fast),
     color var(--transition-fast),
     border-color var(--transition-fast),
     box-shadow var(--transition-fast);
+}
+
+.button:hover,
+.button:focus-visible,
+.button:active {
+  text-decoration: none;
 }
 
 .button:disabled {

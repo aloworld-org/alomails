@@ -68,6 +68,16 @@ button {
   background: none;
   border: none;
   padding: 0;
+  text-decoration: none;
+}
+
+button:hover,
+button:focus-visible,
+button:active,
+[role="button"]:hover,
+[role="button"]:focus-visible,
+[role="button"]:active {
+  text-decoration: none;
 }
 
 a {
