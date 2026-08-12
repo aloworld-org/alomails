@@ -668,6 +668,9 @@ export const fr: Partial<Catalog> = {
   delegateSendAs: "Envoyer en tant que",
   delegateSendOnBehalf: "Envoyer au nom de",
   delegateRemove: "Retirer l’accès",
+  delegateRemoveFor: (email: string) => `Retirer l’accès de ${email}`,
+  delegateFoldersFor: (email: string) =>
+    `Limiter ${email} à certains dossiers`,
   delegateError:
     "Cette modification d’accès n’a pas fonctionné — veuillez réessayer.",
   delegateFoldersLabel: "Limiter à des dossiers",
@@ -726,6 +729,12 @@ export const fr: Partial<Catalog> = {
   filterValuePlaceholder: "valeur",
   filterAddCondition: "Ajouter une condition",
   filterRemoveCondition: "Retirer la condition",
+  filterConditionField: (n: number) => `Condition ${n} : champ`,
+  filterConditionOp: (n: number) => `Condition ${n} : correspondance`,
+  filterConditionValue: (n: number) => `Condition ${n} : valeur`,
+  filterRemoveConditionAt: (n: number) => `Retirer la condition ${n}`,
+  filterRuleEnabled: (rule: string) => `Règle active : ${rule}`,
+  filterFolderLabel: "Dossier de destination",
   filterActionFileInto: "Déplacer vers un dossier",
   filterActionMarkRead: "Marquer comme lu",
   filterActionStar: "Ajouter aux favoris",

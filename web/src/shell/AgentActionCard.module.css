@@ -1,14 +1,11 @@
-/* Rich approval card for a proposed agent action (ADR 0034). Uses the shared
-   design tokens so it inherits light/dark automatically. */
-.card {
+/* Rich approval card for a proposed agent action (ADR 0034). The surface is a
+   `ds/Card` (D2.03); what is left here is how its contents stack, and the
+   margin that separates one proposal from the answer above it. */
+.stack {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   margin: 0 0 var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
 }
 
 .header {
@@ -42,18 +39,21 @@
   border-radius: var(--radius-sm);
   background: var(--bg-raised);
 }
-.field {
+/* Renamed from `.field`: a `ds/Field` is a labelled control, and this is a
+   label beside a value that cannot be edited — the preview of what approving
+   would do. */
+.fact {
   display: flex;
   gap: var(--space-2);
   font-size: var(--text-sm);
   line-height: 1.5;
 }
-.fieldLabel {
+.factLabel {
   flex: none;
   min-width: 72px;
   color: var(--text-tertiary);
 }
-.fieldValue {
+.factValue {
   color: var(--text-primary);
   overflow-wrap: anywhere;
 }
@@ -93,40 +93,10 @@
   flex: none;
 }
 
-.buttons {
+/* The two decisions. Both are `ds/Button`s now — approve is the primary,
+   discard is the outlined ghost beside it — so the only rule left is the row
+   they sit in. */
+.decide {
   display: flex;
   gap: var(--space-2);
-}
-.approve,
-.discard {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 84px;
-  min-height: 32px;
-  padding: 0 14px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 500;
-}
-.approve {
-  color: var(--on-accent, #fff);
-  background: var(--accent);
-}
-.approve:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-.discard {
-  color: var(--text-secondary);
-  border: 1px solid var(--border-default);
-  background: var(--bg-surface);
-}
-.discard:hover:not(:disabled) {
-  background: var(--bg-raised);
-  color: var(--text-primary);
-}
-.approve:disabled,
-.discard:disabled {
-  opacity: 0.6;
-  cursor: default;
 }

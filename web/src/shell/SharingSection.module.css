@@ -45,34 +45,14 @@
   padding-left: var(--space-1);
 }
 
-.folderBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
+/* Both row buttons are `ds/IconButton`s; all either needs is to keep its width
+   when a long address takes the row. */
+.rowButton {
   flex-shrink: 0;
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  transition: background-color var(--transition-fast);
 }
 
-.folderBtn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.limitToggle,
-.check {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.limitToggle {
+/* A `ds/Checkbox`, kept off the row above it. */
+.limit {
   margin-top: var(--space-2);
 }
 
@@ -97,16 +77,6 @@
   margin-top: var(--space-2);
 }
 
-.cancel {
-  height: 34px;
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-default);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
 .email {
   flex: 1;
   min-width: 0;
@@ -117,82 +87,33 @@
   color: var(--text-primary);
 }
 
-.input {
+/* The address field is a `ds/Input`; what it needs from the row is the width
+   the selects and the button leave it. */
+.grow {
   flex: 1;
   min-width: 0;
-  height: 34px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-family: inherit;
 }
 
-.input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-soft);
-}
-
-.selects {
+/* The two `ds/Select`s that say what a colleague may do. They stay at their
+   natural widths — a select's width carries information — and travel together
+   when the row runs out of room. */
+.access {
   display: inline-flex;
   gap: var(--space-2);
   flex-shrink: 0;
 }
 
-.select {
-  height: 34px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-family: inherit;
-}
-
-.select:disabled {
-  opacity: 0.55;
-}
-
 .add {
   flex-shrink: 0;
-  height: 34px;
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--accent);
-  color: var(--text-on-accent);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  transition: background-color var(--transition-fast);
 }
 
-.add:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.add:disabled {
-  opacity: 0.55;
-}
-
+/* A `ds/IconButton`, and the one thing the shared build cannot say: this
+   button takes somebody's access away. */
 .remove {
   flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-md);
-  color: var(--text-tertiary);
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
 }
 
 .remove:hover {
-  background: var(--bg-raised);
   color: var(--danger);
 }
 

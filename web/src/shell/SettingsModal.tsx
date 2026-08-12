@@ -8,7 +8,15 @@ import type { ReactNode } from "react";
 import { Building2, PenLine, SlidersHorizontal, Users, X } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner } from "../ds";
+import {
+  Button,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  Spinner,
+  Toggle,
+} from "../ds";
 import { useJmapClient } from "../jmap";
 import { RichTextEditor } from "../mail/components/RichTextEditor";
 import { FiltersSection } from "./FiltersSection";
@@ -105,160 +113,17 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
   ];
 
   return (
-    <div className={styles.overlay} onMouseDown={onClose}>
-      <div
-        className={styles.modal}
-        role="dialog"
-        aria-modal="true"
-        aria-label={strings.settingsTitle}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className={styles.head}>
-          <span className={styles.headIcon}>
-            <SlidersHorizontal size={17} />
-          </span>
-          <h2>{strings.settingsTitle}</h2>
-          <button
-            type="button"
-            className={styles.iconBtn}
-            onClick={onClose}
-            aria-label={strings.userClose}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {!loaded && error === null ? (
-          <div className={styles.loading}>
-            <Spinner size={24} />
-          </div>
-        ) : (
-          <div className={styles.body}>
-            <nav className={styles.nav} aria-label={strings.settingsTitle}>
-              {nav.map((n) => (
-                <button
-                  key={n.key}
-                  type="button"
-                  className={tab === n.key ? styles.navItemOn : styles.navItem}
-                  onClick={() => setTab(n.key)}
-                  aria-current={tab === n.key}
-                >
-                  <span className={styles.navIcon}>{n.icon}</span>
-                  <span>{n.label}</span>
-                </button>
-              ))}
-            </nav>
-
-            <div className={styles.content}>
-              {tab === "general" && (
-                <>
-                  <section className={styles.section}>
-                    <h3 className={styles.sectionTitle}>
-                      {strings.settingsSignature}
-                    </h3>
-                    <p className={styles.sectionDesc}>
-                      {strings.settingsSignatureHint}
-                    </p>
-                    <div className={styles.editorCard}>
-                      <RichTextEditor
-                        initialHtml={signature}
-                        onChange={setSignature}
-                        placeholder={strings.settingsSignatureHint}
-                      />
-                    </div>
-                  </section>
-
-                  <section className={styles.section}>
-                    <h3 className={styles.sectionTitle}>
-                      {strings.settingsOutOfOffice}
-                    </h3>
-                    <div className={styles.oooCard}>
-                      <label className={styles.oooRow}>
-                        <span className={styles.oooRowText}>
-                          <span className={styles.oooRowTitle}>
-                            {strings.settingsOooToggle}
-                          </span>
-                          <span className={styles.oooRowHint}>
-                            {strings.settingsOutOfOfficeHint}
-                          </span>
-                        </span>
-                        <span className={styles.toggle}>
-                          <input
-                            type="checkbox"
-                            checked={oooEnabled}
-                            onChange={(e) => setOooEnabled(e.target.checked)}
-                          />
-                          <span className={styles.track} />
-                        </span>
-                      </label>
-                      {oooEnabled && (
-                        <>
-                          <input
-                            className={styles.input}
-                            value={oooSubject}
-                            onChange={(e) => setOooSubject(e.target.value)}
-                            placeholder={strings.settingsOooSubjectPlaceholder}
-                          />
-                          <textarea
-                            className={styles.textarea}
-                            rows={4}
-                            value={oooMessage}
-                            onChange={(e) => setOooMessage(e.target.value)}
-                            placeholder={strings.settingsOooMessagePlaceholder}
-                          />
-                        </>
-                      )}
-                    </div>
-                  </section>
-                </>
-              )}
-
-              {tab === "filters" && (
-                <section className={styles.section}>
-                  <h3 className={styles.sectionTitle}>
-                    {strings.settingsFilters}
-                  </h3>
-                  <p className={styles.sectionDesc}>
-                    {strings.settingsFiltersHint}
-                  </p>
-                  <FiltersSection />
-                </section>
-              )}
-
-              {tab === "sharing" && (
-                <section className={styles.section}>
-                  <h3 className={styles.sectionTitle}>
-                    {strings.settingsSharing}
-                  </h3>
-                  <p className={styles.sectionDesc}>
-                    {strings.settingsSharingHint}
-                  </p>
-                  <SharingSection />
-                </section>
-              )}
-
-              {tab === "org" && isAdmin && (
-                <section className={styles.section}>
-                  <h3 className={styles.sectionTitle}>
-                    {strings.settingsOrgFooter}
-                  </h3>
-                  <p className={styles.sectionDesc}>
-                    {strings.settingsOrgFooterHint}
-                  </p>
-                  <div className={styles.editorCard}>
-                    <RichTextEditor
-                      initialHtml={orgFooter}
-                      onChange={setOrgFooter}
-                      placeholder={strings.settingsOrgFooterPlaceholder}
-                    />
-                  </div>
-                </section>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className={styles.foot}>
+    <Modal
+      title={strings.settingsTitle}
+      onClose={onClose}
+      icon={<SlidersHorizontal size={17} />}
+      wide
+      tall="page"
+      actions={
+        <IconButton label={strings.userClose} icon={<X />} onClick={onClose} />
+      }
+      footer={
+        <>
           <span className={styles.footMsg}>
             {note !== null && <span className={styles.footOk}>{note}</span>}
             {error !== null && (
@@ -267,14 +132,151 @@ export function SettingsModal({ isAdmin, onClose }: SettingsModalProps) {
               </span>
             )}
           </span>
-          <button type="button" className={styles.textBtn} onClick={onClose}>
+          <Button variant="ghost" onClick={onClose}>
             {strings.userClose}
-          </button>
+          </Button>
           <Button onClick={() => void save()} disabled={busy || !loaded}>
             {busy ? <Spinner size={16} /> : strings.settingsSave}
           </Button>
+        </>
+      }
+    >
+      {!loaded && error === null ? (
+        <div className={styles.loading}>
+          <Spinner size={24} />
         </div>
-      </div>
-    </div>
+      ) : (
+        <div className={styles.body}>
+          <nav className={styles.nav} aria-label={strings.settingsTitle}>
+            {nav.map((n) => (
+              <button
+                key={n.key}
+                type="button"
+                className={tab === n.key ? styles.navItemOn : styles.navItem}
+                onClick={() => setTab(n.key)}
+                aria-current={tab === n.key}
+              >
+                <span className={styles.navIcon}>{n.icon}</span>
+                <span>{n.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className={styles.content}>
+            {tab === "general" && (
+              <>
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>
+                    {strings.settingsSignature}
+                  </h3>
+                  <p className={styles.sectionDesc}>
+                    {strings.settingsSignatureHint}
+                  </p>
+                  <div className={styles.editorCard}>
+                    <RichTextEditor
+                      initialHtml={signature}
+                      onChange={setSignature}
+                      placeholder={strings.settingsSignatureHint}
+                    />
+                  </div>
+                </section>
+
+                <section className={styles.section}>
+                  <h3 className={styles.sectionTitle}>
+                    {strings.settingsOutOfOffice}
+                  </h3>
+                  <div className={styles.oooCard}>
+                    {/* Was a bare checkbox in a span, with the words beside
+                          it bound to nothing and the hint under it read by
+                          nobody: announced as "checkbox, not checked" over a
+                          setting that is on or off. */}
+                    <Toggle
+                      checked={oooEnabled}
+                      onChange={setOooEnabled}
+                      label={strings.settingsOooToggle}
+                      hint={strings.settingsOutOfOfficeHint}
+                      layout="row"
+                    />
+                    {oooEnabled && (
+                      <>
+                        {/* Labelled rather than placeheld: a placeholder is
+                              gone the moment you type into it, and it was the
+                              only thing naming either control. */}
+                        <Field label={strings.settingsOooSubjectPlaceholder}>
+                          {(control) => (
+                            <Input
+                              {...control}
+                              value={oooSubject}
+                              onChange={(e) => setOooSubject(e.target.value)}
+                            />
+                          )}
+                        </Field>
+                        <Field label={strings.settingsOooMessagePlaceholder}>
+                          {({ id, "aria-describedby": describedBy }) => (
+                            // Not an `Input`: the design system still has no
+                            // multi-line control, which is flagged for the
+                            // wave review rather than invented here.
+                            <textarea
+                              id={id}
+                              aria-describedby={describedBy}
+                              className={styles.textarea}
+                              rows={4}
+                              value={oooMessage}
+                              onChange={(e) => setOooMessage(e.target.value)}
+                            />
+                          )}
+                        </Field>
+                      </>
+                    )}
+                  </div>
+                </section>
+              </>
+            )}
+
+            {tab === "filters" && (
+              <section className={styles.section}>
+                <h3 className={styles.sectionTitle}>
+                  {strings.settingsFilters}
+                </h3>
+                <p className={styles.sectionDesc}>
+                  {strings.settingsFiltersHint}
+                </p>
+                <FiltersSection />
+              </section>
+            )}
+
+            {tab === "sharing" && (
+              <section className={styles.section}>
+                <h3 className={styles.sectionTitle}>
+                  {strings.settingsSharing}
+                </h3>
+                <p className={styles.sectionDesc}>
+                  {strings.settingsSharingHint}
+                </p>
+                <SharingSection />
+              </section>
+            )}
+
+            {tab === "org" && isAdmin && (
+              <section className={styles.section}>
+                <h3 className={styles.sectionTitle}>
+                  {strings.settingsOrgFooter}
+                </h3>
+                <p className={styles.sectionDesc}>
+                  {strings.settingsOrgFooterHint}
+                </p>
+                <div className={styles.editorCard}>
+                  <RichTextEditor
+                    initialHtml={orgFooter}
+                    onChange={setOrgFooter}
+                    placeholder={strings.settingsOrgFooterPlaceholder}
+                  />
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }

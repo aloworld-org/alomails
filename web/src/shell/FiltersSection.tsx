@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Plus, Trash2, X } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner } from "../ds";
+import { Button, Checkbox, IconButton, Input, Select, Spinner } from "../ds";
 import { useJmapClient } from "../jmap";
 import type {
   FilterAction,
@@ -17,7 +17,6 @@ import type {
   MailFilterRule,
   Mailbox,
 } from "../jmap";
-import admin from "../admin/admin.module.css";
 import styles from "./FiltersSection.module.css";
 
 /** A blank draft rule with one empty condition. */
@@ -62,6 +61,14 @@ function summarize(rule: MailFilterRule): string {
     })
     .join(", ");
   return `${conds} → ${acts}`;
+}
+
+/** What to call a rule when a control has to say which rule it belongs to. A
+ *  rule's name is optional — most people never type one — so the fallback is
+ *  the summary the row already shows, never an empty string. */
+function ruleTitle(rule: MailFilterRule): string {
+  const named = rule.name.trim();
+  return named.length > 0 ? named : summarize(rule);
 }
 
 export function FiltersSection() {
@@ -157,13 +164,18 @@ export function FiltersSection() {
         <ul className={styles.list}>
           {rules.map((rule) => (
             <li key={rule.id} className={styles.rule}>
-              <label className={styles.enable}>
-                <input
-                  type="checkbox"
-                  checked={rule.enabled}
-                  onChange={() => toggle(rule)}
-                />
-              </label>
+              {/* The box says which rule it switches. Before: a bare box in a
+                  wrapping label with no text in it — a column announced as
+                  "checkbox, checked" as many times as there are rules. An
+                  unnamed rule is named by what it does, which is the same
+                  sentence the row already draws. */}
+              <Checkbox
+                checked={rule.enabled}
+                onChange={() => toggle(rule)}
+                label={strings.filterRuleEnabled(ruleTitle(rule))}
+                hideLabel
+                className={styles.enable}
+              />
               <button
                 type="button"
                 className={styles.ruleBody}
@@ -174,14 +186,12 @@ export function FiltersSection() {
                 )}
                 <span className={styles.ruleSummary}>{summarize(rule)}</span>
               </button>
-              <button
-                type="button"
-                className={styles.ruleDelete}
+              <IconButton
+                label={strings.filterDelete}
+                icon={<Trash2 />}
                 onClick={() => remove(rule)}
-                aria-label={strings.filterDelete}
-              >
-                <Trash2 size={15} />
-              </button>
+                className={styles.ruleDelete}
+              />
             </li>
           ))}
         </ul>
@@ -212,7 +222,7 @@ export function FiltersSection() {
       )}
 
       {error !== null && (
-        <p className={admin.error} role="alert">
+        <p className={styles.error} role="alert">
           {error}
         </p>
       )}
@@ -288,11 +298,11 @@ function RuleEditor({
 
   return (
     <div className={styles.editor}>
-      <input
-        className={admin.input}
+      <Input
         value={draft.name}
         onChange={(e) => onChange({ ...draft, name: e.target.value })}
         placeholder={strings.filterNamePlaceholder}
+        aria-label={strings.filterNamePlaceholder}
       />
 
       <div className={styles.subhead}>
@@ -313,11 +323,16 @@ function RuleEditor({
         )}
       </div>
 
+      {/* Each condition is three controls, and every one of them used to be
+          anonymous: two selects with no label at all — the pair `ds/Select` was
+          written about, announced as "combo box, From" — and a value box with
+          only a placeholder. They are numbered because a rule can hold several
+          and "field" three times over says nothing about which row. */}
       {draft.conditions.map((c, i) => (
         <div key={i} className={styles.condRow}>
-          <select
-            className={styles.select}
+          <Select
             value={c.field}
+            aria-label={strings.filterConditionField(i + 1)}
             onChange={(e) =>
               setCondition(i, { field: e.target.value as FilterField })
             }
@@ -326,32 +341,30 @@ function RuleEditor({
             <option value="to">{strings.filterFieldTo}</option>
             <option value="cc">{strings.filterFieldCc}</option>
             <option value="subject">{strings.filterFieldSubject}</option>
-          </select>
-          <select
-            className={styles.select}
+          </Select>
+          <Select
             value={c.op}
+            aria-label={strings.filterConditionOp(i + 1)}
             onChange={(e) =>
               setCondition(i, { op: e.target.value as FilterOp })
             }
           >
             <option value="contains">{strings.filterOpContains}</option>
             <option value="is">{strings.filterOpIs}</option>
-          </select>
-          <input
-            className={admin.input}
+          </Select>
+          <Input
             value={c.value}
+            aria-label={strings.filterConditionValue(i + 1)}
             onChange={(e) => setCondition(i, { value: e.target.value })}
             placeholder={strings.filterValuePlaceholder}
           />
           {draft.conditions.length > 1 && (
-            <button
-              type="button"
-              className={styles.condRemove}
+            <IconButton
+              label={strings.filterRemoveConditionAt(i + 1)}
+              icon={<X />}
               onClick={() => removeCondition(i)}
-              aria-label={strings.filterRemoveCondition}
-            >
-              <X size={14} />
-            </button>
+              className={styles.condRemove}
+            />
           )}
         </div>
       ))}
@@ -364,9 +377,11 @@ function RuleEditor({
         <span>{strings.filterDo}</span>
       </div>
       <div className={styles.actions}>
-        <label className={styles.action}>
-          <input
-            type="checkbox"
+        {/* The folder picker is beside the box, not inside its label: a label
+            binds to the first control it contains, so wrapping both left the
+            select unnamed and made clicking its words tick the checkbox. */}
+        <div className={styles.action}>
+          <Checkbox
             checked={fileInto !== undefined}
             disabled={has("delete")}
             onChange={() =>
@@ -375,12 +390,12 @@ function RuleEditor({
                 mailbox: fileInto?.mailbox ?? firstFolder,
               })
             }
+            label={strings.filterActionFileInto}
           />
-          <span>{strings.filterActionFileInto}</span>
           {fileInto !== undefined && (
-            <select
-              className={styles.select}
+            <Select
               value={fileInto.mailbox}
+              aria-label={strings.filterFolderLabel}
               onChange={(e) => setFolder(e.target.value)}
             >
               {folders.map((m) => (
@@ -388,41 +403,32 @@ function RuleEditor({
                   {m.name}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
-        </label>
-        <label className={styles.action}>
-          <input
-            type="checkbox"
-            checked={has("markRead")}
-            disabled={has("delete")}
-            onChange={() => toggleAction({ type: "markRead" })}
-          />
-          <span>{strings.filterActionMarkRead}</span>
-        </label>
-        <label className={styles.action}>
-          <input
-            type="checkbox"
-            checked={has("star")}
-            disabled={has("delete")}
-            onChange={() => toggleAction({ type: "star" })}
-          />
-          <span>{strings.filterActionStar}</span>
-        </label>
-        <label className={styles.action}>
-          <input
-            type="checkbox"
-            checked={has("delete")}
-            onChange={() => toggleAction({ type: "delete" })}
-          />
-          <span>{strings.filterActionDelete}</span>
-        </label>
+        </div>
+        <Checkbox
+          checked={has("markRead")}
+          disabled={has("delete")}
+          onChange={() => toggleAction({ type: "markRead" })}
+          label={strings.filterActionMarkRead}
+        />
+        <Checkbox
+          checked={has("star")}
+          disabled={has("delete")}
+          onChange={() => toggleAction({ type: "star" })}
+          label={strings.filterActionStar}
+        />
+        <Checkbox
+          checked={has("delete")}
+          onChange={() => toggleAction({ type: "delete" })}
+          label={strings.filterActionDelete}
+        />
       </div>
 
       <div className={styles.editorFoot}>
-        <button type="button" className={styles.cancel} onClick={onCancel}>
+        <Button variant="ghost" onClick={onCancel}>
           {strings.filterCancel}
-        </button>
+        </Button>
         <Button onClick={onSave} disabled={busy}>
           {busy ? <Spinner size={15} /> : strings.filterSaveRule}
         </Button>

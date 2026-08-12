@@ -27,9 +27,9 @@
   background: var(--bg-surface);
 }
 
+/* A `ds/Checkbox` whose label is read and not drawn; all that is left is that
+   it keeps its width in the row. */
 .enable {
-  display: inline-flex;
-  align-items: center;
   flex-shrink: 0;
 }
 
@@ -56,23 +56,14 @@
   white-space: nowrap;
 }
 
+/* A `ds/IconButton`. The one rule kept is the colour it turns on hover: this
+   button deletes a rule, and the shared hover says nothing about that. */
 .ruleDelete {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
   flex-shrink: 0;
-  border-radius: var(--radius-md);
-  color: var(--text-tertiary);
-  transition:
-    background-color var(--transition-fast),
-    color var(--transition-fast);
 }
 
 .ruleDelete:hover {
-  background: var(--bg-raised);
-  color: var(--danger, #c0392b);
+  color: var(--danger);
 }
 
 .addRule,
@@ -147,36 +138,16 @@
   gap: var(--space-2);
 }
 
-.select {
-  height: 34px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-family: inherit;
-  flex-shrink: 0;
+/* The two dropdowns keep their natural width — a select's width says what it
+   holds — so the value field is the one that gives way on a narrow pane. This
+   is what the deleted `.select` rule said with `flex-shrink: 0`. */
+.condRow select {
+  flex: none;
 }
 
-.condRow .select {
-  flex-shrink: 0;
-}
-
+/* A `ds/IconButton`; it must not be squeezed by a long value. */
 .condRemove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
   flex-shrink: 0;
-  border-radius: var(--radius-md);
-  color: var(--text-tertiary);
-}
-
-.condRemove:hover {
-  background: var(--bg-surface);
-  color: var(--text-primary);
 }
 
 .actions {
@@ -185,12 +156,13 @@
   gap: var(--space-2);
 }
 
+/* The one action that carries a control of its own: the box and the folder it
+   files into, side by side. The rest are plain `ds/Checkbox`es and need no row
+   of their own. */
 .action {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
 }
 
 .editorFoot {
@@ -201,15 +173,13 @@
   margin-top: var(--space-1);
 }
 
-.cancel {
+/* Where a rule that could not be saved says so. Came from the admin console's
+   stylesheet, which this file used to import for a single class. */
+.error {
+  margin: 0;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-md);
-  color: var(--text-secondary);
+  background: var(--danger-tint);
+  color: var(--danger);
   font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-}
-
-.cancel:hover {
-  background: var(--bg-surface);
-  color: var(--text-primary);
 }

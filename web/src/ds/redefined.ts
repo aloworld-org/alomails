@@ -47,13 +47,6 @@ export const REDEFINES_PRIMITIVES: readonly string[] = [
   "meet/MeetModule.module.css",
   "platform/StackBadge.module.css",
   "projects/ProjectsModule.module.css",
-  "shell/AgentActionCard.module.css",
-  "shell/AgentResultCard.module.css",
-  "shell/ComingSoon.module.css",
-  "shell/FiltersSection.module.css",
-  "shell/SearchOverlay.module.css",
-  "shell/SettingsModal.module.css",
-  "shell/SharingSection.module.css",
   "sites/SitesModule.module.css",
   "tasks/TasksModule.module.css",
 ] as const;

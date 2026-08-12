@@ -16,7 +16,9 @@ export function ComingSoon({ title, body, Icon }: ComingSoonProps) {
   return (
     <div className={styles.wrap}>
       {Icon !== undefined && (
-        <div className={styles.badge}>
+        // Decoration, not a badge: the heading under it says what this is, and
+        // a plate holding a module's own glyph has nothing to announce.
+        <div className={styles.plate} aria-hidden="true">
           <Icon strokeWidth={1.5} />
         </div>
       )}

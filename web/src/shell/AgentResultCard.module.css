@@ -1,15 +1,15 @@
 /* What an executed agent action produced (ADR 0034, B3.10a, B3.10b). Deliberately
    quieter than the approval card beside it: the decision is already made, and
    this is the receipt. Tokens only, so it inherits light/dark. */
-.card {
+/* The surface is a `ds/Card` (D2.03); what stays here is how the facts stack
+   inside it and the space between one receipt and the next. The card's own
+   `--bg-surface` replaces the `--bg-raised` this drew itself on: the quiet
+   comes from `flat` — no shadow — rather than from a second tint. */
+.stack {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   margin: 0 0 var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  background: var(--bg-raised);
 }
 
 .header {

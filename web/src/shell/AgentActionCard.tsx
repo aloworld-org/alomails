@@ -39,7 +39,7 @@ import {
 import { formatAmount } from "../billing";
 import { getLocale, strings } from "../i18n";
 import { durationLabel } from "../projects/format";
-import { Spinner } from "../ds";
+import { Button, Card, Spinner } from "../ds";
 import type { AgentActionDto } from "../jmap";
 import styles from "./AgentActionCard.module.css";
 
@@ -587,9 +587,9 @@ export function AgentActionCard({
   const hasPreview =
     view.fields.length > 0 || (view.body !== undefined && view.body !== "");
   return (
-    <div className={styles.card}>
+    <Card pad="sm" flat className={styles.stack}>
       <div className={styles.header}>
-        <span className={styles.iconWrap}>
+        <span className={styles.iconWrap} aria-hidden="true">
           <Icon size={16} />
         </span>
         <span className={styles.title}>{view.title}</span>
@@ -597,9 +597,9 @@ export function AgentActionCard({
       {hasPreview && (
         <div className={styles.preview}>
           {view.fields.map((f) => (
-            <div key={f.label} className={styles.field}>
-              <span className={styles.fieldLabel}>{f.label}</span>
-              <span className={styles.fieldValue}>
+            <div key={f.label} className={styles.fact}>
+              <span className={styles.factLabel}>{f.label}</span>
+              <span className={styles.factValue}>
                 {f.value === "" ? "—" : f.value}
               </span>
             </div>
@@ -621,13 +621,8 @@ export function AgentActionCard({
         // shown as one. The sentence is the whole affordance.
         <p className={styles.note}>{standing.reason}</p>
       ) : (
-        <div className={styles.buttons}>
-          <button
-            type="button"
-            className={styles.approve}
-            onClick={onApprove}
-            disabled={running}
-          >
+        <div className={styles.decide}>
+          <Button size="sm" onClick={onApprove} disabled={running}>
             {running ? (
               <Spinner size={14} />
             ) : isSend ? (
@@ -635,17 +630,17 @@ export function AgentActionCard({
             ) : (
               strings.agentApprove
             )}
-          </button>
-          <button
-            type="button"
-            className={styles.discard}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
             onClick={onDiscard}
             disabled={running}
           >
             {strings.agentDiscard}
-          </button>
+          </Button>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

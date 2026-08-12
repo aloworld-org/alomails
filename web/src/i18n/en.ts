@@ -700,6 +700,10 @@ export const en = {
   delegateSendAs: "Send as",
   delegateSendOnBehalf: "Send on behalf",
   delegateRemove: "Remove access",
+  // The same two buttons on a row about one person. In a list of five
+  // colleagues, "Remove access" five times says nothing about whose.
+  delegateRemoveFor: (email: string) => `Remove ${email}'s access`,
+  delegateFoldersFor: (email: string) => `Limit ${email} to folders`,
   delegateError: "That access change didn't work — please try again.",
   // Per-folder access (ADR 0017)
   delegateFoldersLabel: "Limit to folders",
@@ -753,6 +757,15 @@ export const en = {
   filterValuePlaceholder: "value",
   filterAddCondition: "Add condition",
   filterRemoveCondition: "Remove condition",
+  // A rule is a numbered list of conditions, and each condition is three
+  // controls. Without the number, a screen reader hears "field, match, value"
+  // three times over and cannot tell which row it is in.
+  filterConditionField: (n: number) => `Condition ${n}: field`,
+  filterConditionOp: (n: number) => `Condition ${n}: match`,
+  filterConditionValue: (n: number) => `Condition ${n}: value`,
+  filterRemoveConditionAt: (n: number) => `Remove condition ${n}`,
+  filterRuleEnabled: (rule: string) => `Rule active: ${rule}`,
+  filterFolderLabel: "Destination folder",
   filterActionFileInto: "Move to folder",
   filterActionMarkRead: "Mark as read",
   filterActionStar: "Star it",

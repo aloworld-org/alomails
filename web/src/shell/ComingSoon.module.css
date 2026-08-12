@@ -10,7 +10,10 @@
   color: var(--text-secondary);
 }
 
-.badge {
+/* Renamed from `.badge`, which was a `ds/Badge`'s name and not its job: a badge
+   states a fact in words and is read. This is a 56px plate holding the module's
+   own glyph, above a heading that already says what the screen is. */
+.plate {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -22,7 +25,7 @@
   margin-bottom: var(--space-2);
 }
 
-.badge svg {
+.plate svg {
   width: 28px;
   height: 28px;
 }

@@ -9,7 +9,7 @@ import type { FormEvent } from "react";
 import { FolderCog, X } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Spinner } from "../ds";
+import { Button, Checkbox, IconButton, Input, Select, Spinner } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { Delegate, Mailbox, SendMode } from "../jmap";
 import styles from "./SharingSection.module.css";
@@ -110,23 +110,22 @@ export function SharingSection() {
                   disabled={busy}
                   onChange={(w, s) => void share(d.email, w, s, d.folders)}
                 />
-                <button
-                  type="button"
-                  className={styles.folderBtn}
+                {/* Both buttons name the person the row is about. "Remove
+                    access", five times in a list of five colleagues, is the
+                    same sentence with nothing in it about whose. */}
+                <IconButton
+                  label={strings.delegateFoldersFor(d.email)}
+                  icon={<FolderCog />}
                   onClick={() => setEditing(editing === d.id ? null : d.id)}
-                  aria-label={strings.delegateFoldersLabel}
-                  title={strings.delegateFoldersLabel}
-                >
-                  <FolderCog size={15} />
-                </button>
-                <button
-                  type="button"
-                  className={styles.remove}
+                  aria-expanded={editing === d.id}
+                  className={styles.rowButton}
+                />
+                <IconButton
+                  label={strings.delegateRemoveFor(d.email)}
+                  icon={<X />}
                   onClick={() => void remove(d.id)}
-                  aria-label={strings.delegateRemove}
-                >
-                  <X size={16} />
-                </button>
+                  className={styles.remove}
+                />
               </div>
               <span className={styles.scopeLabel}>
                 {d.folders.length === 0
@@ -151,8 +150,8 @@ export function SharingSection() {
       )}
 
       <form className={styles.addRow} onSubmit={add}>
-        <input
-          className={styles.input}
+        <Input
+          className={styles.grow}
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -168,43 +167,41 @@ export function SharingSection() {
             setSendMode(s);
           }}
         />
-        <button
+        {/* `type="submit"` said out loud: `ds/Button` defaults to "button", so
+            leaving it off would make Add do nothing at all. */}
+        <Button
           type="submit"
-          className={styles.add}
           disabled={busy || email.trim().length === 0}
+          className={styles.add}
         >
           {strings.sharingAdd}
-        </button>
+        </Button>
       </form>
 
       {folders.length > 0 && (
-        <label className={styles.limitToggle}>
-          <input
-            type="checkbox"
-            checked={limitFolders}
-            onChange={(e) => setLimitFolders(e.target.checked)}
-          />
-          {strings.delegateLimitFolders}
-        </label>
+        <Checkbox
+          checked={limitFolders}
+          onChange={setLimitFolders}
+          label={strings.delegateLimitFolders}
+          className={styles.limit}
+        />
       )}
       {limitFolders && (
         <div className={styles.checklist}>
           {folders.map((f) => (
-            <label key={f.id} className={styles.check}>
-              <input
-                type="checkbox"
-                checked={scope.has(f.id)}
-                onChange={() =>
-                  setScope((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(f.id)) next.delete(f.id);
-                    else next.add(f.id);
-                    return next;
-                  })
-                }
-              />
-              {f.name}
-            </label>
+            <Checkbox
+              key={f.id}
+              checked={scope.has(f.id)}
+              onChange={() =>
+                setScope((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(f.id)) next.delete(f.id);
+                  else next.add(f.id);
+                  return next;
+                })
+              }
+              label={f.name}
+            />
           ))}
         </div>
       )}
@@ -238,35 +235,28 @@ function FolderScope({
     <div className={styles.editScope}>
       <div className={styles.checklist}>
         {folders.map((f) => (
-          <label key={f.id} className={styles.check}>
-            <input
-              type="checkbox"
-              checked={set.has(f.id)}
-              onChange={() =>
-                setSet((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(f.id)) next.delete(f.id);
-                  else next.add(f.id);
-                  return next;
-                })
-              }
-            />
-            {f.name}
-          </label>
+          <Checkbox
+            key={f.id}
+            checked={set.has(f.id)}
+            onChange={() =>
+              setSet((prev) => {
+                const next = new Set(prev);
+                if (next.has(f.id)) next.delete(f.id);
+                else next.add(f.id);
+                return next;
+              })
+            }
+            label={f.name}
+          />
         ))}
       </div>
       <div className={styles.editActions}>
-        <button
-          type="button"
-          className={styles.add}
-          disabled={disabled}
-          onClick={() => onSave([...set])}
-        >
+        <Button size="sm" disabled={disabled} onClick={() => onSave([...set])}>
           {strings.delegateFoldersSave}
-        </button>
-        <button type="button" className={styles.cancel} onClick={onCancel}>
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onCancel}>
           {strings.delegateFoldersCancel}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -285,9 +275,8 @@ function Selects({
   onChange: (canWrite: boolean, sendMode: SendMode) => void;
 }) {
   return (
-    <span className={styles.selects}>
-      <select
-        className={styles.select}
+    <span className={styles.access}>
+      <Select
         value={sendMode === "none" && !canWrite ? "read" : "manage"}
         disabled={disabled || sendMode !== "none"}
         onChange={(e) => onChange(e.target.value === "manage", sendMode)}
@@ -295,9 +284,8 @@ function Selects({
       >
         <option value="read">{strings.delegateReadOnly}</option>
         <option value="manage">{strings.delegateManage}</option>
-      </select>
-      <select
-        className={styles.select}
+      </Select>
+      <Select
         value={sendMode}
         disabled={disabled}
         onChange={(e) => {
@@ -309,7 +297,7 @@ function Selects({
         <option value="none">{strings.delegateSendNone}</option>
         <option value="as">{strings.delegateSendAs}</option>
         <option value="on_behalf">{strings.delegateSendOnBehalf}</option>
-      </select>
+      </Select>
     </span>
   );
 }

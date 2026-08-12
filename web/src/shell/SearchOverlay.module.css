@@ -30,7 +30,14 @@
   color: var(--text-tertiary);
   flex-shrink: 0;
 }
-.input {
+/* Renamed from `.input`, and deliberately not a `ds/Input` (D2.03). The field
+   here is the whole row: the magnifier, the text and the close button share one
+   border and one focus surface, and dropping a bordered 40px control into the
+   middle of it would draw a second field inside the first — the same argument
+   `mail/RecipientInput` makes about its tokens row. It is also the only text
+   entry in the product set at `--text-lg`, because a command palette's query
+   is the thing you are looking at. */
+.query {
   flex: 1;
   border: none;
   background: transparent;
@@ -38,19 +45,13 @@
   color: var(--text-primary);
   font-family: inherit;
 }
-.input::placeholder {
+.query::placeholder {
   color: var(--text-tertiary);
 }
+/* A `ds/IconButton` (D2.03); all that is left is that it must not be squeezed
+   by a long query. */
 .close {
-  display: inline-flex;
-  color: var(--text-tertiary);
-  border-radius: 6px;
-  padding: 4px;
   flex-shrink: 0;
-}
-.close:hover {
-  background: var(--bg-raised);
-  color: var(--text-primary);
 }
 .askRow {
   display: flex;

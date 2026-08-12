@@ -26,7 +26,7 @@ import {
   type SearchHitDto,
 } from "../jmap";
 import { surface } from "../product";
-import { Spinner } from "../ds";
+import { IconButton, Spinner } from "../ds";
 import { AgentActionCard } from "./AgentActionCard";
 import { AgentResultCard } from "./AgentResultCard";
 import styles from "./SearchOverlay.module.css";
@@ -183,7 +183,7 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
         <div className={styles.searchRow}>
           <Search size={18} className={styles.searchIcon} />
           <input
-            className={styles.input}
+            className={styles.query}
             type="search"
             name="workspace-search"
             autoComplete="off"
@@ -196,14 +196,12 @@ export function SearchOverlay({ onClose }: { onClose: () => void }) {
               if (e.key === "Enter") ask();
             }}
           />
-          <button
-            type="button"
-            className={styles.close}
+          <IconButton
+            label={strings.close}
+            icon={<X />}
             onClick={onClose}
-            aria-label={strings.close}
-          >
-            <X size={18} />
-          </button>
+            className={styles.close}
+          />
         </div>
         {q.trim() !== "" && (
           <button

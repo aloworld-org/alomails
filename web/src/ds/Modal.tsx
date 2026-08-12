@@ -33,8 +33,16 @@ export interface ModalProps {
    *  under the pointer while you type is unusable, so the panel takes a fixed
    *  height and hands the scrolling to whichever child of the body asks for it
    *  (`flex: 1; min-height: 0`). Without this the body scrolls as one piece and
-   *  the thing you are editing scrolls away from the thing you are picking. */
-  tall?: boolean | undefined;
+   *  the thing you are editing scrolls away from the thing you are picking.
+   *
+   *  `"page"` is the same argument for a dialog that is a place rather than a
+   *  question — Settings, which has its own section navigation. It takes the
+   *  height of the window rather than of its content, so moving from General
+   *  to Filters does not resize the panel under the pointer, and its body is
+   *  flush: a two-pane layout draws its own edges, and padding here would push
+   *  the nav column off the panel's own side. Added for `shell/SettingsModal`
+   *  (D2.03), which was the only `.modal` of the sixteen that was a place. */
+  tall?: boolean | "page" | undefined;
   children: ReactNode;
 }
 
@@ -122,7 +130,7 @@ export function Modal({
         className={[
           styles.panel,
           wide === true ? styles.wide : "",
-          tall === true ? styles.tall : "",
+          tall === true ? styles.tall : tall === "page" ? styles.page : "",
         ]
           .filter(Boolean)
           .join(" ")}

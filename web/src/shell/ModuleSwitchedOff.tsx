@@ -18,7 +18,7 @@ import styles from "./ComingSoon.module.css";
 export function ModuleSwitchedOff({ title }: { title?: string }) {
   return (
     <div className={styles.wrap}>
-      <div className={styles.badge}>
+      <div className={styles.plate} aria-hidden="true">
         <Lock strokeWidth={1.5} />
       </div>
       <h2 className={styles.title}>{title ?? strings.accessModuleOff}</h2>

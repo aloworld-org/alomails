@@ -40,6 +40,21 @@
   overflow: hidden;
 }
 
+/* A dialog that is a place rather than a question: its own navigation, its own
+   sections. It takes the window's height instead of its content's, so switching
+   section does not resize the panel, and its body is flush — a two-pane layout
+   draws its own edges and its own padding. The height is capped so the panel
+   stays a panel on a tall display. */
+.page {
+  height: min(720px, 86vh);
+}
+
+.page .body {
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
 /* The mark before the title. Decoration: the title is the name. */
 .icon {
   display: inline-flex;

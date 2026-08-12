@@ -11,7 +11,7 @@
 // because a sentence written in the server is a user-facing string in one
 // language (CLAUDE.md). Every word around them is written here, in the
 // catalogue, so the summary is in the reader's language.
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   CalendarClock,
   CalendarRange,
@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 import { formatAmount, formatRate } from "../billing";
-import { Button } from "../ds";
+import { Button, Card } from "../ds";
 import { financeMessage, useFinanceApi } from "../finance";
 import { getLocale, strings } from "../i18n";
 import type {
@@ -148,6 +148,20 @@ function isWhoIsOff(result: AgentResultDto): result is WhoIsOffResultDto {
   );
 }
 
+/** The surface every receipt sits on — one `ds/Card` (D2.03), named once here
+ *  rather than repeated at each of the ten results below.
+ *
+ *  `flat`, because a receipt appears inside the answer panel or a chat message,
+ *  and a shadow on a card inside another surface reads as a mistake rather than
+ *  as depth. */
+function ResultCard({ children }: { children: ReactNode }) {
+  return (
+    <Card pad="sm" flat className={styles.stack}>
+      {children}
+    </Card>
+  );
+}
+
 /** One labelled figure. `aside` is a second fact on the same line ("3 open ·
  *  1 past due"); an absent or empty one is simply not drawn, so a caller can
  *  pass the string it has without deciding first. */
@@ -176,7 +190,7 @@ function Row({
 /** The suggested entry, as the timesheet will show it. */
 function TimeEntryResult({ entry }: { entry: TimeEntryResultDto }) {
   return (
-    <div className={styles.card}>
+    <ResultCard>
       <div className={styles.header}>
         <CalendarClock size={16} aria-hidden />
         <span>{strings.agentActLogTime}</span>
@@ -195,7 +209,7 @@ function TimeEntryResult({ entry }: { entry: TimeEntryResultDto }) {
       <p className={styles.note}>
         {strings.agentTimeLogged(entry.title ?? "")}
       </p>
-    </div>
+    </ResultCard>
   );
 }
 
@@ -208,7 +222,7 @@ function TimeEntryResult({ entry }: { entry: TimeEntryResultDto }) {
  *  know still reads as "left out", never as nothing. */
 function TimesheetDraftResult({ draft }: { draft: TimesheetDraftResultDto }) {
   return (
-    <div className={styles.card}>
+    <ResultCard>
       <div className={styles.header}>
         <CalendarRange size={16} aria-hidden />
         <span>{strings.agentActDraftTimesheet}</span>
@@ -293,7 +307,7 @@ function TimesheetDraftResult({ draft }: { draft: TimesheetDraftResultDto }) {
           {strings.agentDraftedNote(draft.title ?? "")}
         </p>
       )}
-    </div>
+    </ResultCard>
   );
 }
 
@@ -304,7 +318,7 @@ function ProjectStatusResult({ status }: { status: ProjectStatusResultDto }) {
   const { hours, budget, milestones, tasks } = status;
   const consumption = budget.consumptionBp;
   return (
-    <div className={styles.card}>
+    <ResultCard>
       <div className={styles.header}>
         <Gauge size={16} aria-hidden />
         <span>{status.title ?? strings.agentActProjectStatus}</span>
@@ -394,7 +408,7 @@ function ProjectStatusResult({ status }: { status: ProjectStatusResultDto }) {
         />
       </div>
       <p className={styles.note}>{strings.agentProjectStatusNote}</p>
-    </div>
+    </ResultCard>
   );
 }
 
@@ -438,7 +452,7 @@ function CategoryProposalsResult({
   }
 
   return (
-    <div className={styles.card}>
+    <ResultCard>
       <div className={styles.header}>
         <Tags size={16} aria-hidden />
         <span>{strings.agentActCategorise}</span>
@@ -544,7 +558,7 @@ function CategoryProposalsResult({
       {proposals.proposed.length > 0 && (
         <p className={styles.note}>{strings.agentCategoriseFooter}</p>
       )}
-    </div>
+    </ResultCard>
   );
 }
 
@@ -605,7 +619,7 @@ function VatSummaryResult({ report }: { report: VatSummaryResultDto }) {
     report.input.rates.length === 0 &&
     report.netPayableCents === 0;
   return (
-    <div className={styles.card}>
+    <ResultCard>
       <div className={styles.header}>
         <Percent size={16} aria-hidden />
         <span>{strings.agentActVatSummary}</span>
@@ -646,7 +660,7 @@ function VatSummaryResult({ report }: { report: VatSummaryResultDto }) {
         </>
       )}
       <p className={styles.note}>{strings.agentVatFooter}</p>
-    </div>
+    </ResultCard>
   );
 }
 
@@ -709,7 +723,7 @@ function AnomalyFinding({
  *  what it could not look at. */
 function JournalAnomaliesResult({ scan }: { scan: JournalAnomaliesResultDto }) {
   return (
-    <div className={styles.card}>
+    <ResultCard>
       <div className={styles.header}>
         <ScanSearch size={16} aria-hidden />
         <span>{strings.agentActFlagAnomalies}</span>
@@ -759,7 +773,7 @@ function JournalAnomaliesResult({ scan }: { scan: JournalAnomaliesResultDto }) {
         </p>
       )}
       <p className={styles.note}>{strings.agentAnomalyFooter}</p>
-    </div>
+    </ResultCard>
   );
 }
 
@@ -777,7 +791,7 @@ function ReorderProposalsResult({
   const money = (cents: number, currency: string) =>
     formatAmount(cents, getLocale(), currency);
   return (
-    <div className={styles.card}>
+    <ResultCard>
       <div className={styles.header}>
         <ShoppingCart size={16} aria-hidden />
         <span>{strings.agentActReorderProposals}</span>
@@ -854,7 +868,7 @@ function ReorderProposalsResult({
       {proposals.drafted.length > 0 && (
         <p className={styles.note}>{strings.agentReorderFooter}</p>
       )}
-    </div>
+    </ResultCard>
   );
 }
 
@@ -867,17 +881,17 @@ function StockAnswerResult({ answer }: { answer: StockAnswerResultDto }) {
     unit === "" ? qtyLabel(milli) : `${qtyLabel(milli)} ${unit}`;
   if (!answer.product.stocked) {
     return (
-      <div className={styles.card}>
+      <ResultCard>
         <div className={styles.header}>
           <PackageSearch size={16} aria-hidden />
           <span>{answer.title ?? strings.agentActStockAnswer}</span>
         </div>
         <p className={styles.note}>{strings.agentStockNoShelf}</p>
-      </div>
+      </ResultCard>
     );
   }
   return (
-    <div className={styles.card}>
+    <ResultCard>
       <div className={styles.header}>
         <PackageSearch size={16} aria-hidden />
         <span>{answer.title ?? strings.agentActStockAnswer}</span>
@@ -950,7 +964,7 @@ function StockAnswerResult({ answer }: { answer: StockAnswerResultDto }) {
         </>
       )}
       <p className={styles.note}>{strings.agentStockFooter}</p>
-    </div>
+    </ResultCard>
   );
 }
 
@@ -966,7 +980,7 @@ function StockAnswerResult({ answer }: { answer: StockAnswerResultDto }) {
  *  one. The footer says so, so a reader does not go looking. */
 function WhoIsOffResult({ answer }: { answer: WhoIsOffResultDto }) {
   return (
-    <div className={styles.card}>
+    <ResultCard>
       <div className={styles.header}>
         <UserMinus size={16} aria-hidden />
         <span>{strings.agentActWhoIsOff}</span>
@@ -1020,7 +1034,7 @@ function WhoIsOffResult({ answer }: { answer: WhoIsOffResultDto }) {
         </ul>
       )}
       <p className={styles.note}>{strings.agentWhoIsOffFooter}</p>
-    </div>
+    </ResultCard>
   );
 }
 
