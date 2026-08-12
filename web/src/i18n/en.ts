@@ -3483,6 +3483,59 @@ export const en = {
   sitesAnalyticsDeviceDesktop: "Computer",
   sitesAnalyticsDeviceBot: "Bots and crawlers",
   sitesAnalyticsDeviceUnknown: "Unrecognised",
+  // Sites — the attention map (S2.09b): the aggregate clicks and reading
+  // depth collected in S2.09a. Every string here works to stop one
+  // misreading — that a shape counted per area of the page is a count of
+  // people, or that a map drawn from a handful of clicks means anything.
+  sitesHeatmap: "Attention map",
+  sitesBackToAnalytics: "Back to analytics",
+  sitesHeatmapLoadFailed: "The attention map could not be loaded. Try again.",
+  sitesHeatmapLoading: "Loading the attention map",
+  sitesHeatmapPage: "Page",
+  sitesHeatmapPageOption: (path: string, events: number) =>
+    `${path} — ${events} counted`,
+  sitesHeatmapScreens: "Screen size",
+  sitesHeatmapScreenTab: (screen: string, events: string) =>
+    `${screen} (${events})`,
+  sitesHeatmapPrivacyTitle: "A shape, not a recording.",
+  sitesHeatmapPrivacyBody:
+    "Clicks and reading depth are counted per area of the page, by day. There is no cursor trail, no session replay, and nothing that can link two visits to the same person.",
+  sitesHeatmapPrivacyShape:
+    "Only browsers that report it are counted, and at most twenty clicks per page view. Read this as where attention went — never as how many people did something.",
+  sitesHeatmapEmptyTitle: "Nothing to map yet",
+  sitesHeatmapEmptyBody:
+    "Clicks and reading depth appear here once visitors open your published pages. Nothing needs switching on.",
+  sitesHeatmapClicks: "Where people clicked",
+  sitesHeatmapClicksNote:
+    "The whole page, top to bottom, not one screenful. A darker square is an area that was clicked more.",
+  sitesHeatmapClicksLabel: (path: string, screen: string, clicks: number) =>
+    `Map of where ${clicks} clicks landed on ${path}, on a ${screen}`,
+  sitesHeatmapTop: "Top of the page",
+  sitesHeatmapBottom: "Bottom of the page",
+  sitesHeatmapLegendQuiet: "Quieter",
+  sitesHeatmapLegendBusy: "Busier",
+  sitesHeatmapLeft: "Left",
+  sitesHeatmapCentre: "Centre",
+  sitesHeatmapRight: "Right",
+  sitesHeatmapSpot: (side: string, band: string) => `${side}, ${band}`,
+  sitesHeatmapDepthBand: (from: number, to: number) => `${from}–${to}% down`,
+  sitesHeatmapSpots: "Busiest areas",
+  sitesHeatmapSpotsNote:
+    "The same map in words, so it can be read without the colours.",
+  sitesHeatmapClicksEmpty:
+    "Nothing has been clicked on this page on this screen size.",
+  sitesHeatmapSpotsEmpty: "Nothing to describe yet.",
+  sitesHeatmapSpotsHeldBack:
+    "Held back until enough clicks have been counted to describe.",
+  sitesHeatmapDepth: "How far they read",
+  sitesHeatmapDepthNote:
+    "How many readers reached each tenth of the page. Only browsers that report it are counted, so this never adds up to your visits.",
+  sitesHeatmapDepthEmpty: "No reading depth counted here on this screen size.",
+  sitesHeatmapTooFewTitle: "Too little to draw a map",
+  sitesHeatmapTooFewClicks: (collected: number, needed: number) =>
+    `${collected} of ${needed} clicks counted on this screen size. A map drawn from a handful of clicks shows the handful, not your visitors — so it is kept back until there are enough.`,
+  sitesHeatmapTooFewDepth: (collected: number, needed: number) =>
+    `${collected} of ${needed} reading reports counted on this screen size. The curve appears once there are enough for it to mean anything.`,
   // Sites — every version this website has published (S2.04b). The list is
   // dates, never version ids: a person recognises "yesterday at 14:20", not
   // an opaque token.

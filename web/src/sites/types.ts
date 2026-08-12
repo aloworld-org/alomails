@@ -393,6 +393,57 @@ export interface SiteAnalyticsDimension {
   visits: number;
 }
 
+/** One page a site collected heatmap events for, most-active first — the menu
+ *  an owner picks from, so nobody has to remember a path. `events` counts
+ *  clicks and reading reports together and is not comparable to visits. */
+export interface SiteHeatmapPathRow {
+  path: string;
+  events: number;
+}
+
+/** One cell of the click grid. Cells nobody clicked are absent, never zero. */
+export interface SiteHeatmapCell {
+  column: number;
+  row: number;
+  hits: number;
+}
+
+/** One tenth of the page and how many readers reached it. All ten are always
+ *  sent: a depth curve with its quiet tenths dropped is a different claim. */
+export interface SiteHeatmapScrollBucket {
+  bucket: number;
+  hits: number;
+}
+
+/** One page's heatmap as read on one class of screen (`phone`, `tablet`,
+ *  `desktop`) — kept apart because a layout that reflows makes a shared grid
+ *  meaningless. Classes with nothing in them are still listed. */
+export interface SiteHeatmapViewport {
+  viewport: string;
+  clicks: SiteHeatmapCell[];
+  clickTotal: number;
+  scrollDepth: SiteHeatmapScrollBucket[];
+  scrollTotal: number;
+}
+
+/** One page's grid, carrying the dimensions it was counted in so an overlay is
+ *  never drawn against assumed ones. The grid spans the whole scrollable page,
+ *  not one screenful. */
+export interface SiteHeatmapPage {
+  path: string;
+  grid: { columns: number; rows: number };
+  viewports: SiteHeatmapViewport[];
+}
+
+/** The owner's heatmap read for one inclusive period. `page` is `null` when no
+ *  path was asked for — which is not the same as a page with an empty grid. */
+export interface SiteHeatmapReport {
+  from: string;
+  to: string;
+  paths: SiteHeatmapPathRow[];
+  page: SiteHeatmapPage | null;
+}
+
 /** The deployment-wide sites config: published sites serve at
  *  `<subdomain>.<domain>`. The UI composes "goes live at" copy and live
  *  links from it — the domain is the server's to know, never hardcoded. */

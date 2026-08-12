@@ -27,6 +27,7 @@ import type {
   SiteAnalyticsReport,
   SiteDetail,
   SiteDraft,
+  SiteHeatmapReport,
   GeneratedSiteDraft,
   SiteEditEnvelope,
   ProposedSiteEdit,
@@ -370,6 +371,21 @@ export class SitesApi {
     return this.#read<SiteAnalyticsReport>(
       `/sites/${encodeURIComponent(siteId)}/analytics?days=${encodeURIComponent(String(days))}`,
     );
+  }
+
+  /** One page's aggregate click-and-depth heatmap, plus the menu of pages that
+   *  have any. Called without `path` it answers the menu alone (`page` is
+   *  `null`), so the screen can offer the menu before anything is chosen. */
+  heatmap(
+    siteId: string,
+    days: number,
+    path?: string,
+  ): Promise<SiteHeatmapReport> {
+    const query = new URLSearchParams({ days: String(days) });
+    if (path !== undefined) query.set("path", path);
+    return this.#read<SiteHeatmapReport>(
+      `/sites/${encodeURIComponent(siteId)}/heatmap?${query.toString()}`,
+    ).then((report) => ({ ...report, paths: report.paths ?? [] }));
   }
 
   /** The shipped theme presets, in picker order (the first is the default). */

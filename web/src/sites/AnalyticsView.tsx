@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, BarChart3, ShieldCheck } from "lucide-react";
+import { ArrowLeft, BarChart3, MousePointerClick, ShieldCheck } from "lucide-react";
 
 import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
@@ -126,6 +126,13 @@ export function AnalyticsView() {
           <h1 className={styles.title}>{strings.sitesAnalytics}</h1>
           {site !== null && <span className={styles.submissionSiteName}>{site.name}</span>}
         </div>
+        {/* The attention map is a drill-down of these numbers, so it is
+            reached from here rather than from a fifth button on the site
+            page. */}
+        <Link className={styles.analyticsDrill} to={`/sites/${encodeURIComponent(siteId)}/heatmap`}>
+          <MousePointerClick size="var(--icon-size-inline)" aria-hidden="true" />
+          {strings.sitesHeatmap}
+        </Link>
         <div className={styles.analyticsPeriods} aria-label={strings.sitesAnalyticsPeriod}>
           {PERIODS.map((days) => (
             <button

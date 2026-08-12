@@ -1988,6 +1988,104 @@
 .analyticsMore:hover {
   text-decoration: underline;
 }
+/* ---- attention map (S2.09b) ---- */
+.analyticsDrill {
+  display: inline-flex;
+  min-height: var(--control-height);
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.analyticsDrill:hover {
+  background: var(--accent-soft);
+}
+.heatmapToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+.heatmapPageField {
+  display: flex;
+  min-width: var(--overlay-width-sm);
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.heatmapPageField > span {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+.heatmapLayout {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(var(--overlay-width-sm), 1fr)
+  );
+  align-items: start;
+  gap: var(--space-4);
+}
+.heatmapFigure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+.heatmapAxis {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+/* The frame is the whole scrollable page in proportion — the grid's own
+   aspect ratio, never a screen's — so a cell means the same thing on every
+   device the counts came from. */
+.heatmapFrame {
+  position: relative;
+  width: 100%;
+  max-width: var(--overlay-width-sm);
+  aspect-ratio: var(--heatmap-aspect, 1 / 2);
+  border: var(--border-width) solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+.heatmapCell {
+  position: absolute;
+  left: calc(var(--heatmap-x) * 100%);
+  top: calc(var(--heatmap-y) * 100%);
+  width: calc(var(--heatmap-w) * 100%);
+  height: calc(var(--heatmap-h) * 100%);
+  background: color-mix(
+    in srgb,
+    var(--accent) calc(var(--heatmap-value) * 100%),
+    transparent
+  );
+}
+.heatmapLegend {
+  display: flex;
+  width: 100%;
+  max-width: var(--overlay-width-sm);
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+.heatmapLegendBar {
+  height: var(--space-2);
+  flex: 1;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--accent) 18%, transparent),
+    var(--accent)
+  );
+}
 .analyticsSkeletons {
   display: grid;
   grid-template-columns: repeat(

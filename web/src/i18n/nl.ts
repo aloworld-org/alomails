@@ -2801,6 +2801,58 @@ export const nl: Partial<Catalog> = {
   sitesAnalyticsDeviceDesktop: "Computer",
   sitesAnalyticsDeviceBot: "Bots en crawlers",
   sitesAnalyticsDeviceUnknown: "Niet herkend",
+  // Sites — de aandachtskaart (S2.09b).
+  sitesHeatmap: "Aandachtskaart",
+  sitesBackToAnalytics: "Terug naar statistieken",
+  sitesHeatmapLoadFailed:
+    "De aandachtskaart kon niet worden geladen. Probeer het opnieuw.",
+  sitesHeatmapLoading: "Aandachtskaart laden",
+  sitesHeatmapPage: "Pagina",
+  sitesHeatmapPageOption: (path: string, events: number) =>
+    `${path} — ${events} geteld`,
+  sitesHeatmapScreens: "Schermformaat",
+  sitesHeatmapScreenTab: (screen: string, events: string) =>
+    `${screen} (${events})`,
+  sitesHeatmapPrivacyTitle: "Een vorm, geen opname.",
+  sitesHeatmapPrivacyBody:
+    "Kliks en leesdiepte worden per zone van de pagina geteld, per dag. Geen muisspoor, geen sessieopname, en niets wat twee bezoeken aan dezelfde persoon kan koppelen.",
+  sitesHeatmapPrivacyShape:
+    "Alleen browsers die het melden worden geteld, en hoogstens twintig kliks per paginaweergave. Lees dit als waar de aandacht heen ging — nooit als hoeveel mensen iets deden.",
+  sitesHeatmapEmptyTitle: "Nog niets om in kaart te brengen",
+  sitesHeatmapEmptyBody:
+    "Kliks en leesdiepte verschijnen hier zodra bezoekers uw gepubliceerde pagina’s openen. U hoeft niets aan te zetten.",
+  sitesHeatmapClicks: "Waar men klikte",
+  sitesHeatmapClicksNote:
+    "De hele pagina, van boven naar beneden, niet één scherm. Een donkerder vakje is een zone waarop meer werd geklikt.",
+  sitesHeatmapClicksLabel: (path: string, screen: string, clicks: number) =>
+    `Kaart van waar ${clicks} kliks landden op ${path}, op ${screen}`,
+  sitesHeatmapTop: "Bovenkant van de pagina",
+  sitesHeatmapBottom: "Onderkant van de pagina",
+  sitesHeatmapLegendQuiet: "Rustiger",
+  sitesHeatmapLegendBusy: "Drukker",
+  sitesHeatmapLeft: "Links",
+  sitesHeatmapCentre: "Midden",
+  sitesHeatmapRight: "Rechts",
+  sitesHeatmapSpot: (side: string, band: string) => `${side}, ${band}`,
+  sitesHeatmapDepthBand: (from: number, to: number) =>
+    `${from}–${to}% naar beneden`,
+  sitesHeatmapSpots: "Drukste zones",
+  sitesHeatmapSpotsNote:
+    "Dezelfde kaart in woorden, zodat ze zonder de kleuren te lezen is.",
+  sitesHeatmapClicksEmpty:
+    "Er is niets geklikt op deze pagina op dit schermformaat.",
+  sitesHeatmapSpotsEmpty: "Nog niets te beschrijven.",
+  sitesHeatmapSpotsHeldBack:
+    "Wordt getoond zodra er genoeg kliks geteld zijn om te beschrijven.",
+  sitesHeatmapDepth: "Hoe ver men las",
+  sitesHeatmapDepthNote:
+    "Hoeveel lezers elk tiende van de pagina bereikten. Alleen browsers die het melden tellen mee, dus dit komt nooit op uw aantal bezoeken uit.",
+  sitesHeatmapDepthEmpty: "Hier geen leesdiepte geteld op dit schermformaat.",
+  sitesHeatmapTooFewTitle: "Te weinig om een kaart te tekenen",
+  sitesHeatmapTooFewClicks: (collected: number, needed: number) =>
+    `${collected} van ${needed} kliks geteld op dit schermformaat. Een kaart uit een handvol kliks toont dat handvol, niet uw bezoekers — daarom wordt ze pas getoond als er genoeg zijn.`,
+  sitesHeatmapTooFewDepth: (collected: number, needed: number) =>
+    `${collected} van ${needed} leesmeldingen geteld op dit schermformaat. De curve verschijnt zodra er genoeg zijn om iets te betekenen.`,
   // Sites — de geschiedenis van gepubliceerde versies (S2.04b).
   sitesHistory: "Versiegeschiedenis",
   sitesHistorySubtitle:

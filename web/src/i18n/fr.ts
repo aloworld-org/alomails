@@ -2837,6 +2837,59 @@ export const fr: Partial<Catalog> = {
   sitesAnalyticsDeviceDesktop: "Ordinateur",
   sitesAnalyticsDeviceBot: "Robots et moteurs",
   sitesAnalyticsDeviceUnknown: "Non reconnu",
+  // Sites — la carte d'attention (S2.09b).
+  sitesHeatmap: "Carte d’attention",
+  sitesBackToAnalytics: "Retour aux statistiques",
+  sitesHeatmapLoadFailed:
+    "La carte d’attention n’a pas pu être chargée. Réessayez.",
+  sitesHeatmapLoading: "Chargement de la carte d’attention",
+  sitesHeatmapPage: "Page",
+  sitesHeatmapPageOption: (path: string, events: number) =>
+    `${path} — ${events} comptés`,
+  sitesHeatmapScreens: "Taille d’écran",
+  sitesHeatmapScreenTab: (screen: string, events: string) =>
+    `${screen} (${events})`,
+  sitesHeatmapPrivacyTitle: "Une forme, pas un enregistrement.",
+  sitesHeatmapPrivacyBody:
+    "Les clics et la profondeur de lecture sont comptés par zone de la page, par jour. Aucun tracé du curseur, aucun rejeu de session, et rien qui puisse relier deux visites à la même personne.",
+  sitesHeatmapPrivacyShape:
+    "Seuls les navigateurs qui les signalent sont comptés, et au plus vingt clics par affichage de page. Lisez ceci comme l’endroit où l’attention s’est portée — jamais comme le nombre de personnes qui ont fait quelque chose.",
+  sitesHeatmapEmptyTitle: "Rien à cartographier pour l’instant",
+  sitesHeatmapEmptyBody:
+    "Les clics et la profondeur de lecture apparaissent ici dès que des visiteurs ouvrent vos pages publiées. Rien n’est à activer.",
+  sitesHeatmapClicks: "Où l’on a cliqué",
+  sitesHeatmapClicksNote:
+    "La page entière, de haut en bas, et non un seul écran. Un carré plus foncé est une zone davantage cliquée.",
+  sitesHeatmapClicksLabel: (path: string, screen: string, clicks: number) =>
+    `Carte des ${clicks} clics reçus sur ${path}, sur ${screen}`,
+  sitesHeatmapTop: "Haut de la page",
+  sitesHeatmapBottom: "Bas de la page",
+  sitesHeatmapLegendQuiet: "Moins",
+  sitesHeatmapLegendBusy: "Plus",
+  sitesHeatmapLeft: "Gauche",
+  sitesHeatmapCentre: "Centre",
+  sitesHeatmapRight: "Droite",
+  sitesHeatmapSpot: (side: string, band: string) => `${side}, ${band}`,
+  sitesHeatmapDepthBand: (from: number, to: number) =>
+    `${from}–${to} % de la page`,
+  sitesHeatmapSpots: "Zones les plus actives",
+  sitesHeatmapSpotsNote:
+    "La même carte en mots, pour qu’elle se lise sans les couleurs.",
+  sitesHeatmapClicksEmpty:
+    "Rien n’a été cliqué sur cette page sur cette taille d’écran.",
+  sitesHeatmapSpotsEmpty: "Rien à décrire pour l’instant.",
+  sitesHeatmapSpotsHeldBack:
+    "Gardé jusqu’à ce qu’assez de clics soient comptés pour les décrire.",
+  sitesHeatmapDepth: "Jusqu’où l’on a lu",
+  sitesHeatmapDepthNote:
+    "Combien de lecteurs ont atteint chaque dixième de la page. Seuls les navigateurs qui le signalent sont comptés : ce total n’égale donc jamais vos visites.",
+  sitesHeatmapDepthEmpty:
+    "Aucune profondeur de lecture comptée ici sur cette taille d’écran.",
+  sitesHeatmapTooFewTitle: "Trop peu pour dessiner une carte",
+  sitesHeatmapTooFewClicks: (collected: number, needed: number) =>
+    `${collected} clics sur ${needed} comptés sur cette taille d’écran. Une carte tirée d’une poignée de clics montre cette poignée, pas vos visiteurs : elle est donc gardée jusqu’à ce qu’il y en ait assez.`,
+  sitesHeatmapTooFewDepth: (collected: number, needed: number) =>
+    `${collected} signalements de lecture sur ${needed} comptés sur cette taille d’écran. La courbe apparaît dès qu’il y en a assez pour qu’elle ait un sens.`,
   // Sites — l'historique des versions publiées (S2.04b).
   sitesHistory: "Historique des versions",
   sitesHistorySubtitle:
