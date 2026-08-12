@@ -1941,7 +1941,28 @@ pub fn app_with_site_domain_dns(
         ))
         .layer(Extension(site_domain_dns))
         .with_state(state);
-    jmap.merge(identity_routes)
+    // The same API, mounted a second time under `/api`.
+    //
+    // Seventeen prefixes are a page path *and* an API path at once — /billing,
+    // /chat, /drive, /hr and the rest — because each module named its routes
+    // after itself on both sides. A reverse proxy has to send a prefix one way
+    // or the other, so proxying /billing/* makes the API work and makes a hard
+    // refresh on /billing/invoices/123 answer JSON to a browser that wanted the
+    // app. Not proxying it does the reverse. There is no setting that fixes it,
+    // because the collision is in the URLs.
+    //
+    // `/api` is a prefix no page will ever claim, so the proxy rule becomes one
+    // line and the ambiguity is gone. Mounted *beside* the original paths
+    // rather than replacing them: mail clients, the desktop app and any
+    // deployment still on the old Caddyfile keep working, and the old mounts
+    // can be dropped once nothing calls them.
+    //
+    // Protocol paths are deliberately not moved. `/.well-known/*`, `/jmap`,
+    // `/dav`, `/oauth` and `/auth/token` are addresses other software was told
+    // about — by a discovery document, an autoconfig file, or a standard — and
+    // they collide with no page.
+    let under_api = jmap.clone();
+    jmap.merge(identity_routes).nest("/api", under_api)
 }
 
 /// A convenience [`AppState`] with default limits and a fresh push hub.

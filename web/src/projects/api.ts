@@ -429,7 +429,7 @@ export class ProjectsApi {
 
   async #send(path: string, init: RequestInit): Promise<Response> {
     try {
-      return await this.#fetch(`${API_BASE}${path}`, init);
+      return await this.#fetch(`${API_BASE}/api${path}`, init);
     } catch {
       // A dropped connection is not a status code; give it one the UI can treat
       // like any other failure rather than an unhandled rejection.

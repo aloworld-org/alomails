@@ -523,7 +523,7 @@ export class JmapClient {
   async importContacts(
     vcf: string,
   ): Promise<{ imported: number; skipped: number }> {
-    const res = await this.#fetch(`${API_BASE}/contacts/import`, {
+    const res = await this.#fetch(`${API_BASE}/api/contacts/import`, {
       method: "POST",
       headers: { "content-type": "text/vcard" },
       body: vcf,
@@ -534,7 +534,7 @@ export class JmapClient {
 
   /** The whole address book as a `.vcf` document (for download). */
   async exportContacts(): Promise<string> {
-    const res = await this.#fetch(`${API_BASE}/contacts/export`, {
+    const res = await this.#fetch(`${API_BASE}/api/contacts/export`, {
       method: "GET",
     });
     if (!res.ok) throw new JmapError(`export ${res.status}`);
@@ -550,7 +550,7 @@ export class JmapClient {
     username: string;
     password: string;
   }): Promise<{ imported: number; skipped: number; failed: number }> {
-    const res = await this.#fetch(`${API_BASE}/import/imap`, {
+    const res = await this.#fetch(`${API_BASE}/api/import/imap`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(input),
@@ -817,7 +817,7 @@ export class JmapClient {
   }
 
   async #admin(path: string, init: RequestInit): Promise<unknown> {
-    const res = await this.#fetch(`${API_BASE}${path}`, init);
+    const res = await this.#fetch(`${API_BASE}/api${path}`, init);
     if (!res.ok) throw new JmapError(`admin ${res.status}`);
     return res.json();
   }
@@ -1306,7 +1306,7 @@ export class JmapClient {
    * Returns the improved text; throws if AI is unavailable or the backend fails
    * (the caller keeps the user's original draft either way). */
   async improveDraft(text: string): Promise<string> {
-    const res = await this.#fetch(`${API_BASE}/ai/improve`, {
+    const res = await this.#fetch(`${API_BASE}/api/ai/improve`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
@@ -1319,7 +1319,7 @@ export class JmapClient {
   /** Summarize an email thread via the tenant's AI backend (ADR 0011); throws
    * if AI is unavailable (the reading pane then just hides the summary card). */
   async summarizeThread(text: string): Promise<string> {
-    const res = await this.#fetch(`${API_BASE}/ai/summarize`, {
+    const res = await this.#fetch(`${API_BASE}/api/ai/summarize`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
@@ -1332,7 +1332,7 @@ export class JmapClient {
   /** Suggest up to three short, ready-to-send replies for a conversation.
    * `text` is the same flattened thread text used for summarization. */
   async smartReplies(text: string): Promise<string[]> {
-    const res = await this.#fetch(`${API_BASE}/ai/replies`, {
+    const res = await this.#fetch(`${API_BASE}/api/ai/replies`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
@@ -1345,7 +1345,7 @@ export class JmapClient {
   /** Snooze conversations: hide the given messages (in `mailboxId`) until
    * `until` (Unix seconds); a server sweeper returns them to the Inbox. */
   async snooze(ids: string[], mailboxId: string, until: number): Promise<void> {
-    const res = await this.#fetch(`${API_BASE}/snooze`, {
+    const res = await this.#fetch(`${API_BASE}/api/snooze`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ ids, mailboxId, until }),
@@ -1357,7 +1357,7 @@ export class JmapClient {
 
   /** List the caller's documents (metadata only), newest-first. */
   async listDocs(): Promise<DocsSummaryDto[]> {
-    const res = await this.#fetch(`${API_BASE}/docs`, { method: "GET" });
+    const res = await this.#fetch(`${API_BASE}/api/docs`, { method: "GET" });
     if (!res.ok) throw new JmapError(`listDocs ${res.status}`);
     const json = (await res.json()) as { documents: DocsSummaryDto[] };
     return json.documents;
@@ -1365,7 +1365,7 @@ export class JmapClient {
 
   /** Create a document and return it (with empty blocks). */
   async createDoc(title: string): Promise<DocsDto> {
-    const res = await this.#fetch(`${API_BASE}/docs`, {
+    const res = await this.#fetch(`${API_BASE}/api/docs`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ title }),
@@ -1377,7 +1377,7 @@ export class JmapClient {
   /** Load one document with its blocks. */
   async getDoc(id: string): Promise<DocsDto> {
     const res = await this.#fetch(
-      `${API_BASE}/docs/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/docs/${encodeURIComponent(id)}`,
       {
         method: "GET",
       },
@@ -1389,7 +1389,7 @@ export class JmapClient {
   /** Save a document's title and blocks. */
   async saveDoc(id: string, title: string, blocks: unknown[]): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/docs/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/docs/${encodeURIComponent(id)}`,
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -1402,7 +1402,7 @@ export class JmapClient {
   /** Delete a document. */
   async deleteDoc(id: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/docs/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/docs/${encodeURIComponent(id)}`,
       {
         method: "DELETE",
       },
@@ -1574,14 +1574,14 @@ export class JmapClient {
 
   /** The Spaces the caller belongs to. */
   async spaces(): Promise<SpaceDto[]> {
-    const res = await this.#fetch(`${API_BASE}/spaces`);
+    const res = await this.#fetch(`${API_BASE}/api/spaces`);
     if (!res.ok) throw new JmapError(`spaces ${res.status}`);
     return ((await res.json()) as { spaces: SpaceDto[] }).spaces;
   }
 
   /** Create a Space (caller becomes its manager). */
   async createSpace(name: string): Promise<string> {
-    const res = await this.#fetch(`${API_BASE}/spaces`, {
+    const res = await this.#fetch(`${API_BASE}/api/spaces`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ name }),
@@ -1593,7 +1593,7 @@ export class JmapClient {
   /** A Space with its members and modules. */
   async spaceDetail(id: string): Promise<SpaceDetailDto> {
     const res = await this.#fetch(
-      `${API_BASE}/spaces/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/spaces/${encodeURIComponent(id)}`,
     );
     if (!res.ok) throw new JmapError(`spaceDetail ${res.status}`);
     return (await res.json()) as SpaceDetailDto;
@@ -1605,7 +1605,7 @@ export class JmapClient {
     patch: { name?: string; archived?: boolean },
   ): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/spaces/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/spaces/${encodeURIComponent(id)}`,
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -1622,7 +1622,7 @@ export class JmapClient {
     role: SpaceRole,
   ): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/spaces/${encodeURIComponent(id)}/members`,
+      `${API_BASE}/api/spaces/${encodeURIComponent(id)}/members`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -1635,7 +1635,7 @@ export class JmapClient {
   /** Remove a member (manager only). */
   async removeSpaceMember(id: string, userId: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/spaces/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
+      `${API_BASE}/api/spaces/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}`,
       { method: "DELETE" },
     );
     if (!res.ok) throw new JmapError(`removeSpaceMember ${res.status}`);
@@ -1652,7 +1652,7 @@ export class JmapClient {
     const q = new URLSearchParams();
     if (space) q.set("space", space);
     if (parent) q.set("parent", parent);
-    const res = await this.#fetch(`${API_BASE}/drive/list?${q.toString()}`);
+    const res = await this.#fetch(`${API_BASE}/api/drive/list?${q.toString()}`);
     if (!res.ok) throw new JmapError(`driveList ${res.status}`);
     return ((await res.json()) as { nodes: DriveNodeDto[] }).nodes;
   }
@@ -1660,7 +1660,7 @@ export class JmapClient {
   /** A single Drive node the caller can read (for opening a search result). */
   async driveNode(id: string): Promise<DriveNodeDto | null> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}`,
     );
     if (res.status === 404) return null;
     if (!res.ok) throw new JmapError(`driveNode ${res.status}`);
@@ -1671,7 +1671,7 @@ export class JmapClient {
   async driveTrash(space: string | null): Promise<DriveNodeDto[]> {
     const q = new URLSearchParams();
     if (space) q.set("space", space);
-    const res = await this.#fetch(`${API_BASE}/drive/trash?${q.toString()}`);
+    const res = await this.#fetch(`${API_BASE}/api/drive/trash?${q.toString()}`);
     if (!res.ok) throw new JmapError(`driveTrash ${res.status}`);
     return ((await res.json()) as { nodes: DriveNodeDto[] }).nodes;
   }
@@ -1682,7 +1682,7 @@ export class JmapClient {
     parent: string | null,
     name: string,
   ): Promise<string> {
-    const res = await this.#fetch(`${API_BASE}/drive/folders`, {
+    const res = await this.#fetch(`${API_BASE}/api/drive/folders`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ space, parent, name }),
@@ -1698,7 +1698,7 @@ export class JmapClient {
     file: File,
   ): Promise<string> {
     const { blobId, size } = await this.uploadFile(file);
-    const res = await this.#fetch(`${API_BASE}/drive/files`, {
+    const res = await this.#fetch(`${API_BASE}/api/drive/files`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -1724,7 +1724,7 @@ export class JmapClient {
     file: File,
   ): Promise<{ id: string; blobId: string; size: number }> {
     const { blobId, size } = await this.uploadFile(file);
-    const res = await this.#fetch(`${API_BASE}/drive/files`, {
+    const res = await this.#fetch(`${API_BASE}/api/drive/files`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -1743,7 +1743,7 @@ export class JmapClient {
   /** Rename a node. */
   async driveRename(id: string, name: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}`,
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -1760,7 +1760,7 @@ export class JmapClient {
     parent: string | null,
   ): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}/move`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}/move`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -1777,7 +1777,7 @@ export class JmapClient {
     parent: string | null,
   ): Promise<string> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}/copy`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}/copy`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -1791,7 +1791,7 @@ export class JmapClient {
   /** Move a node (and its subtree) to trash. */
   async driveTrashNode(id: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}/trash`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}/trash`,
       {
         method: "POST",
       },
@@ -1802,7 +1802,7 @@ export class JmapClient {
   /** Restore a node from trash. */
   async driveRestoreNode(id: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}/restore`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}/restore`,
       {
         method: "POST",
       },
@@ -1813,7 +1813,7 @@ export class JmapClient {
   /** Permanently delete a node (and its subtree) from trash. */
   async drivePurge(id: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}`,
       {
         method: "DELETE",
       },
@@ -1824,7 +1824,7 @@ export class JmapClient {
   /** A node's version history. */
   async driveVersions(id: string): Promise<DriveVersionDto[]> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}/versions`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}/versions`,
     );
     if (!res.ok) throw new JmapError(`driveVersions ${res.status}`);
     return ((await res.json()) as { versions: DriveVersionDto[] }).versions;
@@ -1833,7 +1833,7 @@ export class JmapClient {
   /** Restore an old version as a new current one. */
   async driveRestoreVersion(id: string, versionNo: number): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}/versions/${versionNo}/restore`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}/versions/${versionNo}/restore`,
       { method: "POST" },
     );
     if (!res.ok) throw new JmapError(`driveRestoreVersion ${res.status}`);
@@ -1842,7 +1842,7 @@ export class JmapClient {
   /** Download a node's current bytes (gated by read access). */
   async driveDownload(id: string): Promise<Blob> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}/download`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}/download`,
     );
     if (!res.ok) throw new JmapError(`driveDownload ${res.status}`);
     return res.blob();
@@ -1851,7 +1851,7 @@ export class JmapClient {
   /** Mint a WOPI token to open a file in the Collabora office editor. */
   async driveOfficeToken(id: string): Promise<string> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}/office`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}/office`,
     );
     if (!res.ok) throw new JmapError(`driveOfficeToken ${res.status}`);
     return ((await res.json()) as { token: string }).token;
@@ -1860,7 +1860,7 @@ export class JmapClient {
   /** Workspace search: files + tasks by name/title (ADR 0029). */
   async search(query: string): Promise<SearchHitDto[]> {
     const res = await this.#fetch(
-      `${API_BASE}/search?q=${encodeURIComponent(query)}`,
+      `${API_BASE}/api/search?q=${encodeURIComponent(query)}`,
     );
     if (!res.ok) throw new JmapError(`search ${res.status}`);
     return ((await res.json()) as { hits: SearchHitDto[] }).hits;
@@ -1871,7 +1871,7 @@ export class JmapClient {
    * when no model is configured (`answer` null, `reason` set), so the caller
    * can always show results. */
   async askWorkspace(query: string): Promise<AiAnswerDto> {
-    const res = await this.#fetch(`${API_BASE}/ai/ask`, {
+    const res = await this.#fetch(`${API_BASE}/api/ai/ask`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ q: query }),
@@ -1885,7 +1885,7 @@ export class JmapClient {
    * a returned `action` must be approved by the user, which then calls
    * `executeAgentAction`. Matches come back even with no model configured. */
   async askAgent(query: string): Promise<AgentAnswerDto> {
-    const res = await this.#fetch(`${API_BASE}/ai/agent`, {
+    const res = await this.#fetch(`${API_BASE}/api/ai/agent`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -1904,7 +1904,7 @@ export class JmapClient {
     tool: string,
     args: Record<string, unknown>,
   ): Promise<AgentExecuteResultDto> {
-    const res = await this.#fetch(`${API_BASE}/ai/agent/execute`, {
+    const res = await this.#fetch(`${API_BASE}/api/ai/agent/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ tool, args }),
@@ -1918,7 +1918,7 @@ export class JmapClient {
    * unavailable (the editor then surfaces a hint). Never applies anything
    * itself — approval happens in the editor. */
   async composeDoc(instruction: string, context: string): Promise<string> {
-    const res = await this.#fetch(`${API_BASE}/ai/compose`, {
+    const res = await this.#fetch(`${API_BASE}/api/ai/compose`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ instruction, context }),
@@ -1934,7 +1934,7 @@ export class JmapClient {
     size: number,
   ): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/nodes/${encodeURIComponent(id)}/versions`,
+      `${API_BASE}/api/drive/nodes/${encodeURIComponent(id)}/versions`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -1956,7 +1956,7 @@ export class JmapClient {
     const { blobId, size } = await this.uploadFile(
       new File(["[]"], `${name}.json`, { type: "application/json" }),
     );
-    const res = await this.#fetch(`${API_BASE}/drive/files`, {
+    const res = await this.#fetch(`${API_BASE}/api/drive/files`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -2004,7 +2004,7 @@ export class JmapClient {
     const { blobId, size } = await this.uploadFile(
       new File(["{}"], `${name}.json`, { type: "application/json" }),
     );
-    const res = await this.#fetch(`${API_BASE}/drive/files`, {
+    const res = await this.#fetch(`${API_BASE}/api/drive/files`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -2057,7 +2057,7 @@ export class JmapClient {
     parent: string | null,
     name: string,
   ): Promise<string> {
-    const res = await this.#fetch(`${API_BASE}/drive/base`, {
+    const res = await this.#fetch(`${API_BASE}/api/drive/base`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ space, parent, name }),
@@ -2069,7 +2069,7 @@ export class JmapClient {
   /** The whole Base at a node. */
   async base(nodeId: string): Promise<BaseDto> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/base/${encodeURIComponent(nodeId)}`,
+      `${API_BASE}/api/drive/base/${encodeURIComponent(nodeId)}`,
     );
     if (!res.ok) throw new JmapError(`base ${res.status}`);
     return (await res.json()) as BaseDto;
@@ -2078,7 +2078,7 @@ export class JmapClient {
   /** Add a table to a Base. */
   async baseAddTable(nodeId: string, name: string): Promise<string> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/base/${encodeURIComponent(nodeId)}/tables`,
+      `${API_BASE}/api/drive/base/${encodeURIComponent(nodeId)}/tables`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2097,7 +2097,7 @@ export class JmapClient {
     options?: Record<string, unknown>,
   ): Promise<string> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/base-tables/${encodeURIComponent(tableId)}/fields`,
+      `${API_BASE}/api/drive/base-tables/${encodeURIComponent(tableId)}/fields`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2114,7 +2114,7 @@ export class JmapClient {
     cells?: Record<string, unknown>,
   ): Promise<string> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/base-tables/${encodeURIComponent(tableId)}/records`,
+      `${API_BASE}/api/drive/base-tables/${encodeURIComponent(tableId)}/records`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2131,7 +2131,7 @@ export class JmapClient {
     cells: Record<string, unknown>,
   ): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/base-records/${encodeURIComponent(recordId)}`,
+      `${API_BASE}/api/drive/base-records/${encodeURIComponent(recordId)}`,
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -2144,7 +2144,7 @@ export class JmapClient {
   /** Delete a record. */
   async baseDeleteRecord(recordId: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/base-records/${encodeURIComponent(recordId)}`,
+      `${API_BASE}/api/drive/base-records/${encodeURIComponent(recordId)}`,
       { method: "DELETE" },
     );
     if (!res.ok) throw new JmapError(`baseDeleteRecord ${res.status}`);
@@ -2158,7 +2158,7 @@ export class JmapClient {
     config?: Record<string, unknown>,
   ): Promise<string> {
     const res = await this.#fetch(
-      `${API_BASE}/drive/base-tables/${encodeURIComponent(tableId)}/views`,
+      `${API_BASE}/api/drive/base-tables/${encodeURIComponent(tableId)}/views`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2182,7 +2182,7 @@ export class JmapClient {
     expiresAt: number;
   }> {
     const url =
-      `${API_BASE}/share/upload` +
+      `${API_BASE}/api/share/upload` +
       `?name=${encodeURIComponent(file.name)}&days=${encodeURIComponent(String(days))}`;
     const res = await this.#fetch(url, {
       method: "POST",
@@ -2312,7 +2312,7 @@ export class JmapClient {
     rcptTo: string[],
     sendAt: number,
   ): Promise<void> {
-    const res = await this.#fetch(`${API_BASE}/send-later`, {
+    const res = await this.#fetch(`${API_BASE}/api/send-later`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -2329,7 +2329,7 @@ export class JmapClient {
 
   /** Cancel a scheduled send: the draft returns to Drafts, editable again. */
   async cancelScheduledSend(emailId: string): Promise<void> {
-    const res = await this.#fetch(`${API_BASE}/send-later/cancel`, {
+    const res = await this.#fetch(`${API_BASE}/api/send-later/cancel`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ emailId }),
@@ -2340,7 +2340,7 @@ export class JmapClient {
   /** Recent correspondents for compose recipient autocomplete, most frequent +
    * recent first. Fetched once per compose session; the client filters locally. */
   async recentContacts(): Promise<EmailAddress[]> {
-    const res = await this.#fetch(`${API_BASE}/contacts`, { method: "GET" });
+    const res = await this.#fetch(`${API_BASE}/api/contacts`, { method: "GET" });
     if (!res.ok) throw new JmapError(`contacts ${res.status}`);
     const json = (await res.json()) as { contacts: EmailAddress[] };
     return json.contacts;
@@ -2351,7 +2351,7 @@ export class JmapClient {
     fromIso: string,
     toIso: string,
   ): Promise<CalendarEvent[]> {
-    const url = `${API_BASE}/calendar/events?from=${encodeURIComponent(
+    const url = `${API_BASE}/api/calendar/events?from=${encodeURIComponent(
       fromIso,
     )}&to=${encodeURIComponent(toIso)}`;
     const res = await this.#fetch(url, { method: "GET" });
@@ -2364,7 +2364,7 @@ export class JmapClient {
    *  template, since range listings return occurrences sharing the master id. */
   async getEvent(id: string): Promise<CalendarEvent> {
     const res = await this.#fetch(
-      `${API_BASE}/calendar/events/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/calendar/events/${encodeURIComponent(id)}`,
       { method: "GET" },
     );
     if (!res.ok) throw new JmapError(`calendar get ${res.status}`);
@@ -2373,7 +2373,7 @@ export class JmapClient {
 
   /** Create a calendar event; returns the stored event (with its id). */
   async createEvent(input: EventInput): Promise<CalendarEvent> {
-    const res = await this.#fetch(`${API_BASE}/calendar/events`, {
+    const res = await this.#fetch(`${API_BASE}/api/calendar/events`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(input),
@@ -2385,7 +2385,7 @@ export class JmapClient {
   /** Replace a calendar event's fields (the whole event/series). */
   async updateEvent(id: string, input: EventInput): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/calendar/events/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/calendar/events/${encodeURIComponent(id)}`,
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -2403,7 +2403,7 @@ export class JmapClient {
     occurrence: string,
     input: EventInput,
   ): Promise<void> {
-    const url = `${API_BASE}/calendar/events/${encodeURIComponent(id)}?occurrence=${encodeURIComponent(
+    const url = `${API_BASE}/api/calendar/events/${encodeURIComponent(id)}?occurrence=${encodeURIComponent(
       occurrence,
     )}`;
     const res = await this.#fetch(url, {
@@ -2419,7 +2419,7 @@ export class JmapClient {
    * only that instance is skipped (the series stays); without it, the whole
    * event/series is deleted. */
   async deleteEvent(id: string, occurrence?: string): Promise<void> {
-    const base = `${API_BASE}/calendar/events/${encodeURIComponent(id)}`;
+    const base = `${API_BASE}/api/calendar/events/${encodeURIComponent(id)}`;
     const url =
       occurrence !== undefined
         ? `${base}?occurrence=${encodeURIComponent(occurrence)}`
@@ -2430,14 +2430,14 @@ export class JmapClient {
 
   /** The user's calendars (personal + any they created). */
   async calendars(): Promise<Calendar[]> {
-    const res = await this.#fetch(`${API_BASE}/calendar/calendars`);
+    const res = await this.#fetch(`${API_BASE}/api/calendar/calendars`);
     if (!res.ok) throw new JmapError(`calendars ${res.status}`);
     return ((await res.json()) as { calendars: Calendar[] }).calendars;
   }
 
   /** Create a calendar; returns it. */
   async createCalendar(name: string, color?: string): Promise<Calendar> {
-    const res = await this.#fetch(`${API_BASE}/calendar/calendars`, {
+    const res = await this.#fetch(`${API_BASE}/api/calendar/calendars`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(color !== undefined ? { name, color } : { name }),
@@ -2449,7 +2449,7 @@ export class JmapClient {
   /** Delete a calendar and its events (the personal one is protected → 409). */
   async deleteCalendar(id: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/calendar/calendars/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/calendar/calendars/${encodeURIComponent(id)}`,
       {
         method: "DELETE",
       },
@@ -2460,7 +2460,7 @@ export class JmapClient {
   /** Who a calendar the caller owns is shared with. */
   async calendarGrants(id: string): Promise<CalendarGrant[]> {
     const res = await this.#fetch(
-      `${API_BASE}/calendar/calendars/${encodeURIComponent(id)}/grants`,
+      `${API_BASE}/api/calendar/calendars/${encodeURIComponent(id)}/grants`,
     );
     if (!res.ok) throw new JmapError(`calendarGrants ${res.status}`);
     return ((await res.json()) as { grants: CalendarGrant[] }).grants;
@@ -2474,7 +2474,7 @@ export class JmapClient {
     role: "viewer" | "editor",
   ): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/calendar/calendars/${encodeURIComponent(id)}/grants`,
+      `${API_BASE}/api/calendar/calendars/${encodeURIComponent(id)}/grants`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2492,7 +2492,7 @@ export class JmapClient {
   ): Promise<void> {
     const q = `kind=${encodeURIComponent(kind)}&subject=${encodeURIComponent(subject)}`;
     const res = await this.#fetch(
-      `${API_BASE}/calendar/calendars/${encodeURIComponent(id)}/grants?${q}`,
+      `${API_BASE}/api/calendar/calendars/${encodeURIComponent(id)}/grants?${q}`,
       { method: "DELETE" },
     );
     if (!res.ok) throw new JmapError(`unshareCalendar ${res.status}`);
@@ -2500,7 +2500,7 @@ export class JmapClient {
 
   /** The tenant's groups, for offering team sharing in the share dialog. */
   async shareableGroups(): Promise<ShareableGroup[]> {
-    const res = await this.#fetch(`${API_BASE}/calendar/groups`);
+    const res = await this.#fetch(`${API_BASE}/api/calendar/groups`);
     if (!res.ok) throw new JmapError(`shareableGroups ${res.status}`);
     return ((await res.json()) as { groups: ShareableGroup[] }).groups;
   }
@@ -2509,14 +2509,14 @@ export class JmapClient {
 
   /** The caller's visible task projects (personal + team). */
   async taskProjects(): Promise<TaskProject[]> {
-    const res = await this.#fetch(`${API_BASE}/tasks/projects`);
+    const res = await this.#fetch(`${API_BASE}/api/tasks/projects`);
     if (!res.ok) throw new JmapError(`taskProjects ${res.status}`);
     return ((await res.json()) as { projects: TaskProject[] }).projects;
   }
 
   /** Create a team project; returns it. */
   async createTaskProject(name: string, color?: string): Promise<TaskProject> {
-    const res = await this.#fetch(`${API_BASE}/tasks/projects`, {
+    const res = await this.#fetch(`${API_BASE}/api/tasks/projects`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(color !== undefined ? { name, color } : { name }),
@@ -2528,7 +2528,7 @@ export class JmapClient {
   /** The active tasks on a project (the client groups into board/list). */
   async tasks(projectId: string): Promise<Task[]> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks?project=${encodeURIComponent(projectId)}`,
+      `${API_BASE}/api/tasks?project=${encodeURIComponent(projectId)}`,
     );
     if (!res.ok) throw new JmapError(`tasks ${res.status}`);
     return ((await res.json()) as { tasks: Task[] }).tasks;
@@ -2536,7 +2536,7 @@ export class JmapClient {
 
   /** Create a task; returns the stored task. */
   async createTask(input: TaskInput): Promise<Task> {
-    const res = await this.#fetch(`${API_BASE}/tasks`, {
+    const res = await this.#fetch(`${API_BASE}/api/tasks`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(input),
@@ -2548,7 +2548,7 @@ export class JmapClient {
   /** A task with its subtasks, comments, and activity (the detail panel). */
   async taskDetail(id: string): Promise<TaskDetailData> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(id)}`,
     );
     if (!res.ok) throw new JmapError(`taskDetail ${res.status}`);
     return (await res.json()) as TaskDetailData;
@@ -2562,7 +2562,7 @@ export class JmapClient {
     size: number,
   ): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/attachments`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/attachments`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2575,7 +2575,7 @@ export class JmapClient {
   /** The files on a task. */
   async taskAttachments(taskId: string): Promise<TaskAttachmentDto[]> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/attachments`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/attachments`,
     );
     if (!res.ok) throw new JmapError(`taskAttachments ${res.status}`);
     return ((await res.json()) as { attachments: TaskAttachmentDto[] })
@@ -2588,7 +2588,7 @@ export class JmapClient {
     attachmentId: string,
   ): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/attachments/${encodeURIComponent(attachmentId)}`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/attachments/${encodeURIComponent(attachmentId)}`,
       { method: "DELETE" },
     );
     if (!res.ok) throw new JmapError(`deleteTaskAttachment ${res.status}`);
@@ -2597,7 +2597,7 @@ export class JmapClient {
   /** Every file across a project's tasks (the Files view). */
   async projectFiles(projectId: string): Promise<ProjectFileDto[]> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/files?project=${encodeURIComponent(projectId)}`,
+      `${API_BASE}/api/tasks/files?project=${encodeURIComponent(projectId)}`,
     );
     if (!res.ok) throw new JmapError(`projectFiles ${res.status}`);
     return ((await res.json()) as { files: ProjectFileDto[] }).files;
@@ -2605,14 +2605,14 @@ export class JmapClient {
 
   /** Every label in the tenant (reusable across tasks). */
   async taskLabels(): Promise<TaskLabelDto[]> {
-    const res = await this.#fetch(`${API_BASE}/tasks/labels`);
+    const res = await this.#fetch(`${API_BASE}/api/tasks/labels`);
     if (!res.ok) throw new JmapError(`taskLabels ${res.status}`);
     return ((await res.json()) as { labels: TaskLabelDto[] }).labels;
   }
 
   /** Create a tenant label. */
   async createTaskLabel(name: string, color?: string): Promise<TaskLabelDto> {
-    const res = await this.#fetch(`${API_BASE}/tasks/labels`, {
+    const res = await this.#fetch(`${API_BASE}/api/tasks/labels`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(color !== undefined ? { name, color } : { name }),
@@ -2624,7 +2624,7 @@ export class JmapClient {
   /** Delete a label from the tenant (and every task). */
   async deleteTaskLabel(labelId: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/labels/${encodeURIComponent(labelId)}`,
+      `${API_BASE}/api/tasks/labels/${encodeURIComponent(labelId)}`,
       {
         method: "DELETE",
       },
@@ -2635,7 +2635,7 @@ export class JmapClient {
   /** Attach a label to a task. */
   async addTaskLabel(taskId: string, labelId: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/labels`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/labels`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2648,7 +2648,7 @@ export class JmapClient {
   /** Remove a label from a task. */
   async removeTaskLabel(taskId: string, labelId: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/labels/${encodeURIComponent(labelId)}`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/labels/${encodeURIComponent(labelId)}`,
       { method: "DELETE" },
     );
     if (!res.ok) throw new JmapError(`removeTaskLabel ${res.status}`);
@@ -2657,7 +2657,7 @@ export class JmapClient {
   /** Follow / stop following a task (the current user). */
   async followTask(taskId: string, follow: boolean): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/followers`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/followers`,
       {
         method: follow ? "POST" : "DELETE",
       },
@@ -2668,7 +2668,7 @@ export class JmapClient {
   /** Record that `taskId` is blocked by `dependsOn` (both must be visible). */
   async addTaskDependency(taskId: string, dependsOn: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/dependencies`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/dependencies`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2681,7 +2681,7 @@ export class JmapClient {
   /** Drop a "blocked by" edge from `taskId` to `dependsOn`. */
   async removeTaskDependency(taskId: string, dependsOn: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/dependencies/${encodeURIComponent(dependsOn)}`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/dependencies/${encodeURIComponent(dependsOn)}`,
       { method: "DELETE" },
     );
     if (!res.ok) throw new JmapError(`removeTaskDependency ${res.status}`);
@@ -2690,7 +2690,7 @@ export class JmapClient {
   /** Every dependency edge among a project's visible tasks (Timeline arrows). */
   async projectDependencies(projectId: string): Promise<TaskDepEdgeDto[]> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/dependencies?project=${encodeURIComponent(projectId)}`,
+      `${API_BASE}/api/tasks/dependencies?project=${encodeURIComponent(projectId)}`,
     );
     if (!res.ok) throw new JmapError(`projectDependencies ${res.status}`);
     return ((await res.json()) as { edges: TaskDepEdgeDto[] }).edges;
@@ -2702,7 +2702,7 @@ export class JmapClient {
     attachmentId: string,
   ): Promise<Blob> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/attachments/${encodeURIComponent(attachmentId)}/download`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/attachments/${encodeURIComponent(attachmentId)}/download`,
     );
     if (!res.ok) throw new JmapError(`downloadTaskAttachment ${res.status}`);
     return res.blob();
@@ -2711,7 +2711,7 @@ export class JmapClient {
   /** Edit a task's fields (not status/position — that is a move). */
   async updateTask(id: string, input: TaskInput): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(id)}`,
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -2724,7 +2724,7 @@ export class JmapClient {
   /** Move a task to a status/position — board drag or list status-change. */
   async moveTask(id: string, status: string, position: number): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(id)}/move`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(id)}/move`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2736,7 +2736,7 @@ export class JmapClient {
 
   async deleteTask(id: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(id)}`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(id)}`,
       {
         method: "DELETE",
       },
@@ -2746,7 +2746,7 @@ export class JmapClient {
 
   /** "What's on my plate": due/overdue assigned tasks. */
   async myPlate(): Promise<Task[]> {
-    const res = await this.#fetch(`${API_BASE}/tasks/today`);
+    const res = await this.#fetch(`${API_BASE}/api/tasks/today`);
     if (!res.ok) throw new JmapError(`myPlate ${res.status}`);
     return ((await res.json()) as { tasks: Task[] }).tasks;
   }
@@ -2757,7 +2757,7 @@ export class JmapClient {
     tasks: TaskInput[],
     projectId?: string,
   ): Promise<{ created: number }> {
-    const res = await this.#fetch(`${API_BASE}/tasks/propose`, {
+    const res = await this.#fetch(`${API_BASE}/api/tasks/propose`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(
@@ -2773,7 +2773,7 @@ export class JmapClient {
   async extractTasks(
     text: string,
   ): Promise<{ title: string; dueAt?: string }[]> {
-    const res = await this.#fetch(`${API_BASE}/ai/extract-tasks`, {
+    const res = await this.#fetch(`${API_BASE}/api/ai/extract-tasks`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
@@ -2786,7 +2786,7 @@ export class JmapClient {
 
   /** Pending AI proposals (awaiting accept/reject). */
   async taskProposals(): Promise<Task[]> {
-    const res = await this.#fetch(`${API_BASE}/tasks/proposals`);
+    const res = await this.#fetch(`${API_BASE}/api/tasks/proposals`);
     if (!res.ok) throw new JmapError(`taskProposals ${res.status}`);
     return ((await res.json()) as { tasks: Task[] }).tasks;
   }
@@ -2794,7 +2794,7 @@ export class JmapClient {
   /** Approve a proposal (optionally with edits), making it a real task. */
   async acceptTask(id: string, edits?: TaskInput): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(id)}/accept`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(id)}/accept`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2807,7 +2807,7 @@ export class JmapClient {
   /** Drop a proposal. */
   async rejectTask(id: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(id)}/reject`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(id)}/reject`,
       {
         method: "POST",
       },
@@ -2817,7 +2817,7 @@ export class JmapClient {
 
   async addSubtask(taskId: string, title: string): Promise<{ id: string }> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/subtasks`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/subtasks`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2834,7 +2834,7 @@ export class JmapClient {
     done: boolean,
   ): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/subtasks/${encodeURIComponent(subtaskId)}`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/subtasks/${encodeURIComponent(subtaskId)}`,
       {
         method: "PUT",
         headers: { "content-type": "application/json" },
@@ -2846,7 +2846,7 @@ export class JmapClient {
 
   async deleteSubtask(taskId: string, subtaskId: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/subtasks/${encodeURIComponent(subtaskId)}`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/subtasks/${encodeURIComponent(subtaskId)}`,
       { method: "DELETE" },
     );
     if (!res.ok) throw new JmapError(`deleteSubtask ${res.status}`);
@@ -2854,7 +2854,7 @@ export class JmapClient {
 
   async addTaskComment(taskId: string, body: string): Promise<void> {
     const res = await this.#fetch(
-      `${API_BASE}/tasks/${encodeURIComponent(taskId)}/comments`,
+      `${API_BASE}/api/tasks/${encodeURIComponent(taskId)}/comments`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -2870,7 +2870,7 @@ export class JmapClient {
     fromIso: string,
     toIso: string,
   ): Promise<FreeBusyPerson[]> {
-    const res = await this.#fetch(`${API_BASE}/calendar/freebusy`, {
+    const res = await this.#fetch(`${API_BASE}/api/calendar/freebusy`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ emails, from: fromIso, to: toIso }),
@@ -2881,7 +2881,7 @@ export class JmapClient {
 
   /** The user's server-side mail filter rules. */
   async filters(): Promise<MailFilterRule[]> {
-    const res = await this.#fetch(`${API_BASE}/filters`, { method: "GET" });
+    const res = await this.#fetch(`${API_BASE}/api/filters`, { method: "GET" });
     if (!res.ok) throw new JmapError(`filters ${res.status}`);
     const json = (await res.json()) as { rules: MailFilterRule[] };
     return json.rules;
@@ -2890,7 +2890,7 @@ export class JmapClient {
   /** Replace the user's mail filter rules; the server recompiles the delivery
    * script. Returns the stored rules. */
   async saveFilters(rules: MailFilterRule[]): Promise<MailFilterRule[]> {
-    const res = await this.#fetch(`${API_BASE}/filters`, {
+    const res = await this.#fetch(`${API_BASE}/api/filters`, {
       method: "PUT",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ rules }),
@@ -2902,7 +2902,7 @@ export class JmapClient {
 
   /** Block a sender: append a rule filing their mail into Junk (idempotent). */
   async blockSender(email: string): Promise<void> {
-    const res = await this.#fetch(`${API_BASE}/filters/block`, {
+    const res = await this.#fetch(`${API_BASE}/api/filters/block`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ email }),
@@ -2928,7 +2928,7 @@ export class JmapClient {
     blobId: string,
     response: RsvpResponse,
   ): Promise<{ added: boolean; replied: boolean }> {
-    const res = await this.#fetch(`${API_BASE}/calendar/rsvp`, {
+    const res = await this.#fetch(`${API_BASE}/api/calendar/rsvp`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ blobId, response }),
@@ -2941,7 +2941,7 @@ export class JmapClient {
    * user's calendar. `blobId` is the cancellation message's blobId. `removed`
    * is false when the event wasn't on the calendar (already gone). */
   async cancelInvitation(blobId: string): Promise<{ removed: boolean }> {
-    const res = await this.#fetch(`${API_BASE}/calendar/cancel`, {
+    const res = await this.#fetch(`${API_BASE}/api/calendar/cancel`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ blobId }),
@@ -2955,7 +2955,7 @@ export class JmapClient {
   async applyReply(
     blobId: string,
   ): Promise<{ applied: boolean; email: string; status: string }> {
-    const res = await this.#fetch(`${API_BASE}/calendar/apply-reply`, {
+    const res = await this.#fetch(`${API_BASE}/api/calendar/apply-reply`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ blobId }),

@@ -58,7 +58,13 @@ const READ_ONLY_FOR_ACCOUNTANT: [&str; 3] = ["billing", "crm", "inventory"];
 /// The first path segment of a matched route template, e.g. `billing` for
 /// `/billing/invoices/{id}/issue`.
 fn module_of(template: &str) -> Option<&str> {
-    template.split('/').find(|segment| !segment.is_empty())
+    // Skips the `/api` mount for the reason `module_access::prefix_of` gives:
+    // the API answers at two paths, and a read-only accountant must be refused
+    // a billing write at both of them.
+    template
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .find(|segment| *segment != "api")
 }
 
 /// Refuses billing and CRM writes to a caller whose only access is a scoped

@@ -41,13 +41,21 @@ const spaBypass = (req: { headers: Record<string, string | string[] | undefined>
   return undefined;
 };
 
+// What the dev server forwards to the API instead of serving the app.
+//
+// `/api` covers every module: the whole API is mounted there as well as at its
+// own paths, and the clients call it there. The module prefixes are gone from
+// this list on purpose — /billing, /chat, /hr and the rest are *page* paths in
+// the router, and forwarding them meant a hard refresh on /billing/invoices/123
+// answered JSON to a browser that wanted the app.
+//
+// What remains beside `/api` are addresses other software was told: the OIDC
+// endpoints, JMAP and its discovery document, CalDAV, mail autoconfig, and
+// Collabora's callback. None of them collides with a page.
 const API_PATHS = [
-  "/jmap", "/ai", "/admin", "/settings", "/docs", "/snooze", "/send-later",
-  "/calendar", "/tasks", "/spaces", "/drive", "/search", "/contacts",
-  "/import", "/signup", "/reset", "/autodiscover", "/Autodiscover", "/dav",
-  "/filters", "/share", "/oauth", "/.well-known", "/auth", "/billing", "/crm",
-  "/audit", "/insights", "/projects", "/finance", "/inventory",
-  "/sites", "/chat", "/meet", "/hr",
+  "/api",
+  "/jmap", "/oauth", "/auth", "/.well-known",
+  "/dav", "/autodiscover", "/Autodiscover", "/wopi",
 ];
 // Collabora paths are loaded by the editor itself (and its server), never a
 // user page navigation — proxy them straight through with no SPA bypass.

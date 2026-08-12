@@ -11,7 +11,7 @@ export class SignupError extends Error {}
 async function post<T>(path: string, body: unknown): Promise<T> {
   let res: Response;
   try {
-    res = await apiFetch(`${API_BASE}${path}`, {
+    res = await apiFetch(`${API_BASE}/api${path}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -29,7 +29,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 /** The domains open to personal signup. Empty means signup is disabled. */
 export async function signupDomains(): Promise<string[]> {
   try {
-    const res = await apiFetch(`${API_BASE}/signup/domains`);
+    const res = await apiFetch(`${API_BASE}/api/signup/domains`);
     if (!res.ok) return [];
     const data = (await res.json()) as { domains?: string[] };
     return data.domains ?? [];

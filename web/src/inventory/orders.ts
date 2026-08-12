@@ -264,7 +264,7 @@ export class InventoryOrdersApi {
 
   async #send(url: string, init: RequestInit): Promise<Response> {
     try {
-      return await this.#fetch(`${API_BASE}${url}`, init);
+      return await this.#fetch(`${API_BASE}/api${url}`, init);
     } catch {
       // A dropped connection is not a status code; give it one the UI can
       // treat like any other failure rather than an unhandled rejection.

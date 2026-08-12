@@ -802,7 +802,7 @@ export class SitesApi {
 
   async #send(path: string, init: RequestInit): Promise<Response> {
     try {
-      return await this.#fetch(`${API_BASE}${path}`, init);
+      return await this.#fetch(`${API_BASE}/api${path}`, init);
     } catch {
       // A dropped connection is not a status code; give it one the UI can
       // treat like any other failure rather than an unhandled rejection.
@@ -846,7 +846,7 @@ async function publicInvitationResponse<T>(response: Response): Promise<T> {
 /** Public token-gated invitation facts. The token is the authority; no user
  * directory or tenant metadata is returned. */
 export function siteInvitation(token: string): Promise<SiteInvitation> {
-  return fetch(`${API_BASE}/sites/invitations/${encodeURIComponent(token)}`).then(
+  return fetch(`${API_BASE}/api/sites/invitations/${encodeURIComponent(token)}`).then(
     publicInvitationResponse<SiteInvitation>,
   );
 }
@@ -856,7 +856,7 @@ export function acceptSiteInvitation(
   token: string,
   password: string,
 ): Promise<SiteInvitation & { status: "accepted" }> {
-  return fetch(`${API_BASE}/sites/invitations/${encodeURIComponent(token)}`, {
+  return fetch(`${API_BASE}/api/sites/invitations/${encodeURIComponent(token)}`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ password }),

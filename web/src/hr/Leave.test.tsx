@@ -218,7 +218,10 @@ const fakeFetch = vi.fn((raw: string, init?: RequestInit) => {
   const body = typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : null;
   calls.push({ url: raw, method, body });
   const url = new URL(raw, "http://localhost");
-  const path = url.pathname;
+  // The API answers at its own paths and again under `/api`, and the client
+  // calls the second. A fixture that pinned one mount would fail the day the
+  // other is used, which is not a fact about HR.
+  const path = url.pathname.replace(/^\/api/, "");
 
   if (method === "POST" && /\/hr\/leave-requests\/[^/]+\/\w+$/.test(path)) {
     return Promise.resolve(json({ request: WAITING }));

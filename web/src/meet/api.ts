@@ -51,7 +51,7 @@ export class MeetApi {
   }
 
   async #send(path: string, init?: RequestInit): Promise<Response> {
-    return this.#fetch(`${API_BASE}${path}`, {
+    return this.#fetch(`${API_BASE}/api${path}`, {
       ...init,
       headers: {
         ...(init?.body === undefined

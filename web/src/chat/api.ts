@@ -59,6 +59,12 @@ export function chatMessage(error: unknown, fallback: string): string {
 
 /** The `/chat/*` client. One method per route, added with its screen. */
 export class ChatApi {
+  // Every list read below ends `?? []`. `#read` casts the server's JSON to a
+  // type without checking it, so a response missing its key resolves as
+  // `undefined` rather than rejecting — which slips straight past a caller's
+  // `.catch` and becomes a `.map` of undefined. That took the whole chat
+  // module down once; a missing list reads as an empty one instead.
+
   readonly #fetch: AuthorizedFetch;
 
   constructor(authorizedFetch: AuthorizedFetch) {
@@ -70,7 +76,7 @@ export class ChatApi {
     const body = await this.#read<{ channels: ChannelSummary[] }>(
       "/chat/channels",
     );
-    return body.channels;
+    return body.channels ?? [];
   }
 
   /** The live public channels I have not joined — "browse channels". */
@@ -78,7 +84,7 @@ export class ChatApi {
     const body = await this.#read<{ channels: Channel[] }>(
       "/chat/channels/joinable",
     );
-    return body.channels;
+    return body.channels ?? [];
   }
 
   /** One room with its people and my standing in it. */
@@ -110,7 +116,7 @@ export class ChatApi {
    *  refuses. */
   async reactionPalette(): Promise<string[]> {
     const body = await this.#read<{ emoji: string[] }>("/chat/reactions");
-    return body.emoji;
+    return body.emoji ?? [];
   }
 
   /** Leave a reaction, or take it back if it is already mine. Returns the
@@ -122,7 +128,7 @@ export class ChatApi {
       `/chat/messages/${encodeURIComponent(messageId)}/reactions`,
       { emoji },
     );
-    return body.reactions;
+    return body.reactions ?? [];
   }
 
   /** The agents in a room, for the composer's `@` list. */
@@ -130,13 +136,13 @@ export class ChatApi {
     const body = await this.#read<{ agents: Agent[] }>(
       `/chat/channels/${encodeURIComponent(id)}/agents`,
     );
-    return body.agents;
+    return body.agents ?? [];
   }
 
   /** Every agent the tenant has, for choosing one to add to a room. */
   async agents(): Promise<Agent[]> {
     const body = await this.#read<{ agents: Agent[] }>("/chat/agents");
-    return body.agents;
+    return body.agents ?? [];
   }
 
   /** Put an agent in a room. */
@@ -146,7 +152,7 @@ export class ChatApi {
       `/chat/channels/${encodeURIComponent(id)}/agents`,
       { agent },
     );
-    return body.agents;
+    return body.agents ?? [];
   }
 
   /** Decide a proposed action. Approving runs it in the same request, so the
@@ -168,7 +174,7 @@ export class ChatApi {
     const body = await this.#read<{ messages: Message[] }>(
       `/chat/search?${params.toString()}`,
     );
-    return body.messages;
+    return body.messages ?? [];
   }
 
   /** Agent turns running in this room right now, so a room does not sit
@@ -225,7 +231,7 @@ export class ChatApi {
     const body = await this.#read<{ people: Person[] }>(
       `/chat/people?${new URLSearchParams({ q: query }).toString()}`,
     );
-    return body.people;
+    return body.people ?? [];
   }
 
   /** Rewrite one's own message. The sequence is untouched, so nobody's read
@@ -260,7 +266,7 @@ export class ChatApi {
     const body = await this.#read<{ messages: Message[] }>(
       `/chat/channels/${encodeURIComponent(id)}/threads/${rootSeq}`,
     );
-    return body.messages;
+    return body.messages ?? [];
   }
 
   /** A page of the main feed, newest first. Pass the oldest `seq` held as
@@ -278,7 +284,7 @@ export class ChatApi {
     const body = await this.#read<{ messages: FeedMessage[] }>(
       `/chat/channels/${encodeURIComponent(id)}/messages${suffix}`,
     );
-    return body.messages;
+    return body.messages ?? [];
   }
 
   /** Say something. `threadRootSeq` makes it a reply; `attachments` are Drive
@@ -328,7 +334,7 @@ export class ChatApi {
 
   async #send(path: string, init: RequestInit): Promise<Response> {
     try {
-      return await this.#fetch(`${API_BASE}${path}`, init);
+      return await this.#fetch(`${API_BASE}/api${path}`, init);
     } catch {
       // A dropped connection is not a status code; give it one the UI can
       // treat like any other failure rather than an unhandled rejection.

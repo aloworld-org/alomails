@@ -75,7 +75,15 @@ const MODULE_OF_PREFIX: [(&str, AppModule); 13] = [
 /// The first path segment of a matched route template, e.g. `billing` for
 /// `/billing/invoices/{id}/issue`.
 fn prefix_of(template: &str) -> Option<&str> {
-    template.split('/').find(|segment| !segment.is_empty())
+    // The whole API is mounted twice — at its own paths and again under
+    // `/api` — so the first segment is `api` for half the traffic. Skipping it
+    // makes both mounts answer to the same rule; without this, every gated
+    // module would read as the module called "api", which is none of them, and
+    // the gate would wave everything through.
+    template
+        .split('/')
+        .filter(|segment| !segment.is_empty())
+        .find(|segment| *segment != "api")
 }
 
 /// The module a route template belongs to, or `None` when it is not gated.
@@ -141,6 +149,25 @@ mod tests {
         assert_eq!(prefix_of("/hr"), Some("hr"));
         assert_eq!(prefix_of("/"), None);
         assert_eq!(prefix_of(""), None);
+    }
+
+    #[test]
+    fn the_api_mount_gates_exactly_as_the_bare_path_does() {
+        // The API answers at two addresses. A module switched off must be
+        // refused at both, and the gate reads the first path segment — which
+        // is `api` for half of them. Getting this wrong fails open: every
+        // request would look like a module called "api", which no switch names.
+        for (bare, under_api) in [
+            ("/billing/invoices", "/api/billing/invoices"),
+            ("/chat/rooms", "/api/chat/rooms"),
+            ("/calendar/events", "/api/calendar/events"),
+        ] {
+            assert_eq!(module_of(bare), module_of(under_api), "{under_api}");
+            assert!(module_of(under_api).is_some(), "{under_api} must still gate");
+        }
+        // And an ungated prefix stays ungated under the mount.
+        assert_eq!(module_of("/api/jmap/upload/{accountId}"), None);
+        assert_eq!(module_of("/api"), None);
     }
 
     #[test]

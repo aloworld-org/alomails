@@ -51,7 +51,7 @@ export class AuditApi {
     });
     let res: Response;
     try {
-      res = await this.#fetch(`${API_BASE}/audit?${query.toString()}`, { method: "GET" });
+      res = await this.#fetch(`${API_BASE}/api/audit?${query.toString()}`, { method: "GET" });
     } catch {
       // A dropped connection is not a status code; give it one the UI can treat
       // like any other failure rather than an unhandled rejection.
