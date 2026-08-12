@@ -23,6 +23,7 @@ import {
   useDeniedModules,
 } from "./shell";
 import { surface } from "./product";
+import { StackBadge } from "./platform/StackBadge";
 import type { ProductModule } from "./product";
 import { DialogProvider } from "./ds";
 import { SiteInvitationView } from "./sites/SiteInvitationView";
@@ -59,62 +60,65 @@ export function App() {
   // avoids threading a context through ~50 call sites).
   const locale = useLocale();
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <DialogProvider>
-          <Fragment key={locale}>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              {/* Public personal signup (ADR 0018); the page hides itself when no
+    <>
+      <StackBadge />
+      <BrowserRouter>
+        <AuthProvider>
+          <DialogProvider>
+            <Fragment key={locale}>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                {/* Public personal signup (ADR 0018); the page hides itself when no
                 personal domains are configured. */}
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/reset" element={<ForgotPasswordPage />} />
-              {/* Claiming an account from an invitation. Public by design: the
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/reset" element={<ForgotPasswordPage />} />
+                {/* Claiming an account from an invitation. Public by design: the
                 token is the credential, and the holder has no account until
                 they spend it. */}
-              <Route path="/invite/:token" element={<InvitationView />} />
-              {/* Accepting a collaborator invitation. Public by design: the
+                <Route path="/invite/:token" element={<InvitationView />} />
+                {/* Accepting a collaborator invitation. Public by design: the
                   token is the credential, and the person holding it may not
                   have an account yet. */}
-              <Route
-                path="/sites/invite/:token"
-                element={<SiteInvitationView />}
-              />
-              {/* The OIDC redirect target; the login flow reads the code inline, so
+                <Route
+                  path="/sites/invite/:token"
+                  element={<SiteInvitationView />}
+                />
+                {/* The OIDC redirect target; the login flow reads the code inline, so
                 a stray navigation here just returns to the app. */}
-              <Route
-                path="/auth/callback"
-                element={<Navigate to={surface.defaultPath} replace />}
-              />
+                <Route
+                  path="/auth/callback"
+                  element={<Navigate to={surface.defaultPath} replace />}
+                />
 
-              <Route element={<RequireAuth />}>
-                {/* Full-screen consoles (own shell, gated internally) — e.g. tenant
+                <Route element={<RequireAuth />}>
+                  {/* Full-screen consoles (own shell, gated internally) — e.g. tenant
                   admin, and the control plane in the workspace product. */}
-                {surface.consoles.map((c) => (
-                  <Route key={c.path} path={c.path} element={c.element()} />
-                ))}
-                <Route element={<AppShell />}>
-                  <Route
-                    index
-                    element={<Navigate to={surface.defaultPath} replace />}
-                  />
-                  {surface.modules.map((m) => (
-                    <Route
-                      key={m.id}
-                      path={`${m.path}/*`}
-                      element={<ModuleRoute module={m} />}
-                    />
+                  {surface.consoles.map((c) => (
+                    <Route key={c.path} path={c.path} element={c.element()} />
                   ))}
-                  <Route
-                    path="*"
-                    element={<Navigate to={surface.defaultPath} replace />}
-                  />
+                  <Route element={<AppShell />}>
+                    <Route
+                      index
+                      element={<Navigate to={surface.defaultPath} replace />}
+                    />
+                    {surface.modules.map((m) => (
+                      <Route
+                        key={m.id}
+                        path={`${m.path}/*`}
+                        element={<ModuleRoute module={m} />}
+                      />
+                    ))}
+                    <Route
+                      path="*"
+                      element={<Navigate to={surface.defaultPath} replace />}
+                    />
+                  </Route>
                 </Route>
-              </Route>
-            </Routes>
-          </Fragment>
-        </DialogProvider>
-      </AuthProvider>
-    </BrowserRouter>
+              </Routes>
+            </Fragment>
+          </DialogProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </>
   );
 }
