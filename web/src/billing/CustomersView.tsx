@@ -82,6 +82,7 @@ export function CustomersView() {
         createLabel={strings.billingNewCustomer}
         onCreate={() => setEditing(null)}
         busy={loading}
+        showCreate={customers.length > 0}
       />
 
       {error !== null && <ErrorBanner message={error} />}

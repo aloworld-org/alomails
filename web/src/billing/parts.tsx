@@ -19,6 +19,7 @@ export function Toolbar({
   createLabel,
   onCreate,
   busy,
+  showCreate = true,
 }: {
   search: string;
   onSearch: (v: string) => void;
@@ -28,6 +29,7 @@ export function Toolbar({
   createLabel: string;
   onCreate: () => void;
   busy: boolean;
+  showCreate?: boolean;
 }) {
   return (
     <div className={styles.toolbar}>
@@ -44,7 +46,7 @@ export function Toolbar({
         {strings.billingShowArchived}
       </label>
       {busy && <Spinner size={16} />}
-      <Button icon={<Plus aria-hidden="true" />} onClick={onCreate}>{createLabel}</Button>
+      {showCreate && <Button icon={<Plus aria-hidden="true" />} onClick={onCreate}>{createLabel}</Button>}
     </div>
   );
 }
