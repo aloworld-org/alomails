@@ -10,7 +10,7 @@
 // optimistic — the line appears at once and is reconciled by the refetch — so a
 // click is never answered by silence (law 6).
 import type { ReactNode } from "react";
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import {
   Archive,
   ChevronLeft,
@@ -68,6 +68,12 @@ import { EMOJI, searchEmoji } from "./emoji";
 import { renderBody } from "./richText";
 import styles from "./ChatModule.module.css";
 
+const AuthoringInsertModal = lazy(() =>
+  import("../authoring").then((module) => ({
+    default: module.AuthoringInsertModal,
+  })),
+);
+
 /** The ceiling the server enforces (`ATTACHMENTS_MAX` in the store). Kept in
  *  step by hand: exceeding it is refused server-side either way, so the worst
  *  a drifted copy does is offer a choice that is then declined. */
@@ -77,6 +83,17 @@ const ATTACHMENTS_MAX = 10;
  *  (`MESSAGE_PAGE_DEFAULT`). A full page means there is probably more behind
  *  it; a short one means we have reached the beginning. */
 const PAGE = 50;
+
+function chatAuthoringText(html: string): string {
+  const document = new DOMParser().parseFromString(html, "text/html");
+  const equation = document.querySelector<HTMLElement>("[data-alo-latex]");
+  if (equation !== null) return `$${equation.dataset.aloLatex ?? ""}$`;
+  const code = document.querySelector<HTMLElement>("[data-alo-lang]");
+  if (code !== null) {
+    return `\`\`\`${code.dataset.aloLang ?? ""}\n${code.textContent ?? ""}\n\`\`\``;
+  }
+  return document.body.textContent ?? "";
+}
 
 /** A room's label: its `#name`, the other person in a DM, or a safe fallback. */
 function channelLabel(channel: ChannelSummary): string {
@@ -615,6 +632,10 @@ export function ChatModule() {
   const [replyMenu, setReplyMenu] = useState(false);
   const replyMenuRef = useRef<HTMLDivElement | null>(null);
   const replyComposerRef = useRef<HTMLTextAreaElement | null>(null);
+  const [authoringInsert, setAuthoringInsert] = useState<{
+    kind: "equation" | "code";
+    target: "message" | "reply";
+  } | null>(null);
   // Which room's row menu is open, by id — one at a time, same reason.
   const [emojiQuery, setEmojiQuery] = useState("");
   // Agent turns running in the open room. Refetched on every push, so it
@@ -2004,11 +2025,7 @@ export function ChatModule() {
                           className={styles.shareItem}
                           onClick={() => {
                             setComposerMenu(null);
-                            wrapSelection(
-                              "```" + String.fromCharCode(10),
-                              String.fromCharCode(10) + "```",
-                              "code",
-                            );
+                            setAuthoringInsert({ kind: "code", target: "message" });
                           }}
                         >
                           <SquareCode size={15} className={styles.shareIcon} />
@@ -2023,7 +2040,7 @@ export function ChatModule() {
                           className={styles.shareItem}
                           onClick={() => {
                             setComposerMenu(null);
-                            wrapSelection("$", "$", "e^{i\\pi}+1=0");
+                            setAuthoringInsert({ kind: "equation", target: "message" });
                           }}
                         >
                           <Sigma size={15} className={styles.shareIcon} />
@@ -2458,11 +2475,7 @@ export function ChatModule() {
                       className={styles.shareItem}
                       onClick={() => {
                         setReplyMenu(false);
-                        insertReplyBlock(
-                          "```" + String.fromCharCode(10),
-                          String.fromCharCode(10) + "```",
-                          "code",
-                        );
+                        setAuthoringInsert({ kind: "code", target: "reply" });
                       }}
                     >
                       <SquareCode size={15} className={styles.shareIcon} />
@@ -2474,7 +2487,7 @@ export function ChatModule() {
                       className={styles.shareItem}
                       onClick={() => {
                         setReplyMenu(false);
-                        insertReplyBlock("$", "$", "e^{i\\pi}+1=0");
+                        setAuthoringInsert({ kind: "equation", target: "reply" });
                       }}
                     >
                       <Sigma size={15} className={styles.shareIcon} />
@@ -2505,6 +2518,20 @@ export function ChatModule() {
             </form>
           )}
         </aside>
+      )}
+      {authoringInsert !== null && (
+        <Suspense fallback={null}>
+          <AuthoringInsertModal
+            kind={authoringInsert.kind}
+            onClose={() => setAuthoringInsert(null)}
+            onInsert={(html) => {
+              const text = chatAuthoringText(html);
+              if (authoringInsert.target === "message") insertAtCaret(text);
+              else insertReplyBlock("", "", text);
+              setAuthoringInsert(null);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );
