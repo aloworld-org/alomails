@@ -624,6 +624,43 @@ describe("editing a section", () => {
       section: { type: "contact_form", heading: "Talk to us", form_id: "f-1" },
     });
   });
+
+  test("how an image is framed survives an edit of the text beside it", async () => {
+    // No prop form offers the crop or the focal point yet (S2.07c does), so
+    // this is the case that would silently unframe every photo on the page.
+    const framed: Section = {
+      type: "hero",
+      heading: "Fresh bread daily",
+      image: {
+        blob_id: "blob-1",
+        alt: "Loaves cooling on a rack",
+        crop: { x_bp: 1250, y_bp: 0, width_bp: 7500, height_bp: 10000 },
+        focal: { x_bp: 4000, y_bp: 3500 },
+      },
+    };
+    replies = [pageReply([framed])];
+    ui();
+    await screen.findByText(strings.sitesSectionHero);
+    fireEvent.click(screen.getByLabelText(strings.sitesEditSection));
+
+    replies = [
+      {
+        match: (url, method) =>
+          method === "PUT" && url.endsWith("/sites/site-1/pages/page-1/sections/0"),
+        status: 200,
+        body: { sections: env([{ ...framed, heading: "Warm bread daily" }]) },
+      },
+    ];
+    fireEvent.change(screen.getByLabelText(strings.sitesFieldHeading), {
+      target: { value: "Warm bread daily" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: strings.sitesSaveSection }));
+
+    await waitFor(() => expect(lastWrite()).toBeTruthy());
+    expect(lastWrite()!.body).toEqual({
+      section: { ...framed, heading: "Warm bread daily" },
+    });
+  });
 });
 
 describe("reordering and deleting", () => {

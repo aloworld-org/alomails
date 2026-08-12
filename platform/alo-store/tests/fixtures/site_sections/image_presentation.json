@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "text_image",
+      "heading": "The roastery",
+      "body": "A 1962 Probat drum, rebuilt by hand over two winters, sits at the centre of the roastery.",
+      "image": {
+        "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg",
+        "alt": "The restored Probat roasting drum",
+        "crop": {
+          "x_bp": 1250,
+          "y_bp": 0,
+          "width_bp": 7500,
+          "height_bp": 10000
+        },
+        "focal": {
+          "x_bp": 4000,
+          "y_bp": 3500
+        }
+      },
+      "image_side": "right"
+    },
+    {
+      "type": "gallery",
+      "heading": "Inside the roastery",
+      "images": [
+        {
+          "blob_id": "2fN8wE5rT9yU3iO7pA1sDg",
+          "alt": "Cupping table set for the morning tasting",
+          "focal": {
+            "x_bp": 5000,
+            "y_bp": 2000
+          }
+        },
+        {
+          "blob_id": "6mB4nV8cX2zL5kJ9hG3fDa",
+          "alt": "",
+          "decorative": true
+        },
+        {
+          "blob_id": "7pQ2rS6tU1vW4xY8zA3bCe",
+          "alt": ""
+        }
+      ]
+    }
+  ]
+}

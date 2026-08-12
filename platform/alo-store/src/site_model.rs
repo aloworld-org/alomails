@@ -38,6 +38,19 @@ const MAX_TOKEN_CHARS: usize = 64;
 /// Character cap for icon name tokens.
 const MAX_ICON_CHARS: usize = 40;
 
+/// The whole width or height of a source image, in the basis points image
+/// geometry is expressed in. Crop rectangles and focal points are stored as
+/// ten-thousandths of the source dimension — never pixels (the same crop must
+/// survive a re-upload at another resolution) and never floats (a stored
+/// presentation value has to compare and round-trip exactly, the way
+/// `vat_rate_bp` does).
+pub const IMAGE_GEOMETRY_FULL_BP: u16 = 10_000;
+/// The smallest crop this schema accepts on either axis, in basis points (1%
+/// of the source). A crop below this is a degenerate rectangle no editor
+/// produces, and it would ask the derivative pipeline to blow a handful of
+/// pixels up to a full-width image.
+pub const MIN_CROP_EXTENT_BP: u16 = 100;
+
 /// Why a sections value was rejected. Messages are field-level validation
 /// details, safe to surface on the wire as a 422 — they never echo stored
 /// content beyond what the writer just sent.
@@ -79,16 +92,151 @@ pub struct Link {
     pub href: String,
 }
 
-/// An image reference: a tenant blob plus its alt text. `alt` is a required
-/// prop (the renderer emits `alt` on every `<img>`); an empty string is the
-/// deliberate spelling for a decorative image.
+/// A crop rectangle over the source image, in [basis
+/// points](IMAGE_GEOMETRY_FULL_BP) of its width and height. The origin is the
+/// top-left corner, so `{0, 0, 10000, 10000}` is the whole image.
+///
+/// The rectangle is *presentation*, not a destructive edit: the tenant's blob
+/// keeps every pixel it was uploaded with, and re-framing a photo never loses
+/// what was cropped away.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ImageCrop {
+    /// Left edge, in basis points from the left of the source.
+    pub x_bp: u16,
+    /// Top edge, in basis points from the top of the source.
+    pub y_bp: u16,
+    /// Width, in basis points of the source width.
+    pub width_bp: u16,
+    /// Height, in basis points of the source height.
+    pub height_bp: u16,
+}
+
+impl ImageCrop {
+    /// The whole image — what an absent crop means.
+    pub const fn full() -> Self {
+        ImageCrop {
+            x_bp: 0,
+            y_bp: 0,
+            width_bp: IMAGE_GEOMETRY_FULL_BP,
+            height_bp: IMAGE_GEOMETRY_FULL_BP,
+        }
+    }
+
+    /// Right edge in basis points (`x + width`), widened so a rectangle that
+    /// overflows the source is caught rather than wrapping.
+    const fn right_bp(self) -> u32 {
+        self.x_bp as u32 + self.width_bp as u32
+    }
+
+    /// Bottom edge in basis points (`y + height`).
+    const fn bottom_bp(self) -> u32 {
+        self.y_bp as u32 + self.height_bp as u32
+    }
+
+    /// The rectangle's midpoint — what an absent focal point means. Saturating
+    /// because this answers for any parsed value, including one that has not
+    /// reached [`SectionsEnvelope::validate`] yet.
+    pub const fn center(self) -> ImageFocalPoint {
+        ImageFocalPoint {
+            x_bp: self.x_bp.saturating_add(self.width_bp / 2),
+            y_bp: self.y_bp.saturating_add(self.height_bp / 2),
+        }
+    }
+
+    /// Whether a focal point lies on or inside this rectangle.
+    pub const fn contains(self, focal: ImageFocalPoint) -> bool {
+        focal.x_bp >= self.x_bp
+            && (focal.x_bp as u32) <= self.right_bp()
+            && focal.y_bp >= self.y_bp
+            && (focal.y_bp as u32) <= self.bottom_bp()
+    }
+}
+
+/// The point of an image that must stay visible when a layout has to crop it
+/// further — a face, a product — in [basis points](IMAGE_GEOMETRY_FULL_BP) of
+/// the source width and height, top-left origin.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ImageFocalPoint {
+    /// Horizontal position, in basis points from the left of the source.
+    pub x_bp: u16,
+    /// Vertical position, in basis points from the top of the source.
+    pub y_bp: u16,
+}
+
+/// An image reference: a tenant blob, its alt text, and how it is presented.
+///
+/// `alt` is a required prop — the renderer emits `alt` on every `<img>` — but
+/// an empty `alt` alone does not say *why* it is empty. `decorative` is that
+/// missing half: set, it means "this image carries no information, and a
+/// screen reader should skip it"; unset with a blank `alt`, it means the alt
+/// text has simply not been written yet, which is what
+/// [`needs_alt_text`](Self::needs_alt_text) reports and what the editor asks
+/// the owner (or an AI proposal) to fill in.
+///
+/// `crop` and `focal` are both optional and both additive: an image stored
+/// before this schema gained them parses unchanged and means "the whole image,
+/// centred" ([`crop_or_full`](Self::crop_or_full),
+/// [`focal_or_center`](Self::focal_or_center)).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct SiteImage {
     /// The tenant blob holding the image bytes.
     pub blob_id: BlobId,
-    /// Alt text; empty means decorative.
+    /// Alt text; blank means either decorative (with `decorative` set) or
+    /// not yet written.
     pub alt: String,
+    /// The visible rectangle of the source; absent means the whole image.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub crop: Option<ImageCrop>,
+    /// The point to keep in frame when a layout crops further; absent means
+    /// the centre of the visible rectangle.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub focal: Option<ImageFocalPoint>,
+    /// Marks a blank `alt` as deliberate: the image is presentational and
+    /// assistive technology should skip it.
+    #[serde(default, skip_serializing_if = "is_not_set")]
+    pub decorative: bool,
+}
+
+/// `skip_serializing_if` for a defaulted flag: absent stays absent, so stored
+/// section JSON gains no key for an image nobody marked decorative.
+fn is_not_set(flag: &bool) -> bool {
+    !*flag
+}
+
+impl SiteImage {
+    /// An image with no presentation overrides — the value every writer
+    /// starts from.
+    pub fn new(blob_id: BlobId, alt: impl Into<String>) -> Self {
+        SiteImage {
+            blob_id,
+            alt: alt.into(),
+            crop: None,
+            focal: None,
+            decorative: false,
+        }
+    }
+
+    /// The visible rectangle: the stored crop, or the whole image.
+    pub fn crop_or_full(&self) -> ImageCrop {
+        self.crop.unwrap_or_else(ImageCrop::full)
+    }
+
+    /// The point to keep in frame: the stored focal point, or the centre of
+    /// the visible rectangle.
+    pub fn focal_or_center(&self) -> ImageFocalPoint {
+        self.focal.unwrap_or_else(|| self.crop_or_full().center())
+    }
+
+    /// Whether this image is still missing the alt text it needs — blank alt
+    /// on an image nobody marked decorative. The editor drives its
+    /// write-the-alt-text prompt off this, so "not written yet" and "nothing
+    /// to say" never look the same.
+    pub fn needs_alt_text(&self) -> bool {
+        !self.decorative && self.alt.trim().is_empty()
+    }
 }
 
 /// Which side of the text a `text_image` section puts its image on.
@@ -408,21 +556,18 @@ impl Section {
         }
     }
 
-    /// The tenant blobs this section's images reference, in document order.
-    /// This is the reference set renderers and the public image path work
-    /// from: everything a page can show is exactly what this returns (plus
-    /// the theme's logo/favicon). The match is deliberately exhaustive — a
-    /// new section variant fails to compile until it declares its images.
-    pub fn image_blob_ids(&self) -> Vec<&BlobId> {
+    /// This section's images, in document order — blob reference, alt text
+    /// and presentation together. This is the set renderers, the public image
+    /// path and the derivative pipeline work from: everything a page can show
+    /// is exactly what this returns (plus the theme's logo/favicon). The match
+    /// is deliberately exhaustive — a new section variant fails to compile
+    /// until it declares its images.
+    pub fn images(&self) -> Vec<&SiteImage> {
         match self {
-            Section::Hero(s) => s.image.iter().map(|i| &i.blob_id).collect(),
-            Section::TextImage(s) => vec![&s.image.blob_id],
-            Section::Gallery(s) => s.images.iter().map(|i| &i.blob_id).collect(),
-            Section::Team(s) => s
-                .members
-                .iter()
-                .filter_map(|m| m.photo.as_ref().map(|i| &i.blob_id))
-                .collect(),
+            Section::Hero(s) => s.image.iter().collect(),
+            Section::TextImage(s) => vec![&s.image],
+            Section::Gallery(s) => s.images.iter().collect(),
+            Section::Team(s) => s.members.iter().filter_map(|m| m.photo.as_ref()).collect(),
             Section::Nav(_)
             | Section::Features(_)
             | Section::Testimonials(_)
@@ -433,6 +578,13 @@ impl Section {
             | Section::Collection(_)
             | Section::Footer(_) => Vec::new(),
         }
+    }
+
+    /// The tenant blobs this section's images reference, in document order —
+    /// [`images`](Self::images) reduced to the reference set the public image
+    /// path authorizes against.
+    pub fn image_blob_ids(&self) -> Vec<&BlobId> {
+        self.images().into_iter().map(|i| &i.blob_id).collect()
     }
 
     /// Content-rule validation for this section (structural typing is already
@@ -760,12 +912,66 @@ fn check_href(section: &'static str, href: &str) -> Result<(), SectionSchemaErro
 
 fn check_image(section: &'static str, image: &SiteImage) -> Result<(), SectionSchemaError> {
     check_token(section, "image blob_id", image.blob_id.as_str())?;
-    // Alt may be empty (decorative) but stays bounded.
+    // Alt may be empty (decorative, or not yet written) but stays bounded.
     if image.alt.chars().count() > MAX_SHORT_TEXT_CHARS {
         return Err(invalid(
             section,
             format!("image alt must be at most {MAX_SHORT_TEXT_CHARS} characters"),
         ));
+    }
+    if image.decorative && !image.alt.trim().is_empty() {
+        return Err(invalid(
+            section,
+            "a decorative image must have empty alt text".to_owned(),
+        ));
+    }
+    check_image_geometry(section, image)
+}
+
+/// Crop and focal-point rules. Both are optional; when present they must
+/// describe a rectangle that exists inside the source and a point that exists
+/// inside that rectangle, so the two can never contradict each other.
+fn check_image_geometry(
+    section: &'static str,
+    image: &SiteImage,
+) -> Result<(), SectionSchemaError> {
+    if let Some(crop) = image.crop {
+        if crop.width_bp < MIN_CROP_EXTENT_BP || crop.height_bp < MIN_CROP_EXTENT_BP {
+            return Err(invalid(
+                section,
+                format!(
+                    "image crop width and height must each be at least {MIN_CROP_EXTENT_BP} basis points of the image"
+                ),
+            ));
+        }
+        if crop.right_bp() > u32::from(IMAGE_GEOMETRY_FULL_BP)
+            || crop.bottom_bp() > u32::from(IMAGE_GEOMETRY_FULL_BP)
+        {
+            return Err(invalid(
+                section,
+                format!(
+                    "image crop must stay inside the image (x + width and y + height may not exceed {IMAGE_GEOMETRY_FULL_BP} basis points)"
+                ),
+            ));
+        }
+    }
+    if let Some(focal) = image.focal {
+        if focal.x_bp > IMAGE_GEOMETRY_FULL_BP || focal.y_bp > IMAGE_GEOMETRY_FULL_BP {
+            return Err(invalid(
+                section,
+                format!(
+                    "image focal point must be within {IMAGE_GEOMETRY_FULL_BP} basis points on each axis"
+                ),
+            ));
+        }
+        if let Some(crop) = image.crop
+            && !crop.contains(focal)
+        {
+            return Err(invalid(
+                section,
+                "image focal point must lie inside the crop".to_owned(),
+            ));
+        }
     }
     Ok(())
 }
@@ -827,10 +1033,10 @@ mod tests {
     /// One fully-populated instance of every section variant — the exhaustive
     /// round-trip corpus.
     fn full_sections() -> Vec<Section> {
-        let image = SiteImage {
-            blob_id: BlobId::new("9hK3vQ2mR8pT1xWz4bC5dg"),
-            alt: "Roasting drum mid-batch".to_owned(),
-        };
+        let image = SiteImage::new(
+            BlobId::new("9hK3vQ2mR8pT1xWz4bC5dg"),
+            "Roasting drum mid-batch",
+        );
         let link = |label: &str, href: &str| Link {
             label: label.to_owned(),
             href: href.to_owned(),
@@ -964,14 +1170,8 @@ mod tests {
         let gallery = Section::Gallery(GallerySection {
             heading: None,
             images: vec![
-                SiteImage {
-                    blob_id: BlobId::new("first-blob"),
-                    alt: String::new(),
-                },
-                SiteImage {
-                    blob_id: BlobId::new("second-blob"),
-                    alt: String::new(),
-                },
+                SiteImage::new(BlobId::new("first-blob"), ""),
+                SiteImage::new(BlobId::new("second-blob"), ""),
             ],
         });
         let ids: Vec<&str> = gallery
@@ -984,10 +1184,7 @@ mod tests {
 
     #[test]
     fn minimal_variants_round_trip_with_options_absent() {
-        let image = SiteImage {
-            blob_id: BlobId::new("9hK3vQ2mR8pT1xWz4bC5dg"),
-            alt: String::new(),
-        };
+        let image = SiteImage::new(BlobId::new("9hK3vQ2mR8pT1xWz4bC5dg"), "");
         let before = envelope(vec![
             Section::Nav(NavSection {
                 links: vec![],
@@ -1186,10 +1383,7 @@ mod tests {
     fn token_and_icon_rules_hold() {
         let bad_blob = envelope(vec![Section::Gallery(GallerySection {
             heading: None,
-            images: vec![SiteImage {
-                blob_id: BlobId::new("not/a/token"),
-                alt: String::new(),
-            }],
+            images: vec![SiteImage::new(BlobId::new("not/a/token"), "")],
         })]);
         assert!(matches!(
             bad_blob.validate(),
@@ -1215,6 +1409,341 @@ mod tests {
                 ..
             })
         ));
+    }
+
+    /// A gallery of one image, for exercising image rules through the same
+    /// gate everything else goes through.
+    fn gallery_of(image: SiteImage) -> SectionsEnvelope {
+        envelope(vec![Section::Gallery(GallerySection {
+            heading: None,
+            images: vec![image],
+        })])
+    }
+
+    fn framed(crop: Option<ImageCrop>, focal: Option<ImageFocalPoint>) -> SiteImage {
+        SiteImage {
+            crop,
+            focal,
+            ..SiteImage::new(BlobId::new("9hK3vQ2mR8pT1xWz4bC5dg"), "A drum roaster")
+        }
+    }
+
+    #[test]
+    fn absent_presentation_props_parse_and_stay_absent_on_the_wire() {
+        // The shape stored before crop/focal/decorative existed: it parses,
+        // it means whole-image-centred, and re-serializing it adds no keys —
+        // an old snapshot is never rewritten just by being read.
+        let legacy = json!({
+            "schema_version": 1,
+            "sections": [{
+                "type": "gallery",
+                "images": [{"blob_id": "9hK3vQ2mR8pT1xWz4bC5dg", "alt": "A drum roaster"}]
+            }]
+        });
+        let parsed = SectionsEnvelope::from_value(legacy.clone()).unwrap();
+        let image = parsed.sections[0].images()[0];
+        assert_eq!(image.crop, None);
+        assert_eq!(image.focal, None);
+        assert!(!image.decorative);
+        assert_eq!(image.crop_or_full(), ImageCrop::full());
+        assert_eq!(
+            image.focal_or_center(),
+            ImageFocalPoint {
+                x_bp: 5_000,
+                y_bp: 5_000
+            }
+        );
+        assert_eq!(parsed.to_value().unwrap(), legacy);
+    }
+
+    #[test]
+    fn a_crop_defaults_the_focal_point_to_its_own_centre() {
+        let image = framed(
+            Some(ImageCrop {
+                x_bp: 2_000,
+                y_bp: 1_000,
+                width_bp: 4_000,
+                height_bp: 2_000,
+            }),
+            None,
+        );
+        assert_eq!(
+            image.focal_or_center(),
+            ImageFocalPoint {
+                x_bp: 4_000,
+                y_bp: 2_000
+            },
+            "the centre of the crop, not the centre of the source"
+        );
+    }
+
+    #[test]
+    fn crop_rules_reject_rectangles_that_leave_or_vanish_inside_the_image() {
+        let whole = ImageCrop::full();
+        gallery_of(framed(Some(whole), None)).validate().unwrap();
+        // Flush against the right and bottom edges is exactly in bounds.
+        gallery_of(framed(
+            Some(ImageCrop {
+                x_bp: 5_000,
+                y_bp: 5_000,
+                width_bp: 5_000,
+                height_bp: 5_000,
+            }),
+            None,
+        ))
+        .validate()
+        .unwrap();
+
+        for bad in [
+            // One basis point past the right edge.
+            ImageCrop {
+                x_bp: 5_001,
+                y_bp: 0,
+                width_bp: 5_000,
+                height_bp: 10_000,
+            },
+            // One basis point past the bottom edge.
+            ImageCrop {
+                x_bp: 0,
+                y_bp: 1,
+                width_bp: 10_000,
+                height_bp: 10_000,
+            },
+            // A rectangle with no area at all.
+            ImageCrop {
+                x_bp: 0,
+                y_bp: 0,
+                width_bp: 0,
+                height_bp: 10_000,
+            },
+            // Narrower than the minimum extent.
+            ImageCrop {
+                x_bp: 0,
+                y_bp: 0,
+                width_bp: 10_000,
+                height_bp: MIN_CROP_EXTENT_BP - 1,
+            },
+        ] {
+            assert!(
+                matches!(
+                    gallery_of(framed(Some(bad), None)).validate(),
+                    Err(SectionSchemaError::Invalid {
+                        section: "gallery",
+                        ..
+                    })
+                ),
+                "expected rejected: {bad:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_focal_point_must_be_inside_the_image_and_inside_its_crop() {
+        let crop = ImageCrop {
+            x_bp: 2_000,
+            y_bp: 2_000,
+            width_bp: 3_000,
+            height_bp: 3_000,
+        };
+        // On the crop's own boundary is inside it.
+        gallery_of(framed(
+            Some(crop),
+            Some(ImageFocalPoint {
+                x_bp: 5_000,
+                y_bp: 2_000,
+            }),
+        ))
+        .validate()
+        .unwrap();
+        // Without a crop, anywhere in the source is fine.
+        gallery_of(framed(
+            None,
+            Some(ImageFocalPoint {
+                x_bp: 10_000,
+                y_bp: 0,
+            }),
+        ))
+        .validate()
+        .unwrap();
+
+        for (crop, focal) in [
+            // Off the source entirely.
+            (
+                None,
+                ImageFocalPoint {
+                    x_bp: 10_001,
+                    y_bp: 0,
+                },
+            ),
+            (
+                None,
+                ImageFocalPoint {
+                    x_bp: 0,
+                    y_bp: 10_001,
+                },
+            ),
+            // Inside the source, but outside the crop it belongs to — the two
+            // props would contradict each other.
+            (
+                Some(crop),
+                ImageFocalPoint {
+                    x_bp: 1_999,
+                    y_bp: 3_000,
+                },
+            ),
+            (
+                Some(crop),
+                ImageFocalPoint {
+                    x_bp: 3_000,
+                    y_bp: 5_001,
+                },
+            ),
+        ] {
+            assert!(
+                matches!(
+                    gallery_of(framed(crop, Some(focal))).validate(),
+                    Err(SectionSchemaError::Invalid {
+                        section: "gallery",
+                        ..
+                    })
+                ),
+                "expected rejected: {focal:?} in {crop:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn decorative_and_missing_alt_text_are_different_states() {
+        let blob = BlobId::new("9hK3vQ2mR8pT1xWz4bC5dg");
+
+        let written = SiteImage::new(blob.clone(), "A drum roaster");
+        assert!(!written.needs_alt_text());
+
+        let not_written = SiteImage::new(blob.clone(), "   ");
+        assert!(
+            not_written.needs_alt_text(),
+            "whitespace is not alt text either"
+        );
+        gallery_of(not_written).validate().unwrap();
+
+        let decorative = SiteImage {
+            decorative: true,
+            ..SiteImage::new(blob.clone(), "")
+        };
+        assert!(!decorative.needs_alt_text());
+        gallery_of(decorative).validate().unwrap();
+
+        // Both at once is a contradiction: the renderer emits `alt=""` for a
+        // decorative image, so the alt text would silently disappear.
+        let both = SiteImage {
+            decorative: true,
+            ..SiteImage::new(blob, "A drum roaster")
+        };
+        assert!(matches!(
+            gallery_of(both).validate(),
+            Err(SectionSchemaError::Invalid {
+                section: "gallery",
+                ..
+            })
+        ));
+    }
+
+    #[test]
+    fn presentation_props_round_trip_through_every_image_bearing_variant() {
+        let crop = ImageCrop {
+            x_bp: 1_000,
+            y_bp: 500,
+            width_bp: 8_000,
+            height_bp: 9_000,
+        };
+        let focal = ImageFocalPoint {
+            x_bp: 4_000,
+            y_bp: 3_000,
+        };
+        let image = framed(Some(crop), Some(focal));
+        let before = envelope(vec![
+            Section::Hero(HeroSection {
+                heading: "Hello".to_owned(),
+                subheading: None,
+                image: Some(image.clone()),
+                primary_cta: None,
+                secondary_cta: None,
+            }),
+            Section::TextImage(TextImageSection {
+                heading: None,
+                body: "Body".to_owned(),
+                image: image.clone(),
+                image_side: ImageSide::Left,
+            }),
+            Section::Gallery(GallerySection {
+                heading: None,
+                images: vec![image.clone()],
+            }),
+            Section::Team(TeamSection {
+                heading: None,
+                members: vec![TeamMember {
+                    name: "Jonas Meer".to_owned(),
+                    role: None,
+                    photo: Some(image),
+                    bio: None,
+                }],
+            }),
+        ]);
+        before.validate().unwrap();
+        let after = SectionsEnvelope::from_value(before.to_value().unwrap()).unwrap();
+        assert_eq!(before, after);
+        for section in &after.sections {
+            let images = section.images();
+            assert_eq!(images.len(), 1, "{} declared no image", section.kind());
+            assert_eq!(images[0].crop, Some(crop));
+            assert_eq!(images[0].focal, Some(focal));
+        }
+    }
+
+    #[test]
+    fn unknown_presentation_prop_is_rejected() {
+        // The crop is a closed shape too: a writer that invents `zoom` finds
+        // out on write, not by having it silently dropped.
+        let value = json!({
+            "schema_version": 1,
+            "sections": [{
+                "type": "gallery",
+                "images": [{
+                    "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg",
+                    "alt": "",
+                    "crop": {"x_bp": 0, "y_bp": 0, "width_bp": 10000, "height_bp": 10000, "zoom": 2}
+                }]
+            }]
+        });
+        assert!(matches!(
+            SectionsEnvelope::from_value(value),
+            Err(SectionSchemaError::Shape(_))
+        ));
+    }
+
+    #[test]
+    fn images_lists_every_image_bearing_variant_and_nothing_else() {
+        let sections = full_sections();
+        let with_images: Vec<&'static str> = sections
+            .iter()
+            .filter(|section| !section.images().is_empty())
+            .map(Section::kind)
+            .collect();
+        assert_eq!(with_images, ["hero", "text_image", "gallery", "team"]);
+        // The blob-id view is exactly the same set, reduced.
+        for section in &sections {
+            let from_images: Vec<&str> = section
+                .images()
+                .into_iter()
+                .map(|i| i.blob_id.as_str())
+                .collect();
+            let direct: Vec<&str> = section
+                .image_blob_ids()
+                .into_iter()
+                .map(BlobId::as_str)
+                .collect();
+            assert_eq!(from_images, direct);
+        }
     }
 
     #[test]

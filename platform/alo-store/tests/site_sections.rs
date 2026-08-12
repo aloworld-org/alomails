@@ -6,6 +6,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use alo_store::SectionsEnvelope;
+use alo_store::site_model::{ImageCrop, ImageFocalPoint};
 use serde_json::Value;
 
 /// One golden fixture per section type; the name is the expected wire tag.
@@ -43,6 +44,10 @@ const SECTION_FIXTURES: &[(&str, &str)] = &[
 ];
 
 const FULL_PAGE: &str = include_str!("fixtures/site_sections/full_page.json");
+
+/// The image presentation props (crop, focal point, decorative) on the two
+/// section types that carry images differently — one image, and a list.
+const IMAGE_PRESENTATION: &str = include_str!("fixtures/site_sections/image_presentation.json");
 
 #[test]
 fn every_section_golden_parses_validates_and_round_trips() {
@@ -102,4 +107,68 @@ fn full_page_golden_round_trips_with_all_sections_in_order() {
     );
     let back = envelope.to_value().unwrap();
     assert_eq!(back, golden, "full page re-serialization drifted");
+}
+
+#[test]
+fn image_presentation_golden_round_trips_and_carries_crop_focal_and_decorative() {
+    let golden: Value = serde_json::from_str(IMAGE_PRESENTATION).unwrap();
+    let envelope = SectionsEnvelope::from_value(golden.clone())
+        .unwrap_or_else(|e| panic!("image presentation fixture rejected: {e}"));
+
+    let framed = envelope.sections[0].images();
+    assert_eq!(framed.len(), 1);
+    assert_eq!(
+        framed[0].crop,
+        Some(ImageCrop {
+            x_bp: 1250,
+            y_bp: 0,
+            width_bp: 7500,
+            height_bp: 10_000,
+        })
+    );
+    assert_eq!(
+        framed[0].focal,
+        Some(ImageFocalPoint {
+            x_bp: 4000,
+            y_bp: 3500
+        })
+    );
+    assert!(!framed[0].needs_alt_text());
+
+    // The gallery's three images are the three states alt text can be in:
+    // written, deliberately decorative, and not yet written.
+    let gallery = envelope.sections[1].images();
+    assert_eq!(gallery.len(), 3);
+    assert!(!gallery[0].needs_alt_text(), "written alt");
+    assert!(gallery[0].crop.is_none(), "a focal point needs no crop");
+    assert!(!gallery[1].needs_alt_text(), "decorative on purpose");
+    assert!(gallery[2].needs_alt_text(), "blank alt, nobody said why");
+
+    let back = envelope.to_value().unwrap();
+    assert_eq!(back, golden, "image presentation re-serialization drifted");
+}
+
+/// The presentation props are additive: every fixture written before they
+/// existed still parses, still re-serializes **without** the new keys (proven
+/// byte-for-byte by the golden test above), and reads as the whole image with
+/// its centre in frame.
+#[test]
+fn images_stored_before_the_presentation_props_mean_whole_image_centred() {
+    let golden: Value = serde_json::from_str(FULL_PAGE).unwrap();
+    let envelope = SectionsEnvelope::from_value(golden).unwrap();
+    let legacy: Vec<_> = envelope.sections.iter().flat_map(|s| s.images()).collect();
+    assert!(!legacy.is_empty(), "the full page golden carries images");
+    for image in legacy {
+        assert_eq!(image.crop, None);
+        assert_eq!(image.focal, None);
+        assert!(!image.decorative);
+        assert_eq!(image.crop_or_full(), ImageCrop::full());
+        assert_eq!(
+            image.focal_or_center(),
+            ImageFocalPoint {
+                x_bp: 5000,
+                y_bp: 5000
+            }
+        );
+    }
 }

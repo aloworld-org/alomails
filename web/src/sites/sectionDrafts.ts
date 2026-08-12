@@ -187,7 +187,11 @@ const draftLink = (link?: SectionLink): SectionLink => ({
   href: link?.href ?? "",
 });
 
+/** The crop, focal point and decorative flag ride through the editor
+ *  untouched: no prop form offers them yet (S2.07c), and a save must never be
+ *  the thing that throws away how an image was framed. */
 const draftImage = (image?: SectionImage): SectionImage => ({
+  ...image,
   blob_id: image?.blob_id ?? "",
   alt: image?.alt ?? "",
 });
@@ -370,10 +374,11 @@ const reqLink = (link: SectionLink): SectionLink => ({
 /** An optional image: no blob id means no image. */
 function optImage(image: SectionImage): SectionImage | undefined {
   const blob_id = image.blob_id.trim();
-  return blob_id === "" ? undefined : { blob_id, alt: image.alt.trim() };
+  return blob_id === "" ? undefined : { ...image, blob_id, alt: image.alt.trim() };
 }
 
 const reqImage = (image: SectionImage): SectionImage => ({
+  ...image,
   blob_id: image.blob_id.trim(),
   alt: image.alt.trim(),
 });

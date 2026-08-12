@@ -15,11 +15,32 @@ export interface SectionLink {
   href: string;
 }
 
-/** An image reference: a tenant blob id plus its alt text (empty alt is the
- *  deliberate spelling for a decorative image). */
+/** The visible rectangle of a source image, in basis points (ten-thousandths)
+ *  of its width and height from the top-left corner. Absent means the whole
+ *  image. */
+export interface ImageCrop {
+  x_bp: number;
+  y_bp: number;
+  width_bp: number;
+  height_bp: number;
+}
+
+/** The point of an image to keep in frame when a layout crops it further, in
+ *  basis points of the source. Absent means the centre of the crop. */
+export interface ImageFocalPoint {
+  x_bp: number;
+  y_bp: number;
+}
+
+/** An image reference: a tenant blob id, its alt text, and how it is
+ *  presented. A blank `alt` with `decorative` set means "nothing to describe";
+ *  a blank `alt` without it means the alt text is not written yet. */
 export interface SectionImage {
   blob_id: string;
   alt: string;
+  crop?: ImageCrop | undefined;
+  focal?: ImageFocalPoint | undefined;
+  decorative?: boolean | undefined;
 }
 
 /** Top navigation bar; the logo comes from the theme. */
