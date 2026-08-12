@@ -169,6 +169,7 @@ pub mod sites;
 pub mod sites_attribution;
 pub mod sites_conversions;
 pub mod sites_heatmap;
+pub mod sites_templates;
 pub mod snooze;
 pub mod spaces;
 pub mod state;

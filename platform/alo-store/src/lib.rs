@@ -182,6 +182,7 @@ pub mod site_public_heatmap;
 pub mod site_public_protection;
 pub mod site_publish;
 pub mod site_publish_schedule;
+pub mod site_templates;
 pub mod site_theme;
 pub mod site_translations;
 pub mod site_versions;
@@ -494,6 +495,10 @@ pub use site_publish_schedule::{
     DueSitePublish, MAX_SITE_PUBLISH_SCHEDULE_HISTORY, SITE_PUBLISH_CLAIM_STALE_MINUTES,
     SITE_PUBLISH_INTERRUPTED, SITE_PUBLISH_MAX_ATTEMPTS, SITE_PUBLISH_SCHEDULE_ERROR_MAX_CHARS,
     SITE_PUBLISH_SCHEDULE_MAX_AHEAD_DAYS, SitePublishSchedule, SitePublishScheduleStatus,
+};
+pub use site_templates::{
+    SiteTemplate, SiteTemplatePage, TEMPLATE_PLACEHOLDER_PRICE, check_template, site_template,
+    site_templates,
 };
 pub use site_theme::{
     DEFAULT_THEME_PRESET, SiteTheme, THEME_PRESETS, THEME_SCHEMA_VERSION, ThemePreset,

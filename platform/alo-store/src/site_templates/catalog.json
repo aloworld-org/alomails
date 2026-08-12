@@ -1,0 +1,1064 @@
+{
+  "templates": [
+    {
+      "id": "consultancy",
+      "version": 1,
+      "kind": "services",
+      "name": "Consultancy",
+      "summary": "Three pages for advisers, agencies and independent professionals: what you do, how you work, and a way to reach you.",
+      "theme_preset": "north",
+      "pages": [
+        {
+          "title": "Home",
+          "slug": "",
+          "is_home": true,
+          "seo_description": "Independent advice for owner-led companies: strategy reviews, operations and interim leadership.",
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "How we work", "href": "/how-we-work" },
+                  { "label": "Contact", "href": "/contact" }
+                ],
+                "cta": { "label": "Book a call", "href": "/contact" }
+              },
+              {
+                "type": "hero",
+                "heading": "Advice that survives contact with your business",
+                "subheading": "We work with owner-led companies on the decisions that are too big to guess at.",
+                "primary_cta": { "label": "Book a call", "href": "/contact" },
+                "secondary_cta": { "label": "How we work", "href": "/how-we-work" }
+              },
+              {
+                "type": "features",
+                "heading": "What we do",
+                "items": [
+                  {
+                    "title": "Strategy reviews",
+                    "body": "A short, structured look at where the business makes money and where it leaks it, ending in a written plan you own."
+                  },
+                  {
+                    "title": "Operations",
+                    "body": "Process, tooling and reporting for teams that have outgrown the spreadsheet they started on."
+                  },
+                  {
+                    "title": "Interim leadership",
+                    "body": "Hands-on cover for a role you are recruiting for, so the work does not stop while you hire."
+                  }
+                ]
+              },
+              {
+                "type": "cta",
+                "heading": "Start with a conversation",
+                "body": "Thirty minutes, no charge, and an honest answer about whether we are the right people for the work.",
+                "button": { "label": "Book a call", "href": "/contact" }
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "How we work", "href": "/how-we-work" },
+                  { "label": "Contact", "href": "/contact" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "How we work",
+          "slug": "how-we-work",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "How we work", "href": "/how-we-work" },
+                  { "label": "Contact", "href": "/contact" }
+                ],
+                "cta": { "label": "Book a call", "href": "/contact" }
+              },
+              {
+                "type": "hero",
+                "heading": "How we work",
+                "subheading": "Short engagements, written conclusions, and no dependency on us afterwards."
+              },
+              {
+                "type": "features",
+                "heading": "The engagement",
+                "items": [
+                  {
+                    "title": "1. A conversation",
+                    "body": "We listen to the problem as you describe it and say plainly whether it is one we can help with."
+                  },
+                  {
+                    "title": "2. A written proposal",
+                    "body": "Scope, price and the date you get the work back, on one page, before anything starts."
+                  },
+                  {
+                    "title": "3. The work",
+                    "body": "We do it, we write it down, and we hand it over so your team can keep running it without us."
+                  }
+                ]
+              },
+              {
+                "type": "faq",
+                "heading": "Questions we are asked",
+                "items": [
+                  {
+                    "question": "How long does an engagement take?",
+                    "answer": "Most reviews take two to four weeks. Anything longer is split into stages you can stop between."
+                  },
+                  {
+                    "question": "Do you work with our existing team?",
+                    "answer": "Always. Nothing we recommend works if the people who run it every day were not part of deciding it."
+                  },
+                  {
+                    "question": "What does it cost?",
+                    "answer": "Replace this answer with your own pricing, or say that you quote per engagement after the first call."
+                  }
+                ]
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Contact", "href": "/contact" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Contact",
+          "slug": "contact",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "How we work", "href": "/how-we-work" },
+                  { "label": "Contact", "href": "/contact" }
+                ]
+              },
+              {
+                "type": "hero",
+                "heading": "Contact",
+                "subheading": "Tell us what you are working on. We read every message ourselves."
+              },
+              {
+                "type": "contact_form",
+                "heading": "Send a message",
+                "body": "Add your phone number and address here if you would rather be called.",
+                "success_message": "Thank you — your message has arrived and we will reply within one working day."
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "How we work", "href": "/how-we-work" }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "restaurant",
+      "version": 1,
+      "kind": "hospitality",
+      "name": "Restaurant or café",
+      "summary": "A room, a menu and directions: the three pages a kitchen actually needs, with a booking enquiry form.",
+      "theme_preset": "terra",
+      "pages": [
+        {
+          "title": "Home",
+          "slug": "",
+          "is_home": true,
+          "seo_description": "A neighbourhood kitchen with a short seasonal menu. See the menu, opening hours and how to find us.",
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Menu", "href": "/menu" },
+                  { "label": "Visit", "href": "/visit" }
+                ],
+                "cta": { "label": "Book a table", "href": "/visit" }
+              },
+              {
+                "type": "hero",
+                "heading": "A neighbourhood kitchen",
+                "subheading": "Seasonal cooking, a short menu that changes with the market, and a room worth staying in.",
+                "primary_cta": { "label": "See the menu", "href": "/menu" },
+                "secondary_cta": { "label": "Find us", "href": "/visit" }
+              },
+              {
+                "type": "features",
+                "heading": "What to expect",
+                "items": [
+                  {
+                    "title": "Lunch",
+                    "body": "A two-course plate cooked from whatever came in that morning, served quickly enough to get back to work."
+                  },
+                  {
+                    "title": "Dinner",
+                    "body": "A longer menu, a small wine list chosen by the people who pour it, and no rush to turn the table."
+                  },
+                  {
+                    "title": "Private hire",
+                    "body": "The room seats a group for a birthday, a wake or a company dinner. Write to us and we will plan it with you."
+                  }
+                ]
+              },
+              {
+                "type": "cta",
+                "heading": "Come and eat",
+                "body": "Walk in, or write ahead if you are more than four.",
+                "button": { "label": "Book a table", "href": "/visit" }
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Menu", "href": "/menu" },
+                  { "label": "Visit", "href": "/visit" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Menu",
+          "slug": "menu",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Menu", "href": "/menu" },
+                  { "label": "Visit", "href": "/visit" }
+                ],
+                "cta": { "label": "Book a table", "href": "/visit" }
+              },
+              {
+                "type": "hero",
+                "heading": "The menu",
+                "subheading": "It changes with the season. Replace these dishes with yours and add your prices."
+              },
+              {
+                "type": "features",
+                "heading": "This week",
+                "items": [
+                  {
+                    "title": "To start",
+                    "body": "Describe two or three small plates here — what is in them and where they came from."
+                  },
+                  {
+                    "title": "Mains",
+                    "body": "Describe the plates the kitchen is proud of this week, with the price beside each one."
+                  },
+                  {
+                    "title": "Puddings",
+                    "body": "One or two, written the way you would say them out loud at the table."
+                  },
+                  {
+                    "title": "To drink",
+                    "body": "The wines, beers or coffees worth naming. A short list reads better than a long one."
+                  }
+                ]
+              },
+              {
+                "type": "faq",
+                "heading": "Before you come",
+                "items": [
+                  {
+                    "question": "Can you cook for dietary requirements?",
+                    "answer": "Say here what you can adapt and what you cannot, and ask guests to tell you when they book."
+                  },
+                  {
+                    "question": "Are children welcome?",
+                    "answer": "Answer honestly — a family deciding where to eat would rather read it here than find out at the door."
+                  }
+                ]
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Visit", "href": "/visit" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Visit",
+          "slug": "visit",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Menu", "href": "/menu" },
+                  { "label": "Visit", "href": "/visit" }
+                ]
+              },
+              {
+                "type": "hero",
+                "heading": "Find us",
+                "subheading": "Add your address, the nearest stop and anything a first-time guest needs to know."
+              },
+              {
+                "type": "features",
+                "heading": "Opening hours",
+                "items": [
+                  {
+                    "title": "Lunch",
+                    "body": "Add the days and times you serve lunch, so nobody arrives to a closed door."
+                  },
+                  {
+                    "title": "Dinner",
+                    "body": "Add the days and times you serve dinner, and the last order of the evening."
+                  }
+                ]
+              },
+              {
+                "type": "contact_form",
+                "heading": "Book a table",
+                "body": "Tell us the date, the time and how many of you there are, and we will confirm by email.",
+                "success_message": "Thank you — we have your request and will confirm your table by email."
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Menu", "href": "/menu" }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "portfolio",
+      "version": 1,
+      "kind": "creative",
+      "name": "Portfolio",
+      "summary": "For photographers, designers, studios and makers: the work first, a short note about you, and an enquiry form.",
+      "theme_preset": "ink",
+      "pages": [
+        {
+          "title": "Home",
+          "slug": "",
+          "is_home": true,
+          "seo_description": "Selected work, how the studio works, and how to commission a project.",
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Work", "href": "/work" },
+                  { "label": "Contact", "href": "/contact" }
+                ],
+                "cta": { "label": "Start a project", "href": "/contact" }
+              },
+              {
+                "type": "hero",
+                "heading": "Work made carefully, for people who will use it",
+                "subheading": "Write one sentence here that a stranger could repeat to somebody else about what you make.",
+                "primary_cta": { "label": "See the work", "href": "/work" },
+                "secondary_cta": { "label": "Start a project", "href": "/contact" }
+              },
+              {
+                "type": "features",
+                "heading": "What I take on",
+                "items": [
+                  {
+                    "title": "Commissions",
+                    "body": "Describe the kind of brief you do your best work on, and the size of project you take."
+                  },
+                  {
+                    "title": "Collaborations",
+                    "body": "Say who you like working alongside — studios, agencies, other makers — and in what role."
+                  },
+                  {
+                    "title": "Prints and licensing",
+                    "body": "If existing work can be bought or licensed, say so here and point at how."
+                  }
+                ]
+              },
+              {
+                "type": "cta",
+                "heading": "Have something in mind?",
+                "body": "A paragraph about the project is enough to start. There is no form to fill in twice.",
+                "button": { "label": "Start a project", "href": "/contact" }
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Work", "href": "/work" },
+                  { "label": "Contact", "href": "/contact" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Work",
+          "slug": "work",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Work", "href": "/work" },
+                  { "label": "Contact", "href": "/contact" }
+                ],
+                "cta": { "label": "Start a project", "href": "/contact" }
+              },
+              {
+                "type": "hero",
+                "heading": "Selected work",
+                "subheading": "Replace these with your own projects, and add a picture to each one from the editor."
+              },
+              {
+                "type": "features",
+                "heading": "Projects",
+                "items": [
+                  {
+                    "title": "Project one",
+                    "body": "What it was, who it was for, and the one decision that made it work. Two sentences beat two paragraphs."
+                  },
+                  {
+                    "title": "Project two",
+                    "body": "What the client needed, what you made, and what happened afterwards."
+                  },
+                  {
+                    "title": "Project three",
+                    "body": "A piece you would take on again. Say why."
+                  }
+                ]
+              },
+              {
+                "type": "cta",
+                "heading": "The full portfolio",
+                "body": "Add a gallery section here from the editor to show the pictures at full width.",
+                "button": { "label": "Get in touch", "href": "/contact" }
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Contact", "href": "/contact" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Contact",
+          "slug": "contact",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Work", "href": "/work" },
+                  { "label": "Contact", "href": "/contact" }
+                ]
+              },
+              {
+                "type": "hero",
+                "heading": "Start a project",
+                "subheading": "Tell me what it is, roughly when it needs to exist, and I will tell you honestly if I am the right person."
+              },
+              {
+                "type": "contact_form",
+                "heading": "Tell me about it",
+                "success_message": "Thank you — your note has arrived and you will hear back from me shortly."
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Work", "href": "/work" }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "nonprofit",
+      "version": 1,
+      "kind": "nonprofit",
+      "name": "Association or charity",
+      "summary": "For clubs, associations and charities: the cause, the work it pays for, and the ways somebody can help.",
+      "theme_preset": "fern",
+      "pages": [
+        {
+          "title": "Home",
+          "slug": "",
+          "is_home": true,
+          "seo_description": "What we do, who it helps, and how to take part or support the work.",
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "What we do", "href": "/what-we-do" },
+                  { "label": "Get involved", "href": "/get-involved" }
+                ],
+                "cta": { "label": "Get involved", "href": "/get-involved" }
+              },
+              {
+                "type": "hero",
+                "heading": "Say the cause in one line, the way a member would say it",
+                "subheading": "Then say who it is for and where you work, so a stranger knows in five seconds whether this is their place.",
+                "primary_cta": { "label": "What we do", "href": "/what-we-do" },
+                "secondary_cta": { "label": "Get involved", "href": "/get-involved" }
+              },
+              {
+                "type": "features",
+                "heading": "The work",
+                "items": [
+                  {
+                    "title": "What we run",
+                    "body": "Describe the activity somebody could turn up to next week, and where and when it happens."
+                  },
+                  {
+                    "title": "Who it is for",
+                    "body": "Say plainly who is welcome and what it costs, if anything, to take part."
+                  },
+                  {
+                    "title": "Who runs it",
+                    "body": "Volunteers, staff or both — say which, because people give differently when they know."
+                  }
+                ]
+              },
+              {
+                "type": "cta",
+                "heading": "Take part",
+                "body": "Members, volunteers and donors all start the same way: by getting in touch.",
+                "button": { "label": "Get involved", "href": "/get-involved" }
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "What we do", "href": "/what-we-do" },
+                  { "label": "Get involved", "href": "/get-involved" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "What we do",
+          "slug": "what-we-do",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "What we do", "href": "/what-we-do" },
+                  { "label": "Get involved", "href": "/get-involved" }
+                ],
+                "cta": { "label": "Get involved", "href": "/get-involved" }
+              },
+              {
+                "type": "hero",
+                "heading": "What we do",
+                "subheading": "One paragraph on the problem, and one on what your organisation actually does about it."
+              },
+              {
+                "type": "features",
+                "heading": "Our programmes",
+                "items": [
+                  {
+                    "title": "Programme one",
+                    "body": "What happens, how often, and what it changes for the people it is for."
+                  },
+                  {
+                    "title": "Programme two",
+                    "body": "The same, in the same length. Consistency reads as competence."
+                  },
+                  {
+                    "title": "Programme three",
+                    "body": "If you only run two, delete this one rather than inventing a third."
+                  }
+                ]
+              },
+              {
+                "type": "faq",
+                "heading": "Questions supporters ask",
+                "items": [
+                  {
+                    "question": "Where does the money go?",
+                    "answer": "Answer with real figures once you have them, and link your annual accounts here."
+                  },
+                  {
+                    "question": "How can I help if I have no money to give?",
+                    "answer": "Name the practical things — time, a skill, a room, a lift — that you genuinely need."
+                  }
+                ]
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Get involved", "href": "/get-involved" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Get involved",
+          "slug": "get-involved",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "What we do", "href": "/what-we-do" },
+                  { "label": "Get involved", "href": "/get-involved" }
+                ]
+              },
+              {
+                "type": "hero",
+                "heading": "Get involved",
+                "subheading": "Join, volunteer, or ask a question. Somebody reads every message."
+              },
+              {
+                "type": "features",
+                "heading": "Three ways to help",
+                "items": [
+                  {
+                    "title": "Become a member",
+                    "body": "Say what membership costs, what it gives, and how somebody joins."
+                  },
+                  {
+                    "title": "Volunteer",
+                    "body": "Say what you need doing and how much time it takes. Vague asks get vague answers."
+                  },
+                  {
+                    "title": "Donate",
+                    "body": "Add your bank details or donation link here once they are ready."
+                  }
+                ]
+              },
+              {
+                "type": "contact_form",
+                "heading": "Write to us",
+                "success_message": "Thank you — your message has arrived and one of us will reply soon."
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "What we do", "href": "/what-we-do" }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "product",
+      "version": 1,
+      "kind": "product",
+      "name": "Software or product",
+      "summary": "For a product or subscription: what it does, what it costs, and a way to ask. Prices are left blank for you to set.",
+      "theme_preset": "midnight",
+      "pages": [
+        {
+          "title": "Home",
+          "slug": "",
+          "is_home": true,
+          "seo_description": "What the product does, who it is for, and what it costs.",
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Pricing", "href": "/pricing" },
+                  { "label": "Contact", "href": "/contact" }
+                ],
+                "cta": { "label": "Get in touch", "href": "/contact" }
+              },
+              {
+                "type": "hero",
+                "heading": "Say what it does, not what category it is in",
+                "subheading": "One sentence a customer could repeat to a colleague, and one on who it is for.",
+                "primary_cta": { "label": "See pricing", "href": "/pricing" },
+                "secondary_cta": { "label": "Ask a question", "href": "/contact" }
+              },
+              {
+                "type": "features",
+                "heading": "What you get",
+                "items": [
+                  {
+                    "title": "The first thing it does",
+                    "body": "Describe the job it does for the customer, in their words rather than yours."
+                  },
+                  {
+                    "title": "The second thing",
+                    "body": "The next most common reason somebody buys it. Stop at three; a list of ten reads as none."
+                  },
+                  {
+                    "title": "The third thing",
+                    "body": "Something true that a competitor cannot copy this quarter."
+                  }
+                ]
+              },
+              {
+                "type": "cta",
+                "heading": "Try it with your own data",
+                "body": "Replace this with whatever the first real step is: a trial, a demo, or a conversation.",
+                "button": { "label": "Get in touch", "href": "/contact" }
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Pricing", "href": "/pricing" },
+                  { "label": "Contact", "href": "/contact" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Pricing",
+          "slug": "pricing",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Pricing", "href": "/pricing" },
+                  { "label": "Contact", "href": "/contact" }
+                ],
+                "cta": { "label": "Get in touch", "href": "/contact" }
+              },
+              {
+                "type": "hero",
+                "heading": "Pricing",
+                "subheading": "The prices below are blank on purpose — only you can set them."
+              },
+              {
+                "type": "pricing",
+                "heading": "Plans",
+                "intro": "Replace the names, the prices and the lines under them with your own.",
+                "tiers": [
+                  {
+                    "name": "Starter",
+                    "price": "—",
+                    "period": "per month",
+                    "description": "For one person getting started.",
+                    "features": [
+                      "Name the limit that defines this plan",
+                      "Then two things it includes",
+                      "And what support looks like"
+                    ],
+                    "cta": { "label": "Get in touch", "href": "/contact" }
+                  },
+                  {
+                    "name": "Team",
+                    "price": "—",
+                    "period": "per month",
+                    "description": "For a small team working together.",
+                    "features": [
+                      "Everything in Starter",
+                      "The thing teams actually pay more for",
+                      "How quickly you answer them"
+                    ],
+                    "cta": { "label": "Get in touch", "href": "/contact" },
+                    "highlighted": true
+                  },
+                  {
+                    "name": "Company",
+                    "price": "—",
+                    "description": "For organisations with their own requirements.",
+                    "features": [
+                      "Everything in Team",
+                      "What changes at this size",
+                      "Who they can call"
+                    ],
+                    "cta": { "label": "Talk to us", "href": "/contact" }
+                  }
+                ]
+              },
+              {
+                "type": "faq",
+                "heading": "Pricing questions",
+                "items": [
+                  {
+                    "question": "Can I change plan later?",
+                    "answer": "Answer plainly, including what happens to money already paid."
+                  },
+                  {
+                    "question": "Are the prices excluding VAT?",
+                    "answer": "Say which, every time. A price a business customer has to guess at is a price they distrust."
+                  }
+                ]
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Contact", "href": "/contact" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Contact",
+          "slug": "contact",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Pricing", "href": "/pricing" },
+                  { "label": "Contact", "href": "/contact" }
+                ]
+              },
+              {
+                "type": "hero",
+                "heading": "Ask us anything",
+                "subheading": "Questions about the product, the price or whether it fits how you already work."
+              },
+              {
+                "type": "contact_form",
+                "heading": "Send a message",
+                "success_message": "Thank you — your message has arrived and we will reply within one working day."
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Pricing", "href": "/pricing" }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "trades",
+      "version": 1,
+      "kind": "local-services",
+      "name": "Local trade",
+      "summary": "For plumbers, electricians, builders and installers: the work you cover, the area you cover, and a quote request.",
+      "theme_preset": "carbon",
+      "pages": [
+        {
+          "title": "Home",
+          "slug": "",
+          "is_home": true,
+          "seo_description": "Local, insured and reachable: the work we cover, the area we cover, and how to get a quote.",
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Services", "href": "/services" },
+                  { "label": "Get a quote", "href": "/contact" }
+                ],
+                "cta": { "label": "Get a quote", "href": "/contact" }
+              },
+              {
+                "type": "hero",
+                "heading": "The trade, the town, and a number that gets answered",
+                "subheading": "Put your trade and your area in this line — it is the only thing most visitors read.",
+                "primary_cta": { "label": "Get a quote", "href": "/contact" },
+                "secondary_cta": { "label": "What we do", "href": "/services" }
+              },
+              {
+                "type": "features",
+                "heading": "Why people call us",
+                "items": [
+                  {
+                    "title": "We turn up",
+                    "body": "Say what somebody can expect: when you answer the phone, and how soon you can come out."
+                  },
+                  {
+                    "title": "Fixed quotes",
+                    "body": "Say how you price the work and whether the quote can change once you have seen the job."
+                  },
+                  {
+                    "title": "Insured and certified",
+                    "body": "List your certifications and registration numbers here — they are the reason a stranger trusts you."
+                  }
+                ]
+              },
+              {
+                "type": "cta",
+                "heading": "Tell us about the job",
+                "body": "A sentence and a photo are usually enough for a first estimate.",
+                "button": { "label": "Get a quote", "href": "/contact" }
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Services", "href": "/services" },
+                  { "label": "Get a quote", "href": "/contact" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Services",
+          "slug": "services",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Services", "href": "/services" },
+                  { "label": "Get a quote", "href": "/contact" }
+                ],
+                "cta": { "label": "Get a quote", "href": "/contact" }
+              },
+              {
+                "type": "hero",
+                "heading": "What we do",
+                "subheading": "Keep this list to the work you want more of."
+              },
+              {
+                "type": "features",
+                "heading": "The work",
+                "items": [
+                  {
+                    "title": "Repairs",
+                    "body": "The jobs you are called out to most. Say roughly how quickly you can get to one."
+                  },
+                  {
+                    "title": "Installations",
+                    "body": "The planned work you quote for, and what a typical job involves from first visit to finish."
+                  },
+                  {
+                    "title": "Maintenance",
+                    "body": "Anything you do on a contract or a yearly visit, and who it is worth having."
+                  },
+                  {
+                    "title": "Emergencies",
+                    "body": "Say honestly whether you take emergency calls, when, and what that costs."
+                  }
+                ]
+              },
+              {
+                "type": "faq",
+                "heading": "Before you call",
+                "items": [
+                  {
+                    "question": "Which areas do you cover?",
+                    "answer": "Name the towns and postcodes. This is the question you are asked most often."
+                  },
+                  {
+                    "question": "Do you charge for a quote?",
+                    "answer": "Answer plainly, including any call-out fee, so nobody is surprised on the doorstep."
+                  }
+                ]
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Get a quote", "href": "/contact" }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "title": "Get a quote",
+          "slug": "contact",
+          "is_home": false,
+          "sections": {
+            "schema_version": 1,
+            "sections": [
+              {
+                "type": "nav",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Services", "href": "/services" },
+                  { "label": "Get a quote", "href": "/contact" }
+                ]
+              },
+              {
+                "type": "hero",
+                "heading": "Get a quote",
+                "subheading": "Describe the job and where you are. Add your phone number below if you would rather be called."
+              },
+              {
+                "type": "contact_form",
+                "heading": "Tell us about the job",
+                "body": "The more you can say about the property and the problem, the closer the estimate will be.",
+                "success_message": "Thank you — we have the details and will come back to you with an estimate."
+              },
+              {
+                "type": "footer",
+                "links": [
+                  { "label": "Home", "href": "/" },
+                  { "label": "Services", "href": "/services" }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

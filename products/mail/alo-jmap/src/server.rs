@@ -33,7 +33,8 @@ use crate::{
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
-    sites_attribution, sites_conversions, sites_heatmap, snooze, spaces, tasks, unsubscribe, wopi,
+    sites_attribution, sites_conversions, sites_heatmap, sites_templates, snooze, spaces, tasks,
+    unsubscribe, wopi,
     workspace_search,
 };
 
@@ -289,6 +290,18 @@ pub fn app_with_site_domain_dns(
         .route("/sites/subdomain-check", get(sites::check_subdomain))
         .route("/sites/theme-presets", get(sites::list_theme_presets))
         .route("/sites/config", get(sites::sites_config))
+        // The shipped template catalog (S2.11a) — the manual sibling of
+        // `/sites/generate`. Static paths, so they resolve ahead of
+        // `/sites/{id}`.
+        .route("/sites/templates", get(sites_templates::list_templates))
+        .route(
+            "/sites/templates/{id}",
+            post(sites_templates::instantiate_template),
+        )
+        .route(
+            "/sites/templates/{id}/preview",
+            get(sites_templates::preview_template),
+        )
         .route(
             "/sites/invitations/{token}",
             get(sites::get_collaborator_invitation).post(sites::accept_collaborator_invitation),

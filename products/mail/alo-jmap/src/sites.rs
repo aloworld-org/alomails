@@ -108,7 +108,7 @@ fn iso(t: OffsetDateTime) -> String {
 
 /// A site as JSON. `theme` is the stored envelope (or the pristine `{}` of a
 /// site that never set one) — always a value that passed the theme gate.
-fn site_json(s: &Site) -> Value {
+pub(crate) fn site_json(s: &Site) -> Value {
     json!({
         "id": s.id.as_str(),
         "name": s.name,
@@ -139,7 +139,7 @@ fn site_domain_json(domain: &SiteDomain) -> Value {
 
 /// A page as JSON. The sections envelope rides along only where the caller
 /// asked for one page (`with_sections`); the list stays lean.
-fn page_json(p: &SitePage, with_sections: bool) -> Value {
+pub(crate) fn page_json(p: &SitePage, with_sections: bool) -> Value {
     let mut j = json!({
         "id": p.id.as_str(),
         "slug": p.slug,
