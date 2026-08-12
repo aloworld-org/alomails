@@ -169,10 +169,10 @@
   max-width: calc(100% - var(--space-8));
   max-height: none;
   transform: translateX(-50%);
-  gap: var(--space-2);
-  padding: var(--space-2);
+  gap: var(--space-1);
+  padding: var(--space-1);
   border: var(--border-width) solid var(--navy-400);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--bg-rail);
   box-shadow: var(--shadow-lg);
 }
@@ -180,8 +180,31 @@
 .livekit :global(.lk-control-bar .lk-button),
 .livekit :global(.lk-control-bar .lk-chat-toggle) {
   min-height: var(--control-height);
+  padding-inline: var(--space-4);
+  border: var(--border-width) solid transparent;
   border-radius: var(--radius-md);
+  background: transparent;
   font-weight: var(--weight-medium);
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.livekit :global(.lk-control-bar .lk-button:hover),
+.livekit :global(.lk-control-bar .lk-chat-toggle:hover) {
+  background: var(--bg-rail-hover);
+}
+
+.livekit :global(.lk-control-bar .lk-button:active),
+.livekit :global(.lk-control-bar .lk-chat-toggle:active) {
+  transform: translateY(var(--border-width));
+}
+
+.livekit :global(.lk-control-bar .lk-button-menu) {
+  margin-left: calc(var(--space-2) * -1);
+  padding-inline: var(--space-2);
+  border-left-color: var(--navy-400);
 }
 
 .livekit :global(.lk-control-bar .lk-button[data-lk-source="microphone"][data-lk-enabled="false"]),
@@ -219,37 +242,80 @@
   overflow: hidden;
   border: var(--border-width) solid var(--navy-400);
   border-radius: var(--radius-xl);
-  background: var(--bg-rail);
+  background: var(--navy-600);
   box-shadow: var(--shadow-lg);
 }
 
 .livekit :global(.lk-chat-header) {
-  justify-content: flex-start;
-  padding: var(--space-4);
+  min-height: var(--space-16);
+  padding: var(--space-3) var(--space-4);
   border-bottom: var(--border-width) solid var(--navy-400);
-  font-size: var(--text-lg);
+  background: var(--bg-rail);
+  font-size: var(--text-base);
   font-weight: var(--weight-semibold);
 }
 
 .livekit :global(.lk-chat-messages) {
+  position: relative;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.livekit :global(.lk-chat-entry) {
   gap: var(--space-2);
-  padding: var(--space-3);
+}
+
+.livekit :global(.lk-chat-entry .lk-meta-data) {
+  color: var(--text-on-rail-muted);
+  font-size: var(--text-xs);
 }
 
 .livekit :global(.lk-chat-entry .lk-message-body) {
   padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-lg);
+  border: var(--border-width) solid var(--navy-400);
+  border-radius: var(--radius-md) var(--radius-lg) var(--radius-lg) var(--radius-lg);
+  background: var(--bg-rail);
+  line-height: var(--leading-normal);
 }
 
 .livekit :global(.lk-chat-form) {
   max-height: none;
   padding: var(--space-3);
   border-top: var(--border-width) solid var(--navy-400);
+  background: var(--bg-rail);
+  gap: var(--space-2);
 }
 
 .livekit :global(.lk-chat-form-input) {
   min-height: var(--control-height);
+  padding-inline: var(--space-3);
+  border-color: var(--navy-400);
   border-radius: var(--radius-md);
+  background: var(--navy-600);
+  color: var(--text-on-rail);
+}
+
+.livekit :global(.lk-chat-form-input::placeholder) {
+  color: var(--text-on-rail-muted);
+}
+
+.livekit :global(.lk-chat-form button[type="submit"]) {
+  min-width: var(--space-16);
+  min-height: var(--control-height);
+  padding-inline: var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-weight: var(--weight-semibold);
+}
+
+.livekit :global(.lk-chat-form button[type="submit"]:hover:not(:disabled)) {
+  background: var(--accent-hover);
+}
+
+.livekit :global(.lk-chat-form button[type="submit"]:disabled) {
+  opacity: 0.55;
 }
 
 /* Our own way out, above the engine's UI: leaving is ours to guarantee, not
@@ -462,18 +528,20 @@
   margin-bottom: var(--space-16);
 }
 
-.meetingActions { position: absolute; z-index: 12; right: var(--space-4); top: var(--space-4); display: flex; gap: var(--space-2); }
-.meetingActions button { min-height: 44px; border: 1px solid rgb(255 255 255 / 16%); border-radius: var(--radius-md); padding: 0 var(--space-3); background: rgb(20 27 31 / 88%); color: white; display: inline-flex; align-items: center; gap: var(--space-2); cursor: pointer; }
-.meetingActions button:hover, .meetingActions .actionActive { background: var(--accent); }
-.meetingActions svg { width: 18px; }
+.meetingActions { position: absolute; z-index: 12; right: calc(var(--space-4) + var(--space-16) + var(--space-12)); top: var(--space-4); display: flex; gap: var(--space-1); padding: var(--space-1); border: var(--border-width) solid var(--navy-400); border-radius: var(--radius-lg); background: var(--bg-rail); box-shadow: var(--shadow-md); }
+.meetingActions button { min-height: var(--control-height); border: var(--border-width) solid transparent; border-radius: var(--radius-md); padding: 0 var(--space-3); background: transparent; color: var(--text-on-rail); display: inline-flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-medium); cursor: pointer; transition: background var(--transition-fast), transform var(--transition-fast); }
+.meetingActions button:hover { background: var(--bg-rail-hover); }
+.meetingActions button:active { transform: translateY(var(--border-width)); }
+.meetingActions .actionActive { background: var(--accent); color: var(--text-on-accent); }
+.meetingActions svg { width: var(--icon-size-control); height: var(--icon-size-control); }
 .reactions { position: relative; }
-.reactionMenu { display: none; position: absolute; top: calc(100% + var(--space-2)); left: 50%; transform: translateX(-50%); padding: var(--space-2); gap: var(--space-1); border-radius: var(--radius-lg); background: rgb(20 27 31 / 96%); box-shadow: var(--shadow-lg); }
+.reactionMenu { display: none; position: absolute; top: calc(100% + var(--space-2)); left: 50%; transform: translateX(-50%); padding: var(--space-1); gap: var(--space-1); border: var(--border-width) solid var(--navy-400); border-radius: var(--radius-lg); background: var(--bg-rail); box-shadow: var(--shadow-lg); }
 .reactions:hover .reactionMenu, .reactions:focus-within .reactionMenu { display: flex; }
-.reactionMenu button { min-width: 40px; padding: 0; font-size: 20px; }
-.raisedHands { position: absolute; z-index: 11; top: 76px; right: var(--space-4); display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: 999px; background: var(--accent-tint); color: var(--accent-hover); }
-.raisedHands svg { width: 18px; }
+.reactionMenu button { min-width: var(--control-height); padding: 0; font-size: var(--text-lg); }
+.raisedHands { position: absolute; z-index: 11; top: calc(var(--space-16) + var(--space-3)); right: var(--space-4); display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: var(--border-width) solid var(--accent); border-radius: var(--radius-full); background: var(--accent-tint); color: var(--accent-active); box-shadow: var(--shadow-sm); }
+.raisedHands svg { width: var(--icon-size-control); height: var(--icon-size-control); }
 .reactionBurst { position: absolute; z-index: 15; left: 50%; bottom: 120px; animation: reaction-rise 2.8s ease-out forwards; display: grid; justify-items: center; pointer-events: none; }
 .reactionBurst span { font-size: 64px; }
-.reactionBurst small { color: white; font-weight: 700; }
+.reactionBurst small { color: var(--text-on-rail); font-weight: var(--weight-bold); }
 @keyframes reaction-rise { from { opacity: 0; transform: translate(-50%, 30px) scale(.7); } 15%, 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -160px) scale(1.15); } }
-@media (max-width: 48rem) { .meetingActions { top: auto; bottom: 90px; left: var(--space-2); right: var(--space-2); justify-content: center; } .meetingActions button { padding: 0 var(--space-2); } .raisedHands { top: var(--space-16); } }
+@media (max-width: 48rem) { .meetingActions { top: auto; bottom: calc(var(--space-16) + var(--space-8)); left: 50%; right: auto; max-width: calc(100% - var(--space-4)); transform: translateX(-50%); } .meetingActions button { padding: 0 var(--space-2); } .raisedHands { top: var(--space-16); } }
