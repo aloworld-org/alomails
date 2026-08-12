@@ -2778,6 +2778,64 @@ export const fr: Partial<Catalog> = {
   sitesAnalyticsEmptyBody:
     "Ouvrez ou partagez votre site publié. Ses premières visites apparaîtront ici automatiquement.",
   sitesAnalyticsOpenSite: "Ouvrir le site publié",
+  sitesAnalyticsPrivacyBeacon:
+    "Le temps de lecture et les clics sortants sont signalés par un petit script présent sur vos pages. Il ne porte aucune identité, si bien que deux signalements d’un même navigateur ne peuvent pas être reliés.",
+  // Sites — les panneaux de détail regroupés (S2.08b).
+  sitesAnalyticsGroupArrival: "Comment on vous a trouvé",
+  sitesAnalyticsGroupPages: "Ce qui a été consulté",
+  sitesAnalyticsGroupReading: "Comment on vous a lu",
+  sitesAnalyticsShowAll: (count: number) => `Tout afficher (${count})`,
+  sitesAnalyticsShowTop: (count: number) => `Afficher les ${count} premiers`,
+  sitesAnalyticsReferrersNote:
+    "Le site depuis lequel un visiteur a suivi un lien. Seul le domaine est conservé, jamais la page.",
+  sitesAnalyticsReferrersEmpty:
+    "Aucune source pour le moment. Elles apparaissent lorsqu’un autre site pointe vers le vôtre.",
+  sitesAnalyticsCampaigns: "Campagnes",
+  sitesAnalyticsCampaignsNote:
+    "Lues dans le paramètre utm_campaign des liens que vous partagez, pour distinguer une infolettre d’une affiche.",
+  sitesAnalyticsCampaignsEmpty:
+    "Aucune campagne pour le moment. Ajoutez ?utm_campaign=mailing-printemps à un lien que vous partagez et ses visites seront comptées ici.",
+  sitesAnalyticsNoCampaign: "Sans campagne",
+  sitesAnalyticsCountries: "Pays",
+  sitesAnalyticsCountriesNote:
+    "Déterminés par le réseau placé devant votre site, jamais à partir d’une adresse de visiteur conservée.",
+  sitesAnalyticsCountriesEmpty:
+    "Aucun pays signalé. Votre site est servi sans réseau qui les nomme : ce panneau reste vide, et tous les autres chiffres restent complets.",
+  sitesAnalyticsNotReported: "Non communiqué",
+  sitesAnalyticsTopPagesNote: "Les pages les plus ouvertes.",
+  sitesAnalyticsPagesEmpty: "Aucune page comptée sur cette période.",
+  sitesAnalyticsEntryPages: "Pages d’arrivée",
+  sitesAnalyticsEntryPagesNote:
+    "La page par laquelle la journée d’un visiteur sur votre site a commencé.",
+  sitesAnalyticsExitPages: "Dernières pages",
+  sitesAnalyticsExitPagesNote:
+    "La dernière page vue ce jour-là. C’est là que la lecture s’est terminée, pas nécessairement là où elle a été abandonnée.",
+  sitesAnalyticsReadTime: "Temps de lecture",
+  sitesAnalyticsReadTimeNote:
+    "Combien de temps les pages sont restées à l’écran, pour l’ensemble du site et non page par page. Seuls les navigateurs qui le signalent sont comptés : ces chiffres n’atteignent donc jamais votre total de visites.",
+  sitesAnalyticsReadTimeEmpty:
+    "Aucun temps de lecture pour le moment. Ils arrivent dès que des visiteurs ouvrent vos pages publiées dans un navigateur qui les signale.",
+  sitesAnalyticsReadUnder10s: "Moins de 10 secondes",
+  sitesAnalyticsRead10to30s: "10 à 30 secondes",
+  sitesAnalyticsRead30to60s: "30 à 60 secondes",
+  sitesAnalyticsRead1to3m: "1 à 3 minutes",
+  sitesAnalyticsRead3to10m: "3 à 10 minutes",
+  sitesAnalyticsReadOver10m: "Plus de 10 minutes",
+  sitesAnalyticsOutbound: "Liens sortants",
+  sitesAnalyticsOutboundNote:
+    "Les domaines vers lesquels les visiteurs sont partis. Au-delà de 200 destinations par jour, les suivantes sont comptées ensemble.",
+  sitesAnalyticsOutboundEmpty:
+    "Aucun clic sortant pour le moment. Ils sont comptés lorsqu’un visiteur suit un lien vers un autre site.",
+  sitesAnalyticsOutboundOther: "Autres domaines",
+  sitesAnalyticsDevices: "Appareils",
+  sitesAnalyticsDevicesNote:
+    "Une catégorie sommaire, tirée de ce que le navigateur dit de lui-même. Rien de plus n’en est conservé.",
+  sitesAnalyticsDevicesEmpty: "Aucun appareil compté sur cette période.",
+  sitesAnalyticsDevicePhone: "Téléphone",
+  sitesAnalyticsDeviceTablet: "Tablette",
+  sitesAnalyticsDeviceDesktop: "Ordinateur",
+  sitesAnalyticsDeviceBot: "Robots et moteurs",
+  sitesAnalyticsDeviceUnknown: "Non reconnu",
   // Sites — l'historique des versions publiées (S2.04b).
   sitesHistory: "Historique des versions",
   sitesHistorySubtitle:

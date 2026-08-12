@@ -369,6 +369,28 @@ export interface SiteAnalyticsReport {
     visits: number;
     uniqueVisitors: number;
   }>;
+  /** `utm_campaign` labels on the links people followed. */
+  campaigns: SiteAnalyticsDimension[];
+  /** Two-letter country codes an edge proxy resolved. */
+  countries: SiteAnalyticsDimension[];
+  /** Coarse device classes: `phone`, `tablet`, `desktop`, `bot`, `unknown`. */
+  devices: SiteAnalyticsDimension[];
+  /** The page a visitor's day started on. */
+  entryPages: SiteAnalyticsDimension[];
+  /** The last page of a visitor's day. */
+  exitPages: SiteAnalyticsDimension[];
+  /** How long views stayed readable, already in bucket order. */
+  readTime: SiteAnalyticsDimension[];
+  /** Domains visitors followed a link to; `other` is the day's overflow. */
+  outboundDomains: SiteAnalyticsDimension[];
+}
+
+/** One value of a second-generation aggregate. These count views, not people:
+ *  no visitor token is kept per campaign, country, or device, so there is no
+ *  unique count to report. An empty `label` means "not reported". */
+export interface SiteAnalyticsDimension {
+  label: string;
+  visits: number;
 }
 
 /** The deployment-wide sites config: published sites serve at

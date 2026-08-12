@@ -2742,6 +2742,64 @@ export const nl: Partial<Catalog> = {
   sitesAnalyticsEmptyBody:
     "Open of deel uw gepubliceerde site. De eerste bezoeken verschijnen hier automatisch.",
   sitesAnalyticsOpenSite: "Live site openen",
+  sitesAnalyticsPrivacyBeacon:
+    "Leestijd en uitgaande kliks worden gemeld door een klein script op uw pagina’s. Het draagt geen enkele identiteit mee, dus twee meldingen van dezelfde browser zijn niet aan elkaar te koppelen.",
+  // Sites — de gegroepeerde detailpanelen (S2.08b).
+  sitesAnalyticsGroupArrival: "Hoe men u vond",
+  sitesAnalyticsGroupPages: "Wat men bekeek",
+  sitesAnalyticsGroupReading: "Hoe men las",
+  sitesAnalyticsShowAll: (count: number) => `Alle ${count} tonen`,
+  sitesAnalyticsShowTop: (count: number) => `Top ${count} tonen`,
+  sitesAnalyticsReferrersNote:
+    "De site vanwaar een bezoeker een link volgde. Alleen het domein wordt bewaard, nooit de pagina.",
+  sitesAnalyticsReferrersEmpty:
+    "Nog geen verwijzers. Ze verschijnen zodra een andere site naar de uwe linkt.",
+  sitesAnalyticsCampaigns: "Campagnes",
+  sitesAnalyticsCampaignsNote:
+    "Gelezen uit utm_campaign in de links die u deelt, zodat u een nieuwsbrief van een affiche kunt onderscheiden.",
+  sitesAnalyticsCampaignsEmpty:
+    "Nog geen campagnes. Voeg ?utm_campaign=lentemailing toe aan een link die u deelt en de bezoeken worden hier geteld.",
+  sitesAnalyticsNoCampaign: "Zonder campagne",
+  sitesAnalyticsCountries: "Landen",
+  sitesAnalyticsCountriesNote:
+    "Bepaald door het netwerk vóór uw site, nooit uit een bewaard bezoekersadres.",
+  sitesAnalyticsCountriesEmpty:
+    "Geen landen gemeld. Uw site wordt geserveerd zonder netwerk dat ze benoemt: dit paneel blijft leeg, alle andere cijfers blijven volledig.",
+  sitesAnalyticsNotReported: "Niet gemeld",
+  sitesAnalyticsTopPagesNote: "De pagina’s die het vaakst zijn geopend.",
+  sitesAnalyticsPagesEmpty: "Nog geen pagina’s geteld in deze periode.",
+  sitesAnalyticsEntryPages: "Eerste pagina’s",
+  sitesAnalyticsEntryPagesNote:
+    "De pagina waarmee de dag van een bezoeker op uw site begon.",
+  sitesAnalyticsExitPages: "Laatste pagina’s",
+  sitesAnalyticsExitPagesNote:
+    "De laatste pagina die die dag is gezien. Daar eindigde het lezen, niet noodzakelijk waar iemand afhaakte.",
+  sitesAnalyticsReadTime: "Leestijd",
+  sitesAnalyticsReadTimeNote:
+    "Hoelang pagina’s in beeld bleven, voor de hele site en niet per pagina. Alleen browsers die het melden tellen mee, dus deze aantallen halen uw bezoekcijfer nooit.",
+  sitesAnalyticsReadTimeEmpty:
+    "Nog geen leestijden. Ze komen binnen zodra bezoekers uw gepubliceerde pagina’s openen in een browser die dit meldt.",
+  sitesAnalyticsReadUnder10s: "Minder dan 10 seconden",
+  sitesAnalyticsRead10to30s: "10 tot 30 seconden",
+  sitesAnalyticsRead30to60s: "30 tot 60 seconden",
+  sitesAnalyticsRead1to3m: "1 tot 3 minuten",
+  sitesAnalyticsRead3to10m: "3 tot 10 minuten",
+  sitesAnalyticsReadOver10m: "Meer dan 10 minuten",
+  sitesAnalyticsOutbound: "Uitgaande links",
+  sitesAnalyticsOutboundNote:
+    "Domeinen waarnaar bezoekers vertrokken. Voorbij 200 bestemmingen per dag worden de overige samen geteld.",
+  sitesAnalyticsOutboundEmpty:
+    "Nog geen uitgaande kliks. Ze worden geteld wanneer een bezoeker een link naar een andere site volgt.",
+  sitesAnalyticsOutboundOther: "Andere domeinen",
+  sitesAnalyticsDevices: "Apparaten",
+  sitesAnalyticsDevicesNote:
+    "Een grove klasse, afgeleid uit wat de browser over zichzelf zegt. Meer wordt er niet van bewaard.",
+  sitesAnalyticsDevicesEmpty: "Nog geen apparaten geteld in deze periode.",
+  sitesAnalyticsDevicePhone: "Telefoon",
+  sitesAnalyticsDeviceTablet: "Tablet",
+  sitesAnalyticsDeviceDesktop: "Computer",
+  sitesAnalyticsDeviceBot: "Bots en crawlers",
+  sitesAnalyticsDeviceUnknown: "Niet herkend",
   // Sites — de geschiedenis van gepubliceerde versies (S2.04b).
   sitesHistory: "Versiegeschiedenis",
   sitesHistorySubtitle:

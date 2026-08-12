@@ -1,7 +1,8 @@
 // One site's privacy-friendly traffic desk: immediate totals, a complete
-// daily series, and the pages/referrers an owner can act on. There is no
-// tracking setup or consent ceremony because collection stores no cookies or
-// personal browsing profile.
+// daily series, and — grouped so the screen stays readable — where people came
+// from, what they looked at, and how they read it. There is no tracking setup
+// or consent ceremony because collection stores no cookies or personal
+// browsing profile.
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -9,9 +10,29 @@ import { ArrowLeft, BarChart3, ShieldCheck } from "lucide-react";
 
 import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
+import { AnalyticsGroup, DimensionPanel } from "./AnalyticsPanels";
+import type { AnalyticsRow } from "./AnalyticsPanels";
+import {
+  campaignLabel,
+  countryLabel,
+  deviceLabel,
+  outboundLabel,
+  pathLabel,
+  readTimeLabel,
+  referrerLabel,
+} from "./analyticsLabels";
 import { EmptyState, ErrorBanner } from "./parts";
-import type { SiteAnalyticsReport, SiteDetail } from "./types";
+import type { SiteAnalyticsDimension, SiteAnalyticsReport, SiteDetail } from "./types";
 import styles from "./SitesModule.module.css";
+
+/** Names one dimension's buckets for reading, keeping the server's order —
+ *  which is by count everywhere except the reading-time histogram. */
+function named(
+  rows: SiteAnalyticsDimension[] | undefined,
+  name: (label: string) => string,
+): AnalyticsRow[] {
+  return (rows ?? []).map((row) => ({ label: name(row.label), visits: row.visits }));
+}
 
 type AnalyticsPeriod = 7 | 30 | 90;
 const PERIODS: AnalyticsPeriod[] = [7, 30, 90];
@@ -195,21 +216,84 @@ export function AnalyticsView() {
             </ol>
           </section>
 
-          <div className={styles.analyticsRankings}>
-            <Ranking
-              title={strings.sitesAnalyticsTopPages}
-              rows={report.topPages.map((row) => ({ label: row.path, visits: row.visits }))}
-              numbers={numbers}
-            />
-            <Ranking
+          <AnalyticsGroup title={strings.sitesAnalyticsGroupArrival}>
+            <DimensionPanel
               title={strings.sitesAnalyticsTopReferrers}
+              note={strings.sitesAnalyticsReferrersNote}
+              empty={strings.sitesAnalyticsReferrersEmpty}
               rows={report.topReferrers.map((row) => ({
-                label: row.domain === "" ? strings.sitesAnalyticsDirect : row.domain,
+                label: referrerLabel(row.domain),
                 visits: row.visits,
               }))}
               numbers={numbers}
             />
-          </div>
+            <DimensionPanel
+              title={strings.sitesAnalyticsCampaigns}
+              note={strings.sitesAnalyticsCampaignsNote}
+              empty={strings.sitesAnalyticsCampaignsEmpty}
+              rows={named(report.campaigns, campaignLabel)}
+              numbers={numbers}
+            />
+            <DimensionPanel
+              title={strings.sitesAnalyticsCountries}
+              note={strings.sitesAnalyticsCountriesNote}
+              empty={strings.sitesAnalyticsCountriesEmpty}
+              rows={named(report.countries, countryLabel)}
+              numbers={numbers}
+            />
+          </AnalyticsGroup>
+
+          <AnalyticsGroup title={strings.sitesAnalyticsGroupPages}>
+            <DimensionPanel
+              title={strings.sitesAnalyticsTopPages}
+              note={strings.sitesAnalyticsTopPagesNote}
+              empty={strings.sitesAnalyticsPagesEmpty}
+              rows={report.topPages.map((row) => ({
+                label: pathLabel(row.path),
+                visits: row.visits,
+              }))}
+              numbers={numbers}
+            />
+            <DimensionPanel
+              title={strings.sitesAnalyticsEntryPages}
+              note={strings.sitesAnalyticsEntryPagesNote}
+              empty={strings.sitesAnalyticsPagesEmpty}
+              rows={named(report.entryPages, pathLabel)}
+              numbers={numbers}
+            />
+            <DimensionPanel
+              title={strings.sitesAnalyticsExitPages}
+              note={strings.sitesAnalyticsExitPagesNote}
+              empty={strings.sitesAnalyticsPagesEmpty}
+              rows={named(report.exitPages, pathLabel)}
+              numbers={numbers}
+            />
+          </AnalyticsGroup>
+
+          <AnalyticsGroup title={strings.sitesAnalyticsGroupReading}>
+            <DimensionPanel
+              title={strings.sitesAnalyticsReadTime}
+              note={strings.sitesAnalyticsReadTimeNote}
+              empty={strings.sitesAnalyticsReadTimeEmpty}
+              rows={named(report.readTime, readTimeLabel)}
+              ordered
+              numbers={numbers}
+            />
+            <DimensionPanel
+              title={strings.sitesAnalyticsOutbound}
+              note={strings.sitesAnalyticsOutboundNote}
+              empty={strings.sitesAnalyticsOutboundEmpty}
+              rows={named(report.outboundDomains, outboundLabel)}
+              numbers={numbers}
+            />
+            <DimensionPanel
+              title={strings.sitesAnalyticsDevices}
+              note={strings.sitesAnalyticsDevicesNote}
+              empty={strings.sitesAnalyticsDevicesEmpty}
+              rows={named(report.devices, deviceLabel)}
+              numbers={numbers}
+            />
+          </AnalyticsGroup>
         </main>
       ) : null}
     </div>
@@ -223,33 +307,8 @@ function PrivacyNote() {
       <div>
         <strong>{strings.sitesAnalyticsPrivacyTitle}</strong>
         <p>{strings.sitesAnalyticsPrivacyBody}</p>
+        <p>{strings.sitesAnalyticsPrivacyBeacon}</p>
       </div>
     </aside>
-  );
-}
-
-function Ranking({
-  title,
-  rows,
-  numbers,
-}: {
-  title: string;
-  rows: Array<{ label: string; visits: number }>;
-  numbers: Intl.NumberFormat;
-}) {
-  return (
-    <section className={styles.analyticsPanel}>
-      <div className={styles.analyticsPanelHead}>
-        <h2>{title}</h2>
-      </div>
-      <ol className={styles.analyticsRanking}>
-        {rows.map((row) => (
-          <li key={row.label}>
-            <span>{row.label}</span>
-            <strong>{numbers.format(row.visits)}</strong>
-          </li>
-        ))}
-      </ol>
-    </section>
   );
 }

@@ -3416,10 +3416,69 @@ export const en = {
   sitesAnalyticsPrivacyTitle: "No cookies. No banner.",
   sitesAnalyticsPrivacyBody:
     "Traffic is counted anonymously by day. alo stores no visitor address, device profile, or browsing history.",
+  sitesAnalyticsPrivacyBeacon:
+    "Reading time and outbound clicks are reported by a small script on your pages. It carries no identity at all, so two reports from the same browser cannot be linked.",
   sitesAnalyticsEmptyTitle: "No visits yet",
   sitesAnalyticsEmptyBody:
     "Open or share your published site. Its first visits will appear here automatically.",
   sitesAnalyticsOpenSite: "Open live site",
+  // Sites — the grouped detail panels (S2.08b). Each panel says how its
+  // numbers get there, because an aggregate read as something it is not is
+  // worse than no aggregate.
+  sitesAnalyticsGroupArrival: "How people found you",
+  sitesAnalyticsGroupPages: "What they looked at",
+  sitesAnalyticsGroupReading: "How they read it",
+  sitesAnalyticsShowAll: (count: number) => `Show all ${count}`,
+  sitesAnalyticsShowTop: (count: number) => `Show top ${count}`,
+  sitesAnalyticsReferrersNote:
+    "The website a visitor followed a link from. Only the domain is kept, never the page.",
+  sitesAnalyticsReferrersEmpty:
+    "No referrers yet. They appear when another website links to yours.",
+  sitesAnalyticsCampaigns: "Campaigns",
+  sitesAnalyticsCampaignsNote:
+    "Read from utm_campaign on the links you share, so you can tell a newsletter from a poster.",
+  sitesAnalyticsCampaignsEmpty:
+    "No campaigns yet. Add ?utm_campaign=spring-mailing to a link you share and its visits are counted here.",
+  sitesAnalyticsNoCampaign: "No campaign",
+  sitesAnalyticsCountries: "Countries",
+  sitesAnalyticsCountriesNote:
+    "Resolved by the network in front of your site, never from a stored visitor address.",
+  sitesAnalyticsCountriesEmpty:
+    "No countries reported. Your site is served without a network that names them, so this stays empty — every other number here is unaffected.",
+  sitesAnalyticsNotReported: "Not reported",
+  sitesAnalyticsTopPagesNote: "The pages that were opened most.",
+  sitesAnalyticsPagesEmpty: "No pages counted in this period yet.",
+  sitesAnalyticsEntryPages: "First pages",
+  sitesAnalyticsEntryPagesNote: "The page a visitor's day on your site started on.",
+  sitesAnalyticsExitPages: "Last pages",
+  sitesAnalyticsExitPagesNote:
+    "The last page seen that day. A last page is where someone finished reading, not necessarily where they gave up.",
+  sitesAnalyticsReadTime: "Reading time",
+  sitesAnalyticsReadTimeNote:
+    "How long pages stayed on screen, for the whole site rather than per page. Only browsers that report it are counted, so these never add up to your visits.",
+  sitesAnalyticsReadTimeEmpty:
+    "No reading times yet. They arrive once visitors open your published pages in a browser that reports them.",
+  sitesAnalyticsReadUnder10s: "Under 10 seconds",
+  sitesAnalyticsRead10to30s: "10–30 seconds",
+  sitesAnalyticsRead30to60s: "30–60 seconds",
+  sitesAnalyticsRead1to3m: "1–3 minutes",
+  sitesAnalyticsRead3to10m: "3–10 minutes",
+  sitesAnalyticsReadOver10m: "Over 10 minutes",
+  sitesAnalyticsOutbound: "Links away",
+  sitesAnalyticsOutboundNote:
+    "Domains visitors left for. Past 200 destinations in a day, the rest are counted together.",
+  sitesAnalyticsOutboundEmpty:
+    "No outbound clicks yet. They are counted when a visitor follows a link to another website.",
+  sitesAnalyticsOutboundOther: "Other domains",
+  sitesAnalyticsDevices: "Devices",
+  sitesAnalyticsDevicesNote:
+    "A coarse class from what the browser says about itself. Nothing more of it is stored.",
+  sitesAnalyticsDevicesEmpty: "No devices counted in this period yet.",
+  sitesAnalyticsDevicePhone: "Phone",
+  sitesAnalyticsDeviceTablet: "Tablet",
+  sitesAnalyticsDeviceDesktop: "Computer",
+  sitesAnalyticsDeviceBot: "Bots and crawlers",
+  sitesAnalyticsDeviceUnknown: "Unrecognised",
   // Sites — every version this website has published (S2.04b). The list is
   // dates, never version ids: a person recognises "yesterday at 14:20", not
   // an opaque token.
