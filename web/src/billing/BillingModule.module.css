@@ -514,6 +514,23 @@
   margin-right: auto;
 }
 
+.settingsPage { overflow: auto; padding: var(--space-5) var(--space-6) var(--space-8); }
+.settingsHero { display: flex; align-items: center; gap: var(--space-4); margin-bottom: var(--space-5); padding: var(--space-5); border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-xl); background: linear-gradient(135deg, var(--bg-surface), var(--accent-tint)); box-shadow: var(--shadow-sm); }
+.settingsHero > span { display: inline-flex; flex: none; align-items: center; justify-content: center; width: var(--space-12); height: var(--space-12); border-radius: var(--radius-lg); background: var(--accent); color: var(--text-on-accent); }
+.settingsHero svg { width: var(--icon-size-control); height: var(--icon-size-control); }
+.settingsHero h2 { margin: 0; color: var(--text-primary); font-size: var(--text-xl); }
+.settingsHero p { max-width: 70ch; margin: var(--space-1) 0 0; color: var(--text-secondary); font-size: var(--text-sm); line-height: var(--leading-normal); }
+.settingsGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.settingsCard { align-self: start; gap: var(--space-4); padding: var(--space-5); border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-xl); background: var(--bg-surface); box-shadow: var(--shadow-sm); }
+.settingsCard:first-child, .settingsCard:nth-child(3) { grid-row: span 2; }
+.settingsCard .sectionTitle { display: flex; align-items: center; gap: var(--space-2); padding-bottom: var(--space-3); border-bottom: var(--border-width) solid var(--border-subtle); color: var(--text-primary); font-size: var(--text-base); text-transform: none; letter-spacing: normal; }
+.settingsCard .sectionTitle svg { width: var(--icon-size-control); height: var(--icon-size-control); color: var(--accent); }
+.settingsCard .label { color: var(--text-secondary); }
+.settingsCard .input { min-height: var(--control-height); background: var(--bg-app); }
+.settingsPage > .createBar { position: sticky; bottom: 0; z-index: var(--z-sticky); margin-top: var(--space-5); padding: var(--space-3) var(--space-4); border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-lg); background: color-mix(in srgb, var(--bg-surface) 92%, transparent); box-shadow: var(--shadow-md); backdrop-filter: blur(var(--space-2)); }
+@media (max-width: 64rem) { .settingsGrid { grid-template-columns: 1fr; }.settingsCard:first-child, .settingsCard:nth-child(3) { grid-row: auto; } }
+@media (max-width: 40rem) { .settingsPage { padding: var(--space-3); }.settingsHero { align-items: flex-start; }.settingsCard { padding: var(--space-4); }.settingsCard .row { flex-direction: column; gap: var(--space-3); } }
+
 /* ---- the line grid ---- */
 .lines {
   display: flex;

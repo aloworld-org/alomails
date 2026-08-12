@@ -13,6 +13,7 @@
 // not written — the surface is last-writer-wins. And **a cleared box sends
 // `null`**, which is how a VAT id or a bank account comes off the record.
 import { useCallback, useEffect, useState } from "react";
+import { BadgeEuro, Building2, Landmark, Mail, MessageSquareText, Save } from "lucide-react";
 
 import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
@@ -179,14 +180,19 @@ export function SettingsView() {
   });
 
   return (
-    <div className={styles.page}>
-      <p className={styles.hint}>
-        {stored.stated ? strings.billingSettingsIntro : strings.billingSettingsFirstRun}
-      </p>
+    <div className={`${styles.page} ${styles.settingsPage}`}>
+      <header className={styles.settingsHero}>
+        <span><Building2 aria-hidden="true" /></span>
+        <div>
+          <h2>{strings.billingSettings}</h2>
+          <p>{stored.stated ? strings.billingSettingsIntro : strings.billingSettingsFirstRun}</p>
+        </div>
+      </header>
       {error !== null && <ErrorBanner message={error} />}
 
-      <section className={styles.lines}>
-        <h2 className={styles.sectionTitle}>{strings.billingSettingsIdentity}</h2>
+      <div className={styles.settingsGrid}>
+      <section className={`${styles.lines} ${styles.settingsCard}`}>
+        <h2 className={styles.sectionTitle}><Building2 aria-hidden="true" />{strings.billingSettingsIdentity}</h2>
         <Field label={strings.billingFieldLegalName} hint={strings.billingLegalNameHint}>
           <input {...text("legalName")} required />
         </Field>
@@ -230,8 +236,8 @@ export function SettingsView() {
         </div>
       </section>
 
-      <section className={styles.lines}>
-        <h2 className={styles.sectionTitle}>{strings.billingSettingsContact}</h2>
+      <section className={`${styles.lines} ${styles.settingsCard}`}>
+        <h2 className={styles.sectionTitle}><Mail aria-hidden="true" />{strings.billingSettingsContact}</h2>
         <div className={styles.row}>
           <Field label={strings.billingFieldEmail}>
             <input
@@ -252,8 +258,8 @@ export function SettingsView() {
         </div>
       </section>
 
-      <section className={styles.lines}>
-        <h2 className={styles.sectionTitle}>{strings.billingSettingsBank}</h2>
+      <section className={`${styles.lines} ${styles.settingsCard}`}>
+        <h2 className={styles.sectionTitle}><Landmark aria-hidden="true" />{strings.billingSettingsBank}</h2>
         <div className={styles.row}>
           <Field label={strings.billingFieldIban} hint={strings.billingIbanHint}>
             <input
@@ -284,8 +290,8 @@ export function SettingsView() {
         </div>
       </section>
 
-      <section className={styles.lines}>
-        <h2 className={styles.sectionTitle}>{strings.billingSettingsAccounting}</h2>
+      <section className={`${styles.lines} ${styles.settingsCard}`}>
+        <h2 className={styles.sectionTitle}><BadgeEuro aria-hidden="true" />{strings.billingSettingsAccounting}</h2>
         <div className={styles.row}>
           <Field label={strings.billingFieldBaseCurrency} hint={strings.billingBaseCurrencyHint}>
             <input
@@ -303,8 +309,8 @@ export function SettingsView() {
         <FxRatesPanel />
       </section>
 
-      <section className={styles.lines}>
-        <h2 className={styles.sectionTitle}>{strings.billingSettingsFooter}</h2>
+      <section className={`${styles.lines} ${styles.settingsCard}`}>
+        <h2 className={styles.sectionTitle}><MessageSquareText aria-hidden="true" />{strings.billingSettingsFooter}</h2>
         <Field label={strings.billingFieldFooterNote} hint={strings.billingFooterNoteHint}>
           <textarea
             className={`${styles.input} ${styles.textarea}`}
@@ -314,12 +320,13 @@ export function SettingsView() {
           />
         </Field>
       </section>
+      </div>
 
       <div className={styles.createBar}>
         <p className={styles.hint} role="status">
           {saved ? strings.billingSettingsSaved : ""}
         </p>
-        <Button onClick={() => void save()} disabled={busy || form.legalName.trim() === ""}>
+        <Button icon={<Save aria-hidden="true" />} onClick={() => void save()} disabled={busy || form.legalName.trim() === ""}>
           {strings.billingSave}
         </Button>
       </div>

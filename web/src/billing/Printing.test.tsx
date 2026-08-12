@@ -381,9 +381,10 @@ describe("the issuer details", () => {
   test("the tab is in the module, and it is not what /billing lands on", async () => {
     ui("/billing");
     // Invoices stay the landing tab (B1.13/B1.14/B1.15); the details are a
-    // thing you fill in once, not the reason you open billing.
+    // thing you fill in once, not the reason you open billing. The approved
+    // customer-first workflow lands on customers before documents.
     await waitFor(() =>
-      expect(calls.some((c) => c.url.includes("/billing/invoices"))).toBe(true),
+      expect(calls.some((c) => c.url.includes("/billing/customers"))).toBe(true),
     );
     expect(calls.some((c) => c.url.includes("/billing/settings"))).toBe(false);
     expect(screen.getByRole("link", { name: strings.billingSettings })).toBeTruthy();
