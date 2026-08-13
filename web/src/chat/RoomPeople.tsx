@@ -12,11 +12,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { Sparkles, UserMinus, UserPlus, X } from "lucide-react";
 
-import { Avatar, Button } from "../ds";
+import { Avatar, Button, IconButton } from "../ds";
 import { strings } from "../i18n";
 import { chatMessage, useChatApi } from "./api";
 import type { Agent, ChannelDetail } from "./types";
-import styles from "./RoomPeople.module.css";
+
+const sectionClass = "mb-2 mt-3 first:mt-0 text-xs font-semibold uppercase tracking-wide text-tertiary";
+const listClass = "m-0 flex list-none flex-col gap-1 p-0";
+const rowClass = "group flex min-h-10 items-center gap-2 rounded-sm px-2 hover:bg-raised";
+const whoClass = "flex min-w-0 flex-1 flex-col";
 
 export function RoomPeople({
   channel,
@@ -88,56 +92,51 @@ export function RoomPeople({
 
   return (
     <div
-      className={styles.backdrop}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
       role="dialog"
       aria-modal="true"
       aria-label={strings.chatWhoIsHere}
     >
-      <div className={styles.panel}>
-        <header className={styles.header}>
-          <h2 className={styles.title}>{strings.chatWhoIsHere}</h2>
-          <button
-            type="button"
-            className={styles.close}
+      <div className="flex max-h-full min-h-0 w-full max-w-md flex-col overflow-hidden rounded-lg border border-subtle bg-surface shadow-lg">
+        <header className="flex items-center justify-between gap-2 border-b border-subtle p-3">
+          <h2 className="m-0 text-sm font-semibold text-primary">{strings.chatWhoIsHere}</h2>
+          <IconButton
             onClick={onClose}
-            aria-label={strings.chatClose}
-          >
-            <X size={16} />
-          </button>
+            label={strings.chatClose}
+            icon={<X size={16} />}
+            size="sm"
+          />
         </header>
 
-        <div className={styles.body}>
-          <h3 className={styles.section}>{strings.chatAgentsHere}</h3>
+        <div className="min-h-0 flex-1 overflow-y-auto p-3">
+          <h3 className={sectionClass}>{strings.chatAgentsHere}</h3>
           {here.length === 0 ? (
-            <p className={styles.note}>{strings.chatNoAgentsHere}</p>
+            <p className="m-0 text-sm text-tertiary">{strings.chatNoAgentsHere}</p>
           ) : (
-            <ul className={styles.list}>
+            <ul className={listClass}>
               {here.map((agent) => (
-                <li key={agent.id} className={styles.row}>
-                  <span className={styles.mark}>
+                <li key={agent.id} className={rowClass}>
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-sm bg--tint text-accent">
                     <Sparkles size={13} />
                   </span>
-                  <span className={styles.who}>
-                    <span className={styles.name}>@{agent.handle}</span>
+                  <span className={whoClass}>
+                    <span className="truncate text-sm text-primary">@{agent.handle}</span>
                     {/* What it has actually done, not what it is for. An
                         agent with a record reads as a colleague; one with
                         only a description reads as a setting. */}
-                    <span className={styles.detail}>
+                    <span className="truncate text-xs text-tertiary">
                       {agent.answers === 0
                         ? strings.chatAgentNothingYet
                         : strings.chatAgentRecord(agent.answers, agent.actions)}
                     </span>
                   </span>
-                  <button
-                    type="button"
-                    className={styles.action}
+                  <IconButton
                     onClick={() => void removeAgent(agent)}
                     disabled={busy === agent.id}
-                    aria-label={strings.chatAgentRemove(agent.handle)}
-                    title={strings.chatAgentRemove(agent.handle)}
-                  >
-                    <UserMinus size={15} />
-                  </button>
+                    label={strings.chatAgentRemove(agent.handle)}
+                    icon={<UserMinus size={15} />}
+                    size="sm"
+                  />
                 </li>
               ))}
             </ul>
@@ -145,62 +144,59 @@ export function RoomPeople({
 
           {available.length > 0 && (
             <>
-              <h3 className={styles.section}>{strings.chatAgentsAvailable}</h3>
-              <ul className={styles.list}>
+              <h3 className={sectionClass}>{strings.chatAgentsAvailable}</h3>
+              <ul className={listClass}>
                 {available.map((agent) => (
-                  <li key={agent.id} className={styles.row}>
-                    <span className={styles.mark}>
+                  <li key={agent.id} className={rowClass}>
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-sm bg--tint text-accent">
                       <Sparkles size={13} />
                     </span>
-                    <span className={styles.who}>
-                      <span className={styles.name}>@{agent.handle}</span>
+                    <span className={whoClass}>
+                      <span className="truncate text-sm text-primary">@{agent.handle}</span>
                       {agent.description !== null && (
-                        <span className={styles.detail}>
+                        <span className="truncate text-xs text-tertiary">
                           {agent.description}
                         </span>
                       )}
                     </span>
-                    <button
-                      type="button"
-                      className={styles.action}
+                    <IconButton
                       onClick={() => void addAgent(agent)}
                       disabled={busy === agent.id}
-                      aria-label={strings.chatAgentAdd(agent.handle)}
-                      title={strings.chatAgentAdd(agent.handle)}
-                    >
-                      <UserPlus size={15} />
-                    </button>
+                      label={strings.chatAgentAdd(agent.handle)}
+                      icon={<UserPlus size={15} />}
+                      size="sm"
+                    />
                   </li>
                 ))}
               </ul>
             </>
           )}
 
-          <h3 className={styles.section}>{strings.chatPeopleHere}</h3>
-          <ul className={styles.list}>
+          <h3 className={sectionClass}>{strings.chatPeopleHere}</h3>
+          <ul className={listClass}>
             {(detail?.members ?? []).map((member) => (
-              <li key={member.user} className={styles.row}>
+              <li key={member.user} className={rowClass}>
                 <Avatar
                   name={member.email ?? member.user}
                   email={member.email ?? undefined}
                   size="sm"
                 />
-                <span className={styles.who}>
-                  <span className={styles.name}>
+                <span className={whoClass}>
+                  <span className="truncate text-sm text-primary">
                     {member.email ?? member.user}
                   </span>
                   {member.role === "owner" && (
-                    <span className={styles.detail}>{strings.chatOwner}</span>
+                    <span className="truncate text-xs text-tertiary">{strings.chatOwner}</span>
                   )}
                 </span>
               </li>
             ))}
           </ul>
 
-          {error !== null && <p className={styles.error}>{error}</p>}
+          {error !== null && <p className="mt-3 text-sm text-accent" role="alert">{error}</p>}
         </div>
 
-        <footer className={styles.footer}>
+        <footer className="flex justify-end border-t border-subtle p-3">
           <Button variant="ghost" onClick={onClose}>
             {strings.chatClose}
           </Button>
