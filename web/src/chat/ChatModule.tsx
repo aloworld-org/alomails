@@ -65,6 +65,7 @@ import { useMeetApi } from "../meet";
 import type { Meeting } from "../meet";
 import { MeetRoom } from "../meet";
 import { EmojiPicker } from "./EmojiPicker";
+import { ComposerShareMenu } from "./ComposerShareMenu";
 import {
   candidatesFor,
   channelLabel,
@@ -1198,98 +1199,13 @@ export function ChatModule() {
                       <Plus size={18} />
                     </button>
                     {composerMenu === "share" && (
-                      <div className={styles.shareMenu} role="menu">
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className={styles.shareItem}
-                          onClick={() => {
-                            setComposerMenu(null);
-                            setPicking(true);
-                          }}
-                        >
-                          <Paperclip size={15} className={styles.shareIcon} />
-                          <span>
-                            <span className={styles.shareName}>
-                              {strings.chatShareFile}
-                            </span>
-                            <span className={styles.shareHint}>
-                              {strings.chatShareFileHint}
-                            </span>
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className={styles.shareItem}
-                          onClick={() => {
-                            setComposerMenu(null);
-                            setAuthoringInsert({ kind: "code", target: "message" });
-                          }}
-                        >
-                          <SquareCode size={15} className={styles.shareIcon} />
-                          <span>
-                            <span className={styles.shareName}>{strings.chatCodeBlock}</span>
-                            <span className={styles.shareHint}>{strings.chatCodeBlockHint}</span>
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className={styles.shareItem}
-                          onClick={() => {
-                            setComposerMenu(null);
-                            setAuthoringInsert({ kind: "equation", target: "message" });
-                          }}
-                        >
-                          <Sigma size={15} className={styles.shareIcon} />
-                          <span>
-                            <span className={styles.shareName}>{strings.chatFormula}</span>
-                            <span className={styles.shareHint}>{strings.chatFormulaHint}</span>
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className={styles.shareItem}
-                          onClick={() => {
-                            setComposerMenu(null);
-                            // Open the '@' list by typing the character the
-                            // composer already understands, rather than
-                            // inventing a second way to name someone.
-                            insertAtCaret("@");
-                          }}
-                        >
-                          <Users size={15} className={styles.shareIcon} />
-                          <span>
-                            <span className={styles.shareName}>
-                              {strings.chatShareMention}
-                            </span>
-                            <span className={styles.shareHint}>
-                              {strings.chatShareMentionHint}
-                            </span>
-                          </span>
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          className={styles.shareItem}
-                          onClick={() => {
-                            setComposerMenu(null);
-                            insertAtCaret("@alo ");
-                          }}
-                        >
-                          <Sparkles size={15} className={styles.shareIcon} />
-                          <span>
-                            <span className={styles.shareName}>
-                              {strings.chatShareAsk}
-                            </span>
-                            <span className={styles.shareHint}>
-                              {strings.chatShareAskHint}
-                            </span>
-                          </span>
-                        </button>
-                      </div>
+                      <ComposerShareMenu
+                        onFile={() => { setComposerMenu(null); setPicking(true); }}
+                        onCode={() => { setComposerMenu(null); setAuthoringInsert({ kind: "code", target: "message" }); }}
+                        onEquation={() => { setComposerMenu(null); setAuthoringInsert({ kind: "equation", target: "message" }); }}
+                        onMention={() => { setComposerMenu(null); insertAtCaret("@"); }}
+                        onAskAlo={() => { setComposerMenu(null); insertAtCaret("@alo "); }}
+                      />
                     )}
                   </span>
                   <span className={styles.shareWrap}>
