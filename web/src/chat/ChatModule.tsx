@@ -24,13 +24,7 @@ import { useJmapClient } from "../jmap";
 import { useDismiss, useIsMobile } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
 import type { DriveNodeDto } from "../jmap/types";
-import type {
-  Attachment,
-  FeedMessage,
-  Turn,
-  Message,
-  Proposal,
-} from "./types";
+import type { Attachment, Message } from "./types";
 import { useMeetApi } from "../meet";
 import type { Meeting } from "../meet";
 import { MeetRoom } from "../meet";
@@ -40,6 +34,7 @@ import { ActiveTurns } from "./ActiveTurns";
 import { MessageFeed } from "./MessageFeed";
 import { ChatComposer } from "./ChatComposer";
 import { useRoomDirectory } from "./useRoomDirectory";
+import { useChatFeed } from "./useChatFeed";
 import {
   candidatesFor,
   channelLabel,
@@ -63,8 +58,6 @@ const ATTACHMENTS_MAX = 10;
 /** What one page of history holds â€” the server's own default
  *  (`MESSAGE_PAGE_DEFAULT`). A full page means there is probably more behind
  *  it; a short one means we have reached the beginning. */
-const PAGE = 50;
-
 function chatAuthoringText(html: string): string {
   const document = new DOMParser().parseFromString(html, "text/html");
   const equation = document.querySelector<HTMLElement>("[data-alo-latex]");
@@ -88,7 +81,6 @@ export function ChatModule() {
   // The reader's own id, for marking the messages addressed to them.
   const { identity } = useAuth();
   const me = identity?.sub ?? null;
-  const [messages, setMessages] = useState<FeedMessage[] | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,16 +90,13 @@ export function ChatModule() {
   } | null>(null);
   // What may be left, per the server. Empty until it answers, which simply
   // means no picker yet â€” never a picker offering emoji it would refuse.
-  const [palette, setPalette] = useState<string[]>([]);
   // Files chosen but not yet sent. Held as Drive nodes so the composer can
   // show their names without a second lookup.
   const [staged, setStaged] = useState<DriveNodeDto[]>([]);
   const [picking, setPicking] = useState(false);
   // Who can be named here: the room's people and its agents, in one list,
   // because the person typing does not care which kind they are reaching for.
-  const [nameable, setNameable] = useState<Nameable[]>([]);
   const [highlighted, setHighlighted] = useState(0);
-  const feedRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const [caret, setCaret] = useState(0);
   const [hasSelection, setHasSelection] = useState(false);
@@ -126,7 +115,6 @@ export function ChatModule() {
   const [emojiQuery, setEmojiQuery] = useState("");
   // Agent turns running in the open room. Refetched on every push, so it
   // follows the same signal the messages do rather than polling on a timer.
-  const [turns, setTurns] = useState<Turn[]>([]);
   // What was half-typed in each room. Switching rooms to check something and
   // losing a sentence is a small betrayal every chat app learned to avoid.
   const drafts = useRef<Map<string, string>>(new Map());
@@ -134,7 +122,6 @@ export function ChatModule() {
   const [dropping, setDropping] = useState(false);
   // Where reading stopped when this room was opened. Held still afterwards:
   // the line must not creep down as new messages land while you are looking.
-  const [readUpTo, setReadUpTo] = useState<number | null>(null);
   // On a phone the two columns become one screen at a time, the way Mail
   // already does it: the list until you pick a room, the room until you come
   // back. Two columns on a 390px screen gave the conversation 58 pixels.
@@ -155,128 +142,9 @@ export function ChatModule() {
   // truth about the same thing.
   // The live public channels not yet joined. Loaded on demand: it is a
   // browsing act, not something every sidebar draw should pay for.
-  const [moreBehind, setMoreBehind] = useState(false);
-  const [loadingOlder, setLoadingOlder] = useState(false);
   const directory = useRoomDirectory(setError);
   const { channels, openId, setOpenId, creating, browsing, setBrowsing, dmQuery, setDmQuery, dmFound, setDmFound, finding, found, loadChannels, find, findPeople, openDm, renameRoom, archiveRoom, browse, joinRoom, createChannel } = directory;
-
-  const loadTurns = useCallback(
-    async (id: string) => {
-      try {
-        setTurns(await api.turns(id));
-      } catch {
-        // A room that cannot say who is thinking is not broken; it just says
-        // nothing. Never surface this.
-        setTurns([]);
-      }
-    },
-    [api],
-  );
-
-  const loadMessages = useCallback(
-    async (id: string) => {
-      try {
-        // Newest-first on the wire; the feed reads oldest-first.
-        const page = await api.messages(id);
-        setMessages([...page].reverse());
-        setMoreBehind(page.length === PAGE);
-        const newest = page[0]?.seq;
-        if (newest !== undefined) await api.markRead(id, newest);
-      } catch (failure) {
-        setError(chatMessage(failure, strings.chatLoadFailed));
-      }
-    },
-    [api],
-  );
-
-  useEffect(() => {
-    // Asked once: the offered set changes with a release, not with a room.
-    void api
-      .reactionPalette()
-      .then(setPalette)
-      .catch(() => setPalette([]));
-  }, [api]);
-
-  useEffect(() => {
-    if (openId === null) return;
-    setMessages(null);
-    setTurns([]);
-    setDraft(drafts.current.get(openId) ?? "");
-    void meet
-      .liveIn(openId)
-      .then((live) => setLiveMeeting(live[0] ?? null))
-      .catch(() => setLiveMeeting(null));
-    setReadUpTo(channels?.find((c) => c.id === openId)?.lastReadSeq ?? null);
-    void loadMessages(openId);
-    void loadTurns(openId);
-  }, [openId, loadMessages, loadTurns]);
-
-  // Reloaded per room: membership is per room, and so is which agents are in
-  // it. Best-effort â€” a composer that cannot suggest still sends.
-  useEffect(() => {
-    if (openId === null) return;
-    let live = true;
-    void (async () => {
-      const [detail, agents] = await Promise.all([
-        api.channel(openId).catch(() => null),
-        api.channelAgents(openId).catch(() => []),
-      ]);
-      if (!live) return;
-      const people: Nameable[] = (detail?.members ?? []).map((m) => ({
-        handle: (m.email ?? m.user).split("@")[0]!.toLowerCase(),
-        label: m.email ?? m.user,
-        agent: false,
-      }));
-      setNameable([
-        ...agents.map((a) => ({
-          handle: a.handle,
-          label: a.name,
-          agent: true,
-        })),
-        ...people,
-      ]);
-    })();
-    return () => {
-      live = false;
-    };
-  }, [api, openId]);
-
-  // Live: a chat signal refreshes the sidebar, the open room, and the open
-  // thread â€” a reply arriving while someone reads the thread is exactly the
-  // case the stream exists for.
-  useEffect(() => {
-    const controller = new AbortController();
-    let live = true;
-    void (async () => {
-      while (live && !controller.signal.aborted) {
-        try {
-          await client.subscribeChat(() => {
-            void loadChannels();
-            if (openId !== null) {
-              void loadMessages(openId);
-              void loadTurns(openId);
-            }
-          }, controller.signal);
-        } catch {
-          // A dropped stream is normal (sleep, proxy timeout); pause, reconnect.
-          await new Promise((resume) => setTimeout(resume, 3_000));
-        }
-      }
-    })();
-    return () => {
-      live = false;
-      controller.abort();
-    };
-  }, [client, openId, loadChannels, loadMessages]);
-
-  // Keep the newest line in view as the conversation grows â€” but only when
-  // the newest line actually changed. Scrolling to the bottom after prepending
-  // older history would throw the reader out of what they went back to read.
-  const newestSeq = messages?.[messages.length - 1]?.seq ?? null;
-  useEffect(() => {
-    const feed = feedRef.current;
-    if (feed !== null) feed.scrollTop = feed.scrollHeight;
-  }, [newestSeq, openId]);
+  const { feedRef, messages, setMessages, turns, palette, nameable, readUpTo, moreBehind, loadingOlder, loadMessages, loadTurns, loadOlder, editMessage, withdrawMessage, decide, react } = useChatFeed(openId, channels, loadChannels, setError);
 
   async function send() {
     const words = draft.trim();
@@ -398,83 +266,6 @@ export function ChatModule() {
       }
     } catch (failure) {
       setError(chatMessage(failure, strings.chatAttachFailed));
-    }
-  }
-
-  async function loadOlder() {
-    const feed = feedRef.current;
-    const oldest = messages?.[0]?.seq;
-    if (openId === null || oldest === undefined || loadingOlder) return;
-    setLoadingOlder(true);
-    const before = feed?.scrollHeight ?? 0;
-    try {
-      const page = await api.messages(openId, oldest);
-      if (page.length > 0) {
-        setMessages((held) => {
-          const current = held ?? [];
-          const known = new Set(current.map((message) => message.id));
-          const earlier = [...page].reverse().filter((message) => !known.has(message.id));
-          return [...earlier, ...current];
-        });
-      }
-      setMoreBehind(page.length === PAGE);
-      requestAnimationFrame(() => {
-        const now = feedRef.current;
-        if (now !== null) now.scrollTop += now.scrollHeight - before;
-      });
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatLoadFailed));
-    } finally {
-      setLoadingOlder(false);
-    }
-  }
-
-  async function editMessage(message: Message, body: string) {
-    setError(null);
-    try {
-      await api.editMessage(message.id, body);
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatEditFailed));
-    }
-    if (openId !== null) void loadMessages(openId);
-  }
-
-  async function withdrawMessage(message: Message) {
-    setError(null);
-    try {
-      await api.withdrawMessage(message.id);
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatWithdrawFailed));
-    }
-    if (openId !== null) void loadMessages(openId);
-  }
-
-  async function decide(proposal: Proposal, approve: boolean) {
-    setError(null);
-    try {
-      await api.decideProposal(proposal.id, approve);
-    } catch (failure) {
-      // Includes the 403 for someone else's proposal, said in the server's
-      // own words rather than a guess made here.
-      setError(chatMessage(failure, strings.chatDecideFailed));
-    }
-    // Either way the room moved: approving ran the action, and both outcomes
-    // settle a card the whole room is watching.
-    if (openId !== null) void loadMessages(openId);
-  }
-
-  async function react(messageId: string, emoji: string) {
-    try {
-      const tally = await api.react(messageId, emoji);
-      // Apply where it is shown â€” a message can be on screen in the feed, in
-      // the thread panel, or in both at once.
-      const applied = <T extends Message>(list: T[] | null): T[] | null =>
-        list?.map((m) =>
-          m.id === messageId ? { ...m, reactions: tally } : m,
-        ) ?? null;
-      setMessages(applied);
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatReactFailed));
     }
   }
 
