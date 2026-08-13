@@ -18,7 +18,6 @@ import {
 
 import { strings } from "../i18n";
 import { useAuth } from "../auth";
-import { FilePicker } from "../drive/FilePicker";
 import { saveBlob } from "../drive/parts";
 import { RoomPeople } from "./RoomPeople";
 import { useJmapClient } from "../jmap/useJmapClient";
@@ -52,6 +51,9 @@ const AuthoringInsertModal = lazy(() =>
 );
 const MeetRoom = lazy(() =>
   import("../meet/MeetRoom").then((module) => ({ default: module.MeetRoom })),
+);
+const FilePicker = lazy(() =>
+  import("../drive/FilePicker").then((module) => ({ default: module.FilePicker })),
 );
 
 export function ChatModule() {
@@ -395,11 +397,11 @@ export function ChatModule() {
       )}
 
       {picking && (
-        <FilePicker
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay text-sm text-on-accent">{strings.chatLoading}</div>}><FilePicker
           max={CHAT_ATTACHMENTS_MAX}
           onClose={() => setPicking(false)}
           onPick={mergePicked}
-        />
+        /></Suspense>
       )}
 
       {authoringInsert !== null && (

@@ -1,19 +1,23 @@
 ﻿import type { ReactNode } from "react";
-import { useCallback, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useRef, useState } from "react";
 import { MessagesSquare, Paperclip, Pencil, Reply, SmilePlus, Sparkles, Trash2, Video } from "lucide-react";
 
 import { Avatar, Button, useDismiss } from "../ds";
 import { fileSize } from "../drive/parts";
 import { strings } from "../i18n";
 import { AgentActionCard } from "../shell/AgentActionCard";
-import { personName, shortTime, standingOf, timeOf, withHandlesMarked } from "./presentation";
-import { renderBody } from "./richText";
+import { personName, shortTime, standingOf, timeOf } from "./presentation";
 import type { Attachment, Message, Proposal } from "./types";
 
 const messageClass = "group relative mt-5 flex w-fit max-w-4xl flex-col items-start pl-12 pr-3";
 const mineClass = "group relative mt-2 flex w-fit max-w-3xl flex-col items-end self-end pl-3 pr-5";
 const toolClass = "flex size-7 items-center justify-center rounded-sm border-0 bg-transparent text-secondary hover:bg-raised hover:text-primary focus-visible:outline-2 focus-visible:outline-accent";
 const bubbleClass = "m-0 max-w-full whitespace-pre-wrap break-words rounded-xl border border-subtle bg-surface px-4 py-3 text-sm leading-relaxed text-primary group-hover:border-default";
+const RichMessageBody = lazy(() => import("./RichMessageBody").then((module) => ({ default: module.RichMessageBody })));
+
+function MessageBody({ body }: { body: string }) {
+  return <Suspense fallback={<>{body}</>}><RichMessageBody body={body} /></Suspense>;
+}
 export function MessageLine({
   message,
   palette,
@@ -267,13 +271,13 @@ export function MessageLine({
             className={message.deletedAt === null ? `${bubbleClass} px-5 py-3` : `${bubbleClass} italic text-tertiary`}
             style={message.deletedAt === null ? { backgroundColor: "var(--accent-soft)", borderColor: "color-mix(in srgb, var(--accent) 28%, transparent)" } : undefined}
           >
-            {message.deletedAt === null ? renderBody(message.body, withHandlesMarked) : strings.chatWithdrawn}
+            {message.deletedAt === null ? <MessageBody body={message.body} /> : strings.chatWithdrawn}
           </p>
           <span className="mb-2 shrink-0 text-xs tabular-nums text-tertiary">{timeOf(message.createdAt)}</span>
         </div>
       ) : (
         <p className={message.deletedAt === null ? `${bubbleClass} ${namesMe ? "bg--tint" : ""}` : `${bubbleClass} italic text-tertiary`}>
-          {message.deletedAt === null ? renderBody(message.body, withHandlesMarked) : strings.chatWithdrawn}
+          {message.deletedAt === null ? <MessageBody body={message.body} /> : strings.chatWithdrawn}
         </p>
       )}
 
