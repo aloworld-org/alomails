@@ -23,7 +23,6 @@ import { RoomPeople } from "./RoomPeople";
 import { useJmapClient } from "../jmap";
 import { useDismiss, useIsMobile } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
-import type { DriveNodeDto } from "../jmap/types";
 import type { Attachment, Message } from "./types";
 import { useMeetApi } from "../meet";
 import type { Meeting } from "../meet";
@@ -35,6 +34,7 @@ import { MessageFeed } from "./MessageFeed";
 import { ChatComposer } from "./ChatComposer";
 import { useRoomDirectory } from "./useRoomDirectory";
 import { useChatFeed } from "./useChatFeed";
+import { CHAT_ATTACHMENTS_MAX, useChatAttachments } from "./useChatAttachments";
 import {
   candidatesFor,
   channelLabel,
@@ -53,8 +53,6 @@ const AuthoringInsertModal = lazy(() =>
 /** The ceiling the server enforces (`ATTACHMENTS_MAX` in the store). Kept in
  *  step by hand: exceeding it is refused server-side either way, so the worst
  *  a drifted copy does is offer a choice that is then declined. */
-const ATTACHMENTS_MAX = 10;
-
 /** What one page of history holds â€” the server's own default
  *  (`MESSAGE_PAGE_DEFAULT`). A full page means there is probably more behind
  *  it; a short one means we have reached the beginning. */
@@ -92,8 +90,6 @@ export function ChatModule() {
   // means no picker yet â€” never a picker offering emoji it would refuse.
   // Files chosen but not yet sent. Held as Drive nodes so the composer can
   // show their names without a second lookup.
-  const [staged, setStaged] = useState<DriveNodeDto[]>([]);
-  const [picking, setPicking] = useState(false);
   // Who can be named here: the room's people and its agents, in one list,
   // because the person typing does not care which kind they are reaching for.
   const [highlighted, setHighlighted] = useState(0);
@@ -119,7 +115,6 @@ export function ChatModule() {
   // losing a sentence is a small betrayal every chat app learned to avoid.
   const drafts = useRef<Map<string, string>>(new Map());
   const [switcher, setSwitcher] = useState<string | null>(null);
-  const [dropping, setDropping] = useState(false);
   // Where reading stopped when this room was opened. Held still afterwards:
   // the line must not creep down as new messages land while you are looking.
   // On a phone the two columns become one screen at a time, the way Mail
@@ -145,6 +140,7 @@ export function ChatModule() {
   const directory = useRoomDirectory(setError);
   const { channels, openId, setOpenId, creating, browsing, setBrowsing, dmQuery, setDmQuery, dmFound, setDmFound, finding, found, loadChannels, find, findPeople, openDm, renameRoom, archiveRoom, browse, joinRoom, createChannel } = directory;
   const { feedRef, messages, setMessages, turns, palette, nameable, readUpTo, moreBehind, loadingOlder, loadMessages, loadTurns, loadOlder, editMessage, withdrawMessage, decide, react } = useChatFeed(openId, channels, loadChannels, setError);
+  const { staged, setStaged, picking, setPicking, dropping, setDropping, shareDropped, mergePicked } = useChatAttachments(setError);
 
   async function send() {
     const words = draft.trim();
@@ -244,29 +240,6 @@ export function ChatModule() {
       composerRef.current?.setSelectionRange(at, at);
       setCaret(at);
     });
-  }
-
-  async function shareDropped(files: FileList) {
-    setDropping(false);
-    if (files.length === 0) return;
-    setError(null);
-    try {
-      for (const file of Array.from(files).slice(0, ATTACHMENTS_MAX)) {
-        // Into Drive first, then staged as a pointer: dropping a file into a
-        // room should leave it somewhere the person can find again, not only
-        // inside a conversation.
-        const id = await client.driveUpload(null, null, file);
-        const node = await client.driveNode(id);
-        if (node === null) continue;
-        setStaged((held) =>
-          held.length >= ATTACHMENTS_MAX || held.some((h) => h.id === node.id)
-            ? held
-            : [...held, node],
-        );
-      }
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatAttachFailed));
-    }
   }
 
   // Typing anywhere types into the composer. Nobody should have to find the
@@ -442,25 +415,9 @@ export function ChatModule() {
 
       {picking && (
         <FilePicker
-          max={ATTACHMENTS_MAX}
+          max={CHAT_ATTACHMENTS_MAX}
           onClose={() => setPicking(false)}
-          onPick={(files) => {
-            setPicking(false);
-            // Merge rather than replace, so choosing twice adds rather than
-            // silently discarding the first pick.
-            setStaged((held) => {
-              const merged = [...held];
-              for (const file of files) {
-                if (
-                  !merged.some((f) => f.id === file.id) &&
-                  merged.length < ATTACHMENTS_MAX
-                ) {
-                  merged.push(file);
-                }
-              }
-              return merged;
-            });
-          }}
+          onPick={mergePicked}
         />
       )}
 
