@@ -8,6 +8,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   BarChart3,
+  CalendarClock,
   FileText,
   Globe2,
   ArrowRight,
@@ -594,6 +595,14 @@ export function SiteView() {
                 onClick={() => navigate("orders")}
               >
                 {strings.sitesOrders}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<CalendarClock size="var(--icon-size-inline)" />}
+                onClick={() => navigate("bookings")}
+              >
+                {strings.sitesBookings}
               </Button>
               <Button
                 variant="ghost"

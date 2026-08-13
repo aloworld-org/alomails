@@ -5,6 +5,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import { PageEditorView } from "./PageEditorView";
+import { BookingsView } from "./BookingsView";
 import { CatalogsView } from "./CatalogsView";
 import { CollectionsView } from "./CollectionsView";
 import { OrdersView } from "./OrdersView";
@@ -29,6 +30,7 @@ export function SitesModule() {
         <Route path=":siteId/funnel" element={<FunnelView />} />
         <Route path=":siteId/catalogs" element={<CatalogsView />} />
         <Route path=":siteId/orders" element={<OrdersView />} />
+        <Route path=":siteId/bookings" element={<BookingsView />} />
         <Route path=":siteId/collections" element={<CollectionsView />} />
         <Route path=":siteId/history" element={<HistoryView />} />
         <Route path=":siteId/submissions" element={<SubmissionsView />} />

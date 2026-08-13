@@ -5289,6 +5289,112 @@ export const en = {
     "This catalog takes orders, so the published page carries an order form under the list. Orders arrive in this site's order inbox.",
   sitesCatalogSectionOrdersOff:
     "This catalog does not take orders, so the page shows the list alone. Ordering is a switch on the catalog, not on this section.",
+  // What a visitor may book, and the calendar it is booked into (S2.13c). Two
+  // facts are repeated wherever they matter, because a visitor would otherwise
+  // discover them: the appointments live in a real Agenda calendar and are
+  // managed there, and a free calendar is not an invitation — the opening hours
+  // are what is offered, and the calendar only ever takes times away.
+  sitesBookings: "Bookings",
+  sitesBookingsHint:
+    "What visitors can book on this website — a consultation, a viewing, a table. Each one is booked straight into one of your calendars.",
+  sitesBookingsLoading: "Loading what can be booked...",
+  sitesBookingsLoadFailed:
+    "The bookable services could not be loaded. Check your connection and try again.",
+  sitesNewBooking: "New bookable service",
+  sitesBookingNoneTitle: "Nothing can be booked yet",
+  sitesBookingNoneBody:
+    "A bookable service is one thing a visitor can take a time for. Say how long it lasts and when you are open for it; the free times are worked out from your calendar.",
+  sitesBookingNoCalendarTitle: "No calendar to book into",
+  sitesBookingNoCalendarBody:
+    "A booking is an appointment in one of your calendars, so there has to be a calendar you can add appointments to. Make one in Agenda and it appears here.",
+  sitesBookingSettings: "This service",
+  sitesBookingSettingsHint:
+    "Everything a visitor is offered. Changes reach the live website at your next publish.",
+  sitesBookingName: "What is being booked",
+  sitesBookingDescription: "Description",
+  sitesBookingWhere: "Where it happens",
+  sitesBookingWherePlaceholder: "Second floor, ring the bell",
+  sitesBookingWhereLine: (place: string) => `Where: ${place}`,
+  sitesBookingCalendar: "Booked into",
+  sitesBookingCalendarHint:
+    "Appointments are written into this calendar, and times you are already busy there are never offered.",
+  sitesBookingCalendarReadOnly: (name: string) => `${name} — shared with you for reading only`,
+  sitesBookingCalendarGone: "Calendar no longer available",
+  sitesBookingCalendarGoneHint:
+    "The calendar this service was booked into can no longer be reached — it was deleted, or its sharing was withdrawn. Until you choose another one, the published page offers no times at all.",
+  sitesBookingOpenAgenda: "Open Agenda to manage the appointments",
+  sitesBookingLength: "Length (minutes)",
+  sitesBookingBuffer: "Gap after (minutes)",
+  sitesBookingNotice: "Shortest notice (minutes)",
+  sitesBookingHorizon: "Opens ahead (days)",
+  sitesBookingTimeZone: "Time zone",
+  sitesBookingTimeZoneHint:
+    "The clock your opening hours are written on, as an IANA name such as Europe/Brussels. Appointments move with the clock when daylight saving changes.",
+  sitesBookingHours: "When you are open for it",
+  sitesBookingHoursHint:
+    "An empty calendar is not an open day. These windows are what is offered; anything already in the calendar is then taken away.",
+  sitesBookingDay: "Day",
+  sitesBookingFrom: "From",
+  sitesBookingUntil: "Until",
+  sitesBookingAddWindow: "Add a window",
+  sitesBookingRemoveWindow: (window: string) => `Remove ${window}`,
+  sitesBookingNoHours: "No opening hours yet — nothing can be booked.",
+  sitesBookingQuestions: "What you ask when it is booked",
+  sitesBookingQuestionsHint:
+    "A name and an email address are always asked and are not in this list. Add only what this particular booking needs.",
+  sitesBookingQuestionLabel: "Question",
+  sitesBookingQuestionLabelPlaceholder: "Telephone number",
+  sitesBookingQuestionKey: "Stored as",
+  sitesBookingQuestionKind: "Kind of answer",
+  sitesBookingQuestionText: "One line",
+  sitesBookingQuestionLongText: "Several lines",
+  sitesBookingQuestionPhone: "Telephone number",
+  sitesBookingQuestionChoice: "One of a list",
+  sitesBookingQuestionOptions: "The answers offered",
+  sitesBookingQuestionOptionsPlaceholder: "Cut, colour, both",
+  sitesBookingQuestionRequired: "Must be answered",
+  sitesBookingAddQuestion: "Add a question",
+  sitesBookingRemoveQuestion: (question: string) => `Remove the question ${question}`,
+  sitesBookingActive: "Take bookings for this",
+  sitesBookingActiveHint:
+    "Switched off, the service stays exactly as it is and the published page says it takes no bookings for now.",
+  sitesBookingCreate: "Create service",
+  sitesBookingSave: "Save service",
+  sitesBookingSaveFailed: "The bookable service could not be saved.",
+  sitesBookingDelete: "Delete service",
+  sitesBookingDeleteConfirm: "Delete it",
+  sitesBookingDeleteHint:
+    "Appointments already in your calendar stay exactly as they are — nothing here cancels one. Pages already published keep offering it until you publish again.",
+  sitesBookingDeleteFailed: "The bookable service could not be deleted.",
+  sitesBookingMinutes: (minutes: number) => `${minutes} minutes`,
+  sitesBookingOff: "Not taking bookings",
+  sitesBookingPreview: "What a visitor sees",
+  sitesBookingPreviewHint:
+    "The offer as the published page states it. The free times themselves are worked out against your calendar the moment somebody asks.",
+  sitesBookingUnnamed: "Untitled service",
+  sitesBookingAsksNothingExtra: "Visitors are asked their name and email address.",
+  sitesBookingAsksAlso: (questions: string) =>
+    `Visitors are asked their name and email address, and: ${questions}.`,
+  sitesBookingPublishHint:
+    "It appears on the website once a page carries a booking section for it and you publish.",
+  sitesBookingOffPreview:
+    "This service is switched off, so the page will say it takes no bookings for now.",
+  // Offering a booking on a page. The section names a service and nothing else:
+  // the length, the week and the questions belong to the service.
+  sitesSectionBooking: "Booking",
+  sitesSectionBookingDesc: "Let visitors book a time with you, straight into your calendar.",
+  sitesBookingSectionHeading: "Heading above it",
+  sitesBookingSectionChoose: "What can be booked here",
+  sitesBookingSectionNoServices: "This site has nothing to book yet",
+  sitesBookingSectionNoServicesHint:
+    "A bookable service says how long it takes, when you are open for it, and which calendar it goes into. Make one and this section can offer it.",
+  sitesBookingSectionOffOption: (name: string) => `${name} (not taking bookings)`,
+  sitesBookingSectionLength: (minutes: number) =>
+    `Visitors pick a free time of ${minutes} minutes. The times come from your calendar when they ask, not from this page.`,
+  sitesBookingSectionOff:
+    "This service is switched off, so the published page will say it takes no bookings for now.",
+  sitesBookingSectionGone:
+    "The service this section offered is gone. Choose another one, or the next publish will be refused.",
   // The order inbox: what visitors asked to buy, and what the owner does next.
   sitesOrders: "Orders",
   sitesOrdersLoadFailed:

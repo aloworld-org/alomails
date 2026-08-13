@@ -27,6 +27,9 @@ import type {
   Site,
   SiteAnalyticsReport,
   SiteAttributionReport,
+  SiteAvailabilitySource,
+  SiteBooking,
+  SiteBookingDraft,
   SiteCrmBoard,
   SiteCrmColumn,
   SiteLeadHandoff,
@@ -662,6 +665,53 @@ export class SitesApi {
       "DELETE",
       `${this.#catalogPath(siteId, catalogId)}/items/${encodeURIComponent(itemId)}`,
     );
+  }
+
+  /** The Agenda calendars a booking service of this site may be attached to,
+   *  read-only shares included and marked as such (S2.13a). An empty list is
+   *  the honest dependency state: nothing here can be booked until the account
+   *  has a calendar to book into. */
+  bookingSources(siteId: string): Promise<SiteAvailabilitySource[]> {
+    return this.#read<{ sources?: SiteAvailabilitySource[] }>(
+      `/sites/${encodeURIComponent(siteId)}/booking-sources`,
+    ).then((response) => response.sources ?? []);
+  }
+
+  /** Every bookable service of the site, in creation order, each with its
+   *  calendar resolved (`calendar: null` when it can no longer be reached). */
+  bookings(siteId: string): Promise<SiteBooking[]> {
+    return this.#read<{ bookings?: SiteBooking[] }>(
+      `/sites/${encodeURIComponent(siteId)}/bookings`,
+    ).then((response) => response.bookings ?? []);
+  }
+
+  createBooking(siteId: string, draft: SiteBookingDraft): Promise<SiteBooking> {
+    return this.#write<SiteBooking>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/bookings`,
+      draft,
+    );
+  }
+
+  /** Replaces the service whole: the form sends every field it shows every
+   *  time, so no sequence of screens can leave a published page offering a week
+   *  its owner never agreed to. */
+  updateBooking(
+    siteId: string,
+    bookingId: string,
+    draft: SiteBookingDraft,
+  ): Promise<SiteBooking> {
+    return this.#write<SiteBooking>("PUT", this.#bookingPath(siteId, bookingId), draft);
+  }
+
+  /** Removes the service. Appointments already in the calendar are
+   *  appointments — nothing here cancels one. */
+  deleteBooking(siteId: string, bookingId: string): Promise<void> {
+    return this.#discard("DELETE", this.#bookingPath(siteId, bookingId));
+  }
+
+  #bookingPath(siteId: string, bookingId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/bookings/${encodeURIComponent(bookingId)}`;
   }
 
   /** Every order this site's published catalogs took, newest first, each with

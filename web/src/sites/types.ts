@@ -398,6 +398,82 @@ export interface SiteOrder {
   lines: SiteOrderLine[];
 }
 
+/** One Agenda calendar a booking service may be attached to, as the Sites-owned
+ *  seam describes it (S2.13a). `writable` is false for a calendar shared for
+ *  reading only — visible in the picker, because hiding it would leave the
+ *  owner hunting for a calendar that is right there, and refused by the server
+ *  with a sentence saying why. */
+export interface SiteAvailabilitySource {
+  id: string;
+  name: string;
+  writable: boolean;
+}
+
+/** What kind of answer an extra booking question takes. */
+export type SiteBookingFieldKind = "text" | "long_text" | "phone" | "choice";
+
+/** One extra question a visitor answers when booking. Name and email are
+ *  structural and are never in this list. */
+export interface SiteBookingField {
+  /** The stable key the answer is stored under; it outlives the label. */
+  key: string;
+  label: string;
+  kind: SiteBookingFieldKind;
+  required: boolean;
+  /** The offered answers, for `choice` alone. */
+  options: string[];
+}
+
+/** One weekly window the service is offered in, in the service's own time zone.
+ *  `weekday` is ISO 8601 (1 = Monday … 7 = Sunday); the bounds are minutes from
+ *  midnight and `endMinute` is exclusive. */
+export interface SiteBookingWindow {
+  weekday: number;
+  startMinute: number;
+  endMinute: number;
+}
+
+/** One bookable service of a site, as its owner sees it. `calendar` is null
+ *  when the bound Agenda calendar can no longer be reached — deleted, or a
+ *  share withdrawn — which the screen states as a fact rather than showing an
+ *  empty week the owner discovers from a visitor's complaint. */
+export interface SiteBooking {
+  id: string;
+  name: string;
+  description: string | null;
+  calendarId: string;
+  calendar: SiteAvailabilitySource | null;
+  timeZone: string;
+  durationMinutes: number;
+  bufferMinutes: number;
+  noticeMinutes: number;
+  horizonDays: number;
+  location: string | null;
+  hours: SiteBookingWindow[];
+  fields: SiteBookingField[];
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** What the booking form sends. Every write replaces the whole service — hours,
+ *  questions and calendar are one decision — so this is the complete shape each
+ *  time, exactly as the route's body spells it. */
+export interface SiteBookingDraft {
+  name: string;
+  description: string;
+  calendarId: string;
+  timeZone: string;
+  durationMinutes: number;
+  bufferMinutes: number;
+  noticeMinutes: number;
+  horizonDays: number;
+  location: string;
+  hours: SiteBookingWindow[];
+  fields: SiteBookingField[];
+  active: boolean;
+}
+
 export interface SiteCollectionFieldMapping {
   title: string;
   slug: string | null;

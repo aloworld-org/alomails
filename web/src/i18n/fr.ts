@@ -4586,6 +4586,113 @@ export const fr: Partial<Catalog> = {
     "Ce catalogue prend les commandes : la page publiée porte donc un bon de commande sous la liste. Les commandes arrivent dans la boîte de commandes de ce site.",
   sitesCatalogSectionOrdersOff:
     "Ce catalogue ne prend pas les commandes : la page affiche donc la liste seule. La prise de commandes se règle sur le catalogue, pas sur cette section.",
+  // Ce qu’un visiteur peut réserver, et l’agenda dans lequel le rendez-vous
+  // est inscrit (S2.13c).
+  sitesBookings: "Réservations",
+  sitesBookingsHint:
+    "Ce qu’un visiteur peut réserver sur ce site — un entretien, une visite, une table. Chaque réservation s’inscrit directement dans l’un de vos agendas.",
+  sitesBookingsLoading: "Chargement de ce qui peut être réservé...",
+  sitesBookingsLoadFailed:
+    "Les prestations réservables n’ont pas pu être chargées. Vérifiez votre connexion et réessayez.",
+  sitesNewBooking: "Nouvelle prestation réservable",
+  sitesBookingNoneTitle: "Rien n’est encore réservable",
+  sitesBookingNoneBody:
+    "Une prestation réservable, c’est une chose pour laquelle un visiteur peut prendre un créneau. Indiquez sa durée et vos heures d’ouverture ; les créneaux libres sont calculés d’après votre agenda.",
+  sitesBookingNoCalendarTitle: "Aucun agenda où inscrire les rendez-vous",
+  sitesBookingNoCalendarBody:
+    "Une réservation est un rendez-vous dans l’un de vos agendas : il faut donc un agenda dans lequel vous pouvez ajouter des rendez-vous. Créez-en un dans Agenda et il apparaîtra ici.",
+  sitesBookingSettings: "Cette prestation",
+  sitesBookingSettingsHint:
+    "Tout ce qui est proposé au visiteur. Les modifications atteignent le site en ligne à votre prochaine publication.",
+  sitesBookingName: "Ce qui est réservé",
+  sitesBookingDescription: "Description",
+  sitesBookingWhere: "Où cela se passe",
+  sitesBookingWherePlaceholder: "Deuxième étage, sonnez",
+  sitesBookingWhereLine: (place: string) => `Où : ${place}`,
+  sitesBookingCalendar: "Inscrit dans",
+  sitesBookingCalendarHint:
+    "Les rendez-vous sont inscrits dans cet agenda, et les moments où vous y êtes déjà occupé ne sont jamais proposés.",
+  sitesBookingCalendarReadOnly: (name: string) =>
+    `${name} — partagé avec vous en lecture seule`,
+  sitesBookingCalendarGone: "Agenda devenu inaccessible",
+  sitesBookingCalendarGoneHint:
+    "L’agenda dans lequel cette prestation était inscrite n’est plus accessible : il a été supprimé, ou son partage a été retiré. Tant que vous n’en choisissez pas un autre, la page publiée ne propose plus aucun créneau.",
+  sitesBookingOpenAgenda: "Ouvrir Agenda pour gérer les rendez-vous",
+  sitesBookingLength: "Durée (minutes)",
+  sitesBookingBuffer: "Battement après (minutes)",
+  sitesBookingNotice: "Délai minimal (minutes)",
+  sitesBookingHorizon: "Ouvert à l’avance (jours)",
+  sitesBookingTimeZone: "Fuseau horaire",
+  sitesBookingTimeZoneHint:
+    "L’horloge sur laquelle vos heures d’ouverture sont écrites, sous forme de nom IANA comme Europe/Brussels. Les rendez-vous suivent l’heure lors du changement d’heure.",
+  sitesBookingHours: "Vos heures d’ouverture",
+  sitesBookingHoursHint:
+    "Un agenda vide n’est pas un jour ouvert. Ces plages sont ce qui est proposé ; ce qui figure déjà dans l’agenda en est ensuite retiré.",
+  sitesBookingDay: "Jour",
+  sitesBookingFrom: "De",
+  sitesBookingUntil: "À",
+  sitesBookingAddWindow: "Ajouter une plage",
+  sitesBookingRemoveWindow: (window: string) => `Retirer ${window}`,
+  sitesBookingNoHours:
+    "Aucune heure d’ouverture pour l’instant — rien ne peut être réservé.",
+  sitesBookingQuestions: "Ce que vous demandez à la réservation",
+  sitesBookingQuestionsHint:
+    "Le nom et l’adresse e-mail sont toujours demandés et ne figurent pas dans cette liste. N’ajoutez que ce dont cette réservation a besoin.",
+  sitesBookingQuestionLabel: "Question",
+  sitesBookingQuestionLabelPlaceholder: "Numéro de téléphone",
+  sitesBookingQuestionKey: "Enregistré sous",
+  sitesBookingQuestionKind: "Type de réponse",
+  sitesBookingQuestionText: "Une ligne",
+  sitesBookingQuestionLongText: "Plusieurs lignes",
+  sitesBookingQuestionPhone: "Numéro de téléphone",
+  sitesBookingQuestionChoice: "Un choix dans une liste",
+  sitesBookingQuestionOptions: "Les réponses proposées",
+  sitesBookingQuestionOptionsPlaceholder: "Coupe, couleur, les deux",
+  sitesBookingQuestionRequired: "Réponse obligatoire",
+  sitesBookingAddQuestion: "Ajouter une question",
+  sitesBookingRemoveQuestion: (question: string) =>
+    `Retirer la question ${question}`,
+  sitesBookingActive: "Accepter les réservations",
+  sitesBookingActiveHint:
+    "Désactivée, la prestation reste telle quelle et la page publiée indique qu’elle n’accepte pas de réservation pour le moment.",
+  sitesBookingCreate: "Créer la prestation",
+  sitesBookingSave: "Enregistrer la prestation",
+  sitesBookingSaveFailed: "La prestation réservable n’a pas pu être enregistrée.",
+  sitesBookingDelete: "Supprimer la prestation",
+  sitesBookingDeleteConfirm: "Supprimer",
+  sitesBookingDeleteHint:
+    "Les rendez-vous déjà inscrits dans votre agenda restent tels quels — rien ici n’en annule un. Les pages déjà publiées continuent de la proposer jusqu’à votre prochaine publication.",
+  sitesBookingDeleteFailed: "La prestation réservable n’a pas pu être supprimée.",
+  sitesBookingMinutes: (minutes: number) => `${minutes} minutes`,
+  sitesBookingOff: "N’accepte pas de réservation",
+  sitesBookingPreview: "Ce que voit un visiteur",
+  sitesBookingPreviewHint:
+    "L’offre telle que la page publiée l’énonce. Les créneaux libres, eux, sont calculés d’après votre agenda au moment où quelqu’un les demande.",
+  sitesBookingUnnamed: "Prestation sans nom",
+  sitesBookingAsksNothingExtra:
+    "Le visiteur indique son nom et son adresse e-mail.",
+  sitesBookingAsksAlso: (questions: string) =>
+    `Le visiteur indique son nom et son adresse e-mail, ainsi que : ${questions}.`,
+  sitesBookingPublishHint:
+    "Elle apparaît sur le site dès qu’une page porte une section de réservation pour elle et que vous publiez.",
+  sitesBookingOffPreview:
+    "Cette prestation est désactivée : la page indiquera qu’elle n’accepte pas de réservation pour le moment.",
+  sitesSectionBooking: "Réservation",
+  sitesSectionBookingDesc:
+    "Laissez les visiteurs réserver un créneau chez vous, directement dans votre agenda.",
+  sitesBookingSectionHeading: "Titre au-dessus",
+  sitesBookingSectionChoose: "Ce qui se réserve ici",
+  sitesBookingSectionNoServices: "Ce site n’a encore rien à réserver",
+  sitesBookingSectionNoServicesHint:
+    "Une prestation réservable indique sa durée, vos heures d’ouverture et l’agenda dans lequel elle s’inscrit. Créez-en une et cette section pourra la proposer.",
+  sitesBookingSectionOffOption: (name: string) =>
+    `${name} (n’accepte pas de réservation)`,
+  sitesBookingSectionLength: (minutes: number) =>
+    `Le visiteur choisit un créneau libre de ${minutes} minutes. Les créneaux viennent de votre agenda au moment de la demande, pas de cette page.`,
+  sitesBookingSectionOff:
+    "Cette prestation est désactivée : la page publiée indiquera qu’elle n’accepte pas de réservation pour le moment.",
+  sitesBookingSectionGone:
+    "La prestation proposée par cette section n’existe plus. Choisissez-en une autre, sinon la prochaine publication sera refusée.",
   sitesOrders: "Commandes",
   sitesOrdersLoadFailed:
     "Les commandes n’ont pas pu être chargées. Vérifiez votre connexion et réessayez.",

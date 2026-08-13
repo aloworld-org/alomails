@@ -148,6 +148,15 @@ export interface CatalogDraft {
   category: string;
 }
 
+/** Which of the site's booking services this section offers, and the heading
+ *  above it. Nothing else: the length, the week and the questions belong to the
+ *  service and are edited where the service is. */
+export interface BookingDraft {
+  type: "booking";
+  booking_id: string;
+  heading: string;
+}
+
 export interface FooterDraft {
   type: "footer";
   text: string;
@@ -169,6 +178,7 @@ export type SectionDraft =
   | ContactFormDraft
   | CollectionDraft
   | CatalogDraft
+  | BookingDraft
   | FooterDraft;
 
 export const blankLink = (): SectionLink => ({ label: "", href: "" });
@@ -362,6 +372,14 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         category: s?.category ?? "",
       };
     }
+    case "booking": {
+      const s = from as Section & { type: "booking" } | undefined;
+      return {
+        type: "booking",
+        booking_id: s?.booking_id ?? "",
+        heading: s?.heading ?? "",
+      };
+    }
     case "footer": {
       const s = from as Section & { type: "footer" } | undefined;
       return { type: "footer", text: s?.text ?? "", links: seeded(s?.links ?? [], blankLink) };
@@ -531,6 +549,12 @@ export function toSection(draft: SectionDraft): Section {
         catalog_id: req(draft.catalog_id),
         heading: opt(draft.heading),
         category: opt(draft.category),
+      };
+    case "booking":
+      return {
+        type: "booking",
+        booking_id: req(draft.booking_id),
+        heading: opt(draft.heading),
       };
     case "footer":
       return {

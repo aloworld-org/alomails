@@ -35,6 +35,8 @@ export function kindLabel(kind: SectionKind): string {
       return strings.sitesSectionCollection;
     case "catalog":
       return strings.sitesSectionCatalog;
+    case "booking":
+      return strings.sitesSectionBooking;
     case "footer":
       return strings.sitesSectionFooter;
   }
@@ -69,6 +71,8 @@ export function kindDescription(kind: SectionKind): string {
       return strings.sitesSectionCollectionDesc;
     case "catalog":
       return strings.sitesSectionCatalogDesc;
+    case "booking":
+      return strings.sitesSectionBookingDesc;
     case "footer":
       return strings.sitesSectionFooterDesc;
   }
@@ -116,6 +120,8 @@ export function sectionSummary(section: Section): string {
           ? strings.sitesSectionCatalog
           : strings.sitesCatalogSectionOneGroup(section.category))
       );
+    case "booking":
+      return section.heading ?? strings.sitesSectionBooking;
     case "footer":
       return section.text ?? strings.sitesCountLinks(section.links.length);
   }

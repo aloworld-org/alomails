@@ -1,5 +1,5 @@
 // The TypeScript mirror of the sections schema v1 — the closed vocabulary of
-// fourteen section types a page is stacked from, exactly as the server's
+// fifteen section types a page is stacked from, exactly as the server's
 // `site_model` speaks it on the wire (`type`-tagged, snake_case props,
 // absent optionals as absent keys). This file changes only when the schema
 // version does; it carries NO validation — the store rules on every write and
@@ -192,6 +192,16 @@ export interface CatalogSection {
   category?: string | undefined;
 }
 
+/** Something a visitor may book — a consultation, a viewing, a test drive.
+ *  `booking_id` names one of the site's own booking services (S2.13a); the
+ *  length, the opening hours and the questions asked are that service's and are
+ *  frozen into the next publish, never copied here. */
+export interface BookingSection {
+  type: "booking";
+  booking_id: string;
+  heading?: string | undefined;
+}
+
 /** The page footer. */
 export interface FooterSection {
   type: "footer";
@@ -214,12 +224,13 @@ export type Section =
   | ContactFormSection
   | CollectionSection
   | CatalogSection
+  | BookingSection
   | FooterSection;
 
 /** A section's wire tag. */
 export type SectionKind = Section["type"];
 
-/** The fourteen kinds in their natural page order — the picker's order. */
+/** The fifteen kinds in their natural page order — the picker's order. */
 export const SECTION_KINDS: readonly SectionKind[] = [
   "nav",
   "hero",
@@ -234,6 +245,7 @@ export const SECTION_KINDS: readonly SectionKind[] = [
   "contact_form",
   "collection",
   "catalog",
+  "booking",
   "footer",
 ];
 

@@ -24,6 +24,7 @@ import {
   toSection,
 } from "./sectionDrafts";
 import type {
+  BookingDraft,
   CatalogDraft,
   ContactFormDraft,
   CollectionDraft,
@@ -42,7 +43,12 @@ import type {
 } from "./sectionDrafts";
 import type { Section, SectionKind, SectionLink } from "./sections";
 import type { SiteCopyAction, SiteEditEnvelope } from "./types";
-import type { SiteCatalog, SiteCatalogCategory, SiteCollection } from "./types";
+import type {
+  SiteBooking,
+  SiteCatalog,
+  SiteCatalogCategory,
+  SiteCollection,
+} from "./types";
 import { sitesMessage, useSitesApi } from "./api";
 import { CopyContext, useCopyContext } from "./copyContext";
 import type { CopyContextValue } from "./copyContext";
@@ -970,6 +976,104 @@ function CatalogFields({ draft, onChange }: { draft: CatalogDraft; onChange: Cha
   );
 }
 
+/** Offering one of the site's booking services on a page. The section holds a
+ *  choice and a heading; the length, the week it is open and the questions a
+ *  visitor answers are the service's own and are edited on the Bookings screen,
+ *  which this form links to rather than duplicating. Two states are said out
+ *  loud because a visitor would otherwise be the one to discover them: a site
+ *  with no service yet, and a service that is switched off. */
+function BookingFields({ draft, onChange }: { draft: BookingDraft; onChange: Change }) {
+  const { siteId = "" } = useParams();
+  const navigate = useNavigate();
+  const api = useSitesApi();
+  const [bookings, setBookings] = useState<SiteBooking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void api
+      .bookings(siteId)
+      .then(
+        (stored) => {
+          if (cancelled) return;
+          setBookings(stored);
+          setError(null);
+        },
+        (reason: unknown) => {
+          if (!cancelled) setError(sitesMessage(reason, strings.sitesBookingsLoadFailed));
+        },
+      )
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, siteId]);
+
+  const firstBookingId = bookings[0]?.id;
+  useEffect(() => {
+    if (draft.booking_id === "" && firstBookingId !== undefined) {
+      onChange({ ...draft, booking_id: firstBookingId });
+    }
+  }, [draft, firstBookingId, onChange]);
+
+  const chosen = bookings.find((booking) => booking.id === draft.booking_id);
+  return (
+    <>
+      <TextField
+        label={strings.sitesBookingSectionHeading}
+        value={draft.heading}
+        onChange={(heading) => onChange({ ...draft, heading })}
+        autoFocus
+        copyPointer="/heading"
+      />
+      {loading ? (
+        <div className={styles.collectionFieldLoading} role="status">
+          <Spinner size={16} />
+          <span>{strings.sitesBookingsLoading}</span>
+        </div>
+      ) : bookings.length === 0 ? (
+        <div className={styles.collectionFieldEmpty}>
+          <strong>{strings.sitesBookingSectionNoServices}</strong>
+          <span>{strings.sitesBookingSectionNoServicesHint}</span>
+          <Button variant="ghost" onClick={() => navigate(`/sites/${siteId}/bookings`)}>
+            {strings.sitesNewBooking}
+          </Button>
+        </div>
+      ) : (
+        <>
+          <Field label={strings.sitesBookingSectionChoose}>
+            <select
+              className={styles.input}
+              value={draft.booking_id}
+              onChange={(event) => onChange({ ...draft, booking_id: event.target.value })}
+            >
+              {bookings.map((booking) => (
+                <option key={booking.id} value={booking.id}>
+                  {booking.active
+                    ? booking.name
+                    : strings.sitesBookingSectionOffOption(booking.name)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <p className={styles.hint}>
+            {chosen === undefined
+              ? strings.sitesBookingSectionGone
+              : chosen.active
+                ? strings.sitesBookingSectionLength(chosen.durationMinutes)
+                : strings.sitesBookingSectionOff}
+          </p>
+        </>
+      )}
+      {error !== null && <p className={styles.aiEditError} role="alert">{error}</p>}
+    </>
+  );
+}
+
 function FooterFields({ draft, onChange }: { draft: FooterDraft; onChange: Change }) {
   return (
     <>
@@ -1019,12 +1123,31 @@ function FormFields({ draft, onChange }: { draft: SectionDraft; onChange: Change
       return <CollectionFields draft={draft} onChange={onChange} />;
     case "catalog":
       return <CatalogFields draft={draft} onChange={onChange} />;
+    case "booking":
+      return <BookingFields draft={draft} onChange={onChange} />;
     case "footer":
       return <FooterFields draft={draft} onChange={onChange} />;
   }
 }
 
 // ---- the dialog -------------------------------------------------------------
+
+/** The three sections that name something else of the site cannot be saved
+ *  until they name it: a section pointing at nothing would be a page that
+ *  publishes an empty hole, or refuses the publish outright. Every other kind
+ *  is ruled on by the server alone. */
+function canSubmit(draft: SectionDraft): boolean {
+  switch (draft.type) {
+    case "collection":
+      return draft.collection_id !== "";
+    case "catalog":
+      return draft.catalog_id !== "";
+    case "booking":
+      return draft.booking_id !== "";
+    default:
+      return true;
+  }
+}
 
 /** The section prop form: fresh for a kind picked in the picker, prefilled
  *  when editing an existing section. Saving hands the wire section up; the
@@ -1063,11 +1186,7 @@ export function SectionFormDialog({
       subtitle={kindDescription(kind)}
       error={error}
       busy={busy}
-      canSubmit={
-        draft.type === "collection"
-          ? draft.collection_id !== ""
-          : draft.type !== "catalog" || draft.catalog_id !== ""
-      }
+      canSubmit={canSubmit(draft)}
       submitLabel={strings.sitesSaveSection}
       onClose={onClose}
       onSubmit={() => onSave(toSection(draft))}

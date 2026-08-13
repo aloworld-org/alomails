@@ -4528,6 +4528,113 @@ export const nl: Partial<Catalog> = {
     "Deze catalogus neemt bestellingen aan, dus de gepubliceerde pagina krijgt een bestelformulier onder de lijst. Bestellingen komen binnen in de bestellijst van deze site.",
   sitesCatalogSectionOrdersOff:
     "Deze catalogus neemt geen bestellingen aan, dus de pagina toont alleen de lijst. Bestellen zet u aan op de catalogus, niet op deze sectie.",
+  // Wat een bezoeker kan reserveren, en de agenda waarin de afspraak terechtkomt
+  // (S2.13c).
+  sitesBookings: "Afspraken",
+  sitesBookingsHint:
+    "Wat een bezoeker op deze website kan reserveren — een gesprek, een bezichtiging, een tafel. Elke afspraak komt rechtstreeks in een van uw agenda’s.",
+  sitesBookingsLoading: "Bezig met laden wat er te reserveren valt...",
+  sitesBookingsLoadFailed:
+    "De reserveerbare diensten konden niet worden geladen. Controleer uw verbinding en probeer het opnieuw.",
+  sitesNewBooking: "Nieuwe reserveerbare dienst",
+  sitesBookingNoneTitle: "Er valt nog niets te reserveren",
+  sitesBookingNoneBody:
+    "Een reserveerbare dienst is één ding waarvoor een bezoeker een tijdstip kan vastleggen. Zeg hoe lang het duurt en wanneer u ervoor open bent; de vrije tijden volgen uit uw agenda.",
+  sitesBookingNoCalendarTitle: "Geen agenda om in te boeken",
+  sitesBookingNoCalendarBody:
+    "Een reservering is een afspraak in een van uw agenda’s, dus er moet een agenda zijn waarin u afspraken kunt zetten. Maak er één in Agenda en hij verschijnt hier.",
+  sitesBookingSettings: "Deze dienst",
+  sitesBookingSettingsHint:
+    "Alles wat een bezoeker te zien krijgt. Wijzigingen bereiken de live website bij uw volgende publicatie.",
+  sitesBookingName: "Wat er wordt geboekt",
+  sitesBookingDescription: "Omschrijving",
+  sitesBookingWhere: "Waar het plaatsvindt",
+  sitesBookingWherePlaceholder: "Tweede verdieping, aanbellen",
+  sitesBookingWhereLine: (place: string) => `Waar: ${place}`,
+  sitesBookingCalendar: "Geboekt in",
+  sitesBookingCalendarHint:
+    "Afspraken worden in deze agenda gezet, en tijden waarop u daar al bezet bent worden nooit aangeboden.",
+  sitesBookingCalendarReadOnly: (name: string) =>
+    `${name} — alleen ter inzage met u gedeeld`,
+  sitesBookingCalendarGone: "Agenda niet meer beschikbaar",
+  sitesBookingCalendarGoneHint:
+    "De agenda waarin deze dienst werd geboekt is niet meer bereikbaar — hij is verwijderd, of het delen is ingetrokken. Zolang u geen andere kiest, biedt de gepubliceerde pagina helemaal geen tijden meer aan.",
+  sitesBookingOpenAgenda: "Agenda openen om de afspraken te beheren",
+  sitesBookingLength: "Duur (minuten)",
+  sitesBookingBuffer: "Pauze erna (minuten)",
+  sitesBookingNotice: "Kortste opzegtermijn (minuten)",
+  sitesBookingHorizon: "Vooruit open (dagen)",
+  sitesBookingTimeZone: "Tijdzone",
+  sitesBookingTimeZoneHint:
+    "De klok waarop uw openingstijden staan, als IANA-naam zoals Europe/Brussels. Afspraken schuiven mee met de klok bij de zomer- en wintertijd.",
+  sitesBookingHours: "Wanneer u ervoor open bent",
+  sitesBookingHoursHint:
+    "Een lege agenda is geen open dag. Deze vensters zijn wat wordt aangeboden; wat al in de agenda staat, gaat er daarna vanaf.",
+  sitesBookingDay: "Dag",
+  sitesBookingFrom: "Van",
+  sitesBookingUntil: "Tot",
+  sitesBookingAddWindow: "Venster toevoegen",
+  sitesBookingRemoveWindow: (window: string) => `${window} verwijderen`,
+  sitesBookingNoHours:
+    "Nog geen openingstijden — er kan niets worden gereserveerd.",
+  sitesBookingQuestions: "Wat u vraagt bij het reserveren",
+  sitesBookingQuestionsHint:
+    "Een naam en een e-mailadres worden altijd gevraagd en staan niet in deze lijst. Voeg alleen toe wat juist deze reservering nodig heeft.",
+  sitesBookingQuestionLabel: "Vraag",
+  sitesBookingQuestionLabelPlaceholder: "Telefoonnummer",
+  sitesBookingQuestionKey: "Opgeslagen als",
+  sitesBookingQuestionKind: "Soort antwoord",
+  sitesBookingQuestionText: "Eén regel",
+  sitesBookingQuestionLongText: "Meerdere regels",
+  sitesBookingQuestionPhone: "Telefoonnummer",
+  sitesBookingQuestionChoice: "Eén uit een lijst",
+  sitesBookingQuestionOptions: "De antwoorden die u aanbiedt",
+  sitesBookingQuestionOptionsPlaceholder: "Knippen, kleuren, allebei",
+  sitesBookingQuestionRequired: "Moet worden ingevuld",
+  sitesBookingAddQuestion: "Vraag toevoegen",
+  sitesBookingRemoveQuestion: (question: string) =>
+    `De vraag ${question} verwijderen`,
+  sitesBookingActive: "Reserveringen hiervoor aannemen",
+  sitesBookingActiveHint:
+    "Uitgezet blijft de dienst precies zoals hij is en zegt de gepubliceerde pagina dat er voorlopig geen reserveringen worden aangenomen.",
+  sitesBookingCreate: "Dienst aanmaken",
+  sitesBookingSave: "Dienst opslaan",
+  sitesBookingSaveFailed: "De reserveerbare dienst kon niet worden opgeslagen.",
+  sitesBookingDelete: "Dienst verwijderen",
+  sitesBookingDeleteConfirm: "Verwijderen",
+  sitesBookingDeleteHint:
+    "Afspraken die al in uw agenda staan blijven precies zoals ze zijn — hier wordt er geen enkele geannuleerd. Al gepubliceerde pagina’s blijven de dienst aanbieden tot u opnieuw publiceert.",
+  sitesBookingDeleteFailed: "De reserveerbare dienst kon niet worden verwijderd.",
+  sitesBookingMinutes: (minutes: number) => `${minutes} minuten`,
+  sitesBookingOff: "Neemt geen reserveringen aan",
+  sitesBookingPreview: "Wat een bezoeker ziet",
+  sitesBookingPreviewHint:
+    "Het aanbod zoals de gepubliceerde pagina het verwoordt. De vrije tijden zelf worden tegen uw agenda berekend op het moment dat iemand ernaar vraagt.",
+  sitesBookingUnnamed: "Naamloze dienst",
+  sitesBookingAsksNothingExtra:
+    "Bezoekers wordt om hun naam en e-mailadres gevraagd.",
+  sitesBookingAsksAlso: (questions: string) =>
+    `Bezoekers wordt om hun naam en e-mailadres gevraagd, en om: ${questions}.`,
+  sitesBookingPublishHint:
+    "Hij verschijnt op de website zodra een pagina er een reserveringssectie voor draagt en u publiceert.",
+  sitesBookingOffPreview:
+    "Deze dienst staat uit, dus de pagina zegt dat er voorlopig geen reserveringen worden aangenomen.",
+  sitesSectionBooking: "Reservering",
+  sitesSectionBookingDesc:
+    "Laat bezoekers een tijdstip bij u vastleggen, rechtstreeks in uw agenda.",
+  sitesBookingSectionHeading: "Kop erboven",
+  sitesBookingSectionChoose: "Wat hier gereserveerd kan worden",
+  sitesBookingSectionNoServices: "Deze site heeft nog niets te reserveren",
+  sitesBookingSectionNoServicesHint:
+    "Een reserveerbare dienst zegt hoe lang hij duurt, wanneer u ervoor open bent en in welke agenda hij komt. Maak er één en deze sectie kan die aanbieden.",
+  sitesBookingSectionOffOption: (name: string) =>
+    `${name} (neemt geen reserveringen aan)`,
+  sitesBookingSectionLength: (minutes: number) =>
+    `Bezoekers kiezen een vrij tijdstip van ${minutes} minuten. Die tijden komen uit uw agenda op het moment dat ze het vragen, niet uit deze pagina.`,
+  sitesBookingSectionOff:
+    "Deze dienst staat uit, dus de gepubliceerde pagina zegt dat er voorlopig geen reserveringen worden aangenomen.",
+  sitesBookingSectionGone:
+    "De dienst die deze sectie aanbood bestaat niet meer. Kies een andere, anders wordt de volgende publicatie geweigerd.",
   sitesOrders: "Bestellingen",
   sitesOrdersLoadFailed:
     "De bestellingen konden niet worden geladen. Controleer uw verbinding en probeer het opnieuw.",
