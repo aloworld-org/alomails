@@ -55,6 +55,26 @@ const SITE_EDITOR_DENIAL: &str =
 /// paperwork is not one a books-only role has any reason to make.
 const READ_ONLY_FOR_ACCOUNTANT: [&str; 3] = ["billing", "crm", "inventory"];
 
+/// The same template or path with the `/api` mount removed — `/api/sites/{id}`
+/// reads as `/sites/{id}`.
+///
+/// The whole API answers at two addresses (see the `/api` nest in
+/// [`crate::server`]), and the browser uses the second one: every call the
+/// Sites web module makes is `/api/sites/…`. A rule written against
+/// `/sites/{id}` alone therefore holds only at the address nobody calls —
+/// which, for the site-editor gate below, meant every collaborator was refused
+/// their own site in the real client while the bare-path tests stayed green.
+///
+/// Distinct from [`module_of`], which only needs the *first* segment and can
+/// skip `api` while looking for it. This one keeps the rest of the path,
+/// because the site id is read out of it positionally.
+fn without_api_mount(value: &str) -> &str {
+    match value.strip_prefix("/api") {
+        Some(rest) if rest.is_empty() || rest.starts_with('/') => rest,
+        _ => value,
+    }
+}
+
 /// The first path segment of a matched route template, e.g. `billing` for
 /// `/billing/invoices/{id}/issue`.
 fn module_of(template: &str) -> Option<&str> {
@@ -93,13 +113,11 @@ pub async fn enforce_scoped_roles(
         && !account.is_admin
         && account.has_role(TenantRole::SiteEditor)
     {
-        let allowed = match template.as_deref() {
+        let allowed = match template.as_deref().map(without_api_mount) {
             Some("/sites") => request.method() == Method::GET,
             Some("/sites/theme-presets" | "/sites/config") => request.method() == Method::GET,
             Some(value) if value.starts_with("/sites/{id}") => {
-                let site = request
-                    .uri()
-                    .path()
+                let site = without_api_mount(request.uri().path())
                     .split('/')
                     .nth(2)
                     .map(alo_store::SiteId::new);
@@ -144,7 +162,21 @@ pub async fn enforce_scoped_roles(
 
 #[cfg(test)]
 mod tests {
-    use super::{READ_ONLY_FOR_ACCOUNTANT, module_of};
+    use super::{READ_ONLY_FOR_ACCOUNTANT, module_of, without_api_mount};
+
+    #[test]
+    fn the_api_mount_reads_as_the_bare_path() {
+        assert_eq!(
+            without_api_mount("/api/sites/{id}/pages"),
+            "/sites/{id}/pages"
+        );
+        assert_eq!(without_api_mount("/api/sites"), "/sites");
+        assert_eq!(without_api_mount("/sites/{id}"), "/sites/{id}");
+        assert_eq!(without_api_mount("/api"), "");
+        // A prefix is a whole segment or it is nothing: a site whose id began
+        // with the letters `api` must not lose them.
+        assert_eq!(without_api_mount("/apikeys/{id}"), "/apikeys/{id}");
+    }
 
     #[test]
     fn the_module_is_the_first_segment_of_the_template() {

@@ -130,6 +130,143 @@ async fn an_editor_sees_and_changes_only_the_granted_site() {
 }
 
 #[tokio::test]
+async fn the_api_mount_scopes_a_site_editor_exactly_as_the_bare_path_does() {
+    // The whole API answers at two addresses, and the browser uses the second
+    // one: every call the web module makes is `/api/sites/…`. A gate that
+    // reads the matched template therefore sees `/api/sites/{id}` for real
+    // traffic and `/sites/{id}` only in tests — so the two mounts are asserted
+    // together, or the rule is only ever proven at the address nobody uses.
+    let h = harness("site-editor-api-mount").await;
+    let (token, editor) = colleague(&h).await;
+    let granted = h
+        .acc
+        .create_site("Granted", &subdomain("apimount", &h))
+        .await
+        .unwrap();
+    let other = h
+        .acc
+        .create_site("Other", &subdomain("apiother", &h))
+        .await
+        .unwrap();
+    h.ts.grant_site_editor(&editor, &granted, &h.user)
+        .await
+        .unwrap();
+
+    let (status, body) = request(&h.app, &token, "GET", "/api/sites", json!({})).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let sites = body["sites"].as_array().unwrap();
+    assert_eq!(sites.len(), 1, "{body}");
+    assert_eq!(sites[0]["id"], granted.as_str());
+
+    let (status, body) = request(
+        &h.app,
+        &token,
+        "GET",
+        &format!("/api/sites/{granted}/pages"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+
+    let (status, body) = request(
+        &h.app,
+        &token,
+        "PUT",
+        &format!("/api/sites/{granted}"),
+        json!({ "name": "Changed through the api mount" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(
+        h.acc.site(&granted).await.unwrap().unwrap().name,
+        "Changed through the api mount"
+    );
+
+    // ...and the closed half stays closed at the second address, which is the
+    // half that would make this a hole rather than a lockout.
+    for uri in [
+        format!("/api/sites/{other}"),
+        "/api/sites/not-a-site".to_owned(),
+        "/api/contacts".to_owned(),
+        "/api/drive/list".to_owned(),
+        "/api/billing/customers".to_owned(),
+        "/api/admin/users".to_owned(),
+    ] {
+        let (status, body) = request(&h.app, &token, "GET", &uri, json!({})).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{uri}: {body}");
+    }
+}
+
+#[tokio::test]
+async fn the_editor_matrix_holds_over_the_surface_added_after_the_grant() {
+    // The grant (S2.03a) was written when `/sites/{id}/*` was pages, sections,
+    // theme and publish. Two waves later the same prefix also spends money and
+    // holds the CRM identities behind a website, and the one middleware says
+    // yes to every `/sites/{id}` template by construction — so what keeps the
+    // money and the business doors shut is a per-handler guard, and the only
+    // way to know each one is still there is to knock.
+    let h = harness("site-editor-matrix").await;
+    let (token, editor) = colleague(&h).await;
+    let site = h
+        .acc
+        .create_site("Matrix", &subdomain("matrix", &h))
+        .await
+        .unwrap();
+    h.ts.grant_site_editor(&editor, &site, &h.user)
+        .await
+        .unwrap();
+
+    // The website itself, and the records it produced: this is the work the
+    // collaborator was invited to do.
+    for path in [
+        "pages",
+        "posts",
+        "submissions",
+        "orders",
+        "bookings",
+        "catalogs",
+        "analytics",
+        "heatmap",
+        "conversions",
+        "domains",
+        "publishes",
+    ] {
+        let (status, body) = request(
+            &h.app,
+            &token,
+            "GET",
+            &format!("/api/sites/{site}/{path}"),
+            json!({}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{path}: {body}");
+    }
+
+    // The money door, the guest list, and the CRM/Billing identities behind
+    // the enquiries — each refused by its own handler, not by the middleware.
+    for path in ["collaborators", "domain-purchases", "leads", "attribution"] {
+        let (status, body) = request(
+            &h.app,
+            &token,
+            "GET",
+            &format!("/api/sites/{site}/{path}"),
+            json!({}),
+        )
+        .await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{path}: {body}");
+    }
+
+    // Buying is not reachable from the site-less half of the surface either.
+    for uri in [
+        "/api/sites/domain-catalog",
+        "/api/sites/domain-search?q=acme",
+    ] {
+        let (status, body) = request(&h.app, &token, "GET", uri, json!({})).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{uri}: {body}");
+    }
+}
+
+#[tokio::test]
 async fn the_site_editor_role_opens_no_surrounding_workspace_surface() {
     let h = harness("site-editor-doors").await;
     let (token, editor) = colleague(&h).await;
