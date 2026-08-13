@@ -35,6 +35,7 @@ import { ChatComposer } from "./ChatComposer";
 import { useRoomDirectory } from "./useRoomDirectory";
 import { useChatFeed } from "./useChatFeed";
 import { CHAT_ATTACHMENTS_MAX, useChatAttachments } from "./useChatAttachments";
+import { chatAuthoringText } from "./authoringText";
 import {
   candidatesFor,
   channelLabel,
@@ -50,29 +51,6 @@ const AuthoringInsertModal = lazy(() =>
   })),
 );
 
-/** The ceiling the server enforces (`ATTACHMENTS_MAX` in the store). Kept in
- *  step by hand: exceeding it is refused server-side either way, so the worst
- *  a drifted copy does is offer a choice that is then declined. */
-/** What one page of history holds â€” the server's own default
- *  (`MESSAGE_PAGE_DEFAULT`). A full page means there is probably more behind
- *  it; a short one means we have reached the beginning. */
-function chatAuthoringText(html: string): string {
-  const document = new DOMParser().parseFromString(html, "text/html");
-  const equation = document.querySelector<HTMLElement>("[data-alo-latex]");
-  if (equation !== null) return `$${equation.dataset.aloLatex ?? ""}$`;
-  const code = document.querySelector<HTMLElement>("[data-alo-lang]");
-  if (code !== null) {
-    return `\`\`\`${code.dataset.aloLang ?? ""}\n${code.textContent ?? ""}\n\`\`\``;
-  }
-  return document.body.textContent ?? "";
-}
-
-
-/**
- * One line of conversation, used by both the feed and the thread panel â€” the
- * two must never drift into showing a message differently. `children` is what
- * hangs under it (the thread affordance in the feed, nothing in a thread).
- */
 export function ChatModule() {
   const api = useChatApi();
   const client = useJmapClient();
