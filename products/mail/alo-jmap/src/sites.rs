@@ -1096,7 +1096,11 @@ pub async fn get_site(
     Ok(Json(j))
 }
 
-fn require_site_manager(account: &Account, site: &Site) -> Result<(), Problem> {
+/// Admin, or the person who made this website. The line between editing a
+/// site (a collaborator's job, S2.03a) and administering one — inviting people
+/// to it, and buying domain names with the tenant's money
+/// ([`crate::sites_domain_purchases`]).
+pub(crate) fn require_site_manager(account: &Account, site: &Site) -> Result<(), Problem> {
     if account.is_admin || site.created_by == account.user.as_str() {
         Ok(())
     } else {

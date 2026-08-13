@@ -172,6 +172,7 @@ pub mod sites_attribution;
 pub mod sites_bookings;
 pub mod sites_catalogs;
 pub mod sites_conversions;
+pub mod sites_domain_purchases;
 pub mod sites_heatmap;
 pub mod sites_orders;
 pub mod sites_templates;
@@ -185,5 +186,5 @@ pub mod wopi;
 pub mod workspace_search;
 
 pub use push::PushHub;
-pub use server::{app, app_state, app_with_site_domain_dns, serve};
+pub use server::{app, app_state, app_with_site_boundaries, app_with_site_domain_dns, serve};
 pub use state::{AppState, Limits};

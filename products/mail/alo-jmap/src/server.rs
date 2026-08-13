@@ -33,8 +33,9 @@ use crate::{
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
-    sites_attribution, sites_bookings, sites_catalogs, sites_conversions, sites_heatmap,
-    sites_orders, sites_templates, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    sites_attribution, sites_bookings, sites_catalogs, sites_conversions, sites_domain_purchases,
+    sites_heatmap, sites_orders, sites_templates, snooze, spaces, tasks, unsubscribe, wopi,
+    workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -44,11 +45,28 @@ pub fn app(state: AppState) -> Router {
     app_with_site_domain_dns(state, Arc::new(sites::SystemSiteDomainTxtLookup))
 }
 
-/// Builds the router with an injectable Sites TXT lookup. Production callers
-/// use [`app`]; integration tests replace only this external DNS boundary.
+/// Builds the router with an injectable Sites TXT lookup, and domain buying
+/// configured from the environment. Production callers use [`app`].
 pub fn app_with_site_domain_dns(
     state: AppState,
     site_domain_dns: Arc<dyn sites::SiteDomainTxtLookup>,
+) -> Router {
+    app_with_site_boundaries(
+        state,
+        site_domain_dns,
+        sites_domain_purchases::SiteDomainCommerce::from_env(),
+    )
+}
+
+/// Builds the router with both outward Sites boundaries injected: the TXT
+/// lookup custom-domain verification reads, and the registrar (plus the
+/// nameservers a bought name is registered with) behind the buy box.
+/// Integration tests replace exactly these — nothing here reaches a network
+/// or an environment variable of its own accord.
+pub fn app_with_site_boundaries(
+    state: AppState,
+    site_domain_dns: Arc<dyn sites::SiteDomainTxtLookup>,
+    site_domain_commerce: sites_domain_purchases::SiteDomainCommerce,
 ) -> Router {
     let upload_limit = state.limits.max_size_upload as usize;
     let request_limit = state.limits.max_size_request;
@@ -289,6 +307,17 @@ pub fn app_with_site_domain_dns(
         .route("/sites/subdomain-check", get(sites::check_subdomain))
         .route("/sites/theme-presets", get(sites::list_theme_presets))
         .route("/sites/config", get(sites::sites_config))
+        // Domain prices (S2.15c). Static paths, ahead of `/sites/{id}`: the
+        // endings this deployment sells and what one name would cost. Both
+        // answer 503 `{"reason":"unconfigured"}` where no registrar is wired.
+        .route(
+            "/sites/domain-catalog",
+            get(sites_domain_purchases::domain_catalog),
+        )
+        .route(
+            "/sites/domain-search",
+            get(sites_domain_purchases::search_domains),
+        )
         // The shipped template catalog (S2.11a) — the manual sibling of
         // `/sites/generate`. Static paths, so they resolve ahead of
         // `/sites/{id}`.
@@ -392,6 +421,29 @@ pub fn app_with_site_domain_dns(
         .route(
             "/sites/{id}/domains/{domain}/verify",
             post(sites::verify_domain),
+        )
+        // Buying a name rather than connecting one you already own (S2.15c).
+        // The whole surface is the site owner's, not a site editor's.
+        .route(
+            "/sites/{id}/domain-purchases",
+            get(sites_domain_purchases::list_purchases)
+                .post(sites_domain_purchases::create_purchase),
+        )
+        .route(
+            "/sites/{id}/domain-purchases/{purchase}",
+            get(sites_domain_purchases::get_purchase),
+        )
+        .route(
+            "/sites/{id}/domain-purchases/{purchase}/registrant",
+            get(sites_domain_purchases::get_registrant),
+        )
+        .route(
+            "/sites/{id}/domain-purchases/{purchase}/approve",
+            post(sites_domain_purchases::approve_purchase),
+        )
+        .route(
+            "/sites/{id}/domain-purchases/{purchase}/cancel",
+            post(sites_domain_purchases::cancel_purchase),
         )
         .route(
             "/sites/{id}/booking-sources",
@@ -2016,6 +2068,7 @@ pub fn app_with_site_domain_dns(
             module_access::enforce_module_access,
         ))
         .layer(Extension(site_domain_dns))
+        .layer(Extension(site_domain_commerce))
         .with_state(state);
     // The same API, mounted a second time under `/api`.
     //
