@@ -59,6 +59,8 @@ import type {
   SiteCatalogDraft,
   SiteCatalogItem,
   SiteCatalogItemDraft,
+  SiteOrder,
+  SiteOrderStatus,
   SiteCollection,
   SiteCollectionDraft,
   SiteCollectionPreview,
@@ -660,6 +662,47 @@ export class SitesApi {
       "DELETE",
       `${this.#catalogPath(siteId, catalogId)}/items/${encodeURIComponent(itemId)}`,
     );
+  }
+
+  /** Every order this site's published catalogs took, newest first, each with
+   *  the lines it asked for. There is no create: the only writer of an order
+   *  is the public door, which prices it from the publish. */
+  orders(siteId: string): Promise<SiteOrder[]> {
+    return this.#read<{ orders?: SiteOrder[] }>(
+      `/sites/${encodeURIComponent(siteId)}/orders`,
+    ).then((response) => response.orders ?? []);
+  }
+
+  /** Moves one order through the workflow, in either direction. Answers the
+   *  order as it now stands, so the screen shows the server's row rather than
+   *  its own guess at it. */
+  setOrderStatus(
+    siteId: string,
+    orderId: string,
+    status: SiteOrderStatus,
+  ): Promise<SiteOrder> {
+    return this.#write<SiteOrder>("PUT", this.#orderPath(siteId, orderId), { status });
+  }
+
+  /** Deletes an order and its lines — spam, a duplicate, or a customer asking
+   *  for their data to be removed. */
+  deleteOrder(siteId: string, orderId: string): Promise<void> {
+    return this.#discard("DELETE", this.#orderPath(siteId, orderId));
+  }
+
+  /** The same order inbox as a spreadsheet-safe CSV rendered by the server,
+   *  one row per ordered line so the numbers can be summed. */
+  async ordersCsv(siteId: string): Promise<string> {
+    const response = await this.#send(
+      `/sites/${encodeURIComponent(siteId)}/orders.csv`,
+      { method: "GET" },
+    );
+    await SitesApi.#rejectFailed(response);
+    return response.text();
+  }
+
+  #orderPath(siteId: string, orderId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/orders/${encodeURIComponent(orderId)}`;
   }
 
   #catalogPath(siteId: string, catalogId: string): string {

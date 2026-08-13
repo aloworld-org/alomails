@@ -4547,6 +4547,65 @@ export const fr: Partial<Catalog> = {
   sitesCatalogItemDeleteLabel: (name: string) => `Supprimer ${name}`,
   sitesCatalogItemDeleteConfirmLabel: (name: string) => `Le supprimer : ${name}`,
   sitesCatalogItemDeleteFailed: "L’article n’a pas pu être supprimé.",
+  sitesSectionCatalog: "Catalogue",
+  sitesSectionCatalogDesc:
+    "Ce que vous proposez, avec les prix, depuis votre catalogue.",
+  sitesCatalogSectionHeading: "Titre au-dessus",
+  sitesCatalogSectionChoose: "Quel catalogue",
+  sitesCatalogSectionGroup: "Quel groupe",
+  sitesCatalogSectionAllGroups: "Tout le catalogue",
+  sitesCatalogSectionGroupHint:
+    "Afficher un seul groupe sur cette page — la carte du midi, les chambres doubles — ou tout.",
+  sitesCatalogSectionGoneGroup: (handle: string) =>
+    `${handle} (n’est plus un groupe)`,
+  sitesCatalogSectionOneGroup: (handle: string) => `Un seul groupe : ${handle}`,
+  sitesCatalogSectionNoCatalogs: "Ce site n’a pas encore de catalogue",
+  sitesCatalogSectionNoCatalogsHint:
+    "Un catalogue contient ce que vous proposez, avec ses prix. Créez-en un et cette section pourra l’afficher.",
+  sitesCatalogSectionOrdersOn:
+    "Ce catalogue prend les commandes : la page publiée porte donc un bon de commande sous la liste. Les commandes arrivent dans la boîte de commandes de ce site.",
+  sitesCatalogSectionOrdersOff:
+    "Ce catalogue ne prend pas les commandes : la page affiche donc la liste seule. La prise de commandes se règle sur le catalogue, pas sur cette section.",
+  sitesOrders: "Commandes",
+  sitesOrdersLoadFailed:
+    "Les commandes n’ont pas pu être chargées. Vérifiez votre connexion et réessayez.",
+  sitesOrdersExport: "Exporter en CSV",
+  sitesOrdersExporting: "Exportation...",
+  sitesOrdersExportFailed: "Les commandes n’ont pas pu être exportées.",
+  sitesNoOrdersTitle: "Aucune commande pour l’instant",
+  sitesNoOrdersBody:
+    "Dès qu’une page publiée affiche un catalogue qui prend les commandes, ce que les visiteurs demandent arrive ici — avec le détail, leurs coordonnées et le total.",
+  sitesOrderList: "Commandes",
+  sitesOrderDetail: "Cette commande",
+  sitesOrderFilter: "Afficher",
+  sitesOrderFilterAll: "Toutes",
+  sitesOrderFilterOption: (label: string, count: number) =>
+    `${label} (${count})`,
+  sitesOrderFilterEmpty: "Aucune commande dans cet état.",
+  sitesOrderStatus: "Où en est cette commande",
+  sitesOrderStatusNew: "Nouvelle",
+  sitesOrderStatusConfirmed: "Confirmée",
+  sitesOrderStatusFulfilled: "Terminée",
+  sitesOrderStatusCancelled: "Annulée",
+  sitesOrderStatusFailed: "La commande n’a pas pu être déplacée.",
+  sitesOrderCatalog: "Depuis",
+  sitesOrderPhone: "Téléphone",
+  sitesOrderItem: "Article",
+  sitesOrderQuantity: "Quantité",
+  sitesOrderUnitPrice: "L’unité",
+  sitesOrderLineTotal: "Ligne",
+  sitesOrderTotal: "Total",
+  sitesOrderLinesCaption: "Ce qui a été commandé",
+  sitesOrderLineNoPrice: "Sur demande",
+  sitesOrderQuotedHint:
+    "Un article sans prix n’ajoute rien au total — chiffrez-le vous-même dans votre réponse.",
+  sitesOrderLineCount: (count: number) =>
+    count === 1 ? "1 article" : `${count} articles`,
+  sitesOrderDelete: "Supprimer la commande",
+  sitesOrderDeleteConfirm: "La supprimer définitivement",
+  sitesOrderDeleteHint:
+    "Cette commande contient le nom d’une personne, son téléphone et ce qu’elle a demandé. La suppression retire tout : il n’y a pas de retour en arrière.",
+  sitesOrderDeleteFailed: "La commande n’a pas pu être supprimée.",
   sitesCollections: "Collections",
   sitesCollectionsHint:
     "Transformez une table alo Base en cartes réutilisables pour votre site.",

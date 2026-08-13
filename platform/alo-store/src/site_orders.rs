@@ -77,8 +77,12 @@ impl SiteOrderStatus {
             "confirmed" => Ok(SiteOrderStatus::Confirmed),
             "fulfilled" => Ok(SiteOrderStatus::Fulfilled),
             "cancelled" => Ok(SiteOrderStatus::Cancelled),
+            // The refusal names the four words, because it is shown to the
+            // owner verbatim: a sentence that only says what is wrong leaves
+            // them guessing what would have been right.
             other => Err(StoreError::Validation(format!(
-                "{other} is not an order status"
+                "{other} is not an order status — it is one of new, confirmed, \
+                 fulfilled or cancelled"
             ))),
         }
     }

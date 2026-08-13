@@ -7,6 +7,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { PageEditorView } from "./PageEditorView";
 import { CatalogsView } from "./CatalogsView";
 import { CollectionsView } from "./CollectionsView";
+import { OrdersView } from "./OrdersView";
 import { PostsView } from "./PostsView";
 import { SiteView } from "./SiteView";
 import { AnalyticsView } from "./AnalyticsView";
@@ -27,6 +28,7 @@ export function SitesModule() {
         <Route path=":siteId/heatmap" element={<HeatmapView />} />
         <Route path=":siteId/funnel" element={<FunnelView />} />
         <Route path=":siteId/catalogs" element={<CatalogsView />} />
+        <Route path=":siteId/orders" element={<OrdersView />} />
         <Route path=":siteId/collections" element={<CollectionsView />} />
         <Route path=":siteId/history" element={<HistoryView />} />
         <Route path=":siteId/submissions" element={<SubmissionsView />} />

@@ -5237,6 +5237,66 @@ export const en = {
   sitesCatalogItemDeleteLabel: (name: string) => `Delete ${name}`,
   sitesCatalogItemDeleteConfirmLabel: (name: string) => `Delete it: ${name}`,
   sitesCatalogItemDeleteFailed: "The item could not be deleted.",
+  // Showing a catalog on a page. The section holds a choice, never a copy:
+  // which catalog, and optionally which one of its groups. Everything else —
+  // the names, the prices, the pictures — is the catalog's own and is frozen
+  // into the next publish.
+  sitesSectionCatalog: "Catalog",
+  sitesSectionCatalogDesc: "What you offer, with prices, from your catalog.",
+  sitesCatalogSectionHeading: "Heading above it",
+  sitesCatalogSectionChoose: "Which catalog",
+  sitesCatalogSectionGroup: "Which group",
+  sitesCatalogSectionAllGroups: "Everything in the catalog",
+  sitesCatalogSectionGroupHint:
+    "Show one group on this page — the lunch menu, the double rooms — or everything.",
+  sitesCatalogSectionGoneGroup: (handle: string) => `${handle} (no longer a group)`,
+  sitesCatalogSectionOneGroup: (handle: string) => `One group: ${handle}`,
+  sitesCatalogSectionNoCatalogs: "This site has no catalog yet",
+  sitesCatalogSectionNoCatalogsHint:
+    "A catalog holds what you offer, with its prices. Make one and this section can show it.",
+  sitesCatalogSectionOrdersOn:
+    "This catalog takes orders, so the published page carries an order form under the list. Orders arrive in this site's order inbox.",
+  sitesCatalogSectionOrdersOff:
+    "This catalog does not take orders, so the page shows the list alone. Ordering is a switch on the catalog, not on this section.",
+  // The order inbox: what visitors asked to buy, and what the owner does next.
+  sitesOrders: "Orders",
+  sitesOrdersLoadFailed:
+    "The orders could not be loaded. Check your connection and try again.",
+  sitesOrdersExport: "Export as CSV",
+  sitesOrdersExporting: "Exporting...",
+  sitesOrdersExportFailed: "The orders could not be exported.",
+  sitesNoOrdersTitle: "No orders yet",
+  sitesNoOrdersBody:
+    "When a published page shows a catalog that takes orders, what visitors ask for lands here — with what they want, their details and the total.",
+  sitesOrderList: "Orders",
+  sitesOrderDetail: "This order",
+  sitesOrderFilter: "Show",
+  sitesOrderFilterAll: "All",
+  sitesOrderFilterOption: (label: string, count: number) => `${label} (${count})`,
+  sitesOrderFilterEmpty: "No orders in this state.",
+  sitesOrderStatus: "Where this order stands",
+  sitesOrderStatusNew: "New",
+  sitesOrderStatusConfirmed: "Confirmed",
+  sitesOrderStatusFulfilled: "Done",
+  sitesOrderStatusCancelled: "Cancelled",
+  sitesOrderStatusFailed: "The order could not be moved.",
+  sitesOrderCatalog: "From",
+  sitesOrderPhone: "Phone",
+  sitesOrderItem: "Item",
+  sitesOrderQuantity: "How many",
+  sitesOrderUnitPrice: "Each",
+  sitesOrderLineTotal: "Line",
+  sitesOrderTotal: "Total",
+  sitesOrderLinesCaption: "What was ordered",
+  sitesOrderLineNoPrice: "On request",
+  sitesOrderQuotedHint:
+    "An item with no price adds nothing to the total — quote it yourself when you reply.",
+  sitesOrderLineCount: (count: number) => (count === 1 ? "1 item" : `${count} items`),
+  sitesOrderDelete: "Delete order",
+  sitesOrderDeleteConfirm: "Delete it for good",
+  sitesOrderDeleteHint:
+    "This order holds someone's name, phone number and what they asked for. Deleting removes all of it — there is no undo.",
+  sitesOrderDeleteFailed: "The order could not be deleted.",
   sitesCollections: "Collections",
   sitesCollectionsHint:
     "Turn an alo Base table into reusable cards for your website.",

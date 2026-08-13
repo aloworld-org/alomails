@@ -4490,6 +4490,65 @@ export const nl: Partial<Catalog> = {
   sitesCatalogItemDeleteConfirmLabel: (name: string) =>
     `Definitief verwijderen: ${name}`,
   sitesCatalogItemDeleteFailed: "Het artikel kon niet worden verwijderd.",
+  sitesSectionCatalog: "Catalogus",
+  sitesSectionCatalogDesc:
+    "Wat u aanbiedt, met prijzen, uit uw eigen catalogus.",
+  sitesCatalogSectionHeading: "Kop erboven",
+  sitesCatalogSectionChoose: "Welke catalogus",
+  sitesCatalogSectionGroup: "Welke groep",
+  sitesCatalogSectionAllGroups: "Alles uit de catalogus",
+  sitesCatalogSectionGroupHint:
+    "Toon één groep op deze pagina — de lunchkaart, de tweepersoonskamers — of alles.",
+  sitesCatalogSectionGoneGroup: (handle: string) =>
+    `${handle} (bestaat niet meer als groep)`,
+  sitesCatalogSectionOneGroup: (handle: string) => `Eén groep: ${handle}`,
+  sitesCatalogSectionNoCatalogs: "Deze site heeft nog geen catalogus",
+  sitesCatalogSectionNoCatalogsHint:
+    "Een catalogus bevat wat u aanbiedt, met de prijzen. Maak er één en deze sectie kan die tonen.",
+  sitesCatalogSectionOrdersOn:
+    "Deze catalogus neemt bestellingen aan, dus de gepubliceerde pagina krijgt een bestelformulier onder de lijst. Bestellingen komen binnen in de bestellijst van deze site.",
+  sitesCatalogSectionOrdersOff:
+    "Deze catalogus neemt geen bestellingen aan, dus de pagina toont alleen de lijst. Bestellen zet u aan op de catalogus, niet op deze sectie.",
+  sitesOrders: "Bestellingen",
+  sitesOrdersLoadFailed:
+    "De bestellingen konden niet worden geladen. Controleer uw verbinding en probeer het opnieuw.",
+  sitesOrdersExport: "Exporteren als CSV",
+  sitesOrdersExporting: "Bezig met exporteren...",
+  sitesOrdersExportFailed: "De bestellingen konden niet worden geëxporteerd.",
+  sitesNoOrdersTitle: "Nog geen bestellingen",
+  sitesNoOrdersBody:
+    "Zodra een gepubliceerde pagina een catalogus toont die bestellingen aanneemt, komt hier binnen wat bezoekers vragen — met de artikelen, hun gegevens en het totaal.",
+  sitesOrderList: "Bestellingen",
+  sitesOrderDetail: "Deze bestelling",
+  sitesOrderFilter: "Tonen",
+  sitesOrderFilterAll: "Alle",
+  sitesOrderFilterOption: (label: string, count: number) =>
+    `${label} (${count})`,
+  sitesOrderFilterEmpty: "Geen bestellingen in deze staat.",
+  sitesOrderStatus: "Hoe deze bestelling ervoor staat",
+  sitesOrderStatusNew: "Nieuw",
+  sitesOrderStatusConfirmed: "Bevestigd",
+  sitesOrderStatusFulfilled: "Afgehandeld",
+  sitesOrderStatusCancelled: "Geannuleerd",
+  sitesOrderStatusFailed: "De bestelling kon niet worden verplaatst.",
+  sitesOrderCatalog: "Uit",
+  sitesOrderPhone: "Telefoon",
+  sitesOrderItem: "Artikel",
+  sitesOrderQuantity: "Aantal",
+  sitesOrderUnitPrice: "Per stuk",
+  sitesOrderLineTotal: "Regel",
+  sitesOrderTotal: "Totaal",
+  sitesOrderLinesCaption: "Wat er besteld is",
+  sitesOrderLineNoPrice: "Op aanvraag",
+  sitesOrderQuotedHint:
+    "Een artikel zonder prijs telt niet mee in het totaal — geef zelf een prijs door in uw antwoord.",
+  sitesOrderLineCount: (count: number) =>
+    count === 1 ? "1 artikel" : `${count} artikelen`,
+  sitesOrderDelete: "Bestelling verwijderen",
+  sitesOrderDeleteConfirm: "Definitief verwijderen",
+  sitesOrderDeleteHint:
+    "Deze bestelling bevat iemands naam, telefoonnummer en wat die persoon vroeg. Verwijderen haalt dat allemaal weg — dit kan niet ongedaan worden gemaakt.",
+  sitesOrderDeleteFailed: "De bestelling kon niet worden verwijderd.",
   sitesCollections: "Collecties",
   sitesCollectionsHint:
     "Maak van een alo Base-tabel herbruikbare kaarten voor uw website.",

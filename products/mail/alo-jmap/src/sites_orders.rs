@@ -24,7 +24,9 @@ use axum::{Json, body::Bytes};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use alo_store::{SiteId, SiteOrder, SiteOrderId, SiteOrderLine, SiteOrderStatus};
+use alo_store::{
+    SiteId, SiteOrder, SiteOrderId, SiteOrderLine, SiteOrderStatus, currency_exponent,
+};
 
 use crate::billing::iso;
 use crate::error::Problem;
@@ -32,12 +34,19 @@ use crate::sites::map_store_err;
 use crate::state::{Account, AppState, authenticate};
 
 /// One order with the lines that belong to it, as the inbox reads it.
+///
+/// `currencyExponent` travels beside the currency, exactly as it does on a
+/// catalog: every figure here is integer minor units, and the screen that
+/// shows them must not own a second copy of the ISO 4217 exception table —
+/// a yen order has no decimals and a euro order has two, and only the server
+/// knows which.
 fn order_json(order: &SiteOrder, lines: &[SiteOrderLine]) -> Value {
     json!({
         "id": order.id.as_str(),
         "catalogId": order.catalog_id,
         "catalogName": order.catalog_name,
         "currency": order.currency,
+        "currencyExponent": currency_exponent(&order.currency),
         "customerName": order.customer_name,
         "customerEmail": order.customer_email,
         "customerPhone": order.customer_phone,

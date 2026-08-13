@@ -356,6 +356,40 @@ export interface SiteCatalogItemDraft {
   availability: SiteCatalogAvailability;
 }
 
+/** Where an order stands. Both directions are allowed: an order cancelled by
+ *  mistake is confirmed again rather than re-typed. */
+export type SiteOrderStatus = "new" | "confirmed" | "fulfilled" | "cancelled";
+
+/** One requested item, frozen with the order at the price that was published
+ *  when the visitor ordered. `unitPriceCents` is `null` for an item quoted by
+ *  hand — which is not a price of zero. */
+export interface SiteOrderLine {
+  itemSlug: string;
+  itemName: string;
+  quantity: number;
+  unitPriceCents: number | null;
+  lineTotalCents: number | null;
+}
+
+/** One order as the owner's inbox reads it. Money is integer minor units of
+ *  `currency`, with `currencyExponent` beside it so nothing here divides by a
+ *  number it guessed. */
+export interface SiteOrder {
+  id: string;
+  catalogId: string;
+  catalogName: string;
+  currency: string;
+  currencyExponent: number;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string | null;
+  note: string | null;
+  totalCents: number;
+  status: SiteOrderStatus;
+  receivedAt: string;
+  lines: SiteOrderLine[];
+}
+
 export interface SiteCollectionFieldMapping {
   title: string;
   slug: string | null;

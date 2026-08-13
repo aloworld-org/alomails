@@ -139,6 +139,15 @@ export interface CollectionDraft {
   heading: string;
 }
 
+export interface CatalogDraft {
+  type: "catalog";
+  catalog_id: string;
+  heading: string;
+  /** A group's handle, or "" for every group. Cleared when the catalog
+   *  changes — a handle only means anything inside its own catalog. */
+  category: string;
+}
+
 export interface FooterDraft {
   type: "footer";
   text: string;
@@ -159,6 +168,7 @@ export type SectionDraft =
   | CtaDraft
   | ContactFormDraft
   | CollectionDraft
+  | CatalogDraft
   | FooterDraft;
 
 export const blankLink = (): SectionLink => ({ label: "", href: "" });
@@ -343,6 +353,15 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         heading: s?.heading ?? "",
       };
     }
+    case "catalog": {
+      const s = from as Section & { type: "catalog" } | undefined;
+      return {
+        type: "catalog",
+        catalog_id: s?.catalog_id ?? "",
+        heading: s?.heading ?? "",
+        category: s?.category ?? "",
+      };
+    }
     case "footer": {
       const s = from as Section & { type: "footer" } | undefined;
       return { type: "footer", text: s?.text ?? "", links: seeded(s?.links ?? [], blankLink) };
@@ -505,6 +524,13 @@ export function toSection(draft: SectionDraft): Section {
         type: "collection",
         collection_id: req(draft.collection_id),
         heading: opt(draft.heading),
+      };
+    case "catalog":
+      return {
+        type: "catalog",
+        catalog_id: req(draft.catalog_id),
+        heading: opt(draft.heading),
+        category: opt(draft.category),
       };
     case "footer":
       return {

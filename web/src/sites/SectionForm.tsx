@@ -24,6 +24,7 @@ import {
   toSection,
 } from "./sectionDrafts";
 import type {
+  CatalogDraft,
   ContactFormDraft,
   CollectionDraft,
   CtaDraft,
@@ -41,7 +42,7 @@ import type {
 } from "./sectionDrafts";
 import type { Section, SectionKind, SectionLink } from "./sections";
 import type { SiteCopyAction, SiteEditEnvelope } from "./types";
-import type { SiteCollection } from "./types";
+import type { SiteCatalog, SiteCatalogCategory, SiteCollection } from "./types";
 import { sitesMessage, useSitesApi } from "./api";
 import { CopyContext, useCopyContext } from "./copyContext";
 import type { CopyContextValue } from "./copyContext";
@@ -818,6 +819,157 @@ function CollectionFields({ draft, onChange }: { draft: CollectionDraft; onChang
   );
 }
 
+/** Mapping a page to what the site sells: which catalog, and optionally one of
+ *  its groups. The prices, names and pictures are not here — they are the
+ *  catalog's, frozen into the next publish — so this form asks two questions
+ *  and says the two things that surprise people: an edit shows up at the next
+ *  publish, and taking orders is a switch on the catalog, not on this page. */
+function CatalogFields({ draft, onChange }: { draft: CatalogDraft; onChange: Change }) {
+  const { siteId = "" } = useParams();
+  const navigate = useNavigate();
+  const api = useSitesApi();
+  const [catalogs, setCatalogs] = useState<SiteCatalog[]>([]);
+  const [groups, setGroups] = useState<SiteCatalogCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    void api
+      .catalogs(siteId)
+      .then(
+        (stored) => {
+          if (cancelled) return;
+          setCatalogs(stored);
+          setError(null);
+        },
+        (reason: unknown) => {
+          if (!cancelled) setError(sitesMessage(reason, strings.sitesCatalogsLoadFailed));
+        },
+      )
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [api, siteId]);
+
+  const firstCatalogId = catalogs[0]?.id;
+  useEffect(() => {
+    if (draft.catalog_id === "" && firstCatalogId !== undefined) {
+      onChange({ ...draft, catalog_id: firstCatalogId });
+    }
+  }, [draft, firstCatalogId, onChange]);
+
+  // The groups on offer are the chosen catalog's own. A group is named by its
+  // handle in the section, so the list has to come from the server rather than
+  // be typed — and a stored handle whose group has since been deleted stays
+  // selectable, because silently widening a section to the whole catalog would
+  // publish something nobody asked for.
+  const chosenId = draft.catalog_id;
+  useEffect(() => {
+    if (chosenId === "") {
+      setGroups([]);
+      return;
+    }
+    let cancelled = false;
+    void api.catalog(siteId, chosenId).then(
+      (detail) => {
+        if (!cancelled) setGroups(detail.categories);
+      },
+      () => {
+        // A catalog that will not load costs the group list, not the form:
+        // every group is still a valid answer.
+        if (!cancelled) setGroups([]);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [api, chosenId, siteId]);
+
+  const chosen = catalogs.find((catalog) => catalog.id === draft.catalog_id);
+  const missingGroup =
+    draft.category !== "" && !groups.some((group) => group.slug === draft.category);
+
+  return (
+    <>
+      <TextField
+        label={strings.sitesCatalogSectionHeading}
+        value={draft.heading}
+        onChange={(heading) => onChange({ ...draft, heading })}
+        autoFocus
+        copyPointer="/heading"
+      />
+      {loading ? (
+        <div className={styles.collectionFieldLoading} role="status">
+          <Spinner size={16} />
+          <span>{strings.sitesCatalogsLoading}</span>
+        </div>
+      ) : catalogs.length === 0 ? (
+        <div className={styles.collectionFieldEmpty}>
+          <strong>{strings.sitesCatalogSectionNoCatalogs}</strong>
+          <span>{strings.sitesCatalogSectionNoCatalogsHint}</span>
+          <Button variant="ghost" onClick={() => navigate(`/sites/${siteId}/catalogs`)}>
+            {strings.sitesNewCatalog}
+          </Button>
+        </div>
+      ) : (
+        <>
+          <Field label={strings.sitesCatalogSectionChoose}>
+            <select
+              className={styles.input}
+              value={draft.catalog_id}
+              onChange={(event) =>
+                // A group handle belongs to the catalog it came from; changing
+                // the catalog drops it rather than carrying a handle that
+                // means nothing here.
+                onChange({ ...draft, catalog_id: event.target.value, category: "" })
+              }
+            >
+              {catalogs.map((catalog) => (
+                <option key={catalog.id} value={catalog.id}>
+                  {catalog.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field
+            label={strings.sitesCatalogSectionGroup}
+            hint={strings.sitesCatalogSectionGroupHint}
+          >
+            <select
+              className={styles.input}
+              value={draft.category}
+              onChange={(event) => onChange({ ...draft, category: event.target.value })}
+            >
+              <option value="">{strings.sitesCatalogSectionAllGroups}</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.slug}>
+                  {group.name}
+                </option>
+              ))}
+              {missingGroup && (
+                <option value={draft.category}>
+                  {strings.sitesCatalogSectionGoneGroup(draft.category)}
+                </option>
+              )}
+            </select>
+          </Field>
+          <p className={styles.hint}>
+            {chosen?.ordersEnabled === true
+              ? strings.sitesCatalogSectionOrdersOn
+              : strings.sitesCatalogSectionOrdersOff}
+          </p>
+        </>
+      )}
+      {error !== null && <p className={styles.aiEditError} role="alert">{error}</p>}
+    </>
+  );
+}
+
 function FooterFields({ draft, onChange }: { draft: FooterDraft; onChange: Change }) {
   return (
     <>
@@ -865,6 +1017,8 @@ function FormFields({ draft, onChange }: { draft: SectionDraft; onChange: Change
       return <ContactFormFields draft={draft} onChange={onChange} />;
     case "collection":
       return <CollectionFields draft={draft} onChange={onChange} />;
+    case "catalog":
+      return <CatalogFields draft={draft} onChange={onChange} />;
     case "footer":
       return <FooterFields draft={draft} onChange={onChange} />;
   }
@@ -909,7 +1063,11 @@ export function SectionFormDialog({
       subtitle={kindDescription(kind)}
       error={error}
       busy={busy}
-      canSubmit={draft.type !== "collection" || draft.collection_id !== ""}
+      canSubmit={
+        draft.type === "collection"
+          ? draft.collection_id !== ""
+          : draft.type !== "catalog" || draft.catalog_id !== ""
+      }
       submitLabel={strings.sitesSaveSection}
       onClose={onClose}
       onSubmit={() => onSave(toSection(draft))}

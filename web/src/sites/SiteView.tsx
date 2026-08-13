@@ -19,6 +19,7 @@ import {
   Lock,
   Newspaper,
   Palette,
+  Receipt,
   ShoppingBag,
   Sparkles,
   Rows3,
@@ -585,6 +586,14 @@ export function SiteView() {
                 onClick={() => navigate("catalogs")}
               >
                 {strings.sitesCatalogs}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Receipt size="var(--icon-size-inline)" />}
+                onClick={() => navigate("orders")}
+              >
+                {strings.sitesOrders}
               </Button>
               <Button
                 variant="ghost"

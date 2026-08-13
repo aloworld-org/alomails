@@ -1,5 +1,5 @@
 // The TypeScript mirror of the sections schema v1 — the closed vocabulary of
-// thirteen section types a page is stacked from, exactly as the server's
+// fourteen section types a page is stacked from, exactly as the server's
 // `site_model` speaks it on the wire (`type`-tagged, snake_case props,
 // absent optionals as absent keys). This file changes only when the schema
 // version does; it carries NO validation — the store rules on every write and
@@ -180,6 +180,18 @@ export interface CollectionSection {
   heading?: string | undefined;
 }
 
+/** What the site offers — dishes, rooms, services, courses — frozen from the
+ *  tenant's own catalog at publish time. `category` is a group's HANDLE, not
+ *  its id, and it belongs to `catalog_id`: choosing a different catalog makes
+ *  any handle from the previous one meaningless. Whether the published section
+ *  carries an order form is a switch on the catalog, not on this section. */
+export interface CatalogSection {
+  type: "catalog";
+  catalog_id: string;
+  heading?: string | undefined;
+  category?: string | undefined;
+}
+
 /** The page footer. */
 export interface FooterSection {
   type: "footer";
@@ -201,12 +213,13 @@ export type Section =
   | CtaSection
   | ContactFormSection
   | CollectionSection
+  | CatalogSection
   | FooterSection;
 
 /** A section's wire tag. */
 export type SectionKind = Section["type"];
 
-/** The thirteen kinds in their natural page order — the picker's order. */
+/** The fourteen kinds in their natural page order — the picker's order. */
 export const SECTION_KINDS: readonly SectionKind[] = [
   "nav",
   "hero",
@@ -220,6 +233,7 @@ export const SECTION_KINDS: readonly SectionKind[] = [
   "cta",
   "contact_form",
   "collection",
+  "catalog",
   "footer",
 ];
 
