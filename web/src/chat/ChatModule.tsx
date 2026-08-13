@@ -26,7 +26,6 @@ import { ChatError, chatMessage, useChatApi } from "./api";
 import type { Attachment, Message } from "./types";
 import { useMeetApi } from "../meet";
 import type { Meeting } from "../meet";
-import { MeetRoom } from "../meet";
 import { ChatSwitcher } from "./ChatSwitcher";
 import { ConversationHeader } from "./ConversationHeader";
 import { ActiveTurns } from "./ActiveTurns";
@@ -49,6 +48,9 @@ const AuthoringInsertModal = lazy(() =>
   import("../authoring").then((module) => ({
     default: module.AuthoringInsertModal,
   })),
+);
+const MeetRoom = lazy(() =>
+  import("../meet/MeetRoom").then((module) => ({ default: module.MeetRoom })),
 );
 
 export function ChatModule() {
@@ -360,7 +362,7 @@ export function ChatModule() {
       </section>
 
       {inMeeting !== null && (
-        <MeetRoom
+        <Suspense fallback={<div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay text-sm text-on-accent">{strings.chatLoading}</div>}><MeetRoom
           meetingId={inMeeting}
           onLeft={() => {
             setInMeeting(null);
@@ -371,7 +373,7 @@ export function ChatModule() {
                 .catch(() => setLiveMeeting(null));
             }
           }}
-        />
+        /></Suspense>
       )}
 
       {switcher !== null && (
