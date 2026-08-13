@@ -196,6 +196,8 @@ pub mod site_public_orders;
 pub mod site_public_protection;
 pub mod site_publish;
 pub mod site_publish_schedule;
+pub mod site_registrar;
+pub mod site_registrar_fixture;
 pub mod site_templates;
 pub mod site_theme;
 pub mod site_translations;
@@ -557,6 +559,13 @@ pub use site_publish_schedule::{
     SITE_PUBLISH_INTERRUPTED, SITE_PUBLISH_MAX_ATTEMPTS, SITE_PUBLISH_SCHEDULE_ERROR_MAX_CHARS,
     SITE_PUBLISH_SCHEDULE_MAX_AHEAD_DAYS, SitePublishSchedule, SitePublishScheduleStatus,
 };
+pub use site_registrar::{
+    DomainAvailability, DomainCandidate, DomainLifecycle, DomainOffer, DomainOrder, DomainQuote,
+    DomainRegistrar, DomainSearch, REGISTRAR_CURRENCY, RegisteredDomain, RegistrableDomain,
+    RegistrantContact, RegistrarEnvironment, RegistrarError, RegistrarIdentity, RetailPolicy,
+    TERM_YEARS_MAX, TERM_YEARS_MIN, TldCatalog, TldOffer, TldRequirement, UnconfiguredRegistrar,
+};
+pub use site_registrar_fixture::FixtureRegistrar;
 pub use site_templates::{
     SiteTemplate, SiteTemplatePage, TEMPLATE_PLACEHOLDER_PRICE, check_template, site_template,
     site_templates,
