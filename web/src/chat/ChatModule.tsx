@@ -21,15 +21,12 @@ import { useAuth } from "../auth";
 import { FilePicker, saveBlob } from "../drive";
 import { RoomPeople } from "./RoomPeople";
 import { useJmapClient } from "../jmap";
-import { useDialogs, useDismiss, useIsMobile } from "../ds";
+import { useDismiss, useIsMobile } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
 import type { DriveNodeDto } from "../jmap/types";
 import type {
   Attachment,
-  Channel,
-  ChannelSummary,
   FeedMessage,
-  Person,
   Turn,
   Message,
   Proposal,
@@ -42,6 +39,7 @@ import { ConversationHeader } from "./ConversationHeader";
 import { ActiveTurns } from "./ActiveTurns";
 import { MessageFeed } from "./MessageFeed";
 import { ChatComposer } from "./ChatComposer";
+import { useRoomDirectory } from "./useRoomDirectory";
 import {
   candidatesFor,
   channelLabel,
@@ -89,15 +87,11 @@ export function ChatModule() {
   const client = useJmapClient();
   // The reader's own id, for marking the messages addressed to them.
   const { identity } = useAuth();
-  const dialogs = useDialogs();
   const me = identity?.sub ?? null;
-  const [channels, setChannels] = useState<ChannelSummary[] | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
   const [messages, setMessages] = useState<FeedMessage[] | null>(null);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
   const [replyContext, setReplyContext] = useState<{
     message: Message;
     private: boolean;
@@ -161,24 +155,10 @@ export function ChatModule() {
   // truth about the same thing.
   // The live public channels not yet joined. Loaded on demand: it is a
   // browsing act, not something every sidebar draw should pay for.
-  const [browsing, setBrowsing] = useState<Channel[] | null>(null);
-  // Starting a conversation with someone: the search text, and what it found.
-  const [dmQuery, setDmQuery] = useState<string | null>(null);
-  const [dmFound, setDmFound] = useState<Person[]>([]);
   const [moreBehind, setMoreBehind] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
-  const [finding, setFinding] = useState("");
-  const [found, setFound] = useState<Message[] | null>(null);
-
-  const loadChannels = useCallback(async () => {
-    try {
-      const rooms = await api.channels();
-      setChannels(rooms);
-      setOpenId((current) => current ?? rooms[0]?.id ?? null);
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatLoadFailed));
-    }
-  }, [api]);
+  const directory = useRoomDirectory(setError);
+  const { channels, openId, setOpenId, creating, browsing, setBrowsing, dmQuery, setDmQuery, dmFound, setDmFound, finding, found, loadChannels, find, findPeople, openDm, renameRoom, archiveRoom, browse, joinRoom, createChannel } = directory;
 
   const loadTurns = useCallback(
     async (id: string) => {
@@ -208,10 +188,6 @@ export function ChatModule() {
     },
     [api],
   );
-
-  useEffect(() => {
-    void loadChannels();
-  }, [loadChannels]);
 
   useEffect(() => {
     // Asked once: the offered set changes with a release, not with a room.
@@ -402,103 +378,6 @@ export function ChatModule() {
     });
   }
 
-  /** Look for something that was said. Debounced by the keystroke that
-   *  triggers it rather than a timer: a short question is cheap, and a timer
-   *  would make the first result feel late. */
-  async function find(query: string) {
-    setFinding(query);
-    if (query.trim() === "") {
-      setFound(null);
-      return;
-    }
-    try {
-      setFound(await api.search(query));
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatSearchFailed));
-      setFound([]);
-    }
-  }
-
-  /** Fetch the page behind the oldest line held, and keep the reader where
-   *  they were.
-   *
-   *  Prepending changes the scroll height, so without correction the content
-   *  under the cursor jumps â€” the single thing that makes an infinite feed
-   *  feel broken. The height is measured before and after, and the difference
-   *  is added back to the scroll position.
-   */
-  async function findPeople(query: string) {
-    setDmQuery(query);
-    if (query.trim().length < 2) {
-      // The server wants two characters; asking with fewer would be a request
-      // that always answers nothing.
-      setDmFound([]);
-      return;
-    }
-    try {
-      setDmFound(await api.findPeople(query));
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatPeopleFailed));
-      setDmFound([]);
-    }
-  }
-
-  async function openDm(person: Person) {
-    setError(null);
-    try {
-      // Opening the same DM twice returns the same room, so this is safe to
-      // press again â€” the server settles it, not a check here.
-      const room = await api.createChannel({ kind: "dm", with: person.user });
-      await loadChannels();
-      setDmQuery(null);
-      setDmFound([]);
-      setOpenId(room.id);
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatDmFailed));
-    }
-  }
-
-  async function renameRoom(room: ChannelSummary) {
-    const name = (
-      await dialogs.prompt({
-        title: strings.chatRename,
-        message: strings.chatRenamePrompt,
-        defaultValue: room.name ?? "",
-        confirmLabel: strings.chatRenameSave,
-      })
-    )?.trim();
-    if (
-      name === undefined ||
-      name === null ||
-      name === "" ||
-      name === room.name
-    )
-      return;
-    try {
-      await api.renameChannel(room.id, { name });
-      await loadChannels();
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatRenameFailed));
-    }
-  }
-
-  async function archiveRoom(room: ChannelSummary) {
-    // Confirmed, because it changes the room for everyone in it â€” and said in
-    // terms of what actually happens, since nothing is deleted.
-    const sure = await dialogs.confirm({
-      title: strings.chatArchiveTitle(room.name ?? strings.chatDirectMessage),
-      message: strings.chatArchiveWarning,
-      confirmLabel: strings.chatArchiveConfirm,
-    });
-    if (!sure) return;
-    try {
-      await api.archiveChannel(room.id);
-      await loadChannels();
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatArchiveFailed));
-    }
-  }
-
   async function shareDropped(files: FileList) {
     setDropping(false);
     if (files.length === 0) return;
@@ -519,43 +398,6 @@ export function ChatModule() {
       }
     } catch (failure) {
       setError(chatMessage(failure, strings.chatAttachFailed));
-    }
-  }
-
-  async function browse() {
-    setError(null);
-    try {
-      // Everything public, not only what is left to join. Browsing a directory
-      // that hides the rooms you are already in reads as empty and broken â€”
-      // which is exactly how it read.
-      const open = await api.joinable();
-      const mine = (channels ?? []).filter(
-        (c) =>
-          c.kind === "channel" &&
-          c.visibility === "public" &&
-          c.archivedAt === null,
-      );
-      const all = [...open, ...mine].sort((a, b) =>
-        (a.name ?? "").localeCompare(b.name ?? ""),
-      );
-      setBrowsing(all);
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatBrowseFailed));
-      setBrowsing([]);
-    }
-  }
-
-  async function joinRoom(channel: Channel) {
-    setError(null);
-    try {
-      await api.join(channel.id);
-      await loadChannels();
-      setBrowsing(null);
-      // Open what was just joined: joining in order to then hunt for it in the
-      // list would be a step the person did not ask for.
-      setOpenId(channel.id);
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatJoinFailed));
     }
   }
 
@@ -633,31 +475,6 @@ export function ChatModule() {
       setMessages(applied);
     } catch (failure) {
       setError(chatMessage(failure, strings.chatReactFailed));
-    }
-  }
-
-  async function createChannel() {
-    // The app's own dialog, not the browser's: a native prompt says
-    // "localhost:5173 says" and looks nothing like the product it is part of.
-    const name = (
-      await dialogs.prompt({
-        title: strings.chatNewChannel,
-        message: strings.chatNewChannelPrompt,
-        placeholder: strings.chatNewChannelPlaceholder,
-        confirmLabel: strings.chatCreate,
-      })
-    )?.trim();
-    if (name === undefined || name === null || name === "") return;
-    setCreating(true);
-    setError(null);
-    try {
-      const room = await api.createChannel({ name });
-      await loadChannels();
-      setOpenId(room.id);
-    } catch (failure) {
-      setError(chatMessage(failure, strings.chatCreateFailed));
-    } finally {
-      setCreating(false);
     }
   }
 
