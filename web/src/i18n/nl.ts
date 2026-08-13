@@ -3188,6 +3188,15 @@ export const nl: Partial<Catalog> = {
   sitesAiPreviewHint:
     "Vergelijk de pagina voor en na en kies daarna wat er gebeurt.",
   sitesAiPreviewCompare: "Voorgestelde paginawijzigingen vergelijken",
+  sitesInlineTextHint:
+    "Klik op een tekst in het voorbeeld om die daar te bewerken. Enter bewaart, Escape zet terug.",
+  sitesInlineTextSaved: "Tekst bijgewerkt.",
+  sitesInlineTextUndone: "Tekstwijziging ongedaan gemaakt.",
+  sitesInlineTextRedone: "Tekstwijziging opnieuw uitgevoerd.",
+  sitesInlineTextStale:
+    "Die tekst hoort bij een sectie die intussen is verplaatst of gewijzigd. Het voorbeeld is ververst — probeer de bewerking opnieuw.",
+  sitesUndoTextEdit: "Tekstwijziging ongedaan maken",
+  sitesRedoTextEdit: "Tekstwijziging opnieuw uitvoeren",
   sitesAiPreviewBefore: "Voor",
   sitesAiPreviewAfter: "Na",
   sitesAiApprove: "Wijzigingen goedkeuren",

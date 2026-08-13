@@ -1183,6 +1183,14 @@
 .protectFormActions {
   margin-left: auto;
 }
+/* Recognition over recall: the preview is a thing you type into, and nothing
+   about a rendered page says so until you have already tried. */
+.previewEditHint {
+  margin: 0 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+}
 /* The preview shows the page itself; this line is what stands in front of it
    for everyone who does not have the password. */
 .previewProtectedNote {

@@ -2585,3 +2585,125 @@ async fn preview_inlines_theme_and_section_images() {
     // The non-image blob is not inlined — public-path fallback.
     assert!(html.contains(&format!("/assets/img/{}", not_an_image.as_str())));
 }
+
+/// The whole inline-editing arc on the wire (S3.01a, ADR 0042): the draft
+/// preview arrives annotated with the coordinate of each typed string, and
+/// posting one of those coordinates straight back through the reviewed-edit
+/// door stores exactly that change — the same door, and the same operation,
+/// an approved AI proposal travels through.
+///
+/// This is the seam a unit test cannot reach: two real routes, one real
+/// tenant, and the coordinate carried between them untouched.
+#[tokio::test]
+async fn a_coordinate_from_the_preview_edits_the_page_through_the_reviewed_door() {
+    let owner = harness("sites-inline-text").await;
+    let outsider = harness_on(Arc::clone(&owner.store), "sites-inline-other").await;
+    let site = created_id(
+        "site",
+        post(
+            &owner.app,
+            &owner.token,
+            "/sites",
+            json!({ "name": "Roastery", "subdomain": sub("inline", &owner) }),
+        )
+        .await,
+    );
+    let page = created_id(
+        "page",
+        post(
+            &owner.app,
+            &owner.token,
+            &format!("/sites/{site}/pages"),
+            json!({ "title": "Home", "home": true }),
+        )
+        .await,
+    );
+    let (status, _) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/pages/{page}/sections"),
+        json!({ "schema_version": 1, "sections": [hero(), faq()] }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let preview = format!("/sites/{site}/pages/{page}/preview");
+    let (status, _, html) = get_text(&owner.app, &owner.token, &preview).await;
+    assert_eq!(status, StatusCode::OK);
+    // The hero's heading and the FAQ's answer are typed strings, so the page
+    // says where each of them came from.
+    assert!(html.contains("data-alo-text=\"0/heading\""), "{html}");
+    assert!(html.contains("data-alo-text=\"1/items/0/answer\""));
+    assert!(html.contains("site-text-edit"));
+
+    // What the browser reports for "1/items/0/answer" after someone types.
+    let edit = json!({ "proposal": { "schema_version": 1, "operations": [{
+        "op": "rewrite_copy",
+        "target": { "index": 1, "type": "faq" },
+        "pointer": "/items/0/answer",
+        "text": "Across the EU, and to Norway."
+    }]}});
+    let (status, stored) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/pages/{page}/ai-edits"),
+        edit.clone(),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "inline edit refused: {stored}");
+    assert_eq!(
+        stored["sections"]["sections"][1]["items"][0]["answer"],
+        json!("Across the EU, and to Norway.")
+    );
+    // Only that leaf moved.
+    assert_eq!(
+        stored["sections"]["sections"][0]["heading"],
+        json!("Coffee roasted the morning it ships")
+    );
+    assert_eq!(
+        stored["sections"]["sections"][1]["items"][0]["question"],
+        json!("Do you ship abroad?")
+    );
+
+    // Undo is the same operation with the old text, and it is exact.
+    let mut undo = edit.clone();
+    undo["proposal"]["operations"][0]["text"] = json!("Across the EU, yes.");
+    let (status, restored) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/pages/{page}/ai-edits"),
+        undo,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        restored["sections"]["sections"][1]["items"][0]["answer"],
+        json!("Across the EU, yes.")
+    );
+
+    // A coordinate the page no longer has is refused rather than aimed at
+    // whatever now sits at that index.
+    let mut stale = edit.clone();
+    stale["proposal"]["operations"][0]["target"]["type"] = json!("hero");
+    let (status, refused) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/pages/{page}/ai-edits"),
+        stale,
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+
+    // And none of it belongs to anyone else: the neighbouring tenant sees no
+    // preview to read a coordinate from, and no door to send one to.
+    let (status, _, body) = get_text(&outsider.app, &outsider.token, &preview).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    let (status, body) = put(
+        &outsider.app,
+        &outsider.token,
+        &format!("/sites/{site}/pages/{page}/ai-edits"),
+        edit,
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+}

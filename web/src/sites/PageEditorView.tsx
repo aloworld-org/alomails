@@ -4,7 +4,13 @@
 // canonical envelope the server answered, so what you see IS what is stored.
 // There is no local dirty buffer to lose, and a refusal (422) points at the
 // exact gesture that broke the rule.
-import { useCallback, useEffect, useRef, useState } from "react";
+//
+// Text is edited where it lives (ADR 0042): the preview is rendered with the
+// coordinate of every single-string property on the element that shows it, and
+// typing there comes back as one `rewrite_copy` — the identical operation the
+// AI panel proposes, through the identical door. That is what lets one undo
+// history cover both, and why there is no "inline save" endpoint.
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -17,9 +23,11 @@ import {
   Monitor,
   Palette,
   Pencil,
+  Redo2,
   SearchCheck,
   Smartphone,
   Trash2,
+  Undo2,
 } from "lucide-react";
 
 import { strings } from "../i18n";
@@ -32,6 +40,18 @@ import { ThemeDialog } from "./ThemeDialog";
 import { PageSeoDialog } from "./PageSeoDialog";
 import { PageAiEditPanel } from "./PageAiEditPanel";
 import { PagePassword } from "./PagePassword";
+import {
+  emptyTextEditHistory,
+  keyTarget,
+  readTextEditMessage,
+  recordTextEdit,
+  redoTextEdit,
+  textEditEnvelope,
+  textEditOperation,
+  undoTextEdit,
+  type TextEditHistory,
+  type TextEditStep,
+} from "./inlineText";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 import type { SitePageDetail } from "./types";
@@ -73,6 +93,15 @@ export function PageEditorView() {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
 
+  const previewFrame = useRef<HTMLIFrameElement | null>(null);
+  // The stack the inline-edit handlers resolve a coordinate against. A ref
+  // rather than the state variable: a message from the preview frame or a
+  // ⌘Z arrive whenever the person decides, and both have to be answered
+  // against the page as it is *now* — a handler that closed over an older
+  // stack would aim a rewrite at a section that has since moved.
+  const sectionsRef = useRef<Section[]>([]);
+  const [history, setHistory] = useState<TextEditHistory>(emptyTextEditHistory);
+  const [textNotice, setTextNotice] = useState("");
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewMobile, setPreviewMobile] = useState(false);
@@ -133,10 +162,24 @@ export function PageEditorView() {
     void load();
   }, [load]);
 
+  // A layout effect, not a passive one: it must have run by the time any
+  // event can reach a handler, and passive effects are allowed to wait.
+  useLayoutEffect(() => {
+    sectionsRef.current = sections;
+  }, [sections]);
+
   useEffect(() => {
     setProposedPreviewHtml(null);
     setPreviewVersion("before");
   }, [siteId, pageId]);
+
+  // Undo belongs to the page being edited. Carrying it across a page or a
+  // language would offer to take back a change on a document that is no
+  // longer on screen.
+  useEffect(() => {
+    setHistory(emptyTextEditHistory);
+    setTextNotice("");
+  }, [siteId, pageId, locale]);
 
   // The live preview: the server renders the draft with the exact renderer
   // publishing uses. `sections` is always the envelope the last op answered,
@@ -321,6 +364,124 @@ export function PageEditorView() {
     }
     void run(api.removeSection(siteId, pageId, index));
   }
+
+  /** Applies one text edit typed on the page.
+   *
+   *  The coordinate is resolved against the sections this editor is holding,
+   *  never trusted from the frame, and the result travels as the same
+   *  `rewrite_copy` operation an approved AI proposal carries. Whatever
+   *  happens, the preview ends up showing the stored truth: on success the
+   *  server's envelope replaces the stack (which re-renders the frame), on a
+   *  refusal the frame is re-fetched so the typed text does not linger as a
+   *  change that was never saved.
+   *
+   *  `replay` is set when undo or redo is re-applying a known step, which is
+   *  the one case that must not push a new entry onto the history. */
+  const applyInlineText = useCallback(
+    async (
+      key: string,
+      text: string,
+      replay: TextEditStep | null = null,
+    ): Promise<boolean> => {
+      const current = sectionsRef.current;
+      const found = keyTarget(current, key);
+      const operation = textEditOperation(current, key, text);
+      if (found === null || operation === null) {
+        setError(strings.sitesInlineTextStale);
+        setPreviewEpoch((epoch) => epoch + 1);
+        return false;
+      }
+      if (found.current === text) return true;
+      setWorking(true);
+      try {
+        const envelope = await api.applyPageEdit(
+          siteId,
+          pageId,
+          textEditEnvelope(operation),
+        );
+        setSections(envelope.sections);
+        setError(null);
+        if (replay === null) {
+          setHistory((current) =>
+            recordTextEdit(current, {
+              key,
+              before: found.current,
+              after: text,
+            }),
+          );
+          setTextNotice(strings.sitesInlineTextSaved);
+        }
+        return true;
+      } catch (err) {
+        setError(sitesMessage(err, strings.sitesSaveFailed));
+        setPreviewEpoch((epoch) => epoch + 1);
+        return false;
+      } finally {
+        setWorking(false);
+      }
+    },
+    [api, pageId, siteId],
+  );
+
+  // The frame's half of direct manipulation. Its document has an opaque
+  // origin, so `event.origin` proves nothing and the sender is proven
+  // instead: only this editor's own preview window is listened to.
+  useEffect(() => {
+    if (locale !== null) return undefined;
+    function onMessage(event: MessageEvent) {
+      const frame = previewFrame.current;
+      const edit = readTextEditMessage(
+        event.data,
+        frame !== null && event.source === frame.contentWindow,
+      );
+      if (edit === null) return;
+      void applyInlineText(edit.key, edit.text);
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [applyInlineText, locale]);
+
+  async function undoText() {
+    const step = undoTextEdit(history);
+    if (step === null) return;
+    if (await applyInlineText(step.step.key, step.text, step.step)) {
+      setHistory(step.history);
+      setTextNotice(strings.sitesInlineTextUndone);
+    }
+  }
+
+  async function redoText() {
+    const step = redoTextEdit(history);
+    if (step === null) return;
+    if (await applyInlineText(step.step.key, step.text, step.step)) {
+      setHistory(step.history);
+      setTextNotice(strings.sitesInlineTextRedone);
+    }
+  }
+
+  // ⌘Z / Ctrl+Z, with shift to redo. Keys pressed inside the preview stay
+  // inside the frame, so this never competes with typing on the page; a field
+  // in the app around it keeps its own native undo.
+  useEffect(() => {
+    if (locale !== null) return undefined;
+    function onKeyDown(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "z") {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+      ) {
+        return;
+      }
+      event.preventDefault();
+      void (event.shiftKey ? redoText() : undoText());
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
 
   /** The prop form's save: add for a fresh section, replace for a stored
    *  one. A refusal stays in the dialog with everything the user typed. */
@@ -521,6 +682,24 @@ export function PageEditorView() {
                 <h2 className={styles.sectionTitle}>{strings.sitesSections}</h2>
                 <div className={styles.sectionBarActions}>
                   {locale === null && (
+                    <>
+                      <IconButton
+                        size="sm"
+                        label={strings.sitesUndoTextEdit}
+                        icon={<Undo2 size={15} />}
+                        disabled={working || history.past.length === 0}
+                        onClick={() => void undoText()}
+                      />
+                      <IconButton
+                        size="sm"
+                        label={strings.sitesRedoTextEdit}
+                        icon={<Redo2 size={15} />}
+                        disabled={working || history.future.length === 0}
+                        onClick={() => void redoText()}
+                      />
+                    </>
+                  )}
+                  {locale === null && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -567,6 +746,7 @@ export function PageEditorView() {
                   result outside the stack itself. */}
               <p className={styles.srOnly} role="status">
                 {moveNotice}
+                {textNotice !== "" && ` ${textNotice}`}
               </p>
 
               {empty && !loading ? (
@@ -759,6 +939,9 @@ export function PageEditorView() {
                   </div>
                 </div>
               </div>
+              {locale === null && (
+                <p className={styles.previewEditHint}>{strings.sitesInlineTextHint}</p>
+              )}
               {pageProtected && (
                 <p className={styles.previewProtectedNote}>
                   <Lock size={13} aria-hidden="true" />
@@ -776,6 +959,7 @@ export function PageEditorView() {
                 {/* Sandboxed: scripts may run (the menu toggle), but the draft
                   document never touches this origin or navigates the app. */}
                 <iframe
+                  ref={previewFrame}
                   className={styles.previewFrame}
                   title={strings.sitesPreviewTitle}
                   sandbox="allow-scripts"

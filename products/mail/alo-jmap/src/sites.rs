@@ -41,8 +41,8 @@ use time::format_description::well_known::Rfc3339;
 use time::{Duration, OffsetDateTime};
 
 use alo_sites::render::{
-    ImageSources, PageRenderContext, SiteRenderContext, render_page_preview, sections_lenient,
-    strings_for,
+    ImageSources, PageRenderContext, SiteRenderContext, render_page_editable, render_page_preview,
+    sections_lenient, strings_for,
 };
 use alo_sites::stylesheet::stylesheet;
 use alo_store::{
@@ -2283,6 +2283,12 @@ pub async fn get_site_image(
 /// images are inlined as `data:` URIs for the same reason. Authenticated
 /// like every edit route; the editor fetches this and shows it in a
 /// sandboxed iframe. `Cache-Control: no-store` — a draft has no cache life.
+///
+/// This one document is rendered **editable** (ADR 0042): every element
+/// holding exactly one typed string is annotated with the coordinate a
+/// `rewrite_copy` operation names, so the editor can turn a click on the page
+/// into the same change a model would propose. It writes nothing — the text
+/// comes back through `PUT …/ai-edits` like every other reviewed change.
 pub async fn preview_page(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -2292,7 +2298,7 @@ pub async fn preview_page(
     let sid = SiteId::new(id);
     let site = require_site(&account, &sid).await?;
     let page = page_record(&account, &sid, &SitePageId::new(pid)).await?;
-    let html = render_preview_html(&account, &site, &page, &page.sections).await?;
+    let html = render_preview(&account, &site, &page, &page.sections, Editable::Yes).await?;
     Ok((
         [
             (header::CONTENT_TYPE, "text/html; charset=utf-8"),
@@ -2343,6 +2349,26 @@ async fn render_preview_html(
     site: &Site,
     page: &SitePage,
     sections: &Value,
+) -> Result<String, Problem> {
+    render_preview(account, site, page, sections, Editable::No).await
+}
+
+/// Whether the rendered preview may be typed into. Only the page the editor is
+/// working on is: a translation, a stored version, and the “after” half of a
+/// proposal are all things to look at, and annotating them would offer an edit
+/// that lands somewhere other than where the user thinks.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Editable {
+    Yes,
+    No,
+}
+
+async fn render_preview(
+    account: &Account,
+    site: &Site,
+    page: &SitePage,
+    sections: &Value,
+    editable: Editable,
 ) -> Result<String, Problem> {
     let theme = SiteTheme::from_stored(site.theme.clone());
     let mut collections = HashMap::new();
@@ -2437,11 +2463,11 @@ async fn render_preview_html(
         catalogs: &catalogs,
         bookings: &bookings,
     };
-    Ok(render_page_preview(
-        &site_ctx,
-        &page_ctx,
-        &stylesheet(&theme),
-    ))
+    let css = stylesheet(&theme);
+    Ok(match editable {
+        Editable::Yes => render_page_editable(&site_ctx, &page_ctx, &css),
+        Editable::No => render_page_preview(&site_ctx, &page_ctx, &css),
+    })
 }
 
 #[derive(Deserialize)]

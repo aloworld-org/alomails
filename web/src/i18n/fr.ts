@@ -3231,6 +3231,15 @@ export const fr: Partial<Catalog> = {
   sitesAiPreviewHint:
     "Comparez la page avant et après, puis choisissez la suite.",
   sitesAiPreviewCompare: "Comparer les modifications proposées",
+  sitesInlineTextHint:
+    "Cliquez sur n’importe quel texte de l’aperçu pour le modifier sur place. Entrée enregistre, Échap rétablit.",
+  sitesInlineTextSaved: "Texte mis à jour.",
+  sitesInlineTextUndone: "Modification du texte annulée.",
+  sitesInlineTextRedone: "Modification du texte rétablie.",
+  sitesInlineTextStale:
+    "Ce texte appartient à une section qui a depuis été déplacée ou modifiée. L’aperçu a été actualisé — réessayez la modification.",
+  sitesUndoTextEdit: "Annuler la modification du texte",
+  sitesRedoTextEdit: "Rétablir la modification du texte",
   sitesAiPreviewBefore: "Avant",
   sitesAiPreviewAfter: "Après",
   sitesAiApprove: "Approuver les modifications",

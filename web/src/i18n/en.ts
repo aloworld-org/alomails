@@ -3061,6 +3061,15 @@ export const en = {
   sitesAiPreviewHint:
     "Compare the page before and after, then choose what happens.",
   sitesAiPreviewCompare: "Compare proposed page changes",
+  sitesInlineTextHint:
+    "Click any text in the preview to edit it there. Enter saves it, Escape puts it back.",
+  sitesInlineTextSaved: "Text updated.",
+  sitesInlineTextUndone: "Text change undone.",
+  sitesInlineTextRedone: "Text change redone.",
+  sitesInlineTextStale:
+    "That text belongs to a section that has since moved or changed. The preview has been refreshed — try the edit again.",
+  sitesUndoTextEdit: "Undo text change",
+  sitesRedoTextEdit: "Redo text change",
   sitesAiPreviewBefore: "Before",
   sitesAiPreviewAfter: "After",
   sitesAiApprove: "Approve changes",
