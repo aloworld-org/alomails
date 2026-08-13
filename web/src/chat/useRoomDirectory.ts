@@ -5,11 +5,30 @@ import { strings } from "../i18n";
 import { chatMessage, useChatApi } from "./api";
 import type { Channel, ChannelSummary, Message, Person } from "./types";
 
+const LAST_ROOM_KEY = "alo.chat.lastRoom";
+
+function rememberedRoom(): string | null {
+  try {
+    return localStorage.getItem(LAST_ROOM_KEY);
+  } catch {
+    return null;
+  }
+}
+
 export function useRoomDirectory(onError: (message: string | null) => void) {
   const api = useChatApi();
   const dialogs = useDialogs();
   const [channels, setChannels] = useState<ChannelSummary[] | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openIdState, setOpenIdState] = useState<string | null>(rememberedRoom);
+  const setOpenId = useCallback((id: string | null) => {
+    setOpenIdState(id);
+    try {
+      // Closing the mobile conversation view must not forget the last room.
+      // Keeping it lets the next visit fetch that room alongside the directory.
+      if (id !== null) localStorage.setItem(LAST_ROOM_KEY, id);
+    } catch { /* storage can be unavailable in hardened browsers */ }
+  }, []);
+  const openId = openIdState;
   const [creating, setCreating] = useState(false);
   const [browsing, setBrowsing] = useState<Channel[] | null>(null);
   const [dmQuery, setDmQuery] = useState<string | null>(null);
@@ -21,7 +40,15 @@ export function useRoomDirectory(onError: (message: string | null) => void) {
     try {
       const rooms = await api.channels();
       setChannels(rooms);
-      setOpenId((current) => current ?? rooms[0]?.id ?? null);
+      setOpenIdState((current) => {
+        const valid = current !== null && rooms.some((room) => room.id === current);
+        const next = valid ? current : rooms[0]?.id ?? null;
+        try {
+          if (next === null) localStorage.removeItem(LAST_ROOM_KEY);
+          else localStorage.setItem(LAST_ROOM_KEY, next);
+        } catch { /* storage can be unavailable in hardened browsers */ }
+        return next;
+      });
     } catch (failure) {
       onError(chatMessage(failure, strings.chatLoadFailed));
     }
