@@ -83,7 +83,6 @@ import type { Nameable } from "./presentation";
 import { renderBody } from "./richText";
 import { MessageLine } from "./MessageLine";
 import { ChatSidebar } from "./ChatSidebar";
-import styles from "./ChatModule.module.css";
 
 const AuthoringInsertModal = lazy(() =>
   import("../authoring").then((module) => ({
@@ -764,7 +763,7 @@ export function ChatModule() {
   const suggestions =
     mention === null ? [] : candidatesFor(mention.token, nameable);
   return (
-    <div className={styles.module}>
+    <div className="flex h-full min-h-0 overflow-hidden bg-app text-primary">
       {(!isMobile || openId === null) && (
         <ChatSidebar
           channels={channels}
@@ -792,7 +791,7 @@ export function ChatModule() {
         />
       )}
       <section
-        className={styles.room}
+        className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-app"
         onDragOver={(event) => {
           if (!event.dataTransfer.types.includes("Files")) return;
           event.preventDefault();
@@ -811,44 +810,45 @@ export function ChatModule() {
         }}
       >
         {dropping && (
-          <div className={styles.dropVeil}>
-            <span className={styles.dropWord}>
+          <div className="absolute inset-3 z-40 flex items-center justify-center rounded-xl border-2 border-dashed border-accent bg--tint">
+            <span className="flex items-center gap-2 rounded-full bg-surface px-4 py-3 text-sm font-semibold text-primary shadow-md">
               <Paperclip size={16} />
               {strings.chatDropFiles}
             </span>
           </div>
         )}
         {open === null ? (
-          <div className={styles.emptyRoom}>
-            <Hash size={28} className={styles.emptyRoomIcon} />
-            <p className={styles.emptyLead}>{strings.chatNoRoomOpenLead}</p>
-            <p className={styles.emptyHint}>{strings.chatNoRoomOpenHint}</p>
+          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+            <span className="mb-3 flex size-14 items-center justify-center rounded-xl bg--tint text-accent"><Hash size={28} /></span>
+            <p className="m-0 text-lg font-semibold text-primary">{strings.chatNoRoomOpenLead}</p>
+            <p className="mt-2 max-w-md text-sm text-tertiary">{strings.chatNoRoomOpenHint}</p>
           </div>
         ) : (
           <>
-            <header className={styles.roomHeader}>
+            <header className="flex min-h-16 shrink-0 items-center gap-3 border-b border-subtle bg-surface px-4">
               {isMobile && (
                 // The way back. Without it a phone opens a room and stays
                 // there for ever.
                 <button
                   type="button"
-                  className={styles.backButton}
+                  className="flex size-10 items-center justify-center rounded-md border-0 bg-transparent text-primary hover:bg-raised"
                   onClick={() => setOpenId(null)}
                   aria-label={strings.chatBackToList}
                 >
                   <ChevronLeft size={18} />
                 </button>
               )}
-              <div className={styles.roomTitle}>
-                <h3 className={styles.roomName}>{channelLabel(open)}</h3>
+              <div className="min-w-0 flex-1">
+                <h3 className="m-0 truncate text-base font-bold text-primary">{channelLabel(open)}</h3>
                 {open.topic !== null && (
-                  <p className={styles.roomTopic}>{open.topic}</p>
+                  <p className="m-0 truncate text-xs text-tertiary">{open.topic}</p>
                 )}
               </div>
-              <div className={styles.roomActions}>
-                <button
-                  type="button"
-                  className={styles.roomMeet}
+              <div className="flex shrink-0 items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<Video size={15} />}
                   onClick={() => {
                     if (liveMeeting !== null) {
                       setInMeeting(liveMeeting.id);
@@ -866,23 +866,22 @@ export function ChatModule() {
                     liveMeeting !== null ? strings.meetJoin : strings.meetStart
                   }
                 >
-                  <Video size={15} />
                   {liveMeeting !== null ? strings.meetLive : strings.meetStart}
-                </button>
-                <button
-                  type="button"
-                  className={styles.roomPeople}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Users size={15} />}
                   onClick={() => setShowingPeople(true)}
                   title={strings.chatMembersAndAgents}
                 >
-                  <Users size={15} />
                   {strings.chatMembersAndAgents}
-                </button>
+                </Button>
                 {open.kind === "channel" && open.archivedAt === null && (
                   <>
                     <button
                       type="button"
-                      className={styles.roomIcon}
+                      className="flex size-9 items-center justify-center rounded-md border-0 bg-transparent text-tertiary hover:bg-raised hover:text-primary"
                       onClick={() => void renameRoom(open)}
                       aria-label={strings.chatRename}
                       title={strings.chatRename}
@@ -891,7 +890,7 @@ export function ChatModule() {
                     </button>
                     <button
                       type="button"
-                      className={styles.roomIcon}
+                      className="flex size-9 items-center justify-center rounded-md border-0 bg-transparent text-tertiary hover:bg-raised hover:text-primary"
                       onClick={() => void archiveRoom(open)}
                       aria-label={strings.chatArchiveAction}
                       title={strings.chatArchiveAction}
@@ -904,11 +903,11 @@ export function ChatModule() {
             </header>
 
             {turns.length > 0 && (
-              <div className={styles.thinkingRow}>
+              <div className="flex shrink-0 flex-wrap gap-2 border-b border-subtle bg-surface px-4 py-2">
                 {turns.map((turn) => (
-                  <span key={turn.id} className={styles.thinking}>
-                    <Sparkles size={13} className={styles.thinkingMark} />
-                    <span className={styles.thinkingDots} aria-hidden="true">
+                  <span key={turn.id} className="inline-flex min-h-8 items-center gap-2 rounded-full bg--tint px-3 text-xs text-primary">
+                    <Sparkles size={13} className="text-accent" />
+                    <span className="flex gap-1" aria-hidden="true">
                       <i />
                       <i />
                       <i />
@@ -919,7 +918,7 @@ export function ChatModule() {
                     {turn.mine && openId !== null && (
                       <button
                         type="button"
-                        className={styles.stop}
+                        className="ml-1 rounded-full border border-subtle bg-transparent px-2 py-1 text-xs text-primary hover:bg-raised"
                         onClick={() => {
                           void api
                             .stopTurn(openId, turn.id)
@@ -934,26 +933,26 @@ export function ChatModule() {
               </div>
             )}
 
-            <div className={styles.feed} ref={feedRef}>
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4" ref={feedRef}>
               {/* An explicit control rather than a scroll trigger: a feed that
                   loads on approach fires while someone is simply reading back,
                   and there is no way to tell it to stop. */}
               {!moreBehind && messages !== null && (
-                <div className={styles.beginning}>
-                  <h4 className={styles.beginningName}>
+                <div className="mx-auto my-8 w-full max-w-3xl rounded-xl border border-subtle bg-surface p-5">
+                  <h4 className="m-0 text-lg font-bold text-primary">
                     {open.kind === "dm"
                       ? strings.chatBeginningDm
                       : strings.chatBeginning(channelLabel(open))}
                   </h4>
                   {open.topic !== null && (
-                    <p className={styles.beginningTopic}>{open.topic}</p>
+                    <p className="mb-0 mt-2 text-sm text-tertiary">{open.topic}</p>
                   )}
                 </div>
               )}
               {moreBehind && messages !== null && (
                 <button
                   type="button"
-                  className={styles.older}
+                  className="mx-auto my-3 min-h-9 rounded-full border border-subtle bg-surface px-4 text-sm text-secondary hover:bg-raised disabled:opacity-60"
                   onClick={() => void loadOlder()}
                   disabled={loadingOlder}
                 >
@@ -961,12 +960,12 @@ export function ChatModule() {
                 </button>
               )}
               {messages === null ? (
-                <p className={styles.feedNote}>
-                  <Loader2 className={styles.spin} size={14} />{" "}
+                <p className="m-auto flex items-center gap-2 text-sm text-tertiary">
+                  <Loader2 className="animate-spin" size={14} />{" "}
                   {strings.chatLoading}
                 </p>
               ) : messages.length === 0 ? (
-                <p className={styles.feedNote}>{strings.chatNoMessagesYet}</p>
+                <p className="m-auto text-sm text-tertiary">{strings.chatNoMessagesYet}</p>
               ) : (
                 messages.map((message, i) => (
                   <Fragment key={message.id}>
@@ -974,8 +973,8 @@ export function ChatModule() {
                       message.seq > readUpTo &&
                       (messages[i - 1]?.seq ?? 0) <= readUpTo &&
                       i > 0 && (
-                        <div className={styles.unread}>
-                          <span className={styles.unreadLabel}>
+                        <div className="my-4 flex items-center gap-3 text-accent before:h-px before:flex-1 before:bg-accent after:h-px after:flex-1 after:bg-accent">
+                          <span className="text-xs font-semibold uppercase tracking-wide">
                             {strings.chatNewMessages}
                           </span>
                         </div>
@@ -983,8 +982,8 @@ export function ChatModule() {
                     {(i === 0 ||
                       dayOf(message.createdAt) !==
                         dayOf(messages[i - 1]!.createdAt)) && (
-                      <div className={styles.day}>
-                        <span className={styles.dayLabel}>
+                      <div className="my-4 flex items-center gap-3 before:h-px before:flex-1 before:bg-subtle after:h-px after:flex-1 after:bg-subtle">
+                        <span className="rounded-full border border-subtle bg-surface px-3 py-1 text-xs font-semibold text-tertiary">
                           {dayOf(message.createdAt)}
                         </span>
                       </div>
@@ -1272,18 +1271,18 @@ export function ChatModule() {
 
       {switcher !== null && (
         <div
-          className={styles.switcherBackdrop}
+          className="fixed inset-0 z-50 flex items-start justify-center bg-overlay px-4 pt-16"
           role="dialog"
           aria-modal="true"
           aria-label={strings.chatJumpTo}
           onClick={() => setSwitcher(null)}
         >
           <div
-            className={styles.switcher}
+            className="w-full max-w-xl overflow-hidden rounded-xl border border-subtle bg-surface shadow-lg"
             onClick={(event) => event.stopPropagation()}
           >
             <input
-              className={styles.switcherInput}
+              className="min-h-12 w-full border-0 border-b border-subtle bg-transparent px-4 text-base text-primary outline-none placeholder:text-tertiary"
               value={switcher}
               onChange={(event) => setSwitcher(event.target.value)}
               placeholder={strings.chatJumpTo}
@@ -1300,26 +1299,24 @@ export function ChatModule() {
                 }
               }}
             />
-            <ul className={styles.switcherList}>
+            <ul className="m-0 max-h-80 list-none overflow-y-auto p-2">
               {switcherHits.length === 0 ? (
-                <li className={styles.switcherNone}>{strings.chatNoRoom}</li>
+                <li className="px-3 py-6 text-center text-sm text-tertiary">{strings.chatNoRoom}</li>
               ) : (
                 switcherHits.map((room, i) => (
                   <li key={room.id}>
                     <button
                       type="button"
-                      className={
-                        i === 0 ? styles.switcherFirst : styles.switcherItem
-                      }
+                      className={`flex min-h-11 w-full items-center gap-2 rounded-md border-0 px-3 text-left text-sm ${i === 0 ? "bg-selected text-primary" : "bg-transparent text-secondary hover:bg-raised"}`}
                       onClick={() => {
                         setOpenId(room.id);
                         setSwitcher(null);
                       }}
                     >
                       {room.kind === "dm" ? (
-                        <Users size={15} className={styles.channelIcon} />
+                        <Users size={15} className="text-tertiary" />
                       ) : (
-                        <Hash size={15} className={styles.channelIcon} />
+                        <Hash size={15} className="text-tertiary" />
                       )}
                       {channelLabel(room)}
                     </button>

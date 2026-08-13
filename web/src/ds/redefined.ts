@@ -28,7 +28,6 @@
 // is not a way to land a new hand-rolled input.
 export const REDEFINES_PRIMITIVES: readonly string[] = [
   "billing/BillingModule.module.css",
-  "chat/ChatModule.module.css",
   "contacts/ContactsModal.module.css",
   "crm/CrmModule.module.css",
   "finance/FinanceModule.module.css",
