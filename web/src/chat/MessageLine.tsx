@@ -10,8 +10,8 @@ import { personName, shortTime, standingOf, timeOf, withHandlesMarked } from "./
 import { renderBody } from "./richText";
 import type { Attachment, Message, Proposal } from "./types";
 
-const messageClass = "group relative mt-4 flex w-fit max-w-4xl flex-col items-start pl-12 pr-3";
-const mineClass = "group relative mt-4 flex w-fit max-w-4xl flex-col items-end self-end pl-3";
+const messageClass = "group relative mt-5 flex w-fit max-w-4xl flex-col items-start pl-12 pr-3";
+const mineClass = "group relative mt-2 flex w-fit max-w-3xl flex-col items-end self-end pl-3 pr-5";
 const toolClass = "flex size-7 items-center justify-center rounded-sm border-0 bg-transparent text-secondary hover:bg-raised hover:text-primary focus-visible:outline-2 focus-visible:outline-accent";
 const bubbleClass = "m-0 max-w-full whitespace-pre-wrap break-words rounded-xl border border-subtle bg-surface px-4 py-3 text-sm leading-relaxed text-primary group-hover:border-default";
 export function MessageLine({
@@ -78,7 +78,7 @@ export function MessageLine({
   const reactable = palette.length > 0 && message.deletedAt === null;
   return (
     <article
-      className={`${authoredByMe ? mineClass : messageClass} ${grouped ? "mt-0 py-1" : ""}`}
+      className={`${authoredByMe ? mineClass : messageClass} ${grouped ? (authoredByMe ? "mt-2" : "mt-1") : ""}`}
     >
       {editing === null && (
         <div className="pointer-events-none absolute -top-4 right-2 z-10 flex gap-1 rounded-md border border-subtle bg-surface p-1 opacity-0 shadow-md transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
@@ -163,7 +163,7 @@ export function MessageLine({
         </div>
       )}
 
-      {grouped ? (
+      {authoredByMe ? null : grouped ? (
         // The time still exists for the reader who wants it, on approach only,
         // in the gutter the avatar would occupy.
         <span className="absolute left-0 top-1 w-10 overflow-hidden whitespace-nowrap pr-1 text-right text-xs tabular-nums text-tertiary opacity-0 group-hover:opacity-100">
@@ -261,13 +261,19 @@ export function MessageLine({
             {strings.chatEditCancel}
           </Button>
         </form>
+      ) : authoredByMe ? (
+        <div className="flex max-w-full items-end gap-3">
+          <p
+            className={message.deletedAt === null ? `${bubbleClass} px-5 py-3` : `${bubbleClass} italic text-tertiary`}
+            style={message.deletedAt === null ? { backgroundColor: "var(--accent-soft)", borderColor: "color-mix(in srgb, var(--accent) 28%, transparent)" } : undefined}
+          >
+            {message.deletedAt === null ? renderBody(message.body, withHandlesMarked) : strings.chatWithdrawn}
+          </p>
+          <span className="mb-2 shrink-0 text-xs tabular-nums text-tertiary">{timeOf(message.createdAt)}</span>
+        </div>
       ) : (
-        <p
-          className={message.deletedAt === null ? `${bubbleClass} ${authoredByMe ? "bg--soft" : namesMe ? "bg--tint" : ""}` : `${bubbleClass} italic text-tertiary`}
-        >
-          {message.deletedAt === null
-            ? renderBody(message.body, withHandlesMarked)
-            : strings.chatWithdrawn}
+        <p className={message.deletedAt === null ? `${bubbleClass} ${namesMe ? "bg--tint" : ""}` : `${bubbleClass} italic text-tertiary`}>
+          {message.deletedAt === null ? renderBody(message.body, withHandlesMarked) : strings.chatWithdrawn}
         </p>
       )}
 
