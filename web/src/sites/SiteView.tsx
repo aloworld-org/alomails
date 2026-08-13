@@ -319,6 +319,17 @@ export function SiteView() {
               )}
             </div>
             <div className={styles.publishActions}>
+              {/* Domains belongs beside the address, not among the content
+                  screens: it is the question "where does this website live?",
+                  which is what the line to its left just answered. */}
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Globe2 size="var(--icon-size-inline)" />}
+                onClick={() => navigate("domains")}
+              >
+                {strings.sitesDomains}
+              </Button>
               {/* History belongs beside Publish: it is the question "what did
                   the last publish look like, and can I have it back?". */}
               <Button

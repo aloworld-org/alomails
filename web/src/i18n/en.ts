@@ -5551,6 +5551,170 @@ export const en = {
   sitesCustomCodeTotalBytes: (used: number, max: number) =>
     `${used} of ${max} bytes in this block altogether`,
 
+  // The addresses a website answers to (S2.15c3): the alo one it always has,
+  // a domain its owner already owns, and one bought here. Two rules run
+  // through this copy. Every price is said twice — what it costs today and
+  // what it costs every year afterwards — because the renewal is the half a
+  // bait price hides in. And nothing is called finished before it is: a TXT
+  // record that has not travelled yet is "not found yet", an approval is not a
+  // payment, and a payment is not a registration.
+  sitesDomains: "Domains",
+  sitesDomainsLoading: "Loading the domains...",
+  sitesDomainsLoadFailed:
+    "The domains of this website could not be loaded. Check your connection and try again.",
+  sitesDomainAloAddress: "This website is always reachable at",
+  sitesDomainOwned: "A domain you already own",
+  sitesDomainOwnedHint:
+    "Add the domain, publish the record shown at your DNS host, then press Check. Nothing changes for your visitors until it is verified.",
+  sitesDomainAddress: "Domain",
+  sitesDomainPlaceholder: "example.com",
+  sitesDomainAdd: "Add domain",
+  sitesDomainAddFailed: "That domain could not be added.",
+  sitesDomainNoneBody:
+    "No domain of your own is connected yet. Add one you already own, or buy one below, and this website answers there too.",
+  sitesDomainStatusPending: "Waiting for the record",
+  sitesDomainStatusVerified: "Verified",
+  sitesDomainStatusLive: "Serving",
+  sitesDomainCheck: "Check",
+  sitesDomainVerifyFailed: "The domain could not be checked.",
+  sitesDomainNotYet:
+    "The record is not visible yet. DNS changes take a few minutes to travel — leave the record in place and check again shortly.",
+  sitesDomainVerifiedNow: (domain: string) =>
+    `${domain} is verified. This website now answers there.`,
+  sitesDomainRecordTitle: "Publish this record at your DNS host",
+  sitesDomainRecordName: "Name",
+  sitesDomainRecordType: "Type",
+  sitesDomainRecordValue: "Value",
+  sitesDomainRecordHint:
+    "Keep the record in place until the check succeeds. Some DNS hosts add the domain to the name themselves — if yours does, leave it out.",
+  sitesDomainPointHint: (host: string) =>
+    `Last step at your DNS host: point the domain at ${host} with a CNAME. An apex domain needs your host's ALIAS or ANAME record instead.`,
+  sitesDomainCopy: "Copy",
+  sitesDomainCopied: "Copied",
+  sitesDomainRemove: "Remove",
+  sitesDomainRemoveConfirm: "Yes, remove it",
+  sitesDomainRemoveHint:
+    "alo stops answering at this domain. The domain itself stays yours — nothing is given up at the registry.",
+  sitesDomainRemoveFailed: "That domain could not be removed.",
+
+  sitesDomainBuy: "Buy a domain",
+  sitesDomainBuyHint:
+    "Search for a name. You see what it costs this year and every year after it before anything is bought.",
+  sitesDomainSearchLabel: "The name you would like",
+  sitesDomainSearchPlaceholder: "acme",
+  sitesDomainSearching: "Looking...",
+  sitesDomainSearchInvite: "Type a name to see which endings are free.",
+  sitesDomainSearchFailed: "That name could not be checked.",
+  sitesDomainCatalogFailed: "The domain prices could not be loaded.",
+  sitesDomainUnconfiguredTitle: "Buying domains is not switched on here",
+  sitesDomainUnconfiguredBody:
+    "This workspace cannot register domain names. You can still connect a domain you already own.",
+  sitesDomainNotBuyable:
+    "This workspace can show prices but cannot register a domain yet, because it has no nameservers configured.",
+  sitesDomainTestRegistrar: (name: string) =>
+    `${name} is a test registrar: nothing is charged and no real name is registered.`,
+  sitesDomainRegistrarLine: (name: string, country: string) =>
+    `Domains are registered through ${name} (${country}). Prices exclude VAT.`,
+  sitesDomainAvailable: "Free",
+  sitesDomainTaken: "Already registered",
+  sitesDomainBlocked: "Not for sale",
+  sitesDomainUnsupportedEnding: "alo does not sell this ending",
+  sitesDomainPremium: "Premium name",
+  sitesDomainPremiumHint:
+    "The registry prices this name above its ending's usual price. Its renewal price is the one shown, not the ordinary one.",
+  sitesDomainPriceLine: (today: string, renewal: string) =>
+    `${today} today, then ${renewal} every year`,
+  sitesDomainChoose: "Buy this domain",
+
+  sitesDomainPurchaseTitle: (domain: string) => `Buy ${domain}`,
+  sitesDomainPurchaseSubtitle:
+    "Who the domain is registered to, and for how long. You approve the price on the next step; nothing is charged before that.",
+  sitesDomainYears: "Paid for",
+  sitesDomainYearsHint:
+    "How many years the first payment covers. After that it is one year at a time.",
+  sitesDomainYearsOption: (years: number) =>
+    years === 1 ? "1 year" : `${years} years`,
+  sitesDomainAutoRenew: "Renew this domain automatically",
+  sitesDomainAutoRenewHint:
+    "A domain that is not renewed is lost, and anybody may then take it. Switch this off only if you intend to renew it yourself.",
+  sitesDomainAutoRenewOn: "It renews automatically every year.",
+  sitesDomainAutoRenewOff:
+    "It does not renew automatically: you have to renew it yourself before it expires, or you lose it.",
+  sitesDomainRegistrant: "Registered to",
+  sitesDomainRegistrantHint:
+    "The registry requires a real person or company that can be reached. This goes to the registry — it is never shown on your website.",
+  sitesDomainRegistrantName: "Full name",
+  sitesDomainRegistrantOrganisation: "Company (leave empty if there is none)",
+  sitesDomainRegistrantEmail: "Email",
+  sitesDomainRegistrantEmailHint:
+    "The registry writes here about expiry and verification. An address nobody reads loses the domain.",
+  sitesDomainRegistrantStreet: "Street and number",
+  sitesDomainRegistrantPostalCode: "Postal code",
+  sitesDomainRegistrantCity: "City",
+  sitesDomainRegistrantCountry: "Country",
+  sitesDomainRegistrantCountryHint: "The two-letter country code, such as nl or be.",
+  sitesDomainRegistrantPhone: "Telephone",
+  sitesDomainRegistrantPhoneHint: "In international form, such as +31201234567.",
+  sitesDomainRequirementEea:
+    "This ending is only sold to a registrant inside the European Economic Area.",
+  sitesDomainRequirementCountry: (country: string) =>
+    `This ending is only sold to a registrant in ${country}.`,
+  sitesDomainSeePrice: "See the price",
+  sitesDomainQuoteFailed: "That domain could not be priced.",
+  sitesDomainApproveTitle: "Approve this price",
+  sitesDomainApproveSubtitle: (domain: string) =>
+    `What ${domain} costs, in full, before anything is charged.`,
+  sitesDomainQuoteName: "Domain",
+  sitesDomainQuoteTerm: "Paid for",
+  sitesDomainQuoteToday: "Today",
+  sitesDomainQuoteRenewal: "Every year after",
+  sitesDomainApproveAction: (price: string) => `Approve ${price}`,
+  sitesDomainApproveHint:
+    "Approving records that you agreed to these exact amounts. If the price changes before it is paid, alo asks you again instead of charging a different one.",
+  sitesDomainApproveFailed: "That price could not be approved.",
+
+  sitesDomainPurchases: "Domains bought here",
+  sitesDomainPurchasesHint:
+    "Every domain this website has started buying, and where it got to.",
+  sitesDomainPurchasesNone: "No domain has been bought for this website yet.",
+  sitesDomainPurchasesLoadFailed: "The domain purchases could not be loaded.",
+  sitesDomainRefresh: "Refresh",
+  sitesDomainTermPrice: (price: string, years: number) =>
+    years === 1 ? `${price} for the first year` : `${price} for the first ${years} years`,
+  sitesDomainRenewalLine: (price: string) => `then ${price} a year`,
+  sitesDomainApprovedOn: (when: string) => `Price approved on ${when}.`,
+  sitesDomainAttempts: (attempts: number) =>
+    `Registration attempt ${attempts}; alo keeps trying.`,
+  sitesDomainCancel: "Call it off",
+  sitesDomainCancelConfirm: "Yes, call it off",
+  sitesDomainCancelFailed: "That purchase could not be called off.",
+  sitesDomainStateQuoted: "Waiting for your approval",
+  sitesDomainStateApproved: "Approved",
+  sitesDomainStateAwaitingPayment: "Waiting to be paid",
+  sitesDomainStatePaid: "Paid",
+  sitesDomainStateRegistering: "Registering",
+  sitesDomainStateRegistered: "Registered",
+  sitesDomainStateConfigured: "Live",
+  sitesDomainStateFailed: "Not completed",
+  sitesDomainStateCancelled: "Called off",
+  sitesDomainStepQuoted:
+    "Nothing has been charged. Approve the price and the purchase goes on to payment.",
+  sitesDomainStepApproved:
+    "You approved this price. Payment comes next: once it settles, alo registers the domain and attaches it to this website by itself.",
+  sitesDomainStepAwaitingPayment:
+    "Waiting for the payment to settle. Registration starts by itself the moment it does.",
+  sitesDomainStepPaid: "Paid. Registration starts within a minute.",
+  sitesDomainStepRegistering: "The registrar is registering the name right now.",
+  sitesDomainStepRegistered: (domain: string) =>
+    `${domain} is registered to you. Attaching it to this website.`,
+  sitesDomainStepConfigured: (domain: string) =>
+    `${domain} is registered and serving this website.`,
+  sitesDomainStepFailed:
+    "This purchase could not be completed. Nothing further will be charged for it.",
+  sitesDomainStepCancelled: "Called off. Nothing was charged.",
+  sitesDomainOwnerOnly:
+    "Only this website’s owner can buy or manage its domain names. You can still edit and publish the website itself.",
+
   // The one approvals inbox (B6.07) — leave, expense claims and timesheet weeks
   // in one list. The words are the approver's, not the system's: what is
   // waiting is "time off", "a claim", "a week", and the person who handed it in

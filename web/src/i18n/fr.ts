@@ -5638,4 +5638,169 @@ export const fr: Partial<Catalog> = {
   inviteFor: (email: string): string => `Pour ${email}`,
   inviteDoneBody: (email: string): string =>
     `Vous pouvez maintenant vous connecter en tant que ${email} avec le mot de passe que vous venez de choisir.`,
+
+  // Les adresses auxquelles un site répond (S2.15c3). Chaque prix est dit
+  // deux fois — ce qu’il coûte aujourd’hui et chaque année ensuite — parce
+  // que le renouvellement est la moitié que cache un prix d’appel.
+  sitesDomains: "Domaines",
+  sitesDomainsLoading: "Chargement des domaines…",
+  sitesDomainsLoadFailed:
+    "Les domaines de ce site n’ont pas pu être chargés. Vérifiez votre connexion et réessayez.",
+  sitesDomainAloAddress: "Ce site reste toujours accessible à l’adresse",
+  sitesDomainOwned: "Un domaine que vous possédez déjà",
+  sitesDomainOwnedHint:
+    "Ajoutez le domaine, publiez l’enregistrement affiché chez votre hébergeur DNS, puis appuyez sur Vérifier. Rien ne change pour vos visiteurs tant qu’il n’est pas vérifié.",
+  sitesDomainAddress: "Domaine",
+  sitesDomainPlaceholder: "exemple.com",
+  sitesDomainAdd: "Ajouter le domaine",
+  sitesDomainAddFailed: "Ce domaine n’a pas pu être ajouté.",
+  sitesDomainNoneBody:
+    "Aucun domaine personnel n’est encore connecté. Ajoutez-en un que vous possédez déjà, ou achetez-en un ci-dessous, et ce site répondra aussi à cette adresse.",
+  sitesDomainStatusPending: "En attente de l’enregistrement",
+  sitesDomainStatusVerified: "Vérifié",
+  sitesDomainStatusLive: "En service",
+  sitesDomainCheck: "Vérifier",
+  sitesDomainVerifyFailed: "Le domaine n’a pas pu être vérifié.",
+  sitesDomainNotYet:
+    "L’enregistrement n’est pas encore visible. Les modifications DNS mettent quelques minutes à se propager : laissez l’enregistrement en place et vérifiez à nouveau dans un instant.",
+  sitesDomainVerifiedNow: (domain: string): string =>
+    `${domain} est vérifié. Ce site répond désormais à cette adresse.`,
+  sitesDomainRecordTitle: "Publiez cet enregistrement chez votre hébergeur DNS",
+  sitesDomainRecordName: "Nom",
+  sitesDomainRecordType: "Type",
+  sitesDomainRecordValue: "Valeur",
+  sitesDomainRecordHint:
+    "Laissez l’enregistrement en place jusqu’à ce que la vérification aboutisse. Certains hébergeurs DNS ajoutent eux-mêmes le domaine au nom : si c’est le cas du vôtre, ne l’indiquez pas.",
+  sitesDomainPointHint: (host: string): string =>
+    `Dernière étape chez votre hébergeur DNS : faites pointer le domaine vers ${host} avec un CNAME. Un domaine racine demande l’enregistrement ALIAS ou ANAME de votre hébergeur.`,
+  sitesDomainCopy: "Copier",
+  sitesDomainCopied: "Copié",
+  sitesDomainRemove: "Retirer",
+  sitesDomainRemoveConfirm: "Oui, le retirer",
+  sitesDomainRemoveHint:
+    "alo cesse de répondre à ce domaine. Le domaine lui-même reste le vôtre : rien n’est abandonné auprès du registre.",
+  sitesDomainRemoveFailed: "Ce domaine n’a pas pu être retiré.",
+  sitesDomainBuy: "Acheter un domaine",
+  sitesDomainBuyHint:
+    "Cherchez un nom. Vous voyez ce qu’il coûte cette année et chaque année suivante avant tout achat.",
+  sitesDomainSearchLabel: "Le nom que vous souhaitez",
+  sitesDomainSearchPlaceholder: "acme",
+  sitesDomainSearching: "Recherche…",
+  sitesDomainSearchInvite:
+    "Saisissez un nom pour voir quelles extensions sont libres.",
+  sitesDomainSearchFailed: "Ce nom n’a pas pu être vérifié.",
+  sitesDomainCatalogFailed: "Les tarifs des domaines n’ont pas pu être chargés.",
+  sitesDomainUnconfiguredTitle: "L’achat de domaines n’est pas activé ici",
+  sitesDomainUnconfiguredBody:
+    "Cet espace de travail ne peut pas enregistrer de noms de domaine. Vous pouvez toujours connecter un domaine que vous possédez déjà.",
+  sitesDomainNotBuyable:
+    "Cet espace de travail peut afficher les tarifs mais ne peut pas encore enregistrer de domaine, faute de serveurs de noms configurés.",
+  sitesDomainTestRegistrar: (name: string): string =>
+    `${name} est un bureau d’enregistrement de test : rien n’est facturé et aucun nom réel n’est enregistré.`,
+  sitesDomainRegistrarLine: (name: string, country: string): string =>
+    `Les domaines sont enregistrés via ${name} (${country}). Tarifs hors TVA.`,
+  sitesDomainAvailable: "Libre",
+  sitesDomainTaken: "Déjà enregistré",
+  sitesDomainBlocked: "Non commercialisé",
+  sitesDomainUnsupportedEnding: "alo ne vend pas cette extension",
+  sitesDomainPremium: "Nom premium",
+  sitesDomainPremiumHint:
+    "Le registre facture ce nom au-dessus du tarif habituel de son extension. Son tarif de renouvellement est celui affiché, et non le tarif ordinaire.",
+  sitesDomainPriceLine: (today: string, renewal: string): string =>
+    `${today} aujourd’hui, puis ${renewal} par an`,
+  sitesDomainChoose: "Acheter ce domaine",
+  sitesDomainPurchaseTitle: (domain: string): string => `Acheter ${domain}`,
+  sitesDomainPurchaseSubtitle:
+    "À qui le domaine est enregistré, et pour combien de temps. Vous approuvez le prix à l’étape suivante ; rien n’est facturé avant cela.",
+  sitesDomainYears: "Payé pour",
+  sitesDomainYearsHint:
+    "Le nombre d’années couvertes par le premier paiement. Ensuite, c’est une année à la fois.",
+  sitesDomainYearsOption: (years: number): string =>
+    years === 1 ? "1 an" : `${years} ans`,
+  sitesDomainAutoRenew: "Renouveler ce domaine automatiquement",
+  sitesDomainAutoRenewHint:
+    "Un domaine qui n’est pas renouvelé est perdu, et n’importe qui peut alors le prendre. Ne désactivez ceci que si vous comptez le renouveler vous-même.",
+  sitesDomainAutoRenewOn: "Il se renouvelle automatiquement chaque année.",
+  sitesDomainAutoRenewOff:
+    "Il ne se renouvelle pas automatiquement : vous devez le renouveler vous-même avant son expiration, sans quoi vous le perdez.",
+  sitesDomainRegistrant: "Enregistré au nom de",
+  sitesDomainRegistrantHint:
+    "Le registre exige une personne ou une société réelle et joignable. Ces informations vont au registre : elles ne sont jamais affichées sur votre site.",
+  sitesDomainRegistrantName: "Nom complet",
+  sitesDomainRegistrantOrganisation: "Société (laissez vide s’il n’y en a pas)",
+  sitesDomainRegistrantEmail: "Adresse e-mail",
+  sitesDomainRegistrantEmailHint:
+    "Le registre écrit ici au sujet de l’expiration et de la vérification. Une adresse que personne ne lit fait perdre le domaine.",
+  sitesDomainRegistrantStreet: "Rue et numéro",
+  sitesDomainRegistrantPostalCode: "Code postal",
+  sitesDomainRegistrantCity: "Ville",
+  sitesDomainRegistrantCountry: "Pays",
+  sitesDomainRegistrantCountryHint:
+    "Le code pays à deux lettres, par exemple fr ou be.",
+  sitesDomainRegistrantPhone: "Téléphone",
+  sitesDomainRegistrantPhoneHint:
+    "Sous forme internationale, par exemple +33123456789.",
+  sitesDomainRequirementEea:
+    "Cette extension n’est vendue qu’à un titulaire établi dans l’Espace économique européen.",
+  sitesDomainRequirementCountry: (country: string): string =>
+    `Cette extension n’est vendue qu’à un titulaire établi dans le pays ${country}.`,
+  sitesDomainSeePrice: "Voir le prix",
+  sitesDomainQuoteFailed: "Le prix de ce domaine n’a pas pu être établi.",
+  sitesDomainApproveTitle: "Approuver ce prix",
+  sitesDomainApproveSubtitle: (domain: string): string =>
+    `Ce que coûte ${domain}, en totalité, avant toute facturation.`,
+  sitesDomainQuoteName: "Domaine",
+  sitesDomainQuoteTerm: "Payé pour",
+  sitesDomainQuoteToday: "Aujourd’hui",
+  sitesDomainQuoteRenewal: "Chaque année suivante",
+  sitesDomainApproveAction: (price: string): string => `Approuver ${price}`,
+  sitesDomainApproveHint:
+    "Approuver consigne votre accord sur ces montants exacts. Si le prix change avant le paiement, alo vous redemande votre accord au lieu de facturer un autre montant.",
+  sitesDomainApproveFailed: "Ce prix n’a pas pu être approuvé.",
+  sitesDomainPurchases: "Domaines achetés ici",
+  sitesDomainPurchasesHint:
+    "Tous les domaines dont l’achat a été entamé pour ce site, et où chacun en est.",
+  sitesDomainPurchasesNone:
+    "Aucun domaine n’a encore été acheté pour ce site.",
+  sitesDomainPurchasesLoadFailed:
+    "Les achats de domaines n’ont pas pu être chargés.",
+  sitesDomainRefresh: "Actualiser",
+  sitesDomainTermPrice: (price: string, years: number): string =>
+    years === 1
+      ? `${price} pour la première année`
+      : `${price} pour les ${years} premières années`,
+  sitesDomainRenewalLine: (price: string): string => `puis ${price} par an`,
+  sitesDomainApprovedOn: (when: string): string => `Prix approuvé le ${when}.`,
+  sitesDomainAttempts: (attempts: number): string =>
+    `Tentative d’enregistrement ${attempts} ; alo continue d’essayer.`,
+  sitesDomainCancel: "Annuler l’achat",
+  sitesDomainCancelConfirm: "Oui, annuler l’achat",
+  sitesDomainCancelFailed: "Cet achat n’a pas pu être annulé.",
+  sitesDomainStateQuoted: "En attente de votre approbation",
+  sitesDomainStateApproved: "Approuvé",
+  sitesDomainStateAwaitingPayment: "En attente de paiement",
+  sitesDomainStatePaid: "Payé",
+  sitesDomainStateRegistering: "Enregistrement en cours",
+  sitesDomainStateRegistered: "Enregistré",
+  sitesDomainStateConfigured: "En service",
+  sitesDomainStateFailed: "Non abouti",
+  sitesDomainStateCancelled: "Annulé",
+  sitesDomainStepQuoted:
+    "Rien n’a été facturé. Approuvez le prix et l’achat passe au paiement.",
+  sitesDomainStepApproved:
+    "Vous avez approuvé ce prix. Le paiement vient ensuite : dès qu’il est encaissé, alo enregistre le domaine et le rattache à ce site de lui-même.",
+  sitesDomainStepAwaitingPayment:
+    "En attente de l’encaissement du paiement. L’enregistrement démarre de lui-même dès qu’il arrive.",
+  sitesDomainStepPaid: "Payé. L’enregistrement démarre dans la minute.",
+  sitesDomainStepRegistering:
+    "Le bureau d’enregistrement enregistre le nom en ce moment.",
+  sitesDomainStepRegistered: (domain: string): string =>
+    `${domain} est enregistré à votre nom. Rattachement à ce site en cours.`,
+  sitesDomainStepConfigured: (domain: string): string =>
+    `${domain} est enregistré et dessert ce site.`,
+  sitesDomainStepFailed:
+    "Cet achat n’a pas pu aboutir. Rien de plus ne sera facturé à ce titre.",
+  sitesDomainStepCancelled: "Annulé. Rien n’a été facturé.",
+  sitesDomainOwnerOnly:
+    "Seul le propriétaire de ce site peut acheter ou gérer ses noms de domaine. Vous pouvez toujours modifier et publier le site lui-même.",
 };

@@ -8,6 +8,7 @@ import { PageEditorView } from "./PageEditorView";
 import { BookingsView } from "./BookingsView";
 import { CatalogsView } from "./CatalogsView";
 import { CollectionsView } from "./CollectionsView";
+import { DomainsView } from "./DomainsView";
 import { OrdersView } from "./OrdersView";
 import { PostsView } from "./PostsView";
 import { SiteView } from "./SiteView";
@@ -32,6 +33,7 @@ export function SitesModule() {
         <Route path=":siteId/orders" element={<OrdersView />} />
         <Route path=":siteId/bookings" element={<BookingsView />} />
         <Route path=":siteId/collections" element={<CollectionsView />} />
+        <Route path=":siteId/domains" element={<DomainsView />} />
         <Route path=":siteId/history" element={<HistoryView />} />
         <Route path=":siteId/submissions" element={<SubmissionsView />} />
         <Route path=":siteId/posts" element={<PostsView />} />

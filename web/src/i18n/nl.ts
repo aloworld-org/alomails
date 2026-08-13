@@ -5582,4 +5582,168 @@ export const nl: Partial<Catalog> = {
   inviteFor: (email: string): string => `Voor ${email}`,
   inviteDoneBody: (email: string): string =>
     `U kunt zich nu aanmelden als ${email} met het wachtwoord dat u zojuist hebt gekozen.`,
+
+  // De adressen waarop een website antwoordt (S2.15c3). Elke prijs staat er
+  // twee keer — wat het vandaag kost en wat het elk jaar daarna kost — omdat
+  // de verlenging de helft is die een lokprijs verzwijgt.
+  sitesDomains: "Domeinen",
+  sitesDomainsLoading: "Domeinen laden…",
+  sitesDomainsLoadFailed:
+    "De domeinen van deze website konden niet worden geladen. Controleer uw verbinding en probeer het opnieuw.",
+  sitesDomainAloAddress: "Deze website is altijd bereikbaar op",
+  sitesDomainOwned: "Een domein dat u al hebt",
+  sitesDomainOwnedHint:
+    "Voeg het domein toe, publiceer het getoonde record bij uw DNS-provider en klik daarna op Controleren. Voor uw bezoekers verandert er niets tot het geverifieerd is.",
+  sitesDomainAddress: "Domein",
+  sitesDomainPlaceholder: "voorbeeld.nl",
+  sitesDomainAdd: "Domein toevoegen",
+  sitesDomainAddFailed: "Dat domein kon niet worden toegevoegd.",
+  sitesDomainNoneBody:
+    "Er is nog geen eigen domein gekoppeld. Voeg er een toe dat u al hebt, of koop er hieronder een, en deze website antwoordt daar ook.",
+  sitesDomainStatusPending: "Wacht op het record",
+  sitesDomainStatusVerified: "Geverifieerd",
+  sitesDomainStatusLive: "In gebruik",
+  sitesDomainCheck: "Controleren",
+  sitesDomainVerifyFailed: "Het domein kon niet worden gecontroleerd.",
+  sitesDomainNotYet:
+    "Het record is nog niet zichtbaar. DNS-wijzigingen doen er een paar minuten over: laat het record staan en controleer straks opnieuw.",
+  sitesDomainVerifiedNow: (domain: string): string =>
+    `${domain} is geverifieerd. Deze website antwoordt daar nu.`,
+  sitesDomainRecordTitle: "Publiceer dit record bij uw DNS-provider",
+  sitesDomainRecordName: "Naam",
+  sitesDomainRecordType: "Type",
+  sitesDomainRecordValue: "Waarde",
+  sitesDomainRecordHint:
+    "Laat het record staan tot de controle slaagt. Sommige DNS-providers zetten het domein zelf achter de naam: doet die van u dat, laat het dan weg.",
+  sitesDomainPointHint: (host: string): string =>
+    `Laatste stap bij uw DNS-provider: wijs het domein met een CNAME naar ${host}. Voor een domein zonder subdomein hebt u het ALIAS- of ANAME-record van uw provider nodig.`,
+  sitesDomainCopy: "Kopiëren",
+  sitesDomainCopied: "Gekopieerd",
+  sitesDomainRemove: "Verwijderen",
+  sitesDomainRemoveConfirm: "Ja, verwijderen",
+  sitesDomainRemoveHint:
+    "alo antwoordt niet langer op dit domein. Het domein zelf blijft van u: bij de registry geeft u niets op.",
+  sitesDomainRemoveFailed: "Dat domein kon niet worden verwijderd.",
+  sitesDomainBuy: "Een domein kopen",
+  sitesDomainBuyHint:
+    "Zoek een naam. U ziet wat die dit jaar kost en wat elk jaar daarna kost voordat er iets gekocht wordt.",
+  sitesDomainSearchLabel: "De naam die u wilt",
+  sitesDomainSearchPlaceholder: "acme",
+  sitesDomainSearching: "Bezig met zoeken…",
+  sitesDomainSearchInvite: "Typ een naam om te zien welke extensies vrij zijn.",
+  sitesDomainSearchFailed: "Die naam kon niet worden gecontroleerd.",
+  sitesDomainCatalogFailed: "De domeinprijzen konden niet worden geladen.",
+  sitesDomainUnconfiguredTitle: "Domeinen kopen staat hier niet aan",
+  sitesDomainUnconfiguredBody:
+    "Deze werkomgeving kan geen domeinnamen registreren. U kunt wel een domein koppelen dat u al hebt.",
+  sitesDomainNotBuyable:
+    "Deze werkomgeving kan prijzen tonen maar nog geen domein registreren, omdat er geen naamservers zijn ingesteld.",
+  sitesDomainTestRegistrar: (name: string): string =>
+    `${name} is een testregistrar: er wordt niets in rekening gebracht en er wordt geen echte naam geregistreerd.`,
+  sitesDomainRegistrarLine: (name: string, country: string): string =>
+    `Domeinen worden geregistreerd via ${name} (${country}). Prijzen zijn exclusief btw.`,
+  sitesDomainAvailable: "Vrij",
+  sitesDomainTaken: "Al geregistreerd",
+  sitesDomainBlocked: "Niet te koop",
+  sitesDomainUnsupportedEnding: "alo verkoopt deze extensie niet",
+  sitesDomainPremium: "Premiumnaam",
+  sitesDomainPremiumHint:
+    "De registry rekent voor deze naam meer dan de gebruikelijke prijs van de extensie. De verlengprijs is de getoonde prijs, niet de gewone.",
+  sitesDomainPriceLine: (today: string, renewal: string): string =>
+    `${today} vandaag, daarna ${renewal} per jaar`,
+  sitesDomainChoose: "Dit domein kopen",
+  sitesDomainPurchaseTitle: (domain: string): string => `${domain} kopen`,
+  sitesDomainPurchaseSubtitle:
+    "Op wiens naam het domein komt te staan, en voor hoe lang. De prijs keurt u in de volgende stap goed; daarvoor wordt er niets in rekening gebracht.",
+  sitesDomainYears: "Betaald voor",
+  sitesDomainYearsHint:
+    "Hoeveel jaar de eerste betaling dekt. Daarna gaat het per jaar.",
+  sitesDomainYearsOption: (years: number): string =>
+    years === 1 ? "1 jaar" : `${years} jaar`,
+  sitesDomainAutoRenew: "Dit domein automatisch verlengen",
+  sitesDomainAutoRenewHint:
+    "Een domein dat niet verlengd wordt, bent u kwijt, en iedereen kan het dan overnemen. Zet dit alleen uit als u het zelf gaat verlengen.",
+  sitesDomainAutoRenewOn: "Het wordt elk jaar automatisch verlengd.",
+  sitesDomainAutoRenewOff:
+    "Het wordt niet automatisch verlengd: u moet het zelf verlengen voordat het verloopt, anders bent u het kwijt.",
+  sitesDomainRegistrant: "Op naam van",
+  sitesDomainRegistrantHint:
+    "De registry eist een echte persoon of onderneming die bereikbaar is. Dit gaat naar de registry en komt nooit op uw website te staan.",
+  sitesDomainRegistrantName: "Volledige naam",
+  sitesDomainRegistrantOrganisation: "Bedrijf (leeg laten als dat er niet is)",
+  sitesDomainRegistrantEmail: "E-mailadres",
+  sitesDomainRegistrantEmailHint:
+    "De registry schrijft hierheen over verloop en verificatie. Een adres dat niemand leest, kost u het domein.",
+  sitesDomainRegistrantStreet: "Straat en huisnummer",
+  sitesDomainRegistrantPostalCode: "Postcode",
+  sitesDomainRegistrantCity: "Plaats",
+  sitesDomainRegistrantCountry: "Land",
+  sitesDomainRegistrantCountryHint:
+    "De landcode van twee letters, bijvoorbeeld nl of be.",
+  sitesDomainRegistrantPhone: "Telefoon",
+  sitesDomainRegistrantPhoneHint:
+    "In internationale vorm, bijvoorbeeld +31201234567.",
+  sitesDomainRequirementEea:
+    "Deze extensie wordt alleen verkocht aan een houder binnen de Europese Economische Ruimte.",
+  sitesDomainRequirementCountry: (country: string): string =>
+    `Deze extensie wordt alleen verkocht aan een houder in het land ${country}.`,
+  sitesDomainSeePrice: "De prijs bekijken",
+  sitesDomainQuoteFailed: "Voor dat domein kon geen prijs worden opgevraagd.",
+  sitesDomainApproveTitle: "Deze prijs goedkeuren",
+  sitesDomainApproveSubtitle: (domain: string): string =>
+    `Wat ${domain} kost, volledig, voordat er iets in rekening wordt gebracht.`,
+  sitesDomainQuoteName: "Domein",
+  sitesDomainQuoteTerm: "Betaald voor",
+  sitesDomainQuoteToday: "Vandaag",
+  sitesDomainQuoteRenewal: "Elk jaar daarna",
+  sitesDomainApproveAction: (price: string): string => `${price} goedkeuren`,
+  sitesDomainApproveHint:
+    "Met goedkeuren legt u vast dat u akkoord gaat met precies deze bedragen. Verandert de prijs voordat er betaald is, dan vraagt alo het u opnieuw in plaats van een ander bedrag in rekening te brengen.",
+  sitesDomainApproveFailed: "Die prijs kon niet worden goedgekeurd.",
+  sitesDomainPurchases: "Hier gekochte domeinen",
+  sitesDomainPurchasesHint:
+    "Elk domein waarvan de aankoop voor deze website is begonnen, en hoe ver die is.",
+  sitesDomainPurchasesNone:
+    "Voor deze website is nog geen domein gekocht.",
+  sitesDomainPurchasesLoadFailed:
+    "De domeinaankopen konden niet worden geladen.",
+  sitesDomainRefresh: "Vernieuwen",
+  sitesDomainTermPrice: (price: string, years: number): string =>
+    years === 1
+      ? `${price} voor het eerste jaar`
+      : `${price} voor de eerste ${years} jaar`,
+  sitesDomainRenewalLine: (price: string): string => `daarna ${price} per jaar`,
+  sitesDomainApprovedOn: (when: string): string =>
+    `Prijs goedgekeurd op ${when}.`,
+  sitesDomainAttempts: (attempts: number): string =>
+    `Registratiepoging ${attempts}; alo blijft het proberen.`,
+  sitesDomainCancel: "Afbestellen",
+  sitesDomainCancelConfirm: "Ja, afbestellen",
+  sitesDomainCancelFailed: "Die aankoop kon niet worden afbesteld.",
+  sitesDomainStateQuoted: "Wacht op uw goedkeuring",
+  sitesDomainStateApproved: "Goedgekeurd",
+  sitesDomainStateAwaitingPayment: "Wacht op betaling",
+  sitesDomainStatePaid: "Betaald",
+  sitesDomainStateRegistering: "Wordt geregistreerd",
+  sitesDomainStateRegistered: "Geregistreerd",
+  sitesDomainStateConfigured: "In gebruik",
+  sitesDomainStateFailed: "Niet afgerond",
+  sitesDomainStateCancelled: "Afbesteld",
+  sitesDomainStepQuoted:
+    "Er is niets in rekening gebracht. Keurt u de prijs goed, dan gaat de aankoop door naar de betaling.",
+  sitesDomainStepApproved:
+    "U hebt deze prijs goedgekeurd. Daarna volgt de betaling: zodra die binnen is, registreert alo het domein en koppelt het dat zelf aan deze website.",
+  sitesDomainStepAwaitingPayment:
+    "Wacht tot de betaling binnen is. De registratie begint vanzelf zodra dat gebeurt.",
+  sitesDomainStepPaid: "Betaald. De registratie begint binnen een minuut.",
+  sitesDomainStepRegistering: "De registrar registreert de naam nu.",
+  sitesDomainStepRegistered: (domain: string): string =>
+    `${domain} staat op uw naam. Wordt gekoppeld aan deze website.`,
+  sitesDomainStepConfigured: (domain: string): string =>
+    `${domain} is geregistreerd en bedient deze website.`,
+  sitesDomainStepFailed:
+    "Deze aankoop kon niet worden afgerond. Er wordt hiervoor niets meer in rekening gebracht.",
+  sitesDomainStepCancelled: "Afbesteld. Er is niets in rekening gebracht.",
+  sitesDomainOwnerOnly:
+    "Alleen de eigenaar van deze website kan domeinnamen kopen of beheren. U kunt de website zelf gewoon bewerken en publiceren.",
 };

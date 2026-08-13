@@ -866,3 +866,179 @@ export interface PostUpdate {
   excerpt: string;
   coverBlobId: string | null;
 }
+
+// ---- domains: the addresses a website answers to (S1.25a, S2.15a–c) --------
+
+/** Where one claimed custom domain stands. `pending` is waiting for its TXT
+ *  proof to appear in DNS, `verified` has been proven, `live` is being served
+ *  — the last two arrive together today, because proving ownership is what
+ *  activates serving. */
+export type SiteDomainStatus = "pending" | "verified" | "live";
+
+/** The exact DNS record that proves a domain is the tenant's. The server
+ *  composes all three fields; a screen shows them and never builds one, so
+ *  what a person copies into their DNS host is what the verifier looks for. */
+export interface SiteDomainVerifyRecord {
+  name: string;
+  type: string;
+  value: string;
+}
+
+/** One domain this website answers to, as `/sites/{id}/domains` sends it. */
+export interface SiteDomain {
+  domain: string;
+  status: SiteDomainStatus;
+  verifiedAt: string | null;
+  verifyRecord: SiteDomainVerifyRecord;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** What the registry demands of the person a domain is registered to. `none`
+ *  is the common case; the others are stated before anybody types an address,
+ *  because discovering them at the registry is discovering them too late. */
+export type DomainRequirement =
+  | { kind: "none" }
+  | { kind: "eea_presence" }
+  | { kind: "country_presence"; country: string };
+
+/** One ending this deployment sells, with both of its prices. `renewCents` is
+ *  what a year costs forever after the first one — never omitted, because the
+ *  renewal price is the half a bait price hides in. */
+export interface DomainEnding {
+  tld: string;
+  registerCents: number;
+  renewCents: number;
+  transferCents: number;
+  minYears: number;
+  maxYears: number;
+  requirement: DomainRequirement;
+}
+
+/** Who registers this deployment's names. `spendsMoney` is false for the
+ *  fixture reseller of a development workspace — the buy box badges it rather
+ *  than hiding it, so nobody demonstrates a purchase believing it was real. */
+export interface DomainRegistrarIdentity {
+  name: string;
+  country: string;
+  environment: string;
+  spendsMoney: boolean;
+}
+
+/** The endings on sale. `buyable` is false when the deployment can price a
+ *  domain but not point one anywhere (no nameservers configured): prices stay
+ *  readable, buying does not. */
+export interface DomainCatalog {
+  registrar: DomainRegistrarIdentity;
+  currency: string;
+  buyable: boolean;
+  endings: DomainEnding[];
+}
+
+/** Whether one candidate can be bought. A price accompanies `available` and
+ *  nothing else — the server never prices what nobody can buy. */
+export type DomainAvailability = "available" | "taken" | "blocked" | "unsupported";
+
+/** The seller's own price for one name and term. Both halves always: what the
+ *  first term costs in total, and what one year costs every year after. */
+export interface DomainQuote {
+  domain: string;
+  termYears: number;
+  currency: string;
+  firstTermCents: number;
+  renewalCentsPerYear: number;
+  premium: boolean;
+}
+
+/** One line of a domain search. */
+export interface DomainOffer {
+  domain: string;
+  availability: DomainAvailability;
+  quote: DomainQuote | null;
+}
+
+/** A search answer: the label that was understood, and one offer per ending. */
+export interface DomainSearchResult {
+  label: string;
+  currency: string;
+  buyable: boolean;
+  offers: DomainOffer[];
+}
+
+/** Who a domain is registered to. Sent when a purchase is started and read
+ *  back only through the purchase's own registrant route — never as a field of
+ *  a list, because a list of purchases is not a place to spread an address. */
+export interface DomainRegistrant {
+  name: string;
+  organisation: string | null;
+  email: string;
+  street: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  phone: string;
+}
+
+/** Where one purchase stands. The first two are before any money, the middle
+ *  three are the machine's, and the last four are ends — `configured` being the
+ *  only happy one, where the name is attached to the website and serving. */
+export type SiteDomainPurchaseState =
+  | "quoted"
+  | "approved"
+  | "awaiting_payment"
+  | "paid"
+  | "registering"
+  | "registered"
+  | "configured"
+  | "failed"
+  | "cancelled";
+
+/** One domain purchase as `/sites/{id}/domain-purchases` sends it. The prices
+ *  are the ones stored when the purchase was quoted, not a fresh answer: what
+ *  a person approves is what they were shown. */
+export interface SiteDomainPurchase {
+  id: string;
+  site: string;
+  kind: "registration" | "renewal";
+  domain: string;
+  tld: string;
+  state: SiteDomainPurchaseState;
+  /** Whether the tenant has been charged — the line cancellation may not cross. */
+  moneyMoved: boolean;
+  /** Whether this purchase is still on its way somewhere. */
+  open: boolean;
+  termYears: number;
+  currency: string;
+  firstTermCents: number;
+  renewalCentsPerYear: number;
+  premium: boolean;
+  autoRenew: boolean;
+  nameservers: string[];
+  requestKey: string;
+  approvedAt: string | null;
+  approvedBy: string | null;
+  paymentReference: string | null;
+  paidAt: string | null;
+  attempts: number;
+  providerReference: string | null;
+  registeredAt: string | null;
+  expiresAt: string | null;
+  lifecycle: string | null;
+  configuredAt: string | null;
+  /** Why it ended badly, in the server's own words. */
+  failure: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** What starting a purchase sends. It carries NO price: the seller states the
+ *  price in the same request, so no browser can propose one. */
+export interface SiteDomainPurchaseDraft {
+  domain: string;
+  years: number;
+  autoRenew: boolean;
+  /** The caller's replay token — the same key answers with the same purchase
+   *  rather than buying a second name. */
+  requestKey: string;
+  registrant: DomainRegistrant;
+}

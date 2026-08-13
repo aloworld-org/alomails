@@ -21,10 +21,16 @@ import { getLocale } from "../i18n";
 import { API_BASE } from "../platform/runtime";
 import type { Section, SectionsEnvelope } from "./sections";
 import type {
+  DomainCatalog,
+  DomainQuote,
+  DomainSearchResult,
   PageDraft,
   PostDraft,
   PostUpdate,
   Site,
+  SiteDomain,
+  SiteDomainPurchase,
+  SiteDomainPurchaseDraft,
   SiteAnalyticsReport,
   SiteAttributionReport,
   SiteAvailabilitySource,
@@ -983,6 +989,103 @@ export class SitesApi {
     ).then(pageProtection);
   }
 
+  // ---- domains -------------------------------------------------------------
+
+  /** The domains this website answers to besides its alo address, with the
+   *  TXT proof each pending one is waiting for. */
+  siteDomains(siteId: string): Promise<SiteDomain[]> {
+    return this.#read<{ domains?: SiteDomain[] }>(
+      `${this.#domainsPath(siteId)}`,
+    ).then((r) => r.domains ?? []);
+  }
+
+  /** Claims a domain the tenant already owns elsewhere; answers the pending
+   *  claim together with the exact record to publish. Syntax and ownership
+   *  rules are the server's — a refusal comes back as a `422` naming one. */
+  addSiteDomain(siteId: string, domain: string): Promise<SiteDomain> {
+    return this.#write<SiteDomain>("POST", this.#domainsPath(siteId), { domain });
+  }
+
+  /** Looks for the TXT proof now. A record that is not there yet is a normal
+   *  answer with the claim still `pending`, not a failure — DNS takes its
+   *  time, and a screen that called that an error would be wrong every time. */
+  verifySiteDomain(siteId: string, domain: string): Promise<SiteDomain> {
+    return this.#write<SiteDomain>(
+      "POST",
+      `${this.#domainsPath(siteId)}/${encodeURIComponent(domain)}/verify`,
+      {},
+    );
+  }
+
+  /** Releases a claim. The domain itself is untouched: this is alo forgetting
+   *  it, not a registry losing it. */
+  async removeSiteDomain(siteId: string, domain: string): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "DELETE",
+      `${this.#domainsPath(siteId)}/${encodeURIComponent(domain)}`,
+      undefined,
+    );
+  }
+
+  /** The endings this deployment sells and what they cost. A deployment that
+   *  sells none answers `503 {"reason":"unconfigured"}`, which the screen
+   *  branches on to offer connecting a domain instead. */
+  domainCatalog(): Promise<DomainCatalog> {
+    return this.#read<DomainCatalog>("/sites/domain-catalog");
+  }
+
+  /** Prices one typed name against the given endings. `q` is sent as typed —
+   *  the server understands `acme`, `Acme.com` and a pasted URL alike, and a
+   *  second, weaker parser here is how two doors end up disagreeing. */
+  searchDomains(query: string, tlds: string[]): Promise<DomainSearchResult> {
+    const params = new URLSearchParams({ q: query });
+    if (tlds.length > 0) params.set("tlds", tlds.join(","));
+    return this.#read<DomainSearchResult>(`/sites/domain-search?${params.toString()}`);
+  }
+
+  /** This website's domain purchases, newest first. Carries no registrant. */
+  domainPurchases(siteId: string): Promise<SiteDomainPurchase[]> {
+    return this.#read<{ purchases?: SiteDomainPurchase[] }>(
+      this.#purchasesPath(siteId),
+    ).then((r) => r.purchases ?? []);
+  }
+
+  /** Starts a purchase at the price the seller states in this very request.
+   *  Nothing is charged and nothing is registered: the answer is a `quoted`
+   *  purchase, and approving it is a second, deliberate act. */
+  startDomainPurchase(
+    siteId: string,
+    draft: SiteDomainPurchaseDraft,
+  ): Promise<SiteDomainPurchase> {
+    return this.#write<SiteDomainPurchase>("POST", this.#purchasesPath(siteId), draft);
+  }
+
+  /** Records that this person agreed to **these exact numbers**. The body is
+   *  the quote the screen had up, all six fields of it; the server refuses an
+   *  approval whose quote has drifted, so a price that moved between the
+   *  screen and the charge stops here instead of being re-quoted silently. */
+  approveDomainPurchase(
+    siteId: string,
+    purchaseId: string,
+    agreed: DomainQuote,
+  ): Promise<SiteDomainPurchase> {
+    return this.#write<SiteDomainPurchase>(
+      "POST",
+      `${this.#purchasesPath(siteId)}/${encodeURIComponent(purchaseId)}/approve`,
+      { agreed },
+    );
+  }
+
+  /** Calls a purchase off. Only before money moved — after that it is a refund
+   *  conversation, and the server says so in those words. */
+  cancelDomainPurchase(siteId: string, purchaseId: string): Promise<SiteDomainPurchase> {
+    return this.#write<SiteDomainPurchase>(
+      "POST",
+      `${this.#purchasesPath(siteId)}/${encodeURIComponent(purchaseId)}/cancel`,
+      {},
+    );
+  }
+
   /** The draft page rendered by the server as one complete, self-contained
    *  HTML document — the editor's preview. Answers text, not JSON; the
    *  caller puts it in a sandboxed iframe via `srcdoc`. */
@@ -1065,6 +1168,14 @@ export class SitesApi {
 
   #schedulePath(siteId: string): string {
     return `/sites/${encodeURIComponent(siteId)}/schedule`;
+  }
+
+  #domainsPath(siteId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/domains`;
+  }
+
+  #purchasesPath(siteId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/domain-purchases`;
   }
 
   #postPath(siteId: string, postId: string): string {
