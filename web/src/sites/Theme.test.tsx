@@ -29,6 +29,13 @@ interface Reply {
   match: (url: string, method: string) => boolean;
   status: number;
   body: unknown;
+  /** Answers every time instead of being consumed once.
+   *
+   * For the background reads a screen makes that no test here asserts on. A
+   * one-shot reply means each test has to know how many times `SiteView` will
+   * fetch its readiness — which is a fact about code these tests are not
+   * about, and it changed under them the moment somebody added a refetch. */
+  persist?: boolean;
 }
 
 const calls: Call[] = [];
@@ -42,10 +49,9 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
     body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
   });
   const index = replies.findIndex((r) => r.match(url, method));
-  const answer =
-    index === -1
-      ? { status: 200, body: {} }
-      : (replies.splice(index, 1)[0] as Reply);
+  const found = index === -1 ? undefined : (replies[index] as Reply);
+  if (found !== undefined && found.persist !== true) replies.splice(index, 1);
+  const answer = found ?? { status: 200, body: {} };
   if (typeof answer.body === "string") {
     return new Response(answer.body, {
       status: answer.status,
@@ -111,13 +117,14 @@ const PRESETS: ThemePreset[] = [
   },
 ];
 
-/** GET /sites/theme-presets — consumable once, so make as many as needed. */
+/** GET /sites/theme-presets — ambient, so it answers however often it is asked. */
 function presetsReply(): Reply {
   return {
     match: (url, method) =>
       method === "GET" && url.endsWith("/sites/theme-presets"),
     status: 200,
     body: { presets: PRESETS },
+    persist: true,
   };
 }
 
@@ -128,13 +135,17 @@ function presetsReply(): Reply {
  * `SiteView` loads the site, its pages and its readiness together and renders
  * all three: an unstubbed endpoint falls through to the catch-all `{}`, and
  * reducing over a `languages` key that is not there takes the whole view down
- * before the dialog can open. */
+ * before the dialog can open.
+ *
+ * Ambient for the same reason it is stubbed at all — the count of times the
+ * view reads it is not this file's business. */
 function readinessReply(): Reply {
   return {
     match: (url, method) =>
       method === "GET" && url.endsWith("/translation-readiness"),
     status: 200,
     body: { defaultLocale: "en", totalPages: 1, languages: [] },
+    persist: true,
   };
 }
 
@@ -158,6 +169,11 @@ function siteReply(theme: Record<string, unknown>): Reply {
       theme,
       publish: null,
     },
+    // Ambient: the view loads the site, the dialog loads it again, and both
+    // want the same body. Every GET fixture in this file is ambient for that
+    // reason — only the writes below stay one-shot, where the order is the
+    // thing under test.
+    persist: true,
   };
 }
 
@@ -177,6 +193,7 @@ function pageReply(): Reply {
         sections: [{ type: "hero", heading: "Fresh bread daily" }],
       },
     },
+    persist: true,
   };
 }
 
@@ -196,13 +213,7 @@ function lastWrite(): Call | undefined {
 }
 
 async function openThemeDialogFromSiteView(theme: Record<string, unknown>) {
-  // One site GET for the view itself, one for the dialog's own load.
-  replies.push(
-    siteReply(theme),
-    readinessReply(),
-    siteReply(theme),
-    presetsReply(),
-  );
+  replies.push(siteReply(theme));
   ui("/sites/site-1");
   fireEvent.click(await screen.findByText(strings.sitesTheme));
   expect(await screen.findByText("Terra")).toBeTruthy();
@@ -210,7 +221,12 @@ async function openThemeDialogFromSiteView(theme: Record<string, unknown>) {
 
 beforeEach(() => {
   calls.length = 0;
-  replies = [];
+  // The two background reads every screen here makes, seeded rather than
+  // pushed per test: a test that forgets one does not fail on the endpoint it
+  // forgot, it fails on "unable to find the text Theme" from a crashed render,
+  // which sends you looking in the dialog. Tests that assign to `replies`
+  // wholesale keep them by spreading this in.
+  replies = [readinessReply(), presetsReply()];
   fakeFetch.mockClear();
   driveUploadBlob.mockClear();
 });
@@ -296,7 +312,7 @@ describe("the theme dialog", () => {
 
 describe("the editor's preview after a theme change", () => {
   test("applying a theme refetches the preview document", async () => {
-    replies = [pageReply(), siteReply({}), presetsReply()];
+    replies.push(pageReply(), siteReply({}));
     ui("/sites/site-1/pages/page-1");
     expect(await screen.findByText("Welcome")).toBeTruthy();
     await waitFor(() => {
@@ -320,7 +336,7 @@ describe("the editor's preview after a theme change", () => {
 
 describe("section image upload", () => {
   test("uploading in the hero form fills the blob id the section then saves", async () => {
-    replies = [pageReply()];
+    replies.push(pageReply(), siteReply({}));
     ui("/sites/site-1/pages/page-1");
     expect(await screen.findByText("Fresh bread daily")).toBeTruthy();
     fireEvent.click(screen.getByLabelText(strings.sitesEditSection));
