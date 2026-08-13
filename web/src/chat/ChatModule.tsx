@@ -928,7 +928,12 @@ export function ChatModule() {
     try {
       const page = await api.messages(openId, oldest);
       if (page.length > 0) {
-        setMessages((held) => [...[...page].reverse(), ...(held ?? [])]);
+        setMessages((held) => {
+          const current = held ?? [];
+          const known = new Set(current.map((message) => message.id));
+          const earlier = [...page].reverse().filter((message) => !known.has(message.id));
+          return [...earlier, ...current];
+        });
       }
       setMoreBehind(page.length === PAGE);
       requestAnimationFrame(() => {
