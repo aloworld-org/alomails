@@ -66,6 +66,7 @@ import type { Meeting } from "../meet";
 import { MeetRoom } from "../meet";
 import { EmojiPicker } from "./EmojiPicker";
 import { ComposerShareMenu } from "./ComposerShareMenu";
+import { FormattingToolbar } from "./FormattingToolbar";
 import {
   candidatesFor,
   channelLabel,
@@ -1073,93 +1074,7 @@ export function ChatModule() {
                     </button>
                   </div>
                 )}
-                {hasSelection && <div className={styles.formatBar} role="toolbar" aria-label={strings.chatFormatting}>
-                  <button
-                    type="button"
-                    className={styles.formatTool}
-                    onClick={() =>
-                      wrapSelection("**", "**", strings.chatFormatHint)
-                    }
-                    aria-label={strings.chatBold}
-                    title={`${strings.chatBold}  (Ctrl+B)`}
-                  >
-                    <Bold size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.formatTool}
-                    onClick={() =>
-                      wrapSelection("_", "_", strings.chatFormatHint)
-                    }
-                    aria-label={strings.chatItalic}
-                    title={`${strings.chatItalic}  (Ctrl+I)`}
-                  >
-                    <Italic size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.formatTool}
-                    onClick={() => wrapSelection("`", "`", "code")}
-                    aria-label={strings.chatInlineCode}
-                    title={strings.chatInlineCode}
-                  >
-                    <Code size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.formatTool}
-                    onClick={() =>
-                      wrapSelection(
-                        "```" + String.fromCharCode(10),
-                        String.fromCharCode(10) + "```",
-                        "code",
-                      )
-                    }
-                    aria-label={strings.chatCodeBlock}
-                    title={strings.chatCodeBlock}
-                  >
-                    <SquareCode size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.formatTool}
-                    onClick={() => wrapSelection("$", "$", "e^{i\\pi}+1=0")}
-                    aria-label={strings.chatFormula}
-                    title={strings.chatFormula}
-                  >
-                    <Sigma size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.formatTool}
-                    onClick={() =>
-                      wrapSelection(
-                        String.fromCharCode(10) + "- ",
-                        "",
-                        strings.chatFormatHint,
-                      )
-                    }
-                    aria-label={strings.chatBulletList}
-                    title={strings.chatBulletList}
-                  >
-                    <List size={15} />
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.formatTool}
-                    onClick={() =>
-                      wrapSelection(
-                        String.fromCharCode(10) + "> ",
-                        "",
-                        strings.chatFormatHint,
-                      )
-                    }
-                    aria-label={strings.chatQuoteAction}
-                    title={strings.chatQuoteAction}
-                  >
-                    <Quote size={15} />
-                  </button>
-                </div>}
+                {hasSelection && <FormattingToolbar wrap={wrapSelection} />}
                 {staged.length > 0 && (
                   <ul className={styles.staged}>
                     {staged.map((file) => (
