@@ -173,7 +173,11 @@ function inline(text: string, mark: (t: string) => ReactNode[]): ReactNode[] {
     }
   })();
 
-  return [...mark(before), middle, ...inline(after, mark)];
+  return [
+    ...mark(before),
+    <Fragment key={`${best.kind}-${best.at}`}>{middle}</Fragment>,
+    ...inline(after, mark),
+  ];
 }
 
 /** KaTeX, rendered to a string we own — never user HTML. */
