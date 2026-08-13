@@ -162,6 +162,7 @@ pub mod site_agenda;
 pub mod site_analytics;
 pub mod site_assets;
 pub mod site_attribution;
+pub mod site_booking_notify;
 pub mod site_booking_publish;
 pub mod site_booking_slots;
 pub mod site_bookings;
@@ -402,10 +403,10 @@ pub use id::{
     InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId,
     InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
     InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
-    SiteBookingId, SiteCatalogCategoryId, SiteCatalogId, SiteCatalogItemId, SiteCollectionId,
-    SiteFormId, SiteFormSubmissionId, SiteId, SiteLeadLinkId, SiteOrderId, SitePageId, SitePostId,
-    SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
-    TimeEntryId, TimeWeekId, UserId,
+    SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId, SiteCatalogId,
+    SiteCatalogItemId, SiteCollectionId, SiteFormId, SiteFormSubmissionId, SiteId, SiteLeadLinkId,
+    SiteOrderId, SitePageId, SitePostId, SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId,
+    TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -464,6 +465,7 @@ pub use site_analytics::{
 };
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
 pub use site_attribution::{SiteAttributionMoney, SiteAttributionReport, SiteAttributionSource};
+pub use site_booking_notify::BookingNotification;
 pub use site_booking_publish::SiteBookingSnapshot;
 pub use site_booking_slots::{
     BookingRules, BookingSlot, BusyInterval, free_slots, local_day, local_wall_clock,

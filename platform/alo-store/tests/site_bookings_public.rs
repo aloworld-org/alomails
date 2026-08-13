@@ -11,9 +11,9 @@
 mod common;
 
 use alo_store::{
-    AccountStore, BookingRequest, CalendarEvent, CalendarId, EventId, PublicBookingService,
-    SiteBookingField, SiteBookingFieldKind, SiteBookingInput, SiteBookingWindow, SiteId,
-    SitePublicStore, StoreError,
+    AccountStore, BookingNotification, BookingRequest, CalendarEvent, CalendarId, EventId,
+    PublicBookingService, SiteBookingField, SiteBookingFieldKind, SiteBookingInput,
+    SiteBookingWindow, SiteId, SitePublicStore, Store, StoreError,
 };
 use serde_json::json;
 use sqlx::postgres::PgPoolOptions;
@@ -66,6 +66,9 @@ fn utc(day: u8, hour: u8, minute: u8) -> OffsetDateTime {
 /// public door the anonymous service would use.
 struct Published {
     account: AccountStore,
+    /// The system-level handle, for the cross-tenant sweeps (the notification
+    /// claim) that are nobody's account.
+    store: Store,
     site: SiteId,
     calendar: CalendarId,
     booking_id: String,
@@ -85,6 +88,7 @@ async fn published_service(tag: &str, fields: &[SiteBookingField], active: bool)
         .await
         .unwrap();
     let account = store.for_account(tenant, user);
+    let system = store.clone();
     let site_subdomain = subdomain(tag);
     let site = account
         .create_site("Studio", &site_subdomain)
@@ -141,6 +145,7 @@ async fn published_service(tag: &str, fields: &[SiteBookingField], active: bool)
         .unwrap();
     Published {
         account,
+        store: system,
         site,
         calendar,
         booking_id: booking.as_str().to_owned(),
@@ -617,6 +622,160 @@ async fn another_tenant_can_neither_see_nor_take_a_booking() {
             .unwrap()
             .is_empty()
     );
+}
+
+/// Every notification the sweep is currently offering that belongs to one of
+/// `subdomains` — claimed the way the real sweep claims, in rounds, until the
+/// queue is empty. Other tenants' rows are claimed and dropped, which is
+/// exactly what a second alo-jmap process would do to ours; the point of the
+/// filter is that this test can only ever assert about its own sites.
+async fn claim_ours(store: &Store, subdomains: &[&str]) -> Vec<BookingNotification> {
+    let mut mine = Vec::new();
+    loop {
+        let claimed = store.claim_booking_notifications(200).await.unwrap();
+        if claimed.is_empty() {
+            break;
+        }
+        mine.extend(
+            claimed
+                .into_iter()
+                .filter(|n| subdomains.iter().any(|sub| n.site_subdomain == *sub)),
+        );
+    }
+    mine
+}
+
+/// The owner is told about an appointment nobody has told them about — once,
+/// in their own tenant, and never about anyone else's website (S2.13b2).
+#[tokio::test]
+async fn a_new_appointment_is_offered_to_its_owner_for_notification_exactly_once() {
+    let fields = [SiteBookingField {
+        key: "phone".to_owned(),
+        label: "Phone".to_owned(),
+        kind: SiteBookingFieldKind::Phone,
+        required: true,
+        options: Vec::new(),
+    }];
+    let ours = published_service("site-booking-notify", &fields, true).await;
+    let theirs = published_service("site-booking-notify-rival", &[], true).await;
+    let subs = [ours.subdomain.as_str(), theirs.subdomain.as_str()];
+
+    // Nothing has been booked, so there is nothing to tell anyone.
+    assert!(
+        claim_ours(&ours.store, &subs).await.is_empty(),
+        "an empty website produced a notification"
+    );
+
+    let answers = [("phone".to_owned(), "+32 2 555 01".to_owned())];
+    let mine = ours
+        .public
+        .reserve_public_booking(
+            &resolve(&ours).await,
+            &visitor(utc(16, 7, 0), &answers),
+            asking_at(),
+        )
+        .await
+        .unwrap()
+        .expect("our service is bookable");
+    let yours = theirs
+        .public
+        .reserve_public_booking(
+            &resolve(&theirs).await,
+            &visitor(utc(16, 8, 0), &[]),
+            asking_at(),
+        )
+        .await
+        .unwrap()
+        .expect("the rival's service is bookable");
+
+    let claimed = claim_ours(&ours.store, &subs).await;
+    assert_eq!(claimed.len(), 2, "one notification per appointment");
+    let for_us = claimed
+        .iter()
+        .find(|n| n.appointment.as_str() == mine.id.as_str())
+        .expect("our appointment was claimed");
+    let for_them = claimed
+        .iter()
+        .find(|n| n.appointment.as_str() == yours.id.as_str())
+        .expect("the rival's appointment was claimed");
+
+    // The notification carries the tenant and the account it must be delivered
+    // to — this is what keeps a website's booking out of a stranger's inbox.
+    assert_eq!(for_us.tenant.as_str(), ours.account.tenant().as_str());
+    assert_eq!(for_us.owner.as_str(), ours.account.user().as_str());
+    assert_eq!(for_us.site_subdomain, ours.subdomain);
+    assert_ne!(for_us.tenant.as_str(), for_them.tenant.as_str());
+    assert_eq!(for_them.tenant.as_str(), theirs.account.tenant().as_str());
+    assert_eq!(for_them.owner.as_str(), theirs.account.user().as_str());
+
+    // And it carries what the owner has to read: what was booked, when, in the
+    // clock it was offered in, by whom, and what they answered.
+    assert_eq!(for_us.booking_name, "Consultation");
+    assert_eq!(for_us.starts_at, utc(16, 7, 0));
+    assert_eq!(for_us.ends_at, utc(16, 7, 30));
+    assert_eq!(for_us.time_zone, "Europe/Brussels");
+    assert_eq!(for_us.visitor_email, "ada@example.test");
+    assert_eq!(for_us.answers.len(), 1);
+    assert_eq!(for_us.answers[0].label, "Phone");
+    assert_eq!(for_us.answers[0].value, "+32 2 555 01");
+    assert!(for_them.answers.is_empty(), "that service asked nothing");
+
+    // At-most-once: a second sweep finds neither of them again, and the
+    // appointments themselves are untouched by the claim.
+    let again = claim_ours(&ours.store, &subs).await;
+    assert!(
+        again.is_empty(),
+        "an appointment was offered for notification twice"
+    );
+    let (status, event): (String, Option<String>) = sqlx::query_as(
+        "SELECT status, event_id FROM site_booking_appointments WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(ours.account.tenant().as_str())
+    .bind(mine.id.as_str())
+    .fetch_one(&ours.pool)
+    .await
+    .unwrap();
+    assert_eq!(status, "booked");
+    assert!(
+        event.is_some(),
+        "claiming a notification touches nothing else"
+    );
+
+    // A reservation whose Agenda event was never written is a booking the
+    // visitor was never confirmed: the owner is not told about it, and the row
+    // keeps its claim marker for the day it is completed.
+    let orphan = ours
+        .public
+        .reserve_public_booking(
+            &resolve(&ours).await,
+            &visitor(utc(16, 8, 0), &answers),
+            asking_at(),
+        )
+        .await
+        .unwrap()
+        .expect("the next slot is bookable");
+    sqlx::query(
+        "UPDATE site_booking_appointments SET event_id = NULL \
+         WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(ours.account.tenant().as_str())
+    .bind(orphan.id.as_str())
+    .execute(&ours.pool)
+    .await
+    .unwrap();
+    assert!(
+        claim_ours(&ours.store, &subs).await.is_empty(),
+        "an unconfirmed reservation was announced to the owner"
+    );
+    let notified: Option<time::OffsetDateTime> = sqlx::query_scalar(
+        "SELECT notified_at FROM site_booking_appointments WHERE tenant_id = $1 AND id = $2",
+    )
+    .bind(ours.account.tenant().as_str())
+    .bind(orphan.id.as_str())
+    .fetch_one(&ours.pool)
+    .await
+    .unwrap();
+    assert!(notified.is_none(), "a skipped row must not be marked told");
 }
 
 #[tokio::test]

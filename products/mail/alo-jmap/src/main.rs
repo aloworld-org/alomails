@@ -159,6 +159,24 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Background booking notifier (alo Sites, ADR 0036): tell the site owner
+    // about each new appointment taken on their website. The appointment is
+    // already in their calendar; this is the second telling, in their inbox,
+    // with the visitor reachable by one reply.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(30));
+            loop {
+                tick.tick().await;
+                let delivered = alo_jmap::site_booking_notify::run_due(&store).await;
+                if delivered > 0 {
+                    tracing::info!(delivered, "booking notification sweep");
+                }
+            }
+        });
+    }
+
     // Background scheduled-publish sweeper (alo Sites, ADR 0036): put each
     // website whose chosen moment has arrived on the internet, through the
     // scheduling user's own account door. Every 30 seconds, so "09:00" means
