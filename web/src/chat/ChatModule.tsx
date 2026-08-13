@@ -1,4 +1,4 @@
-﻿// alo Chat (ADR 0038) â€” rooms on the left, the conversation on the right.
+// alo Chat (ADR 0038) â€” rooms on the left, the conversation on the right.
 //
 // Domain references (UX law 2): Slack and WhatsApp for reflexes â€” a room list
 // with unread counts, a scrolling feed, a composer that sends on Enter â€” and
@@ -14,13 +14,6 @@ import {
   Archive,
   Hash,
   Paperclip,
-  Plus,
-  Reply,
-  Send,
-  Sparkles,
-  Smile,
-  Users,
-  X,
 } from "lucide-react";
 
 import { strings } from "../i18n";
@@ -44,13 +37,11 @@ import type {
 import { useMeetApi } from "../meet";
 import type { Meeting } from "../meet";
 import { MeetRoom } from "../meet";
-import { EmojiPicker } from "./EmojiPicker";
-import { ComposerShareMenu } from "./ComposerShareMenu";
-import { FormattingToolbar } from "./FormattingToolbar";
 import { ChatSwitcher } from "./ChatSwitcher";
 import { ConversationHeader } from "./ConversationHeader";
 import { ActiveTurns } from "./ActiveTurns";
 import { MessageFeed } from "./MessageFeed";
+import { ChatComposer } from "./ChatComposer";
 import {
   candidatesFor,
   channelLabel,
@@ -803,217 +794,7 @@ export function ChatModule() {
                 <Archive size={14} /> {strings.chatArchivedNote}
               </p>
             ) : (
-              <form
-                className="relative mx-auto mb-4 flex w-full max-w-4xl flex-wrap items-end gap-1 rounded-xl border border-default bg-surface px-3 py-2 shadow-sm transition focus-within:border-accent focus-within:ring-2 focus-within:ring--tint max-sm:mx-2 max-sm:w-auto"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  void send();
-                }}
-              >
-                {replyContext !== null && (
-                  <div className="order-first flex w-full min-w-0 items-start gap-3 overflow-hidden border-b border-subtle px-2 pb-3 pt-1">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-raised text-accent" aria-hidden="true">
-                      <Reply size={15} />
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col gap-1">
-                      <strong>
-                        {replyContext.private
-                          ? strings.chatReplyingPrivately(
-                              personName(
-                                replyContext.message.authorEmail,
-                                replyContext.message.author,
-                              ),
-                            )
-                          : strings.chatReplyingHere}
-                      </strong>
-                      <span className="line-clamp-2 break-words text-xs text-tertiary">{replyContext.message.body}</span>
-                    </span>
-                    <button
-                      type="button"
-                      className="flex size-8 shrink-0 items-center justify-center rounded-sm border-0 bg-transparent text-tertiary hover:bg-raised hover:text-primary"
-                      onClick={() => setReplyContext(null)}
-                      aria-label={strings.chatCancelReply}
-                    >
-                      <X size={15} />
-                    </button>
-                  </div>
-                )}
-                {hasSelection && <FormattingToolbar wrap={wrapSelection} />}
-                {staged.length > 0 && (
-                  <ul className="order-first mb-2 flex w-full list-none flex-wrap gap-1 p-0">
-                    {staged.map((file) => (
-                      <li key={file.id}>
-                        <button
-                          type="button"
-                          className="inline-flex min-h-8 max-w-56 items-center gap-1 rounded-full border border-subtle bg-raised px-2 text-xs text-primary hover:border-default"
-                          onClick={() =>
-                            setStaged((held) =>
-                              held.filter((f) => f.id !== file.id),
-                            )
-                          }
-                          aria-label={strings.chatUnstage(file.name)}
-                        >
-                          <Paperclip size={13} />
-                          <span className="truncate">{file.name}</span>
-                          <X size={13} />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <div className="flex shrink-0 items-center gap-2 pr-1" ref={composerMenuRef}>
-                  <span className="relative inline-flex">
-                    <button
-                      type="button"
-                      className="flex size-9 items-center justify-center rounded-md border-0 bg-raised text-tertiary hover:text-primary focus-visible:outline-2 focus-visible:outline-accent"
-                      onClick={() =>
-                        setComposerMenu((at) =>
-                          at === "share" ? null : "share",
-                        )
-                      }
-                      aria-label={strings.chatShare}
-                      title={strings.chatShare}
-                      aria-expanded={composerMenu === "share"}
-                    >
-                      <Plus size={18} />
-                    </button>
-                    {composerMenu === "share" && (
-                      <ComposerShareMenu
-                        onFile={() => { setComposerMenu(null); setPicking(true); }}
-                        onCode={() => { setComposerMenu(null); setAuthoringInsert({ kind: "code", target: "message" }); }}
-                        onEquation={() => { setComposerMenu(null); setAuthoringInsert({ kind: "equation", target: "message" }); }}
-                        onMention={() => { setComposerMenu(null); insertAtCaret("@"); }}
-                        onAskAlo={() => { setComposerMenu(null); insertAtCaret("@alo "); }}
-                      />
-                    )}
-                  </span>
-                  <span className="relative inline-flex">
-                    <button
-                      type="button"
-                      className="flex size-9 items-center justify-center rounded-md border-0 bg-raised text-tertiary hover:text-primary focus-visible:outline-2 focus-visible:outline-accent"
-                      onClick={() =>
-                        setComposerMenu((at) =>
-                          at === "emoji" ? null : "emoji",
-                        )
-                      }
-                      aria-label={strings.chatInsertEmoji}
-                      title={strings.chatInsertEmoji}
-                      aria-expanded={composerMenu === "emoji"}
-                    >
-                      <Smile size={18} />
-                    </button>
-                    {composerMenu === "emoji" && palette.length > 0 && (
-                      <EmojiPicker
-                        query={emojiQuery}
-                        onQuery={setEmojiQuery}
-                        onChoose={(emoji) => {
-                          setComposerMenu(null);
-                          setEmojiQuery("");
-                          insertAtCaret(emoji);
-                        }}
-                      />
-                    )}
-                  </span>
-                </div>
-                {suggestions.length > 0 && (
-                  <ul className="absolute bottom-full left-3 z-30 mb-2 max-h-64 w-80 list-none overflow-y-auto rounded-lg border border-subtle bg-surface p-1 shadow-lg" role="listbox">
-                    {suggestions.map((choice, i) => (
-                      <li key={`${choice.agent}-${choice.handle}`}>
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={i === highlighted}
-                          className={`flex min-h-10 w-full items-center gap-2 rounded-md border-0 px-3 text-left text-sm ${i === highlighted ? "bg-selected text-primary" : "bg-transparent text-secondary hover:bg-raised"}`}
-                          // A mousedown, not a click: a click fires after the
-                          // input has already lost focus and closed the list.
-                          onMouseDown={(event) => {
-                            event.preventDefault();
-                            complete(choice);
-                          }}
-                        >
-                          {choice.agent ? (
-                            <Sparkles size={13} className="shrink-0 text-accent" />
-                          ) : (
-                            <Users size={13} className="shrink-0 text-tertiary" />
-                          )}
-                          <span className="shrink-0 font-semibold text-primary">
-                            @{choice.handle}
-                          </span>
-                          <span className="truncate text-xs text-tertiary">
-                            {choice.label}
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <textarea
-                  ref={composerRef}
-                  rows={1}
-                  className="max-h-40 min-h-9 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 font-ui text-sm leading-relaxed text-primary outline-none placeholder:text-tertiary"
-                  value={draft}
-                  onChange={(event) => {
-                    setDraft(event.target.value);
-                    if (openId !== null)
-                      drafts.current.set(openId, event.target.value);
-                    setCaret(event.target.selectionStart ?? 0);
-                    setHasSelection(event.target.selectionStart !== event.target.selectionEnd);
-                    setHighlighted(0);
-                  }}
-                  onSelect={(event) => {
-                    setCaret(event.currentTarget.selectionStart ?? 0);
-                    setHasSelection(event.currentTarget.selectionStart !== event.currentTarget.selectionEnd);
-                  }}
-                  onKeyDown={(event) => {
-                    if (
-                      event.key === "Enter" &&
-                      !event.shiftKey &&
-                      suggestions.length === 0
-                    ) {
-                      event.preventDefault();
-                      void send();
-                      return;
-                    }
-                    if (suggestions.length === 0) return;
-                    // While the list is open it owns these keys, so Enter
-                    // completes a name instead of sending a half-typed one.
-                    if (event.key === "ArrowDown") {
-                      event.preventDefault();
-                      setHighlighted((at) => (at + 1) % suggestions.length);
-                    } else if (event.key === "ArrowUp") {
-                      event.preventDefault();
-                      setHighlighted(
-                        (at) =>
-                          (at - 1 + suggestions.length) % suggestions.length,
-                      );
-                    } else if (event.key === "Enter" || event.key === "Tab") {
-                      event.preventDefault();
-                      const choice = suggestions[highlighted];
-                      if (choice !== undefined) complete(choice);
-                    } else if (event.key === "Escape") {
-                      event.preventDefault();
-                      // Dismiss without choosing: move the caret past the
-                      // token so the list stops matching it.
-                      setCaret(draft.length);
-                      setHighlighted(0);
-                    }
-                  }}
-                  placeholder={strings.chatComposerPlaceholder(
-                    channelLabel(open),
-                  )}
-                  aria-label={strings.chatComposerLabel}
-                  autoComplete="off"
-                />
-                <button
-                  type="submit"
-                  className="flex size-10 shrink-0 items-center justify-center rounded-md border-0 bg-accent text-on-accent hover:bg--hover disabled:bg-transparent disabled:text-tertiary"
-                  disabled={draft.trim() === "" || sending}
-                  aria-label={strings.chatSend}
-                  title={strings.chatSend}
-                >
-                  <Send size={17} />
-                </button>
-              </form>
+              <ChatComposer room={open} composerRef={composerRef} menuRef={composerMenuRef} draft={draft} sending={sending} reply={replyContext} staged={staged} selected={hasSelection} menu={composerMenu} palette={palette} emojiQuery={emojiQuery} suggestions={suggestions} highlighted={highlighted} onSubmit={() => void send()} onDraft={(value, at, selected) => { setDraft(value); if (openId !== null) drafts.current.set(openId, value); setCaret(at); setHasSelection(selected); setHighlighted(0); }} onSelect={(at, selected) => { setCaret(at); setHasSelection(selected); }} onCaretToEnd={() => setCaret(draft.length)} onHighlighted={setHighlighted} onComplete={complete} onCancelReply={() => setReplyContext(null)} onUnstage={(id) => setStaged((held) => held.filter((file) => file.id !== id))} onMenu={setComposerMenu} onPickFile={() => { setComposerMenu(null); setPicking(true); }} onAuthor={(kind) => { setComposerMenu(null); setAuthoringInsert({ kind, target: "message" }); }} onInsert={(text) => { setComposerMenu(null); insertAtCaret(text); }} onEmojiQuery={setEmojiQuery} onWrap={wrapSelection} />
             )}
           </>
         )}
