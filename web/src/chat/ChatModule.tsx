@@ -1029,29 +1029,29 @@ export function ChatModule() {
               )}
             </div>
 
-            {error !== null && <p className={styles.error}>{error}</p>}
+            {error !== null && <p className="mx-auto mb-2 w-full max-w-4xl rounded-md bg--tint px-3 py-2 text-sm text-primary" role="alert">{error}</p>}
 
             {open.archivedAt !== null ? (
               // The server refuses new words in an archived room, so the
               // composer must not be offered at all: a control that looks
               // usable and answers with an error is worse than its absence.
-              <p className={styles.archivedNote}>
+              <p className="mx-auto mb-4 flex w-full max-w-4xl items-center justify-center gap-2 rounded-md border border-subtle bg-raised px-3 py-2 text-sm text-tertiary">
                 <Archive size={14} /> {strings.chatArchivedNote}
               </p>
             ) : (
               <form
-                className={styles.composer}
+                className="relative mx-auto mb-4 flex w-full max-w-4xl flex-wrap items-end gap-1 rounded-xl border border-default bg-surface px-3 py-2 shadow-sm transition focus-within:border-accent focus-within:ring-2 focus-within:ring--tint max-sm:mx-2 max-sm:w-auto"
                 onSubmit={(event) => {
                   event.preventDefault();
                   void send();
                 }}
               >
                 {replyContext !== null && (
-                  <div className={styles.replyContext}>
-                    <span className={styles.replyContextIcon} aria-hidden="true">
+                  <div className="order-first flex w-full min-w-0 items-start gap-3 overflow-hidden border-b border-subtle px-2 pb-3 pt-1">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-raised text-accent" aria-hidden="true">
                       <Reply size={15} />
                     </span>
-                    <span className={styles.replyContextCopy}>
+                    <span className="flex min-w-0 flex-1 flex-col gap-1">
                       <strong>
                         {replyContext.private
                           ? strings.chatReplyingPrivately(
@@ -1062,11 +1062,11 @@ export function ChatModule() {
                             )
                           : strings.chatReplyingHere}
                       </strong>
-                      <span>{replyContext.message.body}</span>
+                      <span className="line-clamp-2 break-words text-xs text-tertiary">{replyContext.message.body}</span>
                     </span>
                     <button
                       type="button"
-                      className={styles.searchClear}
+                      className="flex size-8 shrink-0 items-center justify-center rounded-sm border-0 bg-transparent text-tertiary hover:bg-raised hover:text-primary"
                       onClick={() => setReplyContext(null)}
                       aria-label={strings.chatCancelReply}
                     >
@@ -1076,12 +1076,12 @@ export function ChatModule() {
                 )}
                 {hasSelection && <FormattingToolbar wrap={wrapSelection} />}
                 {staged.length > 0 && (
-                  <ul className={styles.staged}>
+                  <ul className="order-first mb-2 flex w-full list-none flex-wrap gap-1 p-0">
                     {staged.map((file) => (
                       <li key={file.id}>
                         <button
                           type="button"
-                          className={styles.stagedChip}
+                          className="inline-flex min-h-8 max-w-56 items-center gap-1 rounded-full border border-subtle bg-raised px-2 text-xs text-primary hover:border-default"
                           onClick={() =>
                             setStaged((held) =>
                               held.filter((f) => f.id !== file.id),
@@ -1090,18 +1090,18 @@ export function ChatModule() {
                           aria-label={strings.chatUnstage(file.name)}
                         >
                           <Paperclip size={13} />
-                          <span className={styles.stagedName}>{file.name}</span>
+                          <span className="truncate">{file.name}</span>
                           <X size={13} />
                         </button>
                       </li>
                     ))}
                   </ul>
                 )}
-                <div className={styles.composerMenus} ref={composerMenuRef}>
-                  <span className={styles.shareWrap}>
+                <div className="flex shrink-0 items-center gap-2 pr-1" ref={composerMenuRef}>
+                  <span className="relative inline-flex">
                     <button
                       type="button"
-                      className={styles.composerTool}
+                      className="flex size-9 items-center justify-center rounded-md border-0 bg-raised text-tertiary hover:text-primary focus-visible:outline-2 focus-visible:outline-accent"
                       onClick={() =>
                         setComposerMenu((at) =>
                           at === "share" ? null : "share",
@@ -1123,10 +1123,10 @@ export function ChatModule() {
                       />
                     )}
                   </span>
-                  <span className={styles.shareWrap}>
+                  <span className="relative inline-flex">
                     <button
                       type="button"
-                      className={styles.composerTool}
+                      className="flex size-9 items-center justify-center rounded-md border-0 bg-raised text-tertiary hover:text-primary focus-visible:outline-2 focus-visible:outline-accent"
                       onClick={() =>
                         setComposerMenu((at) =>
                           at === "emoji" ? null : "emoji",
@@ -1152,18 +1152,14 @@ export function ChatModule() {
                   </span>
                 </div>
                 {suggestions.length > 0 && (
-                  <ul className={styles.suggestions} role="listbox">
+                  <ul className="absolute bottom-full left-3 z-30 mb-2 max-h-64 w-80 list-none overflow-y-auto rounded-lg border border-subtle bg-surface p-1 shadow-lg" role="listbox">
                     {suggestions.map((choice, i) => (
                       <li key={`${choice.agent}-${choice.handle}`}>
                         <button
                           type="button"
                           role="option"
                           aria-selected={i === highlighted}
-                          className={
-                            i === highlighted
-                              ? styles.suggestionOn
-                              : styles.suggestion
-                          }
+                          className={`flex min-h-10 w-full items-center gap-2 rounded-md border-0 px-3 text-left text-sm ${i === highlighted ? "bg-selected text-primary" : "bg-transparent text-secondary hover:bg-raised"}`}
                           // A mousedown, not a click: a click fires after the
                           // input has already lost focus and closed the list.
                           onMouseDown={(event) => {
@@ -1172,14 +1168,14 @@ export function ChatModule() {
                           }}
                         >
                           {choice.agent ? (
-                            <Sparkles size={13} className={styles.agentHint} />
+                            <Sparkles size={13} className="shrink-0 text-accent" />
                           ) : (
-                            <Users size={13} className={styles.channelIcon} />
+                            <Users size={13} className="shrink-0 text-tertiary" />
                           )}
-                          <span className={styles.suggestionHandle}>
+                          <span className="shrink-0 font-semibold text-primary">
                             @{choice.handle}
                           </span>
-                          <span className={styles.suggestionLabel}>
+                          <span className="truncate text-xs text-tertiary">
                             {choice.label}
                           </span>
                         </button>
@@ -1190,7 +1186,7 @@ export function ChatModule() {
                 <textarea
                   ref={composerRef}
                   rows={1}
-                  className={styles.input}
+                  className="max-h-40 min-h-9 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-2 font-ui text-sm leading-relaxed text-primary outline-none placeholder:text-tertiary"
                   value={draft}
                   onChange={(event) => {
                     setDraft(event.target.value);
@@ -1246,7 +1242,7 @@ export function ChatModule() {
                 />
                 <button
                   type="submit"
-                  className={styles.send}
+                  className="flex size-10 shrink-0 items-center justify-center rounded-md border-0 bg-accent text-on-accent hover:bg--hover disabled:bg-transparent disabled:text-tertiary"
                   disabled={draft.trim() === "" || sending}
                   aria-label={strings.chatSend}
                   title={strings.chatSend}
