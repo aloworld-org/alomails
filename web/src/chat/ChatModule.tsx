@@ -9,43 +9,27 @@
 // signal refetches the sidebar, and the open room's newest messages. Sending is
 // optimistic â€” the line appears at once and is reconciled by the refetch â€” so a
 // click is never answered by silence (law 6).
-import type { ReactNode } from "react";
 import { Fragment, Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import {
   Archive,
   Hash,
-  Quote,
-  List,
-  Sigma,
-  SquareCode,
-  Code,
-  Italic,
-  Bold,
   Loader2,
-  Lock,
-  MessageSquarePlus,
-  MessagesSquare,
-  MoreHorizontal,
   Paperclip,
   Plus,
   Reply,
-  Search,
   Send,
   Sparkles,
   Smile,
-  SmilePlus,
-  Trash2,
   Users,
   X,
 } from "lucide-react";
 
 import { strings } from "../i18n";
 import { useAuth } from "../auth";
-import { FilePicker, fileSize, saveBlob } from "../drive";
-import { AgentActionCard } from "../shell/AgentActionCard";
+import { FilePicker, saveBlob } from "../drive";
 import { RoomPeople } from "./RoomPeople";
 import { useJmapClient } from "../jmap";
-import { Avatar, Button, useDialogs, useDismiss, useIsMobile } from "../ds";
+import { useDialogs, useDismiss, useIsMobile } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
 import type { DriveNodeDto } from "../jmap/types";
 import type {
@@ -74,13 +58,8 @@ import {
   dayOf,
   mentionAt,
   personName,
-  shortTime,
-  standingOf,
-  timeOf,
-  withHandlesMarked,
 } from "./presentation";
 import type { Nameable } from "./presentation";
-import { renderBody } from "./richText";
 import { MessageLine } from "./MessageLine";
 import { ChatSidebar } from "./ChatSidebar";
 
@@ -729,23 +708,6 @@ export function ChatModule() {
   }, []);
 
   const open = channels?.find((c) => c.id === openId) ?? null;
-  // Channels, then people, then what is archived â€” the order a person looks
-  // in. One flat list is what hid direct messages entirely.
-  const rooms = channels ?? [];
-  const sections: { label: string; rooms: ChannelSummary[] }[] = [
-    {
-      label: strings.chatSectionChannels,
-      rooms: rooms.filter((c) => c.kind === "channel" && c.archivedAt === null),
-    },
-    {
-      label: strings.chatSectionDirect,
-      rooms: rooms.filter((c) => c.kind === "dm" && c.archivedAt === null),
-    },
-    {
-      label: strings.chatSectionArchived,
-      rooms: rooms.filter((c) => c.archivedAt !== null),
-    },
-  ].filter((section) => section.rooms.length > 0);
   // Derived, not stored: the list is a function of what is typed and where
   // the caret is, so it can never disagree with the composer.
   // Null while nothing is being searched for: the picker shows its groups.
