@@ -9,11 +9,10 @@
 // signal refetches the sidebar, and the open room's newest messages. Sending is
 // optimistic â€” the line appears at once and is reconciled by the refetch â€” so a
 // click is never answered by silence (law 6).
-import { Fragment, Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import {
   Archive,
   Hash,
-  Loader2,
   Paperclip,
   Plus,
   Reply,
@@ -51,16 +50,14 @@ import { FormattingToolbar } from "./FormattingToolbar";
 import { ChatSwitcher } from "./ChatSwitcher";
 import { ConversationHeader } from "./ConversationHeader";
 import { ActiveTurns } from "./ActiveTurns";
+import { MessageFeed } from "./MessageFeed";
 import {
   candidatesFor,
   channelLabel,
-  continues,
-  dayOf,
   mentionAt,
   personName,
 } from "./presentation";
 import type { Nameable } from "./presentation";
-import { MessageLine } from "./MessageLine";
 import { ChatSidebar } from "./ChatSidebar";
 
 const AuthoringInsertModal = lazy(() =>
@@ -794,100 +791,7 @@ export function ChatModule() {
 
             <ActiveTurns turns={turns} onStop={(turn) => { if (openId !== null) void api.stopTurn(openId, turn.id).then(() => loadTurns(openId)); }} />
 
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4" ref={feedRef}>
-              {/* An explicit control rather than a scroll trigger: a feed that
-                  loads on approach fires while someone is simply reading back,
-                  and there is no way to tell it to stop. */}
-              {!moreBehind && messages !== null && (
-                <div className="mx-auto my-8 w-full max-w-3xl rounded-xl border border-subtle bg-surface p-5">
-                  <h4 className="m-0 text-lg font-bold text-primary">
-                    {open.kind === "dm"
-                      ? strings.chatBeginningDm
-                      : strings.chatBeginning(channelLabel(open))}
-                  </h4>
-                  {open.topic !== null && (
-                    <p className="mb-0 mt-2 text-sm text-tertiary">{open.topic}</p>
-                  )}
-                </div>
-              )}
-              {moreBehind && messages !== null && (
-                <button
-                  type="button"
-                  className="mx-auto my-3 min-h-9 rounded-full border border-subtle bg-surface px-4 text-sm text-secondary hover:bg-raised disabled:opacity-60"
-                  onClick={() => void loadOlder()}
-                  disabled={loadingOlder}
-                >
-                  {loadingOlder ? strings.chatLoading : strings.chatOlder}
-                </button>
-              )}
-              {messages === null ? (
-                <p className="m-auto flex items-center gap-2 text-sm text-tertiary">
-                  <Loader2 className="animate-spin" size={14} />{" "}
-                  {strings.chatLoading}
-                </p>
-              ) : messages.length === 0 ? (
-                <p className="m-auto text-sm text-tertiary">{strings.chatNoMessagesYet}</p>
-              ) : (
-                messages.map((message, i) => (
-                  <Fragment key={message.id}>
-                    {readUpTo !== null &&
-                      message.seq > readUpTo &&
-                      (messages[i - 1]?.seq ?? 0) <= readUpTo &&
-                      i > 0 && (
-                        <div className="my-4 flex items-center gap-3 text-accent before:h-px before:flex-1 before:bg-accent after:h-px after:flex-1 after:bg-accent">
-                          <span className="text-xs font-semibold uppercase tracking-wide">
-                            {strings.chatNewMessages}
-                          </span>
-                        </div>
-                      )}
-                    {(i === 0 ||
-                      dayOf(message.createdAt) !==
-                        dayOf(messages[i - 1]!.createdAt)) && (
-                      <div className="my-4 flex items-center gap-3 before:h-px before:flex-1 before:bg-subtle after:h-px after:flex-1 after:bg-subtle">
-                        <span className="rounded-full border border-subtle bg-surface px-3 py-1 text-xs font-semibold text-tertiary">
-                          {dayOf(message.createdAt)}
-                        </span>
-                      </div>
-                    )}
-                    <MessageLine
-                      message={message}
-                      grouped={continues(message, messages[i - 1])}
-                      palette={open.archivedAt === null ? palette : []}
-                      me={me}
-                      onReact={(emoji) => void react(message.id, emoji)}
-                      onOpenFile={(file) => void openFile(file)}
-                      onDecide={(p, ok) => void decide(p, ok)}
-                      onEdit={(m, body) => void editMessage(m, body)}
-                      onWithdraw={(m) => void withdrawMessage(m)}
-                      onReplyHere={
-                        open.archivedAt === null
-                          ? (m) => {
-                              setReplyContext({ message: m, private: false });
-                              composerRef.current?.focus();
-                            }
-                          : undefined
-                      }
-                      onReplyPrivate={
-                        open.kind !== "dm" &&
-                        message.authorKind === "user" &&
-                        message.author !== me
-                          ? (m) => {
-                              void openDm({
-                                user: m.author,
-                                email: m.authorEmail ?? m.author,
-                              }).then(() => {
-                                setReplyContext({ message: m, private: true });
-                                composerRef.current?.focus();
-                              });
-                            }
-                          : undefined
-                      }
-                    >
-                    </MessageLine>
-                  </Fragment>
-                ))
-              )}
-            </div>
+            <MessageFeed room={open} messages={messages} feedRef={feedRef} moreBehind={moreBehind} loadingOlder={loadingOlder} readUpTo={readUpTo} palette={palette} me={me} onOlder={() => void loadOlder()} onReact={(message, emoji) => void react(message.id, emoji)} onOpenFile={(file) => void openFile(file)} onDecide={(proposal, approve) => void decide(proposal, approve)} onEdit={(message, body) => void editMessage(message, body)} onWithdraw={(message) => void withdrawMessage(message)} onReplyHere={(message) => { setReplyContext({ message, private: false }); composerRef.current?.focus(); }} onReplyPrivate={(message) => { void openDm({ user: message.author, email: message.authorEmail ?? message.author }).then(() => { setReplyContext({ message, private: true }); composerRef.current?.focus(); }); }} />
 
             {error !== null && <p className="mx-auto mb-2 w-full max-w-4xl rounded-md bg--tint px-3 py-2 text-sm text-primary" role="alert">{error}</p>}
 
