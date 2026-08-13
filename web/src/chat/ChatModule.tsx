@@ -67,6 +67,7 @@ import { MeetRoom } from "../meet";
 import { EmojiPicker } from "./EmojiPicker";
 import { ComposerShareMenu } from "./ComposerShareMenu";
 import { FormattingToolbar } from "./FormattingToolbar";
+import { ChatSwitcher } from "./ChatSwitcher";
 import {
   candidatesFor,
   channelLabel,
@@ -1270,62 +1271,7 @@ export function ChatModule() {
       )}
 
       {switcher !== null && (
-        <div
-          className="fixed inset-0 z-50 flex items-start justify-center bg-overlay px-4 pt-16"
-          role="dialog"
-          aria-modal="true"
-          aria-label={strings.chatJumpTo}
-          onClick={() => setSwitcher(null)}
-        >
-          <div
-            className="w-full max-w-xl overflow-hidden rounded-xl border border-subtle bg-surface shadow-lg"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <input
-              className="min-h-12 w-full border-0 border-b border-subtle bg-transparent px-4 text-base text-primary outline-none placeholder:text-tertiary"
-              value={switcher}
-              onChange={(event) => setSwitcher(event.target.value)}
-              placeholder={strings.chatJumpTo}
-              aria-label={strings.chatJumpTo}
-              autoFocus
-              onKeyDown={(event) => {
-                if (event.key === "Escape") setSwitcher(null);
-                if (event.key === "Enter") {
-                  const first = switcherHits[0];
-                  if (first !== undefined) {
-                    setOpenId(first.id);
-                    setSwitcher(null);
-                  }
-                }
-              }}
-            />
-            <ul className="m-0 max-h-80 list-none overflow-y-auto p-2">
-              {switcherHits.length === 0 ? (
-                <li className="px-3 py-6 text-center text-sm text-tertiary">{strings.chatNoRoom}</li>
-              ) : (
-                switcherHits.map((room, i) => (
-                  <li key={room.id}>
-                    <button
-                      type="button"
-                      className={`flex min-h-11 w-full items-center gap-2 rounded-md border-0 px-3 text-left text-sm ${i === 0 ? "bg-selected text-primary" : "bg-transparent text-secondary hover:bg-raised"}`}
-                      onClick={() => {
-                        setOpenId(room.id);
-                        setSwitcher(null);
-                      }}
-                    >
-                      {room.kind === "dm" ? (
-                        <Users size={15} className="text-tertiary" />
-                      ) : (
-                        <Hash size={15} className="text-tertiary" />
-                      )}
-                      {channelLabel(room)}
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          </div>
-        </div>
+        <ChatSwitcher query={switcher} rooms={switcherHits} onQuery={setSwitcher} onClose={() => setSwitcher(null)} onChoose={(id) => { setOpenId(id); setSwitcher(null); }} />
       )}
 
       {showingPeople && openId !== null && (
