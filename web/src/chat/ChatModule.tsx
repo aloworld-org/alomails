@@ -1,13 +1,13 @@
-// alo Chat (ADR 0038) — rooms on the left, the conversation on the right.
+﻿// alo Chat (ADR 0038) â€” rooms on the left, the conversation on the right.
 //
-// Domain references (UX law 2): Slack and WhatsApp for reflexes — a room list
-// with unread counts, a scrolling feed, a composer that sends on Enter — and
+// Domain references (UX law 2): Slack and WhatsApp for reflexes â€” a room list
+// with unread counts, a scrolling feed, a composer that sends on Enter â€” and
 // Sila for the calm of it. Everything the core task needs is on the surface:
 // no menu is required to start a room, open one, or say something (prime law).
 //
 // Live by the push stream the workspace already keeps open (ADR 0038): a chat
 // signal refetches the sidebar, and the open room's newest messages. Sending is
-// optimistic — the line appears at once and is reconciled by the refetch — so a
+// optimistic â€” the line appears at once and is reconciled by the refetch â€” so a
 // click is never answered by silence (law 6).
 import type { ReactNode } from "react";
 import { Fragment, Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
@@ -65,6 +65,19 @@ import { useMeetApi } from "../meet";
 import type { Meeting } from "../meet";
 import { MeetRoom } from "../meet";
 import { EMOJI, searchEmoji } from "./emoji";
+import {
+  candidatesFor,
+  channelLabel,
+  continues,
+  dayOf,
+  mentionAt,
+  personName,
+  shortTime,
+  standingOf,
+  timeOf,
+  withHandlesMarked,
+} from "./presentation";
+import type { Nameable } from "./presentation";
 import { renderBody } from "./richText";
 import styles from "./ChatModule.module.css";
 
@@ -79,7 +92,7 @@ const AuthoringInsertModal = lazy(() =>
  *  a drifted copy does is offer a choice that is then declined. */
 const ATTACHMENTS_MAX = 10;
 
-/** What one page of history holds — the server's own default
+/** What one page of history holds â€” the server's own default
  *  (`MESSAGE_PAGE_DEFAULT`). A full page means there is probably more behind
  *  it; a short one means we have reached the beginning. */
 const PAGE = 50;
@@ -95,177 +108,9 @@ function chatAuthoringText(html: string): string {
   return document.body.textContent ?? "";
 }
 
-/** A room's label: its `#name`, the other person in a DM, or a safe fallback. */
-function channelLabel(channel: ChannelSummary): string {
-  return channel.name ?? channel.counterpart ?? strings.chatDirectMessage;
-}
 
 /**
- * How a person reads in the feed: the local part of their address, which is
- * what colleagues actually call each other, falling back to the opaque id
- * when the directory no longer knows them (they have left the tenant). This
- * schema has no display-name column yet; when it does, it belongs here.
- */
-function personName(email: string | null, id: string): string {
-  if (email === null) return id;
-  const at = email.indexOf("@");
-  return at > 0 ? email.slice(0, at) : email;
-}
-
-/** Minutes within which consecutive messages from one person are one run.
- *  Slack and Teams both use about this; longer and a reply an hour later
- *  hides under a stale name, shorter and a quick exchange fragments. */
-const GROUP_MINUTES = 5;
-
-/** Whether `message` continues the run started by `before`. */
-function continues(message: Message, before: Message | undefined): boolean {
-  if (before === undefined) return false;
-  if (before.author !== message.author) return false;
-  if (before.authorKind !== message.authorKind) return false;
-  // A proposal or an attachment ends a run: those carry their own block and
-  // reading them without a name above is disorienting.
-  if (before.proposal !== null || before.attachments.length > 0) return false;
-  const gap =
-    new Date(message.createdAt).getTime() -
-    new Date(before.createdAt).getTime();
-  return gap >= 0 && gap < GROUP_MINUTES * 60_000;
-}
-
-/** The day a message belongs to, as a divider reads it. */
-function dayOf(iso: string): string {
-  const d = new Date(iso);
-  const today = new Date();
-  const same = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-  if (same(d, today)) return strings.chatToday;
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  if (same(d, yesterday)) return strings.chatYesterday;
-  return d.toLocaleDateString(undefined, {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    // The year only when it is not this one — "12 March 2024" matters, "12
-    // March 2026" is noise in March 2026.
-    ...(d.getFullYear() === today.getFullYear() ? {} : { year: "numeric" }),
-  });
-}
-
-/** Hour and minute only, for the gutter beside a grouped line. The full
- *  locale time ("10:05 AM") is wider than the gutter and was rendering
- *  clipped against the words. */
-function shortTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-/** Local time of day, for the line beside an author. */
-function timeOf(iso: string): string {
-  const at = new Date(iso);
-  return Number.isNaN(at.getTime())
-    ? ""
-    : at.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-}
-
-/**
- * A message body with its `@handles` marked.
- *
- * The marking is typographic only — who was actually named is the server's
- * answer (`message.mentions`), resolved against the room's members at post
- * time. Re-deciding that here would be a second, weaker copy of a rule that
- * already has an owner; this only makes what was typed visible.
- */
-function withHandlesMarked(body: string): ReactNode[] {
-  const parts: ReactNode[] = [];
-  const pattern = /(^|[\s([{"'])(@[A-Za-z0-9._%+-]+(?:@[A-Za-z0-9.-]+)?)/g;
-  let at = 0;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(body)) !== null) {
-    const start = match.index + match[1]!.length;
-    if (start > at) parts.push(body.slice(at, start));
-    parts.push(
-      <span key={`${start}`} className={styles.handle}>
-        {match[2]}
-      </span>,
-    );
-    at = start + match[2]!.length;
-  }
-  if (at < body.length) parts.push(body.slice(at));
-  return parts;
-}
-
-/** One thing that can be named after an `@`: a person or an agent. */
-interface Nameable {
-  /** What gets typed — a person's local part, or an agent's handle. */
-  handle: string;
-  /** What is shown: an address, or an agent's name. */
-  label: string;
-  agent: boolean;
-}
-
-/**
- * The `@token` being typed immediately before the caret, if any.
- *
- * Mirrors the server's own parser (`parse_handles`): an `@` only opens a
- * mention at a word boundary, so an address typed inline is not one, and a
- * space ends it. The two must agree, or the list would offer a completion the
- * server then declines to resolve.
- */
-function mentionAt(
-  value: string,
-  caret: number,
-): { start: number; token: string } | null {
-  const upto = value.slice(0, caret);
-  const at = upto.lastIndexOf("@");
-  if (at < 0) return null;
-  const before = at === 0 ? " " : upto[at - 1]!;
-  if (!/[\s([{"']/.test(before)) return null;
-  const token = upto.slice(at + 1);
-  if (/\s/.test(token)) return null;
-  return { start: at, token: token.toLowerCase() };
-}
-
-/** Who the list offers for `token`, agents first: an agent is the thing a
- *  person is least likely to know is there. */
-function candidatesFor(token: string, all: Nameable[]): Nameable[] {
-  const matching = all.filter((n) => n.handle.startsWith(token));
-  return [
-    ...matching.filter((n) => n.agent),
-    ...matching.filter((n) => !n.agent),
-  ].slice(0, 6);
-}
-
-/**
- * Whether this reader may decide a proposal, and why not when they may not.
- *
- * Spread rather than passed as a possibly-undefined prop: with
- * `exactOptionalPropertyTypes`, "absent" and "present but undefined" are
- * different things, and only the first means "decidable".
- */
-function standingOf(
-  proposal: Proposal,
-  me: string | null,
-): { standing?: { decidable: false; reason: string } } {
-  if (proposal.state !== "pending") {
-    return {
-      standing: {
-        decidable: false,
-        reason: strings.chatProposalSettled(proposal.state),
-      },
-    };
-  }
-  if (proposal.askedBy !== me) {
-    return {
-      standing: { decidable: false, reason: strings.chatProposalNotYours },
-    };
-  }
-  return {};
-}
-
-/**
- * One line of conversation, used by both the feed and the thread panel — the
+ * One line of conversation, used by both the feed and the thread panel â€” the
  * two must never drift into showing a message differently. `children` is what
  * hangs under it (the thread affordance in the feed, nothing in a thread).
  */
@@ -305,7 +150,7 @@ function MessageLine({
   /** Join the meeting this message announces. */
   onJoinMeeting?: ((id: string) => void) | undefined;
   /** This message continues the previous author's run: no avatar, no name, no
-   *  timestamp — just the words, aligned under the ones above. */
+   *  timestamp â€” just the words, aligned under the ones above. */
   grouped?: boolean;
   children?: ReactNode;
 }) {
@@ -315,7 +160,7 @@ function MessageLine({
   const closePicker = useCallback(() => setPicking(false), []);
   useDismiss(picking, pickerRef, closePicker);
   const [editing, setEditing] = useState<string | null>(null);
-  // Mine to change: my own words, still standing, and never an agent's — an
+  // Mine to change: my own words, still standing, and never an agent's â€” an
   // agent's message is a record of what it said, not a draft.
   const mine =
     me !== null &&
@@ -327,7 +172,7 @@ function MessageLine({
   const who = isAgent
     ? (message.authorEmail ?? message.author)
     : personName(message.authorEmail, message.author);
-  // Withdrawn words take no reactions — the server refuses, so the picker is
+  // Withdrawn words take no reactions â€” the server refuses, so the picker is
   // not offered on them either.
   const reactable = palette.length > 0 && message.deletedAt === null;
   return (
@@ -618,7 +463,7 @@ export function ChatModule() {
     private: boolean;
   } | null>(null);
   // What may be left, per the server. Empty until it answers, which simply
-  // means no picker yet — never a picker offering emoji it would refuse.
+  // means no picker yet â€” never a picker offering emoji it would refuse.
   const [palette, setPalette] = useState<string[]>([]);
   // Files chosen but not yet sent. Held as Drive nodes so the composer can
   // show their names without a second lookup.
@@ -643,7 +488,7 @@ export function ChatModule() {
     kind: "equation" | "code";
     target: "message";
   } | null>(null);
-  // Which room's row menu is open, by id — one at a time, same reason.
+  // Which room's row menu is open, by id â€” one at a time, same reason.
   const [emojiQuery, setEmojiQuery] = useState("");
   // Agent turns running in the open room. Refetched on every push, so it
   // follows the same signal the messages do rather than polling on a timer.
@@ -751,7 +596,7 @@ export function ChatModule() {
   }, [openId, loadMessages, loadTurns]);
 
   // Reloaded per room: membership is per room, and so is which agents are in
-  // it. Best-effort — a composer that cannot suggest still sends.
+  // it. Best-effort â€” a composer that cannot suggest still sends.
   useEffect(() => {
     if (openId === null) return;
     let live = true;
@@ -781,7 +626,7 @@ export function ChatModule() {
   }, [api, openId]);
 
   // Live: a chat signal refreshes the sidebar, the open room, and the open
-  // thread — a reply arriving while someone reads the thread is exactly the
+  // thread â€” a reply arriving while someone reads the thread is exactly the
   // case the stream exists for.
   useEffect(() => {
     const controller = new AbortController();
@@ -808,7 +653,7 @@ export function ChatModule() {
     };
   }, [client, openId, loadChannels, loadMessages]);
 
-  // Keep the newest line in view as the conversation grows — but only when
+  // Keep the newest line in view as the conversation grows â€” but only when
   // the newest line actually changed. Scrolling to the bottom after prepending
   // older history would throw the reader out of what they went back to read.
   const newestSeq = messages?.[messages.length - 1]?.seq ?? null;
@@ -864,7 +709,7 @@ export function ChatModule() {
     }
   }
 
-  /** Put `text` where the caret is and keep typing there — used by the share
+  /** Put `text` where the caret is and keep typing there â€” used by the share
    *  menu and the emoji picker, so neither has to know how the composer
    *  works. */
   function insertAtCaret(text: string) {
@@ -890,7 +735,7 @@ export function ChatModule() {
     const next = `${draft.slice(0, from)}${before}${body}${after}${draft.slice(to)}`;
     setDraft(next);
     if (openId !== null) drafts.current.set(openId, next);
-    // Select the sample so the next keystroke replaces it — the mark is done,
+    // Select the sample so the next keystroke replaces it â€” the mark is done,
     // the words are what you type now.
     const start = from + before.length;
     requestAnimationFrame(() => {
@@ -938,7 +783,7 @@ export function ChatModule() {
    *  they were.
    *
    *  Prepending changes the scroll height, so without correction the content
-   *  under the cursor jumps — the single thing that makes an infinite feed
+   *  under the cursor jumps â€” the single thing that makes an infinite feed
    *  feel broken. The height is measured before and after, and the difference
    *  is added back to the scroll position.
    */
@@ -962,7 +807,7 @@ export function ChatModule() {
     setError(null);
     try {
       // Opening the same DM twice returns the same room, so this is safe to
-      // press again — the server settles it, not a check here.
+      // press again â€” the server settles it, not a check here.
       const room = await api.createChannel({ kind: "dm", with: person.user });
       await loadChannels();
       setDmQuery(null);
@@ -998,7 +843,7 @@ export function ChatModule() {
   }
 
   async function archiveRoom(room: ChannelSummary) {
-    // Confirmed, because it changes the room for everyone in it — and said in
+    // Confirmed, because it changes the room for everyone in it â€” and said in
     // terms of what actually happens, since nothing is deleted.
     const sure = await dialogs.confirm({
       title: strings.chatArchiveTitle(room.name ?? strings.chatDirectMessage),
@@ -1041,7 +886,7 @@ export function ChatModule() {
     setError(null);
     try {
       // Everything public, not only what is left to join. Browsing a directory
-      // that hides the rooms you are already in reads as empty and broken —
+      // that hides the rooms you are already in reads as empty and broken â€”
       // which is exactly how it read.
       const open = await api.joinable();
       const mine = (channels ?? []).filter(
@@ -1134,7 +979,7 @@ export function ChatModule() {
   async function react(messageId: string, emoji: string) {
     try {
       const tally = await api.react(messageId, emoji);
-      // Apply where it is shown — a message can be on screen in the feed, in
+      // Apply where it is shown â€” a message can be on screen in the feed, in
       // the thread panel, or in both at once.
       const applied = <T extends Message>(list: T[] | null): T[] | null =>
         list?.map((m) =>
@@ -1206,7 +1051,7 @@ export function ChatModule() {
   }, []);
 
   const open = channels?.find((c) => c.id === openId) ?? null;
-  // Channels, then people, then what is archived — the order a person looks
+  // Channels, then people, then what is archived â€” the order a person looks
   // in. One flat list is what hid direct messages entirely.
   const rooms = channels ?? [];
   const sections: { label: string; rooms: ChannelSummary[] }[] = [
@@ -1227,7 +1072,7 @@ export function ChatModule() {
   // the caret is, so it can never disagree with the composer.
   // Null while nothing is being searched for: the picker shows its groups.
   const emojiHits = emojiQuery.trim() === "" ? null : searchEmoji(emojiQuery);
-  // Every room, filtered by what has been typed — including archived ones,
+  // Every room, filtered by what has been typed â€” including archived ones,
   // because jumping to something old is exactly when you cannot find it in
   // the list.
   const switcherHits = (channels ?? [])
@@ -1414,7 +1259,7 @@ export function ChatModule() {
                       className={styles.hit}
                       onClick={() => {
                         // Open the room it was said in. The message is not
-                        // scrolled to yet — see chatSearchOpensRoom.
+                        // scrolled to yet â€” see chatSearchOpensRoom.
                         setOpenId(hit.channel);
                         void find("");
                       }}
@@ -1687,7 +1532,7 @@ export function ChatModule() {
                       <i />
                     </span>
                     {strings.chatThinking(turn.handle)}
-                    {/* Only the person who asked may stop it — the same rule
+                    {/* Only the person who asked may stop it â€” the same rule
                         as approving what it proposes. */}
                     {turn.mine && openId !== null && (
                       <button
