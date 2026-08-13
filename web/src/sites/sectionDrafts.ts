@@ -47,6 +47,10 @@ export interface FeaturesDraft {
   heading: string;
   intro: string;
   items: FeatureItemDraft[];
+  /** The chosen column count, carried untouched: the prop form does not offer
+   *  it (resizing happens on the page, ADR 0042) and a save must never be the
+   *  thing that throws it away. */
+  columns?: string | undefined;
 }
 
 export interface TextImageDraft {
@@ -55,12 +59,16 @@ export interface TextImageDraft {
   body: string;
   image: SectionImage;
   image_side: "left" | "right";
+  /** The chosen split, carried untouched (see [`FeaturesDraft`]). */
+  split?: string | undefined;
 }
 
 export interface GalleryDraft {
   type: "gallery";
   heading: string;
   images: SectionImage[];
+  /** The chosen column count, carried untouched. */
+  columns?: string | undefined;
 }
 
 export interface TestimonialDraft {
@@ -104,6 +112,8 @@ export interface TeamDraft {
   type: "team";
   heading: string;
   members: MemberDraft[];
+  /** The chosen column count, carried untouched. */
+  columns?: string | undefined;
 }
 
 export interface FaqItemDraft {
@@ -280,6 +290,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           (s?.items ?? []).map((i: FeatureItem) => ({ title: i.title, body: i.body, icon: i.icon })),
           blankFeature,
         ),
+        columns: s?.columns,
       };
     }
     case "text_image": {
@@ -290,6 +301,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         body: s?.body ?? "",
         image: draftImage(s?.image),
         image_side: s?.image_side ?? "left",
+        split: s?.split,
       };
     }
     case "gallery": {
@@ -298,6 +310,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         type: "gallery",
         heading: s?.heading ?? "",
         images: seeded((s?.images ?? []).map((i: SectionImage) => draftImage(i)), blankImage),
+        columns: s?.columns,
       };
     }
     case "testimonials": {
@@ -349,6 +362,7 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
           })),
           blankMember,
         ),
+        columns: s?.columns,
       };
     }
     case "faq": {
@@ -506,6 +520,7 @@ export function toSection(draft: SectionDraft): Section {
           draft.items,
           (i) => i.title.trim() === "" && i.body.trim() === "",
         ).map((i) => ({ title: req(i.title), body: req(i.body), icon: i.icon })),
+        columns: draft.columns,
       };
     case "text_image":
       return {
@@ -514,12 +529,14 @@ export function toSection(draft: SectionDraft): Section {
         body: req(draft.body),
         image: reqImage(draft.image),
         image_side: draft.image_side,
+        split: draft.split,
       };
     case "gallery":
       return {
         type: "gallery",
         heading: opt(draft.heading),
         images: pruned(draft.images, imageBlank).map(reqImage),
+        columns: draft.columns,
       };
     case "testimonials":
       return {
@@ -561,6 +578,7 @@ export function toSection(draft: SectionDraft): Section {
           photo: optImage(m.photo),
           bio: opt(m.bio),
         })),
+        columns: draft.columns,
       };
     case "faq":
       return {

@@ -3072,6 +3072,24 @@ export const en = {
   sitesRedoEdit: "Redo last change",
   sitesSectionDragHint:
     "Drag a section to move it — the page reorders as you drag. With the keyboard, focus a section and hold Alt with the up or down arrow.",
+  sitesSectionResizeHint:
+    "Some sections can change shape. Pick a size under the section in the list, or focus it in the preview and hold Alt with the left or right arrow.",
+  sitesLayoutOf: (control: string) => `Choose ${control.toLowerCase()}`,
+  sitesSectionResized: (section: string, choice: string) =>
+    `${section} set to ${choice.toLowerCase()}.`,
+  sitesLayoutSplit: "Split",
+  sitesLayoutColumns: "Columns",
+  sitesLayoutShape: "Shape",
+  sitesLayoutSplitWideImage: "Wider image",
+  sitesLayoutSplitHalf: "Equal halves",
+  sitesLayoutSplitWideText: "Wider text",
+  sitesLayoutColumnsTwo: "Two",
+  sitesLayoutColumnsThree: "Three",
+  sitesLayoutColumnsFour: "Four",
+  sitesLayoutShapeNatural: "As uploaded",
+  sitesLayoutShapeWide: "Wide",
+  sitesLayoutShapeSquare: "Square",
+  sitesLayoutShapeTall: "Tall",
   sitesSectionOnPage: (section: string, position: number, total: number) =>
     `${section}, section ${position} of ${total}. Drag it to move it, or hold Alt and press the up or down arrow.`,
   sitesAiPreviewBefore: "Before",

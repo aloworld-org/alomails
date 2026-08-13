@@ -743,6 +743,11 @@ export interface SiteHeatmapReport {
  *  links from it — the domain is the server's to know, never hardcoded. */
 export interface SitesConfig {
   domain: string;
+  /** Per section type, the properties that can be resized and the complete
+   *  ordered list of values each may take (ADR 0042). The editor offers what
+   *  is here and nothing else; absent (an older server) simply means no
+   *  resize affordance. */
+  sectionLayouts?: unknown;
 }
 
 /** The live taken/free answer for the create form. */

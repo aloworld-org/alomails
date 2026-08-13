@@ -40,7 +40,7 @@ import {
 import { strings } from "../i18n";
 import { Button, IconButton, Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
-import { kindLabel, sectionSummary } from "./sectionInfo";
+import { kindLabel, layoutValueLabel, sectionSummary } from "./sectionInfo";
 import { SectionFormDialog } from "./SectionForm";
 import { SectionPicker } from "./SectionPicker";
 import { ThemeDialog } from "./ThemeDialog";
@@ -67,6 +67,16 @@ import {
   readSectionMoveMessage,
   withSectionMoved,
 } from "./sectionMove";
+import {
+  controlsFor,
+  currentValue,
+  layoutOperation,
+  readLayoutStepMessage,
+  readSectionLayouts,
+  steppedValue,
+  type SectionLayouts,
+} from "./sectionLayout";
+import { SectionLayoutControls } from "./SectionLayoutControls";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 import type { SitePageDetail } from "./types";
@@ -135,6 +145,12 @@ export function PageEditorView() {
   // Bumped when the theme changes — the preview document depends on the
   // site's theme, not only on this page's sections.
   const [previewEpoch, setPreviewEpoch] = useState(0);
+  // What each section type may be resized to (ADR 0042). Declared by the
+  // server and read once: the editor offers exactly what is in here, so a
+  // ratio it has never been told about is one it cannot produce. An older
+  // server, or a request that fails, simply means no resize affordance.
+  const [layouts, setLayouts] = useState<SectionLayouts>({});
+  const layoutsRef = useRef<SectionLayouts>({});
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -176,6 +192,25 @@ export function PageEditorView() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    let live = true;
+    void api
+      .config()
+      .then((config) => {
+        if (live) setLayouts(readSectionLayouts(config.sectionLayouts));
+      })
+      .catch(() => {
+        /* No declaration, no handles — the rest of the editor is unaffected. */
+      });
+    return () => {
+      live = false;
+    };
+  }, [api]);
+
+  useLayoutEffect(() => {
+    layoutsRef.current = layouts;
+  }, [layouts]);
 
   // A layout effect, not a passive one: it must have run by the time any
   // event can reach a handler, and passive effects are allowed to wait.
@@ -503,6 +538,88 @@ export function PageEditorView() {
     [api, pageId, siteId],
   );
 
+  /** Resizes the section at `index` to another of the values its type
+   *  declares (ADR 0042, S3.01c).
+   *
+   *  The value is checked against the *server's* declaration before anything
+   *  is sent, and travels as the same `set_prop` operation an approved AI
+   *  proposal carries — so a ratio and a rewritten headline are one kind of
+   *  change, with one diff, one door and one undo.
+   *
+   *  `replay` is set when undo or redo is re-applying a known step, the one
+   *  case that must not push a new entry onto the history. */
+  const applyLayout = useCallback(
+    async (
+      index: number,
+      key: string,
+      value: string,
+      replay = false,
+    ): Promise<boolean> => {
+      const current = sectionsRef.current;
+      const section = current[index];
+      const control = controlsFor(layoutsRef.current, section).find(
+        (c) => c.key === key,
+      );
+      const operation = layoutOperation(
+        current,
+        layoutsRef.current,
+        index,
+        key,
+        value,
+      );
+      if (section === undefined || control === undefined || operation === null) {
+        setError(strings.sitesInlineTextStale);
+        setPreviewEpoch((epoch) => epoch + 1);
+        return false;
+      }
+      const before = currentValue(section, control);
+      if (before === value) return true;
+      setWorking(true);
+      try {
+        const envelope = await api.applyPageEdit(
+          siteId,
+          pageId,
+          textEditEnvelope(operation),
+        );
+        setSections(envelope.sections);
+        setError(null);
+        if (!replay) {
+          setHistory((entries) =>
+            recordEdit(entries, { kind: "layout", index, key, before, after: value }),
+          );
+        }
+        setTextNotice(
+          strings.sitesSectionResized(
+            kindLabel(section.type),
+            layoutValueLabel(key, value),
+          ),
+        );
+        return true;
+      } catch (err) {
+        setError(sitesMessage(err, strings.sitesSaveFailed));
+        setPreviewEpoch((epoch) => epoch + 1);
+        return false;
+      } finally {
+        setWorking(false);
+      }
+    },
+    [api, pageId, siteId],
+  );
+
+  /** One place along the first control the section declares — the keyboard
+   *  gesture on the page. The frame reports a *direction*; which value that
+   *  is, is resolved here against the declaration, because the frame is
+   *  deliberately never told what the values are. */
+  function stepLayout(index: number, step: -1 | 1) {
+    const section = sectionsRef.current[index];
+    const control = controlsFor(layoutsRef.current, section)[0];
+    if (section === undefined || control === undefined) return;
+    const next = steppedValue(control, currentValue(section, control), step);
+    if (next === null) return;
+    focusInPreview.current = index;
+    void applyLayout(index, control.key, next);
+  }
+
   // The frame's half of direct manipulation. Its document has an opaque
   // origin, so `event.origin` proves nothing and the sender is proven
   // instead: only this editor's own preview window is listened to.
@@ -519,6 +636,11 @@ export function PageEditorView() {
       const edit = readTextEditMessage(event.data, own);
       if (edit !== null) {
         void applyInlineText(edit.key, edit.text);
+        return;
+      }
+      const resized = readLayoutStepMessage(event.data, own);
+      if (resized !== null) {
+        stepLayout(resized.index, resized.step);
         return;
       }
       const moved = readSectionMoveMessage(event.data, own);
@@ -564,9 +686,14 @@ export function PageEditorView() {
    *  itself through the same live region as any other move, so only text
    *  needs a word from the caller. */
   function applyStep(step: EditStep): Promise<boolean> {
-    return step.kind === "text"
-      ? applyInlineText(step.key, step.after, true)
-      : move(step.from, step.to, { replay: true });
+    switch (step.kind) {
+      case "text":
+        return applyInlineText(step.key, step.after, true);
+      case "layout":
+        return applyLayout(step.index, step.key, step.after, true);
+      default:
+        return move(step.from, step.to, { replay: true });
+    }
   }
 
   // ⌘Z / Ctrl+Z, with shift to redo. Keys pressed inside the preview stay
@@ -909,6 +1036,17 @@ export function PageEditorView() {
                               {summary}
                             </span>
                           )}
+                          {locale === null && (
+                            <SectionLayoutControls
+                              section={section}
+                              index={i}
+                              layouts={layouts}
+                              disabled={working || translationBusy}
+                              onChoose={(at, key, value) => {
+                                void applyLayout(at, key, value);
+                              }}
+                            />
+                          )}
                         </div>
                         <div className={styles.cardActions}>
                           <IconButton
@@ -1051,7 +1189,8 @@ export function PageEditorView() {
               </div>
               {locale === null && (
                 <p className={styles.previewEditHint}>
-                  {strings.sitesInlineTextHint} {strings.sitesSectionDragHint}
+                  {strings.sitesInlineTextHint} {strings.sitesSectionDragHint}{" "}
+                  {strings.sitesSectionResizeHint}
                 </p>
               )}
               {pageProtected && (

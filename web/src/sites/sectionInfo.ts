@@ -134,3 +134,49 @@ export function sectionSummary(section: Section): string {
       return section.text ?? strings.sitesCountLinks(section.links.length);
   }
 }
+
+/** The name of a resize control (`split`, `columns`, `shape`), in the
+ *  language of the person editing. A control the server declares and this
+ *  build has no word for falls back to its key rather than to an empty
+ *  label — an unnamed button is worse than an untranslated one. */
+export function layoutControlLabel(key: string): string {
+  switch (key) {
+    case "split":
+      return strings.sitesLayoutSplit;
+    case "columns":
+      return strings.sitesLayoutColumns;
+    case "shape":
+      return strings.sitesLayoutShape;
+    default:
+      return key;
+  }
+}
+
+/** The name of one declared value of a resize control. Same fallback rule as
+ *  [`layoutControlLabel`]. */
+export function layoutValueLabel(key: string, value: string): string {
+  switch (`${key}/${value}`) {
+    case "split/wide_image":
+      return strings.sitesLayoutSplitWideImage;
+    case "split/half":
+      return strings.sitesLayoutSplitHalf;
+    case "split/wide_text":
+      return strings.sitesLayoutSplitWideText;
+    case "columns/two":
+      return strings.sitesLayoutColumnsTwo;
+    case "columns/three":
+      return strings.sitesLayoutColumnsThree;
+    case "columns/four":
+      return strings.sitesLayoutColumnsFour;
+    case "shape/natural":
+      return strings.sitesLayoutShapeNatural;
+    case "shape/wide":
+      return strings.sitesLayoutShapeWide;
+    case "shape/square":
+      return strings.sitesLayoutShapeSquare;
+    case "shape/tall":
+      return strings.sitesLayoutShapeTall;
+    default:
+      return value;
+  }
+}

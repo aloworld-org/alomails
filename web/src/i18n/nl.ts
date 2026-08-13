@@ -3199,6 +3199,24 @@ export const nl: Partial<Catalog> = {
   sitesRedoEdit: "Laatste wijziging opnieuw uitvoeren",
   sitesSectionDragHint:
     "Sleep een sectie om die te verplaatsen — de pagina schikt zich meteen opnieuw. Met het toetsenbord: selecteer een sectie en houd Alt ingedrukt met de pijl omhoog of omlaag.",
+  sitesSectionResizeHint:
+    "Sommige secties kunnen van vorm veranderen. Kies een formaat onder de sectie in de lijst, of geef de sectie focus in het voorbeeld en houd Alt ingedrukt met de pijl naar links of rechts.",
+  sitesLayoutOf: (control: string) => `Kies ${control.toLowerCase()}`,
+  sitesSectionResized: (section: string, choice: string) =>
+    `${section} ingesteld op ${choice.toLowerCase()}.`,
+  sitesLayoutSplit: "Verdeling",
+  sitesLayoutColumns: "Kolommen",
+  sitesLayoutShape: "Vorm",
+  sitesLayoutSplitWideImage: "Bredere afbeelding",
+  sitesLayoutSplitHalf: "Gelijke helften",
+  sitesLayoutSplitWideText: "Bredere tekst",
+  sitesLayoutColumnsTwo: "Twee",
+  sitesLayoutColumnsThree: "Drie",
+  sitesLayoutColumnsFour: "Vier",
+  sitesLayoutShapeNatural: "Zoals geüpload",
+  sitesLayoutShapeWide: "Breed",
+  sitesLayoutShapeSquare: "Vierkant",
+  sitesLayoutShapeTall: "Hoog",
   sitesSectionOnPage: (section: string, position: number, total: number) =>
     `${section}, sectie ${position} van ${total}. Sleep de sectie om die te verplaatsen, of houd Alt ingedrukt en gebruik de pijl omhoog of omlaag.`,
   sitesAiPreviewBefore: "Voor",

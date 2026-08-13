@@ -133,6 +133,18 @@ fn cta() -> Value {
             "button": { "label": "Order now", "href": "/order" } })
 }
 
+fn text_image() -> Value {
+    json!({ "type": "text_image", "body": "A 1962 Probat drum, rebuilt by hand.",
+            "image": { "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg", "alt": "The roasting drum" },
+            "image_side": "left" })
+}
+
+fn gallery() -> Value {
+    json!({ "type": "gallery", "images": [
+        { "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg", "alt": "The roasting drum" },
+    ] })
+}
+
 fn faq() -> Value {
     json!({ "type": "faq", "items": [
         { "question": "Do you ship abroad?", "answer": "Across the EU, yes." },
@@ -2824,6 +2836,168 @@ async fn a_section_dragged_on_the_preview_moves_through_the_door_the_stack_uses(
         &outsider.token,
         &format!("{sections}/0/move"),
         json!({ "to": 1 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+}
+
+/// Constrained resize on the wire (ADR 0042, S3.01c): the declaration the
+/// editor reads, a resize applied through the reviewed edit door, and the
+/// refusal that makes "no gesture can produce free positioning" a property of
+/// the server rather than of the front end.
+#[tokio::test]
+async fn a_section_resizes_only_to_the_values_the_server_declares() {
+    let owner = harness("sites-section-resize").await;
+    let outsider = harness_on(Arc::clone(&owner.store), "sites-section-resize-other").await;
+
+    // What may be resized, and to what. The editor offers this and nothing
+    // else, so the list is part of the contract, not a hint.
+    let (status, config) = get(&owner.app, &owner.token, "/sites/config").await;
+    assert_eq!(status, StatusCode::OK, "{config}");
+    let split = &config["sectionLayouts"]["text_image"][0];
+    assert_eq!(split["key"], "split");
+    assert_eq!(split["pointer"], "/split");
+    assert_eq!(split["values"], json!(["wide_image", "half", "wide_text"]));
+    assert_eq!(split["default"], "half");
+    assert_eq!(
+        config["sectionLayouts"]["gallery"][0]["values"],
+        json!(["two", "three", "four"])
+    );
+    // A section type with nothing to resize declares nothing at all.
+    assert!(config["sectionLayouts"].get("faq").is_none());
+    // …and the declaration is not public: it is part of the product.
+    let (status, _) = get(&owner.app, "not-a-token", "/sites/config").await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+    let site = created_id(
+        "site",
+        post(
+            &owner.app,
+            &owner.token,
+            "/sites",
+            json!({ "name": "Roastery", "subdomain": sub("resized", &owner) }),
+        )
+        .await,
+    );
+    let page = created_id(
+        "page",
+        post(
+            &owner.app,
+            &owner.token,
+            &format!("/sites/{site}/pages"),
+            json!({ "title": "Home", "home": true }),
+        )
+        .await,
+    );
+    let sections = format!("/sites/{site}/pages/{page}/sections");
+    let edits = format!("/sites/{site}/pages/{page}/ai-edits");
+    let (status, stored) = put(
+        &owner.app,
+        &owner.token,
+        &sections,
+        json!({ "schema_version": 1, "sections": [text_image(), gallery()] }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{stored}");
+    // Nothing is stored until somebody resizes something: an untouched page
+    // is the page every published site already has.
+    assert!(stored["sections"]["sections"][0].get("split").is_none());
+
+    // The resize itself: one `set_prop` — the operation an approved AI
+    // proposal carries, through the same door.
+    let (status, resized) = put(
+        &owner.app,
+        &owner.token,
+        &edits,
+        json!({ "proposal": { "schema_version": 1, "operations": [{
+            "op": "set_prop",
+            "target": { "index": 0, "type": "text_image" },
+            "pointer": "/split",
+            "value": "wide_text"
+        }]}}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{resized}");
+    assert_eq!(resized["sections"]["sections"][0]["split"], "wide_text");
+
+    // The preview shows the chosen ratio and carries the gesture that steps
+    // it — the class the stylesheet keys its breakpoint rules off.
+    let (status, _, html) = get_text(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/pages/{page}/preview"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        html.contains("s-text-image image-left split-wide-text"),
+        "{html}"
+    );
+    assert!(html.contains("site-section-layout"));
+
+    // Anything between two declared values is refused by the schema itself.
+    for free in [json!("37%"), json!(0.37), json!(37), json!("1.5fr")] {
+        let (status, refused) = put(
+            &owner.app,
+            &owner.token,
+            &edits,
+            json!({ "proposal": { "schema_version": 1, "operations": [{
+                "op": "set_prop",
+                "target": { "index": 0, "type": "text_image" },
+                "pointer": "/split",
+                "value": free
+            }]}}),
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "{free}: {refused}"
+        );
+    }
+    // A column count is not a split, even though both are declared words.
+    let (status, refused) = put(
+        &owner.app,
+        &owner.token,
+        &edits,
+        json!({ "proposal": { "schema_version": 1, "operations": [{
+            "op": "set_prop",
+            "target": { "index": 0, "type": "text_image" },
+            "pointer": "/split",
+            "value": "four"
+        }]}}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+
+    // The gallery resizes on its own control, and the stored page keeps both.
+    let (status, columns) = put(
+        &owner.app,
+        &owner.token,
+        &edits,
+        json!({ "proposal": { "schema_version": 1, "operations": [{
+            "op": "set_prop",
+            "target": { "index": 1, "type": "gallery" },
+            "pointer": "/columns",
+            "value": "two"
+        }]}}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{columns}");
+    assert_eq!(columns["sections"]["sections"][0]["split"], "wide_text");
+    assert_eq!(columns["sections"]["sections"][1]["columns"], "two");
+
+    // And none of it belongs to anyone else.
+    let (status, body) = put(
+        &outsider.app,
+        &outsider.token,
+        &edits,
+        json!({ "proposal": { "schema_version": 1, "operations": [{
+            "op": "set_prop",
+            "target": { "index": 0, "type": "text_image" },
+            "pointer": "/split",
+            "value": "half"
+        }]}}),
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");

@@ -22,7 +22,17 @@ export type EditStep =
   /** A section moved from one position to another. Splice semantics: the
    *  section is taken out at `from` and put back in at `to`, which is what
    *  both doors that can move one already do. */
-  | { kind: "move"; from: number; to: number };
+  | { kind: "move"; from: number; to: number }
+  /** A section resized to another of the values its type declares: `key`
+   *  names the control, `before` and `after` are two of its declared values
+   *  and never anything between them. */
+  | {
+      kind: "layout";
+      index: number;
+      key: string;
+      before: string;
+      after: string;
+    };
 
 /** Undo and redo as two stacks of the same steps: the past is what has been
  *  applied, the future what has been taken back and could return. */
@@ -39,14 +49,26 @@ const HISTORY_LIMIT = 50;
 
 /** The gesture that takes `step` back.
  *
- *  A text step swaps its two strings; a move swaps its two positions, because
- *  a splice out of `from` and into `to` is undone exactly by a splice out of
- *  `to` and into `from`. Both are ordinary gestures — there is no "undo"
- *  request the server has to understand. */
+ *  A text step swaps its two strings; a resize swaps its two declared values;
+ *  a move swaps its two positions, because a splice out of `from` and into
+ *  `to` is undone exactly by a splice out of `to` and into `from`. All three
+ *  are ordinary gestures — there is no "undo" request the server has to
+ *  understand. */
 export function invertEdit(step: EditStep): EditStep {
-  return step.kind === "text"
-    ? { kind: "text", key: step.key, before: step.after, after: step.before }
-    : { kind: "move", from: step.to, to: step.from };
+  switch (step.kind) {
+    case "text":
+      return { kind: "text", key: step.key, before: step.after, after: step.before };
+    case "layout":
+      return {
+        kind: "layout",
+        index: step.index,
+        key: step.key,
+        before: step.after,
+        after: step.before,
+      };
+    default:
+      return { kind: "move", from: step.to, to: step.from };
+  }
 }
 
 /** Records an applied change and drops the redo branch, which is what any new

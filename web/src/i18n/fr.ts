@@ -3242,6 +3242,24 @@ export const fr: Partial<Catalog> = {
   sitesRedoEdit: "Rétablir la dernière modification",
   sitesSectionDragHint:
     "Faites glisser une section pour la déplacer — la page se réorganise pendant le déplacement. Au clavier, sélectionnez une section et maintenez Alt avec la flèche haut ou bas.",
+  sitesSectionResizeHint:
+    "Certaines sections peuvent changer de forme. Choisissez une taille sous la section dans la liste, ou placez le focus dessus dans l’aperçu et maintenez Alt avec la flèche gauche ou droite.",
+  sitesLayoutOf: (control: string) => `Choisir : ${control.toLowerCase()}`,
+  sitesSectionResized: (section: string, choice: string) =>
+    `${section} : ${choice.toLowerCase()}.`,
+  sitesLayoutSplit: "Répartition",
+  sitesLayoutColumns: "Colonnes",
+  sitesLayoutShape: "Forme",
+  sitesLayoutSplitWideImage: "Image plus large",
+  sitesLayoutSplitHalf: "Moitiés égales",
+  sitesLayoutSplitWideText: "Texte plus large",
+  sitesLayoutColumnsTwo: "Deux",
+  sitesLayoutColumnsThree: "Trois",
+  sitesLayoutColumnsFour: "Quatre",
+  sitesLayoutShapeNatural: "Comme importée",
+  sitesLayoutShapeWide: "Large",
+  sitesLayoutShapeSquare: "Carrée",
+  sitesLayoutShapeTall: "Haute",
   sitesSectionOnPage: (section: string, position: number, total: number) =>
     `${section}, section ${position} sur ${total}. Faites-la glisser pour la déplacer, ou maintenez Alt et appuyez sur la flèche haut ou bas.`,
   sitesAiPreviewBefore: "Avant",

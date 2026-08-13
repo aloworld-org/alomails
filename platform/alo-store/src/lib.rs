@@ -180,6 +180,7 @@ pub mod site_form_notify;
 pub mod site_forms;
 pub mod site_generation;
 pub mod site_heatmap;
+pub mod site_layout;
 pub mod site_leads;
 pub mod site_model;
 pub mod site_order_notify;
@@ -527,6 +528,10 @@ pub use site_generation::{GeneratedSiteDraft, NewGeneratedSite, NewGeneratedSite
 pub use site_heatmap::{
     SiteHeatmapCell, SiteHeatmapPath, SiteHeatmapReport, SiteHeatmapScrollBucket,
     SiteHeatmapViewport,
+};
+pub use site_layout::{
+    ColumnSplit, GridColumns, ImageShape, LayoutControl, RESIZABLE_SECTION_KINDS, layout_control,
+    layout_controls,
 };
 pub use site_leads::{SiteLeadDeal, SiteLeadDraft, SiteLeadLink};
 pub use site_model::{SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope};

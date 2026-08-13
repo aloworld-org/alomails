@@ -55,6 +55,7 @@ use alo_store::{
     SiteTranslationPageWrite, SiteTranslationPostContent, SiteTranslationPostWrite, StoreError,
     UserId, normalize_site_domain, site_theme::THEME_PRESETS,
 };
+use alo_store::{RESIZABLE_SECTION_KINDS, layout_controls};
 
 use crate::ai::tenant_ai_config;
 use crate::error::Problem;
@@ -1910,18 +1911,54 @@ pub async fn list_theme_presets(
     Ok(Json(json!({ "presets": presets })))
 }
 
-/// `GET /sites/config` → `{"domain": <SITES_DOMAIN>}` — the deployment-wide
-/// apex under which published sites serve (`<subdomain>.<domain>`, the same
-/// contract the public `alo-sites` service is configured with). The web
-/// composes the "goes live at" copy and live links from it instead of
-/// hardcoding a domain. Static deployment data, but authenticated like every
-/// `/sites/*` route — the edit surface has no anonymous corners.
+/// `GET /sites/config` → `{"domain": …, "sectionLayouts": …}` — the two
+/// deployment-wide facts the editor cannot know for itself.
+///
+/// `domain` is the apex published sites serve under (`<subdomain>.<domain>`,
+/// the same contract the public `alo-sites` service is configured with), so
+/// the web composes the "goes live at" copy and live links from it instead of
+/// hardcoding a domain.
+///
+/// `sectionLayouts` is the **resize declaration** (ADR 0042, S3.01c): per
+/// section type, the properties that can be resized, the JSON pointer each
+/// one lives at, and the complete ordered list of values it may take. The
+/// editor offers exactly what is here and nothing else — which is what makes
+/// "no gesture can produce free positioning" a property of the product rather
+/// than a promise about the front end. It is served rather than mirrored in
+/// TypeScript so there is one declaration, in the crate that validates writes
+/// against it.
+///
+/// Static deployment data, but authenticated like every `/sites/*` route —
+/// the edit surface has no anonymous corners.
 pub async fn sites_config(
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> Result<Json<Value>, Problem> {
     authenticate(&state, &headers).await?;
-    Ok(Json(json!({ "domain": sites_domain() })))
+    Ok(Json(json!({
+        "domain": sites_domain(),
+        "sectionLayouts": section_layouts_json(),
+    })))
+}
+
+/// The resize declaration as JSON, in declaration order.
+fn section_layouts_json() -> Value {
+    let mut layouts = serde_json::Map::new();
+    for kind in RESIZABLE_SECTION_KINDS {
+        let controls: Vec<Value> = layout_controls(kind)
+            .iter()
+            .map(|control| {
+                json!({
+                    "key": control.key,
+                    "pointer": control.pointer,
+                    "values": control.values,
+                    "default": control.default_value,
+                })
+            })
+            .collect();
+        layouts.insert((*kind).to_string(), Value::Array(controls));
+    }
+    Value::Object(layouts)
 }
 
 /// `PUT /sites/:id/theme` (body = the theme envelope) → `{status:"ok"}` —

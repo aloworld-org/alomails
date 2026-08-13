@@ -41,6 +41,9 @@ export interface SectionImage {
   crop?: ImageCrop | undefined;
   focal?: ImageFocalPoint | undefined;
   decorative?: boolean | undefined;
+  /** The frame the image is shown in — one of the shapes its section
+   *  declares (`/sites/config`); absent means the picture's own proportions. */
+  shape?: string | undefined;
 }
 
 /** Top navigation bar; the logo comes from the theme. */
@@ -74,6 +77,8 @@ export interface FeaturesSection {
   heading?: string | undefined;
   intro?: string | undefined;
   items: FeatureItem[];
+  /** Cards per row on a wide screen; absent is the fluid grid. */
+  columns?: string | undefined;
 }
 
 /** A text block alongside an image. */
@@ -83,6 +88,8 @@ export interface TextImageSection {
   body: string;
   image: SectionImage;
   image_side: "left" | "right";
+  /** How the row is divided between image and text; absent is equal columns. */
+  split?: string | undefined;
 }
 
 /** An image gallery; at least one image. */
@@ -90,6 +97,8 @@ export interface GallerySection {
   type: "gallery";
   heading?: string | undefined;
   images: SectionImage[];
+  /** Images per row on a wide screen; absent is the fluid grid. */
+  columns?: string | undefined;
 }
 
 /** One customer quote. */
@@ -139,6 +148,8 @@ export interface TeamSection {
   type: "team";
   heading?: string | undefined;
   members: TeamMember[];
+  /** People per row on a wide screen; absent is the fluid grid. */
+  columns?: string | undefined;
 }
 
 /** One question/answer pair. */

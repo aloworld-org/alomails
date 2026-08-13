@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::id::{BlobId, SiteBookingId, SiteCatalogId, SiteCollectionId};
 use crate::site_custom_code::CustomCodeSection;
+use crate::site_layout::{ColumnSplit, GridColumns, ImageShape};
 
 /// The current sections schema version. Version bumps ship an explicit pure
 /// upgrade function (v1 → v2) applied on read; stored JSON is rewritten
@@ -199,6 +200,12 @@ pub struct SiteImage {
     /// assistive technology should skip it.
     #[serde(default, skip_serializing_if = "is_not_set")]
     pub decorative: bool,
+    /// The frame the image is shown in — one of the shapes its section
+    /// declares ([`crate::site_layout`]); absent means the picture's own
+    /// proportions, which is how every image rendered before this schema
+    /// gained the property.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shape: Option<ImageShape>,
 }
 
 /// `skip_serializing_if` for a defaulted flag: absent stays absent, so stored
@@ -217,6 +224,7 @@ impl SiteImage {
             crop: None,
             focal: None,
             decorative: false,
+            shape: None,
         }
     }
 
@@ -307,6 +315,10 @@ pub struct FeaturesSection {
     pub intro: Option<String>,
     /// The features; at least one.
     pub items: Vec<FeatureItem>,
+    /// Cards per row on a wide screen ([`crate::site_layout`]); absent renders
+    /// the fluid grid this section has always used.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub columns: Option<GridColumns>,
 }
 
 /// A text block alongside an image.
@@ -322,6 +334,10 @@ pub struct TextImageSection {
     pub image: SiteImage,
     /// Which side the image sits on.
     pub image_side: ImageSide,
+    /// How the row is divided between image and text where the two sit side
+    /// by side ([`crate::site_layout`]); absent means equal columns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub split: Option<ColumnSplit>,
 }
 
 /// An image gallery.
@@ -333,6 +349,10 @@ pub struct GallerySection {
     pub heading: Option<String>,
     /// The images; at least one.
     pub images: Vec<SiteImage>,
+    /// Images per row on a wide screen ([`crate::site_layout`]); absent
+    /// renders the fluid grid this section has always used.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub columns: Option<GridColumns>,
 }
 
 /// One customer quote.
@@ -425,6 +445,10 @@ pub struct TeamSection {
     pub heading: Option<String>,
     /// The members; at least one.
     pub members: Vec<TeamMember>,
+    /// People per row on a wide screen ([`crate::site_layout`]); absent
+    /// renders the fluid grid this section has always used.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub columns: Option<GridColumns>,
 }
 
 /// One question/answer pair.
@@ -1123,16 +1147,19 @@ mod tests {
                     body: "Your batch goes in the drum after you order.".to_owned(),
                     icon: Some("flame".to_owned()),
                 }],
+                columns: None,
             }),
             Section::TextImage(TextImageSection {
                 heading: Some("The roastery".to_owned()),
                 body: "A 1962 Probat drum, rebuilt by hand.".to_owned(),
                 image: image.clone(),
                 image_side: ImageSide::Left,
+                split: None,
             }),
             Section::Gallery(GallerySection {
                 heading: Some("Inside the roastery".to_owned()),
                 images: vec![image.clone()],
+                columns: None,
             }),
             Section::Testimonials(TestimonialsSection {
                 heading: Some("What cafés say".to_owned()),
@@ -1163,6 +1190,7 @@ mod tests {
                     photo: Some(image.clone()),
                     bio: Some("Twenty years at the drum.".to_owned()),
                 }],
+                columns: None,
             }),
             Section::Faq(FaqSection {
                 heading: Some("Questions".to_owned()),
@@ -1256,6 +1284,7 @@ mod tests {
                 SiteImage::new(BlobId::new("first-blob"), ""),
                 SiteImage::new(BlobId::new("second-blob"), ""),
             ],
+            columns: None,
         });
         let ids: Vec<&str> = gallery
             .image_blob_ids()
@@ -1283,6 +1312,7 @@ mod tests {
             Section::Gallery(GallerySection {
                 heading: None,
                 images: vec![image],
+                columns: None,
             }),
             Section::Footer(FooterSection {
                 text: None,
@@ -1470,6 +1500,7 @@ mod tests {
         let bad_blob = envelope(vec![Section::Gallery(GallerySection {
             heading: None,
             images: vec![SiteImage::new(BlobId::new("not/a/token"), "")],
+            columns: None,
         })]);
         assert!(matches!(
             bad_blob.validate(),
@@ -1487,6 +1518,7 @@ mod tests {
                 body: "B".to_owned(),
                 icon: Some("Flame!".to_owned()),
             }],
+            columns: None,
         })]);
         assert!(matches!(
             bad_icon.validate(),
@@ -1503,6 +1535,7 @@ mod tests {
         envelope(vec![Section::Gallery(GallerySection {
             heading: None,
             images: vec![image],
+            columns: None,
         })])
     }
 
@@ -1760,10 +1793,12 @@ mod tests {
                 body: "Body".to_owned(),
                 image: image.clone(),
                 image_side: ImageSide::Left,
+                split: None,
             }),
             Section::Gallery(GallerySection {
                 heading: None,
                 images: vec![image.clone()],
+                columns: None,
             }),
             Section::Team(TeamSection {
                 heading: None,
@@ -1773,6 +1808,7 @@ mod tests {
                     photo: Some(image),
                     bio: None,
                 }],
+                columns: None,
             }),
         ]);
         before.validate().unwrap();
