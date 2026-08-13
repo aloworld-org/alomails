@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Archive, Hash, Loader2, Lock, MessageSquarePlus, MoreHorizontal, Pencil, Search, Users, X } from "lucide-react";
+import { Archive, ChevronDown, Hash, Loader2, Lock, MessageSquarePlus, MoreHorizontal, Pencil, Search, SlidersHorizontal, Users, X } from "lucide-react";
 
 import { Avatar, Badge, Button, IconButton } from "../ds";
 import { strings } from "../i18n";
@@ -33,7 +33,7 @@ interface ChatSidebarProps {
 
 const iconClass = "shrink-0 text-tertiary";
 const listClass = "m-0 flex list-none flex-col gap-1 p-0";
-const rowClass = "flex min-h-11 w-full items-center gap-2 rounded-md border border-transparent bg-transparent px-3 text-left text-sm text-primary hover:bg-raised focus-visible:outline-2 focus-visible:outline-accent";
+const rowClass = "flex min-h-12 w-full items-center gap-3 rounded-lg border border-transparent bg-transparent px-3 text-left text-sm text-primary transition hover:bg-raised focus-visible:outline-2 focus-visible:outline-accent";
 
 export function ChatSidebar(props: ChatSidebarProps) {
   const rooms = props.channels ?? [];
@@ -44,30 +44,26 @@ export function ChatSidebar(props: ChatSidebarProps) {
   ].filter((section) => section.rooms.length > 0);
 
   return (
-    <aside className="flex min-h-0 w-80 shrink-0 flex-col border-r border-subtle bg-surface max-md:w-full">
-      <header className="flex min-h-16 items-center px-4">
-        <h2 className="m-0 text-xl font-bold text-primary">{strings.moduleChat}</h2>
+    <aside className="flex min-h-0 w-[27rem] shrink-0 flex-col border-r border-subtle bg-surface max-xl:w-96 max-md:w-full">
+      <header className="flex min-h-20 items-center justify-between px-6">
+        <h2 className="m-0 flex items-center gap-2 text-2xl font-bold text-primary">{strings.moduleChat}<ChevronDown size={17} className="text-secondary" /></h2>
+        <IconButton size="md" label={strings.chatNewDm} icon={<Pencil size={18} />} onClick={props.onStartDm} />
       </header>
 
-      <div className="grid grid-cols-2 gap-2 px-3 pb-3">
-        <Button variant="secondary" size="sm" icon={<MessageSquarePlus size={16} />} onClick={props.onCreateChannel} disabled={props.creating}>
-          {strings.chatNewChannel}
-        </Button>
-        <Button variant="secondary" size="sm" icon={<Users size={16} />} onClick={props.onStartDm}>
-          {strings.chatNewDm}
-        </Button>
-        <Button variant="ghost" size="sm" icon={<Hash size={16} />} onClick={props.onBrowse} block>
-          {strings.chatBrowse}
-        </Button>
-      </div>
-
-      <label className="mx-3 mb-3 flex min-h-10 items-center gap-2 rounded-md border border-subtle bg-app px-3 focus-within:border-accent focus-within:ring-2 focus-within:ring--tint">
+      <label className="mx-6 mb-4 flex min-h-11 items-center gap-2 rounded-lg border border-subtle bg-surface px-3 shadow-sm focus-within:border-accent focus-within:ring-2 focus-within:ring--tint">
         <Search size={15} className={iconClass} />
         <input className="min-w-0 flex-1 border-0 bg-transparent text-sm text-primary outline-none placeholder:text-tertiary" value={props.finding} onChange={(event) => props.onFind(event.target.value)} placeholder={strings.chatSearchPlaceholder} aria-label={strings.chatSearchPlaceholder} autoComplete="off" />
         {props.finding !== "" && <IconButton size="sm" label={strings.chatSearchClear} icon={<X size={14} />} onClick={() => props.onFind("")} />}
       </label>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 pb-4">
+      <div className="mb-4 flex items-center gap-2 px-6">
+        <span className="inline-flex min-h-9 items-center rounded-lg bg-accent px-4 text-xs font-semibold text-on-accent">All</span>
+        <Button variant="secondary" size="sm" icon={<MessageSquarePlus size={15} />} onClick={props.onCreateChannel} disabled={props.creating}>{strings.chatNewChannel}</Button>
+        <Button variant="secondary" size="sm" icon={<Users size={15} />} onClick={props.onStartDm}>{strings.chatNewDm}</Button>
+        <button type="button" className="flex size-9 items-center justify-center rounded-lg border border-subtle bg-surface text-secondary hover:bg-raised" onClick={props.onBrowse} title={strings.chatBrowse}><SlidersHorizontal size={16} /><span className="sr-only">{strings.chatBrowse}</span></button>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5">
         {props.dmQuery !== null ? (
           <SidebarPanel title={strings.chatNewDm} onClose={props.onCloseDm}>
             <label className="mb-2 flex min-h-10 items-center gap-2 rounded-md border border-subtle bg-app px-3 focus-within:border-accent">
@@ -98,7 +94,7 @@ export function ChatSidebar(props: ChatSidebarProps) {
         ) : props.channels.length === 0 ? (
           <div className="px-3 py-8 text-center"><p className="m-0 font-semibold text-primary">{strings.chatNoChannelsLead}</p><p className="mt-2 text-sm text-tertiary">{strings.chatNoChannelsHint}</p></div>
         ) : (
-          <div>{sections.map((section) => <section key={section.label} className="mb-4"><h3 className="mb-1 px-3 text-xs font-semibold uppercase tracking-wide text-tertiary">{section.label}</h3><ul className={listClass}>{section.rooms.map((room) => <RoomRow key={room.id} room={room} open={room.id === props.openId} menuOpen={props.rowMenu === room.id} onOpen={() => props.onOpen(room.id)} onMenu={() => props.onRowMenu(props.rowMenu === room.id ? null : room.id)} onRename={() => props.onRename(room)} onArchive={() => props.onArchive(room)} />)}</ul></section>)}</div>
+          <div>{sections.map((section) => <section key={section.label} className="mb-5"><div className="mb-2 flex items-center justify-between px-2"><h3 className="text-sm font-bold text-primary">{section.label}</h3>{section.label !== strings.chatSectionArchived && <span className="text-secondary" aria-hidden="true">+</span>}</div><ul className={listClass}>{section.rooms.map((room) => <RoomRow key={room.id} room={room} open={room.id === props.openId} menuOpen={props.rowMenu === room.id} onOpen={() => props.onOpen(room.id)} onMenu={() => props.onRowMenu(props.rowMenu === room.id ? null : room.id)} onRename={() => props.onRename(room)} onArchive={() => props.onArchive(room)} />)}</ul></section>)}</div>
         )}
       </div>
     </aside>
@@ -115,5 +111,5 @@ function Note({ children }: { children: ReactNode }) {
 
 function RoomRow({ room, open, menuOpen, onOpen, onMenu, onRename, onArchive }: { room: ChannelSummary; open: boolean; menuOpen: boolean; onOpen: () => void; onMenu: () => void; onRename: () => void; onArchive: () => void }) {
   const roomIconClass = open ? "shrink-0 text-accent" : iconClass;
-  return <li className="group relative flex items-center"><button type="button" aria-current={open ? "page" : undefined} style={open ? { borderColor: "var(--accent)" } : undefined} className={`${rowClass} pr-10 ${open ? "bg-surface font-semibold shadow-sm" : ""} ${room.archivedAt !== null ? "opacity-60" : ""}`} onClick={onOpen}>{room.kind === "dm" ? <Avatar name={channelLabel(room)} email={room.counterpart ?? undefined} size="sm" /> : room.visibility === "private" ? <Lock size={15} className={roomIconClass} /> : <Hash size={15} className={roomIconClass} />}<span className="min-w-0 flex-1 truncate">{channelLabel(room)}</span>{room.archivedAt !== null && <Archive size={13} className={iconClass} aria-label={strings.chatArchived} />}{room.mentions > 0 ? <Badge tone="accent">@{room.mentions}</Badge> : room.unread > 0 ? <Badge>{room.unread}</Badge> : null}</button>{room.kind === "channel" && room.archivedAt === null && <span className="absolute right-1"><IconButton size="sm" label={strings.chatChannelActions(channelLabel(room))} icon={<MoreHorizontal size={16} />} onClick={onMenu} active={menuOpen} />{menuOpen && <span className="absolute right-0 top-full z-20 mt-1 flex min-w-36 flex-col rounded-md border border-subtle bg-surface p-1 shadow-md" role="menu"><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onRename}><Pencil size={14} />{strings.chatRename}</button><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onArchive}><Archive size={14} />{strings.chatArchiveAction}</button></span>}</span>}</li>;
+  return <li className="group relative flex items-center"><button type="button" aria-current={open ? "page" : undefined} className={`${rowClass} pr-10 ${open ? "bg--soft font-semibold" : ""} ${room.archivedAt !== null ? "opacity-60" : ""}`} onClick={onOpen}>{room.kind === "dm" ? <Avatar name={channelLabel(room)} email={room.counterpart ?? undefined} size="sm" /> : room.visibility === "private" ? <Lock size={15} className={roomIconClass} /> : <Hash size={15} className={roomIconClass} />}<span className="min-w-0 flex-1 truncate">{channelLabel(room)}</span>{room.archivedAt !== null && <Archive size={13} className={iconClass} aria-label={strings.chatArchived} />}{room.mentions > 0 ? <Badge tone="accent">@{room.mentions}</Badge> : room.unread > 0 ? <Badge>{room.unread}</Badge> : null}</button>{room.kind === "channel" && room.archivedAt === null && <span className="absolute right-1"><IconButton size="sm" label={strings.chatChannelActions(channelLabel(room))} icon={<MoreHorizontal size={16} />} onClick={onMenu} active={menuOpen} />{menuOpen && <span className="absolute right-0 top-full z-20 mt-1 flex min-w-36 flex-col rounded-md border border-subtle bg-surface p-1 shadow-md" role="menu"><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onRename}><Pencil size={14} />{strings.chatRename}</button><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onArchive}><Archive size={14} />{strings.chatArchiveAction}</button></span>}</span>}</li>;
 }

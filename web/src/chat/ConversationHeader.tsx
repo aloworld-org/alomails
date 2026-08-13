@@ -1,6 +1,6 @@
-import { Archive, ChevronLeft, Pencil, Users, Video } from "lucide-react";
+import { Archive, ChevronLeft, Pencil, UserPlus, Video } from "lucide-react";
 
-import { Button } from "../ds";
+import { Avatar, IconButton } from "../ds";
 import { strings } from "../i18n";
 import type { Meeting } from "../meet";
 import { channelLabel } from "./presentation";
@@ -17,20 +17,21 @@ type Props = {
   onArchive: () => void;
 };
 
-export function ConversationHeader({ room, mobile, liveMeeting, onBack, onMeet, onPeople, onRename, onArchive }: Props) {
+export function ConversationHeader({ room, liveMeeting, onBack, onMeet, onPeople, onRename, onArchive }: Props) {
   return (
-    <header className="flex min-h-16 shrink-0 items-center gap-3 border-b border-subtle bg-surface px-4">
-      {mobile && <button type="button" className="flex size-10 items-center justify-center rounded-md border-0 bg-transparent text-primary hover:bg-raised" onClick={onBack} aria-label={strings.chatBackToList}><ChevronLeft size={18} /></button>}
+    <header className="flex min-h-20 shrink-0 items-center gap-4 border-b border-subtle bg-surface px-7">
+      <button type="button" className="flex size-10 items-center justify-center rounded-lg border-0 bg-transparent text-primary hover:bg-raised" onClick={onBack} aria-label={strings.chatBackToList}><ChevronLeft size={20} /></button>
+      {room.kind === "dm" && <Avatar name={channelLabel(room)} email={room.counterpart ?? undefined} size="md" />}
       <div className="min-w-0 flex-1">
         <h3 className="m-0 truncate text-base font-bold text-primary">{channelLabel(room)}</h3>
-        {room.topic !== null && <p className="m-0 truncate text-xs text-tertiary">{room.topic}</p>}
+        <p className="m-0 flex items-center gap-2 truncate text-xs text-tertiary">{room.topic ?? (room.kind === "dm" ? "Online" : "")}</p>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <Button variant="secondary" size="sm" icon={<Video size={15} />} onClick={onMeet} title={liveMeeting !== null ? strings.meetJoin : strings.meetStart}>{liveMeeting !== null ? strings.meetLive : strings.meetStart}</Button>
-        <Button variant="ghost" size="sm" icon={<Users size={15} />} onClick={onPeople} title={strings.chatMembersAndAgents}>{strings.chatMembersAndAgents}</Button>
+      <div className="flex shrink-0 items-center gap-3">
+        <IconButton size="md" label={liveMeeting !== null ? strings.meetJoin : strings.meetStart} icon={<Video size={18} />} onClick={onMeet} active={liveMeeting !== null} />
+        <button type="button" className="flex size-10 items-center justify-center rounded-lg border border-subtle bg-surface text-primary hover:bg-raised" onClick={onPeople} title={strings.chatMembersAndAgents}><UserPlus size={18} /><span className="sr-only">{strings.chatMembersAndAgents}</span></button>
         {room.kind === "channel" && room.archivedAt === null && <>
-          <button type="button" className="flex size-9 items-center justify-center rounded-md border-0 bg-transparent text-tertiary hover:bg-raised hover:text-primary" onClick={onRename} aria-label={strings.chatRename} title={strings.chatRename}><Pencil size={15} /></button>
-          <button type="button" className="flex size-9 items-center justify-center rounded-md border-0 bg-transparent text-tertiary hover:bg-raised hover:text-primary" onClick={onArchive} aria-label={strings.chatArchiveAction} title={strings.chatArchiveAction}><Archive size={15} /></button>
+          <IconButton size="md" label={strings.chatRename} icon={<Pencil size={17} />} onClick={onRename} />
+          <IconButton size="md" label={strings.chatArchiveAction} icon={<Archive size={17} />} onClick={onArchive} />
         </>}
       </div>
     </header>

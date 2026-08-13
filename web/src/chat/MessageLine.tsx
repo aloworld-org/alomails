@@ -10,10 +10,10 @@ import { personName, shortTime, standingOf, timeOf, withHandlesMarked } from "./
 import { renderBody } from "./richText";
 import type { Attachment, Message, Proposal } from "./types";
 
-const messageClass = "group relative mt-3 flex w-fit max-w-3xl flex-col items-start pl-12 pr-3";
-const mineClass = "group relative mt-3 flex w-fit max-w-3xl flex-col items-end self-end pl-3";
+const messageClass = "group relative mt-4 flex w-fit max-w-4xl flex-col items-start pl-12 pr-3";
+const mineClass = "group relative mt-4 flex w-fit max-w-4xl flex-col items-end self-end pl-3";
 const toolClass = "flex size-7 items-center justify-center rounded-sm border-0 bg-transparent text-secondary hover:bg-raised hover:text-primary focus-visible:outline-2 focus-visible:outline-accent";
-const bubbleClass = "m-0 max-w-full whitespace-pre-wrap break-words rounded-lg border border-subtle bg-surface px-3 py-2 text-sm leading-relaxed text-primary group-hover:border-default";
+const bubbleClass = "m-0 max-w-full whitespace-pre-wrap break-words rounded-xl border border-subtle bg-surface px-4 py-3 text-sm leading-relaxed text-primary group-hover:border-default";
 export function MessageLine({
   message,
   palette,

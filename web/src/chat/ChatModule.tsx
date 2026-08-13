@@ -300,7 +300,7 @@ export function ChatModule() {
         />
       )}
       <section
-        className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-app"
+        className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-surface"
         onDragOver={(event) => {
           if (!event.dataTransfer.types.includes("Files")) return;
           event.preventDefault();
