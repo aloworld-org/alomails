@@ -6,9 +6,11 @@
 mod common;
 
 use alo_store::{
-    DriveLocation, SiteCatalogAvailability, SiteCatalogCategoryInput, SiteCatalogImport,
-    SiteCatalogImportMapping, SiteCatalogInput, SiteCatalogItemInput, SiteId, StoreError,
+    BlobId, DriveLocation, SITE_CATALOG_IMAGE_ALT_MAX_CHARS, SiteCatalogAvailability,
+    SiteCatalogCategoryInput, SiteCatalogImport, SiteCatalogImportMapping, SiteCatalogInput,
+    SiteCatalogItemInput, SiteId, StoreError,
 };
+use bytes::Bytes;
 use serde_json::{Map, Value, json};
 
 fn assert_not_found<T: std::fmt::Debug>(result: Result<T, StoreError>) {
@@ -49,6 +51,7 @@ fn item<'a>(name: &'a str, slug: &'a str, price: Option<i64>) -> SiteCatalogItem
         price_cents: price,
         price_note: None,
         image: None,
+        image_alt: None,
         availability: SiteCatalogAvailability::Available,
         position: 0,
     }
@@ -336,6 +339,134 @@ async fn catalog_writes_are_validated_whole() {
     assert_eq!(survivor.price_cents, Some(250));
 }
 
+/// What an item's photograph shows is the owner's sentence: it round-trips,
+/// it is bounded, it cannot describe a picture that is not there, and it
+/// cannot point at another tenant's file.
+#[tokio::test]
+async fn an_item_photograph_carries_the_words_that_describe_it() {
+    let store = common::test_store().await;
+    let tenant = store.create_tenant("site-catalog-photo").await.unwrap();
+    let user = store
+        .for_tenant(tenant.clone())
+        .create_user("photo@site-catalog.test")
+        .await
+        .unwrap();
+    let account = store.for_account(tenant, user);
+    let other_tenant = store.create_tenant("site-catalog-photo-b").await.unwrap();
+    let other_user = store
+        .for_tenant(other_tenant.clone())
+        .create_user("rival@site-catalog.test")
+        .await
+        .unwrap();
+    let rival = store.for_account(other_tenant, other_user);
+    let site = account
+        .create_site("Harbour", &subdomain("catalog-photo"))
+        .await
+        .unwrap();
+    let catalog = account
+        .create_site_catalog(
+            &site,
+            &SiteCatalogInput {
+                name: "Menu",
+                currency: "EUR",
+                orders_enabled: false,
+            },
+        )
+        .await
+        .unwrap();
+    let photo = account
+        .put_blob(Bytes::from_static(b"beans"), Some("image/png"))
+        .await
+        .unwrap();
+    let rival_photo = rival
+        .put_blob(Bytes::from_static(b"rival-beans"), Some("image/png"))
+        .await
+        .unwrap();
+
+    // A description with nothing to describe is refused by name, so the
+    // sentence the editor shows says what to do about it.
+    let mut orphan = item("Harbour blend", "harbour-blend", Some(123_450));
+    orphan.image_alt = Some("A kraft bag of whole beans");
+    match account
+        .create_site_catalog_item(&site, &catalog, &orphan)
+        .await
+    {
+        Err(StoreError::Validation(detail)) => assert!(
+            detail.contains("needs an image"),
+            "the refusal must say what is missing: {detail}"
+        ),
+        other => panic!("expected a validation error, got {other:?}"),
+    }
+
+    let mut described = item("Harbour blend", "harbour-blend", Some(123_450));
+    described.image = Some(&photo);
+    described.image_alt = Some("  A kraft bag of whole beans on the counter  ");
+    let id = account
+        .create_site_catalog_item(&site, &catalog, &described)
+        .await
+        .unwrap();
+    let stored = account
+        .site_catalog_item(&site, &catalog, &id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        stored.image_alt.as_deref(),
+        Some("A kraft bag of whole beans on the counter"),
+        "the description is stored trimmed"
+    );
+
+    // Blank is not a description: it stores as "nobody wrote one", which is
+    // what makes the published card fall back to the item name.
+    let mut blanked = item("Harbour blend", "harbour-blend", Some(123_450));
+    blanked.image = Some(&photo);
+    blanked.image_alt = Some("   ");
+    account
+        .update_site_catalog_item(&site, &catalog, &id, &blanked)
+        .await
+        .unwrap();
+    assert!(
+        account
+            .site_catalog_item(&site, &catalog, &id)
+            .await
+            .unwrap()
+            .unwrap()
+            .image_alt
+            .is_none()
+    );
+
+    let long = "a".repeat(SITE_CATALOG_IMAGE_ALT_MAX_CHARS + 1);
+    let mut overlong = item("Harbour blend", "harbour-blend", Some(123_450));
+    overlong.image = Some(&photo);
+    overlong.image_alt = Some(&long);
+    assert!(matches!(
+        account
+            .update_site_catalog_item(&site, &catalog, &id, &overlong)
+            .await,
+        Err(StoreError::Validation(_))
+    ));
+
+    // The rival's file is not a file: the item cannot reach it, described or
+    // not, and the item that tried keeps the photograph it had.
+    let mut stolen = item("Harbour blend", "harbour-blend", Some(123_450));
+    stolen.image = Some(&rival_photo);
+    stolen.image_alt = Some("Someone else's beans");
+    assert_not_found(
+        account
+            .update_site_catalog_item(&site, &catalog, &id, &stolen)
+            .await,
+    );
+    let untouched = account
+        .site_catalog_item(&site, &catalog, &id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        untouched.image.as_ref().map(BlobId::as_str),
+        Some(photo.as_str())
+    );
+}
+
 /// The Base import copies rows once, names the row it cannot read, and updates
 /// its own rows on a second run instead of duplicating them.
 #[tokio::test]
@@ -379,6 +510,18 @@ async fn importing_from_base_copies_rows_once_and_refuses_a_price_it_cannot_read
         .base_add_field(&table, "Course", "text", &json!({}))
         .await
         .unwrap();
+    let photo_field = account
+        .base_add_field(&table, "Photo", "attachment", &json!({}))
+        .await
+        .unwrap();
+    let photo = account
+        .put_blob(Bytes::from_static(b"mussels"), Some("image/png"))
+        .await
+        .unwrap();
+    let new_photo = account
+        .put_blob(Bytes::from_static(b"mussels-again"), Some("image/png"))
+        .await
+        .unwrap();
     let first = account
         .base_add_record(
             &table,
@@ -387,6 +530,7 @@ async fn importing_from_base_copies_rows_once_and_refuses_a_price_it_cannot_read
                 (notes_field.as_str(), json!("From the bay, with cream")),
                 (price_field.as_str(), json!(18.5)),
                 (course_field.as_str(), json!("Mains")),
+                (photo_field.as_str(), json!([{"blob_id": photo.as_str()}])),
             ]),
         )
         .await
@@ -408,7 +552,7 @@ async fn importing_from_base_copies_rows_once_and_refuses_a_price_it_cannot_read
         description: Some(notes_field.clone()),
         price: Some(price_field.clone()),
         category: Some(course_field.clone()),
-        image: None,
+        image: Some(photo_field.clone()),
     };
     let import = SiteCatalogImport {
         base_node_id: &base_node,
@@ -437,6 +581,30 @@ async fn importing_from_base_copies_rows_once_and_refuses_a_price_it_cannot_read
         "a repeated name gets its own handle"
     );
     assert!(items.iter().all(|item| item.category_id.is_some()));
+    assert_eq!(
+        items[0].image.as_ref().map(BlobId::as_str),
+        Some(photo.as_str()),
+        "the attachment column is the item's picture"
+    );
+
+    // The owner describes that picture by hand. Base has no column for it, so
+    // the next import must not be the thing that erases it.
+    let described = SiteCatalogItemInput {
+        category: items[0].category_id.as_ref(),
+        name: &items[0].name,
+        slug: &items[0].slug,
+        description: items[0].description.as_deref(),
+        price_cents: items[0].price_cents,
+        price_note: None,
+        image: items[0].image.as_ref(),
+        image_alt: Some("A bowl of mussels in a cream broth"),
+        availability: items[0].availability,
+        position: items[0].position,
+    };
+    account
+        .update_site_catalog_item(&site, &catalog, &items[0].id, &described)
+        .await
+        .unwrap();
 
     // Second run: the same rows, updated in place.
     account
@@ -446,6 +614,7 @@ async fn importing_from_base_copies_rows_once_and_refuses_a_price_it_cannot_read
                 (name_field.as_str(), json!("Mussels, large")),
                 (price_field.as_str(), json!("19,50")),
                 (course_field.as_str(), json!("Mains")),
+                (photo_field.as_str(), json!([{"blob_id": photo.as_str()}])),
             ]),
         )
         .await
@@ -467,6 +636,41 @@ async fn importing_from_base_copies_rows_once_and_refuses_a_price_it_cannot_read
     assert_eq!(
         items[0].slug, "mussels",
         "the handle a link points at is kept"
+    );
+    assert_eq!(
+        items[0].image_alt.as_deref(),
+        Some("A bowl of mussels in a cream broth"),
+        "the same picture keeps the words written about it"
+    );
+
+    // A different photograph, though, is not what those words described.
+    account
+        .base_update_record(
+            &first,
+            &cells(&[
+                (name_field.as_str(), json!("Mussels, large")),
+                (price_field.as_str(), json!("19,50")),
+                (course_field.as_str(), json!("Mains")),
+                (
+                    photo_field.as_str(),
+                    json!([{"blob_id": new_photo.as_str()}]),
+                ),
+            ]),
+        )
+        .await
+        .unwrap();
+    account
+        .import_site_catalog_from_base(&site, &catalog, &import)
+        .await
+        .unwrap();
+    let items = account.site_catalog_items(&site, &catalog).await.unwrap();
+    assert_eq!(
+        items[0].image.as_ref().map(BlobId::as_str),
+        Some(new_photo.as_str())
+    );
+    assert!(
+        items[0].image_alt.is_none(),
+        "a replaced picture must not keep the old description"
     );
 
     // An ambiguous price stops the import naming the row, rather than guessing.

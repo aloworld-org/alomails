@@ -39,6 +39,7 @@ fn item<'a>(
         price_cents: price,
         price_note: None,
         image: None,
+        image_alt: None,
         availability,
         position: 0,
     }
@@ -93,6 +94,12 @@ async fn publishing_freezes_the_catalog_and_hidden_items_never_leave_the_editor(
         SiteCatalogAvailability::Available,
     );
     filter.category = Some(&brews);
+    let photo = account
+        .put_blob(bytes::Bytes::from_static(b"filter-brew"), Some("image/png"))
+        .await
+        .unwrap();
+    filter.image = Some(&photo);
+    filter.image_alt = Some("A cup being poured over at the pass");
     account
         .create_site_catalog_item(&site, &catalog, &filter)
         .await
@@ -162,6 +169,19 @@ async fn publishing_freezes_the_catalog_and_hidden_items_never_leave_the_editor(
         "a hidden item reached the published copy: {snapshot:?}"
     );
     assert_eq!(snapshot.items[0].price_cents, Some(350));
+    assert_eq!(
+        snapshot.items[0]
+            .image
+            .as_ref()
+            .map(alo_store::BlobId::as_str),
+        Some(photo.as_str()),
+        "the picture is frozen with the item"
+    );
+    assert_eq!(
+        snapshot.items[0].image_alt.as_deref(),
+        Some("A cup being poured over at the pass"),
+        "and so are the words describing it"
+    );
     assert_eq!(snapshot.items[0].category.as_deref(), Some("brews"));
     assert!(snapshot.items[1].sold_out, "sold out survives the freeze");
 

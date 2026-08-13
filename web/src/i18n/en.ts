@@ -5223,6 +5223,23 @@ export const en = {
   sitesCatalogItemGroup: "Group",
   sitesCatalogItemNoGroup: "No group",
   sitesCatalogItemDescription: "Description",
+  // The item's photograph. It goes through Drive like every other picture in
+  // Sites, so it stays a file the owner can find again; the card on the
+  // published page shows it, and what it shows is said in words for anyone
+  // who cannot see it.
+  sitesCatalogItemPhoto: "Photo",
+  sitesCatalogItemPhotoNone: "No photo yet",
+  sitesCatalogItemPhotoNoneHint:
+    "An item without a photo still appears, with its name, price and description.",
+  sitesCatalogItemPhotoAdd: "Add a photo",
+  sitesCatalogItemPhotoReplace: "Replace",
+  sitesCatalogItemPhotoRemove: "Remove the photo",
+  sitesCatalogItemPhotoPreview: "The photo of this item",
+  sitesCatalogItemPhotoAlt: "What the photo shows",
+  sitesCatalogItemPhotoAltHint:
+    "Read aloud by screen readers. Describe the picture — not the name printed under it.",
+  sitesCatalogItemPhotoAltMissing:
+    "Nobody has described this photo yet; until then the card falls back to the item name.",
   sitesCatalogItemAvailability: "Availability",
   sitesCatalogAvailabilityHint:
     "Sold out still appears, marked and not orderable. Hidden is not published at all.",

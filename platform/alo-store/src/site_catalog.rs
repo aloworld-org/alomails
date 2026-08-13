@@ -28,6 +28,10 @@ pub const SITE_CATALOG_SLUG_MAX_CHARS: usize = 64;
 pub const SITE_CATALOG_DESCRIPTION_MAX_CHARS: usize = 2_000;
 /// Maximum length of the short note beside a price ("per night", "from").
 pub const SITE_CATALOG_PRICE_NOTE_MAX_CHARS: usize = 60;
+/// Maximum length of what an item's photograph shows, in words. The same cap a
+/// section image's alt text carries ([`crate::site_model::MAX_SHORT_TEXT_CHARS`]),
+/// because it is the same sentence in a different place.
+pub const SITE_CATALOG_IMAGE_ALT_MAX_CHARS: usize = crate::site_model::MAX_SHORT_TEXT_CHARS;
 /// Maximum number of categories one catalog may hold.
 pub const SITE_CATALOG_MAX_CATEGORIES: usize = 100;
 /// Maximum number of items one catalog may hold — the same order of magnitude
@@ -133,6 +137,9 @@ pub struct SiteCatalogItem {
     pub price_cents: Option<i64>,
     pub price_note: Option<String>,
     pub image: Option<BlobId>,
+    /// What the image shows, in words. `None` means the owner has not written
+    /// one and the published card falls back to the item name.
+    pub image_alt: Option<String>,
     pub availability: SiteCatalogAvailability,
     pub position: i32,
     /// The Base record this row was imported from, when it was imported.

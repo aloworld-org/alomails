@@ -10,7 +10,7 @@
 // The description gets more room here than the upload does, on purpose: an
 // undescribed picture is invisible to somebody using a screen reader, and the
 // form says so rather than leaving a blank field to be scrolled past.
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Sparkles, Upload } from "lucide-react";
 import { useParams } from "react-router-dom";
 
@@ -19,49 +19,12 @@ import { useJmapClient } from "../jmap";
 import { Button } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { useCopyContext } from "./copyContext";
+import { useImageSource } from "./imageSource";
 import { ImageFraming } from "./ImageFraming";
 import { Field } from "./parts";
 import type { SectionImage } from "./sections";
 import type { SiteEditEnvelope } from "./types";
 import styles from "./SitesModule.module.css";
-
-/**
- * Loads one of the tenant's image blobs as an object URL for as long as the
- * form is open. A picture that will not load is not an error the owner can
- * act on — the framing control says so and the rest of the form keeps
- * working — so the failure is a state, not a thrown message.
- */
-function useImageSource(siteId: string, blobId: string): string | null {
-  const api = useSitesApi();
-  const [url, setUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    const id = blobId.trim();
-    if (siteId === "" || id === "" || typeof URL.createObjectURL !== "function") {
-      setUrl(null);
-      return;
-    }
-    let live = true;
-    let created: string | null = null;
-    api.siteImage(siteId, id).then(
-      (blob) => {
-        if (!live) return;
-        created = URL.createObjectURL(blob);
-        setUrl(created);
-      },
-      () => {
-        if (live) setUrl(null);
-      },
-    );
-    return () => {
-      live = false;
-      setUrl(null);
-      if (created !== null) URL.revokeObjectURL(created);
-    };
-  }, [api, siteId, blobId]);
-
-  return url;
-}
 
 /**
  * "Suggest a description" — a proposal, never a write.

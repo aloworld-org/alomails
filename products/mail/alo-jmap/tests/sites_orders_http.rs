@@ -108,6 +108,7 @@ fn item<'a>(name: &'a str, slug: &'a str, price: Option<i64>) -> SiteCatalogItem
         price_cents: price,
         price_note: None,
         image: None,
+        image_alt: None,
         availability: SiteCatalogAvailability::Available,
         position: 0,
     }

@@ -4477,6 +4477,19 @@ export const nl: Partial<Catalog> = {
   sitesCatalogItemGroup: "Groep",
   sitesCatalogItemNoGroup: "Geen groep",
   sitesCatalogItemDescription: "Beschrijving",
+  sitesCatalogItemPhoto: "Foto",
+  sitesCatalogItemPhotoNone: "Nog geen foto",
+  sitesCatalogItemPhotoNoneHint:
+    "Een item zonder foto verschijnt gewoon, met zijn naam, prijs en beschrijving.",
+  sitesCatalogItemPhotoAdd: "Foto toevoegen",
+  sitesCatalogItemPhotoReplace: "Vervangen",
+  sitesCatalogItemPhotoRemove: "Foto verwijderen",
+  sitesCatalogItemPhotoPreview: "De foto van dit item",
+  sitesCatalogItemPhotoAlt: "Wat de foto toont",
+  sitesCatalogItemPhotoAltHint:
+    "Wordt voorgelezen door schermlezers. Beschrijf de foto — niet de naam die eronder staat.",
+  sitesCatalogItemPhotoAltMissing:
+    "Niemand heeft deze foto nog beschreven; tot dan valt de kaart terug op de naam van het item.",
   sitesCatalogItemAvailability: "Beschikbaarheid",
   sitesCatalogAvailabilityHint:
     "Uitverkocht blijft zichtbaar, gemarkeerd en niet bestelbaar. Verborgen wordt helemaal niet gepubliceerd.",

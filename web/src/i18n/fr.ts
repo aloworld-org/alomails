@@ -4535,6 +4535,19 @@ export const fr: Partial<Catalog> = {
   sitesCatalogItemGroup: "Groupe",
   sitesCatalogItemNoGroup: "Sans groupe",
   sitesCatalogItemDescription: "Description",
+  sitesCatalogItemPhoto: "Photo",
+  sitesCatalogItemPhotoNone: "Pas encore de photo",
+  sitesCatalogItemPhotoNoneHint:
+    "Un article sans photo apparaît quand même, avec son nom, son prix et sa description.",
+  sitesCatalogItemPhotoAdd: "Ajouter une photo",
+  sitesCatalogItemPhotoReplace: "Remplacer",
+  sitesCatalogItemPhotoRemove: "Retirer la photo",
+  sitesCatalogItemPhotoPreview: "La photo de cet article",
+  sitesCatalogItemPhotoAlt: "Ce que montre la photo",
+  sitesCatalogItemPhotoAltHint:
+    "Lu à voix haute par les lecteurs d’écran. Décrivez l’image — pas le nom écrit en dessous.",
+  sitesCatalogItemPhotoAltMissing:
+    "Personne n’a encore décrit cette photo ; d’ici là, la carte reprend le nom de l’article.",
   sitesCatalogItemAvailability: "Disponibilité",
   sitesCatalogAvailabilityHint:
     "« Épuisé » reste affiché, signalé et non commandable. « Masqué » n’est pas publié du tout.",

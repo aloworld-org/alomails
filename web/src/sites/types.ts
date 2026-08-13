@@ -324,6 +324,9 @@ export interface SiteCatalogItem {
   priceCents: number | null;
   priceNote: string | null;
   imageBlobId: string | null;
+  /** What the photo shows, in words; `null` when nobody has written it and
+   *  the published card falls back to the item name. */
+  imageAlt: string | null;
   availability: SiteCatalogAvailability;
   position: number;
   sourceKey: string | null;
@@ -353,6 +356,11 @@ export interface SiteCatalogItemDraft {
   description: string;
   price: string;
   priceNote: string;
+  /** The Drive blob the photo lives in; `null` is an item with no photo. */
+  imageBlobId: string | null;
+  /** What that photo shows. Blank means nobody wrote it; the server refuses
+   *  one without a photo to describe. */
+  imageAlt: string;
   availability: SiteCatalogAvailability;
 }
 

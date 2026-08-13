@@ -48,6 +48,11 @@ pub struct SiteCatalogSnapshotItem {
     pub price_note: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub image: Option<BlobId>,
+    /// What the image shows, in words. Absent means the owner wrote none and
+    /// the card falls back to the item name — which is also what every
+    /// snapshot frozen before the description existed says.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub image_alt: Option<String>,
     /// Shown, but marked unavailable. Hidden items are absent entirely.
     #[serde(default, skip_serializing_if = "is_false")]
     pub sold_out: bool,
@@ -221,7 +226,7 @@ impl AccountStore {
         .map_err(StoreError::Db)?;
         let rows = sqlx::query_as::<_, VisibleItemRow>(
             "SELECT i.slug, i.name, c.slug AS category, i.description, i.price_cents, \
-                    i.price_note, i.image_blob_id, i.availability \
+                    i.price_note, i.image_blob_id, i.image_alt, i.availability \
              FROM site_catalog_items i \
              LEFT JOIN site_catalog_categories c \
                  ON c.tenant_id = i.tenant_id AND c.id = i.category_id \
@@ -262,6 +267,7 @@ struct VisibleItemRow {
     price_cents: Option<i64>,
     price_note: Option<String>,
     image_blob_id: Option<String>,
+    image_alt: Option<String>,
     availability: String,
 }
 
@@ -275,6 +281,7 @@ impl VisibleItemRow {
             price_cents: self.price_cents,
             price_note: self.price_note,
             image: self.image_blob_id.map(BlobId::new),
+            image_alt: self.image_alt,
             // The query already excluded `hidden`; anything that is not
             // `available` is shown as unavailable rather than silently sold.
             sold_out: self.availability != "available",

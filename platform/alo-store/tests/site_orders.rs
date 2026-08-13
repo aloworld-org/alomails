@@ -41,6 +41,7 @@ fn item<'a>(
         price_cents: price,
         price_note: None,
         image: None,
+        image_alt: None,
         availability,
         position: 0,
     }

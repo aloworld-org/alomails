@@ -459,11 +459,12 @@ pub use site_analytics::{
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
 pub use site_attribution::{SiteAttributionMoney, SiteAttributionReport, SiteAttributionSource};
 pub use site_catalog::{
-    SITE_CATALOG_DESCRIPTION_MAX_CHARS, SITE_CATALOG_MAX_CATEGORIES, SITE_CATALOG_MAX_ITEMS,
-    SITE_CATALOG_MAX_PRICE_CENTS, SITE_CATALOG_NAME_MAX_CHARS, SITE_CATALOG_PRICE_NOTE_MAX_CHARS,
-    SITE_CATALOG_SLUG_MAX_CHARS, SiteCatalog, SiteCatalogAvailability, SiteCatalogCategory,
-    SiteCatalogCategoryInput, SiteCatalogInput, SiteCatalogItem, catalog_slug_from_name,
-    currency_exponent, parse_price_minor_units, validate_currency,
+    SITE_CATALOG_DESCRIPTION_MAX_CHARS, SITE_CATALOG_IMAGE_ALT_MAX_CHARS,
+    SITE_CATALOG_MAX_CATEGORIES, SITE_CATALOG_MAX_ITEMS, SITE_CATALOG_MAX_PRICE_CENTS,
+    SITE_CATALOG_NAME_MAX_CHARS, SITE_CATALOG_PRICE_NOTE_MAX_CHARS, SITE_CATALOG_SLUG_MAX_CHARS,
+    SiteCatalog, SiteCatalogAvailability, SiteCatalogCategory, SiteCatalogCategoryInput,
+    SiteCatalogInput, SiteCatalogItem, catalog_slug_from_name, currency_exponent,
+    parse_price_minor_units, validate_currency,
 };
 pub use site_catalog_import::{
     SiteCatalogImport, SiteCatalogImportMapping, SiteCatalogImportReport,

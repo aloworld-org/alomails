@@ -434,6 +434,111 @@ async fn a_refusal_names_the_rule_and_a_body_that_is_not_the_shape_is_a_400() {
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{foreign_image}");
+
+    // Words about a picture that is not there describe nothing, and the
+    // refusal says which of the two is missing.
+    let (status, orphan_alt) = post(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/catalogs/{catalog}/items"),
+        json!({ "name": "Cake", "slug": "described-cake", "imageAlt": "A three-tier cake" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{orphan_alt}");
+    assert!(
+        orphan_alt["detail"]
+            .as_str()
+            .unwrap()
+            .contains("needs an image"),
+        "{orphan_alt}"
+    );
+}
+
+/// The photograph an item carries and the sentence describing it travel
+/// together on the wire: they are set in one write, read back in the same
+/// shape, and cleared by the same whole replace that clears every other field.
+#[tokio::test]
+async fn an_item_photograph_travels_with_the_words_that_describe_it() {
+    let owner = harness("sites-catalog-photo").await;
+    let site = site_of(&owner, "photo").await;
+    let catalog = created_id(
+        "catalog",
+        post(
+            &owner.app,
+            &owner.token,
+            &format!("/sites/{site}/catalogs"),
+            json!({ "name": "Menu", "currency": "EUR" }),
+        )
+        .await,
+    );
+    let photo = owner
+        .acc
+        .put_blob(bytes::Bytes::from_static(b"a-loaf"), Some("image/png"))
+        .await
+        .unwrap();
+
+    let (status, described) = post(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/catalogs/{catalog}/items"),
+        json!({
+            "name": "Sourdough loaf",
+            "price": "4,50",
+            "imageBlobId": photo.as_str(),
+            "imageAlt": "  A dark round loaf, still on the peel  ",
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{described}");
+    assert_eq!(described["imageBlobId"], photo.as_str());
+    assert_eq!(
+        described["imageAlt"], "A dark round loaf, still on the peel",
+        "the description comes back trimmed, exactly as it is stored"
+    );
+    let item_id = described["id"].as_str().unwrap().to_owned();
+
+    let (status, read) = get(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/catalogs/{catalog}"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(read["items"][0]["imageBlobId"], photo.as_str());
+    assert_eq!(
+        read["items"][0]["imageAlt"],
+        "A dark round loaf, still on the peel"
+    );
+
+    // Keeping the picture and rewriting only the words is one whole replace,
+    // like every other field of the form.
+    let (status, rewritten) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/catalogs/{catalog}/items/{item_id}"),
+        json!({
+            "name": "Sourdough loaf",
+            "price": "4,50",
+            "imageBlobId": photo.as_str(),
+            "imageAlt": "A dark round loaf cooling on a rack",
+        }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{rewritten}");
+    assert_eq!(rewritten["imageAlt"], "A dark round loaf cooling on a rack");
+
+    // Removing the picture removes what was said about it; nothing is left
+    // describing an image the card no longer shows.
+    let (status, bare) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/catalogs/{catalog}/items/{item_id}"),
+        json!({ "name": "Sourdough loaf", "price": "4,50" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{bare}");
+    assert!(bare["imageBlobId"].is_null());
+    assert!(bare["imageAlt"].is_null(), "{bare}");
 }
 
 #[tokio::test]

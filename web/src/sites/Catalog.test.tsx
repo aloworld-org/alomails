@@ -1,7 +1,9 @@
 // What the catalog screen must keep doing (S2.12c): a site with nothing on
 // offer explains what a catalog is rather than showing an empty table; a price
-// is typed and sent verbatim for the server to read; and the server's own
-// refusal sentence is what a person sees when a rule is broken.
+// is typed and sent verbatim for the server to read; the server's own refusal
+// sentence is what a person sees when a rule is broken; and an item's
+// photograph (S2.12c3) is chosen, described, kept across an edit and removed
+// with the words that described it.
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -23,6 +25,14 @@ const mocks = vi.hoisted(() => ({
   createCatalogItem: vi.fn(),
   updateCatalogItem: vi.fn(),
   deleteCatalogItem: vi.fn(),
+  siteImage: vi.fn(),
+}));
+
+/** Uploads go through Drive at the jmap-client seam; nothing else is faked. */
+const driveUploadBlob = vi.hoisted(() => vi.fn());
+
+vi.mock("../jmap", () => ({
+  useJmapClient: () => ({ driveUploadBlob }),
 }));
 
 vi.mock("./api", async (importOriginal) => {
@@ -49,9 +59,17 @@ const SOURDOUGH: SiteCatalogItem = {
   priceCents: 450,
   priceNote: "per loaf",
   imageBlobId: null,
+  imageAlt: null,
   availability: "available",
   position: 0,
   sourceKey: null,
+};
+
+/** The same loaf, photographed and described. */
+const PHOTOGRAPHED: SiteCatalogItem = {
+  ...SOURDOUGH,
+  imageBlobId: "blob-loaf",
+  imageAlt: "A dark round loaf on the peel",
 };
 
 const DETAIL: SiteCatalogDetail = {
@@ -72,6 +90,8 @@ function view() {
 
 beforeEach(() => {
   for (const mock of Object.values(mocks)) mock.mockReset();
+  driveUploadBlob.mockReset();
+  mocks.siteImage.mockResolvedValue(new Blob(["loaf"], { type: "image/png" }));
 });
 
 afterEach(cleanup);
@@ -112,6 +132,14 @@ describe("the catalog screen", () => {
     expect(screen.getByText(/4[.,]50.*per loaf/)).toBeTruthy();
     expect(screen.getByText(/sourdough-loaf · Breads/)).toBeTruthy();
   });
+
+  /** The hidden file input the photo buttons drive; there is exactly one, and
+   *  it has no accessible name of its own because the button is the control. */
+  function photoPicker(): HTMLInputElement {
+    const picker = screen.getByRole("dialog").querySelector("input[type=file]");
+    if (picker === null) throw new Error("the dialog offers no file picker");
+    return picker as HTMLInputElement;
+  }
 
   /** The panel header and the empty state both offer the same first action. */
   function openItemDialog() {
@@ -188,6 +216,113 @@ describe("the catalog screen", () => {
     );
     await waitFor(() =>
       expect(mocks.deleteCatalogItem).toHaveBeenCalledWith("site-1", "catalog-1", "item-1"),
+    );
+  });
+
+  test("an item without a photo says so, and what happens without one", async () => {
+    mocks.catalogs.mockResolvedValue([CATALOG]);
+    mocks.catalog.mockResolvedValue({ ...DETAIL, items: [] });
+
+    view();
+    await screen.findByText(strings.sitesCatalogNoItemsTitle);
+
+    const dialog = openItemDialog();
+    expect(dialog.getByText(strings.sitesCatalogItemPhotoNone)).toBeTruthy();
+    expect(dialog.getByText(strings.sitesCatalogItemPhotoNoneHint)).toBeTruthy();
+    // Nothing to describe yet, so nothing asks for a description.
+    expect(dialog.queryByLabelText(strings.sitesCatalogItemPhotoAlt)).toBeNull();
+  });
+
+  test("a photo is uploaded through Drive and sent with the words about it", async () => {
+    mocks.catalogs.mockResolvedValue([CATALOG]);
+    mocks.catalog.mockResolvedValue({ ...DETAIL, items: [] });
+    mocks.createCatalogItem.mockResolvedValue(PHOTOGRAPHED);
+    driveUploadBlob.mockResolvedValue({ blobId: "blob-loaf" });
+
+    view();
+    await screen.findByText(strings.sitesCatalogNoItemsTitle);
+
+    const dialog = openItemDialog();
+    fireEvent.change(dialog.getByLabelText(strings.sitesCatalogItemName), {
+      target: { value: "Sourdough loaf" },
+    });
+    const file = new File(["bytes"], "loaf.png", { type: "image/png" });
+    fireEvent.change(photoPicker(), { target: { files: [file] } });
+
+    // Until it is described, the form says the card will fall back to the name.
+    const alt = await dialog.findByLabelText(strings.sitesCatalogItemPhotoAlt);
+    expect(dialog.getByText(strings.sitesCatalogItemPhotoAltMissing)).toBeTruthy();
+    fireEvent.change(alt, { target: { value: "A dark round loaf on the peel" } });
+
+    fireEvent.click(dialog.getByRole("button", { name: strings.sitesCatalogAddItem }));
+    await waitFor(() => expect(mocks.createCatalogItem).toHaveBeenCalledTimes(1));
+    expect(mocks.createCatalogItem).toHaveBeenCalledWith(
+      "site-1",
+      "catalog-1",
+      expect.objectContaining({
+        imageBlobId: "blob-loaf",
+        imageAlt: "A dark round loaf on the peel",
+      }),
+    );
+  });
+
+  test("editing an item keeps the photo it already had", async () => {
+    mocks.catalogs.mockResolvedValue([CATALOG]);
+    mocks.catalog.mockResolvedValue({ ...DETAIL, items: [PHOTOGRAPHED] });
+    mocks.updateCatalogItem.mockResolvedValue(PHOTOGRAPHED);
+
+    view();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: strings.sitesCatalogEditItem(PHOTOGRAPHED.name),
+      }),
+    );
+    const dialog = within(screen.getByRole("dialog"));
+    fireEvent.change(dialog.getByLabelText(strings.sitesCatalogItemName), {
+      target: { value: "Sourdough loaf, large" },
+    });
+    fireEvent.click(dialog.getByRole("button", { name: strings.sitesCatalogSaveItem }));
+
+    await waitFor(() => expect(mocks.updateCatalogItem).toHaveBeenCalledTimes(1));
+    // A whole replace that forgot the picture would publish a card without one.
+    expect(mocks.updateCatalogItem).toHaveBeenCalledWith(
+      "site-1",
+      "catalog-1",
+      "item-1",
+      expect.objectContaining({
+        name: "Sourdough loaf, large",
+        imageBlobId: "blob-loaf",
+        imageAlt: "A dark round loaf on the peel",
+      }),
+    );
+  });
+
+  test("removing the photo takes the words about it with it", async () => {
+    mocks.catalogs.mockResolvedValue([CATALOG]);
+    mocks.catalog.mockResolvedValue({ ...DETAIL, items: [PHOTOGRAPHED] });
+    mocks.updateCatalogItem.mockResolvedValue({ ...SOURDOUGH });
+
+    view();
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: strings.sitesCatalogEditItem(PHOTOGRAPHED.name),
+      }),
+    );
+    const dialog = within(screen.getByRole("dialog"));
+    fireEvent.click(
+      dialog.getByRole("button", { name: strings.sitesCatalogItemPhotoRemove }),
+    );
+    expect(dialog.getByText(strings.sitesCatalogItemPhotoNone)).toBeTruthy();
+    fireEvent.click(dialog.getByRole("button", { name: strings.sitesCatalogSaveItem }));
+
+    await waitFor(() => expect(mocks.updateCatalogItem).toHaveBeenCalledTimes(1));
+    expect(mocks.updateCatalogItem).toHaveBeenCalledWith(
+      "site-1",
+      "catalog-1",
+      "item-1",
+      expect.objectContaining({ imageBlobId: null, imageAlt: "" }),
     );
   });
 

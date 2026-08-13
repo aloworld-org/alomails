@@ -1,0 +1,12 @@
+-- What a catalog item's photograph shows, in words.
+--
+-- Until now the published card spelled `alt` with the item's own name, which
+-- describes the thing on offer and not the picture of it: somebody reading the
+-- page with a screen reader heard "Harbour blend, 1 kg" twice and learned
+-- nothing about the photograph. The description is the owner's to write, so it
+-- is stored beside the blob it belongs to.
+--
+-- NULL means "not written": the card falls back to the item name, exactly as
+-- every card published before this column existed already did, so no publish
+-- and no import changes shape.
+ALTER TABLE site_catalog_items ADD COLUMN image_alt TEXT;

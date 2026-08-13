@@ -81,6 +81,7 @@ fn item_json(item: &SiteCatalogItem) -> Value {
         "priceCents": item.price_cents,
         "priceNote": item.price_note,
         "imageBlobId": item.image.as_ref().map(alo_store::BlobId::as_str),
+        "imageAlt": item.image_alt,
         "availability": item.availability.as_str(),
         "position": item.position,
         "sourceKey": item.source_key,
@@ -352,6 +353,10 @@ struct ItemBody {
     price_note: Option<String>,
     #[serde(default)]
     image_blob_id: Option<String>,
+    /// What the picture shows, in words. Absent or blank leaves the published
+    /// card falling back to the item name; without an image it is refused.
+    #[serde(default)]
+    image_alt: Option<String>,
     /// `available`, `sold_out`, or `hidden`; absent means available.
     #[serde(default)]
     availability: Option<String>,
@@ -457,6 +462,7 @@ struct ItemWrite {
     price_cents: Option<i64>,
     price_note: Option<String>,
     image: Option<alo_store::BlobId>,
+    image_alt: Option<String>,
     availability: SiteCatalogAvailability,
 }
 
@@ -478,6 +484,7 @@ impl ItemWrite {
                 .map_err(map_store_err)?,
             price_note: some_text(req.price_note.as_deref()).map(str::to_owned),
             image: some_text(req.image_blob_id.as_deref()).map(alo_store::BlobId::new),
+            image_alt: some_text(req.image_alt.as_deref()).map(str::to_owned),
             availability: availability_of(req.availability.as_deref())?,
         })
     }
@@ -491,6 +498,7 @@ impl ItemWrite {
             price_cents: self.price_cents,
             price_note: self.price_note.as_deref(),
             image: self.image.as_ref(),
+            image_alt: self.image_alt.as_deref(),
             availability: self.availability,
             position,
         }

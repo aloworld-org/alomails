@@ -129,9 +129,18 @@ impl AccountStore {
             let source_key = record.id.as_str().to_owned();
             let existing = self.import_existing_item(catalog, &source_key).await?;
             let slug = match &existing {
-                Some((_, slug)) => slug.clone(),
+                Some(item) => item.slug.clone(),
                 None => unique_slug(&name, &existing_slugs),
             };
+            // An import maps no description of the picture, and replaces the
+            // whole item — so a description the owner wrote by hand would be
+            // erased by the next run. It is kept for exactly as long as it is
+            // still true: the same picture keeps its words, a changed or
+            // removed one loses them rather than describing the wrong photo.
+            let image_alt = existing
+                .as_ref()
+                .filter(|item| item.image.as_deref() == image.as_ref().map(BlobId::as_str))
+                .and_then(|item| item.image_alt.clone());
             let description = cell_text(
                 &record.cells,
                 import.mapping.description.as_ref(),
@@ -146,12 +155,13 @@ impl AccountStore {
                 price_cents: price,
                 price_note: None,
                 image: image.as_ref(),
+                image_alt: image_alt.as_deref(),
                 availability: SiteCatalogAvailability::Available,
                 position: i32::try_from(index).unwrap_or(i32::MAX),
             };
             match existing {
-                Some((id, _)) => {
-                    self.update_site_catalog_item(site, catalog, &id, &input)
+                Some(item) => {
+                    self.update_site_catalog_item(site, catalog, &item.id, &input)
                         .await
                         .map_err(|error| import_row_error(row, error))?;
                     report.updated += 1;
@@ -205,13 +215,16 @@ impl AccountStore {
         .map_err(StoreError::Db)
     }
 
+    /// The row a previous import created for one Base record: what a re-import
+    /// must reuse (the handle a published page already links to) and what it
+    /// must decide about (the picture and the words describing it).
     async fn import_existing_item(
         &self,
         catalog: &SiteCatalogId,
         source_key: &str,
-    ) -> Result<Option<(crate::id::SiteCatalogItemId, String)>> {
-        let row: Option<(String, String)> = sqlx::query_as(
-            "SELECT id, slug FROM site_catalog_items \
+    ) -> Result<Option<ImportedItem>> {
+        let row: Option<(String, String, Option<String>, Option<String>)> = sqlx::query_as(
+            "SELECT id, slug, image_blob_id, image_alt FROM site_catalog_items \
              WHERE tenant_id = $1 AND catalog_id = $2 AND source_key = $3",
         )
         .bind(self.tenant.as_str())
@@ -220,7 +233,12 @@ impl AccountStore {
         .fetch_optional(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-        Ok(row.map(|(id, slug)| (crate::id::SiteCatalogItemId::new(id), slug)))
+        Ok(row.map(|(id, slug, image, image_alt)| ImportedItem {
+            id: crate::id::SiteCatalogItemId::new(id),
+            slug,
+            image,
+            image_alt,
+        }))
     }
 
     /// Finds the category a row names, creating it when it is new.
@@ -265,6 +283,16 @@ impl AccountStore {
         report.categories_created += 1;
         Ok(id)
     }
+}
+
+/// The item a previous import of the same Base record left behind.
+struct ImportedItem {
+    id: crate::id::SiteCatalogItemId,
+    /// The handle it already carries; a re-import never changes it, because a
+    /// published page links to it.
+    slug: String,
+    image: Option<String>,
+    image_alt: Option<String>,
 }
 
 fn import_row_error(row: usize, error: StoreError) -> StoreError {

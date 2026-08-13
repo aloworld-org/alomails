@@ -7,12 +7,15 @@
 // and the availability words all live in the store, and a refusal comes back
 // as a sentence naming the rule that was broken — which is what the form
 // shows, verbatim.
-import { useState } from "react";
-import { Tag } from "lucide-react";
+import { useRef, useState } from "react";
+import { ImagePlus, Tag, Trash2 } from "lucide-react";
 
 import { strings } from "../i18n";
+import { useJmapClient } from "../jmap";
+import { Button, IconButton } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { priceInput } from "./catalogPricing";
+import { useImageSource } from "./imageSource";
 import { DialogFrame, Field } from "./parts";
 import type {
   SiteCatalog,
@@ -36,6 +39,8 @@ function draftFrom(
       description: "",
       price: "",
       priceNote: "",
+      imageBlobId: null,
+      imageAlt: "",
       availability: "available",
     };
   }
@@ -46,6 +51,8 @@ function draftFrom(
     description: item.description ?? "",
     price: priceInput(item.priceCents, catalog.currencyExponent),
     priceNote: item.priceNote ?? "",
+    imageBlobId: item.imageBlobId,
+    imageAlt: item.imageAlt ?? "",
     availability: item.availability,
   };
 }
@@ -65,6 +72,132 @@ export function availabilityLabel(availability: SiteCatalogAvailability): string
     default:
       return strings.sitesCatalogAvailable;
   }
+}
+
+
+/**
+ * The item's photograph: pick one, see it, describe it, or remove it.
+ *
+ * The picture goes through Drive like every other image in Sites, so it stays
+ * a file the owner can find again rather than a byte-string owned by one
+ * dialog. With no photo the field is an empty state that says what happens
+ * without one, because "no photo" is a perfectly good answer and the form
+ * should not look broken for taking it.
+ */
+function PhotoField({
+  siteId,
+  blobId,
+  alt,
+  onChange,
+}: {
+  siteId: string;
+  blobId: string | null;
+  alt: string;
+  onChange: (patch: { imageBlobId?: string | null; imageAlt?: string }) => void;
+}) {
+  const jmap = useJmapClient();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const source = useImageSource(siteId, blobId ?? "");
+
+  function upload(file: File) {
+    setUploading(true);
+    setUploadError(null);
+    jmap.driveUploadBlob(null, null, file).then(
+      ({ blobId: uploaded }) => {
+        // A new picture is not the old one, and the old words described the
+        // old one: replacing the photo clears what was said about it.
+        onChange({ imageBlobId: uploaded, imageAlt: "" });
+        setUploading(false);
+      },
+      () => {
+        setUploadError(strings.sitesUploadFailed);
+        setUploading(false);
+      },
+    );
+  }
+
+  return (
+    <Field label={strings.sitesCatalogItemPhoto}>
+      <div className={styles.itemPhoto}>
+        {blobId === null ? (
+          <div className={styles.itemPhotoEmpty}>
+            <span>{strings.sitesCatalogItemPhotoNone}</span>
+            <span className={styles.hint}>{strings.sitesCatalogItemPhotoNoneHint}</span>
+          </div>
+        ) : (
+          source !== null && (
+            <img
+              className={styles.itemPhotoPreview}
+              src={source}
+              alt={alt.trim() === "" ? strings.sitesCatalogItemPhotoPreview : alt}
+            />
+          )
+        )}
+        <div className={styles.itemPhotoActions}>
+          <input
+            ref={fileInput}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              // Allow re-picking the same file after a remove.
+              event.target.value = "";
+              if (file !== undefined) upload(file);
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<ImagePlus size={14} />}
+            disabled={uploading}
+            onClick={() => fileInput.current?.click()}
+          >
+            {blobId === null
+              ? strings.sitesCatalogItemPhotoAdd
+              : strings.sitesCatalogItemPhotoReplace}
+          </Button>
+          {blobId !== null && (
+            <IconButton
+              size="sm"
+              label={strings.sitesCatalogItemPhotoRemove}
+              icon={<Trash2 size={14} />}
+              disabled={uploading}
+              // The description goes with the picture: the server refuses one
+              // without the other, and keeping it would describe nothing.
+              onClick={() => onChange({ imageBlobId: null, imageAlt: "" })}
+            />
+          )}
+        </div>
+      </div>
+      {uploadError !== null && (
+        <p className={styles.hint} role="alert">
+          {uploadError}
+        </p>
+      )}
+      {blobId !== null && (
+        <div className={styles.itemPhotoAlt}>
+          <Field
+            label={strings.sitesCatalogItemPhotoAlt}
+            hint={strings.sitesCatalogItemPhotoAltHint}
+          >
+            <input
+              className={styles.input}
+              value={alt}
+              onChange={(event) => onChange({ imageAlt: event.target.value })}
+            />
+          </Field>
+          {alt.trim() === "" && (
+            <p className={styles.hint} role="status">
+              {strings.sitesCatalogItemPhotoAltMissing}
+            </p>
+          )}
+        </div>
+      )}
+    </Field>
+  );
 }
 
 export function CatalogItemDialog({
@@ -181,6 +314,12 @@ export function CatalogItemDialog({
           onChange={(event) => change({ description: event.target.value })}
         />
       </Field>
+      <PhotoField
+        siteId={siteId}
+        blobId={draft.imageBlobId}
+        alt={draft.imageAlt}
+        onChange={change}
+      />
       <Field
         label={strings.sitesCatalogItemAvailability}
         hint={strings.sitesCatalogAvailabilityHint}

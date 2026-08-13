@@ -3282,3 +3282,42 @@
   color: var(--text-primary);
   font-weight: var(--weight-semibold);
 }
+
+/* ---- the photograph of one catalog item (S2.12c3) ---- */
+.itemPhoto {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.itemPhotoPreview {
+  width: 6rem;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+/* The same rectangle the preview occupies, so choosing a photo does not make
+   the dialog jump. */
+.itemPhotoEmpty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  justify-content: center;
+  min-height: 4.5rem;
+  padding: var(--space-3);
+  color: var(--text-secondary);
+  border: var(--border-width) dashed var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.itemPhotoActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.itemPhotoAlt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}

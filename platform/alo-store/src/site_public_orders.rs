@@ -219,6 +219,7 @@ mod tests {
             price_cents: price,
             price_note: None,
             image: None,
+            image_alt: None,
             sold_out,
         }
     }

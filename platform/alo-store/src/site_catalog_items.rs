@@ -10,9 +10,9 @@ use crate::error::{Result, StoreError};
 use crate::id::{BlobId, SiteCatalogCategoryId, SiteCatalogId, SiteCatalogItemId, SiteId};
 use crate::site_assets::site_image_content_type;
 use crate::site_catalog::{
-    SITE_CATALOG_DESCRIPTION_MAX_CHARS, SITE_CATALOG_MAX_ITEMS, SITE_CATALOG_MAX_PRICE_CENTS,
-    SITE_CATALOG_PRICE_NOTE_MAX_CHARS, SiteCatalogAvailability, SiteCatalogItem,
-    catalog_slug_conflict, validate_catalog_name, validate_catalog_slug,
+    SITE_CATALOG_DESCRIPTION_MAX_CHARS, SITE_CATALOG_IMAGE_ALT_MAX_CHARS, SITE_CATALOG_MAX_ITEMS,
+    SITE_CATALOG_MAX_PRICE_CENTS, SITE_CATALOG_PRICE_NOTE_MAX_CHARS, SiteCatalogAvailability,
+    SiteCatalogItem, catalog_slug_conflict, validate_catalog_name, validate_catalog_slug,
 };
 
 /// Complete input for one catalog item — every write replaces the whole shape,
@@ -29,6 +29,10 @@ pub struct SiteCatalogItemInput<'a> {
     /// Short qualifier rendered beside the price ("per night", "from").
     pub price_note: Option<&'a str>,
     pub image: Option<&'a BlobId>,
+    /// What the image shows, in words, for the `alt` of the published card.
+    /// `None` leaves the card falling back to the item name; a description
+    /// without an image is refused, like a price note without a price.
+    pub image_alt: Option<&'a str>,
     pub availability: SiteCatalogAvailability,
     pub position: i32,
 }
@@ -57,8 +61,8 @@ impl AccountStore {
         sqlx::query(
             "INSERT INTO site_catalog_items \
                 (tenant_id, catalog_id, id, category_id, name, slug, description, \
-                 price_cents, price_note, image_blob_id, availability, position) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+                 price_cents, price_note, image_blob_id, image_alt, availability, position) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
         )
         .bind(self.tenant.as_str())
         .bind(catalog.as_str())
@@ -70,6 +74,7 @@ impl AccountStore {
         .bind(input.price_cents)
         .bind(checked.price_note.as_ref())
         .bind(input.image.map(BlobId::as_str))
+        .bind(checked.image_alt.as_ref())
         .bind(input.availability.as_str())
         .bind(input.position)
         .execute(&self.pool)
@@ -91,7 +96,7 @@ impl AccountStore {
         self.require_site_catalog(site, catalog).await?;
         let rows = sqlx::query_as::<_, SiteCatalogItemRow>(
             "SELECT id, category_id, name, slug, description, price_cents, price_note, \
-                    image_blob_id, availability, position, source_key \
+                    image_blob_id, image_alt, availability, position, source_key \
              FROM site_catalog_items \
              WHERE tenant_id = $1 AND catalog_id = $2 ORDER BY position, created_at, id",
         )
@@ -118,7 +123,7 @@ impl AccountStore {
         self.require_site_catalog(site, catalog).await?;
         let row = sqlx::query_as::<_, SiteCatalogItemRow>(
             "SELECT id, category_id, name, slug, description, price_cents, price_note, \
-                    image_blob_id, availability, position, source_key \
+                    image_blob_id, image_alt, availability, position, source_key \
              FROM site_catalog_items \
              WHERE tenant_id = $1 AND catalog_id = $2 AND id = $3",
         )
@@ -148,7 +153,7 @@ impl AccountStore {
         let done = sqlx::query(
             "UPDATE site_catalog_items SET category_id = $4, name = $5, slug = $6, \
                     description = $7, price_cents = $8, price_note = $9, image_blob_id = $10, \
-                    availability = $11, position = $12, updated_at = now() \
+                    image_alt = $11, availability = $12, position = $13, updated_at = now() \
              WHERE tenant_id = $1 AND catalog_id = $2 AND id = $3",
         )
         .bind(self.tenant.as_str())
@@ -161,6 +166,7 @@ impl AccountStore {
         .bind(input.price_cents)
         .bind(checked.price_note.as_ref())
         .bind(input.image.map(BlobId::as_str))
+        .bind(checked.image_alt.as_ref())
         .bind(input.availability.as_str())
         .bind(input.position)
         .execute(&self.pool)
@@ -248,6 +254,16 @@ impl AccountStore {
                 "a price note needs a price to stand beside".to_owned(),
             ));
         }
+        let image_alt = trimmed_within(
+            input.image_alt,
+            SITE_CATALOG_IMAGE_ALT_MAX_CHARS,
+            "image description",
+        )?;
+        if image_alt.is_some() && input.image.is_none() {
+            return Err(StoreError::Validation(
+                "an image description needs an image to describe".to_owned(),
+            ));
+        }
         self.require_catalog_category(catalog, input.category)
             .await?;
         self.require_catalog_image(input.image).await?;
@@ -256,6 +272,7 @@ impl AccountStore {
             slug,
             description,
             price_note,
+            image_alt,
         })
     }
 
@@ -309,6 +326,7 @@ pub(crate) struct CheckedCatalogItem {
     pub(crate) slug: String,
     pub(crate) description: Option<String>,
     pub(crate) price_note: Option<String>,
+    pub(crate) image_alt: Option<String>,
 }
 
 fn trimmed_within(value: Option<&str>, max: usize, role: &str) -> Result<Option<String>> {
@@ -333,6 +351,7 @@ struct SiteCatalogItemRow {
     price_cents: Option<i64>,
     price_note: Option<String>,
     image_blob_id: Option<String>,
+    image_alt: Option<String>,
     availability: String,
     position: i32,
     source_key: Option<String>,
@@ -349,6 +368,7 @@ impl SiteCatalogItemRow {
             price_cents: self.price_cents,
             price_note: self.price_note,
             image: self.image_blob_id.map(BlobId::new),
+            image_alt: self.image_alt,
             availability: SiteCatalogAvailability::parse(&self.availability)?,
             position: self.position,
             source_key: self.source_key,
