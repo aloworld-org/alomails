@@ -344,7 +344,7 @@ export function CollectionsView() {
             })}
           </aside>
 
-          <main className={styles.collectionEditor}>
+          <div className={styles.collectionEditor}>
             <section className={styles.collectionSetup} aria-labelledby="collection-setup-title">
               <div className={styles.collectionPanelHead}>
                 <div>
@@ -493,7 +493,7 @@ export function CollectionsView() {
                 </div>
               )}
             </section>
-          </main>
+          </div>
         </div>
       )}
     </div>

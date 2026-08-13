@@ -227,7 +227,7 @@ export function HeatmapView() {
           />
         </>
       ) : (
-        <main className={styles.analyticsContent}>
+        <div className={styles.analyticsContent}>
           <PrivacyNote />
 
           <div className={styles.heatmapToolbar}>
@@ -342,7 +342,7 @@ export function HeatmapView() {
               />
             </div>
           )}
-        </main>
+        </div>
       )}
     </div>
   );

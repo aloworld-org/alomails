@@ -3644,3 +3644,47 @@
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
 }
+
+/* ---- phone widths (S2.16b) ----
+   The wave review walked the module at 360px. Six rules had a query already —
+   the schedule, protect, collaborator, copy-tone and AI composer panels, and
+   the editor's two columns — and the rest of the surface was written as if a
+   window were always wide. These are the layouts that cannot reflow on their
+   own: rows that are `display: flex` with no wrap push their last child off
+   the side rather than under it, and a two-column grid stays two columns at
+   any width, so a pair of fields ends up ~140px each with the label wrapping
+   to three lines. Nothing here changes the wide layout: `flex-wrap` only acts
+   once a row has actually run out of room. */
+@media (max-width: 40rem) {
+  /* Every screen's title bar, and the "PAGES / New page" bars under it. */
+  .header,
+  .sectionBar {
+    flex-wrap: wrap;
+  }
+  .headerActions {
+    margin-left: 0;
+  }
+  /* A site called after its owner, or a subdomain longer than the screen:
+     both are one unbroken word, which nothing but this will break. */
+  .title,
+  .mono {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  /* Paired fields in the dialogs — price and currency, width and height. */
+  .fieldRow,
+  .onboardingChoices,
+  .translationFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Source, arrow, translation, state — five columns of a review row. */
+  .translationReviewItem {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+  /* The table already scrolls sideways when it must; the page around it
+     should not also spend 48px of a 360px screen on its own margins. */
+  .tableWrap {
+    padding: 0 var(--space-4) var(--space-4);
+  }
+}

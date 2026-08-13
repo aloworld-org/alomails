@@ -343,7 +343,7 @@ export function CatalogsView() {
             ))}
           </aside>
 
-          <main className={styles.catalogEditor}>
+          <div className={styles.catalogEditor}>
             <section className={styles.catalogPanel} aria-labelledby="catalog-settings-title">
               <div className={styles.collectionPanelHead}>
                 <div>
@@ -562,7 +562,7 @@ export function CatalogsView() {
                 )}
               </section>
             )}
-          </main>
+          </div>
         </div>
       )}
 

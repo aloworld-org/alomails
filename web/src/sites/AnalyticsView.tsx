@@ -179,7 +179,7 @@ export function AnalyticsView() {
           />
         </>
       ) : report !== null ? (
-        <main className={styles.analyticsContent}>
+        <div className={styles.analyticsContent}>
           <PrivacyNote />
           <section className={styles.analyticsSummary} aria-label={strings.sitesAnalyticsSummary}>
             <article className={styles.analyticsMetric}>
@@ -301,7 +301,7 @@ export function AnalyticsView() {
               numbers={numbers}
             />
           </AnalyticsGroup>
-        </main>
+        </div>
       ) : null}
     </div>
   );

@@ -3,12 +3,13 @@
 // for. Choosing a tile hands the kind back — the prop form takes it from
 // there; nothing is written until that form saves.
 import { LayoutGrid, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 
 import { strings } from "../i18n";
 import { kindDescription, kindLabel } from "./sectionInfo";
 import { SECTION_KINDS } from "./sections";
 import type { SectionKind } from "./sections";
+import { useDialogKeyboard } from "./useDialogKeyboard";
 import styles from "./SitesModule.module.css";
 
 /** The schematic thumbnails, one per kind: not screenshots, just the shape a
@@ -210,17 +211,18 @@ export function SectionPicker({
   onPick: (kind: SectionKind) => void;
   onClose: () => void;
 }) {
+  const panel = useRef<HTMLDivElement>(null);
+  useDialogKeyboard(panel, onClose);
   return (
     <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
       <div
+        ref={panel}
         className={`${styles.modal} ${styles.pickerModal}`}
         role="dialog"
         aria-modal="true"
         aria-label={strings.sitesPickerTitle}
+        tabIndex={-1}
         onMouseDown={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onClose();
-        }}
       >
         <div className={styles.modalHead}>
           <span className={styles.modalIcon} aria-hidden="true">
@@ -234,7 +236,7 @@ export function SectionPicker({
             type="button"
             className={styles.modalClose}
             onClick={onClose}
-            aria-label={strings.sitesCancel}
+            aria-label={strings.close}
           >
             <X size={18} />
           </button>

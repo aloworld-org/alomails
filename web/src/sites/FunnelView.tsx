@@ -181,7 +181,7 @@ export function FunnelView() {
           onCta={() => navigate(`/sites/${encodeURIComponent(siteId)}`)}
         />
       ) : report !== null ? (
-        <main className={styles.analyticsContent}>
+        <div className={styles.analyticsContent}>
           <section className={styles.analyticsPanel} aria-label={strings.sitesFunnelChain}>
             <div className={styles.analyticsPanelHead}>
               <h2>{strings.sitesFunnelChain}</h2>
@@ -271,7 +271,7 @@ export function FunnelView() {
             </div>
             <p className={styles.analyticsNote}>{strings.sitesFunnelSumNote}</p>
           </section>
-        </main>
+        </div>
       ) : null}
     </div>
   );

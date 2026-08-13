@@ -295,7 +295,7 @@ export function BookingsView() {
             ))}
           </aside>
 
-          <main className={styles.catalogEditor}>
+          <div className={styles.catalogEditor}>
             <section className={styles.catalogPanel} aria-labelledby="booking-settings-title">
               <div className={styles.collectionPanelHead}>
                 <div>
@@ -696,7 +696,7 @@ export function BookingsView() {
                 )}
               </div>
             </section>
-          </main>
+          </div>
         </div>
       )}
     </div>

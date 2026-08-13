@@ -4,12 +4,13 @@
 // than imports from billing — the two modules belong to different tracks and
 // must not couple; promoting this dialog chrome into `ds` is a wave-review
 // candidate once three modules carry it.)
-import type { FormEvent, ReactNode } from "react";
+import { useRef, type FormEvent, type ReactNode } from "react";
 import { X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button } from "../ds";
+import { useDialogKeyboard } from "./useDialogKeyboard";
 import styles from "./SitesModule.module.css";
 
 /** A failure the page could not hide: shown, never swallowed. */
@@ -100,6 +101,8 @@ export function DialogFrame({
   onSubmit: () => void;
   children: ReactNode;
 }) {
+  const panel = useRef<HTMLFormElement>(null);
+  useDialogKeyboard(panel, onClose);
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!busy && canSubmit) onSubmit();
@@ -107,15 +110,14 @@ export function DialogFrame({
   return (
     <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
       <form
+        ref={panel}
         className={wide ? `${styles.modal} ${styles.modalWide}` : styles.modal}
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        tabIndex={-1}
         onSubmit={submit}
         onMouseDown={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onClose();
-        }}
       >
         <div className={styles.modalHead}>
           <span className={styles.modalIcon} aria-hidden="true">
@@ -129,7 +131,10 @@ export function DialogFrame({
             type="button"
             className={styles.modalClose}
             onClick={onClose}
-            aria-label={strings.sitesCancel}
+            // "Close", not "Cancel": the footer already carries a Cancel, and
+            // two controls with one name in one dialog is a list of identical
+            // choices to anybody reading it through the rotor. (S2.16b)
+            aria-label={strings.close}
           >
             <X size={18} />
           </button>
