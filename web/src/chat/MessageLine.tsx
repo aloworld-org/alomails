@@ -55,6 +55,7 @@ export function MessageLine({
   children?: ReactNode;
 }) {
   const namesMe = me !== null && message.mentions.includes(me);
+  const authoredByMe = me !== null && message.authorKind === "user" && message.author === me;
   const [picking, setPicking] = useState(false);
   const pickerRef = useRef<HTMLSpanElement | null>(null);
   const closePicker = useCallback(() => setPicking(false), []);
@@ -77,7 +78,7 @@ export function MessageLine({
   const reactable = palette.length > 0 && message.deletedAt === null;
   return (
     <article
-      className={`${namesMe ? mineClass : messageClass} ${grouped ? "mt-0 py-1" : ""}`}
+      className={`${authoredByMe ? mineClass : messageClass} ${grouped ? "mt-0 py-1" : ""}`}
     >
       {editing === null && (
         <div className="pointer-events-none absolute -top-4 right-2 z-10 flex gap-1 rounded-md border border-subtle bg-surface p-1 opacity-0 shadow-md transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
@@ -262,7 +263,7 @@ export function MessageLine({
         </form>
       ) : (
         <p
-          className={message.deletedAt === null ? `${bubbleClass} ${namesMe ? "bg--tint" : ""}` : `${bubbleClass} italic text-tertiary`}
+          className={message.deletedAt === null ? `${bubbleClass} ${authoredByMe ? "bg--soft" : namesMe ? "bg--tint" : ""}` : `${bubbleClass} italic text-tertiary`}
         >
           {message.deletedAt === null
             ? renderBody(message.body, withHandlesMarked)
@@ -336,4 +337,3 @@ export function MessageLine({
     </article>
   );
 }
-

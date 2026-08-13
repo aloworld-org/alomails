@@ -460,6 +460,19 @@ test("only my own standing words offer Edit and Withdraw", async () => {
   expect(screen.getAllByLabelText(strings.chatWithdrawAction)).toHaveLength(1);
 });
 
+test("my messages align right while other people's messages align left", async () => {
+  withMessages([
+    message({ id: "m-mine", seq: 1, author: ME, body: "my aligned words" }),
+    message({ id: "m-theirs", seq: 2, author: THEM, authorEmail: "ben@alo.test", body: "their aligned words" }),
+  ]);
+  mount();
+
+  const mine = (await screen.findByText("my aligned words")).closest("article");
+  const theirs = screen.getByText("their aligned words").closest("article");
+  expect(mine?.className).toContain("self-end");
+  expect(theirs?.className).not.toContain("self-end");
+});
+
 test("editing sends the new words, and an unchanged edit sends nothing", async () => {
   withMessages([
     message({ id: "m-mine", seq: 1, author: ME, body: "teh plan" }),
