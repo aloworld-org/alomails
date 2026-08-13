@@ -64,7 +64,7 @@ import type {
 import { useMeetApi } from "../meet";
 import type { Meeting } from "../meet";
 import { MeetRoom } from "../meet";
-import { EMOJI, searchEmoji } from "./emoji";
+import { EmojiPicker } from "./EmojiPicker";
 import {
   candidatesFor,
   channelLabel,
@@ -748,7 +748,6 @@ export function ChatModule() {
   // Derived, not stored: the list is a function of what is typed and where
   // the caret is, so it can never disagree with the composer.
   // Null while nothing is being searched for: the picker shows its groups.
-  const emojiHits = emojiQuery.trim() === "" ? null : searchEmoji(emojiQuery);
   // Every room, filtered by what has been typed â€” including archived ones,
   // because jumping to something old is exactly when you cannot find it in
   // the list.
@@ -1309,68 +1308,15 @@ export function ChatModule() {
                       <Smile size={18} />
                     </button>
                     {composerMenu === "emoji" && palette.length > 0 && (
-                      <div className={styles.emojiMenu}>
-                        <input
-                          className={styles.emojiSearch}
-                          value={emojiQuery}
-                          onChange={(event) =>
-                            setEmojiQuery(event.target.value)
-                          }
-                          placeholder={strings.chatEmojiSearch}
-                          aria-label={strings.chatEmojiSearch}
-                          autoComplete="off"
-                          autoFocus
-                        />
-                        <div className={styles.emojiScroll}>
-                          {emojiHits !== null ? (
-                            emojiHits.length === 0 ? (
-                              <p className={styles.emojiNone}>
-                                {strings.chatEmojiNone}
-                              </p>
-                            ) : (
-                              <div className={styles.emojiGrid}>
-                                {emojiHits.map((glyph) => (
-                                  <button
-                                    key={glyph}
-                                    type="button"
-                                    className={styles.pickerOption}
-                                    onClick={() => {
-                                      setComposerMenu(null);
-                                      setEmojiQuery("");
-                                      insertAtCaret(glyph);
-                                    }}
-                                  >
-                                    {glyph}
-                                  </button>
-                                ))}
-                              </div>
-                            )
-                          ) : (
-                            EMOJI.map((group) => (
-                              <div key={group.name}>
-                                <h4 className={styles.emojiHeading}>
-                                  {group.name}
-                                </h4>
-                                <div className={styles.emojiGrid}>
-                                  {group.items.map(([glyph]) => (
-                                    <button
-                                      key={glyph}
-                                      type="button"
-                                      className={styles.pickerOption}
-                                      onClick={() => {
-                                        setComposerMenu(null);
-                                        insertAtCaret(glyph);
-                                      }}
-                                    >
-                                      {glyph}
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
+                      <EmojiPicker
+                        query={emojiQuery}
+                        onQuery={setEmojiQuery}
+                        onChoose={(emoji) => {
+                          setComposerMenu(null);
+                          setEmojiQuery("");
+                          insertAtCaret(emoji);
+                        }}
+                      />
                     )}
                   </span>
                 </div>
