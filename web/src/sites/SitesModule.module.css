@@ -764,6 +764,65 @@
   color: var(--text-secondary);
   padding: 0 var(--space-1);
 }
+/* ---- the custom-code block's editor ---- */
+/* The boundary sits above the first field, in the accent tint rather than the
+   danger red: this is a capability being explained, not a mistake being
+   reported. */
+.codeBoundary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: var(--border-width) solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--accent-tint);
+}
+.codeBoundaryTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.codeBoundaryList {
+  margin: 0;
+  padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  color: var(--text-secondary);
+}
+.codeArea {
+  min-height: 132px;
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+}
+.codeBudget {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+.codeBudgetOver {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--danger);
+  font-variant-numeric: tabular-nums;
+}
+.codeCapabilityNote {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  color: var(--danger);
+}
+
 .itemsEditor {
   display: flex;
   flex-direction: column;

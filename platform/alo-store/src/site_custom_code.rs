@@ -625,6 +625,25 @@ mod tests {
         assert!(!back.contains("capabilities"), "{back}");
     }
 
+    /// The editor states every capability, including the denied ones, rather
+    /// than leaving them out (`web/src/sites/CustomCodeFields.tsx`): a switch
+    /// a person turned off should reach the server as "off", not as silence.
+    /// Both spellings mean the same thing here, and neither may become a
+    /// refusal — the switches are the only way a block is authored.
+    #[test]
+    fn the_editors_explicit_denials_mean_the_same_as_saying_nothing() {
+        let parsed: CustomCodeSection = serde_json::from_str(
+            r#"{"title":"Opening hours","html":"<p>Open until six</p>",
+                "css":"p { font-weight: 700; }",
+                "capabilities":{"scripts":false,"inline_images":false},
+                "height_px":180}"#,
+        )
+        .unwrap();
+        assert_eq!(parsed.capabilities, CustomCodeCapabilities::default());
+        parsed.validate().unwrap();
+        assert_eq!(parsed.capabilities.sandbox_attribute(), "");
+    }
+
     #[test]
     fn an_unknown_capability_is_refused_rather_than_ignored() {
         let error = serde_json::from_str::<CustomCodeSection>(

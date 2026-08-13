@@ -37,6 +37,8 @@ export function kindLabel(kind: SectionKind): string {
       return strings.sitesSectionCatalog;
     case "booking":
       return strings.sitesSectionBooking;
+    case "custom_code":
+      return strings.sitesSectionCustomCode;
     case "footer":
       return strings.sitesSectionFooter;
   }
@@ -73,6 +75,8 @@ export function kindDescription(kind: SectionKind): string {
       return strings.sitesSectionCatalogDesc;
     case "booking":
       return strings.sitesSectionBookingDesc;
+    case "custom_code":
+      return strings.sitesSectionCustomCodeDesc;
     case "footer":
       return strings.sitesSectionFooterDesc;
   }
@@ -122,6 +126,10 @@ export function sectionSummary(section: Section): string {
       );
     case "booking":
       return section.heading ?? strings.sitesSectionBooking;
+    case "custom_code":
+      // The frame's accessible name is what a visitor is told this block is,
+      // so it is also the honest line for the card when there is no heading.
+      return clip(section.heading ?? section.title);
     case "footer":
       return section.text ?? strings.sitesCountLinks(section.links.length);
   }

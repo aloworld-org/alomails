@@ -52,6 +52,7 @@ import type {
 import { sitesMessage, useSitesApi } from "./api";
 import { CopyContext, useCopyContext } from "./copyContext";
 import type { CopyContextValue } from "./copyContext";
+import { CustomCodeFields } from "./CustomCodeFields";
 import { ImageFields } from "./ImageFields";
 import { DialogFrame, Field } from "./parts";
 import styles from "./SitesModule.module.css";
@@ -1125,6 +1126,11 @@ function FormFields({ draft, onChange }: { draft: SectionDraft; onChange: Change
       return <CatalogFields draft={draft} onChange={onChange} />;
     case "booking":
       return <BookingFields draft={draft} onChange={onChange} />;
+    case "custom_code":
+      // No copy tools anywhere in this form: the assistant refuses to write
+      // or change code by name (`alo-ai`'s sites module), so offering the
+      // affordance would only produce a refusal.
+      return <CustomCodeFields draft={draft} onChange={onChange} />;
     case "footer":
       return <FooterFields draft={draft} onChange={onChange} />;
   }

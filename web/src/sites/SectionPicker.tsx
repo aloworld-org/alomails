@@ -1,4 +1,4 @@
-// The add-section picker: a grid of the fifteen section types, each tile a
+// The add-section picker: a grid of the sixteen section types, each tile a
 // small schematic thumbnail with the type's name and one line on what it is
 // for. Choosing a tile hands the kind back — the prop form takes it from
 // there; nothing is written until that form saves.
@@ -163,6 +163,31 @@ function thumbnail(kind: SectionKind): ReactNode {
           <rect x="36" y="10" width="24" height="4" rx="2" opacity="0.7" />
           <rect x="36" y="19" width="24" height="3" rx="1.5" opacity="0.45" />
           <rect x="36" y="27" width="14" height="6" rx="3" opacity="0.7" />
+        </>
+      );
+    case "custom_code":
+      // A framed box with brackets in it: the block is code, and the frame
+      // around it is the point rather than decoration.
+      return (
+        <>
+          <rect
+            x="6"
+            y="6"
+            width="52"
+            height="28"
+            rx="3"
+            fill="none"
+            stroke="currentColor"
+            strokeDasharray="4 3"
+            opacity="0.6"
+          />
+          <path
+            d="M24 15 L18 20 L24 25 M40 15 L46 20 L40 25"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          />
+          <rect x="30" y="13" width="4" height="14" rx="2" opacity="0.45" />
         </>
       );
     case "footer":

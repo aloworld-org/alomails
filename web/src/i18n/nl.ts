@@ -4745,6 +4745,52 @@ export const nl: Partial<Catalog> = {
     "Koppel een tabel voordat u deze sectie toevoegt",
   sitesCollectionSectionNoConnectionsHint:
     "De collectie blijft herbruikbaar, zodat dezelfde Base meerdere pagina's kan voeden.",
+
+  // Het blok met eigen code, afgesloten in een verzegeld kader (S2.14b).
+  sitesSectionCustomCode: "Eigen code",
+  sitesSectionCustomCodeDesc:
+    "Uw eigen HTML, CSS en JavaScript, verzegeld in een kader zonder uitweg.",
+  sitesCustomCodeBoundaryTitle: "Wat dit blok wel en niet kan",
+  sitesCustomCodeBoundarySealed:
+    "Het draait afgesloten van uw site: het kan de pagina eromheen niet lezen, uw bezoekers niet, en ook niet wat zij elders hebben ingevuld.",
+  sitesCustomCodeBoundaryNoNetwork:
+    "Het heeft geen netwerk. Er wordt niets van een ander adres geladen — geen insluiting, geen lettertype, geen meetscript — en juist daardoor blijft deze site zonder cookiebanner.",
+  sitesCustomCodeBoundaryYours:
+    "Het is uw code, gepubliceerd precies zoals u die hebt geschreven. Wij controleren niet wat die doet, en de assistent schrijft of wijzigt die niet.",
+  sitesCustomCodeHeadingHint:
+    "Wordt door de pagina boven het blok getoond, in de typografie van uw site. Laat leeg voor een blok dat op zichzelf staat.",
+  sitesCustomCodeFrameTitle: "Wat dit blok is",
+  sitesCustomCodeFrameTitleHint:
+    "Wordt voorgelezen aan bezoekers met een schermlezer: \"Een timer voor de branding die nu loopt\", niet \"kader\".",
+  sitesCustomCodeHtml: "Opmaak",
+  sitesCustomCodeHtmlHint:
+    "De inhoud van het blok. Het document eromheen — het beleid, de stijl- en scriptblokken — wordt voor u geschreven.",
+  sitesCustomCodeCss: "Stijl",
+  sitesCustomCodeCssHint: "Geldt alleen binnen dit blok. Optioneel.",
+  sitesCustomCodeJs: "Script",
+  sitesCustomCodeJsHint:
+    "Draait alleen binnen dit blok, op het apparaat van de bezoeker.",
+  sitesCustomCodeCapabilities: "Wat het blok mag",
+  sitesCustomCodeCapabilitiesHint:
+    "Alles staat uit tot u het aanzet, en alleen deze twee kunnen aan.",
+  sitesCustomCodeScripts: "Een script uitvoeren",
+  sitesCustomCodeScriptsHint:
+    "Zonder dit is het blok opmaak en stijl: er wordt niets uitgevoerd, wat er ook in staat.",
+  sitesCustomCodeScriptMissing:
+    "Er is nog geen script om uit te voeren. Schrijf er een of zet dit uit — een recht zonder iets erachter wordt geweigerd.",
+  sitesCustomCodeScriptDropped:
+    "Uitgezet, dus het script hieronder wordt niet met het blok opgeslagen. Zet het weer aan om het te behouden.",
+  sitesCustomCodeImages: "Afbeeldingen in de opmaak tonen",
+  sitesCustomCodeImagesHint:
+    "Voor een afbeelding die in de opmaak zelf staat. Een afbeelding van een adres kan nog steeds niet laden — gebruik daarvoor een afbeeldingssectie.",
+  sitesCustomCodeHeight: "Hoogte op de pagina (pixels)",
+  sitesCustomCodeHeightHint:
+    "Een verzegeld blok kan van buitenaf niet worden opgemeten, dus geeft u de hoogte op. Tussen 40 en 2000.",
+  sitesCustomCodeBytes: (used: number, max: number) => `${used} van ${max} bytes`,
+  sitesCustomCodeBytesOver: (used: number, max: number) =>
+    `${used} van ${max} bytes — te lang om op te slaan`,
+  sitesCustomCodeTotalBytes: (used: number, max: number) =>
+    `${used} van ${max} bytes in dit blok in totaal`,
   appLauncherAutoHint:
     "De apps die u het meest gebruikt, automatisch bijgehouden",
   meetTitle: "Vergadering",

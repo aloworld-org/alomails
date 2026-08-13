@@ -157,6 +157,26 @@ export interface BookingDraft {
   heading: string;
 }
 
+/** A custom-code block while it is being written. The script is held even
+ *  while the capability that runs it is switched off, so turning the switch
+ *  back on does not cost the code that was typed — but a saved block never
+ *  carries a script it is not allowed to run: `toSection` sends the two
+ *  together or neither, which is the biconditional the server checks. */
+export interface CustomCodeDraft {
+  type: "custom_code";
+  heading: string;
+  title: string;
+  html: string;
+  css: string;
+  js: string;
+  scripts: boolean;
+  inline_images: boolean;
+  /** As typed, so the number field can be emptied mid-edit. A value that is
+   *  not a number is sent as one the server refuses by its own rule, rather
+   *  than being silently corrected here. */
+  height: string;
+}
+
 export interface FooterDraft {
   type: "footer";
   text: string;
@@ -179,7 +199,13 @@ export type SectionDraft =
   | CollectionDraft
   | CatalogDraft
   | BookingDraft
+  | CustomCodeDraft
   | FooterDraft;
+
+/** The height a new block starts at: tall enough to show something, short
+ *  enough that an empty one does not push the rest of the page off screen. A
+ *  required field never starts blank. */
+export const DEFAULT_CUSTOM_CODE_HEIGHT_PX = 320;
 
 export const blankLink = (): SectionLink => ({ label: "", href: "" });
 export const blankImage = (): SectionImage => ({ blob_id: "", alt: "" });
@@ -380,6 +406,20 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         heading: s?.heading ?? "",
       };
     }
+    case "custom_code": {
+      const s = from as Section & { type: "custom_code" } | undefined;
+      return {
+        type: "custom_code",
+        heading: s?.heading ?? "",
+        title: s?.title ?? "",
+        html: s?.html ?? "",
+        css: s?.css ?? "",
+        js: s?.js ?? "",
+        scripts: s?.capabilities?.scripts ?? false,
+        inline_images: s?.capabilities?.inline_images ?? false,
+        height: String(s?.height_px ?? DEFAULT_CUSTOM_CODE_HEIGHT_PX),
+      };
+    }
     case "footer": {
       const s = from as Section & { type: "footer" } | undefined;
       return { type: "footer", text: s?.text ?? "", links: seeded(s?.links ?? [], blankLink) };
@@ -420,6 +460,15 @@ const reqImage = (image: SectionImage): SectionImage => ({
   blob_id: image.blob_id.trim(),
   alt: image.alt.trim(),
 });
+
+/** The frame height as the wire carries it. Anything a height cannot be —
+ *  blank, a word, a negative, past the wire's `u16` — is sent as 0, so the
+ *  server answers by naming the allowed range instead of failing to parse the
+ *  envelope at all. */
+function heightPx(typed: string): number {
+  const value = Number.parseInt(typed.trim(), 10);
+  return Number.isInteger(value) && value >= 0 && value <= 65_535 ? value : 0;
+}
 
 /** Rows the user added but never touched are dropped, not sent as errors. */
 function pruned<T>(items: T[], isBlank: (item: T) => boolean): T[] {
@@ -556,6 +605,22 @@ export function toSection(draft: SectionDraft): Section {
         booking_id: req(draft.booking_id),
         heading: opt(draft.heading),
       };
+    case "custom_code": {
+      // A script is stored only together with the capability that runs it:
+      // switching scripts off saves the block without its script rather than
+      // saving bytes the browser is forbidden to execute.
+      const js = draft.scripts ? opt(draft.js) : undefined;
+      return {
+        type: "custom_code",
+        heading: opt(draft.heading),
+        title: req(draft.title),
+        html: draft.html.trim(),
+        css: opt(draft.css),
+        js,
+        capabilities: { scripts: draft.scripts, inline_images: draft.inline_images },
+        height_px: heightPx(draft.height),
+      };
+    }
     case "footer":
       return {
         type: "footer",

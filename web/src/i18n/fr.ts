@@ -4806,6 +4806,52 @@ export const fr: Partial<Catalog> = {
     "Connectez une table avant d'ajouter cette section",
   sitesCollectionSectionNoConnectionsHint:
     "La collection reste réutilisable : la même Base peut alimenter plusieurs pages.",
+
+  // Le bloc de code personnalisé, isolé dans un cadre scellé (S2.14b).
+  sitesSectionCustomCode: "Code personnalisé",
+  sitesSectionCustomCodeDesc:
+    "Votre propre HTML, CSS et JavaScript, scellé dans un cadre sans issue.",
+  sitesCustomCodeBoundaryTitle: "Ce que ce bloc peut et ne peut pas faire",
+  sitesCustomCodeBoundarySealed:
+    "Il s’exécute isolé de votre site : il ne peut lire ni la page qui l’entoure, ni vos visiteurs, ni ce qu’ils ont saisi ailleurs.",
+  sitesCustomCodeBoundaryNoNetwork:
+    "Il n’a aucun accès réseau. Rien ne se charge depuis une autre adresse — ni intégration, ni police, ni script de mesure — et c’est ce qui évite à ce site toute bannière de cookies.",
+  sitesCustomCodeBoundaryYours:
+    "C’est votre code, publié exactement tel que vous l’avez écrit. Nous ne vérifions pas ce qu’il fait, et l’assistant ne l’écrira ni ne le modifiera.",
+  sitesCustomCodeHeadingHint:
+    "Affiché par la page au-dessus du bloc, dans la typographie de votre site. Laissez vide pour un bloc qui se suffit à lui-même.",
+  sitesCustomCodeFrameTitle: "Ce qu’est ce bloc",
+  sitesCustomCodeFrameTitleHint:
+    "Lu à voix haute aux visiteurs qui utilisent un lecteur d’écran : « Un minuteur pour la torréfaction en cours », et non « cadre ».",
+  sitesCustomCodeHtml: "Balisage",
+  sitesCustomCodeHtmlHint:
+    "Le corps du bloc. Le document qui l’entoure — sa politique, ses blocs de style et de script — est écrit pour vous.",
+  sitesCustomCodeCss: "Style",
+  sitesCustomCodeCssHint: "Ne s’applique qu’à l’intérieur de ce bloc. Facultatif.",
+  sitesCustomCodeJs: "Script",
+  sitesCustomCodeJsHint:
+    "Ne s’exécute qu’à l’intérieur de ce bloc, sur l’appareil du visiteur.",
+  sitesCustomCodeCapabilities: "Ce que le bloc a le droit de faire",
+  sitesCustomCodeCapabilitiesHint:
+    "Tout est désactivé tant que vous ne l’activez pas, et seules ces deux autorisations existent.",
+  sitesCustomCodeScripts: "Exécuter un script",
+  sitesCustomCodeScriptsHint:
+    "Sans cela, le bloc n’est que balisage et style : rien ne s’y exécute, quoi qu’il contienne.",
+  sitesCustomCodeScriptMissing:
+    "Il n’y a encore aucun script à exécuter. Écrivez-en un ou désactivez cette option : une autorisation sans rien derrière est refusée.",
+  sitesCustomCodeScriptDropped:
+    "Option désactivée : le script ci-dessous ne sera pas enregistré avec le bloc. Réactivez-la pour le conserver.",
+  sitesCustomCodeImages: "Afficher les images contenues dans le balisage",
+  sitesCustomCodeImagesHint:
+    "Pour une image écrite directement dans le balisage. Une image provenant d’une adresse ne peut toujours pas se charger — utilisez une section image pour cela.",
+  sitesCustomCodeHeight: "Hauteur sur la page (pixels)",
+  sitesCustomCodeHeightHint:
+    "Un bloc scellé ne peut pas être mesuré de l’extérieur : c’est donc vous qui indiquez sa hauteur. Entre 40 et 2000.",
+  sitesCustomCodeBytes: (used: number, max: number) => `${used} octets sur ${max}`,
+  sitesCustomCodeBytesOver: (used: number, max: number) =>
+    `${used} octets sur ${max} — trop long pour être enregistré`,
+  sitesCustomCodeTotalBytes: (used: number, max: number) =>
+    `${used} octets sur ${max} pour l’ensemble du bloc`,
   appLauncherAutoHint:
     "Les applications que vous utilisez le plus, tenues à jour automatiquement",
   meetTitle: "Réunion",

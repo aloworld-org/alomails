@@ -5504,6 +5504,53 @@ export const en = {
   sitesCollectionSectionNoConnectionsHint:
     "The collection stays reusable, so the same Base can power more than one page.",
 
+  // The sandboxed custom-code block (S2.14b). The words do the work the CSP
+  // does: they say what the frame stops before the first line is written, so
+  // nobody pastes an embed and discovers at publish time that it cannot load.
+  sitesSectionCustomCode: "Custom code",
+  sitesSectionCustomCodeDesc:
+    "Your own HTML, CSS and JavaScript, sealed in a frame with no way out.",
+  sitesCustomCodeBoundaryTitle: "What this block can and cannot do",
+  sitesCustomCodeBoundarySealed:
+    "It runs sealed off from your site: it cannot read the page around it, your visitors, or anything they typed elsewhere.",
+  sitesCustomCodeBoundaryNoNetwork:
+    "It has no network. Nothing loads from another address — no embed, no font, no analytics script — which is what keeps this site free of a cookie banner.",
+  sitesCustomCodeBoundaryYours:
+    "It is your code, published exactly as you wrote it. We do not check what it does, and the assistant will not write or change it.",
+  sitesCustomCodeHeadingHint:
+    "Shown by the page above the block, in your site's own type. Leave it empty for a block that stands alone.",
+  sitesCustomCodeFrameTitle: "What this block is",
+  sitesCustomCodeFrameTitleHint:
+    "Read aloud to visitors using a screen reader — \"A timer counting down the current roast\", not \"frame\".",
+  sitesCustomCodeHtml: "Markup",
+  sitesCustomCodeHtmlHint:
+    "The body of the block. The document around it — its policy, its style and script blocks — is written for you.",
+  sitesCustomCodeCss: "Style",
+  sitesCustomCodeCssHint: "Applies inside this block only. Optional.",
+  sitesCustomCodeJs: "Script",
+  sitesCustomCodeJsHint: "Runs inside this block only, on the visitor's device.",
+  sitesCustomCodeCapabilities: "What the block is allowed to do",
+  sitesCustomCodeCapabilitiesHint:
+    "Everything is off until you turn it on, and only these two can be turned on.",
+  sitesCustomCodeScripts: "Run a script",
+  sitesCustomCodeScriptsHint:
+    "Without this the block is markup and style: nothing in it executes, whatever it says.",
+  sitesCustomCodeScriptMissing:
+    "There is no script to run yet. Write one, or switch this off — a permission with nothing behind it is refused.",
+  sitesCustomCodeScriptDropped:
+    "Switched off, so the script below is not saved with the block. Switch it back on to keep it.",
+  sitesCustomCodeImages: "Show images carried in the markup",
+  sitesCustomCodeImagesHint:
+    "For a picture written into the markup itself. A picture from an address still cannot load — use an image section for those.",
+  sitesCustomCodeHeight: "Height on the page (pixels)",
+  sitesCustomCodeHeightHint:
+    "A sealed block cannot be measured from the outside, so you say how tall it is. Between 40 and 2000.",
+  sitesCustomCodeBytes: (used: number, max: number) => `${used} of ${max} bytes`,
+  sitesCustomCodeBytesOver: (used: number, max: number) =>
+    `${used} of ${max} bytes — too long to save`,
+  sitesCustomCodeTotalBytes: (used: number, max: number) =>
+    `${used} of ${max} bytes in this block altogether`,
+
   // The one approvals inbox (B6.07) — leave, expense claims and timesheet weeks
   // in one list. The words are the approver's, not the system's: what is
   // waiting is "time off", "a claim", "a week", and the person who handed it in

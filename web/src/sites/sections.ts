@@ -1,5 +1,5 @@
 // The TypeScript mirror of the sections schema v1 — the closed vocabulary of
-// fifteen section types a page is stacked from, exactly as the server's
+// sixteen section types a page is stacked from, exactly as the server's
 // `site_model` speaks it on the wire (`type`-tagged, snake_case props,
 // absent optionals as absent keys). This file changes only when the schema
 // version does; it carries NO validation — the store rules on every write and
@@ -202,6 +202,39 @@ export interface BookingSection {
   heading?: string | undefined;
 }
 
+/** What the sandboxed frame around a custom-code block may do. Every field is
+ *  default-deny, and the set is deliberately small: neither capability opens a
+ *  network, and none of them ever will (`site_custom_code.rs`). Absent on the
+ *  wire when nothing is granted. */
+export interface CustomCodeCapabilities {
+  /** The block's `js` runs. Declared exactly when there is a script to run —
+   *  the server refuses a script without it AND it without a script. */
+  scripts: boolean;
+  /** `data:` images decode inside the frame. Never a URL; there is nothing to
+   *  fetch from. */
+  inline_images: boolean;
+}
+
+/** The tenant's own HTML, CSS and JavaScript, published inside a sandboxed
+ *  frame. The three parts are stored apart — a `<script>` in the markup is a
+ *  refusal, not a surprise — and the document around them (its doctype, its
+ *  `Content-Security-Policy`, its `<style>` and `<script>`) is assembled by the
+ *  renderer, never here. `height_px` is authored because a frame with an opaque
+ *  origin cannot be measured from the page around it. */
+export interface CustomCodeSection {
+  type: "custom_code";
+  /** Rendered by the PAGE, above the frame, in the site's own type. */
+  heading?: string | undefined;
+  /** The frame's accessible name. Required: a frame without one is announced
+   *  as "frame" and nothing else. */
+  title: string;
+  html: string;
+  css?: string | undefined;
+  js?: string | undefined;
+  capabilities?: CustomCodeCapabilities | undefined;
+  height_px: number;
+}
+
 /** The page footer. */
 export interface FooterSection {
   type: "footer";
@@ -225,12 +258,13 @@ export type Section =
   | CollectionSection
   | CatalogSection
   | BookingSection
+  | CustomCodeSection
   | FooterSection;
 
 /** A section's wire tag. */
 export type SectionKind = Section["type"];
 
-/** The fifteen kinds in their natural page order — the picker's order. */
+/** The sixteen kinds in their natural page order — the picker's order. */
 export const SECTION_KINDS: readonly SectionKind[] = [
   "nav",
   "hero",
@@ -246,6 +280,7 @@ export const SECTION_KINDS: readonly SectionKind[] = [
   "collection",
   "catalog",
   "booking",
+  "custom_code",
   "footer",
 ];
 
