@@ -928,6 +928,73 @@ impl Store {
         rows.into_iter().map(DueRow::into_due).collect()
     }
 
+    /// Who approved this purchase — the person whose door a machine acts
+    /// through when it finishes what they started.
+    ///
+    /// The payment bridge that settles a charge and the registration sweep that
+    /// attaches a bought name both hold a tenant and a purchase and no user at
+    /// all, and a system that writes as nobody is a system whose audit trail
+    /// says nobody. The approver is the honest answer: they agreed to this
+    /// exact price, and everything that follows follows from that.
+    ///
+    /// System-level like the sweep, and tenant-checked exactly as hard: another
+    /// tenant's purchase is [`StoreError::NotFound`]. A purchase nobody has
+    /// approved is the same — there is no user to act as, which is precisely
+    /// the situation where acting would be wrong.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the purchase isn't that tenant's or has no
+    /// approver; [`StoreError::Db`].
+    pub async fn site_domain_purchase_approver(
+        &self,
+        tenant: &TenantId,
+        purchase: &SiteDomainPurchaseId,
+    ) -> Result<UserId> {
+        let approver: Option<Option<String>> = sqlx::query_scalar(
+            "SELECT approved_by FROM site_domain_purchases WHERE tenant_id = $1 AND id = $2",
+        )
+        .bind(tenant.as_str())
+        .bind(purchase.as_str())
+        .fetch_optional(self.pool())
+        .await
+        .map_err(StoreError::Db)?;
+        approver
+            .flatten()
+            .map(UserId::new)
+            .ok_or(StoreError::NotFound)
+    }
+
+    /// The purchase a payment settles, found the way the bridge that took the
+    /// money knows it: by the reference it minted.
+    ///
+    /// One payment settles one purchase — the unique index on
+    /// `(tenant_id, payment_reference)` is that promise in the schema — so this
+    /// resolves to at most one row, and a reference this tenant is not waiting
+    /// for is [`StoreError::NotFound`] rather than a guess at what was meant.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`]; [`StoreError::Validation`] for a malformed
+    /// reference; [`StoreError::Db`]; [`StoreError::Conflict`] if a stored
+    /// token is unreadable.
+    pub async fn site_domain_purchase_awaiting_payment(
+        &self,
+        tenant: &TenantId,
+        payment_reference: &str,
+    ) -> Result<SiteDomainPurchase> {
+        let reference = validate_payment_reference(payment_reference)?;
+        let row = sqlx::query_as::<_, PurchaseRow>(&format!(
+            "SELECT {PURCHASE_COLUMNS} FROM site_domain_purchases \
+             WHERE tenant_id = $1 AND payment_reference = $2"
+        ))
+        .bind(tenant.as_str())
+        .bind(&reference)
+        .fetch_optional(self.pool())
+        .await
+        .map_err(StoreError::Db)?
+        .ok_or(StoreError::NotFound)?;
+        row.into_purchase()
+    }
+
     /// Writes the registrar's answer onto a claimed purchase: it is registered,
     /// and here is the provider's own reference, the expiry it counted and the
     /// name's lifecycle.

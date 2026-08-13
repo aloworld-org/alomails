@@ -31,6 +31,30 @@
 //! AI paths established (S1.28a) and the buy box branches on, rather than a
 //! screen that fails at the price.
 //!
+//! # The payment handoff (S2.15c2)
+//!
+//! Two doors, deliberately on opposite sides of the money.
+//!
+//! [`checkout_purchase`] is the tenant's: it records the opaque reference
+//! whatever charges them minted, and moves an approved purchase to
+//! `awaiting_payment`. Recording a reference charges nobody, so it sits behind
+//! the same site-owner guard as the rest of this surface.
+//!
+//! [`settle_payment`] is **not** the tenant's. "The money arrived" is the one
+//! statement a buyer may not make about their own purchase — it is what puts
+//! the purchase in the registration sweep's queue, and a tenant who could say
+//! it would register domains nobody paid for. So it is a machine door: no user
+//! token, a deployment secret in `X-Alo-Settlement` instead
+//! ([`SiteDomainCommerce::settlement_secret`], from
+//! `SITE_PAYMENT_SETTLEMENT_SECRET`), and the payment reference — unique per
+//! tenant by index — as the key naming what settled. With the secret unset the
+//! door is `503 unconfigured`, never open: a deployment that has wired no
+//! payment bridge settles nothing.
+//!
+//! The settlement is still written through a person's door — the one who
+//! approved that exact price ([`alo_store::Store::site_domain_purchase_approver`]) —
+//! because a row that says a machine did it is a row that says nobody did.
+//!
 //! Error contract, otherwise identical to the rest of `/sites/*`: `401`
 //! unauthenticated, `404` for a site or purchase that does not resolve in the
 //! caller's tenant, `422` for a rule the caller can fix (with the store's or
@@ -74,10 +98,23 @@ const SITE_NAMESERVERS_ENV: &str = "SITE_NAMESERVERS";
 /// deployment guess.
 const SITE_REGISTRAR_ENV: &str = "SITE_REGISTRAR";
 
-/// The two deployment facts domain buying needs, resolved once when the router
-/// is built: who registers the names, and which nameservers they answer from.
+/// Environment variable holding the secret the payment bridge presents to
+/// [`settle_payment`]. Unset — the default, and what production holds — means
+/// no charge can be declared settled at all.
+const SITE_PAYMENT_SETTLEMENT_SECRET_ENV: &str = "SITE_PAYMENT_SETTLEMENT_SECRET";
+
+/// Shortest settlement secret this door will honour. Short enough to type,
+/// long enough that guessing it is not a way to acquire domains.
+const SETTLEMENT_SECRET_MIN: usize = 24;
+
+/// The header the payment bridge carries its secret in.
+const SETTLEMENT_HEADER: &str = "x-alo-settlement";
+
+/// The deployment facts domain buying needs, resolved once when the router is
+/// built: who registers the names, which nameservers they answer from, and the
+/// secret that lets a payment bridge say a charge settled.
 ///
-/// A struct rather than two `Extension`s so a test builds one value with a
+/// A struct rather than three `Extension`s so a test builds one value with a
 /// fixture registrar and its own nameservers, and reads no environment at all
 /// — process-wide environment mutation is not a thing a test suite can do
 /// safely on several threads.
@@ -88,6 +125,9 @@ pub struct SiteDomainCommerce {
     /// The nameservers every registration is created with, in order. Empty
     /// disables buying while leaving prices readable.
     pub nameservers: Vec<String>,
+    /// What the payment bridge must present to settle a charge. `None` — the
+    /// default — closes the door entirely rather than opening it to everybody.
+    pub settlement_secret: Option<String>,
 }
 
 impl SiteDomainCommerce {
@@ -116,7 +156,21 @@ impl SiteDomainCommerce {
                 .map(|host| host.trim().to_ascii_lowercase())
                 .filter(|host| !host.is_empty())
                 .collect(),
+            // A secret too short to be one is treated as absent: the door
+            // stays shut, which is the safe reading of a misconfiguration
+            // whose other reading hands out domains.
+            settlement_secret: std::env::var(SITE_PAYMENT_SETTLEMENT_SECRET_ENV)
+                .ok()
+                .filter(|secret| secret.len() >= SETTLEMENT_SECRET_MIN),
         }
+    }
+
+    /// Whether this deployment can register anything at all — the gate the
+    /// registration sweep is started behind, so an installation that sells no
+    /// domains also runs no worker for them.
+    #[must_use]
+    pub fn sells_domains(&self) -> bool {
+        !self.nameservers.is_empty()
     }
 }
 
@@ -125,6 +179,7 @@ impl Default for SiteDomainCommerce {
         Self {
             registrar: Arc::new(UnconfiguredRegistrar),
             nameservers: Vec::new(),
+            settlement_secret: None,
         }
     }
 }
@@ -607,6 +662,133 @@ pub async fn approve_purchase(
         .await
         .map_err(map_store_err)?;
     Ok(Json(purchase_json(&approved)))
+}
+
+#[derive(Deserialize)]
+struct CheckoutBody {
+    /// What the charge is called by whatever charges the tenant. Opaque here.
+    #[serde(rename = "paymentReference")]
+    payment_reference: String,
+}
+
+/// `POST /sites/:id/domain-purchases/:purchase/checkout`
+/// `{"paymentReference":"…"}` hands the approved purchase to a payment.
+///
+/// The reference is Billing's — or that of whatever payment bridge a
+/// deployment wires — and is stored verbatim, never parsed: how a tenant is
+/// charged is not this module's business, and its only interest in the
+/// reference is that one payment settles one purchase.
+///
+/// Nothing here says money moved. The purchase reaches `awaiting_payment` and
+/// waits for [`settle_payment`], on the other side of the door, to say that it
+/// did.
+pub async fn checkout_purchase(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((id, purchase)): Path<(String, String)>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let site = SiteId::new(id);
+    require_purchasing_site(&account, &site).await?;
+    let body: CheckoutBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let purchase = load_purchase(&account, &site, &purchase).await?;
+    let awaiting = account
+        .acc
+        .await_site_domain_payment(&purchase.id, &body.payment_reference)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(purchase_json(&awaiting)))
+}
+
+#[derive(Deserialize)]
+struct SettleBody {
+    /// Whose charge settled. The bridge knows it; a browser has no business
+    /// naming it.
+    tenant: String,
+    /// The reference the bridge minted at checkout — unique per tenant, so it
+    /// names exactly one purchase.
+    #[serde(rename = "paymentReference")]
+    payment_reference: String,
+}
+
+/// `POST /sites/domain-payments/settle` `{"tenant":"…","paymentReference":"…"}`
+/// records that a charge arrived, which is what queues the registration.
+///
+/// The machine door of this module (see the header): no user token, the
+/// deployment's settlement secret in `X-Alo-Settlement` instead. A tenant may
+/// not declare their own payment settled, because that statement is worth a
+/// domain.
+///
+/// Repeating it is harmless — the store returns the already-settled purchase —
+/// so a bridge that delivers its webhook twice registers one name.
+pub async fn settle_payment(
+    State(state): State<AppState>,
+    Extension(commerce): Extension<SiteDomainCommerce>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let Some(expected) = commerce.settlement_secret.as_deref() else {
+        return Err(unconfigured());
+    };
+    let presented = headers
+        .get(SETTLEMENT_HEADER)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    if !secret_matches(expected, presented) {
+        return Err(Problem::with(
+            StatusCode::UNAUTHORIZED,
+            "This door is for the payment bridge of this alo deployment.",
+        ));
+    }
+    let body: SettleBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let tenant = alo_store::TenantId::new(body.tenant);
+    let purchase = state
+        .store
+        .site_domain_purchase_awaiting_payment(&tenant, &body.payment_reference)
+        .await
+        .map_err(map_settlement_err)?;
+    // Through the door of the person who approved this exact price: a
+    // settlement written by nobody is a settlement nobody can be asked about.
+    let approver = state
+        .store
+        .site_domain_purchase_approver(&tenant, &purchase.id)
+        .await
+        .map_err(map_settlement_err)?;
+    let settled = state
+        .store
+        .for_account(tenant, approver)
+        .settle_site_domain_payment(&purchase.id, &body.payment_reference)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(purchase_json(&settled)))
+}
+
+/// Whether the presented secret is the configured one, compared without
+/// leaking where it first differs.
+fn secret_matches(expected: &str, presented: &str) -> bool {
+    if expected.len() != presented.len() {
+        return false;
+    }
+    expected
+        .bytes()
+        .zip(presented.bytes())
+        .fold(0u8, |differs, (a, b)| differs | (a ^ b))
+        == 0
+}
+
+/// A settlement that resolves to nothing is one `404`, whatever part of it was
+/// wrong: a bridge holding the deployment secret is not a caller we need to
+/// help tell a wrong tenant from an unknown reference, and a door that did
+/// would answer questions about which tenants exist.
+fn map_settlement_err(error: alo_store::StoreError) -> Problem {
+    match error {
+        alo_store::StoreError::NotFound => Problem::with(
+            StatusCode::NOT_FOUND,
+            "no domain purchase is waiting for that payment",
+        ),
+        other => map_store_err(other),
+    }
 }
 
 /// `POST /sites/:id/domain-purchases/:purchase/cancel` calls a purchase off.

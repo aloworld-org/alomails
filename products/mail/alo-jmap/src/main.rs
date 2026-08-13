@@ -195,6 +195,30 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Background domain-registration sweeper (alo Sites, ADR 0036): register
+    // every paid domain purchase with the reseller and attach the name to its
+    // website. Only in a deployment that sells domains at all — with no
+    // nameservers configured nothing can be bought, so there is nothing to
+    // register. Every 60 seconds: the money already moved, and a registry that
+    // takes a minute to answer is normal.
+    {
+        let commerce = alo_jmap::sites_domain_purchases::SiteDomainCommerce::from_env();
+        if commerce.sells_domains() {
+            let store = Arc::clone(&store);
+            tokio::spawn(async move {
+                let mut tick = tokio::time::interval(std::time::Duration::from_secs(60));
+                loop {
+                    tick.tick().await;
+                    let live =
+                        alo_jmap::site_domain_worker::run_due(&store, &commerce.registrar).await;
+                    if live > 0 {
+                        tracing::info!(live, "domain registration sweep");
+                    }
+                }
+            });
+        }
+    }
+
     // Background share-expiry sweeper (alo Transfer): drop expired share links
     // and reclaim any blob no live share still holds.
     {

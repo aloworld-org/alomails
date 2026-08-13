@@ -160,6 +160,7 @@ pub mod share;
 pub mod sieve;
 pub mod signup_route;
 pub mod site_booking_notify;
+pub mod site_domain_worker;
 pub mod site_notify;
 pub mod site_order_notify;
 pub mod site_protection;

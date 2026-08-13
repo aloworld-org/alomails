@@ -49,15 +49,34 @@ fn nameservers() -> Vec<String> {
     NAMESERVERS.iter().map(|ns| (*ns).to_owned()).collect()
 }
 
+/// The settlement secret of a deployment whose payment bridge is wired. Long
+/// enough to be one: a shorter value is read as absent.
+const SETTLEMENT_SECRET: &str = "settlement-secret-for-tests-0001";
+
 /// A deployment that sells domains through the fixture reseller, plus the
-/// concrete handle a test needs to seed a name as taken.
+/// concrete handle a test needs to seed a name as taken. No payment bridge:
+/// the settle door is shut until a test asks for one.
 fn selling() -> (Arc<FixtureRegistrar>, SiteDomainCommerce) {
     let registrar = Arc::new(FixtureRegistrar::new(FIXTURE_NOW).unwrap());
     let commerce = SiteDomainCommerce {
         registrar: Arc::clone(&registrar) as Arc<dyn alo_store::DomainRegistrar>,
         nameservers: nameservers(),
+        settlement_secret: None,
     };
     (registrar, commerce)
+}
+
+/// The same deployment with a payment bridge wired, so charges can be declared
+/// settled by whoever holds the secret and by nobody else.
+fn selling_with_a_payment_bridge() -> (Arc<FixtureRegistrar>, SiteDomainCommerce) {
+    let (registrar, commerce) = selling();
+    (
+        registrar,
+        SiteDomainCommerce {
+            settlement_secret: Some(SETTLEMENT_SECRET.to_owned()),
+            ..commerce
+        },
+    )
 }
 
 fn app_with(h: &Harness, commerce: SiteDomainCommerce) -> Router {
@@ -765,4 +784,271 @@ async fn a_purchase_answers_only_under_the_site_it_belongs_to() {
     )
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+}
+
+// ---- the payment handoff (S2.15c2) --------------------------------------------
+
+/// POSTs to the payment bridge's door, which carries a deployment secret
+/// instead of anybody's token.
+async fn settle(app: &Router, secret: Option<&str>, body: Value) -> (StatusCode, Value) {
+    let mut req = Request::builder()
+        .method("POST")
+        .uri("/sites/domain-payments/settle")
+        .header("content-type", "application/json");
+    if let Some(secret) = secret {
+        req = req.header("x-alo-settlement", secret);
+    }
+    send(app, req.body(Body::from(body.to_string())).unwrap()).await
+}
+
+/// Buys and approves one name, answering with (site id, purchase id, quote).
+async fn approved_purchase(h: &Harness, app: &Router, tag: &str) -> (String, String, Value) {
+    let site = h
+        .acc
+        .create_site("Shop", &sub(tag, h))
+        .await
+        .unwrap()
+        .as_str()
+        .to_owned();
+    let name = format!("{}.com", label(tag, h));
+    let (status, purchase) = post(
+        app,
+        &h.token,
+        &format!("/sites/{site}/domain-purchases"),
+        buy_body(&name, &format!("{tag}-key-12345678")),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{purchase}");
+    let id = purchase["id"].as_str().unwrap().to_owned();
+    let (status, approved) = post(
+        app,
+        &h.token,
+        &format!("/sites/{site}/domain-purchases/{id}/approve"),
+        json!({ "agreed": agreed(&purchase) }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{approved}");
+    (site, id, purchase)
+}
+
+#[tokio::test]
+async fn checkout_records_the_reference_without_moving_any_money() {
+    let h = harness("domain-checkout").await;
+    let (_registrar, commerce) = selling();
+    let app = app_with(&h, commerce);
+    let (site, id, _) = approved_purchase(&h, &app, "chk").await;
+    let checkout = format!("/sites/{site}/domain-purchases/{id}/checkout");
+
+    // Billing's own string, stored verbatim and never parsed.
+    let (status, awaiting) = post(
+        &app,
+        &h.token,
+        &checkout,
+        json!({ "paymentReference": "pi/2026-08/0042" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{awaiting}");
+    assert_eq!(awaiting["state"], "awaiting_payment");
+    assert_eq!(awaiting["paymentReference"], "pi/2026-08/0042");
+    assert_eq!(
+        awaiting["moneyMoved"], false,
+        "asking for money is not receiving it"
+    );
+    assert!(awaiting["paidAt"].is_null());
+
+    // The same reference again is the same purchase; a second, different one
+    // is refused rather than quietly replacing the charge in flight.
+    let (status, again) = post(
+        &app,
+        &h.token,
+        &checkout,
+        json!({ "paymentReference": "pi/2026-08/0042" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{again}");
+    assert_eq!(again["id"], awaiting["id"]);
+    let (status, body) = post(
+        &app,
+        &h.token,
+        &checkout,
+        json!({ "paymentReference": "pi/2026-08/0043" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert!(
+        body["detail"].as_str().unwrap().contains("another payment"),
+        "{body}"
+    );
+
+    // A reference that is not one is refused in the rule's own words.
+    let (site2, id2, _) = approved_purchase(&h, &app, "chk2").await;
+    let (status, body) = post(
+        &app,
+        &h.token,
+        &format!("/sites/{site2}/domain-purchases/{id2}/checkout"),
+        json!({ "paymentReference": " " }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert!(
+        body["detail"].as_str().unwrap().contains("characters"),
+        "{body}"
+    );
+}
+
+#[tokio::test]
+async fn an_unapproved_purchase_cannot_be_handed_to_a_payment() {
+    let h = harness("domain-checkout-early").await;
+    let (_registrar, commerce) = selling();
+    let app = app_with(&h, commerce);
+    let site = h.acc.create_site("Shop", &sub("early", &h)).await.unwrap();
+    let name = format!("{}.com", label("early", &h));
+    let (_, purchase) = post(
+        &app,
+        &h.token,
+        &format!("/sites/{}/domain-purchases", site.as_str()),
+        buy_body(&name, "early-key-12345"),
+    )
+    .await;
+    let id = purchase["id"].as_str().unwrap();
+    let (status, body) = post(
+        &app,
+        &h.token,
+        &format!("/sites/{}/domain-purchases/{id}/checkout", site.as_str()),
+        json!({ "paymentReference": "pi_early_0001" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{body}");
+    assert!(
+        body["detail"].as_str().unwrap().contains("approved"),
+        "{body}"
+    );
+}
+
+#[tokio::test]
+async fn only_the_payment_bridge_may_say_a_charge_settled() {
+    let h = harness("domain-settle").await;
+    let (_registrar, commerce) = selling_with_a_payment_bridge();
+    let app = app_with(&h, commerce);
+    let (site, id, _) = approved_purchase(&h, &app, "set").await;
+    let reference = format!("pi_settle_{}", id);
+    let (status, awaiting) = post(
+        &app,
+        &h.token,
+        &format!("/sites/{site}/domain-purchases/{id}/checkout"),
+        json!({ "paymentReference": reference }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{awaiting}");
+
+    let body = json!({ "tenant": h.tenant.as_str(), "paymentReference": reference });
+
+    // No secret, and a wrong secret, are the same closed door.
+    for secret in [None, Some("not-the-settlement-secret-0001")] {
+        let (status, refused) = settle(&app, secret, body.clone()).await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED, "{refused}");
+    }
+    // And nothing moved through them.
+    let (_, still) = get(
+        &app,
+        Some(&h.token),
+        &format!("/sites/{site}/domain-purchases/{id}"),
+    )
+    .await;
+    assert_eq!(still["state"], "awaiting_payment");
+
+    // A reference nobody is waiting for, and the right reference under the
+    // wrong tenant, are one answer: this door is no oracle.
+    for wrong in [
+        json!({ "tenant": h.tenant.as_str(), "paymentReference": "pi_never_seen_0001" }),
+        json!({ "tenant": "tenant-that-does-not-exist", "paymentReference": reference }),
+    ] {
+        let (status, refused) = settle(&app, Some(SETTLEMENT_SECRET), wrong).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "{refused}");
+    }
+
+    let (status, paid) = settle(&app, Some(SETTLEMENT_SECRET), body.clone()).await;
+    assert_eq!(status, StatusCode::OK, "{paid}");
+    assert_eq!(paid["state"], "paid");
+    assert_eq!(paid["moneyMoved"], true);
+    assert!(!paid["paidAt"].is_null());
+
+    // A webhook delivered twice settles one purchase.
+    let (status, twice) = settle(&app, Some(SETTLEMENT_SECRET), body).await;
+    assert_eq!(status, StatusCode::OK, "{twice}");
+    assert_eq!(twice["id"], paid["id"]);
+    assert_eq!(twice["state"], "paid");
+
+    // Past the charge, calling it off is a support conversation, not a button.
+    let (status, refused) = post(
+        &app,
+        &h.token,
+        &format!("/sites/{site}/domain-purchases/{id}/cancel"),
+        json!({}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+}
+
+#[tokio::test]
+async fn a_deployment_with_no_payment_bridge_settles_nothing() {
+    let h = harness("domain-settle-unwired").await;
+    let (_registrar, commerce) = selling();
+    let app = app_with(&h, commerce);
+    let (site, id, _) = approved_purchase(&h, &app, "unw").await;
+    let reference = format!("pi_unwired_{}", id);
+    post(
+        &app,
+        &h.token,
+        &format!("/sites/{site}/domain-purchases/{id}/checkout"),
+        json!({ "paymentReference": reference }),
+    )
+    .await;
+
+    // Even holding a secret: there is none to hold.
+    for secret in [None, Some(SETTLEMENT_SECRET)] {
+        let (status, body) = settle(
+            &app,
+            secret,
+            json!({ "tenant": h.tenant.as_str(), "paymentReference": reference }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE, "{body}");
+        assert_eq!(body["reason"], "unconfigured");
+    }
+    let (_, still) = get(
+        &app,
+        Some(&h.token),
+        &format!("/sites/{site}/domain-purchases/{id}"),
+    )
+    .await;
+    assert_eq!(still["state"], "awaiting_payment");
+    assert_eq!(still["moneyMoved"], false);
+}
+
+#[tokio::test]
+async fn checkout_is_the_owners_door_and_no_one_elses() {
+    let a = harness("domain-checkout-a").await;
+    let b = harness_on(Arc::clone(&a.store), "domain-checkout-b").await;
+    let (_registrar, commerce) = selling();
+    let app = app_with(&a, commerce);
+    let (site, id, _) = approved_purchase(&a, &app, "own").await;
+    let checkout = format!("/sites/{site}/domain-purchases/{id}/checkout");
+    let body = json!({ "paymentReference": "pi_someone_else_01" });
+
+    let (other, _) = colleague(&a).await;
+    let (status, refused) = post(&app, &other, &checkout, body.clone()).await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{refused}");
+
+    let (status, refused) = post(&app, &b.token, &checkout, body).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{refused}");
+
+    let (_, still) = get(
+        &app,
+        Some(&a.token),
+        &format!("/sites/{site}/domain-purchases/{id}"),
+    )
+    .await;
+    assert_eq!(still["state"], "approved");
+    assert!(still["paymentReference"].is_null());
 }

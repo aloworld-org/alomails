@@ -318,6 +318,14 @@ pub fn app_with_site_boundaries(
             "/sites/domain-search",
             get(sites_domain_purchases::search_domains),
         )
+        // The payment bridge's door (S2.15c2): "this charge settled", which is
+        // what queues a registration. Deliberately not a tenant's route — it
+        // carries the deployment's settlement secret instead of a user token,
+        // and is 503 `{"reason":"unconfigured"}` until one is configured.
+        .route(
+            "/sites/domain-payments/settle",
+            post(sites_domain_purchases::settle_payment),
+        )
         // The shipped template catalog (S2.11a) — the manual sibling of
         // `/sites/generate`. Static paths, so they resolve ahead of
         // `/sites/{id}`.
@@ -440,6 +448,12 @@ pub fn app_with_site_boundaries(
         .route(
             "/sites/{id}/domain-purchases/{purchase}/approve",
             post(sites_domain_purchases::approve_purchase),
+        )
+        // Handing an approved purchase to a payment (S2.15c2). Records the
+        // reference; says nothing about money having moved.
+        .route(
+            "/sites/{id}/domain-purchases/{purchase}/checkout",
+            post(sites_domain_purchases::checkout_purchase),
         )
         .route(
             "/sites/{id}/domain-purchases/{purchase}/cancel",

@@ -1176,3 +1176,89 @@ async fn a_stored_quote_does_not_drift() {
             .await,
     );
 }
+
+/// The two system-level lookups the payment bridge and the registration sweep
+/// reach a purchase by (S2.15c2): the person who approved a price, and the
+/// purchase one payment is settling. Both are doors a caller holds no tenant
+/// token for, so both are tenant-checked exactly as hard as the account ones.
+#[tokio::test]
+async fn the_machine_doors_find_a_purchase_only_inside_its_own_tenant() {
+    let store = common::test_store().await;
+    let (account, user, _inbox) = common::fresh_account(&store, "domain-machine").await;
+    let tenant = account.tenant().clone();
+    let site = site_for(&account, "machine").await;
+    let provider = registrar();
+    let domain = buyable(&provider, "mach");
+    let quote = quote_for(&provider, &domain, 1).await;
+    let purchase = account
+        .start_site_domain_purchase(&site, purchase_of(&domain, &quote, "machine-key-001"))
+        .await
+        .unwrap();
+
+    // Nobody has approved anything, so there is no one to act as — which is
+    // exactly the situation in which acting would be wrong.
+    assert_not_found(
+        store
+            .site_domain_purchase_approver(&tenant, &purchase.id)
+            .await,
+    );
+    account
+        .approve_site_domain_purchase(&purchase.id, &quote)
+        .await
+        .unwrap();
+    assert_eq!(
+        store
+            .site_domain_purchase_approver(&tenant, &purchase.id)
+            .await
+            .unwrap(),
+        user
+    );
+
+    // A payment nobody is waiting for names no purchase; a reference that is
+    // not one is refused before any row is read.
+    assert_not_found(
+        store
+            .site_domain_purchase_awaiting_payment(&tenant, "pi_never_minted")
+            .await,
+    );
+    assert_validation(
+        store
+            .site_domain_purchase_awaiting_payment(&tenant, "  ")
+            .await,
+    );
+
+    let reference = "pi_machine_0001";
+    account
+        .await_site_domain_payment(&purchase.id, reference)
+        .await
+        .unwrap();
+    let found = store
+        .site_domain_purchase_awaiting_payment(&tenant, reference)
+        .await
+        .unwrap();
+    assert_eq!(found.id, purchase.id);
+    assert_eq!(found.state, SiteDomainPurchaseState::AwaitingPayment);
+
+    // The tenant is the boundary on both, not a hint: another tenant's
+    // settlement reaches nothing, and neither does another tenant's sweep.
+    let stranger = TenantId::new(format!("{}x", tenant.as_str()));
+    assert_not_found(
+        store
+            .site_domain_purchase_awaiting_payment(&stranger, reference)
+            .await,
+    );
+    assert_not_found(
+        store
+            .site_domain_purchase_approver(&stranger, &purchase.id)
+            .await,
+    );
+    // …and the purchase is exactly as it was.
+    assert_eq!(
+        account
+            .site_domain_purchase(&purchase.id)
+            .await
+            .unwrap()
+            .state,
+        SiteDomainPurchaseState::AwaitingPayment
+    );
+}
