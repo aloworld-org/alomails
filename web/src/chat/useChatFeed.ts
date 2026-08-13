@@ -40,10 +40,17 @@ export function useChatFeed(openId: string | null, channels: ChannelSummary[] | 
     if (openId === null) return;
     setMessages(null);
     setTurns([]);
-    setReadUpTo(channels?.find((room) => room.id === openId)?.lastReadSeq ?? null);
     void loadMessages(openId);
     void loadTurns(openId);
-  }, [channels, loadMessages, loadTurns, openId]);
+  }, [loadMessages, loadTurns, openId]);
+
+  // Capture the unread boundary once, when a room becomes available. Later
+  // sidebar refreshes must not reopen the room and mark it read again.
+  useEffect(() => {
+    if (openId === null) return;
+    const room = channels?.find((candidate) => candidate.id === openId);
+    if (room !== undefined) setReadUpTo(room.lastReadSeq);
+  }, [openId, channels]);
 
   useEffect(() => {
     if (openId === null) return;
