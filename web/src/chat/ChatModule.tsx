@@ -13,7 +13,6 @@ import type { ReactNode } from "react";
 import { Fragment, Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
 import {
   Archive,
-  ChevronLeft,
   Hash,
   Quote,
   List,
@@ -28,7 +27,6 @@ import {
   MessagesSquare,
   MoreHorizontal,
   Paperclip,
-  Pencil,
   Plus,
   Reply,
   Search,
@@ -38,7 +36,6 @@ import {
   SmilePlus,
   Trash2,
   Users,
-  Video,
   X,
 } from "lucide-react";
 
@@ -68,6 +65,7 @@ import { EmojiPicker } from "./EmojiPicker";
 import { ComposerShareMenu } from "./ComposerShareMenu";
 import { FormattingToolbar } from "./FormattingToolbar";
 import { ChatSwitcher } from "./ChatSwitcher";
+import { ConversationHeader } from "./ConversationHeader";
 import {
   candidatesFor,
   channelLabel,
@@ -826,82 +824,10 @@ export function ChatModule() {
           </div>
         ) : (
           <>
-            <header className="flex min-h-16 shrink-0 items-center gap-3 border-b border-subtle bg-surface px-4">
-              {isMobile && (
-                // The way back. Without it a phone opens a room and stays
-                // there for ever.
-                <button
-                  type="button"
-                  className="flex size-10 items-center justify-center rounded-md border-0 bg-transparent text-primary hover:bg-raised"
-                  onClick={() => setOpenId(null)}
-                  aria-label={strings.chatBackToList}
-                >
-                  <ChevronLeft size={18} />
-                </button>
-              )}
-              <div className="min-w-0 flex-1">
-                <h3 className="m-0 truncate text-base font-bold text-primary">{channelLabel(open)}</h3>
-                {open.topic !== null && (
-                  <p className="m-0 truncate text-xs text-tertiary">{open.topic}</p>
-                )}
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  icon={<Video size={15} />}
-                  onClick={() => {
-                    if (liveMeeting !== null) {
-                      setInMeeting(liveMeeting.id);
-                      return;
-                    }
-                    void meet
-                      .start({ channel: open.id, title: channelLabel(open) })
-                      .then((m) => {
-                        setLiveMeeting(m);
-                        setInMeeting(m.id);
-                      })
-                      .catch(() => setError(strings.meetJoinFailed));
-                  }}
-                  title={
-                    liveMeeting !== null ? strings.meetJoin : strings.meetStart
-                  }
-                >
-                  {liveMeeting !== null ? strings.meetLive : strings.meetStart}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  icon={<Users size={15} />}
-                  onClick={() => setShowingPeople(true)}
-                  title={strings.chatMembersAndAgents}
-                >
-                  {strings.chatMembersAndAgents}
-                </Button>
-                {open.kind === "channel" && open.archivedAt === null && (
-                  <>
-                    <button
-                      type="button"
-                      className="flex size-9 items-center justify-center rounded-md border-0 bg-transparent text-tertiary hover:bg-raised hover:text-primary"
-                      onClick={() => void renameRoom(open)}
-                      aria-label={strings.chatRename}
-                      title={strings.chatRename}
-                    >
-                      <Pencil size={15} />
-                    </button>
-                    <button
-                      type="button"
-                      className="flex size-9 items-center justify-center rounded-md border-0 bg-transparent text-tertiary hover:bg-raised hover:text-primary"
-                      onClick={() => void archiveRoom(open)}
-                      aria-label={strings.chatArchiveAction}
-                      title={strings.chatArchiveAction}
-                    >
-                      <Archive size={15} />
-                    </button>
-                  </>
-                )}
-              </div>
-            </header>
+            <ConversationHeader room={open} mobile={isMobile} liveMeeting={liveMeeting} onBack={() => setOpenId(null)} onMeet={() => {
+              if (liveMeeting !== null) { setInMeeting(liveMeeting.id); return; }
+              void meet.start({ channel: open.id, title: channelLabel(open) }).then((meeting) => { setLiveMeeting(meeting); setInMeeting(meeting.id); }).catch(() => setError(strings.meetJoinFailed));
+            }} onPeople={() => setShowingPeople(true)} onRename={() => void renameRoom(open)} onArchive={() => void archiveRoom(open)} />
 
             {turns.length > 0 && (
               <div className="flex shrink-0 flex-wrap gap-2 border-b border-subtle bg-surface px-4 py-2">
