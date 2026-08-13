@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useJmapClient } from "../jmap";
+import { useJmapClient } from "../jmap/useJmapClient";
 import { strings } from "../i18n";
 import { chatMessage, useChatApi } from "./api";
 import type { Nameable } from "./presentation";

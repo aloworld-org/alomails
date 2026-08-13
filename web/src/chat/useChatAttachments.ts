@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { useJmapClient } from "../jmap";
+import { useJmapClient } from "../jmap/useJmapClient";
 import type { DriveNodeDto } from "../jmap/types";
 import { strings } from "../i18n";
 import { chatMessage } from "./api";

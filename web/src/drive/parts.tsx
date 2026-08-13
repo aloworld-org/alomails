@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import type { DriveNodeDto } from "../jmap";
+import type { DriveNodeDto } from "../jmap/types";
 
 /** Preserve a useful backend reason for Drive recovery messages. */
 export function driveErrorReason(error: unknown): string | null {

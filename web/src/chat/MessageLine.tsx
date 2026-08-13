@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import { MessagesSquare, Paperclip, Pencil, Reply, SmilePlus, Sparkles, Trash2, Video } from "lucide-react";
 
 import { Avatar, Button, useDismiss } from "../ds";
-import { fileSize } from "../drive";
+import { fileSize } from "../drive/parts";
 import { strings } from "../i18n";
 import { AgentActionCard } from "../shell/AgentActionCard";
 import { personName, shortTime, standingOf, timeOf, withHandlesMarked } from "./presentation";

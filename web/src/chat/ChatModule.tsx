@@ -18,14 +18,15 @@ import {
 
 import { strings } from "../i18n";
 import { useAuth } from "../auth";
-import { FilePicker, saveBlob } from "../drive";
+import { FilePicker } from "../drive/FilePicker";
+import { saveBlob } from "../drive/parts";
 import { RoomPeople } from "./RoomPeople";
-import { useJmapClient } from "../jmap";
+import { useJmapClient } from "../jmap/useJmapClient";
 import { useDismiss, useIsMobile } from "../ds";
 import { ChatError, chatMessage, useChatApi } from "./api";
 import type { Attachment, Message } from "./types";
-import { useMeetApi } from "../meet";
-import type { Meeting } from "../meet";
+import { useMeetApi } from "../meet/api";
+import type { Meeting } from "../meet/api";
 import { ChatSwitcher } from "./ChatSwitcher";
 import { ConversationHeader } from "./ConversationHeader";
 import { ActiveTurns } from "./ActiveTurns";

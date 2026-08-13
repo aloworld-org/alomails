@@ -68,7 +68,7 @@ vi.mock("../auth", () => ({
 }));
 
 // The push stream is a live socket; a test wants the render, not the wire.
-vi.mock("../jmap", () => ({
+vi.mock("../jmap/useJmapClient", () => ({
   useJmapClient: () => ({
     subscribeChat: () => new Promise(() => {}),
     driveDownload: async () => new Blob(),

@@ -2,7 +2,7 @@ import { Archive, ChevronLeft, Pencil, UserPlus, Video } from "lucide-react";
 
 import { Avatar, IconButton } from "../ds";
 import { strings } from "../i18n";
-import type { Meeting } from "../meet";
+import type { Meeting } from "../meet/api";
 import { channelLabel } from "./presentation";
 import type { ChannelSummary } from "./types";
 
