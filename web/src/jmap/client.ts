@@ -1215,7 +1215,14 @@ export class JmapClient {
   /** Whether the signed-in user is a platform operator (gates the console). */
   async isOperator(): Promise<boolean> {
     try {
-      const out = (await this.#admin("/control/me", { method: "GET" })) as {
+      // Not through `#admin`, which prefixes `/api`: the control plane is a
+      // *different service* (`alo-control`, ADR 0012), routed by the proxy on
+      // its own `/control` prefix. Sending it to `/api` asks alo-jmap for a
+      // route it has never had, and in production reaches the wrong container
+      // entirely. `/control` collides with no page, so it needs no prefix.
+      const res = await this.#fetch(`${API_BASE}/control/me`, { method: "GET" });
+      if (!res.ok) throw new JmapError(`control ${res.status}`);
+      const out = (await res.json()) as {
         isOperator?: boolean;
       };
       return out.isOperator === true;

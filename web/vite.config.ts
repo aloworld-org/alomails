@@ -54,8 +54,15 @@ const spaBypass = (req: { headers: Record<string, string | string[] | undefined>
 // Collabora's callback. None of them collides with a page.
 const API_PATHS = [
   "/api",
-  "/jmap", "/oauth", "/auth", "/.well-known",
+  // `/auth/token`, not `/auth`: `/auth/callback` is a *page* — the OIDC
+  // redirect target — and proxying the whole prefix sent the browser's
+  // redirect to the API, which 404s. The production Caddyfile always listed
+  // the single route; only this list was too broad.
+  "/jmap", "/oauth", "/auth/token", "/.well-known",
   "/dav", "/autodiscover", "/Autodiscover", "/wopi",
+  // A different service behind the same proxy (ADR 0012), so it keeps its own
+  // prefix and must not be folded under `/api`.
+  "/control",
 ];
 // Collabora paths are loaded by the editor itself (and its server), never a
 // user page navigation — proxy them straight through with no SPA bypass.
