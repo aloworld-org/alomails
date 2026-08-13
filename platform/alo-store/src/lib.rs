@@ -158,9 +158,11 @@ pub mod search;
 pub mod settings;
 pub mod share;
 pub mod signup;
+pub mod site_agenda;
 pub mod site_analytics;
 pub mod site_assets;
 pub mod site_attribution;
+pub mod site_bookings;
 pub mod site_catalog;
 pub mod site_catalog_import;
 pub mod site_catalog_items;
@@ -397,8 +399,8 @@ pub use id::{
     InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId,
     InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
     InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
-    SiteCatalogCategoryId, SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteFormId,
-    SiteFormSubmissionId, SiteId, SiteLeadLinkId, SiteOrderId, SitePageId, SitePostId,
+    SiteBookingId, SiteCatalogCategoryId, SiteCatalogId, SiteCatalogItemId, SiteCollectionId,
+    SiteFormId, SiteFormSubmissionId, SiteId, SiteLeadLinkId, SiteOrderId, SitePageId, SitePostId,
     SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
     TimeEntryId, TimeWeekId, UserId,
 };
@@ -453,11 +455,22 @@ pub use schedule::DueSend;
 pub use search::SearchHit;
 pub use share::{ShareCreated, ShareTarget};
 pub use signup::PendingSignup;
+pub use site_agenda::SiteAvailabilitySource;
 pub use site_analytics::{
     SiteAnalyticsDay, SiteAnalyticsDimension, SiteAnalyticsRank, SiteAnalyticsReport,
 };
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
 pub use site_attribution::{SiteAttributionMoney, SiteAttributionReport, SiteAttributionSource};
+pub use site_bookings::{
+    SITE_BOOKING_DESCRIPTION_MAX_CHARS, SITE_BOOKING_FIELD_KEY_MAX_CHARS,
+    SITE_BOOKING_FIELD_LABEL_MAX_CHARS, SITE_BOOKING_FIELD_MAX_OPTIONS,
+    SITE_BOOKING_FIELD_OPTION_MAX_CHARS, SITE_BOOKING_LOCATION_MAX_CHARS,
+    SITE_BOOKING_MAX_BUFFER_MINUTES, SITE_BOOKING_MAX_DURATION_MINUTES, SITE_BOOKING_MAX_FIELDS,
+    SITE_BOOKING_MAX_HORIZON_DAYS, SITE_BOOKING_MAX_NOTICE_MINUTES, SITE_BOOKING_MAX_PER_SITE,
+    SITE_BOOKING_MAX_WINDOWS, SITE_BOOKING_MIN_DURATION_MINUTES, SITE_BOOKING_NAME_MAX_CHARS,
+    SITE_BOOKING_TIME_ZONE_MAX_CHARS, SiteBooking, SiteBookingField, SiteBookingFieldKind,
+    SiteBookingInput, SiteBookingWindow,
+};
 pub use site_catalog::{
     SITE_CATALOG_DESCRIPTION_MAX_CHARS, SITE_CATALOG_IMAGE_ALT_MAX_CHARS,
     SITE_CATALOG_MAX_CATEGORIES, SITE_CATALOG_MAX_ITEMS, SITE_CATALOG_MAX_PRICE_CENTS,

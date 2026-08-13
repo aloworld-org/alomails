@@ -254,6 +254,11 @@ opaque_id!(
     SiteOrderId
 );
 opaque_id!(
+    /// One bookable service of an alo Sites website — what a visitor may book,
+    /// bound to the Agenda calendar it is read against and written into.
+    SiteBookingId
+);
+opaque_id!(
     /// A billing customer — the company or person a tenant invoices
     /// (alo Billing, ADR 0035).
     BillingCustomerId
