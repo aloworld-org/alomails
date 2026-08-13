@@ -80,6 +80,7 @@ import {
 import type { Nameable } from "./presentation";
 import { renderBody } from "./richText";
 import { MessageLine } from "./MessageLine";
+import { ChatSidebar } from "./ChatSidebar";
 import styles from "./ChatModule.module.css";
 
 const AuthoringInsertModal = lazy(() =>
@@ -764,327 +765,31 @@ export function ChatModule() {
   return (
     <div className={styles.module}>
       {(!isMobile || openId === null) && (
-        <aside className={styles.sidebar}>
-          <header className={styles.sidebarHeader}>
-            <h2 className={styles.sidebarTitle}>{strings.moduleChat}</h2>
-          </header>
-
-          {/* Named, not iconographic. Three unlabelled glyphs in a corner is how
-            "start a DM" and "add an agent" became things nobody could find. */}
-          <div className={styles.actions}>
-            <button
-              type="button"
-              className={styles.action}
-              onClick={() => void createChannel()}
-              disabled={creating}
-            >
-              <MessageSquarePlus size={16} className={styles.actionIcon} />
-              {strings.chatNewChannel}
-            </button>
-            <button
-              type="button"
-              className={styles.action}
-              onClick={() => setDmQuery("")}
-            >
-              <Users size={16} className={styles.actionIcon} />
-              {strings.chatNewDm}
-            </button>
-            <button
-              type="button"
-              className={styles.action}
-              onClick={() => void browse()}
-            >
-              <Hash size={16} className={styles.actionIcon} />
-              {strings.chatBrowse}
-            </button>
-          </div>
-          <div className={styles.searchRow}>
-            <Search size={14} className={styles.channelIcon} />
-            <input
-              className={styles.search}
-              value={finding}
-              onChange={(event) => void find(event.target.value)}
-              placeholder={strings.chatSearchPlaceholder}
-              aria-label={strings.chatSearchPlaceholder}
-              autoComplete="off"
-            />
-            {finding !== "" && (
-              <button
-                type="button"
-                className={styles.searchClear}
-                onClick={() => void find("")}
-                aria-label={strings.chatSearchClear}
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {dmQuery !== null ? (
-            <div className={styles.browsePane}>
-              <div className={styles.browseHead}>
-                <span className={styles.browseTitle}>{strings.chatNewDm}</span>
-                <button
-                  type="button"
-                  className={styles.searchClear}
-                  onClick={() => {
-                    setDmQuery(null);
-                    setDmFound([]);
-                  }}
-                  aria-label={strings.chatClose}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-              <div className={styles.searchRow}>
-                <Users size={14} className={styles.channelIcon} />
-                <input
-                  className={styles.search}
-                  value={dmQuery}
-                  onChange={(event) => void findPeople(event.target.value)}
-                  placeholder={strings.chatFindPerson}
-                  aria-label={strings.chatFindPerson}
-                  autoComplete="off"
-                  autoFocus
-                />
-              </div>
-              {dmFound.length === 0 ? (
-                <p className={styles.sidebarNote}>
-                  {dmQuery.trim().length < 2
-                    ? strings.chatFindPersonHint
-                    : strings.chatNobodyFound}
-                </p>
-              ) : (
-                <ul className={styles.channelList}>
-                  {dmFound.map((person) => (
-                    <li key={person.user}>
-                      <button
-                        type="button"
-                        className={styles.channel}
-                        onClick={() => void openDm(person)}
-                      >
-                        <Avatar
-                          name={person.email}
-                          email={person.email}
-                          size="sm"
-                        />
-                        <span className={styles.channelName}>
-                          {person.email}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : browsing !== null ? (
-            <div className={styles.browsePane}>
-              <div className={styles.browseHead}>
-                <span className={styles.browseTitle}>{strings.chatBrowse}</span>
-                <button
-                  type="button"
-                  className={styles.searchClear}
-                  onClick={() => setBrowsing(null)}
-                  aria-label={strings.chatClose}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-              {browsing.length === 0 ? (
-                <p className={styles.sidebarNote}>
-                  {strings.chatNothingToJoin}
-                </p>
-              ) : (
-                <ul className={styles.channelList}>
-                  {browsing.map((room) => (
-                    <li key={room.id}>
-                      <button
-                        type="button"
-                        className={styles.channel}
-                        onClick={() => {
-                          if ((channels ?? []).some((c) => c.id === room.id)) {
-                            setOpenId(room.id);
-                            setBrowsing(null);
-                          } else {
-                            void joinRoom(room);
-                          }
-                        }}
-                      >
-                        <Hash size={15} className={styles.channelIcon} />
-                        <span className={styles.channelName}>{room.name}</span>
-                        <span className={styles.joinHint}>
-                          {(channels ?? []).some((c) => c.id === room.id)
-                            ? strings.chatJoined
-                            : strings.chatJoin}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : found !== null ? (
-            found.length === 0 ? (
-              <p className={styles.sidebarNote}>{strings.chatSearchNothing}</p>
-            ) : (
-              <ul className={styles.channelList}>
-                {found.map((hit) => (
-                  <li key={hit.id}>
-                    <button
-                      type="button"
-                      className={styles.hit}
-                      onClick={() => {
-                        // Open the room it was said in. The message is not
-                        // scrolled to yet â€” see chatSearchOpensRoom.
-                        setOpenId(hit.channel);
-                        void find("");
-                      }}
-                    >
-                      <span className={styles.hitWho}>
-                        {hit.authorKind === "agent"
-                          ? (hit.authorEmail ?? hit.author)
-                          : personName(hit.authorEmail, hit.author)}
-                      </span>
-                      <span className={styles.hitBody}>{hit.body}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )
-          ) : channels === null ? (
-            <p className={styles.sidebarNote}>
-              <Loader2 className={styles.spin} size={14} />{" "}
-              {strings.chatLoading}
-            </p>
-          ) : channels.length === 0 ? (
-            // Law 5: an empty room list teaches the one next step.
-            <div className={styles.emptySidebar}>
-              <p className={styles.emptyLead}>{strings.chatNoChannelsLead}</p>
-              <p className={styles.emptyHint}>{strings.chatNoChannelsHint}</p>
-            </div>
-          ) : (
-            <div className={styles.channelList} ref={rowMenuRef}>
-              {sections.map((section) => (
-                <section key={section.label}>
-                  <h3 className={styles.sectionLabel}>{section.label}</h3>
-                  <ul className={styles.sectionList}>
-                    {section.rooms.map((channel) => (
-                      // The row is the target; its menu sits beside the button rather
-                      // than inside it, because a button inside a button is invalid
-                      // and swallows the click.
-                      <li key={channel.id} className={styles.channelRow}>
-                        <button
-                          type="button"
-                          className={[
-                            channel.id === openId
-                              ? styles.channelOpen
-                              : styles.channel,
-                            // An archived room stays reachable (its history is still
-                            // the team's), but it must not read as a live one.
-                            channel.archivedAt !== null
-                              ? styles.channelArchived
-                              : "",
-                          ]
-                            .filter(Boolean)
-                            .join(" ")}
-                          onClick={() => setOpenId(channel.id)}
-                        >
-                          {channel.kind === "dm" ? (
-                            <Avatar
-                              name={channelLabel(channel)}
-                              email={channel.counterpart ?? undefined}
-                              size="sm"
-                            />
-                          ) : channel.visibility === "private" ? (
-                            <Lock size={15} className={styles.channelIcon} />
-                          ) : (
-                            <Hash size={15} className={styles.channelIcon} />
-                          )}
-                          <span className={styles.channelName}>
-                            {channelLabel(channel)}
-                          </span>
-                          {channel.archivedAt !== null && (
-                            <Archive
-                              size={13}
-                              className={styles.channelIcon}
-                              aria-label={strings.chatArchived}
-                            />
-                          )}
-                          {channel.mentions > 0 ? (
-                            // A room with something addressed to you says so, rather
-                            // than hiding it inside a larger unread number.
-                            <span
-                              className={styles.badgeMention}
-                              title={strings.chatMentionsYou(channel.mentions)}
-                            >
-                              @{channel.mentions}
-                            </span>
-                          ) : (
-                            channel.unread > 0 && (
-                              <span className={styles.badge}>
-                                {channel.unread}
-                              </span>
-                            )
-                          )}
-                        </button>
-                        {channel.kind === "channel" &&
-                          channel.archivedAt === null && (
-                            <span className={styles.rowMenuWrap}>
-                              <button
-                                type="button"
-                                className={styles.rowMenuButton}
-                                onClick={() =>
-                                  setRowMenu((at) =>
-                                    at === channel.id ? null : channel.id,
-                                  )
-                                }
-                                aria-label={strings.chatChannelActions(
-                                  channelLabel(channel),
-                                )}
-                                aria-expanded={rowMenu === channel.id}
-                              >
-                                <MoreHorizontal size={16} />
-                              </button>
-                              {rowMenu === channel.id && (
-                                <span className={styles.rowMenu} role="menu">
-                                  <button
-                                    type="button"
-                                    role="menuitem"
-                                    className={styles.rowMenuItem}
-                                    onClick={() => {
-                                      setRowMenu(null);
-                                      void renameRoom(channel);
-                                    }}
-                                  >
-                                    <Pencil size={14} />
-                                    {strings.chatRename}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    role="menuitem"
-                                    className={styles.rowMenuItem}
-                                    onClick={() => {
-                                      setRowMenu(null);
-                                      void archiveRoom(channel);
-                                    }}
-                                  >
-                                    <Archive size={14} />
-                                    {strings.chatArchiveAction}
-                                  </button>
-                                </span>
-                              )}
-                            </span>
-                          )}
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          )}
-        </aside>
+        <ChatSidebar
+          channels={channels}
+          openId={openId}
+          creating={creating}
+          finding={finding}
+          found={found}
+          dmQuery={dmQuery}
+          dmFound={dmFound}
+          browsing={browsing}
+          rowMenu={rowMenu}
+          onCreateChannel={() => void createChannel()}
+          onStartDm={() => setDmQuery("")}
+          onBrowse={() => void browse()}
+          onFind={(query) => void find(query)}
+          onFindPeople={(query) => void findPeople(query)}
+          onCloseDm={() => { setDmQuery(null); setDmFound([]); }}
+          onOpenDm={(person) => void openDm(person)}
+          onCloseBrowse={() => setBrowsing(null)}
+          onJoinRoom={(room) => void joinRoom(room)}
+          onOpen={(id) => { setOpenId(id); setBrowsing(null); }}
+          onRowMenu={setRowMenu}
+          onRename={(room) => void renameRoom(room)}
+          onArchive={(room) => void archiveRoom(room)}
+        />
       )}
-
       <section
         className={styles.room}
         onDragOver={(event) => {
