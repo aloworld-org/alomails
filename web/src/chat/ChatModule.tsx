@@ -66,6 +66,7 @@ import { ComposerShareMenu } from "./ComposerShareMenu";
 import { FormattingToolbar } from "./FormattingToolbar";
 import { ChatSwitcher } from "./ChatSwitcher";
 import { ConversationHeader } from "./ConversationHeader";
+import { ActiveTurns } from "./ActiveTurns";
 import {
   candidatesFor,
   channelLabel,
@@ -829,36 +830,7 @@ export function ChatModule() {
               void meet.start({ channel: open.id, title: channelLabel(open) }).then((meeting) => { setLiveMeeting(meeting); setInMeeting(meeting.id); }).catch(() => setError(strings.meetJoinFailed));
             }} onPeople={() => setShowingPeople(true)} onRename={() => void renameRoom(open)} onArchive={() => void archiveRoom(open)} />
 
-            {turns.length > 0 && (
-              <div className="flex shrink-0 flex-wrap gap-2 border-b border-subtle bg-surface px-4 py-2">
-                {turns.map((turn) => (
-                  <span key={turn.id} className="inline-flex min-h-8 items-center gap-2 rounded-full bg--tint px-3 text-xs text-primary">
-                    <Sparkles size={13} className="text-accent" />
-                    <span className="flex gap-1" aria-hidden="true">
-                      <i />
-                      <i />
-                      <i />
-                    </span>
-                    {strings.chatThinking(turn.handle)}
-                    {/* Only the person who asked may stop it â€” the same rule
-                        as approving what it proposes. */}
-                    {turn.mine && openId !== null && (
-                      <button
-                        type="button"
-                        className="ml-1 rounded-full border border-subtle bg-transparent px-2 py-1 text-xs text-primary hover:bg-raised"
-                        onClick={() => {
-                          void api
-                            .stopTurn(openId, turn.id)
-                            .then(() => loadTurns(openId));
-                        }}
-                      >
-                        {strings.chatStop}
-                      </button>
-                    )}
-                  </span>
-                ))}
-              </div>
-            )}
+            <ActiveTurns turns={turns} onStop={(turn) => { if (openId !== null) void api.stopTurn(openId, turn.id).then(() => loadTurns(openId)); }} />
 
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4" ref={feedRef}>
               {/* An explicit control rather than a scroll trigger: a feed that
