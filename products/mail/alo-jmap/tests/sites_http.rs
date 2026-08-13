@@ -2707,3 +2707,134 @@ async fn a_coordinate_from_the_preview_edits_the_page_through_the_reviewed_door(
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
 }
+
+/// S3.01b — a section dragged on the preview and a section the assistant moves
+/// are ONE change, on the real wire.
+///
+/// The preview carries a coordinate per section, the editor turns a drop into
+/// the move door it already had, and the assistant's `reorder_section` over
+/// the same page produces the byte-identical envelope. That last assertion is
+/// the one that matters: two doors that splice differently would be two
+/// orderings a customer could reach, and a diff nobody could trust.
+#[tokio::test]
+async fn a_section_dragged_on_the_preview_moves_through_the_door_the_stack_uses() {
+    let owner = harness("sites-section-move").await;
+    let outsider = harness_on(Arc::clone(&owner.store), "sites-section-move-other").await;
+    let site = created_id(
+        "site",
+        post(
+            &owner.app,
+            &owner.token,
+            "/sites",
+            json!({ "name": "Roastery", "subdomain": sub("dragged", &owner) }),
+        )
+        .await,
+    );
+    let page = created_id(
+        "page",
+        post(
+            &owner.app,
+            &owner.token,
+            &format!("/sites/{site}/pages"),
+            json!({ "title": "Home", "home": true }),
+        )
+        .await,
+    );
+    let sections = format!("/sites/{site}/pages/{page}/sections");
+    let (status, original) = put(
+        &owner.app,
+        &owner.token,
+        &sections,
+        json!({ "schema_version": 1, "sections": [hero(), faq(), cta()] }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    // The preview says where each section is, and carries the gesture that
+    // reports a move.
+    let preview = format!("/sites/{site}/pages/{page}/preview");
+    let (status, _, html) = get_text(&owner.app, &owner.token, &preview).await;
+    assert_eq!(status, StatusCode::OK);
+    for index in 0..3 {
+        assert!(
+            html.contains(&format!("data-alo-section=\"{index}\"")),
+            "section {index} is not marked: {html}"
+        );
+    }
+    assert!(html.contains("site-section-move"));
+
+    // The hero dropped at the end of the page: `from` 0, no neighbour after
+    // it, which the editor resolves to the destination 2.
+    let (status, dragged) = post(
+        &owner.app,
+        &owner.token,
+        &format!("{sections}/0/move"),
+        json!({ "to": 2 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{dragged}");
+    assert_eq!(
+        kinds(&dragged["sections"]["sections"]),
+        ["faq", "cta", "hero"]
+    );
+
+    // Put it back, then ask the assistant for the same move: byte-identical.
+    let (status, back) = post(
+        &owner.app,
+        &owner.token,
+        &format!("{sections}/2/move"),
+        json!({ "to": 0 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(back["sections"], original["sections"]);
+    let (status, proposed) = put(
+        &owner.app,
+        &owner.token,
+        &format!("/sites/{site}/pages/{page}/ai-edits"),
+        json!({ "proposal": { "schema_version": 1, "operations": [{
+            "op": "reorder_section",
+            "target": { "index": 0, "type": "hero" },
+            "to": 2
+        }]}}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{proposed}");
+    assert_eq!(
+        proposed["sections"], dragged["sections"],
+        "the two doors that move a section disagree about what a move is"
+    );
+
+    // A destination this page does not have is refused rather than clamped.
+    let (status, refused) = post(
+        &owner.app,
+        &owner.token,
+        &format!("{sections}/0/move"),
+        json!({ "to": 9 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{refused}");
+
+    // And none of it belongs to anyone else: the neighbouring tenant sees no
+    // preview to pick a section up from, and no door to report a drop to.
+    let (status, _, body) = get_text(&outsider.app, &outsider.token, &preview).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+    let (status, body) = post(
+        &outsider.app,
+        &outsider.token,
+        &format!("{sections}/0/move"),
+        json!({ "to": 1 }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "{body}");
+}
+
+/// The section kinds of a stored envelope, in order.
+fn kinds(sections: &Value) -> Vec<&str> {
+    sections
+        .as_array()
+        .expect("an array of sections")
+        .iter()
+        .map(|section| section["type"].as_str().expect("a typed section"))
+        .collect()
+}

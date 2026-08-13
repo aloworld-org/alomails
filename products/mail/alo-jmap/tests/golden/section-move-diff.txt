@@ -1,0 +1,21 @@
+sections: nav hero features text_image gallery testimonials pricing team faq cta contact_form collection catalog booking custom_code footer
+
+move hero from 1 to 2
+  order: nav features hero text_image gallery testimonials pricing team faq cta contact_form collection catalog booking custom_code footer
+  values changed:
+
+move cta from 9 to 8
+  order: nav hero features text_image gallery testimonials pricing team cta faq contact_form collection catalog booking custom_code footer
+  values changed:
+
+move booking from 13 to 1
+  order: nav booking hero features text_image gallery testimonials pricing team faq cta contact_form collection catalog custom_code footer
+  values changed:
+
+move hero from 1 to 14
+  order: nav features text_image gallery testimonials pricing team faq cta contact_form collection catalog booking custom_code hero footer
+  values changed:
+
+move gallery from 4 to 12
+  order: nav hero features text_image testimonials pricing team faq cta contact_form collection catalog gallery booking custom_code footer
+  values changed:

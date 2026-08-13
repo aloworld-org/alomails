@@ -8,7 +8,8 @@
 // this app is actually holding, and build a `rewrite_copy` operation — the
 // same operation an AI proposal contains, applied through the same guarded
 // door. There is no second edit path, so there is no second thing to get
-// wrong, and the undo history below is one history for both.
+// wrong. The undo history that covers it is shared with every other gesture
+// on the page and lives in `editHistory.ts`.
 //
 // Nothing here trusts the frame. Its document has no origin, it is built from
 // tenant content, and a message is a string somebody typed: the key is only
@@ -33,27 +34,6 @@ export interface InlineTextEdit {
   /** The finished text, as plain characters. */
   text: string;
 }
-
-/** One applied inline edit, kept so it can be taken back. `before` is the
- *  value the page had when the gesture started; `after` is what replaced it. */
-export interface TextEditStep {
-  key: string;
-  before: string;
-  after: string;
-}
-
-/** Undo and redo as two stacks of the same steps: the past is what has been
- *  applied, the future what has been taken back and could return. */
-export interface TextEditHistory {
-  past: TextEditStep[];
-  future: TextEditStep[];
-}
-
-export const emptyTextEditHistory: TextEditHistory = { past: [], future: [] };
-
-/** How deep undo goes. Long enough to cover a session of typing, short enough
- *  that the editor never holds an unbounded copy of the page's text. */
-const HISTORY_LIMIT = 50;
 
 /**
  * Reads the message the preview frame posted, or `null` for anything else.
@@ -155,39 +135,4 @@ export function textEditOperation(
 /** One operation, wrapped in the envelope the edit door takes. */
 export function textEditEnvelope(operation: SiteEditOperation): SiteEditEnvelope {
   return { schema_version: EDIT_SCHEMA_VERSION, operations: [operation] };
-}
-
-/** Records an applied edit and drops the redo branch, which is what any new
- *  edit after an undo means. */
-export function recordTextEdit(
-  history: TextEditHistory,
-  step: TextEditStep,
-): TextEditHistory {
-  return { past: [...history.past, step].slice(-HISTORY_LIMIT), future: [] };
-}
-
-/** The step undo would take back, with the history that follows it. */
-export function undoTextEdit(
-  history: TextEditHistory,
-): { history: TextEditHistory; step: TextEditStep; text: string } | null {
-  const step = history.past.at(-1);
-  if (step === undefined) return null;
-  return {
-    history: { past: history.past.slice(0, -1), future: [step, ...history.future] },
-    step,
-    text: step.before,
-  };
-}
-
-/** The step redo would put back, with the history that follows it. */
-export function redoTextEdit(
-  history: TextEditHistory,
-): { history: TextEditHistory; step: TextEditStep; text: string } | null {
-  const [step, ...rest] = history.future;
-  if (step === undefined) return null;
-  return {
-    history: { past: [...history.past, step].slice(-HISTORY_LIMIT), future: rest },
-    step,
-    text: step.after,
-  };
 }

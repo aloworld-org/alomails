@@ -3195,8 +3195,12 @@ export const nl: Partial<Catalog> = {
   sitesInlineTextRedone: "Tekstwijziging opnieuw uitgevoerd.",
   sitesInlineTextStale:
     "Die tekst hoort bij een sectie die intussen is verplaatst of gewijzigd. Het voorbeeld is ververst — probeer de bewerking opnieuw.",
-  sitesUndoTextEdit: "Tekstwijziging ongedaan maken",
-  sitesRedoTextEdit: "Tekstwijziging opnieuw uitvoeren",
+  sitesUndoEdit: "Laatste wijziging ongedaan maken",
+  sitesRedoEdit: "Laatste wijziging opnieuw uitvoeren",
+  sitesSectionDragHint:
+    "Sleep een sectie om die te verplaatsen — de pagina schikt zich meteen opnieuw. Met het toetsenbord: selecteer een sectie en houd Alt ingedrukt met de pijl omhoog of omlaag.",
+  sitesSectionOnPage: (section: string, position: number, total: number) =>
+    `${section}, sectie ${position} van ${total}. Sleep de sectie om die te verplaatsen, of houd Alt ingedrukt en gebruik de pijl omhoog of omlaag.`,
   sitesAiPreviewBefore: "Voor",
   sitesAiPreviewAfter: "Na",
   sitesAiApprove: "Wijzigingen goedkeuren",

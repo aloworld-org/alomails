@@ -17,17 +17,21 @@ import { SECTIONS_SCHEMA_VERSION } from "./sections";
 import type { Section, SectionsEnvelope } from "./sections";
 import type { SiteEditEnvelope } from "./types";
 import {
-  emptyTextEditHistory,
   keyTarget,
   pointerText,
   readTextEditMessage,
-  recordTextEdit,
-  redoTextEdit,
   splitTextKey,
   textEditEnvelope,
   textEditOperation,
-  undoTextEdit,
 } from "./inlineText";
+import {
+  emptyEditHistory,
+  invertEdit,
+  recordEdit,
+  redoEdit,
+  undoEdit,
+  type EditStep,
+} from "./editHistory";
 
 const HERO: Section = {
   type: "hero",
@@ -138,26 +142,44 @@ describe("the coordinate is resolved here, never trusted", () => {
   });
 });
 
-describe("undo and redo", () => {
-  const first = { key: "0/heading", before: "Fresh bread daily", after: "Bread" };
-  const second = { key: "0/subheading", before: "Since 1962", after: "Since 1962." };
+describe("undo and redo, over the history every gesture shares", () => {
+  const first: EditStep = {
+    kind: "text",
+    key: "0/heading",
+    before: "Fresh bread daily",
+    after: "Bread",
+  };
+  const second: EditStep = {
+    kind: "text",
+    key: "0/subheading",
+    before: "Since 1962",
+    after: "Since 1962.",
+  };
 
   test("undo walks back, redo walks forward, and a new edit ends the branch", () => {
-    let history = recordTextEdit(recordTextEdit(emptyTextEditHistory, first), second);
+    let history = recordEdit(recordEdit(emptyEditHistory, first), second);
 
-    const undone = undoTextEdit(history);
-    expect(undone?.text).toBe("Since 1962");
+    const undone = undoEdit(history);
     expect(undone?.step).toEqual(second);
+    // Undo is the inverse gesture, not a restored snapshot: applying it writes
+    // the text the page had before.
+    expect(invertEdit((undone as NonNullable<typeof undone>).step)).toEqual({
+      kind: "text",
+      key: "0/subheading",
+      before: "Since 1962.",
+      after: "Since 1962",
+    });
     history = (undone as NonNullable<typeof undone>).history;
 
-    const redone = redoTextEdit(history);
-    expect(redone?.text).toBe("Since 1962.");
+    const redone = redoEdit(history);
+    expect(redone?.step).toEqual(second);
     history = (redone as NonNullable<typeof redone>).history;
-    expect(redoTextEdit(history)).toBeNull();
+    expect(redoEdit(history)).toBeNull();
 
     // Undo once, then type something new: the abandoned redo is gone.
-    history = (undoTextEdit(history) as { history: typeof history }).history;
-    history = recordTextEdit(history, {
+    history = (undoEdit(history) as { history: typeof history }).history;
+    history = recordEdit(history, {
+      kind: "text",
       key: "1/items/0/answer",
       before: "Every day.",
       after: "Every day except Sunday.",
@@ -167,8 +189,8 @@ describe("undo and redo", () => {
   });
 
   test("an empty history offers nothing to undo or redo", () => {
-    expect(undoTextEdit(emptyTextEditHistory)).toBeNull();
-    expect(redoTextEdit(emptyTextEditHistory)).toBeNull();
+    expect(undoEdit(emptyEditHistory)).toBeNull();
+    expect(redoEdit(emptyEditHistory)).toBeNull();
   });
 });
 
@@ -310,7 +332,7 @@ describe("the page editor applies what the preview reports", () => {
     // Undo is offered only once there is something to take back, and it puts
     // the previous text through the identical door.
     const undo = await screen.findByRole<HTMLButtonElement>("button", {
-      name: strings.sitesUndoTextEdit,
+      name: strings.sitesUndoEdit,
     });
     await waitFor(() => expect(undo.disabled).toBe(false));
     fireEvent.click(undo);
@@ -330,7 +352,7 @@ describe("the page editor applies what the preview reports", () => {
     });
 
     const redo = screen.getByRole<HTMLButtonElement>("button", {
-      name: strings.sitesRedoTextEdit,
+      name: strings.sitesRedoEdit,
     });
     await waitFor(() => expect(redo.disabled).toBe(false));
     fireEvent.click(redo);
@@ -349,7 +371,7 @@ describe("the page editor applies what the preview reports", () => {
     expect(edits()).toHaveLength(0);
     expect(
       screen.getByRole<HTMLButtonElement>("button", {
-        name: strings.sitesUndoTextEdit,
+        name: strings.sitesUndoEdit,
       }).disabled,
     ).toBe(true);
   });

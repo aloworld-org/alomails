@@ -3238,8 +3238,12 @@ export const fr: Partial<Catalog> = {
   sitesInlineTextRedone: "Modification du texte rétablie.",
   sitesInlineTextStale:
     "Ce texte appartient à une section qui a depuis été déplacée ou modifiée. L’aperçu a été actualisé — réessayez la modification.",
-  sitesUndoTextEdit: "Annuler la modification du texte",
-  sitesRedoTextEdit: "Rétablir la modification du texte",
+  sitesUndoEdit: "Annuler la dernière modification",
+  sitesRedoEdit: "Rétablir la dernière modification",
+  sitesSectionDragHint:
+    "Faites glisser une section pour la déplacer — la page se réorganise pendant le déplacement. Au clavier, sélectionnez une section et maintenez Alt avec la flèche haut ou bas.",
+  sitesSectionOnPage: (section: string, position: number, total: number) =>
+    `${section}, section ${position} sur ${total}. Faites-la glisser pour la déplacer, ou maintenez Alt et appuyez sur la flèche haut ou bas.`,
   sitesAiPreviewBefore: "Avant",
   sitesAiPreviewAfter: "Après",
   sitesAiApprove: "Approuver les modifications",

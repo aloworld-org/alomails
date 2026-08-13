@@ -10,6 +10,13 @@
 // typing there comes back as one `rewrite_copy` — the identical operation the
 // AI panel proposes, through the identical door. That is what lets one undo
 // history cover both, and why there is no "inline save" endpoint.
+//
+// A section is moved where it lives too (S3.01b): dragging one in the preview
+// reflows the page under the pointer and reports where it landed, and `move`
+// below — the same function the stack's own buttons call — sends it. So the
+// gesture on the page, the buttons in the stack and the assistant's
+// `reorder_section` are three ways to ask for one change, all of which come
+// back as the server's canonical envelope and all of which one ⌘Z takes back.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -41,17 +48,25 @@ import { PageSeoDialog } from "./PageSeoDialog";
 import { PageAiEditPanel } from "./PageAiEditPanel";
 import { PagePassword } from "./PagePassword";
 import {
-  emptyTextEditHistory,
   keyTarget,
   readTextEditMessage,
-  recordTextEdit,
-  redoTextEdit,
   textEditEnvelope,
   textEditOperation,
-  undoTextEdit,
-  type TextEditHistory,
-  type TextEditStep,
 } from "./inlineText";
+import {
+  emptyEditHistory,
+  invertEdit,
+  recordEdit,
+  redoEdit,
+  undoEdit,
+  type EditHistory,
+  type EditStep,
+} from "./editHistory";
+import {
+  moveDestination,
+  readSectionMoveMessage,
+  withSectionMoved,
+} from "./sectionMove";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 import type { SitePageDetail } from "./types";
@@ -100,7 +115,7 @@ export function PageEditorView() {
   // against the page as it is *now* — a handler that closed over an older
   // stack would aim a rewrite at a section that has since moved.
   const sectionsRef = useRef<Section[]>([]);
-  const [history, setHistory] = useState<TextEditHistory>(emptyTextEditHistory);
+  const [history, setHistory] = useState<EditHistory>(emptyEditHistory);
   const [textNotice, setTextNotice] = useState("");
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -177,7 +192,7 @@ export function PageEditorView() {
   // language would offer to take back a change on a document that is no
   // longer on screen.
   useEffect(() => {
-    setHistory(emptyTextEditHistory);
+    setHistory(emptyEditHistory);
     setTextNotice("");
   }, [siteId, pageId, locale]);
 
@@ -266,16 +281,19 @@ export function PageEditorView() {
     setSearchParams({ locale: nextLocale });
   }
 
-  /** Runs one stack op and renders the envelope the server answered. */
-  async function run(op: Promise<SectionsEnvelope>) {
+  /** Runs one stack op and renders the envelope the server answered. Answers
+   *  whether it was stored, which is what decides if it joins the history. */
+  async function run(op: Promise<SectionsEnvelope>): Promise<boolean> {
     setWorking(true);
     setConfirmDelete(null);
     try {
       setSections((await op).sections);
       setError(null);
+      return true;
     } catch (err) {
       focusAfterMove.current = null;
       setError(sitesMessage(err, strings.sitesSaveFailed));
+      return false;
     } finally {
       setWorking(false);
     }
@@ -327,9 +345,31 @@ export function PageEditorView() {
     target.focus();
   }, [sections, working, translationBusy]);
 
-  function move(from: number, to: number, control?: string) {
-    if (to < 0 || to >= sections.length || from === to) return;
-    const moving = sections[from];
+  /** The one move on this screen.
+   *
+   *  A stack button, a section dragged on the page and the inverse of either
+   *  under ⌘Z all arrive here, so there is a single set of rules about what a
+   *  move announces, what it focuses and what it stores — and a single request
+   *  behind all of them.
+   *
+   *  `control` refocuses a stack button after the list is replaced;
+   *  `inPreview` asks the preview frame to put focus back on the section
+   *  itself, which is what a keyboard move made on the page needs, since
+   *  applying it re-renders the whole document. `replay` is set when undo or
+   *  redo is re-applying a known step — the one case that must not push a new
+   *  entry onto the history. */
+  async function move(
+    from: number,
+    to: number,
+    options: { control?: string; inPreview?: boolean; replay?: boolean } = {},
+  ): Promise<boolean> {
+    // Against the ref, not the render's copy: a message from the preview frame
+    // arrives whenever the person decides, and has to be answered against the
+    // page as it is now.
+    const current = sectionsRef.current;
+    if (from < 0 || from >= current.length) return false;
+    if (to < 0 || to >= current.length || from === to) return false;
+    const moving = current[from];
     if (moving !== undefined) {
       // Announced as well as done: a reorder is invisible to a reader who
       // cannot see the stack reflow.
@@ -337,21 +377,64 @@ export function PageEditorView() {
         strings.sitesSectionMoved(
           kindLabel(moving.type),
           to + 1,
-          sections.length,
+          current.length,
         ),
       );
     }
-    if (control !== undefined)
-      focusAfterMove.current = { index: to, control, before: sections };
+    if (options.control !== undefined)
+      focusAfterMove.current = {
+        index: to,
+        control: options.control,
+        before: current,
+      };
+    if (options.inPreview === true) focusInPreview.current = to;
+    let stored: boolean;
     if (locale !== null) {
-      const reordered = [...sections];
-      const [moved] = reordered.splice(from, 1);
-      if (moved === undefined) return;
-      reordered.splice(to, 0, moved);
-      void saveLocalized(reordered);
-      return;
+      const reordered = withSectionMoved(current, from, to);
+      if (reordered === null) return false;
+      stored = await saveLocalized(reordered);
+    } else {
+      stored = await run(api.moveSection(siteId, pageId, from, to));
     }
-    void run(api.moveSection(siteId, pageId, from, to));
+    if (stored && options.replay !== true && locale === null) {
+      setHistory((entries) => recordEdit(entries, { kind: "move", from, to }));
+    }
+    return stored;
+  }
+
+  /** Which section the preview frame should put focus on after the document
+   *  it is showing has been replaced. Null unless a move was made inside it. */
+  const focusInPreview = useRef<number | null>(null);
+
+  /** The editor chrome the preview document cannot write for itself: what each
+   *  section is called, and where focus goes after a move.
+   *
+   *  These are the *editor's* words, so they are in the language of the person
+   *  editing — which is not necessarily the language of the site being edited,
+   *  and is why they are posted in rather than rendered by `alo-sites`. The
+   *  target origin can only be `"*"`: the document is a sandboxed `srcdoc` and
+   *  has no origin to name. Nothing secret travels — a section kind and a
+   *  position, both of which are already on the screen the message is sent
+   *  from. */
+  function postPreviewChrome() {
+    const frame = previewFrame.current?.contentWindow ?? null;
+    if (frame === null || locale !== null) return;
+    const current = sectionsRef.current;
+    frame.postMessage(
+      {
+        alo: "site-edit-chrome",
+        labels: current.map((section, index) =>
+          strings.sitesSectionOnPage(
+            kindLabel(section.type),
+            index + 1,
+            current.length,
+          ),
+        ),
+        focus: focusInPreview.current,
+      },
+      "*",
+    );
+    focusInPreview.current = null;
   }
 
   function remove(index: number) {
@@ -378,11 +461,7 @@ export function PageEditorView() {
    *  `replay` is set when undo or redo is re-applying a known step, which is
    *  the one case that must not push a new entry onto the history. */
   const applyInlineText = useCallback(
-    async (
-      key: string,
-      text: string,
-      replay: TextEditStep | null = null,
-    ): Promise<boolean> => {
+    async (key: string, text: string, replay = false): Promise<boolean> => {
       const current = sectionsRef.current;
       const found = keyTarget(current, key);
       const operation = textEditOperation(current, key, text);
@@ -401,9 +480,10 @@ export function PageEditorView() {
         );
         setSections(envelope.sections);
         setError(null);
-        if (replay === null) {
-          setHistory((current) =>
-            recordTextEdit(current, {
+        if (!replay) {
+          setHistory((entries) =>
+            recordEdit(entries, {
+              kind: "text",
               key,
               before: found.current,
               after: text,
@@ -426,37 +506,67 @@ export function PageEditorView() {
   // The frame's half of direct manipulation. Its document has an opaque
   // origin, so `event.origin` proves nothing and the sender is proven
   // instead: only this editor's own preview window is listened to.
+  //
+  // No dependency array: the move handler must answer against the page as it
+  // is at the moment the gesture lands, and re-subscribing on every render is
+  // how a handler stays current without a second copy of the state to keep in
+  // sync.
   useEffect(() => {
     if (locale !== null) return undefined;
     function onMessage(event: MessageEvent) {
       const frame = previewFrame.current;
-      const edit = readTextEditMessage(
-        event.data,
-        frame !== null && event.source === frame.contentWindow,
-      );
-      if (edit === null) return;
-      void applyInlineText(edit.key, edit.text);
+      const own = frame !== null && event.source === frame.contentWindow;
+      const edit = readTextEditMessage(event.data, own);
+      if (edit !== null) {
+        void applyInlineText(edit.key, edit.text);
+        return;
+      }
+      const moved = readSectionMoveMessage(event.data, own);
+      if (moved === null) return;
+      const current = sectionsRef.current;
+      if (current[moved.from] === undefined) {
+        // The page moved under the gesture: refuse it rather than aim it at
+        // whatever now sits at that position, and show the truth again.
+        setError(strings.sitesInlineTextStale);
+        setPreviewEpoch((epoch) => epoch + 1);
+        return;
+      }
+      const to = moveDestination(current.length, moved.from, moved.before);
+      if (to === null) return;
+      void move(moved.from, to, { inPreview: true });
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [applyInlineText, locale]);
+  });
 
-  async function undoText() {
-    const step = undoTextEdit(history);
-    if (step === null) return;
-    if (await applyInlineText(step.step.key, step.text, step.step)) {
-      setHistory(step.history);
+  /** Takes back the last change, whichever gesture made it, by applying its
+   *  inverse through that gesture's own door. */
+  async function undoEdits() {
+    const undone = undoEdit(history);
+    if (undone === null) return;
+    if (!(await applyStep(invertEdit(undone.step)))) return;
+    setHistory(undone.history);
+    if (undone.step.kind === "text")
       setTextNotice(strings.sitesInlineTextUndone);
-    }
   }
 
-  async function redoText() {
-    const step = redoTextEdit(history);
-    if (step === null) return;
-    if (await applyInlineText(step.step.key, step.text, step.step)) {
-      setHistory(step.history);
+  /** Puts back the last change undo took away. */
+  async function redoEdits() {
+    const redone = redoEdit(history);
+    if (redone === null) return;
+    if (!(await applyStep(redone.step))) return;
+    setHistory(redone.history);
+    if (redone.step.kind === "text")
       setTextNotice(strings.sitesInlineTextRedone);
-    }
+  }
+
+  /** Re-applies one known step without recording it again. A move announces
+   *  itself through the same live region as any other move, so only text
+   *  needs a word from the caller. */
+  function applyStep(step: EditStep): Promise<boolean> {
+    return step.kind === "text"
+      ? applyInlineText(step.key, step.after, true)
+      : move(step.from, step.to, { replay: true });
   }
 
   // ⌘Z / Ctrl+Z, with shift to redo. Keys pressed inside the preview stay
@@ -477,7 +587,7 @@ export function PageEditorView() {
         return;
       }
       event.preventDefault();
-      void (event.shiftKey ? redoText() : undoText());
+      void (event.shiftKey ? redoEdits() : undoEdits());
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -685,17 +795,17 @@ export function PageEditorView() {
                     <>
                       <IconButton
                         size="sm"
-                        label={strings.sitesUndoTextEdit}
+                        label={strings.sitesUndoEdit}
                         icon={<Undo2 size={15} />}
                         disabled={working || history.past.length === 0}
-                        onClick={() => void undoText()}
+                        onClick={() => void undoEdits()}
                       />
                       <IconButton
                         size="sm"
-                        label={strings.sitesRedoTextEdit}
+                        label={strings.sitesRedoEdit}
                         icon={<Redo2 size={15} />}
                         disabled={working || history.future.length === 0}
-                        onClick={() => void redoText()}
+                        onClick={() => void redoEdits()}
                       />
                     </>
                   )}
@@ -778,7 +888,7 @@ export function PageEditorView() {
                         }}
                         onDrop={(e) => {
                           e.preventDefault();
-                          if (dragFrom !== null) move(dragFrom, i);
+                          if (dragFrom !== null) void move(dragFrom, i);
                           setDragFrom(null);
                           setDragOver(null);
                         }}
@@ -812,7 +922,7 @@ export function PageEditorView() {
                               translationFallback ||
                               i === 0
                             }
-                            onClick={() => move(i, i - 1, "up")}
+                            onClick={() => void move(i, i - 1, { control: "up" })}
                           />
                           <IconButton
                             size="sm"
@@ -827,7 +937,7 @@ export function PageEditorView() {
                               translationFallback ||
                               i === sections.length - 1
                             }
-                            onClick={() => move(i, i + 1, "down")}
+                            onClick={() => void move(i, i + 1, { control: "down" })}
                           />
                           <IconButton
                             size="sm"
@@ -940,7 +1050,9 @@ export function PageEditorView() {
                 </div>
               </div>
               {locale === null && (
-                <p className={styles.previewEditHint}>{strings.sitesInlineTextHint}</p>
+                <p className={styles.previewEditHint}>
+                  {strings.sitesInlineTextHint} {strings.sitesSectionDragHint}
+                </p>
               )}
               {pageProtected && (
                 <p className={styles.previewProtectedNote}>
@@ -960,6 +1072,7 @@ export function PageEditorView() {
                   document never touches this origin or navigates the app. */}
                 <iframe
                   ref={previewFrame}
+                  onLoad={postPreviewChrome}
                   className={styles.previewFrame}
                   title={strings.sitesPreviewTitle}
                   sandbox="allow-scripts"

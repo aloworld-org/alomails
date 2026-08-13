@@ -335,15 +335,20 @@ fn published_and_read_only_renderings_carry_no_editing_surface() {
     );
 }
 
-/// The document without its annotations.
+/// The document without its annotations — both of them: the text coordinates
+/// this file is about, and the section coordinates a move uses (S3.01b).
 fn strip_marks(html: &str) -> String {
-    let mut out = String::with_capacity(html.len());
-    let mut rest = html;
-    while let Some(at) = rest.find(" data-alo-text=\"") {
-        out.push_str(&rest[..at]);
-        let after = &rest[at + " data-alo-text=\"".len()..];
-        rest = &after[after.find('"').expect("unterminated attribute") + 1..];
+    let mut out = html.to_owned();
+    for attribute in [" data-alo-text=\"", " data-alo-section=\""] {
+        let mut stripped = String::with_capacity(out.len());
+        let mut rest = out.as_str();
+        while let Some(at) = rest.find(attribute) {
+            stripped.push_str(&rest[..at]);
+            let after = &rest[at + attribute.len()..];
+            rest = &after[after.find('"').expect("unterminated attribute") + 1..];
+        }
+        stripped.push_str(rest);
+        out = stripped;
     }
-    out.push_str(rest);
     out
 }

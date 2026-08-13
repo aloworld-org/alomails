@@ -3068,8 +3068,12 @@ export const en = {
   sitesInlineTextRedone: "Text change redone.",
   sitesInlineTextStale:
     "That text belongs to a section that has since moved or changed. The preview has been refreshed — try the edit again.",
-  sitesUndoTextEdit: "Undo text change",
-  sitesRedoTextEdit: "Redo text change",
+  sitesUndoEdit: "Undo last change",
+  sitesRedoEdit: "Redo last change",
+  sitesSectionDragHint:
+    "Drag a section to move it — the page reorders as you drag. With the keyboard, focus a section and hold Alt with the up or down arrow.",
+  sitesSectionOnPage: (section: string, position: number, total: number) =>
+    `${section}, section ${position} of ${total}. Drag it to move it, or hold Alt and press the up or down arrow.`,
   sitesAiPreviewBefore: "Before",
   sitesAiPreviewAfter: "After",
   sitesAiApprove: "Approve changes",
