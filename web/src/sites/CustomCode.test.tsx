@@ -20,6 +20,18 @@ import { SitesModule } from "./SitesModule";
 import { SECTIONS_SCHEMA_VERSION } from "./sections";
 import type { Section, SectionsEnvelope } from "./sections";
 
+/** The stack's controls are named after the section they act on (S2.16b2), so
+ *  a test that wants "the first Edit" asks for the marker the editor puts on
+ *  them rather than for a name that is now different on every row. */
+function sectionControls(control: string): HTMLElement[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>(
+      `[data-section-control="${control}"]`,
+    ),
+  ];
+}
+
+
 interface Call {
   url: string;
   method: string;
@@ -252,7 +264,7 @@ describe("writing a custom-code block", () => {
     replies = [pageReply([TIMER])];
     ui();
     await screen.findByText(strings.sitesSectionCustomCode);
-    fireEvent.click(screen.getByLabelText(strings.sitesEditSection));
+    fireEvent.click(sectionControls("edit")[0]!);
 
     // The stored block opens with its script and the permission that runs it.
     expect(

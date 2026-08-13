@@ -3270,10 +3270,15 @@ export const en = {
   sitesAddSectionTitle: (section: string) => `Add ${section}`,
   sitesEditSectionTitle: (section: string) => `Edit ${section}`,
   sitesSaveSection: "Save section",
-  sitesMoveUp: "Move up",
-  sitesMoveDown: "Move down",
-  sitesEditSection: "Edit section",
-  sitesDeleteSection: "Delete section",
+  // Named, because a stack of five sections is otherwise twenty buttons
+  // called "Move up", "Edit section", "Delete section" with nothing in the
+  // name to say which one they act on (S2.16b2).
+  sitesMoveUp: (section: string) => `Move ${section} up`,
+  sitesMoveDown: (section: string) => `Move ${section} down`,
+  sitesEditSection: (section: string) => `Edit ${section}`,
+  sitesDeleteSection: (section: string) => `Delete ${section}`,
+  sitesSectionMoved: (section: string, position: number, total: number) =>
+    `${section} moved to position ${position} of ${total}.`,
   sitesConfirmDelete: "Really delete?",
   sitesPreview: "Preview",
   sitesPreviewTitle: "Draft preview",

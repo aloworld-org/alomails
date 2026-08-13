@@ -14,6 +14,18 @@ import { SitesModule } from "./SitesModule";
 import { SECTIONS_SCHEMA_VERSION } from "./sections";
 import type { Section, SectionsEnvelope } from "./sections";
 
+/** The stack's controls are named after the section they act on (S2.16b2), so
+ *  a test that wants "the first Edit" asks for the marker the editor puts on
+ *  them rather than for a name that is now different on every row. */
+function sectionControls(control: string): HTMLElement[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>(
+      `[data-section-control="${control}"]`,
+    ),
+  ];
+}
+
+
 interface Call {
   url: string;
   method: string;
@@ -149,7 +161,7 @@ describe("manual page translation", () => {
     ui("/sites/site-1/pages/page-1?locale=fr");
 
     expect(await screen.findByText(strings.sitesTranslationMissingTitle("FR"))).toBeTruthy();
-    expect(screen.getAllByLabelText(strings.sitesEditSection)[0]).toHaveProperty("disabled", true);
+    expect(sectionControls("edit")[0]!).toHaveProperty("disabled", true);
 
     const savedFrench = {
       ...localizedFallback,
@@ -180,7 +192,7 @@ describe("manual page translation", () => {
       },
     });
     expect(await screen.findByText(strings.sitesTranslationDetails)).toBeTruthy();
-    expect(screen.getAllByLabelText(strings.sitesEditSection)[0]).toHaveProperty("disabled", false);
+    expect(sectionControls("edit")[0]!).toHaveProperty("disabled", false);
   });
 
   test("localized section changes replace only the selected language draft", async () => {
@@ -209,7 +221,7 @@ describe("manual page translation", () => {
         body: { ...french, sections: env([FAQ, HERO]) },
       },
     ];
-    fireEvent.click(screen.getAllByLabelText(strings.sitesMoveDown)[0]!);
+    fireEvent.click(sectionControls("down")[0]!);
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()).toMatchObject({
@@ -511,7 +523,7 @@ describe("editing a section", () => {
     replies = [pageReply([HERO])];
     ui();
     await screen.findByText(strings.sitesSectionHero);
-    fireEvent.click(screen.getByLabelText(strings.sitesEditSection));
+    fireEvent.click(sectionControls("edit")[0]!);
 
     fireEvent.click(
       screen.getAllByRole("button", { name: strings.sitesAiImproveCopy })[0]!,
@@ -574,7 +586,7 @@ describe("editing a section", () => {
     replies = [pageReply([HERO, CONTACT])];
     ui();
     await screen.findByText(strings.sitesSectionHero);
-    fireEvent.click(screen.getAllByLabelText(strings.sitesEditSection)[0]!);
+    fireEvent.click(sectionControls("edit")[0]!);
     const heading = screen.getByLabelText(strings.sitesFieldHeading) as HTMLInputElement;
     expect(heading.value).toBe("Fresh bread daily");
 
@@ -604,7 +616,7 @@ describe("editing a section", () => {
     replies = [pageReply([CONTACT])];
     ui();
     await screen.findByText(strings.sitesSectionContactForm);
-    fireEvent.click(screen.getByLabelText(strings.sitesEditSection));
+    fireEvent.click(sectionControls("edit")[0]!);
 
     replies = [
       {
@@ -642,7 +654,7 @@ describe("editing a section", () => {
     replies = [pageReply([framed])];
     ui();
     await screen.findByText(strings.sitesSectionHero);
-    fireEvent.click(screen.getByLabelText(strings.sitesEditSection));
+    fireEvent.click(sectionControls("edit")[0]!);
 
     replies = [
       {
@@ -678,7 +690,7 @@ describe("reordering and deleting", () => {
         body: { sections: env([FAQ, HERO]) },
       },
     ];
-    fireEvent.click(screen.getAllByLabelText(strings.sitesMoveDown)[0]!);
+    fireEvent.click(sectionControls("down")[0]!);
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     expect(lastWrite()!.body).toEqual({ to: 1 });
   });
@@ -689,7 +701,7 @@ describe("reordering and deleting", () => {
     await screen.findByText(strings.sitesSectionFaq);
 
     // The first click only arms the confirmation.
-    fireEvent.click(screen.getAllByLabelText(strings.sitesDeleteSection)[1]!);
+    fireEvent.click(sectionControls("delete")[1]!);
     expect(lastWrite()).toBeUndefined();
 
     replies = [
@@ -751,7 +763,7 @@ describe("the live preview", () => {
       },
       previewReply("<!doctype html>\n<p>after</p>"),
     ];
-    fireEvent.click(screen.getAllByLabelText(strings.sitesMoveDown)[0]!);
+    fireEvent.click(sectionControls("down")[0]!);
     await waitFor(() => expect(frame().getAttribute("srcdoc")).toContain("after"));
 
     // A refused gesture leaves the sections untouched — and the pane still.
@@ -764,7 +776,7 @@ describe("the live preview", () => {
         body: { detail: "no section at index 9 (the page has 2)" },
       },
     ];
-    fireEvent.click(screen.getAllByLabelText(strings.sitesMoveDown)[0]!);
+    fireEvent.click(sectionControls("down")[0]!);
     await screen.findByText("no section at index 9 (the page has 2)");
     expect(previewCalls()).toBe(fetched);
   });

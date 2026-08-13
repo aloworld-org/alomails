@@ -18,6 +18,18 @@ import { SitesModule } from "./SitesModule";
 import { SECTIONS_SCHEMA_VERSION } from "./sections";
 import type { Section, SectionImage, SectionsEnvelope } from "./sections";
 
+/** The stack's controls are named after the section they act on (S2.16b2), so
+ *  a test that wants "the first Edit" asks for the marker the editor puts on
+ *  them rather than for a name that is now different on every row. */
+function sectionControls(control: string): HTMLElement[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>(
+      `[data-section-control="${control}"]`,
+    ),
+  ];
+}
+
+
 interface Call {
   url: string;
   method: string;
@@ -106,7 +118,7 @@ const lastWrite = (): Call | undefined => calls.filter((c) => c.method !== "GET"
 /** Opens the prop form of the page's only section. */
 async function openTheSection() {
   await screen.findByText(strings.sitesSectionHero);
-  fireEvent.click(screen.getByLabelText(strings.sitesEditSection));
+  fireEvent.click(sectionControls("edit")[0]!);
   await screen.findByLabelText(strings.sitesFieldImageAlt);
 }
 

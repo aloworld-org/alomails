@@ -146,7 +146,6 @@
   white-space: nowrap;
 }
 .backLink:hover {
-  color: var(--accent);
   background: var(--bg-raised);
 }
 .siteHead {
@@ -230,7 +229,7 @@
   border-radius: var(--radius-sm);
 }
 .rowName:hover {
-  color: var(--accent);
+  color: var(--accent-active);
   text-decoration: underline;
 }
 .pageLink {
@@ -241,7 +240,7 @@
   border-radius: var(--radius-sm);
 }
 .pageLink:hover {
-  color: var(--accent);
+  color: var(--accent-active);
   text-decoration: underline;
 }
 .badge {
@@ -252,7 +251,7 @@
   background: var(--bg-raised);
   border: 1px solid var(--border-default);
   font-size: var(--text-xs);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   vertical-align: middle;
 }
 .chip {
@@ -459,12 +458,12 @@
 .onboardingChoice:hover {
   border-color: var(--accent);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--text-primary);
 }
 .onboardingChoiceActive {
   border-color: var(--accent);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--text-primary);
 }
 .onboardingNotice {
   margin: 0;
@@ -589,7 +588,7 @@
 .templatePreviewTabActive {
   border-color: var(--accent);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--text-primary);
 }
 .templatePreviewViewport {
   border: 1px solid var(--border-subtle);
@@ -944,10 +943,7 @@
 .liveLink {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
-  color: var(--accent);
-  text-decoration: none;
-}
-.liveLink:hover {
+  color: var(--text-primary);
   text-decoration: underline;
 }
 .publishActions {
@@ -1138,7 +1134,7 @@
 .protectOutcome {
   max-width: var(--overlay-width-lg);
   margin: var(--space-2) 0 0;
-  color: var(--accent);
+  color: var(--text-primary);
   font-size: var(--text-sm);
   line-height: var(--leading-relaxed);
 }
@@ -1208,7 +1204,7 @@
   background: var(--accent-tint);
   border: 1px solid var(--accent);
   font-size: var(--text-xs);
-  color: var(--accent);
+  color: var(--text-primary);
   vertical-align: middle;
 }
 
@@ -1313,7 +1309,7 @@
   justify-content: center;
   border-radius: var(--radius-full);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--text-primary);
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
 }
@@ -1544,7 +1540,7 @@
   font-weight: var(--weight-semibold);
 }
 .translationReviewKind {
-  color: var(--accent);
+  color: var(--accent-active);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
   text-transform: uppercase;
@@ -1597,7 +1593,7 @@
 .localeTabActive,
 .localeTabActive:hover {
   background: var(--accent-tint);
-  color: var(--accent);
+  color: var(--text-primary);
 }
 .translationMissing {
   justify-content: space-between;
@@ -1712,7 +1708,7 @@
 .previewCompareButtonActive,
 .previewCompareButtonActive:hover {
   background: var(--bg-selected);
-  color: var(--accent);
+  color: var(--text-primary);
 }
 .previewViewport,
 .previewViewportMobile {
@@ -1771,14 +1767,16 @@
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
 }
+/* On the sunken ground of this panel the tertiary grey is 4.1:1 at 12px, and
+   these two lines are what the panel says about itself (S2.16b2). */
 .aiProposalHint {
   margin: var(--space-1) 0 0;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--text-xs);
 }
 .aiEditHeading p {
   margin: var(--space-1) 0 0;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--text-xs);
 }
 .aiEditComposer {
@@ -1950,12 +1948,11 @@
   cursor: pointer;
 }
 .analyticsPeriod:hover {
-  color: var(--accent);
   background: var(--accent-soft);
 }
 .analyticsPeriodActive,
 .analyticsPeriodActive:hover {
-  color: var(--accent);
+  color: var(--accent-active);
   background: var(--bg-surface);
 }
 .analyticsContent {
@@ -1976,7 +1973,7 @@
   border: var(--border-width) solid var(--border-subtle);
   border-radius: var(--radius-md);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--text-secondary);
 }
 .analyticsContent .analyticsPrivacy {
   margin: 0;
@@ -2145,7 +2142,7 @@
   align-self: flex-start;
   min-height: var(--control-height);
   margin-top: var(--space-2);
-  color: var(--accent);
+  color: var(--accent-active);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   cursor: pointer;
@@ -2161,7 +2158,7 @@
   gap: var(--space-2);
   padding: 0 var(--space-3);
   border-radius: var(--radius-sm);
-  color: var(--accent);
+  color: var(--accent-active);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
 }
@@ -2341,7 +2338,7 @@
   font-weight: var(--weight-medium);
 }
 .open {
-  color: var(--accent);
+  color: var(--accent-active);
 }
 .handled {
   color: var(--success);
@@ -3686,5 +3683,68 @@
      should not also spend 48px of a 360px screen on its own margins. */
   .tableWrap {
     padding: 0 var(--space-4) var(--space-4);
+  }
+}
+
+/* Read aloud, never drawn — `display: none` would take it out of the
+   accessibility tree too, which is the opposite of the point (S2.16b2). */
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- phone widths, what the browser showed (S2.16b2) ----
+   S2.16b was read from the source; this pair was found by opening the screens
+   at 360px, and neither is visible in the file it is written in. */
+@media (max-width: 40rem) {
+  /* The ranking panels — top pages, referrers, campaigns, countries, devices.
+     `auto-fit, minmax(8.5rem, 1fr)` fits TWO of them on a 360px screen, and
+     each row inside is `label | bar | count` where the bar (3.5rem) and the
+     count are fixed: the label's `minmax(0, 1fr)` is what gives, and it gives
+     all of it. The measured result was 29 labels at width 0 — four bars and
+     four numbers under "Countries" with no country named anywhere. One panel
+     per row, and the bar moved under its own label, so the label keeps the
+     width it needs. */
+  .analyticsRankings {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .analyticsDimension li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: var(--space-1);
+  }
+  .analyticsDimensionLabel {
+    grid-row: 1;
+    grid-column: 1;
+    overflow: visible;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .analyticsDimension li > strong {
+    grid-row: 1;
+    grid-column: 2;
+  }
+  .analyticsShare {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+  /* One row per enabled language: code, name, "Default", "Ready", actions.
+     The name column asks for a fixed 12rem, which with the rest makes the row
+     404px wide inside a 360px screen — and the row does not scroll, so the
+     state of every language after the first was simply off the edge. */
+  .languageRow {
+    flex-wrap: wrap;
+  }
+  .languageName {
+    min-width: 0;
+  }
+  .languageRow > :last-child {
+    margin-left: 0;
   }
 }

@@ -4,7 +4,7 @@
 // canonical envelope the server answered, so what you see IS what is stored.
 // There is no local dirty buffer to lose, and a refusal (422) points at the
 // exact gesture that broke the rule.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -231,14 +231,75 @@ export function PageEditorView() {
       setSections((await op).sections);
       setError(null);
     } catch (err) {
+      focusAfterMove.current = null;
       setError(sitesMessage(err, strings.sitesSaveFailed));
     } finally {
       setWorking(false);
     }
   }
 
-  function move(from: number, to: number) {
+  /** Focus follows the section, not the row it used to sit in.
+   *
+   *  A move replaces the whole list with the server's answer, so React
+   *  unmounts the row that had focus and the caret falls to `<body>`: measured
+   *  in a browser at 360px, moving one section down cost ten more Tab presses
+   *  to get back to it, which is a reorder nobody can do twice. The row is
+   *  found again by position after the new list renders, and the same control
+   *  is refocused — falling back to its sibling when the button that was
+   *  pressed is the one the new position disables (the last row has no "move
+   *  down", the first no "move up"). */
+  const stackRef = useRef<HTMLOListElement | null>(null);
+  const focusAfterMove = useRef<{
+    index: number;
+    control: string;
+    /** The list as it was when the move was asked for. Until `sections` is a
+     *  different array the stack on screen is still the old order, and the row
+     *  at `index` holds somebody else's section. */
+    before: Section[];
+  } | null>(null);
+  const [moveNotice, setMoveNotice] = useState("");
+
+  useEffect(() => {
+    const want = focusAfterMove.current;
+    // Two things have to have happened. The server's list has to have
+    // replaced the old one — until then the row at `index` is the section
+    // that was there before — and the op has to have finished, because every
+    // control is disabled while it is in flight and a disabled button cannot
+    // take focus.
+    if (want === null || sections === want.before) return;
+    if (working || translationBusy) return;
+    const row = stackRef.current?.children.item(want.index);
+    if (!(row instanceof HTMLElement)) return;
+    const wanted = row.querySelector<HTMLButtonElement>(
+      `[data-section-control="${want.control}"]`,
+    );
+    const target =
+      wanted !== null && !wanted.disabled
+        ? wanted
+        : row.querySelector<HTMLButtonElement>(
+            "[data-section-control]:not(:disabled)",
+          );
+    if (target === null) return;
+    focusAfterMove.current = null;
+    target.focus();
+  }, [sections, working, translationBusy]);
+
+  function move(from: number, to: number, control?: string) {
     if (to < 0 || to >= sections.length || from === to) return;
+    const moving = sections[from];
+    if (moving !== undefined) {
+      // Announced as well as done: a reorder is invisible to a reader who
+      // cannot see the stack reflow.
+      setMoveNotice(
+        strings.sitesSectionMoved(
+          kindLabel(moving.type),
+          to + 1,
+          sections.length,
+        ),
+      );
+    }
+    if (control !== undefined)
+      focusAfterMove.current = { index: to, control, before: sections };
     if (locale !== null) {
       const reordered = [...sections];
       const [moved] = reordered.splice(from, 1);
@@ -502,6 +563,12 @@ export function PageEditorView() {
                 />
               )}
 
+              {/* Reordering is the one edit on this screen with no visible
+                  result outside the stack itself. */}
+              <p className={styles.srOnly} role="status">
+                {moveNotice}
+              </p>
+
               {empty && !loading ? (
                 <EmptyState
                   Icon={Layers}
@@ -511,7 +578,7 @@ export function PageEditorView() {
                   onCta={() => openForm({ kind: "hero", index: null })}
                 />
               ) : (
-                <ol className={styles.stack}>
+                <ol className={styles.stack} ref={stackRef}>
                   {sections.map((section, i) => {
                     const summary = sectionSummary(section);
                     const cardClass =
@@ -556,7 +623,8 @@ export function PageEditorView() {
                         <div className={styles.cardActions}>
                           <IconButton
                             size="sm"
-                            label={strings.sitesMoveUp}
+                            label={strings.sitesMoveUp(kindLabel(section.type))}
+                            data-section-control="up"
                             icon={<ChevronUp size={15} />}
                             disabled={
                               working ||
@@ -564,11 +632,14 @@ export function PageEditorView() {
                               translationFallback ||
                               i === 0
                             }
-                            onClick={() => move(i, i - 1)}
+                            onClick={() => move(i, i - 1, "up")}
                           />
                           <IconButton
                             size="sm"
-                            label={strings.sitesMoveDown}
+                            label={strings.sitesMoveDown(
+                              kindLabel(section.type),
+                            )}
+                            data-section-control="down"
                             icon={<ChevronDown size={15} />}
                             disabled={
                               working ||
@@ -576,11 +647,14 @@ export function PageEditorView() {
                               translationFallback ||
                               i === sections.length - 1
                             }
-                            onClick={() => move(i, i + 1)}
+                            onClick={() => move(i, i + 1, "down")}
                           />
                           <IconButton
                             size="sm"
-                            label={strings.sitesEditSection}
+                            label={strings.sitesEditSection(
+                              kindLabel(section.type),
+                            )}
+                            data-section-control="edit"
                             icon={<Pencil size={15} />}
                             disabled={
                               working || translationBusy || translationFallback
@@ -607,7 +681,10 @@ export function PageEditorView() {
                           ) : (
                             <IconButton
                               size="sm"
-                              label={strings.sitesDeleteSection}
+                              label={strings.sitesDeleteSection(
+                                kindLabel(section.type),
+                              )}
+                              data-section-control="delete"
                               icon={<Trash2 size={15} />}
                               disabled={
                                 working ||

@@ -19,6 +19,18 @@ import { strings } from "../i18n";
 import { SitesModule } from "./SitesModule";
 import type { ThemePreset } from "./types";
 
+/** The stack's controls are named after the section they act on (S2.16b2), so
+ *  a test that wants "the first Edit" asks for the marker the editor puts on
+ *  them rather than for a name that is now different on every row. */
+function sectionControls(control: string): HTMLElement[] {
+  return [
+    ...document.querySelectorAll<HTMLElement>(
+      `[data-section-control="${control}"]`,
+    ),
+  ];
+}
+
+
 interface Call {
   url: string;
   method: string;
@@ -339,7 +351,7 @@ describe("section image upload", () => {
     replies.push(pageReply(), siteReply({}));
     ui("/sites/site-1/pages/page-1");
     expect(await screen.findByText("Fresh bread daily")).toBeTruthy();
-    fireEvent.click(screen.getByLabelText(strings.sitesEditSection));
+    fireEvent.click(sectionControls("edit")[0]!);
     expect(await screen.findByText(strings.sitesSaveSection)).toBeTruthy();
     fireEvent.click(screen.getByText(strings.sitesUploadImage));
     const file = new File(["png"], "drum.png", { type: "image/png" });
