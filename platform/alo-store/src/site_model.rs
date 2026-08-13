@@ -3,7 +3,7 @@
 //! A page's `sections` JSON is the envelope [`SectionsEnvelope`] —
 //! `{ "schema_version": 1, "sections": [ … ] }` — where every entry is one
 //! variant of [`Section`], an internally-tagged serde enum with a closed
-//! vocabulary of fourteen section types. The schema is **strict on write**:
+//! vocabulary of sixteen section types. The schema is **strict on write**:
 //! unknown section types and unknown props are validation errors here, because
 //! the only writers (the editor UI and the AI ops path) speak this schema
 //! exactly. Read-side tolerance (skip-with-log on unknown sections, so an old
@@ -17,6 +17,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::id::{BlobId, SiteBookingId, SiteCatalogId, SiteCollectionId};
+use crate::site_custom_code::CustomCodeSection;
 
 /// The current sections schema version. Version bumps ship an explicit pure
 /// upgrade function (v1 → v2) applied on read; stored JSON is rewritten
@@ -567,6 +568,8 @@ pub enum Section {
     Catalog(CatalogSection),
     /// Something a visitor may book, against the service's Agenda calendar.
     Booking(BookingSection),
+    /// The tenant's own HTML/CSS/JS, published inside a sandboxed frame.
+    CustomCode(CustomCodeSection),
     /// Page footer.
     Footer(FooterSection),
 }
@@ -589,6 +592,7 @@ impl Section {
             Section::Collection(_) => "collection",
             Section::Catalog(_) => "catalog",
             Section::Booking(_) => "booking",
+            Section::CustomCode(_) => "custom_code",
             Section::Footer(_) => "footer",
         }
     }
@@ -615,6 +619,9 @@ impl Section {
             | Section::Collection(_)
             | Section::Catalog(_)
             | Section::Booking(_)
+            // A custom-code block owns no tenant blob: it has no network, so
+            // the only image it can show is one carried inline in its markup.
+            | Section::CustomCode(_)
             | Section::Footer(_) => Vec::new(),
         }
     }
@@ -747,6 +754,10 @@ impl Section {
                 check_token(kind, "booking_id", s.booking_id.as_str())?;
                 check_opt_short(kind, "heading", s.heading.as_deref())
             }
+            // The block's own rules — byte caps, the capability/script pairing,
+            // and everything that would break the frame's document — live with
+            // the sandbox contract they belong to.
+            Section::CustomCode(s) => s.validate(),
             Section::Footer(s) => {
                 check_opt_short(kind, "text", s.text.as_deref())?;
                 check_len(kind, "links", s.links.len(), false)?;
@@ -842,7 +853,7 @@ fn invalid(section: &'static str, detail: String) -> SectionSchemaError {
 }
 
 /// A required short string: non-blank, within [`MAX_SHORT_TEXT_CHARS`].
-fn check_short(
+pub(crate) fn check_short(
     section: &'static str,
     field: &'static str,
     value: &str,
@@ -859,7 +870,7 @@ fn check_long(
     check_text(section, field, value, MAX_LONG_TEXT_CHARS)
 }
 
-fn check_opt_short(
+pub(crate) fn check_opt_short(
     section: &'static str,
     field: &'static str,
     value: Option<&str>,
@@ -1175,6 +1186,27 @@ mod tests {
                 collection_id: SiteCollectionId::new("seasonal-roasts"),
                 heading: Some("Seasonal roasts".to_owned()),
             }),
+            Section::Catalog(CatalogSection {
+                catalog_id: SiteCatalogId::new("house-menu"),
+                heading: Some("On the counter".to_owned()),
+                category: Some("espresso".to_owned()),
+            }),
+            Section::Booking(BookingSection {
+                booking_id: SiteBookingId::new("tasting-table"),
+                heading: Some("Book the tasting table".to_owned()),
+            }),
+            Section::CustomCode(CustomCodeSection {
+                heading: Some("Roast timer".to_owned()),
+                title: "A timer counting down the current roast".to_owned(),
+                html: "<p id=\"left\">12:00</p>".to_owned(),
+                css: Some("#left { font-size: 3rem; }".to_owned()),
+                js: Some("document.getElementById('left');".to_owned()),
+                capabilities: crate::site_custom_code::CustomCodeCapabilities {
+                    scripts: true,
+                    inline_images: true,
+                },
+                height_px: 220,
+            }),
             Section::Footer(FooterSection {
                 text: Some("© Nordwind Coffee Roasters".to_owned()),
                 links: vec![link("Imprint", "/imprint"), link("Privacy", "/privacy")],
@@ -1192,7 +1224,7 @@ mod tests {
     #[test]
     fn every_variant_round_trips_fully_populated() {
         let before = envelope(full_sections());
-        assert_eq!(before.sections.len(), 13, "corpus must cover all variants");
+        assert_eq!(before.sections.len(), 16, "corpus must cover all variants");
         before.validate().unwrap();
         let value = before.to_value().unwrap();
         let after = SectionsEnvelope::from_value(value).unwrap();
@@ -1267,7 +1299,7 @@ mod tests {
     }
 
     #[test]
-    fn wire_tags_are_the_thirteen_snake_case_tokens() {
+    fn wire_tags_are_the_sixteen_snake_case_tokens() {
         let expected = [
             "nav",
             "hero",
@@ -1281,6 +1313,9 @@ mod tests {
             "cta",
             "contact_form",
             "collection",
+            "catalog",
+            "booking",
+            "custom_code",
             "footer",
         ];
         for (section, expected) in full_sections().iter().zip(expected) {

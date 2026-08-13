@@ -41,8 +41,20 @@ const SECTION_FIXTURES: &[(&str, &str)] = &[
         include_str!("fixtures/site_sections/contact_form.json"),
     ),
     (
+        "collection",
+        include_str!("fixtures/site_sections/collection.json"),
+    ),
+    (
+        "catalog",
+        include_str!("fixtures/site_sections/catalog.json"),
+    ),
+    (
         "booking",
         include_str!("fixtures/site_sections/booking.json"),
+    ),
+    (
+        "custom_code",
+        include_str!("fixtures/site_sections/custom_code.json"),
     ),
     ("footer", include_str!("fixtures/site_sections/footer.json")),
 ];
@@ -82,7 +94,81 @@ fn section_goldens_cover_the_whole_vocabulary_exactly_once() {
     let mut names: Vec<&str> = SECTION_FIXTURES.iter().map(|(name, _)| *name).collect();
     names.sort_unstable();
     names.dedup();
-    assert_eq!(names.len(), 13, "one golden per section type, no gaps");
+    assert_eq!(names.len(), 16, "one golden per section type, no gaps");
+}
+
+/// The custom-code block through the **public write gate** — the same door the
+/// editor and the AI ops path use. The unit tests in `site_custom_code` cover
+/// the rule matrix; what is proven here is that no hostile shape reaches
+/// storage by going around them, and that the refusal names the rule so a UI
+/// can show it verbatim.
+#[test]
+fn the_write_gate_refuses_custom_code_that_would_escape_its_frame() {
+    let block = |patch: Value| -> Value {
+        let mut section = serde_json::json!({
+            "type": "custom_code",
+            "title": "Roast timer",
+            "html": "<p>12:00</p>",
+            "height_px": 220,
+        });
+        for (key, value) in patch.as_object().expect("patch is an object") {
+            section[key] = value.clone();
+        }
+        serde_json::json!({"schema_version": 1, "sections": [section]})
+    };
+
+    for (patch, expected) in [
+        // The wrapper's own blocks are not the tenant's to open.
+        (
+            serde_json::json!({"html": "<script>fetch('/steal')</script>"}),
+            "<script>",
+        ),
+        // Nor the document around them.
+        (
+            serde_json::json!({"html": "<body onload=\"top.location='/'\">x</body>"}),
+            "<body>",
+        ),
+        // Nothing is loaded from anywhere: the frame has no network.
+        (
+            serde_json::json!({"html": "<p>see https://tracker.example</p>"}),
+            "no network access",
+        ),
+        // A script without the capability that runs it, and the reverse.
+        (
+            serde_json::json!({"js": "alert(1)"}),
+            "must declare the scripts capability",
+        ),
+        (
+            serde_json::json!({"capabilities": {"scripts": true}}),
+            "only be declared by a block that has a script",
+        ),
+        // A part that would end its own inlined block.
+        (
+            serde_json::json!({"css": "body{}</style><img>", "js": "1", "capabilities": {"scripts": true}}),
+            "`</`",
+        ),
+        // Bounds the page budget depends on.
+        (
+            serde_json::json!({"height_px": 4000}),
+            "height must be between",
+        ),
+    ] {
+        let error = SectionsEnvelope::from_value(block(patch.clone()))
+            .expect_err(&format!("{patch} must be refused"))
+            .to_string();
+        assert!(
+            error.contains(expected),
+            "{patch} was refused as {error:?}, expected the {expected:?} rule"
+        );
+    }
+
+    // And the accepted shape really is accepted, through the same door.
+    SectionsEnvelope::from_value(block(serde_json::json!({
+        "css": "p { font-size: 3rem; }",
+        "js": "document.title;",
+        "capabilities": {"scripts": true, "inline_images": true},
+    })))
+    .expect("a well-formed block must pass the gate");
 }
 
 #[test]

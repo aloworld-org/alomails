@@ -243,14 +243,39 @@ fn validate_envelope(edit: &SiteEditEnvelope) -> Result<(), SiteEditError> {
     }
     for (operation, edit) in edit.operations.iter().enumerate() {
         match edit {
-            SiteEditOperation::SetProp { pointer, .. }
-            | SiteEditOperation::RewriteCopy { pointer, .. } => {
-                validate_pointer(pointer, operation)?;
+            SiteEditOperation::SetProp {
+                target, pointer, ..
             }
-            SiteEditOperation::AddSection { .. }
-            | SiteEditOperation::RemoveSection { .. }
-            | SiteEditOperation::ReorderSection { .. } => {}
+            | SiteEditOperation::RewriteCopy {
+                target, pointer, ..
+            } => {
+                validate_pointer(pointer, operation)?;
+                reject_custom_code(&target.kind, operation)?;
+            }
+            SiteEditOperation::AddSection { section, .. } => {
+                reject_custom_code(section.kind(), operation)?;
+            }
+            SiteEditOperation::RemoveSection { .. } | SiteEditOperation::ReorderSection { .. } => {}
         }
+    }
+    Ok(())
+}
+
+/// The assistant may move or delete a custom-code block like any other
+/// section, and may never write one or touch what is inside it. Code in a
+/// tenant's published site is written by a person who meant to write it —
+/// the sandbox contains what a block can do, but nothing contains an author
+/// nobody asked.
+///
+/// `RemoveSection`/`ReorderSection` are deliberately absent from the callers:
+/// both are reversible page arrangement, and neither changes a single byte of
+/// the code.
+fn reject_custom_code(kind: &str, operation: usize) -> Result<(), SiteEditError> {
+    if kind == "custom_code" {
+        return Err(invalid(
+            operation,
+            "custom code is written by hand, not by the assistant".to_owned(),
+        ));
     }
     Ok(())
 }
@@ -446,6 +471,81 @@ mod tests {
         ] {
             assert!(prompt.contains(operation), "missing {operation}");
         }
+    }
+
+    /// Custom code is the one section the assistant may arrange but never
+    /// author or rewrite: a sandbox bounds what a block can *do*, and nothing
+    /// bounds a block nobody meant to write. Moving and deleting stay allowed —
+    /// both are reversible page arrangement that changes no code.
+    #[test]
+    fn the_assistant_may_move_custom_code_but_never_write_it() {
+        let block = json!({
+            "type": "custom_code",
+            "title": "Widget",
+            "html": "<p>anything</p>",
+            "height_px": 200,
+        });
+        let page = SectionsEnvelope::from_value(json!({
+            "schema_version": 1,
+            "sections": [block.clone(), {"type": "footer", "text": "Acme", "links": []}]
+        }))
+        .unwrap();
+
+        for refused in [
+            SiteEditOperation::AddSection {
+                at: 0,
+                section: serde_json::from_value(block).unwrap(),
+            },
+            SiteEditOperation::SetProp {
+                target: target(0, "custom_code"),
+                pointer: "/js".to_owned(),
+                value: json!("fetch('/x')"),
+            },
+            SiteEditOperation::RewriteCopy {
+                target: target(0, "custom_code"),
+                pointer: "/html".to_owned(),
+                text: "<p>rewritten</p>".to_owned(),
+            },
+        ] {
+            let error = apply_site_edit(&page, &edit(vec![refused]))
+                .expect_err("the assistant must not write custom code");
+            assert!(
+                matches!(&error, SiteEditError::Invalid { detail, .. }
+                    if detail.contains("written by hand")),
+                "{error}"
+            );
+        }
+
+        // Arrangement is still the assistant's to propose.
+        let moved = apply_site_edit(
+            &page,
+            &edit(vec![SiteEditOperation::ReorderSection {
+                target: target(0, "custom_code"),
+                to: 1,
+            }]),
+        )
+        .unwrap();
+        assert_eq!(
+            moved.sections.iter().map(Section::kind).collect::<Vec<_>>(),
+            ["footer", "custom_code"]
+        );
+    }
+
+    /// A pointer edit cannot smuggle a block in by re-typing a section it is
+    /// allowed to touch: the result is re-parsed through the section schema,
+    /// which needs the props a hero does not have.
+    #[test]
+    fn a_prop_edit_cannot_turn_another_section_into_custom_code() {
+        let error = apply_site_edit(
+            &page(),
+            &edit(vec![SiteEditOperation::SetProp {
+                target: target(0, "hero"),
+                pointer: "/type".to_owned(),
+                value: json!("custom_code"),
+            }]),
+        )
+        .expect_err("re-typing a section must not produce a custom-code block");
+        assert!(matches!(error, SiteEditError::Invalid { .. }), "{error}");
     }
 
     #[test]

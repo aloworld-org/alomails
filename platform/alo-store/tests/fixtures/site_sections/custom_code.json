@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "sections": [
+    {
+      "type": "custom_code",
+      "heading": "Roast timer",
+      "title": "A timer counting down the current roast",
+      "html": "<p id=\"left\">12:00</p><button type=\"button\" id=\"go\">Start</button>",
+      "css": "#left { font-size: 3rem; font-variant-numeric: tabular-nums; }",
+      "js": "const el = document.getElementById('left'); document.getElementById('go').addEventListener('click', () => { el.textContent = '11:59'; });",
+      "capabilities": { "scripts": true, "inline_images": false },
+      "height_px": 220
+    }
+  ]
+}

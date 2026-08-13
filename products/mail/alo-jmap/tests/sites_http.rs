@@ -139,6 +139,18 @@ fn faq() -> Value {
     ] })
 }
 
+/// A sandboxed custom-code block as the editor sends it: the three parts apart,
+/// and the one capability that runs the script.
+fn custom_code() -> Value {
+    json!({ "type": "custom_code",
+            "title": "A timer counting down the current roast",
+            "html": "<p id=\"left\">12:00</p>",
+            "css": "#left { font-size: 3rem; }",
+            "js": "document.getElementById('left');",
+            "capabilities": { "scripts": true },
+            "height_px": 220 })
+}
+
 // ---- auth guard --------------------------------------------------------------
 
 #[tokio::test]
@@ -1078,6 +1090,96 @@ async fn localized_page_drafts_resolve_fallback_and_hide_other_tenants() {
 }
 
 // ---- sections ----------------------------------------------------------------
+
+/// The custom-code block on the wire, through the real router and the real
+/// database: it is added like any other section, comes back exactly as it was
+/// sent — capabilities included — and every refusal arrives as a 422 whose
+/// `detail` names the rule in the words a screen can show without rewording.
+#[tokio::test]
+async fn a_custom_code_block_is_stored_and_its_refusals_reach_the_wire() {
+    let h = harness("sites-custom-code").await;
+    let site = created_id(
+        "site",
+        post(
+            &h.app,
+            &h.token,
+            "/sites",
+            json!({ "name": "Custom", "subdomain": sub("cc", &h) }),
+        )
+        .await,
+    );
+    let page = created_id(
+        "page",
+        post(
+            &h.app,
+            &h.token,
+            &format!("/sites/{site}/pages"),
+            json!({ "title": "Home", "home": true }),
+        )
+        .await,
+    );
+    let sections = format!("/sites/{site}/pages/{page}/sections");
+
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        &sections,
+        json!({ "section": custom_code() }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "add custom code: {body}");
+    let stored = &body["sections"]["sections"][0];
+    assert_eq!(stored["type"], json!("custom_code"));
+    assert_eq!(stored["capabilities"]["scripts"], json!(true));
+    assert_eq!(
+        stored["capabilities"]["inline_images"],
+        json!(false),
+        "an undeclared capability comes back denied, not absent"
+    );
+    assert_eq!(stored["height_px"], json!(220));
+
+    // The page read carries the same block: nothing about it is derived at
+    // response time.
+    let (_, page_body) = get(&h.app, &h.token, &format!("/sites/{site}/pages/{page}")).await;
+    assert_eq!(page_body["sections"]["sections"][0], *stored);
+
+    // Each refusal is a 422 that says which rule was broken.
+    for (patch, expected) in [
+        (json!({ "html": "<script>alert(1)</script>" }), "<script>"),
+        (
+            json!({ "js": "fetch('https://tracker.example')" }),
+            "no network access",
+        ),
+        (
+            json!({ "capabilities": { "scripts": false } }),
+            "capability",
+        ),
+        (json!({ "height_px": 9000 }), "height must be between"),
+    ] {
+        let mut section = custom_code();
+        for (key, value) in patch.as_object().unwrap() {
+            section[key] = value.clone();
+        }
+        let (status, body) = put(
+            &h.app,
+            &h.token,
+            &format!("{sections}/0"),
+            json!({ "section": section }),
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY, "{patch}: {body}");
+        let detail = body["detail"].as_str().unwrap_or_default();
+        assert!(
+            detail.contains(expected),
+            "{patch} was refused as {detail:?}, expected the {expected:?} rule"
+        );
+    }
+
+    // The refused writes changed nothing: the block on the page is still the
+    // one that was accepted.
+    let (_, after) = get(&h.app, &h.token, &format!("/sites/{site}/pages/{page}")).await;
+    assert_eq!(after["sections"]["sections"][0], *stored);
+}
 
 #[tokio::test]
 async fn section_ops_add_update_move_remove_and_full_set() {

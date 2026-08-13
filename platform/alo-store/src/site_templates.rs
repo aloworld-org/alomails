@@ -326,6 +326,14 @@ fn check_section_content(section: &Section) -> Result<(), String> {
              made"
                 .to_owned(),
         ),
+        // A template is code we ship into other people's sites. Shipping a
+        // block of executable JavaScript that way makes the catalog a supply
+        // chain, and a tenant would have no reason to read it before pressing
+        // Use. Custom code is written by the tenant, for one site, or not at
+        // all.
+        Section::CustomCode(_) => {
+            Err("a template may not ship custom code for a tenant to run".to_owned())
+        }
         Section::Pricing(pricing) => {
             for tier in &pricing.tiers {
                 if tier.price != TEMPLATE_PLACEHOLDER_PRICE {
@@ -385,6 +393,7 @@ fn section_hrefs(section: &Section) -> Vec<&str> {
         | Section::ContactForm(_)
         | Section::Collection(_)
         | Section::Catalog(_)
-        | Section::Booking(_) => Vec::new(),
+        | Section::Booking(_)
+        | Section::CustomCode(_) => Vec::new(),
     }
 }

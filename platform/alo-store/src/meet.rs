@@ -427,7 +427,7 @@ impl Store {
         &self,
         token: &str,
     ) -> Result<Option<MeetingGuest>> {
-        let Some(guest) = self.meeting_guest_by_token(token).await? else {
+        let Some(_guest) = self.meeting_guest_by_token(token).await? else {
             return Ok(None);
         };
         sqlx::query("UPDATE meeting_guest_invitations SET requested_at=COALESCE(requested_at,now()) WHERE token_hash=$1")

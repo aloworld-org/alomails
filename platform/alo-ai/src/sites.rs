@@ -324,6 +324,14 @@ fn reject_external_references(sections: &SectionsEnvelope) -> Result<(), SiteDra
                 "contact_form section: generated drafts may not claim a form id".to_owned(),
             ));
         }
+        // The assistant does not write code into a tenant's site. A generated
+        // draft is meant to be read and approved at a glance; a block of
+        // JavaScript is neither, and nothing a description asks for needs one.
+        if matches!(section, Section::CustomCode(_)) {
+            return Err(invalid(
+                "custom_code section: generated drafts may not contain custom code".to_owned(),
+            ));
+        }
     }
     Ok(())
 }
@@ -477,6 +485,36 @@ mod tests {
             parse_site_draft(&form),
             Err(SiteDraftError::Invalid(_))
         ));
+    }
+
+    /// The assistant drafts sites, not software. A `custom_code` section is a
+    /// block of JavaScript the owner never wrote and would have to read before
+    /// pressing Publish; the draft is refused rather than quietly carrying it,
+    /// and the prompt never offers the shape in the first place.
+    #[test]
+    fn a_generated_draft_may_not_contain_custom_code() {
+        let mut draft: serde_json::Value = serde_json::from_str(VALID).unwrap();
+        draft["pages"][0]["sections"]["sections"]
+            .as_array_mut()
+            .expect("the fixture's first page has sections")
+            .push(serde_json::json!({
+                "type": "custom_code",
+                "title": "Widget",
+                "html": "<p>anything</p>",
+                "height_px": 200,
+            }));
+        let error = parse_site_draft(&draft.to_string())
+            .expect_err("a generated draft carrying custom code must be refused");
+        assert!(
+            matches!(&error, SiteDraftError::Invalid(detail) if detail.contains("custom_code")),
+            "{error}"
+        );
+
+        let prompt = &site_generation_messages("bakery")[0].content;
+        assert!(
+            !prompt.contains("custom_code"),
+            "the generation prompt must not offer a section the gate refuses"
+        );
     }
 
     #[test]

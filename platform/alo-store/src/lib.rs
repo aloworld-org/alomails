@@ -172,6 +172,7 @@ pub mod site_catalog_items;
 pub mod site_catalog_publish;
 pub mod site_collections;
 pub mod site_conversions;
+pub mod site_custom_code;
 pub mod site_domains;
 pub mod site_editors;
 pub mod site_form_notify;
@@ -501,6 +502,11 @@ pub use site_collections::{
     SiteCollectionInput, SiteCollectionItem, SiteCollectionSnapshot,
 };
 pub use site_conversions::{SiteConversionReport, SiteConversionSource};
+pub use site_custom_code::{
+    CustomCodeCapabilities, CustomCodeSection, MAX_CUSTOM_CODE_CSS_BYTES,
+    MAX_CUSTOM_CODE_HEIGHT_PX, MAX_CUSTOM_CODE_HTML_BYTES, MAX_CUSTOM_CODE_JS_BYTES,
+    MAX_CUSTOM_CODE_TOTAL_BYTES, MIN_CUSTOM_CODE_HEIGHT_PX,
+};
 pub use site_domains::{SITE_DOMAIN_MAX_LEN, SiteDomain, SiteDomainStatus, normalize_site_domain};
 pub use site_form_notify::FormNotification;
 pub use site_forms::{
