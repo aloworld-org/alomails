@@ -173,6 +173,7 @@ pub mod site_catalog_publish;
 pub mod site_collections;
 pub mod site_conversions;
 pub mod site_custom_code;
+pub mod site_domain_purchases;
 pub mod site_domains;
 pub mod site_editors;
 pub mod site_form_notify;
@@ -407,9 +408,10 @@ pub use id::{
     InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
     InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
     SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId, SiteCatalogId,
-    SiteCatalogItemId, SiteCollectionId, SiteFormId, SiteFormSubmissionId, SiteId, SiteLeadLinkId,
-    SiteOrderId, SitePageId, SitePostId, SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId,
-    TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId, SiteFormSubmissionId,
+    SiteId, SiteLeadLinkId, SiteOrderId, SitePageId, SitePostId, SitePublishId,
+    SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId,
+    UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -508,6 +510,13 @@ pub use site_custom_code::{
     CustomCodeCapabilities, CustomCodeSection, MAX_CUSTOM_CODE_CSS_BYTES,
     MAX_CUSTOM_CODE_HEIGHT_PX, MAX_CUSTOM_CODE_HTML_BYTES, MAX_CUSTOM_CODE_JS_BYTES,
     MAX_CUSTOM_CODE_TOTAL_BYTES, MIN_CUSTOM_CODE_HEIGHT_PX,
+};
+pub use site_domain_purchases::{
+    DueSiteDomainRegistration, MAX_SITE_DOMAIN_PURCHASES, NewSiteDomainPurchase,
+    PAYMENT_REFERENCE_MAX, PAYMENT_REFERENCE_MIN, SITE_DOMAIN_PURCHASE_CLAIM_STALE_MINUTES,
+    SITE_DOMAIN_PURCHASE_FAILURE_MAX_CHARS, SITE_DOMAIN_PURCHASE_INTERRUPTED,
+    SITE_DOMAIN_PURCHASE_MAX_ATTEMPTS, SiteDomainPurchase, SiteDomainPurchaseKind,
+    SiteDomainPurchaseState, validate_payment_reference,
 };
 pub use site_domains::{SITE_DOMAIN_MAX_LEN, SiteDomain, SiteDomainStatus, normalize_site_domain};
 pub use site_form_notify::FormNotification;

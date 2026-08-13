@@ -264,6 +264,13 @@ opaque_id!(
     SiteBookingAppointmentId
 );
 opaque_id!(
+    /// One domain a tenant is buying or renewing through alo — the whole
+    /// arc from the price they were shown to the name serving their site.
+    /// Doubles as the replay token the registrar call is made under, so a
+    /// retried registration can never buy the name twice.
+    SiteDomainPurchaseId
+);
+opaque_id!(
     /// A billing customer — the company or person a tenant invoices
     /// (alo Billing, ADR 0035).
     BillingCustomerId

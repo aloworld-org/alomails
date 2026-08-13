@@ -956,7 +956,12 @@ impl DomainSearch {
 /// This is the registrant data a registry requires by contract — the one piece
 /// of personal data this path sends outside alo. It is validated here, carried
 /// no further than the registrar, and never logged.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// It is `serde`-serializable for exactly one reason: the purchase row of
+/// [`crate::site_domain_purchases`] is the single place it may rest, inside the
+/// buying tenant's own row. Serializing it anywhere else — a log line, an error,
+/// an event — is the bug this doc comment exists to make obvious.
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct RegistrantContact {
     /// Full name of the person responsible.
     pub name: String,
@@ -1091,6 +1096,27 @@ impl DomainOrder {
                 offer.tld, offer.min_years, offer.max_years
             )));
         }
+        self.validate_shape()?;
+        Ok(domain)
+    }
+
+    /// Everything about an order that can be checked without asking a
+    /// registrar what it sells: the registrant, the nameservers, the term and
+    /// the replay token.
+    ///
+    /// The purchase record ([`crate::site_domain_purchases`]) holds an order
+    /// whose ending was already proven sellable when it was quoted, and no
+    /// catalog is in reach at write time; it checks this half, and
+    /// [`Self::validate`] is this plus the catalog's own rules.
+    ///
+    /// # Errors
+    /// [`RegistrarError::Validation`], naming the rule broken.
+    pub fn validate_shape(&self) -> RegistrarResult<()> {
+        if !(TERM_YEARS_MIN..=TERM_YEARS_MAX).contains(&self.years) {
+            return Err(RegistrarError::Validation(format!(
+                "a domain is registered for {TERM_YEARS_MIN}-{TERM_YEARS_MAX} years at a time"
+            )));
+        }
         self.registrant.validate()?;
         if !(NAMESERVERS_MIN..=NAMESERVERS_MAX).contains(&self.nameservers.len()) {
             return Err(RegistrarError::Validation(format!(
@@ -1108,7 +1134,7 @@ impl DomainOrder {
             seen.push(host);
         }
         validate_idempotency_key(&self.idempotency_key)?;
-        Ok(domain)
+        Ok(())
     }
 
     /// What "the same order" means for a replay: everything a registry would
