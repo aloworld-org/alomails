@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Plus, X } from "lucide-react";
 
+import { Chip, Input } from "../ds";
 import { strings } from "../i18n";
 import type { BaseFieldDto, BaseRecordDto, BaseTableDto } from "../jmap";
 import styles from "./BaseEditor.module.css";
@@ -46,11 +47,7 @@ export function CellDisplay({
   if (value === null || value === undefined || value === "") return null;
   if (field.type === "checkbox") return value === true ? <span>✓</span> : null;
   if (field.type === "select" && typeof value === "string") {
-    return (
-      <span className={styles.chip} style={{ ["--cc"]: chipColor(value) } as React.CSSProperties}>
-        {value}
-      </span>
-    );
+    return <Chip color={chipColor(value)}>{value}</Chip>;
   }
   if ((field.type === "multiselect" || field.type === "link") && Array.isArray(value)) {
     const target = field.type === "link" ? tables.find((t) => t.id === field.options.linkTableId) : undefined;
@@ -64,10 +61,12 @@ export function CellDisplay({
                   return r ? recordLabel(target, r) : "…";
                 })()
               : String(v);
+          // A link chip names a record in another table; its colour would say
+          // nothing, so it stays the neutral chip.
           return field.type === "link" ? (
-            <span key={i} className={styles.linkChip}>{s}</span>
+            <Chip key={i}>{s}</Chip>
           ) : (
-            <span key={i} className={styles.chip} style={{ ["--cc"]: chipColor(s) } as React.CSSProperties}>{s}</span>
+            <Chip key={i} color={chipColor(s)}>{s}</Chip>
           );
         })}
       </span>
@@ -99,27 +98,30 @@ export function Cell({
       );
     case "number":
       return (
-        <input
+        <Input
           type="number"
-          className={styles.input}
+          variant="cell"
+          aria-label={field.name}
           defaultValue={typeof value === "number" ? value : (value as string) ?? ""}
           onBlur={(e) => onCommit(e.target.value === "" ? null : Number(e.target.value))}
         />
       );
     case "date":
       return (
-        <input
+        <Input
           type="date"
-          className={styles.input}
+          variant="cell"
+          aria-label={field.name}
           defaultValue={typeof value === "string" ? value : ""}
           onChange={(e) => onCommit(e.target.value || null)}
         />
       );
     case "person":
       return (
-        <input
+        <Input
           type="text"
-          className={styles.input}
+          variant="cell"
+          aria-label={field.name}
           inputMode="email"
           defaultValue={typeof value === "string" ? value : ""}
           placeholder={strings.basePersonPlaceholder}
@@ -140,9 +142,10 @@ export function Cell({
       );
     default:
       return (
-        <input
+        <Input
           type="text"
-          className={styles.input}
+          variant="cell"
+          aria-label={field.name}
           defaultValue={value === null || value === undefined ? "" : String(value)}
           onBlur={(e) => onCommit(e.target.value)}
         />
@@ -162,11 +165,7 @@ function SelectCell({
   const current = typeof value === "string" ? value : "";
   return (
     <div className={styles.selectCell}>
-      {current !== "" && (
-        <span className={styles.chip} style={{ ["--cc"]: chipColor(current) } as React.CSSProperties}>
-          {current}
-        </span>
-      )}
+      {current !== "" && <Chip color={chipColor(current)}>{current}</Chip>}
       <select
         className={styles.selectHidden}
         value={current}
@@ -214,9 +213,9 @@ function MultiSelectCell({
           <span className={styles.cellEmpty}>—</span>
         ) : (
           selected.map((c) => (
-            <span key={c} className={styles.chip} style={{ ["--cc"]: chipColor(c) } as React.CSSProperties}>
+            <Chip key={c} color={chipColor(c)}>
               {c}
-            </span>
+            </Chip>
           ))
         )}
       </button>
@@ -225,9 +224,7 @@ function MultiSelectCell({
           {choices.length === 0 && <div className={styles.pickerEmpty}>{strings.baseNoChoices}</div>}
           {choices.map((c) => (
             <button key={c} type="button" className={styles.pickerRow} onClick={() => toggle(c)}>
-              <span className={styles.chip} style={{ ["--cc"]: chipColor(c) } as React.CSSProperties}>
-                {c}
-              </span>
+              <Chip color={chipColor(c)}>{c}</Chip>
               {selected.includes(c) && <X size={13} />}
             </button>
           ))}
@@ -272,11 +269,7 @@ function LinkCell({
             <Plus size={13} /> {strings.baseLink}
           </span>
         ) : (
-          ids.map((id) => (
-            <span key={id} className={styles.linkChip}>
-              {nameOf(id)}
-            </span>
-          ))
+          ids.map((id) => <Chip key={id}>{nameOf(id)}</Chip>)
         )}
       </button>
       {open && (

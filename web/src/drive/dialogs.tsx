@@ -1,6 +1,12 @@
 // Drive modals: choose a destination (move/copy), browse version history, and
 // view/manage a Space's membership. Each is a small focused dialog over the
 // file manager.
+//
+// All three are `ds/Modal` (D2.04). The hand-built version they replace had a
+// scrim, a panel and a close button and none of the behaviour: Escape did not
+// close it, Tab walked straight out onto the file list behind it, and
+// dismissing it dropped focus at the top of the document instead of back on
+// the button that opened it.
 import { useEffect, useState } from "react";
 import { HardDrive, Users, X } from "lucide-react";
 
@@ -12,7 +18,15 @@ import {
   type SpaceDetailDto,
   type SpaceRole,
 } from "../jmap";
-import { Avatar, useDialogs } from "../ds";
+import {
+  Avatar,
+  Button,
+  IconButton,
+  Input,
+  Modal,
+  Select,
+  useDialogs,
+} from "../ds";
 import { driveErrorReason, fileSize } from "./parts";
 import styles from "./DriveModule.module.css";
 
@@ -30,29 +44,25 @@ export function DestinationDialog({
 }) {
   const writable = spaces.filter((s) => s.myRole !== "viewer" && !s.archived);
   return (
-    <div className={styles.scrim} onMouseDown={onClose}>
-      <div className={styles.dialog} onMouseDown={(e) => e.stopPropagation()}>
-        <div className={styles.dialogHead}>
-          <h2>{mode === "move" ? strings.driveMoveTo : strings.driveCopyTo}</h2>
-          <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.close}>
-            <X size={18} />
+    <Modal
+      title={mode === "move" ? strings.driveMoveTo : strings.driveCopyTo}
+      onClose={onClose}
+      actions={<IconButton label={strings.close} icon={<X size={18} />} onClick={onClose} />}
+    >
+      <div className={styles.destList}>
+        <button type="button" className={styles.destItem} onClick={() => onPick(null)}>
+          <HardDrive size={18} />
+          <span>{strings.driveMyFiles}</span>
+        </button>
+        {writable.map((s) => (
+          <button key={s.id} type="button" className={styles.destItem} onClick={() => onPick(s.id)}>
+            <Users size={18} />
+            <span>{s.name}</span>
           </button>
-        </div>
-        <div className={styles.destList}>
-          <button type="button" className={styles.destItem} onClick={() => onPick(null)}>
-            <HardDrive size={18} />
-            <span>{strings.driveMyFiles}</span>
-          </button>
-          {writable.map((s) => (
-            <button key={s.id} type="button" className={styles.destItem} onClick={() => onPick(s.id)}>
-              <Users size={18} />
-              <span>{s.name}</span>
-            </button>
-          ))}
-        </div>
-        <p className={styles.destHint}>{strings.driveDestHint}</p>
+        ))}
       </div>
-    </div>
+      <p className={styles.destHint}>{strings.driveDestHint}</p>
+    </Modal>
   );
 }
 
@@ -99,45 +109,41 @@ export function VersionsDialog({ nodeId, onChanged, onClose }: { nodeId: string;
   }
 
   return (
-    <div className={styles.scrim} onMouseDown={onClose}>
-      <div className={styles.dialog} onMouseDown={(e) => e.stopPropagation()}>
-        <div className={styles.dialogHead}>
-          <h2>{strings.driveVersionHistory}</h2>
-          <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.close}>
-            <X size={18} />
-          </button>
+    <Modal
+      title={strings.driveVersionHistory}
+      onClose={onClose}
+      actions={<IconButton label={strings.close} icon={<X size={18} />} onClick={onClose} />}
+    >
+      {versions === null ? (
+        <DialogSkeleton />
+      ) : loadError !== null ? (
+        <div className={styles.dialogError} role="alert">
+          <p>{strings.driveVersionsLoadFailed(loadError)}</p>
+          <button type="button" className={styles.versionRestore} onClick={load}>{strings.driveRetry}</button>
         </div>
-        {versions === null ? (
-          <DialogSkeleton />
-        ) : loadError !== null ? (
-          <div className={styles.dialogError} role="alert">
-            <p>{strings.driveVersionsLoadFailed(loadError)}</p>
-            <button type="button" className={styles.versionRestore} onClick={load}>{strings.driveRetry}</button>
-          </div>
-        ) : versions.length === 0 ? (
-          <p className={styles.destHint}>{strings.driveNoVersions}</p>
-        ) : (
-          <ul className={styles.versionList}>
-            {versions.map((v, i) => (
-              <li key={v.versionNo} className={styles.versionRow}>
-                <span className={styles.versionNo}>v{v.versionNo}</span>
-                <span className={styles.versionMeta}>
-                  {fileSize(v.size)} · {new Date(v.createdAt).toLocaleString()}
-                </span>
-                {i === 0 ? (
-                  <span className={styles.versionCurrent}>{strings.driveCurrent}</span>
-                ) : (
-                  <button type="button" className={styles.versionRestore} onClick={() => void restore(v.versionNo)}>
-                    {strings.driveRestore}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        {actionError !== "" && <p className={styles.memberErr} role="alert">{actionError}</p>}
-      </div>
-    </div>
+      ) : versions.length === 0 ? (
+        <p className={styles.destHint}>{strings.driveNoVersions}</p>
+      ) : (
+        <ul className={styles.versionList}>
+          {versions.map((v, i) => (
+            <li key={v.versionNo} className={styles.versionRow}>
+              <span className={styles.versionNo}>v{v.versionNo}</span>
+              <span className={styles.versionMeta}>
+                {fileSize(v.size)} · {new Date(v.createdAt).toLocaleString()}
+              </span>
+              {i === 0 ? (
+                <span className={styles.versionCurrent}>{strings.driveCurrent}</span>
+              ) : (
+                <button type="button" className={styles.versionRestore} onClick={() => void restore(v.versionNo)}>
+                  {strings.driveRestore}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {actionError !== "" && <p className={styles.memberErr} role="alert">{actionError}</p>}
+    </Modal>
   );
 }
 
@@ -186,72 +192,72 @@ export function MembersDialog({ space, onClose }: { space: SpaceDto; onClose: ()
   }
 
   return (
-    <div className={styles.scrim} onMouseDown={onClose}>
-      <div className={styles.dialog} onMouseDown={(e) => e.stopPropagation()}>
-        <div className={styles.dialogHead}>
-          <h2>{strings.driveMembersOf(space.name)}</h2>
-          <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.close}>
-            <X size={18} />
-          </button>
+    <Modal
+      title={strings.driveMembersOf(space.name)}
+      onClose={onClose}
+      actions={<IconButton label={strings.close} icon={<X size={18} />} onClick={onClose} />}
+    >
+      {detail === null && loadError === null ? (
+        <DialogSkeleton />
+      ) : loadError !== null ? (
+        <div className={styles.dialogError} role="alert">
+          <p>{strings.driveMembersLoadFailed(loadError)}</p>
+          <button type="button" className={styles.versionRestore} onClick={load}>{strings.driveRetry}</button>
         </div>
-        {detail === null && loadError === null ? (
-          <DialogSkeleton />
-        ) : loadError !== null ? (
-          <div className={styles.dialogError} role="alert">
-            <p>{strings.driveMembersLoadFailed(loadError)}</p>
-            <button type="button" className={styles.versionRestore} onClick={load}>{strings.driveRetry}</button>
-          </div>
-        ) : detail !== null ? (
-          <>
-            <ul className={styles.memberList}>
-              {detail.members.map((m) => (
-                <li key={m.userId} className={styles.memberRow}>
-                  <Avatar name={m.email ?? m.userId} />
-                  <span className={styles.memberEmail}>{m.email ?? m.userId}</span>
-                  <span className={styles.memberRole}>{strings.driveRole(m.role)}</span>
-                  {canManage && (
-                    <button
-                      type="button"
-                      className={styles.iconBtn}
-                      onClick={() => void remove(m.userId, m.email ?? m.userId)}
-                      aria-label={strings.driveRemoveMember}
-                    >
-                      <X size={14} />
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {canManage && (
-              <div className={styles.addMember}>
-                <input
-                  className={styles.addEmail}
-                  value={email}
-                  placeholder={strings.driveAddMemberPlaceholder}
-                  inputMode="email"
-                  autoCapitalize="none"
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && void add()}
-                />
-                <select
-                  className={styles.addRole}
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as SpaceRole)}
-                >
-                  <option value="viewer">{strings.driveRole("viewer")}</option>
-                  <option value="editor">{strings.driveRole("editor")}</option>
-                  <option value="manager">{strings.driveRole("manager")}</option>
-                </select>
-                <button type="button" className={styles.addBtn} onClick={() => void add()}>
-                  {strings.driveAdd}
-                </button>
-              </div>
-            )}
-            {error !== "" && <p className={styles.memberErr}>{error}</p>}
-          </>
-        ) : null}
-      </div>
-    </div>
+      ) : detail !== null ? (
+        <>
+          <ul className={styles.memberList}>
+            {detail.members.map((m) => (
+              <li key={m.userId} className={styles.memberRow}>
+                <Avatar name={m.email ?? m.userId} />
+                <span className={styles.memberEmail}>{m.email ?? m.userId}</span>
+                <span className={styles.memberRole}>{strings.driveRole(m.role)}</span>
+                {canManage && (
+                  <button
+                    type="button"
+                    className={styles.iconBtn}
+                    onClick={() => void remove(m.userId, m.email ?? m.userId)}
+                    // A row of buttons all called "Remove" is useless read
+                    // aloud, so each one names the person it takes out.
+                    aria-label={strings.driveRemoveMemberFor(m.email ?? m.userId)}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          {canManage && (
+            <div className={styles.addMember}>
+              <Input
+                className={styles.addEmail}
+                value={email}
+                aria-label={strings.driveAddMemberLabel}
+                placeholder={strings.driveAddMemberPlaceholder}
+                inputMode="email"
+                autoCapitalize="none"
+                onChange={(e) => setEmail(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && void add()}
+              />
+              {/* Without a name this select is announced as its own current
+                  value — "combo box, Editor" — which reads as an answer to a
+                  question nobody asked. */}
+              <Select
+                aria-label={strings.driveMemberRoleLabel}
+                value={role}
+                onChange={(e) => setRole(e.target.value as SpaceRole)}
+              >
+                <option value="viewer">{strings.driveRole("viewer")}</option>
+                <option value="editor">{strings.driveRole("editor")}</option>
+                <option value="manager">{strings.driveRole("manager")}</option>
+              </Select>
+              <Button onClick={() => void add()}>{strings.driveAdd}</Button>
+            </div>
+          )}
+          {error !== "" && <p className={styles.memberErr} role="alert">{error}</p>}
+        </>
+      ) : null}
+    </Modal>
   );
 }
 

@@ -745,37 +745,10 @@
 }
 
 /* ---- dialogs ---- */
-.scrim {
-  position: fixed;
-  inset: 0;
-  background: color-mix(in srgb, var(--text-primary) 32%, transparent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-toast);
-  padding: var(--space-4);
-}
-.dialog {
-  width: min(var(--overlay-width-lg), 100%);
-  max-height: 80vh;
-  overflow-y: auto;
-  background: var(--bg-surface);
-  border: var(--border-width) solid var(--border-default);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
-  padding: var(--space-5);
-}
-.dialogHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--space-4);
-}
-.dialogHead h2 {
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-}
+/* The scrim, the panel and the header belong to `ds/Modal` since D2.04; what is
+   left below is what goes *inside* the three Drive dialogs. `.iconBtn` stays
+   because the Sheet ribbon and the member rows use it — it is not the close
+   button any more, that is `ds/IconButton`. */
 .iconBtn {
   display: inline-flex;
   width: var(--control-height);
@@ -918,34 +891,12 @@
   padding-top: var(--space-4);
   border-top: var(--border-width) solid var(--border-subtle);
 }
+/* The row's three controls are `ds/Input`, `ds/Select` and `ds/Button`; all
+   this says is which one takes the spare width. `min-width: 0` because a flex
+   item will not shrink below its content otherwise, and an email is long. */
 .addEmail {
   flex: 1;
   min-width: 0;
-  min-height: var(--control-height);
-  padding: 0 var(--space-3);
-  border: var(--border-width) solid var(--border-default);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-}
-.addRole {
-  min-height: var(--control-height);
-  padding: 0 var(--space-2);
-  border: var(--border-width) solid var(--border-default);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-}
-.addBtn {
-  min-height: var(--control-height);
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--accent);
-  color: var(--text-on-accent);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
 }
 .memberErr {
   margin-top: var(--space-2);

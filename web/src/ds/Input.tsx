@@ -18,6 +18,14 @@ export interface InputProps extends Omit<
 > {
   /** `lg` is the taller control the sign-in screens use. */
   size?: "md" | "lg" | undefined;
+  /** `cell` is the editor *inside* a grid cell — Base's tables, where the cell
+   *  already draws the box and a second border inside it reads as a field
+   *  floating in a field. It fills its container, drops the border and the
+   *  background, and keeps the focus ring inside the cell's own edge so a
+   *  focused cell does not grow by two pixels and shift the row. Added for
+   *  `drive/BaseCell` (D2.04), which was the only `.input` of the twenty-two
+   *  that lived in a cell rather than in a form. */
+  variant?: "field" | "cell" | undefined;
   /** Draws the error state and marks the control for assistive technology.
    *  `Field` sets this from its own `error`, so callers rarely pass it. */
   invalid?: boolean | undefined;
@@ -27,6 +35,7 @@ export interface InputProps extends Omit<
 
 export function Input({
   size = "md",
+  variant = "field",
   invalid,
   htmlSize,
   className,
@@ -35,6 +44,7 @@ export function Input({
   const classes = [
     styles.input,
     size === "lg" ? styles.lg : "",
+    variant === "cell" ? styles.cell : "",
     invalid === true ? styles.invalid : "",
     className ?? "",
   ]

@@ -1494,8 +1494,16 @@ export const en = {
   driveRole: (role: string): string =>
     role === "manager" ? "Manager" : role === "editor" ? "Editor" : "Viewer",
   driveAddMemberPlaceholder: "Add someone by email",
+  // The name of the two add-a-member controls, for a screen reader. A
+  // placeholder disappears the moment you type into it, and a select with no
+  // label is announced as whichever role it currently shows.
+  driveAddMemberLabel: "Email address",
+  driveMemberRoleLabel: "Role",
   driveAdd: "Add",
   driveRemoveMember: "Remove",
+  /** Names the person a Remove button takes out — a column of buttons all
+   *  called "Remove" tells a screen-reader user nothing. */
+  driveRemoveMemberFor: (who: string): string => `Remove ${who}`,
   driveRemoveMemberConfirm: (who: string) => `Remove ${who} from this Space?`,
   driveMemberError: "Couldn’t add that person — check the email and your role.",
   driveNewDoc: "New doc",

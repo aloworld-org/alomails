@@ -47,6 +47,37 @@
   cursor: not-allowed;
 }
 
+/* The editor inside a grid cell. Base's cells draw their own box, so the
+   field's border and surface would be a second box inside the first; what is
+   left is the type, the padding and the focus ring. The border stays in the
+   layout as `transparent` rather than being removed, so the error state below
+   still has something to colour and a focused cell does not change width.
+
+   The ring is drawn *inside* the cell (`outline-offset: -2px`), which is the
+   one place the outward ring is wrong: at the edge of a table it would be
+   clipped by the neighbouring cell, and it would overlap the cell border on
+   every side. The row keeps its height either way. */
+.cell {
+  height: 100%;
+  /* `height: 100%` needs a definite height from the cell to resolve; where it
+     does not, this keeps the control a touch target rather than a hairline. */
+  min-height: var(--control-height);
+  padding: 0 var(--space-3);
+  border-color: transparent;
+  background: transparent;
+  /* A grid packs rows; 13px is the density the Base tables were built at and
+     is a decision, not a discrepancy with the 14px of a form. */
+  font-size: var(--text-sm);
+}
+
+.cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-color: transparent;
+  background: var(--bg-surface);
+  border-radius: var(--radius-sm);
+}
+
 /* Set by `Field` when it is showing an error, so the control and its message
    agree without every caller wiring it up. */
 .invalid,

@@ -4726,6 +4726,7 @@ export const nl: Partial<Catalog> = {
   agendaUpcoming: "Binnenkort",
   driveActions: "Acties",
   driveAdd: "Toevoegen",
+  driveAddMemberLabel: "E-mailadres",
   driveAddMemberPlaceholder: "Voeg iemand toe via e-mail",
   driveColModified: "Gewijzigd",
   driveColName: "Naam",
@@ -4744,6 +4745,7 @@ export const nl: Partial<Catalog> = {
   driveKindWord: "Word-document",
   driveMemberError:
     "Kon die persoon niet toevoegen — controleer het e-mailadres en uw rol.",
+  driveMemberRoleLabel: "Rol",
   driveMembers: "Leden",
   driveMove: "Verplaatsen",
   driveMoveTo: "Verplaatsen naar…",
@@ -4761,6 +4763,7 @@ export const nl: Partial<Catalog> = {
   driveNoVersions: "Geen eerdere versies.",
   driveOpen: "Openen",
   driveRemoveMember: "Verwijderen",
+  driveRemoveMemberFor: (who: string): string => `${who} verwijderen`,
   driveRename: "Naam wijzigen",
   driveRenamePrompt: "Nieuwe naam",
   driveRestore: "Herstellen",

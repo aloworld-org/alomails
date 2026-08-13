@@ -10,7 +10,7 @@
 // Asking for both would nest a button inside a button. That renders perfectly
 // happily and then swallows one of the two clicks, so it is reported rather
 // than quietly resolved.
-import { useEffect, type ReactNode } from "react";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { X } from "lucide-react";
 
 import styles from "./Chip.module.css";
@@ -27,6 +27,16 @@ export interface ChipProps {
    *  caller invents — and, as on `Badge`, never the only signal. An overdue
    *  chip says "overdue" in its label as well as in its colour. */
   tone?: "neutral" | "accent" | "danger" | undefined;
+  /** A colour derived from the chip's *value* rather than from its state — the
+   *  choices of a Base select field, where the colour is what tells one value
+   *  apart from another and no fixed palette could know them in advance. Any
+   *  CSS colour; the component tints it rather than using it raw, so the label
+   *  keeps its contrast whatever is passed. Overrides `tone`, which answers a
+   *  different question: use one or the other, never both.
+   *
+   *  Like `tone`, it is never the only signal — a coloured chip still says
+   *  what it is in its label. */
+  color?: string | undefined;
   /** Passed through on the button form, for a chip that opens a menu. */
   "aria-haspopup"?: "menu" | "dialog" | "listbox" | undefined;
   "aria-expanded"?: boolean | undefined;
@@ -40,6 +50,7 @@ export function Chip({
   onRemove,
   removeLabel,
   tone = "neutral",
+  color,
   className,
   title,
   "aria-haspopup": hasPopup,
@@ -60,7 +71,7 @@ export function Chip({
 
   const classes = [
     styles.chip,
-    styles[tone] ?? "",
+    color === undefined ? (styles[tone] ?? "") : styles.tinted,
     onClick === undefined ? "" : styles.pressable,
     onRemove === undefined ? "" : styles.removable,
     className ?? "",
@@ -68,11 +79,20 @@ export function Chip({
     .filter(Boolean)
     .join(" ");
 
+  // The value's colour reaches the stylesheet as a custom property, so the
+  // mixing that keeps the label readable stays in CSS with the rest of the
+  // chip rather than being computed at every call site.
+  const tint =
+    color === undefined
+      ? undefined
+      : ({ "--chip-color": color } as CSSProperties);
+
   if (onClick !== undefined) {
     return (
       <button
         type="button"
         className={classes}
+        style={tint}
         onClick={onClick}
         title={title}
         {...(hasPopup === undefined ? {} : { "aria-haspopup": hasPopup })}
@@ -84,7 +104,7 @@ export function Chip({
   }
 
   return (
-    <span className={classes} title={title}>
+    <span className={classes} style={tint} title={title}>
       {children}
       {onRemove !== undefined && (
         <button

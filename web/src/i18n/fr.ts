@@ -4787,6 +4787,7 @@ export const fr: Partial<Catalog> = {
   agendaUpcoming: "À venir",
   driveActions: "Actions",
   driveAdd: "Ajouter",
+  driveAddMemberLabel: "Adresse e-mail",
   driveAddMemberPlaceholder: "Ajoutez quelqu’un par e-mail",
   driveColModified: "Modifié",
   driveColName: "Nom",
@@ -4805,6 +4806,7 @@ export const fr: Partial<Catalog> = {
   driveKindWord: "Document Word",
   driveMemberError:
     "Impossible d’ajouter cette personne — vérifiez l’adresse e-mail et votre rôle.",
+  driveMemberRoleLabel: "Rôle",
   driveMembers: "Membres",
   driveMove: "Déplacer",
   driveMoveTo: "Déplacer vers…",
@@ -4822,6 +4824,7 @@ export const fr: Partial<Catalog> = {
   driveNoVersions: "Aucune version précédente.",
   driveOpen: "Ouvrir",
   driveRemoveMember: "Retirer",
+  driveRemoveMemberFor: (who: string): string => `Retirer ${who}`,
   driveRename: "Renommer",
   driveRenamePrompt: "Nouveau nom",
   driveRestore: "Restaurer",

@@ -16,32 +16,11 @@
   outline: 2px solid var(--accent, var(--border-strong));
   outline-offset: 1px;
 }
-.edit {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 8px 10px;
-  margin: 2px 0;
-  border-radius: var(--radius-md);
-  background: var(--bg-raised);
-  border: 1px solid var(--border-default);
-}
-.tag {
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-  flex-shrink: 0;
-}
-.input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-}
-.input::placeholder {
-  color: var(--text-tertiary);
-}
+/* The equation block's own edit row lived here — a bordered strip with a `LaTeX`
+   tag and a bare monospace input. It stopped being rendered when the block
+   started opening `authoring/EquationEditor` instead, and nothing referenced
+   these rules any more; they were the last `.input` in Drive, deleted with the
+   rest of D2.04. */
 .code { width: 100%; margin: 8px 0; }
 .comment {
   width: 100%;

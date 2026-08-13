@@ -31,6 +31,17 @@
   color: var(--danger);
 }
 
+/* A colour that comes from the chip's value, not from its state: a Base select
+   field invents its own choices, so no named tone can cover them. The colour
+   is mixed rather than used raw — a fill at 16% and a label at 70% against the
+   text colour — which is what keeps a pale choice colour readable as a label
+   and a dark one readable as a fill. Set through `--chip-color` by the
+   component, so a caller never writes the mix. */
+.tinted {
+  background: color-mix(in srgb, var(--chip-color) 16%, transparent);
+  color: color-mix(in srgb, var(--chip-color) 70%, var(--text-primary));
+}
+
 /* The chip that is itself a button. */
 .pressable {
   border: none;
@@ -45,7 +56,8 @@
 }
 
 .accent.pressable:hover,
-.danger.pressable:hover {
+.danger.pressable:hover,
+.tinted.pressable:hover {
   /* A toned chip already carries a fill; darkening it would change what the
      tone says, so the hover is the ring of the surface under it. */
   box-shadow: inset 0 0 0 var(--border-width) currentColor;
