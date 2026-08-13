@@ -133,6 +133,26 @@ pub async fn preview_version_page(
         .collect();
     catalogs.retain(|id, _| referenced_catalogs.iter().any(|wanted| wanted == id));
 
+    // And the booking services that publish froze: a version preview shows what
+    // that publish offered to book, never what the service says now.
+    let mut bookings = HashMap::new();
+    for booking in account
+        .acc
+        .site_publish_booking_snapshots(&sid, &pid)
+        .await
+        .map_err(map_store_err)?
+    {
+        bookings.insert(booking.booking_id.as_str().to_owned(), booking);
+    }
+    let referenced_bookings: Vec<String> = sections_lenient(&snapshot.sections)
+        .into_iter()
+        .filter_map(|section| match section {
+            Section::Booking(booking) => Some(booking.booking_id.as_str().to_owned()),
+            _ => None,
+        })
+        .collect();
+    bookings.retain(|id, _| referenced_bookings.iter().any(|wanted| wanted == id));
+
     let theme = SiteTheme::from_stored(version.theme.clone());
     let images = preview_image_map(
         &account,
@@ -160,6 +180,7 @@ pub async fn preview_version_page(
         sections: &snapshot.sections,
         collections: &collections,
         catalogs: &catalogs,
+        bookings: &bookings,
     };
     Ok((
         [

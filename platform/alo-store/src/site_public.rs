@@ -6,6 +6,14 @@
 //! private — so serving another tenant's rows is unrepresentable, the same
 //! by-construction guarantee the account door gives authenticated code.
 //!
+//! It has one deliberate exception, and it is worth naming here: taking a
+//! booking has to put an appointment in the owner's calendar, and there is no
+//! session to do that under. [`crate::site_public_bookings`] resolves the
+//! owner from the frozen snapshot the visitor is looking at and opens exactly
+//! that account's Agenda door through [`crate::site_agenda`] — one function,
+//! reachable only with a tenant and a calendar owner that a published row
+//! already named.
+//!
 //! Its reads expose **public state only**: immutable page snapshots
 //! (`site_publishes`, `site_page_snapshots`) plus explicitly published blog
 //! posts. Draft pages, draft posts, forms, and everything else in a tenant's
@@ -23,6 +31,7 @@ use crate::blob::BlobStore;
 use crate::error::{Result, StoreError};
 use crate::id::{BlobId, SiteId, SitePublishId, TenantId};
 use crate::site_assets::{SiteImageData, site_image_content_type};
+use crate::site_booking_publish::{SiteBookingSnapshot, SiteBookingSnapshotRow};
 use crate::site_catalog_publish::{SiteCatalogSnapshot, SiteCatalogSnapshotRow};
 use crate::site_collections::SiteCollectionSnapshot;
 use crate::site_publish::{SiteCollectionSnapshotRow, SitePageSnapshot, SitePageSnapshotRow};
@@ -115,6 +124,13 @@ impl SitePublicStore {
     /// the pool itself is never part of the public surface.
     pub(crate) fn pool(&self) -> &PgPool {
         &self.pool
+    }
+
+    /// The blob backend, for the sibling module that opens the owner's Agenda
+    /// door to write a booked appointment ([`crate::site_public_bookings`]).
+    /// Crate-internal for the same reason as [`Self::pool`].
+    pub(crate) fn blobs(&self) -> &BlobStore {
+        &self.blobs
     }
 
     /// Resolves a subdomain to the site's current publish — the one indexed
@@ -238,6 +254,34 @@ impl SitePublicStore {
         .map_err(StoreError::Db)?;
         rows.into_iter()
             .map(SiteCatalogSnapshotRow::into_snapshot)
+            .collect()
+    }
+
+    /// The booking services frozen beside the resolved pages — what the site
+    /// offered to book at publish time. Free time is deliberately absent: it is
+    /// read live per visitor ([`crate::site_public_bookings`]), because a
+    /// snapshot of what is free would be stale before it was written.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure; [`StoreError::Conflict`] when a stored
+    /// snapshot cannot be read back.
+    pub async fn published_bookings(
+        &self,
+        site: &PublishedSite,
+    ) -> Result<Vec<SiteBookingSnapshot>> {
+        let rows = sqlx::query_as::<_, SiteBookingSnapshotRow>(
+            "SELECT booking_id, name, description, calendar_id, time_zone, duration_minutes, \
+                    buffer_minutes, notice_minutes, horizon_days, location, hours, fields, active \
+             FROM site_booking_snapshots \
+             WHERE tenant_id = $1 AND publish_id = $2 ORDER BY booking_id",
+        )
+        .bind(site.tenant.as_str())
+        .bind(site.publish.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        rows.into_iter()
+            .map(SiteBookingSnapshotRow::into_snapshot)
             .collect()
     }
 

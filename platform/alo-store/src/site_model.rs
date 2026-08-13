@@ -16,7 +16,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::id::{BlobId, SiteCatalogId, SiteCollectionId};
+use crate::id::{BlobId, SiteBookingId, SiteCatalogId, SiteCollectionId};
 
 /// The current sections schema version. Version bumps ship an explicit pure
 /// upgrade function (v1 → v2) applied on read; stored JSON is rewritten
@@ -518,6 +518,20 @@ pub struct CatalogSection {
     pub category: Option<String>,
 }
 
+/// Something a visitor may book, frozen from the tenant's own
+/// [booking service](crate::site_bookings) at publish time. The section stores
+/// only the stable service id and an optional heading; what it is called, how
+/// long it takes, when it is offered and what is asked when booking all live in
+/// the frozen snapshot, and the free times are read live against the bound
+/// Agenda calendar at the moment the visitor looks.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct BookingSection {
+    pub booking_id: SiteBookingId,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heading: Option<String>,
+}
+
 /// One section of a page — the closed v1 vocabulary. The wire tag is the
 /// `type` prop (`{"type": "hero", …}`); unknown tags and unknown props are
 /// rejected on write.
@@ -551,6 +565,8 @@ pub enum Section {
     /// What the site offers, frozen from the tenant's own catalog at publish
     /// time.
     Catalog(CatalogSection),
+    /// Something a visitor may book, against the service's Agenda calendar.
+    Booking(BookingSection),
     /// Page footer.
     Footer(FooterSection),
 }
@@ -572,6 +588,7 @@ impl Section {
             Section::ContactForm(_) => "contact_form",
             Section::Collection(_) => "collection",
             Section::Catalog(_) => "catalog",
+            Section::Booking(_) => "booking",
             Section::Footer(_) => "footer",
         }
     }
@@ -597,6 +614,7 @@ impl Section {
             | Section::ContactForm(_)
             | Section::Collection(_)
             | Section::Catalog(_)
+            | Section::Booking(_)
             | Section::Footer(_) => Vec::new(),
         }
     }
@@ -724,6 +742,10 @@ impl Section {
                     check_token(kind, "category", category)?;
                 }
                 Ok(())
+            }
+            Section::Booking(s) => {
+                check_token(kind, "booking_id", s.booking_id.as_str())?;
+                check_opt_short(kind, "heading", s.heading.as_deref())
             }
             Section::Footer(s) => {
                 check_opt_short(kind, "text", s.text.as_deref())?;

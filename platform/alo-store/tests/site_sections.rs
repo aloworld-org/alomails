@@ -40,6 +40,10 @@ const SECTION_FIXTURES: &[(&str, &str)] = &[
         "contact_form",
         include_str!("fixtures/site_sections/contact_form.json"),
     ),
+    (
+        "booking",
+        include_str!("fixtures/site_sections/booking.json"),
+    ),
     ("footer", include_str!("fixtures/site_sections/footer.json")),
 ];
 
@@ -78,7 +82,7 @@ fn section_goldens_cover_the_whole_vocabulary_exactly_once() {
     let mut names: Vec<&str> = SECTION_FIXTURES.iter().map(|(name, _)| *name).collect();
     names.sort_unstable();
     names.dedup();
-    assert_eq!(names.len(), 12, "one golden per section type, no gaps");
+    assert_eq!(names.len(), 13, "one golden per section type, no gaps");
 }
 
 #[test]

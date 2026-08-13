@@ -321,6 +321,11 @@ fn check_section_content(section: &Section) -> Result<(), String> {
         Section::Catalog(_) => {
             Err("a template may not ship a catalog the tenant has not made".to_owned())
         }
+        Section::Booking(_) => Err(
+            "a template may not ship a bookable service bound to a calendar the tenant has not \
+             made"
+                .to_owned(),
+        ),
         Section::Pricing(pricing) => {
             for tier in &pricing.tiers {
                 if tier.price != TEMPLATE_PLACEHOLDER_PRICE {
@@ -379,6 +384,7 @@ fn section_hrefs(section: &Section) -> Vec<&str> {
         | Section::Faq(_)
         | Section::ContactForm(_)
         | Section::Collection(_)
-        | Section::Catalog(_) => Vec::new(),
+        | Section::Catalog(_)
+        | Section::Booking(_) => Vec::new(),
     }
 }

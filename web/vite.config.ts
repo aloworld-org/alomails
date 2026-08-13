@@ -1,4 +1,8 @@
 import react from "@vitejs/plugin-react";
+// Tailwind is how styles are written (ADR 0046). Its theme is generated from
+// ds/tokens.css by scripts/gen-tailwind-theme.mjs, so utilities and custom
+// properties are the same values spelled two ways.
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vitest/config";
 import type { ProxyOptions } from "vite";
 import { fileURLToPath } from "node:url";
@@ -89,6 +93,7 @@ const devProxy: Record<string, ProxyOptions> = {
 export default defineConfig(({ command }) => ({
   plugins: [
     react(),
+    tailwindcss(),
     {
       name: "alo-product-title",
       transformIndexHtml(html) {

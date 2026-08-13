@@ -162,6 +162,8 @@ pub mod site_agenda;
 pub mod site_analytics;
 pub mod site_assets;
 pub mod site_attribution;
+pub mod site_booking_publish;
+pub mod site_booking_slots;
 pub mod site_bookings;
 pub mod site_catalog;
 pub mod site_catalog_import;
@@ -184,6 +186,7 @@ pub mod site_pages;
 pub mod site_posts;
 pub mod site_public;
 mod site_public_analytics;
+pub mod site_public_bookings;
 pub mod site_public_conversions;
 pub mod site_public_forms;
 pub mod site_public_heatmap;
@@ -461,6 +464,10 @@ pub use site_analytics::{
 };
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
 pub use site_attribution::{SiteAttributionMoney, SiteAttributionReport, SiteAttributionSource};
+pub use site_booking_publish::SiteBookingSnapshot;
+pub use site_booking_slots::{
+    BookingRules, BookingSlot, BusyInterval, free_slots, local_day, local_wall_clock,
+};
 pub use site_bookings::{
     SITE_BOOKING_DESCRIPTION_MAX_CHARS, SITE_BOOKING_FIELD_KEY_MAX_CHARS,
     SITE_BOOKING_FIELD_LABEL_MAX_CHARS, SITE_BOOKING_FIELD_MAX_OPTIONS,
@@ -523,6 +530,10 @@ pub use site_public::{
 };
 pub use site_public_analytics::{
     DeviceClass, OUTBOUND_OVERFLOW, PublicSiteSignal, PublicSiteVisit, ReadTimeBucket,
+};
+pub use site_public_bookings::{
+    BOOKING_ANSWER_MAX_CHARS, BOOKING_VISITOR_EMAIL_MAX_CHARS, BOOKING_VISITOR_NAME_MAX_CHARS,
+    BookingAnswer, BookingRequest, PublicBookingService, ReservedAppointment,
 };
 pub use site_public_conversions::{
     CONVERSION_SOURCE_ID_MAX_LEN, ConversionSource, ConversionStage,

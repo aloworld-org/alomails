@@ -129,6 +129,9 @@ pub async fn preview_template(
     // both frozen sets are deliberately empty here.
     let collections = HashMap::new();
     let catalogs = HashMap::new();
+    // A template may not ship a bookable service (it would have to name a
+    // calendar the tenant has not made), so this map is empty by construction.
+    let bookings = HashMap::new();
     let site_ctx = SiteRenderContext {
         name: &template.name,
         base_url: &base_url,
@@ -146,6 +149,7 @@ pub async fn preview_template(
         sections: &sections,
         collections: &collections,
         catalogs: &catalogs,
+        bookings: &bookings,
     };
     Ok((
         [

@@ -2374,6 +2374,24 @@ async fn render_preview_html(
             catalogs.insert(id, preview);
         }
     }
+    // And the same for bookable services: the preview offers what the next
+    // publish would freeze, so the editor is never shown a service the page
+    // could not actually offer.
+    let mut bookings = HashMap::new();
+    for section in sections_lenient(sections) {
+        if let Section::Booking(booking) = section {
+            let id = booking.booking_id.as_str().to_owned();
+            if bookings.contains_key(&id) {
+                continue;
+            }
+            let preview = account
+                .acc
+                .site_booking_preview(&site.id, &booking.booking_id)
+                .await
+                .map_err(map_store_err)?;
+            bookings.insert(id, preview);
+        }
+    }
     let images = preview_image_map(
         account,
         &theme,
@@ -2413,6 +2431,7 @@ async fn render_preview_html(
         sections,
         collections: &collections,
         catalogs: &catalogs,
+        bookings: &bookings,
     };
     Ok(render_page_preview(
         &site_ctx,

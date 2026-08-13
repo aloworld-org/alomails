@@ -259,6 +259,11 @@ opaque_id!(
     SiteBookingId
 );
 opaque_id!(
+    /// One appointment a visitor reserved on a published site, against a
+    /// [`SiteBookingId`] service.
+    SiteBookingAppointmentId
+);
+opaque_id!(
     /// A billing customer — the company or person a tenant invoices
     /// (alo Billing, ADR 0035).
     BillingCustomerId

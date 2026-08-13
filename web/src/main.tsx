@@ -4,6 +4,9 @@
 import "@fontsource-variable/inter";
 import "@fontsource-variable/eb-garamond";
 import "./ds/tokens.css";
+// Tailwind, and the theme generated from those tokens (ADR 0046). After
+// tokens.css so the custom properties exist for the theme to reference.
+import "./ds/theme.css";
 import "./ds/global.css";
 
 import { createRoot } from "react-dom/client";
