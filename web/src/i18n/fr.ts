@@ -337,6 +337,8 @@ export const fr: Partial<Catalog> = {
   agendaDeleteCalendar: "Supprimer l'agenda",
   agendaToday: "Aujourd'hui",
   agendaPrev: "Précédent",
+  agendaToolbarLabel: "Agenda",
+  agendaViewLabel: "Affichage",
   agendaNext: "Suivant",
   agendaMonth: "Mois",
   agendaWeek: "Semaine",
@@ -485,6 +487,7 @@ export const fr: Partial<Catalog> = {
   agendaShareGroup: "Groupe",
   agendaShareAdd: "Partager",
   agendaShareRemove: "Retirer",
+  agendaShareRemoveFor: (name: string) => `Ne plus partager avec ${name}`,
   agendaShareEmpty: "Pas encore partagé.",
   agendaShareLoadError: "Impossible de charger les partages.",
   agendaShareError: "Impossible de mettre à jour le partage. Réessayez.",
@@ -989,18 +992,22 @@ export const fr: Partial<Catalog> = {
   userReset: "Réinitialiser le mot de passe",
   userResetDone: "Mot de passe réinitialisé.",
   userAdminRole: "Administrateur de l’organisation",
+  userAdminRoleFor: (email: string) =>
+    `Accès administrateur de l’organisation pour ${email}`,
   userAdminHint:
     "Les administrateurs peuvent gérer les utilisateurs, les alias et les paramètres.",
   userAliases: "Alias",
   userAliasesHint:
     "Adresses supplémentaires qui aboutissent à cette boîte aux lettres.",
   userAliasPlaceholder: "alias@namel3ss.com",
+  userAliasAdd: "Ajouter un alias",
   userDelete: "Supprimer l’utilisateur",
   userDeleteConfirm: (email: string) =>
     `Supprimer ${email} et tout son courrier ? Cette action est irréversible.`,
   userActionError: "Cela n’a pas fonctionné — veuillez réessayer.",
   userClose: "Fermer",
   adminAiProviders: "Fournisseurs d’IA",
+  adminProviderEnabledFor: (name: string) => `${name} activé`,
   adminAiIntro:
     "Choisissez les modèles qui font fonctionner alo — auto-hébergés, ou vos propres clés d’API.",
   adminAddProvider: "Ajouter un fournisseur",

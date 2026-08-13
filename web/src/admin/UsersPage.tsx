@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Avatar, Spinner, useDialogs } from "../ds";
+import { Avatar, Spinner, Toggle, useDialogs } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { AdminUser } from "../jmap";
 import { formatBytes } from "../mail/format";
@@ -144,15 +144,19 @@ export function UsersPage() {
                 >
                   {strings.userShareAccess}
                 </button>
-                <label className={styles.toggle} title={strings.userAdminRole}>
-                  <input
-                    type="checkbox"
-                    checked={u.isAdmin}
-                    disabled={u.id === selfId}
-                    onChange={() => void toggleAdmin(u)}
-                  />
-                  <span className={styles.track} />
-                </label>
+                {/* Twenty rows, twenty switches, and the only name each had
+                    was a `title` on an empty `<label>` — a tooltip is not a
+                    name, so all twenty were announced as "checkbox, not
+                    checked". Each now says whose admin access it grants, and
+                    says it as a switch. The name is read but not drawn: the
+                    column already carries the word. */}
+                <Toggle
+                  checked={u.isAdmin}
+                  disabled={u.id === selfId}
+                  onChange={() => void toggleAdmin(u)}
+                  label={strings.userAdminRoleFor(u.email)}
+                  hideLabel
+                />
                 <button
                   type="button"
                   className={styles.iconBtn}

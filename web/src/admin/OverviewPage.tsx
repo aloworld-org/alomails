@@ -7,7 +7,7 @@ import { Link } from "react-router-dom";
 import { Globe, ShieldCheck, Sparkles, UserRound, Users } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Spinner, cx } from "../ds";
+import { Card, Spinner, cx } from "../ds";
 import { useJmapClient } from "../jmap";
 import { formatBytes } from "../mail/format";
 import styles from "./admin.module.css";
@@ -107,17 +107,24 @@ export function OverviewPage() {
           </div>
 
           <h2 className={styles.sectionTitle}>{strings.overviewManage}</h2>
-          <div className={styles.cards}>
+          <div className={styles.cardGrid}>
             {sections.map((s) => (
-              <Link key={s.to} to={s.to} className={cx(styles.card, styles.cardLink)}>
+              /* `Card interactive` wrapping a link, which is what that variant
+                 documents itself as being for. The link covers the card rather
+                 than containing it, so its accessible name is the section —
+                 "Users & mailboxes" — instead of the heading and the sentence
+                 under it read as one run-on phrase. */
+              <Card key={s.to} interactive className={cx(styles.cardRow, styles.cardLink)}>
                 <span className={styles.cardIcon}>
                   <s.Icon size={20} strokeWidth={1.75} />
                 </span>
                 <div className={styles.cardText}>
-                  <div className={styles.cardName}>{s.name}</div>
+                  <Link to={s.to} className={styles.cardCover}>
+                    {s.name}
+                  </Link>
                   <div className={styles.cardDesc}>{s.desc}</div>
                 </div>
-              </Link>
+              </Card>
             ))}
           </div>
         </>

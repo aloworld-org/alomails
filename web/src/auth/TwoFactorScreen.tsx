@@ -7,7 +7,7 @@ import type { FormEvent } from "react";
 import { ArrowLeft, Lock } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner } from "../ds";
+import { Button, Card, Input, Spinner } from "../ds";
 import { CodeInput } from "./CodeInput";
 import styles from "./TwoFactorScreen.module.css";
 
@@ -34,10 +34,10 @@ export function TwoFactorScreen({ onVerify, onBack, error, submitting }: TwoFact
 
   return (
     <div className={styles.page}>
-      <form className={styles.card} onSubmit={submit}>
-        <div className={styles.badge}>
+      <Card as="form" pad="lg" className={styles.panel} onSubmit={submit}>
+        <span className={styles.mark} aria-hidden="true">
           <Lock strokeWidth={2} />
-        </div>
+        </span>
         <h1 className={styles.title}>{strings.twoFactorTitle}</h1>
         <p className={styles.subtitle}>
           {mode === "totp" ? strings.twoFactorSubtitle : strings.twoFactorRecoverySubtitle}
@@ -52,8 +52,9 @@ export function TwoFactorScreen({ onVerify, onBack, error, submitting }: TwoFact
             ariaLabel={strings.twoFactorCodeLabel}
           />
         ) : (
-          <input
+          <Input
             className={styles.recovery}
+            size="lg"
             type="text"
             autoComplete="one-time-code"
             placeholder={strings.recoveryPlaceholder}
@@ -87,7 +88,7 @@ export function TwoFactorScreen({ onVerify, onBack, error, submitting }: TwoFact
           <ArrowLeft size={15} />
           <span>{strings.backToSignIn}</span>
         </button>
-      </form>
+      </Card>
     </div>
   );
 }

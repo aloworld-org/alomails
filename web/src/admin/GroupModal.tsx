@@ -1,11 +1,21 @@
 // Create a group, or manage one (set its distribution-list address, add/remove
 // members, delete). All writes go through the admin-gated /admin/groups routes.
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
 import { X } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner, useDialogs } from "../ds";
+import {
+  Button,
+  Chip,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  Select,
+  Spinner,
+  useDialogs,
+} from "../ds";
 import { useJmapClient } from "../jmap";
 import type { AdminGroup, AdminUser } from "../jmap";
 import styles from "./admin.module.css";
@@ -17,6 +27,11 @@ interface GroupModalProps {
 }
 
 export function GroupModal({ group, onClose, onChanged }: GroupModalProps) {
+  // The create form lives in the dialog's body and its submit button in the
+  // dialog's footer, which are siblings rather than ancestor and descendant —
+  // so the button is tied to the form by id, and Enter in the name field still
+  // creates the group.
+  const formId = useId();
   const { confirm } = useDialogs();
   const client = useJmapClient();
   const [name, setName] = useState("");
@@ -134,175 +149,155 @@ export function GroupModal({ group, onClose, onChanged }: GroupModalProps) {
 
   if (group === undefined) {
     return (
-      <div className={styles.overlay} onMouseDown={onClose}>
-        <div
-          className={styles.modal}
-          role="dialog"
-          aria-modal="true"
-          aria-label={strings.adminNewGroup}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <form onSubmit={create}>
-            <div className={styles.modalHead}>
-              <h2>{strings.adminNewGroup}</h2>
-              <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.groupClose}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className={styles.modalBody}>
-              <label className={styles.field}>
-                <span className={styles.label}>{strings.groupName}</span>
-                <input
-                  className={styles.input}
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Team"
-                  autoFocus
-                />
-              </label>
-              {error !== null && (
-                <p className={styles.error} role="alert">
-                  {error}
-                </p>
-              )}
-            </div>
-            <div className={styles.modalFoot}>
-              <div className={styles.footSpacer} />
-              <button type="button" className={styles.textBtn} onClick={onClose}>
-                {strings.providerCancel}
-              </button>
-              <Button type="submit" disabled={busy}>
-                {busy ? <Spinner size={16} /> : strings.groupCreate}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
+      <Modal
+        title={strings.adminNewGroup}
+        onClose={onClose}
+        actions={<IconButton label={strings.groupClose} icon={<X size={18} />} onClick={onClose} />}
+        footer={
+          <>
+            <div className={styles.footSpacer} />
+            <Button variant="ghost" onClick={onClose}>
+              {strings.providerCancel}
+            </Button>
+            <Button type="submit" form={formId} disabled={busy}>
+              {busy ? <Spinner size={16} /> : strings.groupCreate}
+            </Button>
+          </>
+        }
+      >
+        <form id={formId} onSubmit={create}>
+          <Field label={strings.groupName}>
+            {(control) => (
+              <Input
+                {...control}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Team"
+                autoFocus
+              />
+            )}
+          </Field>
+        </form>
+        {error !== null && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
+      </Modal>
     );
   }
 
   const addable = allUsers.filter((u) => !members.some((m) => m.id === u.id));
 
   return (
-    <div className={styles.overlay} onMouseDown={onClose}>
-      <div
-        className={styles.modal}
-        role="dialog"
-        aria-modal="true"
-        aria-label={group.name}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className={styles.modalHead}>
-          <h2>{group.name}</h2>
-          <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.groupClose}>
-            <X size={18} />
-          </button>
-        </div>
-        <div className={styles.modalBody}>
-          <div className={styles.field}>
-            <span className={styles.label}>{strings.groupName}</span>
-            <div className={styles.keyRow}>
-              <input
-                className={styles.input}
-                value={listName}
-                onChange={(e) => setListName(e.target.value)}
-              />
-              <button
-                type="button"
-                className={styles.ghost}
-                onClick={() => void saveName()}
-                disabled={busy || listName.trim().length === 0 || listName.trim() === group.name}
-              >
-                {strings.groupRename}
-              </button>
-            </div>
-          </div>
-
-          <div className={styles.field}>
-            <span className={styles.label}>{strings.groupListAddress}</span>
-            <div className={styles.keyRow}>
-              <input
-                className={styles.input}
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="team@namel3ss.com"
-              />
-              <button
-                type="button"
-                className={styles.ghost}
-                onClick={() => void saveAddress()}
-                disabled={busy || address.trim().length === 0}
-              >
-                {strings.groupAddressSave}
-              </button>
-              {(group.address ?? "").length > 0 && (
-                <button type="button" className={styles.ghost} onClick={() => void clearAddress()} disabled={busy}>
-                  {strings.groupAddressClear}
-                </button>
-              )}
-            </div>
-            <span className={styles.hint}>{strings.groupListAddressHint}</span>
-          </div>
-
-          <div className={styles.field}>
-            <span className={styles.label}>{strings.groupMembers}</span>
-            <div className={styles.chips}>
-              {members.length === 0 && <span className={styles.hint}>{strings.groupNoMembers}</span>}
-              {members.map((m) => (
-                <span key={m.id} className={styles.chip}>
-                  <span className={styles.chipLabel}>{m.email}</span>
-                  <button
-                    type="button"
-                    className={styles.chipX}
-                    onClick={() => void removeMember(m.id)}
-                    aria-label={strings.providerRemoveModel(m.email)}
-                  >
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
-            </div>
-            <div className={styles.keyRow}>
-              <select
-                className={styles.input}
-                value={pick}
-                onChange={(e) => setPick(e.target.value)}
-                disabled={addable.length === 0}
-              >
-                <option value="">{strings.groupAddMember}…</option>
-                {addable.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.email}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className={styles.ghost}
-                onClick={() => void addMember(pick)}
-                disabled={busy || pick.length === 0}
-              >
-                {strings.groupAddMember}
-              </button>
-            </div>
-          </div>
-
-          {error !== null && (
-            <p className={styles.error} role="alert">
-              {error}
-            </p>
-          )}
-        </div>
-        <div className={styles.modalFoot}>
+    <Modal
+      title={group.name}
+      onClose={onClose}
+      actions={<IconButton label={strings.groupClose} icon={<X size={18} />} onClick={onClose} />}
+      footer={
+        <>
           <button type="button" className={styles.dangerBtn} onClick={() => void del()} disabled={busy}>
             {strings.groupDelete}
           </button>
           <div className={styles.footSpacer} />
-          <button type="button" className={styles.primary} onClick={onClose}>
-            {strings.groupClose}
-          </button>
+          <Button onClick={onClose}>{strings.groupClose}</Button>
+        </>
+      }
+    >
+      <Field label={strings.groupName}>
+        {(control) => (
+          <div className={styles.keyRow}>
+            <Input
+              {...control}
+              className={styles.keyRowGrow}
+              value={listName}
+              onChange={(e) => setListName(e.target.value)}
+            />
+            <Button
+              variant="ghost"
+              onClick={() => void saveName()}
+              disabled={busy || listName.trim().length === 0 || listName.trim() === group.name}
+            >
+              {strings.groupRename}
+            </Button>
+          </div>
+        )}
+      </Field>
+
+      <Field label={strings.groupListAddress} hint={strings.groupListAddressHint}>
+        {(control) => (
+          <div className={styles.keyRow}>
+            <Input
+              {...control}
+              className={styles.keyRowGrow}
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="team@namel3ss.com"
+            />
+            <Button
+              variant="ghost"
+              onClick={() => void saveAddress()}
+              disabled={busy || address.trim().length === 0}
+            >
+              {strings.groupAddressSave}
+            </Button>
+            {(group.address ?? "").length > 0 && (
+              <Button variant="ghost" onClick={() => void clearAddress()} disabled={busy}>
+                {strings.groupAddressClear}
+              </Button>
+            )}
+          </div>
+        )}
+      </Field>
+
+      {/* Not a `ds/Field`: "Members" names a section — a list of people and a
+          way to add one — rather than a single control, and a `<label>` bound
+          to whichever control happened to come first would be a lie. The
+          picker carries its own name. */}
+      <div className={styles.block}>
+        <span className={styles.label}>{strings.groupMembers}</span>
+        <div className={styles.chipRow}>
+          {members.length === 0 && <span className={styles.hint}>{strings.groupNoMembers}</span>}
+          {members.map((m) => (
+            <Chip
+              key={m.id}
+              onRemove={() => void removeMember(m.id)}
+              removeLabel={strings.providerRemoveModel(m.email)}
+            >
+              {m.email}
+            </Chip>
+          ))}
+        </div>
+        <div className={styles.keyRow}>
+          <Select
+            className={styles.keyRowGrow}
+            aria-label={strings.groupAddMember}
+            value={pick}
+            onChange={(e) => setPick(e.target.value)}
+            disabled={addable.length === 0}
+            placeholder={`${strings.groupAddMember}…`}
+          >
+            {addable.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.email}
+              </option>
+            ))}
+          </Select>
+          <Button
+            variant="ghost"
+            onClick={() => void addMember(pick)}
+            disabled={busy || pick.length === 0}
+          >
+            {strings.groupAddMember}
+          </Button>
         </div>
       </div>
-    </div>
+
+      {error !== null && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
+    </Modal>
   );
 }

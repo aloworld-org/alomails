@@ -322,124 +322,34 @@
   font-weight: var(--weight-medium);
 }
 
-/* toggle */
-.toggle {
-  position: relative;
-  display: inline-flex;
-  cursor: pointer;
-}
+/* The switches, the dialogs and their fields are `ds/Toggle`, `ds/Modal`,
+   `ds/Field` + `ds/Input`/`ds/Select` and `ds/Chip` since D2.05, so the rules
+   that drew all of them are gone. What is left below is what a dialog's
+   *contents* need and the design system does not own. */
 
-.toggle input {
-  position: absolute;
-  opacity: 0;
-}
-
-.track {
-  width: 38px;
-  height: 22px;
-  border-radius: var(--radius-full);
-  background: var(--border-strong);
-  transition: background-color var(--transition-fast);
-}
-
-.track::after {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--radius-full);
-  background: #fff;
-  transition: transform var(--transition-fast);
-}
-
-.toggle input:checked + .track {
-  background: var(--accent);
-}
-
-.toggle input:checked + .track::after {
-  transform: translateX(16px);
-}
-
-/* modal */
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-modal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-6);
-  background: var(--bg-overlay);
-}
-
-.modal {
-  width: 100%;
-  max-width: 480px;
-  background: var(--bg-surface);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-}
-
-.modalHead {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--border-subtle);
-}
-
-.modalHead h2 {
-  flex: 1;
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-}
-
-.modalIcon {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
-  border-radius: var(--radius-md);
-  background: var(--bg-raised);
-  color: var(--accent);
-}
-
-.modalBody {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-5);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
+/* The name over a labelled *section* — a list of aliases, a set of app
+   switches — where a `ds/Field`'s `<label>` would have to bind to one control
+   and there is no single control to bind it to. */
 .label {
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
-.input {
-  height: 40px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-base);
+/* That section: the label, then whatever it names. What `.field` was, minus
+   the claim of being one form control. */
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
-.input:focus {
-  outline: none;
-  border-color: var(--border-strong);
+/* A dialog body's own form. `ds/Modal` spaces its children; the form is one
+   child holding several, so it repeats that spacing inside itself. */
+.providerForm,
+.userForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
 }
 
 /* A bordered container for the rich-text signature/footer editors. */
@@ -488,23 +398,6 @@
   flex-wrap: wrap;
 }
 
-.testBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  height: 34px;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.testBtn:hover {
-  border-color: var(--border-strong);
-  color: var(--text-primary);
-}
-
 .testOk {
   display: inline-flex;
   align-items: center;
@@ -527,14 +420,6 @@
   font-size: var(--text-sm);
 }
 
-.modalFoot {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  border-top: 1px solid var(--border-subtle);
-}
-
 .footSpacer {
   flex: 1;
 }
@@ -545,7 +430,10 @@
   gap: var(--space-2);
 }
 
-.keyRow .input {
+/* The control in a key row that takes the leftover width — the field, next to
+   the button that acts on it. Named rather than selected as `.keyRow .input`,
+   because the field is a `ds/Input` now and its class belongs to `ds/`. */
+.keyRowGrow {
   flex: 1;
   min-width: 0;
 }
@@ -603,7 +491,11 @@
   font-size: var(--text-sm);
 }
 
-.cards {
+/* The column of cards on Overview. Renamed from `.cards`, which the
+   primitives ratchet reads as a plural of `.card` — correctly: a stylesheet
+   naming the singular is what it exists to catch, and a container is not
+   worth an exemption. */
+.cardGrid {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -648,8 +540,34 @@
   color: var(--text-secondary);
 }
 
+/* What a `ds/Card` does not decide: how this console's cards lay their icon,
+   their text and their actions out in a row. The surface, the border, the
+   radius and the shadow are the component's. */
+.cardRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* The link that covers an interactive card. It names the card — so the
+   accessible name is the section, not the section plus its description — and
+   the whole surface stays clickable. */
+.cardCover {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.cardCover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
 /* A card that is a navigation link (Overview → each admin area). */
 .cardLink {
+  position: relative;
   text-decoration: none;
   cursor: pointer;
   transition:
@@ -657,23 +575,19 @@
     background-color var(--transition-fast);
 }
 
-.cardLink:hover {
+.cardLink:hover,
+.cardLink:focus-within {
   border-color: var(--border-strong);
   background: var(--bg-raised);
   text-decoration: none;
 }
 
-.card {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-}
-
-.cardDefault {
+/* The card that is the tenant's default provider, or a group that is a
+   distribution list. Doubled for the same reason as `agenda/.viewSwitch`:
+   `ds/Card`'s `border` shorthand ties with this rule's `border-color` on
+   specificity and lives in another chunk, so an untouched build-config change
+   could quietly take the accent ring away. */
+.cardDefault.cardDefault {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent);
 }
@@ -916,7 +830,9 @@
 }
 
 /* model chips */
-.chips {
+/* The row a set of `ds/Chip`s wraps in. Renamed from `.chips` for the same
+   reason as `.cardGrid`. */
+.chipRow {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -925,42 +841,6 @@
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   background: var(--bg-surface);
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  height: 26px;
-  padding: 0 3px 0 var(--space-2);
-  border-radius: var(--radius-full);
-  background: var(--bg-raised);
-  font-size: var(--text-sm);
-}
-
-.chipPrimary {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  color: var(--accent);
-}
-
-.chipLabel {
-  color: inherit;
-}
-
-.chipX {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: var(--radius-full);
-  color: currentcolor;
-  opacity: 0.7;
-}
-
-.chipX:hover {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.06);
 }
 
 .chipInput {
@@ -1034,31 +914,10 @@
   background: var(--bg-surface);
 }
 
-.scopeCheck {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
 .scopeActions {
   display: flex;
   gap: var(--space-2);
   margin-top: var(--space-2);
-}
-
-.iconTextBtn {
-  padding: 0 var(--space-3);
-  height: 32px;
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.iconTextBtn:hover {
-  color: var(--text-primary);
 }
 
 .delegateEmail {

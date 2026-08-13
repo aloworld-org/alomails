@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AtSign, Plus, Trash2, Users } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Spinner, cx, useDialogs } from "../ds";
+import { Card, Spinner, cx, useDialogs } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { AdminGroup } from "../jmap";
 import { GroupModal } from "./GroupModal";
@@ -71,7 +71,7 @@ export function GroupsPage() {
           {groups.map((g) => {
             const isList = (g.address ?? "").length > 0;
             return (
-              <li key={g.id} className={cx(styles.card, isList && styles.cardDefault)}>
+              <Card as="li" key={g.id} className={cx(styles.cardRow, isList && styles.cardDefault)}>
                 <span className={styles.cardIcon}>
                   {isList ? <AtSign size={20} strokeWidth={1.75} /> : <Users size={20} strokeWidth={1.75} />}
                 </span>
@@ -98,7 +98,7 @@ export function GroupsPage() {
                     <Trash2 size={16} />
                   </button>
                 </div>
-              </li>
+              </Card>
             );
           })}
         </ul>

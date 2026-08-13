@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { X } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button } from "../ds";
+import { Button, Field, IconButton, Input, Modal, Select } from "../ds";
 import {
   useJmapClient,
   type Calendar,
@@ -82,73 +82,87 @@ export function ShareDialog({ calendar, onClose }: Props) {
   }
 
   return (
-    <div
-      className={styles.modalScrim}
-      role="dialog"
-      aria-modal="true"
-      onMouseDown={onClose}
-    >
-      <div className={styles.modal} onMouseDown={(e) => e.stopPropagation()}>
-        <div className={styles.modalHead}>
-          <h2>{strings.agendaShareTitle(calendar.name)}</h2>
-          <button
-            type="button"
-            className={styles.iconBtn}
-            onClick={onClose}
-            aria-label={strings.agendaClose}
+    <Modal
+      title={strings.agendaShareTitle(calendar.name)}
+      onClose={onClose}
+      actions={
+        <IconButton
+          label={strings.agendaClose}
+          icon={<X size={18} />}
+          onClick={onClose}
+        />
+      }
+      footer={
+        <>
+          <div className={styles.footSpacer} />
+          <Button variant="ghost" onClick={onClose} disabled={busy}>
+            {strings.agendaClose}
+          </Button>
+          <Button
+            onClick={() => void add()}
+            disabled={
+              busy || (kind === "user" ? email.trim() === "" : groupId === "")
+            }
           >
-            <X size={18} />
-          </button>
-        </div>
+            {strings.agendaShareAdd}
+          </Button>
+        </>
+      }
+    >
+      {grants.length > 0 ? (
+        <ul className={styles.shareList}>
+          {grants.map((g) => (
+            <li key={`${g.kind}:${g.subject}`} className={styles.shareRow}>
+              <span className={styles.shareLabel}>
+                {g.label}
+                {g.kind === "group" && (
+                  <span className={styles.shareTag}>
+                    {strings.agendaShareGroup}
+                  </span>
+                )}
+              </span>
+              <span className={styles.shareRole}>
+                {g.role === "editor"
+                  ? strings.agendaShareEditor
+                  : strings.agendaShareViewer}
+              </span>
+              {/* One "Remove" per row is a list of identical buttons read
+                  aloud; each says whose access it takes away. */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void remove(g)}
+                disabled={busy}
+                aria-label={strings.agendaShareRemoveFor(g.label)}
+              >
+                {strings.agendaShareRemove}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className={styles.fieldHint}>{strings.agendaShareEmpty}</p>
+      )}
 
-        {grants.length > 0 ? (
-          <ul className={styles.shareList}>
-            {grants.map((g) => (
-              <li key={`${g.kind}:${g.subject}`} className={styles.shareRow}>
-                <span className={styles.shareLabel}>
-                  {g.label}
-                  {g.kind === "group" && (
-                    <span className={styles.shareTag}>
-                      {strings.agendaShareGroup}
-                    </span>
-                  )}
-                </span>
-                <span className={styles.shareRole}>
-                  {g.role === "editor"
-                    ? strings.agendaShareEditor
-                    : strings.agendaShareViewer}
-                </span>
-                <button
-                  type="button"
-                  className={styles.linkBtn}
-                  onClick={() => void remove(g)}
-                  disabled={busy}
-                >
-                  {strings.agendaShareRemove}
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className={styles.fieldHint}>{strings.agendaShareEmpty}</p>
-        )}
-
-        <div className={styles.shareForm}>
-          <label className={styles.field}>
-            <span>{strings.agendaShareWith}</span>
-            <select
+      <div className={styles.shareForm}>
+        <Field label={strings.agendaShareWith}>
+          {(control) => (
+            <Select
+              {...control}
               value={kind}
               onChange={(e) => setKind(e.target.value as Kind)}
             >
               <option value="user">{strings.agendaSharePerson}</option>
               <option value="group">{strings.agendaShareGroupOption}</option>
-            </select>
-          </label>
+            </Select>
+          )}
+        </Field>
 
-          {kind === "user" ? (
-            <label className={styles.field}>
-              <span>{strings.agendaShareEmail}</span>
-              <input
+        {kind === "user" ? (
+          <Field label={strings.agendaShareEmail}>
+            {(control) => (
+              <Input
+                {...control}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={strings.agendaShareEmailPlaceholder}
@@ -157,64 +171,46 @@ export function ShareDialog({ calendar, onClose }: Props) {
                 autoCorrect="off"
                 spellCheck={false}
               />
-            </label>
-          ) : (
-            <label className={styles.field}>
-              <span>{strings.agendaShareGroupOption}</span>
-              <select
+            )}
+          </Field>
+        ) : (
+          <Field label={strings.agendaShareGroupOption}>
+            {(control) => (
+              <Select
+                {...control}
                 value={groupId}
                 onChange={(e) => setGroupId(e.target.value)}
+                placeholder={strings.agendaShareGroupPick}
               >
-                <option value="">{strings.agendaShareGroupPick}</option>
                 {groups.map((g) => (
                   <option key={g.id} value={g.id}>
                     {g.name}
                   </option>
                 ))}
-              </select>
-            </label>
-          )}
+              </Select>
+            )}
+          </Field>
+        )}
 
-          <label className={styles.field}>
-            <span>{strings.agendaShareAccess}</span>
-            <select
+        <Field label={strings.agendaShareAccess}>
+          {(control) => (
+            <Select
+              {...control}
               value={role}
               onChange={(e) => setRole(e.target.value as Role)}
             >
               <option value="viewer">{strings.agendaShareViewer}</option>
               <option value="editor">{strings.agendaShareEditor}</option>
-            </select>
-          </label>
-        </div>
-
-        {error !== null && (
-          <p className={styles.modalError} role="alert">
-            {error}
-          </p>
-        )}
-
-        <div className={styles.modalActions}>
-          <div className={styles.modalActionsRight}>
-            <button
-              type="button"
-              className={styles.linkBtn}
-              onClick={onClose}
-              disabled={busy}
-            >
-              {strings.agendaClose}
-            </button>
-            <Button
-              type="button"
-              onClick={() => void add()}
-              disabled={
-                busy || (kind === "user" ? email.trim() === "" : groupId === "")
-              }
-            >
-              {strings.agendaShareAdd}
-            </Button>
-          </div>
-        </div>
+            </Select>
+          )}
+        </Field>
       </div>
-    </div>
+
+      {error !== null && (
+        <p className={styles.modalError} role="alert">
+          {error}
+        </p>
+      )}
+    </Modal>
   );
 }

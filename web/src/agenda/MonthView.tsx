@@ -1,5 +1,5 @@
 // The month grid — 6 weeks, Monday-first, à la Google/Outlook. Each day shows
-// its events as chips; click a day to add one, click a chip to edit.
+// its events as pills; click a day to add one, click a pill to edit.
 import { getLocale, strings } from "../i18n";
 import type { CalendarEvent } from "../jmap";
 import { eventOnDay, monthGridDays, sameDay, startOfMonth } from "./dates";
@@ -15,7 +15,7 @@ interface Props {
   onEventClick: (event: CalendarEvent) => void;
 }
 
-const MAX_CHIPS = 3;
+const MAX_PER_DAY = 3;
 
 export function MonthView({
   anchor,
@@ -89,10 +89,10 @@ export function MonthView({
                 </span>
               </div>
               <div className={styles.dayEvents}>
-                {dayEvents.slice(0, MAX_CHIPS).map(({ e, s }) => (
+                {dayEvents.slice(0, MAX_PER_DAY).map(({ e, s }) => (
                   <button
                     key={`${e.id}-${e.startsAt}`}
-                    className={`${styles.chip} ${e.allDay ? styles.chipAllDay : styles.chipTimed}`}
+                    className={`${styles.eventPill} ${e.allDay ? styles.eventAllDay : styles.eventTimed}`}
                     style={
                       {
                         ["--cal"]: colorOf(e.calendarId),
@@ -105,25 +105,25 @@ export function MonthView({
                     title={e.summary}
                   >
                     {e.allDay ? (
-                      <span className={styles.chipTitle}>
+                      <span className={styles.eventTitle}>
                         {e.summary || strings.agendaUntitledEvent}
                       </span>
                     ) : (
                       <>
-                        <span className={styles.chipDot} aria-hidden />
-                        <span className={styles.chipTime}>
+                        <span className={styles.eventDot} aria-hidden />
+                        <span className={styles.eventTime}>
                           {timeFmt.format(s)}
                         </span>
-                        <span className={styles.chipTitle}>
+                        <span className={styles.eventTitle}>
                           {e.summary || strings.agendaUntitledEvent}
                         </span>
                       </>
                     )}
                   </button>
                 ))}
-                {dayEvents.length > MAX_CHIPS && (
-                  <span className={styles.moreChip}>
-                    +{dayEvents.length - MAX_CHIPS}
+                {dayEvents.length > MAX_PER_DAY && (
+                  <span className={styles.moreEvents}>
+                    +{dayEvents.length - MAX_PER_DAY}
                   </span>
                 )}
               </div>

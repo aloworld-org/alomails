@@ -3,12 +3,12 @@
 // Test-connection action that shows an inline "Connection verified" banner
 // before you save. Saving enables the provider (and makes it the default when
 // the tenant has none yet). A single model is used per provider for now.
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { FormEvent } from "react";
 import { Check, Eye, EyeOff, KeyRound, RefreshCw, Server, X } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Spinner, cx } from "../ds";
+import { Button, Chip, Field, IconButton, Input, Modal, Spinner } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { AiProvider } from "../jmap";
 import type { CatalogEntry } from "./catalog";
@@ -40,6 +40,7 @@ export function ProviderModal({ entry, provider, makeDefaultOnSave, onClose, onS
     setModels([...models, m]);
     setModelDraft("");
   }
+  const formId = useId();
   const [showKey, setShowKey] = useState(false);
   const [testing, setTesting] = useState(false);
   const [tested, setTested] = useState<{ ok: boolean; models: number } | "fail" | null>(null);
@@ -90,135 +91,135 @@ export function ProviderModal({ entry, provider, makeDefaultOnSave, onClose, onS
   }
 
   const verified = tested !== null && tested !== "fail" && tested.ok;
+  const title = entry.needsKey
+    ? strings.connectTitle(entry.name)
+    : strings.configureTitle(entry.name);
 
   return (
-    <div className={styles.overlay} onMouseDown={onClose}>
-      <div
-        className={styles.modal}
-        role="dialog"
-        aria-modal="true"
-        aria-label={entry.needsKey ? strings.connectTitle(entry.name) : strings.configureTitle(entry.name)}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <form onSubmit={save}>
-          <div className={styles.modalHead}>
-            <span className={styles.modalIcon}>
-              {entry.group === "self" ? <Server size={18} /> : <KeyRound size={18} />}
-            </span>
-            <h2>{entry.needsKey ? strings.connectTitle(entry.name) : strings.configureTitle(entry.name)}</h2>
-            <button type="button" className={styles.iconBtn} onClick={onClose} aria-label={strings.providerCancel}>
-              <X size={18} />
-            </button>
-          </div>
-
-          <div className={styles.modalBody}>
-            {entry.needsKey && (
-              <label className={styles.field}>
-                <span className={styles.label}>{strings.providerApiKey}</span>
-                <div className={styles.keyRow}>
-                  <input
-                    className={styles.input}
-                    type={showKey ? "text" : "password"}
-                    value={apiKey}
-                    onChange={(e) => {
-                      setApiKey(e.target.value);
-                      setTested(null);
-                    }}
-                    placeholder={provider?.hasKey === true ? strings.providerApiKeyKept : "sk-…"}
-                  />
-                  <button
-                    type="button"
-                    className={styles.eyeBtn}
-                    onClick={() => setShowKey((v) => !v)}
-                    aria-label={showKey ? strings.providerHideKey : strings.providerShowKey}
-                  >
-                    {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-              </label>
-            )}
-
-            <label className={styles.field}>
-              <span className={styles.label}>{strings.providerBaseUrl}</span>
-              <input
-                className={styles.input}
-                value={baseUrl}
-                onChange={(e) => {
-                  setBaseUrl(e.target.value);
-                  setTested(null);
-                }}
-                placeholder="http://localhost:11434"
-              />
-            </label>
-
-            <div className={styles.field}>
-              <span className={styles.label}>{strings.providerModels}</span>
-              <div className={styles.chips}>
-                {models.map((m, i) => (
-                  <span key={m} className={cx(styles.chip, i === 0 && styles.chipPrimary)}>
-                    <span className={styles.chipLabel}>{m}</span>
-                    <button
-                      type="button"
-                      className={styles.chipX}
-                      onClick={() => setModels(models.filter((x) => x !== m))}
-                      aria-label={strings.providerRemoveModel(m)}
-                    >
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
-                <input
-                  className={styles.chipInput}
-                  value={modelDraft}
-                  onChange={(e) => setModelDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === ",") {
-                      e.preventDefault();
-                      addModel();
-                    }
+    <Modal
+      title={title}
+      onClose={onClose}
+      icon={entry.group === "self" ? <Server size={18} /> : <KeyRound size={18} />}
+      actions={<IconButton label={strings.providerCancel} icon={<X size={18} />} onClick={onClose} />}
+      footer={
+        <>
+          <Button
+            variant="ghost"
+            icon={testing ? <Spinner size={14} /> : <RefreshCw size={14} />}
+            onClick={() => void test()}
+            disabled={testing}
+          >
+            {testing ? strings.providerTesting : tested !== null ? strings.providerTestAgain : strings.providerTest}
+          </Button>
+          <div className={styles.footSpacer} />
+          <Button variant="ghost" onClick={onClose}>
+            {strings.providerCancel}
+          </Button>
+          <Button type="submit" form={formId} disabled={saving}>
+            {saving ? <Spinner size={16} /> : strings.providerSave}
+          </Button>
+        </>
+      }
+    >
+      {/* The form is in the body and Save is in the footer, so the two are
+          joined by id rather than by nesting — and Enter in a field still
+          saves. */}
+      <form id={formId} className={styles.providerForm} onSubmit={save}>
+        {entry.needsKey && (
+          <Field label={strings.providerApiKey}>
+            {(control) => (
+              <div className={styles.keyRow}>
+                <Input
+                  {...control}
+                  className={styles.keyRowGrow}
+                  type={showKey ? "text" : "password"}
+                  value={apiKey}
+                  onChange={(e) => {
+                    setApiKey(e.target.value);
+                    setTested(null);
                   }}
-                  placeholder={
-                    models.length === 0
-                      ? (entry.defaultModel ?? (entry.needsKey ? "gpt-4o-mini" : "llama3.2"))
-                      : strings.providerModelPlaceholder
-                  }
+                  placeholder={provider?.hasKey === true ? strings.providerApiKeyKept : "sk-…"}
                 />
-                <button type="button" className={styles.addChip} onClick={addModel}>
-                  {strings.providerAddModel}
+                <button
+                  type="button"
+                  className={styles.eyeBtn}
+                  onClick={() => setShowKey((v) => !v)}
+                  aria-label={showKey ? strings.providerHideKey : strings.providerShowKey}
+                  aria-pressed={showKey}
+                >
+                  {showKey ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-            </div>
-
-            {verified && (
-              <div className={styles.verified}>
-                <Check size={16} />
-                <span>{strings.providerTestOk((tested as { models: number }).models)}</span>
-              </div>
             )}
-            {tested === "fail" && <div className={styles.failed}>{strings.providerTestFail}</div>}
+          </Field>
+        )}
 
-            {error !== null && (
-              <p className={styles.error} role="alert">
-                {error}
-              </p>
-            )}
-          </div>
+        <Field label={strings.providerBaseUrl}>
+          {(control) => (
+            <Input
+              {...control}
+              value={baseUrl}
+              onChange={(e) => {
+                setBaseUrl(e.target.value);
+                setTested(null);
+              }}
+              placeholder="http://localhost:11434"
+            />
+          )}
+        </Field>
 
-          <div className={styles.modalFoot}>
-            <button type="button" className={styles.testBtn} onClick={() => void test()} disabled={testing}>
-              {testing ? <Spinner size={14} /> : <RefreshCw size={14} />}
-              <span>{testing ? strings.providerTesting : tested !== null ? strings.providerTestAgain : strings.providerTest}</span>
-            </button>
-            <div className={styles.footSpacer} />
-            <button type="button" className={styles.textBtn} onClick={onClose}>
-              {strings.providerCancel}
-            </button>
-            <button type="submit" className={styles.primary} disabled={saving}>
-              {saving ? <Spinner size={16} /> : strings.providerSave}
+        {/* Not a `ds/Field`: "Models" names a set of chips and the box that
+            adds one, not a single control. The box carries its own name. */}
+        <div className={styles.block}>
+          <span className={styles.label}>{strings.providerModels}</span>
+          <div className={styles.chipRow}>
+            {models.map((m, i) => (
+              <Chip
+                key={m}
+                tone={i === 0 ? "accent" : "neutral"}
+                onRemove={() => setModels(models.filter((x) => x !== m))}
+                removeLabel={strings.providerRemoveModel(m)}
+              >
+                {m}
+              </Chip>
+            ))}
+            <input
+              className={styles.chipInput}
+              aria-label={strings.providerAddModel}
+              value={modelDraft}
+              onChange={(e) => setModelDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  addModel();
+                }
+              }}
+              placeholder={
+                models.length === 0
+                  ? (entry.defaultModel ?? (entry.needsKey ? "gpt-4o-mini" : "llama3.2"))
+                  : strings.providerModelPlaceholder
+              }
+            />
+            <button type="button" className={styles.addChip} onClick={addModel}>
+              {strings.providerAddModel}
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+
+        {verified && (
+          <div className={styles.verified}>
+            <Check size={16} />
+            <span>{strings.providerTestOk((tested as { models: number }).models)}</span>
+          </div>
+        )}
+        {tested === "fail" && <div className={styles.failed}>{strings.providerTestFail}</div>}
+
+        {error !== null && (
+          <p className={styles.error} role="alert">
+            {error}
+          </p>
+        )}
+      </form>
+    </Modal>
   );
 }

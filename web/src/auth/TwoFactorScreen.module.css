@@ -7,21 +7,23 @@
   background: var(--bg-app);
 }
 
-.card {
+/* The surface, the border, the radius, the shadow and the padding are
+   `ds/Card pad="lg"`. What is left here is how this particular card stacks its
+   contents and how wide it is allowed to get. */
+.panel {
   width: 100%;
   max-width: 420px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-8);
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-4);
 }
 
-.badge {
+/* Not a `ds/Badge`: a badge states a fact in words and is read out. This is a
+   64px emblem above a heading that already says "two-factor authentication",
+   so it says nothing a screen reader needs and is hidden from one. Same call
+   as `shell/ComingSoon.plate` at D2.03. */
+.mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -32,7 +34,7 @@
   color: var(--accent);
 }
 
-.badge svg {
+.mark svg {
   width: 28px;
   height: 28px;
 }
@@ -50,22 +52,12 @@
   margin-top: calc(-1 * var(--space-2));
 }
 
+/* The box is `ds/Input size="lg"`. What stays is how a recovery code is read:
+   centred, with the letters spaced apart so a string of them can be checked
+   against the sheet it was printed on. */
 .recovery {
-  width: 100%;
-  height: 48px;
-  padding: 0 var(--space-4);
   text-align: center;
   letter-spacing: 0.08em;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-raised);
-  color: var(--text-primary);
-}
-
-.recovery:focus {
-  outline: none;
-  background: var(--bg-surface);
-  border-color: var(--border-strong);
 }
 
 .error {

@@ -22,7 +22,14 @@ import {
   type CalendarEvent,
   type EventInput,
 } from "../jmap";
-import { Spinner, useDialogs } from "../ds";
+import {
+  Button,
+  IconButton,
+  Spinner,
+  Toolbar,
+  ToolbarGroup,
+  useDialogs,
+} from "../ds";
 import { EventModal } from "./EventModal";
 import { ShareDialog } from "./ShareDialog";
 import { MiniMonth } from "./MiniMonth";
@@ -357,38 +364,50 @@ export function AgendaModule() {
       </aside>
 
       <section className={styles.main}>
-        <header className={styles.toolbar}>
-          <button className={styles.todayBtn} onClick={goToday}>
+        {/* `keyboard="tab"`, the default: the row carries a heading and a
+            spinner between its controls, so the arrow keys a `role="toolbar"`
+            promises would have nothing coherent to move between. */}
+        <Toolbar
+          label={strings.agendaToolbarLabel}
+          surface="bar"
+          density="compact"
+        >
+          <Button variant="ghost" size="sm" onClick={goToday}>
             {strings.agendaToday}
-          </button>
-          <button
-            className={styles.navBtn}
-            onClick={() => step(-1)}
-            aria-label={strings.agendaPrev}
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            className={styles.navBtn}
-            onClick={() => step(1)}
-            aria-label={strings.agendaNext}
-          >
-            <ChevronRight size={18} />
-          </button>
+          </Button>
+          <ToolbarGroup>
+            <IconButton
+              label={strings.agendaPrev}
+              icon={<ChevronLeft size={18} />}
+              onClick={() => step(-1)}
+            />
+            <IconButton
+              label={strings.agendaNext}
+              icon={<ChevronRight size={18} />}
+              onClick={() => step(1)}
+            />
+          </ToolbarGroup>
           <h1 className={styles.periodLabel}>{label}</h1>
           {loading && <Spinner size={16} />}
-          <div className={styles.viewSwitch}>
+          {/* A segmented control: named, so four bare words are announced as
+              one choice, and a group so a wrap never splits it in half. */}
+          <ToolbarGroup
+            label={strings.agendaViewLabel}
+            className={styles.viewSwitch}
+          >
             {VIEWS.map((v) => (
               <button
                 key={v.id}
+                type="button"
                 className={view === v.id ? styles.viewActive : ""}
+                aria-current={view === v.id ? "true" : undefined}
                 onClick={() => setView(v.id)}
               >
                 {v.label()}
               </button>
             ))}
-          </div>
-        </header>
+          </ToolbarGroup>
+        </Toolbar>
 
         <div className={styles.viewport}>
           {view === "month" ? (

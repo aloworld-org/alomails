@@ -1,12 +1,22 @@
 // Create a user, or manage an existing one (reset password, aliases, delete).
 // Admin-gated on the server; the calling page also hides self-destructive
 // actions for the signed-in admin.
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import type { FormEvent } from "react";
 import { X } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner, useDialogs } from "../ds";
+import {
+  Button,
+  Chip,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  Spinner,
+  Toggle,
+  useDialogs,
+} from "../ds";
 import { useJmapClient } from "../jmap";
 import type { AdminUser, AppModuleId, UserModuleAccess } from "../jmap";
 import styles from "./admin.module.css";
@@ -51,6 +61,7 @@ export function UserModal({
 }: UserModalProps) {
   const { confirm } = useDialogs();
   const client = useJmapClient();
+  const formId = useId();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [aliases, setAliases] = useState<string[]>(user?.aliases ?? []);
@@ -248,262 +259,113 @@ export function UserModal({
 
   if (user === undefined) {
     return (
-      <div className={styles.overlay} onMouseDown={onClose}>
-        <div
-          className={styles.modal}
-          role="dialog"
-          aria-modal="true"
-          aria-label={strings.adminAddUser}
-          onMouseDown={(e) => e.stopPropagation()}
-        >
-          <form onSubmit={create}>
-            <div className={styles.modalHead}>
-              <h2>{strings.adminAddUser}</h2>
-              <button
-                type="button"
-                className={styles.iconBtn}
-                onClick={onClose}
-                aria-label={strings.userClose}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className={styles.modalBody}>
-              <label className={styles.field}>
-                <span className={styles.label}>{strings.userEmail}</span>
-                <input
-                  className={styles.input}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@namel3ss.com"
-                  autoFocus
-                />
-              </label>
-              <label className={styles.field}>
-                <span className={styles.label}>{strings.userPassword}</span>
-                <input
-                  className={styles.input}
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder={strings.userPasswordHint}
-                />
-              </label>
-              {inviteUrl !== null && (
-                <div className={styles.field}>
-                  <span className={styles.label}>
-                    {strings.userInviteReady}
-                  </span>
-                  <div className={styles.keyRow}>
-                    <input
-                      className={styles.input}
-                      readOnly
-                      value={inviteUrl}
-                      onFocus={(e) => e.currentTarget.select()}
-                    />
-                    <button
-                      type="button"
-                      className={styles.textBtn}
-                      onClick={() => {
-                        void navigator.clipboard.writeText(inviteUrl);
-                        setCopied(true);
-                      }}
-                    >
-                      {copied
-                        ? strings.userInviteCopied
-                        : strings.userInviteCopy}
-                    </button>
-                  </div>
-                  <span className={styles.hint}>{strings.userInviteHint}</span>
-                </div>
-              )}
-              {error !== null && (
-                <p className={styles.error} role="alert">
-                  {error}
-                </p>
-              )}
-            </div>
-            <div className={styles.modalFoot}>
-              <div className={styles.footSpacer} />
-              <button
-                type="button"
-                className={styles.textBtn}
-                onClick={onClose}
-              >
-                {strings.providerCancel}
-              </button>
-              {/* Two ways to make an account, and the invitation is the one
-                  the copy recommends: it is the only one where the admin does
-                  not end up knowing somebody else's password. */}
-              <button
-                type="button"
-                className={styles.textBtn}
-                onClick={() => void invite()}
-                disabled={busy}
-              >
-                {strings.userInvite}
-              </button>
-              <Button type="submit" disabled={busy}>
-                {busy ? <Spinner size={16} /> : strings.userCreate}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.overlay} onMouseDown={onClose}>
-      <div
-        className={styles.modal}
-        role="dialog"
-        aria-modal="true"
-        aria-label={user.email}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className={styles.modalHead}>
-          <h2>{user.email}</h2>
-          <button
-            type="button"
-            className={styles.iconBtn}
+      <Modal
+        title={strings.adminAddUser}
+        onClose={onClose}
+        actions={
+          <IconButton
+            label={strings.userClose}
+            icon={<X size={18} />}
             onClick={onClose}
-            aria-label={strings.userClose}
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <div className={styles.modalBody}>
-          <div className={styles.field}>
-            <span className={styles.label}>{strings.userNewPassword}</span>
-            <div className={styles.keyRow}>
-              <input
-                className={styles.input}
+          />
+        }
+        footer={
+          <>
+            <div className={styles.footSpacer} />
+            <Button variant="ghost" onClick={onClose}>
+              {strings.providerCancel}
+            </Button>
+            {/* Two ways to make an account, and the invitation is the one
+                the copy recommends: it is the only one where the admin does
+                not end up knowing somebody else's password. */}
+            <Button
+              variant="ghost"
+              onClick={() => void invite()}
+              disabled={busy}
+            >
+              {strings.userInvite}
+            </Button>
+            <Button type="submit" form={formId} disabled={busy}>
+              {busy ? <Spinner size={16} /> : strings.userCreate}
+            </Button>
+          </>
+        }
+      >
+        {/* Body and footer are siblings inside the dialog, so Create is tied to
+            the form by id — which also keeps Enter in either field working. */}
+        <form id={formId} className={styles.userForm} onSubmit={create}>
+          <Field label={strings.userEmail}>
+            {(control) => (
+              <Input
+                {...control}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@namel3ss.com"
+                autoFocus
+              />
+            )}
+          </Field>
+          <Field label={strings.userPassword}>
+            {(control) => (
+              <Input
+                {...control}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={strings.userPasswordHint}
               />
-              <button
-                type="button"
-                className={styles.ghost}
-                onClick={() => void reset()}
-                disabled={busy || password.length < 8}
-              >
-                {strings.userReset}
-              </button>
-            </div>
-            {note !== null && <span className={styles.hintOk}>{note}</span>}
-          </div>
-
-          {/* Scoped roles (ADR 0035, B4.12). A named checkbox with the whole
-              rule written beside it, not a bare switch: an access grant is the
-              one control where "what does this do?" must be answerable without
-              trying it. */}
-          <div className={styles.field}>
-            <span className={styles.label}>{strings.userRoles}</span>
-            <div className={styles.keyRow}>
-              <label
-                className={styles.toggle}
-                aria-label={strings.userAccountantRole}
-              >
-                <input
-                  type="checkbox"
-                  checked={accountant}
-                  disabled={busy}
-                  onChange={() => void toggleAccountant()}
-                />
-                <span className={styles.track} />
-              </label>
-              <span>{strings.userAccountantRole}</span>
-            </div>
-            <span className={styles.hint}>{strings.userAccountantHint}</span>
-          </div>
-
-          {/* The apps this person gets (migration 0208). Checked means they
-              have it, which is the sentence an administrator thinks in — the
-              server stores the complement, and neither side has to know.
-
-              The rail hides what is switched off and the API refuses it, so
-              this is a real decision rather than a tidy-up of somebody's
-              sidebar. The hint says so, because "hidden" and "refused" are
-              very different promises and an admin is entitled to know which
-              one they are making. */}
-          <div className={styles.field}>
-            <span className={styles.label}>{strings.userApps}</span>
-            {modules === null ? (
-              <Spinner />
-            ) : (
-              <div className={styles.appGrid}>
-                {modules.map((m) => (
-                  <div key={m.id} className={styles.keyRow}>
-                    <label
-                      className={styles.toggle}
-                      aria-label={MODULE_LABEL[m.id]()}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={m.allowed}
-                        disabled={busy}
-                        onChange={() => void toggleModule(m.id, !m.allowed)}
-                      />
-                      <span className={styles.track} />
-                    </label>
-                    <span>{MODULE_LABEL[m.id]()}</span>
-                  </div>
-                ))}
-              </div>
             )}
-            <span className={styles.hint}>
-              {isSelf ? strings.userAppsSelfHint : strings.userAppsHint}
-            </span>
-          </div>
-
-          <div className={styles.field}>
-            <span className={styles.label}>{strings.userAliases}</span>
-            <div className={styles.chips}>
-              {aliases.map((a) => (
-                <span key={a} className={styles.chip}>
-                  <span className={styles.chipLabel}>{a}</span>
-                  <button
-                    type="button"
-                    className={styles.chipX}
-                    onClick={() => void removeAlias(a)}
-                    aria-label={strings.providerRemoveModel(a)}
+          </Field>
+          {inviteUrl !== null && (
+            <Field
+              label={strings.userInviteReady}
+              hint={strings.userInviteHint}
+            >
+              {(control) => (
+                <div className={styles.keyRow}>
+                  <Input
+                    {...control}
+                    className={styles.keyRowGrow}
+                    readOnly
+                    value={inviteUrl}
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(inviteUrl);
+                      setCopied(true);
+                    }}
                   >
-                    <X size={12} />
-                  </button>
-                </span>
-              ))}
-              <input
-                className={styles.chipInput}
-                value={aliasDraft}
-                onChange={(e) => setAliasDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === ",") {
-                    e.preventDefault();
-                    void addAlias();
-                  }
-                }}
-                placeholder={strings.userAliasPlaceholder}
-              />
-              <button
-                type="button"
-                className={styles.addChip}
-                onClick={() => void addAlias()}
-              >
-                {strings.providerAddModel}
-              </button>
-            </div>
-          </div>
-
+                    {copied ? strings.userInviteCopied : strings.userInviteCopy}
+                  </Button>
+                </div>
+              )}
+            </Field>
+          )}
           {error !== null && (
             <p className={styles.error} role="alert">
               {error}
             </p>
           )}
-        </div>
-        <div className={styles.modalFoot}>
+        </form>
+      </Modal>
+    );
+  }
+
+  return (
+    <Modal
+      title={user.email}
+      onClose={onClose}
+      actions={
+        <IconButton
+          label={strings.userClose}
+          icon={<X size={18} />}
+          onClick={onClose}
+        />
+      }
+      footer={
+        <>
           <button
             type="button"
             className={styles.dangerBtn}
@@ -513,11 +375,123 @@ export function UserModal({
             {strings.userDelete}
           </button>
           <div className={styles.footSpacer} />
-          <button type="button" className={styles.primary} onClick={onClose}>
-            {strings.userClose}
+          <Button onClick={onClose}>{strings.userClose}</Button>
+        </>
+      }
+    >
+      <Field label={strings.userNewPassword}>
+        {(control) => (
+          <>
+            <div className={styles.keyRow}>
+              <Input
+                {...control}
+                className={styles.keyRowGrow}
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={strings.userPasswordHint}
+              />
+              <Button
+                variant="ghost"
+                onClick={() => void reset()}
+                disabled={busy || password.length < 8}
+              >
+                {strings.userReset}
+              </Button>
+            </div>
+            {note !== null && <span className={styles.hintOk}>{note}</span>}
+          </>
+        )}
+      </Field>
+
+      {/* Scoped roles (ADR 0035, B4.12). A named switch with the whole rule
+          written beside it, not a bare one: an access grant is the one control
+          where "what does this do?" must be answerable without trying it. The
+          label used to be an `aria-label` on a `<label>` whose visible text sat
+          in a sibling `<span>` bound to nothing — so the words on screen and
+          the words read out were two unrelated things. */}
+      <div className={styles.block}>
+        <span className={styles.label}>{strings.userRoles}</span>
+        <Toggle
+          checked={accountant}
+          disabled={busy}
+          onChange={() => void toggleAccountant()}
+          label={strings.userAccountantRole}
+          hint={strings.userAccountantHint}
+        />
+      </div>
+
+      {/* The apps this person gets (migration 0208). Checked means they
+          have it, which is the sentence an administrator thinks in — the
+          server stores the complement, and neither side has to know.
+
+          The rail hides what is switched off and the API refuses it, so
+          this is a real decision rather than a tidy-up of somebody's
+          sidebar. The hint says so, because "hidden" and "refused" are
+          very different promises and an admin is entitled to know which
+          one they are making. */}
+      <div className={styles.block}>
+        <span className={styles.label}>{strings.userApps}</span>
+        {modules === null ? (
+          <Spinner />
+        ) : (
+          <div className={styles.appGrid}>
+            {modules.map((m) => (
+              <Toggle
+                key={m.id}
+                checked={m.allowed}
+                disabled={busy}
+                onChange={() => void toggleModule(m.id, !m.allowed)}
+                label={MODULE_LABEL[m.id]()}
+              />
+            ))}
+          </div>
+        )}
+        <span className={styles.hint}>
+          {isSelf ? strings.userAppsSelfHint : strings.userAppsHint}
+        </span>
+      </div>
+
+      <div className={styles.block}>
+        <span className={styles.label}>{strings.userAliases}</span>
+        <div className={styles.chipRow}>
+          {aliases.map((a) => (
+            <Chip
+              key={a}
+              onRemove={() => void removeAlias(a)}
+              removeLabel={strings.providerRemoveModel(a)}
+            >
+              {a}
+            </Chip>
+          ))}
+          <input
+            className={styles.chipInput}
+            aria-label={strings.userAliasAdd}
+            value={aliasDraft}
+            onChange={(e) => setAliasDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === ",") {
+                e.preventDefault();
+                void addAlias();
+              }
+            }}
+            placeholder={strings.userAliasPlaceholder}
+          />
+          <button
+            type="button"
+            className={styles.addChip}
+            onClick={() => void addAlias()}
+          >
+            {strings.providerAddModel}
           </button>
         </div>
       </div>
-    </div>
+
+      {error !== null && (
+        <p className={styles.error} role="alert">
+          {error}
+        </p>
+      )}
+    </Modal>
   );
 }

@@ -27,9 +27,6 @@
 // down. Adding a line is a deliberate exemption and should be argued for; it
 // is not a way to land a new hand-rolled input.
 export const REDEFINES_PRIMITIVES: readonly string[] = [
-  "admin/admin.module.css",
-  "agenda/AgendaModule.module.css",
-  "auth/TwoFactorScreen.module.css",
   "billing/BillingModule.module.css",
   "chat/ChatModule.module.css",
   "contacts/ContactsModal.module.css",

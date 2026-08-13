@@ -7,7 +7,17 @@ import type { HTMLAttributes } from "react";
 
 import styles from "./Card.module.css";
 
-export interface CardProps extends HTMLAttributes<HTMLDivElement> {
+export interface CardProps extends HTMLAttributes<HTMLElement> {
+  /** The element to draw the surface on. A card is a surface, not a meaning,
+   *  and the meaning belongs to the caller: the two-factor screen's card *is*
+   *  the sign-in form, `home`'s cards are the page's sections, and `meet`
+   *  draws one per list item. Wrapping a `<form>` in a `<div class="card">`
+   *  would put the padding and the border on something that is not the thing
+   *  you submit, so the element is a prop instead. Defaults to `div`, which is
+   *  what a card with nothing else to say should be.
+   *
+   *  Added for `auth/TwoFactorScreen` (D2.05). */
+  as?: "div" | "section" | "form" | "li" | undefined;
   /** `sm` for dense lists, `lg` for a card that is the whole screen. */
   pad?: "sm" | "md" | "lg" | undefined;
   /** Drop the shadow, for a card sitting inside another surface. */
@@ -19,6 +29,7 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 export function Card({
+  as: Element = "div",
   pad = "md",
   flat,
   interactive,
@@ -34,5 +45,5 @@ export function Card({
   ]
     .filter(Boolean)
     .join(" ");
-  return <div className={classes} {...rest} />;
+  return <Element className={classes} {...rest} />;
 }

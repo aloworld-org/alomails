@@ -7,7 +7,7 @@ import type { FormEvent } from "react";
 import { CheckCircle2, Clock, Plus, Trash2 } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner, cx, useDialogs } from "../ds";
+import { Button, Input, Spinner, cx, useDialogs } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { ControlDomain } from "../jmap";
 import styles from "./admin.module.css";
@@ -101,8 +101,9 @@ export function DomainsPage() {
 
       {adding && (
         <form className={styles.keyRow} onSubmit={register}>
-          <input
-            className={styles.input}
+          <Input
+            className={styles.keyRowGrow}
+            aria-label={strings.adminAddDomain}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="customer.example"

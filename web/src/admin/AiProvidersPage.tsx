@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { KeyRound, Plus, Server } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Spinner, cx } from "../ds";
+import { Card, Spinner, Toggle, cx } from "../ds";
 import { useJmapClient } from "../jmap";
 import type { AiProvider } from "../jmap";
 import { CATALOG } from "./catalog";
@@ -66,7 +66,7 @@ export function AiProvidersPage() {
     const st = status(entry, p);
     const isDefault = p?.isDefault === true && p.enabled;
     return (
-      <div key={entry.kind} className={cx(styles.card, isDefault && styles.cardDefault)}>
+      <Card key={entry.kind} className={cx(styles.cardRow, isDefault && styles.cardDefault)}>
         <span className={styles.cardIcon}>
           {entry.group === "self" ? <Server size={20} strokeWidth={1.75} /> : <KeyRound size={20} strokeWidth={1.75} />}
         </span>
@@ -85,17 +85,19 @@ export function AiProvidersPage() {
           <button type="button" className={styles.ghost} onClick={() => setEditing(entry)}>
             {strings.adminManage}
           </button>
-          <label className={styles.toggle}>
-            <input
-              type="checkbox"
-              checked={p?.enabled === true}
-              disabled={p === undefined}
-              onChange={() => p !== undefined && void toggle(entry, p)}
-            />
-            <span className={styles.track} />
-          </label>
+          {/* One unnamed switch per provider card: announced as "checkbox, not
+              checked" whichever card it was on. It now says which provider it
+              turns on, read but not drawn — the card's own heading is beside
+              it. */}
+          <Toggle
+            checked={p?.enabled === true}
+            disabled={p === undefined}
+            onChange={() => p !== undefined && void toggle(entry, p)}
+            label={strings.adminProviderEnabledFor(entry.name)}
+            hideLabel
+          />
         </div>
-      </div>
+      </Card>
     );
   }
 
@@ -138,13 +140,13 @@ export function AiProvidersPage() {
           <section className={styles.group}>
             <h2 className={styles.groupTitle}>{strings.adminAiSelfHosted}</h2>
             <p className={styles.groupHint}>{strings.adminAiSelfHostedHint}</p>
-            <div className={styles.cards}>{selfHosted.map(card)}</div>
+            <div className={styles.cardGrid}>{selfHosted.map(card)}</div>
           </section>
 
           <section className={styles.group}>
             <h2 className={styles.groupTitle}>{strings.adminAiOwnKeys}</h2>
             <p className={styles.groupHint}>{strings.adminAiOwnKeysHint}</p>
-            <div className={styles.cards}>{ownKeys.map(card)}</div>
+            <div className={styles.cardGrid}>{ownKeys.map(card)}</div>
           </section>
 
           <p className={styles.footnote}>{strings.adminAiFootnote}</p>

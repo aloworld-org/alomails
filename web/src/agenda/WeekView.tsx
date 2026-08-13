@@ -83,11 +83,13 @@ export function WeekView({
                 .map(({ e }) => (
                   <button
                     key={`${e.id}-${e.startsAt}`}
-                    className={`${styles.chip} ${styles.chipAllDay}`}
+                    className={`${styles.eventPill} ${styles.eventAllDay}`}
                     onClick={() => onEventClick(e)}
                     title={e.summary}
                   >
-                    <span className={styles.chipTitle}>{e.summary || "—"}</span>
+                    <span className={styles.eventTitle}>
+                      {e.summary || "—"}
+                    </span>
                   </button>
                 ))}
             </div>
