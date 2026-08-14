@@ -269,6 +269,7 @@ pub fn app_with_site_boundaries(
         .route("/meet/{id}/join", post(meet_routes::join))
         .route("/meet/{id}/end", post(meet_routes::end))
         .route("/meet/{id}/participants", get(meet_routes::participants))
+        .route("/meet/{id}/moderate", post(meet_routes::moderate))
         .route(
             "/meet/{id}/messages",
             get(meet_routes::messages).post(meet_routes::post_message),

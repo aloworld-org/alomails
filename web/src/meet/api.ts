@@ -142,6 +142,14 @@ export class MeetApi {
     return (await res.json()) as MeetingTranscriptSegment;
   }
 
+  async moderate(meeting: string, action: "mute" | "remove", participant: string, trackSid?: string): Promise<void> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/moderate`, {
+      method: "POST",
+      body: JSON.stringify({ action, participant, trackSid }),
+    });
+    if (!res.ok) throw new MeetApiError(res.status, "moderate meeting participant");
+  }
+
   async uploadAttachment(meeting: string, message: string, file: File): Promise<MeetingAttachment> {
     const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/messages/${encodeURIComponent(message)}/attachments?name=${encodeURIComponent(file.name)}`, { method: "POST", body: file, headers: { "content-type": file.type } });
     if (!res.ok) throw new MeetApiError(res.status, "upload meeting attachment");

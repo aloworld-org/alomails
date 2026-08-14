@@ -28,6 +28,10 @@ use hmac::{Hmac, Mac};
 use serde::Serialize;
 use sha2::Sha256;
 
+fn is_false(value: &bool) -> bool {
+    !*value
+}
+
 /// How long a join token is good for. Minutes, not hours: it is exchanged for
 /// a media session immediately, and a token that outlives the join is a token
 /// somebody can pass on.
@@ -51,6 +55,8 @@ struct VideoGrant<'a> {
     can_subscribe: bool,
     #[serde(rename = "canPublishData")]
     can_publish_data: bool,
+    #[serde(rename = "roomAdmin", skip_serializing_if = "is_false")]
+    room_admin: bool,
 }
 
 #[derive(Serialize)]
@@ -108,11 +114,47 @@ pub fn mint(
             // Data messages carry things like raised hands and reactions,
             // which belong to the meeting rather than to us.
             can_publish_data: true,
+            room_admin: false,
         },
     };
     let header_b64 = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).ok()?);
     let claims_b64 = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&claims).ok()?);
     let signing_input = format!("{header_b64}.{claims_b64}");
+    let mut mac = Hmac::<Sha256>::new_from_slice(api_secret.as_bytes()).ok()?;
+    mac.update(signing_input.as_bytes());
+    let signature = URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes());
+    Some(format!("{signing_input}.{signature}"))
+}
+
+/// Mint a short-lived server-to-server token for moderating one room.
+///
+/// This token is never returned to a browser. It authorizes only LiveKit's
+/// room service for the one opaque room alo has already resolved.
+#[must_use]
+pub fn mint_room_admin(api_key: &str, api_secret: &str, room: &str, now: i64) -> Option<String> {
+    let header = Header {
+        alg: "HS256",
+        typ: "JWT",
+    };
+    let claims = Claims {
+        iss: api_key,
+        sub: "alo-meet-moderator",
+        identity: "alo-meet-moderator",
+        name: "alo Meet",
+        nbf: now - 60,
+        exp: now + TOKEN_TTL_SECONDS,
+        video: VideoGrant {
+            room_join: false,
+            room,
+            can_publish: false,
+            can_subscribe: false,
+            can_publish_data: false,
+            room_admin: true,
+        },
+    };
+    let encoded_header = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).ok()?);
+    let encoded_claims = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&claims).ok()?);
+    let signing_input = format!("{encoded_header}.{encoded_claims}");
     let mut mac = Hmac::<Sha256>::new_from_slice(api_secret.as_bytes()).ok()?;
     mac.update(signing_input.as_bytes());
     let signature = URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes());

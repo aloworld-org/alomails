@@ -282,6 +282,111 @@ pub async fn participants(
     })))
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModerateParticipant {
+    action: String,
+    participant: String,
+    #[serde(default)]
+    track_sid: Option<String>,
+}
+
+/// `POST /meet/{id}/moderate` — let the host mute or remove a participant.
+///
+/// The browser never receives a room-admin token. alo resolves the opaque room,
+/// verifies the caller created the meeting, then makes one narrowly scoped
+/// RoomService call on their behalf.
+pub async fn moderate(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<ModerateParticipant>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let meeting = account
+        .acc
+        .meeting(&MeetingId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    if meeting.created_by.as_str() != account.user.as_str() {
+        return Err(Problem::with(
+            axum::http::StatusCode::FORBIDDEN,
+            "only the meeting host can moderate participants",
+        ));
+    }
+    if body.participant.trim().is_empty() || body.participant == account.user.as_str() {
+        return Err(Problem::with(
+            axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+            "choose another participant",
+        ));
+    }
+    let Some(media) = state.media.as_ref() else {
+        return Err(Problem::with(
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            "meetings are not configured on this deployment",
+        ));
+    };
+    let token = crate::meet_token::mint_room_admin(
+        &media.api_key,
+        &media.api_secret,
+        &meeting.room,
+        OffsetDateTime::now_utc().unix_timestamp(),
+    )
+    .ok_or_else(Problem::server_error)?;
+    let (method, payload) = match body.action.as_str() {
+        "mute" => {
+            let track_sid = body
+                .track_sid
+                .filter(|sid| !sid.trim().is_empty())
+                .ok_or_else(|| {
+                    Problem::with(
+                        axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+                        "a microphone track is required",
+                    )
+                })?;
+            (
+                "MutePublishedTrack",
+                json!({ "room": meeting.room, "identity": body.participant, "track_sid": track_sid, "muted": true }),
+            )
+        }
+        "remove" => (
+            "RemoveParticipant",
+            json!({ "room": meeting.room, "identity": body.participant }),
+        ),
+        _ => {
+            return Err(Problem::with(
+                axum::http::StatusCode::UNPROCESSABLE_ENTITY,
+                "moderation action must be mute or remove",
+            ));
+        }
+    };
+    let host = media
+        .url
+        .replacen("wss://", "https://", 1)
+        .replacen("ws://", "http://", 1)
+        .trim_end_matches('/')
+        .to_owned();
+    let response = reqwest::Client::new()
+        .post(format!("{host}/twirp/livekit.RoomService/{method}"))
+        .bearer_auth(token)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|_| {
+            Problem::with(
+                axum::http::StatusCode::BAD_GATEWAY,
+                "the meeting server could not apply that action",
+            )
+        })?;
+    if !response.status().is_success() {
+        return Err(Problem::with(
+            axum::http::StatusCode::BAD_GATEWAY,
+            "the meeting server could not apply that action",
+        ));
+    }
+    Ok(Json(json!({ "ok": true })))
+}
+
 fn attachment_json(meeting_id: &str, attachment: &alo_store::MeetingMessageAttachment) -> Value {
     json!({ "id": attachment.id, "name": attachment.file_name, "contentType": attachment.content_type, "size": attachment.size,
         "url": format!("/api/meet/{meeting_id}/messages/{}/attachments/{}", attachment.message_id, attachment.id) })

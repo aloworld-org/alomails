@@ -59,6 +59,15 @@ describe("joining a meeting", () => {
     );
   });
 
+  test("host moderation stays behind alo's authenticated meeting API", async () => {
+    const { api, fetched } = client(200);
+    await expect(api.moderate("m-1", "mute", "user-2", "TR_audio")).resolves.toBeUndefined();
+    expect(fetched).toHaveBeenCalledWith(
+      expect.stringContaining("/api/meet/m-1/moderate"),
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ action: "mute", participant: "user-2", trackSid: "TR_audio" }) }),
+    );
+  });
+
   test("a deployment with no engine says so, distinctly", async () => {
     // 503 means the meeting is real and attendance was recorded — there is
     // simply nowhere to hold it. Reporting that as a generic failure would

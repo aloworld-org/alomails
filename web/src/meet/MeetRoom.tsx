@@ -26,7 +26,7 @@ import {
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
 import { ConnectionState, Track } from "livekit-client";
-import { ArrowLeft, Captions, Check, ChevronDown, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, MonitorUp, Paperclip, PhoneOff, PictureInPicture2, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, Users, Video, X } from "lucide-react";
+import { ArrowLeft, Captions, Check, ChevronDown, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, Mic, MicOff, MonitorUp, Paperclip, PhoneOff, PictureInPicture2, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, UserMinus, Users, Video, X } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
 import { useAuth } from "../auth/AuthProvider";
@@ -121,7 +121,7 @@ function StoredChatAttachment({ api, attachment }: { api: MeetApi; attachment: M
   return <a className={styles.chatAttachment} href={url} download={attachment.name}>{attachment.contentType.startsWith("image/") ? <img src={url} alt={attachment.name} /> : <span><FileText aria-hidden="true" /><b>{attachment.name}</b><small>{Math.ceil(attachment.size / 1024)} KB</small></span>}</a>;
 }
 
-function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => void }) {
+function InCallChat({ meetingId, hostId, onClose }: { meetingId: string; hostId: string; onClose: () => void }) {
   const api = useMeetApi();
   const { chatMessages, send, isSending } = useChat();
   const participants = useParticipants();
@@ -134,6 +134,8 @@ function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => 
   const [reactions, setReactions] = useState<Record<string, Record<string, string[]>>>({});
   const [history, setHistory] = useState<MeetingMessage[]>([]);
   const [sendError, setSendError] = useState(false);
+  const [moderationError, setModerationError] = useState(false);
+  const [moderating, setModerating] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const remoteParticipants = participants.filter((person) => !person.isLocal);
   const encoder = new TextEncoder();
@@ -210,6 +212,18 @@ function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => 
     } catch { setSendError(true); }
   };
   const recipientName = participants.find((person) => person.identity === recipient)?.name || recipient;
+  const host = localParticipant.identity === hostId;
+  const moderate = async (action: "mute" | "remove", identity: string, trackSid?: string) => {
+    setModerationError(false);
+    setModerating(`${action}:${identity}`);
+    try {
+      await api.moderate(meetingId, action, identity, trackSid);
+    } catch {
+      setModerationError(true);
+    } finally {
+      setModerating(null);
+    }
+  };
   return (
     <aside className={styles.aloChat} aria-label={strings.meetChatTitle}>
       <header><h2>{strings.meetChatTitle}</h2><button type="button" onClick={onClose} aria-label={strings.meetClose}><X /></button></header>
@@ -265,7 +279,24 @@ function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => 
           </form>
         </>
       ) : (
-        <ul className={styles.peopleList}>{participants.map((person) => <li key={person.identity}><span className={styles.chatAvatar}>{(person.name || person.identity).slice(0, 1).toUpperCase()}</span><div><strong>{person.name || person.identity}</strong><small>{person.isLocal ? strings.meetYou : strings.meetParticipant}</small></div><i />{!person.isLocal && <button type="button" onClick={() => { setRecipient(person.identity); setTab("messages"); }}><MessageSquare />{strings.meetMessagePrivately}</button>}</li>)}</ul>
+        <div className={styles.peoplePanel}>
+          <ul className={styles.peopleList}>{participants.map((person) => {
+            const microphone = person.getTrackPublication(Track.Source.Microphone);
+            const muted = microphone === undefined || microphone.isMuted;
+            const name = person.name || person.identity;
+            return <li key={person.identity} className={person.isSpeaking ? styles.personSpeaking : undefined}>
+              <span className={styles.chatAvatar}>{name.slice(0, 1).toUpperCase()}</span>
+              <div><strong>{name}{person.identity === hostId ? <em>{strings.meetHost}</em> : null}</strong><small>{person.isLocal ? strings.meetYou : person.isSpeaking ? strings.meetSpeaking : muted ? strings.meetMuted : strings.meetParticipant}</small></div>
+              <span className={muted ? styles.personMuted : styles.personAudio} title={muted ? strings.meetMuted : strings.meetMicrophone}>{muted ? <MicOff /> : <Mic />}</span>
+              {!person.isLocal && <div className={styles.personActions}>
+                <button type="button" onClick={() => { setRecipient(person.identity); setTab("messages"); }} aria-label={strings.meetMessagePrivately}><MessageSquare /></button>
+                {host && !muted && microphone?.trackSid && <button type="button" disabled={moderating !== null} onClick={() => void moderate("mute", person.identity, microphone.trackSid)} aria-label={strings.meetMuteParticipant}><MicOff /></button>}
+                {host && <button type="button" disabled={moderating !== null} onClick={() => { if (window.confirm(strings.meetRemoveParticipantConfirm(name))) void moderate("remove", person.identity); }} aria-label={strings.meetRemoveParticipant}><UserMinus /></button>}
+              </div>}
+            </li>;
+          })}</ul>
+          {moderationError && <p className={styles.chatSendError} role="alert">{strings.meetModerationFailed}</p>}
+        </div>
       )}
     </aside>
   );
@@ -506,7 +537,7 @@ function ConnectionRecovery() {
   return <div className={styles.connectionRecovery} role="status" aria-live="polite"><RefreshCw aria-hidden="true" /><div><strong>{strings.meetReconnecting}</strong><span>{strings.meetReconnectingHint}</span></div></div>;
 }
 
-function MeetingExperience({ meetingId, onLeave }: { meetingId: string; onLeave: () => void }) {
+function MeetingExperience({ meetingId, hostId, onLeave }: { meetingId: string; hostId: string; onLeave: () => void }) {
   const [chatOpen, setChatOpen] = useState(true);
   const [captionsOpen, setCaptionsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -523,7 +554,7 @@ function MeetingExperience({ meetingId, onLeave }: { meetingId: string; onLeave:
     <FullscreenAction />
     <MeetingActions meetingId={meetingId} onLeave={onLeave} chatOpen={chatOpen} onChat={() => setChatOpen((open) => !open)} captionsOpen={captionsOpen} onCaptions={() => setCaptionsOpen((open) => !open)} onSettings={() => setSettingsOpen(true)} onPictureInPicture={() => void pictureInPicture()} />
     <MeetingCaptions meetingId={meetingId} visible={captionsOpen} />
-    {chatOpen && <InCallChat meetingId={meetingId} onClose={() => setChatOpen(false)} />}
+    {chatOpen && <InCallChat meetingId={meetingId} hostId={hostId} onClose={() => setChatOpen(false)} />}
     {settingsOpen && <DeviceSettings onClose={() => setSettingsOpen(false)} />}
   </>;
 }
@@ -713,7 +744,7 @@ export function MeetRoom({
         // empty black screen. A day of CSS guesses; one missing attribute.
         data-lk-theme="default"
       >
-        <MeetingExperience meetingId={meetingId} onLeave={onLeft} />
+        <MeetingExperience meetingId={meetingId} hostId={grant.meeting.createdBy} onLeave={onLeft} />
       </LiveKitRoom>
     </div>
   );

@@ -553,12 +553,24 @@
 .emojiMenu button { height: 2.25rem; border-radius: 0.45rem; font-size: 1rem; }
 .emojiMenu button:hover { background: #173044; }
 .peopleList { min-height: 0; overflow-y: auto; margin: 0; padding: 1.25rem; list-style: none; }
-.peopleList li { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0; }
+.peoplePanel { min-height: 0; overflow: hidden; display: flex; flex: 1; flex-direction: column; }
+.peopleList li { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid transparent; border-radius: 0.85rem; transition: border-color 140ms ease, background 140ms ease; }
+.peopleList li + li { margin-top: 0.25rem; }
+.peopleList li:hover { border-color: #294052; background: rgb(255 255 255 / 3%); }
+.peopleList li.personSpeaking { border-color: rgb(46 204 113 / 45%); background: rgb(46 204 113 / 7%); }
 .peopleList li div { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.peopleList strong { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.peopleList strong em { padding: 0.12rem 0.4rem; border-radius: 999px; background: rgb(238 109 79 / 14%); color: var(--accent); font-size: 0.62rem; font-style: normal; font-weight: 700; text-transform: uppercase; }
 .peopleList small { color: #8fa2b2; }
-.peopleList i { width: 0.55rem; height: 0.55rem; border-radius: 999px; background: var(--success); }
-.peopleList li > button { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.5rem; border: 1px solid #31485a; border-radius: 0.55rem; color: #c4d0d9; font-size: 0.68rem; }
-.peopleList li > button svg { width: 0.8rem; }
+.personAudio, .personMuted { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 1.8rem; height: 1.8rem; border-radius: 999px; }
+.personAudio { color: var(--success); background: rgb(46 204 113 / 10%); }
+.personMuted { color: #8fa2b2; background: rgb(255 255 255 / 5%); }
+.personAudio svg, .personMuted svg { width: 0.9rem; height: 0.9rem; }
+.peopleList li .personActions { display: flex; flex: 0 0 auto; flex-direction: row; gap: 0.3rem; }
+.personActions button { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; padding: 0; border: 1px solid #31485a; border-radius: 0.6rem; color: #c4d0d9; }
+.personActions button:hover { border-color: var(--accent); color: var(--accent); }
+.personActions button:disabled { cursor: wait; opacity: 0.5; }
+.personActions svg { width: 0.9rem; height: 0.9rem; }
 
 .settingsBackdrop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: rgb(2 17 29 / 68%); backdrop-filter: blur(5px); }
 .deviceSettings { width: min(30rem, 100%); max-height: min(46rem, calc(100vh - 3rem)); overflow: auto; border: 1px solid #31485a; border-radius: 1.1rem; background: #0b2234; color: #eef5fa; box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 38%); }

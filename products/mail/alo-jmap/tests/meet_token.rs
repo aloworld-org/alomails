@@ -9,7 +9,7 @@ use base64::Engine as _;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use serde_json::Value;
 
-use alo_jmap::meet_token::mint;
+use alo_jmap::meet_token::{mint, mint_room_admin};
 
 fn token_for(room: &str, secret: &str, now: i64) -> String {
     mint("key", secret, room, "user-anna", "anna", now).unwrap_or_default()
@@ -76,4 +76,14 @@ fn the_signature_depends_on_the_secret() {
     let b = signature_of(&token_for("m-abc", "secret-two", 1_000));
     assert!(!a.is_empty());
     assert_ne!(a, b);
+}
+
+#[test]
+fn moderation_token_is_room_scoped_and_cannot_join() {
+    let token = mint_room_admin("key", "secret", "m-abc", 1_000).unwrap_or_default();
+    let c = claims_of(&token);
+    assert_eq!(c["video"]["room"], "m-abc");
+    assert_eq!(c["video"]["roomAdmin"], true);
+    assert_eq!(c["video"]["roomJoin"], false);
+    assert_eq!(c["video"]["canPublish"], false);
 }
