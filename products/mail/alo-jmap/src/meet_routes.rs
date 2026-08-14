@@ -131,6 +131,22 @@ pub async fn mine(
     })))
 }
 
+/// `GET /meet/history` — recently ended meetings visible to the caller.
+pub async fn history(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let meetings = account
+        .acc
+        .my_recent_meetings()
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "meetings": meetings.iter().map(meeting_json).collect::<Vec<_>>()
+    })))
+}
+
 /// `GET /meet/events/{id}` — the meeting on a calendar event, if any.
 ///
 /// Answers `null` rather than 404 when there is none: "this invitation has no

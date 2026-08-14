@@ -61,6 +61,7 @@ export function MeetModule() {
   const { identity } = useAuth();
   const navigate = useNavigate();
   const [live, setLive] = useState<Meeting[] | null>(null);
+  const [history, setHistory] = useState<Meeting[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [inMeeting, setInMeeting] = useState<string | null>(() =>
     new URLSearchParams(window.location.search).get("meeting"),
@@ -80,8 +81,9 @@ export function MeetModule() {
   const load = useCallback(async () => {
     const now = new Date();
     const end = new Date(now.getTime() + 14 * 86_400_000);
-    const [meetings, upcoming] = await Promise.allSettled([
+    const [meetings, recent, upcoming] = await Promise.allSettled([
       api.mine(),
+      api.history(),
       calendar.calendarEvents(now.toISOString(), end.toISOString()),
     ]);
     if (meetings.status === "fulfilled") {
@@ -91,6 +93,7 @@ export function MeetModule() {
       setLive(null);
       setLoadProblem(true);
     }
+    setHistory(recent.status === "fulfilled" ? recent.value : []);
     setEvents(
       upcoming.status === "fulfilled"
         ? upcoming.value.sort((a, b) => a.startsAt.localeCompare(b.startsAt))
@@ -178,6 +181,7 @@ export function MeetModule() {
             </section>
 
             {later.length > 0 && <section className={styles.upcoming}><div className={styles.sectionHeading}><div><h2>{strings.meetUpcoming}</h2><p>{strings.meetUpcomingHint}</p></div></div>{later.slice(0, 4).map((event) => <button type="button" key={`${event.id}-${event.startsAt}`} onClick={() => navigate("/agenda")}><time><b>{new Date(event.startsAt).toLocaleDateString(getLocale(), { day: "2-digit" })}</b><small>{new Date(event.startsAt).toLocaleDateString(getLocale(), { month: "short" })}</small></time><span><strong>{event.summary || strings.meetCalendarUntitled}</strong><small>{time(event.startsAt)} · {duration(event)}</small></span><ArrowRight /></button>)}</section>}
+            {history.length > 0 && <section className={styles.history}><div className={styles.sectionHeading}><div><h2>{strings.meetRecent}</h2><p>{strings.meetRecentHint}</p></div></div><ul>{history.slice(0, 6).map((meeting) => <li key={meeting.id}><span className={styles.historyIcon}><Video /></span><div><strong>{meeting.title.trim() || strings.meetUntitled}</strong><small>{meeting.endedAt === null ? "" : strings.meetEndedAt(new Date(meeting.endedAt).toLocaleString(getLocale(), { dateStyle: "medium", timeStyle: "short" }))}</small></div>{meeting.startedAt !== null && meeting.endedAt !== null && <time>{strings.meetDuration(Math.max(1, Math.round((new Date(meeting.endedAt).getTime() - new Date(meeting.startedAt).getTime()) / 60_000)))}</time>}</li>)}</ul></section>}
           </main>
 
           <aside className={styles.sidebar}>

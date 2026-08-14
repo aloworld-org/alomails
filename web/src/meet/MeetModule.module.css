@@ -55,6 +55,14 @@
 .upcoming > button { display: grid; grid-template-columns: var(--space-16) 1fr auto; align-items: center; width: 100%; padding: var(--space-3) 0; border: 0; border-top: var(--border-width) solid var(--border-subtle); background: transparent; color: var(--text-primary); text-align: left; cursor: pointer; }
 .upcoming time { display: flex; flex-direction: column; align-items: center; border-right: var(--border-width) solid var(--border-subtle); }
 .upcoming time b { font-size: var(--text-lg); }.upcoming small { color: var(--text-tertiary); }.upcoming > button > span { display: flex; flex-direction: column; padding-left: var(--space-4); }.upcoming > button > svg { width: var(--icon-size-inline); color: var(--text-tertiary); }
+.history { padding: var(--space-4); border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-surface); box-shadow: var(--shadow-sm); }
+.history ul { margin: 0; padding: 0; list-style: none; }
+.history li { display: grid; grid-template-columns: var(--space-10) minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-3) 0; border-top: var(--border-width) solid var(--border-subtle); }
+.historyIcon { display: inline-flex; width: var(--space-10); height: var(--space-10); align-items: center; justify-content: center; border-radius: var(--radius-md); background: var(--accent-tint); color: var(--accent-active); }
+.historyIcon svg { width: var(--icon-size-inline); }
+.history li > div { display: flex; min-width: 0; flex-direction: column; gap: var(--space-1); }
+.history li strong { overflow: hidden; color: var(--text-primary); font-size: var(--text-sm); text-overflow: ellipsis; white-space: nowrap; }
+.history li small, .history li time { color: var(--text-tertiary); font-size: var(--text-xs); }
 .dateCard, .schedule, .quick { border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--bg-surface); box-shadow: var(--shadow-sm); }
 .dateCard { padding: var(--space-5); background: linear-gradient(145deg, var(--bg-surface), color-mix(in srgb, var(--accent-tint) 45%, var(--bg-surface))); }
 .dateCard > div { display: flex; align-items: center; justify-content: space-between; color: var(--text-secondary); }.dateCard svg { width: var(--icon-size-control); }.dateCard > strong { display: block; margin-top: var(--space-3); color: var(--accent); font-size: var(--text-3xl); line-height: 1; }.dateCard > p { margin: var(--space-1) 0 0; color: var(--text-secondary); text-transform: capitalize; }

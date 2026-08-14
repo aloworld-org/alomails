@@ -513,4 +513,32 @@ impl AccountStore {
         }
         Ok(mine)
     }
+
+    /// Recently ended meetings this person was allowed to see.
+    ///
+    /// Visibility deliberately reuses [`AccountStore::meeting`]'s channel
+    /// rule instead of turning history into a tenant-wide activity feed.
+    pub async fn my_recent_meetings(&self) -> Result<Vec<Meeting>> {
+        let rows: Vec<MeetingRow> = sqlx::query_as(&format!(
+            "SELECT {COLUMNS} FROM meetings \
+             WHERE tenant_id = $1 AND ended_at IS NOT NULL \
+             ORDER BY ended_at DESC LIMIT 50"
+        ))
+        .bind(self.tenant.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        let mut mine = Vec::new();
+        for row in rows {
+            let meeting = to_meeting(row);
+            let visible = match &meeting.channel_id {
+                Some(channel) => self.channel(channel).await.is_ok(),
+                None => meeting.created_by.as_str() == self.user.as_str(),
+            };
+            if visible {
+                mine.push(meeting);
+            }
+        }
+        Ok(mine)
+    }
 }

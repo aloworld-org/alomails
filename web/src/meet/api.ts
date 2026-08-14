@@ -83,6 +83,13 @@ export class MeetApi {
     return ((await res.json()) as { meetings: Meeting[] }).meetings;
   }
 
+  /** Recently ended meetings this person was allowed to attend. */
+  async history(): Promise<Meeting[]> {
+    const res = await this.#send("/meet/history");
+    if (!res.ok) return [];
+    return ((await res.json()) as { meetings: Meeting[] }).meetings;
+  }
+
   /** Meetings still running in a room. */
   async liveIn(channel: string): Promise<Meeting[]> {
     const res = await this.#send(

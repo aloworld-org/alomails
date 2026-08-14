@@ -264,6 +264,7 @@ pub fn app_with_site_boundaries(
         .route("/chat/people", get(chat::find_people))
         // alo Meet: the record is ours, the media is the engine's.
         .route("/meet", get(meet_routes::mine).post(meet_routes::start))
+        .route("/meet/history", get(meet_routes::history))
         .route("/meet/{id}", get(meet_routes::get))
         .route("/meet/{id}/join", post(meet_routes::join))
         .route("/meet/{id}/end", post(meet_routes::end))

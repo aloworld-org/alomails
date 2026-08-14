@@ -16,6 +16,12 @@ function client(status: number, body: unknown = {}) {
 }
 
 describe("joining a meeting", () => {
+  test("meeting history is loaded from the dedicated ended-meetings route", async () => {
+    const { api, fetched } = client(200, { meetings: [{ id: "m-ended", live: false }] });
+    await expect(api.history()).resolves.toEqual([{ id: "m-ended", live: false }]);
+    expect(fetched).toHaveBeenCalledWith(expect.stringContaining("/api/meet/history"), expect.any(Object));
+  });
+
   test("a deployment with no engine says so, distinctly", async () => {
     // 503 means the meeting is real and attendance was recorded — there is
     // simply nowhere to hold it. Reporting that as a generic failure would
