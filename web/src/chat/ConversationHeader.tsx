@@ -30,10 +30,10 @@ export function ConversationHeader({ room, liveMeeting, onBack, onMeet, onPeople
             <p className="mb-0 mt-1 truncate text-lg text-tertiary">{room.counterpart}</p>
           </div>
           <div className="flex shrink-0 items-center gap-5">
-            <button type="button" className={`flex size-[4.5rem] items-center justify-center rounded-[1.125rem] border border-subtle bg-surface text-primary transition-colors hover:bg-raised ${liveMeeting !== null ? "border-accent text-accent" : ""}`} onClick={onMeet} aria-label={liveMeeting !== null ? strings.meetJoin : strings.meetStart} title={liveMeeting !== null ? strings.meetJoin : strings.meetStart}><Video size={27} strokeWidth={1.9} /></button>
-            <span className="mx-1 h-16 w-px shrink-0" style={{ backgroundColor: "var(--border-subtle)" }} aria-hidden="true" />
-            <button type="button" className="flex size-[4.5rem] items-center justify-center rounded-[1.125rem] border border-subtle bg-surface text-primary transition-colors hover:bg-raised" onClick={onPeople} title={strings.chatMembersAndAgents}><UserPlus size={29} strokeWidth={1.9} /><span className="sr-only">{strings.chatMembersAndAgents}</span></button>
-            <button type="button" className="flex size-[4.5rem] items-center justify-center rounded-[1.125rem] border border-subtle bg-surface text-primary transition-colors hover:bg-raised" onClick={onArchive} aria-label={strings.chatArchiveAction} title={strings.chatArchiveAction}><Archive size={27} strokeWidth={1.9} /></button>
+            <button type="button" className={`flex size-14 items-center justify-center rounded-xl border-0 bg-transparent text-primary transition-colors hover:bg-raised ${liveMeeting !== null ? "text-accent" : ""}`} onClick={onMeet} aria-label={liveMeeting !== null ? strings.meetJoin : strings.meetStart} title={liveMeeting !== null ? strings.meetJoin : strings.meetStart}><Video size={27} strokeWidth={1.9} /></button>
+            <span className="mx-1 block h-16 w-[2px] shrink-0 bg-[#ded5ca]" aria-hidden="true" />
+            <button type="button" className="flex size-14 items-center justify-center rounded-xl border-0 bg-transparent text-primary transition-colors hover:bg-raised" onClick={onPeople} title={strings.chatMembersAndAgents}><UserPlus size={29} strokeWidth={1.9} /><span className="sr-only">{strings.chatMembersAndAgents}</span></button>
+            <button type="button" className="flex size-14 items-center justify-center rounded-xl border-0 bg-transparent text-primary transition-colors hover:bg-raised" onClick={onArchive} aria-label={strings.chatArchiveAction} title={strings.chatArchiveAction}><Archive size={27} strokeWidth={1.9} /></button>
           </div>
         </div>
       </header>
