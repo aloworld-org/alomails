@@ -20,9 +20,10 @@ import {
   useDataChannel,
   useLocalParticipant,
   useParticipants,
+  useRoomContext,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
-import { ArrowLeft, Check, ChevronDown, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, MonitorUp, Paperclip, PhoneOff, RefreshCw, Send, ServerOff, Share2, ShieldCheck, Smile, Users, Video, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, MonitorUp, Paperclip, PhoneOff, PictureInPicture2, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, Users, Video, X } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
 import { useAuth } from "../auth/AuthProvider";
@@ -229,7 +230,7 @@ type MeetSignal =
   | { kind: "hand"; raised: boolean; name: string }
   | { kind: "reaction"; emoji: string; name: string };
 
-function MeetingActions({ meetingId, onLeave, chatOpen, onChat }: { meetingId: string; onLeave: () => void; chatOpen: boolean; onChat: () => void }) {
+function MeetingActions({ meetingId, onLeave, chatOpen, onChat, onSettings, onPictureInPicture }: { meetingId: string; onLeave: () => void; chatOpen: boolean; onChat: () => void; onSettings: () => void; onPictureInPicture: () => void }) {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   const { localParticipant } = useLocalParticipant();
@@ -301,6 +302,12 @@ function MeetingActions({ meetingId, onLeave, chatOpen, onChat }: { meetingId: s
         <button type="button" className={chatOpen ? styles.actionActive : undefined} onClick={onChat} aria-pressed={chatOpen}>
           <MessageSquare aria-hidden="true" />{strings.meetChat}
         </button>
+        <button type="button" onClick={onPictureInPicture} aria-label={strings.meetPictureInPicture} title={strings.meetPictureInPicture}>
+          <PictureInPicture2 aria-hidden="true" />
+        </button>
+        <button type="button" onClick={onSettings} aria-label={strings.meetDeviceSettings} title={strings.meetDeviceSettings}>
+          <Settings aria-hidden="true" />
+        </button>
         <button type="button" className={styles.leaveAction} onClick={onLeave}>
           <PhoneOff aria-hidden="true" />{strings.meetLeave}
         </button>
@@ -317,14 +324,58 @@ function MeetingActions({ meetingId, onLeave, chatOpen, onChat }: { meetingId: s
   );
 }
 
+function DeviceSettings({ onClose }: { onClose: () => void }) {
+  const room = useRoomContext();
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selected, setSelected] = useState<Record<MediaDeviceKind, string>>({ audioinput: "", audiooutput: "", videoinput: "" });
+  useEffect(() => {
+    let current = true;
+    void navigator.mediaDevices.enumerateDevices().then((found) => {
+      if (!current) return;
+      setDevices(found);
+      setSelected({
+        audioinput: room.getActiveDevice("audioinput") ?? "",
+        audiooutput: room.getActiveDevice("audiooutput") ?? "",
+        videoinput: room.getActiveDevice("videoinput") ?? "",
+      });
+    });
+    return () => { current = false; };
+  }, [room]);
+  const choose = async (kind: MediaDeviceKind, deviceId: string) => {
+    await room.switchActiveDevice(kind, deviceId);
+    setSelected((value) => ({ ...value, [kind]: deviceId }));
+  };
+  const groups: Array<{ kind: MediaDeviceKind; label: string }> = [
+    { kind: "audioinput", label: strings.meetMicrophone },
+    { kind: "videoinput", label: strings.meetCamera },
+    { kind: "audiooutput", label: strings.meetSpeaker },
+  ];
+  return <div className={styles.settingsBackdrop} role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className={styles.deviceSettings} role="dialog" aria-modal="true" aria-labelledby="meet-device-settings-title">
+      <header><div><span>{strings.meetSettings}</span><h2 id="meet-device-settings-title">{strings.meetDeviceSettings}</h2></div><button type="button" onClick={onClose} aria-label={strings.meetClose}><X /></button></header>
+      <div className={styles.deviceFields}>{groups.map(({ kind, label }) => <label key={kind}><span>{label}</span><select value={selected[kind]} onChange={(event) => void choose(kind, event.target.value)}>{devices.filter((device) => device.kind === kind).map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `${label} ${index + 1}`}</option>)}</select></label>)}</div>
+      <p>{strings.meetDeviceSettingsHint}</p>
+      <footer><Button onClick={onClose}>{strings.meetDone}</Button></footer>
+    </section>
+  </div>;
+}
+
 function MeetingExperience({ meetingId, onLeave }: { meetingId: string; onLeave: () => void }) {
   const [chatOpen, setChatOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const pictureInPicture = async () => {
+    const video = document.querySelector<HTMLVideoElement>(`.${styles.livekit} video:not([data-lk-local-participant="true"])`) ?? document.querySelector<HTMLVideoElement>(`.${styles.livekit} video`);
+    if (video === null || document.pictureInPictureEnabled !== true) return;
+    if (document.pictureInPictureElement !== null) await document.exitPictureInPicture();
+    else await video.requestPictureInPicture();
+  };
   return <>
     <VideoConference chatMessageFormatter={formatChatMessageLinks} />
     <PresentingNotice />
     <FullscreenAction />
-    <MeetingActions meetingId={meetingId} onLeave={onLeave} chatOpen={chatOpen} onChat={() => setChatOpen((open) => !open)} />
+    <MeetingActions meetingId={meetingId} onLeave={onLeave} chatOpen={chatOpen} onChat={() => setChatOpen((open) => !open)} onSettings={() => setSettingsOpen(true)} onPictureInPicture={() => void pictureInPicture()} />
     {chatOpen && <InCallChat onClose={() => setChatOpen(false)} />}
+    {settingsOpen && <DeviceSettings onClose={() => setSettingsOpen(false)} />}
   </>;
 }
 

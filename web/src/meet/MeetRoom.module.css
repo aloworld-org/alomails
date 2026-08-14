@@ -558,6 +558,22 @@
 .peopleList li > button { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.5rem; border: 1px solid #31485a; border-radius: 0.55rem; color: #c4d0d9; font-size: 0.68rem; }
 .peopleList li > button svg { width: 0.8rem; }
 
+.settingsBackdrop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: rgb(2 17 29 / 68%); backdrop-filter: blur(5px); }
+.deviceSettings { width: min(28rem, 100%); overflow: hidden; border: 1px solid #31485a; border-radius: 1.1rem; background: #0b2234; color: #eef5fa; box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 38%); }
+.deviceSettings > header { display: flex; align-items: center; justify-content: space-between; padding: 1.15rem 1.25rem; border-bottom: 1px solid #203649; }
+.deviceSettings > header span { color: var(--accent); font-size: 0.66rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
+.deviceSettings h2 { margin: 0.2rem 0 0; font-size: 1.05rem; }
+.deviceSettings > header button { display: inline-flex; width: 2.35rem; height: 2.35rem; align-items: center; justify-content: center; border: 0; border-radius: 0.65rem; background: transparent; color: #c4d0d9; cursor: pointer; }
+.deviceSettings > header button:hover { background: #173044; color: white; }
+.deviceSettings > header svg { width: 1.05rem; }
+.deviceFields { display: grid; gap: 1rem; padding: 1.25rem; }
+.deviceFields label { display: grid; gap: 0.4rem; }
+.deviceFields label > span { color: #c4d0d9; font-size: 0.75rem; font-weight: 650; }
+.deviceFields select { width: 100%; min-height: 2.75rem; padding: 0 2.25rem 0 0.8rem; border: 1px solid #31485a; border-radius: 0.7rem; outline: 0; background: #10283a; color: #eef5fa; }
+.deviceFields select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); }
+.deviceSettings > p { margin: 0; padding: 0 1.25rem 1rem; color: #8fa2b2; font-size: 0.72rem; line-height: 1.45; }
+.deviceSettings > footer { display: flex; justify-content: flex-end; padding: 0.9rem 1.25rem; border-top: 1px solid #203649; }
+
 .livekit :global(.lk-chat-entry) {
   gap: var(--space-2);
 }
