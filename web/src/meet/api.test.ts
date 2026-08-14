@@ -68,6 +68,25 @@ describe("joining a meeting", () => {
     );
   });
 
+  test("recording consent and control stay behind alo's meeting API", async () => {
+    const recording = { id: "rec-1", status: "pending", consents: [] };
+    const requested = client(200, recording);
+    await expect(requested.api.requestRecording("m-1")).resolves.toMatchObject({ id: "rec-1" });
+    expect(requested.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/meet/m-1/recordings"), expect.objectContaining({ method: "POST" }));
+
+    const consented = client(200, recording);
+    await consented.api.consentRecording("m-1", "rec-1");
+    expect(consented.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/meet/m-1/recordings/rec-1/consent"), expect.objectContaining({ method: "POST" }));
+
+    const started = client(200, { ...recording, status: "recording" });
+    await started.api.startRecording("m-1", "rec-1");
+    expect(started.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/meet/m-1/recordings/rec-1/start"), expect.objectContaining({ method: "POST" }));
+
+    const stopped = client(200, { ...recording, status: "completed" });
+    await stopped.api.stopRecording("m-1", "rec-1");
+    expect(stopped.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/meet/m-1/recordings/rec-1/stop"), expect.objectContaining({ method: "POST" }));
+  });
+
   test("a deployment with no engine says so, distinctly", async () => {
     // 503 means the meeting is real and attendance was recorded — there is
     // simply nowhere to hold it. Reporting that as a generic failure would

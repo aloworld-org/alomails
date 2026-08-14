@@ -920,6 +920,7 @@
 .meetingActions button:hover { background: var(--bg-rail-hover); }
 .meetingActions button:active { transform: translateY(var(--border-width)); }
 .meetingActions .actionActive { background: var(--accent); color: var(--text-on-accent); }
+.meetingActions .recordingActive { border-color: rgb(255 103 80 / 55%); background: rgb(255 103 80 / 16%); color: #ff806b; }
 .meetingActions .leaveAction { margin-left: var(--space-1); background: var(--danger); color: var(--text-on-accent); font-weight: var(--weight-semibold); }
 .meetingActions .leaveAction:hover { filter: brightness(1.08); }
 .meetingActions svg { width: var(--icon-size-control); height: var(--icon-size-control); }
@@ -932,6 +933,17 @@
 .reactionBurst { position: absolute; z-index: 15; left: 50%; bottom: 120px; animation: reaction-rise 2.8s ease-out forwards; display: grid; justify-items: center; pointer-events: none; }
 .reactionBurst span { font-size: 64px; }
 .reactionBurst small { color: var(--text-on-rail); font-weight: var(--weight-bold); }
+.recordingNotice { position: fixed; z-index: 30; top: 1.25rem; left: 50%; display: flex; align-items: center; gap: .75rem; width: min(46rem, calc(100vw - 2rem)); padding: .75rem 1rem; border: 1px solid #31485a; border-radius: 1rem; background: rgb(8 31 49 / 96%); color: #fff; box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 28%); transform: translateX(-50%); backdrop-filter: blur(18px); }
+.recordingNotice > svg { flex: 0 0 auto; width: 1rem; height: 1rem; fill: var(--accent); color: var(--accent); }
+.recordingNotice > div { min-width: 0; display: grid; gap: .1rem; flex: 1; }
+.recordingNotice strong { font-size: .82rem; }
+.recordingNotice span, .recordingNotice small { color: #afbeca; font-size: .72rem; }
+.recordingNotice button { min-height: 2.25rem; padding-inline: .9rem; border: 0; border-radius: .7rem; background: var(--accent); color: #fff; font-weight: 700; cursor: pointer; }
+.recordingNotice .consentGiven { display: inline-flex; align-items: center; gap: .3rem; color: #66d49d; white-space: nowrap; }
+.consentGiven svg { width: .9rem; height: .9rem; }
+.recordingIndicator { position: fixed; z-index: 28; top: 1.4rem; left: 50%; display: inline-flex; align-items: center; gap: .5rem; padding: .55rem .8rem; border: 1px solid rgb(255 103 80 / 42%); border-radius: 999px; background: rgb(8 31 49 / 94%); color: #fff; font-size: .75rem; font-weight: 700; transform: translateX(-50%); }
+.recordingIndicator span { width: .55rem; height: .55rem; border-radius: 50%; background: #ff6750; box-shadow: 0 0 0 .25rem rgb(255 103 80 / 15%); }
+.recordingError { position: fixed; z-index: 31; top: 5.3rem; left: 50%; max-width: calc(100vw - 2rem); padding: .65rem .9rem; border: 1px solid rgb(255 103 80 / 48%); border-radius: .8rem; background: #351d20; color: #ffd7d0; font-size: .76rem; transform: translateX(-50%); }
 
 .room:not(.prejoinRoom) .meetingActions {
   right: 2rem;

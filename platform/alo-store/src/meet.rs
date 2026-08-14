@@ -90,6 +90,25 @@ pub struct MeetingTranscriptSegment {
     pub created_at: OffsetDateTime,
 }
 
+/// A consent-gated recording of one meeting.
+#[derive(Debug, Clone)]
+pub struct MeetingRecording {
+    pub id: String,
+    pub requested_by: UserId,
+    pub egress_id: Option<String>,
+    pub status: String,
+    pub file_path: Option<String>,
+    pub requested_at: OffsetDateTime,
+    pub started_at: Option<OffsetDateTime>,
+    pub stopped_at: Option<OffsetDateTime>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MeetingRecordingConsent {
+    pub user: UserId,
+    pub consented_at: OffsetDateTime,
+}
+
 /// What a meeting is attached to when it is made.
 #[derive(Debug, Clone, Default)]
 pub struct NewMeeting {
@@ -155,10 +174,143 @@ fn to_meeting(row: MeetingRow) -> Meeting {
     }
 }
 
+fn to_recording(
+    row: (
+        String,
+        String,
+        Option<String>,
+        String,
+        Option<String>,
+        OffsetDateTime,
+        Option<OffsetDateTime>,
+        Option<OffsetDateTime>,
+    ),
+) -> MeetingRecording {
+    MeetingRecording {
+        id: row.0,
+        requested_by: UserId::new(row.1),
+        egress_id: row.2,
+        status: row.3,
+        file_path: row.4,
+        requested_at: row.5,
+        started_at: row.6,
+        stopped_at: row.7,
+    }
+}
+
 const COLUMNS: &str =
     "id, room, title, created_by, channel_id, event_id, created_at, started_at, ended_at";
 
 impl AccountStore {
+    /// Ask everyone currently present to consent to a recording.
+    pub async fn request_meeting_recording(
+        &self,
+        meeting_id: &MeetingId,
+    ) -> Result<MeetingRecording> {
+        let meeting = self.meeting(meeting_id).await?;
+        self.require_meeting_host(&meeting)?;
+        if meeting.ended_at.is_some() {
+            return Err(StoreError::Validation(
+                "a live meeting is required".to_owned(),
+            ));
+        }
+        let active: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM meeting_recordings WHERE tenant_id=$1 AND meeting_id=$2 AND status IN ('pending','recording'))")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).fetch_one(&self.pool).await.map_err(StoreError::Db)?;
+        if active {
+            return Err(StoreError::Conflict(
+                "this meeting already has an active recording request".to_owned(),
+            ));
+        }
+        let id = generate_token();
+        let row: (String,String,Option<String>,String,Option<String>,OffsetDateTime,Option<OffsetDateTime>,Option<OffsetDateTime>) = sqlx::query_as(
+            "INSERT INTO meeting_recordings (tenant_id,meeting_id,id,requested_by) VALUES ($1,$2,$3,$4) RETURNING id,requested_by,egress_id,status,file_path,requested_at,started_at,stopped_at"
+        ).bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(&id).bind(self.user.as_str()).fetch_one(&self.pool).await.map_err(StoreError::Db)?;
+        Ok(to_recording(row))
+    }
+
+    pub async fn current_meeting_recording(
+        &self,
+        meeting_id: &MeetingId,
+    ) -> Result<Option<MeetingRecording>> {
+        self.meeting(meeting_id).await?;
+        let row = sqlx::query_as("SELECT id,requested_by,egress_id,status,file_path,requested_at,started_at,stopped_at FROM meeting_recordings WHERE tenant_id=$1 AND meeting_id=$2 ORDER BY requested_at DESC LIMIT 1")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).fetch_optional(&self.pool).await.map_err(StoreError::Db)?;
+        Ok(row.map(to_recording))
+    }
+
+    /// Keep explicit evidence that this participant accepted this recording.
+    pub async fn consent_to_meeting_recording(
+        &self,
+        meeting_id: &MeetingId,
+        recording_id: &str,
+    ) -> Result<MeetingRecordingConsent> {
+        let meeting = self.meeting(meeting_id).await?;
+        if meeting.ended_at.is_some() {
+            return Err(StoreError::Validation(
+                "a live meeting is required".to_owned(),
+            ));
+        }
+        let present: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM meeting_participants WHERE tenant_id=$1 AND meeting_id=$2 AND user_id=$3)")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(self.user.as_str()).fetch_one(&self.pool).await.map_err(StoreError::Db)?;
+        if !present {
+            return Err(StoreError::Forbidden);
+        }
+        let row: Option<(String,OffsetDateTime)> = sqlx::query_as("INSERT INTO meeting_recording_consents (tenant_id,meeting_id,recording_id,user_id) SELECT $1,$2,$3,$4 WHERE EXISTS(SELECT 1 FROM meeting_recordings WHERE tenant_id=$1 AND meeting_id=$2 AND id=$3 AND status='pending') ON CONFLICT (tenant_id,meeting_id,recording_id,user_id) DO UPDATE SET consented_at=meeting_recording_consents.consented_at RETURNING user_id,consented_at")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(recording_id).bind(self.user.as_str()).fetch_optional(&self.pool).await.map_err(StoreError::Db)?;
+        row.map(|(user, consented_at)| MeetingRecordingConsent {
+            user: UserId::new(user),
+            consented_at,
+        })
+        .ok_or(StoreError::NotFound)
+    }
+
+    pub async fn meeting_recording_consents(
+        &self,
+        meeting_id: &MeetingId,
+        recording_id: &str,
+    ) -> Result<Vec<MeetingRecordingConsent>> {
+        self.meeting(meeting_id).await?;
+        let rows: Vec<(String,OffsetDateTime)> = sqlx::query_as("SELECT user_id,consented_at FROM meeting_recording_consents WHERE tenant_id=$1 AND meeting_id=$2 AND recording_id=$3 ORDER BY consented_at")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(recording_id).fetch_all(&self.pool).await.map_err(StoreError::Db)?;
+        Ok(rows
+            .into_iter()
+            .map(|(user, consented_at)| MeetingRecordingConsent {
+                user: UserId::new(user),
+                consented_at,
+            })
+            .collect())
+    }
+
+    pub async fn mark_meeting_recording_started(
+        &self,
+        meeting_id: &MeetingId,
+        recording_id: &str,
+        egress_id: &str,
+        file_path: &str,
+    ) -> Result<MeetingRecording> {
+        let meeting = self.meeting(meeting_id).await?;
+        self.require_meeting_host(&meeting)?;
+        let row = sqlx::query_as("UPDATE meeting_recordings SET status='recording',egress_id=$4,file_path=$5,started_at=now() WHERE tenant_id=$1 AND meeting_id=$2 AND id=$3 AND status='pending' RETURNING id,requested_by,egress_id,status,file_path,requested_at,started_at,stopped_at")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(recording_id).bind(egress_id).bind(file_path).fetch_optional(&self.pool).await.map_err(StoreError::Db)?;
+        row.map(to_recording).ok_or(StoreError::Conflict(
+            "the recording is no longer waiting to start".to_owned(),
+        ))
+    }
+
+    pub async fn mark_meeting_recording_stopped(
+        &self,
+        meeting_id: &MeetingId,
+        recording_id: &str,
+    ) -> Result<MeetingRecording> {
+        let meeting = self.meeting(meeting_id).await?;
+        self.require_meeting_host(&meeting)?;
+        let row = sqlx::query_as("UPDATE meeting_recordings SET status='completed',stopped_at=now() WHERE tenant_id=$1 AND meeting_id=$2 AND id=$3 AND status='recording' RETURNING id,requested_by,egress_id,status,file_path,requested_at,started_at,stopped_at")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(recording_id).fetch_optional(&self.pool).await.map_err(StoreError::Db)?;
+        row.map(to_recording).ok_or(StoreError::Conflict(
+            "the recording is not running".to_owned(),
+        ))
+    }
+
     /// Store a meeting message before it is broadcast through the media engine.
     pub async fn post_meeting_message(
         &self,

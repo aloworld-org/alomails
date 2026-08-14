@@ -444,7 +444,8 @@ pub use insight_tiles::{NewTile, Tile, TileSpec};
 // StockFilter`), which keeps every one of them unambiguous at its use site.
 pub use meet::{
     Meeting, MeetingGuest, MeetingGuestInvitationCreated, MeetingMessage, MeetingMessageAttachment,
-    MeetingMessageReaction, MeetingParticipant, MeetingTranscriptSegment, NewMeeting,
+    MeetingMessageReaction, MeetingParticipant, MeetingRecording, MeetingRecordingConsent,
+    MeetingTranscriptSegment, NewMeeting,
 };
 pub use model::{
     AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, CalendarGrant, Category,

@@ -271,6 +271,22 @@ pub fn app_with_site_boundaries(
         .route("/meet/{id}/participants", get(meet_routes::participants))
         .route("/meet/{id}/moderate", post(meet_routes::moderate))
         .route(
+            "/meet/{id}/recordings",
+            get(meet_routes::current_recording).post(meet_routes::request_recording),
+        )
+        .route(
+            "/meet/{id}/recordings/{recording}/consent",
+            post(meet_routes::consent_recording),
+        )
+        .route(
+            "/meet/{id}/recordings/{recording}/start",
+            post(meet_routes::start_recording),
+        )
+        .route(
+            "/meet/{id}/recordings/{recording}/stop",
+            post(meet_routes::stop_recording),
+        )
+        .route(
             "/meet/{id}/messages",
             get(meet_routes::messages).post(meet_routes::post_message),
         )

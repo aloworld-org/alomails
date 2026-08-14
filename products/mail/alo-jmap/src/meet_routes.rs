@@ -13,6 +13,7 @@ use axum::http::{HeaderMap, HeaderValue, header};
 use axum::response::Response;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use std::collections::HashSet;
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
@@ -385,6 +386,318 @@ pub async fn moderate(
         ));
     }
     Ok(Json(json!({ "ok": true })))
+}
+
+fn recording_json(
+    recording: &alo_store::MeetingRecording,
+    consents: &[alo_store::MeetingRecordingConsent],
+) -> Value {
+    json!({
+        "id": recording.id,
+        "requestedBy": recording.requested_by.as_str(),
+        "status": recording.status,
+        "filePath": recording.file_path,
+        "requestedAt": iso(recording.requested_at),
+        "startedAt": recording.started_at.map(iso),
+        "stoppedAt": recording.stopped_at.map(iso),
+        "consents": consents.iter().map(|consent| json!({"user": consent.user.as_str(), "consentedAt": iso(consent.consented_at)})).collect::<Vec<_>>(),
+    })
+}
+
+async fn livekit_post(
+    media: &crate::state::MediaEngine,
+    service: &str,
+    method: &str,
+    token: String,
+    payload: Value,
+) -> Result<Value, Problem> {
+    let host = media
+        .url
+        .replacen("wss://", "https://", 1)
+        .replacen("ws://", "http://", 1)
+        .trim_end_matches('/')
+        .to_owned();
+    let response = reqwest::Client::new()
+        .post(format!("{host}/twirp/livekit.{service}/{method}"))
+        .bearer_auth(token)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|_| {
+            Problem::with(
+                axum::http::StatusCode::BAD_GATEWAY,
+                "the meeting server did not respond",
+            )
+        })?;
+    if !response.status().is_success() {
+        return Err(Problem::with(
+            axum::http::StatusCode::BAD_GATEWAY,
+            "the meeting server could not complete that request",
+        ));
+    }
+    response.json().await.map_err(|_| {
+        Problem::with(
+            axum::http::StatusCode::BAD_GATEWAY,
+            "the meeting server returned an invalid response",
+        )
+    })
+}
+
+/// Begin the consent phase. Requesting is also the host's explicit consent.
+pub async fn request_recording(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let meeting_id = MeetingId::new(id);
+    let recording = account
+        .acc
+        .request_meeting_recording(&meeting_id)
+        .await
+        .map_err(map_store_err)?;
+    let _ = account
+        .acc
+        .consent_to_meeting_recording(&meeting_id, &recording.id)
+        .await
+        .map_err(map_store_err)?;
+    let consents = account
+        .acc
+        .meeting_recording_consents(&meeting_id, &recording.id)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(recording_json(&recording, &consents)))
+}
+
+pub async fn current_recording(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let meeting_id = MeetingId::new(id);
+    let Some(recording) = account
+        .acc
+        .current_meeting_recording(&meeting_id)
+        .await
+        .map_err(map_store_err)?
+    else {
+        return Ok(Json(json!({"recording": null})));
+    };
+    let consents = account
+        .acc
+        .meeting_recording_consents(&meeting_id, &recording.id)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(
+        json!({"recording": recording_json(&recording, &consents)}),
+    ))
+}
+
+pub async fn consent_recording(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((meeting, recording)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let meeting_id = MeetingId::new(meeting);
+    account
+        .acc
+        .consent_to_meeting_recording(&meeting_id, &recording)
+        .await
+        .map_err(map_store_err)?;
+    let current = account
+        .acc
+        .current_meeting_recording(&meeting_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(Problem::not_found)?;
+    let consents = account
+        .acc
+        .meeting_recording_consents(&meeting_id, &recording)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(recording_json(&current, &consents)))
+}
+
+pub async fn start_recording(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((meeting, recording)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let meeting_id = MeetingId::new(meeting);
+    let record = account
+        .acc
+        .current_meeting_recording(&meeting_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(Problem::not_found)?;
+    if record.id != recording || record.status != "pending" {
+        return Err(Problem::with(
+            axum::http::StatusCode::CONFLICT,
+            "the recording is not waiting to start",
+        ));
+    }
+    let meeting = account
+        .acc
+        .meeting(&meeting_id)
+        .await
+        .map_err(map_store_err)?;
+    if meeting.created_by.as_str() != account.user.as_str() {
+        return Err(Problem::with(
+            axum::http::StatusCode::FORBIDDEN,
+            "only the meeting host can start recording",
+        ));
+    }
+    let Some(media) = state.media.as_ref() else {
+        return Err(Problem::with(
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            "meetings are not configured on this deployment",
+        ));
+    };
+    let admin = crate::meet_token::mint_room_admin(
+        &media.api_key,
+        &media.api_secret,
+        &meeting.room,
+        OffsetDateTime::now_utc().unix_timestamp(),
+    )
+    .ok_or_else(Problem::server_error)?;
+    let live = livekit_post(
+        media,
+        "RoomService",
+        "ListParticipants",
+        admin,
+        json!({"room": meeting.room}),
+    )
+    .await?;
+    let attended: HashSet<String> = account
+        .acc
+        .meeting_participants(&meeting_id)
+        .await
+        .map_err(map_store_err)?
+        .into_iter()
+        .map(|p| p.user.as_str().to_owned())
+        .collect();
+    let current: HashSet<String> = live["participants"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|p| p["identity"].as_str())
+        .filter(|identity| attended.contains(*identity))
+        .map(ToOwned::to_owned)
+        .collect();
+    let consented: HashSet<String> = account
+        .acc
+        .meeting_recording_consents(&meeting_id, &recording)
+        .await
+        .map_err(map_store_err)?
+        .into_iter()
+        .map(|c| c.user.as_str().to_owned())
+        .collect();
+    let missing = current.difference(&consented).count();
+    if missing > 0 {
+        return Err(Problem::with(
+            axum::http::StatusCode::CONFLICT,
+            "everyone currently in the meeting must consent before recording starts",
+        )
+        .with_extra(json!({"missingConsents": missing})));
+    }
+    let token = crate::meet_token::mint_room_record(
+        &media.api_key,
+        &media.api_secret,
+        OffsetDateTime::now_utc().unix_timestamp(),
+    )
+    .ok_or_else(Problem::server_error)?;
+    let file_path = format!("meet/{}/{}.mp4", meeting_id.as_str(), recording);
+    let started = livekit_post(media, "Egress", "StartRoomCompositeEgress", token, json!({"room_name": meeting.room, "layout": "speaker", "file_outputs": [{"filepath": file_path}]})).await?;
+    let egress_id = started["egress_id"]
+        .as_str()
+        .filter(|id| !id.is_empty())
+        .ok_or_else(|| {
+            Problem::with(
+                axum::http::StatusCode::BAD_GATEWAY,
+                "the recording service returned no recording id",
+            )
+        })?;
+    let updated = account
+        .acc
+        .mark_meeting_recording_started(&meeting_id, &recording, egress_id, &file_path)
+        .await
+        .map_err(map_store_err)?;
+    let consents = account
+        .acc
+        .meeting_recording_consents(&meeting_id, &recording)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(recording_json(&updated, &consents)))
+}
+
+pub async fn stop_recording(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((meeting, recording)): Path<(String, String)>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let meeting_id = MeetingId::new(meeting);
+    let current = account
+        .acc
+        .current_meeting_recording(&meeting_id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(Problem::not_found)?;
+    if current.id != recording || current.status != "recording" {
+        return Err(Problem::with(
+            axum::http::StatusCode::CONFLICT,
+            "the recording is not running",
+        ));
+    }
+    let meeting = account
+        .acc
+        .meeting(&meeting_id)
+        .await
+        .map_err(map_store_err)?;
+    if meeting.created_by.as_str() != account.user.as_str() {
+        return Err(Problem::with(
+            axum::http::StatusCode::FORBIDDEN,
+            "only the meeting host can stop recording",
+        ));
+    }
+    let Some(media) = state.media.as_ref() else {
+        return Err(Problem::with(
+            axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            "meetings are not configured on this deployment",
+        ));
+    };
+    let token = crate::meet_token::mint_room_record(
+        &media.api_key,
+        &media.api_secret,
+        OffsetDateTime::now_utc().unix_timestamp(),
+    )
+    .ok_or_else(Problem::server_error)?;
+    let egress_id = current
+        .egress_id
+        .as_deref()
+        .ok_or_else(Problem::server_error)?;
+    livekit_post(
+        media,
+        "Egress",
+        "StopEgress",
+        token,
+        json!({"egress_id": egress_id}),
+    )
+    .await?;
+    let stopped = account
+        .acc
+        .mark_meeting_recording_stopped(&meeting_id, &recording)
+        .await
+        .map_err(map_store_err)?;
+    let consents = account
+        .acc
+        .meeting_recording_consents(&meeting_id, &recording)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(recording_json(&stopped, &consents)))
 }
 
 fn attachment_json(meeting_id: &str, attachment: &alo_store::MeetingMessageAttachment) -> Value {

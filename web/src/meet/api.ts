@@ -42,6 +42,17 @@ export interface MeetingMessage {
 export interface MeetingAttachment { id: string; name: string; contentType: string; size: number; url: string; }
 export interface MeetingReaction { emoji: string; actor: string; }
 export interface MeetingTranscriptSegment { id: string; speaker: string; text: string; final: boolean; createdAt: string; }
+export interface MeetingRecordingConsent { user: string; consentedAt: string; }
+export interface MeetingRecording {
+  id: string;
+  requestedBy: string;
+  status: "pending" | "recording" | "completed" | "failed";
+  filePath: string | null;
+  requestedAt: string;
+  startedAt: string | null;
+  stoppedAt: string | null;
+  consents: MeetingRecordingConsent[];
+}
 
 /** Raised when meetings are not configured on this deployment. */
 export class MeetUnavailable extends Error {}
@@ -148,6 +159,36 @@ export class MeetApi {
       body: JSON.stringify({ action, participant, trackSid }),
     });
     if (!res.ok) throw new MeetApiError(res.status, "moderate meeting participant");
+  }
+
+  async currentRecording(meeting: string): Promise<MeetingRecording | null> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/recordings`);
+    if (!res.ok) return null;
+    return ((await res.json()) as { recording: MeetingRecording | null }).recording;
+  }
+
+  async requestRecording(meeting: string): Promise<MeetingRecording> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/recordings`, { method: "POST", body: "{}" });
+    if (!res.ok) throw new MeetApiError(res.status, "request meeting recording");
+    return (await res.json()) as MeetingRecording;
+  }
+
+  async consentRecording(meeting: string, recording: string): Promise<MeetingRecording> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/recordings/${encodeURIComponent(recording)}/consent`, { method: "POST", body: "{}" });
+    if (!res.ok) throw new MeetApiError(res.status, "consent to meeting recording");
+    return (await res.json()) as MeetingRecording;
+  }
+
+  async startRecording(meeting: string, recording: string): Promise<MeetingRecording> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/recordings/${encodeURIComponent(recording)}/start`, { method: "POST", body: "{}" });
+    if (!res.ok) throw new MeetApiError(res.status, "start meeting recording");
+    return (await res.json()) as MeetingRecording;
+  }
+
+  async stopRecording(meeting: string, recording: string): Promise<MeetingRecording> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/recordings/${encodeURIComponent(recording)}/stop`, { method: "POST", body: "{}" });
+    if (!res.ok) throw new MeetApiError(res.status, "stop meeting recording");
+    return (await res.json()) as MeetingRecording;
   }
 
   async uploadAttachment(meeting: string, message: string, file: File): Promise<MeetingAttachment> {

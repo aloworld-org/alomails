@@ -57,6 +57,8 @@ struct VideoGrant<'a> {
     can_publish_data: bool,
     #[serde(rename = "roomAdmin", skip_serializing_if = "is_false")]
     room_admin: bool,
+    #[serde(rename = "roomRecord", skip_serializing_if = "is_false")]
+    room_record: bool,
 }
 
 #[derive(Serialize)]
@@ -115,6 +117,7 @@ pub fn mint(
             // which belong to the meeting rather than to us.
             can_publish_data: true,
             room_admin: false,
+            room_record: false,
         },
     };
     let header_b64 = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).ok()?);
@@ -150,6 +153,40 @@ pub fn mint_room_admin(api_key: &str, api_secret: &str, room: &str, now: i64) ->
             can_subscribe: false,
             can_publish_data: false,
             room_admin: true,
+            room_record: false,
+        },
+    };
+    let encoded_header = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).ok()?);
+    let encoded_claims = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&claims).ok()?);
+    let signing_input = format!("{encoded_header}.{encoded_claims}");
+    let mut mac = Hmac::<Sha256>::new_from_slice(api_secret.as_bytes()).ok()?;
+    mac.update(signing_input.as_bytes());
+    let signature = URL_SAFE_NO_PAD.encode(mac.finalize().into_bytes());
+    Some(format!("{signing_input}.{signature}"))
+}
+
+/// Mint a server-only token that may start and stop Egress recordings.
+#[must_use]
+pub fn mint_room_record(api_key: &str, api_secret: &str, now: i64) -> Option<String> {
+    let header = Header {
+        alg: "HS256",
+        typ: "JWT",
+    };
+    let claims = Claims {
+        iss: api_key,
+        sub: "alo-meet-recorder",
+        identity: "alo-meet-recorder",
+        name: "alo Meet",
+        nbf: now - 60,
+        exp: now + TOKEN_TTL_SECONDS,
+        video: VideoGrant {
+            room_join: false,
+            room: "",
+            can_publish: false,
+            can_subscribe: false,
+            can_publish_data: false,
+            room_admin: false,
+            room_record: true,
         },
     };
     let encoded_header = URL_SAFE_NO_PAD.encode(serde_json::to_vec(&header).ok()?);

@@ -26,14 +26,14 @@ import {
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
 import { ConnectionState, Track } from "livekit-client";
-import { ArrowLeft, Captions, Check, ChevronDown, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, Mic, MicOff, MonitorUp, Paperclip, PhoneOff, PictureInPicture2, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, UserMinus, Users, Video, X } from "lucide-react";
+import { ArrowLeft, Captions, Check, ChevronDown, Circle, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, Mic, MicOff, MonitorUp, Paperclip, PhoneOff, PictureInPicture2, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, Square, UserMinus, Users, Video, X } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../ds";
 import { strings } from "../i18n";
 import { MeetApiError, MeetUnavailable, useMeetApi } from "./api";
-import type { JoinGrant, MeetApi, MeetingAttachment, MeetingMessage, MeetingTranscriptSegment } from "./api";
+import type { JoinGrant, MeetApi, MeetingAttachment, MeetingMessage, MeetingRecording, MeetingTranscriptSegment } from "./api";
 import styles from "./MeetRoom.module.css";
 
 function useMeetingDuration(startedAt: string | null): string {
@@ -320,7 +320,50 @@ type MeetSignal =
   | { kind: "hand"; raised: boolean; name: string }
   | { kind: "reaction"; emoji: string; name: string };
 
-function MeetingActions({ meetingId, onLeave, chatOpen, onChat, captionsOpen, onCaptions, onSettings, onPictureInPicture }: { meetingId: string; onLeave: () => void; chatOpen: boolean; onChat: () => void; captionsOpen: boolean; onCaptions: () => void; onSettings: () => void; onPictureInPicture: () => void }) {
+function useMeetingRecording(meetingId: string, hostId: string) {
+  const api = useMeetApi();
+  const { localParticipant } = useLocalParticipant();
+  const [recording, setRecording] = useState<MeetingRecording | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let current = true;
+    const refresh = async () => {
+      try {
+        const value = await api.currentRecording(meetingId);
+        if (current) setRecording(value?.status === "completed" || value?.status === "failed" ? null : value);
+      } catch {
+        // Recording status is supplemental to the call. A short API outage
+        // must never interrupt media or eject someone from the room.
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 3_000);
+    return () => { current = false; window.clearInterval(timer); };
+  }, [api, meetingId]);
+
+  const run = async (action: () => Promise<MeetingRecording>) => {
+    setBusy(true);
+    setError("");
+    try { setRecording(await action()); }
+    catch (failure) { setError(failure instanceof Error ? failure.message : strings.meetRecordingFailed); }
+    finally { setBusy(false); }
+  };
+  const isHost = localParticipant.identity === hostId;
+  const consented = recording?.consents.some((consent) => consent.user === localParticipant.identity) ?? false;
+  return {
+    recording, busy, error, isHost, consented,
+    request: () => run(() => api.requestRecording(meetingId)),
+    consent: () => recording === null ? Promise.resolve() : run(() => api.consentRecording(meetingId, recording.id)),
+    start: () => recording === null ? Promise.resolve() : run(() => api.startRecording(meetingId, recording.id)),
+    stop: () => recording === null ? Promise.resolve() : run(() => api.stopRecording(meetingId, recording.id)),
+  };
+}
+
+type RecordingControls = ReturnType<typeof useMeetingRecording>;
+
+function MeetingActions({ meetingId, recording, onLeave, chatOpen, onChat, captionsOpen, onCaptions, onSettings, onPictureInPicture }: { meetingId: string; recording: RecordingControls; onLeave: () => void; chatOpen: boolean; onChat: () => void; captionsOpen: boolean; onCaptions: () => void; onSettings: () => void; onPictureInPicture: () => void }) {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   const { localParticipant } = useLocalParticipant();
@@ -401,6 +444,21 @@ function MeetingActions({ meetingId, onLeave, chatOpen, onChat, captionsOpen, on
         <button type="button" onClick={onSettings} aria-label={strings.meetDeviceSettings} title={strings.meetDeviceSettings}>
           <Settings aria-hidden="true" />
         </button>
+        {recording.recording === null && recording.isHost && (
+          <button type="button" disabled={recording.busy} onClick={() => void recording.request()}><Circle aria-hidden="true" />{strings.meetRecord}</button>
+        )}
+        {recording.recording?.status === "pending" && recording.isHost && (
+          <button type="button" disabled={recording.busy} onClick={() => void recording.start()}><Circle aria-hidden="true" />{strings.meetStartRecording}</button>
+        )}
+        {recording.recording?.status === "pending" && !recording.isHost && !recording.consented && (
+          <button type="button" disabled={recording.busy} onClick={() => void recording.consent()}><Check aria-hidden="true" />{strings.meetIConsent}</button>
+        )}
+        {recording.recording?.status === "recording" && recording.isHost && (
+          <button type="button" className={styles.recordingActive} disabled={recording.busy} onClick={() => void recording.stop()}><Square aria-hidden="true" />{strings.meetStopRecording}</button>
+        )}
+        {recording.recording?.status === "recording" && !recording.isHost && (
+          <button type="button" className={styles.recordingActive} disabled><Circle aria-hidden="true" />{strings.meetRecording}</button>
+        )}
         <button type="button" className={styles.leaveAction} onClick={onLeave}>
           <PhoneOff aria-hidden="true" />{strings.meetLeave}
         </button>
@@ -541,6 +599,7 @@ function MeetingExperience({ meetingId, hostId, onLeave }: { meetingId: string; 
   const [chatOpen, setChatOpen] = useState(true);
   const [captionsOpen, setCaptionsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const recording = useMeetingRecording(meetingId, hostId);
   const pictureInPicture = async () => {
     const video = document.querySelector<HTMLVideoElement>(`.${styles.livekit} video:not([data-lk-local-participant="true"])`) ?? document.querySelector<HTMLVideoElement>(`.${styles.livekit} video`);
     if (video === null || document.pictureInPictureEnabled !== true) return;
@@ -552,7 +611,18 @@ function MeetingExperience({ meetingId, hostId, onLeave }: { meetingId: string; 
     <PresentingNotice />
     <ConnectionRecovery />
     <FullscreenAction />
-    <MeetingActions meetingId={meetingId} onLeave={onLeave} chatOpen={chatOpen} onChat={() => setChatOpen((open) => !open)} captionsOpen={captionsOpen} onCaptions={() => setCaptionsOpen((open) => !open)} onSettings={() => setSettingsOpen(true)} onPictureInPicture={() => void pictureInPicture()} />
+    <MeetingActions meetingId={meetingId} recording={recording} onLeave={onLeave} chatOpen={chatOpen} onChat={() => setChatOpen((open) => !open)} captionsOpen={captionsOpen} onCaptions={() => setCaptionsOpen((open) => !open)} onSettings={() => setSettingsOpen(true)} onPictureInPicture={() => void pictureInPicture()} />
+    {recording.recording?.status === "pending" && (
+      <aside className={styles.recordingNotice} role="status">
+        <Circle aria-hidden="true" />
+        <div><strong>{strings.meetRecordingConsentTitle}</strong><span>{strings.meetRecordingConsentBody}</span></div>
+        <small>{strings.meetConsentCount(recording.recording.consents.length)}</small>
+        {!recording.isHost && !recording.consented && <button type="button" disabled={recording.busy} onClick={() => void recording.consent()}>{strings.meetIConsent}</button>}
+        {recording.consented && <span className={styles.consentGiven}><Check aria-hidden="true" />{strings.meetRecordingConsentGiven}</span>}
+      </aside>
+    )}
+    {recording.recording?.status === "recording" && <div className={styles.recordingIndicator} role="status"><span />{strings.meetRecording}</div>}
+    {recording.error !== "" && <div className={styles.recordingError} role="alert">{recording.error}</div>}
     <MeetingCaptions meetingId={meetingId} visible={captionsOpen} />
     {chatOpen && <InCallChat meetingId={meetingId} hostId={hostId} onClose={() => setChatOpen(false)} />}
     {settingsOpen && <DeviceSettings onClose={() => setSettingsOpen(false)} />}
