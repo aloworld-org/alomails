@@ -22,7 +22,7 @@ import {
   useParticipants,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
-import { ArrowLeft, Copy, Hand, Maximize2, MessageSquare, MonitorUp, PhoneOff, RefreshCw, Send, ServerOff, Share2, ShieldCheck, Smile, Video, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, MonitorUp, Paperclip, PhoneOff, RefreshCw, Send, ServerOff, Share2, ShieldCheck, Smile, Video, X } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
 import { useAuth } from "../auth/AuthProvider";
@@ -94,17 +94,69 @@ function ChatWelcome() {
   );
 }
 
+type ChatReactionSignal = { kind: "chat-reaction"; messageId: string; emoji: string; actor: string };
+
+function ChatAttachment({ file }: { file: File }) {
+  const [url, setUrl] = useState("");
+  useEffect(() => {
+    const next = URL.createObjectURL(file);
+    setUrl(next);
+    return () => URL.revokeObjectURL(next);
+  }, [file]);
+  if (url === "") return null;
+  const isImage = file.type.startsWith("image/");
+  return <a className={styles.chatAttachment} href={url} download={file.name}>
+    {isImage ? <img src={url} alt={file.name} /> : <span><FileText aria-hidden="true" /><b>{file.name}</b><small>{Math.ceil(file.size / 1024)} KB</small></span>}
+  </a>;
+}
+
 function InCallChat({ onClose }: { onClose: () => void }) {
   const { chatMessages, send, isSending } = useChat();
   const participants = useParticipants();
+  const { localParticipant } = useLocalParticipant();
   const [tab, setTab] = useState<"messages" | "people">("messages");
   const [draft, setDraft] = useState("");
+  const [recipient, setRecipient] = useState<string | null>(null);
+  const [showRecipients, setShowRecipients] = useState(false);
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [reactions, setReactions] = useState<Record<string, Record<string, string[]>>>({});
+  const fileInput = useRef<HTMLInputElement>(null);
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  const { send: sendAction } = useDataChannel("alo-meet-chat-actions", (packet) => {
+    try {
+      const signal = JSON.parse(decoder.decode(packet.payload)) as ChatReactionSignal;
+      if (signal.kind !== "chat-reaction") return;
+      setReactions((current) => {
+        const message = current[signal.messageId] ?? {};
+        const actors = message[signal.emoji] ?? [];
+        return { ...current, [signal.messageId]: { ...message, [signal.emoji]: Array.from(new Set([...actors, signal.actor])) } };
+      });
+    } catch { /* Ignore data from older clients on the same topic. */ }
+  });
+  const deliveryOptions = recipient === null ? {} : {
+    destinationIdentities: [recipient],
+    attributes: { "alo.private": "true", "alo.recipient": recipient },
+  };
   const submit = async (text = draft) => {
     const message = text.trim();
     if (message === "" || isSending) return;
-    await send(message);
+    await send(message, deliveryOptions);
     setDraft("");
   };
+  const sendFiles = async (files: FileList | null) => {
+    if (files === null || files.length === 0 || isSending) return;
+    const accepted = Array.from(files).filter((file) => file.type.startsWith("image/") || file.type === "application/pdf");
+    if (accepted.length === 0) return;
+    await send(accepted.map((file) => file.name).join(", "), { ...deliveryOptions, attachments: accepted });
+    if (fileInput.current !== null) fileInput.current.value = "";
+  };
+  const react = async (messageId: string, emoji: string) => {
+    const actor = localParticipant.name || localParticipant.identity;
+    setReactions((current) => ({ ...current, [messageId]: { ...(current[messageId] ?? {}), [emoji]: Array.from(new Set([...(current[messageId]?.[emoji] ?? []), actor])) } }));
+    await sendAction(encoder.encode(JSON.stringify({ kind: "chat-reaction", messageId, emoji, actor } satisfies ChatReactionSignal)), { reliable: true });
+  };
+  const recipientName = participants.find((person) => person.identity === recipient)?.name || recipient;
   return (
     <aside className={styles.aloChat} aria-label={strings.meetChatTitle}>
       <header><h2>{strings.meetChatTitle}</h2><button type="button" onClick={onClose} aria-label={strings.meetClose}><X /></button></header>
@@ -117,20 +169,33 @@ function InCallChat({ onClose }: { onClose: () => void }) {
           <div className={styles.aloChatMessages}>
             {chatMessages.length === 0 ? <ChatWelcome /> : chatMessages.map((message) => {
               const name = message.from?.name || message.from?.identity || strings.meetSomeone;
-              return <article key={`${message.timestamp}-${message.message}`} className={message.from?.isLocal ? styles.chatMine : undefined}>
+              const privateMessage = message.attributes?.["alo.private"] === "true";
+              return <article key={message.id} className={message.from?.isLocal ? styles.chatMine : undefined}>
                 <span className={styles.chatAvatar}>{name.slice(0, 1).toUpperCase()}</span>
-                <div><p><strong>{name}{message.from?.isLocal ? ` (${strings.meetYou})` : ""}</strong><time>{new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></p><div className={styles.chatBubble}>{formatChatMessageLinks(message.message)}</div></div>
+                <div className={styles.chatMessageBody}><p><strong>{name}{message.from?.isLocal ? ` (${strings.meetYou})` : ""}</strong>{privateMessage && <span className={styles.privateBadge}><Lock />{strings.meetPrivate}</span>}<time>{new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></p><div className={styles.chatBubble}>{formatChatMessageLinks(message.message)}{message.attachedFiles?.map((file) => <ChatAttachment key={`${message.id}-${file.name}`} file={file} />)}</div>
+                  <div className={styles.messageActions}>{["👍", "❤️", "😂", "🎉"].map((emoji) => <button type="button" key={emoji} onClick={() => void react(message.id, emoji)} aria-label={`${strings.meetReact} ${emoji}`}>{emoji}</button>)}{!message.from?.isLocal && <button type="button" onClick={() => { setRecipient(message.from?.identity ?? null); setTab("messages"); }}><Lock />{strings.meetReplyPrivately}</button>}</div>
+                  {Object.entries(reactions[message.id] ?? {}).length > 0 && <div className={styles.messageReactions}>{Object.entries(reactions[message.id] ?? {}).map(([emoji, actors]) => <span key={emoji} title={actors.join(", ")}>{emoji} {actors.length}</span>)}</div>}
+                </div>
               </article>;
             })}
           </div>
           <div className={styles.quickReplies}>{[strings.meetQuickReplyOne, strings.meetQuickReplyTwo, strings.meetQuickReplyThree].map((reply) => <button type="button" key={reply} onClick={() => void submit(reply)}>{reply}</button>)}</div>
           <form className={styles.aloChatComposer} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+            <div className={styles.composerContext}>
+              <button type="button" onClick={() => setShowRecipients((shown) => !shown)} className={recipient !== null ? styles.privateRecipient : undefined}>{recipient === null ? strings.meetEveryone : <><Lock />{recipientName}</>}</button>
+              {showRecipients && <div className={styles.recipientMenu}><button type="button" onClick={() => { setRecipient(null); setShowRecipients(false); }}><span>{strings.meetEveryone}</span>{recipient === null && <Check />}</button>{participants.filter((person) => !person.isLocal).map((person) => <button type="button" key={person.identity} onClick={() => { setRecipient(person.identity); setShowRecipients(false); }}><span>{person.name || person.identity}</span>{recipient === person.identity && <Check />}</button>)}</div>}
+            </div>
+            <div className={styles.composerRow}>
+              <input ref={fileInput} type="file" accept="image/*,application/pdf" multiple hidden onChange={(event) => void sendFiles(event.target.files)} />
+              <button type="button" className={styles.composerTool} onClick={() => fileInput.current?.click()} aria-label={strings.meetAttachFile} title={strings.meetAttachFile}><Paperclip /></button>
+              <div className={styles.emojiControl}><button type="button" className={styles.composerTool} onClick={() => setShowEmoji((shown) => !shown)} aria-label={strings.meetAddEmoji}><Smile /></button>{showEmoji && <div className={styles.emojiMenu}>{["👍", "👏", "❤️", "😂", "😊", "🎉"].map((emoji) => <button type="button" key={emoji} onClick={() => { setDraft((value) => `${value}${emoji}`); setShowEmoji(false); }}>{emoji}</button>)}</div>}</div>
             <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={strings.meetChatPlaceholder} aria-label={strings.meetChatPlaceholder} />
             <button type="submit" disabled={draft.trim() === "" || isSending} aria-label={strings.chatSend}><Send /></button>
+            </div>
           </form>
         </>
       ) : (
-        <ul className={styles.peopleList}>{participants.map((person) => <li key={person.identity}><span className={styles.chatAvatar}>{(person.name || person.identity).slice(0, 1).toUpperCase()}</span><div><strong>{person.name || person.identity}</strong><small>{person.isLocal ? strings.meetYou : strings.meetParticipant}</small></div><i /></li>)}</ul>
+        <ul className={styles.peopleList}>{participants.map((person) => <li key={person.identity}><span className={styles.chatAvatar}>{(person.name || person.identity).slice(0, 1).toUpperCase()}</span><div><strong>{person.name || person.identity}</strong><small>{person.isLocal ? strings.meetYou : strings.meetParticipant}</small></div><i />{!person.isLocal && <button type="button" onClick={() => { setRecipient(person.identity); setTab("messages"); }}><MessageSquare />{strings.meetMessagePrivately}</button>}</li>)}</ul>
       )}
     </aside>
   );

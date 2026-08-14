@@ -490,28 +490,66 @@
 .aloChat > nav .chatTabActive { color: var(--accent); }
 .aloChat > nav .chatTabActive::after { background: var(--accent); }
 .aloChatMessages { min-height: 0; overflow-y: auto; padding: 1.25rem; }
-.aloChatMessages article { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: 0.75rem; margin-bottom: 1.5rem; }
+.aloChatMessages article { position: relative; display: grid; grid-template-columns: 2.4rem minmax(0, 1fr); gap: 0.75rem; margin-bottom: 1.35rem; }
+.aloChatMessages article.chatMine { grid-template-columns: minmax(0, 1fr); padding-left: 2.6rem; }
+.chatMine > .chatAvatar { display: none; }
+.chatMessageBody { min-width: 0; }
 .aloChatMessages article > div > p { display: flex; align-items: center; gap: 0.65rem; margin: 0 0 0.45rem; }
 .aloChatMessages article strong { font-size: 0.88rem; }
 .aloChatMessages article time { color: #8fa2b2; font-size: 0.75rem; }
 .chatAvatar { display: inline-flex; width: 2.4rem; height: 2.4rem; flex: none; align-items: center; justify-content: center; border-radius: 999px; background: linear-gradient(135deg, var(--accent), #f69a78); color: white; font-size: 0.8rem; font-weight: 700; }
 .chatBubble { color: #eef5fa; font-size: 0.88rem; line-height: 1.55; }
-.chatMine .chatBubble { padding: 0.65rem 0.8rem; border: 1px solid #31485a; border-radius: 0.9rem; background: #10283a; }
+.chatMine .chatMessageBody > p { justify-content: flex-end; }
+.chatMine .chatBubble { margin-left: auto; padding: 0.7rem 0.85rem; border: 1px solid color-mix(in srgb, var(--accent) 38%, #31485a); border-radius: 1rem 1rem 0.3rem 1rem; background: color-mix(in srgb, var(--accent) 13%, #10283a); }
+.privateBadge { display: inline-flex; align-items: center; gap: 0.22rem; padding: 0.16rem 0.4rem; border-radius: 999px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: #f69a78; font-size: 0.65rem; font-weight: 650; }
+.privateBadge svg { width: 0.68rem; height: 0.68rem; }
+.messageActions { display: flex; align-items: center; gap: 0.2rem; margin-top: 0.35rem; opacity: 0; transform: translateY(-2px); transition: opacity 120ms ease, transform 120ms ease; }
+.aloChatMessages article:hover .messageActions, .aloChatMessages article:focus-within .messageActions { opacity: 1; transform: none; }
+.chatMine .messageActions { justify-content: flex-end; }
+.messageActions button { display: inline-flex; min-height: 1.7rem; align-items: center; gap: 0.3rem; padding: 0 0.4rem; border-radius: 0.5rem; color: #9fb0bf; font-size: 0.68rem; }
+.messageActions button:hover { background: #173044; color: white; }
+.messageActions svg { width: 0.72rem; height: 0.72rem; }
+.messageReactions { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.35rem; }
+.chatMine .messageReactions { justify-content: flex-end; }
+.messageReactions span { padding: 0.18rem 0.45rem; border: 1px solid #31485a; border-radius: 999px; background: #10283a; font-size: 0.7rem; }
+.chatAttachment { display: block; margin-top: 0.55rem; overflow: hidden; border: 1px solid #31485a; border-radius: 0.7rem; color: inherit; text-decoration: none; }
+.chatAttachment img { display: block; width: 100%; max-height: 11rem; object-fit: cover; }
+.chatAttachment > span { display: grid; grid-template-columns: 1.7rem minmax(0, 1fr); column-gap: 0.5rem; align-items: center; padding: 0.65rem; }
+.chatAttachment svg { grid-row: 1 / span 2; width: 1.35rem; }
+.chatAttachment b, .chatAttachment small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chatAttachment small { color: #8fa2b2; font-size: 0.68rem; }
 .quickReplies { display: flex; gap: 0.45rem; overflow-x: auto; padding: 0.7rem 1rem; border-top: 1px solid #203649; }
 .quickReplies button { min-height: 2.15rem; flex: none; padding: 0 0.8rem; border: 1px solid #31485a; border-radius: 999px; font-size: 0.75rem; }
 .quickReplies button:hover { border-color: var(--accent); color: var(--accent); }
-.aloChatComposer { display: grid; grid-template-columns: minmax(0, 1fr) 2.6rem; gap: 0.4rem; margin: 0 1rem 1rem; padding: 0.3rem; border: 1px solid #31485a; border-radius: 0.8rem; background: #0b2234; }
+.aloChatComposer { position: relative; margin: 0 1rem 1rem; padding: 0.3rem; border: 1px solid #31485a; border-radius: 0.9rem; background: #0b2234; }
 .aloChatComposer:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); }
-.aloChatComposer input { min-width: 0; border: 0; outline: 0; background: transparent; color: white; padding: 0 0.55rem; }
+.composerContext { position: relative; display: flex; padding: 0.15rem 0.15rem 0.3rem; }
+.composerContext > button { display: inline-flex; min-height: 1.65rem; align-items: center; gap: 0.3rem; padding: 0 0.5rem; border-radius: 0.45rem; color: #9fb0bf; font-size: 0.7rem; }
+.composerContext > button:hover, .composerContext > .privateRecipient { background: #173044; color: #f69a78; }
+.composerContext svg { width: 0.72rem; }
+.recipientMenu { position: absolute; right: 0; bottom: calc(100% + 0.35rem); left: 0; z-index: 5; overflow: hidden; border: 1px solid #31485a; border-radius: 0.75rem; background: #10283a; box-shadow: 0 0.7rem 1.8rem rgb(0 0 0 / 30%); }
+.recipientMenu button { display: flex; width: 100%; min-height: 2.4rem; align-items: center; justify-content: space-between; padding: 0 0.75rem; color: #eef5fa; font-size: 0.78rem; text-align: left; }
+.recipientMenu button:hover { background: #173044; }
+.recipientMenu svg { width: 0.9rem; color: var(--accent); }
+.composerRow { display: grid; grid-template-columns: 2.25rem 2.25rem minmax(0, 1fr) 2.6rem; gap: 0.2rem; align-items: center; }
+.aloChatComposer input:not([type="file"]) { min-width: 0; border: 0; outline: 0; background: transparent; color: white; padding: 0 0.45rem; }
 .aloChatComposer input::placeholder { color: #8295a5; }
-.aloChatComposer button { display: inline-flex; width: 2.6rem; height: 2.6rem; align-items: center; justify-content: center; border-radius: 0.65rem; background: var(--accent); color: white; }
-.aloChatComposer button:disabled { opacity: 0.45; }
-.aloChatComposer svg { width: 1.2rem; }
+.composerRow > button[type="submit"] { display: inline-flex; width: 2.6rem; height: 2.6rem; align-items: center; justify-content: center; border-radius: 0.65rem; background: var(--accent); color: white; }
+.composerRow > button[type="submit"]:disabled { opacity: 0.45; }
+.composerRow svg { width: 1.15rem; }
+.composerTool { display: inline-flex; width: 2.25rem; height: 2.25rem; align-items: center; justify-content: center; border-radius: 0.55rem; color: #9fb0bf; }
+.composerTool:hover { background: #173044; color: white; }
+.emojiControl { position: relative; }
+.emojiMenu { position: absolute; right: 0; bottom: calc(100% + 0.55rem); z-index: 5; display: grid; grid-template-columns: repeat(3, 2.25rem); gap: 0.2rem; padding: 0.4rem; border: 1px solid #31485a; border-radius: 0.75rem; background: #10283a; box-shadow: 0 0.7rem 1.8rem rgb(0 0 0 / 30%); }
+.emojiMenu button { height: 2.25rem; border-radius: 0.45rem; font-size: 1rem; }
+.emojiMenu button:hover { background: #173044; }
 .peopleList { min-height: 0; overflow-y: auto; margin: 0; padding: 1.25rem; list-style: none; }
 .peopleList li { display: flex; align-items: center; gap: 0.75rem; padding: 0.65rem 0; }
 .peopleList li div { display: flex; min-width: 0; flex: 1; flex-direction: column; }
 .peopleList small { color: #8fa2b2; }
 .peopleList i { width: 0.55rem; height: 0.55rem; border-radius: 999px; background: var(--success); }
+.peopleList li > button { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.5rem; border: 1px solid #31485a; border-radius: 0.55rem; color: #c4d0d9; font-size: 0.68rem; }
+.peopleList li > button svg { width: 0.8rem; }
 
 .livekit :global(.lk-chat-entry) {
   gap: var(--space-2);
