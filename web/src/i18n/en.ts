@@ -1921,7 +1921,7 @@ export const en = {
   chatAgentRemove: (handle: string): string => `Remove @${handle}`,
   chatAgentAddFailed: "That agent couldn’t be added.",
   chatAgentRemoveFailed: "That agent couldn’t be removed.",
-  chatSearchPlaceholder: "Search messages",
+  chatSearchPlaceholder: "Search messages, people, channels…",
   chatSearchClear: "Clear search",
   chatSearchNothing: "Nothing matched.",
   chatSearchFailed: "That search couldn’t be run.",

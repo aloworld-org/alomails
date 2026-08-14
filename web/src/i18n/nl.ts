@@ -5109,7 +5109,7 @@ export const nl: Partial<Catalog> = {
   chatSearchClear: "Zoekopdracht wissen",
   chatSearchFailed: "Die zoekopdracht kon niet worden uitgevoerd.",
   chatSearchNothing: "Niets gevonden.",
-  chatSearchPlaceholder: "Berichten zoeken",
+  chatSearchPlaceholder: "Zoek berichten, mensen en kanalen…",
   chatSectionArchived: "Gearchiveerd",
   chatSectionChannels: "Kanalen",
   chatFilterAll: "Alles",

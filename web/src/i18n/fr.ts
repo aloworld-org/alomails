@@ -5173,7 +5173,7 @@ export const fr: Partial<Catalog> = {
   chatSearchClear: "Effacer la recherche",
   chatSearchFailed: "Impossible d’effectuer cette recherche.",
   chatSearchNothing: "Aucun résultat.",
-  chatSearchPlaceholder: "Rechercher des messages",
+  chatSearchPlaceholder: "Rechercher messages, personnes, canaux…",
   chatSectionArchived: "Archivés",
   chatSectionChannels: "Canaux",
   chatFilterAll: "Tout",

@@ -582,8 +582,7 @@ test("a colleague is searched for, never listed, and one letter asks nothing", a
   ];
   mount();
 
-  fireEvent.click(await screen.findByRole("button", { name: strings.chatCompose }));
-  fireEvent.click(await screen.findByText(strings.chatNewDm));
+  fireEvent.click((await screen.findAllByRole("button", { name: strings.chatNewDm }))[0]!);
   const box = screen.getByLabelText(strings.chatFindPerson);
 
   // One letter must not reach the server: it would ask a question whose only
