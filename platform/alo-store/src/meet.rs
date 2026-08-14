@@ -64,6 +64,16 @@ pub struct MeetingMessage {
     pub created_at: OffsetDateTime,
 }
 
+#[derive(Debug, Clone)]
+pub struct MeetingMessageAttachment {
+    pub id: String,
+    pub message_id: String,
+    pub file_name: String,
+    pub content_type: String,
+    pub size: i64,
+    pub data: Option<Vec<u8>>,
+}
+
 /// What a meeting is attached to when it is made.
 #[derive(Debug, Clone, Default)]
 pub struct NewMeeting {
@@ -204,6 +214,82 @@ impl AccountStore {
                 created_at: row.4,
             })
             .collect())
+    }
+
+    pub async fn attach_to_meeting_message(
+        &self,
+        meeting_id: &MeetingId,
+        message_id: &str,
+        file_name: &str,
+        content_type: &str,
+        data: Vec<u8>,
+    ) -> Result<MeetingMessageAttachment> {
+        self.meeting(meeting_id).await?;
+        if data.is_empty()
+            || data.len() > 10 * 1024 * 1024
+            || file_name.trim().is_empty()
+            || !(content_type.starts_with("image/") || content_type == "application/pdf")
+        {
+            return Err(StoreError::Validation(
+                "only images and PDFs up to 10 MB are supported".to_owned(),
+            ));
+        }
+        let owns: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM meeting_messages WHERE tenant_id=$1 AND meeting_id=$2 AND id=$3 AND sender_id=$4)")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(message_id).bind(self.user.as_str()).fetch_one(&self.pool).await.map_err(StoreError::Db)?;
+        if !owns {
+            return Err(StoreError::Forbidden);
+        }
+        let id = generate_token();
+        sqlx::query("INSERT INTO meeting_message_attachments (tenant_id,meeting_id,message_id,id,file_name,content_type,data) VALUES ($1,$2,$3,$4,$5,$6,$7)")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(message_id).bind(&id).bind(file_name.trim()).bind(content_type).bind(&data).execute(&self.pool).await.map_err(StoreError::Db)?;
+        Ok(MeetingMessageAttachment {
+            id,
+            message_id: message_id.to_owned(),
+            file_name: file_name.trim().to_owned(),
+            content_type: content_type.to_owned(),
+            size: data.len() as i64,
+            data: None,
+        })
+    }
+
+    pub async fn meeting_message_attachments(
+        &self,
+        meeting_id: &MeetingId,
+    ) -> Result<Vec<MeetingMessageAttachment>> {
+        self.meeting(meeting_id).await?;
+        let rows: Vec<(String,String,String,String,i64)> = sqlx::query_as("SELECT a.id,a.message_id,a.file_name,a.content_type,octet_length(a.data) FROM meeting_message_attachments a JOIN meeting_messages m ON m.tenant_id=a.tenant_id AND m.meeting_id=a.meeting_id AND m.id=a.message_id WHERE a.tenant_id=$1 AND a.meeting_id=$2 AND (m.recipient_id IS NULL OR m.recipient_id=$3 OR m.sender_id=$3) ORDER BY a.created_at,a.id")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(self.user.as_str()).fetch_all(&self.pool).await.map_err(StoreError::Db)?;
+        Ok(rows
+            .into_iter()
+            .map(|r| MeetingMessageAttachment {
+                id: r.0,
+                message_id: r.1,
+                file_name: r.2,
+                content_type: r.3,
+                size: r.4,
+                data: None,
+            })
+            .collect())
+    }
+
+    pub async fn meeting_message_attachment(
+        &self,
+        meeting_id: &MeetingId,
+        message_id: &str,
+        attachment_id: &str,
+    ) -> Result<MeetingMessageAttachment> {
+        self.meeting(meeting_id).await?;
+        let row: Option<(String,String,String,String,i64,Vec<u8>)> = sqlx::query_as("SELECT a.id,a.message_id,a.file_name,a.content_type,octet_length(a.data),a.data FROM meeting_message_attachments a JOIN meeting_messages m ON m.tenant_id=a.tenant_id AND m.meeting_id=a.meeting_id AND m.id=a.message_id WHERE a.tenant_id=$1 AND a.meeting_id=$2 AND a.message_id=$3 AND a.id=$4 AND (m.recipient_id IS NULL OR m.recipient_id=$5 OR m.sender_id=$5)")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(message_id).bind(attachment_id).bind(self.user.as_str()).fetch_optional(&self.pool).await.map_err(StoreError::Db)?;
+        row.map(|r| MeetingMessageAttachment {
+            id: r.0,
+            message_id: r.1,
+            file_name: r.2,
+            content_type: r.3,
+            size: r.4,
+            data: Some(r.5),
+        })
+        .ok_or(StoreError::NotFound)
     }
 
     /// Start a meeting.

@@ -518,6 +518,7 @@
 .chatAttachment svg { grid-row: 1 / span 2; width: 1.35rem; }
 .chatAttachment b, .chatAttachment small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chatAttachment small { color: #8fa2b2; font-size: 0.68rem; }
+.chatAttachmentLoading { display: block; margin-top: 0.5rem; color: #8fa2b2; font-size: 0.72rem; }
 .quickReplies { display: flex; gap: 0.45rem; overflow-x: auto; padding: 0.7rem 1rem; border-top: 1px solid #203649; }
 .quickReplies button { min-height: 2.15rem; flex: none; padding: 0 0.8rem; border: 1px solid #31485a; border-radius: 999px; font-size: 0.75rem; }
 .quickReplies button:hover { border-color: var(--accent); color: var(--accent); }

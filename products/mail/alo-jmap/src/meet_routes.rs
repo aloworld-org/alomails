@@ -7,8 +7,10 @@
 //! an answer, never from a request.
 
 use axum::Json;
-use axum::extract::{Path, State};
-use axum::http::HeaderMap;
+use axum::body::{Body, Bytes};
+use axum::extract::{Path, Query, State};
+use axum::http::{HeaderMap, HeaderValue, header};
+use axum::response::Response;
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::OffsetDateTime;
@@ -280,13 +282,23 @@ pub async fn participants(
     })))
 }
 
-fn message_json(message: &alo_store::MeetingMessage) -> Value {
+fn attachment_json(meeting_id: &str, attachment: &alo_store::MeetingMessageAttachment) -> Value {
+    json!({ "id": attachment.id, "name": attachment.file_name, "contentType": attachment.content_type, "size": attachment.size,
+        "url": format!("/api/meet/{meeting_id}/messages/{}/attachments/{}", attachment.message_id, attachment.id) })
+}
+
+fn message_json(
+    message: &alo_store::MeetingMessage,
+    attachments: &[alo_store::MeetingMessageAttachment],
+    meeting_id: &str,
+) -> Value {
     json!({
         "id": message.id,
         "sender": message.sender.as_str(),
         "recipient": message.recipient.as_ref().map(UserId::as_str),
         "body": message.body,
         "createdAt": iso(message.created_at),
+        "attachments": attachments.iter().filter(|a| a.message_id == message.id).map(|a| attachment_json(meeting_id, a)).collect::<Vec<_>>(),
     })
 }
 
@@ -297,13 +309,19 @@ pub async fn messages(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let meeting_id = MeetingId::new(id);
     let messages = account
         .acc
-        .meeting_messages(&MeetingId::new(id))
+        .meeting_messages(&meeting_id)
+        .await
+        .map_err(map_store_err)?;
+    let attachments = account
+        .acc
+        .meeting_message_attachments(&meeting_id)
         .await
         .map_err(map_store_err)?;
     Ok(Json(
-        json!({ "messages": messages.iter().map(message_json).collect::<Vec<_>>() }),
+        json!({ "messages": messages.iter().map(|m| message_json(m, &attachments, meeting_id.as_str())).collect::<Vec<_>>() }),
     ))
 }
 
@@ -323,10 +341,70 @@ pub async fn post_message(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let recipient = body.recipient.map(UserId::new);
+    let meeting_id = MeetingId::new(id);
     let message = account
         .acc
-        .post_meeting_message(&MeetingId::new(id), &body.body, recipient.as_ref())
+        .post_meeting_message(&meeting_id, &body.body, recipient.as_ref())
         .await
         .map_err(map_store_err)?;
-    Ok(Json(message_json(&message)))
+    Ok(Json(message_json(&message, &[], meeting_id.as_str())))
+}
+
+#[derive(Deserialize)]
+pub struct AttachmentName {
+    name: String,
+}
+
+pub async fn upload_attachment(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((meeting, message)): Path<(String, String)>,
+    Query(query): Query<AttachmentName>,
+    body: Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let content_type = headers
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("application/octet-stream");
+    let attachment = account
+        .acc
+        .attach_to_meeting_message(
+            &MeetingId::new(meeting.clone()),
+            &message,
+            &query.name,
+            content_type,
+            body.to_vec(),
+        )
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(attachment_json(&meeting, &attachment)))
+}
+
+pub async fn download_attachment(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((meeting, message, attachment)): Path<(String, String, String)>,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let file = account
+        .acc
+        .meeting_message_attachment(&MeetingId::new(meeting), &message, &attachment)
+        .await
+        .map_err(map_store_err)?;
+    let mut response = Response::new(Body::from(file.data.unwrap_or_default()));
+    response.headers_mut().insert(
+        header::CONTENT_TYPE,
+        HeaderValue::from_str(&file.content_type)
+            .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream")),
+    );
+    response.headers_mut().insert(
+        header::CONTENT_DISPOSITION,
+        HeaderValue::from_str(&format!(
+            "attachment; filename=\"{}\"",
+            file.file_name.replace(['\"', '\\'], "_")
+        ))
+        .unwrap_or_else(|_| HeaderValue::from_static("attachment")),
+    );
+    Ok(response)
 }

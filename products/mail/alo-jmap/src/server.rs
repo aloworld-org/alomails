@@ -273,6 +273,14 @@ pub fn app_with_site_boundaries(
             "/meet/{id}/messages",
             get(meet_routes::messages).post(meet_routes::post_message),
         )
+        .route(
+            "/meet/{id}/messages/{message}/attachments",
+            post(meet_routes::upload_attachment),
+        )
+        .route(
+            "/meet/{id}/messages/{message}/attachments/{attachment}",
+            get(meet_routes::download_attachment),
+        )
         .route("/meet/channels/{id}", get(meet_routes::in_channel))
         .route("/meet/events/{id}", get(meet_routes::for_event))
         .route(

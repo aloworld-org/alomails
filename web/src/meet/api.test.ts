@@ -31,6 +31,16 @@ describe("joining a meeting", () => {
     );
   });
 
+  test("meeting attachments are uploaded as their real media type", async () => {
+    const { api, fetched } = client(200, { id: "file-1", name: "plan.pdf" });
+    const file = new File(["pdf"], "plan.pdf", { type: "application/pdf" });
+    await expect(api.uploadAttachment("m-1", "msg-1", file)).resolves.toMatchObject({ id: "file-1" });
+    expect(fetched).toHaveBeenCalledWith(
+      expect.stringContaining("/api/meet/m-1/messages/msg-1/attachments?name=plan.pdf"),
+      expect.objectContaining({ method: "POST", body: file, headers: { "content-type": "application/pdf" } }),
+    );
+  });
+
   test("a deployment with no engine says so, distinctly", async () => {
     // 503 means the meeting is real and attendance was recorded — there is
     // simply nowhere to hold it. Reporting that as a generic failure would

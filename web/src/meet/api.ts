@@ -35,7 +35,10 @@ export interface MeetingMessage {
   recipient: string | null;
   body: string;
   createdAt: string;
+  attachments: MeetingAttachment[];
 }
+
+export interface MeetingAttachment { id: string; name: string; contentType: string; size: number; url: string; }
 
 /** Raised when meetings are not configured on this deployment. */
 export class MeetUnavailable extends Error {}
@@ -111,6 +114,18 @@ export class MeetApi {
     });
     if (!res.ok) throw new MeetApiError(res.status, "post meeting message");
     return (await res.json()) as MeetingMessage;
+  }
+
+  async uploadAttachment(meeting: string, message: string, file: File): Promise<MeetingAttachment> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/messages/${encodeURIComponent(message)}/attachments?name=${encodeURIComponent(file.name)}`, { method: "POST", body: file, headers: { "content-type": file.type } });
+    if (!res.ok) throw new MeetApiError(res.status, "upload meeting attachment");
+    return (await res.json()) as MeetingAttachment;
+  }
+
+  async downloadAttachment(attachment: MeetingAttachment): Promise<Blob> {
+    const res = await this.#send(attachment.url.replace(/^\/api/, ""));
+    if (!res.ok) throw new MeetApiError(res.status, "download meeting attachment");
+    return res.blob();
   }
 
   /** Meetings still running in a room. */

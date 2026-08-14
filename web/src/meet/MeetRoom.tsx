@@ -32,7 +32,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../ds";
 import { strings } from "../i18n";
 import { MeetApiError, MeetUnavailable, useMeetApi } from "./api";
-import type { JoinGrant, MeetingMessage } from "./api";
+import type { JoinGrant, MeetApi, MeetingAttachment, MeetingMessage } from "./api";
 import styles from "./MeetRoom.module.css";
 
 function useMeetingDuration(startedAt: string | null): string {
@@ -113,6 +113,13 @@ function ChatAttachment({ file }: { file: File }) {
   </a>;
 }
 
+function StoredChatAttachment({ api, attachment }: { api: MeetApi; attachment: MeetingAttachment }) {
+  const [url, setUrl] = useState("");
+  useEffect(() => { let current = true; let objectUrl = ""; void api.downloadAttachment(attachment).then((blob) => { if (!current) return; objectUrl = URL.createObjectURL(blob); setUrl(objectUrl); }); return () => { current = false; if (objectUrl !== "") URL.revokeObjectURL(objectUrl); }; }, [api, attachment]);
+  if (url === "") return <span className={styles.chatAttachmentLoading}>{attachment.name}</span>;
+  return <a className={styles.chatAttachment} href={url} download={attachment.name}>{attachment.contentType.startsWith("image/") ? <img src={url} alt={attachment.name} /> : <span><FileText aria-hidden="true" /><b>{attachment.name}</b><small>{Math.ceil(attachment.size / 1024)} KB</small></span>}</a>;
+}
+
 function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => void }) {
   const api = useMeetApi();
   const { chatMessages, send, isSending } = useChat();
@@ -167,8 +174,15 @@ function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => 
     if (files === null || files.length === 0 || isSending) return;
     const accepted = Array.from(files).filter((file) => file.type.startsWith("image/") || file.type === "application/pdf");
     if (accepted.length === 0) return;
-    await send(accepted.map((file) => file.name).join(", "), { ...deliveryOptions, attachments: accepted });
-    if (fileInput.current !== null) fileInput.current.value = "";
+    setSendError(false);
+    try {
+      const body = accepted.map((file) => file.name).join(", ");
+      const stored = await api.postMessage(meetingId, body, recipient);
+      stored.attachments = await Promise.all(accepted.map((file) => api.uploadAttachment(meetingId, stored.id, file)));
+      setHistory((current) => [...current, stored]);
+      await send(body, { ...deliveryOptions, attributes: { ...deliveryOptions.attributes, "alo.persistedId": stored.id }, attachments: accepted });
+      if (fileInput.current !== null) fileInput.current.value = "";
+    } catch { setSendError(true); }
   };
   const react = async (messageId: string, emoji: string) => {
     const actor = localParticipant.name || localParticipant.identity;
@@ -191,7 +205,7 @@ function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => 
               const person = participants.find((participant) => participant.identity === message.sender);
               const name = person?.name || person?.identity || strings.meetSomeone;
               const mine = message.sender === localParticipant.identity;
-              return <article key={message.id} className={mine ? styles.chatMine : undefined}><span className={styles.chatAvatar}>{name.slice(0, 1).toUpperCase()}</span><div className={styles.chatMessageBody}><p><strong>{name}{mine ? ` (${strings.meetYou})` : ""}</strong>{message.recipient !== null && <span className={styles.privateBadge}><Lock />{strings.meetPrivate}</span>}<time>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></p><div className={styles.chatBubble}>{formatChatMessageLinks(message.body)}</div></div></article>;
+              return <article key={message.id} className={mine ? styles.chatMine : undefined}><span className={styles.chatAvatar}>{name.slice(0, 1).toUpperCase()}</span><div className={styles.chatMessageBody}><p><strong>{name}{mine ? ` (${strings.meetYou})` : ""}</strong>{message.recipient !== null && <span className={styles.privateBadge}><Lock />{strings.meetPrivate}</span>}<time>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></p><div className={styles.chatBubble}>{formatChatMessageLinks(message.body)}{message.attachments?.map((attachment) => <StoredChatAttachment key={attachment.id} api={api} attachment={attachment} />)}</div></div></article>;
             })}
             {chatMessages.map((message) => {
               const name = message.from?.name || message.from?.identity || strings.meetSomeone;
