@@ -37,8 +37,17 @@
 /* In-call composition: one dark canvas, one stage, one optional chat rail.
    These dimensions deliberately mirror the approved desktop mockup. */
 .room:not(.prejoinRoom) { background: #031827; }
+.room:not(.prejoinRoom)::before {
+  content: "";
+  position: fixed;
+  inset: 0.75rem;
+  z-index: 0;
+  border: 1px solid #183247;
+  border-radius: 1.75rem;
+  pointer-events: none;
+}
 .room:not(.prejoinRoom) .livekit {
-  margin: 5.75rem 1.5rem 7rem;
+  margin: 5.75rem 1.65rem 7.25rem;
   border: 0;
   border-radius: 1.5rem;
   box-shadow: none;
@@ -67,7 +76,15 @@
   background: color-mix(in srgb, #071b2c 92%, transparent);
 }
 .room:not(.prejoinRoom) .livekit :global(.lk-grid-layout-wrapper),
-.room:not(.prejoinRoom) .livekit :global(.lk-focus-layout-wrapper) { padding: 0; }
+.room:not(.prejoinRoom) .livekit :global(.lk-focus-layout-wrapper) {
+  width: 100%;
+  padding: 0;
+}
+.room:not(.prejoinRoom) .livekit :global(.lk-video-conference),
+.room:not(.prejoinRoom) .livekit :global(.lk-video-conference-inner) {
+  width: 100%;
+  min-width: 0;
+}
 .room:not(.prejoinRoom) .livekit :global(.lk-participant-tile) {
   border: 1px solid #203649;
   border-radius: 1.5rem;
@@ -422,7 +439,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: min(26ch, calc(min(var(--overlay-width-lg), 34vw) - var(--space-8)));
+  width: min(16rem, calc(100% - 3rem));
+  padding: 1.4rem;
+  border: 1px solid #203649;
+  border-radius: 1.25rem;
+  background: linear-gradient(145deg, rgb(10 32 50 / 96%), rgb(7 27 44 / 96%));
   transform: translate(50%, -50%);
   color: var(--text-on-rail-muted);
   text-align: center;

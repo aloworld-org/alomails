@@ -50,7 +50,10 @@ function useMeetingDuration(startedAt: string | null): string {
 
 function MeetingHeader({ grant }: { grant: JoinGrant }) {
   const duration = useMeetingDuration(grant.meeting.startedAt);
-  const title = grant.meeting.title.trim() === "" ? strings.meetUntitled : grant.meeting.title;
+  const rawTitle = grant.meeting.title.trim();
+  const title = rawTitle === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawTitle)
+    ? strings.meetUntitled
+    : rawTitle;
   return (
     <div className={styles.roomHeader}>
       <span className={styles.roomBrand}><Video aria-hidden="true" /></span>
