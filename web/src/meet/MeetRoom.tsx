@@ -17,11 +17,12 @@ import {
   VideoConference,
   formatChatMessageLinks,
   useChat,
+  useConnectionState,
   useDataChannel,
   useLocalParticipant,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
-import { ArrowLeft, Copy, Hand, MonitorUp, PhoneOff, RefreshCw, ServerOff, Share2, ShieldCheck, Smile, Video } from "lucide-react";
+import { Activity, ArrowLeft, Copy, Hand, Maximize2, MonitorUp, PhoneOff, RefreshCw, ServerOff, Share2, ShieldCheck, Smile, Video } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
 import { useAuth } from "../auth/AuthProvider";
@@ -88,6 +89,25 @@ function ChatWelcome() {
       <p>{strings.meetChatEmptyBody}</p>
     </div>
   );
+}
+
+function MeetingStatus() {
+  const state = useConnectionState();
+  return <div className={styles.statusStrip} role="status"><span className={state === "connected" ? styles.statusGood : styles.statusWaiting} /><Activity aria-hidden="true" /><strong>{state === "connected" ? strings.meetGoodConnection : strings.meetConnectingStatus}</strong></div>;
+}
+
+function FullscreenAction() {
+  const [full, setFull] = useState(document.fullscreenElement !== null);
+  useEffect(() => {
+    const changed = () => setFull(document.fullscreenElement !== null);
+    document.addEventListener("fullscreenchange", changed);
+    return () => document.removeEventListener("fullscreenchange", changed);
+  }, []);
+  const toggle = async () => {
+    if (document.fullscreenElement !== null) await document.exitFullscreen();
+    else await document.documentElement.requestFullscreen();
+  };
+  return <button type="button" className={styles.fullscreen} onClick={() => void toggle()} aria-label={full ? strings.meetExitFullscreen : strings.meetEnterFullscreen} title={full ? strings.meetExitFullscreen : strings.meetEnterFullscreen}><Maximize2 aria-hidden="true" /></button>;
 }
 
 type MeetSignal =
@@ -358,6 +378,8 @@ export function MeetRoom({
         <VideoConference chatMessageFormatter={formatChatMessageLinks} />
         <PresentingNotice />
         <ChatWelcome />
+        <FullscreenAction />
+        <MeetingStatus />
         <MeetingActions meetingId={meetingId} onLeave={onLeft} />
       </LiveKitRoom>
     </div>

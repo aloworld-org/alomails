@@ -34,6 +34,119 @@
   --lk-font-family: var(--font-ui);
 }
 
+/* In-call composition: one dark canvas, one stage, one optional chat rail.
+   These dimensions deliberately mirror the approved desktop mockup. */
+.room:not(.prejoinRoom) { background: #031827; }
+.room:not(.prejoinRoom) .livekit {
+  margin: 5.75rem 1.5rem 7rem;
+  border: 0;
+  border-radius: 1.5rem;
+  box-shadow: none;
+  background: transparent;
+}
+.room:not(.prejoinRoom) .inCallBack {
+  top: 1.25rem;
+  left: 1.5rem;
+  min-height: 3.25rem;
+  padding-inline: 1.25rem;
+  border: 1px solid #203649;
+  border-radius: 999px;
+  background: #071b2c;
+}
+.room:not(.prejoinRoom) .inCallSafety {
+  top: 1.25rem;
+  min-height: 3.25rem;
+  border-color: #203649;
+  background: #071b2c;
+}
+.room:not(.prejoinRoom) .roomHeader {
+  top: 7rem;
+  left: 2.75rem;
+  border-color: #31485a;
+  border-radius: 1rem;
+  background: color-mix(in srgb, #071b2c 92%, transparent);
+}
+.room:not(.prejoinRoom) .livekit :global(.lk-grid-layout-wrapper),
+.room:not(.prejoinRoom) .livekit :global(.lk-focus-layout-wrapper) { padding: 0; }
+.room:not(.prejoinRoom) .livekit :global(.lk-participant-tile) {
+  border: 1px solid #203649;
+  border-radius: 1.5rem;
+  box-shadow: none;
+}
+.room:not(.prejoinRoom) .livekit :global(.lk-control-bar) {
+  bottom: 4.75rem;
+  left: 1.75rem;
+  min-height: 4.75rem;
+  gap: 0;
+  padding: 0.375rem;
+  border-color: #203649;
+  border-radius: 1.25rem;
+  background: #071b2c;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 22%);
+}
+.room:not(.prejoinRoom) .livekit :global(.lk-control-bar .lk-button),
+.room:not(.prejoinRoom) .livekit :global(.lk-control-bar .lk-chat-toggle) {
+  min-height: 4rem;
+  padding-inline: 1.4rem;
+  border-radius: 0.9rem;
+}
+.room:not(.prejoinRoom) .livekit :global(.lk-chat) {
+  position: fixed;
+  top: 5.75rem;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  width: 26rem;
+  height: auto;
+  border: 1px solid #203649;
+  border-radius: 1.5rem;
+  background: linear-gradient(180deg, #0a2032, #071b2c);
+  box-shadow: none;
+}
+.room:not(.prejoinRoom) .livekit:has(:global(.lk-chat)) :global(.lk-video-conference) { padding-right: 27.5rem; }
+.room:not(.prejoinRoom) .livekit :global(.lk-chat-header) { min-height: 4.5rem; border-color: #203649; background: transparent; font-size: 1.15rem; }
+.room:not(.prejoinRoom) .livekit :global(.lk-chat-messages) { padding: 1.25rem; }
+.room:not(.prejoinRoom) .livekit :global(.lk-chat-form) { padding: 1rem; border-color: #203649; background: transparent; }
+.room:not(.prejoinRoom) .livekit :global(.lk-chat-form-input) { min-height: 3.25rem; border-color: #31485a; border-radius: 0.9rem; background: #0b2234; }
+
+.fullscreen {
+  position: fixed;
+  top: 7rem;
+  right: 2.75rem;
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 1px solid #31485a;
+  border-radius: 1rem;
+  background: color-mix(in srgb, #071b2c 84%, transparent);
+  color: var(--text-on-rail);
+  cursor: pointer;
+}
+.fullscreen svg { width: 1.4rem; height: 1.4rem; }
+.statusStrip {
+  position: fixed;
+  left: 1.75rem;
+  right: 1.75rem;
+  bottom: 1rem;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3rem;
+  padding: 0 1.25rem;
+  border: 1px solid #203649;
+  border-radius: 999px;
+  background: #071b2c;
+  color: var(--text-on-rail-muted);
+  font-size: 0.8rem;
+}
+.statusStrip svg { width: 1rem; height: 1rem; }
+.statusGood, .statusWaiting { width: 0.55rem; height: 0.55rem; border-radius: 999px; }
+.statusGood { background: var(--success); box-shadow: 0 0 0 0.3rem color-mix(in srgb, var(--success) 16%, transparent); }
+.statusWaiting { background: var(--warning); }
+
 .roomHeader {
   position: fixed;
   top: calc(var(--space-16) + var(--space-8));
@@ -671,6 +784,24 @@
 .reactionBurst { position: absolute; z-index: 15; left: 50%; bottom: 120px; animation: reaction-rise 2.8s ease-out forwards; display: grid; justify-items: center; pointer-events: none; }
 .reactionBurst span { font-size: 64px; }
 .reactionBurst small { color: var(--text-on-rail); font-weight: var(--weight-bold); }
+
+.room:not(.prejoinRoom) .meetingActions {
+  right: 1.75rem;
+  bottom: 4.75rem;
+  min-height: 4.75rem;
+  align-items: center;
+  gap: 0;
+  padding: 0.375rem;
+  border-color: #203649;
+  border-radius: 1.25rem;
+  background: #071b2c;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 22%);
+}
+.room:not(.prejoinRoom) .meetingActions button { min-height: 4rem; padding-inline: 1.25rem; border-radius: 0.9rem; }
+.room:not(.prejoinRoom) .meetingActions .leaveAction { margin-left: 0.35rem; padding-inline: 1.6rem; border-radius: 0.9rem; background: linear-gradient(135deg, #ff725e, #f15343); }
+.room:not(.prejoinRoom):has(:global(.lk-chat)) .meetingActions { right: 28.75rem; }
+.room:not(.prejoinRoom):has(:global(.lk-chat)) .fullscreen { right: 29.25rem; }
+.room:not(.prejoinRoom):has(:global(.lk-chat)) .statusStrip { right: 28.75rem; }
 @keyframes reaction-rise { from { opacity: 0; transform: translate(-50%, 30px) scale(.7); } 15%, 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -160px) scale(1.15); } }
 @media (max-width: 70rem) { .livekit :global(.lk-control-bar) { left: 50%; transform: translateX(-50%); }.meetingActions { bottom: calc(var(--space-16) + var(--space-5)); } }
 @media (max-width: 48rem) { .livekit { margin: var(--space-16) var(--space-2) calc(var(--space-16) + var(--space-8)); }.inCallSafety { display: none; }.roomHeader { top: calc(var(--space-16) + var(--space-3)); left: var(--space-4); }.meetingActions { bottom: calc(var(--space-16) + var(--space-8)); left: 50%; right: auto; max-width: calc(100% - var(--space-4)); overflow-x: auto; transform: translateX(-50%); } .meetingActions button { padding: 0 var(--space-2); } .raisedHands { top: var(--space-16); } .chatWelcome { right: 50%; width: min(28ch, calc(100% - var(--space-8))); } }
