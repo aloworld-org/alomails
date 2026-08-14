@@ -25,9 +25,10 @@ type Props = {
   onReplyHere: (message: Message) => void;
   onReplyPrivate: (message: Message) => void;
   onDescription: () => void;
+  onJoinMeeting: (id: string) => void;
 };
 
-export function MessageFeed({ room, messages, feedRef, moreBehind, loadingOlder, readUpTo, palette, me, onOlder, onReact, onOpenFile, onDecide, onEdit, onWithdraw, onReplyHere, onReplyPrivate, onDescription }: Props) {
+export function MessageFeed({ room, messages, feedRef, moreBehind, loadingOlder, readUpTo, palette, me, onOlder, onReact, onOpenFile, onDecide, onEdit, onWithdraw, onReplyHere, onReplyPrivate, onDescription, onJoinMeeting }: Props) {
   return <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface px-8 pb-8" ref={feedRef}>
     {!moreBehind && messages !== null && <div className="mx-auto my-10 flex w-full max-w-6xl items-center gap-6 rounded-2xl border border-subtle bg-surface p-8">
       {room.kind === "channel" && <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg--tint text-accent"><Hash size={36} /></span>}
@@ -41,7 +42,7 @@ export function MessageFeed({ room, messages, feedRef, moreBehind, loadingOlder,
     {messages === null ? <p className="m-auto flex items-center gap-2 text-sm text-tertiary"><Loader2 className="animate-spin" size={14} /> {strings.chatLoading}</p> : messages.length === 0 ? <p className="m-auto text-sm text-tertiary">{strings.chatNoMessagesYet}</p> : messages.map((message, index) => <Fragment key={message.id}>
       {readUpTo !== null && message.seq > readUpTo && (messages[index - 1]?.seq ?? 0) <= readUpTo && index > 0 && <div className="my-4 flex items-center gap-3 text-accent before:h-px before:flex-1 before:bg-accent after:h-px after:flex-1 after:bg-accent"><span className="text-xs font-semibold uppercase tracking-wide">{strings.chatNewMessages}</span></div>}
       {(index === 0 || dayOf(message.createdAt) !== dayOf(messages[index - 1]!.createdAt)) && <div className="my-4 flex items-center gap-3 before:h-px before:flex-1 before:bg-subtle after:h-px after:flex-1 after:bg-subtle"><span className="rounded-full border border-subtle bg-surface px-3 py-1 text-xs font-semibold text-tertiary">{dayOf(message.createdAt)}</span></div>}
-      <MessageLine message={message} grouped={continues(message, messages[index - 1])} palette={room.archivedAt === null ? palette : []} me={me} onReact={(emoji) => onReact(message, emoji)} onOpenFile={onOpenFile} onDecide={onDecide} onEdit={onEdit} onWithdraw={onWithdraw} onReplyHere={room.archivedAt === null ? onReplyHere : undefined} onReplyPrivate={room.kind !== "dm" && message.authorKind === "user" && message.author !== me ? onReplyPrivate : undefined} />
+      <MessageLine message={message} grouped={continues(message, messages[index - 1])} palette={room.archivedAt === null ? palette : []} me={me} onReact={(emoji) => onReact(message, emoji)} onOpenFile={onOpenFile} onDecide={onDecide} onEdit={onEdit} onWithdraw={onWithdraw} onReplyHere={room.archivedAt === null ? onReplyHere : undefined} onReplyPrivate={room.kind !== "dm" && message.authorKind === "user" && message.author !== me ? onReplyPrivate : undefined} onJoinMeeting={onJoinMeeting} />
     </Fragment>)}
   </div>;
 }

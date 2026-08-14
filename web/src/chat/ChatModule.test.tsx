@@ -75,6 +75,10 @@ vi.mock("../jmap/useJmapClient", () => ({
   }),
 }));
 
+vi.mock("../meet/MeetRoom", () => ({
+  MeetRoom: ({ meetingId }: { meetingId: string }) => <div data-testid="open-meeting">{meetingId}</div>,
+}));
+
 const ROOM: ChannelSummary = {
   counterpart: null,
   id: "room-1",
@@ -135,6 +139,15 @@ beforeEach(() => {
   fakeFetch.mockClear();
 });
 afterEach(cleanup);
+
+test("a meeting announcement opens that meeting's pre-join screen", async () => {
+  withMessages([message({ body: "__meeting__:meeting-42" })]);
+  mount();
+
+  fireEvent.click(await screen.findByRole("button", { name: strings.meetJoin }));
+
+  expect((await screen.findByTestId("open-meeting")).textContent).toBe("meeting-42");
+});
 
 test("a DM is named for the other participant everywhere", async () => {
   const dm: ChannelSummary = {
