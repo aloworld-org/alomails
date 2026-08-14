@@ -281,6 +281,10 @@ pub fn app_with_site_boundaries(
             "/meet/{id}/messages/{message}/attachments/{attachment}",
             get(meet_routes::download_attachment),
         )
+        .route(
+            "/meet/{id}/messages/{message}/reactions",
+            post(meet_routes::react),
+        )
         .route("/meet/channels/{id}", get(meet_routes::in_channel))
         .route("/meet/events/{id}", get(meet_routes::for_event))
         .route(

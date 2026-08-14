@@ -154,7 +154,20 @@ function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => 
   };
   useEffect(() => {
     let current = true;
-    void api.messages(meetingId).then((messages) => { if (current) setHistory(messages); });
+    void api.messages(meetingId).then((messages) => {
+      if (!current) return;
+      setHistory(messages);
+      setReactions((existing) => {
+        const next = { ...existing };
+        for (const message of messages) {
+          for (const reaction of message.reactions ?? []) {
+            const byEmoji = next[message.id] ?? {};
+            next[message.id] = { ...byEmoji, [reaction.emoji]: Array.from(new Set([...(byEmoji[reaction.emoji] ?? []), reaction.actor])) };
+          }
+        }
+        return next;
+      });
+    });
     return () => { current = false; };
   }, [api, meetingId]);
   const submit = async (text = draft) => {
@@ -184,10 +197,16 @@ function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => 
       if (fileInput.current !== null) fileInput.current.value = "";
     } catch { setSendError(true); }
   };
-  const react = async (messageId: string, emoji: string) => {
+  const react = async (messageId: string, emoji: string, persistedId = messageId) => {
     const actor = localParticipant.name || localParticipant.identity;
-    setReactions((current) => ({ ...current, [messageId]: { ...(current[messageId] ?? {}), [emoji]: Array.from(new Set([...(current[messageId]?.[emoji] ?? []), actor])) } }));
-    await sendAction(encoder.encode(JSON.stringify({ kind: "chat-reaction", messageId, emoji, actor } satisfies ChatReactionSignal)), { reliable: true });
+    try {
+      await api.react(meetingId, persistedId, emoji);
+      setReactions((current) => {
+        const keys = Array.from(new Set([messageId, persistedId]));
+        return keys.reduce((next, key) => ({ ...next, [key]: { ...(next[key] ?? {}), [emoji]: Array.from(new Set([...(next[key]?.[emoji] ?? []), actor])) } }), current);
+      });
+      await sendAction(encoder.encode(JSON.stringify({ kind: "chat-reaction", messageId, emoji, actor } satisfies ChatReactionSignal)), { reliable: true });
+    } catch { setSendError(true); }
   };
   const recipientName = participants.find((person) => person.identity === recipient)?.name || recipient;
   return (
@@ -205,7 +224,7 @@ function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => 
               const person = participants.find((participant) => participant.identity === message.sender);
               const name = person?.name || person?.identity || strings.meetSomeone;
               const mine = message.sender === localParticipant.identity;
-              return <article key={message.id} className={mine ? styles.chatMine : undefined}><span className={styles.chatAvatar}>{name.slice(0, 1).toUpperCase()}</span><div className={styles.chatMessageBody}><p><strong>{name}{mine ? ` (${strings.meetYou})` : ""}</strong>{message.recipient !== null && <span className={styles.privateBadge}><Lock />{strings.meetPrivate}</span>}<time>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></p><div className={styles.chatBubble}>{formatChatMessageLinks(message.body)}{message.attachments?.map((attachment) => <StoredChatAttachment key={attachment.id} api={api} attachment={attachment} />)}</div></div></article>;
+              return <article key={message.id} className={mine ? styles.chatMine : undefined}><span className={styles.chatAvatar}>{name.slice(0, 1).toUpperCase()}</span><div className={styles.chatMessageBody}><p><strong>{name}{mine ? ` (${strings.meetYou})` : ""}</strong>{message.recipient !== null && <span className={styles.privateBadge}><Lock />{strings.meetPrivate}</span>}<time>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></p><div className={styles.chatBubble}>{formatChatMessageLinks(message.body)}{message.attachments?.map((attachment) => <StoredChatAttachment key={attachment.id} api={api} attachment={attachment} />)}</div><div className={styles.messageActions}>{["👍", "❤️", "😂", "🎉"].map((emoji) => <button type="button" key={emoji} onClick={() => void react(message.id, emoji)} aria-label={`${strings.meetReact} ${emoji}`}>{emoji}</button>)}{!mine && <button type="button" onClick={() => { setRecipient(message.sender); setTab("messages"); }}><Lock />{strings.meetReplyPrivately}</button>}</div>{Object.entries(reactions[message.id] ?? {}).length > 0 && <div className={styles.messageReactions}>{Object.entries(reactions[message.id] ?? {}).map(([emoji, actors]) => <span key={emoji} title={actors.join(", ")}>{emoji} {actors.length}</span>)}</div>}</div></article>;
             })}
             {chatMessages.map((message) => {
               const name = message.from?.name || message.from?.identity || strings.meetSomeone;
@@ -213,7 +232,7 @@ function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => 
               return <article key={message.id} className={message.from?.isLocal ? styles.chatMine : undefined}>
                 <span className={styles.chatAvatar}>{name.slice(0, 1).toUpperCase()}</span>
                 <div className={styles.chatMessageBody}><p><strong>{name}{message.from?.isLocal ? ` (${strings.meetYou})` : ""}</strong>{privateMessage && <span className={styles.privateBadge}><Lock />{strings.meetPrivate}</span>}<time>{new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></p><div className={styles.chatBubble}>{formatChatMessageLinks(message.message)}{message.attachedFiles?.map((file) => <ChatAttachment key={`${message.id}-${file.name}`} file={file} />)}</div>
-                  <div className={styles.messageActions}>{["👍", "❤️", "😂", "🎉"].map((emoji) => <button type="button" key={emoji} onClick={() => void react(message.id, emoji)} aria-label={`${strings.meetReact} ${emoji}`}>{emoji}</button>)}{!message.from?.isLocal && <button type="button" onClick={() => { setRecipient(message.from?.identity ?? null); setTab("messages"); }}><Lock />{strings.meetReplyPrivately}</button>}</div>
+                  <div className={styles.messageActions}>{["👍", "❤️", "😂", "🎉"].map((emoji) => <button type="button" key={emoji} onClick={() => void react(message.id, emoji, message.attributes?.["alo.persistedId"])} aria-label={`${strings.meetReact} ${emoji}`}>{emoji}</button>)}{!message.from?.isLocal && <button type="button" onClick={() => { setRecipient(message.from?.identity ?? null); setTab("messages"); }}><Lock />{strings.meetReplyPrivately}</button>}</div>
                   {Object.entries(reactions[message.id] ?? {}).length > 0 && <div className={styles.messageReactions}>{Object.entries(reactions[message.id] ?? {}).map(([emoji, actors]) => <span key={emoji} title={actors.join(", ")}>{emoji} {actors.length}</span>)}</div>}
                 </div>
               </article>;

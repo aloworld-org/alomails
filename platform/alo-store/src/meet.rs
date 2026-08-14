@@ -74,6 +74,13 @@ pub struct MeetingMessageAttachment {
     pub data: Option<Vec<u8>>,
 }
 
+#[derive(Debug, Clone)]
+pub struct MeetingMessageReaction {
+    pub message_id: String,
+    pub user: UserId,
+    pub emoji: String,
+}
+
 /// What a meeting is attached to when it is made.
 #[derive(Debug, Clone, Default)]
 pub struct NewMeeting {
@@ -290,6 +297,46 @@ impl AccountStore {
             data: Some(r.5),
         })
         .ok_or(StoreError::NotFound)
+    }
+
+    /// Add a reaction to a message visible to the caller. Repeating it is idempotent.
+    pub async fn react_to_meeting_message(
+        &self,
+        meeting_id: &MeetingId,
+        message_id: &str,
+        emoji: &str,
+    ) -> Result<()> {
+        self.meeting(meeting_id).await?;
+        if emoji.is_empty() || emoji.chars().count() > 8 {
+            return Err(StoreError::Validation(
+                "a short emoji reaction is required".to_owned(),
+            ));
+        }
+        let visible: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM meeting_messages WHERE tenant_id=$1 AND meeting_id=$2 AND id=$3 AND (recipient_id IS NULL OR recipient_id=$4 OR sender_id=$4))")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(message_id).bind(self.user.as_str()).fetch_one(&self.pool).await.map_err(StoreError::Db)?;
+        if !visible {
+            return Err(StoreError::NotFound);
+        }
+        sqlx::query("INSERT INTO meeting_message_reactions (tenant_id,meeting_id,message_id,user_id,emoji) VALUES ($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(message_id).bind(self.user.as_str()).bind(emoji).execute(&self.pool).await.map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    pub async fn meeting_message_reactions(
+        &self,
+        meeting_id: &MeetingId,
+    ) -> Result<Vec<MeetingMessageReaction>> {
+        self.meeting(meeting_id).await?;
+        let rows: Vec<(String,String,String)> = sqlx::query_as("SELECT r.message_id,r.user_id,r.emoji FROM meeting_message_reactions r JOIN meeting_messages m ON m.tenant_id=r.tenant_id AND m.meeting_id=r.meeting_id AND m.id=r.message_id WHERE r.tenant_id=$1 AND r.meeting_id=$2 AND (m.recipient_id IS NULL OR m.recipient_id=$3 OR m.sender_id=$3) ORDER BY r.created_at")
+            .bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(self.user.as_str()).fetch_all(&self.pool).await.map_err(StoreError::Db)?;
+        Ok(rows
+            .into_iter()
+            .map(|r| MeetingMessageReaction {
+                message_id: r.0,
+                user: UserId::new(r.1),
+                emoji: r.2,
+            })
+            .collect())
     }
 
     /// Start a meeting.

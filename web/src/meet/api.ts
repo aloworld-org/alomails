@@ -36,9 +36,11 @@ export interface MeetingMessage {
   body: string;
   createdAt: string;
   attachments: MeetingAttachment[];
+  reactions: MeetingReaction[];
 }
 
 export interface MeetingAttachment { id: string; name: string; contentType: string; size: number; url: string; }
+export interface MeetingReaction { emoji: string; actor: string; }
 
 /** Raised when meetings are not configured on this deployment. */
 export class MeetUnavailable extends Error {}
@@ -114,6 +116,14 @@ export class MeetApi {
     });
     if (!res.ok) throw new MeetApiError(res.status, "post meeting message");
     return (await res.json()) as MeetingMessage;
+  }
+
+  async react(meeting: string, message: string, emoji: string): Promise<void> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/messages/${encodeURIComponent(message)}/reactions`, {
+      method: "POST",
+      body: JSON.stringify({ emoji }),
+    });
+    if (!res.ok) throw new MeetApiError(res.status, "react to meeting message");
   }
 
   async uploadAttachment(meeting: string, message: string, file: File): Promise<MeetingAttachment> {

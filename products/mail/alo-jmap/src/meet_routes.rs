@@ -290,6 +290,7 @@ fn attachment_json(meeting_id: &str, attachment: &alo_store::MeetingMessageAttac
 fn message_json(
     message: &alo_store::MeetingMessage,
     attachments: &[alo_store::MeetingMessageAttachment],
+    reactions: &[alo_store::MeetingMessageReaction],
     meeting_id: &str,
 ) -> Value {
     json!({
@@ -299,6 +300,7 @@ fn message_json(
         "body": message.body,
         "createdAt": iso(message.created_at),
         "attachments": attachments.iter().filter(|a| a.message_id == message.id).map(|a| attachment_json(meeting_id, a)).collect::<Vec<_>>(),
+        "reactions": reactions.iter().filter(|r| r.message_id == message.id).map(|r| json!({"emoji":r.emoji,"actor":r.user.as_str()})).collect::<Vec<_>>(),
     })
 }
 
@@ -320,8 +322,13 @@ pub async fn messages(
         .meeting_message_attachments(&meeting_id)
         .await
         .map_err(map_store_err)?;
+    let reactions = account
+        .acc
+        .meeting_message_reactions(&meeting_id)
+        .await
+        .map_err(map_store_err)?;
     Ok(Json(
-        json!({ "messages": messages.iter().map(|m| message_json(m, &attachments, meeting_id.as_str())).collect::<Vec<_>>() }),
+        json!({ "messages": messages.iter().map(|m| message_json(m, &attachments, &reactions, meeting_id.as_str())).collect::<Vec<_>>() }),
     ))
 }
 
@@ -347,7 +354,27 @@ pub async fn post_message(
         .post_meeting_message(&meeting_id, &body.body, recipient.as_ref())
         .await
         .map_err(map_store_err)?;
-    Ok(Json(message_json(&message, &[], meeting_id.as_str())))
+    Ok(Json(message_json(&message, &[], &[], meeting_id.as_str())))
+}
+
+#[derive(Deserialize)]
+pub struct PostReaction {
+    emoji: String,
+}
+
+pub async fn react(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path((meeting, message)): Path<(String, String)>,
+    Json(body): Json<PostReaction>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    account
+        .acc
+        .react_to_meeting_message(&MeetingId::new(meeting), &message, &body.emoji)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({"ok":true})))
 }
 
 #[derive(Deserialize)]
