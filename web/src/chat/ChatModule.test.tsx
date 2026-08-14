@@ -150,6 +150,29 @@ test("a meeting announcement opens that meeting's pre-join screen", async () => 
   expect((await screen.findByTestId("open-meeting")).textContent).toBe("meeting-42");
 });
 
+test("a meeting announcement has a human-readable sidebar preview", async () => {
+  const dm: ChannelSummary = {
+    ...ROOM,
+    id: "dm-meeting",
+    kind: "dm",
+    name: null,
+    counterpart: "claude@alo.test",
+    visibility: "private",
+    lastBody: "__meeting__:meeting-42",
+  };
+  answers = [
+    { match: "/turns", body: { turns: [] } },
+    { match: "/chat/reactions", body: { emoji: [] } },
+    { match: "/messages", body: { messages: [] } },
+    { match: "/chat/channels", body: { channels: [dm] } },
+  ];
+
+  mount();
+
+  expect(await screen.findByText(strings.chatMeetingPreview)).toBeTruthy();
+  expect(screen.queryByText("__meeting__:meeting-42")).toBeNull();
+});
+
 test("a DM is named for the other participant everywhere", async () => {
   const dm: ChannelSummary = {
     ...ROOM,

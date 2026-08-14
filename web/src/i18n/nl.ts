@@ -4883,6 +4883,7 @@ export const nl: Partial<Catalog> = {
   meetRetry: "Opnieuw proberen",
   meetBack: "Terug naar Meet",
   meetStartedHere: "is een vergadering gestart in dit gesprek",
+  chatMeetingPreview: "Heeft een vergadering gestart",
   meetJoin: "Deelnemen aan de vergadering",
   meetLive: "Vergadering bezig",
   meetJoinNow: "Nu deelnemen",

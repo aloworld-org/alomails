@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Archive, ChevronDown, ChevronRight, Hash, Loader2, Lock, MoreHorizontal, Pencil, Search, SlidersHorizontal, Users, X } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Hash, Loader2, Lock, MoreHorizontal, Pencil, Search, SlidersHorizontal, Users, Video, X } from "lucide-react";
 
 import { Avatar, IconButton } from "../ds";
 import { strings } from "../i18n";
@@ -133,6 +133,7 @@ function RoomRow({ room, open, menuOpen, onOpen, onMenu, onRename, onArchive }: 
   const roomIconClass = open ? "shrink-0 text-accent" : iconClass;
   const label = room.kind === "dm" ? directMessageName(room) : channelLabel(room);
   const at = sidebarTime(room.lastAt);
+  const meetingPreview = room.lastBody?.startsWith("__meeting__:") === true;
   const rowStyle = {
     ...(open ? { background: "linear-gradient(90deg, #FFF1EC 0%, #FCE9E3 100%)", borderColor: "transparent" } : {}),
     paddingLeft: room.kind === "channel" ? "1.5rem" : "1rem",
@@ -148,7 +149,10 @@ function RoomRow({ room, open, menuOpen, onOpen, onMenu, onRename, onArchive }: 
             <span className="grid min-w-0 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-0.5">
               <span className="truncate text-base font-semibold leading-5">{label}</span>
               {at !== null && <span className="text-xs font-normal text-tertiary">{at}</span>}
-              <span className="col-span-2 truncate text-sm font-normal leading-5 text-tertiary">{room.lastBody ?? room.counterpart}</span>
+              <span className="col-span-2 flex min-w-0 items-center gap-1.5 text-sm font-normal leading-5 text-tertiary">
+                {meetingPreview && <Video size={13} className="shrink-0 text-accent" aria-hidden="true" />}
+                <span className="truncate">{meetingPreview ? strings.chatMeetingPreview : room.lastBody ?? room.counterpart}</span>
+              </span>
             </span>
           ) : <span className="block truncate">{label}</span>}
         </span>

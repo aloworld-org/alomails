@@ -1828,6 +1828,7 @@ export const en = {
   meetAddToEvent: "Add a meeting",
   meetStart: "Start a meeting",
   meetStartedHere: "started a meeting in this conversation",
+  chatMeetingPreview: "Started a meeting",
   meetJoin: "Join the meeting",
   meetLive: "Meeting in progress",
   meetJoinNow: "Join now",

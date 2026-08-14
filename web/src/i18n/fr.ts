@@ -4944,6 +4944,7 @@ export const fr: Partial<Catalog> = {
   meetRetry: "Réessayer",
   meetBack: "Retour à Meet",
   meetStartedHere: "a démarré une réunion dans cette conversation",
+  chatMeetingPreview: "A démarré une réunion",
   meetJoin: "Rejoindre la réunion",
   meetLive: "Réunion en cours",
   meetJoinNow: "Rejoindre maintenant",
