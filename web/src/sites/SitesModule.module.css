@@ -181,11 +181,33 @@
 }
 
 /* ---- the table ---- */
+/* The flexing variant is for viewport-column screens (the site list), where
+   the wrap fills the leftover height and scrolls inside itself under the
+   sticky header. */
 .tableWrap {
   flex: 1;
   min-height: 0;
   overflow: auto;
   padding: 0 var(--space-6) var(--space-6);
+}
+/* The static variant is for tables inside a body that scrolls as a whole
+   (site screen, funnel). A shrinkable flex item there collapses to its
+   padding once the content above outgrows a phone screen, leaving the table
+   trapped inside a sliver of nested scroll. */
+.tableWrapStatic {
+  flex-shrink: 0;
+  overflow-x: auto;
+  padding: 0 var(--space-6) var(--space-6);
+}
+/* The scrolling body of a panel-stack screen: the header stays put and the
+   panels below it scroll as one document (the pattern analyticsContent
+   established). */
+.pageBody {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 .table {
   width: 100%;
@@ -1081,6 +1103,9 @@
   margin-left: auto;
   display: flex;
   gap: var(--space-2);
+  /* Four buttons wide; on a phone the row must fold rather than push
+     "Publish changes" past the screen edge. */
+  flex-wrap: wrap;
 }
 .publishError {
   font-size: var(--text-sm);

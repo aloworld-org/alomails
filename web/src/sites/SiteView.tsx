@@ -277,6 +277,10 @@ export function SiteView() {
         {loading && <Spinner size={16} />}
       </header>
 
+      {/* Everything below the header scrolls as one document: this screen is
+          a stack of panels, not a viewport column, and on a phone the pages
+          table lives below the fold. */}
+      <div className={styles.pageBody}>
       {error !== null && <ErrorBanner message={error} />}
 
       {site !== null && (
@@ -678,7 +682,7 @@ export function SiteView() {
               onCta={() => setCreating(true)}
             />
           ) : (
-            <div className={styles.tableWrap}>
+            <div className={styles.tableWrapStatic}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -715,6 +719,7 @@ export function SiteView() {
           )}
         </>
       )}
+      </div>
 
       {theming && site !== null && (
         <ThemeDialog

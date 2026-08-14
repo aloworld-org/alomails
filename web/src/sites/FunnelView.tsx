@@ -249,7 +249,7 @@ export function FunnelView() {
                 {strings.sitesSubmissions}
               </Link>
             </div>
-            <div className={styles.tableWrap}>
+            <div className={styles.tableWrapStatic}>
               <table className={styles.table}>
                 <thead>
                   <tr>
