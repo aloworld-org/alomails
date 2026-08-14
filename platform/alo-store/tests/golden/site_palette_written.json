@@ -1,0 +1,206 @@
+[
+  {
+    "kind": "nav",
+    "ready": true,
+    "section": {
+      "cta": {
+        "href": "/visit",
+        "label": "Order beans"
+      },
+      "links": [
+        {
+          "href": "/",
+          "label": "Home"
+        },
+        {
+          "href": "/visit",
+          "label": "Visit us"
+        }
+      ],
+      "type": "nav"
+    }
+  },
+  {
+    "kind": "hero",
+    "ready": true,
+    "section": {
+      "heading": "Nordwind Coffee Roasters",
+      "image": {
+        "alt": "Roasting drum mid-batch",
+        "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg"
+      },
+      "primary_cta": {
+        "href": "/visit",
+        "label": "Visit us"
+      },
+      "subheading": "Small-batch roastery on the harbour",
+      "type": "hero"
+    }
+  },
+  {
+    "kind": "features",
+    "ready": true,
+    "section": {
+      "heading": "Why Nordwind",
+      "items": [
+        {
+          "body": "Your batch goes in the drum after you order.",
+          "icon": "flame",
+          "title": "Roasted to order"
+        }
+      ],
+      "type": "features"
+    }
+  },
+  {
+    "kind": "text_image",
+    "ready": true,
+    "section": {
+      "body": "Small-batch roastery on the harbour",
+      "image": {
+        "alt": "Roasting drum mid-batch",
+        "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg"
+      },
+      "image_side": "left",
+      "type": "text_image"
+    }
+  },
+  {
+    "kind": "gallery",
+    "ready": true,
+    "section": {
+      "images": [
+        {
+          "alt": "Roasting drum mid-batch",
+          "blob_id": "9hK3vQ2mR8pT1xWz4bC5dg"
+        },
+        {
+          "alt": "The counter at opening time",
+          "blob_id": "4tR7yU1iO3pA5sD8fGhJkl"
+        },
+        {
+          "alt": "Jonas at the roaster",
+          "blob_id": "2wQ8xL4nV6yB0aC7dE9fgh"
+        }
+      ],
+      "type": "gallery"
+    }
+  },
+  {
+    "kind": "testimonials",
+    "ready": true,
+    "section": {
+      "heading": "What the neighbourhood says",
+      "items": [
+        {
+          "author": "Ines Kortekaas",
+          "quote": "The only beans I buy.",
+          "role": "Regular since 2019"
+        }
+      ],
+      "type": "testimonials"
+    }
+  },
+  {
+    "kind": "pricing",
+    "needs": "writing",
+    "ready": false
+  },
+  {
+    "kind": "team",
+    "ready": true,
+    "section": {
+      "heading": "Behind the drum",
+      "members": [
+        {
+          "name": "Jonas Weber",
+          "photo": {
+            "alt": "Jonas at the roaster",
+            "blob_id": "2wQ8xL4nV6yB0aC7dE9fgh"
+          },
+          "role": "Roaster"
+        }
+      ],
+      "type": "team"
+    }
+  },
+  {
+    "kind": "faq",
+    "ready": true,
+    "section": {
+      "items": [
+        {
+          "answer": "Anywhere in the EU, in two days.",
+          "question": "Do you ship abroad?"
+        }
+      ],
+      "type": "faq"
+    }
+  },
+  {
+    "kind": "cta",
+    "ready": true,
+    "section": {
+      "button": {
+        "href": "/roastery",
+        "label": "The roastery"
+      },
+      "heading": "Nordwind Coffee Roasters",
+      "type": "cta"
+    }
+  },
+  {
+    "kind": "contact_form",
+    "ready": true,
+    "section": {
+      "heading": "Say hello",
+      "success_message": "We answer within a day.",
+      "type": "contact_form"
+    }
+  },
+  {
+    "kind": "collection",
+    "needs": "collection",
+    "ready": false
+  },
+  {
+    "kind": "catalog",
+    "ready": true,
+    "section": {
+      "catalog_id": "catBarMenu1234567890",
+      "heading": "The bar",
+      "type": "catalog"
+    }
+  },
+  {
+    "kind": "booking",
+    "needs": "booking",
+    "ready": false
+  },
+  {
+    "kind": "custom_code",
+    "needs": "code",
+    "ready": false
+  },
+  {
+    "kind": "footer",
+    "ready": true,
+    "section": {
+      "links": [
+        {
+          "href": "/",
+          "label": "Home"
+        },
+        {
+          "href": "/roastery",
+          "label": "The roastery"
+        },
+        {
+          "href": "/visit",
+          "label": "Visit us"
+        }
+      ],
+      "type": "footer"
+    }
+  }
+]

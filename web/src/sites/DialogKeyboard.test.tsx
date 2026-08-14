@@ -6,10 +6,13 @@
 // closing dropped the caret at the top of the document. These tests fail
 // against that code and pass against `useDialogKeyboard`.
 //
-// Both frames are exercised, because both are hand-written chrome that every
-// dialog on the surface inherits: `DialogFrame` (twelve dialogs — new site,
-// new page, theme, SEO, publish, catalog item, domain purchase, handoff, the
-// section prop forms) and `SectionPicker`, which is a dialog of its own.
+// `DialogFrame` is the hand-written chrome every dialog on the surface
+// inherits — twelve of them: new site, new page, theme, SEO, publish, catalog
+// item, domain purchase, handoff, and the section prop forms. (The section
+// palette used to be a thirteenth; it became a panel beside the stack in
+// S3.01d, because a block is dragged onto the page and nothing can be dragged
+// out of a modal onto what it covers. Its own keyboard contract is asserted in
+// `SectionPalette.test.tsx`.)
 import { useState } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -18,7 +21,6 @@ import { Sparkles } from "lucide-react";
 
 import { strings } from "../i18n";
 import { DialogFrame, Field } from "./parts";
-import { SectionPicker } from "./SectionPicker";
 
 afterEach(cleanup);
 
@@ -150,54 +152,5 @@ describe("a sites dialog can be used without a mouse", () => {
     // button under the user's fingers.
     fireEvent.change(field, { target: { value: "typing" } });
     expect(document.activeElement).toBe(field);
-  });
-});
-
-describe("the section picker keeps the same contract", () => {
-  function PickerHarness({ onClose }: { onClose: () => void }) {
-    const [open, setOpen] = useState(false);
-    return (
-      <div>
-        <button type="button" onClick={() => setOpen(true)}>
-          open
-        </button>
-        {open && (
-          <SectionPicker
-            onPick={() => {}}
-            onClose={() => {
-              setOpen(false);
-              onClose();
-            }}
-          />
-        )}
-      </div>
-    );
-  }
-
-  test("focus enters it, Escape closes it from outside, and the opener gets focus back", () => {
-    const closed = vi.fn();
-    render(<PickerHarness onClose={closed} />);
-    const trigger = openDialog();
-    const picker = screen.getByRole("dialog");
-    expect(picker.contains(document.activeElement)).toBe(true);
-
-    trigger.focus();
-    fireEvent.keyDown(trigger, { key: "Escape" });
-    expect(closed).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(document.activeElement).toBe(trigger);
-  });
-
-  test("Tab wraps inside the tile grid", () => {
-    render(<PickerHarness onClose={() => {}} />);
-    openDialog();
-    const tiles = [
-      ...screen.getByRole("dialog").querySelectorAll<HTMLElement>("button"),
-    ];
-    const first = tiles[0]!;
-    const last = tiles[tiles.length - 1]!;
-    last.focus();
-    fireEvent.keyDown(last, { key: "Tab" });
-    expect(document.activeElement).toBe(first);
   });
 });

@@ -34,8 +34,8 @@ use crate::{
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
     sites_attribution, sites_bookings, sites_catalogs, sites_conversions, sites_domain_purchases,
-    sites_heatmap, sites_orders, sites_templates, snooze, spaces, tasks, unsubscribe, wopi,
-    workspace_search,
+    sites_heatmap, sites_orders, sites_palette, sites_templates, snooze, spaces, tasks,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -636,6 +636,18 @@ pub fn app_with_site_boundaries(
         .route(
             "/sites/{id}/pages/{pid}/sections/{index}/move",
             post(sites::move_section),
+        )
+        // The section palette (ADR 0042 §4): what a new block would look like
+        // with THIS tenant's own content, and a picture of it rendered by the
+        // public renderer. Reads only — dropping a tile goes through the
+        // section ops above.
+        .route(
+            "/sites/{id}/pages/{pid}/palette",
+            get(sites_palette::page_palette),
+        )
+        .route(
+            "/sites/{id}/pages/{pid}/palette/{kind}/preview",
+            get(sites_palette::palette_preview),
         )
         // Spaces — the membership spine (ADR 0026). Static paths before /{id}.
         .route(

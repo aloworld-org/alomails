@@ -1,0 +1,103 @@
+[
+  {
+    "kind": "nav",
+    "ready": true,
+    "section": {
+      "links": [
+        {
+          "href": "/",
+          "label": "Home"
+        }
+      ],
+      "type": "nav"
+    }
+  },
+  {
+    "kind": "hero",
+    "ready": true,
+    "section": {
+      "heading": "Nordwind Coffee Roasters",
+      "type": "hero"
+    }
+  },
+  {
+    "kind": "features",
+    "needs": "writing",
+    "ready": false
+  },
+  {
+    "kind": "text_image",
+    "needs": "picture",
+    "ready": false
+  },
+  {
+    "kind": "gallery",
+    "needs": "picture",
+    "ready": false
+  },
+  {
+    "kind": "testimonials",
+    "needs": "writing",
+    "ready": false
+  },
+  {
+    "kind": "pricing",
+    "needs": "writing",
+    "ready": false
+  },
+  {
+    "kind": "team",
+    "needs": "writing",
+    "ready": false
+  },
+  {
+    "kind": "faq",
+    "needs": "writing",
+    "ready": false
+  },
+  {
+    "kind": "cta",
+    "needs": "writing",
+    "ready": false
+  },
+  {
+    "kind": "contact_form",
+    "ready": true,
+    "section": {
+      "type": "contact_form"
+    }
+  },
+  {
+    "kind": "collection",
+    "needs": "collection",
+    "ready": false
+  },
+  {
+    "kind": "catalog",
+    "needs": "catalog",
+    "ready": false
+  },
+  {
+    "kind": "booking",
+    "needs": "booking",
+    "ready": false
+  },
+  {
+    "kind": "custom_code",
+    "needs": "code",
+    "ready": false
+  },
+  {
+    "kind": "footer",
+    "ready": true,
+    "section": {
+      "links": [
+        {
+          "href": "/",
+          "label": "Home"
+        }
+      ],
+      "type": "footer"
+    }
+  }
+]

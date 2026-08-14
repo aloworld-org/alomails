@@ -19,6 +19,8 @@ import { useMemo } from "react";
 import { useAuth } from "../auth";
 import { getLocale } from "../i18n";
 import { API_BASE } from "../platform/runtime";
+import { readPalette } from "./palette";
+import type { PaletteTile } from "./palette";
 import type { Section, SectionsEnvelope } from "./sections";
 import type {
   DomainCatalog,
@@ -1093,6 +1095,29 @@ export class SitesApi {
     const path = locale === undefined
       ? `${this.#pagePath(siteId, pageId)}/preview`
       : `${this.#localizedPagePath(siteId, pageId, locale)}/preview`;
+    const res = await this.#send(path, { method: "GET" });
+    await SitesApi.#rejectFailed(res);
+    return res.text();
+  }
+
+  /** The section palette for this page: one tile per section type, seeded
+   *  from the tenant's own website (ADR 0042 §4). Read-only — dropping a tile
+   *  goes through [`addSection`](SitesApi#addSection) like every other add. */
+  async pagePalette(siteId: string, pageId: string): Promise<PaletteTile[]> {
+    return readPalette(
+      await this.#read<unknown>(`${this.#pagePath(siteId, pageId)}/palette`),
+    );
+  }
+
+  /** One palette tile rendered as a complete, self-contained HTML document in
+   *  the site's own theme — the picture on the tile. Answers text, not JSON;
+   *  the caller puts it in a sandboxed iframe via `srcdoc`. */
+  async palettePreview(
+    siteId: string,
+    pageId: string,
+    kind: string,
+  ): Promise<string> {
+    const path = `${this.#pagePath(siteId, pageId)}/palette/${encodeURIComponent(kind)}/preview`;
     const res = await this.#send(path, { method: "GET" });
     await SitesApi.#rejectFailed(res);
     return res.text();

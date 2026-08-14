@@ -3398,8 +3398,37 @@ export const en = {
   sitesNoSectionsTitle: "Nothing on this page yet",
   sitesNoSectionsBody:
     "Stack sections — a hero, your features, a contact form — to build the page.",
-  sitesPickerTitle: "Add a section",
-  sitesPickerSubtitle: "Pick a block; you fill in its content next.",
+  // The palette (ADR 0042 §4): blocks shown with the tenant's own content,
+  // dragged onto the stack or placed with the keyboard.
+  sitesPaletteTitle: "Add a section",
+  sitesPaletteHint:
+    "Drag a block onto the page, or choose where it goes and press one.",
+  sitesPalettePosition: "Where it goes",
+  sitesPaletteAtTop: "At the top",
+  sitesPaletteAtEnd: "At the end",
+  sitesPaletteAfter: (section: string) => `After the ${section}`,
+  sitesPaletteAdd: (section: string, position: string) =>
+    `Add ${section} — ${position.toLowerCase()}`,
+  sitesPaletteDropHere: "Drop here to add at the end",
+  sitesPaletteOwnContent: "Shown with your own content.",
+  sitesPalettePreviewTitle: (section: string) => `${section} on your website`,
+  sitesPaletteLoading: "Filling these with your own content…",
+  sitesPaletteFailed:
+    "Your own content could not be loaded, so these blocks open a form instead.",
+  sitesPaletteOpensForm: "Opens a form",
+  sitesPaletteDone: "Done adding",
+  sitesPaletteNeedsWriting:
+    "Nothing of yours belongs here yet — this one you write. Adding it opens a form.",
+  sitesPaletteNeedsPicture:
+    "Put a picture on this website and this block fills itself with it. Adding it now opens a form.",
+  sitesPaletteNeedsCatalog:
+    "Make a catalog first — this block shows what is in it. Adding it now opens a form.",
+  sitesPaletteNeedsCollection:
+    "Connect a collection first — this block shows its rows. Adding it now opens a form.",
+  sitesPaletteNeedsBooking:
+    "Add something people can book first — this block offers it. Adding it now opens a form.",
+  sitesPaletteNeedsCode:
+    "The code in this one is yours to write. Adding it opens a form.",
   sitesAddSectionTitle: (section: string) => `Add ${section}`,
   sitesEditSectionTitle: (section: string) => `Edit ${section}`,
   sitesSaveSection: "Save section",
@@ -3412,6 +3441,8 @@ export const en = {
   sitesDeleteSection: (section: string) => `Delete ${section}`,
   sitesSectionMoved: (section: string, position: number, total: number) =>
     `${section} moved to position ${position} of ${total}.`,
+  sitesSectionAdded: (section: string, position: number, total: number) =>
+    `${section} added as section ${position} of ${total}.`,
   sitesConfirmDelete: "Really delete?",
   sitesPreview: "Preview",
   sitesPreviewTitle: "Draft preview",

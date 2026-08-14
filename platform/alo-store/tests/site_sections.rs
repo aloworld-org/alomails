@@ -97,6 +97,20 @@ fn section_goldens_cover_the_whole_vocabulary_exactly_once() {
     assert_eq!(names.len(), 16, "one golden per section type, no gaps");
 }
 
+/// The published list of section types and the fixture corpus are two
+/// spellings of one vocabulary, and everything that offers a section type
+/// (the editor's palette, S3.01d) iterates the published one. A variant added
+/// to one and not the other is a type nothing offers, or a tile for a type
+/// that does not exist.
+#[test]
+fn the_published_section_type_list_matches_the_goldens() {
+    let mut published: Vec<&str> = alo_store::SECTION_KINDS.to_vec();
+    let mut fixtures: Vec<&str> = SECTION_FIXTURES.iter().map(|(name, _)| *name).collect();
+    published.sort_unstable();
+    fixtures.sort_unstable();
+    assert_eq!(published, fixtures);
+}
+
 /// The custom-code block through the **public write gate** — the same door the
 /// editor and the AI ops path use. The unit tests in `site_custom_code` cover
 /// the rule matrix; what is proven here is that no hostile shape reaches

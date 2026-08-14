@@ -11,7 +11,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { strings } from "../i18n";
 import { SitesModule } from "./SitesModule";
-import { SECTIONS_SCHEMA_VERSION } from "./sections";
+import { SECTIONS_SCHEMA_VERSION, SECTION_KINDS } from "./sections";
 import type { Section, SectionsEnvelope } from "./sections";
 
 /** The stack's controls are named after the section they act on (S2.16b2), so
@@ -397,29 +397,24 @@ describe("search and sharing details", () => {
   });
 });
 
+/** One tile of the open palette (S3.01d) — the add path every section takes. */
+function paletteTile(kind: string): HTMLElement {
+  const found = document.querySelector<HTMLElement>(
+    `[data-palette-tile="${kind}"]`,
+  );
+  if (found === null) throw new Error(`no ${kind} tile in the palette`);
+  return found;
+}
+
 describe("adding a section", () => {
-  test("the picker offers all thirteen types; saving the form POSTs exactly the typed section", async () => {
+  test("the palette offers every type; saving the form POSTs exactly the typed section", async () => {
     replies = [pageReply([])];
     ui();
-    // Empty page → empty state; its CTA opens the picker.
+    // Empty page → empty state; the header control opens the palette.
     fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesAddSection }))[0]!);
 
-    for (const label of [
-      strings.sitesSectionNav,
-      strings.sitesSectionHero,
-      strings.sitesSectionFeatures,
-      strings.sitesSectionTextImage,
-      strings.sitesSectionGallery,
-      strings.sitesSectionTestimonials,
-      strings.sitesSectionPricing,
-      strings.sitesSectionTeam,
-      strings.sitesSectionFaq,
-      strings.sitesSectionCta,
-      strings.sitesSectionContactForm,
-      strings.sitesSectionCollection,
-      strings.sitesSectionFooter,
-    ]) {
-      expect(screen.getByText(label)).toBeTruthy();
+    for (const kind of SECTION_KINDS) {
+      expect(paletteTile(kind)).toBeTruthy();
     }
 
     replies = [
@@ -432,11 +427,9 @@ describe("adding a section", () => {
         },
       },
     ];
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: `${strings.sitesSectionHero} ${strings.sitesSectionHeroDesc}`,
-      }),
-    );
+    // Nothing seeded here (the palette request has no reply), so the tile
+    // opens the prop form — the pre-palette behaviour.
+    fireEvent.click(paletteTile("hero"));
     fireEvent.change(screen.getByLabelText(strings.sitesFieldHeading), {
       target: { value: "  Big and warm " },
     });
@@ -444,8 +437,12 @@ describe("adding a section", () => {
 
     await waitFor(() => expect(lastWrite()).toBeTruthy());
     // Exactly the typed section: trimmed, untouched optionals ABSENT — the
-    // stored JSON never grows blank keys.
-    expect(lastWrite()!.body).toEqual({ section: { type: "hero", heading: "Big and warm" } });
+    // stored JSON never grows blank keys — plus the position the palette
+    // chose for it (an empty page has only the top).
+    expect(lastWrite()!.body).toEqual({
+      section: { type: "hero", heading: "Big and warm" },
+      index: 0,
+    });
     // The stack renders the envelope the server answered.
     expect(await screen.findByText("Big and warm")).toBeTruthy();
   });
@@ -454,11 +451,7 @@ describe("adding a section", () => {
     replies = [pageReply([])];
     ui();
     fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesAddSection }))[0]!);
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: `${strings.sitesSectionFaq} ${strings.sitesSectionFaqDesc}`,
-      }),
-    );
+    fireEvent.click(paletteTile("faq"));
     // The form starts with one blank entry; fill it, add a second.
     fireEvent.change(screen.getByLabelText(strings.sitesFieldQuestion), {
       target: { value: "When?" },
@@ -492,6 +485,7 @@ describe("adding a section", () => {
           { question: "Where?", answer: "At the harbour." },
         ],
       },
+      index: 0,
     });
   });
 
@@ -499,11 +493,7 @@ describe("adding a section", () => {
     replies = [pageReply([])];
     ui();
     fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesAddSection }))[0]!);
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: `${strings.sitesSectionCta} ${strings.sitesSectionCtaDesc}`,
-      }),
-    );
+    fireEvent.click(paletteTile("cta"));
     replies = [
       {
         match: (url, method) =>

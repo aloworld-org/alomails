@@ -390,11 +390,9 @@ describe("the AI draft of a description", () => {
     replies = [pageReply([])];
     ui();
     fireEvent.click((await screen.findAllByRole("button", { name: strings.sitesAddSection }))[0]!);
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: `${strings.sitesSectionHero} ${strings.sitesSectionHeroDesc}`,
-      }),
-    );
+    const tile = document.querySelector<HTMLElement>('[data-palette-tile="hero"]');
+    if (tile === null) throw new Error("no hero tile in the palette");
+    fireEvent.click(tile);
 
     await screen.findByLabelText(strings.sitesFieldImageAlt);
     expect(screen.queryByRole("button", { name: strings.sitesAiAltWrite })).toBeNull();

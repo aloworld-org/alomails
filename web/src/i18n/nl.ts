@@ -3373,8 +3373,36 @@ export const nl: Partial<Catalog> = {
   sitesNoSectionsTitle: "Deze pagina is nog leeg",
   sitesNoSectionsBody:
     "Stapel secties — een blikvanger, uw voordelen, een contactformulier — om de pagina te bouwen.",
-  sitesPickerTitle: "Sectie toevoegen",
-  sitesPickerSubtitle: "Kies een blok en vul daarna de inhoud in.",
+  // Het palet (ADR 0042 §4): blokken getoond met de eigen inhoud van de klant.
+  sitesPaletteTitle: "Sectie toevoegen",
+  sitesPaletteHint:
+    "Sleep een blok op de pagina, of kies de plek en druk op een blok.",
+  sitesPalettePosition: "Plek",
+  sitesPaletteAtTop: "Bovenaan",
+  sitesPaletteAtEnd: "Onderaan",
+  sitesPaletteAfter: (section: string) => `Na ${section}`,
+  sitesPaletteAdd: (section: string, position: string) =>
+    `${section} toevoegen — ${position.toLowerCase()}`,
+  sitesPaletteDropHere: "Hier loslaten om onderaan toe te voegen",
+  sitesPaletteOwnContent: "Getoond met uw eigen inhoud.",
+  sitesPalettePreviewTitle: (section: string) => `${section} op uw website`,
+  sitesPaletteLoading: "Wordt gevuld met uw eigen inhoud…",
+  sitesPaletteFailed:
+    "Uw eigen inhoud kon niet worden geladen; deze blokken openen daarom een formulier.",
+  sitesPaletteOpensForm: "Opent een formulier",
+  sitesPaletteDone: "Klaar met toevoegen",
+  sitesPaletteNeedsWriting:
+    "Hier hoort nog niets van u — dit blok schrijft u zelf. Toevoegen opent een formulier.",
+  sitesPaletteNeedsPicture:
+    "Zet een foto op deze website en dit blok vult zichzelf. Nu toevoegen opent een formulier.",
+  sitesPaletteNeedsCatalog:
+    "Maak eerst een catalogus — dit blok toont wat erin staat. Nu toevoegen opent een formulier.",
+  sitesPaletteNeedsCollection:
+    "Verbind eerst een collectie — dit blok toont de rijen ervan. Nu toevoegen opent een formulier.",
+  sitesPaletteNeedsBooking:
+    "Voeg eerst iets toe dat te boeken is — dit blok biedt het aan. Nu toevoegen opent een formulier.",
+  sitesPaletteNeedsCode:
+    "De code in dit blok schrijft u zelf. Toevoegen opent een formulier.",
   sitesAddSectionTitle: (section: string) => `${section} toevoegen`,
   sitesEditSectionTitle: (section: string) => `${section} bewerken`,
   sitesSaveSection: "Sectie opslaan",
@@ -3384,6 +3412,8 @@ export const nl: Partial<Catalog> = {
   sitesDeleteSection: (section: string) => `${section} verwijderen`,
   sitesSectionMoved: (section: string, position: number, total: number) =>
     `${section} verplaatst naar positie ${position} van ${total}.`,
+  sitesSectionAdded: (section: string, position: number, total: number) =>
+    `${section} toegevoegd als sectie ${position} van ${total}.`,
   sitesConfirmDelete: "Deze sectie verwijderen?",
   sitesPreview: "Voorbeeld",
   sitesPreviewTitle: "Conceptvoorbeeld",

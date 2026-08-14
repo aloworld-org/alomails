@@ -598,6 +598,32 @@ pub enum Section {
     Footer(FooterSection),
 }
 
+/// Every section type this build speaks, in the order the editor offers them:
+/// the page's frame first, then the blocks that carry content, then its foot.
+///
+/// This is the list a palette iterates and the list [`Section::kind`] answers
+/// out of; the schema-fixture test asserts the two agree, so a variant added
+/// without a fixture — or a fixture without a variant — fails the gate rather
+/// than becoming a section type nothing offers.
+pub const SECTION_KINDS: &[&str] = &[
+    "nav",
+    "hero",
+    "features",
+    "text_image",
+    "gallery",
+    "testimonials",
+    "pricing",
+    "team",
+    "faq",
+    "cta",
+    "contact_form",
+    "collection",
+    "catalog",
+    "booking",
+    "custom_code",
+    "footer",
+];
+
 impl Section {
     /// The section's wire tag — the exact string serde writes as `type`.
     pub fn kind(&self) -> &'static str {

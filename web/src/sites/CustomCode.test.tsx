@@ -122,16 +122,17 @@ function lastWrite(): Call | undefined {
   return calls.filter((c) => c.method !== "GET").at(-1);
 }
 
-/** Opens the picker and chooses the custom-code tile. */
+/** Opens the palette and chooses the custom-code tile (whose code is never
+ *  seeded, so it always opens the prop form). */
 async function openBlockForm() {
   fireEvent.click(
     (await screen.findAllByRole("button", { name: strings.sitesAddSection }))[0]!,
   );
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: `${strings.sitesSectionCustomCode} ${strings.sitesSectionCustomCodeDesc}`,
-    }),
+  const tile = document.querySelector<HTMLElement>(
+    '[data-palette-tile="custom_code"]',
   );
+  if (tile === null) throw new Error("no custom_code tile in the palette");
+  fireEvent.click(tile);
 }
 
 beforeEach(() => {
@@ -210,6 +211,7 @@ describe("writing a custom-code block", () => {
         capabilities: { scripts: false, inline_images: false },
         height_px: 180,
       },
+      index: 0,
     });
   });
 
@@ -257,6 +259,7 @@ describe("writing a custom-code block", () => {
         capabilities: { scripts: true, inline_images: false },
         height_px: 320,
       },
+      index: 0,
     });
   });
 

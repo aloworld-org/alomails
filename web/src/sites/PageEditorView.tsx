@@ -42,7 +42,7 @@ import { Button, IconButton, Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { kindLabel, layoutValueLabel, sectionSummary } from "./sectionInfo";
 import { SectionFormDialog } from "./SectionForm";
-import { SectionPicker } from "./SectionPicker";
+import { SectionPalette } from "./SectionPalette";
 import { ThemeDialog } from "./ThemeDialog";
 import { PageSeoDialog } from "./PageSeoDialog";
 import { PageAiEditPanel } from "./PageAiEditPanel";
@@ -78,15 +78,18 @@ import {
 } from "./sectionLayout";
 import { SectionLayoutControls } from "./SectionLayoutControls";
 import { EmptyState, ErrorBanner } from "./parts";
+import { insertionIndex, type PaletteTile } from "./palette";
 import type { Section, SectionKind, SectionsEnvelope } from "./sections";
 import type { SitePageDetail } from "./types";
 import styles from "./SitesModule.module.css";
 
 /** Which section the prop form is editing: a fresh one of `kind` when
- *  `index` is null, the stored one at `index` otherwise. */
+ *  `index` is null, the stored one at `index` otherwise. `insertAt` is where a
+ *  fresh one lands — the position the palette was dropped at, or the end. */
 interface FormTarget {
   kind: SectionKind;
   index: number | null;
+  insertAt?: number;
 }
 
 export function PageEditorView() {
@@ -111,6 +114,29 @@ export function PageEditorView() {
   const [working, setWorking] = useState(false);
 
   const [picking, setPicking] = useState(false);
+  // The palette pulls the caret onto its first tile once its seeded tiles
+  // arrive — which can land AFTER a close was asked for (Escape before the
+  // server answered). The tile then unmounts under the caret and jsdom and
+  // browsers alike drop focus on the document. When the palette leaves, a
+  // caret it took down with it goes back to the control that opened it.
+  useEffect(() => {
+    if (!picking) return undefined;
+    return () => {
+      if (
+        document.activeElement === null ||
+        document.activeElement === document.body
+      ) {
+        document
+          .querySelector<HTMLButtonElement>("[data-add-section]")
+          ?.focus();
+      }
+    };
+  }, [picking]);
+  // The tile currently being dragged out of the palette, and the position the
+  // stack is offering it. A new block and a moved one are two different
+  // gestures over the same rows, so the stack has to know which is in flight.
+  const [paletteDrag, setPaletteDrag] = useState<PaletteTile | null>(null);
+  const [paletteOver, setPaletteOver] = useState<number | null>(null);
   const [form, setForm] = useState<FormTarget | null>(null);
   const [formBusy, setFormBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -727,8 +753,9 @@ export function PageEditorView() {
     try {
       if (locale !== null) {
         const nextSections = [...sections];
-        if (target.index === null) nextSections.push(section);
-        else nextSections[target.index] = section;
+        if (target.index === null) {
+          nextSections.splice(target.insertAt ?? nextSections.length, 0, section);
+        } else nextSections[target.index] = section;
         const saved = await saveLocalized(nextSections);
         if (!saved) return;
         setForm(null);
@@ -737,7 +764,7 @@ export function PageEditorView() {
       }
       const envelope =
         target.index === null
-          ? await api.addSection(siteId, pageId, section)
+          ? await api.addSection(siteId, pageId, section, target.insertAt)
           : await api.updateSection(siteId, pageId, target.index, section);
       setSections(envelope.sections);
       setForm(null);
@@ -753,6 +780,62 @@ export function PageEditorView() {
     setFormError(null);
     setConfirmDelete(null);
     setForm(target);
+  }
+
+  /** Puts one palette tile onto the page at `at` (ADR 0042 §4, S3.01d).
+   *
+   *  A seeded tile is stored exactly as the palette showed it — every word in
+   *  it is already this tenant's — through the same `POST …/sections` the prop
+   *  form saves through, so a dragged block, a typed block and one the
+   *  assistant proposes are one kind of change with one validation behind
+   *  them. A tile the palette could not fill from the website opens that form
+   *  at the same position instead, which is the pre-palette behaviour and the
+   *  reason no block is ever unreachable.
+   *
+   *  Where it landed is announced and focused: a stack that grows in silence
+   *  is invisible to a reader who cannot see it reflow, and a caret left on a
+   *  palette tile makes the next keystroke land somewhere surprising. */
+  async function addTile(tile: PaletteTile, at: number) {
+    const current = sectionsRef.current;
+    const index = insertionIndex(current.length, at);
+    setPaletteDrag(null);
+    setPaletteOver(null);
+    if (tile.section === null) {
+      openForm({ kind: tile.kind, index: null, insertAt: index });
+      return;
+    }
+    const section = tile.section;
+    let stored: boolean;
+    if (locale !== null) {
+      stored = await saveLocalized([
+        ...current.slice(0, index),
+        section,
+        ...current.slice(index),
+      ]);
+    } else {
+      focusAfterMove.current = { index, control: "edit", before: current };
+      stored = await run(api.addSection(siteId, pageId, section, index));
+    }
+    if (stored) {
+      setMoveNotice(
+        strings.sitesSectionAdded(
+          kindLabel(tile.kind),
+          index + 1,
+          current.length + 1,
+        ),
+      );
+    }
+  }
+
+  /** Closes the palette and puts the caret back on the control that opened it
+   *  — the disclosure contract every other panel on this screen keeps. */
+  function closePalette() {
+    setPicking(false);
+    setPaletteDrag(null);
+    setPaletteOver(null);
+    document
+      .querySelector<HTMLButtonElement>("[data-add-section]")
+      ?.focus();
   }
 
   const empty = sections.length === 0;
@@ -956,13 +1039,32 @@ export function PageEditorView() {
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => setPicking(true)}
+                    data-add-section=""
+                    aria-expanded={picking}
+                    onClick={() => (picking ? closePalette() : setPicking(true))}
                     disabled={working || translationBusy || translationFallback}
                   >
                     {strings.sitesAddSection}
                   </Button>
                 </div>
               </div>
+
+              {picking && (
+                <SectionPalette
+                  siteId={siteId}
+                  pageId={pageId}
+                  seeded={locale === null}
+                  sections={sections}
+                  busy={working || translationBusy}
+                  onChoose={(tile, index) => void addTile(tile, index)}
+                  onDragTile={setPaletteDrag}
+                  onDragEnd={() => {
+                    setPaletteDrag(null);
+                    setPaletteOver(null);
+                  }}
+                  onClose={closePalette}
+                />
+              )}
 
               {locale === null && (
                 <PageAiEditPanel
@@ -992,16 +1094,18 @@ export function PageEditorView() {
                   title={strings.sitesNoSectionsTitle}
                   body={strings.sitesNoSectionsBody}
                   cta={strings.sitesAddFirstSection}
-                  onCta={() => openForm({ kind: "hero", index: null })}
+                  onCta={() => setPicking(true)}
                 />
               ) : (
                 <ol className={styles.stack} ref={stackRef}>
                   {sections.map((section, i) => {
                     const summary = sectionSummary(section);
                     const cardClass =
-                      dragOver === i && dragFrom !== null && dragFrom !== i
-                        ? `${styles.card} ${styles.cardDropTarget}`
-                        : styles.card;
+                      paletteDrag !== null && paletteOver === i
+                        ? `${styles.card} ${styles.cardInsertBefore}`
+                        : dragOver === i && dragFrom !== null && dragFrom !== i
+                          ? `${styles.card} ${styles.cardDropTarget}`
+                          : styles.card;
                     return (
                       // Sections have no identity — the position is the key.
                       <li
@@ -1011,10 +1115,17 @@ export function PageEditorView() {
                         onDragStart={() => setDragFrom(i)}
                         onDragOver={(e) => {
                           e.preventDefault();
-                          setDragOver(i);
+                          // A block from the palette lands *before* this row;
+                          // a row from the stack changes places with it.
+                          if (paletteDrag !== null) setPaletteOver(i);
+                          else setDragOver(i);
                         }}
                         onDrop={(e) => {
                           e.preventDefault();
+                          if (paletteDrag !== null) {
+                            void addTile(paletteDrag, i);
+                            return;
+                          }
                           if (dragFrom !== null) void move(dragFrom, i);
                           setDragFrom(null);
                           setDragOver(null);
@@ -1127,6 +1238,26 @@ export function PageEditorView() {
                     );
                   })}
                 </ol>
+              )}
+
+              {paletteDrag !== null && (
+                <div
+                  className={
+                    paletteOver === sections.length
+                      ? `${styles.paletteDropEnd} ${styles.paletteDropEndOver}`
+                      : styles.paletteDropEnd
+                  }
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setPaletteOver(sections.length);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    void addTile(paletteDrag, sections.length);
+                  }}
+                >
+                  {strings.sitesPaletteDropHere}
+                </div>
               )}
             </div>
 
@@ -1248,16 +1379,6 @@ export function PageEditorView() {
             setSeoOpen(false);
             setPreviewEpoch((epoch) => epoch + 1);
           }}
-        />
-      )}
-
-      {picking && (
-        <SectionPicker
-          onPick={(kind) => {
-            setPicking(false);
-            openForm({ kind, index: null });
-          }}
-          onClose={() => setPicking(false)}
         />
       )}
 

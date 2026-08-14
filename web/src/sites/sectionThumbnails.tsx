@@ -1,20 +1,14 @@
-// The add-section picker: a grid of the sixteen section types, each tile a
-// small schematic thumbnail with the type's name and one line on what it is
-// for. Choosing a tile hands the kind back — the prop form takes it from
-// there; nothing is written until that form saves.
-import { LayoutGrid, X } from "lucide-react";
-import { useRef, type ReactNode } from "react";
+// The schematic thumbnails the palette draws each section type by: not
+// screenshots, and not the tenant's content — the *shape* a stranger
+// recognizes a block from, in one small line drawing. The tile's own text
+// names it, and the tile's preview shows what it would really look like with
+// the tenant's own content (S3.01d), so these are decorative by construction.
+import type { ReactNode } from "react";
 
-import { strings } from "../i18n";
-import { kindDescription, kindLabel } from "./sectionInfo";
-import { SECTION_KINDS } from "./sections";
 import type { SectionKind } from "./sections";
-import { useDialogKeyboard } from "./useDialogKeyboard";
-import styles from "./SitesModule.module.css";
 
-/** The schematic thumbnails, one per kind: not screenshots, just the shape a
- *  stranger recognizes the block by. Decorative — the tile's text names it. */
-function thumbnail(kind: SectionKind): ReactNode {
+/** The schematic, one per section type. */
+export function sectionThumbnail(kind: SectionKind): ReactNode {
   switch (kind) {
     case "nav":
       return (
@@ -201,68 +195,4 @@ function thumbnail(kind: SectionKind): ReactNode {
         </>
       );
   }
-}
-
-/** The picker dialog. Escape or the scrim closes it without choosing. */
-export function SectionPicker({
-  onPick,
-  onClose,
-}: {
-  onPick: (kind: SectionKind) => void;
-  onClose: () => void;
-}) {
-  const panel = useRef<HTMLDivElement>(null);
-  useDialogKeyboard(panel, onClose);
-  return (
-    <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
-      <div
-        ref={panel}
-        className={`${styles.modal} ${styles.pickerModal}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label={strings.sitesPickerTitle}
-        tabIndex={-1}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className={styles.modalHead}>
-          <span className={styles.modalIcon} aria-hidden="true">
-            <LayoutGrid size={19} />
-          </span>
-          <div className={styles.modalHeadText}>
-            <h2>{strings.sitesPickerTitle}</h2>
-            <p>{strings.sitesPickerSubtitle}</p>
-          </div>
-          <button
-            type="button"
-            className={styles.modalClose}
-            onClick={onClose}
-            aria-label={strings.close}
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <div className={`${styles.modalBody} ${styles.pickerGrid}`}>
-          {SECTION_KINDS.map((kind) => (
-            <button
-              key={kind}
-              type="button"
-              className={styles.pickerTile}
-              onClick={() => onPick(kind)}
-            >
-              <svg
-                className={styles.pickerThumb}
-                viewBox="0 0 64 40"
-                aria-hidden="true"
-                focusable="false"
-              >
-                {thumbnail(kind)}
-              </svg>
-              <span className={styles.pickerTileName}>{kindLabel(kind)}</span>
-              <span className={styles.pickerTileDesc}>{kindDescription(kind)}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
 }

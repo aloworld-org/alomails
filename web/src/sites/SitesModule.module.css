@@ -687,52 +687,183 @@
 }
 
 /* ---- the section picker ---- */
-.pickerModal {
-  width: min(680px, 100%);
-}
-.pickerGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+/* ---- the section palette (ADR 0042 §4, S3.01d) ----
+   A panel beside the stack rather than a dialog over it: a block is dragged
+   onto the page, and nothing can be dragged out of a modal onto what it
+   covers. */
+.palette {
+  margin: 0 var(--space-6) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-raised);
+  display: flex;
+  flex-direction: column;
   gap: var(--space-3);
+  padding: var(--space-3);
+  max-width: 720px;
 }
-.pickerTile {
+.paletteHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.paletteIcon {
+  display: inline-flex;
+  color: var(--accent);
+}
+.paletteHeadText {
+  flex: 1;
+  min-width: 12rem;
+}
+.paletteTitle {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.paletteHint {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  line-height: var(--leading-relaxed);
+}
+.palettePosition {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+.paletteBody {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-3);
+  align-items: start;
+}
+.paletteGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-2);
+  max-height: 22rem;
+  overflow-y: auto;
+}
+.paletteTile {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-1);
-  padding: var(--space-3);
+  padding: var(--space-2);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   background: var(--bg-surface);
   text-align: left;
-  cursor: pointer;
+  cursor: grab;
 }
-.pickerTile:hover {
+.paletteTile:hover {
   border-color: var(--accent);
   background: var(--bg-raised);
 }
-.pickerThumb {
+.paletteTile:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.paletteTileActive {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.paletteThumb {
   width: 100%;
   height: auto;
   color: var(--accent);
   background: var(--accent-soft);
   border-radius: var(--radius-sm);
-  padding: var(--space-2);
+  padding: var(--space-1);
   box-sizing: border-box;
 }
-.pickerThumb rect,
-.pickerThumb circle,
-.pickerThumb path {
+.paletteThumb rect,
+.paletteThumb circle,
+.paletteThumb path {
   fill: currentColor;
 }
-.pickerTileName {
+.paletteTileName {
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
 }
-.pickerTileDesc {
+.paletteTileDesc,
+.paletteTileNeeds {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
+}
+.paletteTileNeeds {
+  color: var(--text-secondary);
+}
+.palettePreview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.palettePreviewViewport {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  padding: var(--space-1);
+}
+.palettePreviewFrame {
+  display: block;
+  width: 100%;
+  height: min(34vh, 18rem);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  /* A picture of the block: no link inside a sandboxed preview should be
+     followable, and no click in it is an edit. */
+  pointer-events: none;
+}
+.paletteNote {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  line-height: var(--leading-relaxed);
+}
+.paletteFoot {
+  margin: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+/* Where a dragged block would land: a line above the row it goes before, and
+   a zone under the last one for the end of the page. */
+.cardInsertBefore {
+  border-top: 2px solid var(--accent);
+  box-shadow: var(--focus-ring);
+}
+.paletteDropEnd {
+  margin: 0 var(--space-6) var(--space-6);
+  padding: var(--space-3);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-align: center;
+  max-width: 720px;
+}
+.paletteDropEndOver {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: var(--accent-soft);
+}
+@media (max-width: 900px) {
+  .paletteBody {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .palette {
+    margin: 0 var(--space-3) var(--space-3);
+  }
 }
 
 /* ---- the prop forms ---- */

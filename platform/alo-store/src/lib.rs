@@ -200,6 +200,7 @@ pub mod site_publish;
 pub mod site_publish_schedule;
 pub mod site_registrar;
 pub mod site_registrar_fixture;
+pub mod site_seed;
 pub mod site_templates;
 pub mod site_theme;
 pub mod site_translations;
@@ -536,7 +537,9 @@ pub use site_layout::{
     layout_controls,
 };
 pub use site_leads::{SiteLeadDeal, SiteLeadDraft, SiteLeadLink};
-pub use site_model::{SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope};
+pub use site_model::{
+    SECTION_KINDS, SECTIONS_SCHEMA_VERSION, Section, SectionSchemaError, SectionsEnvelope,
+};
 pub use site_order_notify::OrderNotification;
 pub use site_orders::{
     ORDER_EMAIL_MAX_CHARS, ORDER_MAX_LINES, ORDER_MAX_QUANTITY, ORDER_NAME_MAX_CHARS,
@@ -582,6 +585,7 @@ pub use site_registrar::{
     TERM_YEARS_MAX, TERM_YEARS_MIN, TldCatalog, TldOffer, TldRequirement, UnconfiguredRegistrar,
 };
 pub use site_registrar_fixture::FixtureRegistrar;
+pub use site_seed::{SectionSeed, SeedBinding, SeedContext, SeedNeed, SeedPage, seed_section};
 pub use site_templates::{
     SiteTemplate, SiteTemplatePage, TEMPLATE_PLACEHOLDER_PRICE, check_template, site_template,
     site_templates,

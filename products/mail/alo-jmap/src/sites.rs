@@ -2381,7 +2381,7 @@ pub async fn preview_localized_page(
 /// through the public renderer. Keeping this one path means the AI review's
 /// “after” view is the page that approval would actually store, not a client
 /// approximation.
-async fn render_preview_html(
+pub(crate) async fn render_preview_html(
     account: &Account,
     site: &Site,
     page: &SitePage,
@@ -2817,7 +2817,7 @@ fn parse_section(value: Value) -> Result<Section, Problem> {
 }
 
 /// Loads the page's current envelope for a read-modify-write section op.
-async fn page_record(
+pub(crate) async fn page_record(
     account: &Account,
     site: &SiteId,
     page: &SitePageId,

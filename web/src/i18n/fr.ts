@@ -3416,8 +3416,36 @@ export const fr: Partial<Catalog> = {
   sitesNoSectionsTitle: "Cette page est encore vide",
   sitesNoSectionsBody:
     "Empilez des sections — une accroche, vos points forts, un formulaire de contact — pour construire la page.",
-  sitesPickerTitle: "Ajouter une section",
-  sitesPickerSubtitle: "Choisissez un bloc, puis renseignez son contenu.",
+  // La palette (ADR 0042 §4) : des blocs montrés avec le contenu du client.
+  sitesPaletteTitle: "Ajouter une section",
+  sitesPaletteHint:
+    "Faites glisser un bloc sur la page, ou choisissez sa place et appuyez dessus.",
+  sitesPalettePosition: "Emplacement",
+  sitesPaletteAtTop: "Tout en haut",
+  sitesPaletteAtEnd: "Tout en bas",
+  sitesPaletteAfter: (section: string) => `Après ${section}`,
+  sitesPaletteAdd: (section: string, position: string) =>
+    `Ajouter ${section} — ${position.toLowerCase()}`,
+  sitesPaletteDropHere: "Déposez ici pour ajouter à la fin",
+  sitesPaletteOwnContent: "Affiché avec votre propre contenu.",
+  sitesPalettePreviewTitle: (section: string) => `${section} sur votre site`,
+  sitesPaletteLoading: "Remplissage avec votre propre contenu…",
+  sitesPaletteFailed:
+    "Votre contenu n'a pas pu être chargé : ces blocs ouvrent donc un formulaire.",
+  sitesPaletteOpensForm: "Ouvre un formulaire",
+  sitesPaletteDone: "Terminé",
+  sitesPaletteNeedsWriting:
+    "Rien de vôtre ici pour l'instant — celui-ci, c'est vous qui l'écrivez. L'ajouter ouvre un formulaire.",
+  sitesPaletteNeedsPicture:
+    "Ajoutez une image à ce site et ce bloc se remplira tout seul. L'ajouter maintenant ouvre un formulaire.",
+  sitesPaletteNeedsCatalog:
+    "Créez d'abord un catalogue — ce bloc en montre le contenu. L'ajouter maintenant ouvre un formulaire.",
+  sitesPaletteNeedsCollection:
+    "Connectez d'abord une collection — ce bloc en montre les lignes. L'ajouter maintenant ouvre un formulaire.",
+  sitesPaletteNeedsBooking:
+    "Ajoutez d'abord une prestation réservable — ce bloc la propose. L'ajouter maintenant ouvre un formulaire.",
+  sitesPaletteNeedsCode:
+    "Le code de ce bloc, c'est vous qui l'écrivez. L'ajouter ouvre un formulaire.",
   sitesAddSectionTitle: (section: string) => `Ajouter ${section}`,
   sitesEditSectionTitle: (section: string) => `Modifier ${section}`,
   sitesSaveSection: "Enregistrer la section",
@@ -3427,6 +3455,8 @@ export const fr: Partial<Catalog> = {
   sitesDeleteSection: (section: string) => `Supprimer ${section}`,
   sitesSectionMoved: (section: string, position: number, total: number) =>
     `${section} déplacé en position ${position} sur ${total}.`,
+  sitesSectionAdded: (section: string, position: number, total: number) =>
+    `${section} ajouté en position ${position} sur ${total}.`,
   sitesConfirmDelete: "Supprimer cette section ?",
   sitesPreview: "Aperçu",
   sitesPreviewTitle: "Aperçu du brouillon",
