@@ -390,6 +390,7 @@ function MeetingCaptions({ meetingId, visible }: { meetingId: string; visible: b
   const api = useMeetApi();
   const live = useTranscriptions();
   const { localParticipant } = useLocalParticipant();
+  const participants = useParticipants();
   const [stored, setStored] = useState<MeetingTranscriptSegment[]>([]);
   const saved = useRef(new Map<string, string>());
   useEffect(() => {
@@ -399,7 +400,9 @@ function MeetingCaptions({ meetingId, visible }: { meetingId: string; visible: b
   }, [api, meetingId]);
   useEffect(() => {
     for (const segment of live) {
-      if (segment.participantInfo.identity !== localParticipant.identity) continue;
+      const transcribedTrack = segment.streamInfo.attributes?.["lk.transcribed_track_id"];
+      const localMicrophone = localParticipant.getTrackPublication(Track.Source.Microphone)?.trackSid;
+      if (segment.participantInfo.identity !== localParticipant.identity && transcribedTrack !== localMicrophone) continue;
       const id = segment.streamInfo.attributes?.["lk.segment_id"] ?? segment.streamInfo.id;
       const finalSegment = segment.streamInfo.attributes?.["lk.transcription_final"] === "true";
       const fingerprint = `${segment.text}\u0000${finalSegment}`;
@@ -414,9 +417,11 @@ function MeetingCaptions({ meetingId, visible }: { meetingId: string; visible: b
   const merged = new Map(stored.map((segment) => [segment.id, segment]));
   for (const segment of live) {
     const id = segment.streamInfo.attributes?.["lk.segment_id"] ?? segment.streamInfo.id;
+    const transcribedTrack = segment.streamInfo.attributes?.["lk.transcribed_track_id"];
+    const speaker = participants.find((participant) => participant.getTrackPublication(Track.Source.Microphone)?.trackSid === transcribedTrack);
     merged.set(id, {
       id,
-      speaker: segment.participantInfo.identity,
+      speaker: speaker?.identity ?? segment.participantInfo.identity,
       text: segment.text,
       final: segment.streamInfo.attributes?.["lk.transcription_final"] === "true",
       createdAt: merged.get(id)?.createdAt ?? new Date().toISOString(),
