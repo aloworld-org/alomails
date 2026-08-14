@@ -87,6 +87,16 @@ describe("joining a meeting", () => {
     expect(stopped.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/meet/m-1/recordings/rec-1/stop"), expect.objectContaining({ method: "POST" }));
   });
 
+  test("meeting minutes use the configured AI bridge", async () => {
+    const summary = client(200, { summary: "A decision was made." });
+    await expect(summary.api.summarizeTranscript("claude: decide today")).resolves.toBe("A decision was made.");
+    expect(summary.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/ai/summarize"), expect.objectContaining({ method: "POST" }));
+
+    const actions = client(200, { tasks: [{ title: "Send the decision" }] });
+    await expect(actions.api.extractTranscriptActions("claude: send it")).resolves.toEqual([{ title: "Send the decision" }]);
+    expect(actions.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/ai/extract-tasks"), expect.objectContaining({ method: "POST" }));
+  });
+
   test("a deployment with no engine says so, distinctly", async () => {
     // 503 means the meeting is real and attendance was recorded — there is
     // simply nowhere to hold it. Reporting that as a generic failure would

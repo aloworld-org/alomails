@@ -26,7 +26,7 @@ import {
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
 import { ConnectionState, Track } from "livekit-client";
-import { ArrowLeft, Captions, Check, ChevronDown, Circle, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, Mic, MicOff, MonitorUp, Paperclip, PhoneOff, PictureInPicture2, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, Square, UserMinus, Users, Video, X } from "lucide-react";
+import { ArrowLeft, Captions, Check, ChevronDown, Circle, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, Mic, MicOff, MonitorUp, Paperclip, PhoneOff, PictureInPicture2, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, Sparkles, Square, UserMinus, Users, Video, X } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
 import { useAuth } from "../auth/AuthProvider";
@@ -157,7 +157,7 @@ function InCallChat({ meetingId, hostId, onClose }: { meetingId: string; hostId:
   };
   useEffect(() => {
     let current = true;
-    void api.messages(meetingId).then((messages) => {
+    const refresh = () => void api.messages(meetingId).then((messages) => {
       if (!current) return;
       setHistory(messages);
       setReactions((existing) => {
@@ -171,7 +171,9 @@ function InCallChat({ meetingId, hostId, onClose }: { meetingId: string; hostId:
         return next;
       });
     });
-    return () => { current = false; };
+    refresh();
+    const timer = window.setInterval(refresh, 3_000);
+    return () => { current = false; window.clearInterval(timer); };
   }, [api, meetingId]);
   const submit = async (text = draft) => {
     const message = text.trim();
@@ -364,6 +366,7 @@ function useMeetingRecording(meetingId: string, hostId: string) {
 type RecordingControls = ReturnType<typeof useMeetingRecording>;
 
 function MeetingActions({ meetingId, recording, onLeave, chatOpen, onChat, captionsOpen, onCaptions, onSettings, onPictureInPicture }: { meetingId: string; recording: RecordingControls; onLeave: () => void; chatOpen: boolean; onChat: () => void; captionsOpen: boolean; onCaptions: () => void; onSettings: () => void; onPictureInPicture: () => void }) {
+  const api = useMeetApi();
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   const { localParticipant } = useLocalParticipant();
@@ -371,6 +374,8 @@ function MeetingActions({ meetingId, recording, onLeave, chatOpen, onChat, capti
   const [raisedHands, setRaisedHands] = useState<string[]>([]);
   const [reaction, setReaction] = useState<{ emoji: string; name: string; key: number } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [minutesBusy, setMinutesBusy] = useState(false);
+  const [minutesError, setMinutesError] = useState(false);
   const { send } = useDataChannel("alo-meet-actions", (message) => {
     try {
       const signal = JSON.parse(decoder.decode(message.payload)) as MeetSignal;
@@ -413,6 +418,19 @@ function MeetingActions({ meetingId, recording, onLeave, chatOpen, onChat, capti
       window.setTimeout(() => setCopied(false), 2_000);
     }
   };
+  const generateMinutes = async () => {
+    setMinutesBusy(true);
+    setMinutesError(false);
+    try {
+      const segments = await api.transcript(meetingId);
+      const text = segments.filter((segment) => segment.final && segment.text.trim() !== "").map((segment) => `${segment.speaker}: ${segment.text}`).join("\n");
+      if (text === "") throw new Error("empty transcript");
+      const [summary, actions] = await Promise.all([api.summarizeTranscript(text), api.extractTranscriptActions(text)]);
+      const actionText = actions.length === 0 ? strings.meetMinutesNoActions : actions.map((action) => `• ${action.title}`).join("\n");
+      await api.postMessage(meetingId, `${strings.meetMinutesTitle}\n\n${summary}\n\n${strings.meetMinutesActions}\n${actionText}`, null);
+    } catch { setMinutesError(true); }
+    finally { setMinutesBusy(false); }
+  };
 
   return (
     <>
@@ -444,6 +462,7 @@ function MeetingActions({ meetingId, recording, onLeave, chatOpen, onChat, capti
         <button type="button" onClick={onSettings} aria-label={strings.meetDeviceSettings} title={strings.meetDeviceSettings}>
           <Settings aria-hidden="true" />
         </button>
+        {recording.isHost && <button type="button" disabled={minutesBusy} onClick={() => void generateMinutes()} title={strings.meetGenerateMinutes}><Sparkles aria-hidden="true" />{strings.meetGenerateMinutes}</button>}
         {recording.recording === null && recording.isHost && (
           <button type="button" disabled={recording.busy} onClick={() => void recording.request()}><Circle aria-hidden="true" />{strings.meetRecord}</button>
         )}
@@ -471,6 +490,7 @@ function MeetingActions({ meetingId, recording, onLeave, chatOpen, onChat, capti
           <span>{reaction.emoji}</span><small>{reaction.name}</small>
         </div>
       )}
+      {minutesError && <div className={styles.recordingError} role="alert">{strings.meetMinutesFailed}</div>}
     </>
   );
 }

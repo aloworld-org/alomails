@@ -53,6 +53,7 @@ export interface MeetingRecording {
   stoppedAt: string | null;
   consents: MeetingRecordingConsent[];
 }
+export interface MeetingActionItem { title: string; }
 
 /** Raised when meetings are not configured on this deployment. */
 export class MeetUnavailable extends Error {}
@@ -189,6 +190,18 @@ export class MeetApi {
     const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/recordings/${encodeURIComponent(recording)}/stop`, { method: "POST", body: "{}" });
     if (!res.ok) throw new MeetApiError(res.status, "stop meeting recording");
     return (await res.json()) as MeetingRecording;
+  }
+
+  async summarizeTranscript(text: string): Promise<string> {
+    const res = await this.#send("/ai/summarize", { method: "POST", body: JSON.stringify({ text }) });
+    if (!res.ok) throw new MeetApiError(res.status, "summarize meeting transcript");
+    return ((await res.json()) as { summary: string }).summary;
+  }
+
+  async extractTranscriptActions(text: string): Promise<MeetingActionItem[]> {
+    const res = await this.#send("/ai/extract-tasks", { method: "POST", body: JSON.stringify({ text }) });
+    if (!res.ok) throw new MeetApiError(res.status, "extract meeting actions");
+    return ((await res.json()) as { tasks: MeetingActionItem[] }).tasks;
   }
 
   async uploadAttachment(meeting: string, message: string, file: File): Promise<MeetingAttachment> {
