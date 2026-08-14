@@ -121,7 +121,7 @@ export function ChatModule() {
   // The live public channels not yet joined. Loaded on demand: it is a
   // browsing act, not something every sidebar draw should pay for.
   const directory = useRoomDirectory(setError);
-  const { channels, openId, setOpenId, creating, browsing, setBrowsing, dmQuery, setDmQuery, dmFound, setDmFound, finding, found, loadChannels, find, findPeople, openDm, renameRoom, archiveRoom, browse, joinRoom, createChannel } = directory;
+  const { channels, openId, setOpenId, creating, browsing, setBrowsing, dmQuery, setDmQuery, dmFound, setDmFound, finding, found, loadChannels, find, findPeople, openDm, renameRoom, describeRoom, archiveRoom, browse, joinRoom, createChannel } = directory;
   const { feedRef, messages, setMessages, turns, palette, nameable, readUpTo, moreBehind, loadingOlder, loadMessages, loadTurns, loadOlder, editMessage, withdrawMessage, decide, react } = useChatFeed(openId, channels, loadChannels, setError);
   const { staged, setStaged, picking, setPicking, dropping, setDropping, shareDropped, mergePicked } = useChatAttachments(setError);
 
@@ -346,7 +346,7 @@ export function ChatModule() {
 
             <ActiveTurns turns={turns} onStop={(turn) => { if (openId !== null) void api.stopTurn(openId, turn.id).then(() => loadTurns(openId)); }} />
 
-            <MessageFeed room={open} messages={messages} feedRef={feedRef} moreBehind={moreBehind} loadingOlder={loadingOlder} readUpTo={readUpTo} palette={palette} me={me} onOlder={() => void loadOlder()} onReact={(message, emoji) => void react(message.id, emoji)} onOpenFile={(file) => void openFile(file)} onDecide={(proposal, approve) => void decide(proposal, approve)} onEdit={(message, body) => void editMessage(message, body)} onWithdraw={(message) => void withdrawMessage(message)} onReplyHere={(message) => { setReplyContext({ message, private: false }); composerRef.current?.focus(); }} onReplyPrivate={(message) => { void openDm({ user: message.author, email: message.authorEmail ?? message.author }).then(() => { setReplyContext({ message, private: true }); composerRef.current?.focus(); }); }} />
+            <MessageFeed room={open} messages={messages} feedRef={feedRef} moreBehind={moreBehind} loadingOlder={loadingOlder} readUpTo={readUpTo} palette={palette} me={me} onOlder={() => void loadOlder()} onReact={(message, emoji) => void react(message.id, emoji)} onOpenFile={(file) => void openFile(file)} onDecide={(proposal, approve) => void decide(proposal, approve)} onEdit={(message, body) => void editMessage(message, body)} onWithdraw={(message) => void withdrawMessage(message)} onReplyHere={(message) => { setReplyContext({ message, private: false }); composerRef.current?.focus(); }} onReplyPrivate={(message) => { void openDm({ user: message.author, email: message.authorEmail ?? message.author }).then(() => { setReplyContext({ message, private: true }); composerRef.current?.focus(); }); }} onDescription={() => void describeRoom(open)} />
 
             {error !== null && <p className="mx-auto mb-2 w-full max-w-4xl rounded-md bg--tint px-3 py-2 text-sm text-primary" role="alert">{error}</p>}
 

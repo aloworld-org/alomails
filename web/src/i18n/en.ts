@@ -1898,6 +1898,11 @@ export const en = {
   chatRenamePrompt: "Everyone in the channel sees the new name.",
   chatRenameSave: "Rename",
   chatRenameFailed: "That channel couldn’t be renamed.",
+  chatAddDescription: "Add description",
+  chatEditDescription: "Edit description",
+  chatDescriptionPrompt: "Help people understand what this channel is for.",
+  chatDescriptionSave: "Save description",
+  chatDescriptionFailed: "That channel description couldn’t be saved.",
   chatArchiveAction: "Archive channel",
   chatArchiveTitle: (name: string): string => `Archive ${name}?`,
   chatArchiveWarning:

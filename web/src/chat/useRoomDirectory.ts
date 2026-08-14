@@ -88,6 +88,13 @@ export function useRoomDirectory(onError: (message: string | null) => void) {
     catch (failure) { onError(chatMessage(failure, strings.chatRenameFailed)); }
   }
 
+  async function describeRoom(room: ChannelSummary) {
+    const topic = (await dialogs.prompt({ title: strings.chatAddDescription, message: strings.chatDescriptionPrompt, defaultValue: room.topic ?? "", confirmLabel: strings.chatDescriptionSave }))?.trim();
+    if (topic === undefined || topic === null || topic === room.topic) return;
+    try { await api.renameChannel(room.id, { topic }); await loadChannels(); }
+    catch (failure) { onError(chatMessage(failure, strings.chatDescriptionFailed)); }
+  }
+
   async function archiveRoom(room: ChannelSummary) {
     const sure = await dialogs.confirm({ title: strings.chatArchiveTitle(room.name ?? strings.chatDirectMessage), message: strings.chatArchiveWarning, confirmLabel: strings.chatArchiveConfirm });
     if (!sure) return;
@@ -120,5 +127,5 @@ export function useRoomDirectory(onError: (message: string | null) => void) {
     finally { setCreating(false); }
   }
 
-  return { channels, openId, setOpenId, creating, browsing, setBrowsing, dmQuery, setDmQuery, dmFound, setDmFound, finding, found, loadChannels, find, findPeople, openDm, renameRoom, archiveRoom, browse, joinRoom, createChannel };
+  return { channels, openId, setOpenId, creating, browsing, setBrowsing, dmQuery, setDmQuery, dmFound, setDmFound, finding, found, loadChannels, find, findPeople, openDm, renameRoom, describeRoom, archiveRoom, browse, joinRoom, createChannel };
 }
