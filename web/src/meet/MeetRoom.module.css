@@ -875,7 +875,7 @@
 .meetingActions .leaveAction:hover { filter: brightness(1.08); }
 .meetingActions svg { width: var(--icon-size-control); height: var(--icon-size-control); }
 .reactions { position: relative; }
-.reactionMenu { display: none; position: absolute; top: calc(100% + var(--space-2)); left: 50%; transform: translateX(-50%); padding: var(--space-1); gap: var(--space-1); border: var(--border-width) solid var(--navy-400); border-radius: var(--radius-lg); background: var(--bg-rail); box-shadow: var(--shadow-lg); }
+.reactionMenu { display: none; position: absolute; right: 0; bottom: calc(100% + var(--space-2)); z-index: 40; padding: var(--space-1); gap: var(--space-1); border: var(--border-width) solid var(--navy-400); border-radius: var(--radius-lg); background: var(--bg-rail); box-shadow: var(--shadow-lg); }
 .reactions:hover .reactionMenu, .reactions:focus-within .reactionMenu { display: flex; }
 .reactionMenu button { min-width: var(--control-height); padding: 0; font-size: var(--text-lg); }
 .raisedHands { position: absolute; z-index: 11; top: calc(var(--space-16) + var(--space-3)); right: var(--space-4); display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border: var(--border-width) solid var(--accent); border-radius: var(--radius-full); background: var(--accent-tint); color: var(--accent-active); box-shadow: var(--shadow-sm); }
