@@ -158,7 +158,7 @@ test("a DM is named for the other participant everywhere", async () => {
   expect(screen.getByText("ben@alo.test")).toBeTruthy();
   const selectedRoom = screen.getByRole("button", { name: /Ben/ });
   expect(selectedRoom.getAttribute("aria-current")).toBe("page");
-  expect(selectedRoom.style.backgroundColor).toBe("var(--accent-soft)");
+  expect(selectedRoom.style.background).toContain("linear-gradient");
   expect(
     screen.getByPlaceholderText(strings.chatComposerPlaceholder("ben@alo.test")),
   ).toBeTruthy();
