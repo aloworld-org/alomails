@@ -25,12 +25,20 @@
 //!   to act on it, and no phrasing of a description makes that safe. Removal
 //!   stays a human act in Drive itself.
 
-/// The Drive tools the agent may propose, by name.
-pub const DRIVE_TOOLS: &[&str] = &["find_file"];
+use crate::agent_tool::AgentTool;
+
+/// The Drive tools, each declaring whether it reads or writes (ADR 0047 §1).
+///
+/// One tool, and it reads. There is no `delete_file` and there will not be
+/// one; nothing here can change a byte of anybody's Drive.
+pub const DRIVE_TOOLS: &[AgentTool] = &[AgentTool::read("find_file")];
 
 /// What each Drive tool takes, in the words the model reads.
+///
+/// Read-versus-write is declared in [`DRIVE_TOOLS`] and rendered into the
+/// prompt from there (ADR 0047 §1), never restated here.
 pub const DRIVE_TOOL_DOC: &str = "\
-- find_file: find files in the user's Drive by what they are called or what they are about. It only READS; it changes nothing. args: {\"query\": string (what the user called it, in their own words, required), \"limit\": integer (optional, at most 20)}. Propose this when the user asks where something is, or asks for a file by name. Pass their words through exactly — never tidy a filename, never guess an extension, and never invent an identifier.\n";
+- find_file: find files in the user's Drive by what they are called or what they are about. args: {\"query\": string (what the user called it, in their own words, required), \"limit\": integer (optional, at most 20)}. Use this when the user asks where something is, or asks for a file by name. Pass their words through exactly — never tidy a filename, never guess an extension, and never invent an identifier.\n";
 
 /// The rules that keep a Drive proposal honest, appended to the system prompt.
 pub const DRIVE_GUIDANCE: &str = "For a Drive tool, pass the file's name through EXACTLY as the user gave it — never complete it, correct its spelling, add an extension, or supply an identifier of any kind. A file has no number the user knows, so it is not in the numbered sources. If the user did not name a file, ANSWER and ask which one they mean rather than searching for something plausible. You cannot delete anything in Drive and must not offer to; if the user asks you to remove a file, say that removal is theirs to do in Drive.\n";
@@ -43,10 +51,11 @@ mod tests {
     /// is a tool the model can propose and nothing can perform.
     #[test]
     fn every_named_tool_is_described() {
-        for name in DRIVE_TOOLS {
+        for tool in DRIVE_TOOLS {
             assert!(
-                DRIVE_TOOL_DOC.contains(&format!("- {name}:")),
-                "{name} is offered to the model with no description"
+                DRIVE_TOOL_DOC.contains(&format!("- {}:", tool.name)),
+                "{} is offered to the model with no description",
+                tool.name
             );
         }
     }
@@ -55,10 +64,11 @@ mod tests {
     /// this test is where the argument has to be had.
     #[test]
     fn nothing_here_can_destroy_a_file() {
-        for name in DRIVE_TOOLS {
+        for tool in DRIVE_TOOLS {
             assert!(
-                !name.contains("delete") && !name.contains("remove") && !name.contains("trash"),
-                "{name} would let a misread sentence destroy somebody's work"
+                tool.is_read(),
+                "{} would let a misread sentence destroy somebody's work",
+                tool.name
             );
         }
         assert!(DRIVE_GUIDANCE.contains("cannot delete"));
@@ -69,7 +79,7 @@ mod tests {
     /// argument local to Drive.
     #[test]
     fn the_set_is_only_what_drive_can_actually_do() {
-        assert_eq!(DRIVE_TOOLS, &["find_file"]);
+        assert_eq!(DRIVE_TOOLS, &[AgentTool::read("find_file")]);
     }
 
     /// The whole point of naming files rather than numbering them.

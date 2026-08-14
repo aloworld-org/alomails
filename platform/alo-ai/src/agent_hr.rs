@@ -37,7 +37,9 @@
 //!   real person — is a document somebody would act on
 //!   (`docs/design/hr.md` § "The two tools that do ship").
 
-/// The HR tools the agent may propose, by name.
+use crate::agent_tool::AgentTool;
+
+/// The HR tools, each declaring whether it reads or writes (ADR 0047 §1).
 ///
 /// The jmap layer validates an approved tool against the union of this list and
 /// every other product's ([`crate::is_agent_tool`]) and owns the execution of
@@ -47,7 +49,10 @@
 /// not before: a tool described to a model but refused by the execute route is a
 /// dead proposal, and the invariant test in [`crate::agent`] holds this list and
 /// the prompt to exactly the tools that can act.
-pub const HR_TOOLS: &[&str] = &["who_is_off", "draft_letter_from_template"];
+pub const HR_TOOLS: &[AgentTool] = &[
+    AgentTool::read("who_is_off"),
+    AgentTool::write("draft_letter_from_template"),
+];
 
 /// The description of each HR tool, spliced into the agent's system prompt
 /// after the Inventory tools ([`crate::agent`]).
@@ -55,7 +60,7 @@ pub const HR_TOOLS: &[&str] = &["who_is_off", "draft_letter_from_template"];
 /// Every line ends with a newline so the block concatenates into the list above
 /// it without the caller knowing how many tools HR has.
 pub const HR_TOOL_DOC: &str = "\
-- who_is_off: read which colleagues are away from work over a stated range of days — the same team absence view everybody in the workspace already sees. It only READS: it books nothing, approves nothing, cancels nothing and tells nobody. args: {\"from\": string \"YYYY-MM-DD\" (the first day of the range, REQUIRED), \"to\": string \"YYYY-MM-DD\" (the last day, optional — the same single day when left out)}. It returns names and days and NOTHING ELSE. There is no reason, no kind of leave and no note in what it reads, so never state or guess WHY anybody is away — not illness, not holiday, not parental or unpaid leave, not anything. Never answer with who is IN: a colleague this tool does not name may be at a customer, on another country's public holiday, or not an employee at all. Propose this when the user asks who is off, who is away, or whether somebody is around on a given day.\n\
+- who_is_off: read which colleagues are away from work over a stated range of days — the same team absence view everybody in the workspace already sees. It books nothing, approves nothing, cancels nothing and tells nobody. args: {\"from\": string \"YYYY-MM-DD\" (the first day of the range, REQUIRED), \"to\": string \"YYYY-MM-DD\" (the last day, optional — the same single day when left out)}. It returns names and days and NOTHING ELSE. There is no reason, no kind of leave and no note in what it reads, so never state or guess WHY anybody is away — not illness, not holiday, not parental or unpaid leave, not anything. Never answer with who is IN: a colleague this tool does not name may be at a customer, on another country's public holiday, or not an employee at all. Use this when the user asks who is off, who is away, or whether somebody is around on a given day.\n\
 - draft_letter_from_template: fill in one of THIS COMPANY'S OWN letter templates about a colleague — an employment confirmation, a letter for a landlord, a reference — and leave the result in the user's Drafts. It sends nothing and tells nobody: the user reads it, edits it and sends it themselves. args: {\"template\": string (the name of a letter this company has already written, REQUIRED), \"employee\": string (the colleague the letter is about, by name, REQUIRED), \"to\": string (an address to put the draft to, optional — left empty for the user to fill in)}. You can fill in ONLY a letter the company has written: when nothing matches, say which letters exist and stop there. NEVER write, extend, reword or invent a letter about a person — the company's own words are the whole point, and improvising one is the single worst thing this tool set could do. The letter says only what its own template asks for, out of the staff directory and the company's details; it can carry no pay, no bank account, no date of birth, no home address and no national id, so never offer to add one.\n";
 
 /// The HR paragraph of the agent's general instructions.
@@ -74,8 +79,9 @@ mod tests {
     fn every_hr_tool_is_described_to_the_model() {
         for tool in HR_TOOLS {
             assert!(
-                HR_TOOL_DOC.contains(&format!("- {tool}:")),
-                "{tool} has no description in the prompt"
+                HR_TOOL_DOC.contains(&format!("- {}:", tool.name)),
+                "{} has no description in the prompt",
+                tool.name
             );
         }
         // …and nothing is described that cannot be executed.
@@ -96,7 +102,9 @@ mod tests {
             .lines()
             .find(|line| line.starts_with("- who_is_off:"))
             .expect("who_is_off is described");
-        assert!(line.contains("only READS"), "{line}");
+        // That it only reads is declared in the registry and rendered into the
+        // prompt from there (ADR 0047 §1) — asserted where it is decided.
+        assert!(crate::is_read_tool("who_is_off"));
         assert!(line.contains("books nothing"), "{line}");
         assert!(line.contains("approves nothing"), "{line}");
         // The design note's deliberate absence, in the model's own words: an
@@ -190,7 +198,10 @@ mod tests {
             "attendance_score",
         ] {
             assert!(!HR_TOOL_DOC.contains(forbidden), "{forbidden}");
-            assert!(!HR_TOOLS.contains(&forbidden), "{forbidden}");
+            assert!(
+                crate::agent_tool::find_tool(HR_TOOLS, forbidden).is_none(),
+                "{forbidden}"
+            );
         }
     }
 
@@ -208,7 +219,10 @@ mod tests {
             "payroll_export",
         ] {
             assert!(!HR_TOOL_DOC.contains(forbidden), "{forbidden}");
-            assert!(!HR_TOOLS.contains(&forbidden), "{forbidden}");
+            assert!(
+                crate::agent_tool::find_tool(HR_TOOLS, forbidden).is_none(),
+                "{forbidden}"
+            );
         }
         assert!(HR_GUIDANCE.contains("no HR tool reads pay"));
     }

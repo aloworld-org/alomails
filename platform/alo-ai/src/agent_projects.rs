@@ -37,15 +37,17 @@
 //! Nothing here invoices anybody: the hours→invoice handoff (B3.06) is a human
 //! act on the unbilled view, and no tool in this list can reach it.
 
-/// The Projects tools the agent may propose, by name.
+use crate::agent_tool::AgentTool;
+
+/// The Projects tools, each declaring whether it reads or writes (ADR 0047 §1).
 ///
 /// The jmap layer validates an approved tool against the union of this list and
 /// every other product's ([`crate::is_agent_tool`]) and owns the execution of
 /// each.
-pub const PROJECTS_TOOLS: &[&str] = &[
-    "log_time",
-    "project_status_summary",
-    "draft_timesheet_from_calendar",
+pub const PROJECTS_TOOLS: &[AgentTool] = &[
+    AgentTool::write("log_time"),
+    AgentTool::read("project_status_summary"),
+    AgentTool::write("draft_timesheet_from_calendar"),
 ];
 
 /// The description of each Projects tool, spliced into the agent's system
@@ -55,7 +57,7 @@ pub const PROJECTS_TOOLS: &[&str] = &[
 /// it without the caller knowing how many tools Projects has.
 pub const PROJECTS_TOOL_DOC: &str = "\
 - log_time: suggest a timesheet entry for work somebody did on a project. It is SAVED AS A SUGGESTION for the user to accept in their timesheet — it counts towards nothing until they do, and it is never submitted or invoiced on its own. args: {\"project\": string (the project's name, exactly as the user says it, required), \"date\": string in \"YYYY-MM-DD\" (the day the work was done, required), \"minutes\": integer (WHOLE MINUTES — 90 for an hour and a half, never 1.5, required), \"note\": string (what was done, optional), \"task\": string (the task on that project it was done under, optional), \"billable\": boolean (optional; work on a client project is chargeable unless the user says otherwise)}. Never invent a day, a duration or a project the user did not give you.\n\
-- project_status_summary: report where one project stands — hours logged, budget used, milestones, and open tasks. It only READS; it changes nothing. args: {\"project\": string (the project's name, exactly as the user says it, required)}. Propose this instead of answering from the sources when the user asks how a project is going: the figures are in the timesheet and the plan, not in the search results.\n\
+- project_status_summary: report where one project stands — hours logged, budget used, milestones, and open tasks. args: {\"project\": string (the project's name, exactly as the user says it, required)}. Use this instead of answering from the sources when the user asks how a project is going: the figures are in the timesheet and the plan, not in the search results.\n\
 - draft_timesheet_from_calendar: suggest one timesheet entry per meeting in the user's OWN Agenda over a range of days — the way somebody fills in a week they forgot to log. Every entry is SAVED AS A SUGGESTION for the user to accept, exactly like log_time, and counts towards nothing until they do. args: {\"project\": string (the project those meetings were for, exactly as the user says it, required — the project is what the USER says it is and is never taken from a meeting's title), \"from\": string in \"YYYY-MM-DD\" (the first day of the range, required), \"to\": string in \"YYYY-MM-DD\" (the last day, included; optional — the same day as from when it is left out), \"billable\": boolean (optional; as for log_time)}. A range covers at most 31 days, and all-day entries are left out because a day marked \"Leave\" is not an hour worked. Propose this when the user asks to fill in a timesheet from their calendar or diary; never call it to find out what somebody did.\n";
 
 /// The Projects paragraph of the agent's general instructions.
@@ -74,8 +76,9 @@ mod tests {
     fn every_projects_tool_is_described_to_the_model() {
         for tool in PROJECTS_TOOLS {
             assert!(
-                PROJECTS_TOOL_DOC.contains(&format!("- {tool}:")),
-                "{tool} has no description in the prompt"
+                PROJECTS_TOOL_DOC.contains(&format!("- {}:", tool.name)),
+                "{} has no description in the prompt",
+                tool.name
             );
         }
         // …and nothing is described that cannot be executed.
@@ -104,8 +107,11 @@ mod tests {
         // A logged hour is a suggestion, not a filed timesheet line.
         assert!(PROJECTS_TOOL_DOC.contains("SAVED AS A SUGGESTION"));
         assert!(PROJECTS_TOOL_DOC.contains("counts towards nothing until they do"));
-        // The summary is a read, and it is proposed instead of a guessed answer.
-        assert!(PROJECTS_TOOL_DOC.contains("only READS"));
+        // The summary is a read — declared in the registry and rendered into
+        // the prompt from there (ADR 0047 §1), so it now runs inside the turn
+        // and grounds the answer instead of being offered as a button.
+        assert!(crate::is_read_tool("project_status_summary"));
+        assert!(!crate::is_read_tool("log_time"), "a logged hour is a write");
     }
 
     #[test]
@@ -137,7 +143,7 @@ mod tests {
             "invoice_hours",
         ] {
             assert!(!PROJECTS_TOOL_DOC.contains(forbidden));
-            assert!(!PROJECTS_TOOLS.contains(&forbidden));
+            assert!(crate::agent_tool::find_tool(PROJECTS_TOOLS, forbidden).is_none());
         }
     }
 }

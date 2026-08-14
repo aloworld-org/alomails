@@ -20,13 +20,22 @@
 //!   look identical in a database, so the tool reports the clash and lets a
 //!   human read it.
 
-/// The Agenda reading tools the agent may propose, by name.
-pub const AGENDA_TOOLS: &[&str] = &["whats_on", "am_i_free"];
+use crate::agent_tool::AgentTool;
+
+/// The Agenda tools, each declaring whether it reads or writes (ADR 0047 §1).
+///
+/// Both are reads: they run inside the turn and their answer lands in the room
+/// with no tap. Writing a diary stays with `create_event`, which is proposed.
+pub const AGENDA_TOOLS: &[AgentTool] = &[AgentTool::read("whats_on"), AgentTool::read("am_i_free")];
 
 /// What each Agenda tool takes, in the words the model reads.
+///
+/// Whether a tool reads or writes is **not** written here: it is declared in
+/// [`AGENDA_TOOLS`] and rendered into the prompt from there (ADR 0047 §1), so
+/// prose and behaviour cannot drift apart.
 pub const AGENDA_TOOL_DOC: &str = "\
-- whats_on: read what is in the user's own calendar over a range of days. It only READS; it changes nothing. args: {\"from\": string in \"YYYY-MM-DD\" (the first day, required), \"to\": string in \"YYYY-MM-DD\" (the last day, included; optional — the same day as from when left out)}. Propose this whenever the user asks what they have on, what their day or week looks like, or when something is. Never answer such a question from the sources: what is in the diary is in the diary, and a document that mentions a meeting is not evidence it is still happening. A range covers at most 31 days.\n\
-- am_i_free: check whether anything already overlaps a specific span of time. It only READS. args: {\"start\": string RFC 3339 datetime e.g. \"2026-08-13T14:00:00Z\" (required), \"end\": string RFC 3339 (optional; one hour after start when left out)}. Propose this BEFORE create_event whenever the user asks to book something at a particular time, so a new meeting is not proposed on top of one they already have. It reports what clashes; it does not decide whether they can be interrupted.\n";
+- whats_on: read what is in the user's own calendar over a range of days. args: {\"from\": string in \"YYYY-MM-DD\" (the first day, required), \"to\": string in \"YYYY-MM-DD\" (the last day, included; optional — the same day as from when left out)}. Use this whenever the user asks what they have on, what their day or week looks like, or when something is. Never answer such a question from the sources: what is in the diary is in the diary, and a document that mentions a meeting is not evidence it is still happening. A range covers at most 31 days.\n\
+- am_i_free: check whether anything already overlaps a specific span of time. args: {\"start\": string RFC 3339 datetime e.g. \"2026-08-13T14:00:00Z\" (required), \"end\": string RFC 3339 (optional; one hour after start when left out)}. Use this BEFORE create_event whenever the user asks to book something at a particular time, so a new meeting is not proposed on top of one they already have. It reports what clashes; it does not decide whether they can be interrupted.\n";
 
 /// The rules that keep an Agenda proposal honest, appended to the system prompt.
 pub const AGENDA_GUIDANCE: &str = "For an Agenda tool, resolve every relative day (today, tomorrow, Thursday, next week) against today's date given below and pass a real calendar date — never a phrase, and never a day you were not given enough to work out. If the user's meaning is ambiguous (\"Friday\" when it is already Friday), ANSWER and ask which they mean rather than choosing. Ask what is on the calendar with whats_on rather than inferring it from the sources; a document that mentions a meeting is not proof it is still in the diary.\n";
@@ -37,10 +46,11 @@ mod tests {
 
     #[test]
     fn every_named_tool_is_described() {
-        for name in AGENDA_TOOLS {
+        for tool in AGENDA_TOOLS {
             assert!(
-                AGENDA_TOOL_DOC.contains(&format!("- {name}:")),
-                "{name} is offered to the model with no description"
+                AGENDA_TOOL_DOC.contains(&format!("- {}:", tool.name)),
+                "{} is offered to the model with no description",
+                tool.name
             );
         }
     }
@@ -49,16 +59,13 @@ mod tests {
     /// `create_event`, which the user approves.
     #[test]
     fn nothing_here_can_change_a_diary() {
-        for name in AGENDA_TOOLS {
+        for tool in AGENDA_TOOLS {
             assert!(
-                !name.contains("create")
-                    && !name.contains("move")
-                    && !name.contains("cancel")
-                    && !name.contains("delete"),
-                "{name} would let a reading tool change somebody's calendar"
+                tool.is_read(),
+                "{} would run inside a turn and change somebody's calendar",
+                tool.name
             );
         }
-        assert!(AGENDA_TOOL_DOC.contains("It only READS"));
     }
 
     /// The whole reason the tool takes a date rather than a word.

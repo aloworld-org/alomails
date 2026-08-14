@@ -28,12 +28,18 @@
 //! tool that can win or lose a deal, and it does so only after the user reads
 //! the proposal and approves it.
 
-/// The CRM tools the agent may propose, by name.
+use crate::agent_tool::AgentTool;
+
+/// The CRM tools, each declaring whether it reads or writes (ADR 0047 §1).
 ///
 /// The jmap layer validates an approved tool against the union of this list and
 /// every other product's ([`crate::is_agent_tool`]) and owns the execution of
 /// each.
-pub const CRM_TOOLS: &[&str] = &["create_deal", "move_deal_stage", "draft_followup"];
+pub const CRM_TOOLS: &[AgentTool] = &[
+    AgentTool::write("create_deal"),
+    AgentTool::write("move_deal_stage"),
+    AgentTool::write("draft_followup"),
+];
 
 /// The description of each CRM tool, spliced into the agent's system prompt
 /// after the billing tools ([`crate::agent`]).
@@ -61,8 +67,9 @@ mod tests {
     fn every_crm_tool_is_described_to_the_model() {
         for tool in CRM_TOOLS {
             assert!(
-                CRM_TOOL_DOC.contains(&format!("- {tool}:")),
-                "{tool} has no description in the prompt"
+                CRM_TOOL_DOC.contains(&format!("- {}:", tool.name)),
+                "{} has no description in the prompt",
+                tool.name
             );
         }
         // …and nothing is described that cannot be executed.
@@ -99,7 +106,7 @@ mod tests {
     fn nothing_crm_offers_deletes_a_record_or_sends_mail() {
         for forbidden in ["delete_deal", "send_followup", "delete_pipeline"] {
             assert!(!CRM_TOOL_DOC.contains(forbidden));
-            assert!(!CRM_TOOLS.contains(&forbidden));
+            assert!(crate::agent_tool::find_tool(CRM_TOOLS, forbidden).is_none());
         }
     }
 }

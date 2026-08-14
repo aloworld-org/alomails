@@ -31,12 +31,17 @@
 //!   version of it needs seasonality and lead-time variance we deliberately do
 //!   not build (`docs/design/inventory.md` § The inventory agent).
 
-/// The Inventory tools the agent may propose, by name.
+use crate::agent_tool::AgentTool;
+
+/// The Inventory tools, each declaring whether it reads or writes (ADR 0047 §1).
 ///
 /// The jmap layer validates an approved tool against the union of this list and
 /// every other product's ([`crate::is_agent_tool`]) and owns the execution of
 /// each.
-pub const INVENTORY_TOOLS: &[&str] = &["reorder_proposals", "stock_answer"];
+pub const INVENTORY_TOOLS: &[AgentTool] = &[
+    AgentTool::write("reorder_proposals"),
+    AgentTool::read("stock_answer"),
+];
 
 /// The description of each Inventory tool, spliced into the agent's system
 /// prompt after the Finance tools ([`crate::agent`]).
@@ -45,7 +50,7 @@ pub const INVENTORY_TOOLS: &[&str] = &["reorder_proposals", "stock_answer"];
 /// it without the caller knowing how many tools Inventory has.
 pub const INVENTORY_TOOL_DOC: &str = "\
 - reorder_proposals: go through everything the user is under their OWN minimum on and write one DRAFT purchase order per supplier for it. Each draft is SAVED AS A DRAFT in their purchase orders, carries no order number, and has been sent to NOBODY — they open it, change it and press send themselves. args: {\"supplier\": string (only what this one supplier sells us, optional — every supplier when left out), \"location\": string (only what is short at this one place, by its name or its code, optional — everywhere when left out)}. You do NOT choose what to buy or what it costs and there is no argument for either: the quantities come from the user's own minimums and shelves, and the prices from their own agreed price list. A shortage nobody has quoted us for is reported back as left out rather than ordered from a supplier you picked. Propose this when the user asks what needs reordering, what is running low, or to raise the orders for it.\n\
-- stock_answer: read where ONE product of the user's stands right now — how much is on each of their shelves, how much is on order from suppliers, how much is promised to customers, what that leaves available, and whether it is under a minimum they set. It only READS: it writes nothing, orders nothing and reserves nothing. args: {\"product\": string (the product, by the name, SKU or barcode the user used, REQUIRED)}. Answer with the figures it returns and NOTHING you worked out yourself: never estimate when stock will run out, never predict what will be needed, and never suggest a quantity to buy — the tool reports today, and reorder_proposals is what turns a shortage into a document. Propose this when the user asks how many of something is left, whether there is enough, or what is on its way.\n";
+- stock_answer: read where ONE product of the user's stands right now — how much is on each of their shelves, how much is on order from suppliers, how much is promised to customers, what that leaves available, and whether it is under a minimum they set. It orders nothing and reserves nothing. args: {\"product\": string (the product, by the name, SKU or barcode the user used, REQUIRED)}. Answer with the figures it returns and NOTHING you worked out yourself: never estimate when stock will run out, never predict what will be needed, and never suggest a quantity to buy — the tool reports today, and reorder_proposals is what turns a shortage into a document. Use this when the user asks how many of something is left, whether there is enough, or what is on its way.\n";
 
 /// The Inventory paragraph of the agent's general instructions.
 ///
@@ -63,8 +68,9 @@ mod tests {
     fn every_inventory_tool_is_described_to_the_model() {
         for tool in INVENTORY_TOOLS {
             assert!(
-                INVENTORY_TOOL_DOC.contains(&format!("- {tool}:")),
-                "{tool} has no description in the prompt"
+                INVENTORY_TOOL_DOC.contains(&format!("- {}:", tool.name)),
+                "{} has no description in the prompt",
+                tool.name
             );
         }
         // …and nothing is described that cannot be executed.
@@ -113,8 +119,11 @@ mod tests {
             .lines()
             .find(|line| line.starts_with("- stock_answer:"))
             .expect("stock_answer is described");
-        assert!(line.contains("only READS"), "{line}");
-        assert!(line.contains("writes nothing"), "{line}");
+        // That it only reads is declared in the registry and rendered into the
+        // prompt from there (ADR 0047 §1) — asserted where it is decided, and
+        // it is the tool the whole ADR is named after: "is the X100 in stock?"
+        // must come back as a figure and not as a button.
+        assert!(crate::is_read_tool("stock_answer"));
         // A reservation is the thing this answer is most likely to be mistaken
         // for: the store deliberately has none (`inv_reorder`'s header argues
         // it), so the model must not imply one was made.
@@ -146,7 +155,7 @@ mod tests {
             "apply_stocktake",
         ] {
             assert!(!INVENTORY_TOOL_DOC.contains(forbidden));
-            assert!(!INVENTORY_TOOLS.contains(&forbidden));
+            assert!(crate::agent_tool::find_tool(INVENTORY_TOOLS, forbidden).is_none());
         }
     }
 }

@@ -391,6 +391,12 @@ opaque_id!(
     ChatProposalId
 );
 opaque_id!(
+    /// One tool an agent ran, read or write (ADR 0047 §4). A read runs inside
+    /// the turn with nobody's approval, so this row is the only place it shows
+    /// up; a write's approval is a [`ChatProposalId`] and this is its receipt.
+    ChatToolRunId
+);
+opaque_id!(
     /// One journal entry — everything one document event did to the books, in
     /// one transaction (alo Finance, ADR 0035, wave B4). An entry is written
     /// whole and never edited: a correction is another entry pointing back at

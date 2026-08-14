@@ -17,11 +17,12 @@
 
 use serde_json::{Value, json};
 
-use alo_ai::{AgentDecision, AiConfig, InferenceError, WorkspaceSource};
-use alo_store::{AccountStore, AgentRecord, ChatAgent, ChatChannelId, TenantId, parse_handles};
+use alo_ai::{AiConfig, InferenceError, WorkspaceSource};
+use alo_store::{AgentRecord, ChatAgent, ChatChannelId, parse_handles};
 
+use crate::agent_turn::{Turn, TurnContext, TurnResult, take_turn as run_turn};
 use crate::push;
-use crate::state::AppState;
+use crate::state::{Account, AppState};
 
 /// How much of the workspace grounds one chat turn. Matches the command
 /// palette's budget: the same question deserves the same evidence wherever it
@@ -60,12 +61,14 @@ enum Spoken {
 /// untouched, because their words were already said and are not conditional on
 /// a model being reachable.
 async fn take_turn(
-    acc: &AccountStore,
+    state: &AppState,
+    account: &Account,
     channel: &ChatChannelId,
     agent: &ChatAgent,
     question: &str,
     stopped: &std::sync::atomic::AtomicBool,
 ) -> Option<Spoken> {
+    let acc = &account.acc;
     // Access-scoped retrieval — the only thing this turn may ever see, and it
     // is the asker's access, never the agent's.
     let hits = acc
@@ -115,20 +118,30 @@ async fn take_turn(
             ),
         }
     };
-    let decided = alo_ai::run_agent(&config, question, &ground, &today, &[]).await;
+    // The turn, with its reading tools run inside it (ADR 0047): asking what is
+    // in stock comes back as the figure, and only a change comes back as
+    // something to approve.
+    let turn = Turn {
+        request: question,
+        sources: &ground,
+        today: &today,
+        folders: &[],
+        context: TurnContext::in_room(&agent.id, channel),
+    };
+    let decided = run_turn(state, account, &config, &turn).await;
     // Stopped while it was thinking: the call cannot be un-made, but its words
     // can be kept out of the room, which is what someone pressing Stop wants.
     if stopped.load(std::sync::atomic::Ordering::SeqCst) {
         return None;
     }
     match decided {
-        Ok(AgentDecision::Answer(answer)) => {
+        Ok(TurnResult::Answer(answer)) => {
             acc.post_as_agent(channel, &agent.id, &answer, None)
                 .await
                 .ok()?;
             Some(Spoken::Answered)
         }
-        Ok(AgentDecision::Action { action, say }) => {
+        Ok(TurnResult::Propose { action, say }) => {
             // The sentence goes in the room so everyone can read what was
             // proposed; the action is recorded against that message, and only
             // the asker's tap can run it.
@@ -171,17 +184,17 @@ const UNREACHABLE: &str = "I couldn't reach the model just now. Try me again in 
 /// reaches the room over the push stream the client is already holding open.
 pub(crate) fn answer_if_named(
     state: &AppState,
-    acc: &AccountStore,
-    tenant: &TenantId,
+    account: &Account,
     channel: &ChatChannelId,
     body: &str,
 ) {
     let state = state.clone();
-    let acc = acc.clone();
-    let tenant = tenant.clone();
+    let account = account.clone();
+    let tenant = account.tenant.clone();
     let channel = channel.clone();
     let body = body.to_owned();
     tokio::spawn(async move {
+        let acc = account.acc.clone();
         let Ok(present) = acc.channel_agents(&channel).await else {
             return;
         };
@@ -196,7 +209,7 @@ pub(crate) fn answer_if_named(
                 acc.user().as_str(),
             );
             push::notify_chat(&state, &tenant, &[acc.user().clone()]).await;
-            let spoke = take_turn(&acc, &channel, &agent, &body, &stopped).await;
+            let spoke = take_turn(&state, &account, &channel, &agent, &body, &stopped).await;
             state.turns.end(&tenant, &channel, &id);
             if spoke.is_some() {
                 // Tell the room its shape changed, exactly as a person's
@@ -227,6 +240,9 @@ pub(crate) fn agent_json(a: &ChatAgent, record: Option<&AgentRecord>) -> Value {
         "disabled": a.disabled,
         "answers": record.map_or(0, |r| r.answers),
         "actions": record.map_or(0, |r| r.actions),
+        // What it looked up for this person, with nobody's approval (ADR 0047
+        // §4). Without it a third of an agent's work would be invisible here.
+        "reads": record.map_or(0, |r| r.reads),
         "lastAt": record.and_then(|r| r.last_at).map(|at| {
             at.format(&time::format_description::well_known::Rfc3339)
                 .unwrap_or_default()

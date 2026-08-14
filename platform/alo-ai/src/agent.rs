@@ -19,27 +19,57 @@ use crate::agent_finance::{FINANCE_GUIDANCE, FINANCE_TOOL_DOC, FINANCE_TOOLS};
 use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
 use crate::agent_inventory::{INVENTORY_GUIDANCE, INVENTORY_TOOL_DOC, INVENTORY_TOOLS};
 use crate::agent_projects::{PROJECTS_GUIDANCE, PROJECTS_TOOL_DOC, PROJECTS_TOOLS};
+use crate::agent_tool::{AgentTool, find_tool};
 use crate::{AiConfig, ChatMessage, InferenceError, WorkspaceSource, chat, render_sources};
 
-/// The core (mail, tasks, calendar) tools the agent may propose, by name.
+/// The core (mail, tasks, calendar) tools, each declaring whether it reads or
+/// writes (ADR 0047 §1).
 ///
-/// A **product** contributes its own list beside this one — billing's is
-/// [`BILLING_TOOLS`] — and [`is_agent_tool`] is the allowlist the execution
-/// boundary asks. Adding a core tool → describe it in [`AGENT_SYSTEM_TOOLS`]
+/// Every one of them writes: this list is the mail and diary half of the agent,
+/// and there is nothing here that merely looks. A **product** contributes its
+/// own list beside this one — billing's is [`BILLING_TOOLS`] — and
+/// [`is_agent_tool`] is the allowlist the execution boundary asks. Adding a
+/// core tool → declare its effect here, describe it in [`AGENT_SYSTEM_TOOLS`],
 /// and wire its validation + execution in the jmap agent handler.
-pub const AGENT_TOOLS: &[&str] = &[
-    "create_task",
-    "create_event",
-    "mark_read",
-    "flag_email",
-    "archive_email",
-    "trash_email",
-    "snooze_email",
-    "draft_email",
-    "draft_reply",
-    "send_email",
-    "move_to_folder",
+pub const AGENT_TOOLS: &[AgentTool] = &[
+    AgentTool::write("create_task"),
+    AgentTool::write("create_event"),
+    AgentTool::write("mark_read"),
+    AgentTool::write("flag_email"),
+    AgentTool::write("archive_email"),
+    AgentTool::write("trash_email"),
+    AgentTool::write("snooze_email"),
+    AgentTool::write("draft_email"),
+    AgentTool::write("draft_reply"),
+    AgentTool::write("send_email"),
+    AgentTool::write("move_to_folder"),
 ];
+
+/// Every tool that exists, across every product, in prompt order.
+///
+/// One list rather than eleven, so a caller cannot ask some of them and forget
+/// another — the mistake [`is_agent_tool`] was written to prevent, now with the
+/// effect bit carried along beside the name.
+#[must_use]
+pub fn all_tools() -> Vec<AgentTool> {
+    let mut out = Vec::new();
+    for list in [
+        AGENT_TOOLS,
+        BILLING_TOOLS,
+        CRM_TOOLS,
+        PROJECTS_TOOLS,
+        FINANCE_TOOLS,
+        INVENTORY_TOOLS,
+        HR_TOOLS,
+        DRIVE_TOOLS,
+        AGENDA_TOOLS,
+        CHAT_TOOLS,
+        CONTACTS_TOOLS,
+    ] {
+        out.extend_from_slice(list);
+    }
+    out
+}
 
 /// One action the agent proposes. `args` is validated tool-by-tool at the
 /// execution boundary — never trusted here.
@@ -70,7 +100,7 @@ pub enum AgentDecision {
 const AGENT_SYSTEM_HEAD: &str = "You are alo, the assistant across the user's entire workspace. \
 For each request you do EXACTLY ONE of two things, and you reply with a SINGLE JSON object and nothing else:\n\
 1) ANSWER from the numbered sources below: {\"kind\":\"answer\",\"answer\":\"<text>\"}. Cite each source you use by its number in square brackets like [1]. Use ONLY the sources; if they do not contain the answer, say you could not find it — never invent files, people, or facts.\n\
-2) PROPOSE ONE ACTION for the user to approve: {\"kind\":\"action\",\"say\":\"<one short sentence describing what you will do>\",\"action\":{\"tool\":\"<tool>\",\"args\":{...}}}. You NEVER perform the action yourself — you only propose it; the user approves it.\n\
+2) USE ONE TOOL: {\"kind\":\"action\",\"say\":\"<one short sentence describing what you will do>\",\"action\":{\"tool\":\"<tool>\",\"args\":{...}}}. What happens next depends on the tool, and the two lists after the descriptions below say which is which: a READING tool runs immediately and comes back to you as a source to answer from, while a tool that CHANGES something is only proposed and waits for the user to approve it — you never perform a change yourself.\n\
 Available tools:\n";
 
 /// The core tools, described. A **product's** tools are described in its own
@@ -105,10 +135,11 @@ pub fn system_prompt() -> String {
     format!(
         "{AGENT_SYSTEM_HEAD}{AGENT_SYSTEM_TOOLS}{BILLING_TOOL_DOC}{CRM_TOOL_DOC}{PROJECTS_TOOL_DOC}\
          {FINANCE_TOOL_DOC}{INVENTORY_TOOL_DOC}{HR_TOOL_DOC}{DRIVE_TOOL_DOC}{AGENDA_TOOL_DOC}\
-         {CHAT_TOOL_DOC}{CONTACTS_TOOL_DOC}\
+         {CHAT_TOOL_DOC}{CONTACTS_TOOL_DOC}{}\
          {BILLING_GUIDANCE}{CRM_GUIDANCE}{PROJECTS_GUIDANCE}{FINANCE_GUIDANCE}{INVENTORY_GUIDANCE}\
          {HR_GUIDANCE}{DRIVE_GUIDANCE}{AGENDA_GUIDANCE}{CHAT_GUIDANCE}{CONTACTS_GUIDANCE}\
-         {AGENT_SYSTEM_RULES}"
+         {AGENT_SYSTEM_RULES}",
+        effect_block()
     )
 }
 
@@ -119,17 +150,51 @@ pub fn system_prompt() -> String {
 /// route) cannot check some of them and forget another.
 #[must_use]
 pub fn is_agent_tool(tool: &str) -> bool {
-    AGENT_TOOLS.contains(&tool)
-        || BILLING_TOOLS.contains(&tool)
-        || CRM_TOOLS.contains(&tool)
-        || PROJECTS_TOOLS.contains(&tool)
-        || FINANCE_TOOLS.contains(&tool)
-        || INVENTORY_TOOLS.contains(&tool)
-        || HR_TOOLS.contains(&tool)
-        || DRIVE_TOOLS.contains(&tool)
-        || AGENDA_TOOLS.contains(&tool)
-        || CHAT_TOOLS.contains(&tool)
-        || CONTACTS_TOOLS.contains(&tool)
+    all_tools().iter().any(|entry| entry.name == tool)
+}
+
+/// Whether `tool` is one that only reads, and may therefore run inside a turn
+/// with nobody's approval (ADR 0047 §1).
+///
+/// The answer comes from the registry and from nowhere else: not from the
+/// tool's name, not from its description, and never from the model's own word
+/// for what it is doing — the model is the untrusted party in this design, and
+/// an injected turn would call a write a read. **A name the registry does not
+/// know is not a read**, so an unfamiliar tool takes the proposal path and
+/// meets [`is_agent_tool`] at the boundary rather than the path that skips
+/// approval.
+#[must_use]
+pub fn is_read_tool(tool: &str) -> bool {
+    let all = all_tools();
+    find_tool(&all, tool).is_some_and(|entry| entry.is_read())
+}
+
+/// The read/write split, rendered for the model out of the declarations
+/// themselves (ADR 0047 §1).
+///
+/// It used to be a hand-written sentence — "It only READS; it changes nothing."
+/// — repeated in eleven tool descriptions, which is a claim the code could not
+/// check and the behaviour could drift from. Generating it here means the
+/// prompt and the execution boundary read the same list, so they cannot
+/// disagree about which tools need a tap.
+fn effect_block() -> String {
+    let all = all_tools();
+    let names = |want_read: bool| {
+        all.iter()
+            .filter(|tool| tool.is_read() == want_read)
+            .map(|tool| tool.name)
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    format!(
+        "\nThese tools only READ. They change nothing, so choosing one does not ask the user anything: it runs \
+straight away and you are then asked again with its result, so you can ANSWER from what it found. Prefer one of \
+these over the sources whenever the question is about a record they cover — {}.\n\
+Every other tool CHANGES something. Choosing one PROPOSES it: the user reads your \"say\" line and approves it \
+before anything happens, and you never see a result — {}.\n",
+        names(true),
+        names(false)
+    )
 }
 
 /// The chat messages for one agent turn. Pure and exported so the prompt is
@@ -217,6 +282,43 @@ pub fn parse_decision(text: &str) -> Result<AgentDecision, InferenceError> {
     }
 }
 
+/// Told to the model on the second and later calls of a read turn, when there
+/// is still a lookup left in the budget.
+const MORE_READS_LEFT: &str = "\n\nThe last source above is the result of a tool you just ran. \
+ANSWER the request from it now if it contains what you need — that is what you looked it up for. \
+Only run one more reading tool if the answer genuinely needs a second lookup.";
+
+/// Told instead when the lookup budget is spent (ADR 0047 §2).
+const NO_READS_LEFT: &str = "\n\nThe last source above is the result of a tool you just ran, and it \
+was your LAST lookup — you may not run another reading tool for this request. ANSWER from what you \
+have; if it is not enough, say plainly what you could not find out and ask the user to narrow the \
+question. You may still propose a tool that CHANGES something.";
+
+/// The chat messages for the second and later calls of a read turn (ADR 0047
+/// §2), where `sources` already carries the tool results as further numbered
+/// sources. `more_allowed` says whether the turn's lookup budget has anything
+/// left.
+///
+/// Pure and exported so the prompt is testable without a backend.
+#[must_use]
+pub fn after_read_messages(
+    request: &str,
+    sources: &[WorkspaceSource],
+    today: &str,
+    folders: &[String],
+    more_allowed: bool,
+) -> Vec<ChatMessage> {
+    let mut messages = agent_messages(request, sources, today, folders);
+    if let Some(user) = messages.last_mut() {
+        user.content.push_str(if more_allowed {
+            MORE_READS_LEFT
+        } else {
+            NO_READS_LEFT
+        });
+    }
+    messages
+}
+
 /// Run one agent turn: build the prompt from the request + access-scoped sources,
 /// call the model, and parse its decision. Returns a decision to PROPOSE — it
 /// never executes anything.
@@ -233,6 +335,34 @@ pub async fn run_agent(
     let text = chat(
         config,
         &agent_messages(request, sources, today, folders),
+        0.2,
+    )
+    .await?;
+    parse_decision(&text)
+}
+
+/// Ask again once a reading tool has run and its result has joined `sources`
+/// (ADR 0047 §2) — the second half of what makes a read *answer* rather than
+/// propose.
+///
+/// Identical in every other respect to [`run_agent`]: same prompt, same
+/// envelope, same refusal to execute anything. `more_allowed` is false on the
+/// last lookup of the turn, so the model is told to answer with what it has
+/// rather than asking for a lookup it will not get.
+///
+/// # Errors
+/// [`InferenceError`] for disabled/unconfigured/unreachable/backend/empty.
+pub async fn run_agent_after_read(
+    config: &AiConfig,
+    request: &str,
+    sources: &[WorkspaceSource],
+    today: &str,
+    folders: &[String],
+    more_allowed: bool,
+) -> Result<AgentDecision, InferenceError> {
+    let text = chat(
+        config,
+        &after_read_messages(request, sources, today, folders, more_allowed),
         0.2,
     )
     .await?;
@@ -320,35 +450,14 @@ mod tests {
         // told about but the execute route refuses is a dead proposal, and a
         // tool it is never told about is dead code.
         let prompt = system_prompt();
-        for tool in AGENT_TOOLS
-            .iter()
-            .chain(BILLING_TOOLS)
-            .chain(CRM_TOOLS)
-            .chain(PROJECTS_TOOLS)
-            .chain(FINANCE_TOOLS)
-            .chain(INVENTORY_TOOLS)
-            .chain(HR_TOOLS)
-            .chain(DRIVE_TOOLS)
-            .chain(AGENDA_TOOLS)
-            .chain(CHAT_TOOLS)
-            .chain(CONTACTS_TOOLS)
-        {
-            assert!(prompt.contains(&format!("- {tool}:")), "{tool} undescribed");
-            assert!(is_agent_tool(tool), "{tool} is not allowed to execute");
+        for tool in all_tools() {
+            let name = tool.name;
+            assert!(prompt.contains(&format!("- {name}:")), "{name} undescribed");
+            assert!(is_agent_tool(name), "{name} is not allowed to execute");
         }
         assert_eq!(
             prompt.matches("\n- ").count(),
-            AGENT_TOOLS.len()
-                + BILLING_TOOLS.len()
-                + CRM_TOOLS.len()
-                + PROJECTS_TOOLS.len()
-                + FINANCE_TOOLS.len()
-                + INVENTORY_TOOLS.len()
-                + HR_TOOLS.len()
-                + DRIVE_TOOLS.len()
-                + AGENDA_TOOLS.len()
-                + CHAT_TOOLS.len()
-                + CONTACTS_TOOLS.len(),
+            all_tools().len(),
             "the prompt describes exactly the tools that exist"
         );
         // A name from neither list is not executable, whatever it looks like.
@@ -361,6 +470,100 @@ mod tests {
         ] {
             assert!(!is_agent_tool(stranger), "{stranger:?} must not be allowed");
         }
+    }
+
+    /// ADR 0047 §1. The split is a property of the tool, declared once, and the
+    /// eleven reads are the eleven the ADR names — no more, and not by prefix.
+    #[test]
+    fn the_registry_declares_which_tools_only_read() {
+        let reads: Vec<&str> = all_tools()
+            .iter()
+            .filter(|t| t.is_read())
+            .map(|t| t.name)
+            .collect();
+        assert_eq!(
+            reads,
+            [
+                "project_status_summary",
+                "vat_summary",
+                "flag_anomalies",
+                "stock_answer",
+                "who_is_off",
+                "find_file",
+                "whats_on",
+                "am_i_free",
+                "catch_up_room",
+                "find_in_chat",
+                "find_contact",
+            ]
+        );
+        assert_eq!(all_tools().len(), 33);
+        for name in &reads {
+            assert!(is_read_tool(name), "{name} is declared a read");
+        }
+        // A write is never a read, however much its name looks like a lookup.
+        for name in ["draft_letter_from_template", "categorise_transactions"] {
+            assert!(is_agent_tool(name));
+            assert!(!is_read_tool(name), "{name} must still wait for a tap");
+        }
+        // And a name nobody declared is not a read — so it takes the proposal
+        // path, where the allowlist refuses it, rather than the path that skips
+        // approval. This is the silent failure the ADR rejects a naming
+        // convention to avoid.
+        for stranger in ["", "find_everything", "stock_answer ", "read_payroll"] {
+            assert!(
+                !is_read_tool(stranger),
+                "{stranger:?} must not run un-tapped"
+            );
+        }
+    }
+
+    /// The prompt's statement of the split is generated from the same list the
+    /// boundary asks, so prose and behaviour cannot drift (ADR 0047 §1).
+    #[test]
+    fn the_prompt_states_the_split_from_the_declarations() {
+        let prompt = system_prompt();
+        let block = effect_block();
+        assert!(prompt.contains(&block));
+        let (reading, changing) = block
+            .split_once("Every other tool CHANGES something")
+            .expect("both halves are rendered");
+        for tool in all_tools() {
+            let half = if tool.is_read() { reading } else { changing };
+            assert!(
+                half.contains(tool.name),
+                "{} is on the wrong side of the prompt's split",
+                tool.name
+            );
+        }
+        // The hand-written claim this replaced must not come back: two
+        // statements of one fact is exactly how they came to disagree.
+        assert!(
+            !prompt.contains("It only READS"),
+            "the split is rendered, never written out per tool"
+        );
+    }
+
+    #[test]
+    fn the_second_call_tells_the_model_the_result_is_there_and_what_is_left() {
+        let sources = [src(1, "tool result", "stock_answer")];
+        let more = after_read_messages("is the X100 in stock?", &sources, "2026-08-14", &[], true);
+        let last = &more[1].content;
+        assert!(last.contains("is the X100 in stock?"));
+        assert!(last.contains("stock_answer"));
+        assert!(last.contains("result of a tool you just ran"));
+        assert!(last.contains("Only run one more reading tool"));
+
+        // On the last lookup it is told so, and told to say what it could not
+        // find rather than asking for a lookup it will not get.
+        let done = after_read_messages("is the X100 in stock?", &sources, "2026-08-14", &[], false);
+        let last = &done[1].content;
+        assert!(last.contains("LAST lookup"));
+        assert!(last.contains("ask the user to narrow the question"));
+        assert!(!last.contains("Only run one more reading tool"));
+        // Same system prompt either way — one contract, not two.
+        assert_eq!(more[0].content, done[0].content);
+        assert_eq!(more[0].content, system_prompt());
     }
 
     #[test]

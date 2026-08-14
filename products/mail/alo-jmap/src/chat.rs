@@ -703,13 +703,7 @@ pub async fn post_message(
     notify_room(&state, &account, &message.channel, &named).await;
     // Naming an agent is the whole trigger; the turn runs off this request so
     // the words just said are not held up by a model call.
-    crate::chat_agent::answer_if_named(
-        &state,
-        &account.acc,
-        &account.tenant,
-        &message.channel,
-        &message.body,
-    );
+    crate::chat_agent::answer_if_named(&state, &account, &message.channel, &message.body);
     let emails = resolve_emails(&state, &account, std::slice::from_ref(&message.author)).await;
     let shared = account
         .acc

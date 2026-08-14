@@ -28,13 +28,14 @@ pub mod agent_finance;
 pub mod agent_hr;
 pub mod agent_inventory;
 pub mod agent_projects;
+mod agent_tool;
 pub mod insights;
 pub mod site_edits;
 pub mod site_translation;
 pub mod sites;
 pub use agent::{
-    AGENT_TOOLS, AgentDecision, ProposedAction, agent_messages, is_agent_tool, parse_decision,
-    run_agent, system_prompt,
+    AGENT_TOOLS, AgentDecision, ProposedAction, after_read_messages, agent_messages, all_tools,
+    is_agent_tool, is_read_tool, parse_decision, run_agent, run_agent_after_read, system_prompt,
 };
 pub use agent_agenda::AGENDA_TOOLS;
 pub use agent_billing::BILLING_TOOLS;
@@ -46,6 +47,7 @@ pub use agent_finance::FINANCE_TOOLS;
 pub use agent_hr::HR_TOOLS;
 pub use agent_inventory::INVENTORY_TOOLS;
 pub use agent_projects::PROJECTS_TOOLS;
+pub use agent_tool::{AgentTool, Effect, find_tool};
 pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, repair_messages};
 pub use site_edits::{
     SITE_EDIT_SCHEMA_VERSION, SiteEditEnvelope, SiteEditError, SiteEditOperation,

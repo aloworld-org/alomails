@@ -363,7 +363,7 @@ fn invalid(detail: String) -> SiteDraftError {
 }
 
 #[cfg(test)]
-#[allow(clippy::unwrap_used)]
+#[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
     use alo_store::THEME_PRESETS;

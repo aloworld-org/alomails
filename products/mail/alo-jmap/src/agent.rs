@@ -9,8 +9,12 @@
 //! can see, and execution runs through `account.acc` (their tenant) — an agent
 //! can never act outside the caller's own permissions.
 
-use alo_ai::{AgentDecision, AiConfig, InferenceError, WorkspaceSource};
-use alo_store::{CalendarEvent, EventId, MAX_PAGE, MailboxId, MessageId, NewTask, Page};
+use crate::agent_turn::{Turn, TurnContext, TurnResult, take_turn};
+use alo_ai::{AiConfig, InferenceError, WorkspaceSource};
+use alo_store::{
+    CalendarEvent, ChatAgentId, ChatChannelId, EventId, MAX_PAGE, MailboxId, MessageId,
+    NewAgentToolRun, NewTask, Page,
+};
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::{Json, body::Bytes};
@@ -32,15 +36,71 @@ use crate::state::{Account, AppState, authenticate};
 /// How many retrieved items ground one agent turn (mirrors `/ai/ask`).
 const AGENT_SOURCES: i64 = 8;
 
+/// Whether anybody approved this run (ADR 0047 §3).
+///
+/// This is the whole execution boundary. A reading tool may run either way; a
+/// tool that **changes** something may run only under [`Approval::Asker`], and
+/// that is checked here rather than asked for in the prompt — the model is the
+/// untrusted party, and a prompt that asks nicely is not a permission system.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Approval {
+    /// Nobody approved it: it is running inside a turn, off the model's own
+    /// choice, so it is a **read or nothing**.
+    InTurn,
+    /// The asker themselves asked for it — a `chat_proposals` row of their own
+    /// that they approved, or their own tap in the command palette. Never
+    /// anybody else's say-so: the run carries their reach.
+    Asker,
+}
+
+/// One run of one tool: who approved it, and where it is happening.
+///
+/// The `agent` and `channel` are for the audit record (ADR 0047 §4) and are
+/// `None` outside chat — the command palette's assistant is not a row in
+/// `chat_agents` and is in no room.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct ToolRun<'a> {
+    /// Whose approval, if anybody's, this run carries.
+    pub approval: Approval,
+    /// The agent that ran it.
+    pub agent: Option<&'a ChatAgentId>,
+    /// The room it happened in.
+    pub channel: Option<&'a ChatChannelId>,
+}
+
+impl ToolRun<'_> {
+    /// A run the caller themselves asked for, outside any room — the command
+    /// palette's execute route, where pressing the button *is* the approval.
+    pub(crate) const fn approved() -> Self {
+        Self {
+            approval: Approval::Asker,
+            agent: None,
+            channel: None,
+        }
+    }
+}
+
+/// Said when a tool that changes something is reached from inside a turn.
+///
+/// Unreachable in practice — a turn only ever runs what the registry declares a
+/// read — but the boundary states its own rule rather than trusting the layer
+/// above to have applied it. It is phrased for the person, because both the
+/// model and a room can end up reading it.
+const NEEDS_APPROVAL: &str =
+    "that changes something, so it waits for you to approve it — it cannot run on its own";
+
 /// `POST /ai/agent` — `{"q":"..."}` → `{"answer":str|null,
 /// "action":{tool,args,say}|null, "sources":[...],
 /// "reason":null|"unconfigured"|"unreachable"}`.
 ///
-/// Runs access-scoped retrieval, then asks the model to answer **or** propose one
-/// action. It never executes: a returned `action` is a proposal the UI must have
-/// the user approve, which then calls `/ai/agent/execute`. Unlike `/ai/ask` it
-/// still calls the model when retrieval is empty — the agent can act (e.g. create
-/// a task) without any sources.
+/// Runs access-scoped retrieval, then takes a turn: a **reading** tool the model
+/// chooses runs inside this request and its result grounds the answer, while a
+/// tool that **changes** something comes back as an `action` for the UI to have
+/// the user approve, which then calls `/ai/agent/execute` (ADR 0047). So a
+/// returned `action` is always a change and never a lookup — asking what is in
+/// stock gets the figure, not a button. Unlike `/ai/ask` it still calls the model
+/// when retrieval is empty — the agent can act (e.g. create a task) without any
+/// sources.
 pub async fn agent(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -129,20 +189,20 @@ pub async fn agent(
         Some(zone) => Some(zone),
         None => account.acc.user_timezone().await.unwrap_or_default(),
     };
-    match alo_ai::run_agent(
-        &config,
-        &request,
-        &ground,
-        &today_where(known_tz.as_deref()),
-        &folders,
-    )
-    .await
-    {
-        Ok(AgentDecision::Answer(answer)) => Ok(Json(json!({
+    let today = today_where(known_tz.as_deref());
+    let turn = Turn {
+        request: &request,
+        sources: &ground,
+        today: &today,
+        folders: &folders,
+        context: TurnContext::palette(),
+    };
+    match take_turn(&state, &account, &config, &turn).await {
+        Ok(TurnResult::Answer(answer)) => Ok(Json(json!({
             "answer": answer, "action": Value::Null,
             "reason": Value::Null, "sources": sources_json
         }))),
-        Ok(AgentDecision::Action { mut action, say }) => {
+        Ok(TurnResult::Propose { mut action, say }) => {
             resolve_email_source(&mut action.args, &sources);
             Ok(Json(json!({
                 "answer": Value::Null,
@@ -182,7 +242,10 @@ pub async fn agent_execute(
     let req: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let tool = req.get("tool").and_then(Value::as_str).unwrap_or("").trim();
     let args = req.get("args").cloned().unwrap_or(Value::Null);
-    execute_tool(&state, &account, tool, &args).await
+    // Pressing the button in the palette IS the approval, and it is the
+    // caller's own: this route is reached from their session and from nowhere
+    // else.
+    execute_tool(&state, &account, tool, &args, &ToolRun::approved()).await
 }
 
 /// Run one approved tool through the caller's own store.
@@ -201,10 +264,64 @@ pub(crate) async fn execute_tool(
     account: &Account,
     tool: &str,
     args: &Value,
+    run: &ToolRun<'_>,
 ) -> Result<Json<Value>, Problem> {
-    if !alo_ai::is_agent_tool(tool) {
+    let all = alo_ai::all_tools();
+    let Some(entry) = alo_ai::find_tool(&all, tool).copied() else {
         return Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool"));
+    };
+    // ADR 0047 §3, and the reason "reads only" is true of a turn rather than
+    // merely asked of it. The registry says what this tool does and the caller
+    // says whose approval it carries; nothing the model returned is consulted.
+    if !entry.is_read() && run.approval == Approval::InTurn {
+        record_run(account, run, &entry, args, false).await;
+        return Err(Problem::with(StatusCode::FORBIDDEN, NEEDS_APPROVAL));
     }
+    let done = dispatch(state, account, tool, args).await;
+    // ADR 0047 §4: both paths leave a row, and a refusal leaves one too.
+    record_run(account, run, &entry, args, done.is_ok()).await;
+    done
+}
+
+/// Write the audit row for one run (ADR 0047 §4).
+///
+/// **Best-effort on purpose.** A read the caller was entitled to must not fail
+/// because a logline could not be written — that trades a working product for
+/// an audit trail nobody asked to be strict. The failure is reported to the
+/// operator's log instead, with the tool's name and never its arguments: those
+/// carry the caller's own content.
+async fn record_run(
+    account: &Account,
+    run: &ToolRun<'_>,
+    entry: &alo_ai::AgentTool,
+    args: &Value,
+    ok: bool,
+) {
+    if let Err(err) = account
+        .acc
+        .record_tool_run(&NewAgentToolRun {
+            agent: run.agent,
+            channel: run.channel,
+            tool: entry.name,
+            effect: entry.effect.as_str(),
+            args,
+            ok,
+        })
+        .await
+    {
+        tracing::warn!(tool = entry.name, error = %err, "agent tool run not recorded");
+    }
+}
+
+/// Run one tool, once it is allowed to run. Split out so
+/// [`execute_tool`]'s boundary check and audit cannot be bypassed by a caller
+/// reaching the dispatcher directly.
+async fn dispatch(
+    state: &AppState,
+    account: &Account,
+    tool: &str,
+    args: &Value,
+) -> Result<Json<Value>, Problem> {
     match tool {
         "create_task" => execute_create_task(account, args).await,
         "create_event" => execute_create_event(account, args).await,

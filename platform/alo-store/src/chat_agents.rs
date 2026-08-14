@@ -321,6 +321,15 @@ pub struct AgentRecord {
     pub answers: i64,
     /// Actions it proposed that someone approved and that therefore ran.
     pub actions: i64,
+    /// Reading tools it ran **for the caller**, inside a turn and with nobody's
+    /// approval (ADR 0047 §4).
+    ///
+    /// Counted from `agent_tool_runs` rather than from proposals, because a
+    /// read no longer makes one. Without this, eleven of the thirty-three
+    /// tools would run leaving nothing behind and this record — the one
+    /// surface that says what an agent has done — would quietly under-report a
+    /// third of its work.
+    pub reads: i64,
     /// When it last said anything.
     pub last_at: Option<OffsetDateTime>,
 }
@@ -336,6 +345,18 @@ impl AccountStore {
     ///
     /// One query for every agent rather than one each: this is drawn beside a
     /// list.
+    ///
+    /// The reads are a second query rather than another join, because they are
+    /// counted over a different population: what an agent *said* is scoped by
+    /// the rooms the caller can see, while what it *ran* is scoped to the
+    /// caller's own runs — a read happens through one person's access and a
+    /// colleague must not learn from a tally which diaries were opened for
+    /// them. Folding both into one `GROUP BY` would multiply the two counts
+    /// together.
+    ///
+    /// An agent that has only ever read still appears here: its row comes from
+    /// the reads alone, so eleven tools' worth of work is not invisible until
+    /// the agent happens to also speak.
     ///
     /// # Errors
     /// [`StoreError::Db`] on a database failure.
@@ -363,7 +384,7 @@ impl AccountStore {
         .fetch_all(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-        Ok(rows
+        let mut records: std::collections::HashMap<String, AgentRecord> = rows
             .into_iter()
             .map(|(agent, answers, actions, last_at)| {
                 (
@@ -371,10 +392,15 @@ impl AccountStore {
                     AgentRecord {
                         answers,
                         actions,
+                        reads: 0,
                         last_at,
                     },
                 )
             })
-            .collect())
+            .collect();
+        for (agent, reads) in self.agent_read_counts().await? {
+            records.entry(agent).or_default().reads = reads;
+        }
+        Ok(records)
     }
 }

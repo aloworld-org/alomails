@@ -25,6 +25,7 @@ pub mod agent_inventory;
 pub mod agent_projects;
 pub mod agent_reads;
 pub mod agent_timesheet;
+mod agent_turn;
 pub mod ai;
 pub mod api;
 pub mod audit;

@@ -84,6 +84,12 @@ impl Default for Limits {
 /// scoped to that `(tenant, user)`. Obtained only via [`authenticate`].
 /// The door bakes both ids, so every store call is account-scoped by
 /// construction — no ownership guard to remember.
+///
+/// `Clone` so a chat agent's turn can run off the request that triggered it and
+/// still act through the asker's own door. Cloning copies the claims already
+/// resolved; it can never widen them, because there is no constructor here that
+/// takes a tenant or a user — only [`authenticate`] makes one.
+#[derive(Clone)]
 pub struct Account {
     /// The tenant claim (from the token, never the request body).
     pub tenant: TenantId,

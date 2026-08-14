@@ -22,14 +22,16 @@
 //!   *draft*. Assigning a legal number and putting mail on the wire stay
 //!   deliberate human acts.
 
-/// The billing tools the agent may propose, by name.
+use crate::agent_tool::AgentTool;
+
+/// The billing tools, each declaring whether it reads or writes (ADR 0047 §1).
 ///
 /// The jmap layer validates an approved tool against the union of this list and
 /// the core one ([`crate::is_agent_tool`]) and owns the execution of each.
-pub const BILLING_TOOLS: &[&str] = &[
-    "create_invoice_draft",
-    "quote_to_invoice",
-    "draft_payment_reminder",
+pub const BILLING_TOOLS: &[AgentTool] = &[
+    AgentTool::write("create_invoice_draft"),
+    AgentTool::write("quote_to_invoice"),
+    AgentTool::write("draft_payment_reminder"),
 ];
 
 /// The description of each billing tool, spliced into the agent's system prompt
@@ -58,8 +60,9 @@ mod tests {
     fn every_billing_tool_is_described_to_the_model() {
         for tool in BILLING_TOOLS {
             assert!(
-                BILLING_TOOL_DOC.contains(&format!("- {tool}:")),
-                "{tool} has no description in the prompt"
+                BILLING_TOOL_DOC.contains(&format!("- {}:", tool.name)),
+                "{} has no description in the prompt",
+                tool.name
             );
         }
         // …and nothing is described that cannot be executed.
@@ -91,7 +94,7 @@ mod tests {
         assert!(BILLING_TOOL_DOC.contains("NEVER sent automatically"));
         for forbidden in ["issue_invoice", "send_invoice", "record_payment"] {
             assert!(!BILLING_TOOL_DOC.contains(forbidden));
-            assert!(!BILLING_TOOLS.contains(&forbidden));
+            assert!(crate::agent_tool::find_tool(BILLING_TOOLS, forbidden).is_none());
         }
     }
 }

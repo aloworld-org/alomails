@@ -227,7 +227,20 @@ pub async fn decide_proposal(
     if body.approve {
         // Runs as the asker, because `account` IS the asker: `decide_proposal`
         // has already refused anybody else.
-        match crate::agent::execute_tool(&state, &account, &decided.tool, &decided.args).await {
+        // The agent whose message carried the proposal, so the run joins the
+        // rest of that agent's record (ADR 0047 §4). Best-effort: a message
+        // that has gone since must not stop the act the asker just approved.
+        let author = account.acc.chat_message(&decided.message).await.ok();
+        let agent = author
+            .filter(|message| message.author_is_agent)
+            .map(|message| ChatAgentId::new(message.author.as_str().to_owned()));
+        let run = crate::agent::ToolRun {
+            approval: crate::agent::Approval::Asker,
+            agent: agent.as_ref(),
+            channel: Some(&decided.channel),
+        };
+        match crate::agent::execute_tool(&state, &account, &decided.tool, &decided.args, &run).await
+        {
             Ok(Json(done)) => result = done,
             Err(problem) => {
                 // The record says approved and the act failed. Say so rather
