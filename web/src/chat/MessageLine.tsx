@@ -1,6 +1,6 @@
 ﻿import type { ReactNode } from "react";
 import { lazy, Suspense, useCallback, useRef, useState } from "react";
-import { MessagesSquare, Paperclip, Pencil, Reply, SmilePlus, Sparkles, Trash2, Video } from "lucide-react";
+import { Check, CheckCheck, MessagesSquare, Paperclip, Pencil, Reply, SmilePlus, Sparkles, Trash2, Video } from "lucide-react";
 
 import { Avatar, Button, useDismiss } from "../ds";
 import { fileSize } from "../drive/parts";
@@ -269,7 +269,14 @@ export function MessageLine({
           >
             {message.deletedAt === null ? <MessageBody body={message.body} /> : strings.chatWithdrawn}
           </p>
-          <span className="mb-2 shrink-0 text-xs tabular-nums text-tertiary">{timeOf(message.createdAt)}</span>
+          <span className="mb-2 inline-flex shrink-0 items-center gap-2 text-xs tabular-nums text-tertiary">
+            {timeOf(message.createdAt)}
+            {message.readBy > 0 ? (
+              <CheckCheck size={18} strokeWidth={2.25} className="text-accent" aria-label={strings.chatMessageReadBy(message.readBy)} />
+            ) : (
+              <Check size={17} strokeWidth={2.25} aria-label={strings.chatMessageSent} />
+            )}
+          </span>
         </div>
       ) : (
         <p className={message.deletedAt === null ? `${bubbleClass} ${namesMe ? "bg--tint" : ""}` : `${bubbleClass} italic text-tertiary`}>

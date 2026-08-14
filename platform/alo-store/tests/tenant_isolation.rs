@@ -3002,6 +3002,23 @@ async fn chat_messages_are_room_scoped_and_ordered_by_their_own_sequence() {
 
     c.mark_read(&room, 4).await.unwrap();
     assert_eq!(theirs(c.channel_summaries().await.unwrap()).unread, 3);
+    let receipts = a.messages(&room, None, 50).await.unwrap();
+    assert!(
+        receipts
+            .iter()
+            .filter(|line| line.message.author == ua)
+            .filter(|line| line.message.seq <= 4)
+            .all(|line| line.read_by == 1),
+        "another member reading through a message produces a real receipt"
+    );
+    assert!(
+        receipts
+            .iter()
+            .filter(|line| line.message.author == ua)
+            .filter(|line| line.message.seq > 4)
+            .all(|line| line.read_by == 0),
+        "messages beyond the other member's cursor remain merely sent"
+    );
     c.mark_read(&room, 2).await.unwrap();
     assert_eq!(
         theirs(c.channel_summaries().await.unwrap()).last_read_seq,

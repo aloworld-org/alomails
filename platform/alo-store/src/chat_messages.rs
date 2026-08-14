@@ -131,6 +131,9 @@ pub struct ChatFeedMessage {
     pub reply_count: i64,
     /// When the newest surviving reply arrived, for "last reply 5m ago".
     pub last_reply_at: Option<OffsetDateTime>,
+    /// Other room members whose read cursor has reached this message.
+    /// This is computed by the store so clients never invent delivery state.
+    pub read_by: i64,
 }
 
 const MESSAGE_COLUMNS: &str = "id, channel_id, seq, author_id, author_kind, on_behalf_of, body, kind, \
@@ -322,7 +325,7 @@ impl AccountStore {
     ) -> Result<Vec<ChatFeedMessage>> {
         self.channel(channel).await?;
         let limit = limit.clamp(1, MESSAGE_PAGE_MAX);
-        // The message's own columns, then the two the feed adds.
+        // The message's own columns, then the three the feed adds.
         type FeedRow = (
             String,
             String,
@@ -338,6 +341,7 @@ impl AccountStore {
             Option<OffsetDateTime>,
             i64,
             Option<OffsetDateTime>,
+            i64,
         );
         let rows: Vec<FeedRow> = sqlx::query_as(&format!(
             "SELECT {}, \
@@ -346,7 +350,10 @@ impl AccountStore {
                     AND r.thread_root_seq = m.seq AND r.deleted_at IS NULL) AS reply_count, \
                  (SELECT max(r.created_at) FROM chat_messages r \
                   WHERE r.tenant_id = m.tenant_id AND r.channel_id = m.channel_id \
-                    AND r.thread_root_seq = m.seq AND r.deleted_at IS NULL) AS last_reply_at \
+                    AND r.thread_root_seq = m.seq AND r.deleted_at IS NULL) AS last_reply_at, \
+                 (SELECT count(*) FROM chat_members reader \
+                  WHERE reader.tenant_id = m.tenant_id AND reader.channel_id = m.channel_id \
+                    AND reader.user_id <> m.author_id AND reader.last_read_seq >= m.seq) AS read_by \
              FROM chat_messages m \
              WHERE m.tenant_id = $1 AND m.channel_id = $2 \
                AND m.thread_root_seq IS NULL \
@@ -373,6 +380,7 @@ impl AccountStore {
                     message: row_to_message(message)?,
                     reply_count: r.12,
                     last_reply_at: r.13,
+                    read_by: r.14,
                 })
             })
             .collect()

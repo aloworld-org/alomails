@@ -173,6 +173,7 @@ fn feed_message_json(
     if let Some(object) = value.as_object_mut() {
         object.insert("replyCount".to_owned(), json!(f.reply_count));
         object.insert("lastReplyAt".to_owned(), json!(f.last_reply_at.map(iso)));
+        object.insert("readBy".to_owned(), json!(f.read_by));
     }
     value
 }
@@ -290,6 +291,9 @@ fn message_json(m: &ChatMessage, emails: &HashMap<String, String>) -> Value {
         "createdAt": iso(m.created_at),
         "editedAt": m.edited_at.map(iso),
         "deletedAt": m.deleted_at.map(iso),
+        // A newly accepted message has not yet been read by another member.
+        // Feed reads replace this with the store-computed receipt count.
+        "readBy": 0,
     })
 }
 

@@ -5149,6 +5149,8 @@ export const nl: Partial<Catalog> = {
   chatWithdrawAction: "Intrekken",
   chatWithdrawFailed: "Dat bericht kon niet worden ingetrokken.",
   chatWithdrawn: "Dit bericht is ingetrokken.",
+  chatMessageSent: "Verzonden",
+  chatMessageReadBy: (count: number) => `Gelezen door ${count}`,
   chatYesterday: "Gisteren",
   docSaving: "Opslaan…",
   chatAgentAdd: (handle: string): string =>

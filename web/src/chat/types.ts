@@ -166,6 +166,8 @@ export interface Message {
   /** Set when withdrawn: the row survives so the numbering never gains a
    *  hole, but the words are gone. */
   deletedAt: string | null;
+  /** Number of other room members whose read cursor includes this message. */
+  readBy: number;
 }
 
 /**

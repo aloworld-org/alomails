@@ -5213,6 +5213,8 @@ export const fr: Partial<Catalog> = {
   chatWithdrawAction: "Retirer",
   chatWithdrawFailed: "Impossible de retirer ce message.",
   chatWithdrawn: "Ce message a été retiré.",
+  chatMessageSent: "Envoyé",
+  chatMessageReadBy: (count: number) => `Lu par ${count}`,
   chatYesterday: "Hier",
   docSaving: "Enregistrement…",
   chatAgentAdd: (handle: string): string =>

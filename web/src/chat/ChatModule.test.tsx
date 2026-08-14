@@ -119,6 +119,7 @@ function message(over: Partial<FeedMessage>): FeedMessage {
     createdAt: "2026-08-09T10:00:00Z",
     editedAt: null,
     deletedAt: null,
+    readBy: 0,
     ...over,
   };
 }
@@ -486,6 +487,20 @@ test("my messages align right while other people's messages align left", async (
   const theirs = screen.getByText("their aligned words").closest("article");
   expect(mine?.className).toContain("self-end");
   expect(theirs?.className).not.toContain("self-end");
+});
+
+test("my messages show truthful sent and read receipts", async () => {
+  withMessages([
+    message({ id: "m-sent", seq: 1, author: ME, body: "accepted by server", readBy: 0 }),
+    message({ id: "m-read", seq: 2, author: ME, body: "read by colleague", readBy: 1 }),
+    message({ id: "m-theirs", seq: 3, author: THEM, body: "not my receipt", readBy: 1 }),
+  ]);
+  mount();
+
+  await screen.findByText("accepted by server");
+  expect(screen.getByLabelText(strings.chatMessageSent)).toBeTruthy();
+  expect(screen.getByLabelText(strings.chatMessageReadBy(1))).toBeTruthy();
+  expect(screen.getAllByLabelText(strings.chatMessageReadBy(1))).toHaveLength(1);
 });
 
 test("editing sends the new words, and an unchanged edit sends nothing", async () => {

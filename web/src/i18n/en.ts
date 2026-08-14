@@ -1754,6 +1754,8 @@ export const en = {
   chatSend: "Send",
   chatEdited: "edited",
   chatWithdrawn: "This message was withdrawn.",
+  chatMessageSent: "Sent",
+  chatMessageReadBy: (count: number) => `Read by ${count}`,
   chatNoMessagesYet: "No messages yet — say the first thing.",
   chatArchived: "Archived",
   chatReplyInThread: "Reply here",
