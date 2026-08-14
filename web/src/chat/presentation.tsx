@@ -12,6 +12,16 @@ export interface Nameable {
 export const channelLabel = (channel: ChannelSummary): string =>
   channel.name ?? channel.counterpart ?? strings.chatDirectMessage;
 
+/** A sidebar is a list of people, not addresses. Until the identity directory
+ * carries profile names, turn the stable address local-part into a calm human
+ * label while keeping the full address in the conversation header. */
+export const directMessageName = (channel: ChannelSummary): string => {
+  if (channel.kind !== "dm" || channel.counterpart === null) return channelLabel(channel);
+  const local = channel.counterpart.split("@", 1)[0]?.replace(/[._-]+/g, " ").trim();
+  if (!local) return channel.counterpart;
+  return local.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase());
+};
+
 export function personName(email: string | null, id: string): string {
   if (email === null) return id;
   const at = email.indexOf("@");

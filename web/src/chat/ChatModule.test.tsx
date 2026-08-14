@@ -90,6 +90,7 @@ const ROOM: ChannelSummary = {
   lastReadSeq: 2,
   lastSeq: 2,
   lastAt: "2026-08-09T10:01:00Z",
+  lastBody: "Latest planning note",
 };
 
 /** A message with everything empty, so each test states only its own point. */
@@ -153,10 +154,11 @@ test("a DM is named for the other participant everywhere", async () => {
 
   mount();
 
-  expect((await screen.findAllByText("ben@alo.test")).length).toBeGreaterThan(1);
-  const selectedRoom = screen.getByRole("button", { name: "ben@alo.test" });
+  expect(await screen.findByText("Ben")).toBeTruthy();
+  expect(screen.getByText("ben@alo.test")).toBeTruthy();
+  const selectedRoom = screen.getByRole("button", { name: /Ben/ });
   expect(selectedRoom.getAttribute("aria-current")).toBe("page");
-  expect(selectedRoom.style.backgroundColor).toBe("var(--accent-soft)");
+  expect(selectedRoom.style.backgroundColor).toBe("rgb(248, 214, 204)");
   expect(
     screen.getByPlaceholderText(strings.chatComposerPlaceholder("ben@alo.test")),
   ).toBeTruthy();
@@ -580,6 +582,7 @@ test("a colleague is searched for, never listed, and one letter asks nothing", a
   ];
   mount();
 
+  fireEvent.click(await screen.findByRole("button", { name: strings.chatCompose }));
   fireEvent.click(await screen.findByText(strings.chatNewDm));
   const box = screen.getByLabelText(strings.chatFindPerson);
 

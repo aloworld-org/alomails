@@ -1,9 +1,9 @@
 import { useState, type ReactNode } from "react";
-import { Archive, ChevronDown, Hash, Loader2, Lock, MoreHorizontal, Pencil, Search, SlidersHorizontal, Users, X } from "lucide-react";
+import { Archive, ChevronDown, ChevronRight, Hash, Loader2, Lock, MoreHorizontal, Pencil, Search, SlidersHorizontal, Users, X } from "lucide-react";
 
-import { Avatar, Badge, IconButton } from "../ds";
+import { Avatar, IconButton } from "../ds";
 import { strings } from "../i18n";
-import { channelLabel, personName } from "./presentation";
+import { channelLabel, directMessageName, personName } from "./presentation";
 import type { Channel, ChannelSummary, Message, Person } from "./types";
 
 interface ChatSidebarProps {
@@ -38,21 +38,23 @@ const rowClass = "flex min-h-10 w-full items-center gap-3 rounded-lg border bord
 export function ChatSidebar(props: ChatSidebarProps) {
   const rooms = props.channels ?? [];
   const [filter, setFilter] = useState<"all" | "unread" | "threads" | "mentions">("all");
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
   const visibleRooms = rooms.filter((room) => filter === "all"
     || (filter === "unread" && room.unread > 0)
     || (filter === "mentions" && room.mentions > 0)
     || (filter === "threads" && room.lastSeq !== null));
   const sections = [
-    { label: strings.chatSectionChannels, rooms: visibleRooms.filter((room) => room.kind === "channel" && room.archivedAt === null) },
-    { label: strings.chatSectionDirect, rooms: visibleRooms.filter((room) => room.kind === "dm" && room.archivedAt === null) },
-    { label: strings.chatSectionArchived, rooms: visibleRooms.filter((room) => room.archivedAt !== null) },
+    { key: "channels", label: strings.chatSectionChannels, rooms: visibleRooms.filter((room) => room.kind === "channel" && room.archivedAt === null) },
+    { key: "direct", label: strings.chatSectionDirect, rooms: visibleRooms.filter((room) => room.kind === "dm" && room.archivedAt === null) },
+    { key: "archived", label: strings.chatSectionArchived, rooms: visibleRooms.filter((room) => room.archivedAt !== null) },
   ].filter((section) => section.rooms.length > 0);
 
   return (
     <aside className="flex min-h-0 w-[24rem] shrink-0 flex-col border-r border-subtle bg-surface max-xl:w-80 max-md:w-full">
       <header className="flex min-h-16 items-center justify-between px-5">
         <h2 className="m-0 flex items-center gap-2 text-lg font-bold tracking-[-0.02em] text-primary">{strings.moduleChat}<ChevronDown size={15} className="text-tertiary" /></h2>
-        <span className="rounded-lg border border-subtle bg-surface"><IconButton size="sm" label={strings.chatNewDm} icon={<Pencil size={16} />} onClick={props.onStartDm} /></span>
+        <span className="relative rounded-lg border border-subtle bg-surface"><IconButton size="sm" label={strings.chatCompose} icon={<Pencil size={16} />} onClick={() => setComposeOpen((open) => !open)} active={composeOpen} />{composeOpen && <span className="absolute right-0 top-full z-30 mt-2 flex min-w-44 flex-col rounded-xl border border-subtle bg-surface p-1.5 shadow-md"><button type="button" className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm text-primary hover:bg-raised" onClick={() => { setComposeOpen(false); props.onCreateChannel(); }}><Hash size={15} />{strings.chatNewChannel}</button><button type="button" className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm text-primary hover:bg-raised" onClick={() => { setComposeOpen(false); props.onStartDm(); }}><Users size={15} />{strings.chatNewDm}</button></span>}</span>
       </header>
 
       <label className="mx-5 mb-3 flex min-h-10 items-center gap-2.5 rounded-lg border border-subtle bg-surface px-3 transition focus-within:border-accent focus-within:ring-2 focus-within:ring--tint">
@@ -65,11 +67,6 @@ export function ChatSidebar(props: ChatSidebarProps) {
         {(["all", "unread", "threads", "mentions"] as const).map((value) => <button key={value} type="button" aria-pressed={filter === value} className={`min-h-8 rounded-lg border px-3 text-xs font-medium transition-colors ${filter === value ? "border-accent bg-accent text-on-accent" : "border-subtle bg-surface text-secondary hover:bg-raised hover:text-primary"}`} onClick={() => setFilter(value)}>{value === "all" ? strings.chatFilterAll : value === "unread" ? strings.chatFilterUnread : value === "threads" ? strings.chatFilterThreads : strings.chatFilterMentions}</button>)}
         <button type="button" className="ml-auto flex size-8 items-center justify-center rounded-lg border border-subtle bg-surface text-secondary hover:bg-raised" onClick={props.onBrowse} title={strings.chatBrowse}><SlidersHorizontal size={14} /><span className="sr-only">{strings.chatBrowse}</span></button>
       </div>
-      <div className="mb-4 grid grid-cols-2 gap-2 px-5">
-        <button type="button" className="flex min-h-10 items-center justify-center gap-2 rounded-lg border border-transparent bg-[var(--accent-soft)] px-3 text-xs font-semibold text-accent transition-colors hover:border-accent" onClick={props.onCreateChannel} disabled={props.creating}><Hash size={14} />{strings.chatNewChannel}</button>
-        <button type="button" className="flex min-h-10 items-center justify-center gap-2 rounded-lg border border-subtle bg-surface px-3 text-xs font-semibold text-primary transition-colors hover:bg-raised" onClick={props.onStartDm}><Users size={14} />{strings.chatNewDm}</button>
-      </div>
-
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5">
         {props.dmQuery !== null ? (
           <SidebarPanel title={strings.chatNewDm} onClose={props.onCloseDm}>
@@ -101,7 +98,7 @@ export function ChatSidebar(props: ChatSidebarProps) {
         ) : props.channels.length === 0 ? (
           <div className="px-3 py-8 text-center"><p className="m-0 font-semibold text-primary">{strings.chatNoChannelsLead}</p><p className="mt-2 text-sm text-tertiary">{strings.chatNoChannelsHint}</p></div>
         ) : (
-          <div>{sections.map((section) => <section key={section.label} className="mb-5"><div className="mb-1 flex min-h-8 items-center justify-between px-2"><h3 className="m-0 text-sm font-bold text-primary">{section.label}</h3>{section.label !== strings.chatSectionArchived && <button type="button" className="flex size-7 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-raised hover:text-primary" aria-label={section.label === strings.chatSectionChannels ? strings.chatNewChannel : strings.chatNewDm} onClick={section.label === strings.chatSectionChannels ? props.onCreateChannel : props.onStartDm}>+</button>}</div><ul className={listClass}>{section.rooms.map((room) => <RoomRow key={room.id} room={room} open={room.id === props.openId} menuOpen={props.rowMenu === room.id} onOpen={() => props.onOpen(room.id)} onMenu={() => props.onRowMenu(props.rowMenu === room.id ? null : room.id)} onRename={() => props.onRename(room)} onArchive={() => props.onArchive(room)} />)}</ul></section>)}</div>
+          <div>{sections.map((section) => { const isCollapsed = collapsed.has(section.key); return <section key={section.key} className="mb-6"><div className="mb-1 flex min-h-8 items-center justify-between px-1"><button type="button" className="flex min-w-0 items-center gap-1 rounded-md px-1 py-1 text-sm font-bold text-primary hover:bg-raised" onClick={() => setCollapsed((current) => { const next = new Set(current); if (next.has(section.key)) next.delete(section.key); else next.add(section.key); return next; })}>{isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}<span>{section.label}</span></button>{section.label !== strings.chatSectionArchived && <button type="button" className="flex size-7 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-raised hover:text-primary" aria-label={section.label === strings.chatSectionChannels ? strings.chatNewChannel : strings.chatNewDm} onClick={section.label === strings.chatSectionChannels ? props.onCreateChannel : props.onStartDm}>+</button>}</div>{!isCollapsed && <ul className={listClass}>{section.rooms.map((room) => <RoomRow key={room.id} room={room} open={room.id === props.openId} menuOpen={props.rowMenu === room.id} onOpen={() => props.onOpen(room.id)} onMenu={() => props.onRowMenu(props.rowMenu === room.id ? null : room.id)} onRename={() => props.onRename(room)} onArchive={() => props.onArchive(room)} />)}</ul>}</section>; })}</div>
         )}
       </div>
     </aside>
@@ -116,7 +113,21 @@ function Note({ children }: { children: ReactNode }) {
   return <p className="m-0 px-3 py-4 text-sm text-tertiary">{children}</p>;
 }
 
+function sidebarTime(value: string | null): string | null {
+  if (value === null) return null;
+  const at = new Date(value);
+  if (Number.isNaN(at.getTime())) return null;
+  const now = new Date();
+  if (at.toDateString() === now.toDateString()) return at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (at.toDateString() === yesterday.toDateString()) return strings.chatYesterday;
+  return at.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
 function RoomRow({ room, open, menuOpen, onOpen, onMenu, onRename, onArchive }: { room: ChannelSummary; open: boolean; menuOpen: boolean; onOpen: () => void; onMenu: () => void; onRename: () => void; onArchive: () => void }) {
   const roomIconClass = open ? "shrink-0 text-accent" : iconClass;
-  return <li className="group relative flex items-center"><button type="button" aria-current={open ? "page" : undefined} style={open ? { backgroundColor: "var(--accent-soft)", borderColor: "transparent" } : undefined} className={`${rowClass} pr-10 ${open ? "font-semibold" : ""} ${room.archivedAt !== null ? "opacity-60" : ""}`} onClick={onOpen}>{room.kind === "dm" ? <Avatar name={channelLabel(room)} email={room.counterpart ?? undefined} size="sm" /> : room.visibility === "private" ? <Lock size={14} className={roomIconClass} /> : <Hash size={14} className={roomIconClass} />}<span className="min-w-0 flex-1 truncate">{channelLabel(room)}</span>{room.archivedAt !== null && <Archive size={13} className={iconClass} aria-label={strings.chatArchived} />}{room.mentions > 0 ? <Badge tone="accent">@{room.mentions}</Badge> : room.unread > 0 ? <Badge>{room.unread}</Badge> : null}</button>{room.kind === "channel" && room.archivedAt === null && <span className="absolute right-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"><IconButton size="sm" label={strings.chatChannelActions(channelLabel(room))} icon={<MoreHorizontal size={16} />} onClick={onMenu} active={menuOpen} />{menuOpen && <span className="absolute right-0 top-full z-20 mt-1 flex min-w-36 flex-col rounded-md border border-subtle bg-surface p-1 shadow-md" role="menu"><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onRename}><Pencil size={14} />{strings.chatRename}</button><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onArchive}><Archive size={14} />{strings.chatArchiveAction}</button></span>}</span>}</li>;
+  const label = room.kind === "dm" ? directMessageName(room) : channelLabel(room);
+  const at = sidebarTime(room.lastAt);
+  return <li className="group relative flex items-center"><button type="button" aria-current={open ? "page" : undefined} style={open ? { backgroundColor: "#F8D6CC", borderColor: "transparent" } : undefined} className={`${rowClass} ${room.kind === "dm" ? "py-2" : "pr-10"} ${open ? "font-semibold" : ""} ${room.archivedAt !== null ? "opacity-60" : ""}`} onClick={onOpen}>{room.kind === "dm" ? <Avatar name={label} email={room.counterpart ?? undefined} size="sm" /> : room.visibility === "private" ? <Lock size={14} className={roomIconClass} /> : <Hash size={14} className={roomIconClass} />}<span className="min-w-0 flex-1">{room.kind === "dm" ? <span className="grid min-w-0 grid-cols-[1fr_auto] gap-x-2"><span className="truncate font-semibold">{label}</span>{at !== null && <span className="text-[0.68rem] font-normal text-tertiary">{at}</span>}<span className="col-span-2 truncate text-xs font-normal text-tertiary">{room.lastBody ?? room.counterpart}</span></span> : <span className="block truncate">{label}</span>}</span>{room.archivedAt !== null && <Archive size={13} className={iconClass} aria-label={strings.chatArchived} />}{room.mentions > 0 ? <span className="flex size-5 items-center justify-center rounded-full bg-accent text-[0.65rem] font-bold text-on-accent">{room.mentions}</span> : room.unread > 0 ? <span className="flex size-5 items-center justify-center rounded-full bg-accent text-[0.65rem] font-bold text-on-accent">{room.unread}</span> : null}</button>{room.kind === "channel" && room.archivedAt === null && <span className="absolute right-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"><IconButton size="sm" label={strings.chatChannelActions(channelLabel(room))} icon={<MoreHorizontal size={16} />} onClick={onMenu} active={menuOpen} />{menuOpen && <span className="absolute right-0 top-full z-20 mt-1 flex min-w-36 flex-col rounded-md border border-subtle bg-surface p-1 shadow-md" role="menu"><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onRename}><Pencil size={14} />{strings.chatRename}</button><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onArchive}><Archive size={14} />{strings.chatArchiveAction}</button></span>}</span>}</li>;
 }

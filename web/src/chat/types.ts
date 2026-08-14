@@ -39,6 +39,8 @@ export interface ChannelSummary extends Channel {
   lastReadSeq: number;
   lastSeq: number | null;
   lastAt: string | null;
+  /** The newest real message, used as the compact sidebar preview. */
+  lastBody: string | null;
 }
 
 /** An agent turn running right now. */

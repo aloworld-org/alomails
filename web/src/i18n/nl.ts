@@ -5116,6 +5116,7 @@ export const nl: Partial<Catalog> = {
   chatFilterUnread: "Ongelezen",
   chatFilterThreads: "Threads",
   chatFilterMentions: "Vermeldingen",
+  chatCompose: "Opstellen",
   chatSectionDirect: "Directe berichten",
   chatSend: "Verzenden",
   chatSendFailed:

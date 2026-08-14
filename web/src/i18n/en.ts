@@ -1890,6 +1890,7 @@ export const en = {
   chatFilterUnread: "Unread",
   chatFilterThreads: "Threads",
   chatFilterMentions: "Mentions",
+  chatCompose: "Compose",
   chatSectionDirect: "Direct messages",
   chatSectionArchived: "Archived",
   chatChannelActions: (name: string): string => `Actions for ${name}`,

@@ -5180,6 +5180,7 @@ export const fr: Partial<Catalog> = {
   chatFilterUnread: "Non lus",
   chatFilterThreads: "Fils",
   chatFilterMentions: "Mentions",
+  chatCompose: "Composer",
   chatSectionDirect: "Messages directs",
   chatSend: "Envoyer",
   chatSendFailed:

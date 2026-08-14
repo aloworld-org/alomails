@@ -110,6 +110,8 @@ pub struct ChatChannelSummary {
     pub last_seq: Option<i64>,
     /// When that newest message arrived.
     pub last_at: Option<OffsetDateTime>,
+    /// The newest surviving message body, for the sidebar preview.
+    pub last_body: Option<String>,
 }
 
 /// A message as the main feed shows it: the message, plus what is hanging
@@ -579,6 +581,7 @@ impl AccountStore {
             Option<i64>,
             Option<OffsetDateTime>,
             Option<String>,
+            Option<String>,
         );
         let rows: Vec<SummaryRow> = sqlx::query_as(&format!(
             "SELECT {} , \
@@ -591,6 +594,10 @@ impl AccountStore {
                   WHERE x.tenant_id = c.tenant_id AND x.channel_id = c.id) AS last_seq, \
                  (SELECT max(x.created_at) FROM chat_messages x \
                   WHERE x.tenant_id = c.tenant_id AND x.channel_id = c.id) AS last_at, \
+                 (SELECT x.body FROM chat_messages x \
+                  WHERE x.tenant_id = c.tenant_id AND x.channel_id = c.id \
+                    AND x.deleted_at IS NULL \
+                  ORDER BY x.seq DESC LIMIT 1) AS last_body, \
                  CASE WHEN c.kind = 'dm' THEN ( \
                    SELECT u.email FROM chat_members other \
                    JOIN users u ON u.tenant_id = other.tenant_id AND u.id = other.user_id \
@@ -624,7 +631,8 @@ impl AccountStore {
                     unread: r.9,
                     last_seq: r.10,
                     last_at: r.11,
-                    counterpart: r.12,
+                    last_body: r.12,
+                    counterpart: r.13,
                 })
             })
             .collect()
