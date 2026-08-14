@@ -17,13 +17,12 @@ import {
   VideoConference,
   formatChatMessageLinks,
   useChat,
-  useConnectionState,
   useDataChannel,
   useLocalParticipant,
   useParticipants,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
-import { Activity, ArrowLeft, Copy, Hand, Maximize2, MessageSquare, MonitorUp, PhoneOff, RefreshCw, Send, ServerOff, Share2, ShieldCheck, Smile, Video, X } from "lucide-react";
+import { ArrowLeft, Copy, Hand, Maximize2, MessageSquare, MonitorUp, PhoneOff, RefreshCw, Send, ServerOff, Share2, ShieldCheck, Smile, Video, X } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
 import { useAuth } from "../auth/AuthProvider";
@@ -135,11 +134,6 @@ function InCallChat({ onClose }: { onClose: () => void }) {
       )}
     </aside>
   );
-}
-
-function MeetingStatus() {
-  const state = useConnectionState();
-  return <div className={styles.statusStrip} role="status"><span className={state === "connected" ? styles.statusGood : styles.statusWaiting} /><Activity aria-hidden="true" /><strong>{state === "connected" ? strings.meetGoodConnection : strings.meetConnectingStatus}</strong></div>;
 }
 
 function FullscreenAction() {
@@ -254,7 +248,6 @@ function MeetingExperience({ meetingId, onLeave }: { meetingId: string; onLeave:
     <VideoConference chatMessageFormatter={formatChatMessageLinks} />
     <PresentingNotice />
     <FullscreenAction />
-    <MeetingStatus />
     <MeetingActions meetingId={meetingId} onLeave={onLeave} chatOpen={chatOpen} onChat={() => setChatOpen((open) => !open)} />
     {chatOpen && <InCallChat onClose={() => setChatOpen(false)} />}
   </>;
