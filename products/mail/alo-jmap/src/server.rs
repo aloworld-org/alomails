@@ -285,6 +285,10 @@ pub fn app_with_site_boundaries(
             "/meet/{id}/messages/{message}/reactions",
             post(meet_routes::react),
         )
+        .route(
+            "/meet/{id}/transcript",
+            get(meet_routes::transcript).post(meet_routes::put_transcript_segment),
+        )
         .route("/meet/channels/{id}", get(meet_routes::in_channel))
         .route("/meet/events/{id}", get(meet_routes::for_event))
         .route(

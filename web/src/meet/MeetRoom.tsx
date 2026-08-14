@@ -22,17 +22,18 @@ import {
   useLocalParticipant,
   useParticipants,
   useRoomContext,
+  useTranscriptions,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
 import { ConnectionState, Track } from "livekit-client";
-import { ArrowLeft, Check, ChevronDown, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, MonitorUp, Paperclip, PhoneOff, PictureInPicture2, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, Users, Video, X } from "lucide-react";
+import { ArrowLeft, Captions, Check, ChevronDown, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, MonitorUp, Paperclip, PhoneOff, PictureInPicture2, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, Users, Video, X } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../ds";
 import { strings } from "../i18n";
 import { MeetApiError, MeetUnavailable, useMeetApi } from "./api";
-import type { JoinGrant, MeetApi, MeetingAttachment, MeetingMessage } from "./api";
+import type { JoinGrant, MeetApi, MeetingAttachment, MeetingMessage, MeetingTranscriptSegment } from "./api";
 import styles from "./MeetRoom.module.css";
 
 function useMeetingDuration(startedAt: string | null): string {
@@ -288,7 +289,7 @@ type MeetSignal =
   | { kind: "hand"; raised: boolean; name: string }
   | { kind: "reaction"; emoji: string; name: string };
 
-function MeetingActions({ meetingId, onLeave, chatOpen, onChat, onSettings, onPictureInPicture }: { meetingId: string; onLeave: () => void; chatOpen: boolean; onChat: () => void; onSettings: () => void; onPictureInPicture: () => void }) {
+function MeetingActions({ meetingId, onLeave, chatOpen, onChat, captionsOpen, onCaptions, onSettings, onPictureInPicture }: { meetingId: string; onLeave: () => void; chatOpen: boolean; onChat: () => void; captionsOpen: boolean; onCaptions: () => void; onSettings: () => void; onPictureInPicture: () => void }) {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   const { localParticipant } = useLocalParticipant();
@@ -360,6 +361,9 @@ function MeetingActions({ meetingId, onLeave, chatOpen, onChat, onSettings, onPi
         <button type="button" className={chatOpen ? styles.actionActive : undefined} onClick={onChat} aria-pressed={chatOpen}>
           <MessageSquare aria-hidden="true" />{strings.meetChat}
         </button>
+        <button type="button" className={captionsOpen ? styles.actionActive : undefined} onClick={onCaptions} aria-pressed={captionsOpen} aria-label={strings.meetCaptions} title={strings.meetCaptions}>
+          <Captions aria-hidden="true" />
+        </button>
         <button type="button" onClick={onPictureInPicture} aria-label={strings.meetPictureInPicture} title={strings.meetPictureInPicture}>
           <PictureInPicture2 aria-hidden="true" />
         </button>
@@ -380,6 +384,48 @@ function MeetingActions({ meetingId, onLeave, chatOpen, onChat, onSettings, onPi
       )}
     </>
   );
+}
+
+function MeetingCaptions({ meetingId, visible }: { meetingId: string; visible: boolean }) {
+  const api = useMeetApi();
+  const live = useTranscriptions();
+  const { localParticipant } = useLocalParticipant();
+  const [stored, setStored] = useState<MeetingTranscriptSegment[]>([]);
+  const saved = useRef(new Map<string, string>());
+  useEffect(() => {
+    let current = true;
+    void api.transcript(meetingId).then((segments) => { if (current) setStored(segments); });
+    return () => { current = false; };
+  }, [api, meetingId]);
+  useEffect(() => {
+    for (const segment of live) {
+      if (segment.participantInfo.identity !== localParticipant.identity) continue;
+      const id = segment.streamInfo.attributes?.["lk.segment_id"] ?? segment.streamInfo.id;
+      const finalSegment = segment.streamInfo.attributes?.["lk.transcription_final"] === "true";
+      const fingerprint = `${segment.text}\u0000${finalSegment}`;
+      if (segment.text.trim() === "" || saved.current.get(id) === fingerprint) continue;
+      saved.current.set(id, fingerprint);
+      void api.putTranscriptSegment(meetingId, { id, text: segment.text, final: finalSegment }).then((persisted) => {
+        setStored((current) => [...current.filter((item) => item.id !== persisted.id), persisted].sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
+      });
+    }
+  }, [api, live, localParticipant.identity, meetingId]);
+  if (!visible) return null;
+  const merged = new Map(stored.map((segment) => [segment.id, segment]));
+  for (const segment of live) {
+    const id = segment.streamInfo.attributes?.["lk.segment_id"] ?? segment.streamInfo.id;
+    merged.set(id, {
+      id,
+      speaker: segment.participantInfo.identity,
+      text: segment.text,
+      final: segment.streamInfo.attributes?.["lk.transcription_final"] === "true",
+      createdAt: merged.get(id)?.createdAt ?? new Date().toISOString(),
+    });
+  }
+  const lines = Array.from(merged.values()).filter((segment) => segment.text.trim() !== "").slice(-3);
+  return <div className={styles.captionOverlay} role="log" aria-live="polite" aria-label={strings.meetCaptions}>
+    {lines.length === 0 ? <span className={styles.captionWaiting}>{strings.meetCaptionsWaiting}</span> : lines.map((segment) => <p key={segment.id}><strong>{segment.speaker === localParticipant.identity ? strings.meetYou : segment.speaker}</strong><span>{segment.text}</span></p>)}
+  </div>;
 }
 
 function DeviceSettings({ onClose }: { onClose: () => void }) {
@@ -457,6 +503,7 @@ function ConnectionRecovery() {
 
 function MeetingExperience({ meetingId, onLeave }: { meetingId: string; onLeave: () => void }) {
   const [chatOpen, setChatOpen] = useState(true);
+  const [captionsOpen, setCaptionsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const pictureInPicture = async () => {
     const video = document.querySelector<HTMLVideoElement>(`.${styles.livekit} video:not([data-lk-local-participant="true"])`) ?? document.querySelector<HTMLVideoElement>(`.${styles.livekit} video`);
@@ -469,7 +516,8 @@ function MeetingExperience({ meetingId, onLeave }: { meetingId: string; onLeave:
     <PresentingNotice />
     <ConnectionRecovery />
     <FullscreenAction />
-    <MeetingActions meetingId={meetingId} onLeave={onLeave} chatOpen={chatOpen} onChat={() => setChatOpen((open) => !open)} onSettings={() => setSettingsOpen(true)} onPictureInPicture={() => void pictureInPicture()} />
+    <MeetingActions meetingId={meetingId} onLeave={onLeave} chatOpen={chatOpen} onChat={() => setChatOpen((open) => !open)} captionsOpen={captionsOpen} onCaptions={() => setCaptionsOpen((open) => !open)} onSettings={() => setSettingsOpen(true)} onPictureInPicture={() => void pictureInPicture()} />
+    <MeetingCaptions meetingId={meetingId} visible={captionsOpen} />
     {chatOpen && <InCallChat meetingId={meetingId} onClose={() => setChatOpen(false)} />}
     {settingsOpen && <DeviceSettings onClose={() => setSettingsOpen(false)} />}
   </>;

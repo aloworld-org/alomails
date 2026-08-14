@@ -1860,6 +1860,8 @@ export const en = {
   meetChatEmptyTitle: "The room is listening",
   meetChatEmptyBody: "Share a thought, a link, or the detail everyone will want after the call.",
   meetChat: "Chat",
+  meetCaptions: "Live captions",
+  meetCaptionsWaiting: "Captions will appear when the transcription service hears speech.",
   meetChatTitle: "In-call chat",
   meetChatMessages: "Messages",
   meetChatPeople: (count: number) => `People (${count})`,

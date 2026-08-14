@@ -41,6 +41,7 @@ export interface MeetingMessage {
 
 export interface MeetingAttachment { id: string; name: string; contentType: string; size: number; url: string; }
 export interface MeetingReaction { emoji: string; actor: string; }
+export interface MeetingTranscriptSegment { id: string; speaker: string; text: string; final: boolean; createdAt: string; }
 
 /** Raised when meetings are not configured on this deployment. */
 export class MeetUnavailable extends Error {}
@@ -124,6 +125,21 @@ export class MeetApi {
       body: JSON.stringify({ emoji }),
     });
     if (!res.ok) throw new MeetApiError(res.status, "react to meeting message");
+  }
+
+  async transcript(meeting: string): Promise<MeetingTranscriptSegment[]> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/transcript`);
+    if (!res.ok) return [];
+    return ((await res.json()) as { segments: MeetingTranscriptSegment[] }).segments;
+  }
+
+  async putTranscriptSegment(meeting: string, segment: { id: string; text: string; final: boolean }): Promise<MeetingTranscriptSegment> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/transcript`, {
+      method: "POST",
+      body: JSON.stringify(segment),
+    });
+    if (!res.ok) throw new MeetApiError(res.status, "save meeting transcript");
+    return (await res.json()) as MeetingTranscriptSegment;
   }
 
   async uploadAttachment(meeting: string, message: string, file: File): Promise<MeetingAttachment> {

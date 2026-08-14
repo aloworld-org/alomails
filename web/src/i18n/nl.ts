@@ -4885,6 +4885,8 @@ export const nl: Partial<Catalog> = {
   meetChatEmptyTitle: "De ruimte luistert",
   meetChatEmptyBody: "Deel een gedachte, een link of het detail dat iedereen na het gesprek nodig heeft.",
   meetChat: "Chat",
+  meetCaptions: "Live ondertiteling",
+  meetCaptionsWaiting: "Ondertiteling verschijnt wanneer de transcriptieservice spraak hoort.",
   meetChatTitle: "Chat tijdens gesprek",
   meetChatMessages: "Berichten",
   meetChatPeople: (count: number) => `Mensen (${count})`,

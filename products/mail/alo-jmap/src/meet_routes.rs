@@ -377,6 +377,60 @@ pub async fn react(
     Ok(Json(json!({"ok":true})))
 }
 
+fn transcript_json(segment: &alo_store::MeetingTranscriptSegment) -> Value {
+    json!({
+        "id": segment.id,
+        "speaker": segment.speaker.as_str(),
+        "text": segment.text,
+        "final": segment.final_segment,
+        "createdAt": iso(segment.created_at),
+    })
+}
+
+pub async fn transcript(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let segments = account
+        .acc
+        .meeting_transcript(&MeetingId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(
+        json!({ "segments": segments.iter().map(transcript_json).collect::<Vec<_>>() }),
+    ))
+}
+
+#[derive(Deserialize)]
+pub struct PutTranscriptSegment {
+    id: String,
+    text: String,
+    #[serde(rename = "final", default)]
+    final_segment: bool,
+}
+
+pub async fn put_transcript_segment(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<PutTranscriptSegment>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let segment = account
+        .acc
+        .put_meeting_transcript_segment(
+            &MeetingId::new(id),
+            &body.id,
+            &body.text,
+            body.final_segment,
+        )
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(transcript_json(&segment)))
+}
+
 #[derive(Deserialize)]
 pub struct AttachmentName {
     name: String,

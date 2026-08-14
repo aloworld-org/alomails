@@ -81,6 +81,15 @@ pub struct MeetingMessageReaction {
     pub emoji: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct MeetingTranscriptSegment {
+    pub id: String,
+    pub speaker: UserId,
+    pub text: String,
+    pub final_segment: bool,
+    pub created_at: OffsetDateTime,
+}
+
 /// What a meeting is attached to when it is made.
 #[derive(Debug, Clone, Default)]
 pub struct NewMeeting {
@@ -335,6 +344,59 @@ impl AccountStore {
                 message_id: r.0,
                 user: UserId::new(r.1),
                 emoji: r.2,
+            })
+            .collect())
+    }
+
+    /// Store this participant's own caption segment. Speech recognition sends
+    /// refinements under one id before marking the phrase final.
+    pub async fn put_meeting_transcript_segment(
+        &self,
+        meeting_id: &MeetingId,
+        id: &str,
+        text: &str,
+        final_segment: bool,
+    ) -> Result<MeetingTranscriptSegment> {
+        self.meeting(meeting_id).await?;
+        let id = id.trim();
+        let text = text.trim();
+        if id.is_empty()
+            || id.chars().count() > 200
+            || text.is_empty()
+            || text.chars().count() > 8_000
+        {
+            return Err(StoreError::Validation(
+                "a transcript segment id and text are required".to_owned(),
+            ));
+        }
+        let row: (String, String, String, bool, OffsetDateTime) = sqlx::query_as(
+            "INSERT INTO meeting_transcript_segments (tenant_id,meeting_id,id,speaker_id,text,final) VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (tenant_id,meeting_id,id) DO UPDATE SET text=EXCLUDED.text,final=EXCLUDED.final WHERE meeting_transcript_segments.speaker_id=EXCLUDED.speaker_id RETURNING id,speaker_id,text,final,created_at"
+        ).bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(id).bind(self.user.as_str()).bind(text).bind(final_segment).fetch_one(&self.pool).await.map_err(StoreError::Db)?;
+        Ok(MeetingTranscriptSegment {
+            id: row.0,
+            speaker: UserId::new(row.1),
+            text: row.2,
+            final_segment: row.3,
+            created_at: row.4,
+        })
+    }
+
+    pub async fn meeting_transcript(
+        &self,
+        meeting_id: &MeetingId,
+    ) -> Result<Vec<MeetingTranscriptSegment>> {
+        self.meeting(meeting_id).await?;
+        let rows: Vec<(String, String, String, bool, OffsetDateTime)> = sqlx::query_as(
+            "SELECT id,speaker_id,text,final,created_at FROM meeting_transcript_segments WHERE tenant_id=$1 AND meeting_id=$2 ORDER BY created_at,id"
+        ).bind(self.tenant.as_str()).bind(meeting_id.as_str()).fetch_all(&self.pool).await.map_err(StoreError::Db)?;
+        Ok(rows
+            .into_iter()
+            .map(|row| MeetingTranscriptSegment {
+                id: row.0,
+                speaker: UserId::new(row.1),
+                text: row.2,
+                final_segment: row.3,
+                created_at: row.4,
             })
             .collect())
     }
