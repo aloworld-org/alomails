@@ -263,7 +263,7 @@ export function MeetRoom({
 
   if (choices === null) {
     return (
-      <div className={styles.room} data-lk-theme="default">
+      <div className={`${styles.room} ${styles.prejoinRoom}`} data-lk-theme="default">
         <Button
           variant="ghost"
           className={styles.back}
@@ -304,6 +304,7 @@ export function MeetRoom({
             camLabel={strings.meetCamera}
             persistUserChoices
             />
+            <p className={styles.joinHint}>{strings.meetSettingsAfterJoin}</p>
           </section>
         </main>
       </div>
