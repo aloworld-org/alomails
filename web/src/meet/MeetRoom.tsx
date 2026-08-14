@@ -20,9 +20,10 @@ import {
   useConnectionState,
   useDataChannel,
   useLocalParticipant,
+  useParticipants,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
-import { Activity, ArrowLeft, Copy, Hand, Maximize2, MonitorUp, PhoneOff, RefreshCw, ServerOff, Share2, ShieldCheck, Smile, Video } from "lucide-react";
+import { Activity, ArrowLeft, Copy, Hand, Maximize2, MessageSquare, MonitorUp, PhoneOff, RefreshCw, Send, ServerOff, Share2, ShieldCheck, Smile, Video, X } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
 import { useAuth } from "../auth/AuthProvider";
@@ -94,6 +95,48 @@ function ChatWelcome() {
   );
 }
 
+function InCallChat({ onClose }: { onClose: () => void }) {
+  const { chatMessages, send, isSending } = useChat();
+  const participants = useParticipants();
+  const [tab, setTab] = useState<"messages" | "people">("messages");
+  const [draft, setDraft] = useState("");
+  const submit = async (text = draft) => {
+    const message = text.trim();
+    if (message === "" || isSending) return;
+    await send(message);
+    setDraft("");
+  };
+  return (
+    <aside className={styles.aloChat} aria-label={strings.meetChatTitle}>
+      <header><h2>{strings.meetChatTitle}</h2><button type="button" onClick={onClose} aria-label={strings.meetClose}><X /></button></header>
+      <nav aria-label={strings.meetChatTitle}>
+        <button type="button" className={tab === "messages" ? styles.chatTabActive : undefined} onClick={() => setTab("messages")}>{strings.meetChatMessages}</button>
+        <button type="button" className={tab === "people" ? styles.chatTabActive : undefined} onClick={() => setTab("people")}>{strings.meetChatPeople(participants.length)}</button>
+      </nav>
+      {tab === "messages" ? (
+        <>
+          <div className={styles.aloChatMessages}>
+            {chatMessages.length === 0 ? <ChatWelcome /> : chatMessages.map((message) => {
+              const name = message.from?.name || message.from?.identity || strings.meetSomeone;
+              return <article key={`${message.timestamp}-${message.message}`} className={message.from?.isLocal ? styles.chatMine : undefined}>
+                <span className={styles.chatAvatar}>{name.slice(0, 1).toUpperCase()}</span>
+                <div><p><strong>{name}{message.from?.isLocal ? ` (${strings.meetYou})` : ""}</strong><time>{new Date(message.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></p><div className={styles.chatBubble}>{formatChatMessageLinks(message.message)}</div></div>
+              </article>;
+            })}
+          </div>
+          <div className={styles.quickReplies}>{[strings.meetQuickReplyOne, strings.meetQuickReplyTwo, strings.meetQuickReplyThree].map((reply) => <button type="button" key={reply} onClick={() => void submit(reply)}>{reply}</button>)}</div>
+          <form className={styles.aloChatComposer} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+            <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={strings.meetChatPlaceholder} aria-label={strings.meetChatPlaceholder} />
+            <button type="submit" disabled={draft.trim() === "" || isSending} aria-label={strings.chatSend}><Send /></button>
+          </form>
+        </>
+      ) : (
+        <ul className={styles.peopleList}>{participants.map((person) => <li key={person.identity}><span className={styles.chatAvatar}>{(person.name || person.identity).slice(0, 1).toUpperCase()}</span><div><strong>{person.name || person.identity}</strong><small>{person.isLocal ? strings.meetYou : strings.meetParticipant}</small></div><i /></li>)}</ul>
+      )}
+    </aside>
+  );
+}
+
 function MeetingStatus() {
   const state = useConnectionState();
   return <div className={styles.statusStrip} role="status"><span className={state === "connected" ? styles.statusGood : styles.statusWaiting} /><Activity aria-hidden="true" /><strong>{state === "connected" ? strings.meetGoodConnection : strings.meetConnectingStatus}</strong></div>;
@@ -117,7 +160,7 @@ type MeetSignal =
   | { kind: "hand"; raised: boolean; name: string }
   | { kind: "reaction"; emoji: string; name: string };
 
-function MeetingActions({ meetingId, onLeave }: { meetingId: string; onLeave: () => void }) {
+function MeetingActions({ meetingId, onLeave, chatOpen, onChat }: { meetingId: string; onLeave: () => void; chatOpen: boolean; onChat: () => void }) {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   const { localParticipant } = useLocalParticipant();
@@ -186,6 +229,9 @@ function MeetingActions({ meetingId, onLeave }: { meetingId: string; onLeave: ()
           {copied ? <Copy aria-hidden="true" /> : <Share2 aria-hidden="true" />}
           {copied ? strings.meetLinkCopied : strings.meetInvite}
         </button>
+        <button type="button" className={chatOpen ? styles.actionActive : undefined} onClick={onChat} aria-pressed={chatOpen}>
+          <MessageSquare aria-hidden="true" />{strings.meetChat}
+        </button>
         <button type="button" className={styles.leaveAction} onClick={onLeave}>
           <PhoneOff aria-hidden="true" />{strings.meetLeave}
         </button>
@@ -200,6 +246,18 @@ function MeetingActions({ meetingId, onLeave }: { meetingId: string; onLeave: ()
       )}
     </>
   );
+}
+
+function MeetingExperience({ meetingId, onLeave }: { meetingId: string; onLeave: () => void }) {
+  const [chatOpen, setChatOpen] = useState(true);
+  return <>
+    <VideoConference chatMessageFormatter={formatChatMessageLinks} />
+    <PresentingNotice />
+    <FullscreenAction />
+    <MeetingStatus />
+    <MeetingActions meetingId={meetingId} onLeave={onLeave} chatOpen={chatOpen} onChat={() => setChatOpen((open) => !open)} />
+    {chatOpen && <InCallChat onClose={() => setChatOpen(false)} />}
+  </>;
 }
 
 /**
@@ -386,12 +444,7 @@ export function MeetRoom({
         // empty black screen. A day of CSS guesses; one missing attribute.
         data-lk-theme="default"
       >
-        <VideoConference chatMessageFormatter={formatChatMessageLinks} />
-        <PresentingNotice />
-        <ChatWelcome />
-        <FullscreenAction />
-        <MeetingStatus />
-        <MeetingActions meetingId={meetingId} onLeave={onLeft} />
+        <MeetingExperience meetingId={meetingId} onLeave={onLeft} />
       </LiveKitRoom>
     </div>
   );
