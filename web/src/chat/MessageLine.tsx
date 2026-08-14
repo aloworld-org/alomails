@@ -85,7 +85,7 @@ export function MessageLine({
       className={`${authoredByMe ? mineClass : messageClass} ${grouped ? (authoredByMe ? "mt-2" : "mt-3") : ""}`}
     >
       {editing === null && (
-        <div className="pointer-events-none absolute -top-4 right-2 z-10 flex gap-1 rounded-md border border-subtle bg-surface p-1 opacity-0 shadow-md transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
+        <div className="pointer-events-none absolute bottom-full right-2 z-10 mb-2 flex gap-1 rounded-md border border-subtle bg-surface p-1 opacity-0 shadow-md transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
           {reactable && (
             <span className="relative inline-flex" ref={pickerRef}>
               <button
