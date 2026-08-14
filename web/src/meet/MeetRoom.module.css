@@ -484,8 +484,9 @@
 .aloChat > header button { display: inline-flex; width: 2.5rem; height: 2.5rem; align-items: center; justify-content: center; border-radius: 0.75rem; }
 .aloChat > header button:hover { background: #112b40; }
 .aloChat > header svg { width: 1.2rem; }
-.aloChat > nav { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid #203649; }
+.aloChat > nav { display: grid; grid-template-columns: 1fr 1fr repeat(4, 2.75rem); overflow-x: auto; border-bottom: 1px solid #203649; }
 .aloChat > nav button { position: relative; color: #9fb0bf; font-weight: 600; }
+.aloChat > nav button svg { width: 1rem; height: 1rem; }
 .aloChat > nav button::after { content: ""; position: absolute; right: 1.25rem; bottom: 0; left: 1.25rem; height: 2px; border-radius: 999px; background: transparent; }
 .aloChat > nav .chatTabActive { color: var(--accent); }
 .aloChat > nav .chatTabActive::after { background: var(--accent); }
@@ -967,6 +968,36 @@
 .captionOverlay span { min-width: 0; overflow-wrap: anywhere; }
 .captionLanguage { justify-self: end; display: inline-flex; align-items: center; gap: .45rem; color: #aebdc8; font-size: .68rem; }
 .captionLanguage select { min-height: 1.9rem; padding: 0 1.6rem 0 .55rem; border: 1px solid #385064; border-radius: .55rem; background: #10283a; color: #fff; }
+.toolLoading, .toolEmpty { margin: auto; padding: 2rem; color: #9fb0bf; text-align: center; }
+.meetingToolPanel { min-height: 0; flex: 1; overflow-y: auto; padding: 1.15rem; color: #fff; }
+.meetingToolPanel > header { display: flex; align-items: flex-start; gap: .75rem; margin-bottom: 1.1rem; }
+.meetingToolPanel > header > svg { width: 1.15rem; color: var(--accent); }
+.meetingToolPanel h3, .meetingToolPanel p { margin: 0; }
+.meetingToolPanel header p { margin-top: .2rem; color: #9fb0bf; font-size: .72rem; line-height: 1.4; }
+.meetingToolPanel > p[role="alert"] { margin-top: .75rem; color: #ff9b89; font-size: .72rem; }
+.toolAgenda, .toolFiles { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.toolAgenda li { display: flex; align-items: center; gap: .35rem; }
+.toolAgenda li > button:first-child { min-width: 0; flex: 1; justify-content: flex-start; gap: .6rem; padding: .65rem .7rem; border: 1px solid #294154; border-radius: .7rem; background: #10283a; color: #fff; text-align: left; }
+.toolAgenda li > button:first-child span { display: grid; place-items: center; width: 1rem; height: 1rem; border: 1px solid #53697a; border-radius: .3rem; }
+.toolAgenda li > button:first-child span svg { width: .75rem; }
+.toolAgenda li > button:last-child { width: 2.25rem; height: 2.25rem; border: 0; background: transparent; color: #9fb0bf; }
+.toolAgenda .agendaDone { color: #8fa2b1; text-decoration: line-through; }
+.toolAdd { display: flex; gap: .5rem; margin-top: .8rem; }
+.toolAdd input, .pollCreate input, .meetingToolPanel textarea { width: 100%; border: 1px solid #294154; border-radius: .7rem; background: #0c2437; color: #fff; }
+.toolAdd input, .pollCreate input { min-height: 2.5rem; padding: 0 .7rem; }
+.toolAdd button, .pollCreate button, .toolSave { display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.5rem; padding-inline: .85rem; border: 0; border-radius: .7rem; background: var(--accent); color: #fff; font-weight: 700; }
+.toolAdd button svg, .pollCreate button svg { width: .9rem; }
+.toolPolls { display: grid; gap: .8rem; }
+.toolPolls article { display: grid; gap: .45rem; padding: .85rem; border: 1px solid #294154; border-radius: .85rem; background: #0c2437; }
+.toolPolls article > strong { margin-bottom: .2rem; }
+.toolPolls article button { display: flex; justify-content: space-between; min-height: 2.35rem; padding: .5rem .65rem; border: 1px solid #385064; border-radius: .65rem; background: transparent; color: #dbe4eb; }
+.toolPolls article .pollSelected { border-color: var(--accent); background: rgb(239 111 79 / 14%); color: #fff; }
+.toolPolls article small { color: #9fb0bf; }
+.pollCreate { display: grid; gap: .5rem; margin-top: .9rem; padding-top: .9rem; border-top: 1px solid #203649; }
+.meetingToolPanel textarea { min-height: 17rem; resize: vertical; padding: .8rem; line-height: 1.55; }
+.toolSave { float: right; margin-top: .65rem; }
+.toolFiles li { padding: .7rem; border: 1px solid #294154; border-radius: .75rem; background: #0c2437; }
+.toolFiles li > small { display: block; margin-top: .35rem; color: #8fa2b1; }
 .captionWaiting { color: #aebbc5; text-align: center; }
 @keyframes reaction-rise { from { opacity: 0; transform: translate(-50%, 30px) scale(.7); } 15%, 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -160px) scale(1.15); } }
 @media (max-width: 70rem) { .livekit :global(.lk-control-bar) { left: 50%; transform: translateX(-50%); }.meetingActions { bottom: calc(var(--space-16) + var(--space-5)); } }

@@ -275,6 +275,11 @@ pub fn app_with_site_boundaries(
         .route("/meet/{id}/participants", get(meet_routes::participants))
         .route("/meet/{id}/moderate", post(meet_routes::moderate))
         .route(
+            "/meet/{id}/workspace",
+            get(meet_routes::workspace).put(meet_routes::put_workspace),
+        )
+        .route("/meet/{id}/workspace/vote", post(meet_routes::vote_poll))
+        .route(
             "/meet/{id}/recordings",
             get(meet_routes::current_recording).post(meet_routes::request_recording),
         )

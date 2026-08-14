@@ -56,6 +56,133 @@ pub struct StartMeeting {
     event: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct PutWorkspace {
+    revision: i64,
+    state: Value,
+}
+
+#[derive(Deserialize)]
+pub struct VotePoll {
+    poll: String,
+    option: usize,
+}
+
+fn workspace_json(workspace: alo_store::MeetingWorkspace) -> Value {
+    json!({ "state": workspace.state, "revision": workspace.revision, "updatedAt": iso(workspace.updated_at) })
+}
+
+fn validate_workspace(state: &Value) -> Result<(), Problem> {
+    let agenda = state
+        .get("agenda")
+        .and_then(Value::as_array)
+        .ok_or_else(Problem::not_json)?;
+    let polls = state
+        .get("polls")
+        .and_then(Value::as_array)
+        .ok_or_else(Problem::not_json)?;
+    let notes = state
+        .get("notes")
+        .and_then(Value::as_str)
+        .ok_or_else(Problem::not_json)?;
+    if agenda.len() > 50 || polls.len() > 20 || notes.chars().count() > 50_000 {
+        return Err(Problem::with(
+            axum::http::StatusCode::PAYLOAD_TOO_LARGE,
+            "meeting workspace is too large",
+        ));
+    }
+    if agenda.iter().any(|item| {
+        item.get("text")
+            .and_then(Value::as_str)
+            .is_none_or(|text| text.trim().is_empty() || text.chars().count() > 500)
+    }) {
+        return Err(Problem::with(
+            axum::http::StatusCode::BAD_REQUEST,
+            "agenda item is invalid",
+        ));
+    }
+    for poll in polls {
+        let question = poll.get("question").and_then(Value::as_str).unwrap_or("");
+        let options = poll
+            .get("options")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        if question.trim().is_empty()
+            || question.chars().count() > 500
+            || !(2..=10).contains(&options.len())
+            || options.iter().any(|option| {
+                option
+                    .as_str()
+                    .is_none_or(|text| text.trim().is_empty() || text.chars().count() > 200)
+            })
+        {
+            return Err(Problem::with(
+                axum::http::StatusCode::BAD_REQUEST,
+                "poll is invalid",
+            ));
+        }
+    }
+    Ok(())
+}
+
+pub async fn workspace(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let workspace = account
+        .acc
+        .meeting_workspace(&MeetingId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(workspace_json(workspace)))
+}
+
+pub async fn put_workspace(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<PutWorkspace>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let meeting_id = MeetingId::new(id);
+    let meeting = account
+        .acc
+        .meeting(&meeting_id)
+        .await
+        .map_err(map_store_err)?;
+    if meeting.created_by.as_str() != account.user.as_str() {
+        return Err(Problem::with(
+            axum::http::StatusCode::FORBIDDEN,
+            "only the host can edit meeting tools",
+        ));
+    }
+    validate_workspace(&body.state)?;
+    let saved = account
+        .acc
+        .put_meeting_workspace(&meeting_id, body.revision, &body.state)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(workspace_json(saved)))
+}
+
+pub async fn vote_poll(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<VotePoll>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let saved = account
+        .acc
+        .vote_meeting_poll(&MeetingId::new(id), &body.poll, body.option)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(workspace_json(saved)))
+}
+
 /// `POST /meet` — start a meeting, optionally attached to a room or an event.
 ///
 /// # Errors

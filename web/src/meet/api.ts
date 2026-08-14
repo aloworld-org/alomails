@@ -54,6 +54,10 @@ export interface MeetingRecording {
   consents: MeetingRecordingConsent[];
 }
 export interface MeetingActionItem { title: string; }
+export interface MeetingAgendaItem { id: string; text: string; done: boolean; }
+export interface MeetingPoll { id: string; question: string; options: string[]; votes: Record<string, number>; }
+export interface MeetingWorkspaceState { agenda: MeetingAgendaItem[]; polls: MeetingPoll[]; notes: string; }
+export interface MeetingWorkspace { state: MeetingWorkspaceState; revision: number; updatedAt: string; }
 
 /** Raised when meetings are not configured on this deployment. */
 export class MeetUnavailable extends Error {}
@@ -208,6 +212,24 @@ export class MeetApi {
     const res = await this.#send("/ai/translate", { method: "POST", body: JSON.stringify({ text, language }) });
     if (!res.ok) throw new MeetApiError(res.status, "translate meeting caption");
     return ((await res.json()) as { text: string }).text;
+  }
+
+  async meetingWorkspace(meeting: string): Promise<MeetingWorkspace> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/workspace`);
+    if (!res.ok) throw new MeetApiError(res.status, "load meeting tools");
+    return (await res.json()) as MeetingWorkspace;
+  }
+
+  async saveMeetingWorkspace(meeting: string, workspace: MeetingWorkspace): Promise<MeetingWorkspace> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/workspace`, { method: "PUT", body: JSON.stringify({ revision: workspace.revision, state: workspace.state }) });
+    if (!res.ok) throw new MeetApiError(res.status, "save meeting tools");
+    return (await res.json()) as MeetingWorkspace;
+  }
+
+  async voteMeetingPoll(meeting: string, poll: string, option: number): Promise<MeetingWorkspace> {
+    const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/workspace/vote`, { method: "POST", body: JSON.stringify({ poll, option }) });
+    if (!res.ok) throw new MeetApiError(res.status, "vote in meeting poll");
+    return (await res.json()) as MeetingWorkspace;
   }
 
   async uploadAttachment(meeting: string, message: string, file: File): Promise<MeetingAttachment> {

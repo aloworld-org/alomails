@@ -109,6 +109,13 @@ pub struct MeetingRecordingConsent {
     pub consented_at: OffsetDateTime,
 }
 
+#[derive(Debug, Clone)]
+pub struct MeetingWorkspace {
+    pub state: serde_json::Value,
+    pub revision: i64,
+    pub updated_at: OffsetDateTime,
+}
+
 /// What a meeting is attached to when it is made.
 #[derive(Debug, Clone, Default)]
 pub struct NewMeeting {
@@ -202,6 +209,93 @@ const COLUMNS: &str =
     "id, room, title, created_by, channel_id, event_id, created_at, started_at, ended_at";
 
 impl AccountStore {
+    /// Shared agenda, polls, and notes for a meeting. The meeting visibility
+    /// check is the permission boundary for every read and write.
+    pub async fn meeting_workspace(&self, id: &MeetingId) -> Result<MeetingWorkspace> {
+        self.meeting(id).await?;
+        sqlx::query("INSERT INTO meeting_workspaces (tenant_id, meeting_id) VALUES ($1,$2) ON CONFLICT DO NOTHING")
+            .bind(self.tenant.as_str()).bind(id.as_str()).execute(&self.pool).await.map_err(StoreError::Db)?;
+        let row: (serde_json::Value, i64, OffsetDateTime) = sqlx::query_as(
+            "SELECT state, revision, updated_at FROM meeting_workspaces WHERE tenant_id=$1 AND meeting_id=$2",
+        ).bind(self.tenant.as_str()).bind(id.as_str()).fetch_one(&self.pool).await.map_err(StoreError::Db)?;
+        Ok(MeetingWorkspace {
+            state: row.0,
+            revision: row.1,
+            updated_at: row.2,
+        })
+    }
+
+    /// Replace shared meeting state only when the caller edited the revision
+    /// they actually read. This prevents one participant's note from silently
+    /// erasing somebody else's poll vote.
+    pub async fn put_meeting_workspace(
+        &self,
+        id: &MeetingId,
+        revision: i64,
+        state: &serde_json::Value,
+    ) -> Result<MeetingWorkspace> {
+        self.meeting(id).await?;
+        let row: Option<(serde_json::Value, i64, OffsetDateTime)> = sqlx::query_as(
+            "UPDATE meeting_workspaces SET state=$4, revision=revision+1, updated_at=now() WHERE tenant_id=$1 AND meeting_id=$2 AND revision=$3 RETURNING state,revision,updated_at",
+        ).bind(self.tenant.as_str()).bind(id.as_str()).bind(revision).bind(state).fetch_optional(&self.pool).await.map_err(StoreError::Db)?;
+        row.map(|r| MeetingWorkspace {
+            state: r.0,
+            revision: r.1,
+            updated_at: r.2,
+        })
+        .ok_or_else(|| {
+            StoreError::Conflict("meeting workspace changed; reload and try again".to_owned())
+        })
+    }
+
+    /// Record only the caller's vote. The caller cannot manufacture votes for
+    /// another participant; optimistic retries preserve simultaneous voters.
+    pub async fn vote_meeting_poll(
+        &self,
+        id: &MeetingId,
+        poll_id: &str,
+        option: usize,
+    ) -> Result<MeetingWorkspace> {
+        for _ in 0..3 {
+            let current = self.meeting_workspace(id).await?;
+            let mut state = current.state.clone();
+            let polls = state
+                .get_mut("polls")
+                .and_then(serde_json::Value::as_array_mut)
+                .ok_or_else(|| StoreError::Validation("meeting polls are invalid".to_owned()))?;
+            let poll = polls
+                .iter_mut()
+                .find(|poll| poll.get("id").and_then(serde_json::Value::as_str) == Some(poll_id))
+                .ok_or(StoreError::NotFound)?;
+            let option_count = poll
+                .get("options")
+                .and_then(serde_json::Value::as_array)
+                .map(Vec::len)
+                .unwrap_or(0);
+            if option >= option_count {
+                return Err(StoreError::Validation("poll option is invalid".to_owned()));
+            }
+            let votes = poll
+                .get_mut("votes")
+                .and_then(serde_json::Value::as_object_mut)
+                .ok_or_else(|| {
+                    StoreError::Validation("meeting poll votes are invalid".to_owned())
+                })?;
+            votes.insert(self.user.as_str().to_owned(), serde_json::json!(option));
+            match self
+                .put_meeting_workspace(id, current.revision, &state)
+                .await
+            {
+                Ok(saved) => return Ok(saved),
+                Err(StoreError::Conflict(_)) => continue,
+                Err(error) => return Err(error),
+            }
+        }
+        Err(StoreError::Conflict(
+            "meeting workspace is busy; try again".to_owned(),
+        ))
+    }
+
     /// Ask everyone currently present to consent to a recording.
     pub async fn request_meeting_recording(
         &self,

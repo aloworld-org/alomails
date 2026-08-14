@@ -242,3 +242,56 @@ async fn only_the_host_can_moderate_a_guest_lobby() {
             .is_err()
     );
 }
+
+#[tokio::test]
+async fn meeting_tools_are_shared_inside_the_room_and_tenant_isolated() {
+    let store = common::test_store().await;
+    let tenant = store.create_tenant("meet-tools").await.unwrap();
+    let ts = store.for_tenant(tenant.clone());
+    let host_user = ts.create_user("host@tools.test").await.unwrap();
+    let voter_user = ts.create_user("voter@tools.test").await.unwrap();
+    let host = store.for_account(tenant.clone(), host_user);
+    let voter = store.for_account(tenant.clone(), voter_user.clone());
+    let channel = host
+        .create_channel("planning", None, ChannelVisibility::Public)
+        .await
+        .unwrap();
+    voter.join_channel(&channel).await.unwrap();
+    let meeting = host
+        .create_meeting(&NewMeeting {
+            channel_id: Some(channel),
+            ..NewMeeting::default()
+        })
+        .await
+        .unwrap();
+    let initial = host.meeting_workspace(&meeting.id).await.unwrap();
+    let state = serde_json::json!({
+        "agenda": [{"id":"a1","text":"Choose a date","done":false}],
+        "polls": [{"id":"p1","question":"Which day?","options":["Monday","Tuesday"],"votes":{}}],
+        "notes": "Decision log"
+    });
+    host.put_meeting_workspace(&meeting.id, initial.revision, &state)
+        .await
+        .unwrap();
+    let voted = voter.vote_meeting_poll(&meeting.id, "p1", 1).await.unwrap();
+    assert_eq!(voted.state["polls"][0]["votes"][voter_user.as_str()], 1);
+    assert_eq!(
+        host.meeting_workspace(&meeting.id).await.unwrap().state["notes"],
+        "Decision log"
+    );
+
+    let other_tenant = store.create_tenant("meet-tools-other").await.unwrap();
+    let outsider_user = store
+        .for_tenant(other_tenant.clone())
+        .create_user("outside@tools.test")
+        .await
+        .unwrap();
+    let outsider = store.for_account(other_tenant, outsider_user);
+    assert!(outsider.meeting_workspace(&meeting.id).await.is_err());
+    assert!(
+        outsider
+            .vote_meeting_poll(&meeting.id, "p1", 0)
+            .await
+            .is_err()
+    );
+}

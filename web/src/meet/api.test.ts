@@ -103,6 +103,19 @@ describe("joining a meeting", () => {
     expect(translated.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/ai/translate"), expect.objectContaining({ method: "POST", body: JSON.stringify({ text: "Hello", language: "fr" }) }));
   });
 
+  test("meeting agenda, polls, notes, and votes use durable meeting tools", async () => {
+    const workspace = { revision: 2, updatedAt: "2026-08-14T10:00:00Z", state: { agenda: [], polls: [], notes: "" } };
+    const loaded = client(200, workspace);
+    await expect(loaded.api.meetingWorkspace("m-1")).resolves.toEqual(workspace);
+    expect(loaded.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/meet/m-1/workspace"), expect.any(Object));
+    const saved = client(200, { ...workspace, revision: 3 });
+    await saved.api.saveMeetingWorkspace("m-1", workspace);
+    expect(saved.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/meet/m-1/workspace"), expect.objectContaining({ method: "PUT" }));
+    const voted = client(200, { ...workspace, revision: 4 });
+    await voted.api.voteMeetingPoll("m-1", "poll-1", 0);
+    expect(voted.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/meet/m-1/workspace/vote"), expect.objectContaining({ method: "POST", body: JSON.stringify({ poll: "poll-1", option: 0 }) }));
+  });
+
   test("a deployment with no engine says so, distinctly", async () => {
     // 503 means the meeting is real and attendance was recorded — there is
     // simply nowhere to hold it. Reporting that as a generic failure would

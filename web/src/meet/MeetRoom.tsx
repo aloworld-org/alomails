@@ -26,14 +26,14 @@ import {
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
 import { ConnectionState, Track } from "livekit-client";
-import { ArrowLeft, Captions, Check, ChevronDown, Circle, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, Mic, MicOff, MonitorUp, Paperclip, PhoneOff, PictureInPicture2, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, Sparkles, Square, UserMinus, Users, Video, X } from "lucide-react";
+import { ArrowLeft, BarChart3, Captions, Check, ChevronDown, Circle, ClipboardList, Copy, FileText, FolderOpen, Hand, Lock, Maximize2, MessageSquare, Mic, MicOff, MonitorUp, NotebookPen, Paperclip, PhoneOff, PictureInPicture2, Plus, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, Sparkles, Square, Trash2, UserMinus, Users, Video, X } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
 import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../ds";
 import { strings } from "../i18n";
 import { MeetApiError, MeetUnavailable, useMeetApi } from "./api";
-import type { JoinGrant, MeetApi, MeetingAttachment, MeetingMessage, MeetingRecording, MeetingTranscriptSegment } from "./api";
+import type { JoinGrant, MeetApi, MeetingAttachment, MeetingMessage, MeetingRecording, MeetingTranscriptSegment, MeetingWorkspace } from "./api";
 import styles from "./MeetRoom.module.css";
 
 function useMeetingDuration(startedAt: string | null): string {
@@ -121,12 +121,46 @@ function StoredChatAttachment({ api, attachment }: { api: MeetApi; attachment: M
   return <a className={styles.chatAttachment} href={url} download={attachment.name}>{attachment.contentType.startsWith("image/") ? <img src={url} alt={attachment.name} /> : <span><FileText aria-hidden="true" /><b>{attachment.name}</b><small>{Math.ceil(attachment.size / 1024)} KB</small></span>}</a>;
 }
 
+type ToolTab = "agenda" | "polls" | "notes" | "files";
+
+function MeetingTools({ meetingId, host, tab }: { meetingId: string; host: boolean; tab: ToolTab }) {
+  const api = useMeetApi();
+  const { localParticipant } = useLocalParticipant();
+  const [workspace, setWorkspace] = useState<MeetingWorkspace | null>(null);
+  const [messages, setMessages] = useState<MeetingMessage[]>([]);
+  const [draft, setDraft] = useState("");
+  const [question, setQuestion] = useState("");
+  const [optionA, setOptionA] = useState("");
+  const [optionB, setOptionB] = useState("");
+  const [error, setError] = useState(false);
+  const notesDirty = useRef(false);
+  useEffect(() => {
+    let current = true;
+    const refresh = () => void Promise.all([api.meetingWorkspace(meetingId), api.messages(meetingId)]).then(([next, history]) => { if (current) { if (!notesDirty.current) setWorkspace(next); setMessages(history); } }).catch(() => setError(true));
+    refresh(); const timer = window.setInterval(refresh, 4_000);
+    return () => { current = false; window.clearInterval(timer); };
+  }, [api, meetingId]);
+  const save = async (state: MeetingWorkspace["state"]) => {
+    if (workspace === null) return;
+    setError(false);
+    try { setWorkspace(await api.saveMeetingWorkspace(meetingId, { ...workspace, state })); notesDirty.current = false; } catch { setError(true); }
+  };
+  if (workspace === null) return <div className={styles.toolLoading}>{strings.meetToolLoading}</div>;
+  if (tab === "files") {
+    const files = messages.flatMap((message) => message.attachments.map((attachment) => ({ attachment, sender: message.sender, createdAt: message.createdAt })));
+    return <section className={styles.meetingToolPanel}><header><FolderOpen /><div><h3>{strings.meetFiles}</h3><p>{strings.meetFilesHint}</p></div></header>{files.length === 0 ? <p className={styles.toolEmpty}>{strings.meetNoFiles}</p> : <ul className={styles.toolFiles}>{files.map(({ attachment, sender, createdAt }) => <li key={attachment.id}><StoredChatAttachment api={api} attachment={attachment} /><small>{sender} · {new Date(createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</small></li>)}</ul>}</section>;
+  }
+  if (tab === "agenda") return <section className={styles.meetingToolPanel}><header><ClipboardList /><div><h3>{strings.meetAgenda}</h3><p>{strings.meetAgendaHint}</p></div></header><ul className={styles.toolAgenda}>{workspace.state.agenda.map((item) => <li key={item.id}><button type="button" disabled={!host} className={item.done ? styles.agendaDone : undefined} onClick={() => void save({ ...workspace.state, agenda: workspace.state.agenda.map((current) => current.id === item.id ? { ...current, done: !current.done } : current) })}><span>{item.done && <Check />}</span>{item.text}</button>{host && <button type="button" aria-label={strings.deleteLabel} onClick={() => void save({ ...workspace.state, agenda: workspace.state.agenda.filter((current) => current.id !== item.id) })}><Trash2 /></button>}</li>)}</ul>{host && <form className={styles.toolAdd} onSubmit={(event) => { event.preventDefault(); const text = draft.trim(); if (text === "") return; void save({ ...workspace.state, agenda: [...workspace.state.agenda, { id: crypto.randomUUID(), text, done: false }] }).then(() => setDraft("")); }}><input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={strings.meetAgendaPlaceholder} /><button type="submit" disabled={draft.trim() === ""}><Plus />{strings.add}</button></form>}{error && <p role="alert">{strings.meetToolsFailed}</p>}</section>;
+  if (tab === "polls") return <section className={styles.meetingToolPanel}><header><BarChart3 /><div><h3>{strings.meetPolls}</h3><p>{strings.meetPollsHint}</p></div></header><div className={styles.toolPolls}>{workspace.state.polls.map((poll) => <article key={poll.id}><strong>{poll.question}</strong>{poll.options.map((option, index) => { const votes = Object.values(poll.votes).filter((vote) => vote === index).length; const selected = poll.votes[localParticipant.identity] === index; return <button type="button" className={selected ? styles.pollSelected : undefined} key={option} onClick={() => void api.voteMeetingPoll(meetingId, poll.id, index).then(setWorkspace).catch(() => setError(true))}><span>{option}</span><small>{votes}</small></button>; })}</article>)}</div>{host && <form className={styles.pollCreate} onSubmit={(event) => { event.preventDefault(); if ([question, optionA, optionB].some((value) => value.trim() === "")) return; void save({ ...workspace.state, polls: [...workspace.state.polls, { id: crypto.randomUUID(), question: question.trim(), options: [optionA.trim(), optionB.trim()], votes: {} }] }).then(() => { setQuestion(""); setOptionA(""); setOptionB(""); }); }}><input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={strings.meetPollQuestion} /><input value={optionA} onChange={(event) => setOptionA(event.target.value)} placeholder={strings.meetPollOptionOne} /><input value={optionB} onChange={(event) => setOptionB(event.target.value)} placeholder={strings.meetPollOptionTwo} /><button type="submit"><Plus />{strings.meetCreatePoll}</button></form>}{error && <p role="alert">{strings.meetToolsFailed}</p>}</section>;
+  return <section className={styles.meetingToolPanel}><header><NotebookPen /><div><h3>{strings.meetNotes}</h3><p>{strings.meetNotesHint}</p></div></header><textarea value={workspace.state.notes} readOnly={!host} onChange={(event) => { notesDirty.current = true; setWorkspace({ ...workspace, state: { ...workspace.state, notes: event.target.value } }); }} placeholder={strings.meetNotesPlaceholder} />{host && <button type="button" className={styles.toolSave} onClick={() => void save(workspace.state)}>{strings.save}</button>}{error && <p role="alert">{strings.meetToolsFailed}</p>}</section>;
+}
+
 function InCallChat({ meetingId, hostId, onClose }: { meetingId: string; hostId: string; onClose: () => void }) {
   const api = useMeetApi();
   const { chatMessages, send, isSending } = useChat();
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
-  const [tab, setTab] = useState<"messages" | "people">("messages");
+  const [tab, setTab] = useState<"messages" | "people" | ToolTab>("messages");
   const [draft, setDraft] = useState("");
   const [recipient, setRecipient] = useState<string | null>(null);
   const [showRecipients, setShowRecipients] = useState(false);
@@ -232,6 +266,10 @@ function InCallChat({ meetingId, hostId, onClose }: { meetingId: string; hostId:
       <nav aria-label={strings.meetChatTitle}>
         <button type="button" className={tab === "messages" ? styles.chatTabActive : undefined} onClick={() => setTab("messages")}>{strings.meetChatMessages}</button>
         <button type="button" className={tab === "people" ? styles.chatTabActive : undefined} onClick={() => setTab("people")}>{strings.meetChatPeople(participants.length)}</button>
+        <button type="button" className={tab === "agenda" ? styles.chatTabActive : undefined} onClick={() => setTab("agenda")} title={strings.meetAgenda}><ClipboardList /></button>
+        <button type="button" className={tab === "polls" ? styles.chatTabActive : undefined} onClick={() => setTab("polls")} title={strings.meetPolls}><BarChart3 /></button>
+        <button type="button" className={tab === "notes" ? styles.chatTabActive : undefined} onClick={() => setTab("notes")} title={strings.meetNotes}><NotebookPen /></button>
+        <button type="button" className={tab === "files" ? styles.chatTabActive : undefined} onClick={() => setTab("files")} title={strings.meetFiles}><FolderOpen /></button>
       </nav>
       {tab === "messages" ? (
         <>
@@ -280,7 +318,7 @@ function InCallChat({ meetingId, hostId, onClose }: { meetingId: string; hostId:
             {sendError && <p className={styles.chatSendError} role="alert">{strings.meetMessageSendFailed}</p>}
           </form>
         </>
-      ) : (
+      ) : tab === "people" ? (
         <div className={styles.peoplePanel}>
           <ul className={styles.peopleList}>{participants.map((person) => {
             const microphone = person.getTrackPublication(Track.Source.Microphone);
@@ -299,7 +337,7 @@ function InCallChat({ meetingId, hostId, onClose }: { meetingId: string; hostId:
           })}</ul>
           {moderationError && <p className={styles.chatSendError} role="alert">{strings.meetModerationFailed}</p>}
         </div>
-      )}
+      ) : <MeetingTools meetingId={meetingId} host={host} tab={tab} />}
     </aside>
   );
 }

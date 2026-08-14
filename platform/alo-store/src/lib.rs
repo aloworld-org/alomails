@@ -445,7 +445,7 @@ pub use insight_tiles::{NewTile, Tile, TileSpec};
 pub use meet::{
     Meeting, MeetingGuest, MeetingGuestInvitationCreated, MeetingMessage, MeetingMessageAttachment,
     MeetingMessageReaction, MeetingParticipant, MeetingRecording, MeetingRecordingConsent,
-    MeetingTranscriptSegment, NewMeeting,
+    MeetingTranscriptSegment, MeetingWorkspace, NewMeeting,
 };
 pub use model::{
     AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, CalendarGrant, Category,
