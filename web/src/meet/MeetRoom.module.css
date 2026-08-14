@@ -958,7 +958,25 @@
   background: #071b2c;
   box-shadow: 0 12px 32px rgb(0 0 0 / 18%);
 }
-.room:not(.prejoinRoom) .meetingActions button { min-height: 3.15rem; padding-inline: 1.05rem; border-radius: 0.75rem; }
+.room:not(.prejoinRoom) .meetingActions button {
+  min-height: 3.15rem;
+  flex: 0 0 auto;
+  padding-inline: 0.68rem;
+  border-radius: 0.75rem;
+  white-space: nowrap;
+}
+.room:not(.prejoinRoom) .meetingActions > button:nth-of-type(4),
+.room:not(.prejoinRoom) .meetingActions > button:nth-of-type(7) {
+  margin-left: 0.22rem;
+  border-left-color: #294154;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.room:not(.prejoinRoom) .meetingActions > button[aria-label] {
+  width: 2.65rem;
+  padding-inline: 0;
+  justify-content: center;
+}
 .room:not(.prejoinRoom) .meetingActions .leaveAction { margin-left: 0.3rem; padding-inline: 1.35rem; border-radius: 0.75rem; background: var(--accent); }
 .room:not(.prejoinRoom):has(.aloChat) .meetingActions { right: 27.5rem; }
 .room:not(.prejoinRoom):has(.aloChat) .fullscreen { right: 27.75rem; }
