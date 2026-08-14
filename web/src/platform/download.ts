@@ -31,10 +31,14 @@ const REVOKE_MS = 1_000;
  */
 export function saveTextFile(text: string, fileName: string, mediaType: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: mediaType }));
+  // Keep the implementation that created this object URL. Test environments
+  // and embedded webviews can replace the global URL object before the delayed
+  // cleanup runs; looking it up again then leaks the URL or throws.
+  const revokeObjectURL = URL.revokeObjectURL.bind(URL);
   const link = document.createElement("a");
   link.href = url;
   link.download = fileName;
   link.rel = "noopener";
   link.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), REVOKE_MS);
+  window.setTimeout(() => revokeObjectURL(url), REVOKE_MS);
 }
