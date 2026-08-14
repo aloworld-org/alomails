@@ -135,9 +135,27 @@ function RoomRow({ room, open, menuOpen, onOpen, onMenu, onRename, onArchive }: 
   const at = sidebarTime(room.lastAt);
   const rowStyle = {
     ...(open ? { background: "linear-gradient(90deg, #FFF1EC 0%, #FCE9E3 100%)", borderColor: "transparent" } : {}),
-    paddingLeft: room.kind === "channel" ? "1.5rem" : "0.5rem",
+    paddingLeft: room.kind === "channel" ? "1.5rem" : "1rem",
     paddingRight: "1rem",
   };
 
-  return <li className="group relative flex items-center"><button type="button" aria-current={open ? "page" : undefined} style={rowStyle} className={`${rowClass} ${room.kind === "dm" ? "py-2" : ""} ${open ? "font-medium" : ""} ${room.archivedAt !== null ? "opacity-60" : ""}`} onClick={onOpen}>{room.kind === "dm" ? <Avatar name={label} email={room.counterpart ?? undefined} size="sm" /> : room.visibility === "private" ? <Lock size={18} className={roomIconClass} /> : <Hash size={18} className={roomIconClass} />}<span className="min-w-0 flex-1">{room.kind === "dm" ? <span className="grid min-w-0 grid-cols-[1fr_auto] gap-x-2"><span className="truncate font-semibold">{label}</span>{at !== null && <span className="text-[0.68rem] font-normal text-tertiary">{at}</span>}<span className="col-span-2 truncate text-xs font-normal text-tertiary">{room.lastBody ?? room.counterpart}</span></span> : <span className="block truncate">{label}</span>}</span>{room.archivedAt !== null && <Archive size={13} className={iconClass} aria-label={strings.chatArchived} />}{room.mentions > 0 ? <span className="flex size-6 items-center justify-center rounded-full bg-accent text-xs font-bold text-on-accent">{room.mentions}</span> : room.unread > 0 ? <span className="flex size-6 items-center justify-center rounded-full bg-accent text-xs font-bold text-on-accent">{room.unread}</span> : null}</button>{room.kind === "channel" && room.archivedAt === null && room.unread === 0 && room.mentions === 0 && <span className="absolute right-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"><IconButton size="sm" label={strings.chatChannelActions(channelLabel(room))} icon={<MoreHorizontal size={16} />} onClick={onMenu} active={menuOpen} />{menuOpen && <span className="absolute right-0 top-full z-20 mt-1 flex min-w-36 flex-col rounded-md border border-subtle bg-surface p-1 shadow-md" role="menu"><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onRename}><Pencil size={14} />{strings.chatRename}</button><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onArchive}><Archive size={14} />{strings.chatArchiveAction}</button></span>}</span>}</li>;
+  return (
+    <li className="group relative flex items-center">
+      <button type="button" aria-current={open ? "page" : undefined} style={rowStyle} className={`${rowClass} ${room.kind === "dm" ? "!min-h-[4.5rem] py-3" : ""} ${open ? "font-medium" : ""} ${room.archivedAt !== null ? "opacity-60" : ""}`} onClick={onOpen}>
+        {room.kind === "dm" ? <Avatar name={label} email={room.counterpart ?? undefined} size="lg" /> : room.visibility === "private" ? <Lock size={18} className={roomIconClass} /> : <Hash size={18} className={roomIconClass} />}
+        <span className="min-w-0 flex-1">
+          {room.kind === "dm" ? (
+            <span className="grid min-w-0 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-0.5">
+              <span className="truncate text-base font-semibold leading-5">{label}</span>
+              {at !== null && <span className="text-xs font-normal text-tertiary">{at}</span>}
+              <span className="col-span-2 truncate text-sm font-normal leading-5 text-tertiary">{room.lastBody ?? room.counterpart}</span>
+            </span>
+          ) : <span className="block truncate">{label}</span>}
+        </span>
+        {room.archivedAt !== null && <Archive size={13} className={iconClass} aria-label={strings.chatArchived} />}
+        {room.mentions > 0 ? <span className="flex size-6 items-center justify-center rounded-full bg-accent text-xs font-bold text-on-accent">{room.mentions}</span> : room.unread > 0 ? <span className="flex size-6 items-center justify-center rounded-full bg-accent text-xs font-bold text-on-accent">{room.unread}</span> : null}
+      </button>
+      {room.kind === "channel" && room.archivedAt === null && room.unread === 0 && room.mentions === 0 && <span className="absolute right-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"><IconButton size="sm" label={strings.chatChannelActions(channelLabel(room))} icon={<MoreHorizontal size={16} />} onClick={onMenu} active={menuOpen} />{menuOpen && <span className="absolute right-0 top-full z-20 mt-1 flex min-w-36 flex-col rounded-md border border-subtle bg-surface p-1 shadow-md" role="menu"><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onRename}><Pencil size={14} />{strings.chatRename}</button><button type="button" role="menuitem" className="flex min-h-10 items-center gap-2 rounded-sm px-3 text-sm hover:bg-raised" onClick={onArchive}><Archive size={14} />{strings.chatArchiveAction}</button></span>}</span>}
+    </li>
+  );
 }
