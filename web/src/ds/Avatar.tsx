@@ -6,7 +6,7 @@ import styles from "./Avatar.module.css";
 interface AvatarProps {
   name: string;
   email?: string | undefined;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 }
 
 const TINTS = [

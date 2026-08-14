@@ -3,7 +3,7 @@ import { ChevronDown, ChevronLeft, Hash, MoreHorizontal, Pencil, UserPlus, Video
 import { Avatar, IconButton } from "../ds";
 import { strings } from "../i18n";
 import type { Meeting } from "../meet/api";
-import { channelLabel } from "./presentation";
+import { channelLabel, directMessageName } from "./presentation";
 import type { ChannelSummary } from "./types";
 
 type Props = {
@@ -18,14 +18,35 @@ type Props = {
 };
 
 export function ConversationHeader({ room, liveMeeting, onBack, onMeet, onPeople, onRename, onArchive }: Props) {
+  if (room.kind === "dm") {
+    const name = directMessageName(room);
+    return (
+      <header className="shrink-0 bg-surface px-8 py-6">
+        <div className="flex min-h-32 items-center gap-8 rounded-3xl border border-subtle bg-surface px-8 shadow-sm">
+          <button type="button" className="flex size-16 shrink-0 items-center justify-center rounded-2xl border border-subtle bg-surface text-primary hover:bg-raised" onClick={onBack} aria-label={strings.chatBackToList}><ChevronLeft size={28} /></button>
+          <Avatar name={name} email={room.counterpart ?? undefined} size="xl" />
+          <div className="min-w-0 flex-1">
+            <h3 className="m-0 truncate text-2xl font-bold text-primary">{name}</h3>
+            <p className="mb-0 mt-1 truncate text-lg text-tertiary">{room.counterpart}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-4">
+            <IconButton size="md" className="!size-16 !rounded-2xl" label={liveMeeting !== null ? strings.meetJoin : strings.meetStart} icon={<Video size={24} />} onClick={onMeet} active={liveMeeting !== null} />
+            <span className="mx-1 h-14 w-px bg-subtle" aria-hidden="true" />
+            <button type="button" className="flex size-16 items-center justify-center rounded-2xl border border-subtle bg-surface text-primary hover:bg-raised" onClick={onPeople} title={strings.chatMembersAndAgents}><UserPlus size={26} /><span className="sr-only">{strings.chatMembersAndAgents}</span></button>
+            <IconButton size="md" className="!size-16 !rounded-2xl" label={strings.chatArchiveAction} icon={<MoreHorizontal size={26} />} onClick={onArchive} />
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className="flex min-h-[8.5rem] shrink-0 items-center gap-5 border-b border-subtle bg-surface px-12">
       <button type="button" className="flex size-16 items-center justify-center rounded-2xl border border-subtle bg-surface text-primary hover:bg-raised" onClick={onBack} aria-label={strings.chatBackToList}><ChevronLeft size={27} /></button>
-      {room.kind === "dm" && <Avatar name={channelLabel(room)} email={room.counterpart ?? undefined} size="md" />}
-      {room.kind === "channel" && <Hash size={38} strokeWidth={1.8} className="shrink-0 text-primary" />}
+      <Hash size={38} strokeWidth={1.8} className="shrink-0 text-primary" />
       <div className="min-w-0 flex-1">
-        <h3 className="m-0 flex items-center gap-2 truncate text-2xl font-bold text-primary">{channelLabel(room)}{room.kind === "channel" && <ChevronDown size={20} />}</h3>
-        <p className="mb-0 mt-1 flex items-center gap-2 truncate text-base text-tertiary">{room.topic ?? (room.kind === "dm" ? "Online" : "")}</p>
+        <h3 className="m-0 flex items-center gap-2 truncate text-2xl font-bold text-primary">{channelLabel(room)}<ChevronDown size={20} /></h3>
+        <p className="mb-0 mt-1 flex items-center gap-2 truncate text-base text-tertiary">{room.topic ?? ""}</p>
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <IconButton size="md" className="!size-16 !rounded-2xl" label={liveMeeting !== null ? strings.meetJoin : strings.meetStart} icon={<Video size={22} />} onClick={onMeet} active={liveMeeting !== null} />
