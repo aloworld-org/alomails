@@ -865,9 +865,10 @@ pub async fn mark_read(
     Json(body): Json<ReadBody>,
 ) -> Result<StatusCode, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let channel = ChatChannelId::new(id);
     account
         .acc
-        .mark_read(&ChatChannelId::new(id), body.seq)
+        .mark_read(&channel, body.seq)
         .await
         .map_err(map_store_err)?;
     // The cursor is personal, but its receipt is visible to the people whose
@@ -876,7 +877,7 @@ pub async fn mark_read(
     notify_room(
         &state,
         &account,
-        &ChatChannelId::new(id),
+        &channel,
         std::slice::from_ref(&account.user),
     )
     .await;
