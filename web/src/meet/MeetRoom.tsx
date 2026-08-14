@@ -54,6 +54,13 @@ function useMeetingDuration(startedAt: string | null): string {
     : `${String(minutes).padStart(2, "0")}:${String(rest).padStart(2, "0")}`;
 }
 
+function meetingConsentCount(count: number): string {
+  const formatter: unknown = strings.meetConsentCount;
+  return typeof formatter === "function"
+    ? (formatter as (value: number) => string)(count)
+    : `${count} ${String(formatter ?? "")}`.trim();
+}
+
 function MeetingHeader({ grant }: { grant: JoinGrant }) {
   const duration = useMeetingDuration(grant.meeting.startedAt);
   const rawTitle = grant.meeting.title.trim();
@@ -687,7 +694,7 @@ function MeetingExperience({ meetingId, hostId, onLeave }: { meetingId: string; 
       <aside className={styles.recordingNotice} role="status">
         <Circle aria-hidden="true" />
         <div><strong>{strings.meetRecordingConsentTitle}</strong><span>{strings.meetRecordingConsentBody}</span></div>
-        <small>{strings.meetConsentCount(recording.recording.consents.length)}</small>
+        <small>{meetingConsentCount(recording.recording.consents.length)}</small>
         {!recording.isHost && !recording.consented && <button type="button" disabled={recording.busy} onClick={() => void recording.consent()}>{strings.meetIConsent}</button>}
         {recording.consented && <span className={styles.consentGiven}><Check aria-hidden="true" />{strings.meetRecordingConsentGiven}</span>}
       </aside>
