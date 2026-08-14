@@ -559,7 +559,7 @@
 .peopleList li > button svg { width: 0.8rem; }
 
 .settingsBackdrop { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 1.5rem; background: rgb(2 17 29 / 68%); backdrop-filter: blur(5px); }
-.deviceSettings { width: min(28rem, 100%); overflow: hidden; border: 1px solid #31485a; border-radius: 1.1rem; background: #0b2234; color: #eef5fa; box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 38%); }
+.deviceSettings { width: min(30rem, 100%); max-height: min(46rem, calc(100vh - 3rem)); overflow: auto; border: 1px solid #31485a; border-radius: 1.1rem; background: #0b2234; color: #eef5fa; box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 38%); }
 .deviceSettings > header { display: flex; align-items: center; justify-content: space-between; padding: 1.15rem 1.25rem; border-bottom: 1px solid #203649; }
 .deviceSettings > header span { color: var(--accent); font-size: 0.66rem; font-weight: 750; letter-spacing: 0.08em; text-transform: uppercase; }
 .deviceSettings h2 { margin: 0.2rem 0 0; font-size: 1.05rem; }
@@ -571,8 +571,27 @@
 .deviceFields label > span { color: #c4d0d9; font-size: 0.75rem; font-weight: 650; }
 .deviceFields select { width: 100%; min-height: 2.75rem; padding: 0 2.25rem 0 0.8rem; border: 1px solid #31485a; border-radius: 0.7rem; outline: 0; background: #10283a; color: #eef5fa; }
 .deviceFields select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); }
+.backgroundSettings { display: grid; gap: 0.8rem; margin: 0 1.25rem 1.1rem; padding-top: 1rem; border-top: 1px solid #203649; }
+.backgroundSettings > div:first-child { display: grid; gap: 0.22rem; }
+.backgroundSettings > div:first-child strong { font-size: 0.82rem; }
+.backgroundSettings > div:first-child small { color: #8fa2b2; line-height: 1.4; }
+.backgroundSettings > div[role="group"] { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+.backgroundSettings button { display: grid; gap: 0.45rem; padding: 0.45rem; border: 1px solid #31485a; border-radius: 0.8rem; background: transparent; color: #c4d0d9; text-align: left; cursor: pointer; }
+.backgroundSettings button:disabled { cursor: wait; opacity: 0.7; }
+.backgroundSettings button.backgroundActive { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, #10283a); color: white; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 14%, transparent); }
+.backgroundSettings button > span { display: block; height: 4.5rem; border-radius: 0.55rem; background: linear-gradient(145deg, #1a3549, #0a2032); }
+.backgroundSettings button > .backgroundNone { background: linear-gradient(145deg, #173044 50%, #0a2032 50%); }
+.backgroundSettings button > .backgroundBlur { background: radial-gradient(circle at 50% 38%, #8fa2b2 0 16%, transparent 17%), radial-gradient(ellipse at 50% 95%, #60788a 0 32%, transparent 33%), linear-gradient(145deg, #244257, #0a2032); filter: blur(1.5px); }
+.backgroundSettings > p { margin: 0; color: #ff9a86; font-size: 0.72rem; }
 .deviceSettings > p { margin: 0; padding: 0 1.25rem 1rem; color: #8fa2b2; font-size: 0.72rem; line-height: 1.45; }
 .deviceSettings > footer { display: flex; justify-content: flex-end; padding: 0.9rem 1.25rem; border-top: 1px solid #203649; }
+
+.connectionRecovery { position: fixed; z-index: 50; top: 1.25rem; left: 50%; display: flex; align-items: center; gap: 0.75rem; min-width: min(23rem, calc(100vw - 2rem)); padding: 0.75rem 1rem; border: 1px solid #31485a; border-radius: 0.85rem; background: #10283a; color: white; box-shadow: 0 1rem 2.4rem rgb(0 0 0 / 32%); transform: translateX(-50%); }
+.connectionRecovery > svg { width: 1.1rem; color: var(--accent); animation: reconnectSpin 1s linear infinite; }
+.connectionRecovery > div { display: grid; gap: 0.08rem; }
+.connectionRecovery strong { font-size: 0.78rem; }
+.connectionRecovery span { color: #aebdc8; font-size: 0.7rem; }
+@keyframes reconnectSpin { to { transform: rotate(360deg); } }
 
 .livekit :global(.lk-chat-entry) {
   gap: var(--space-2);

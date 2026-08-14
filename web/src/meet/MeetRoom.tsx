@@ -17,12 +17,14 @@ import {
   VideoConference,
   formatChatMessageLinks,
   useChat,
+  useConnectionState,
   useDataChannel,
   useLocalParticipant,
   useParticipants,
   useRoomContext,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
+import { ConnectionState, Track } from "livekit-client";
 import { ArrowLeft, Check, ChevronDown, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, MonitorUp, Paperclip, PhoneOff, PictureInPicture2, RefreshCw, Send, ServerOff, Settings, Share2, ShieldCheck, Smile, Users, Video, X } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
@@ -328,6 +330,9 @@ function DeviceSettings({ onClose }: { onClose: () => void }) {
   const room = useRoomContext();
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selected, setSelected] = useState<Record<MediaDeviceKind, string>>({ audioinput: "", audiooutput: "", videoinput: "" });
+  const [background, setBackground] = useState<"none" | "blur">(() => room.localParticipant.getTrackPublication(Track.Source.Camera)?.videoTrack?.getProcessor() ? "blur" : "none");
+  const [backgroundBusy, setBackgroundBusy] = useState(false);
+  const [backgroundError, setBackgroundError] = useState("");
   useEffect(() => {
     let current = true;
     void navigator.mediaDevices.enumerateDevices().then((found) => {
@@ -345,6 +350,26 @@ function DeviceSettings({ onClose }: { onClose: () => void }) {
     await room.switchActiveDevice(kind, deviceId);
     setSelected((value) => ({ ...value, [kind]: deviceId }));
   };
+  const chooseBackground = async (next: "none" | "blur") => {
+    const camera = room.localParticipant.getTrackPublication(Track.Source.Camera)?.videoTrack;
+    if (camera === undefined || backgroundBusy || next === background) return;
+    setBackgroundBusy(true);
+    setBackgroundError("");
+    try {
+      if (next === "none") {
+        await camera.stopProcessor();
+      } else {
+        const { BackgroundProcessor, supportsBackgroundProcessors } = await import("@livekit/track-processors");
+        if (!supportsBackgroundProcessors()) throw new Error("unsupported");
+        await camera.setProcessor(BackgroundProcessor({ mode: "background-blur", blurRadius: 12 }));
+      }
+      setBackground(next);
+    } catch {
+      setBackgroundError(strings.meetBackgroundUnsupported);
+    } finally {
+      setBackgroundBusy(false);
+    }
+  };
   const groups: Array<{ kind: MediaDeviceKind; label: string }> = [
     { kind: "audioinput", label: strings.meetMicrophone },
     { kind: "videoinput", label: strings.meetCamera },
@@ -354,10 +379,24 @@ function DeviceSettings({ onClose }: { onClose: () => void }) {
     <section className={styles.deviceSettings} role="dialog" aria-modal="true" aria-labelledby="meet-device-settings-title">
       <header><div><span>{strings.meetSettings}</span><h2 id="meet-device-settings-title">{strings.meetDeviceSettings}</h2></div><button type="button" onClick={onClose} aria-label={strings.meetClose}><X /></button></header>
       <div className={styles.deviceFields}>{groups.map(({ kind, label }) => <label key={kind}><span>{label}</span><select value={selected[kind]} onChange={(event) => void choose(kind, event.target.value)}>{devices.filter((device) => device.kind === kind).map((device, index) => <option key={device.deviceId} value={device.deviceId}>{device.label || `${label} ${index + 1}`}</option>)}</select></label>)}</div>
+      <div className={styles.backgroundSettings}>
+        <div><strong>{strings.meetBackgroundEffects}</strong><small>{strings.meetBackgroundEffectsHint}</small></div>
+        <div role="group" aria-label={strings.meetBackgroundEffects}>
+          <button type="button" className={background === "none" ? styles.backgroundActive : undefined} disabled={backgroundBusy} onClick={() => void chooseBackground("none")}><span className={styles.backgroundNone} />{strings.meetBackgroundNone}</button>
+          <button type="button" className={background === "blur" ? styles.backgroundActive : undefined} disabled={backgroundBusy} onClick={() => void chooseBackground("blur")}><span className={styles.backgroundBlur} />{strings.meetBackgroundBlur}</button>
+        </div>
+        {backgroundError !== "" && <p role="alert">{backgroundError}</p>}
+      </div>
       <p>{strings.meetDeviceSettingsHint}</p>
       <footer><Button onClick={onClose}>{strings.meetDone}</Button></footer>
     </section>
   </div>;
+}
+
+function ConnectionRecovery() {
+  const state = useConnectionState();
+  if (state !== ConnectionState.Reconnecting && state !== ConnectionState.SignalReconnecting) return null;
+  return <div className={styles.connectionRecovery} role="status" aria-live="polite"><RefreshCw aria-hidden="true" /><div><strong>{strings.meetReconnecting}</strong><span>{strings.meetReconnectingHint}</span></div></div>;
 }
 
 function MeetingExperience({ meetingId, onLeave }: { meetingId: string; onLeave: () => void }) {
@@ -372,6 +411,7 @@ function MeetingExperience({ meetingId, onLeave }: { meetingId: string; onLeave:
   return <>
     <VideoConference chatMessageFormatter={formatChatMessageLinks} />
     <PresentingNotice />
+    <ConnectionRecovery />
     <FullscreenAction />
     <MeetingActions meetingId={meetingId} onLeave={onLeave} chatOpen={chatOpen} onChat={() => setChatOpen((open) => !open)} onSettings={() => setSettingsOpen(true)} onPictureInPicture={() => void pictureInPicture()} />
     {chatOpen && <InCallChat onClose={() => setChatOpen(false)} />}
@@ -382,8 +422,8 @@ function MeetingExperience({ meetingId, onLeave }: { meetingId: string; onLeave:
 /**
  * Join a meeting and hold it until the person leaves.
  *
- * `onLeft` fires when they hang up or the connection ends, so whatever opened
- * this can put the screen back as it was.
+ * `onLeft` fires only when they choose to hang up. Network failures remain on
+ * this screen so the person can reconnect without losing their place.
  */
 export function MeetRoom({
   meetingId,
@@ -448,6 +488,7 @@ export function MeetRoom({
               <Button
                 icon={<RefreshCw aria-hidden="true" />}
                 onClick={() => {
+                  connectedOnce.current = false;
                   setProblem(null);
                   setJoinAttempt((attempt) => attempt + 1);
                 }}
@@ -547,12 +588,12 @@ export function MeetRoom({
         // way that is hard to undo.
         video={choices.videoEnabled}
         audio={choices.audioEnabled}
+        options={{ adaptiveStream: true, dynacast: true }}
         onConnected={() => { connectedOnce.current = true; }}
         onDisconnected={() => {
           // A failed initial signal connection is not the same action as the
           // person leaving. Keep them in Meet with a useful retry state.
-          if (connectedOnce.current) onLeft();
-          else setProblem({ kind: "join", message: strings.meetJoinFailed });
+          setProblem({ kind: "join", message: connectedOnce.current ? strings.meetConnectionLost : strings.meetJoinFailed });
         }}
         onError={() => setProblem({ kind: "join", message: strings.meetJoinFailed })}
         className={styles.livekit}
