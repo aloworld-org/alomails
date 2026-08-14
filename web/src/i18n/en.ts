@@ -1823,7 +1823,7 @@ export const en = {
   meetNothingLive: "No meetings are running",
   meetWhereFrom:
     "Meetings usually start where the people are — in a conversation, or on a calendar invitation. Anything running that you can join appears here.",
-  meetUntitled: "Untitled meeting",
+  meetUntitled: "Instant meeting",
   meetNotStarted: "Not started yet",
   meetAddToEvent: "Add a meeting",
   meetStart: "Start a meeting",

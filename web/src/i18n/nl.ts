@@ -4840,7 +4840,7 @@ export const nl: Partial<Catalog> = {
   meetNothingLive: "Er zijn geen vergaderingen bezig",
   meetWhereFrom:
     "Vergaderingen beginnen meestal waar de mensen zijn — in een gesprek of op een agenda-uitnodiging. Alles wat loopt en waaraan u kunt deelnemen, verschijnt hier.",
-  meetUntitled: "Naamloze vergadering",
+  meetUntitled: "Directe vergadering",
   meetNotStarted: "Nog niet begonnen",
   meetAddToEvent: "Vergadering toevoegen",
   meetStart: "Een vergadering starten",

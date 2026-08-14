@@ -4901,7 +4901,7 @@ export const fr: Partial<Catalog> = {
   meetNothingLive: "Aucune réunion en cours",
   meetWhereFrom:
     "Les réunions commencent généralement là où sont les personnes — dans une conversation ou sur une invitation d’agenda. Tout ce qui est en cours et que vous pouvez rejoindre apparaît ici.",
-  meetUntitled: "Réunion sans titre",
+  meetUntitled: "Réunion instantanée",
   meetNotStarted: "Pas encore commencée",
   meetAddToEvent: "Ajouter une réunion",
   meetStart: "Démarrer une réunion",
