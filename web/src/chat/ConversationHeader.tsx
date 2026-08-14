@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronLeft, Hash, MoreHorizontal, Pencil, UserPlus, Video } from "lucide-react";
+import { Archive, ChevronDown, ChevronLeft, Hash, MoreHorizontal, Pencil, UserPlus, Video } from "lucide-react";
 
 import { Avatar, IconButton } from "../ds";
 import { strings } from "../i18n";
@@ -33,7 +33,7 @@ export function ConversationHeader({ room, liveMeeting, onBack, onMeet, onPeople
             <button type="button" className={`flex size-[4.5rem] items-center justify-center rounded-[1.125rem] border border-subtle bg-surface text-primary transition-colors hover:bg-raised ${liveMeeting !== null ? "border-accent text-accent" : ""}`} onClick={onMeet} aria-label={liveMeeting !== null ? strings.meetJoin : strings.meetStart} title={liveMeeting !== null ? strings.meetJoin : strings.meetStart}><Video size={27} strokeWidth={1.9} /></button>
             <span className="mx-1 h-14 w-px bg-subtle" aria-hidden="true" />
             <button type="button" className="flex size-[4.5rem] items-center justify-center rounded-[1.125rem] border border-subtle bg-surface text-primary transition-colors hover:bg-raised" onClick={onPeople} title={strings.chatMembersAndAgents}><UserPlus size={29} strokeWidth={1.9} /><span className="sr-only">{strings.chatMembersAndAgents}</span></button>
-            <button type="button" className="flex size-[4.5rem] items-center justify-center rounded-[1.125rem] border border-subtle bg-surface text-primary transition-colors hover:bg-raised" onClick={onArchive} aria-label={strings.chatArchiveAction} title={strings.chatArchiveAction}><MoreHorizontal size={30} strokeWidth={2} /></button>
+            <button type="button" className="flex size-[4.5rem] items-center justify-center rounded-[1.125rem] border border-subtle bg-surface text-primary transition-colors hover:bg-raised" onClick={onArchive} aria-label={strings.chatArchiveAction} title={strings.chatArchiveAction}><Archive size={27} strokeWidth={1.9} /></button>
           </div>
         </div>
       </header>
