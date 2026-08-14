@@ -870,8 +870,16 @@ pub async fn mark_read(
         .mark_read(&ChatChannelId::new(id), body.seq)
         .await
         .map_err(map_store_err)?;
-    // A read cursor is personal: only this person's other devices need it.
-    push::notify_chat(&state, &account.tenant, std::slice::from_ref(&account.user)).await;
+    // The cursor is personal, but its receipt is visible to the people whose
+    // messages it covers. Notify the room so their single checks can become
+    // double checks without waiting for a reload.
+    notify_room(
+        &state,
+        &account,
+        &ChatChannelId::new(id),
+        std::slice::from_ref(&account.user),
+    )
+    .await;
     Ok(StatusCode::NO_CONTENT)
 }
 
