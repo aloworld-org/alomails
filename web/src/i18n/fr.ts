@@ -5176,6 +5176,10 @@ export const fr: Partial<Catalog> = {
   chatSearchPlaceholder: "Rechercher des messages",
   chatSectionArchived: "Archivés",
   chatSectionChannels: "Canaux",
+  chatFilterAll: "Tout",
+  chatFilterUnread: "Non lus",
+  chatFilterThreads: "Fils",
+  chatFilterMentions: "Mentions",
   chatSectionDirect: "Messages directs",
   chatSend: "Envoyer",
   chatSendFailed:

@@ -5112,6 +5112,10 @@ export const nl: Partial<Catalog> = {
   chatSearchPlaceholder: "Berichten zoeken",
   chatSectionArchived: "Gearchiveerd",
   chatSectionChannels: "Kanalen",
+  chatFilterAll: "Alles",
+  chatFilterUnread: "Ongelezen",
+  chatFilterThreads: "Threads",
+  chatFilterMentions: "Vermeldingen",
   chatSectionDirect: "Directe berichten",
   chatSend: "Verzenden",
   chatSendFailed:
