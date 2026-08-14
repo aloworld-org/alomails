@@ -74,6 +74,50 @@ pub async fn summarize(
     Ok(Json(json!({ "summary": summary })))
 }
 
+/// Translate a short caption into one explicitly selected language.
+pub async fn translate(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    if body.len() > MAX_IMPROVE_BYTES {
+        return Err(Problem::with(
+            StatusCode::PAYLOAD_TOO_LARGE,
+            "text too large",
+        ));
+    }
+    let request: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let text = request
+        .get("text")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
+    let language = request
+        .get("language")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let language_name = match language {
+        "en" => "English",
+        "fr" => "French",
+        "nl" => "Dutch",
+        _ => {
+            return Err(Problem::with(
+                StatusCode::BAD_REQUEST,
+                "supported language required",
+            ));
+        }
+    };
+    if text.is_empty() {
+        return Err(Problem::with(StatusCode::BAD_REQUEST, "text required"));
+    }
+    let config = tenant_ai_config(&account).await?;
+    let translated = alo_ai::translate_text(&config, text, language_name)
+        .await
+        .map_err(|e| ai_problem(&e))?;
+    Ok(Json(json!({ "text": translated })))
+}
+
 /// `POST /ai/replies` — `{"text": "<thread>"}` → `{"replies": ["...", ...]}`.
 /// Suggests up to three short replies for the open conversation; degrades like
 /// the other AI endpoints (503 when AI is off, 502 on a backend failure).

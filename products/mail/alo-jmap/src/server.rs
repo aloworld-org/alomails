@@ -97,6 +97,10 @@ pub fn app_with_site_boundaries(
             post(ai::summarize).layer(DefaultBodyLimit::max(ai::MAX_SUMMARIZE_BYTES)),
         )
         .route(
+            "/ai/translate",
+            post(ai::translate).layer(DefaultBodyLimit::max(ai::MAX_IMPROVE_BYTES)),
+        )
+        .route(
             "/ai/replies",
             post(ai::replies).layer(DefaultBodyLimit::max(ai::MAX_SUMMARIZE_BYTES)),
         )

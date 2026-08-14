@@ -1876,6 +1876,8 @@ export const en = {
   meetChatEmptyBody: "Share a thought, a link, or the detail everyone will want after the call.",
   meetChat: "Chat",
   meetCaptions: "Live captions",
+  meetCaptionLanguage: "Caption language",
+  meetCaptionOriginal: "Original",
   meetCaptionsWaiting: "Captions will appear when the transcription service hears speech.",
   meetChatTitle: "In-call chat",
   meetChatMessages: "Messages",

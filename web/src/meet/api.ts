@@ -204,6 +204,12 @@ export class MeetApi {
     return ((await res.json()) as { tasks: MeetingActionItem[] }).tasks;
   }
 
+  async translateCaption(text: string, language: "en" | "fr" | "nl"): Promise<string> {
+    const res = await this.#send("/ai/translate", { method: "POST", body: JSON.stringify({ text, language }) });
+    if (!res.ok) throw new MeetApiError(res.status, "translate meeting caption");
+    return ((await res.json()) as { text: string }).text;
+  }
+
   async uploadAttachment(meeting: string, message: string, file: File): Promise<MeetingAttachment> {
     const res = await this.#send(`/meet/${encodeURIComponent(meeting)}/messages/${encodeURIComponent(message)}/attachments?name=${encodeURIComponent(file.name)}`, { method: "POST", body: file, headers: { "content-type": file.type } });
     if (!res.ok) throw new MeetApiError(res.status, "upload meeting attachment");

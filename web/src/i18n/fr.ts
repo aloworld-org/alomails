@@ -4962,6 +4962,8 @@ export const fr: Partial<Catalog> = {
   meetChatEmptyBody: "Partagez une idée, un lien ou le détail dont chacun aura besoin après l’appel.",
   meetChat: "Chat",
   meetCaptions: "Sous-titres en direct",
+  meetCaptionLanguage: "Langue des sous-titres",
+  meetCaptionOriginal: "Original",
   meetCaptionsWaiting: "Les sous-titres apparaîtront lorsque le service de transcription entendra la parole.",
   meetChatTitle: "Chat de l’appel",
   meetChatMessages: "Messages",

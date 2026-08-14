@@ -4901,6 +4901,8 @@ export const nl: Partial<Catalog> = {
   meetChatEmptyBody: "Deel een gedachte, een link of het detail dat iedereen na het gesprek nodig heeft.",
   meetChat: "Chat",
   meetCaptions: "Live ondertiteling",
+  meetCaptionLanguage: "Taal van ondertitels",
+  meetCaptionOriginal: "Origineel",
   meetCaptionsWaiting: "Ondertiteling verschijnt wanneer de transcriptieservice spraak hoort.",
   meetChatTitle: "Chat tijdens gesprek",
   meetChatMessages: "Berichten",

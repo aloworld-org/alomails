@@ -501,6 +501,8 @@ function MeetingCaptions({ meetingId, visible }: { meetingId: string; visible: b
   const { localParticipant } = useLocalParticipant();
   const participants = useParticipants();
   const [stored, setStored] = useState<MeetingTranscriptSegment[]>([]);
+  const [language, setLanguage] = useState<"original" | "en" | "fr" | "nl">("original");
+  const [translations, setTranslations] = useState<Record<string, string>>({});
   const saved = useRef(new Map<string, string>());
   useEffect(() => {
     let current = true;
@@ -522,7 +524,6 @@ function MeetingCaptions({ meetingId, visible }: { meetingId: string; visible: b
       });
     }
   }, [api, live, localParticipant.identity, meetingId]);
-  if (!visible) return null;
   const merged = new Map(stored.map((segment) => [segment.id, segment]));
   for (const segment of live) {
     const id = segment.streamInfo.attributes?.["lk.segment_id"] ?? segment.streamInfo.id;
@@ -537,8 +538,18 @@ function MeetingCaptions({ meetingId, visible }: { meetingId: string; visible: b
     });
   }
   const lines = Array.from(merged.values()).filter((segment) => segment.text.trim() !== "").slice(-3);
+  useEffect(() => {
+    if (!visible || language === "original") return;
+    for (const line of lines.filter((segment) => segment.final)) {
+      const key = `${line.id}:${language}`;
+      if (translations[key] !== undefined) continue;
+      void api.translateCaption(line.text, language).then((text) => setTranslations((current) => ({ ...current, [key]: text }))).catch(() => undefined);
+    }
+  }, [api, language, lines, translations, visible]);
+  if (!visible) return null;
   return <div className={styles.captionOverlay} role="log" aria-live="polite" aria-label={strings.meetCaptions}>
-    {lines.length === 0 ? <span className={styles.captionWaiting}>{strings.meetCaptionsWaiting}</span> : lines.map((segment) => <p key={segment.id}><strong>{segment.speaker === localParticipant.identity ? strings.meetYou : segment.speaker}</strong><span>{segment.text}</span></p>)}
+    <label className={styles.captionLanguage}>{strings.meetCaptionLanguage}<select value={language} onChange={(event) => setLanguage(event.target.value as typeof language)}><option value="original">{strings.meetCaptionOriginal}</option><option value="en">English</option><option value="nl">Nederlands</option><option value="fr">Français</option></select></label>
+    {lines.length === 0 ? <span className={styles.captionWaiting}>{strings.meetCaptionsWaiting}</span> : lines.map((segment) => <p key={segment.id}><strong>{segment.speaker === localParticipant.identity ? strings.meetYou : segment.speaker}</strong><span>{language === "original" ? segment.text : translations[`${segment.id}:${language}`] ?? segment.text}</span></p>)}
   </div>;
 }
 

@@ -965,6 +965,8 @@
 .captionOverlay p { display: grid; grid-template-columns: minmax(4.5rem, auto) 1fr; gap: .75rem; margin: 0; color: #fff; line-height: 1.45; }
 .captionOverlay strong { color: var(--accent); }
 .captionOverlay span { min-width: 0; overflow-wrap: anywhere; }
+.captionLanguage { justify-self: end; display: inline-flex; align-items: center; gap: .45rem; color: #aebdc8; font-size: .68rem; }
+.captionLanguage select { min-height: 1.9rem; padding: 0 1.6rem 0 .55rem; border: 1px solid #385064; border-radius: .55rem; background: #10283a; color: #fff; }
 .captionWaiting { color: #aebbc5; text-align: center; }
 @keyframes reaction-rise { from { opacity: 0; transform: translate(-50%, 30px) scale(.7); } 15%, 75% { opacity: 1; } to { opacity: 0; transform: translate(-50%, -160px) scale(1.15); } }
 @media (max-width: 70rem) { .livekit :global(.lk-control-bar) { left: 50%; transform: translateX(-50%); }.meetingActions { bottom: calc(var(--space-16) + var(--space-5)); } }

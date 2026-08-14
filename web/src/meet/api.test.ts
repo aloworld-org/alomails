@@ -97,6 +97,12 @@ describe("joining a meeting", () => {
     expect(actions.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/ai/extract-tasks"), expect.objectContaining({ method: "POST" }));
   });
 
+  test("captions can be translated into a selected supported language", async () => {
+    const translated = client(200, { text: "Bonjour" });
+    await expect(translated.api.translateCaption("Hello", "fr")).resolves.toBe("Bonjour");
+    expect(translated.fetched).toHaveBeenCalledWith(expect.stringContaining("/api/ai/translate"), expect.objectContaining({ method: "POST", body: JSON.stringify({ text: "Hello", language: "fr" }) }));
+  });
+
   test("a deployment with no engine says so, distinctly", async () => {
     // 503 means the meeting is real and attendance was recorded — there is
     // simply nowhere to hold it. Reporting that as a generic failure would

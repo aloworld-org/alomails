@@ -435,6 +435,27 @@ pub async fn summarize(config: &AiConfig, thread: &str) -> Result<String, Infere
     chat(config, &summarize_messages(thread), 0.2).await
 }
 
+/// Translate one caption without adding, removing, or summarizing content.
+pub async fn translate_text(
+    config: &AiConfig,
+    text: &str,
+    target_language: &str,
+) -> Result<String, InferenceError> {
+    let messages = vec![
+        ChatMessage {
+            role: "system".to_owned(),
+            content: format!(
+                "Translate the supplied meeting caption into {target_language}. Preserve names, numbers, links, tone, and meaning. Return only the translation, with no commentary or quotation."
+            ),
+        },
+        ChatMessage {
+            role: "user".to_owned(),
+            content: text.to_owned(),
+        },
+    ];
+    chat(config, &messages, 0.0).await
+}
+
 /// One retrieved item offered to the model as grounding for a workspace answer
 /// (ADR 0029). The retrieval layer has already applied the caller's access, so
 /// every source here is something they could open themselves — the model is
