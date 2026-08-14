@@ -22,7 +22,7 @@ import {
   useParticipants,
 } from "@livekit/components-react";
 import type { LocalUserChoices } from "@livekit/components-react";
-import { ArrowLeft, Check, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, MonitorUp, Paperclip, PhoneOff, RefreshCw, Send, ServerOff, Share2, ShieldCheck, Smile, Video, X } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Copy, FileText, Hand, Lock, Maximize2, MessageSquare, MonitorUp, Paperclip, PhoneOff, RefreshCw, Send, ServerOff, Share2, ShieldCheck, Smile, Users, Video, X } from "lucide-react";
 
 import wavingHand from "../assets/alo-waving-hand.svg";
 import { useAuth } from "../auth/AuthProvider";
@@ -121,6 +121,7 @@ function InCallChat({ onClose }: { onClose: () => void }) {
   const [showEmoji, setShowEmoji] = useState(false);
   const [reactions, setReactions] = useState<Record<string, Record<string, string[]>>>({});
   const fileInput = useRef<HTMLInputElement>(null);
+  const remoteParticipants = participants.filter((person) => !person.isLocal);
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
   const { send: sendAction } = useDataChannel("alo-meet-chat-actions", (packet) => {
@@ -181,10 +182,19 @@ function InCallChat({ onClose }: { onClose: () => void }) {
           </div>
           <div className={styles.quickReplies}>{[strings.meetQuickReplyOne, strings.meetQuickReplyTwo, strings.meetQuickReplyThree].map((reply) => <button type="button" key={reply} onClick={() => void submit(reply)}>{reply}</button>)}</div>
           <form className={styles.aloChatComposer} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-            <div className={styles.composerContext}>
-              <button type="button" onClick={() => setShowRecipients((shown) => !shown)} className={recipient !== null ? styles.privateRecipient : undefined}>{recipient === null ? strings.meetEveryone : <><Lock />{recipientName}</>}</button>
-              {showRecipients && <div className={styles.recipientMenu}><button type="button" onClick={() => { setRecipient(null); setShowRecipients(false); }}><span>{strings.meetEveryone}</span>{recipient === null && <Check />}</button>{participants.filter((person) => !person.isLocal).map((person) => <button type="button" key={person.identity} onClick={() => { setRecipient(person.identity); setShowRecipients(false); }}><span>{person.name || person.identity}</span>{recipient === person.identity && <Check />}</button>)}</div>}
-            </div>
+            {remoteParticipants.length > 0 && <div className={styles.composerContext}>
+              <button type="button" onClick={() => setShowRecipients((shown) => !shown)} className={recipient !== null ? styles.privateRecipient : undefined} aria-expanded={showRecipients}>
+                <span className={styles.recipientLabel}>{strings.meetSendTo}</span>
+                {recipient === null ? <Users /> : <Lock />}
+                <strong>{recipient === null ? strings.meetEveryone : recipientName}</strong>
+                <ChevronDown className={styles.recipientChevron} />
+              </button>
+              {showRecipients && <div className={styles.recipientMenu}>
+                <p>{strings.meetChooseRecipient}</p>
+                <button type="button" onClick={() => { setRecipient(null); setShowRecipients(false); }}><span><strong>{strings.meetEveryone}</strong><small>{strings.meetEveryoneHint}</small></span>{recipient === null && <Check />}</button>
+                {remoteParticipants.map((person) => <button type="button" key={person.identity} onClick={() => { setRecipient(person.identity); setShowRecipients(false); }}><span><strong>{person.name || person.identity}</strong><small>{strings.meetPrivateHint}</small></span>{recipient === person.identity && <Check />}</button>)}
+              </div>}
+            </div>}
             <div className={styles.composerRow}>
               <input ref={fileInput} type="file" accept="image/*,application/pdf" multiple hidden onChange={(event) => void sendFiles(event.target.files)} />
               <button type="button" className={styles.composerTool} onClick={() => fileInput.current?.click()} aria-label={strings.meetAttachFile} title={strings.meetAttachFile}><Paperclip /></button>
