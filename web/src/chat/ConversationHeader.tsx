@@ -21,20 +21,20 @@ export function ConversationHeader({ room, liveMeeting, onBack, onMeet, onPeople
   if (room.kind === "dm") {
     const name = directMessageName(room);
     return (
-      <header className="shrink-0 bg-surface px-8 py-6">
-        <div className="flex min-h-32 items-center gap-8 rounded-3xl border border-subtle bg-surface px-8 shadow-sm">
-          <button type="button" className="flex size-16 shrink-0 items-center justify-center rounded-2xl border border-subtle bg-surface text-primary hover:bg-raised" onClick={onBack} aria-label={strings.chatBackToList}><ChevronLeft size={28} /></button>
-          <Avatar name={name} email={room.counterpart ?? undefined} size="xl" />
+      <header className="shrink-0 bg-surface px-6 py-4">
+        <div className="flex min-h-24 items-center gap-5 rounded-2xl border border-subtle bg-surface px-6 shadow-sm">
+          <button type="button" className="flex size-11 shrink-0 items-center justify-center rounded-xl border-0 bg-transparent text-primary hover:bg-raised" onClick={onBack} aria-label={strings.chatBackToList}><ChevronLeft size={23} /></button>
+          <Avatar name={name} email={room.counterpart ?? undefined} size="lg" />
           <div className="min-w-0 flex-1">
-            <h3 className="m-0 truncate text-2xl font-bold text-primary">{name}</h3>
-            <p className="mb-0 mt-1 truncate text-lg text-tertiary">{room.counterpart}</p>
+            <h3 className="m-0 truncate text-lg font-bold text-primary">{name}</h3>
+            <p className="mb-0 mt-0.5 truncate text-sm text-tertiary">{room.counterpart}</p>
           </div>
-          <div className="flex shrink-0 items-center gap-5">
-            <button type="button" className={`flex size-14 items-center justify-center rounded-xl border-0 bg-transparent text-primary transition-colors hover:bg-raised ${liveMeeting !== null ? "text-accent" : ""}`} onClick={onMeet} aria-label={liveMeeting !== null ? strings.meetJoin : strings.meetStart} title={liveMeeting !== null ? strings.meetJoin : strings.meetStart}><Video size={27} strokeWidth={1.9} /></button>
-            <span className="mx-1 block h-16 w-[2px] shrink-0 bg-[#ded5ca]" aria-hidden="true" />
-            <button type="button" className="flex size-14 items-center justify-center rounded-xl border-0 bg-transparent text-primary transition-colors hover:bg-raised" onClick={onPeople} title={strings.chatMembersAndAgents}><UserPlus size={29} strokeWidth={1.9} /><span className="sr-only">{strings.chatMembersAndAgents}</span></button>
-            <span className="mx-1 block h-16 w-[2px] shrink-0 bg-[#ded5ca]" aria-hidden="true" />
-            <button type="button" className="flex size-14 items-center justify-center rounded-xl border-0 bg-transparent text-primary transition-colors hover:bg-raised" onClick={onArchive} aria-label={strings.chatArchiveAction} title={strings.chatArchiveAction}><Archive size={27} strokeWidth={1.9} /></button>
+          <div className="flex shrink-0 items-center gap-3">
+            <button type="button" className={`flex size-11 items-center justify-center rounded-lg border-0 bg-transparent text-primary transition-colors hover:bg-raised ${liveMeeting !== null ? "text-accent" : ""}`} onClick={onMeet} aria-label={liveMeeting !== null ? strings.meetJoin : strings.meetStart} title={liveMeeting !== null ? strings.meetJoin : strings.meetStart}><Video size={22} strokeWidth={1.9} /></button>
+            <span className="block h-10 w-px shrink-0 bg-[#ded5ca]" aria-hidden="true" />
+            <button type="button" className="flex size-11 items-center justify-center rounded-lg border-0 bg-transparent text-primary transition-colors hover:bg-raised" onClick={onPeople} title={strings.chatMembersAndAgents}><UserPlus size={23} strokeWidth={1.9} /><span className="sr-only">{strings.chatMembersAndAgents}</span></button>
+            <span className="block h-10 w-px shrink-0 bg-[#ded5ca]" aria-hidden="true" />
+            <button type="button" className="flex size-11 items-center justify-center rounded-lg border-0 bg-transparent text-primary transition-colors hover:bg-raised" onClick={onArchive} aria-label={strings.chatArchiveAction} title={strings.chatArchiveAction}><Archive size={22} strokeWidth={1.9} /></button>
           </div>
         </div>
       </header>
