@@ -9,7 +9,7 @@
 // The `LiveKitRoom` element wants a URL and a token. It never learns which
 // workspace this is, and it cannot: the token carries an opaque room name and
 // a user id, and this component has nothing else to give it.
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "@livekit/components-styles";
 import {
   LiveKitRoom,
@@ -35,6 +35,8 @@ import { strings } from "../i18n";
 import { MeetApiError, MeetUnavailable, useMeetApi } from "./api";
 import type { JoinGrant, MeetApi, MeetingAttachment, MeetingMessage, MeetingRecording, MeetingTranscriptSegment, MeetingWorkspace } from "./api";
 import styles from "./MeetRoom.module.css";
+
+const LIVEKIT_ROOM_OPTIONS = { adaptiveStream: true, dynacast: true } as const;
 
 function useMeetingDuration(startedAt: string | null): string {
   const [now, setNow] = useState(() => Date.now());
@@ -721,6 +723,40 @@ export function MeetRoom({
   const [choices, setChoices] = useState<LocalUserChoices | null>(null);
   const [joinAttempt, setJoinAttempt] = useState(0);
   const connectedOnce = useRef(false);
+  const onLeftRef = useRef(onLeft);
+  const failureTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    onLeftRef.current = onLeft;
+  }, [onLeft]);
+
+  const clearFailureTimer = useCallback(() => {
+    if (failureTimer.current !== null) {
+      window.clearTimeout(failureTimer.current);
+      failureTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearFailureTimer, [clearFailureTimer]);
+
+  const leave = useCallback(() => onLeftRef.current(), []);
+  const handleConnected = useCallback(() => {
+    clearFailureTimer();
+    connectedOnce.current = true;
+  }, [clearFailureTimer]);
+  const scheduleConnectionProblem = useCallback(() => {
+    clearFailureTimer();
+    // LiveKit can briefly report a cancelled publication while replacing a
+    // device track. Give a healthy connection the chance to settle before
+    // replacing the call with the retry screen.
+    failureTimer.current = window.setTimeout(() => {
+      setProblem({
+        kind: "join",
+        message: connectedOnce.current ? strings.meetConnectionLost : strings.meetJoinFailed,
+      });
+      failureTimer.current = null;
+    }, 1_500);
+  }, [clearFailureTimer]);
 
   useEffect(() => {
     if (choices === null) return;
@@ -735,7 +771,7 @@ export function MeetRoom({
       } catch (failure) {
         if (!joined) return;
         if (failure instanceof MeetApiError && failure.status === 404) {
-          onLeft();
+          onLeftRef.current();
           return;
         }
         setProblem(failure instanceof MeetUnavailable
@@ -746,7 +782,7 @@ export function MeetRoom({
     return () => {
       joined = false;
     };
-  }, [api, choices, joinAttempt, meetingId, onLeft]);
+  }, [api, choices, joinAttempt, meetingId]);
 
   if (problem !== null) {
     return (
@@ -775,7 +811,7 @@ export function MeetRoom({
                 {strings.meetRetry}
               </Button>
             )}
-            <Button variant="ghost" onClick={onLeft}>{strings.meetClose}</Button>
+            <Button variant="ghost" onClick={leave}>{strings.meetClose}</Button>
           </div>
         </div>
       </div>
@@ -789,7 +825,7 @@ export function MeetRoom({
           variant="ghost"
           className={styles.back}
           icon={<ArrowLeft aria-hidden="true" />}
-          onClick={onLeft}
+          onClick={leave}
         >
           {strings.meetBack}
         </Button>
@@ -847,7 +883,7 @@ export function MeetRoom({
         variant="ghost"
         className={styles.inCallBack}
         icon={<ArrowLeft aria-hidden="true" />}
-        onClick={onLeft}
+        onClick={leave}
       >
         {strings.meetBack}
       </Button>
@@ -867,14 +903,10 @@ export function MeetRoom({
         // way that is hard to undo.
         video={choices.videoEnabled}
         audio={choices.audioEnabled}
-        options={{ adaptiveStream: true, dynacast: true }}
-        onConnected={() => { connectedOnce.current = true; }}
-        onDisconnected={() => {
-          // A failed initial signal connection is not the same action as the
-          // person leaving. Keep them in Meet with a useful retry state.
-          setProblem({ kind: "join", message: connectedOnce.current ? strings.meetConnectionLost : strings.meetJoinFailed });
-        }}
-        onError={() => setProblem({ kind: "join", message: strings.meetJoinFailed })}
+        options={LIVEKIT_ROOM_OPTIONS}
+        onConnected={handleConnected}
+        onDisconnected={scheduleConnectionProblem}
+        onError={scheduleConnectionProblem}
         className={styles.livekit}
         // The engine's own theme attribute. Without it none of its CSS
         // variables exist, and `.lk-grid-layout-wrapper`'s
@@ -883,7 +915,7 @@ export function MeetRoom({
         // empty black screen. A day of CSS guesses; one missing attribute.
         data-lk-theme="default"
       >
-        <MeetingExperience meetingId={meetingId} hostId={grant.meeting.createdBy} onLeave={onLeft} />
+        <MeetingExperience meetingId={meetingId} hostId={grant.meeting.createdBy} onLeave={leave} />
       </LiveKitRoom>
     </div>
   );
