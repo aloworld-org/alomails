@@ -63,9 +63,9 @@ export function ChatSidebar(props: ChatSidebarProps) {
         {props.finding !== "" && <IconButton size="sm" label={strings.chatSearchClear} icon={<X size={14} />} onClick={() => props.onFind("")} />}
       </label>
 
-      <div className="mb-3 flex items-center gap-2 px-5">
-        {(["all", "unread", "threads", "mentions"] as const).map((value) => <button key={value} type="button" aria-pressed={filter === value} className={`min-h-8 rounded-lg border px-3 text-xs font-medium transition-colors ${filter === value ? "border-accent bg-accent text-on-accent" : "border-subtle bg-surface text-secondary hover:bg-raised hover:text-primary"}`} onClick={() => setFilter(value)}>{value === "all" ? strings.chatFilterAll : value === "unread" ? strings.chatFilterUnread : value === "threads" ? strings.chatFilterThreads : strings.chatFilterMentions}</button>)}
-        <button type="button" className="ml-auto flex size-8 items-center justify-center rounded-lg border border-subtle bg-surface text-secondary hover:bg-raised" onClick={props.onBrowse} title={strings.chatBrowse}><SlidersHorizontal size={14} /><span className="sr-only">{strings.chatBrowse}</span></button>
+      <div className="mb-3 flex min-h-9 items-center gap-3 px-5">
+        {(["all", "unread", "threads", "mentions"] as const).map((value) => <button key={value} type="button" aria-pressed={filter === value} className={`border-0 bg-transparent p-0 text-sm transition-colors ${filter === value ? "font-semibold text-accent" : "font-normal text-primary hover:text-accent"}`} onClick={() => setFilter(value)}>{value === "all" ? strings.chatFilterAll : value === "unread" ? strings.chatFilterUnread : value === "threads" ? strings.chatFilterThreads : strings.chatFilterMentions}</button>)}
+        <button type="button" className="ml-auto flex size-8 items-center justify-center rounded-lg border-0 bg-transparent text-secondary transition-colors hover:bg-raised hover:text-primary" onClick={props.onBrowse} title={strings.chatBrowse}><SlidersHorizontal size={15} /><span className="sr-only">{strings.chatBrowse}</span></button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-5">
         {props.dmQuery !== null ? (
