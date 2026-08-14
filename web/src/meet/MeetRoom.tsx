@@ -9,7 +9,7 @@
 // The `LiveKitRoom` element wants a URL and a token. It never learns which
 // workspace this is, and it cannot: the token carries an opaque room name and
 // a user id, and this component has nothing else to give it.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "@livekit/components-styles";
 import {
   LiveKitRoom,
@@ -221,6 +221,7 @@ export function MeetRoom({
   // hunting for a settings menu mid-meeting.
   const [choices, setChoices] = useState<LocalUserChoices | null>(null);
   const [joinAttempt, setJoinAttempt] = useState(0);
+  const connectedOnce = useRef(false);
 
   useEffect(() => {
     if (choices === null) return;
@@ -366,7 +367,14 @@ export function MeetRoom({
         // way that is hard to undo.
         video={choices.videoEnabled}
         audio={choices.audioEnabled}
-        onDisconnected={onLeft}
+        onConnected={() => { connectedOnce.current = true; }}
+        onDisconnected={() => {
+          // A failed initial signal connection is not the same action as the
+          // person leaving. Keep them in Meet with a useful retry state.
+          if (connectedOnce.current) onLeft();
+          else setProblem({ kind: "join", message: strings.meetJoinFailed });
+        }}
+        onError={() => setProblem({ kind: "join", message: strings.meetJoinFailed })}
         className={styles.livekit}
         // The engine's own theme attribute. Without it none of its CSS
         // variables exist, and `.lk-grid-layout-wrapper`'s
