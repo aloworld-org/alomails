@@ -33,6 +33,7 @@ export function ConversationHeader({ room, liveMeeting, onBack, onMeet, onPeople
             <button type="button" className={`flex size-14 items-center justify-center rounded-xl border-0 bg-transparent text-primary transition-colors hover:bg-raised ${liveMeeting !== null ? "text-accent" : ""}`} onClick={onMeet} aria-label={liveMeeting !== null ? strings.meetJoin : strings.meetStart} title={liveMeeting !== null ? strings.meetJoin : strings.meetStart}><Video size={27} strokeWidth={1.9} /></button>
             <span className="mx-1 block h-16 w-[2px] shrink-0 bg-[#ded5ca]" aria-hidden="true" />
             <button type="button" className="flex size-14 items-center justify-center rounded-xl border-0 bg-transparent text-primary transition-colors hover:bg-raised" onClick={onPeople} title={strings.chatMembersAndAgents}><UserPlus size={29} strokeWidth={1.9} /><span className="sr-only">{strings.chatMembersAndAgents}</span></button>
+            <span className="mx-1 block h-16 w-[2px] shrink-0 bg-[#ded5ca]" aria-hidden="true" />
             <button type="button" className="flex size-14 items-center justify-center rounded-xl border-0 bg-transparent text-primary transition-colors hover:bg-raised" onClick={onArchive} aria-label={strings.chatArchiveAction} title={strings.chatArchiveAction}><Archive size={27} strokeWidth={1.9} /></button>
           </div>
         </div>
