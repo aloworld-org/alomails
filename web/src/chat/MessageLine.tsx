@@ -9,10 +9,10 @@ import { AgentActionCard } from "../shell/AgentActionCard";
 import { personName, shortTime, standingOf, timeOf } from "./presentation";
 import type { Attachment, Message, Proposal } from "./types";
 
-const messageClass = "group relative mt-5 flex w-fit max-w-4xl flex-col items-start pl-12 pr-3";
-const mineClass = "group relative mt-2 flex w-fit max-w-3xl flex-col items-end self-end pl-3 pr-5";
+const messageClass = "group relative mt-8 flex w-fit max-w-4xl flex-col items-start pl-12 pr-3";
+const mineClass = "group relative mt-3 flex w-fit max-w-3xl flex-col items-end self-end pl-3 pr-5";
 const toolClass = "flex size-7 items-center justify-center rounded-sm border-0 bg-transparent text-secondary hover:bg-raised hover:text-primary focus-visible:outline-2 focus-visible:outline-accent";
-const bubbleClass = "m-0 max-w-full whitespace-pre-wrap break-words rounded-xl border border-subtle bg-surface px-4 py-3 text-sm leading-relaxed text-primary group-hover:border-default";
+const bubbleClass = "m-0 max-w-full whitespace-pre-wrap break-words rounded-xl border border-subtle bg-surface px-5 py-4 text-base leading-[1.65] text-primary group-hover:border-default";
 const RichMessageBody = lazy(() => import("./RichMessageBody").then((module) => ({ default: module.RichMessageBody })));
 
 function MessageBody({ body }: { body: string }) {
@@ -82,7 +82,7 @@ export function MessageLine({
   const reactable = palette.length > 0 && message.deletedAt === null;
   return (
     <article
-      className={`${authoredByMe ? mineClass : messageClass} ${grouped ? (authoredByMe ? "mt-2" : "mt-1") : ""}`}
+      className={`${authoredByMe ? mineClass : messageClass} ${grouped ? (authoredByMe ? "mt-2" : "mt-3") : ""}`}
     >
       {editing === null && (
         <div className="pointer-events-none absolute -top-4 right-2 z-10 flex gap-1 rounded-md border border-subtle bg-surface p-1 opacity-0 shadow-md transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
@@ -174,17 +174,13 @@ export function MessageLine({
           {shortTime(message.createdAt)}
         </span>
       ) : (
-        <div className="mb-1 flex items-center gap-2">
+        <div className="mb-2 flex min-h-8 items-center gap-2">
           {isAgent ? (
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-sm bg--tint text-accent" aria-hidden="true">
+            <span className="absolute left-0 top-0 flex size-8 shrink-0 items-center justify-center rounded-lg bg--tint text-accent" aria-hidden="true">
               <Sparkles size={13} />
             </span>
           ) : (
-            <Avatar
-              name={who}
-              email={message.authorEmail ?? undefined}
-              size="sm"
-            />
+            <span className="absolute left-0 top-0"><Avatar name={who} email={message.authorEmail ?? undefined} size="sm" /></span>
           )}
           <span
             className={isAgent ? "text-sm font-semibold text-accent" : "text-sm font-bold text-primary"}
@@ -325,12 +321,12 @@ export function MessageLine({
       )}
 
       {message.reactions.length > 0 && (
-        <div className="mt-1 flex flex-wrap items-center gap-1">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {message.reactions.map((reaction) => (
             <button
               key={reaction.emoji}
               type="button"
-              className={`inline-flex min-h-7 items-center gap-1 rounded-lg border px-2 text-xs ${reaction.mine ? "border-accent bg--tint font-semibold text-primary" : "border-subtle bg-surface text-secondary hover:border-default"}`}
+              className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-3 text-sm ${reaction.mine ? "border-accent bg--tint font-semibold text-primary" : "border-subtle bg-surface text-secondary hover:border-default"}`}
               onClick={() => onReact(reaction.emoji)}
               // The chip is a toggle, and says which way it will go.
               aria-pressed={reaction.mine}

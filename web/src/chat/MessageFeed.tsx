@@ -27,7 +27,7 @@ type Props = {
 };
 
 export function MessageFeed({ room, messages, feedRef, moreBehind, loadingOlder, readUpTo, palette, me, onOlder, onReact, onOpenFile, onDecide, onEdit, onWithdraw, onReplyHere, onReplyPrivate }: Props) {
-  return <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface px-7 pb-6" ref={feedRef}>
+  return <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-surface px-8 pb-8" ref={feedRef}>
     {!moreBehind && messages !== null && <div className="mx-auto my-7 w-full max-w-5xl rounded-xl border border-subtle bg-surface p-5">
       <h4 className="m-0 text-lg font-bold text-primary">{room.kind === "dm" ? strings.chatBeginningDm : strings.chatBeginning(channelLabel(room))}</h4>
       {room.topic !== null && <p className="mb-0 mt-2 text-sm text-tertiary">{room.topic}</p>}
