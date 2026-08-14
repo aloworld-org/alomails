@@ -4889,6 +4889,7 @@ export const nl: Partial<Catalog> = {
   meetChatMessages: "Berichten",
   meetChatPeople: (count: number) => `Mensen (${count})`,
   meetChatPlaceholder: "Stuur een bericht",
+  meetMessageSendFailed: "Dit bericht is niet opgeslagen. Controleer uw verbinding en probeer het opnieuw.",
   meetEveryone: "Iedereen",
   meetSendTo: "Aan:",
   meetChooseRecipient: "Bericht sturen naar",

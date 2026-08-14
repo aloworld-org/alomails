@@ -32,7 +32,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { Button } from "../ds";
 import { strings } from "../i18n";
 import { MeetApiError, MeetUnavailable, useMeetApi } from "./api";
-import type { JoinGrant } from "./api";
+import type { JoinGrant, MeetingMessage } from "./api";
 import styles from "./MeetRoom.module.css";
 
 function useMeetingDuration(startedAt: string | null): string {
@@ -113,7 +113,8 @@ function ChatAttachment({ file }: { file: File }) {
   </a>;
 }
 
-function InCallChat({ onClose }: { onClose: () => void }) {
+function InCallChat({ meetingId, onClose }: { meetingId: string; onClose: () => void }) {
+  const api = useMeetApi();
   const { chatMessages, send, isSending } = useChat();
   const participants = useParticipants();
   const { localParticipant } = useLocalParticipant();
@@ -123,6 +124,8 @@ function InCallChat({ onClose }: { onClose: () => void }) {
   const [showRecipients, setShowRecipients] = useState(false);
   const [showEmoji, setShowEmoji] = useState(false);
   const [reactions, setReactions] = useState<Record<string, Record<string, string[]>>>({});
+  const [history, setHistory] = useState<MeetingMessage[]>([]);
+  const [sendError, setSendError] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const remoteParticipants = participants.filter((person) => !person.isLocal);
   const encoder = new TextEncoder();
@@ -142,11 +145,23 @@ function InCallChat({ onClose }: { onClose: () => void }) {
     destinationIdentities: [recipient],
     attributes: { "alo.private": "true", "alo.recipient": recipient },
   };
+  useEffect(() => {
+    let current = true;
+    void api.messages(meetingId).then((messages) => { if (current) setHistory(messages); });
+    return () => { current = false; };
+  }, [api, meetingId]);
   const submit = async (text = draft) => {
     const message = text.trim();
     if (message === "" || isSending) return;
-    await send(message, deliveryOptions);
-    setDraft("");
+    setSendError(false);
+    try {
+      const stored = await api.postMessage(meetingId, message, recipient);
+      setHistory((current) => [...current, stored]);
+      await send(message, { ...deliveryOptions, attributes: { ...deliveryOptions.attributes, "alo.persistedId": stored.id } });
+      setDraft("");
+    } catch {
+      setSendError(true);
+    }
   };
   const sendFiles = async (files: FileList | null) => {
     if (files === null || files.length === 0 || isSending) return;
@@ -171,7 +186,14 @@ function InCallChat({ onClose }: { onClose: () => void }) {
       {tab === "messages" ? (
         <>
           <div className={styles.aloChatMessages}>
-            {chatMessages.length === 0 ? <ChatWelcome /> : chatMessages.map((message) => {
+            {chatMessages.length === 0 && history.length === 0 ? <ChatWelcome /> : <>
+            {history.filter((stored) => !chatMessages.some((live) => live.attributes?.["alo.persistedId"] === stored.id)).map((message) => {
+              const person = participants.find((participant) => participant.identity === message.sender);
+              const name = person?.name || person?.identity || strings.meetSomeone;
+              const mine = message.sender === localParticipant.identity;
+              return <article key={message.id} className={mine ? styles.chatMine : undefined}><span className={styles.chatAvatar}>{name.slice(0, 1).toUpperCase()}</span><div className={styles.chatMessageBody}><p><strong>{name}{mine ? ` (${strings.meetYou})` : ""}</strong>{message.recipient !== null && <span className={styles.privateBadge}><Lock />{strings.meetPrivate}</span>}<time>{new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</time></p><div className={styles.chatBubble}>{formatChatMessageLinks(message.body)}</div></div></article>;
+            })}
+            {chatMessages.map((message) => {
               const name = message.from?.name || message.from?.identity || strings.meetSomeone;
               const privateMessage = message.attributes?.["alo.private"] === "true";
               return <article key={message.id} className={message.from?.isLocal ? styles.chatMine : undefined}>
@@ -181,7 +203,7 @@ function InCallChat({ onClose }: { onClose: () => void }) {
                   {Object.entries(reactions[message.id] ?? {}).length > 0 && <div className={styles.messageReactions}>{Object.entries(reactions[message.id] ?? {}).map(([emoji, actors]) => <span key={emoji} title={actors.join(", ")}>{emoji} {actors.length}</span>)}</div>}
                 </div>
               </article>;
-            })}
+            })}</>}
           </div>
           <div className={styles.quickReplies}>{[strings.meetQuickReplyOne, strings.meetQuickReplyTwo, strings.meetQuickReplyThree].map((reply) => <button type="button" key={reply} onClick={() => void submit(reply)}>{reply}</button>)}</div>
           <form className={styles.aloChatComposer} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
@@ -205,6 +227,7 @@ function InCallChat({ onClose }: { onClose: () => void }) {
             <input value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={strings.meetChatPlaceholder} aria-label={strings.meetChatPlaceholder} />
             <button type="submit" disabled={draft.trim() === "" || isSending} aria-label={strings.chatSend}><Send /></button>
             </div>
+            {sendError && <p className={styles.chatSendError} role="alert">{strings.meetMessageSendFailed}</p>}
           </form>
         </>
       ) : (
@@ -414,7 +437,7 @@ function MeetingExperience({ meetingId, onLeave }: { meetingId: string; onLeave:
     <ConnectionRecovery />
     <FullscreenAction />
     <MeetingActions meetingId={meetingId} onLeave={onLeave} chatOpen={chatOpen} onChat={() => setChatOpen((open) => !open)} onSettings={() => setSettingsOpen(true)} onPictureInPicture={() => void pictureInPicture()} />
-    {chatOpen && <InCallChat onClose={() => setChatOpen(false)} />}
+    {chatOpen && <InCallChat meetingId={meetingId} onClose={() => setChatOpen(false)} />}
     {settingsOpen && <DeviceSettings onClose={() => setSettingsOpen(false)} />}
   </>;
 }

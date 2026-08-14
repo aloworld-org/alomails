@@ -22,6 +22,15 @@ describe("joining a meeting", () => {
     expect(fetched).toHaveBeenCalledWith(expect.stringContaining("/api/meet/history"), expect.any(Object));
   });
 
+  test("in-call messages are persisted with their private recipient", async () => {
+    const { api, fetched } = client(200, { id: "msg-1", body: "hello", recipient: "user-2" });
+    await expect(api.postMessage("m-1", "hello", "user-2")).resolves.toMatchObject({ id: "msg-1" });
+    expect(fetched).toHaveBeenCalledWith(
+      expect.stringContaining("/api/meet/m-1/messages"),
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ body: "hello", recipient: "user-2" }) }),
+    );
+  });
+
   test("a deployment with no engine says so, distinctly", async () => {
     // 503 means the meeting is real and attendance was recorded — there is
     // simply nowhere to hold it. Reporting that as a generic failure would

@@ -4950,6 +4950,7 @@ export const fr: Partial<Catalog> = {
   meetChatMessages: "Messages",
   meetChatPeople: (count: number) => `Personnes (${count})`,
   meetChatPlaceholder: "Envoyer un message",
+  meetMessageSendFailed: "Ce message n’a pas été enregistré. Vérifiez votre connexion et réessayez.",
   meetEveryone: "Tout le monde",
   meetSendTo: "À :",
   meetChooseRecipient: "Envoyer le message à",

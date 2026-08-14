@@ -1864,6 +1864,7 @@ export const en = {
   meetChatMessages: "Messages",
   meetChatPeople: (count: number) => `People (${count})`,
   meetChatPlaceholder: "Send a message",
+  meetMessageSendFailed: "That message was not saved. Check your connection and try again.",
   meetEveryone: "Everyone",
   meetSendTo: "To:",
   meetChooseRecipient: "Send message to",

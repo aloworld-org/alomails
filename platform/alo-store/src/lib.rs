@@ -443,7 +443,8 @@ pub use insight_tiles::{NewTile, Tile, TileSpec};
 // `alo_store::inv_moves::{NewMove, MoveReason}`, `alo_store::inv_stock::
 // StockFilter`), which keeps every one of them unambiguous at its use site.
 pub use meet::{
-    Meeting, MeetingGuest, MeetingGuestInvitationCreated, MeetingParticipant, NewMeeting,
+    Meeting, MeetingGuest, MeetingGuestInvitationCreated, MeetingMessage, MeetingParticipant,
+    NewMeeting,
 };
 pub use model::{
     AiConfigRow, AiProviderRow, AuditEntry, Blob, Calendar, CalendarEvent, CalendarGrant, Category,

@@ -54,6 +54,16 @@ pub struct MeetingParticipant {
     pub joined_at: OffsetDateTime,
 }
 
+/// A durable text message sent while a meeting is running.
+#[derive(Debug, Clone)]
+pub struct MeetingMessage {
+    pub id: String,
+    pub sender: UserId,
+    pub recipient: Option<UserId>,
+    pub body: String,
+    pub created_at: OffsetDateTime,
+}
+
 /// What a meeting is attached to when it is made.
 #[derive(Debug, Clone, Default)]
 pub struct NewMeeting {
@@ -123,6 +133,79 @@ const COLUMNS: &str =
     "id, room, title, created_by, channel_id, event_id, created_at, started_at, ended_at";
 
 impl AccountStore {
+    /// Store a meeting message before it is broadcast through the media engine.
+    pub async fn post_meeting_message(
+        &self,
+        meeting_id: &MeetingId,
+        body: &str,
+        recipient: Option<&UserId>,
+    ) -> Result<MeetingMessage> {
+        let meeting = self.meeting(meeting_id).await?;
+        if meeting.ended_at.is_some() || body.trim().is_empty() || body.len() > 10_000 {
+            return Err(StoreError::Validation(
+                "a live meeting and a message are required".to_owned(),
+            ));
+        }
+        if let Some(person) = recipient {
+            let allowed: bool = sqlx::query_scalar(
+                "SELECT EXISTS(SELECT 1 FROM meeting_participants WHERE tenant_id=$1 AND meeting_id=$2 AND user_id=$3)",
+            )
+            .bind(self.tenant.as_str())
+            .bind(meeting_id.as_str())
+            .bind(person.as_str())
+            .fetch_one(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+            if !allowed {
+                return Err(StoreError::Forbidden);
+            }
+        }
+        let id = generate_token();
+        let row: (String, String, Option<String>, String, OffsetDateTime) = sqlx::query_as(
+            "INSERT INTO meeting_messages (tenant_id,meeting_id,id,sender_id,recipient_id,body) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,sender_id,recipient_id,body,created_at",
+        )
+        .bind(self.tenant.as_str())
+        .bind(meeting_id.as_str())
+        .bind(&id)
+        .bind(self.user.as_str())
+        .bind(recipient.map(UserId::as_str))
+        .bind(body.trim())
+        .fetch_one(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(MeetingMessage {
+            id: row.0,
+            sender: UserId::new(row.1),
+            recipient: row.2.map(UserId::new),
+            body: row.3,
+            created_at: row.4,
+        })
+    }
+
+    /// Messages visible to the caller: public, addressed to them, or sent by them.
+    pub async fn meeting_messages(&self, meeting_id: &MeetingId) -> Result<Vec<MeetingMessage>> {
+        self.meeting(meeting_id).await?;
+        let rows: Vec<(String, String, Option<String>, String, OffsetDateTime)> = sqlx::query_as(
+            "SELECT id,sender_id,recipient_id,body,created_at FROM meeting_messages WHERE tenant_id=$1 AND meeting_id=$2 AND (recipient_id IS NULL OR recipient_id=$3 OR sender_id=$3) ORDER BY created_at,id LIMIT 1000",
+        )
+        .bind(self.tenant.as_str())
+        .bind(meeting_id.as_str())
+        .bind(self.user.as_str())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(rows
+            .into_iter()
+            .map(|row| MeetingMessage {
+                id: row.0,
+                sender: UserId::new(row.1),
+                recipient: row.2.map(UserId::new),
+                body: row.3,
+                created_at: row.4,
+            })
+            .collect())
+    }
+
     /// Start a meeting.
     ///
     /// When it belongs to a chat room, the caller must be able to read that

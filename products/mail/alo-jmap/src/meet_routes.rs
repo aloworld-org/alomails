@@ -14,6 +14,7 @@ use serde_json::{Value, json};
 use time::OffsetDateTime;
 use time::format_description::well_known::Rfc3339;
 
+use alo_store::UserId;
 use alo_store::{ChatChannelId, EventId, Meeting, MeetingId, NewMeeting};
 
 use crate::billing::map_store_err;
@@ -277,4 +278,55 @@ pub async fn participants(
             .map(|p| json!({ "user": p.user.as_str(), "joinedAt": iso(p.joined_at) }))
             .collect::<Vec<_>>()
     })))
+}
+
+fn message_json(message: &alo_store::MeetingMessage) -> Value {
+    json!({
+        "id": message.id,
+        "sender": message.sender.as_str(),
+        "recipient": message.recipient.as_ref().map(UserId::as_str),
+        "body": message.body,
+        "createdAt": iso(message.created_at),
+    })
+}
+
+/// `GET /meet/{id}/messages` — durable messages visible to this participant.
+pub async fn messages(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let messages = account
+        .acc
+        .meeting_messages(&MeetingId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(
+        json!({ "messages": messages.iter().map(message_json).collect::<Vec<_>>() }),
+    ))
+}
+
+#[derive(Deserialize)]
+pub struct PostMeetingMessage {
+    body: String,
+    #[serde(default)]
+    recipient: Option<String>,
+}
+
+/// `POST /meet/{id}/messages` — persist before real-time broadcast.
+pub async fn post_message(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(body): Json<PostMeetingMessage>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let recipient = body.recipient.map(UserId::new);
+    let message = account
+        .acc
+        .post_meeting_message(&MeetingId::new(id), &body.body, recipient.as_ref())
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(message_json(&message)))
 }

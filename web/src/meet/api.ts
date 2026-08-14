@@ -29,6 +29,14 @@ export interface JoinGrant {
   token: string;
 }
 
+export interface MeetingMessage {
+  id: string;
+  sender: string;
+  recipient: string | null;
+  body: string;
+  createdAt: string;
+}
+
 /** Raised when meetings are not configured on this deployment. */
 export class MeetUnavailable extends Error {}
 
@@ -88,6 +96,21 @@ export class MeetApi {
     const res = await this.#send("/meet/history");
     if (!res.ok) return [];
     return ((await res.json()) as { meetings: Meeting[] }).meetings;
+  }
+
+  async messages(id: string): Promise<MeetingMessage[]> {
+    const res = await this.#send(`/meet/${encodeURIComponent(id)}/messages`);
+    if (!res.ok) return [];
+    return ((await res.json()) as { messages: MeetingMessage[] }).messages;
+  }
+
+  async postMessage(id: string, body: string, recipient: string | null): Promise<MeetingMessage> {
+    const res = await this.#send(`/meet/${encodeURIComponent(id)}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ body, recipient }),
+    });
+    if (!res.ok) throw new MeetApiError(res.status, "post meeting message");
+    return (await res.json()) as MeetingMessage;
   }
 
   /** Meetings still running in a room. */
