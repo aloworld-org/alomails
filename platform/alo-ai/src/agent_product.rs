@@ -297,6 +297,7 @@ mod tests {
                 "site_answer",
                 "site_page_read",
                 "site_seo_review",
+                "site_translation_status",
                 "site_page_draft",
                 "site_page_edit",
                 "site_publish",
@@ -330,7 +331,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 39);
+        assert_eq!(workspace.len(), 40);
     }
 
     /// The boundary's question, over the whole registry: a product offers its

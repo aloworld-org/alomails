@@ -627,9 +627,13 @@ mod tests {
                 "site_answer",
                 "site_page_read",
                 "site_seo_review",
+                // A2.1b: …and how far each of the site's own languages got.
+                // Translating them is not a tool at all — it stays on
+                // `/sites/:id/translation-proposals`, page by page.
+                "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 39);
+        assert_eq!(all_tools().len(), 40);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

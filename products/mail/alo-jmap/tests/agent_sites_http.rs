@@ -1,4 +1,4 @@
-//! **The Website agent, end to end** (A2.1) — the four sentences ADR 0034 and
+//! **The Website agent, end to end** (A2.1, A2.1b) — the five sentences ADR 0034 and
 //! ADR 0047 leave a website agent to prove, each asked the way a person asks it
 //! and answered the way a person reads it:
 //!
@@ -11,7 +11,10 @@
 //!   own approval and on nothing else;
 //! - an edit changes the **words** and leaves the wiring — a link's target —
 //!   exactly as it was, and what a visitor reads does not change until a
-//!   publish.
+//!   publish;
+//! - `@sites is the website ready in French?` — answered from the **counts**
+//!   (A2.1b): which language is short how many pages, with nothing translated
+//!   on the way and no tool offered that could translate one.
 //!
 //! Everything goes through the product's own path: the tenant's agents are the
 //! ones `GET /chat/agents` seeds (A1.5), the room is made over HTTP, the agent
@@ -699,6 +702,305 @@ async fn an_approved_edit_rewrites_the_copy_and_leaves_the_link_alone() {
     );
 }
 
+// ---- the languages: counted, and not translated ------------------------------
+
+/// The same bakery, set up in three languages with only part of the French
+/// written — and nothing at all in German.
+///
+/// The shape is the one a site actually reaches: pages are written in the
+/// default language, somebody starts a second language and stops halfway, and a
+/// third is enabled and never begun. Coverage is exact, so the half-written
+/// French is two pages short rather than "there, with fallbacks".
+async fn a_bakery_in_three_languages(h: &Harness) -> SiteId {
+    let (site, home) = a_bakery(h).await;
+    h.acc
+        .set_site_locales(
+            &site,
+            "en",
+            &["en".to_owned(), "fr".to_owned(), "de".to_owned()],
+        )
+        .await
+        .unwrap();
+    for (title, slug) in [("Visit", "visit"), ("Our story", "story")] {
+        let page = h
+            .acc
+            .create_site_page(&site, title, slug, false)
+            .await
+            .unwrap();
+        h.acc
+            .set_page_sections(
+                &site,
+                &page,
+                json!({
+                    "schema_version": alo_store::SECTIONS_SCHEMA_VERSION,
+                    "sections": [{ "type": "hero", "heading": title }],
+                }),
+            )
+            .await
+            .unwrap();
+    }
+    // One page of French, and only one.
+    h.acc
+        .set_site_page_locale(
+            &site,
+            &home,
+            "fr",
+            "Accueil",
+            "",
+            json!({
+                "schema_version": alo_store::SECTIONS_SCHEMA_VERSION,
+                "sections": [{ "type": "hero", "heading": "Boulangerie Juniper" }],
+            }),
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+    site
+}
+
+/// **The A2.1b question, end to end.** Which language is short how many pages —
+/// answered from the counts, with no page translated on the way and nothing
+/// offered that would translate one.
+#[tokio::test]
+async fn the_website_agent_says_which_language_is_short_how_many_pages() {
+    let h = harness("agent-a21b-count").await;
+    let site = a_bakery_in_three_languages(&h).await;
+    const ANSWER: &str = "French is two pages short of the three you have, and German has none of \
+                          them yet. Translating a whole site is something you start on the \
+                          website's Languages screen, where every page is shown beside the \
+                          original before anything is kept.";
+    let (base, seen) = scripted_model(vec![
+        wants(
+            "site_translation_status",
+            json!({}),
+            "Let me check the languages.",
+        ),
+        says(ANSWER),
+    ])
+    .await;
+    use_model(&h, &base).await;
+    let agent = the_website_agent(&h).await;
+    let channel = a_room_with(&h, "the website", &agent).await;
+
+    const QUESTION: &str = "@sites is the website ready in French?";
+    let spoken = ask_in_room(&h, &channel, QUESTION).await;
+
+    // An answer, in the room, with **no button in between**: asking how far the
+    // languages got changes nothing, so nothing waits for a tap (ADR 0047 §1).
+    assert_eq!(spoken["body"], json!(ANSWER));
+    let room = messages(&h, &channel).await;
+    for message in &room {
+        assert_eq!(
+            message["proposal"],
+            Value::Null,
+            "counting languages must never produce a proposal: {message}"
+        );
+    }
+
+    let system = offered(&seen, 0);
+    assert!(
+        system.contains("- site_translation_status:"),
+        "the Website agent is offered the count: {system}"
+    );
+    assert!(
+        system.contains("CANNOT translate anything"),
+        "and told, where it reads its tools, that it cannot do the translating: {system}"
+    );
+
+    // **The numbers the answer rests on**, in the sources of the second call.
+    let second = shown(&seen, 1);
+    assert!(
+        second.contains("tool result \"site_translation_status\""),
+        "{second}"
+    );
+    assert!(
+        second.contains("\"kind\":\"siteTranslationStatus\""),
+        "{second}"
+    );
+    assert!(second.contains("\"totalPages\":3"), "{second}");
+    assert!(
+        second.contains(
+            "{\"isDefault\":false,\"locale\":\"fr\",\"missingPages\":2,\"ready\":false,\"translatedPages\":1}"
+        ),
+        "the half-written French is two pages short, exactly: {second}"
+    );
+    assert!(
+        second.contains(
+            "{\"isDefault\":false,\"locale\":\"de\",\"missingPages\":3,\"ready\":false,\"translatedPages\":0}"
+        ),
+        "and the language nobody began is short all of them: {second}"
+    );
+    assert!(
+        second.contains(
+            "{\"isDefault\":true,\"locale\":\"en\",\"missingPages\":0,\"ready\":true,\"translatedPages\":3}"
+        ),
+        "the default language is complete by definition: {second}"
+    );
+    // The default first, then whichever language is furthest behind — the order
+    // the question is asked in. (`"locale":` is the per-language key; the site's
+    // own `defaultLocale` and `enabledLocales` do not match it.)
+    let order: Vec<usize> = [
+        "\"locale\":\"en\"",
+        "\"locale\":\"de\"",
+        "\"locale\":\"fr\"",
+    ]
+    .iter()
+    .map(|locale| {
+        second
+            .find(locale)
+            .unwrap_or_else(|| panic!("{locale} is in the result: {second}"))
+    })
+    .collect();
+    assert!(order[0] < order[1] && order[1] < order[2], "{second}");
+    assert!(second.contains("\"languagesShort\":2"), "{second}");
+    // A fallback is not a translation: nothing here reports the French as
+    // ready because a visitor would be shown the English.
+    assert!(
+        !second.contains("\"locale\":\"fr\",\"missingPages\":0"),
+        "{second}"
+    );
+    // Said beside the numbers, because the numbers are what would otherwise
+    // tempt an offer to fix them.
+    assert!(second.contains("\"agentCanTranslate\":false"), "{second}");
+
+    // Audited as a read, and the site is exactly as it was: three pages, one
+    // French draft, and no second language written by the asking.
+    let runs = h.acc.agent_tool_runs(50).await.unwrap();
+    assert_eq!(runs.len(), 1, "{runs:?}");
+    assert_eq!(runs[0].tool, "site_translation_status");
+    assert_eq!(runs[0].effect, "read");
+    assert!(runs[0].ok);
+    let after = h
+        .acc
+        .site_translation_readiness(&site)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(after.total_pages, 3);
+    let french = after
+        .locales
+        .iter()
+        .find(|locale| locale.locale == "fr")
+        .unwrap();
+    assert_eq!(
+        french.translated_pages, 1,
+        "asking how far French got must not write a word of it"
+    );
+    let record = h.acc.agent_records().await.unwrap();
+    let record = record.get(agent.as_str()).unwrap();
+    assert_eq!(record.reads, 1);
+    assert_eq!(record.answers, 1);
+    assert_eq!(record.actions, 0);
+
+    transcript(
+        QUESTION,
+        &[
+            format!("POST /chat/channels/{channel}/messages"),
+            format!("     {}", json!({ "body": QUESTION })),
+            "--- what the model was shown (call 1 of 2, user turn) ---".to_owned(),
+            shown(&seen, 0),
+            "--- what the model replied (call 1) ---".to_owned(),
+            wants(
+                "site_translation_status",
+                json!({}),
+                "Let me check the languages.",
+            ),
+            "--- what the model was shown (call 2 of 2, user turn) ---".to_owned(),
+            second,
+            "--- what the model replied (call 2) ---".to_owned(),
+            says(ANSWER),
+            "--- GET /chat/channels/{id}/messages, the agent's message ---".to_owned(),
+            spoken.to_string(),
+            format!(
+                "--- audited: {} / {} / ok={} ---",
+                runs[0].tool, runs[0].effect, runs[0].ok
+            ),
+        ],
+    );
+}
+
+/// Asks the count in a room of its own and hands back what the model was shown
+/// beside it. The two "nothing is missing" cases below differ only in the site
+/// they are asked about, and each needs its own tenant: coverage is a property
+/// of the whole site, so they cannot share one.
+async fn the_count_shown_to_the_model(h: &Harness, question: &str) -> String {
+    let (base, seen) = scripted_model(vec![
+        wants("site_translation_status", json!({}), "Let me look."),
+        says("Here is where the languages stand."),
+    ])
+    .await;
+    use_model(h, &base).await;
+    let agent = the_website_agent(h).await;
+    let channel = a_room_with(h, "the website", &agent).await;
+    ask_in_room(h, &channel, question).await;
+
+    let runs = h.acc.agent_tool_runs(50).await.unwrap();
+    assert_eq!(runs.len(), 1, "{runs:?}");
+    assert_eq!(runs[0].tool, "site_translation_status");
+    assert_eq!(runs[0].effect, "read");
+    assert!(runs[0].ok);
+    shown(&seen, 1)
+}
+
+/// A site in one language has nothing to translate *into*, which is a different
+/// answer from a site whose translations are all done — and it is said as its
+/// own reason code rather than left to a client to infer from a zero.
+#[tokio::test]
+async fn a_site_in_one_language_has_nothing_to_translate_into() {
+    let h = harness("agent-a21b-one").await;
+    a_bakery(&h).await;
+
+    let shown = the_count_shown_to_the_model(&h, "@sites how is the French coming along?").await;
+    assert!(
+        shown.contains("\"findings\":[\"oneLanguageOnly\"]"),
+        "one language is its own answer, not a clean bill of health: {shown}"
+    );
+    assert!(shown.contains("\"languagesShort\":0"), "{shown}");
+    assert!(shown.contains("\"agentCanTranslate\":false"), "{shown}");
+}
+
+/// …and a site whose second language is fully written says *that*, so the model
+/// is never left to read "0 missing" out of a site nobody translated.
+#[tokio::test]
+async fn a_site_whose_languages_are_all_written_says_so() {
+    let h = harness("agent-a21b-done").await;
+    let (site, home) = a_bakery(&h).await;
+    h.acc
+        .set_site_locales(&site, "en", &["en".to_owned(), "fr".to_owned()])
+        .await
+        .unwrap();
+    h.acc
+        .set_site_page_locale(
+            &site,
+            &home,
+            "fr",
+            "Accueil",
+            "",
+            json!({
+                "schema_version": alo_store::SECTIONS_SCHEMA_VERSION,
+                "sections": [{ "type": "hero", "heading": "Boulangerie Juniper" }],
+            }),
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+
+    let shown = the_count_shown_to_the_model(&h, "@sites is the French finished?").await;
+    assert!(
+        shown.contains("\"findings\":[\"everyLanguageComplete\"]"),
+        "every language written is its own answer: {shown}"
+    );
+    assert!(shown.contains("\"languagesShort\":0"), "{shown}");
+    assert!(
+        shown.contains(
+            "{\"isDefault\":false,\"locale\":\"fr\",\"missingPages\":0,\"ready\":true,\"translatedPages\":1}"
+        ),
+        "{shown}"
+    );
+}
+
 // ---- the tenant --------------------------------------------------------------
 
 /// **Law 1: a Website agent reaches no other tenant's website.**
@@ -746,6 +1048,16 @@ async fn a_website_agent_reaches_no_other_tenants_site() {
         other.acc.site_grounding_corpus(&theirs).await,
         Err(alo_store::StoreError::NotFound)
     ));
+    // …including how far its languages got (A2.1b): a count is a fact about
+    // somebody else's site as much as a passage of it is.
+    assert!(
+        other
+            .acc
+            .site_translation_readiness(&theirs)
+            .await
+            .unwrap()
+            .is_none()
+    );
 
     // And the agent, asked by name for the other tenant's site, is refused and
     // says so — the refusal reaches the model, the bakery's words do not.

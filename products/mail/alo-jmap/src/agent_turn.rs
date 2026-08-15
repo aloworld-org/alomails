@@ -395,10 +395,11 @@ mod tests {
                 }
             }
         }
-        // Fourteen of them, which is the whole point of ADR 0047 — eleven from
-        // the products A1 covered, and the Website agent's three (A2.1).
+        // Fifteen of them, which is the whole point of ADR 0047 — eleven from
+        // the products A1 covered, the Website agent's three (A2.1), and its
+        // language count (A2.1b).
         let reads = alo_ai::all_tools().iter().filter(|t| t.is_read()).count();
-        assert_eq!(reads, 14);
+        assert_eq!(reads, 15);
     }
 
     #[test]

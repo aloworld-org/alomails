@@ -10,7 +10,7 @@
 //! another tenant's is nameable from here, because the resolver picks out of
 //! `account.acc.sites()` and never out of an id the model stated.
 //!
-//! Four rules shape this module, and none of them is thin glue:
+//! Five rules shape this module, and none of them is thin glue:
 //!
 //! - **A question about the site is answered from the internet, not the draft.**
 //!   [`execute_site_answer`] reads
@@ -34,6 +34,14 @@
 //!   pointer that is not in that set, so a model cannot re-point a button at
 //!   another domain, claim an asset it does not have, or write a script into a
 //!   page — whatever it puts in its arguments.
+//! - **Translating is not one of the tools, and counting it is.**
+//!   [`execute_site_translation_status`] reports how many pages each of the
+//!   site's languages is short and stops there; the translating itself stays on
+//!   `POST /sites/:id/translation-proposals`, which proposes every page beside
+//!   its original and keeps nothing the owner did not approve. An agent that
+//!   could rewrite a whole site into another language from one chat message
+//!   would be a second, quieter path around that screen, so there is no such
+//!   tool to execute here (A2.1b).
 //! - **Results carry facts and reason codes, never sentences.** The review
 //!   answers `noSeoDescription`, not "this page has no description": a
 //!   user-facing sentence composed in the server would be English authored in
@@ -223,6 +231,95 @@ pub async fn execute_site_seo_review(
             "siteFindings": review_site(&site, &pages),
             "pagesReviewed": pages.len(),
             "findings": findings,
+        }
+    })))
+}
+
+/// `site_translation_status` — which of the site's languages is short how many
+/// pages (A2.1b).
+///
+/// One bounded store read
+/// ([`alo_store::AccountStore::site_translation_readiness`]): two queries
+/// whatever the page count, because this is a question somebody asks about a
+/// two-hundred-page site as readily as about a four-page one. Coverage is
+/// **exact** there — a page that falls back to another language counts as
+/// missing, which is the honest answer to "is the French ready".
+///
+/// It is a read in the registry and it stays one: translating is
+/// `POST /sites/:id/translation-proposals`, where every proposed page is shown
+/// beside its original and nothing is kept without the owner's approval. This
+/// tool exists so an agent can say what is missing without becoming a second,
+/// quieter path to rewriting a whole site.
+///
+/// # Errors
+/// `422` when no site of the tenant's matches the argument, or when the site
+/// resolved above has since been deleted; the store's own failure otherwise.
+pub async fn execute_site_translation_status(
+    account: &Account,
+    args: &Value,
+) -> Result<Json<Value>, Problem> {
+    let site = resolve_site(account, args).await?;
+    let readiness = account
+        .acc
+        .site_translation_readiness(&site.id)
+        .await
+        .map_err(map_store_err)?
+        .ok_or_else(|| unprocessable("that website is not there any more"))?;
+
+    let total = readiness.total_pages;
+    // The default language first — it is the one everything else is measured
+    // against — then whichever language is furthest behind, which is the answer
+    // to the question as people actually ask it.
+    let mut languages = readiness.locales;
+    languages.sort_by(|a, b| {
+        let rank = |locale: &str| u8::from(locale != readiness.default_locale);
+        rank(&a.locale)
+            .cmp(&rank(&b.locale))
+            .then_with(|| {
+                total
+                    .saturating_sub(b.translated_pages)
+                    .cmp(&total.saturating_sub(a.translated_pages))
+            })
+            .then_with(|| a.locale.cmp(&b.locale))
+    });
+    let short = languages
+        .iter()
+        .filter(|locale| locale.translated_pages < total)
+        .count();
+
+    // Reason codes, not sentences (the module's fourth rule): what the client
+    // and the model each say about an untranslated site is said in the reader's
+    // own language, not composed here in English.
+    let mut findings: Vec<&'static str> = Vec::new();
+    if languages.len() < 2 {
+        findings.push("oneLanguageOnly");
+    }
+    if total == 0 {
+        findings.push("noPages");
+    } else if short == 0 && languages.len() > 1 {
+        findings.push("everyLanguageComplete");
+    }
+
+    Ok(Json(json!({
+        "ok": true,
+        "result": {
+            "kind": "siteTranslationStatus",
+            "site": site_ref(&site),
+            "defaultLocale": readiness.default_locale,
+            "totalPages": total,
+            "languages": languages.iter().map(|locale| json!({
+                "locale": locale.locale,
+                "isDefault": locale.locale == readiness.default_locale,
+                "translatedPages": locale.translated_pages,
+                "missingPages": total.saturating_sub(locale.translated_pages),
+                "ready": locale.translated_pages >= total,
+            })).collect::<Vec<_>>(),
+            "languagesShort": short,
+            "findings": findings,
+            // Said in the result and not only in the prompt: the model reads
+            // this beside the numbers, and the numbers are exactly what would
+            // otherwise tempt it to offer to fix them.
+            "agentCanTranslate": false,
         }
     })))
 }
