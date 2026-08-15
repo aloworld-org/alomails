@@ -228,6 +228,11 @@ opaque_id!(
     SiteLeadLinkId
 );
 opaque_id!(
+    /// One document a tenant deliberately published to a site's visitor
+    /// assistant — a row in the Public knowledge collection (ADR 0040 §1).
+    SiteKnowledgeSourceId
+);
+opaque_id!(
     /// One blog post on an alo Sites website; its body lives in alo Docs.
     SitePostId
 );

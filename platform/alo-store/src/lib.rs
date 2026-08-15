@@ -182,7 +182,9 @@ pub mod site_editors;
 pub mod site_form_notify;
 pub mod site_forms;
 pub mod site_generation;
+pub mod site_grounding;
 pub mod site_heatmap;
+pub mod site_knowledge;
 pub mod site_layout;
 pub mod site_leads;
 pub mod site_model;
@@ -417,9 +419,9 @@ pub use id::{
     InvSoInvoiceId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId,
     ProjectMilestoneId, SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId,
     SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId,
-    SiteFormSubmissionId, SiteId, SiteLeadLinkId, SiteOrderId, SitePageId, SitePostId,
-    SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
-    TimeEntryId, TimeWeekId, UserId,
+    SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId,
+    SitePostId, SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId,
+    ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -534,10 +536,12 @@ pub use site_forms::{
     MAX_FORMS_PER_SITE, SiteForm, SiteFormSubmission, SubmissionContent, normalize_submission,
 };
 pub use site_generation::{GeneratedSiteDraft, NewGeneratedSite, NewGeneratedSitePage};
+pub use site_grounding::{GroundingCitation, GroundingDocument, section_text};
 pub use site_heatmap::{
     SiteHeatmapCell, SiteHeatmapPath, SiteHeatmapReport, SiteHeatmapScrollBucket,
     SiteHeatmapViewport,
 };
+pub use site_knowledge::{SITE_KNOWLEDGE_MAX_SOURCES, SiteKnowledgeSource};
 pub use site_layout::{
     ColumnSplit, GridColumns, ImageShape, LayoutControl, RESIZABLE_SECTION_KINDS, layout_control,
     layout_controls,
