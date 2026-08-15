@@ -22,9 +22,13 @@ use crate::state::Account;
 
 /// At most a month of diary in one answer: a year of events is not a summary,
 /// it is a denial-of-service on the model's context.
-const MAX_DAYS: i64 = 31;
+///
+/// Shared with [`crate::agent_agenda`], which looks at the same diaries over
+/// the same kind of range: two limits would mean two answers to "how far ahead
+/// may an agent look", and the looser one would be the real one.
+pub(crate) const MAX_DAYS: i64 = 31;
 
-fn iso(at: OffsetDateTime) -> String {
+pub(crate) fn iso(at: OffsetDateTime) -> String {
     at.format(&Rfc3339).unwrap_or_default()
 }
 

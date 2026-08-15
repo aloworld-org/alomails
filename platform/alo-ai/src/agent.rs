@@ -611,6 +611,12 @@ mod tests {
                 "find_contact",
                 "whats_on",
                 "am_i_free",
+                // A2.6: the Agenda agent looks for a slot across the diaries
+                // shared with the asker, and gathers what one meeting is
+                // about. Moving a meeting is `reschedule_event`, which is a
+                // write and is not here.
+                "find_a_time",
+                "meeting_prep",
                 "catch_up_room",
                 "find_in_chat",
                 "find_file",
@@ -651,7 +657,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 57);
+        assert_eq!(all_tools().len(), 60);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

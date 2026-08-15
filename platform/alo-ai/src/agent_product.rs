@@ -281,7 +281,14 @@ mod tests {
         );
         assert_eq!(
             names(AgentProduct::Agenda),
-            ["whats_on", "am_i_free", "create_event"]
+            [
+                "whats_on",
+                "am_i_free",
+                "find_a_time",
+                "meeting_prep",
+                "create_event",
+                "reschedule_event",
+            ]
         );
         assert_eq!(names(AgentProduct::Tasks), ["create_task"]);
         assert_eq!(names(AgentProduct::Chat), ["catch_up_room", "find_in_chat"]);
@@ -391,7 +398,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 57);
+        assert_eq!(workspace.len(), 60);
     }
 
     /// The boundary's question, over the whole registry: a product offers its
@@ -453,5 +460,19 @@ mod tests {
         // out of one is Drive's rather than Mail's (A2.8 owns correspondence).
         assert!(offers(AgentProduct::Drive, "attachment_read"));
         assert!(!offers(AgentProduct::Mail, "attachment_read"));
+        // …and the ones A2.6 adds. Looking across several diaries and moving a
+        // meeting that is already in one are Agenda's; a meeting is not a task
+        // and not a room, so neither of the products that also deal in
+        // scheduled things may reach them.
+        assert!(offers(AgentProduct::Agenda, "find_a_time"));
+        assert!(offers(AgentProduct::Agenda, "reschedule_event"));
+        assert!(!offers(AgentProduct::Tasks, "reschedule_event"));
+        assert!(!offers(AgentProduct::Chat, "find_a_time"));
+        // Preparing a meeting reads the mail that goes with it, which does not
+        // make it a Mail tool: the Mail agent has no way to move a meeting and
+        // the Agenda agent has no way to send one an email.
+        assert!(offers(AgentProduct::Agenda, "meeting_prep"));
+        assert!(!offers(AgentProduct::Mail, "meeting_prep"));
+        assert!(!offers(AgentProduct::Agenda, "send_email"));
     }
 }

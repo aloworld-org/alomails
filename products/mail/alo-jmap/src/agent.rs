@@ -462,6 +462,15 @@ async fn dispatch(
         // from the record rather than the search snippets, and none writes.
         "whats_on" => crate::agent_reads::execute_whats_on(account, args).await,
         "am_i_free" => crate::agent_reads::execute_am_i_free(account, args).await,
+        // …and the three A2.6 adds, which take Agenda past the caller's own
+        // diary. `find_a_time` looks across the diaries already shared with
+        // them and reports the ones it could not see rather than counting them
+        // free; `meeting_prep` gathers one meeting's mail and attachments; and
+        // `reschedule_event` — the only write here that touches a meeting that
+        // already exists — moves one sitting and changes nothing else about it.
+        "find_a_time" => crate::agent_agenda::execute_find_a_time(account, args, state).await,
+        "meeting_prep" => crate::agent_meeting::execute_meeting_prep(account, args).await,
+        "reschedule_event" => crate::agent_meeting::execute_reschedule_event(account, args).await,
         "catch_up_room" => crate::agent_reads::execute_catch_up_room(account, args).await,
         "find_in_chat" => crate::agent_reads::execute_find_in_chat(account, args).await,
         "find_contact" => crate::agent_reads::execute_find_contact(account, args).await,
