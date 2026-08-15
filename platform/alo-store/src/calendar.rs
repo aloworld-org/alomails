@@ -898,7 +898,7 @@ fn grant_exists(editor_only: bool) -> String {
 
 /// SQL predicate (calendar aliased `c`, viewer `$2`): the viewer may *see* the
 /// calendar — they own it or hold any grant (direct or via a group).
-fn visible_pred() -> String {
+pub(crate) fn visible_pred() -> String {
     let grant = grant_exists(false);
     format!("(c.owner_user_id = $2 OR {grant})")
 }

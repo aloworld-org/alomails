@@ -10,6 +10,7 @@
 pub mod account;
 pub mod account_imap;
 pub mod account_sieve;
+pub mod agent_ground;
 pub mod agent_product;
 pub mod agent_tool_runs;
 pub mod audit;
@@ -230,6 +231,7 @@ pub mod vcard;
 pub use account::AccountStore;
 pub use account_imap::{ImapEntry, ImapMailbox, ImapSearchRow};
 pub use account_sieve::{OutboundAction, SieveDelivery, SieveScriptMeta};
+pub use agent_ground::GroundSource;
 pub use agent_product::{ALL_AGENT_PRODUCTS, AgentProduct};
 pub use agent_tool_runs::{AgentToolRun, NewAgentToolRun};
 pub use bank_camt::parse_camt053;

@@ -509,3 +509,120 @@ async fn approving_another_products_change_still_runs_nothing() {
         Some(agent.as_str())
     );
 }
+
+// ---- product-scoped grounding (A1.3) ----------------------------------------
+
+/// Files a Drive document and an email that both match the same word, so a
+/// product's grounding can only be narrower than the workspace's — never a
+/// different question.
+async fn a_file_and_an_email_about_the_same_thing(h: &Harness) {
+    use alo_store::{DriveLocation, NewDriveFile};
+    h.acc
+        .drive_create_file(
+            &DriveLocation::Personal,
+            None,
+            &NewDriveFile {
+                name: "pangolin report.docx".to_owned(),
+                blob_id: "x".to_owned(),
+                size: 1,
+                ..Default::default()
+            },
+        )
+        .await
+        .unwrap();
+    let inbox = h.acc.inbox().await.unwrap();
+    h.acc
+        .ingest(
+            &inbox,
+            b"From: sender@example.test\r\nSubject: the pangolin account\r\n\
+              Message-ID: <ground-wire@alo.test>\r\n\r\nthey replied about the pangolin\r\n",
+        )
+        .await
+        .unwrap();
+}
+
+/// The sentence A1.3 asks to be proved, on the wire: a Mail agent's grounding
+/// carries the asker's own correspondence and **no Drive row**, out of a
+/// workspace where a file matches the question just as well.
+#[tokio::test]
+async fn a_mail_agents_grounding_is_its_own_records_and_holds_no_drive_rows() {
+    let h = harness("agentground").await;
+    a_file_and_an_email_about_the_same_thing(&h).await;
+    let (base, seen) = scripted_model(vec![says("They wrote about it last week [1].")]).await;
+    use_model(&h, &base).await;
+    let (channel, _) = a_room_with_an_agent(&h, "desk", "mail", AgentProduct::Mail).await;
+
+    let spoken = ask_in_room(&h, &channel, "@mail what about the pangolin?").await;
+    assert_eq!(spoken["body"], json!("They wrote about it last week [1]."));
+
+    let asked = seen.lock().unwrap().clone();
+    assert_eq!(asked.len(), 1, "one call, no tool run");
+    let first = asked[0].to_string();
+    assert!(
+        first.contains("the pangolin account"),
+        "the Mail agent grounds in its own correspondence: {first}"
+    );
+    assert!(
+        !first.contains("pangolin report.docx"),
+        "a Mail agent's grounding must contain no Drive rows: {first}"
+    );
+}
+
+/// The other half of the same rule: an agent whose product reaches its records
+/// through a reading tool is grounded in **nothing**, in the same workspace
+/// where two records match — so it cannot answer a stock question from
+/// somebody's email, and its prompt says where its records actually are.
+#[tokio::test]
+async fn an_inventory_agent_is_grounded_in_nothing_and_told_to_look_it_up() {
+    let h = harness("agentnoground").await;
+    a_file_and_an_email_about_the_same_thing(&h).await;
+    let (base, seen) = scripted_model(vec![says("I'd have to look that up in stock.")]).await;
+    use_model(&h, &base).await;
+    let (channel, _) =
+        a_room_with_an_agent(&h, "stockroom", "inventory", AgentProduct::Inventory).await;
+
+    ask_in_room(&h, &channel, "@inventory what about the pangolin?").await;
+
+    let asked = seen.lock().unwrap().clone();
+    assert_eq!(asked.len(), 1);
+    let first = asked[0].to_string();
+    assert!(
+        !first.contains("the pangolin account"),
+        "the Inventory agent must not be handed the asker's email: {first}"
+    );
+    assert!(
+        !first.contains("pangolin report.docx"),
+        "nor their files: {first}"
+    );
+    // Its system prompt says so rather than leaving an empty list to be read as
+    // "there is nothing".
+    assert!(
+        first.contains("Nothing in your product is searched for you"),
+        "it must be told to use its reading tool: {first}"
+    );
+
+    // Ask alo, in the same workspace, still sees both — it is the one agent
+    // that looks everywhere (ADR 0034).
+    let (status, body) = post(
+        &h.app,
+        &h.token,
+        "/ai/agent",
+        json!({ "q": "what about the pangolin?" }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let titles: Vec<String> = body["sources"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|source| source["title"].as_str().unwrap_or_default().to_owned())
+        .collect();
+    assert!(
+        titles.iter().any(|t| t == "pangolin report.docx"),
+        "{titles:?}"
+    );
+    assert!(
+        titles.iter().any(|t| t == "the pangolin account"),
+        "{titles:?}"
+    );
+}

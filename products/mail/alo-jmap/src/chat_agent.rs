@@ -70,9 +70,11 @@ async fn take_turn(
 ) -> Option<Spoken> {
     let acc = &account.acc;
     // Access-scoped retrieval — the only thing this turn may ever see, and it
-    // is the asker's access, never the agent's.
+    // is the asker's access, never the agent's. Scoped to the agent's own
+    // product too (A1.3): the Inventory agent is no longer grounded in eight of
+    // the asker's emails, and reaches stock through its own reading tool.
     let hits = acc
-        .workspace_search_terms(question, CHAT_SOURCES)
+        .agent_ground(agent.product, question, CHAT_SOURCES)
         .await
         .unwrap_or_default();
     let ground: Vec<WorkspaceSource> = hits

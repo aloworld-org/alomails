@@ -146,10 +146,13 @@ pub async fn agent(
         return Err(Problem::with(StatusCode::BAD_REQUEST, "q required"));
     }
 
-    // Access-scoped retrieval — the only thing the agent may ever see.
+    // Access-scoped retrieval — the only thing the agent may ever see. The
+    // palette IS "Ask alo", the one agent that looks across every product
+    // (ADR 0034), so this is the workspace-wide view by decision rather than by
+    // default: `agent_ground` scopes every *other* product to its own records.
     let hits = account
         .acc
-        .workspace_search_terms(&request, AGENT_SOURCES)
+        .agent_ground(alo_store::AgentProduct::Workspace, &request, AGENT_SOURCES)
         .await
         .map_err(|_| Problem::server_error())?;
     let sources_json: Vec<Value> = hits

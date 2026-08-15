@@ -473,7 +473,9 @@ pub async fn translate_text(
 pub struct WorkspaceSource {
     /// 1-based citation number the model refers to (e.g. `[1]`).
     pub index: usize,
-    /// `file` | `doc` | `base` | `folder` | `task` | `message`.
+    /// `file` | `doc` | `base` | `folder` | `task` | `message`, plus the
+    /// product-scoped kinds A1.3 grounds an agent in: `contact` | `event` |
+    /// `chat`.
     pub kind: String,
     /// The item's name/title/subject.
     pub title: String,
@@ -498,6 +500,11 @@ pub(crate) fn render_sources(sources: &[WorkspaceSource]) -> String {
         let kind = match source.kind.as_str() {
             "message" => "email",
             "doc" => "document",
+            // The product-scoped kinds (A1.3), said the way a person would say
+            // them — a bare "chat" or "event" beside a title reads as a label
+            // rather than as what the thing is.
+            "chat" => "chat message",
+            "event" => "calendar event",
             other => other,
         };
         out.push_str(&format!("[{}] {} \"{}\"", source.index, kind, source.title));
@@ -673,6 +680,38 @@ mod tests {
         assert_eq!(m[0].role, "system");
         assert_eq!(m[1].role, "user");
         assert_eq!(m[1].content, "Hey, wanna meet tmrw?");
+    }
+
+    /// A1.3's product-scoped kinds are said the way a person says them: a bare
+    /// "chat" or "event" beside a title reads as a label rather than as what
+    /// the thing is, and the model is being told what it is looking at.
+    #[test]
+    fn the_product_scoped_kinds_are_rendered_as_words() {
+        let sources = vec![
+            WorkspaceSource {
+                index: 1,
+                kind: "chat".to_owned(),
+                title: "the X100 shipped today".to_owned(),
+                detail: String::new(),
+            },
+            WorkspaceSource {
+                index: 2,
+                kind: "event".to_owned(),
+                title: "Acme review".to_owned(),
+                detail: String::new(),
+            },
+            WorkspaceSource {
+                index: 3,
+                kind: "contact".to_owned(),
+                title: "Acme Ltd".to_owned(),
+                detail: String::new(),
+            },
+        ];
+        let rendered = render_sources(&sources);
+        assert!(rendered.contains("[1] chat message \"the X100 shipped today\""));
+        assert!(rendered.contains("[2] calendar event \"Acme review\""));
+        // A contact is already the word for what it is.
+        assert!(rendered.contains("[3] contact \"Acme Ltd\""));
     }
 
     #[test]

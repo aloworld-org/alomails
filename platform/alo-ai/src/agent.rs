@@ -67,6 +67,19 @@ const AGENT_SYSTEM_HEAD: &str = "For each request you do EXACTLY ONE of two thin
 1) ANSWER from the numbered sources below: {\"kind\":\"answer\",\"answer\":\"<text>\"}. Cite each source you use by its number in square brackets like [1]. Use ONLY the sources; if they do not contain the answer, say you could not find it — never invent files, people, or facts.\n\
 2) USE ONE TOOL: {\"kind\":\"action\",\"say\":\"<one short sentence describing what you will do>\",\"action\":{\"tool\":\"<tool>\",\"args\":{...}}}. What happens next depends on the tool, and the two lists after the descriptions below say which is which: a READING tool runs immediately and comes back to you as a source to answer from, while a tool that CHANGES something is only proposed and waits for the user to approve it — you never perform a change yourself.\n";
 
+/// Said to an agent whose product is not searched for it (A1.3).
+///
+/// Billing, CRM, Projects, Finance, Inventory and People reach their records
+/// through a reading tool rather than through retrieval — the module gate rides
+/// with the tool, and a search predicate would be a second door into
+/// role-gated rows (`alo_store::agent_ground`). An agent that is not told this
+/// reads an empty source list as "there is nothing", which is the wrong answer;
+/// it should look the record up instead.
+const GROUND_BY_TOOL: &str = "Nothing in your product is searched for you before you are asked: \
+the numbered sources are whatever else matched, never your own records. Reach those with one of \
+your reading tools, and never answer a question about them from a source that merely mentions the \
+subject.\n";
+
 /// Said instead of a tool list to an agent whose product has none yet
 /// (Insights, Meet, Sites until their waves land).
 const NO_TOOLS_YET: &str = "You have no tools in this product yet, so you ANSWER from the numbered sources and never \
@@ -96,10 +109,22 @@ pub fn system_prompt_for(product: AgentProduct) -> String {
         docs.push_str(set.doc);
         guidance.push_str(set.guidance);
     }
-    let tools = if sets.iter().all(|set| set.tools.is_empty()) {
+    let no_tools = sets.iter().all(|set| set.tools.is_empty());
+    let tools = if no_tools {
         NO_TOOLS_YET.to_owned()
     } else {
         format!("Available tools:\n{docs}{}", effect_block(product))
+    };
+    // A product with tools but no retrieval is told where its records actually
+    // are. One with neither is told nothing extra: it has no lookup to offer,
+    // and `NO_TOOLS_YET` has already said so.
+    let ground = if no_tools
+        || product == AgentProduct::Workspace
+        || !alo_store::agent_ground::sources_for(product).is_empty()
+    {
+        ""
+    } else {
+        GROUND_BY_TOOL
     };
     let stay = if product == AgentProduct::Workspace {
         ""
@@ -107,7 +132,7 @@ pub fn system_prompt_for(product: AgentProduct) -> String {
         crate::agent_product::STAY_IN_PRODUCT
     };
     format!(
-        "{}{stay}\n{AGENT_SYSTEM_HEAD}{tools}{guidance}{AGENT_SYSTEM_RULES}",
+        "{}{stay}\n{AGENT_SYSTEM_HEAD}{tools}{ground}{guidance}{AGENT_SYSTEM_RULES}",
         crate::agent_product::headline(product)
     )
 }
@@ -371,6 +396,29 @@ mod tests {
             title: title.to_owned(),
             detail: String::new(),
         }
+    }
+
+    /// A1.3: the sentence that tells an agent where its records actually are is
+    /// said to exactly the products that are not searched for — never to one
+    /// that is, never to Ask alo, and never to an agent with no tool to look
+    /// anything up with. Read off `agent_ground`'s own table, so the prompt and
+    /// the retrieval cannot drift apart.
+    #[test]
+    fn only_a_product_with_tools_but_no_retrieval_is_told_to_look_it_up() {
+        for product in alo_store::ALL_AGENT_PRODUCTS {
+            let prompt = system_prompt_for(product);
+            let searched = !alo_store::agent_ground::sources_for(product).is_empty();
+            let has_tools = !tools_for(product).is_empty();
+            let expected = has_tools && !searched && product != AgentProduct::Workspace;
+            assert_eq!(
+                prompt.contains(GROUND_BY_TOOL),
+                expected,
+                "{product} is told the wrong thing about its grounding"
+            );
+        }
+        // Stated plainly, because it is the pair A1.3 turns on.
+        assert!(system_prompt_for(AgentProduct::Inventory).contains(GROUND_BY_TOOL));
+        assert!(!system_prompt_for(AgentProduct::Mail).contains(GROUND_BY_TOOL));
     }
 
     #[test]

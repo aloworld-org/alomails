@@ -159,10 +159,28 @@ impl AccountStore {
         if terms.is_empty() {
             return self.workspace_search(question, limit).await;
         }
+        let mut hits = self.drive_term_hits(&terms, limit).await?;
+        hits.extend(self.task_term_hits(&terms, limit).await?);
+        hits.extend(self.mail_term_hits(&terms, limit).await?);
+        Ok(hits)
+    }
+
+    /// Drive nodes matching any keyword by name, or the whole phrase by indexed
+    /// content, in a location the caller can read.
+    ///
+    /// One of the three sources [`Self::workspace_search_terms`] unions, split
+    /// out so per-product grounding ([`crate::agent_ground`]) can draw on
+    /// exactly one of them without a second copy of the access predicate.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn drive_term_hits(
+        &self,
+        terms: &[String],
+        limit: i64,
+    ) -> Result<Vec<SearchHit>> {
         let joined = terms.join(" ");
         let mut hits = Vec::new();
-
-        // Drive: any keyword as a substring of the name, OR a content match.
         let drive = sqlx::query_as::<_, (String, String, String, Option<String>)>(
             "SELECT id, kind, name, \
                     CASE WHEN location_kind = 'space' THEN location_id ELSE NULL END AS space \
@@ -179,7 +197,7 @@ impl AccountStore {
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
         .bind(limit)
-        .bind(&terms)
+        .bind(terms)
         .bind(&joined)
         .fetch_all(&self.pool)
         .await
@@ -192,8 +210,20 @@ impl AccountStore {
                 space,
             });
         }
+        Ok(hits)
+    }
 
-        // Tasks: any keyword as a substring of the title, on a visible project.
+    /// Active tasks matching any keyword by title, on a project the caller can
+    /// see — the same predicate the task module itself uses.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn task_term_hits(
+        &self,
+        terms: &[String],
+        limit: i64,
+    ) -> Result<Vec<SearchHit>> {
+        let mut hits = Vec::new();
         let tasks = sqlx::query_as::<_, (String, String)>(
             "SELECT t.id, t.title FROM tasks t \
              WHERE t.tenant_id = $1 AND t.state = 'active' \
@@ -207,7 +237,7 @@ impl AccountStore {
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
         .bind(limit)
-        .bind(&terms)
+        .bind(terms)
         .fetch_all(&self.pool)
         .await
         .map_err(StoreError::Db)?;
@@ -219,12 +249,25 @@ impl AccountStore {
                 space: None,
             });
         }
+        Ok(hits)
+    }
 
-        // Mail: match ANY keyword against the full-text index (same "any keyword"
-        // recall as drive/tasks above), scoped to the caller's own mailbox. ORing
-        // per-term matters because a request is often action-phrased ("archive the
-        // Acme newsletter") — the verb is a keyword but never appears in the email,
-        // so ANDing every term would exclude the very message being referenced.
+    /// The caller's **own** messages matching ANY keyword against the mail
+    /// full-text index (subject, participants and body).
+    ///
+    /// ORing per-term matters because a request is often action-phrased
+    /// ("archive the Acme newsletter") — the verb is a keyword but never appears
+    /// in the email, so ANDing every term would exclude the very message being
+    /// referenced.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub(crate) async fn mail_term_hits(
+        &self,
+        terms: &[String],
+        limit: i64,
+    ) -> Result<Vec<SearchHit>> {
+        let mut hits = Vec::new();
         let mail = sqlx::query_as::<_, (String, String)>(
             "SELECT id, subject FROM messages \
              WHERE tenant_id = $1 AND user_id = $2 \
@@ -234,7 +277,7 @@ impl AccountStore {
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
-        .bind(&terms)
+        .bind(terms)
         .bind(limit)
         .fetch_all(&self.pool)
         .await
@@ -261,7 +304,7 @@ impl AccountStore {
 /// of three or more characters, minus a small stop-word list, de-duplicated,
 /// capped. Empty when the question is all stop-words/punctuation (the caller
 /// then falls back to a literal search).
-fn keywords(question: &str) -> Vec<String> {
+pub(crate) fn keywords(question: &str) -> Vec<String> {
     const STOP: &[&str] = &[
         "the", "and", "for", "you", "your", "this", "that", "with", "from", "about", "have", "has",
         "had", "what", "which", "where", "who", "whom", "when", "why", "how", "are", "was", "were",
