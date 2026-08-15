@@ -285,7 +285,16 @@ mod tests {
         );
         assert_eq!(names(AgentProduct::Tasks), ["create_task"]);
         assert_eq!(names(AgentProduct::Chat), ["catch_up_room", "find_in_chat"]);
-        assert_eq!(names(AgentProduct::Drive), ["find_file"]);
+        assert_eq!(
+            names(AgentProduct::Drive),
+            [
+                "find_file",
+                "file_read",
+                "attachment_read",
+                "file_rename",
+                "file_move",
+            ]
+        );
         assert_eq!(
             names(AgentProduct::Sheets),
             [
@@ -382,7 +391,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 53);
+        assert_eq!(workspace.len(), 57);
     }
 
     /// The boundary's question, over the whole registry: a product offers its
@@ -429,5 +438,20 @@ mod tests {
         assert!(offers(AgentProduct::Insights, "insight_report"));
         assert!(!offers(AgentProduct::Billing, "insight_answer"));
         assert!(!offers(AgentProduct::Insights, "create_invoice_draft"));
+        // …and the ones A2.5 adds. Reading a *file* is Drive's and reading a
+        // *document by its blocks* is Docs': the two are different tools rather
+        // than one tool in two products, which is what
+        // `workspace_is_every_product_once` refuses. Moving and renaming are
+        // Drive's alone — a document agent that could move somebody's file is a
+        // second place the same decision is made.
+        assert!(offers(AgentProduct::Drive, "file_read"));
+        assert!(offers(AgentProduct::Drive, "file_move"));
+        assert!(!offers(AgentProduct::Docs, "file_read"));
+        assert!(!offers(AgentProduct::Docs, "file_move"));
+        assert!(!offers(AgentProduct::Drive, "doc_read"));
+        // An attachment is a file that has not been filed yet, so pulling text
+        // out of one is Drive's rather than Mail's (A2.8 owns correspondence).
+        assert!(offers(AgentProduct::Drive, "attachment_read"));
+        assert!(!offers(AgentProduct::Mail, "attachment_read"));
     }
 }

@@ -614,6 +614,11 @@ mod tests {
                 "catch_up_room",
                 "find_in_chat",
                 "find_file",
+                // A2.5: the Drive agent says what a file contains and what is
+                // attached to an email. Renaming and moving are writes and are
+                // not here.
+                "file_read",
+                "attachment_read",
                 "sheet_read",
                 "sheet_answer",
                 "sheet_formula_explain",
@@ -646,7 +651,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 53);
+        assert_eq!(all_tools().len(), 57);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -716,11 +721,14 @@ mod tests {
         assert!(chat.contains("Every tool you have only READS"));
         assert!(!chat.contains("Every other tool CHANGES"));
 
-        // Drive has exactly one tool and it is a lookup.
+        // Drive was one-sided until A2.5 gave it a rename and a move; three
+        // reads and two writes make it two-sided, and the prompt says so from
+        // the declarations rather than from anybody's memory of it.
         let drive = system_prompt_for(AgentProduct::Drive);
-        assert!(drive.contains("Every tool you have only READS"));
-        assert!(!drive.contains("Every other tool CHANGES"));
+        assert!(drive.contains("These tools only READ"));
+        assert!(drive.contains("Every other tool CHANGES something"));
         assert!(drive.contains("find_file"));
+        assert!(drive.contains("file_rename"));
 
         // Tasks has exactly one and it changes something.
         let tasks = system_prompt_for(AgentProduct::Tasks);

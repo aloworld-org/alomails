@@ -15,6 +15,7 @@
 pub mod admin;
 pub mod agent;
 pub mod agent_args;
+pub mod agent_attachments;
 pub mod agent_billing;
 pub mod agent_crm;
 pub mod agent_docs;
