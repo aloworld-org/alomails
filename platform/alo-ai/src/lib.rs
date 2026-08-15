@@ -64,7 +64,7 @@ pub use agent_tool::{AgentTool, Effect, find_tool};
 pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, repair_messages};
 pub use site_chat::{
     MAX_QUESTION_CHARS, SiteChatCitation, SiteChatError, SiteChatRefusal, SiteChatReply,
-    SiteChatSource, answer_site_question, citation_path, parse_site_chat_reply,
+    SiteChatSource, SiteChatVoice, answer_site_question, citation_path, parse_site_chat_reply,
     retrieve_site_sources, site_chat_messages,
 };
 pub use site_edits::{

@@ -298,3 +298,134 @@ async fn ceiling_hit_is_claimed_once_with_the_owning_tenant() {
             .any(|n| n.site_subdomain == sub)
     );
 }
+
+#[tokio::test]
+async fn appearance_is_defaulted_validated_and_tenant_walled() {
+    use alo_store::{
+        BlobId, ChatLauncherCorner, ChatLauncherIcon, ChatTone, ChatWidgetAccent,
+        SiteChatAppearance,
+    };
+
+    let store = common::test_store().await;
+    let (a, _, _) = common::fresh_account(&store, "chat-look-a").await;
+    let (b, _, _) = common::fresh_account(&store, "chat-look-b").await;
+    let sub = subdomain("chatlook");
+    let site = a.create_site("Look Co", &sub).await.unwrap();
+    a.create_site_page(&site, "Home", "", true).await.unwrap();
+    a.publish_site(&site).await.unwrap();
+    let month = chat_month_key(OffsetDateTime::now_utc());
+
+    // Defaulted rather than blank: a site that never touched its appearance
+    // — and has no settings row at all — reads as the defaults.
+    let fresh = a.site_chat_appearance(&site).await.unwrap();
+    assert_eq!(fresh, SiteChatAppearance::default());
+
+    // The wrong tenant resolves nothing, in either direction of the wall.
+    assert_not_found(b.site_chat_appearance(&site).await);
+    assert_not_found(b.set_site_chat_appearance(&site, &fresh).await);
+
+    // A violated content rule is a named validation error, not a write.
+    let oversized = SiteChatAppearance {
+        bot_name: Some("n".repeat(61)),
+        ..SiteChatAppearance::default()
+    };
+    match a.set_site_chat_appearance(&site, &oversized).await {
+        Err(StoreError::Validation(msg)) => assert!(msg.contains("bot_name"), "{msg}"),
+        other => panic!("expected Validation, got {other:?}"),
+    }
+
+    // A full appearance round-trips, and setting it does NOT switch the
+    // assistant on — appearance and enablement are independent choices.
+    let avatar = BlobId::new("9hK3vQ2mR8pT1xWz4bC5dg");
+    let chosen = SiteChatAppearance {
+        schema_version: alo_store::CHAT_APPEARANCE_SCHEMA_VERSION,
+        bot_name: Some("Marie".to_owned()),
+        avatar: Some(avatar.clone()),
+        welcome: Some("Hi, ask me about our bread.".to_owned()),
+        suggested_questions: vec!["When are you open?".to_owned()],
+        tone: ChatTone::Warm,
+        tone_note: Some("Family bakery, plain words.".to_owned()),
+        launcher_corner: ChatLauncherCorner::Left,
+        launcher_icon: ChatLauncherIcon::Sparkle,
+        auto_open: true,
+        offline_message: Some("We answer by mail within a day.".to_owned()),
+        accent: ChatWidgetAccent::Surface,
+    };
+    let stored = a.set_site_chat_appearance(&site, &chosen).await.unwrap();
+    assert_eq!(stored, chosen);
+    assert_eq!(a.site_chat_appearance(&site).await.unwrap(), chosen);
+    let settings = a.site_chat_settings(&site, &month).await.unwrap();
+    assert!(
+        !settings.enabled,
+        "saving an appearance never switches the assistant on"
+    );
+    assert_eq!(
+        settings.monthly_ceiling_cents,
+        DEFAULT_CHAT_MONTHLY_CEILING_CENTS
+    );
+
+    // ...and setting the switch afterwards keeps the appearance.
+    a.set_site_chat_settings(&site, true, 500, &month)
+        .await
+        .unwrap();
+    assert_eq!(a.site_chat_appearance(&site).await.unwrap(), chosen);
+
+    // The public door reads exactly this site's appearance, and the avatar
+    // gate opens only for the configured blob while the assistant is on.
+    let (public, resolved) = public_door(&sub).await;
+    assert_eq!(public.chat_appearance(&resolved).await.unwrap(), chosen);
+    assert!(
+        public
+            .chat_avatar_allows(&resolved, avatar.as_str())
+            .await
+            .unwrap()
+    );
+    assert!(
+        !public
+            .chat_avatar_allows(&resolved, "f4K9sL2wN7qR5tYx8vB1cA")
+            .await
+            .unwrap(),
+        "a blob that is not the avatar is never served through this gate"
+    );
+    a.set_site_chat_settings(&site, false, 500, &month)
+        .await
+        .unwrap();
+    assert!(
+        !public
+            .chat_avatar_allows(&resolved, avatar.as_str())
+            .await
+            .unwrap(),
+        "an off assistant serves no avatar"
+    );
+
+    // A second tenant's own site keeps its own appearance behind the wall:
+    // resolving A's host never reads B's choices.
+    let sub_b = subdomain("chatlookb");
+    let site_b = b.create_site("Other Co", &sub_b).await.unwrap();
+    b.create_site_page(&site_b, "Home", "", true).await.unwrap();
+    b.publish_site(&site_b).await.unwrap();
+    b.set_site_chat_appearance(
+        &site_b,
+        &SiteChatAppearance {
+            bot_name: Some("Bob".to_owned()),
+            ..SiteChatAppearance::default()
+        },
+    )
+    .await
+    .unwrap();
+    let (public_b, resolved_b) = public_door(&sub_b).await;
+    assert_eq!(
+        public_b
+            .chat_appearance(&resolved_b)
+            .await
+            .unwrap()
+            .bot_name
+            .as_deref(),
+        Some("Bob")
+    );
+    assert_eq!(
+        public.chat_appearance(&resolved).await.unwrap().bot_name,
+        chosen.bot_name,
+        "host A still reads A's appearance, never B's"
+    );
+}

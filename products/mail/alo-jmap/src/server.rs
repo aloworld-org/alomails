@@ -405,6 +405,11 @@ pub fn app_with_site_boundaries(
             "/sites/{id}/chat-settings",
             get(sites_chat::get_chat_settings).put(sites_chat::put_chat_settings),
         )
+        // The assistant's appearance and voice (ADR 0040 §5).
+        .route(
+            "/sites/{id}/chat-appearance",
+            get(sites_chat::get_chat_appearance).put(sites_chat::put_chat_appearance),
+        )
         // The assistant's Public knowledge collection (ADR 0040 §1) — what
         // the owner has deliberately published for it to read.
         .route(

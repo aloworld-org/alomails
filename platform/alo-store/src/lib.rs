@@ -175,6 +175,7 @@ pub mod site_catalog;
 pub mod site_catalog_import;
 pub mod site_catalog_items;
 pub mod site_catalog_publish;
+pub mod site_chat_appearance;
 pub mod site_chat_limits;
 pub mod site_collections;
 pub mod site_conversions;
@@ -517,6 +518,12 @@ pub use site_catalog_import::{
 pub use site_catalog_items::SiteCatalogItemInput;
 pub use site_catalog_publish::{
     SiteCatalogSnapshot, SiteCatalogSnapshotCategory, SiteCatalogSnapshotItem,
+};
+pub use site_chat_appearance::{
+    CHAT_APPEARANCE_SCHEMA_VERSION, CHAT_BOT_NAME_MAX_CHARS, CHAT_OFFLINE_MESSAGE_MAX_CHARS,
+    CHAT_SUGGESTED_MAX, CHAT_SUGGESTED_QUESTION_MAX_CHARS, CHAT_TONE_NOTE_MAX_CHARS,
+    CHAT_WELCOME_MAX_CHARS, ChatAppearanceError, ChatLauncherCorner, ChatLauncherIcon, ChatTone,
+    ChatWidgetAccent, SiteChatAppearance,
 };
 pub use site_chat_limits::{
     ChatCeilingNotification, ChatGate, DEFAULT_CHAT_MONTHLY_CEILING_CENTS,
