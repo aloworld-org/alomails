@@ -269,6 +269,17 @@ opaque_id!(
     SiteBookingAppointmentId
 );
 opaque_id!(
+    /// One ticketed event a site sells seats to — a dated product whose
+    /// price lives on Billing's price list and whose seat count lives here
+    /// (alo Commerce wave one, ADR 0041).
+    SiteTicketEventId
+);
+opaque_id!(
+    /// One hold on a ticketed event's seats — taken before payment, counting
+    /// against capacity until it completes, releases or expires (ADR 0041).
+    SiteTicketHoldId
+);
+opaque_id!(
     /// One domain a tenant is buying or renewing through alo — the whole
     /// arc from the price they were shown to the name serving their site.
     /// Doubles as the replay token the registrar call is made under, so a

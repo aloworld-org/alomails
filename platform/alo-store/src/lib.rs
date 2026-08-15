@@ -218,6 +218,8 @@ pub mod site_registrar_fixture;
 pub mod site_seed;
 pub mod site_templates;
 pub mod site_theme;
+pub mod site_ticket_holds;
+pub mod site_tickets;
 pub mod site_translations;
 pub mod site_versions;
 pub mod sites;
@@ -436,8 +438,8 @@ pub use id::{
     ProjectMilestoneId, SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId,
     SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId,
     SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId,
-    SitePostId, SitePublishId, SitePublishScheduleId, SpaceId, SubtaskId, TaskId, TenantId,
-    ThreadId, TimeEntryId, TimeWeekId, UserId,
+    SitePostId, SitePublishId, SitePublishScheduleId, SiteTicketEventId, SiteTicketHoldId,
+    SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -634,6 +636,13 @@ pub use site_templates::{
 pub use site_theme::{
     DEFAULT_THEME_PRESET, SiteTheme, THEME_PRESETS, THEME_SCHEMA_VERSION, ThemePreset,
     ThemeSchemaError, theme_preset,
+};
+pub use site_ticket_holds::{
+    SiteTicketHold, SiteTicketHoldState, TICKET_HOLD_MAX_QUANTITY, TICKET_HOLD_MAX_TTL,
+    TICKET_HOLD_MIN_TTL, TicketAvailability,
+};
+pub use site_tickets::{
+    SITE_TICKET_EVENT_MAX_CAPACITY, SITE_TICKET_EVENT_MAX_PER_SITE, SiteTicketEvent,
 };
 pub use site_translations::{
     SiteTranslationPageContent, SiteTranslationPageWrite, SiteTranslationPostContent,
