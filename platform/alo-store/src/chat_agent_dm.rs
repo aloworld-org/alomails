@@ -126,6 +126,13 @@ impl AccountStore {
     /// parse. [`StoreError::NotFound`] from [`AccountStore::channel`] is what
     /// keeps a room the caller may not see from answering it at all.
     ///
+    /// **A room is not a way past the module switch.** A one-to-one opened
+    /// before an admin switched Inventory off for this person stays readable —
+    /// its history is theirs — but its counterpart is no longer theirs to see,
+    /// so the answer here is `None` and every message in it is an ordinary
+    /// message nobody replies to. That is the same sentence
+    /// [`AccountStore::agents`] gives about the list, asked of a room.
+    ///
     /// # Errors
     /// [`StoreError::NotFound`] if the room is not the caller's to see.
     pub async fn channel_agent_counterpart(
@@ -136,6 +143,15 @@ impl AccountStore {
         if room.kind != ChannelKind::AgentDm {
             return Ok(None);
         }
-        Ok(room.agent)
+        let Some(agent) = room.agent else {
+            return Ok(None);
+        };
+        match self.agent(&agent).await {
+            Ok(_) => Ok(Some(agent)),
+            // The agent gate's own answer for "not yours to see". A room whose
+            // counterpart has become invisible is not an error to its owner.
+            Err(StoreError::NotFound) => Ok(None),
+            Err(other) => Err(other),
+        }
     }
 }

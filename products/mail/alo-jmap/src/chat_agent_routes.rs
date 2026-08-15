@@ -7,7 +7,7 @@
 //! which rooms they are in, and deciding what one has proposed.
 
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
@@ -15,6 +15,7 @@ use serde_json::{Value, json};
 use alo_store::{ChatAgentId, ChatChannelId, ChatProposal, ChatProposalId, StoreError};
 
 use crate::chat_agent::agent_json;
+use crate::chat_agent_names::agent_seed_for;
 use crate::error::Problem;
 use crate::push;
 use crate::state::{AppState, authenticate};
@@ -53,16 +54,35 @@ pub(crate) fn proposal_json(p: &ChatProposal) -> Value {
     })
 }
 
-/// `GET /chat/agents` → the agents this tenant has.
+#[derive(Deserialize)]
+pub struct ListQuery {
+    /// The language the tenant's default agents are named in, on the first read
+    /// a tenant ever makes. Ignored afterwards — the seed runs once.
+    #[serde(default)]
+    lang: Option<String>,
+}
+
+/// `GET /chat/agents[?lang=nl]` → the agents this tenant has that this caller
+/// may see, **seeding the default set on first use** (A1.5).
+///
+/// A tenant that has never opened the list is given an agent for every product
+/// here rather than by an administrator posting fifteen handles by hand. What
+/// comes back is then filtered by the caller's own module switches, so an agent
+/// of an app they may not open is absent rather than shown and refused.
 ///
 /// # Errors
 /// 401 unauthenticated.
 pub async fn list_agents(
     State(state): State<AppState>,
     headers: HeaderMap,
+    Query(query): Query<ListQuery>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
-    let agents = account.acc.agents().await.map_err(map_store_err)?;
+    let agents = account
+        .acc
+        .agents_or_seed(&agent_seed_for(query.lang.as_deref().unwrap_or_default()))
+        .await
+        .map_err(map_store_err)?;
     let records = account.acc.agent_records().await.unwrap_or_default();
     Ok(Json(json!({
         "agents": agents
@@ -91,8 +111,9 @@ pub struct NewAgentBody {
 /// agent.
 ///
 /// # Errors
-/// 422 for a bad or taken handle, or a product that is not one of the accepted
-/// words.
+/// 422 for a bad or taken handle, a product that is not one of the accepted
+/// words, or a product this caller may not open — an agent they could not then
+/// see is refused rather than made and hidden (A1.5).
 pub async fn create_agent(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -115,7 +136,10 @@ pub async fn create_agent(
     Ok(Json(agent_json(&agent, None)))
 }
 
-/// `GET /chat/channels/{id}/agents` → the agents in a room.
+/// `GET /chat/channels/{id}/agents` → the agents in a room this caller may see.
+///
+/// An agent of a module they may not open is absent here too, even in a room
+/// they share with a colleague who still has it (A1.5).
 ///
 /// # Errors
 /// 404 when the room is not the caller's to see.
@@ -153,7 +177,8 @@ pub async fn list_channel_agents(
 /// rather than tracking whether a room exists.
 ///
 /// # Errors
-/// 404 when this tenant has no such agent; 422 when it is retired.
+/// 404 when this tenant has no such agent, or it belongs to a module this
+/// caller may not open; 422 when it is retired.
 pub async fn open_agent_dm(
     State(state): State<AppState>,
     headers: HeaderMap,

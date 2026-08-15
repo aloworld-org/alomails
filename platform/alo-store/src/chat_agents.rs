@@ -135,7 +135,43 @@ type AgentRow = (
 /// The columns every agent query selects, in the order [`row_to_agent`] reads
 /// them. One list, so a query cannot forget the product and get an agent this
 /// code would then have to guess the scope of.
-const AGENT_COLUMNS: &str = "id, handle, name, description, product, disabled_at";
+///
+/// Written for the `a` alias every agent query gives `chat_agents`, because
+/// [`AGENT_VISIBLE`] correlates on `a.product` and a query without the alias
+/// could not carry the gate.
+const AGENT_COLUMNS: &str = "a.id, a.handle, a.name, a.description, a.product, a.disabled_at";
+
+/// Whether an agent is the caller's to see — **the module gate, stated once**
+/// (queue item A1.5).
+///
+/// An agent is the agent *of* a product (migration 0401), and a product is a
+/// rail module a tenant admin can switch off per person (migration 0208). So a
+/// person who cannot open Inventory has no `@inventory`: not a hidden button,
+/// no agent — not in the list, not by id, not in a room they share with someone
+/// who does have it, and not as the counterpart of a one-to-one they opened
+/// before the switch was thrown.
+///
+/// **The existing gate, asked of a new subject — not a second one.** The join
+/// is `d.module = a.product` because the two vocabularies are the same words by
+/// construction (`AgentProduct::as_str` == `AppModule::as_str`, held by a test
+/// in [`crate::agent_product`]), and the two products that are not modules —
+/// `mail` and `workspace` — are exactly the two the 0208 CHECK will not store,
+/// so they can never match a denial row and are always visible. That is the
+/// right answer for both: mail is the account itself, and Ask alo is the
+/// workspace agent whose own scope is already whatever its human can reach.
+///
+/// `NOT u.is_admin` is [`crate::AccessFacts::may_open`]'s admin arm, spelled in
+/// SQL rather than repeated as a judgement here: an administrator is never
+/// denied, because an administrator who switched an app off for themselves must
+/// still be able to reach the console that switches it back on.
+///
+/// Every query that pastes this in binds `$1` = tenant and `$2` = caller first,
+/// in that order, and starts its own parameters at `$3`.
+const AGENT_VISIBLE: &str = "NOT EXISTS ( \
+       SELECT 1 FROM tenant_user_module_denials d \
+         JOIN users u ON u.tenant_id = d.tenant_id AND u.id = d.user_id \
+        WHERE d.tenant_id = $1 AND d.user_id = $2 \
+          AND d.module = a.product AND NOT u.is_admin)";
 
 /// Read one row.
 ///
@@ -173,8 +209,9 @@ impl AccountStore {
     /// say would silently get the widest agent there is.
     ///
     /// # Errors
-    /// [`StoreError::Validation`] for a bad handle,
-    /// [`StoreError::Conflict`] if the handle is taken.
+    /// [`StoreError::Validation`] for a bad handle, an empty name, or a product
+    /// this caller may not open; [`StoreError::Conflict`] if the handle is
+    /// taken.
     pub async fn create_agent(
         &self,
         handle: &str,
@@ -186,6 +223,19 @@ impl AccountStore {
         let name = name.trim();
         if name.is_empty() {
             return Err(StoreError::Validation("an agent needs a name".to_owned()));
+        }
+        // Said plainly rather than answered with the agent's id, because
+        // [`AccountStore::agent`] would then refuse to hand back the thing this
+        // call just made: an agent of a module this person cannot open is not
+        // theirs to see, and a 201 followed by a 404 is worse than a refusal
+        // that says why. Not a second gate — the same one, asked before the
+        // write instead of after it.
+        if let Some(module) = product.module()
+            && !self.access_facts().await?.may_open(module)
+        {
+            return Err(StoreError::Validation(format!(
+                "@{handle} would be the {product} agent, and this account cannot open {product}"
+            )));
         }
         let id = ChatAgentId::generate();
         let done = sqlx::query(
@@ -207,31 +257,47 @@ impl AccountStore {
         Ok(id)
     }
 
-    /// Every agent this tenant has, retired ones included — the composer's
-    /// `@` list filters, the member sheet shows.
+    /// Every agent this tenant has that this caller may see, retired ones
+    /// included — the composer's `@` list filters, the member sheet shows.
+    ///
+    /// Gated by [`AGENT_VISIBLE`]: an agent of a module an admin has switched
+    /// off for this person is simply not here. To seed the tenant's default set
+    /// on a first read, call [`AccountStore::agents_or_seed`] instead.
     ///
     /// # Errors
     /// [`StoreError::Db`] on a database failure.
     pub async fn agents(&self) -> Result<Vec<ChatAgent>> {
         let rows: Vec<AgentRow> = sqlx::query_as(&format!(
-            "SELECT {AGENT_COLUMNS} FROM chat_agents WHERE tenant_id = $1 ORDER BY handle"
+            "SELECT {AGENT_COLUMNS} FROM chat_agents a \
+             WHERE a.tenant_id = $1 AND {AGENT_VISIBLE} ORDER BY a.handle"
         ))
         .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
         .fetch_all(&self.pool)
         .await
         .map_err(StoreError::Db)?;
         rows_to_agents(rows)
     }
 
-    /// One agent of this tenant.
+    /// One agent of this tenant, if it is this caller's to see.
+    ///
+    /// The chokepoint for the module gate on every path that reaches an agent
+    /// by id: [`AccountStore::add_agent_to_channel`] and
+    /// [`AccountStore::open_agent_dm`] both come through here, so neither
+    /// repeats the rule.
     ///
     /// # Errors
-    /// [`StoreError::NotFound`] if there is no such agent here.
+    /// [`StoreError::NotFound`] if there is no such agent here — including one
+    /// that exists but belongs to a module this caller may not open, which is
+    /// the same answer an id that was never issued gets, so the refusal is
+    /// never an oracle either.
     pub async fn agent(&self, id: &ChatAgentId) -> Result<ChatAgent> {
         let row: Option<AgentRow> = sqlx::query_as(&format!(
-            "SELECT {AGENT_COLUMNS} FROM chat_agents WHERE tenant_id = $1 AND id = $2"
+            "SELECT {AGENT_COLUMNS} FROM chat_agents a \
+             WHERE a.tenant_id = $1 AND a.id = $3 AND {AGENT_VISIBLE}"
         ))
         .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
         .bind(id.as_str())
         .fetch_optional(&self.pool)
         .await
@@ -239,26 +305,30 @@ impl AccountStore {
         row_to_agent(row.ok_or(StoreError::NotFound)?)
     }
 
-    /// The agents in a room, so a mention can be resolved against them.
+    /// The agents in a room this caller may see, so a mention can be resolved
+    /// against them.
+    ///
+    /// Gated by [`AGENT_VISIBLE`] as well as by the room, which is what stops
+    /// a shared room becoming a way round the module switch: a colleague who
+    /// still has Inventory can put `@inventory` in a channel and be answered
+    /// there, and to the person who was denied it the same room simply has no
+    /// such member to name. Their `@inventory` resolves to nobody and no turn
+    /// is taken.
     ///
     /// # Errors
     /// [`StoreError::NotFound`] if the room is not the caller's to see.
     pub async fn channel_agents(&self, channel: &ChatChannelId) -> Result<Vec<ChatAgent>> {
         self.channel(channel).await?;
-        let columns = AGENT_COLUMNS
-            .split(", ")
-            .map(|column| format!("a.{column}"))
-            .collect::<Vec<_>>()
-            .join(", ");
         let rows: Vec<AgentRow> = sqlx::query_as(&format!(
-            "SELECT {columns} \
+            "SELECT {AGENT_COLUMNS} \
              FROM chat_agents a \
              JOIN chat_agent_members m \
                ON m.tenant_id = a.tenant_id AND m.agent_id = a.id \
-             WHERE a.tenant_id = $1 AND m.channel_id = $2 \
+             WHERE a.tenant_id = $1 AND m.channel_id = $3 AND {AGENT_VISIBLE} \
              ORDER BY a.handle"
         ))
         .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
         .bind(channel.as_str())
         .fetch_all(&self.pool)
         .await
