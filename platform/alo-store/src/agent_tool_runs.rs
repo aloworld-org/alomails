@@ -147,6 +147,45 @@ impl AccountStore {
         Ok(rows.into_iter().map(row_to_run).collect())
     }
 
+    /// What **one** agent has run for this person, most recent first — the
+    /// "what it has done" half of the agent directory (A3.3).
+    ///
+    /// Scoped to the caller's own runs for the same reason
+    /// [`AccountStore::agent_tool_runs`] is: a run is an act taken through one
+    /// person's access, and reading which diaries and rooms were opened on
+    /// somebody else's behalf would be exactly the leak the access rules exist
+    /// to prevent. Two people therefore see different histories for the same
+    /// agent, which is the rule the rest of the record already follows.
+    ///
+    /// **This does not decide whether the agent is the caller's to see** —
+    /// [`AccountStore::agent`] does, and every caller here asks it first. An id
+    /// of an agent whose module the caller was denied simply matches no row
+    /// they could have made a run with, so the worst case is an empty list
+    /// rather than a leak; the refusal that says so is the directory's.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn agent_tool_runs_for(
+        &self,
+        agent: &ChatAgentId,
+        limit: i64,
+    ) -> Result<Vec<AgentToolRun>> {
+        let rows: Vec<RunRow> = sqlx::query_as(
+            "SELECT id, agent_id, channel_id, asked_by, tool, effect, args, ok, created_at \
+             FROM agent_tool_runs \
+             WHERE tenant_id = $1 AND asked_by = $2 AND agent_id = $3 \
+             ORDER BY created_at DESC, id DESC LIMIT $4",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(agent.as_str())
+        .bind(limit.clamp(1, 200))
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(rows.into_iter().map(row_to_run).collect())
+    }
+
     /// How many reads each agent has run for this person, keyed by agent id —
     /// the reads half of [`crate::AgentRecord`].
     ///

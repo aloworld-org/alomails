@@ -15,27 +15,27 @@ use crate::error::Problem;
 use crate::push::PushHub;
 use crate::state::{AppState, Limits};
 use crate::{
-    admin, agent, ai, api, audit, audit_record, autoconfig, base, billing_bills, billing_customers,
-    billing_fx, billing_invoices, billing_payments, billing_products, billing_quotes,
-    billing_reminder, billing_reports, billing_schedules, billing_send, billing_sepa,
-    billing_settings, blob, calendar, carddav, chat, chat_agent_routes, contacts, crm_activities,
-    crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages,
-    crm_threads, delegates, docs, drive, filters, finance_approvals, finance_bank,
-    finance_bank_match, finance_chart, finance_expenses, finance_mileage, finance_periods,
-    finance_receipts, finance_report_aged, finance_report_balance, finance_report_pl,
-    finance_report_vat, flagdue, hr_checklists, hr_documents, hr_employees, hr_holidays,
-    hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_letters, hr_org, hr_payroll,
-    hr_recruitment, imap_import_route, insights, insights_ask, insights_eval, insights_gallery,
-    inventory_counts, inventory_locations, inventory_moves, inventory_po, inventory_po_print,
-    inventory_po_receipts, inventory_po_send, inventory_reorder, inventory_scan, inventory_so,
-    inventory_so_deliveries, inventory_so_invoice, inventory_stock, inventory_supplier_prices,
-    inventory_suppliers, invite_route, meet_routes, module_access, projects_clients,
-    projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
-    projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
-    signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
-    sites_attribution, sites_bookings, sites_catalogs, sites_chat, sites_conversions,
-    sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders, sites_palette,
-    sites_templates, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    admin, agent, agent_directory, ai, api, audit, audit_record, autoconfig, base, billing_bills,
+    billing_customers, billing_fx, billing_invoices, billing_payments, billing_products,
+    billing_quotes, billing_reminder, billing_reports, billing_schedules, billing_send,
+    billing_sepa, billing_settings, blob, calendar, carddav, chat, chat_agent_routes, contacts,
+    crm_activities, crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines,
+    crm_reports, crm_stages, crm_threads, delegates, docs, drive, filters, finance_approvals,
+    finance_bank, finance_bank_match, finance_chart, finance_expenses, finance_mileage,
+    finance_periods, finance_receipts, finance_report_aged, finance_report_balance,
+    finance_report_pl, finance_report_vat, flagdue, hr_checklists, hr_documents, hr_employees,
+    hr_holidays, hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_letters, hr_org,
+    hr_payroll, hr_recruitment, imap_import_route, insights, insights_ask, insights_eval,
+    insights_gallery, inventory_counts, inventory_locations, inventory_moves, inventory_po,
+    inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
+    inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice, inventory_stock,
+    inventory_supplier_prices, inventory_suppliers, invite_route, meet_routes, module_access,
+    projects_clients, projects_invoices, projects_plan, projects_reports, projects_templates,
+    projects_time, projects_weeks, push, reset_route, schedule, scoped_roles, security, session,
+    settings, share, signup_route, site_protection, site_schedule, site_version_preview,
+    site_versions, sites, sites_attribution, sites_bookings, sites_catalogs, sites_chat,
+    sites_conversions, sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders,
+    sites_palette, sites_templates, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -332,6 +332,17 @@ pub fn app_with_site_boundaries(
         .route(
             "/chat/agents/{id}/dm",
             post(chat_agent_routes::open_agent_dm),
+        )
+        // The agent directory (A3.3): what each agent is for, what it may
+        // touch, and what it has done. A static segment beside `{id}` above,
+        // which axum resolves before any parameter, so no id can shadow it.
+        .route(
+            "/chat/agents/directory",
+            get(agent_directory::list_directory),
+        )
+        .route(
+            "/chat/agents/{id}/directory",
+            get(agent_directory::agent_directory),
         )
         .route(
             "/chat/channels/{id}/agents",

@@ -23,7 +23,7 @@ use crate::state::{AppState, authenticate};
 /// The store's vocabulary on the wire, unchanged from the rest of chat: a
 /// thing you may not see is 404, a thing you may see but not do is 403, and a
 /// rule you broke is 422 in the store's own words.
-fn map_store_err(e: StoreError) -> Problem {
+pub(crate) fn map_store_err(e: StoreError) -> Problem {
     match e {
         StoreError::NotFound => Problem::with(StatusCode::NOT_FOUND, "not found"),
         StoreError::Forbidden => Problem::with(
@@ -62,6 +62,20 @@ pub struct ListQuery {
     lang: Option<String>,
 }
 
+impl ListQuery {
+    /// The tag to seed in, or the empty string — which
+    /// [`crate::chat_agent_names::agent_words_for`] reads as "the default
+    /// table" rather than as a refusal.
+    ///
+    /// An accessor rather than a public field because the directory (A3.3)
+    /// seeds through the same call as the list, and the two must not be able to
+    /// disagree about what "no language given" means.
+    #[must_use]
+    pub(crate) fn lang(&self) -> &str {
+        self.lang.as_deref().unwrap_or_default()
+    }
+}
+
 /// `GET /chat/agents[?lang=nl]` → the agents this tenant has that this caller
 /// may see, **seeding the default set on first use** (A1.5).
 ///
@@ -80,7 +94,7 @@ pub async fn list_agents(
     let account = authenticate(&state, &headers).await?;
     let agents = account
         .acc
-        .agents_or_seed(&agent_seed_for(query.lang.as_deref().unwrap_or_default()))
+        .agents_or_seed(&agent_seed_for(query.lang()))
         .await
         .map_err(map_store_err)?;
     let records = account.acc.agent_records().await.unwrap_or_default();

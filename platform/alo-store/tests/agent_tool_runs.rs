@@ -144,6 +144,87 @@ async fn a_read_leaves_a_record_even_though_nobody_approved_it() {
     ));
 }
 
+/// The directory's per-agent window (A3.3): one agent's runs, most recent
+/// first, and **only that agent's** — an entry that quietly included the
+/// neighbouring agent's work would describe a reach it does not have.
+#[tokio::test]
+async fn one_agents_runs_are_that_agents_and_the_newest_come_first() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("toolrun-one").await.unwrap();
+    let ts = store.for_tenant(t.clone());
+    let ua = ts.create_user("anna@one.test").await.unwrap();
+    let a = store.for_account(t.clone(), ua.clone());
+
+    let inventory = a
+        .create_agent("inventory", "Inventory", None, AgentProduct::Inventory)
+        .await
+        .unwrap();
+    let agenda = a
+        .create_agent("agenda", "Agenda", None, AgentProduct::Agenda)
+        .await
+        .unwrap();
+
+    let args = json!({ "product": "X100" });
+    for tool in ["stock_answer", "reorder_proposals"] {
+        a.record_tool_run(&NewAgentToolRun {
+            agent: Some(&inventory),
+            channel: None,
+            tool,
+            effect: if tool == "stock_answer" {
+                "read"
+            } else {
+                "write"
+            },
+            args: &args,
+            ok: true,
+        })
+        .await
+        .unwrap();
+    }
+    a.record_tool_run(&NewAgentToolRun {
+        agent: Some(&agenda),
+        channel: None,
+        tool: "whats_on",
+        effect: "read",
+        args: &args,
+        ok: true,
+    })
+    .await
+    .unwrap();
+
+    let runs = a.agent_tool_runs_for(&inventory, 20).await.unwrap();
+    assert_eq!(runs.len(), 2, "{runs:?}");
+    // Newest first, so a directory entry opens on what just happened.
+    assert_eq!(runs[0].tool, "reorder_proposals");
+    assert_eq!(runs[0].effect, "write");
+    assert_eq!(runs[1].tool, "stock_answer");
+    assert!(
+        runs.iter().all(|r| r.tool != "whats_on"),
+        "another agent's run is in this one's window: {runs:?}"
+    );
+    assert_eq!(a.agent_tool_runs_for(&agenda, 20).await.unwrap().len(), 1);
+
+    // The window is a window: asking for one gets the newest one.
+    let newest = a.agent_tool_runs_for(&inventory, 1).await.unwrap();
+    assert_eq!(newest.len(), 1);
+    assert_eq!(newest[0].tool, "reorder_proposals");
+
+    // An agent that has run nothing reports nothing rather than failing, and so
+    // does an id that was never issued — the refusal that says which it is
+    // belongs to the route, not here.
+    let quiet = a
+        .create_agent("mail", "Mail", None, AgentProduct::Mail)
+        .await
+        .unwrap();
+    assert!(a.agent_tool_runs_for(&quiet, 20).await.unwrap().is_empty());
+    assert!(
+        a.agent_tool_runs_for(&ChatAgentId::new("never-issued".to_owned()), 20)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
 /// Constitution law #1. A run says which diary was opened and which room was
 /// read on whose behalf; another tenant must not see one, and neither must a
 /// colleague in the same tenant.
@@ -189,6 +270,12 @@ async fn a_run_is_never_another_tenants_and_never_a_colleagues() {
         b.agent_tool_runs(50).await.unwrap().is_empty(),
         "a colleague must not read another person's tool runs"
     );
+    // …including through the directory's per-agent window, with the agent id
+    // he legitimately knows because he can see the agent itself (A3.3).
+    assert!(
+        b.agent_tool_runs_for(&agent, 50).await.unwrap().is_empty(),
+        "a colleague read another person's runs through the directory"
+    );
     assert_eq!(
         b.agent_records()
             .await
@@ -202,6 +289,7 @@ async fn a_run_is_never_another_tenants_and_never_a_colleagues() {
     // Another tenant sees nothing at all, agent id and tool name guessed
     // exactly right.
     assert!(c.agent_tool_runs(50).await.unwrap().is_empty());
+    assert!(c.agent_tool_runs_for(&agent, 50).await.unwrap().is_empty());
     assert!(c.agent_records().await.unwrap().is_empty());
     // …and writing one in tenant two does not reach into tenant one.
     c.record_tool_run(&NewAgentToolRun {
@@ -220,4 +308,9 @@ async fn a_run_is_never_another_tenants_and_never_a_colleagues() {
         "another tenant's row must not appear here"
     );
     assert_eq!(c.agent_tool_runs(50).await.unwrap().len(), 1);
+    // The agent id is the same string in both tenants, and the per-agent window
+    // still separates them: the tenant is the first thing the query asks about,
+    // not something the id is trusted to imply.
+    assert_eq!(a.agent_tool_runs_for(&agent, 50).await.unwrap().len(), 1);
+    assert_eq!(c.agent_tool_runs_for(&agent, 50).await.unwrap().len(), 1);
 }
