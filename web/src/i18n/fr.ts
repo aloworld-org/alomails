@@ -3070,6 +3070,7 @@ export const fr: Partial<Catalog> = {
   sitesFunnelSumNote:
     "Une facture atteignable depuis deux formulaires compte une fois pour le site et une fois sous chaque formulaire : ces colonnes sont une lecture par formulaire et ne s’additionnent pas jusqu’aux totaux ci-dessus.",
   sitesFunnelDeletedSource: "Formulaire supprimé",
+  sitesFunnelChatSource: "Assistant du site",
   // Sites — transmettre une demande au tableau des ventes (S2.10c).
   sitesHandoffSection: "Ventes",
   sitesHandoffInvite:

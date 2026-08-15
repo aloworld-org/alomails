@@ -3031,6 +3031,7 @@ export const nl: Partial<Catalog> = {
   sitesFunnelSumNote:
     "Eén factuur die vanuit twee formulieren bereikbaar is, telt één keer voor de site en één keer onder elk formulier. Deze kolommen zijn dus een lezing per formulier en tellen niet op tot de totalen hierboven.",
   sitesFunnelDeletedSource: "Verwijderd formulier",
+  sitesFunnelChatSource: "Website-assistent",
   // Sites — één aanvraag doorgeven aan het verkoopbord (S2.10c).
   sitesHandoffSection: "Verkoop",
   sitesHandoffInvite:

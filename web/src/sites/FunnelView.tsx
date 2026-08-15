@@ -311,7 +311,9 @@ function SourceRow({
   return (
     <tr>
       <td>
-        <span className={source.name === null ? styles.funnelSourceGone : ""}>
+        <span
+          className={source.name === null && source.kind !== "chat" ? styles.funnelSourceGone : ""}
+        >
           {sourceLabel(source)}
         </span>
       </td>

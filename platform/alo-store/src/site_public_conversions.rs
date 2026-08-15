@@ -35,13 +35,18 @@ use crate::site_public::{PublishedSite, SitePublicStore};
 /// is noise, not a lookup. Mirrors the migration's own bound.
 pub const CONVERSION_SOURCE_ID_MAX_LEN: usize = 64;
 
-/// The kind of site-owned object a conversion happened on. One variant today;
-/// the later commerce and booking slices convert on their own objects, and the
-/// stored word is what keeps those additive.
+/// The kind of site-owned object a conversion happened on. The stored word is
+/// what keeps later conversion points additive — `chat` joined `form` exactly
+/// that way (S3.03d), and the commerce slices will join the same way.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConversionSource {
     /// A contact form of the site (`site_forms`).
     Form,
+    /// The site's assistant conversation. Keyed by the site's own id — the
+    /// widget belongs to the site, not to any form — so `view` counts the
+    /// conversation offering its lead form and `submit` counts a lead
+    /// actually raised through CRM's seam.
+    Chat,
 }
 
 impl ConversionSource {
@@ -50,6 +55,7 @@ impl ConversionSource {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::Form => "form",
+            Self::Chat => "chat",
         }
     }
 }
@@ -188,6 +194,44 @@ impl SitePublicStore {
     }
 }
 
+impl SitePublicStore {
+    /// Counts one conversion stage on the **resolved** site's assistant
+    /// conversation (S3.03d): `view` when the conversation offered its lead
+    /// form, `submit` when a lead was actually raised. Both facts are the
+    /// server's own — neither is ever claimed by a browser.
+    ///
+    /// The stored key is the site's own id, taken from the resolved row like
+    /// every scope on this door, so a visitor can neither open new buckets
+    /// nor count against another site. No visitor identity exists on this
+    /// path to store — that is a property of the table (0307), not of care
+    /// taken here.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] if the aggregate write fails.
+    pub async fn record_public_chat_conversion(
+        &self,
+        site: &PublishedSite,
+        day: Date,
+        stage: ConversionStage,
+    ) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO site_conversion_daily \
+                 (tenant_id, site_id, day, source_kind, source_id, stage, hits) \
+             VALUES ($1, $2, $3, 'chat', $2, $4, 1) \
+             ON CONFLICT (tenant_id, site_id, day, source_kind, source_id, stage) \
+             DO UPDATE SET hits = site_conversion_daily.hits + 1",
+        )
+        .bind(site.tenant.as_str())
+        .bind(site.site.as_str())
+        .bind(day)
+        .bind(stage.as_str())
+        .execute(self.pool())
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(())
+    }
+}
+
 /// Whether a token is shaped like one of our ids at all. Not a lookup and not
 /// a guarantee — the statement decides existence — just the door refusing to
 /// send a kilobyte of someone's imagination to the database.
@@ -209,6 +253,7 @@ mod tests {
         assert_eq!(ConversionStage::Start.as_str(), "start");
         assert_eq!(ConversionStage::Submit.as_str(), "submit");
         assert_eq!(ConversionSource::Form.as_str(), "form");
+        assert_eq!(ConversionSource::Chat.as_str(), "chat");
         for stage in ConversionStage::ORDERED {
             assert_eq!(ConversionStage::from_word(stage.as_str()), Some(stage));
         }

@@ -91,10 +91,15 @@ export function funnelMoney(cents: number, currency: string): string {
   }
 }
 
-/** What to call a conversion point. A form deleted since the enquiries came
- *  in keeps its counts — deleting a form must not rewrite last month — so it
- *  is named as gone rather than shown with an empty label. */
-export function sourceLabel(source: Pick<SiteAttributionSource, "name">): string {
+/** What to call a conversion point. The assistant conversation (`chat`) is a
+ *  site-level source with no record of its own, so it is named here; a form
+ *  deleted since the enquiries came in keeps its counts — deleting a form
+ *  must not rewrite last month — so it is named as gone rather than shown
+ *  with an empty label. */
+export function sourceLabel(source: Pick<SiteAttributionSource, "kind" | "name">): string {
+  if (source.kind === "chat") {
+    return strings.sitesFunnelChatSource;
+  }
   return source.name === null || source.name === "" ? strings.sitesFunnelDeletedSource : source.name;
 }
 

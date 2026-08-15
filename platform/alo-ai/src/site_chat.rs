@@ -71,16 +71,18 @@ pub enum SiteChatRefusal {
 }
 
 /// The bot's reply to one visitor question: a cited answer, a refusal, or an
-/// offer to book one of the site's own published services.
+/// offer of one of the two reversible acts ADR 0040 §2 allows.
 ///
-/// `OfferBooking` is the **only action** this contract can express, and it is
-/// an offer, not an act: the model may point at one numbered service from the
-/// published list it was shown, and everything that follows — real free
-/// times, the reservation itself — is deterministic code reading published
-/// truth. That is ADR 0040 §2's reversible-only rule enforced in the type:
-/// a payment, an invoice, a discount, or any other verb is not a variant
-/// here, so no model output can even *represent* one (the strict parse
-/// rejects unknown fields outright).
+/// `OfferBooking` and `OfferLead` are the **only actions** this contract can
+/// express, and both are offers, not acts: the model may point at one
+/// numbered service from the published list it was shown, or say the visitor
+/// wants to leave their details — and everything that follows (real free
+/// times, the reservation, the form and the CRM write) is deterministic code
+/// reading published truth and the visitor's own typed input. That is ADR
+/// 0040 §2's reversible-only rule enforced in the type: a payment, an
+/// invoice, a discount, or any other verb is not a variant here, so no model
+/// output can even *represent* one (the strict parse rejects unknown fields
+/// outright).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SiteChatReply {
     Answer {
@@ -92,6 +94,11 @@ pub enum SiteChatReply {
     /// The visitor asked to book: the 1-based number of one service from the
     /// bookable-services list the prompt carried.
     OfferBooking { service: usize },
+    /// The visitor asked to be contacted: the widget shows its own
+    /// name-and-address form, and the capture itself is the caller's
+    /// deterministic code over CRM's public lead seam. The model contributes
+    /// no field of the lead — not even the words of the offer.
+    OfferLead,
 }
 
 /// Why the answering path failed (as opposed to refused).
@@ -270,7 +277,10 @@ the number of every source the answer draws on, or {\"refuse\":true} when the so
 contain the answer. When a numbered list of bookable services follows the sources and the \
 visitor is asking to book, schedule or reserve an appointment, reply {\"book\":N} with the number \
 of the one service that fits; never book anything not on that list, and never state times or \
-availability yourself — free times are shown to the visitor by the booking system. Answer \
+availability yourself — free times are shown to the visitor by the booking system. When the \
+visitor asks to be contacted, called back, or to leave their details for the business — and only \
+when they ask — reply {\"contact\":true}: they are then shown a form for their name and address, \
+so never collect those yourself and never promise when the business will reply. Answer \
 briefly and concretely, in the visitor's language. Never invent facts, prices, dates, discounts, \
 or availability, and never promise anything on the business's behalf: if it is not in the \
 sources, refuse.";
@@ -378,10 +388,15 @@ struct RawReply {
     citations: Vec<usize>,
     #[serde(default)]
     refuse: bool,
-    /// The one action verb this contract has (`deny_unknown_fields` is what
-    /// keeps it the only one): the number of a bookable service to offer.
+    /// One of the two action verbs this contract has (`deny_unknown_fields`
+    /// is what keeps them the only two): the number of a bookable service to
+    /// offer.
     #[serde(default)]
     book: Option<usize>,
+    /// The other action verb: the visitor asked to be contacted, so offer
+    /// the lead form. Carries nothing — the visitor types their own details.
+    #[serde(default)]
+    contact: bool,
 }
 
 /// Parse the model's reply against the sources it was shown, enforcing the
@@ -391,8 +406,9 @@ struct RawReply {
 /// [`SiteChatRefusal::Uncited`] rather than an answer. A `book` naming one of
 /// the `services` the prompt offered becomes [`SiteChatReply::OfferBooking`];
 /// one naming anything else is refused, exactly like a citation of a source
-/// never shown. A reply that refuses *and* acts refuses — always the safe
-/// direction.
+/// never shown. A `contact` becomes [`SiteChatReply::OfferLead`]. A reply
+/// that refuses *and* acts refuses, and one that books *and* offers contact
+/// refuses too — always the safe direction, never a guess between two acts.
 ///
 /// # Errors
 /// [`SiteChatError::MissingObject`] when no JSON object is present;
@@ -410,11 +426,18 @@ pub fn parse_site_chat_reply(
     if raw.refuse {
         return Ok(SiteChatReply::Refusal(SiteChatRefusal::ModelDeclined));
     }
+    if raw.book.is_some() && raw.contact {
+        // Two acts in one reply is not a choice this code makes for the model.
+        return Ok(SiteChatReply::Refusal(SiteChatRefusal::ModelDeclined));
+    }
     if let Some(service) = raw.book {
         if service == 0 || service > services {
             return Ok(SiteChatReply::Refusal(SiteChatRefusal::UnknownService));
         }
         return Ok(SiteChatReply::OfferBooking { service });
+    }
+    if raw.contact {
+        return Ok(SiteChatReply::OfferLead);
     }
     let answer = raw.answer.as_deref().unwrap_or("").trim().to_owned();
     if answer.is_empty() {
@@ -670,6 +693,10 @@ mod tests {
         assert_eq!(messages[0].role, "system");
         assert!(messages[0].content.contains("ONLY the numbered sources"));
         assert!(messages[0].content.contains("{\"refuse\":true}"));
+        // The lead offer is in the standing rules — it needs no site data —
+        // and the form is the widget's: the model never collects details.
+        assert!(messages[0].content.contains("{\"contact\":true}"));
+        assert!(messages[0].content.contains("never collect those yourself"));
         let user = &messages[1].content;
         assert!(user.contains("Question: what is your address?"));
         assert!(user.contains("[1] page \"Visit us\""));
@@ -858,11 +885,43 @@ mod tests {
         assert_eq!(reply, SiteChatReply::Refusal(SiteChatRefusal::ModelDeclined));
     }
 
+    #[test]
+    fn a_contact_becomes_a_lead_offer_carrying_nothing() {
+        let reply = parse_site_chat_reply(r#"{"contact":true}"#, &sources(), 0).unwrap();
+        assert_eq!(reply, SiteChatReply::OfferLead);
+        // Prose around the object is tolerated exactly like an answer's.
+        let wrapped = parse_site_chat_reply("Of course! {\"contact\":true}", &sources(), 3).unwrap();
+        assert_eq!(wrapped, SiteChatReply::OfferLead);
+        // contact:false is the absent default, not a third state.
+        let absent = parse_site_chat_reply(r#"{"contact":false,"refuse":true}"#, &sources(), 0);
+        assert_eq!(
+            absent.unwrap(),
+            SiteChatReply::Refusal(SiteChatRefusal::ModelDeclined)
+        );
+    }
+
+    /// A reply carrying two acts, or an act beside a refusal, refuses: this
+    /// code never chooses between actions on the model's behalf.
+    #[test]
+    fn an_ambiguous_acting_reply_refuses() {
+        for raw in [
+            r#"{"refuse":true,"contact":true}"#,
+            r#"{"book":1,"contact":true}"#,
+        ] {
+            let reply = parse_site_chat_reply(raw, &sources(), 3).unwrap();
+            assert_eq!(
+                reply,
+                SiteChatReply::Refusal(SiteChatRefusal::ModelDeclined),
+                "{raw}"
+            );
+        }
+    }
+
     /// ADR 0040 §2, enforced in code rather than in the prompt: the action
-    /// vocabulary is closed. `book` is the only verb the contract can even
-    /// deserialize — a payment, an order confirmation, a discount, a
-    /// cancellation of someone else's meeting are all shape errors, never
-    /// actions.
+    /// vocabulary is closed. `book` and `contact` are the only verbs the
+    /// contract can even deserialize — a payment, an order confirmation, a
+    /// discount, a cancellation of someone else's meeting are all shape
+    /// errors, never actions.
     #[test]
     fn no_other_action_verb_can_even_be_represented() {
         for raw in [

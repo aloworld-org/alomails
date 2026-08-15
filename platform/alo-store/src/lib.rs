@@ -206,6 +206,7 @@ pub mod site_public_bookings;
 pub mod site_public_conversions;
 pub mod site_public_forms;
 pub mod site_public_heatmap;
+pub mod site_public_leads;
 pub mod site_public_orders;
 pub mod site_public_protection;
 pub mod site_publish;

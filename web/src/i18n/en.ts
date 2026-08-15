@@ -3917,6 +3917,7 @@ export const en = {
   sitesFunnelSumNote:
     "One invoice reachable from two forms counts once for the website and once under each form, so these columns are a reading per form and do not add up to the totals above.",
   sitesFunnelDeletedSource: "Deleted form",
+  sitesFunnelChatSource: "Website assistant",
   // Sites — handing one enquiry to the sales board (S2.10c). The dialog asks
   // for the three things only a person can decide; the enquirer's name,
   // address and message travel with the handoff and are never retyped.
