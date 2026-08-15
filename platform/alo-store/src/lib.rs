@@ -213,6 +213,7 @@ pub mod site_public_heatmap;
 pub mod site_public_leads;
 pub mod site_public_orders;
 pub mod site_public_protection;
+pub mod site_public_shop;
 pub mod site_public_tickets;
 pub mod site_publish;
 pub mod site_publish_schedule;
@@ -650,6 +651,9 @@ pub use site_templates::{
 pub use site_theme::{
     DEFAULT_THEME_PRESET, SiteTheme, THEME_PRESETS, THEME_SCHEMA_VERSION, ThemePreset,
     ThemeSchemaError, theme_preset,
+};
+pub use site_public_shop::{
+    PublicTicketCheckout, PublicTicketEvent, PublicTicketOrderStatus, TICKET_CHECKOUT_HOLD_TTL,
 };
 pub use site_public_tickets::PublicTicket;
 pub use site_ticket_fulfil::{

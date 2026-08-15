@@ -217,7 +217,7 @@ impl OrderRow {
     }
 }
 
-fn normalize_buyer_name(value: &str) -> Result<String> {
+pub(crate) fn normalize_buyer_name(value: &str) -> Result<String> {
     let value = value.trim();
     if value.is_empty() {
         return Err(StoreError::Validation("name must not be empty".to_owned()));
@@ -237,7 +237,7 @@ fn normalize_buyer_name(value: &str) -> Result<String> {
 
 /// The same shape gate the booking and order doors apply: enough to catch a
 /// typo, never a claim that the mailbox exists.
-fn normalize_buyer_email(value: &str) -> Result<String> {
+pub(crate) fn normalize_buyer_email(value: &str) -> Result<String> {
     let value = value.trim();
     if value.is_empty() || value.chars().count() > TICKET_BUYER_EMAIL_MAX_CHARS {
         return Err(StoreError::Validation(format!(
