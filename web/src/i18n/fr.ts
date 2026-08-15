@@ -2820,6 +2820,75 @@ export const fr: Partial<Catalog> = {
   sitesAssistantPickerBack: "Revenir au dossier parent",
   sitesAssistantPickerSearch: "Rechercher dans ce dossier",
   sitesAssistantPickerEmpty: "Rien dans ce dossier.",
+  // Sites — l'écran d'apparence de l'assistant (ADR 0040 §5, S3.02g).
+  sitesAssistantLookTitle: "Son apparence et sa voix",
+  sitesAssistantLookHint:
+    "Le widget porte déjà le thème, le logo et la langue de votre site. Vous choisissez ici ses mots et quelques réglages encadrés — la couleur reste dans la palette de votre site.",
+  sitesAssistantBotNameLabel: "Nom de l'assistant",
+  sitesAssistantBotNameHint:
+    "Souvent volontairement différent du nom de l'entreprise — « Demandez à Marie » fonctionne mieux que « Discutez avec nous ».",
+  sitesAssistantAvatarLabel: "Avatar",
+  sitesAssistantAvatarHint:
+    "Une petite photo affichée dans l'en-tête du widget. Un visage fonctionne mieux qu'un logo.",
+  sitesAssistantWelcomeLabel: "Message d'accueil",
+  sitesAssistantWelcomeDefaultNote:
+    "Voici le texte par défaut, dans la langue de votre site — gardez-le ou faites-le vôtre.",
+  sitesAssistantQuestionsLegend: "Questions suggérées",
+  sitesAssistantQuestionsHint:
+    "Jusqu'à trois questions à toucher, proposées jusqu'à ce que le visiteur pose la sienne.",
+  sitesAssistantQuestionLabel: (n: number) => `Question suggérée ${n}`,
+  sitesAssistantSuggestFromSite: "Suggérer depuis votre site",
+  sitesAssistantSuggestedApplied:
+    "Rédigées à partir des pages de votre site — modifiez-les librement.",
+  sitesAssistantSuggestedNone:
+    "Rien à proposer pour l'instant. Une FAQ, des tarifs, une réservation ou un formulaire de contact sur vos pages donneront matière à suggestion.",
+  sitesAssistantSuggestFailed:
+    "Vos pages n'ont pas pu être lues pour les suggestions. Réessayez.",
+  sitesAssistantSuggestedPricing: "Quels sont vos tarifs ?",
+  sitesAssistantSuggestedBooking: "Puis-je prendre rendez-vous ?",
+  sitesAssistantSuggestedCatalog: "Que proposez-vous ?",
+  sitesAssistantSuggestedContact: "Comment puis-je vous joindre ?",
+  sitesAssistantAppearanceSave: "Enregistrer l'apparence",
+  sitesAssistantToneLegend: "Ton",
+  sitesAssistantToneFormal: "Formel",
+  sitesAssistantToneNeutral: "Neutre",
+  sitesAssistantToneWarm: "Chaleureux",
+  sitesAssistantToneNoteLabel: "Note de voix",
+  sitesAssistantToneNoteHint:
+    "La manière dont votre entreprise s'exprime — mots simples, pas de jargon, par exemple. Style uniquement : cela ne change jamais ce que l'assistant a le droit de dire ou de promettre.",
+  sitesAssistantCornerLegend: "Coin du lanceur",
+  sitesAssistantCornerRight: "En bas à droite",
+  sitesAssistantCornerLeft: "En bas à gauche",
+  sitesAssistantIconLegend: "Icône du lanceur",
+  sitesAssistantIconChat: "Bulle de dialogue",
+  sitesAssistantIconQuestion: "Point d'interrogation",
+  sitesAssistantIconSparkle: "Étincelle",
+  sitesAssistantAccentLegend: "Couleur",
+  sitesAssistantAccentHint:
+    "Un choix parmi les rôles de la palette de votre site — chaque option garde un contraste lisible.",
+  sitesAssistantAccentPrimary: "Couleur de marque",
+  sitesAssistantAccentText: "Encre",
+  sitesAssistantAccentSurface: "Discret",
+  sitesAssistantAutoOpenLabel: "S'ouvre de lui-même au chargement de la page",
+  sitesAssistantAutoOpenHint:
+    "Désactivé par défaut — une fenêtre non sollicitée est ce que tout le monde déteste. Activé, il s'ouvre sans voler le clavier.",
+  sitesAssistantOfflineLabel: "Message d'indisponibilité",
+  sitesAssistantOfflineHint:
+    "Affiché quand l'assistant ne peut pas répondre — budget mensuel épuisé, ou aucune IA configurée.",
+  sitesAssistantPreviewTitle: "Aperçu",
+  sitesAssistantPreviewHint:
+    "Le vrai widget, dans le thème de votre site, montré ouvert. Les visiteurs le voient d'abord fermé dans son coin.",
+  sitesAssistantPreviewFrameTitle: "Aperçu du widget de l'assistant",
+  sitesAssistantPreviewFailed: "L'aperçu n'a pas pu être affiché.",
+  sitesAssistantA11yTitle: "Accessibilité",
+  sitesAssistantA11yContrast: (ratio: string) =>
+    `Le texte sur la couleur choisie mesure ${ratio}:1 — au-dessus du seuil WCAG AA de 4,5:1.`,
+  sitesAssistantA11yContrastGuarantee:
+    "Chaque choix de couleur est vérifié côté serveur contre votre palette — aucune option ne peut enregistrer une combinaison illisible.",
+  sitesAssistantA11yKeyboard:
+    "Le widget est une boîte de dialogue étiquetée : utilisable entièrement au clavier, Échap la ferme, et les réponses sont annoncées par les lecteurs d'écran à mesure qu'elles arrivent.",
+  sitesAssistantA11yAvatar:
+    "L'avatar est décoratif et masqué aux lecteurs d'écran — c'est le nom de l'assistant qu'ils annoncent.",
   sitesAnalytics: "Statistiques",
   sitesAnalyticsLoadFailed:
     "Les statistiques de votre site n’ont pas pu être chargées. Réessayez.",

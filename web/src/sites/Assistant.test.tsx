@@ -17,7 +17,14 @@ const mocks = vi.hoisted(() => ({
   chatKnowledge: vi.fn(),
   addChatKnowledge: vi.fn(),
   removeChatKnowledge: vi.fn(),
+  chatAppearance: vi.fn(),
+  setChatAppearance: vi.fn(),
+  chatAppearancePreview: vi.fn(),
+  themePresets: vi.fn(),
+  pages: vi.fn(),
+  page: vi.fn(),
   driveList: vi.fn(),
+  driveUploadBlob: vi.fn(),
 }));
 
 vi.mock("./api", async (importOriginal) => {
@@ -26,7 +33,10 @@ vi.mock("./api", async (importOriginal) => {
 });
 
 vi.mock("../jmap", () => ({
-  useJmapClient: () => ({ driveList: mocks.driveList }),
+  useJmapClient: () => ({
+    driveList: mocks.driveList,
+    driveUploadBlob: mocks.driveUploadBlob,
+  }),
 }));
 
 const settings = {
@@ -36,6 +46,33 @@ const settings = {
   month: "2026-08",
   spentCents: 0,
   ceilingHit: false,
+};
+
+const appearance = {
+  botName: null,
+  avatarBlobId: null,
+  welcome: null,
+  suggestedQuestions: [],
+  tone: "neutral",
+  toneNote: null,
+  launcherCorner: "right",
+  launcherIcon: "chat",
+  autoOpen: false,
+  offlineMessage: null,
+  accent: "primary",
+  limits: {
+    botNameChars: 60,
+    welcomeChars: 400,
+    suggestedQuestions: 3,
+    suggestedQuestionChars: 160,
+    toneNoteChars: 500,
+    offlineMessageChars: 300,
+  },
+  defaults: {
+    botName: "Ask us anything",
+    welcome: "Hello! Ask me anything about what is published on this site.",
+    offlineMessage: "The assistant is not available right now.",
+  },
 };
 
 function mount() {
@@ -50,9 +87,13 @@ function mount() {
 
 beforeEach(() => {
   for (const mock of Object.values(mocks)) mock.mockReset();
-  mocks.site.mockResolvedValue({ id: "site-1", name: "Axon" });
+  mocks.site.mockResolvedValue({ id: "site-1", name: "Axon", theme: {} });
   mocks.chatSettings.mockResolvedValue(settings);
   mocks.chatKnowledge.mockResolvedValue([]);
+  mocks.chatAppearance.mockResolvedValue(appearance);
+  mocks.chatAppearancePreview.mockResolvedValue("<!doctype html><p>preview</p>");
+  mocks.themePresets.mockResolvedValue([]);
+  mocks.pages.mockResolvedValue([]);
   mocks.driveList.mockResolvedValue([]);
 });
 

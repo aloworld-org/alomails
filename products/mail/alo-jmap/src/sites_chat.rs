@@ -24,17 +24,20 @@
 
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{HeaderMap, StatusCode, header};
+use axum::response::{IntoResponse, Response};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::OffsetDateTime;
 
+use alo_sites::render::strings_for;
+use alo_sites::stylesheet::stylesheet;
 use alo_store::{
     BlobId, CHAT_BOT_NAME_MAX_CHARS, CHAT_OFFLINE_MESSAGE_MAX_CHARS, CHAT_SUGGESTED_MAX,
     CHAT_SUGGESTED_QUESTION_MAX_CHARS, CHAT_TONE_NOTE_MAX_CHARS, CHAT_WELCOME_MAX_CHARS,
     ChatLauncherCorner, ChatLauncherIcon, ChatTone, ChatWidgetAccent,
-    DEFAULT_CHAT_MONTHLY_CEILING_CENTS, SiteChatAppearance, SiteChatSettings, SiteId,
-    chat_month_key,
+    DEFAULT_CHAT_MONTHLY_CEILING_CENTS, Site, SiteChatAppearance, SiteChatSettings, SiteId,
+    SiteTheme, chat_month_key,
 };
 
 use crate::error::Problem;
@@ -46,10 +49,11 @@ const OWNER_ONLY: &str =
     "Only this website's owner can switch its assistant on or set its monthly budget.";
 
 /// The site these settings belong to, provided the caller administers it.
-async fn require_settings_site(account: &Account, site: &SiteId) -> Result<(), Problem> {
+async fn require_settings_site(account: &Account, site: &SiteId) -> Result<Site, Problem> {
     let site = require_site(account, site).await?;
     require_site_manager(account, &site)
-        .map_err(|_| Problem::with(StatusCode::FORBIDDEN, OWNER_ONLY))
+        .map_err(|_| Problem::with(StatusCode::FORBIDDEN, OWNER_ONLY))?;
+    Ok(site)
 }
 
 /// The effective settings as JSON. `defaultCeilingCents` rides along so the
@@ -116,8 +120,12 @@ pub async fn put_chat_settings(
 
 /// The appearance as wire JSON. `limits` rides along so the screen can bound
 /// its fields to the same caps the store enforces, instead of re-inventing
-/// them.
-fn appearance_json(appearance: &SiteChatAppearance) -> Value {
+/// them; `defaults` carries the written copy the widget falls back on — in
+/// the **site's** default language, which is what the visitor would read —
+/// so the screen can pre-fill a written welcome instead of an empty box
+/// (S3.02g) without keeping a second copy of the renderer's strings.
+fn appearance_json(appearance: &SiteChatAppearance, site: &Site) -> Value {
+    let strings = strings_for(&site.default_locale);
     json!({
         "botName": appearance.bot_name,
         "avatarBlobId": appearance.avatar.as_ref().map(BlobId::as_str),
@@ -138,6 +146,11 @@ fn appearance_json(appearance: &SiteChatAppearance) -> Value {
             "toneNoteChars": CHAT_TONE_NOTE_MAX_CHARS,
             "offlineMessageChars": CHAT_OFFLINE_MESSAGE_MAX_CHARS,
         },
+        "defaults": {
+            "botName": strings.chat_title,
+            "welcome": strings.chat_welcome,
+            "offlineMessage": strings.chat_unavailable,
+        },
     })
 }
 
@@ -151,13 +164,13 @@ pub async fn get_chat_appearance(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let site = SiteId::new(id);
-    require_settings_site(&account, &site).await?;
+    let record = require_settings_site(&account, &site).await?;
     let appearance = account
         .acc
         .site_chat_appearance(&site)
         .await
         .map_err(map_store_err)?;
-    Ok(Json(appearance_json(&appearance)))
+    Ok(Json(appearance_json(&appearance, &record)))
 }
 
 /// The wire shape of a `PUT /sites/:id/chat-appearance` body: the complete
@@ -229,11 +242,90 @@ pub async fn put_chat_appearance(
         ..SiteChatAppearance::default()
     };
     let site = SiteId::new(id);
-    require_settings_site(&account, &site).await?;
+    let record = require_settings_site(&account, &site).await?;
     let stored = account
         .acc
         .set_site_chat_appearance(&site, &appearance)
         .await
         .map_err(map_store_err)?;
-    Ok(Json(appearance_json(&stored)))
+    Ok(Json(appearance_json(&stored, &record)))
+}
+
+/// The largest avatar the preview inlines as a `data:` URI — the same bound
+/// as the page preview's images, and for the same reason: public asset paths
+/// do not resolve on the edit origin, and the preview document stays bounded.
+const PREVIEW_AVATAR_MAX_BYTES: usize = 4 * 1024 * 1024;
+
+/// `POST /sites/:id/chat-appearance/preview` → the widget exactly as the
+/// public service would inject it, wearing the site's own theme, as one
+/// complete self-contained HTML document (`text/html`) — the live preview
+/// beside the appearance fields (S3.02g). The body is the same shape `PUT`
+/// takes and is validated by the same model, so what previews clean saves
+/// clean; **nothing is stored**. The panel renders open and without its
+/// behavior script — the editor shows the document in a sandboxed iframe.
+/// Owner-only like the rest of the appearance family, and `no-store`: a
+/// draft has no cache life.
+pub async fn preview_chat_appearance(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Response, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let value: Value = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let req: PutChatAppearanceBody = serde_json::from_value(value)
+        .map_err(|error| Problem::with(StatusCode::UNPROCESSABLE_ENTITY, error.to_string()))?;
+    let appearance = SiteChatAppearance {
+        bot_name: req.bot_name,
+        avatar: req.avatar_blob_id.map(BlobId::new),
+        welcome: req.welcome,
+        suggested_questions: req.suggested_questions,
+        tone: req.tone,
+        tone_note: req.tone_note,
+        launcher_corner: req.launcher_corner,
+        launcher_icon: req.launcher_icon,
+        auto_open: req.auto_open,
+        offline_message: req.offline_message,
+        accent: req.accent,
+        ..SiteChatAppearance::default()
+    };
+    let site = SiteId::new(id);
+    let record = require_settings_site(&account, &site).await?;
+    // The same gate a save goes through, so the 422 wording never differs
+    // between previewing a value and storing it.
+    appearance
+        .validate()
+        .map_err(|error| map_store_err(error.into()))?;
+    let avatar_src = match &appearance.avatar {
+        None => None,
+        Some(blob) => {
+            use base64::Engine;
+            match account.acc.site_image(blob).await.map_err(map_store_err)? {
+                Some(image) if image.bytes.len() <= PREVIEW_AVATAR_MAX_BYTES => Some(format!(
+                    "data:{};base64,{}",
+                    image.content_type,
+                    base64::engine::general_purpose::STANDARD.encode(&image.bytes)
+                )),
+                // Absent, foreign, non-image or oversized: the preview simply
+                // shows no avatar rather than a broken image.
+                _ => None,
+            }
+        }
+    };
+    let theme = SiteTheme::from_stored(record.theme.clone());
+    let css = stylesheet(&theme);
+    let html = alo_sites::serve::widget::preview_document(
+        strings_for(&record.default_locale),
+        &css,
+        &appearance,
+        avatar_src.as_deref(),
+    );
+    Ok((
+        [
+            (header::CONTENT_TYPE, "text/html; charset=utf-8"),
+            (header::CACHE_CONTROL, "no-store"),
+        ],
+        html,
+    )
+        .into_response())
 }

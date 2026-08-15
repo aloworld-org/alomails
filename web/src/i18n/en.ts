@@ -3665,6 +3665,74 @@ export const en = {
   sitesAssistantPickerBack: "Back to the parent folder",
   sitesAssistantPickerSearch: "Search this folder",
   sitesAssistantPickerEmpty: "Nothing in this folder.",
+  // Sites — the assistant's appearance screen (ADR 0040 §5, S3.02g).
+  sitesAssistantLookTitle: "How it looks and speaks",
+  sitesAssistantLookHint:
+    "The widget already wears your site's theme, logo, and language. What you choose here is its words and a few bounded choices — colour stays within your site's own palette.",
+  sitesAssistantBotNameLabel: "Assistant name",
+  sitesAssistantBotNameHint:
+    "Often deliberately not the company name — “Ask Marie” outperforms “Chat with us”.",
+  sitesAssistantAvatarLabel: "Avatar",
+  sitesAssistantAvatarHint:
+    "A small photo shown in the widget's header. A face works better than a logo.",
+  sitesAssistantWelcomeLabel: "Welcome message",
+  sitesAssistantWelcomeDefaultNote:
+    "This is the written default, in your site's language — keep it or make it yours.",
+  sitesAssistantQuestionsLegend: "Suggested questions",
+  sitesAssistantQuestionsHint:
+    "Up to three one-tap questions, offered until the visitor asks their own.",
+  sitesAssistantQuestionLabel: (n: number) => `Suggested question ${n}`,
+  sitesAssistantSuggestFromSite: "Suggest from your site",
+  sitesAssistantSuggestedApplied:
+    "Drafted from your site's own pages — edit them freely.",
+  sitesAssistantSuggestedNone:
+    "Nothing to draft from yet. An FAQ, pricing, booking, or contact section on your pages gives this something to work with.",
+  sitesAssistantSuggestFailed: "Your pages could not be read for suggestions. Try again.",
+  sitesAssistantSuggestedPricing: "What does it cost?",
+  sitesAssistantSuggestedBooking: "Can I book an appointment?",
+  sitesAssistantSuggestedCatalog: "What do you offer?",
+  sitesAssistantSuggestedContact: "How can I reach you?",
+  sitesAssistantAppearanceSave: "Save appearance",
+  sitesAssistantToneLegend: "Tone",
+  sitesAssistantToneFormal: "Formal",
+  sitesAssistantToneNeutral: "Neutral",
+  sitesAssistantToneWarm: "Warm",
+  sitesAssistantToneNoteLabel: "Voice note",
+  sitesAssistantToneNoteHint:
+    "How your business speaks — plain words, no jargon, that sort of thing. Style only: it can never change what the assistant is allowed to say or promise.",
+  sitesAssistantCornerLegend: "Launcher corner",
+  sitesAssistantCornerRight: "Bottom right",
+  sitesAssistantCornerLeft: "Bottom left",
+  sitesAssistantIconLegend: "Launcher icon",
+  sitesAssistantIconChat: "Speech bubble",
+  sitesAssistantIconQuestion: "Question mark",
+  sitesAssistantIconSparkle: "Sparkle",
+  sitesAssistantAccentLegend: "Colour",
+  sitesAssistantAccentHint:
+    "A choice among your site's own palette roles — every option keeps readable contrast.",
+  sitesAssistantAccentPrimary: "Brand colour",
+  sitesAssistantAccentText: "Ink",
+  sitesAssistantAccentSurface: "Quiet",
+  sitesAssistantAutoOpenLabel: "Open by itself when the page loads",
+  sitesAssistantAutoOpenHint:
+    "Off by default — an uninvited popup is the thing everyone hates. When on, it opens without stealing the keyboard.",
+  sitesAssistantOfflineLabel: "Offline message",
+  sitesAssistantOfflineHint:
+    "Shown when the assistant cannot answer — the monthly budget is spent, or no AI is configured.",
+  sitesAssistantPreviewTitle: "Preview",
+  sitesAssistantPreviewHint:
+    "The real widget, wearing your site's theme, shown open. Visitors see it closed in its corner first.",
+  sitesAssistantPreviewFrameTitle: "Assistant widget preview",
+  sitesAssistantPreviewFailed: "The preview could not be rendered.",
+  sitesAssistantA11yTitle: "Accessibility",
+  sitesAssistantA11yContrast: (ratio: string) =>
+    `Text on the chosen colour measures ${ratio}:1 — above the 4.5:1 WCAG AA bar.`,
+  sitesAssistantA11yContrastGuarantee:
+    "Every colour choice here is contrast-checked against your palette on the server — no option can store an unreadable combination.",
+  sitesAssistantA11yKeyboard:
+    "The widget is a labelled dialog: keyboard-operable throughout, Escape closes it, and answers are announced by screen readers as they arrive.",
+  sitesAssistantA11yAvatar:
+    "The avatar is decorative and hidden from screen readers — the assistant's name is what they announce.",
   // Sites — privacy-friendly traffic analytics.
   sitesAnalytics: "Analytics",
   sitesAnalyticsLoadFailed:

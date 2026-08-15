@@ -410,6 +410,10 @@ pub fn app_with_site_boundaries(
             "/sites/{id}/chat-appearance",
             get(sites_chat::get_chat_appearance).put(sites_chat::put_chat_appearance),
         )
+        .route(
+            "/sites/{id}/chat-appearance/preview",
+            post(sites_chat::preview_chat_appearance),
+        )
         // The assistant's Public knowledge collection (ADR 0040 §1) — what
         // the owner has deliberately published for it to read.
         .route(

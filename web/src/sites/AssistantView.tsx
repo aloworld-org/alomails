@@ -15,6 +15,7 @@ import { ArrowLeft, BookOpenCheck, Bot, FileText, Globe2, Newspaper, X } from "l
 import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
+import { AssistantAppearance } from "./AssistantAppearance";
 import { funnelMoney } from "./funnelReading";
 import { KnowledgePickerDialog } from "./KnowledgePickerDialog";
 import { ErrorBanner } from "./parts";
@@ -273,6 +274,8 @@ export function AssistantView() {
             </div>
           </section>
         )}
+
+        {settings !== null && <AssistantAppearance siteId={siteId} site={site} />}
       </div>
 
       {picking && (

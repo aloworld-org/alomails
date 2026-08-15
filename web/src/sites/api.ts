@@ -76,6 +76,8 @@ import type {
   SiteCollectionDraft,
   SiteCollectionPreview,
   SiteCollectionSource,
+  SiteChatAppearance,
+  SiteChatAppearanceView,
   SiteChatSettings,
   SiteCollaborator,
   SiteCollaboratorInvite,
@@ -250,6 +252,47 @@ export class SitesApi {
       `/sites/${encodeURIComponent(siteId)}/chat-settings`,
       { enabled, monthlyCeilingCents },
     );
+  }
+
+  /** The assistant's appearance and voice (ADR 0040 §5), with the server's
+   *  field caps and the written defaults the widget falls back on. */
+  chatAppearance(siteId: string): Promise<SiteChatAppearanceView> {
+    return this.#read<SiteChatAppearanceView>(this.#appearancePath(siteId));
+  }
+
+  /** Stores the whole appearance in one write — the form sends every field it
+   *  shows every time, so no sequence of screens can leave the public widget
+   *  half-written — and answers the resulting view. */
+  setChatAppearance(
+    siteId: string,
+    appearance: SiteChatAppearance,
+  ): Promise<SiteChatAppearanceView> {
+    return this.#write<SiteChatAppearanceView>(
+      "PUT",
+      this.#appearancePath(siteId),
+      appearance,
+    );
+  }
+
+  /** The widget exactly as the public service would inject it, wearing the
+   *  site's own theme, rendered from the UNSAVED appearance draft as one
+   *  complete HTML document. Answers text, not JSON; the caller puts it in a
+   *  sandboxed iframe via `srcdoc`. Nothing is stored. */
+  async chatAppearancePreview(
+    siteId: string,
+    appearance: SiteChatAppearance,
+  ): Promise<string> {
+    const response = await this.#send(`${this.#appearancePath(siteId)}/preview`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(appearance),
+    });
+    await SitesApi.#rejectFailed(response);
+    return response.text();
+  }
+
+  #appearancePath(siteId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/chat-appearance`;
   }
 
   /** The documents the owner has published to the site's assistant, oldest

@@ -2782,6 +2782,75 @@ export const nl: Partial<Catalog> = {
   sitesAssistantPickerBack: "Terug naar de bovenliggende map",
   sitesAssistantPickerSearch: "Zoeken in deze map",
   sitesAssistantPickerEmpty: "Niets in deze map.",
+  // Sites — het uiterlijk-scherm van de assistent (ADR 0040 §5, S3.02g).
+  sitesAssistantLookTitle: "Hoe hij eruitziet en klinkt",
+  sitesAssistantLookHint:
+    "De widget draagt al het thema, het logo en de taal van uw site. Wat u hier kiest zijn zijn woorden en enkele begrensde keuzes — kleur blijft binnen het palet van uw eigen site.",
+  sitesAssistantBotNameLabel: "Naam van de assistent",
+  sitesAssistantBotNameHint:
+    "Vaak bewust niet de bedrijfsnaam — “Vraag het Marie” werkt beter dan “Chat met ons”.",
+  sitesAssistantAvatarLabel: "Avatar",
+  sitesAssistantAvatarHint:
+    "Een kleine foto in de kop van de widget. Een gezicht werkt beter dan een logo.",
+  sitesAssistantWelcomeLabel: "Welkomstbericht",
+  sitesAssistantWelcomeDefaultNote:
+    "Dit is de geschreven standaardtekst, in de taal van uw site — houd hem of maak hem eigen.",
+  sitesAssistantQuestionsLegend: "Voorgestelde vragen",
+  sitesAssistantQuestionsHint:
+    "Tot drie vragen met één tik, aangeboden tot de bezoeker zelf iets vraagt.",
+  sitesAssistantQuestionLabel: (n: number) => `Voorgestelde vraag ${n}`,
+  sitesAssistantSuggestFromSite: "Voorstellen vanuit uw site",
+  sitesAssistantSuggestedApplied:
+    "Opgesteld uit de pagina's van uw eigen site — pas ze gerust aan.",
+  sitesAssistantSuggestedNone:
+    "Nog niets om uit te putten. Een FAQ, prijzen, een boeking of een contactformulier op uw pagina's geeft hier materiaal voor.",
+  sitesAssistantSuggestFailed:
+    "Uw pagina's konden niet worden gelezen voor suggesties. Probeer opnieuw.",
+  sitesAssistantSuggestedPricing: "Wat kost het?",
+  sitesAssistantSuggestedBooking: "Kan ik een afspraak maken?",
+  sitesAssistantSuggestedCatalog: "Wat biedt u aan?",
+  sitesAssistantSuggestedContact: "Hoe kan ik u bereiken?",
+  sitesAssistantAppearanceSave: "Uiterlijk opslaan",
+  sitesAssistantToneLegend: "Toon",
+  sitesAssistantToneFormal: "Formeel",
+  sitesAssistantToneNeutral: "Neutraal",
+  sitesAssistantToneWarm: "Warm",
+  sitesAssistantToneNoteLabel: "Stemnotitie",
+  sitesAssistantToneNoteHint:
+    "Hoe uw bedrijf spreekt — gewone woorden, geen jargon, dat soort dingen. Alleen stijl: het verandert nooit wat de assistent mag zeggen of beloven.",
+  sitesAssistantCornerLegend: "Hoek van de knop",
+  sitesAssistantCornerRight: "Rechtsonder",
+  sitesAssistantCornerLeft: "Linksonder",
+  sitesAssistantIconLegend: "Pictogram van de knop",
+  sitesAssistantIconChat: "Tekstballon",
+  sitesAssistantIconQuestion: "Vraagteken",
+  sitesAssistantIconSparkle: "Vonk",
+  sitesAssistantAccentLegend: "Kleur",
+  sitesAssistantAccentHint:
+    "Een keuze uit de paletrollen van uw eigen site — elke optie houdt het contrast leesbaar.",
+  sitesAssistantAccentPrimary: "Merkkleur",
+  sitesAssistantAccentText: "Inkt",
+  sitesAssistantAccentSurface: "Rustig",
+  sitesAssistantAutoOpenLabel: "Opent vanzelf wanneer de pagina laadt",
+  sitesAssistantAutoOpenHint:
+    "Standaard uit — een ongevraagde pop-up is wat iedereen haat. Ingeschakeld opent hij zonder het toetsenbord over te nemen.",
+  sitesAssistantOfflineLabel: "Offline-bericht",
+  sitesAssistantOfflineHint:
+    "Getoond wanneer de assistent niet kan antwoorden — het maandbudget is op, of er is geen AI ingesteld.",
+  sitesAssistantPreviewTitle: "Voorbeeld",
+  sitesAssistantPreviewHint:
+    "De echte widget, in het thema van uw site, open getoond. Bezoekers zien hem eerst gesloten in zijn hoek.",
+  sitesAssistantPreviewFrameTitle: "Voorbeeld van de assistent-widget",
+  sitesAssistantPreviewFailed: "Het voorbeeld kon niet worden weergegeven.",
+  sitesAssistantA11yTitle: "Toegankelijkheid",
+  sitesAssistantA11yContrast: (ratio: string) =>
+    `Tekst op de gekozen kleur meet ${ratio}:1 — boven de WCAG AA-grens van 4,5:1.`,
+  sitesAssistantA11yContrastGuarantee:
+    "Elke kleurkeuze wordt op de server getoetst aan uw palet — geen enkele optie kan een onleesbare combinatie opslaan.",
+  sitesAssistantA11yKeyboard:
+    "De widget is een gelabeld dialoogvenster: volledig met het toetsenbord te bedienen, Escape sluit het, en antwoorden worden door schermlezers voorgelezen zodra ze binnenkomen.",
+  sitesAssistantA11yAvatar:
+    "De avatar is decoratief en verborgen voor schermlezers — zij kondigen de naam van de assistent aan.",
   sitesAnalytics: "Statistieken",
   sitesAnalyticsLoadFailed:
     "De statistieken van uw site konden niet worden geladen. Probeer het opnieuw.",

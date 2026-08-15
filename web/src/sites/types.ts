@@ -53,6 +53,61 @@ export interface SiteChatSettings {
   ceilingHit: boolean;
 }
 
+/** The tone scale between formal and warm (ADR 0040 §5). */
+export type SiteChatTone = "formal" | "neutral" | "warm";
+
+/** Which corner of the published page the launcher sits in. */
+export type SiteChatCorner = "right" | "left";
+
+/** Which shipped glyph the launcher shows. A bounded set, never an upload. */
+export type SiteChatIcon = "chat" | "question" | "sparkle";
+
+/** The widget's accent as a choice among the site's own palette roles —
+ *  never a free colour; every role pair is contrast-proven server-side. */
+export type SiteChatAccent = "primary" | "text" | "surface";
+
+/** The assistant's appearance and voice as the form edits it (ADR 0040 §5).
+ *  `null` text means "use the written default the widget ships with". */
+export interface SiteChatAppearance {
+  botName: string | null;
+  avatarBlobId: string | null;
+  welcome: string | null;
+  suggestedQuestions: string[];
+  tone: SiteChatTone;
+  toneNote: string | null;
+  launcherCorner: SiteChatCorner;
+  launcherIcon: SiteChatIcon;
+  autoOpen: boolean;
+  offlineMessage: string | null;
+  accent: SiteChatAccent;
+}
+
+/** The server's own field caps, mirrored so the form bounds its inputs to
+ *  the same numbers the store enforces instead of re-inventing them. */
+export interface SiteChatAppearanceLimits {
+  botNameChars: number;
+  welcomeChars: number;
+  suggestedQuestions: number;
+  suggestedQuestionChars: number;
+  toneNoteChars: number;
+  offlineMessageChars: number;
+}
+
+/** The written copy the widget falls back on when a field is unset — in the
+ *  site's default language, which is what a visitor would read. */
+export interface SiteChatAppearanceDefaults {
+  botName: string;
+  welcome: string;
+  offlineMessage: string;
+}
+
+/** What `GET /sites/:id/chat-appearance` answers: the stored appearance
+ *  together with the caps and the written defaults. */
+export interface SiteChatAppearanceView extends SiteChatAppearance {
+  limits: SiteChatAppearanceLimits;
+  defaults: SiteChatAppearanceDefaults;
+}
+
 /** One document the owner published to the site's assistant (ADR 0040 §1) —
  *  and therefore to anyone on the internet who asks it. */
 export interface SiteKnowledgeSource {
