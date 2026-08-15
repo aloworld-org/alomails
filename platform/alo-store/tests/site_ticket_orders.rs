@@ -1,0 +1,725 @@
+//! The ticket order against a real database (ADR 0041, item S3.04c): order →
+//! payment-reference → paid, driven end to end through the fixture payment
+//! provider.
+//!
+//! The tests this suite exists for: the full arc (hold → order → hosted
+//! payment → webhook target → status fetched → paid, seats sold), the webhook
+//! replayed being one sale, money that arrives after the seats are gone
+//! failing **visibly**, and the columns-of-the-table proof that no card data
+//! can live in alo. Around them, the frame every storage suite carries: the
+//! tenant and site walls on every verb.
+
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
+mod common;
+
+use alo_store::{
+    AccountStore, BillingProductId, FixtureSitePayments, SiteId, SitePaymentProvider,
+    SitePaymentRequest, SitePaymentStatus, SiteTicketEventId, SiteTicketHoldId,
+    SiteTicketHoldState, SiteTicketOrderState, StoreError, TICKET_ORDER_PAID_AFTER_LAPSE,
+};
+use time::{Duration, OffsetDateTime};
+
+fn assert_not_found<T: std::fmt::Debug>(result: Result<T, StoreError>) {
+    match result {
+        Err(StoreError::NotFound) => {}
+        other => panic!("expected NotFound, got {other:?}"),
+    }
+}
+
+fn conflict_of<T: std::fmt::Debug>(result: Result<T, StoreError>) -> String {
+    match result {
+        Err(StoreError::Conflict(said)) => said,
+        other => panic!("expected Conflict, got {other:?}"),
+    }
+}
+
+fn subdomain(tag: &str) -> String {
+    format!(
+        "{tag}-{}",
+        SiteId::generate()
+            .as_str()
+            .chars()
+            .filter(char::is_ascii_alphanumeric)
+            .take(12)
+            .collect::<String>()
+            .to_ascii_lowercase()
+    )
+}
+
+fn clock() -> OffsetDateTime {
+    OffsetDateTime::now_utc()
+}
+
+/// A provider payment id no other run of this suite can have used: the
+/// one-payment-one-order index is global by design (it is the webhook's
+/// lookup key), and the shared test database remembers every earlier run.
+fn ppid(tag: &str) -> String {
+    format!("fixpay-{tag}-{}", SiteId::generate().as_str())
+}
+
+const TTL: Duration = Duration::minutes(10);
+
+/// A tenant, a site, a sellable 8 500-cent product, an event with seats, and
+/// a live hold on two of them — the moment a buyer clicks "buy".
+struct Venue {
+    account: AccountStore,
+    site: SiteId,
+    product: BillingProductId,
+    event: SiteTicketEventId,
+    hold: SiteTicketHoldId,
+    now: OffsetDateTime,
+}
+
+async fn venue(tag: &str) -> Venue {
+    let store = common::test_store().await;
+    let tenant = store
+        .create_tenant(&format!("ticket-orders-{tag}"))
+        .await
+        .unwrap();
+    let user = store
+        .for_tenant(tenant.clone())
+        .create_user(&format!("owner@{tag}.test"))
+        .await
+        .unwrap();
+    let account = store.for_account(tenant, user);
+    let site = account.create_site("Venue", &subdomain(tag)).await.unwrap();
+    let product = account
+        .create_billing_product(&alo_store::NewProduct {
+            name: "Letterpress workshop".to_owned(),
+            unit: "seat".to_owned(),
+            unit_price_cents: 8_500,
+            vat_rate_bp: 2100,
+            ..Default::default()
+        })
+        .await
+        .unwrap();
+    let now = clock();
+    let event = account
+        .create_site_ticket_event(&site, &product, now + Duration::days(7), 10)
+        .await
+        .unwrap();
+    let hold = account
+        .take_ticket_hold(&site, &event, 2, TTL, now)
+        .await
+        .unwrap();
+    Venue {
+        account,
+        site,
+        product,
+        event,
+        hold: hold.id,
+        now,
+    }
+}
+
+/// The provider request the checkout route will build — the fixture only
+/// needs it to be well-formed.
+fn payment_request(key: &str, amount_cents: i64) -> SitePaymentRequest {
+    SitePaymentRequest {
+        idempotency_key: key.to_owned(),
+        amount_cents,
+        currency: "EUR".to_owned(),
+        description: "2 × Letterpress workshop".to_owned(),
+        redirect_url: "https://venue.alosites.com/tickets/thanks".to_owned(),
+        webhook_url: "https://venue.alosites.com/pay/webhook".to_owned(),
+    }
+}
+
+#[tokio::test]
+async fn the_arc_from_hold_to_paid_sells_the_seats() {
+    let v = venue("arc").await;
+    let store = common::test_store().await;
+    let provider = FixtureSitePayments::new();
+
+    // The order records the buyer and the price list's answer: 2 × 8 500.
+    let order = v
+        .account
+        .create_ticket_order(&v.site, &v.hold, "Maud Adams", "maud@example.org", v.now)
+        .await
+        .unwrap();
+    assert_eq!(order.state, SiteTicketOrderState::Pending);
+    assert_eq!(order.quantity, 2);
+    assert_eq!(order.unit_price_cents, 8_500);
+    assert_eq!(order.amount_cents, 17_000);
+    assert_eq!(order.vat_rate_bp, 2100);
+    assert_eq!(order.currency, "EUR");
+    assert_eq!(order.event, v.event);
+
+    // The hosted handoff: the provider mints the payment, alo stores the
+    // reference and where the checkout lives.
+    let created = provider
+        .create_payment(payment_request(order.id.as_str(), order.amount_cents))
+        .await
+        .unwrap();
+    let waiting = v
+        .account
+        .open_ticket_payment(
+            &v.site,
+            &order.id,
+            &created.provider_payment_id,
+            &created.checkout_url,
+        )
+        .await
+        .unwrap();
+    assert_eq!(waiting.state, SiteTicketOrderState::AwaitingPayment);
+    assert_eq!(
+        waiting.checkout_url.as_deref(),
+        Some(created.checkout_url.as_str())
+    );
+
+    // The buyer pays on the provider's page; its webhook names the payment.
+    provider
+        .mark(&created.provider_payment_id, SitePaymentStatus::Paid)
+        .unwrap();
+    let target = store
+        .ticket_payment_target(&created.provider_payment_id)
+        .await
+        .unwrap()
+        .expect("the payment names an order");
+    assert_eq!(target.order, order.id);
+    assert_eq!(target.site, v.site);
+
+    // The status is fetched from the provider — never read from the webhook —
+    // and settles the order and the hold as one decision.
+    let status = provider
+        .payment_status(created.provider_payment_id.clone())
+        .await
+        .unwrap();
+    let paid = v
+        .account
+        .apply_ticket_payment(&target.site, &target.order, status, v.now)
+        .await
+        .unwrap();
+    assert_eq!(paid.state, SiteTicketOrderState::Paid);
+    assert!(paid.paid_at.is_some());
+    assert!(paid.failure.is_none());
+
+    let hold = v
+        .account
+        .site_ticket_hold(&v.site, &v.hold, v.now)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(hold.state, SiteTicketHoldState::Completed);
+    let seats = v
+        .account
+        .ticket_availability(&v.site, &v.event, v.now)
+        .await
+        .unwrap();
+    assert_eq!(seats.sold, 2);
+    assert_eq!(seats.held, 0);
+    assert_eq!(seats.remaining, 8);
+}
+
+#[tokio::test]
+async fn a_webhook_replayed_five_times_is_one_sale() {
+    let v = venue("replay").await;
+    let order = v
+        .account
+        .create_ticket_order(&v.site, &v.hold, "Maud Adams", "maud@example.org", v.now)
+        .await
+        .unwrap();
+    v.account
+        .open_ticket_payment(
+            &v.site,
+            &order.id,
+            &ppid("replay"),
+            "https://checkout.fixture.invalid/replay",
+        )
+        .await
+        .unwrap();
+    let first = v
+        .account
+        .apply_ticket_payment(&v.site, &order.id, SitePaymentStatus::Paid, v.now)
+        .await
+        .unwrap();
+    for _ in 0..4 {
+        let again = v
+            .account
+            .apply_ticket_payment(&v.site, &order.id, SitePaymentStatus::Paid, v.now)
+            .await
+            .unwrap();
+        assert_eq!(again.state, SiteTicketOrderState::Paid);
+        assert_eq!(again.paid_at, first.paid_at);
+    }
+    let seats = v
+        .account
+        .ticket_availability(&v.site, &v.event, v.now)
+        .await
+        .unwrap();
+    assert_eq!(seats.sold, 2, "a replayed webhook must not sell twice");
+}
+
+#[tokio::test]
+async fn one_payment_settles_exactly_one_order() {
+    let v = venue("onepay").await;
+    let order = v
+        .account
+        .create_ticket_order(&v.site, &v.hold, "Maud Adams", "maud@example.org", v.now)
+        .await
+        .unwrap();
+    let shared = ppid("shared");
+    v.account
+        .open_ticket_payment(
+            &v.site,
+            &order.id,
+            &shared,
+            "https://checkout.fixture.invalid/a",
+        )
+        .await
+        .unwrap();
+
+    let second_hold = v
+        .account
+        .take_ticket_hold(&v.site, &v.event, 1, TTL, v.now)
+        .await
+        .unwrap();
+    let second = v
+        .account
+        .create_ticket_order(
+            &v.site,
+            &second_hold.id,
+            "Iris Bell",
+            "iris@example.org",
+            v.now,
+        )
+        .await
+        .unwrap();
+    let said = conflict_of(
+        v.account
+            .open_ticket_payment(
+                &v.site,
+                &second.id,
+                &shared,
+                "https://checkout.fixture.invalid/b",
+            )
+            .await,
+    );
+    assert!(said.contains("another order"), "said: {said}");
+}
+
+#[tokio::test]
+async fn money_after_the_seats_are_gone_fails_visibly() {
+    let v = venue("late").await;
+    let order = v
+        .account
+        .create_ticket_order(&v.site, &v.hold, "Maud Adams", "maud@example.org", v.now)
+        .await
+        .unwrap();
+    v.account
+        .open_ticket_payment(
+            &v.site,
+            &order.id,
+            &ppid("late"),
+            "https://checkout.fixture.invalid/late",
+        )
+        .await
+        .unwrap();
+
+    // The buyer dawdled past the hold's expiry, then paid. The seats may
+    // already be resold: the order fails visibly, naming the refund — it
+    // never sells seats it no longer holds.
+    let after_expiry = v.now + TTL + Duration::minutes(1);
+    let failed = v
+        .account
+        .apply_ticket_payment(&v.site, &order.id, SitePaymentStatus::Paid, after_expiry)
+        .await
+        .unwrap();
+    assert_eq!(failed.state, SiteTicketOrderState::Failed);
+    assert_eq!(
+        failed.failure.as_deref(),
+        Some(TICKET_ORDER_PAID_AFTER_LAPSE)
+    );
+    assert!(failed.paid_at.is_none());
+
+    let seats = v
+        .account
+        .ticket_availability(&v.site, &v.event, after_expiry)
+        .await
+        .unwrap();
+    assert_eq!(seats.sold, 0);
+    assert_eq!(seats.remaining, 10, "the lapsed seats stay on sale");
+}
+
+#[tokio::test]
+async fn a_dead_status_frees_the_seats_and_a_later_payment_names_the_refund() {
+    let v = venue("dead").await;
+    let order = v
+        .account
+        .create_ticket_order(&v.site, &v.hold, "Maud Adams", "maud@example.org", v.now)
+        .await
+        .unwrap();
+    v.account
+        .open_ticket_payment(
+            &v.site,
+            &order.id,
+            &ppid("dead"),
+            "https://checkout.fixture.invalid/dead",
+        )
+        .await
+        .unwrap();
+
+    // The buyer cancelled on the provider's page: the order closes and the
+    // seats go straight back on sale — no waiting for the hold to time out.
+    let cancelled = v
+        .account
+        .apply_ticket_payment(&v.site, &order.id, SitePaymentStatus::Canceled, v.now)
+        .await
+        .unwrap();
+    assert_eq!(cancelled.state, SiteTicketOrderState::Cancelled);
+    let hold = v
+        .account
+        .site_ticket_hold(&v.site, &v.hold, v.now)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(hold.state, SiteTicketHoldState::Released);
+    let seats = v
+        .account
+        .ticket_availability(&v.site, &v.event, v.now)
+        .await
+        .unwrap();
+    assert_eq!(seats.remaining, 10);
+
+    // The cancel webhook replayed changes nothing.
+    let again = v
+        .account
+        .apply_ticket_payment(&v.site, &order.id, SitePaymentStatus::Canceled, v.now)
+        .await
+        .unwrap();
+    assert_eq!(again.state, SiteTicketOrderState::Cancelled);
+
+    // And a paid status arriving after the cancel is money with no seats:
+    // visible failure, naming the refund.
+    let late = v
+        .account
+        .apply_ticket_payment(&v.site, &order.id, SitePaymentStatus::Paid, v.now)
+        .await
+        .unwrap();
+    assert_eq!(late.state, SiteTicketOrderState::Failed);
+    assert_eq!(late.failure.as_deref(), Some(TICKET_ORDER_PAID_AFTER_LAPSE));
+}
+
+#[tokio::test]
+async fn a_paid_order_is_never_unsold_by_a_late_status() {
+    let v = venue("sold").await;
+    let order = v
+        .account
+        .create_ticket_order(&v.site, &v.hold, "Maud Adams", "maud@example.org", v.now)
+        .await
+        .unwrap();
+    v.account
+        .open_ticket_payment(
+            &v.site,
+            &order.id,
+            &ppid("sold"),
+            "https://checkout.fixture.invalid/sold",
+        )
+        .await
+        .unwrap();
+    v.account
+        .apply_ticket_payment(&v.site, &order.id, SitePaymentStatus::Paid, v.now)
+        .await
+        .unwrap();
+    for status in [
+        SitePaymentStatus::Failed,
+        SitePaymentStatus::Canceled,
+        SitePaymentStatus::Expired,
+        SitePaymentStatus::Open,
+    ] {
+        let still = v
+            .account
+            .apply_ticket_payment(&v.site, &order.id, status, v.now)
+            .await
+            .unwrap();
+        assert_eq!(
+            still.state,
+            SiteTicketOrderState::Paid,
+            "{status:?} unsold a sale"
+        );
+    }
+    let seats = v
+        .account
+        .ticket_availability(&v.site, &v.event, v.now)
+        .await
+        .unwrap();
+    assert_eq!(seats.sold, 2);
+}
+
+#[tokio::test]
+async fn creation_replays_for_the_same_buyer_and_refuses_another() {
+    let v = venue("createreplay").await;
+    let order = v
+        .account
+        .create_ticket_order(&v.site, &v.hold, "Maud Adams", "maud@example.org", v.now)
+        .await
+        .unwrap();
+    // The double-clicked buy button reaches the order it already made.
+    let again = v
+        .account
+        .create_ticket_order(&v.site, &v.hold, "Maud Adams", "maud@example.org", v.now)
+        .await
+        .unwrap();
+    assert_eq!(again.id, order.id);
+    // A different buyer on the same seats is refused, never a quiet swap.
+    let said = conflict_of(
+        v.account
+            .create_ticket_order(&v.site, &v.hold, "Iris Bell", "iris@example.org", v.now)
+            .await,
+    );
+    assert!(said.contains("different buyer"), "said: {said}");
+}
+
+#[tokio::test]
+async fn an_order_needs_a_live_hold_and_a_listed_price() {
+    let v = venue("gates").await;
+
+    // A lapsed hold cannot be bought — the seats may belong to somebody else.
+    let after_expiry = v.now + TTL + Duration::minutes(1);
+    let said = conflict_of(
+        v.account
+            .create_ticket_order(
+                &v.site,
+                &v.hold,
+                "Maud Adams",
+                "maud@example.org",
+                after_expiry,
+            )
+            .await,
+    );
+    assert!(said.contains("expired"), "said: {said}");
+
+    // A released hold likewise.
+    let released = v
+        .account
+        .take_ticket_hold(&v.site, &v.event, 1, TTL, v.now)
+        .await
+        .unwrap();
+    v.account
+        .release_ticket_hold(&v.site, &released.id, v.now)
+        .await
+        .unwrap();
+    let said = conflict_of(
+        v.account
+            .create_ticket_order(
+                &v.site,
+                &released.id,
+                "Maud Adams",
+                "maud@example.org",
+                v.now,
+            )
+            .await,
+    );
+    assert!(said.contains("released"), "said: {said}");
+
+    // An archived product answers for nothing: the shop can never sell the
+    // past, so the order is refused at the door.
+    let live = v
+        .account
+        .take_ticket_hold(&v.site, &v.event, 1, TTL, v.now)
+        .await
+        .unwrap();
+    v.account
+        .set_billing_product_archived(&v.product, true)
+        .await
+        .unwrap();
+    let said = conflict_of(
+        v.account
+            .create_ticket_order(&v.site, &live.id, "Maud Adams", "maud@example.org", v.now)
+            .await,
+    );
+    assert!(said.contains("price list"), "said: {said}");
+
+    // Malformed buyers never reach the database.
+    assert!(matches!(
+        v.account
+            .create_ticket_order(&v.site, &live.id, "", "maud@example.org", v.now)
+            .await,
+        Err(StoreError::Validation(_))
+    ));
+    assert!(matches!(
+        v.account
+            .create_ticket_order(&v.site, &live.id, "Maud", "not-an-address", v.now)
+            .await,
+        Err(StoreError::Validation(_))
+    ));
+}
+
+#[tokio::test]
+async fn the_tenant_and_site_walls_hold_on_every_verb() {
+    let a = venue("wall-a").await;
+    let b = venue("wall-b").await;
+
+    // Tenant B addressing tenant A's records: a clean NotFound on every verb,
+    // never data and never a 500.
+    assert_not_found(
+        b.account
+            .create_ticket_order(&a.site, &a.hold, "Sly Fox", "fox@example.org", b.now)
+            .await,
+    );
+    let a_order = a
+        .account
+        .create_ticket_order(&a.site, &a.hold, "Maud Adams", "maud@example.org", a.now)
+        .await
+        .unwrap();
+    assert_not_found(
+        b.account
+            .open_ticket_payment(
+                &a.site,
+                &a_order.id,
+                &ppid("wall"),
+                "https://checkout.fixture.invalid/b",
+            )
+            .await,
+    );
+    assert_not_found(
+        b.account
+            .apply_ticket_payment(&a.site, &a_order.id, SitePaymentStatus::Paid, b.now)
+            .await,
+    );
+    assert!(
+        b.account
+            .site_ticket_order(&a.site, &a_order.id)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        b.account
+            .site_ticket_orders(&a.site)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+
+    // The same walls between two sites of ONE tenant: B's own site cannot
+    // reach A's hold, and a hold from another of the tenant's sites is not
+    // orderable through this one.
+    let second_site = a
+        .account
+        .create_site("Annex", &subdomain("wall-annex"))
+        .await
+        .unwrap();
+    assert_not_found(
+        a.account
+            .create_ticket_order(
+                &second_site,
+                &a.hold,
+                "Maud Adams",
+                "maud@example.org",
+                a.now,
+            )
+            .await,
+    );
+    assert_not_found(
+        a.account
+            .apply_ticket_payment(&second_site, &a_order.id, SitePaymentStatus::Paid, a.now)
+            .await,
+    );
+
+    // A's view is untouched by everything B tried.
+    let mine = a.account.site_ticket_orders(&a.site).await.unwrap();
+    assert_eq!(mine.len(), 1);
+    assert_eq!(mine[0].state, SiteTicketOrderState::Pending);
+}
+
+#[tokio::test]
+async fn the_webhook_door_answers_none_for_strangers() {
+    let v = venue("door").await;
+    let store = common::test_store().await;
+    let order = v
+        .account
+        .create_ticket_order(&v.site, &v.hold, "Maud Adams", "maud@example.org", v.now)
+        .await
+        .unwrap();
+    let door = ppid("door");
+    v.account
+        .open_ticket_payment(
+            &v.site,
+            &order.id,
+            &door,
+            "https://checkout.fixture.invalid/door",
+        )
+        .await
+        .unwrap();
+
+    // A probe with a guessed or garbage id learns nothing.
+    assert!(
+        store
+            .ticket_payment_target("fixpay-nobody")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(store.ticket_payment_target("").await.unwrap().is_none());
+    assert!(
+        store
+            .ticket_payment_target("two words")
+            .await
+            .unwrap()
+            .is_none()
+    );
+
+    // The real id names exactly its own order.
+    let target = store
+        .ticket_payment_target(&door)
+        .await
+        .unwrap()
+        .expect("the payment names its order");
+    assert_eq!(target.order, order.id);
+    assert_eq!(target.site, v.site);
+}
+
+#[tokio::test]
+async fn the_table_has_no_room_for_a_card() {
+    // Make sure migrations have run, then read the schema itself.
+    let _ = common::test_store().await;
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .connect(&common::database_url())
+        .await
+        .unwrap();
+    let columns: Vec<String> = sqlx::query_scalar(
+        "SELECT column_name FROM information_schema.columns \
+          WHERE table_name = 'site_ticket_orders' ORDER BY column_name",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    // The exact column list IS the privacy proof: a column that could carry
+    // a card number, an expiry, a CVC or a cardholder would have to appear
+    // here, in a diff a reviewer reads next to this sentence.
+    assert_eq!(
+        columns,
+        vec![
+            "amount_cents",
+            "buyer_email",
+            "buyer_name",
+            "checkout_url",
+            "created_at",
+            "currency",
+            "event_id",
+            "failure",
+            "hold_id",
+            "id",
+            "paid_at",
+            "provider_payment_id",
+            "quantity",
+            "site_id",
+            "state",
+            "tenant_id",
+            "unit_price_cents",
+            "updated_at",
+            "vat_rate_bp",
+        ]
+    );
+    for column in &columns {
+        for forbidden in ["card", "pan", "cvc", "cvv", "expiry", "holder", "iban"] {
+            assert!(
+                !column.contains(forbidden),
+                "column '{column}' could carry payment-instrument data"
+            );
+        }
+    }
+}

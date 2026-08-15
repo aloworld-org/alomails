@@ -202,7 +202,11 @@ async fn agenda_answers_spans_only_and_expands_its_own_recurrence() {
     let owned = owned_site("seam-spans").await;
     owned
         .account
-        .create_event(&event(&owned.calendar, "Confidential supplier call", utc(16, 10, 0)))
+        .create_event(&event(
+            &owned.calendar,
+            "Confidential supplier call",
+            utc(16, 10, 0),
+        ))
         .await
         .unwrap();
     let mut daily = event(&owned.calendar, "Morning stand-up", utc(14, 9, 0));
@@ -241,7 +245,11 @@ async fn busy_spans_are_scoped_to_the_calendar_its_owner_and_their_tenant() {
         .unwrap();
     owned
         .account
-        .create_event(&event(&owned.calendar, "On the asked calendar", utc(16, 9, 0)))
+        .create_event(&event(
+            &owned.calendar,
+            "On the asked calendar",
+            utc(16, 9, 0),
+        ))
         .await
         .unwrap();
     owned
@@ -329,9 +337,7 @@ async fn published_availability_offers_what_the_current_publish_switched_on() {
     let offered = owned.public.published_availability(&site).await.unwrap();
     assert_eq!(offered.len(), 1, "a draft-only service is not offered");
 
-    owned
-        .publish_with(&[&consultation, &asleep, &newer])
-        .await;
+    owned.publish_with(&[&consultation, &asleep, &newer]).await;
     let site = owned
         .public
         .resolve_published(&owned.subdomain)
@@ -346,7 +352,11 @@ async fn published_availability_offers_what_the_current_publish_switched_on() {
         .into_iter()
         .map(|service| service.published.name)
         .collect();
-    assert_eq!(names, vec!["Consultation", "Walk-in"], "name order, active only");
+    assert_eq!(
+        names,
+        vec!["Consultation", "Walk-in"],
+        "name order, active only"
+    );
 
     // A calendar deleted since the publish takes its service off the list:
     // nothing bookable, rather than an empty week.
@@ -395,7 +405,13 @@ async fn published_availability_is_scoped_to_the_site_and_its_tenant() {
         .await
         .unwrap();
     assert_eq!(our_list.len(), 1);
-    assert_eq!(our_list[0].published.booking_id.as_str(), consultation.as_str());
+    assert_eq!(
+        our_list[0].published.booking_id.as_str(),
+        consultation.as_str()
+    );
     assert_eq!(their_list.len(), 1);
-    assert_eq!(their_list[0].published.booking_id.as_str(), massage.as_str());
+    assert_eq!(
+        their_list[0].published.booking_id.as_str(),
+        massage.as_str()
+    );
 }

@@ -142,7 +142,10 @@ impl AccountStore {
         .fetch_all(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-        Ok(rows.into_iter().map(SiteTicketEventRow::into_event).collect())
+        Ok(rows
+            .into_iter()
+            .map(SiteTicketEventRow::into_event)
+            .collect())
     }
 
     /// One ticketed event of one of the tenant's sites, or `None`.
@@ -250,13 +253,15 @@ impl AccountStore {
                 "tickets have been sold to this event; it can no longer be deleted".to_owned(),
             ));
         }
-        sqlx::query("DELETE FROM site_ticket_events WHERE tenant_id = $1 AND site_id = $2 AND id = $3")
-            .bind(self.tenant.as_str())
-            .bind(site.as_str())
-            .bind(event.as_str())
-            .execute(&mut *tx)
-            .await
-            .map_err(StoreError::Db)?;
+        sqlx::query(
+            "DELETE FROM site_ticket_events WHERE tenant_id = $1 AND site_id = $2 AND id = $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .bind(event.as_str())
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
         tx.commit().await.map_err(StoreError::Db)?;
         Ok(())
     }

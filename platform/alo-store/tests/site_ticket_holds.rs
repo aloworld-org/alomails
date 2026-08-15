@@ -67,17 +67,17 @@ fn workshop() -> NewProduct {
 /// A tenant, a user's account door, a site, and a sellable product.
 async fn venue(tag: &str) -> (AccountStore, SiteId, BillingProductId) {
     let store = common::test_store().await;
-    let tenant = store.create_tenant(&format!("tickets-{tag}")).await.unwrap();
+    let tenant = store
+        .create_tenant(&format!("tickets-{tag}"))
+        .await
+        .unwrap();
     let user = store
         .for_tenant(tenant.clone())
         .create_user(&format!("owner@{tag}.test"))
         .await
         .unwrap();
     let account = store.for_account(tenant, user);
-    let site = account
-        .create_site("Venue", &subdomain(tag))
-        .await
-        .unwrap();
+    let site = account.create_site("Venue", &subdomain(tag)).await.unwrap();
     let product = account.create_billing_product(&workshop()).await.unwrap();
     (account, site, product)
 }
@@ -223,9 +223,21 @@ async fn the_tenant_and_site_walls_hold() {
             .unwrap()
             .is_empty()
     );
-    assert_not_found(account_b.take_ticket_hold(&site_a, &event_a, 1, TTL, now).await);
-    assert_not_found(account_b.complete_ticket_hold(&site_a, &hold_a.id, now).await);
-    assert_not_found(account_b.release_ticket_hold(&site_a, &hold_a.id, now).await);
+    assert_not_found(
+        account_b
+            .take_ticket_hold(&site_a, &event_a, 1, TTL, now)
+            .await,
+    );
+    assert_not_found(
+        account_b
+            .complete_ticket_hold(&site_a, &hold_a.id, now)
+            .await,
+    );
+    assert_not_found(
+        account_b
+            .release_ticket_hold(&site_a, &hold_a.id, now)
+            .await,
+    );
     assert_not_found(account_b.ticket_availability(&site_a, &event_a, now).await);
     assert!(
         account_b
@@ -244,7 +256,11 @@ async fn the_tenant_and_site_walls_hold() {
             .unwrap()
             .is_none()
     );
-    assert_not_found(account_a.take_ticket_hold(&site_b, &event_a, 1, TTL, now).await);
+    assert_not_found(
+        account_a
+            .take_ticket_hold(&site_b, &event_a, 1, TTL, now)
+            .await,
+    );
 
     // A's own view is untouched by all of it.
     let availability = account_a
@@ -402,7 +418,11 @@ async fn completion_keeps_the_seats_forever_and_retries_are_harmless() {
     assert_eq!(availability.remaining, 3);
 
     // And a sale cannot be released from here — refunds are a later wave.
-    let said = conflict_of(account.release_ticket_hold(&site, &hold.id, much_later).await);
+    let said = conflict_of(
+        account
+            .release_ticket_hold(&site, &hold.id, much_later)
+            .await,
+    );
     assert!(said.contains("complete"), "{said}");
 }
 
@@ -549,7 +569,10 @@ async fn an_event_with_sales_cannot_be_deleted_and_one_without_goes_cleanly() {
         .take_ticket_hold(&site, &unsold, 1, TTL, now)
         .await
         .unwrap();
-    account.delete_site_ticket_event(&site, &unsold).await.unwrap();
+    account
+        .delete_site_ticket_event(&site, &unsold)
+        .await
+        .unwrap();
     assert!(
         account
             .site_ticket_event(&site, &unsold)

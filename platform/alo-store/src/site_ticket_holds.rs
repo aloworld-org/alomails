@@ -315,9 +315,9 @@ impl AccountStore {
             SiteTicketHoldState::Expired => Err(StoreError::Conflict(
                 "this hold has expired and its seats have been released".to_owned(),
             )),
-            SiteTicketHoldState::Released => Err(StoreError::Conflict(
-                "this hold was released".to_owned(),
-            )),
+            SiteTicketHoldState::Released => {
+                Err(StoreError::Conflict("this hold was released".to_owned()))
+            }
             // Unreachable in practice: a live hold satisfies the guard. If a
             // racing writer flipped it between the two reads, answer with the
             // freshest truth we have.

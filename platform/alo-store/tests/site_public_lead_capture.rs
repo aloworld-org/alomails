@@ -131,7 +131,11 @@ async fn one_visitor_on_two_tenants_sites_is_two_isolated_leads() {
 
     // Each tenant holds exactly its own card, owned by its own site creator.
     for (owned, deal, foreign) in [(&a, &deal_a, &deal_b), (&b, &deal_b, &deal_a)] {
-        let deals = owned.account.crm_deals(&DealFilter::default()).await.unwrap();
+        let deals = owned
+            .account
+            .crm_deals(&DealFilter::default())
+            .await
+            .unwrap();
         assert_eq!(deals.len(), 1);
         assert_eq!(deals[0].id.as_str(), deal.as_str());
         assert_eq!(deals[0].owner_user_id, owned.account.user().as_str());
@@ -185,7 +189,13 @@ async fn a_refused_field_writes_nothing() {
         Err(StoreError::Validation(detail)) => assert!(detail.contains("valid address")),
         other => panic!("expected Validation, got: {other:?}"),
     }
-    assert!(a.account.crm_deals(&DealFilter::default()).await.unwrap().is_empty());
+    assert!(
+        a.account
+            .crm_deals(&DealFilter::default())
+            .await
+            .unwrap()
+            .is_empty()
+    );
     assert!(a.account.crm_pipelines(false).await.unwrap().is_empty());
 }
 

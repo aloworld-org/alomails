@@ -290,7 +290,10 @@ impl AccountStore {
         .fetch_all(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-        Ok(rows.into_iter().filter_map(ActionRow::into_action).collect())
+        Ok(rows
+            .into_iter()
+            .filter_map(ActionRow::into_action)
+            .collect())
     }
 }
 

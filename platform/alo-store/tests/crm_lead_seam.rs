@@ -64,7 +64,10 @@ struct Owned {
 
 async fn owned(tag: &str) -> Owned {
     let (store, blobs) = common::test_store_with_blobs().await;
-    let tenant = store.create_tenant(&format!("lead-seam-{tag}")).await.unwrap();
+    let tenant = store
+        .create_tenant(&format!("lead-seam-{tag}"))
+        .await
+        .unwrap();
     let user = store
         .for_tenant(tenant.clone())
         .create_user(&format!("owner@{tag}.test"))
@@ -266,7 +269,10 @@ async fn crm_refuses_a_blank_title_at_the_seam_too() {
     lead.title = "   ".to_owned();
     match owned.door().capture(&seed(), &lead).await {
         Err(StoreError::Validation(msg)) => {
-            assert!(msg.contains("title"), "expected the title rule, got {msg:?}");
+            assert!(
+                msg.contains("title"),
+                "expected the title rule, got {msg:?}"
+            );
         }
         other => panic!("expected Validation, got: {other:?}"),
     }
@@ -314,7 +320,10 @@ async fn no_pair_of_tenants_can_reach_each_other_through_the_door() {
         .await
     {
         Err(StoreError::Validation(msg)) => {
-            assert!(msg.contains("owner"), "expected the owner rule, got {msg:?}");
+            assert!(
+                msg.contains("owner"),
+                "expected the owner rule, got {msg:?}"
+            );
         }
         other => panic!("expected Validation, got: {other:?}"),
     }

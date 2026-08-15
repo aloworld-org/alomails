@@ -94,7 +94,6 @@ impl AccountStore {
             .into_iter()
             .find(|source| source.calendar.as_str() == calendar.as_str()))
     }
-
 }
 
 /// Opens the Agenda door of the account that owns a bound calendar — the

@@ -201,6 +201,8 @@ pub mod site_order_notify;
 pub mod site_orders;
 pub mod site_page_protection;
 pub mod site_pages;
+pub mod site_payments;
+pub mod site_payments_fixture;
 pub mod site_posts;
 pub mod site_public;
 mod site_public_analytics;
@@ -219,6 +221,7 @@ pub mod site_seed;
 pub mod site_templates;
 pub mod site_theme;
 pub mod site_ticket_holds;
+pub mod site_ticket_orders;
 pub mod site_tickets;
 pub mod site_translations;
 pub mod site_versions;
@@ -439,7 +442,8 @@ pub use id::{
     SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId,
     SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId,
     SitePostId, SitePublishId, SitePublishScheduleId, SiteTicketEventId, SiteTicketHoldId,
-    SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    SiteTicketOrderId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId,
+    UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -596,6 +600,13 @@ pub use site_page_protection::{
 pub use site_pages::{
     LocalizedSitePage, SiteLocaleReadiness, SitePage, SiteTranslationReadiness, validate_page_slug,
 };
+pub use site_payments::{
+    SITE_PAYMENT_DESCRIPTION_MAX_CHARS, SITE_PAYMENT_MAX_AMOUNT_CENTS, SITE_PAYMENT_URL_MAX_CHARS,
+    SitePaymentCreated, SitePaymentEnvironment, SitePaymentError, SitePaymentFuture,
+    SitePaymentIdentity, SitePaymentProvider, SitePaymentRequest, SitePaymentResult,
+    SitePaymentStatus, UnconfiguredSitePayments,
+};
+pub use site_payments_fixture::FixtureSitePayments;
 pub use site_posts::{NewSitePost, SitePost, SitePostStatus, SitePostUpdate};
 pub use site_public::{
     PublishedSite, PublishedSitePost, PublishedSitePostBody, PublishedSitePostPage, SitePublicStore,
@@ -640,6 +651,10 @@ pub use site_theme::{
 pub use site_ticket_holds::{
     SiteTicketHold, SiteTicketHoldState, TICKET_HOLD_MAX_QUANTITY, TICKET_HOLD_MAX_TTL,
     TICKET_HOLD_MIN_TTL, TicketAvailability,
+};
+pub use site_ticket_orders::{
+    MAX_SITE_TICKET_ORDERS, SiteTicketOrder, SiteTicketOrderState, TICKET_BUYER_EMAIL_MAX_CHARS,
+    TICKET_BUYER_NAME_MAX_CHARS, TICKET_ORDER_PAID_AFTER_LAPSE, TicketPaymentTarget,
 };
 pub use site_tickets::{
     SITE_TICKET_EVENT_MAX_CAPACITY, SITE_TICKET_EVENT_MAX_PER_SITE, SiteTicketEvent,

@@ -280,6 +280,13 @@ opaque_id!(
     SiteTicketHoldId
 );
 opaque_id!(
+    /// One ticket order — a buyer paying for one hold's seats through a
+    /// hosted payment page (ADR 0041). Doubles as the idempotency key the
+    /// provider call is made under, so a retried checkout never charges
+    /// twice.
+    SiteTicketOrderId
+);
+opaque_id!(
     /// One domain a tenant is buying or renewing through alo — the whole
     /// arc from the price they were shown to the name serving their site.
     /// Doubles as the replay token the registrar call is made under, so a

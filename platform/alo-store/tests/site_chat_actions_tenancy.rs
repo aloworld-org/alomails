@@ -85,7 +85,9 @@ async fn every_entry_round_trips_and_the_transcript_reads_newest_first() {
     assert_eq!(transcript[0].kind, SiteChatActionKind::LeadKnown);
     assert_eq!(transcript[6].kind, SiteChatActionKind::Answered);
     assert!(
-        transcript.windows(2).all(|w| w[0].occurred_at >= w[1].occurred_at),
+        transcript
+            .windows(2)
+            .all(|w| w[0].occurred_at >= w[1].occurred_at),
         "the transcript reads newest first"
     );
 
@@ -145,9 +147,12 @@ async fn the_transcript_is_bounded_per_site() {
 
     let extra = 10;
     for n in 0..(CHAT_ACTIONS_KEPT + extra) {
-        door.record_chat_action(&published, &NewChatAction::booking_offered(&format!("s-{n}")))
-            .await
-            .unwrap();
+        door.record_chat_action(
+            &published,
+            &NewChatAction::booking_offered(&format!("s-{n}")),
+        )
+        .await
+        .unwrap();
     }
 
     let transcript = acc.site_chat_actions(&site).await.unwrap();
