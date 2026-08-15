@@ -273,7 +273,7 @@ pub(crate) async fn execute_tool(
     // ADR 0047 §3, and the reason "reads only" is true of a turn rather than
     // merely asked of it. The registry says what this tool does and the caller
     // says whose approval it carries; nothing the model returned is consulted.
-    if !entry.is_read() && run.approval == Approval::InTurn {
+    if must_wait_for_approval(entry, run.approval) {
         record_run(account, run, &entry, args, false).await;
         return Err(Problem::with(StatusCode::FORBIDDEN, NEEDS_APPROVAL));
     }
@@ -281,6 +281,19 @@ pub(crate) async fn execute_tool(
     // ADR 0047 §4: both paths leave a row, and a refusal leaves one too.
     record_run(account, run, &entry, args, done.is_ok()).await;
     done
+}
+
+/// The execution boundary's whole rule (ADR 0047 §3): **a tool that changes
+/// something may not run unless the asker approved it.**
+///
+/// A function rather than an inline condition so the rule can be checked against
+/// the entire registry in one test, without a database and without a model. That
+/// matters more here than anywhere else in the turn: it is the only thing
+/// standing between an injected prompt and a write, and it is unreachable in
+/// practice — [`crate::agent_turn`] never offers it a write — so nothing else
+/// would notice if it were quietly inverted.
+const fn must_wait_for_approval(entry: alo_ai::AgentTool, approval: Approval) -> bool {
+    !entry.is_read() && matches!(approval, Approval::InTurn)
 }
 
 /// Write the audit row for one run (ADR 0047 §4).
@@ -1037,9 +1050,31 @@ fn parse_due(s: &str) -> Option<time::OffsetDateTime> {
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::{
-        addr_specs, parse_due, parse_rfc3339, parse_wake_time, reply_references, reply_subject,
-        resolve_email_source,
+        Approval, addr_specs, must_wait_for_approval, parse_due, parse_rfc3339, parse_wake_time,
+        reply_references, reply_subject, resolve_email_source,
     };
+
+    /// The boundary rule, over **every** tool that exists rather than a sample:
+    /// a write is refused from inside a turn and allowed with the asker's own
+    /// approval; a read runs either way. The registry is the only thing
+    /// consulted, so a tool added tomorrow is covered by this the moment it is
+    /// declared.
+    #[test]
+    fn a_write_is_refused_from_inside_a_turn_and_a_read_never_is() {
+        for entry in alo_ai::all_tools() {
+            assert_eq!(
+                must_wait_for_approval(entry, Approval::InTurn),
+                !entry.is_read(),
+                "{} is wrong at the boundary with nobody's approval",
+                entry.name
+            );
+            assert!(
+                !must_wait_for_approval(entry, Approval::Asker),
+                "{} was refused despite the asker approving it",
+                entry.name
+            );
+        }
+    }
 
     #[test]
     fn addr_specs_extracts_recipients_from_a_header_list() {
