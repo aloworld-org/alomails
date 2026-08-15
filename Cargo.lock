@@ -178,6 +178,7 @@ dependencies = [
 name = "alo-sites"
 version = "0.0.1"
 dependencies = [
+ "alo-ai",
  "alo-store",
  "axum",
  "bytes",

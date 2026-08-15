@@ -20,6 +20,7 @@ use time::OffsetDateTime;
 use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
 use crate::id::{SiteId, TenantId, UserId};
+use crate::model::AiConfigRow;
 use crate::site_public::{PublishedSite, SitePublicStore};
 use crate::store::Store;
 
@@ -201,6 +202,38 @@ impl SitePublicStore {
                 remaining_cents: ceiling - spent,
             },
         })
+    }
+
+    /// The resolved site's tenant's default AI backend, for the visitor
+    /// assistant's own model call (S3.02e) — the same row, mapped the same
+    /// way, as the authenticated door's `default_ai_config`: the enabled
+    /// default provider, first listed model. `None` means no usable backend
+    /// is configured and the assistant is honestly unavailable.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on backend failure.
+    pub async fn tenant_ai_config(&self, site: &PublishedSite) -> Result<Option<AiConfigRow>> {
+        let row = sqlx::query_as::<_, (String, String, Option<String>, bool)>(
+            "SELECT base_url, model, api_key, enabled FROM ai_providers \
+             WHERE tenant_id = $1 AND is_default AND enabled LIMIT 1",
+        )
+        .bind(site.tenant.as_str())
+        .fetch_optional(self.pool())
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(row.map(|(base_url, model, api_key, enabled)| AiConfigRow {
+            base_url,
+            // A provider may enable several models (stored comma-separated);
+            // the first is the active model the AI features request.
+            model: model
+                .split(',')
+                .next()
+                .map(str::trim)
+                .unwrap_or("")
+                .to_owned(),
+            api_key,
+            enabled,
+        }))
     }
 
     /// Adds `cents` of model spend to the resolved site's ledger for `month`,

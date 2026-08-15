@@ -24,11 +24,17 @@
 
 use std::collections::BTreeMap;
 
+use sqlx::PgPool;
+
 use crate::account::AccountStore;
+use crate::blob::BlobStore;
 use crate::error::{Result, StoreError};
 use crate::extract::extract_text;
 use crate::id::{SiteId, SiteKnowledgeSourceId, SitePublishId};
+use crate::site_collections::SiteCollectionSnapshot;
 use crate::site_model::{Section, SectionsEnvelope};
+use crate::site_public::{PublishedSite, SitePublicStore};
+use crate::site_publish::SitePageSnapshot;
 
 /// Where a grounding document came from — the citation every assistant answer
 /// must carry (ADR 0040: an answer that cannot cite is not given).
@@ -83,151 +89,213 @@ impl AccountStore {
         };
         let publish_id = SitePublishId::new(publish_id);
         let mut corpus = Vec::new();
-        self.ground_published_pages(site, &publish_id, &mut corpus)
-            .await?;
-        self.ground_published_posts(site, &mut corpus).await?;
-        self.ground_knowledge_sources(site, &mut corpus).await?;
+        page_documents(
+            self.site_publish_snapshots(site, &publish_id).await?,
+            self.site_publish_collection_snapshots(site, &publish_id)
+                .await?,
+            &mut corpus,
+        )?;
+        post_documents(
+            &self.pool,
+            &self.blobs,
+            self.tenant.as_str(),
+            site.as_str(),
+            &mut corpus,
+        )
+        .await?;
+        knowledge_documents(
+            &self.pool,
+            &self.blobs,
+            self.tenant.as_str(),
+            site.as_str(),
+            &mut corpus,
+        )
+        .await?;
         Ok(corpus)
     }
+}
 
-    /// The published pages: every snapshot of the current publish, its typed
-    /// section text plus the collection rows frozen with that same publish.
-    async fn ground_published_pages(
+impl SitePublicStore {
+    /// The same corpus through the public door, for the visitor assistant's
+    /// own answering path (S3.02e): a [`PublishedSite`] is only ever resolved
+    /// from a live publish, so the assembly reads exactly the frozen snapshot
+    /// set the Host lookup led to — one assembly, two doors, no second copy
+    /// of the rules. Scoped by the resolved value's private tenant pairing
+    /// like every other read on this door.
+    ///
+    /// # Errors
+    /// [`StoreError::Conflict`] when a stored snapshot fails to parse;
+    /// [`StoreError::Db`] on backend failure.
+    pub async fn site_grounding_corpus(
         &self,
-        site: &SiteId,
-        publish: &SitePublishId,
-        corpus: &mut Vec<GroundingDocument>,
-    ) -> Result<()> {
-        let collections: BTreeMap<String, Vec<String>> = self
-            .site_publish_collection_snapshots(site, publish)
-            .await?
-            .into_iter()
-            .map(|snapshot| {
-                let mut parts = vec![snapshot.name];
-                for item in snapshot.items {
-                    parts.push(item.title);
-                    parts.extend(item.summary);
-                    parts.extend(item.body);
-                }
-                (snapshot.collection_id.as_str().to_owned(), parts)
-            })
-            .collect();
-        for snapshot in self.site_publish_snapshots(site, publish).await? {
-            let envelope = SectionsEnvelope::from_value(snapshot.sections).map_err(|error| {
-                StoreError::Conflict(format!("published page snapshot is invalid: {error}"))
-            })?;
-            let mut parts = Vec::new();
-            if let Some(description) = &snapshot.seo_description {
-                push_text(&mut parts, description);
-            }
-            for section in &envelope.sections {
-                parts.extend(section_text(section));
-                if let Section::Collection(collection) = section
-                    && let Some(items) = collections.get(collection.collection_id.as_str())
-                {
-                    parts.extend(items.iter().cloned());
-                }
-            }
-            corpus.push(GroundingDocument {
-                citation: GroundingCitation::Page {
-                    slug: snapshot.slug,
-                    locale: snapshot.locale,
-                },
-                title: snapshot.title,
-                text: parts.join("\n"),
-            });
-        }
-        Ok(())
-    }
-
-    /// The published blog posts, through the same gate the public service
-    /// uses: status `published`, a non-trashed `doc` node, its current bytes.
-    async fn ground_published_posts(
-        &self,
-        site: &SiteId,
-        corpus: &mut Vec<GroundingDocument>,
-    ) -> Result<()> {
-        let rows = sqlx::query_as::<_, (String, String, String, String, Option<String>, String)>(
-            "SELECT p.slug, p.title, p.excerpt, d.kind, d.content_type, b.hash \
-             FROM site_posts p \
-             JOIN drive_nodes d ON d.tenant_id = p.tenant_id AND d.id = p.doc_node_id \
-             JOIN blobs b ON b.tenant_id = d.tenant_id AND b.id = d.blob_id \
-             WHERE p.tenant_id = $1 AND p.site_id = $2 \
-               AND p.status = 'published' AND d.kind = 'doc' AND NOT d.trashed \
-             ORDER BY p.published_at DESC, p.id",
+        site: &PublishedSite,
+    ) -> Result<Vec<GroundingDocument>> {
+        let mut corpus = Vec::new();
+        page_documents(
+            self.published_pages(site).await?,
+            self.published_collections(site).await?,
+            &mut corpus,
+        )?;
+        post_documents(
+            self.pool(),
+            self.blobs(),
+            site.tenant.as_str(),
+            site.site.as_str(),
+            &mut corpus,
         )
-        .bind(self.tenant.as_str())
-        .bind(site.as_str())
-        .fetch_all(&self.pool)
-        .await
-        .map_err(StoreError::Db)?;
-        for (slug, title, excerpt, kind, content_type, hash) in rows {
-            let mut parts = Vec::new();
-            push_text(&mut parts, &excerpt);
-            if let Some(body) = self.extracted_blob_text(kind, content_type, &hash).await {
-                parts.push(body);
-            }
-            corpus.push(GroundingDocument {
-                citation: GroundingCitation::Post { slug },
-                title,
-                text: parts.join("\n"),
-            });
-        }
-        Ok(())
-    }
-
-    /// The Public knowledge collection: each deliberately-added document's
-    /// current text — the live-read the published blog set the precedent for,
-    /// because the add was the deliberate act on exactly this document.
-    async fn ground_knowledge_sources(
-        &self,
-        site: &SiteId,
-        corpus: &mut Vec<GroundingDocument>,
-    ) -> Result<()> {
-        let rows = sqlx::query_as::<_, (String, String, String, Option<String>, Option<String>)>(
-            "SELECT k.id, d.name, d.kind, d.content_type, b.hash \
-             FROM site_knowledge_sources k \
-             JOIN drive_nodes d ON d.tenant_id = k.tenant_id AND d.id = k.doc_node_id \
-             LEFT JOIN blobs b ON b.tenant_id = d.tenant_id AND b.id = d.blob_id \
-             WHERE k.tenant_id = $1 AND k.site_id = $2 AND NOT d.trashed \
-             ORDER BY k.added_at, k.id",
+        .await?;
+        knowledge_documents(
+            self.pool(),
+            self.blobs(),
+            site.tenant.as_str(),
+            site.site.as_str(),
+            &mut corpus,
         )
-        .bind(self.tenant.as_str())
-        .bind(site.as_str())
-        .fetch_all(&self.pool)
-        .await
-        .map_err(StoreError::Db)?;
-        for (source_id, name, kind, content_type, hash) in rows {
-            let Some(hash) = hash else { continue };
-            let Some(text) = self.extracted_blob_text(kind, content_type, &hash).await else {
-                continue;
-            };
-            corpus.push(GroundingDocument {
-                citation: GroundingCitation::Knowledge {
-                    source_id: SiteKnowledgeSourceId::new(source_id),
-                },
-                title: name,
-                text,
-            });
-        }
-        Ok(())
+        .await?;
+        Ok(corpus)
     }
+}
 
-    /// Best-effort text extraction from one tenant blob, off the async
-    /// runtime — the same discipline as Drive content indexing: a missing
-    /// blob, a failed parse, or a parser panic is `None`, never an error.
-    async fn extracted_blob_text(
-        &self,
-        kind: String,
-        content_type: Option<String>,
-        hash: &str,
-    ) -> Option<String> {
-        let bytes = self.blobs.get(self.tenant.as_str(), hash).await.ok()?;
-        tokio::task::spawn_blocking(move || extract_text(&kind, content_type.as_deref(), &bytes))
-            .await
-            .ok()
-            .flatten()
+/// The published pages: every snapshot of the frozen publish, its typed
+/// section text plus the collection rows frozen with that same publish.
+/// Shared verbatim by both doors — the corpus rules must never fork.
+fn page_documents(
+    snapshots: Vec<SitePageSnapshot>,
+    collection_snapshots: Vec<SiteCollectionSnapshot>,
+    corpus: &mut Vec<GroundingDocument>,
+) -> Result<()> {
+    let collections: BTreeMap<String, Vec<String>> = collection_snapshots
+        .into_iter()
+        .map(|snapshot| {
+            let mut parts = vec![snapshot.name];
+            for item in snapshot.items {
+                parts.push(item.title);
+                parts.extend(item.summary);
+                parts.extend(item.body);
+            }
+            (snapshot.collection_id.as_str().to_owned(), parts)
+        })
+        .collect();
+    for snapshot in snapshots {
+        let envelope = SectionsEnvelope::from_value(snapshot.sections).map_err(|error| {
+            StoreError::Conflict(format!("published page snapshot is invalid: {error}"))
+        })?;
+        let mut parts = Vec::new();
+        if let Some(description) = &snapshot.seo_description {
+            push_text(&mut parts, description);
+        }
+        for section in &envelope.sections {
+            parts.extend(section_text(section));
+            if let Section::Collection(collection) = section
+                && let Some(items) = collections.get(collection.collection_id.as_str())
+            {
+                parts.extend(items.iter().cloned());
+            }
+        }
+        corpus.push(GroundingDocument {
+            citation: GroundingCitation::Page {
+                slug: snapshot.slug,
+                locale: snapshot.locale,
+            },
+            title: snapshot.title,
+            text: parts.join("\n"),
+        });
     }
+    Ok(())
+}
+
+/// The published blog posts, through the same gate the public service
+/// uses: status `published`, a non-trashed `doc` node, its current bytes.
+async fn post_documents(
+    pool: &PgPool,
+    blobs: &BlobStore,
+    tenant: &str,
+    site: &str,
+    corpus: &mut Vec<GroundingDocument>,
+) -> Result<()> {
+    let rows = sqlx::query_as::<_, (String, String, String, String, Option<String>, String)>(
+        "SELECT p.slug, p.title, p.excerpt, d.kind, d.content_type, b.hash \
+         FROM site_posts p \
+         JOIN drive_nodes d ON d.tenant_id = p.tenant_id AND d.id = p.doc_node_id \
+         JOIN blobs b ON b.tenant_id = d.tenant_id AND b.id = d.blob_id \
+         WHERE p.tenant_id = $1 AND p.site_id = $2 \
+           AND p.status = 'published' AND d.kind = 'doc' AND NOT d.trashed \
+         ORDER BY p.published_at DESC, p.id",
+    )
+    .bind(tenant)
+    .bind(site)
+    .fetch_all(pool)
+    .await
+    .map_err(StoreError::Db)?;
+    for (slug, title, excerpt, kind, content_type, hash) in rows {
+        let mut parts = Vec::new();
+        push_text(&mut parts, &excerpt);
+        if let Some(body) = extracted_blob_text(blobs, tenant, kind, content_type, &hash).await {
+            parts.push(body);
+        }
+        corpus.push(GroundingDocument {
+            citation: GroundingCitation::Post { slug },
+            title,
+            text: parts.join("\n"),
+        });
+    }
+    Ok(())
+}
+
+/// The Public knowledge collection: each deliberately-added document's
+/// current text — the live-read the published blog set the precedent for,
+/// because the add was the deliberate act on exactly this document.
+async fn knowledge_documents(
+    pool: &PgPool,
+    blobs: &BlobStore,
+    tenant: &str,
+    site: &str,
+    corpus: &mut Vec<GroundingDocument>,
+) -> Result<()> {
+    let rows = sqlx::query_as::<_, (String, String, String, Option<String>, Option<String>)>(
+        "SELECT k.id, d.name, d.kind, d.content_type, b.hash \
+         FROM site_knowledge_sources k \
+         JOIN drive_nodes d ON d.tenant_id = k.tenant_id AND d.id = k.doc_node_id \
+         LEFT JOIN blobs b ON b.tenant_id = d.tenant_id AND b.id = d.blob_id \
+         WHERE k.tenant_id = $1 AND k.site_id = $2 AND NOT d.trashed \
+         ORDER BY k.added_at, k.id",
+    )
+    .bind(tenant)
+    .bind(site)
+    .fetch_all(pool)
+    .await
+    .map_err(StoreError::Db)?;
+    for (source_id, name, kind, content_type, hash) in rows {
+        let Some(hash) = hash else { continue };
+        let Some(text) = extracted_blob_text(blobs, tenant, kind, content_type, &hash).await else {
+            continue;
+        };
+        corpus.push(GroundingDocument {
+            citation: GroundingCitation::Knowledge {
+                source_id: SiteKnowledgeSourceId::new(source_id),
+            },
+            title: name,
+            text,
+        });
+    }
+    Ok(())
+}
+
+/// Best-effort text extraction from one tenant blob, off the async
+/// runtime — the same discipline as Drive content indexing: a missing
+/// blob, a failed parse, or a parser panic is `None`, never an error.
+async fn extracted_blob_text(
+    blobs: &BlobStore,
+    tenant: &str,
+    kind: String,
+    content_type: Option<String>,
+    hash: &str,
+) -> Option<String> {
+    let bytes = blobs.get(tenant, hash).await.ok()?;
+    tokio::task::spawn_blocking(move || extract_text(&kind, content_type.as_deref(), &bytes))
+        .await
+        .ok()
+        .flatten()
 }
 
 /// The human-readable text of one typed section — every string the section

@@ -411,3 +411,124 @@ async fn only_readable_documents_enter_the_collection_and_the_cap_holds() {
     let overflow = create_doc(&account, "One too many", "the last straw").await;
     assert_conflict(account.add_site_knowledge_source(&site, &overflow).await);
 }
+
+/// The public door (S3.02e): the visitor assistant reads the corpus through
+/// `SitePublicStore`, and it must be byte-identical to the authenticated
+/// assembly — one set of rules, two doors — while a resolved host can only
+/// ever read its own tenant's corpus. The tenant's AI backend follows the
+/// same scoping: the resolved site answers with its own tenant's default
+/// provider or nothing.
+#[tokio::test]
+async fn the_public_door_reads_the_same_corpus_and_only_its_own() {
+    let (store, blobs) = common::test_store_with_blobs().await;
+    let public = alo_store::SitePublicStore::new(
+        sqlx::postgres::PgPoolOptions::new()
+            .max_connections(4)
+            .connect(&common::database_url())
+            .await
+            .unwrap(),
+        blobs,
+    );
+
+    let (a, _, _) = common::fresh_account(&store, "grounding-public-a").await;
+    let (b, _, _) = common::fresh_account(&store, "grounding-public-b").await;
+
+    let a_sub = subdomain("puba");
+    let a_site = a.create_site("Bakery A", &a_sub).await.unwrap();
+    let a_home = a.create_site_page(&a_site, "Home", "", true).await.unwrap();
+    a.set_page_sections(
+        &a_site,
+        &a_home,
+        hero_faq_sections("A_PAGE_FACT rye bread daily", "A_FAQ_FACT since 1998"),
+    )
+    .await
+    .unwrap();
+    a.publish_site(&a_site).await.unwrap();
+    let a_doc = create_doc(&a, "Launch story", "A_POST_FACT sourdough week").await;
+    let a_post = a
+        .create_site_post(
+            &a_site,
+            &NewSitePost {
+                doc_node_id: &a_doc,
+                slug: "launch",
+                title: "The launch",
+                excerpt: "A launch excerpt",
+                cover_blob_id: None,
+            },
+        )
+        .await
+        .unwrap();
+    a.publish_site_post(&a_site, &a_post).await.unwrap();
+    let a_knowledge = create_doc(&a, "Price list", "A_KNOWLEDGE_FACT day rate 900").await;
+    a.add_site_knowledge_source(&a_site, &a_knowledge)
+        .await
+        .unwrap();
+
+    let b_sub = subdomain("pubb");
+    let b_site = b.create_site("Bakery B", &b_sub).await.unwrap();
+    let b_home = b.create_site_page(&b_site, "Home", "", true).await.unwrap();
+    b.set_page_sections(
+        &b_site,
+        &b_home,
+        hero_faq_sections("B_PAGE_FACT spelt loaves", "B_FAQ_FACT since 2001"),
+    )
+    .await
+    .unwrap();
+    b.publish_site(&b_site).await.unwrap();
+
+    // The public assembly is the authenticated assembly, verbatim.
+    let resolved_a = public.resolve_published(&a_sub).await.unwrap().unwrap();
+    let via_public = public.site_grounding_corpus(&resolved_a).await.unwrap();
+    let via_account = a.site_grounding_corpus(&a_site).await.unwrap();
+    assert_eq!(via_public, via_account, "the two doors must never fork");
+    let text = corpus_text(&via_public);
+    assert!(text.contains("A_PAGE_FACT"));
+    assert!(text.contains("A_POST_FACT"));
+    assert!(text.contains("A_KNOWLEDGE_FACT"));
+
+    // A resolved host reads its own tenant's strings and nobody else's.
+    assert!(!text.contains("B_PAGE_FACT"));
+    let resolved_b = public.resolve_published(&b_sub).await.unwrap().unwrap();
+    let b_text = corpus_text(&public.site_grounding_corpus(&resolved_b).await.unwrap());
+    assert!(b_text.contains("B_PAGE_FACT"));
+    assert!(!b_text.contains("A_PAGE_FACT") && !b_text.contains("A_KNOWLEDGE_FACT"));
+
+    // The AI backend follows the same wall: no provider → None; tenant A's
+    // enabled default → A's config (first listed model); tenant B still None.
+    assert!(
+        public
+            .tenant_ai_config(&resolved_a)
+            .await
+            .unwrap()
+            .is_none()
+    );
+    // Provider ids are global primary keys in the shared test database, so
+    // the id must be fresh per run — a repeated fixed id would still belong
+    // to an earlier run's tenant and the upsert would silently touch nothing.
+    let provider = format!("prov-{}", alo_store::SiteId::generate().as_str());
+    a.upsert_ai_provider(
+        &provider,
+        "openai_compatible",
+        "Test backend",
+        "http://127.0.0.1:1",
+        "model-one, model-two",
+        Some("secret-key"),
+        true,
+    )
+    .await
+    .unwrap();
+    a.set_default_ai_provider(&provider).await.unwrap();
+    let config = public.tenant_ai_config(&resolved_a).await.unwrap().unwrap();
+    assert_eq!(config.base_url, "http://127.0.0.1:1");
+    assert_eq!(config.model, "model-one");
+    assert_eq!(config.api_key.as_deref(), Some("secret-key"));
+    assert!(config.enabled);
+    assert!(
+        public
+            .tenant_ai_config(&resolved_b)
+            .await
+            .unwrap()
+            .is_none(),
+        "tenant B must never read tenant A's backend"
+    );
+}
