@@ -723,3 +723,304 @@ async fn the_table_has_no_room_for_a_card() {
         }
     }
 }
+
+// ---------------------------------------------------------------------------
+// Fulfilment (item S3.04d): a paid sale is made good — the ticket minted, the
+// invoice raised and settled in Billing, the buyer in CRM — at most once, and
+// walled per tenant and per site.
+//
+// Every call to `claim_ticket_fulfilments` lives inside ONE test function:
+// the claim sweep is global by design (it is a system worker), so two tests
+// claiming concurrently would claim each other's orders. One claiming test
+// cannot race itself.
+// ---------------------------------------------------------------------------
+
+use alo_store::{
+    ClaimedTicketFulfilment, DealFilter, NewBillingSettings, PipelineSeed, SitePublicStore,
+    SiteTicketOrder, SiteTicketOrderId, StageSeed, Store, TicketFulfilWords,
+};
+
+fn fulfil_words() -> TicketFulfilWords {
+    TicketFulfilWords {
+        unit: "ticket",
+        fallback_item: "Event ticket",
+        payment_method: "Hosted checkout",
+        crm_title: "Ticket sale",
+    }
+}
+
+/// The board a first capture seeds — the caller's strings, as the worker
+/// resolves them per site language.
+fn crm_seed() -> PipelineSeed {
+    PipelineSeed {
+        name: "Sales".to_owned(),
+        stages: [("New", false, false), ("Won", true, false), ("Lost", false, true)]
+            .into_iter()
+            .map(|(name, is_won, is_lost)| StageSeed {
+                name: name.to_owned(),
+                is_won,
+                is_lost,
+            })
+            .collect(),
+    }
+}
+
+/// Order → hosted payment → webhook-confirmed paid, exactly as S3.04c wires
+/// it — the moment fulfilment exists to follow.
+async fn paid(v: &Venue, tag: &str, hold: &SiteTicketHoldId, email: &str) -> SiteTicketOrder {
+    let order = v
+        .account
+        .create_ticket_order(&v.site, hold, "Maud Adams", email, v.now)
+        .await
+        .unwrap();
+    v.account
+        .open_ticket_payment(
+            &v.site,
+            &order.id,
+            &ppid(tag),
+            "https://checkout.fixture.invalid/fulfil",
+        )
+        .await
+        .unwrap();
+    v.account
+        .apply_ticket_payment(&v.site, &order.id, SitePaymentStatus::Paid, v.now)
+        .await
+        .unwrap()
+}
+
+/// Claims rounds until the given order is offered. The shared database may
+/// hold other suites' unfulfilled paid orders; each round makes progress, so
+/// the loop is bounded.
+async fn claim_for(store: &Store, order: &SiteTicketOrderId) -> ClaimedTicketFulfilment {
+    for _ in 0..100 {
+        let claims = store.claim_ticket_fulfilments(100).await.unwrap();
+        let found = claims.iter().any(|claim| &claim.order == order);
+        let ours = claims.into_iter().find(|claim| &claim.order == order);
+        if found {
+            return ours.unwrap();
+        }
+    }
+    panic!("the paid order was never offered to the sweep");
+}
+
+#[tokio::test]
+async fn a_paid_sale_is_made_good_once_and_walled() {
+    let store = common::test_store().await;
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(4)
+        .connect(&common::database_url())
+        .await
+        .unwrap();
+    let public = SitePublicStore::new(
+        pool.clone(),
+        alo_store::BlobStore::in_memory(4 * 1024 * 1024),
+    );
+
+    // A venue whose seller profile can invoice, with a published site the
+    // public ticket page will resolve.
+    let v = venue("fulfil").await;
+    let sub = v.account.site(&v.site).await.unwrap().unwrap().subdomain;
+    v.account
+        .create_site_page(&v.site, "Home", "", true)
+        .await
+        .unwrap();
+    v.account.publish_site(&v.site).await.unwrap();
+    v.account
+        .save_billing_settings(&NewBillingSettings {
+            legal_name: "Letterpress BV".to_owned(),
+            country: "BE".to_owned(),
+            ..NewBillingSettings::default()
+        })
+        .await
+        .unwrap();
+    let buyer = format!("maud@{}.example", SiteId::generate().as_str().to_lowercase());
+    let order = paid(&v, "fulfil-a", &v.hold, &buyer).await;
+
+    // The claim carries the sale and mints the ticket.
+    let claim = claim_for(&store, &order.id).await;
+    assert_eq!(claim.quantity, 2);
+    assert_eq!(claim.amount_cents, 17_000);
+    assert_eq!(claim.vat_rate_bp, 2100);
+    assert_eq!(claim.buyer_email, buyer);
+    assert_eq!(claim.site_subdomain, sub);
+    assert!(!claim.token.is_empty());
+
+    // The act: invoice raised and settled, buyer in CRM, record written.
+    let outcome = store
+        .fulfil_claimed_ticket(&claim, &fulfil_words(), &crm_seed())
+        .await
+        .unwrap();
+    assert!(outcome.invoiced);
+    assert!(outcome.lead_raised);
+
+    // Billing's document: issued, referencing the order, worth no more than
+    // the buyer paid (VAT carved out of the consumer price, never added on
+    // top of it), and settled by the recorded hosted payment.
+    let invoices = v.account.billing_invoices(None).await.unwrap();
+    let summary = invoices
+        .iter()
+        .find(|summary| summary.invoice.reference == order.id.as_str())
+        .expect("the sale has an invoice");
+    assert!(summary.invoice.number.is_some());
+    assert!(summary.totals.gross_cents <= 17_000);
+    assert!(summary.totals.gross_cents >= 16_998);
+    assert!(summary.totals.vat_cents > 0);
+    assert_eq!(summary.paid_cents, 17_000);
+
+    // CRM's card: one lead, titled by the caller, carrying the buyer.
+    let deals = v.account.crm_deals(&DealFilter::default()).await.unwrap();
+    assert_eq!(deals.len(), 1);
+    assert_eq!(deals[0].title, "Ticket sale — Venue");
+    assert_eq!(deals[0].contact_email, buyer);
+    assert_eq!(deals[0].value_cents, 0, "a sale states no pipeline value");
+
+    // At most once: no later round ever offers this order again.
+    let again = store.claim_ticket_fulfilments(200).await.unwrap();
+    assert!(
+        again.iter().all(|c| c.order != order.id),
+        "a fulfilled order must never be claimed twice"
+    );
+
+    // The buyer's ticket, on the site it was minted for.
+    let site = public.resolve_published(&sub).await.unwrap().unwrap();
+    let ticket = public
+        .public_ticket(&site, &claim.token)
+        .await
+        .unwrap()
+        .expect("the token answers on its own site");
+    assert_eq!(ticket.quantity, 2);
+    assert_eq!(ticket.holder, "Maud Adams");
+    assert!(ticket.description.contains("Letterpress workshop"));
+
+    // The walls: another tenant's site, a sibling site of the same tenant,
+    // and garbage all get the same nothing.
+    let stranger = venue("fulfil-wall").await;
+    let stranger_sub = stranger
+        .account
+        .site(&stranger.site)
+        .await
+        .unwrap()
+        .unwrap()
+        .subdomain;
+    stranger
+        .account
+        .create_site_page(&stranger.site, "Home", "", true)
+        .await
+        .unwrap();
+    stranger.account.publish_site(&stranger.site).await.unwrap();
+    let foreign = public
+        .resolve_published(&stranger_sub)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(public.public_ticket(&foreign, &claim.token).await.unwrap().is_none());
+    let sibling_sub = subdomain("fulfil-sib");
+    let sibling = v.account.create_site("Annex", &sibling_sub).await.unwrap();
+    v.account
+        .create_site_page(&sibling, "Home", "", true)
+        .await
+        .unwrap();
+    v.account.publish_site(&sibling).await.unwrap();
+    let sibling_site = public.resolve_published(&sibling_sub).await.unwrap().unwrap();
+    assert!(
+        public
+            .public_ticket(&sibling_site, &claim.token)
+            .await
+            .unwrap()
+            .is_none(),
+        "a ticket answers only on the site it was minted for"
+    );
+    assert!(public.public_ticket(&site, "no-such-token").await.unwrap().is_none());
+    assert!(public.public_ticket(&site, "a token; drop").await.unwrap().is_none());
+
+    // The same buyer again: Billing reuses the customer, CRM answers
+    // already-customer rather than raising a twin card.
+    let hold2 = v
+        .account
+        .take_ticket_hold(&v.site, &v.event, 1, TTL, v.now)
+        .await
+        .unwrap();
+    let order2 = paid(&v, "fulfil-b", &hold2.id, &buyer).await;
+    let claim2 = claim_for(&store, &order2.id).await;
+    let outcome2 = store
+        .fulfil_claimed_ticket(&claim2, &fulfil_words(), &crm_seed())
+        .await
+        .unwrap();
+    assert!(outcome2.invoiced);
+    assert!(!outcome2.lead_raised, "a known buyer raises no second card");
+    let customers = v.account.billing_customers(false).await.unwrap();
+    assert_eq!(
+        customers
+            .iter()
+            .filter(|c| c.email.as_deref() == Some(buyer.as_str()))
+            .count(),
+        1,
+        "one buyer is one customer"
+    );
+    assert_eq!(v.account.billing_invoices(None).await.unwrap().len(), 2);
+    assert_eq!(v.account.crm_deals(&DealFilter::default()).await.unwrap().len(), 1);
+
+    // A venue that cannot invoice yet: the sale is still made good — ticket
+    // and CRM — and the missing invoice is written down, not guessed.
+    let bare = venue("fulfil-bare").await;
+    let bare_buyer = format!("ada@{}.example", SiteId::generate().as_str().to_lowercase());
+    let order3 = paid(&bare, "fulfil-c", &bare.hold, &bare_buyer).await;
+    let claim3 = claim_for(&store, &order3.id).await;
+    let outcome3 = store
+        .fulfil_claimed_ticket(&claim3, &fulfil_words(), &crm_seed())
+        .await
+        .unwrap();
+    assert!(!outcome3.invoiced, "no seller country, no invoice");
+    assert!(bare.account.billing_invoices(None).await.unwrap().is_empty());
+    assert_eq!(
+        bare.account.crm_deals(&DealFilter::default()).await.unwrap().len(),
+        1,
+        "the buyer still reaches CRM"
+    );
+}
+
+#[tokio::test]
+async fn the_fulfilment_table_has_no_buyer_column() {
+    let _ = common::test_store().await;
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .connect(&common::database_url())
+        .await
+        .unwrap();
+    let columns: Vec<String> = sqlx::query_scalar(
+        "SELECT column_name FROM information_schema.columns \
+          WHERE table_name = 'site_ticket_fulfilments' ORDER BY column_name",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    // The exact column list IS the privacy proof: who bought lives on the
+    // order, and a column that could carry a person would have to appear
+    // here, in a diff a reviewer reads next to this sentence.
+    assert_eq!(
+        columns,
+        vec![
+            "created_at",
+            "crm_outcome",
+            "description",
+            "event_id",
+            "id",
+            "invoice_id",
+            "invoice_note",
+            "invoice_number",
+            "order_id",
+            "site_id",
+            "tenant_id",
+            "token",
+            "updated_at",
+        ]
+    );
+    for column in &columns {
+        for forbidden in ["name", "email", "phone", "buyer", "card", "address"] {
+            assert!(
+                !column.contains(forbidden),
+                "column '{column}' could carry a person"
+            );
+        }
+    }
+}

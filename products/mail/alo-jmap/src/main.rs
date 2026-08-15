@@ -194,6 +194,25 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Background ticket-fulfilment sweeper (alo Sites, ADR 0041): make each
+    // paid ticket sale good — mint the buyer's ticket, raise and settle the
+    // invoice in Billing, hand the buyer to CRM — each through the owning
+    // module's own door. Every 30 seconds: the buyer is watching the return
+    // page their payment sent them back to.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(30));
+            loop {
+                tick.tick().await;
+                let fulfilled = alo_jmap::site_ticket_worker::run_due(&store).await;
+                if fulfilled > 0 {
+                    tracing::info!(fulfilled, "ticket fulfilment sweep");
+                }
+            }
+        });
+    }
+
     // Background scheduled-publish sweeper (alo Sites, ADR 0036): put each
     // website whose chosen moment has arrived on the internet, through the
     // scheduling user's own account door. Every 30 seconds, so "09:00" means

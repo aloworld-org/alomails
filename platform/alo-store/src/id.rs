@@ -287,6 +287,12 @@ opaque_id!(
     SiteTicketOrderId
 );
 opaque_id!(
+    /// One fulfilment of a paid ticket order — the record that the sale was
+    /// made good: the ticket minted, the invoice raised, the contact in CRM
+    /// (ADR 0041, S3.04d). One per order, inserted as the sweep's claim.
+    SiteTicketFulfilmentId
+);
+opaque_id!(
     /// One domain a tenant is buying or renewing through alo — the whole
     /// arc from the price they were shown to the name serving their site.
     /// Doubles as the replay token the registrar call is made under, so a
