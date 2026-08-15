@@ -9,7 +9,9 @@
 
 mod common;
 
-use alo_store::{ChannelVisibility, ChatAgentId, ChatChannelId, NewAgentToolRun, StoreError};
+use alo_store::{
+    AgentProduct, ChannelVisibility, ChatAgentId, ChatChannelId, NewAgentToolRun, StoreError,
+};
 use serde_json::json;
 
 /// A read runs inside the turn with nobody's approval, so the log is the only
@@ -24,7 +26,7 @@ async fn a_read_leaves_a_record_even_though_nobody_approved_it() {
     let a = store.for_account(t.clone(), ua.clone());
 
     let agent = a
-        .create_agent("inventory", "Inventory", None)
+        .create_agent("inventory", "Inventory", None, AgentProduct::Inventory)
         .await
         .unwrap();
     let room = a
@@ -163,7 +165,10 @@ async fn a_run_is_never_another_tenants_and_never_a_colleagues() {
         .unwrap();
     let c = store.for_account(t2.clone(), uc.clone());
 
-    let agent = a.create_agent("agenda", "Agenda", None).await.unwrap();
+    let agent = a
+        .create_agent("agenda", "Agenda", None, AgentProduct::Agenda)
+        .await
+        .unwrap();
     let args = json!({ "from": "2026-08-14" });
     a.record_tool_run(&NewAgentToolRun {
         agent: Some(&agent),

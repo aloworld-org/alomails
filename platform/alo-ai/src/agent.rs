@@ -1,74 +1,40 @@
-//! The "Ask alo" agent (ADR 0034) — the top-level assistant that either ANSWERS
-//! from the user's workspace or PROPOSES one action for the user to approve. It
-//! never executes: the jmap layer runs an approved action through the
-//! tenant-scoped store. Model-agnostic by design — the model replies with a
-//! single JSON envelope (no native function-calling required), parsed here.
+//! One agent turn (ADR 0034) — an agent that either ANSWERS from the user's
+//! workspace or PROPOSES one action for the user to approve. It never executes:
+//! the jmap layer runs an approved action through the tenant-scoped store.
+//! Model-agnostic by design — the model replies with a single JSON envelope (no
+//! native function-calling required), parsed here.
 //!
-//! Trust rule (ADR 0023/0034): the agent proposes, the user approves. Nothing in
-//! this module performs an action; it only decides what to propose.
+//! **Every turn is a product's turn** (A1.2). The prompt is built for one
+//! [`AgentProduct`] and offers that product's tools and nobody else's, so the
+//! Inventory agent is told about stock and not about payroll.
+//! [`AgentProduct::Workspace`] is "Ask alo", the one agent that works across
+//! products and is therefore offered all of them. None of this is a permission
+//! system on its own: the boundary that refuses a tool an agent was not offered
+//! is `alo-jmap`'s `execute_tool`, and it asks [`crate::agent_product::offers`]
+//! rather than trusting that the prompt was obeyed.
+//!
+//! Trust rule (ADR 0023/0034/0047): a tool that changes something is proposed
+//! and the user approves. Nothing in this module performs an action; it only
+//! decides what to propose.
 
 use serde::{Deserialize, Serialize};
 
-use crate::agent_agenda::{AGENDA_GUIDANCE, AGENDA_TOOL_DOC, AGENDA_TOOLS};
-use crate::agent_billing::{BILLING_GUIDANCE, BILLING_TOOL_DOC, BILLING_TOOLS};
-use crate::agent_chat::{CHAT_GUIDANCE, CHAT_TOOL_DOC, CHAT_TOOLS};
-use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS};
-use crate::agent_crm::{CRM_GUIDANCE, CRM_TOOL_DOC, CRM_TOOLS};
-use crate::agent_drive::{DRIVE_GUIDANCE, DRIVE_TOOL_DOC, DRIVE_TOOLS};
-use crate::agent_finance::{FINANCE_GUIDANCE, FINANCE_TOOL_DOC, FINANCE_TOOLS};
-use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
-use crate::agent_inventory::{INVENTORY_GUIDANCE, INVENTORY_TOOL_DOC, INVENTORY_TOOLS};
-use crate::agent_projects::{PROJECTS_GUIDANCE, PROJECTS_TOOL_DOC, PROJECTS_TOOLS};
+pub use alo_store::AgentProduct;
+
+use crate::agent_product::{tool_sets, tools_for};
 use crate::agent_tool::{AgentTool, find_tool};
 use crate::{AiConfig, ChatMessage, InferenceError, WorkspaceSource, chat, render_sources};
 
-/// The core (mail, tasks, calendar) tools, each declaring whether it reads or
-/// writes (ADR 0047 §1).
-///
-/// Every one of them writes: this list is the mail and diary half of the agent,
-/// and there is nothing here that merely looks. A **product** contributes its
-/// own list beside this one — billing's is [`BILLING_TOOLS`] — and
-/// [`is_agent_tool`] is the allowlist the execution boundary asks. Adding a
-/// core tool → declare its effect here, describe it in [`AGENT_SYSTEM_TOOLS`],
-/// and wire its validation + execution in the jmap agent handler.
-pub const AGENT_TOOLS: &[AgentTool] = &[
-    AgentTool::write("create_task"),
-    AgentTool::write("create_event"),
-    AgentTool::write("mark_read"),
-    AgentTool::write("flag_email"),
-    AgentTool::write("archive_email"),
-    AgentTool::write("trash_email"),
-    AgentTool::write("snooze_email"),
-    AgentTool::write("draft_email"),
-    AgentTool::write("draft_reply"),
-    AgentTool::write("send_email"),
-    AgentTool::write("move_to_folder"),
-];
-
 /// Every tool that exists, across every product, in prompt order.
 ///
-/// One list rather than eleven, so a caller cannot ask some of them and forget
+/// One list rather than twelve, so a caller cannot ask some of them and forget
 /// another — the mistake [`is_agent_tool`] was written to prevent, now with the
-/// effect bit carried along beside the name.
+/// effect bit carried along beside the name. **This is what exists, not what
+/// any one agent may use**: for that, ask
+/// [`crate::agent_product::offers`].
 #[must_use]
 pub fn all_tools() -> Vec<AgentTool> {
-    let mut out = Vec::new();
-    for list in [
-        AGENT_TOOLS,
-        BILLING_TOOLS,
-        CRM_TOOLS,
-        PROJECTS_TOOLS,
-        FINANCE_TOOLS,
-        INVENTORY_TOOLS,
-        HR_TOOLS,
-        DRIVE_TOOLS,
-        AGENDA_TOOLS,
-        CHAT_TOOLS,
-        CONTACTS_TOOLS,
-    ] {
-        out.extend_from_slice(list);
-    }
-    out
+    tools_for(AgentProduct::Workspace)
 }
 
 /// One action the agent proposes. `args` is validated tool-by-tool at the
@@ -97,57 +63,62 @@ pub enum AgentDecision {
 
 /// The opening of the system prompt: what the agent is, and the two shapes its
 /// reply may take.
-const AGENT_SYSTEM_HEAD: &str = "You are alo, the assistant across the user's entire workspace. \
-For each request you do EXACTLY ONE of two things, and you reply with a SINGLE JSON object and nothing else:\n\
+const AGENT_SYSTEM_HEAD: &str = "For each request you do EXACTLY ONE of two things, and you reply with a SINGLE JSON object and nothing else:\n\
 1) ANSWER from the numbered sources below: {\"kind\":\"answer\",\"answer\":\"<text>\"}. Cite each source you use by its number in square brackets like [1]. Use ONLY the sources; if they do not contain the answer, say you could not find it — never invent files, people, or facts.\n\
-2) USE ONE TOOL: {\"kind\":\"action\",\"say\":\"<one short sentence describing what you will do>\",\"action\":{\"tool\":\"<tool>\",\"args\":{...}}}. What happens next depends on the tool, and the two lists after the descriptions below say which is which: a READING tool runs immediately and comes back to you as a source to answer from, while a tool that CHANGES something is only proposed and waits for the user to approve it — you never perform a change yourself.\n\
-Available tools:\n";
+2) USE ONE TOOL: {\"kind\":\"action\",\"say\":\"<one short sentence describing what you will do>\",\"action\":{\"tool\":\"<tool>\",\"args\":{...}}}. What happens next depends on the tool, and the two lists after the descriptions below say which is which: a READING tool runs immediately and comes back to you as a source to answer from, while a tool that CHANGES something is only proposed and waits for the user to approve it — you never perform a change yourself.\n";
 
-/// The core tools, described. A **product's** tools are described in its own
-/// module and spliced in after these ([`system_prompt`]), so a module can gain a
-/// tool without this constant being touched.
-const AGENT_SYSTEM_TOOLS: &str = "\
-- create_task: create a to-do for the user. args: {\"title\": string (required), \"due\": string in \"YYYY-MM-DD\" (optional), \"notes\": string (optional)}.\n\
-- create_event: schedule a calendar event. args: {\"title\": string (required), \"start\": string RFC 3339 datetime e.g. \"2026-08-07T14:00:00Z\" (required), \"end\": string RFC 3339 (optional; defaults to one hour after start), \"location\": string (optional), \"notes\": string (optional)}.\n\
-- mark_read: mark an email read or unread. args: {\"source\": number, \"read\": boolean}.\n\
-- flag_email: flag (star) or unflag an email. args: {\"source\": number, \"flagged\": boolean}.\n\
-- archive_email: move an email out of the inbox into Archive. args: {\"source\": number}.\n\
-- trash_email: move an email to Trash (delete it from the inbox and archive). args: {\"source\": number}.\n\
-- snooze_email: hide an email from the inbox until a chosen time, when it returns to the inbox. args: {\"source\": number, \"until\": string RFC 3339 datetime e.g. \"2026-08-07T09:00:00Z\" (required)}.\n\
-- draft_email: write a NEW email and save it to the user's Drafts for them to review and send — it is NEVER sent automatically. args: {\"to\": string email address (required), \"subject\": string (optional), \"body\": string (required)}. Compose the body from the request; do not invent facts. The sender is always the user's own address — never set it.\n\
-- draft_reply: write a reply to an email in the sources and save it to the user's Drafts — NEVER sent automatically. args: {\"source\": number (the email to reply to, required), \"body\": string (required)}. The reply goes to that email's sender and keeps its subject thread; compose the body from the request, do not invent facts.\n\
-- send_email: SEND a message that is ALREADY in the user's Drafts. This delivers it to its recipients and CANNOT be undone. args: {\"source\": number (a draft in the sources, required)}. Only propose this when the user clearly and explicitly asks to send, and only for a draft that already exists — if there is no draft yet, write one first with draft_email or draft_reply and let the user send it. The user still approves before anything is sent.\n\
-- move_to_folder: move an email into one of the user's own mail folders. args: {\"source\": number, \"folder\": string}. Set \"folder\" to EXACTLY one of the folder names listed under \"Folders\" below — never invent a folder. If the user names a folder that is not in that list, ANSWER instead and say that folder does not exist. Prefer the dedicated tools for Archive (archive_email) and Trash (trash_email).\n";
+/// Said instead of a tool list to an agent whose product has none yet
+/// (Insights, Meet, Sites until their waves land).
+const NO_TOOLS_YET: &str = "You have no tools in this product yet, so you ANSWER from the numbered sources and never \
+     return an action. If the request needs something done, say plainly that you cannot do it yet.\n";
 
-/// The rules that apply across every tool, and the output contract.
+/// The rules that apply whatever the product, and the output contract.
+///
+/// Rules that belong to **one** product live in that product's guidance — the
+/// `source` numbering of an email moved to [`crate::agent_mail`] in A1.2,
+/// because an agent with no email tool was being told how to fill in an
+/// argument it would never have.
 const AGENT_SYSTEM_RULES: &str = "\
-For any tool that acts on an email, set \"source\" to the number [n] of that email in the numbered sources above; only propose it when the relevant email is present in the sources. \
 Resolve any relative date or time (today, tomorrow 3pm, next Friday) against the current date given below into an absolute value (YYYY-MM-DD for a task due, RFC 3339 UTC for an event). \
 If the request needs an action no tool covers, ANSWER instead and say you cannot do that yet. Write the answer/say text in the user's language. Output ONLY the JSON object — no markdown, no code fences, no preamble.";
 
-/// The whole system prompt: the core tools, then each product's, then the rules
-/// that hold across all of them.
+/// The whole system prompt for one product's agent: who it is, the tools it —
+/// and only it — may use, then the rules that hold whatever the product.
 ///
-/// Built rather than written out so a product agent (ADR 0034) is a tool list
-/// plus a paragraph in its own module — the seam every wave after B1 adds to.
+/// Built rather than written out, so a product agent (ADR 0034) is a row in
+/// [`crate::agent_product`] plus a tool list and a paragraph in its own module.
 #[must_use]
-pub fn system_prompt() -> String {
+pub fn system_prompt_for(product: AgentProduct) -> String {
+    let sets = tool_sets(product);
+    let mut docs = String::new();
+    let mut guidance = String::new();
+    for set in sets {
+        docs.push_str(set.doc);
+        guidance.push_str(set.guidance);
+    }
+    let tools = if sets.iter().all(|set| set.tools.is_empty()) {
+        NO_TOOLS_YET.to_owned()
+    } else {
+        format!("Available tools:\n{docs}{}", effect_block(product))
+    };
+    let stay = if product == AgentProduct::Workspace {
+        ""
+    } else {
+        crate::agent_product::STAY_IN_PRODUCT
+    };
     format!(
-        "{AGENT_SYSTEM_HEAD}{AGENT_SYSTEM_TOOLS}{BILLING_TOOL_DOC}{CRM_TOOL_DOC}{PROJECTS_TOOL_DOC}\
-         {FINANCE_TOOL_DOC}{INVENTORY_TOOL_DOC}{HR_TOOL_DOC}{DRIVE_TOOL_DOC}{AGENDA_TOOL_DOC}\
-         {CHAT_TOOL_DOC}{CONTACTS_TOOL_DOC}{}\
-         {BILLING_GUIDANCE}{CRM_GUIDANCE}{PROJECTS_GUIDANCE}{FINANCE_GUIDANCE}{INVENTORY_GUIDANCE}\
-         {HR_GUIDANCE}{DRIVE_GUIDANCE}{AGENDA_GUIDANCE}{CHAT_GUIDANCE}{CONTACTS_GUIDANCE}\
-         {AGENT_SYSTEM_RULES}",
-        effect_block()
+        "{}{stay}\n{AGENT_SYSTEM_HEAD}{tools}{guidance}{AGENT_SYSTEM_RULES}",
+        crate::agent_product::headline(product)
     )
 }
 
-/// Whether `tool` is a tool the agent may execute — the allowlist the execution
-/// boundary asks, across every product's set.
+/// Whether `tool` is a tool that exists at all — the allowlist the execution
+/// boundary asks first, across every product's set.
 ///
 /// One question rather than one list per product, so a caller (the jmap execute
-/// route) cannot check some of them and forget another.
+/// route) cannot check some of them and forget another. It says nothing about
+/// **whose** tool it is: that is [`crate::agent_product::offers`], and the
+/// boundary asks both.
 #[must_use]
 pub fn is_agent_tool(tool: &str) -> bool {
     all_tools().iter().any(|entry| entry.name == tool)
@@ -177,15 +148,35 @@ pub fn is_read_tool(tool: &str) -> bool {
 /// check and the behaviour could drift from. Generating it here means the
 /// prompt and the execution boundary read the same list, so they cannot
 /// disagree about which tools need a tap.
-fn effect_block() -> String {
-    let all = all_tools();
+fn effect_block(product: AgentProduct) -> String {
+    let offered = tools_for(product);
     let names = |want_read: bool| {
-        all.iter()
+        offered
+            .iter()
             .filter(|tool| tool.is_read() == want_read)
             .map(|tool| tool.name)
             .collect::<Vec<_>>()
             .join(", ")
     };
+    // A product with only reads (or only writes) is told about the half it
+    // has; naming an empty list would read as "and here are the others",
+    // which is the sentence that invites a tool nobody offered.
+    if names(true).is_empty() {
+        return format!(
+            "\nEvery tool you have CHANGES something. Choosing one PROPOSES it: the user reads your \
+\"say\" line and approves it before anything happens, and you never see a result — {}.\n",
+            names(false)
+        );
+    }
+    if names(false).is_empty() {
+        return format!(
+            "\nEvery tool you have only READS. It changes nothing, so choosing one does not ask the \
+user anything: it runs straight away and you are then asked again with its result, so you can ANSWER \
+from what it found. Prefer one of these over the sources whenever the question is about a record they \
+cover — {}.\n",
+            names(true)
+        );
+    }
     format!(
         "\nThese tools only READ. They change nothing, so choosing one does not ask the user anything: it runs \
 straight away and you are then asked again with its result, so you can ANSWER from what it found. Prefer one of \
@@ -197,34 +188,55 @@ before anything happens, and you never see a result — {}.\n",
     )
 }
 
+/// Everything one turn is asked from.
+///
+/// A struct rather than five parameters repeated across four functions: the
+/// **product** joined them in A1.2, and a fifth positional argument of the same
+/// shape as its neighbours is how a caller ends up passing the wrong agent's
+/// scope without the compiler noticing.
+#[derive(Debug, Clone, Copy)]
+pub struct AgentAsk<'a> {
+    /// Whose agent is taking this turn — what it may be offered (ADR 0034).
+    pub product: AgentProduct,
+    /// The request, in the asker's own words.
+    pub request: &'a str,
+    /// The grounding, retrieved through the asker's own access.
+    pub sources: &'a [WorkspaceSource],
+    /// The caller's current date (`YYYY-MM-DD`), so the model can resolve
+    /// relative dates like "tomorrow".
+    pub today: &'a str,
+    /// The user's mail-folder names, so `move_to_folder` can only target a real
+    /// one. Ignored unless this product actually has that tool.
+    pub folders: &'a [String],
+}
+
 /// The chat messages for one agent turn. Pure and exported so the prompt is
-/// testable without a backend. `today` is the caller's current date
-/// (`YYYY-MM-DD`) so the model can resolve relative dates like "tomorrow";
-/// `folders` are the user's mail-folder names, so `move_to_folder` can only
-/// target a real one.
+/// testable without a backend.
 #[must_use]
-pub fn agent_messages(
-    request: &str,
-    sources: &[WorkspaceSource],
-    today: &str,
-    folders: &[String],
-) -> Vec<ChatMessage> {
-    let folder_line = if folders.is_empty() {
-        String::new()
-    } else {
-        format!("\n\nFolders (for move_to_folder): {}", folders.join(", "))
-    };
+pub fn agent_messages(ask: &AgentAsk<'_>) -> Vec<ChatMessage> {
+    // Only an agent that can move a message needs to know the folders. For
+    // every other product the list is noise the model has to read past, and
+    // noise in a prompt is where an invented tool call comes from.
+    let folder_line =
+        if ask.folders.is_empty() || !crate::agent_product::offers(ask.product, "move_to_folder") {
+            String::new()
+        } else {
+            format!(
+                "\n\nFolders (for move_to_folder): {}",
+                ask.folders.join(", ")
+            )
+        };
     let user = format!(
         "Today's date is {}.\nRequest: {}\n\nSources:\n{}{}",
-        today.trim(),
-        request.trim(),
-        render_sources(sources),
+        ask.today.trim(),
+        ask.request.trim(),
+        render_sources(ask.sources),
         folder_line
     );
     vec![
         ChatMessage {
             role: "system".to_owned(),
-            content: system_prompt(),
+            content: system_prompt_for(ask.product),
         },
         ChatMessage {
             role: "user".to_owned(),
@@ -301,14 +313,8 @@ question. You may still propose a tool that CHANGES something.";
 ///
 /// Pure and exported so the prompt is testable without a backend.
 #[must_use]
-pub fn after_read_messages(
-    request: &str,
-    sources: &[WorkspaceSource],
-    today: &str,
-    folders: &[String],
-    more_allowed: bool,
-) -> Vec<ChatMessage> {
-    let mut messages = agent_messages(request, sources, today, folders);
+pub fn after_read_messages(ask: &AgentAsk<'_>, more_allowed: bool) -> Vec<ChatMessage> {
+    let mut messages = agent_messages(ask);
     if let Some(user) = messages.last_mut() {
         user.content.push_str(if more_allowed {
             MORE_READS_LEFT
@@ -327,17 +333,9 @@ pub fn after_read_messages(
 /// [`InferenceError`] for disabled/unconfigured/unreachable/backend/empty.
 pub async fn run_agent(
     config: &AiConfig,
-    request: &str,
-    sources: &[WorkspaceSource],
-    today: &str,
-    folders: &[String],
+    ask: &AgentAsk<'_>,
 ) -> Result<AgentDecision, InferenceError> {
-    let text = chat(
-        config,
-        &agent_messages(request, sources, today, folders),
-        0.2,
-    )
-    .await?;
+    let text = chat(config, &agent_messages(ask), 0.2).await?;
     parse_decision(&text)
 }
 
@@ -354,18 +352,10 @@ pub async fn run_agent(
 /// [`InferenceError`] for disabled/unconfigured/unreachable/backend/empty.
 pub async fn run_agent_after_read(
     config: &AiConfig,
-    request: &str,
-    sources: &[WorkspaceSource],
-    today: &str,
-    folders: &[String],
+    ask: &AgentAsk<'_>,
     more_allowed: bool,
 ) -> Result<AgentDecision, InferenceError> {
-    let text = chat(
-        config,
-        &after_read_messages(request, sources, today, folders, more_allowed),
-        0.2,
-    )
-    .await?;
+    let text = chat(config, &after_read_messages(ask, more_allowed), 0.2).await?;
     parse_decision(&text)
 }
 
@@ -420,15 +410,31 @@ mod tests {
         assert!(parse_decision(r#"{"kind":"other"}"#).is_err());
     }
 
+    fn ask<'a>(
+        product: AgentProduct,
+        request: &'a str,
+        sources: &'a [WorkspaceSource],
+        folders: &'a [String],
+    ) -> AgentAsk<'a> {
+        AgentAsk {
+            product,
+            request,
+            sources,
+            today: "2026-08-07",
+            folders,
+        }
+    }
+
     #[test]
     fn prompt_carries_request_sources_date_and_the_tool() {
         let folders = ["Work".to_owned(), "Receipts".to_owned()];
-        let msgs = agent_messages(
+        let sources = [src(1, "message", "Acme thread")];
+        let msgs = agent_messages(&ask(
+            AgentProduct::Workspace,
             "book a slot",
-            &[src(1, "message", "Acme thread")],
-            "2026-08-07",
+            &sources,
             &folders,
-        );
+        ));
         assert_eq!(msgs.len(), 2);
         assert!(msgs[0].content.contains("create_task"));
         assert!(msgs[1].content.contains("book a slot"));
@@ -440,8 +446,83 @@ mod tests {
 
     #[test]
     fn prompt_omits_the_folder_line_when_there_are_none() {
-        let msgs = agent_messages("hi", &[], "2026-08-07", &[]);
+        let msgs = agent_messages(&ask(AgentProduct::Workspace, "hi", &[], &[]));
         assert!(!msgs[1].content.contains("Folders (for move_to_folder)"));
+    }
+
+    /// The folder list is Mail's business. An Inventory agent has no
+    /// `move_to_folder`, so naming the user's mail folders at it is a menu for
+    /// a tool it cannot call — and the shortest route to an invented one.
+    #[test]
+    fn only_an_agent_that_can_move_a_message_is_told_the_folders() {
+        let folders = ["Work".to_owned(), "Receipts".to_owned()];
+        for product in [AgentProduct::Mail, AgentProduct::Workspace] {
+            let msgs = agent_messages(&ask(product, "file this", &[], &folders));
+            assert!(msgs[1].content.contains("Work, Receipts"), "{product}");
+        }
+        for product in [
+            AgentProduct::Inventory,
+            AgentProduct::Agenda,
+            AgentProduct::Sites,
+        ] {
+            let msgs = agent_messages(&ask(product, "file this", &[], &folders));
+            assert!(
+                !msgs[1].content.contains("Folders (for move_to_folder)"),
+                "{product}"
+            );
+        }
+    }
+
+    /// **A product's agent is offered its own product's tools and no others**
+    /// (A1.2). The prompt is not the permission system — the boundary is — but
+    /// an agent told about a tool it cannot run would spend every turn
+    /// proposing refusals.
+    #[test]
+    fn a_products_prompt_describes_exactly_that_products_tools() {
+        for product in alo_store::ALL_AGENT_PRODUCTS {
+            let prompt = system_prompt_for(product);
+            let mine = crate::agent_product::tools_for(product);
+            for tool in &mine {
+                assert!(
+                    prompt.contains(&format!("- {}:", tool.name)),
+                    "{product} is not told about its own {}",
+                    tool.name
+                );
+            }
+            for tool in all_tools() {
+                if mine.iter().any(|entry| entry.name == tool.name) {
+                    continue;
+                }
+                assert!(
+                    !prompt.contains(&format!("- {}:", tool.name)),
+                    "{product} is offered {}, which is another product's",
+                    tool.name
+                );
+            }
+            assert_eq!(
+                prompt.matches("\n- ").count(),
+                mine.len(),
+                "{product} describes exactly the tools it has"
+            );
+            // Whoever it is, it is told so, and the output contract is still
+            // the last thing it reads.
+            assert!(prompt.starts_with("You are "));
+            assert!(prompt.ends_with("no preamble."));
+        }
+        // The three products whose agents are still to be built say so plainly
+        // rather than leaving an empty menu under a heading.
+        for empty in [
+            AgentProduct::Insights,
+            AgentProduct::Meet,
+            AgentProduct::Sites,
+        ] {
+            let prompt = system_prompt_for(empty);
+            assert!(prompt.contains("no tools in this product yet"), "{empty}");
+            assert!(!prompt.contains("Available tools:"), "{empty}");
+        }
+        // And only Ask alo is free to answer about anything.
+        assert!(!system_prompt_for(AgentProduct::Workspace).contains("not yours to answer"));
+        assert!(system_prompt_for(AgentProduct::Hr).contains("not yours to answer"));
     }
 
     #[test]
@@ -449,7 +530,7 @@ mod tests {
         // The allowlist and the prompt are one surface: a tool the model is
         // told about but the execute route refuses is a dead proposal, and a
         // tool it is never told about is dead code.
-        let prompt = system_prompt();
+        let prompt = system_prompt_for(AgentProduct::Workspace);
         for tool in all_tools() {
             let name = tool.name;
             assert!(prompt.contains(&format!("- {name}:")), "{name} undescribed");
@@ -484,17 +565,17 @@ mod tests {
         assert_eq!(
             reads,
             [
+                "find_contact",
+                "whats_on",
+                "am_i_free",
+                "catch_up_room",
+                "find_in_chat",
+                "find_file",
                 "project_status_summary",
                 "vat_summary",
                 "flag_anomalies",
                 "stock_answer",
                 "who_is_off",
-                "find_file",
-                "whats_on",
-                "am_i_free",
-                "catch_up_room",
-                "find_in_chat",
-                "find_contact",
             ]
         );
         assert_eq!(all_tools().len(), 33);
@@ -522,8 +603,8 @@ mod tests {
     /// boundary asks, so prose and behaviour cannot drift (ADR 0047 §1).
     #[test]
     fn the_prompt_states_the_split_from_the_declarations() {
-        let prompt = system_prompt();
-        let block = effect_block();
+        let prompt = system_prompt_for(AgentProduct::Workspace);
+        let block = effect_block(AgentProduct::Workspace);
         assert!(prompt.contains(&block));
         let (reading, changing) = block
             .split_once("Every other tool CHANGES something")
@@ -544,10 +625,52 @@ mod tests {
         );
     }
 
+    /// A product with only reads, or only writes, is told about the half it
+    /// has. The two-list sentence would otherwise name an empty list, which
+    /// reads as "and here are the others" — an invitation to a tool nobody
+    /// offered.
+    #[test]
+    fn a_one_sided_product_is_told_about_the_half_it_has() {
+        // Every Billing tool changes something.
+        let billing = system_prompt_for(AgentProduct::Billing);
+        assert!(billing.contains("Every tool you have CHANGES something"));
+        assert!(!billing.contains("These tools only READ"));
+
+        // Mail's nine writes plus the address book's one read: two-sided, so
+        // it gets the two-list sentence.
+        let mail = system_prompt_for(AgentProduct::Mail);
+        assert!(mail.contains("These tools only READ"));
+        assert!(mail.contains("Every other tool CHANGES something"));
+        assert!(mail.contains("find_contact"));
+
+        // Chat has only lookups.
+        let chat = system_prompt_for(AgentProduct::Chat);
+        assert!(chat.contains("Every tool you have only READS"));
+        assert!(!chat.contains("Every other tool CHANGES"));
+
+        // Drive has exactly one tool and it is a lookup.
+        let drive = system_prompt_for(AgentProduct::Drive);
+        assert!(drive.contains("Every tool you have only READS"));
+        assert!(!drive.contains("Every other tool CHANGES"));
+        assert!(drive.contains("find_file"));
+
+        // Tasks has exactly one and it changes something.
+        let tasks = system_prompt_for(AgentProduct::Tasks);
+        assert!(tasks.contains("Every tool you have CHANGES something"));
+        assert!(tasks.contains("create_task"));
+    }
+
     #[test]
     fn the_second_call_tells_the_model_the_result_is_there_and_what_is_left() {
         let sources = [src(1, "tool result", "stock_answer")];
-        let more = after_read_messages("is the X100 in stock?", &sources, "2026-08-14", &[], true);
+        let asked = AgentAsk {
+            product: AgentProduct::Inventory,
+            request: "is the X100 in stock?",
+            sources: &sources,
+            today: "2026-08-14",
+            folders: &[],
+        };
+        let more = after_read_messages(&asked, true);
         let last = &more[1].content;
         assert!(last.contains("is the X100 in stock?"));
         assert!(last.contains("stock_answer"));
@@ -556,24 +679,30 @@ mod tests {
 
         // On the last lookup it is told so, and told to say what it could not
         // find rather than asking for a lookup it will not get.
-        let done = after_read_messages("is the X100 in stock?", &sources, "2026-08-14", &[], false);
+        let done = after_read_messages(&asked, false);
         let last = &done[1].content;
         assert!(last.contains("LAST lookup"));
         assert!(last.contains("ask the user to narrow the question"));
         assert!(!last.contains("Only run one more reading tool"));
-        // Same system prompt either way — one contract, not two.
+        // Same system prompt either way — one contract, not two — and it is
+        // still the Inventory agent's, not everybody's.
         assert_eq!(more[0].content, done[0].content);
-        assert_eq!(more[0].content, system_prompt());
+        assert_eq!(more[0].content, system_prompt_for(AgentProduct::Inventory));
     }
 
     #[test]
     fn the_output_contract_stays_the_last_thing_the_model_reads() {
-        let prompt = system_prompt();
+        let prompt = system_prompt_for(AgentProduct::Workspace);
         assert!(prompt.ends_with("no preamble."));
-        // A product's tools come after the core ones, and its guidance after
-        // its tools — the order the prompt is assembled in.
+        // Ask alo reads the products in the order `ALL_AGENT_PRODUCTS` lists
+        // them, and each product's guidance after all of the tool lines.
         let at = |needle: &str| prompt.find(needle).unwrap_or(usize::MAX);
-        assert!(at("- create_task:") < at("- create_invoice_draft:"));
+        assert!(at("- draft_email:") < at("- find_contact:"));
+        assert!(at("- find_contact:") < at("- whats_on:"));
+        assert!(at("- whats_on:") < at("- create_task:"));
+        assert!(at("- create_task:") < at("- catch_up_room:"));
+        assert!(at("- catch_up_room:") < at("- find_file:"));
+        assert!(at("- find_file:") < at("- create_invoice_draft:"));
         assert!(at("- create_invoice_draft:") < at("- create_deal:"));
         assert!(at("- create_deal:") < at("- log_time:"));
         assert!(at("- log_time:") < at("- categorise_transactions:"));

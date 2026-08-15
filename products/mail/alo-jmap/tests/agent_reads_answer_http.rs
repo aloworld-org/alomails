@@ -29,7 +29,7 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
-use alo_store::{ChatAgentId, ChatChannelId};
+use alo_store::{AgentProduct, ChatAgentId, ChatChannelId};
 use common::{Harness, harness, send};
 
 // ---- a scripted, local, offline "model" -------------------------------------
@@ -159,8 +159,15 @@ async fn get(app: &Router, token: &str, uri: &str) -> (StatusCode, Value) {
     send(app, req).await
 }
 
-/// A public room with one agent in it, both made the way the product makes them.
-async fn a_room_with_an_agent(h: &Harness, name: &str, handle: &str) -> (String, ChatAgentId) {
+/// A public room with one agent in it, both made the way the product makes
+/// them. `product` is what the agent is the agent **of** (ADR 0034, A1.2) — the
+/// value that decides which tools it is offered and which the boundary refuses.
+async fn a_room_with_an_agent(
+    h: &Harness,
+    name: &str,
+    handle: &str,
+    product: AgentProduct,
+) -> (String, ChatAgentId) {
     let (status, body) = post(
         &h.app,
         &h.token,
@@ -172,7 +179,7 @@ async fn a_room_with_an_agent(h: &Harness, name: &str, handle: &str) -> (String,
     let channel = body["id"].as_str().unwrap().to_owned();
     let agent = h
         .acc
-        .create_agent(handle, "Inventory", Some("knows the stock"))
+        .create_agent(handle, handle, Some("knows its own product"), product)
         .await
         .unwrap();
     h.acc
@@ -251,9 +258,9 @@ async fn a_read_answers_in_the_room_and_leaves_no_proposal() {
     ])
     .await;
     use_model(&h, &base).await;
-    let (channel, agent) = a_room_with_an_agent(&h, "stock", "inventory").await;
+    let (channel, agent) = a_room_with_an_agent(&h, "stock", "chat", AgentProduct::Chat).await;
 
-    let spoken = ask_in_room(&h, &channel, "@inventory what did I just ask about?").await;
+    let spoken = ask_in_room(&h, &channel, "@chat what did I just ask about?").await;
 
     // The answer, in the room, with nothing to approve on it.
     assert_eq!(
@@ -315,9 +322,9 @@ async fn a_write_executes_nothing_until_the_asker_approves_it() {
     )])
     .await;
     use_model(&h, &base).await;
-    let (channel, agent) = a_room_with_an_agent(&h, "ordering", "inventory").await;
+    let (channel, agent) = a_room_with_an_agent(&h, "ordering", "tasks", AgentProduct::Tasks).await;
 
-    let spoken = ask_in_room(&h, &channel, "@inventory we need more X100").await;
+    let spoken = ask_in_room(&h, &channel, "@tasks we need more X100").await;
 
     // What the room sees: the sentence, with the change hanging off it, pending.
     assert_eq!(spoken["body"], json!("I'll add a task to order more."));
@@ -367,5 +374,138 @@ async fn a_write_executes_nothing_until_the_asker_approves_it() {
     assert_eq!(
         h.acc.agent_records().await.unwrap()[agent.as_str()].reads,
         0
+    );
+}
+
+// ---- the product boundary (A1.2) --------------------------------------------
+
+/// **A lookup belonging to another product is refused, and the agent says so.**
+///
+/// The Inventory agent's model asks for `whats_on`, which is the Agenda agent's.
+/// It takes the reading path — a lookup must never wear a button (ADR 0047) —
+/// and the execution boundary refuses it there, handing the model back the
+/// reason. The turn's second call therefore carries the refusal among its
+/// sources, and what lands in the room is a sentence naming the agent that owns
+/// the question, not a diary.
+///
+/// The refusal is audited as an attempt that did not succeed: an audit that
+/// records only what worked hides exactly the rows worth reading.
+#[tokio::test]
+async fn a_lookup_from_another_product_is_refused_and_the_agent_says_who_owns_it() {
+    let h = harness("agentscopeR").await;
+    let (base, seen) = scripted_model(vec![
+        wants(
+            "whats_on",
+            json!({ "from": "2026-08-15" }),
+            "Let me check the diary.",
+        ),
+        says("That's the Agenda agent's — ask @agenda what's on."),
+    ])
+    .await;
+    use_model(&h, &base).await;
+    let (channel, agent) =
+        a_room_with_an_agent(&h, "stock", "inventory", AgentProduct::Inventory).await;
+
+    let spoken = ask_in_room(&h, &channel, "@inventory what have I got on today?").await;
+
+    // What the room got: a sentence, not a button and not a diary.
+    assert_eq!(
+        spoken["body"],
+        json!("That's the Agenda agent's — ask @agenda what's on.")
+    );
+    assert_eq!(spoken["proposal"], Value::Null);
+
+    // The model was told, in its own second call, exactly why the lookup did
+    // not run — which is what let it answer usefully instead of dying.
+    let asked = seen.lock().unwrap().clone();
+    assert_eq!(asked.len(), 2, "the refusal costs one further call");
+    let second = asked[1].to_string();
+    assert!(
+        second.contains("this lookup did not run"),
+        "the refusal must reach the model: {second}"
+    );
+    assert!(
+        second.contains("not a tool the inventory agent has"),
+        "and it must name the product: {second}"
+    );
+    // The Inventory agent's own prompt never offered it the diary in the first
+    // place — the prompt and the boundary read one registry.
+    let first = asked[0].to_string();
+    assert!(!first.contains("- whats_on:"), "{first}");
+    assert!(first.contains("- stock_answer:"), "{first}");
+
+    // Audited as an attempt that failed, against this agent and this room.
+    let runs = h.acc.agent_tool_runs(50).await.unwrap();
+    assert_eq!(runs.len(), 1, "{runs:?}");
+    assert_eq!(runs[0].tool, "whats_on");
+    assert!(!runs[0].ok, "a refused run is recorded as refused");
+    assert_eq!(
+        runs[0].agent.as_ref().map(ChatAgentId::as_str),
+        Some(agent.as_str())
+    );
+    assert_eq!(
+        runs[0].channel.as_ref().map(ChatChannelId::as_str),
+        Some(channel.as_str())
+    );
+    // Nothing was read, so nothing counts as read.
+    let records = h.acc.agent_records().await.unwrap();
+    assert_eq!(records.get(agent.as_str()).unwrap().reads, 0);
+}
+
+/// **A change belonging to another product is refused even when the asker
+/// approves it** — the property A1.2 is actually judged on.
+///
+/// The Inventory agent's model asks for `create_task`, which is the Tasks
+/// agent's. It is a write, so it arrives in the room as a proposal exactly as
+/// any write does; the asker taps approve; and the boundary refuses it because
+/// of *whose* tool it is, not because of who tapped. Approval widens who may
+/// run a tool, never which product's tools an agent has.
+#[tokio::test]
+async fn approving_another_products_change_still_runs_nothing() {
+    let h = harness("agentscopeW").await;
+    let (base, _seen) = scripted_model(vec![wants(
+        "create_task",
+        json!({ "title": "Order more X100" }),
+        "I'll add a task to order more.",
+    )])
+    .await;
+    use_model(&h, &base).await;
+    let (channel, agent) =
+        a_room_with_an_agent(&h, "ordering", "inventory", AgentProduct::Inventory).await;
+
+    let spoken = ask_in_room(&h, &channel, "@inventory we need more X100").await;
+    assert_eq!(spoken["proposal"]["tool"], json!("create_task"));
+    assert_eq!(spoken["proposal"]["state"], json!("pending"));
+    let proposal = spoken["proposal"]["id"].as_str().unwrap().to_owned();
+
+    // The asker's own tap. It is refused, and the refusal says why.
+    let (status, problem) = post(
+        &h.app,
+        &h.token,
+        &format!("/chat/proposals/{proposal}"),
+        json!({ "approve": true }),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN, "{problem}");
+    let detail = problem["detail"].as_str().unwrap_or_default();
+    assert!(detail.contains("create_task"), "{problem}");
+    assert!(detail.contains("inventory"), "{problem}");
+
+    // Nothing was created. This is the sentence the whole item is for.
+    let project = h.acc.ensure_personal_project().await.unwrap();
+    assert!(
+        h.acc.tasks_in_project(&project).await.unwrap().is_empty(),
+        "an agent must not run another product's tool, approved or not"
+    );
+
+    // And the attempt is on the record as an attempt.
+    let runs = h.acc.agent_tool_runs(50).await.unwrap();
+    assert_eq!(runs.len(), 1, "{runs:?}");
+    assert_eq!(runs[0].tool, "create_task");
+    assert_eq!(runs[0].effect, "write");
+    assert!(!runs[0].ok);
+    assert_eq!(
+        runs[0].agent.as_ref().map(ChatAgentId::as_str),
+        Some(agent.as_str())
     );
 }

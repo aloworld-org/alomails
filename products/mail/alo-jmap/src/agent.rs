@@ -89,6 +89,18 @@ impl ToolRun<'_> {
 const NEEDS_APPROVAL: &str =
     "that changes something, so it waits for you to approve it — it cannot run on its own";
 
+/// Said when an agent reaches for a tool belonging to another product (A1.2).
+///
+/// It names the product rather than apologising, because the model reads it
+/// too and the useful correction is "that is somebody else's tool". Formatted
+/// with the agent's own product and the tool it asked for; it carries nothing
+/// about anybody's records.
+fn out_of_product(product: alo_store::AgentProduct, tool: &str) -> String {
+    format!(
+        "{tool} is not a tool the {product} agent has — ask the agent whose product it belongs to"
+    )
+}
+
 /// `POST /ai/agent` — `{"q":"..."}` → `{"answer":str|null,
 /// "action":{tool,args,say}|null, "sources":[...],
 /// "reason":null|"unconfigured"|"unreachable"}`.
@@ -191,6 +203,9 @@ pub async fn agent(
     };
     let today = today_where(known_tz.as_deref());
     let turn = Turn {
+        // The palette IS "Ask alo" — the top-level agent ADR 0034 scopes to no
+        // product, because working across them is the whole job.
+        product: alo_store::AgentProduct::Workspace,
         request: &request,
         sources: &ground,
         today: &today,
@@ -270,6 +285,17 @@ pub(crate) async fn execute_tool(
     let Some(entry) = alo_ai::find_tool(&all, tool).copied() else {
         return Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool"));
     };
+    // A1.2, ADR 0034: an agent may only use its own product's tools, and this
+    // is where that is *true* rather than merely offered. The product is read
+    // from the agent's own row, never taken from the caller — see [`scope`].
+    let product = scope(account, run).await?;
+    if !alo_ai::offers(product, tool) {
+        record_run(account, run, &entry, args, false).await;
+        return Err(Problem::with(
+            StatusCode::FORBIDDEN,
+            out_of_product(product, tool),
+        ));
+    }
     // ADR 0047 §3, and the reason "reads only" is true of a turn rather than
     // merely asked of it. The registry says what this tool does and the caller
     // says whose approval it carries; nothing the model returned is consulted.
@@ -282,6 +308,38 @@ pub(crate) async fn execute_tool(
     record_run(account, run, &entry, args, done.is_ok()).await;
     done
 }
+
+/// Which product's tools this run may use (A1.2).
+///
+/// **Read from the agent's row through the caller's own store**, not passed in
+/// by whoever built the [`ToolRun`]. A caller that could state its own scope
+/// would be one refactor away from stating a wider one, and the mistake would
+/// be invisible: every test would still pass, because the tools would still
+/// run. The lookup is one indexed row in a path that is about to call a model.
+///
+/// No agent means the command palette's assistant, which **is** "Ask alo" —
+/// the one agent ADR 0034 scopes to no product because working across them is
+/// its job.
+///
+/// # Errors
+/// 403 when the agent cannot be read at all. Fails closed: a deleted agent, a
+/// wrong tenant, or a product word this binary does not know are all reasons
+/// to run nothing, and the tools an unreadable row might have wanted are
+/// exactly the ones worth refusing.
+async fn scope(account: &Account, run: &ToolRun<'_>) -> Result<alo_store::AgentProduct, Problem> {
+    let Some(id) = run.agent else {
+        return Ok(alo_store::AgentProduct::Workspace);
+    };
+    account
+        .acc
+        .agent(id)
+        .await
+        .map(|agent| agent.product)
+        .map_err(|_| Problem::with(StatusCode::FORBIDDEN, UNKNOWN_AGENT))
+}
+
+/// Said when the agent a run claims to be cannot be read.
+const UNKNOWN_AGENT: &str = "that agent is not one of this workspace's, so nothing was run";
 
 /// The execution boundary's whole rule (ADR 0047 §3): **a tool that changes
 /// something may not run unless the asker approved it.**
@@ -1074,6 +1132,76 @@ mod tests {
                 entry.name
             );
         }
+    }
+
+    /// **The boundary test A1.2 exists for**, over the whole registry rather
+    /// than a sample: an agent may use its own product's tools and no others,
+    /// and approving a proposal does not change that.
+    ///
+    /// `offers` is what `execute_tool` asks, before anything is dispatched and
+    /// before the approval question is even reached — so this is the condition
+    /// the route runs, checked directly, with no database and no model. What
+    /// this pins is that the refusal is a property of the **pair** (product,
+    /// tool): the asker's approval widens who may run a tool, never which
+    /// product's tools an agent has.
+    #[test]
+    fn an_agent_may_use_only_its_own_products_tools() {
+        for product in alo_store::ALL_AGENT_PRODUCTS {
+            let mine = alo_ai::tools_for(product);
+            for entry in alo_ai::all_tools() {
+                let ours = mine.iter().any(|tool| tool.name == entry.name);
+                assert_eq!(
+                    alo_ai::offers(product, entry.name),
+                    ours,
+                    "{product} and {}",
+                    entry.name
+                );
+                // An approval says who asked, not what an agent is. A tool of
+                // another product's stays refused with the asker's own tap.
+                if !ours {
+                    for approval in [Approval::InTurn, Approval::Asker] {
+                        assert!(
+                            !alo_ai::offers(product, entry.name),
+                            "{product} got {} under {approval:?}",
+                            entry.name
+                        );
+                    }
+                }
+            }
+        }
+        // Named plainly, because these are the sentences the item is about.
+        assert!(!alo_ai::offers(
+            alo_store::AgentProduct::Inventory,
+            "send_email"
+        ));
+        assert!(!alo_ai::offers(
+            alo_store::AgentProduct::Hr,
+            "create_invoice_draft"
+        ));
+        assert!(alo_ai::offers(
+            alo_store::AgentProduct::Inventory,
+            "stock_answer"
+        ));
+        // Ask alo is the one agent that spans them, and even it refuses a name
+        // no product declares.
+        assert!(alo_ai::offers(
+            alo_store::AgentProduct::Workspace,
+            "send_email"
+        ));
+        assert!(!alo_ai::offers(
+            alo_store::AgentProduct::Workspace,
+            "delete_everything"
+        ));
+    }
+
+    /// The refusal says which agent could have done it, and carries nothing
+    /// about anybody's records — both the model and a room can read it.
+    #[test]
+    fn the_refusal_names_the_product_and_the_tool_and_nothing_else() {
+        let said = super::out_of_product(alo_store::AgentProduct::Inventory, "send_email");
+        assert!(said.contains("send_email"));
+        assert!(said.contains("inventory"));
+        assert!(said.contains("ask the agent"));
     }
 
     #[test]

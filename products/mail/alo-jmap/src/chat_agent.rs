@@ -122,6 +122,11 @@ async fn take_turn(
     // in stock comes back as the figure, and only a change comes back as
     // something to approve.
     let turn = Turn {
+        // The agent's own product (A1.2): it is offered its product's tools
+        // and told it is that product's agent. The refusal of every other
+        // product's tools happens at the execution boundary, which reads this
+        // same value off the agent's row rather than taking it from here.
+        product: agent.product,
         request: question,
         sources: &ground,
         today: &today,
@@ -237,6 +242,10 @@ pub(crate) fn agent_json(a: &ChatAgent, record: Option<&AgentRecord>) -> Value {
         "handle": a.handle,
         "name": a.name,
         "description": a.description,
+        // What it is the agent *of* (ADR 0034, A1.2) — the same word the
+        // rail uses for the module, so a client can put an agent beside its
+        // product without a second mapping.
+        "product": a.product.as_str(),
         "disabled": a.disabled,
         "answers": record.map_or(0, |r| r.answers),
         "actions": record.map_or(0, |r| r.actions),

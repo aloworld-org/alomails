@@ -26,8 +26,8 @@
 //! hostile message can make an agent look up something the person who
 //! triggered the turn could already look up, and nothing further.
 
-use alo_ai::{AgentDecision, AiConfig, InferenceError, WorkspaceSource};
-use alo_store::{ChatAgentId, ChatChannelId};
+use alo_ai::{AgentAsk, AgentDecision, AiConfig, InferenceError, WorkspaceSource};
+use alo_store::{AgentProduct, ChatAgentId, ChatChannelId};
 
 use crate::agent::{Approval, ToolRun, execute_tool};
 use crate::state::{Account, AppState};
@@ -94,6 +94,14 @@ impl<'a> TurnContext<'a> {
 /// build one — a room and the command palette — should be visibly filling in
 /// the same form.
 pub(crate) struct Turn<'a> {
+    /// The product whose agent is taking it, which decides what it is offered
+    /// (A1.2). [`AgentProduct::Workspace`] for the command palette's "Ask alo".
+    ///
+    /// This is the *prompt's* copy of the scope. The one that is enforced is
+    /// read from the agent's own row at the execution boundary, so a turn that
+    /// claimed a wider product here would be offered tools it still could not
+    /// run.
+    pub product: AgentProduct,
     /// What was asked, in the asker's own words.
     pub request: &'a str,
     /// The grounding the caller retrieved through the asker's access.
@@ -136,6 +144,7 @@ pub(crate) async fn take_turn(
     turn: &Turn<'_>,
 ) -> Result<TurnResult, InferenceError> {
     let Turn {
+        product,
         request,
         today,
         folders,
@@ -143,7 +152,20 @@ pub(crate) async fn take_turn(
         ..
     } = *turn;
     let mut sources = turn.sources.to_vec();
-    let mut decided = alo_ai::run_agent(config, request, &sources, today, folders).await?;
+    // Built twice rather than held across the loop: `sources` grows by a tool
+    // result between the two calls, so an `AgentAsk` borrowing it cannot
+    // outlive one round.
+    let mut decided = alo_ai::run_agent(
+        config,
+        &AgentAsk {
+            product,
+            request,
+            sources: &sources,
+            today,
+            folders,
+        },
+    )
+    .await?;
 
     for used in 0..MAX_READS {
         let action = match step(decided) {
@@ -158,9 +180,18 @@ pub(crate) async fn take_turn(
             detail,
         });
         let more_allowed = used + 1 < MAX_READS;
-        decided =
-            alo_ai::run_agent_after_read(config, request, &sources, today, folders, more_allowed)
-                .await?;
+        decided = alo_ai::run_agent_after_read(
+            config,
+            &AgentAsk {
+                product,
+                request,
+                sources: &sources,
+                today,
+                folders,
+            },
+            more_allowed,
+        )
+        .await?;
     }
     Ok(finish(decided))
 }
@@ -181,6 +212,14 @@ enum Step {
 /// A write is proposed, exactly as before. A read is run. Anything the registry
 /// does not know is proposed, so an unfamiliar name meets the allowlist at the
 /// execution boundary rather than the path that skips approval.
+///
+/// **Product scope is deliberately not asked here** (A1.2). A read belonging to
+/// another product still takes the read path and is refused by the boundary,
+/// which tells the model *which* agent owns it — so the turn ends with the
+/// agent saying who to ask instead of putting a button on a lookup, which is
+/// the bug ADR 0047 exists to remove. Checking it here as well would be a
+/// second copy of a permission rule, and two copies are how they come to
+/// disagree.
 fn step(decided: AgentDecision) -> Step {
     match decided {
         AgentDecision::Answer(answer) => Step::Done(TurnResult::Answer(answer)),
@@ -289,6 +328,48 @@ mod tests {
         assert!(matches!(step(action("delete_everything")), Step::Done(_)));
     }
 
+    /// **Another product's read takes the read path and is refused there**
+    /// (A1.2), rather than being turned into a button here.
+    ///
+    /// The scope is not asked in this module on purpose: the diary lookup goes
+    /// to [`crate::agent::execute_tool`] whoever asked for it, and the
+    /// Inventory agent gets back "whats_on is not a tool the inventory agent
+    /// has", which the next call turns into an answer naming the agent that
+    /// owns it. Putting the check here as well would make a lookup wear a
+    /// button — the exact bug ADR 0047 removed — and would be a second copy of
+    /// a permission rule.
+    #[test]
+    fn another_products_read_still_takes_the_read_path() {
+        assert!(matches!(step(action("whats_on")), Step::RunRead(_)));
+        // What makes that safe is the boundary, not this: no product but
+        // Agenda and Ask alo may actually run it.
+        for product in alo_store::ALL_AGENT_PRODUCTS {
+            assert_eq!(
+                alo_ai::offers(product, "whats_on"),
+                matches!(product, AgentProduct::Agenda | AgentProduct::Workspace),
+                "{product}"
+            );
+        }
+    }
+
+    /// The refusal a foreign lookup comes back with is handed to the model as
+    /// the tool's result, so the turn can say who to ask instead of dying
+    /// silently. This pins the rendering of that refusal, which is the only
+    /// part of it this module owns.
+    #[test]
+    fn a_refused_lookup_is_reported_to_the_model_rather_than_failing_the_turn() {
+        let problem = crate::error::Problem::with(
+            axum::http::StatusCode::FORBIDDEN,
+            "whats_on is not a tool the inventory agent has — ask the agent whose product it belongs to",
+        );
+        let said = format!(
+            "this lookup did not run: {}",
+            problem.detail.as_deref().unwrap_or("it was refused")
+        );
+        assert!(said.contains("not a tool the inventory agent has"));
+        assert!(said.contains("did not run"));
+    }
+
     /// **A read never becomes a proposal, and a write always does** — over
     /// every tool that exists, not a sample. `TurnResult::Propose` is the only
     /// thing either surface turns into a `chat_proposals` row, so this is the
@@ -296,6 +377,10 @@ mod tests {
     #[test]
     fn every_read_runs_and_every_write_waits() {
         for entry in alo_ai::all_tools() {
+            // Ask alo has every tool, so this stays a statement about the
+            // read/write split and not about product scope (which
+            // `a_read_belonging_to_another_product_is_never_run_in_the_turn`
+            // covers over every product).
             match step(action(entry.name)) {
                 Step::RunRead(ran) => {
                     assert!(entry.is_read(), "{} ran without approval", entry.name);

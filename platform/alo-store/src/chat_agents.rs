@@ -17,6 +17,7 @@ use serde_json::Value;
 use time::OffsetDateTime;
 
 use crate::account::AccountStore;
+use crate::agent_product::AgentProduct;
 use crate::error::{Result, StoreError};
 use crate::id::{ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, UserId};
 
@@ -34,6 +35,12 @@ pub struct ChatAgent {
     pub name: String,
     /// One line: what asking it is good for.
     pub description: Option<String>,
+    /// The product it is the agent **of** (ADR 0034, migration 0401).
+    ///
+    /// Not decoration: it decides which tools the prompt offers it and which
+    /// ones the execution boundary refuses it. [`AgentProduct::Workspace`] is
+    /// "Ask alo" and is the only value that gets all of them.
+    pub product: AgentProduct,
     /// Retired agents keep their past messages but take no new turns.
     pub disabled: bool,
 }
@@ -121,21 +128,49 @@ type AgentRow = (
     String,
     String,
     Option<String>,
+    String,
     Option<OffsetDateTime>,
 );
 
-fn row_to_agent(row: AgentRow) -> ChatAgent {
-    ChatAgent {
+/// The columns every agent query selects, in the order [`row_to_agent`] reads
+/// them. One list, so a query cannot forget the product and get an agent this
+/// code would then have to guess the scope of.
+const AGENT_COLUMNS: &str = "id, handle, name, description, product, disabled_at";
+
+/// Read one row.
+///
+/// **Fails rather than guesses at an unreadable product.** A word the CHECK
+/// allowed but this binary cannot read means the database is ahead of it — a
+/// rolling deploy — and the two available guesses are both wrong in a way that
+/// matters: `workspace` would hand every tool to an agent somebody deliberately
+/// scoped, and a narrower guess would silently take tools away from a working
+/// room. That is the opposite direction from
+/// [`crate::user_modules::modules_from_words`], which drops an unknown module
+/// and so fails open, and the difference is the stakes: there an unknown word
+/// withholds an app for a few minutes, here it would decide a permission.
+fn row_to_agent(row: AgentRow) -> Result<ChatAgent> {
+    Ok(ChatAgent {
         id: ChatAgentId::new(row.0),
         handle: row.1,
         name: row.2,
         description: row.3,
-        disabled: row.4.is_some(),
-    }
+        product: AgentProduct::parse(&row.4)?,
+        disabled: row.5.is_some(),
+    })
+}
+
+fn rows_to_agents(rows: Vec<AgentRow>) -> Result<Vec<ChatAgent>> {
+    rows.into_iter().map(row_to_agent).collect()
 }
 
 impl AccountStore {
-    /// Define an agent for this tenant.
+    /// Define an agent for this tenant, as the agent of one product.
+    ///
+    /// `product` is what scopes it (ADR 0034): the tools its prompt offers and
+    /// the ones the execution boundary refuses it. It is a required argument
+    /// and has no default, because the only sensible default would be
+    /// [`AgentProduct::Workspace`] — every tool — and a caller who forgot to
+    /// say would silently get the widest agent there is.
     ///
     /// # Errors
     /// [`StoreError::Validation`] for a bad handle,
@@ -145,6 +180,7 @@ impl AccountStore {
         handle: &str,
         name: &str,
         description: Option<&str>,
+        product: AgentProduct,
     ) -> Result<ChatAgentId> {
         let handle = validate_handle(handle)?;
         let name = name.trim();
@@ -153,14 +189,15 @@ impl AccountStore {
         }
         let id = ChatAgentId::generate();
         let done = sqlx::query(
-            "INSERT INTO chat_agents (tenant_id, id, handle, name, description) \
-             VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING",
+            "INSERT INTO chat_agents (tenant_id, id, handle, name, description, product) \
+             VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING",
         )
         .bind(self.tenant.as_str())
         .bind(id.as_str())
         .bind(&handle)
         .bind(name)
         .bind(description.map(str::trim).filter(|d| !d.is_empty()))
+        .bind(product.as_str())
         .execute(&self.pool)
         .await
         .map_err(StoreError::Db)?;
@@ -176,15 +213,14 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on a database failure.
     pub async fn agents(&self) -> Result<Vec<ChatAgent>> {
-        let rows: Vec<AgentRow> = sqlx::query_as(
-            "SELECT id, handle, name, description, disabled_at FROM chat_agents \
-             WHERE tenant_id = $1 ORDER BY handle",
-        )
+        let rows: Vec<AgentRow> = sqlx::query_as(&format!(
+            "SELECT {AGENT_COLUMNS} FROM chat_agents WHERE tenant_id = $1 ORDER BY handle"
+        ))
         .bind(self.tenant.as_str())
         .fetch_all(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-        Ok(rows.into_iter().map(row_to_agent).collect())
+        rows_to_agents(rows)
     }
 
     /// One agent of this tenant.
@@ -192,16 +228,15 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::NotFound`] if there is no such agent here.
     pub async fn agent(&self, id: &ChatAgentId) -> Result<ChatAgent> {
-        let row: Option<AgentRow> = sqlx::query_as(
-            "SELECT id, handle, name, description, disabled_at FROM chat_agents \
-             WHERE tenant_id = $1 AND id = $2",
-        )
+        let row: Option<AgentRow> = sqlx::query_as(&format!(
+            "SELECT {AGENT_COLUMNS} FROM chat_agents WHERE tenant_id = $1 AND id = $2"
+        ))
         .bind(self.tenant.as_str())
         .bind(id.as_str())
         .fetch_optional(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-        row.map(row_to_agent).ok_or(StoreError::NotFound)
+        row_to_agent(row.ok_or(StoreError::NotFound)?)
     }
 
     /// The agents in a room, so a mention can be resolved against them.
@@ -210,20 +245,25 @@ impl AccountStore {
     /// [`StoreError::NotFound`] if the room is not the caller's to see.
     pub async fn channel_agents(&self, channel: &ChatChannelId) -> Result<Vec<ChatAgent>> {
         self.channel(channel).await?;
-        let rows: Vec<AgentRow> = sqlx::query_as(
-            "SELECT a.id, a.handle, a.name, a.description, a.disabled_at \
+        let columns = AGENT_COLUMNS
+            .split(", ")
+            .map(|column| format!("a.{column}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let rows: Vec<AgentRow> = sqlx::query_as(&format!(
+            "SELECT {columns} \
              FROM chat_agents a \
              JOIN chat_agent_members m \
                ON m.tenant_id = a.tenant_id AND m.agent_id = a.id \
              WHERE a.tenant_id = $1 AND m.channel_id = $2 \
-             ORDER BY a.handle",
-        )
+             ORDER BY a.handle"
+        ))
         .bind(self.tenant.as_str())
         .bind(channel.as_str())
         .fetch_all(&self.pool)
         .await
         .map_err(StoreError::Db)?;
-        Ok(rows.into_iter().map(row_to_agent).collect())
+        rows_to_agents(rows)
     }
 
     /// Put an agent in a room. Membership is a member's business, the same as

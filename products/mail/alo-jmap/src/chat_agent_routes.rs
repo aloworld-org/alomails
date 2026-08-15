@@ -77,21 +77,38 @@ pub struct NewAgentBody {
     handle: String,
     name: String,
     description: Option<String>,
+    /// Which product this is the agent of (ADR 0034, A1.2) — one of the rail's
+    /// module ids, or `workspace` for an "Ask alo".
+    ///
+    /// **Required, and additive**: the field is new, so a client that predates
+    /// it sends nothing and gets a 422 naming the accepted words rather than
+    /// an agent with every tool in the workspace. Defaulting it would make the
+    /// widest agent the one you get by forgetting.
+    product: Option<String>,
 }
 
-/// `POST /chat/agents` `{handle, name, description?}` → define an agent.
+/// `POST /chat/agents` `{handle, name, description?, product}` → define an
+/// agent.
 ///
 /// # Errors
-/// 422 for a bad or taken handle.
+/// 422 for a bad or taken handle, or a product that is not one of the accepted
+/// words.
 pub async fn create_agent(
     State(state): State<AppState>,
     headers: HeaderMap,
     Json(body): Json<NewAgentBody>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let product = alo_store::AgentProduct::parse(body.product.as_deref().unwrap_or_default())
+        .map_err(map_store_err)?;
     let id = account
         .acc
-        .create_agent(&body.handle, &body.name, body.description.as_deref())
+        .create_agent(
+            &body.handle,
+            &body.name,
+            body.description.as_deref(),
+            product,
+        )
         .await
         .map_err(map_store_err)?;
     let agent = account.acc.agent(&id).await.map_err(map_store_err)?;

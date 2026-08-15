@@ -6,7 +6,8 @@
 mod common;
 
 use alo_store::{
-    ChannelVisibility, ChatAgentId, DriveLocation, NewDriveFile, ProposalState, StoreError,
+    AgentProduct, ChannelVisibility, ChatAgentId, DriveLocation, NewDriveFile, ProposalState,
+    StoreError,
 };
 use serde_json::json;
 
@@ -38,20 +39,44 @@ async fn an_agent_posts_as_itself_and_acts_as_the_person_who_asked() {
     let b = store.for_account(t.clone(), ub.clone());
 
     let alo = a
-        .create_agent("alo", "alo", Some("asks and answers"))
+        .create_agent(
+            "alo",
+            "alo",
+            Some("asks and answers"),
+            AgentProduct::Workspace,
+        )
         .await
         .unwrap();
 
     // A handle is claimed once per tenant, and must be typeable.
-    assert!(a.create_agent("alo", "another", None).await.is_err());
-    assert!(a.create_agent("has space", "x", None).await.is_err());
-    assert!(a.create_agent("", "x", None).await.is_err());
+    assert!(
+        a.create_agent("alo", "another", None, AgentProduct::Workspace)
+            .await
+            .is_err()
+    );
+    assert!(
+        a.create_agent("has space", "x", None, AgentProduct::Workspace)
+            .await
+            .is_err()
+    );
+    assert!(
+        a.create_agent("", "x", None, AgentProduct::Workspace)
+            .await
+            .is_err()
+    );
     // '@' is stripped rather than refused: people type it.
-    let helper = a.create_agent("@helper", "Helper", None).await.unwrap();
+    let helper = a
+        .create_agent("@helper", "Helper", None, AgentProduct::Mail)
+        .await
+        .unwrap();
+    let read_back = a.agent(&helper).await.unwrap();
+    assert_eq!(read_back.handle, "helper", "a handle is stored without '@'");
+    // The product it was created as is the product it comes back as — the
+    // value everything else scopes by (ADR 0034, A1.2).
+    assert_eq!(read_back.product, AgentProduct::Mail);
     assert_eq!(
-        a.agent(&helper).await.unwrap().handle,
-        "helper",
-        "a handle is stored without its '@'"
+        a.agent(&alo).await.unwrap().product,
+        AgentProduct::Workspace
     );
 
     let room = a
@@ -119,7 +144,10 @@ async fn only_the_asker_may_approve_what_an_agent_proposed() {
         .unwrap();
     let c = store.for_account(t2, uc);
 
-    let alo = a.create_agent("alo", "alo", None).await.unwrap();
+    let alo = a
+        .create_agent("alo", "alo", None, AgentProduct::Workspace)
+        .await
+        .unwrap();
     let room = a
         .create_channel("planning", None, ChannelVisibility::Public)
         .await
@@ -193,7 +221,10 @@ async fn a_discarded_proposal_stays_discarded() {
         .unwrap();
     let a = store.for_account(t, ua);
 
-    let alo = a.create_agent("alo", "alo", None).await.unwrap();
+    let alo = a
+        .create_agent("alo", "alo", None, AgentProduct::Workspace)
+        .await
+        .unwrap();
     let room = a
         .create_channel("planning", None, ChannelVisibility::Public)
         .await
@@ -376,7 +407,10 @@ async fn an_agents_record_counts_only_rooms_the_reader_can_see() {
     let a = store.for_account(t.clone(), ua);
     let b = store.for_account(t.clone(), ub);
 
-    let alo = a.create_agent("alo", "alo", None).await.unwrap();
+    let alo = a
+        .create_agent("alo", "alo", None, AgentProduct::Workspace)
+        .await
+        .unwrap();
     let open = a
         .create_channel("open", None, ChannelVisibility::Public)
         .await
