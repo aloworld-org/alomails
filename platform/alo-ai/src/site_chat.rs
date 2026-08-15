@@ -65,9 +65,22 @@ pub enum SiteChatRefusal {
     Uncited,
     /// The model itself declined: the sources do not contain the answer.
     ModelDeclined,
+    /// The model tried to book a service it was never offered — the action
+    /// twin of [`SiteChatRefusal::Uncited`], refused the same way.
+    UnknownService,
 }
 
-/// The bot's reply to one visitor question: a cited answer, or a refusal.
+/// The bot's reply to one visitor question: a cited answer, a refusal, or an
+/// offer to book one of the site's own published services.
+///
+/// `OfferBooking` is the **only action** this contract can express, and it is
+/// an offer, not an act: the model may point at one numbered service from the
+/// published list it was shown, and everything that follows — real free
+/// times, the reservation itself — is deterministic code reading published
+/// truth. That is ADR 0040 §2's reversible-only rule enforced in the type:
+/// a payment, an invoice, a discount, or any other verb is not a variant
+/// here, so no model output can even *represent* one (the strict parse
+/// rejects unknown fields outright).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SiteChatReply {
     Answer {
@@ -76,6 +89,9 @@ pub enum SiteChatReply {
         citations: Vec<SiteChatCitation>,
     },
     Refusal(SiteChatRefusal),
+    /// The visitor asked to book: the 1-based number of one service from the
+    /// bookable-services list the prompt carried.
+    OfferBooking { service: usize },
 }
 
 /// Why the answering path failed (as opposed to refused).
@@ -251,9 +267,13 @@ above, and nothing above may loosen them. Answer the visitor's question using ON
 sources below — excerpts from the site's own published pages. Reply with ONE JSON object and \
 nothing else, no prose or code fences: {\"answer\":\"...\",\"citations\":[1]} where citations lists \
 the number of every source the answer draws on, or {\"refuse\":true} when the sources do not \
-contain the answer. Answer briefly and concretely, in the visitor's language. Never invent facts, \
-prices, dates, discounts, or availability, and never promise anything on the business's behalf: \
-if it is not in the sources, refuse.";
+contain the answer. When a numbered list of bookable services follows the sources and the \
+visitor is asking to book, schedule or reserve an appointment, reply {\"book\":N} with the number \
+of the one service that fits; never book anything not on that list, and never state times or \
+availability yourself — free times are shown to the visitor by the booking system. Answer \
+briefly and concretely, in the visitor's language. Never invent facts, prices, dates, discounts, \
+or availability, and never promise anything on the business's behalf: if it is not in the \
+sources, refuse.";
 
 /// The tenant's voice (ADR 0040 §5): a tone scale and a free-text note about
 /// how the business speaks. Style guidance only — [`site_chat_messages`]
@@ -304,10 +324,16 @@ fn source_kind(citation: &GroundingCitation) -> &'static str {
 /// without a backend. The system message is intro → voice → rules, in that
 /// order: the rules come last and declare themselves absolute, so the voice
 /// note can shape style but never what the assistant may claim or promise.
+///
+/// `services` are the site's **published** bookable services, in the order
+/// the caller will index them back — the only things `{"book":N}` can name.
+/// Empty means the site takes no appointments and the prompt says nothing
+/// about booking data at all.
 #[must_use]
 pub fn site_chat_messages(
     question: &str,
     sources: &[SiteChatSource],
+    services: &[String],
     voice: &SiteChatVoice<'_>,
 ) -> Vec<ChatMessage> {
     let mut rendered = String::new();
@@ -324,6 +350,13 @@ pub fn site_chat_messages(
         Some(block) => format!("{SITE_CHAT_INTRO}\n\n{block}\n\n{SITE_CHAT_RULES}"),
         None => format!("{SITE_CHAT_INTRO}\n\n{SITE_CHAT_RULES}"),
     };
+    let mut user = format!("Question: {}\n\nSources:\n{}", question.trim(), rendered);
+    if !services.is_empty() {
+        user.push_str("Bookable services:\n");
+        for (position, name) in services.iter().enumerate() {
+            user.push_str(&format!("[{}] {}\n", position + 1, name));
+        }
+    }
     vec![
         ChatMessage {
             role: "system".to_owned(),
@@ -331,7 +364,7 @@ pub fn site_chat_messages(
         },
         ChatMessage {
             role: "user".to_owned(),
-            content: format!("Question: {}\n\nSources:\n{}", question.trim(), rendered),
+            content: user,
         },
     ]
 }
@@ -345,26 +378,43 @@ struct RawReply {
     citations: Vec<usize>,
     #[serde(default)]
     refuse: bool,
+    /// The one action verb this contract has (`deny_unknown_fields` is what
+    /// keeps it the only one): the number of a bookable service to offer.
+    #[serde(default)]
+    book: Option<usize>,
 }
 
 /// Parse the model's reply against the sources it was shown, enforcing the
 /// ADR's rule: an answer is delivered only when every citation names a source
 /// from that list, and at least one does. A refusal is honoured as stated; an
 /// answer citing nothing, or citing a source that was never offered, becomes
-/// [`SiteChatRefusal::Uncited`] rather than an answer.
+/// [`SiteChatRefusal::Uncited`] rather than an answer. A `book` naming one of
+/// the `services` the prompt offered becomes [`SiteChatReply::OfferBooking`];
+/// one naming anything else is refused, exactly like a citation of a source
+/// never shown. A reply that refuses *and* acts refuses — always the safe
+/// direction.
 ///
 /// # Errors
 /// [`SiteChatError::MissingObject`] when no JSON object is present;
-/// [`SiteChatError::Shape`] when it is not the contract's shape;
-/// [`SiteChatError::Invalid`] when it neither answers nor refuses.
+/// [`SiteChatError::Shape`] when it is not the contract's shape — including
+/// any field beyond the contract's four, which is what keeps the action
+/// vocabulary closed in code;
+/// [`SiteChatError::Invalid`] when it neither answers, refuses, nor books.
 pub fn parse_site_chat_reply(
     text: &str,
     sources: &[SiteChatSource],
+    services: usize,
 ) -> Result<SiteChatReply, SiteChatError> {
     let json = extract_json(text).ok_or(SiteChatError::MissingObject)?;
     let raw: RawReply = serde_json::from_str(json)?;
     if raw.refuse {
         return Ok(SiteChatReply::Refusal(SiteChatRefusal::ModelDeclined));
+    }
+    if let Some(service) = raw.book {
+        if service == 0 || service > services {
+            return Ok(SiteChatReply::Refusal(SiteChatRefusal::UnknownService));
+        }
+        return Ok(SiteChatReply::OfferBooking { service });
     }
     let answer = raw.answer.as_deref().unwrap_or("").trim().to_owned();
     if answer.is_empty() {
@@ -402,6 +452,15 @@ pub fn parse_site_chat_reply(
 /// the configured backend in the tenant's voice, then hold its reply to the
 /// citation rule.
 ///
+/// `services` are the published bookable services (empty when the site takes
+/// no appointments). They widen the no-model shortcut by exactly one case:
+/// a question that retrieves nothing is still refused unheard when there is
+/// nothing bookable either, but when there is, the model is consulted with
+/// zero sources — "can I book a haircut?" shares no vocabulary with most
+/// corpora, and a booking site whose bot cannot hear that question is broken.
+/// With no sources on the table, the citation rule already guarantees the
+/// only deliverable outcomes are a booking offer or a refusal.
+///
 /// # Errors
 /// [`SiteChatError::EmptyQuestion`]/[`SiteChatError::QuestionTooLong`] on bad
 /// input; [`SiteChatError::Inference`] when the backend is disabled,
@@ -411,6 +470,7 @@ pub async fn answer_site_question(
     config: &AiConfig,
     question: &str,
     corpus: &[GroundingDocument],
+    services: &[String],
     voice: &SiteChatVoice<'_>,
 ) -> Result<SiteChatReply, SiteChatError> {
     let question = question.trim();
@@ -421,11 +481,16 @@ pub async fn answer_site_question(
         return Err(SiteChatError::QuestionTooLong);
     }
     let sources = retrieve_site_sources(question, corpus);
-    if sources.is_empty() {
+    if sources.is_empty() && services.is_empty() {
         return Ok(SiteChatReply::Refusal(SiteChatRefusal::NoSources));
     }
-    let reply = chat(config, &site_chat_messages(question, &sources, voice), 0.2).await?;
-    parse_site_chat_reply(&reply, &sources)
+    let reply = chat(
+        config,
+        &site_chat_messages(question, &sources, services, voice),
+        0.2,
+    )
+    .await?;
+    parse_site_chat_reply(&reply, &sources, services.len())
 }
 
 #[cfg(test)]
@@ -521,6 +586,7 @@ mod tests {
             &config,
             "quantum flux capacitor",
             &corpus(),
+            &[],
             &SiteChatVoice::default(),
         )
         .await
@@ -540,6 +606,7 @@ mod tests {
             &config,
             "what is your address?",
             &corpus(),
+            &[],
             &SiteChatVoice::default(),
         )
         .await;
@@ -558,10 +625,10 @@ mod tests {
             enabled: false,
         };
         let voice = SiteChatVoice::default();
-        let out = answer_site_question(&config, "   ", &corpus(), &voice).await;
+        let out = answer_site_question(&config, "   ", &corpus(), &[], &voice).await;
         assert!(matches!(out, Err(SiteChatError::EmptyQuestion)));
         let long = "a ".repeat(MAX_QUESTION_CHARS);
-        let out = answer_site_question(&config, &long, &corpus(), &voice).await;
+        let out = answer_site_question(&config, &long, &corpus(), &[], &voice).await;
         assert!(matches!(out, Err(SiteChatError::QuestionTooLong)));
     }
 
@@ -598,7 +665,7 @@ mod tests {
     fn the_prompt_numbers_sources_and_demands_the_contract() {
         let sources = sources();
         let messages =
-            site_chat_messages("what is your address?", &sources, &SiteChatVoice::default());
+            site_chat_messages("what is your address?", &sources, &[], &SiteChatVoice::default());
         assert_eq!(messages.len(), 2);
         assert_eq!(messages[0].role, "system");
         assert!(messages[0].content.contains("ONLY the numbered sources"));
@@ -614,6 +681,7 @@ mod tests {
         let messages = site_chat_messages(
             "what is your address?",
             &sources(),
+            &[],
             &SiteChatVoice::default(),
         );
         assert_eq!(
@@ -636,7 +704,7 @@ mod tests {
             tone: ChatTone::Warm,
             note: Some(note),
         };
-        let messages = site_chat_messages("what is your address?", &sources(), &voice);
+        let messages = site_chat_messages("what is your address?", &sources(), &[], &voice);
         let system = &messages[0].content;
         // The rules ride verbatim, AFTER the note, and close the message.
         assert!(system.ends_with(SITE_CHAT_RULES));
@@ -658,7 +726,7 @@ mod tests {
             tone: ChatTone::Formal,
             note: Some(&long),
         };
-        let messages = site_chat_messages("what is your address?", &sources(), &voice);
+        let messages = site_chat_messages("what is your address?", &sources(), &[], &voice);
         let system = &messages[0].content;
         assert!(system.contains(&"x".repeat(CHAT_TONE_NOTE_MAX_CHARS)));
         assert!(!system.contains(&"x".repeat(CHAT_TONE_NOTE_MAX_CHARS + 1)));
@@ -669,7 +737,7 @@ mod tests {
     #[test]
     fn a_cited_answer_is_delivered_with_typed_citations() {
         let sources = sources();
-        let reply = parse_site_chat_reply(REPLY_CITED, &sources).unwrap();
+        let reply = parse_site_chat_reply(REPLY_CITED, &sources, 0).unwrap();
         let SiteChatReply::Answer { text, citations } = reply else {
             panic!("expected an answer");
         };
@@ -687,19 +755,19 @@ mod tests {
 
     #[test]
     fn an_answer_without_citations_becomes_a_refusal() {
-        let reply = parse_site_chat_reply(REPLY_UNCITED, &sources()).unwrap();
+        let reply = parse_site_chat_reply(REPLY_UNCITED, &sources(), 0).unwrap();
         assert_eq!(reply, SiteChatReply::Refusal(SiteChatRefusal::Uncited));
     }
 
     #[test]
     fn an_answer_citing_an_unoffered_source_becomes_a_refusal() {
-        let reply = parse_site_chat_reply(REPLY_OUT_OF_RANGE, &sources()).unwrap();
+        let reply = parse_site_chat_reply(REPLY_OUT_OF_RANGE, &sources(), 0).unwrap();
         assert_eq!(reply, SiteChatReply::Refusal(SiteChatRefusal::Uncited));
     }
 
     #[test]
     fn the_models_own_refusal_is_honoured() {
-        let reply = parse_site_chat_reply(REPLY_REFUSAL, &sources()).unwrap();
+        let reply = parse_site_chat_reply(REPLY_REFUSAL, &sources(), 0).unwrap();
         assert_eq!(
             reply,
             SiteChatReply::Refusal(SiteChatRefusal::ModelDeclined)
@@ -708,7 +776,7 @@ mod tests {
 
     #[test]
     fn a_prose_wrapped_reply_still_parses() {
-        let reply = parse_site_chat_reply(REPLY_PROSE_WRAPPED, &sources()).unwrap();
+        let reply = parse_site_chat_reply(REPLY_PROSE_WRAPPED, &sources(), 0).unwrap();
         assert!(matches!(reply, SiteChatReply::Answer { .. }));
     }
 
@@ -722,6 +790,7 @@ mod tests {
         let reply = parse_site_chat_reply(
             r#"{"answer":"See our visit page.","citations":[1,2,1]}"#,
             &both,
+            0,
         )
         .unwrap();
         let SiteChatReply::Answer { citations, .. } = reply else {
@@ -734,30 +803,131 @@ mod tests {
     fn out_of_contract_replies_are_errors_not_answers() {
         let sources = sources();
         assert!(matches!(
-            parse_site_chat_reply("no json here", &sources),
+            parse_site_chat_reply("no json here", &sources, 0),
             Err(SiteChatError::MissingObject)
         ));
         assert!(matches!(
             parse_site_chat_reply(
                 r#"{"answer":"hi","citations":[1],"surprise":true}"#,
-                &sources
+                &sources,
+                0
             ),
             Err(SiteChatError::Shape(_))
         ));
         assert!(matches!(
-            parse_site_chat_reply(r#"{"citations":[1]}"#, &sources),
+            parse_site_chat_reply(r#"{"citations":[1]}"#, &sources, 0),
             Err(SiteChatError::Invalid(_))
         ));
         // A refusal that also carries an answer refuses — the safe direction.
         let mixed = parse_site_chat_reply(
             r#"{"answer":"maybe this","citations":[1],"refuse":true}"#,
             &sources,
+            0,
         )
         .unwrap();
         assert_eq!(
             mixed,
             SiteChatReply::Refusal(SiteChatRefusal::ModelDeclined)
         );
+    }
+
+    #[test]
+    fn a_book_naming_an_offered_service_becomes_an_offer() {
+        let reply = parse_site_chat_reply(r#"{"book":2}"#, &sources(), 3).unwrap();
+        assert_eq!(reply, SiteChatReply::OfferBooking { service: 2 });
+        // Prose around the object is tolerated exactly like an answer's.
+        let wrapped = parse_site_chat_reply("Sure! {\"book\":1}", &sources(), 1).unwrap();
+        assert_eq!(wrapped, SiteChatReply::OfferBooking { service: 1 });
+    }
+
+    #[test]
+    fn a_book_naming_an_unoffered_service_is_refused() {
+        for (raw, offered) in [(r#"{"book":4}"#, 3), (r#"{"book":0}"#, 3), (r#"{"book":1}"#, 0)] {
+            let reply = parse_site_chat_reply(raw, &sources(), offered).unwrap();
+            assert_eq!(
+                reply,
+                SiteChatReply::Refusal(SiteChatRefusal::UnknownService),
+                "{raw} with {offered} services"
+            );
+        }
+    }
+
+    #[test]
+    fn a_reply_that_refuses_and_books_refuses() {
+        let reply = parse_site_chat_reply(r#"{"refuse":true,"book":1}"#, &sources(), 3).unwrap();
+        assert_eq!(reply, SiteChatReply::Refusal(SiteChatRefusal::ModelDeclined));
+    }
+
+    /// ADR 0040 §2, enforced in code rather than in the prompt: the action
+    /// vocabulary is closed. `book` is the only verb the contract can even
+    /// deserialize — a payment, an order confirmation, a discount, a
+    /// cancellation of someone else's meeting are all shape errors, never
+    /// actions.
+    #[test]
+    fn no_other_action_verb_can_even_be_represented() {
+        for raw in [
+            r#"{"pay":1}"#,
+            r#"{"charge":{"amount":100}}"#,
+            r#"{"invoice":1}"#,
+            r#"{"discount":90}"#,
+            r#"{"cancel":"someone-elses-meeting"}"#,
+            r#"{"book":1,"pay":1}"#,
+        ] {
+            assert!(
+                matches!(
+                    parse_site_chat_reply(raw, &sources(), 5),
+                    Err(SiteChatError::Shape(_))
+                ),
+                "{raw} must be out of contract"
+            );
+        }
+    }
+
+    #[test]
+    fn the_prompt_lists_bookable_services_only_when_there_are_any() {
+        let services = vec!["Consultation".to_owned(), "Studio visit".to_owned()];
+        let messages = site_chat_messages(
+            "can I book a consultation?",
+            &sources(),
+            &services,
+            &SiteChatVoice::default(),
+        );
+        let user = &messages[1].content;
+        assert!(user.contains("Bookable services:\n[1] Consultation\n[2] Studio visit"));
+        assert!(messages[0].content.contains("{\"book\":N}"));
+        let without = site_chat_messages(
+            "can I book a consultation?",
+            &sources(),
+            &[],
+            &SiteChatVoice::default(),
+        );
+        assert!(!without[1].content.contains("Bookable services"));
+    }
+
+    /// A question that retrieves nothing still reaches the model when the
+    /// site has bookable services — and still refuses unheard when it has
+    /// none (the S3.02b cost promise, unchanged for non-booking sites).
+    #[tokio::test]
+    async fn no_sources_with_services_reaches_the_backend_gate() {
+        let config = AiConfig {
+            base_url: "http://localhost:1".to_owned(),
+            model: "m".to_owned(),
+            api_key: None,
+            enabled: false,
+        };
+        let services = vec!["Consultation".to_owned()];
+        let out = answer_site_question(
+            &config,
+            "quantum flux capacitor",
+            &corpus(),
+            &services,
+            &SiteChatVoice::default(),
+        )
+        .await;
+        assert!(matches!(
+            out,
+            Err(SiteChatError::Inference(InferenceError::Disabled))
+        ));
     }
 
     #[test]

@@ -168,6 +168,7 @@ pub mod site_agenda;
 pub mod site_analytics;
 pub mod site_assets;
 pub mod site_attribution;
+pub mod site_booking_manage;
 pub mod site_booking_notify;
 pub mod site_booking_publish;
 pub mod site_booking_slots;
@@ -491,6 +492,7 @@ pub use site_analytics::{
 };
 pub use site_assets::{SITE_IMAGE_CONTENT_TYPES, SiteImageData, site_image_content_type};
 pub use site_attribution::{SiteAttributionMoney, SiteAttributionReport, SiteAttributionSource};
+pub use site_booking_manage::{CancelOutcome, ManagedAppointment};
 pub use site_booking_notify::BookingNotification;
 pub use site_booking_publish::SiteBookingSnapshot;
 pub use site_booking_slots::{

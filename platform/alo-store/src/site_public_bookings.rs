@@ -110,6 +110,10 @@ pub struct ReservedAppointment {
     /// offered the time in.
     pub time_zone: String,
     pub location: Option<String>,
+    /// The capability that lets the visitor (and only whoever holds the
+    /// confirmation) see, calendar-import, and cancel this one appointment —
+    /// the reversibility handle of [`crate::site_booking_manage`].
+    pub manage_token: String,
 }
 
 impl SitePublicStore {
@@ -348,6 +352,7 @@ impl SitePublicStore {
         };
 
         let id = SiteBookingAppointmentId::generate();
+        let manage_token = crate::id::generate_token();
         let mut tx = self.pool().begin().await.map_err(StoreError::Db)?;
         // One writer at a time per calendar, for the length of this
         // transaction: the overlap check below and the insert that follows it
@@ -380,8 +385,8 @@ impl SitePublicStore {
         let written = sqlx::query(
             "INSERT INTO site_booking_appointments \
                  (tenant_id, site_id, id, booking_id, booking_name, calendar_id, starts_at, \
-                  ends_at, time_zone, visitor_name, visitor_email, answers) \
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) \
+                  ends_at, time_zone, visitor_name, visitor_email, answers, manage_token) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) \
              ON CONFLICT DO NOTHING",
         )
         .bind(service.tenant.as_str())
@@ -396,6 +401,7 @@ impl SitePublicStore {
         .bind(&visitor_name)
         .bind(&visitor_email)
         .bind(sqlx::types::Json(&answers_json))
+        .bind(&manage_token)
         .execute(&mut *tx)
         .await
         .map_err(StoreError::Db)?;
@@ -468,6 +474,7 @@ impl SitePublicStore {
             ends_at: slot.ends_at,
             time_zone: service.published.time_zone.clone(),
             location: service.published.location.clone(),
+            manage_token,
         }))
     }
 }

@@ -11,8 +11,8 @@
 mod common;
 
 use alo_store::{
-    AccountStore, BookingNotification, BookingRequest, CalendarEvent, CalendarId, EventId,
-    PublicBookingService, SiteBookingField, SiteBookingFieldKind, SiteBookingInput,
+    AccountStore, BookingNotification, BookingRequest, CalendarEvent, CalendarId, CancelOutcome,
+    EventId, PublicBookingService, SiteBookingField, SiteBookingFieldKind, SiteBookingInput,
     SiteBookingWindow, SiteId, SitePublicStore, Store, StoreError,
 };
 use serde_json::json;
@@ -809,4 +809,199 @@ async fn an_appointment_stores_nothing_about_the_visitors_connection() {
             "missing {expected}"
         );
     }
+}
+
+#[tokio::test]
+async fn the_visitor_can_cancel_what_they_booked_and_the_slot_frees() {
+    let published = published_service("site-booking-cancel", &[], true).await;
+    let service = resolve(&published).await;
+    let reserved = published
+        .public
+        .reserve_public_booking(&service, &visitor(utc(16, 7, 0), &[]), asking_at())
+        .await
+        .unwrap()
+        .expect("the service is bookable");
+    assert!(
+        !reserved.manage_token.is_empty(),
+        "every reservation mints the visitor's capability"
+    );
+    let site = published
+        .public
+        .resolve_published(&published.subdomain)
+        .await
+        .unwrap()
+        .unwrap();
+
+    // The token shows the visitor their own appointment — name and time,
+    // nothing else — while it stands.
+    let seen = published
+        .public
+        .managed_appointment(&site, &reserved.manage_token)
+        .await
+        .unwrap()
+        .expect("the token resolves on its own site");
+    assert_eq!(seen.booking_name, "Consultation");
+    assert_eq!(seen.starts_at, utc(16, 7, 0));
+    assert!(seen.booked);
+
+    // Cancelling withdraws the reservation…
+    let outcome = published
+        .public
+        .cancel_managed_appointment(&site, &reserved.manage_token, asking_at())
+        .await
+        .unwrap()
+        .expect("the token resolves");
+    assert_eq!(
+        outcome,
+        CancelOutcome::Cancelled {
+            booking_name: "Consultation".to_owned()
+        }
+    );
+
+    // …the slot is offered to the next visitor again…
+    let slots = published
+        .public
+        .public_booking_slots(&service, wednesday(), asking_at())
+        .await
+        .unwrap();
+    assert!(
+        slots.iter().any(|slot| slot.starts_at == utc(16, 7, 0)),
+        "a cancelled appointment frees its time"
+    );
+
+    // …and the owner's calendar no longer shows the meeting.
+    let events = published
+        .account
+        .events_in_range(utc(16, 0, 0), utc(17, 0, 0))
+        .await
+        .unwrap();
+    assert!(events.is_empty(), "the event follows the fact: {events:?}");
+
+    // Cancelling twice is answered honestly, and the view says cancelled.
+    let again = published
+        .public
+        .cancel_managed_appointment(&site, &reserved.manage_token, asking_at())
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        again,
+        CancelOutcome::AlreadyCancelled {
+            booking_name: "Consultation".to_owned()
+        }
+    );
+    let after = published
+        .public
+        .managed_appointment(&site, &reserved.manage_token)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(!after.booked);
+}
+
+#[tokio::test]
+async fn a_manage_token_answers_nothing_on_another_site_or_tenant() {
+    let published = published_service("site-booking-token-a", &[], true).await;
+    let service = resolve(&published).await;
+    let reserved = published
+        .public
+        .reserve_public_booking(&service, &visitor(utc(16, 7, 0), &[]), asking_at())
+        .await
+        .unwrap()
+        .expect("the service is bookable");
+
+    // A whole other tenant with its own published site: the token is the
+    // same generic nothing there, for reading and for cancelling alike.
+    let foreign = published_service("site-booking-token-b", &[], true).await;
+    let foreign_site = foreign
+        .public
+        .resolve_published(&foreign.subdomain)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(
+        foreign
+            .public
+            .managed_appointment(&foreign_site, &reserved.manage_token)
+            .await
+            .unwrap()
+            .is_none(),
+        "a foreign site must not even see the appointment"
+    );
+    assert!(
+        foreign
+            .public
+            .cancel_managed_appointment(&foreign_site, &reserved.manage_token, asking_at())
+            .await
+            .unwrap()
+            .is_none(),
+        "a foreign site must not cancel it"
+    );
+
+    // The reservation still stands at home, untouched by the probing.
+    let site = published
+        .public
+        .resolve_published(&published.subdomain)
+        .await
+        .unwrap()
+        .unwrap();
+    let seen = published
+        .public
+        .managed_appointment(&site, &reserved.manage_token)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(seen.booked);
+
+    // Unknown and malformed tokens are the same nothing as foreign ones.
+    for probe in ["no-such-token", "bad token;drop", ""] {
+        assert!(
+            published
+                .public
+                .managed_appointment(&site, probe)
+                .await
+                .unwrap()
+                .is_none(),
+            "{probe:?} must resolve to nothing"
+        );
+    }
+}
+
+#[tokio::test]
+async fn an_appointment_that_already_started_cannot_be_cancelled() {
+    let published = published_service("site-booking-too-late", &[], true).await;
+    let service = resolve(&published).await;
+    let reserved = published
+        .public
+        .reserve_public_booking(&service, &visitor(utc(16, 7, 0), &[]), asking_at())
+        .await
+        .unwrap()
+        .expect("the service is bookable");
+    let site = published
+        .public
+        .resolve_published(&published.subdomain)
+        .await
+        .unwrap()
+        .unwrap();
+
+    // Half past: the meeting is under way.
+    let outcome = published
+        .public
+        .cancel_managed_appointment(&site, &reserved.manage_token, utc(16, 7, 15))
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        outcome,
+        CancelOutcome::TooLate {
+            booking_name: "Consultation".to_owned()
+        }
+    );
+    let seen = published
+        .public
+        .managed_appointment(&site, &reserved.manage_token)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(seen.booked, "undoing the past is not offered");
 }
