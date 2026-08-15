@@ -28,6 +28,7 @@ pub mod agent_hr;
 pub mod agent_insights;
 pub mod agent_inventory;
 pub mod agent_meeting;
+mod agent_orchestrate;
 pub mod agent_projects;
 pub mod agent_reads;
 pub mod agent_sheets;

@@ -29,7 +29,10 @@ use crate::state::{Account, AppState};
 /// How much of the workspace grounds one chat turn. Matches the command
 /// palette's budget: the same question deserves the same evidence wherever it
 /// is asked.
-const CHAT_SOURCES: i64 = 8;
+///
+/// Shared with [`crate::agent_orchestrate`], so a step of an Ask alo plan is
+/// grounded exactly as the same question typed at the agent directly would be.
+pub(crate) const CHAT_SOURCES: i64 = 8;
 
 /// The agents named in `body`, out of those present in the room.
 ///
@@ -48,13 +51,48 @@ pub(crate) fn named_agents(body: &str, present: &[ChatAgent]) -> Vec<ChatAgent> 
 }
 
 /// What the agent decided, already said in the room.
-enum Spoken {
+pub(crate) enum Spoken {
     /// It answered; nothing waits on anybody.
     Answered,
     /// It proposed something, and only the asker may approve it.
     Proposed,
     /// It could not answer, and said so once.
     Excused,
+    /// A multi-step run was stopped part-way and said so
+    /// ([`crate::agent_orchestrate`]). A single turn stopped while it was
+    /// thinking says nothing at all instead — there is nothing half-done to
+    /// account for.
+    Stopped,
+}
+
+/// The grounding for one turn: whatever the asker's own access turns up in that
+/// product, as numbered sources with no bodies.
+///
+/// The only thing a turn may ever see, and it is the **asker's** access, never
+/// the agent's. Scoped to the product too (A1.3): the Inventory agent is not
+/// grounded in eight of the asker's emails, and reaches stock through its own
+/// reading tool. Shared with [`crate::agent_orchestrate`] so a delegated step
+/// grounds the same way.
+pub(crate) async fn ground(
+    account: &Account,
+    product: alo_store::AgentProduct,
+    question: &str,
+    limit: i64,
+) -> Vec<WorkspaceSource> {
+    account
+        .acc
+        .agent_ground(product, question, limit)
+        .await
+        .unwrap_or_default()
+        .iter()
+        .enumerate()
+        .map(|(i, h)| WorkspaceSource {
+            index: i + 1,
+            kind: h.kind.clone(),
+            title: h.title.clone(),
+            detail: String::new(),
+        })
+        .collect()
 }
 
 /// Run one agent turn and post its result into the room.
@@ -71,25 +109,6 @@ async fn take_turn(
     stopped: &std::sync::atomic::AtomicBool,
 ) -> Option<Spoken> {
     let acc = &account.acc;
-    // Access-scoped retrieval — the only thing this turn may ever see, and it
-    // is the asker's access, never the agent's. Scoped to the agent's own
-    // product too (A1.3): the Inventory agent is no longer grounded in eight of
-    // the asker's emails, and reaches stock through its own reading tool.
-    let hits = acc
-        .agent_ground(agent.product, question, CHAT_SOURCES)
-        .await
-        .unwrap_or_default();
-    let ground: Vec<WorkspaceSource> = hits
-        .iter()
-        .enumerate()
-        .map(|(i, h)| WorkspaceSource {
-            index: i + 1,
-            kind: h.kind.clone(),
-            title: h.title.clone(),
-            detail: String::new(),
-        })
-        .collect();
-
     let config = match acc.default_ai_config().await {
         Ok(Some(row)) => AiConfig {
             base_url: row.base_url,
@@ -122,6 +141,27 @@ async fn take_turn(
             ),
         }
     };
+    // **Ask alo orchestrates rather than owns** (ADR 0034, A3.1): it routes the
+    // question to the product agents and runs their answers as a visible plan,
+    // each step under its own agent's scope. It falls back to the ordinary turn
+    // below when there is nobody to route to or the planner cannot be reached —
+    // a workspace with one agent in it should still have an assistant.
+    if agent.product == alo_store::AgentProduct::Workspace {
+        let run = crate::agent_orchestrate::Run {
+            channel,
+            alo: agent,
+            question,
+            today: &today,
+            config: &config,
+            stopped,
+        };
+        match crate::agent_orchestrate::orchestrate(state, account, &run).await {
+            crate::agent_orchestrate::Orchestrated::Ran(spoke) => return spoke,
+            crate::agent_orchestrate::Orchestrated::NotRouted => {}
+        }
+    }
+
+    let ground = ground(account, agent.product, question, CHAT_SOURCES).await;
     // The turn, with its reading tools run inside it (ADR 0047): asking what is
     // in stock comes back as the figure, and only a change comes back as
     // something to approve.
@@ -180,11 +220,12 @@ async fn take_turn(
 
 /// Said in the room when no model is configured. Plain, and not an apology:
 /// it names what is missing and who can fix it.
-const UNCONFIGURED: &str = "I can't answer yet — no AI provider is set up for this workspace. An admin can add one in Settings.";
+pub(crate) const UNCONFIGURED: &str = "I can't answer yet — no AI provider is set up for this workspace. An admin can add one in Settings.";
 
 /// Said when the provider could not be reached. Deliberately says nothing
 /// about why: the reason is an operator's business, not a room's.
-const UNREACHABLE: &str = "I couldn't reach the model just now. Try me again in a moment.";
+pub(crate) const UNREACHABLE: &str =
+    "I couldn't reach the model just now. Try me again in a moment.";
 
 /// The agents a message is addressed to, which depends on the room it was said
 /// in.

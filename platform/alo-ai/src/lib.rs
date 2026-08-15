@@ -30,6 +30,7 @@ pub mod agent_hr;
 pub mod agent_insights;
 pub mod agent_inventory;
 pub mod agent_mail;
+pub mod agent_plan;
 pub mod agent_product;
 pub mod agent_projects;
 pub mod agent_sheets;
@@ -60,6 +61,10 @@ pub use agent_hr::HR_TOOLS;
 pub use agent_insights::INSIGHTS_TOOLS;
 pub use agent_inventory::INVENTORY_TOOLS;
 pub use agent_mail::MAIL_TOOLS;
+pub use agent_plan::{
+    AgentPlan, MAX_PLAN_STEPS, PlanAgent, PlanAsk, PlanStep, parse_plan, plan_messages,
+    plan_system_prompt, run_planner,
+};
 pub use agent_product::{ToolSet, offers, tool_sets, tools_for};
 pub use agent_projects::PROJECTS_TOOLS;
 pub use agent_sheets::SHEETS_TOOLS;

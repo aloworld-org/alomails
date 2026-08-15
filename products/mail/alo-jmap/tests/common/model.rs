@@ -22,6 +22,19 @@ pub type Seen = Arc<Mutex<Vec<Value>>>;
 /// answers `script` in order (the last entry repeats), recording what it was
 /// asked. It speaks just enough HTTP/1.1 for `reqwest`.
 pub async fn scripted_model(script: Vec<String>) -> (String, Seen) {
+    scripted_model_paced(script, std::time::Duration::ZERO).await
+}
+
+/// The same, with every answer held back for `pace`.
+///
+/// For the one property that cannot be seen from an instant backend: a
+/// **multi-step run being stopped in the middle of itself** (A3.1). With no
+/// delay the whole run is over before a Stop could be sent, so the suite would
+/// be testing whether it can win a race rather than whether stopping works.
+pub async fn scripted_model_paced(
+    script: Vec<String>,
+    pace: std::time::Duration,
+) -> (String, Seen) {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
@@ -71,6 +84,9 @@ pub async fn scripted_model(script: Vec<String>) -> (String, Seen) {
                     .or_else(|| script.last())
                     .cloned()
                     .unwrap_or_default();
+                if !pace.is_zero() {
+                    tokio::time::sleep(pace).await;
+                }
                 let answer =
                     json!({ "choices": [{ "message": { "role": "assistant", "content": content } }] })
                         .to_string();
