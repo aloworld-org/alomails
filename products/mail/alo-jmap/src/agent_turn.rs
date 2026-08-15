@@ -395,9 +395,10 @@ mod tests {
                 }
             }
         }
-        // Eleven of them, which is the whole point of ADR 0047.
+        // Fourteen of them, which is the whole point of ADR 0047 — eleven from
+        // the products A1 covered, and the Website agent's three (A2.1).
         let reads = alo_ai::all_tools().iter().filter(|t| t.is_read()).count();
-        assert_eq!(reads, 11);
+        assert_eq!(reads, 14);
     }
 
     #[test]

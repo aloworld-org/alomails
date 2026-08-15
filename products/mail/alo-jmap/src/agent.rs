@@ -28,6 +28,7 @@ use crate::agent_finance_answers as finance_answers;
 use crate::agent_hr as hr;
 use crate::agent_inventory as inventory;
 use crate::agent_projects as projects;
+use crate::agent_sites as sites;
 use crate::agent_timesheet as timesheet;
 use crate::ai::MAX_ASK_BYTES;
 use crate::error::Problem;
@@ -468,6 +469,17 @@ async fn dispatch(
         "draft_letter_from_template" => {
             hr::execute_draft_letter_from_template(account, args, state).await
         }
+        // alo Sites' tools (A2.1), on the same seam. The three reads answer
+        // from the published site and the draft; the two page writes land in
+        // the **draft** and nowhere else, and `site_publish` is the only one of
+        // the six that puts anything on the internet — which is why it is
+        // declared a write and cannot run without the owner's own approval.
+        "site_answer" => sites::execute_site_answer(account, args).await,
+        "site_page_read" => sites::execute_site_page_read(account, args).await,
+        "site_seo_review" => sites::execute_site_seo_review(account, args).await,
+        "site_page_draft" => sites::execute_site_page_draft(account, args).await,
+        "site_page_edit" => sites::execute_site_page_edit(account, args).await,
+        "site_publish" => sites::execute_site_publish(account, args).await,
         // Unreachable given the allowlist check, but the match stays total.
         _ => Err(Problem::with(StatusCode::BAD_REQUEST, "unknown tool")),
     }

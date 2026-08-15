@@ -81,7 +81,7 @@ your reading tools, and never answer a question about them from a source that me
 subject.\n";
 
 /// Said instead of a tool list to an agent whose product has none yet
-/// (Insights, Meet, Sites until their waves land).
+/// (Insights and Meet until their waves land).
 const NO_TOOLS_YET: &str = "You have no tools in this product yet, so you ANSWER from the numbered sources and never \
      return an action. If the request needs something done, say plainly that you cannot do it yet.\n";
 
@@ -557,13 +557,9 @@ mod tests {
             assert!(prompt.starts_with("You are "));
             assert!(prompt.ends_with("no preamble."));
         }
-        // The three products whose agents are still to be built say so plainly
+        // The two products whose agents are still to be built say so plainly
         // rather than leaving an empty menu under a heading.
-        for empty in [
-            AgentProduct::Insights,
-            AgentProduct::Meet,
-            AgentProduct::Sites,
-        ] {
+        for empty in [AgentProduct::Insights, AgentProduct::Meet] {
             let prompt = system_prompt_for(empty);
             assert!(prompt.contains("no tools in this product yet"), "{empty}");
             assert!(!prompt.contains("Available tools:"), "{empty}");
@@ -602,7 +598,7 @@ mod tests {
     }
 
     /// ADR 0047 §1. The split is a property of the tool, declared once, and the
-    /// eleven reads are the eleven the ADR names — no more, and not by prefix.
+    /// reads are the ones each product declared — no more, and not by prefix.
     #[test]
     fn the_registry_declares_which_tools_only_read() {
         let reads: Vec<&str> = all_tools()
@@ -624,9 +620,16 @@ mod tests {
                 "flag_anomalies",
                 "stock_answer",
                 "who_is_off",
+                // A2.1: the Website agent reads the published site, one page of
+                // the draft, and what search engines will find missing. Putting
+                // any of it on the internet is `site_publish`, which is not
+                // here — that is the whole of "publishing is proposed".
+                "site_answer",
+                "site_page_read",
+                "site_seo_review",
             ]
         );
-        assert_eq!(all_tools().len(), 33);
+        assert_eq!(all_tools().len(), 39);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -756,14 +759,16 @@ mod tests {
         assert!(at("- log_time:") < at("- categorise_transactions:"));
         assert!(at("- categorise_transactions:") < at("- reorder_proposals:"));
         assert!(at("- reorder_proposals:") < at("- who_is_off:"));
+        assert!(at("- who_is_off:") < at("- site_answer:"));
         // Every tool line comes before every product's guidance, so a model
         // reads the whole menu before it reads how to fill an order from it.
-        assert!(at("- who_is_off:") < at("For a billing tool"));
+        assert!(at("- site_publish:") < at("For a billing tool"));
         assert!(at("For a billing tool") < at("For a CRM tool"));
         assert!(at("For a CRM tool") < at("For a projects tool"));
         assert!(at("For a projects tool") < at("For a finance tool"));
         assert!(at("For a finance tool") < at("For an inventory tool"));
         assert!(at("For an inventory tool") < at("For an HR tool"));
-        assert!(at("For an HR tool") < at("Output ONLY the JSON object"));
+        assert!(at("For an HR tool") < at("For a website tool"));
+        assert!(at("For a website tool") < at("Output ONLY the JSON object"));
     }
 }

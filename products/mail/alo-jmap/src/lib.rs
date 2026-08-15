@@ -24,6 +24,7 @@ pub mod agent_hr;
 pub mod agent_inventory;
 pub mod agent_projects;
 pub mod agent_reads;
+pub mod agent_sites;
 pub mod agent_timesheet;
 mod agent_turn;
 pub mod ai;

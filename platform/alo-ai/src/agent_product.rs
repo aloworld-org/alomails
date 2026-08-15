@@ -30,6 +30,7 @@ use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
 use crate::agent_inventory::{INVENTORY_GUIDANCE, INVENTORY_TOOL_DOC, INVENTORY_TOOLS};
 use crate::agent_mail::{MAIL_GUIDANCE, MAIL_TOOL_DOC, MAIL_TOOLS};
 use crate::agent_projects::{PROJECTS_GUIDANCE, PROJECTS_TOOL_DOC, PROJECTS_TOOLS};
+use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
 use crate::agent_tasks::{TASKS_GUIDANCE, TASKS_TOOL_DOC, TASKS_TOOLS};
 use crate::agent_tool::AgentTool;
 
@@ -72,6 +73,7 @@ const PROJECTS_SET: ToolSet = set(PROJECTS_TOOLS, PROJECTS_TOOL_DOC, PROJECTS_GU
 const FINANCE_SET: ToolSet = set(FINANCE_TOOLS, FINANCE_TOOL_DOC, FINANCE_GUIDANCE);
 const INVENTORY_SET: ToolSet = set(INVENTORY_TOOLS, INVENTORY_TOOL_DOC, INVENTORY_GUIDANCE);
 const HR_SET: ToolSet = set(HR_TOOLS, HR_TOOL_DOC, HR_GUIDANCE);
+const SITES_SET: ToolSet = set(SITES_TOOLS, SITES_TOOL_DOC, SITES_GUIDANCE);
 
 /// Mail's, including the address book.
 const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
@@ -85,14 +87,15 @@ const PROJECTS: &[ToolSet] = &[PROJECTS_SET];
 const FINANCE: &[ToolSet] = &[FINANCE_SET];
 const INVENTORY: &[ToolSet] = &[INVENTORY_SET];
 const HR: &[ToolSet] = &[HR_SET];
+const SITES: &[ToolSet] = &[SITES_SET];
 
 /// A product whose agent has no tools yet.
 ///
-/// Insights, Meet and Sites are real products with real modules; their agents
-/// are queued (A2.1, A2.4, A3.2) and their tool sets are what those items
-/// build. Until then such an agent answers from its grounding and proposes
-/// nothing — which is a truthful agent, and better than borrowing another
-/// product's tools to look busy.
+/// Insights and Meet are real products with real modules; their agents are
+/// queued (A2.4, A3.2) and their tool sets are what those items build. Until
+/// then such an agent answers from its grounding and proposes nothing — which is
+/// a truthful agent, and better than borrowing another product's tools to look
+/// busy.
 const NONE_YET: &[ToolSet] = &[];
 
 /// Every product's tool sets, in the order [`AgentProduct::Workspace`] renders
@@ -114,7 +117,8 @@ pub fn tool_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Finance => FINANCE,
         AgentProduct::Inventory => INVENTORY,
         AgentProduct::Hr => HR,
-        AgentProduct::Insights | AgentProduct::Meet | AgentProduct::Sites => NONE_YET,
+        AgentProduct::Sites => SITES,
+        AgentProduct::Insights | AgentProduct::Meet => NONE_YET,
         // Ask alo works across products, so it is offered all of them — the
         // one agent for which that is the decision rather than the default
         // (ADR 0034).
@@ -137,6 +141,7 @@ const WORKSPACE: &[ToolSet] = &[
     FINANCE_SET,
     INVENTORY_SET,
     HR_SET,
+    SITES_SET,
 ];
 
 /// Who the agent is, said in the first line of its system prompt.
@@ -286,11 +291,18 @@ mod tests {
             names(AgentProduct::Hr),
             ["who_is_off", "draft_letter_from_template"]
         );
-        for empty in [
-            AgentProduct::Insights,
-            AgentProduct::Meet,
-            AgentProduct::Sites,
-        ] {
+        assert_eq!(
+            names(AgentProduct::Sites),
+            [
+                "site_answer",
+                "site_page_read",
+                "site_seo_review",
+                "site_page_draft",
+                "site_page_edit",
+                "site_publish",
+            ]
+        );
+        for empty in [AgentProduct::Insights, AgentProduct::Meet] {
             assert!(tools_for(empty).is_empty(), "{empty} has no tools yet");
         }
     }
@@ -318,7 +330,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 33);
+        assert_eq!(workspace.len(), 39);
     }
 
     /// The boundary's question, over the whole registry: a product offers its
@@ -348,5 +360,10 @@ mod tests {
         assert!(!offers(AgentProduct::Mail, "stock_answer"));
         assert!(offers(AgentProduct::Inventory, "stock_answer"));
         assert!(offers(AgentProduct::Workspace, "send_email"));
+        // The one A2.1 adds: putting a site on the internet belongs to the
+        // Website agent and to nobody else's.
+        assert!(offers(AgentProduct::Sites, "site_publish"));
+        assert!(!offers(AgentProduct::Mail, "site_publish"));
+        assert!(!offers(AgentProduct::Sites, "send_email"));
     }
 }
