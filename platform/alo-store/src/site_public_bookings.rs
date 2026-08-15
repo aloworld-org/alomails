@@ -34,7 +34,7 @@ use crate::model::CalendarEvent;
 use crate::site_booking_publish::{SiteBookingSnapshot, SiteBookingSnapshotRow};
 use crate::site_booking_slots::{BookingRules, BookingSlot, free_slots, local_day};
 use crate::site_bookings::{SiteBookingField, SiteBookingFieldKind};
-use crate::site_public::SitePublicStore;
+use crate::site_public::{PublishedSite, SitePublicStore};
 
 /// The longest id token this door will even send to the database. Real ids are
 /// 22 characters (base64url of 16 random bytes); anything far outside that
@@ -165,6 +165,62 @@ impl SitePublicStore {
         }))
     }
 
+    /// Everything one published site currently offers appointments for — the
+    /// site-level entry ADR 0040's conversation needs: the bot (and anything
+    /// else public) can ask *what can be booked here* without a page-carried
+    /// service id, and gets back the same resolved services the booking
+    /// section itself books through.
+    ///
+    /// Only the **active** services frozen into the publish `site` is serving
+    /// are offered, in name order. A service whose calendar has since been
+    /// deleted drops out — nothing bookable rather than an empty week — and a
+    /// site with none, or one whose publish has been superseded, is an empty
+    /// list. Tenancy is carried by `site` itself: a [`PublishedSite`] only
+    /// ever comes out of this store's Host resolvers, so another tenant's
+    /// services are unrepresentable here.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure; [`StoreError::Conflict`] when a stored
+    /// snapshot cannot be read back.
+    pub async fn published_availability(
+        &self,
+        site: &PublishedSite,
+    ) -> Result<Vec<PublicBookingService>> {
+        let rows: Vec<ResolvedBookingRow> = sqlx::query_as(
+            "SELECT sn.tenant_id, sn.site_id, c.owner_user_id AS owner, sn.booking_id, sn.name, \
+                    sn.description, sn.calendar_id, sn.time_zone, sn.duration_minutes, \
+                    sn.buffer_minutes, sn.notice_minutes, sn.horizon_days, sn.location, \
+                    sn.hours, sn.fields, sn.active \
+             FROM site_booking_snapshots sn \
+             JOIN sites s ON s.tenant_id = sn.tenant_id AND s.id = sn.site_id \
+                         AND s.published_publish_id = sn.publish_id \
+             JOIN calendars c ON c.tenant_id = sn.tenant_id AND c.id = sn.calendar_id \
+             WHERE sn.tenant_id = $1 AND sn.site_id = $2 AND sn.publish_id = $3 AND sn.active \
+             ORDER BY sn.name, sn.booking_id",
+        )
+        .bind(site.tenant.as_str())
+        .bind(site.site.as_str())
+        .bind(site.publish.as_str())
+        .fetch_all(self.pool())
+        .await
+        .map_err(StoreError::Db)?;
+        let mut services = Vec::with_capacity(rows.len());
+        for row in rows {
+            let tenant = TenantId::new(row.tenant_id);
+            let site_id = SiteId::new(row.site_id);
+            let owner = UserId::new(row.owner);
+            let published = row.snapshot.into_snapshot()?;
+            services.push(PublicBookingService {
+                tenant,
+                site: site_id,
+                calendar: published.calendar.clone(),
+                owner,
+                published,
+            });
+        }
+        Ok(services)
+    }
+
     /// The times a visitor may still pick on one local day of `service`.
     ///
     /// Empty is a complete answer: a closed day, a full day, a day before the
@@ -198,9 +254,11 @@ impl SitePublicStore {
     }
 
     /// Everything the owner is not free for in `[from, to)`: their calendar's
-    /// own events, read through the Agenda seam, plus every live appointment
-    /// already taken on that calendar — including ones whose Agenda event has
-    /// not been written yet, which is what closes the gap between committing a
+    /// busy spans, asked of Agenda's own availability seam
+    /// ([`crate::calendar_availability`], which can answer nothing but spans —
+    /// never a title, a guest or a note), plus every live appointment already
+    /// taken on that calendar — including ones whose Agenda event has not been
+    /// written yet, which is what closes the gap between committing a
     /// reservation and showing it in the calendar.
     async fn busy_in(
         &self,
@@ -208,13 +266,21 @@ impl SitePublicStore {
         from: OffsetDateTime,
         to: OffsetDateTime,
     ) -> Result<Vec<crate::site_booking_slots::BusyInterval>> {
-        let door = crate::site_agenda::agenda_door(
+        let availability = crate::calendar_availability::CalendarAvailability::open(
             self.pool().clone(),
             self.blobs().clone(),
             service.tenant.clone(),
             service.owner.clone(),
         );
-        let mut busy = door.site_calendar_busy(&service.calendar, from, to).await?;
+        let mut busy: Vec<crate::site_booking_slots::BusyInterval> = availability
+            .busy_spans(&service.calendar, from, to)
+            .await?
+            .into_iter()
+            .map(|span| crate::site_booking_slots::BusyInterval {
+                from: span.from,
+                to: span.to,
+            })
+            .collect();
         let reserved: Vec<(OffsetDateTime, OffsetDateTime)> = sqlx::query_as(
             "SELECT starts_at, ends_at FROM site_booking_appointments \
              WHERE tenant_id = $1 AND calendar_id = $2 AND status = 'booked' \

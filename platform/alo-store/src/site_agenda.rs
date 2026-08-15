@@ -24,15 +24,20 @@
 //! Both reads go through [`AccountStore`], so they carry the account door's
 //! tenant *and* user scoping: a calendar of another tenant — or of another
 //! user of the same tenant that was never shared — does not resolve.
+//!
+//! What is deliberately *not* here any more: reading busy time for an
+//! anonymous visitor. That is Agenda's own seam now
+//! ([`crate::calendar_availability`]), which can answer nothing but spans —
+//! so the public path never holds a full event, by construction rather than
+//! by promise. This module keeps the picker reads (which need an
+//! authenticated owner anyway) and the write half below.
 
 use sqlx::PgPool;
-use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::blob::BlobStore;
 use crate::error::Result;
 use crate::id::{CalendarId, TenantId, UserId};
-use crate::site_booking_slots::BusyInterval;
 
 /// One calendar a site's booking service may be attached to, as Sites sees
 /// it: an id, something to call it in a picker, and whether an appointment can
@@ -90,38 +95,11 @@ impl AccountStore {
             .find(|source| source.calendar.as_str() == calendar.as_str()))
     }
 
-    /// The spans of `[from, to)` this account is already busy in on one bound
-    /// calendar — the only thing a booking service reads out of Agenda's
-    /// contents, and it reads no further than that: a start, an end, and never
-    /// a title, a guest or a note. What a visitor is shown is *this time is
-    /// taken*, which is the least the calendar can say and still be true.
-    ///
-    /// Built on [`AccountStore::events_in_range`], so recurring series are
-    /// expanded, moved occurrences land where they were moved to, and cancelled
-    /// ones do not block anything — all of that stays Agenda's to decide.
-    ///
-    /// # Errors
-    /// [`StoreError::Db`](crate::error::StoreError::Db) on failure.
-    pub async fn site_calendar_busy(
-        &self,
-        calendar: &CalendarId,
-        from: OffsetDateTime,
-        to: OffsetDateTime,
-    ) -> Result<Vec<BusyInterval>> {
-        Ok(self
-            .events_in_range(from, to)
-            .await?
-            .into_iter()
-            .filter(|event| event.calendar_id.as_str() == calendar.as_str())
-            .map(|event| BusyInterval {
-                from: event.starts_at,
-                to: event.ends_at,
-            })
-            .collect())
-    }
 }
 
-/// Opens the Agenda door of the account that owns a bound calendar.
+/// Opens the Agenda door of the account that owns a bound calendar — the
+/// **write** half of the seam: putting the appointment a visitor took into
+/// the owner's calendar, through Agenda's own rules and change log.
 ///
 /// This is the one place a request with **no user** — an anonymous visitor
 /// booking on a published site — crosses into an owner-scoped store. It is
@@ -129,8 +107,10 @@ impl AccountStore {
 /// door has no account access by construction ([`crate::site_public`]), and the
 /// only way past that is this function, whose caller must already have resolved
 /// the tenant and the calendar's owner from a published snapshot. Everything
-/// the returned door then does — reading busy time, writing the appointment —
-/// carries the owner's own tenant and user scoping.
+/// the returned door then does carries the owner's own tenant and user
+/// scoping. Reading, by contrast, no longer needs this door at all:
+/// availability is asked of [`crate::calendar_availability`], which cannot
+/// answer with anything but spans.
 pub(crate) fn agenda_door(
     pool: PgPool,
     blobs: BlobStore,

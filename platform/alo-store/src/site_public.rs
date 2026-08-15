@@ -12,7 +12,9 @@
 //! owner from the frozen snapshot the visitor is looking at and opens exactly
 //! that account's Agenda door through [`crate::site_agenda`] — one function,
 //! reachable only with a tenant and a calendar owner that a published row
-//! already named.
+//! already named. Reading availability does not even get that far: busy time
+//! is asked of Agenda's own seam ([`crate::calendar_availability`]), which
+//! can answer nothing but spans.
 //!
 //! Its reads expose **public state only**: immutable page snapshots
 //! (`site_publishes`, `site_page_snapshots`) plus explicitly published blog
