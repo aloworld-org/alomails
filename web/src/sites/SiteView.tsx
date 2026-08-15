@@ -8,6 +8,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
   BarChart3,
+  Bot,
   CalendarClock,
   FileText,
   Globe2,
@@ -651,6 +652,20 @@ export function SiteView() {
               >
                 {strings.sitesAnalytics}
               </Button>
+              {/* The assistant is the owner's door — switching it on, setting
+                  its budget and publishing what it reads are owner acts
+                  (ADR 0040), so like Collaborators it only renders for the
+                  person who can actually open it. */}
+              {site.canManageCollaborators && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Bot size="var(--icon-size-inline)" />}
+                  onClick={() => navigate("assistant")}
+                >
+                  {strings.sitesAssistant}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"

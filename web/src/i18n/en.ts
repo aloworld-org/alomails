@@ -3621,6 +3621,50 @@ export const en = {
   sitesExportingSubmissions: "Preparing export…",
   sitesSubmissionsExportFailed:
     "Your submissions could not be exported. Try again.",
+  // Sites — the visitor assistant's admin screen (ADR 0040, S3.02d).
+  sitesAssistant: "Assistant",
+  sitesAssistantTitle: "Site assistant",
+  sitesAssistantLoadFailed: "The assistant's settings could not be loaded. Try again.",
+  sitesAssistantSwitchTitle: "The assistant and its budget",
+  sitesAssistantSwitchHint:
+    "A chat assistant on your published website that answers visitors' questions from your published pages — and always names the page an answer came from.",
+  sitesAssistantEnable: "Answer visitors' questions on the published website",
+  sitesAssistantBudgetLabel: "Monthly budget (€)",
+  sitesAssistantBudgetHint: (defaultBudget: string) =>
+    `Answers cost money. When a month's answers reach this budget, the assistant pauses and visitors are pointed to your contact form instead — you will be notified. If you leave it unset, the budget is ${defaultBudget}.`,
+  sitesAssistantBudgetNotANumber: "Enter the monthly budget as a number of euros.",
+  sitesAssistantSpent: (spent: string, budget: string) =>
+    `${spent} of ${budget} spent this month.`,
+  sitesAssistantCeilingHit:
+    "This month's budget is used up, so the assistant is paused and visitors are offered your contact form. Raising the budget reopens it immediately.",
+  sitesAssistantSave: "Save",
+  sitesAssistantSaved: "Saved.",
+  sitesAssistantSaveFailed: "The assistant's settings could not be saved. Try again.",
+  sitesAssistantReadsTitle: "What the assistant reads",
+  sitesAssistantReadsRule:
+    "Whatever the assistant can read, anyone on the internet can read — it answers strangers with it.",
+  sitesAssistantReadsPublishedSite: "Your published website — every live page",
+  sitesAssistantReadsPublishedPosts: "Your published blog posts",
+  sitesAssistantAlwaysRead: "always read",
+  sitesAssistantNoKnowledge:
+    "No documents published to the assistant yet. It answers from your published website alone.",
+  sitesAssistantAddedOn: (date: string) => `published ${date}`,
+  sitesAssistantTrashed: "in the Drive trash — no longer read",
+  sitesAssistantWithdraw: (title: string) => `Withdraw ${title}`,
+  sitesAssistantWithdrawFailed:
+    "The document could not be withdrawn from the assistant. Try again.",
+  sitesAssistantInternetWarning:
+    "Anyone on the internet will be able to read this.",
+  sitesAssistantPublishDocument: "Publish a document to the assistant…",
+  sitesAssistantPublishFailed:
+    "The document could not be published to the assistant. Try again.",
+  sitesAssistantPickerTitle: "Publish a document to the assistant",
+  sitesAssistantPickerSubtitle:
+    "Pick one readable document — the assistant will answer visitors from it.",
+  sitesAssistantPickerConfirm: "Publish to the assistant",
+  sitesAssistantPickerBack: "Back to the parent folder",
+  sitesAssistantPickerSearch: "Search this folder",
+  sitesAssistantPickerEmpty: "Nothing in this folder.",
   // Sites — privacy-friendly traffic analytics.
   sitesAnalytics: "Analytics",
   sitesAnalyticsLoadFailed:

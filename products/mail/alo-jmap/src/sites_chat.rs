@@ -9,10 +9,16 @@
 //! Auth and tenancy follow the `/sites/*` family exactly: [`authenticate`],
 //! then the account door, so a foreign site id is a clean 404 and a ceiling
 //! outside the allowed range is a 422 naming the rule.
+//!
+//! **Both routes are the site owner's** (S3.02d, the same posture as the
+//! domain-purchase money door): the ceiling is the tenant's money and the
+//! switch makes the tenant's published content answerable by strangers, so
+//! neither a restricted site editor nor an uninvolved colleague may read or
+//! set them — only the person who made the site, or an admin.
 
 use axum::Json;
 use axum::extract::{Path, State};
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use time::OffsetDateTime;
@@ -20,8 +26,19 @@ use time::OffsetDateTime;
 use alo_store::{DEFAULT_CHAT_MONTHLY_CEILING_CENTS, SiteChatSettings, SiteId, chat_month_key};
 
 use crate::error::Problem;
-use crate::sites::map_store_err;
-use crate::state::{AppState, authenticate};
+use crate::sites::{map_store_err, require_site, require_site_manager};
+use crate::state::{Account, AppState, authenticate};
+
+/// The refusal a non-owner meets here, naming what only the owner may do.
+const OWNER_ONLY: &str =
+    "Only this website's owner can switch its assistant on or set its monthly budget.";
+
+/// The site these settings belong to, provided the caller administers it.
+async fn require_settings_site(account: &Account, site: &SiteId) -> Result<(), Problem> {
+    let site = require_site(account, site).await?;
+    require_site_manager(account, &site)
+        .map_err(|_| Problem::with(StatusCode::FORBIDDEN, OWNER_ONLY))
+}
 
 /// The effective settings as JSON. `defaultCeilingCents` rides along so the
 /// screen can label the pre-filled value as the default it is.
@@ -45,10 +62,12 @@ pub async fn get_chat_settings(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let site = SiteId::new(id);
+    require_settings_site(&account, &site).await?;
     let month = chat_month_key(OffsetDateTime::now_utc());
     let settings = account
         .acc
-        .site_chat_settings(&SiteId::new(id), &month)
+        .site_chat_settings(&site, &month)
         .await
         .map_err(map_store_err)?;
     Ok(Json(settings_json(&settings)))
@@ -72,15 +91,12 @@ pub async fn put_chat_settings(
     let account = authenticate(&state, &headers).await?;
     let req: PutChatSettingsBody =
         serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
+    let site = SiteId::new(id);
+    require_settings_site(&account, &site).await?;
     let month = chat_month_key(OffsetDateTime::now_utc());
     let settings = account
         .acc
-        .set_site_chat_settings(
-            &SiteId::new(id),
-            req.enabled,
-            req.monthly_ceiling_cents,
-            &month,
-        )
+        .set_site_chat_settings(&site, req.enabled, req.monthly_ceiling_cents, &month)
         .await
         .map_err(map_store_err)?;
     Ok(Json(settings_json(&settings)))

@@ -36,6 +36,36 @@ export interface SiteCollaborator {
   status: "pending" | "active";
 }
 
+/** The visitor assistant's switch and monthly budget (ADR 0040 §3), as the
+ *  server answers them — never blank: a site that never saved settings reads
+ *  as off with the default ceiling. Money is integer cents throughout. */
+export interface SiteChatSettings {
+  enabled: boolean;
+  monthlyCeilingCents: number;
+  /** What the ceiling is when nobody sets one, so the screen can label the
+   *  pre-filled value as the default it is. */
+  defaultCeilingCents: number;
+  /** The month the spend below belongs to, `YYYY-MM`. */
+  month: string;
+  spentCents: number;
+  /** True once this month's spend reached the ceiling; raising the ceiling
+   *  reopens the assistant immediately. */
+  ceilingHit: boolean;
+}
+
+/** One document the owner published to the site's assistant (ADR 0040 §1) —
+ *  and therefore to anyone on the internet who asks it. */
+export interface SiteKnowledgeSource {
+  id: string;
+  docNodeId: string;
+  title: string;
+  /** The document is in Drive's trash: still listed so the binding is
+   *  visible and removable, but the assistant no longer reads it. */
+  trashed: boolean;
+  addedBy: string;
+  addedAt: string;
+}
+
 export interface SiteCollaboratorInvite {
   collaborator: SiteCollaborator;
   /** Present only for a new or refreshed pending invitation. */

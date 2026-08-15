@@ -34,8 +34,8 @@ use crate::{
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
     sites_attribution, sites_bookings, sites_catalogs, sites_chat, sites_conversions,
-    sites_domain_purchases, sites_heatmap, sites_orders, sites_palette, sites_templates, snooze,
-    spaces, tasks, unsubscribe, wopi, workspace_search,
+    sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders, sites_palette,
+    sites_templates, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -404,6 +404,16 @@ pub fn app_with_site_boundaries(
         .route(
             "/sites/{id}/chat-settings",
             get(sites_chat::get_chat_settings).put(sites_chat::put_chat_settings),
+        )
+        // The assistant's Public knowledge collection (ADR 0040 §1) — what
+        // the owner has deliberately published for it to read.
+        .route(
+            "/sites/{id}/chat-knowledge",
+            get(sites_knowledge::list_knowledge).post(sites_knowledge::add_knowledge),
+        )
+        .route(
+            "/sites/{id}/chat-knowledge/{source}",
+            delete(sites_knowledge::remove_knowledge),
         )
         .route("/sites/{id}/publish", post(sites::publish_site))
         .route("/sites/{id}/unpublish", post(sites::unpublish_site))

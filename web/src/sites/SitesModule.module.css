@@ -3955,3 +3955,149 @@
   color: var(--text-primary);
   font-weight: var(--weight-semibold);
 }
+
+/* ---- the assistant's admin screen (ADR 0040, S3.02d) ---- */
+/* The one sentence that is the permission model, above the publish button on
+   every pass. Warning-toned rather than danger-red: it explains a boundary
+   the owner is choosing to cross, it does not report a mistake. */
+.assistantWarning {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  border-left: var(--border-width-strong) solid var(--warning);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+}
+.assistantSwitch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-primary);
+}
+.assistantSources {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.assistantSource {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+.assistantSource > svg {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+.assistantSource > span:first-of-type {
+  overflow-wrap: anywhere;
+}
+.assistantSourceMeta {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+.assistantSource > :last-child {
+  margin-left: auto;
+}
+
+/* The document browser inside the publish dialog: back, path, search, then
+   the folder's rows. Folders navigate, documents select — one at a time. */
+.assistantPickerTools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.assistantPickerBack {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.assistantPickerBack:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.assistantPickerPath {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+.assistantPickerSearch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-tertiary);
+}
+.assistantPickerSearch input {
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  outline: none;
+  min-width: 0;
+  width: var(--control-width-compact);
+}
+.assistantPickerList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 40vh;
+  overflow-y: auto;
+  border: var(--border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+}
+.assistantPickerStatus {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6);
+  color: var(--text-tertiary);
+}
+.assistantPickerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.assistantPickerRow:hover {
+  background: var(--bg-raised);
+}
+.assistantPickerRow > svg {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+.assistantPickerRowSelected,
+.assistantPickerRowSelected:hover {
+  border-color: var(--accent);
+  background: var(--accent-tint);
+}
+.assistantPickerName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

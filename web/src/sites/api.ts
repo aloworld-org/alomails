@@ -76,8 +76,10 @@ import type {
   SiteCollectionDraft,
   SiteCollectionPreview,
   SiteCollectionSource,
+  SiteChatSettings,
   SiteCollaborator,
   SiteCollaboratorInvite,
+  SiteKnowledgeSource,
   SiteInvitation,
   SitesConfig,
   SubdomainCheck,
@@ -223,6 +225,57 @@ export class SitesApi {
     await this.#write<{ status?: string }>(
       "DELETE",
       `/sites/${encodeURIComponent(siteId)}/collaborators/${encodeURIComponent(userId)}`,
+      undefined,
+    );
+  }
+
+  /** The assistant's switch, monthly budget, and this month's spend
+   *  (ADR 0040 §3). Owner-only on the server; a non-owner gets the server's
+   *  own refusal sentence. */
+  chatSettings(siteId: string): Promise<SiteChatSettings> {
+    return this.#read<SiteChatSettings>(
+      `/sites/${encodeURIComponent(siteId)}/chat-settings`,
+    );
+  }
+
+  /** Sets the switch and the ceiling in one write — they are one decision on
+   *  one screen — and answers the resulting settings. */
+  setChatSettings(
+    siteId: string,
+    enabled: boolean,
+    monthlyCeilingCents: number,
+  ): Promise<SiteChatSettings> {
+    return this.#write<SiteChatSettings>(
+      "PUT",
+      `/sites/${encodeURIComponent(siteId)}/chat-settings`,
+      { enabled, monthlyCeilingCents },
+    );
+  }
+
+  /** The documents the owner has published to the site's assistant, oldest
+   *  first (ADR 0040 §1). */
+  chatKnowledge(siteId: string): Promise<SiteKnowledgeSource[]> {
+    return this.#read<{ sources?: SiteKnowledgeSource[] }>(
+      `/sites/${encodeURIComponent(siteId)}/chat-knowledge`,
+    ).then((response) => response.sources ?? []);
+  }
+
+  /** Publishes one Drive document to the assistant — and therefore to anyone
+   *  on the internet, which is the sentence the screen shows above the
+   *  button. The server rules on readability, duplicates and the cap. */
+  addChatKnowledge(siteId: string, docNodeId: string): Promise<SiteKnowledgeSource> {
+    return this.#write<SiteKnowledgeSource>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/chat-knowledge`,
+      { docNodeId },
+    );
+  }
+
+  /** Withdraws a document from the assistant; Drive keeps the document. */
+  async removeChatKnowledge(siteId: string, sourceId: string): Promise<void> {
+    await this.#write<{ status?: string }>(
+      "DELETE",
+      `/sites/${encodeURIComponent(siteId)}/chat-knowledge/${encodeURIComponent(sourceId)}`,
       undefined,
     );
   }

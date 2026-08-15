@@ -2775,6 +2775,51 @@ export const fr: Partial<Catalog> = {
   sitesExportingSubmissions: "Préparation de l’export…",
   sitesSubmissionsExportFailed:
     "Vos messages n’ont pas pu être exportés. Réessayez.",
+  sitesAssistant: "Assistant",
+  sitesAssistantTitle: "Assistant du site",
+  sitesAssistantLoadFailed:
+    "Les réglages de l’assistant n’ont pas pu être chargés. Réessayez.",
+  sitesAssistantSwitchTitle: "L’assistant et son budget",
+  sitesAssistantSwitchHint:
+    "Un assistant de conversation sur votre site publié qui répond aux questions des visiteurs à partir de vos pages publiées — et cite toujours la page d’où vient une réponse.",
+  sitesAssistantEnable: "Répondre aux questions des visiteurs sur le site publié",
+  sitesAssistantBudgetLabel: "Budget mensuel (€)",
+  sitesAssistantBudgetHint: (defaultBudget: string) =>
+    `Les réponses coûtent de l’argent. Quand les réponses d’un mois atteignent ce budget, l’assistant se met en pause et les visiteurs sont orientés vers votre formulaire de contact — vous en serez averti. Sans réglage, le budget est de ${defaultBudget}.`,
+  sitesAssistantBudgetNotANumber: "Saisissez le budget mensuel en euros.",
+  sitesAssistantSpent: (spent: string, budget: string) =>
+    `${spent} dépensés sur ${budget} ce mois-ci.`,
+  sitesAssistantCeilingHit:
+    "Le budget de ce mois est épuisé : l’assistant est en pause et les visiteurs sont orientés vers votre formulaire de contact. Augmenter le budget le rouvre immédiatement.",
+  sitesAssistantSave: "Enregistrer",
+  sitesAssistantSaved: "Enregistré.",
+  sitesAssistantSaveFailed:
+    "Les réglages de l’assistant n’ont pas pu être enregistrés. Réessayez.",
+  sitesAssistantReadsTitle: "Ce que l’assistant lit",
+  sitesAssistantReadsRule:
+    "Tout ce que l’assistant peut lire, n’importe qui sur Internet peut le lire — il s’en sert pour répondre à des inconnus.",
+  sitesAssistantReadsPublishedSite: "Votre site publié — chaque page en ligne",
+  sitesAssistantReadsPublishedPosts: "Vos articles de blog publiés",
+  sitesAssistantAlwaysRead: "toujours lu",
+  sitesAssistantNoKnowledge:
+    "Aucun document publié vers l’assistant pour l’instant. Il répond uniquement à partir de votre site publié.",
+  sitesAssistantAddedOn: (date: string) => `publié le ${date}`,
+  sitesAssistantTrashed: "dans la corbeille de Drive — n’est plus lu",
+  sitesAssistantWithdraw: (title: string) => `Retirer ${title}`,
+  sitesAssistantWithdrawFailed:
+    "Le document n’a pas pu être retiré de l’assistant. Réessayez.",
+  sitesAssistantInternetWarning:
+    "N’importe qui sur Internet pourra lire ceci.",
+  sitesAssistantPublishDocument: "Publier un document vers l’assistant…",
+  sitesAssistantPublishFailed:
+    "Le document n’a pas pu être publié vers l’assistant. Réessayez.",
+  sitesAssistantPickerTitle: "Publier un document vers l’assistant",
+  sitesAssistantPickerSubtitle:
+    "Choisissez un document lisible — l’assistant s’en servira pour répondre aux visiteurs.",
+  sitesAssistantPickerConfirm: "Publier vers l’assistant",
+  sitesAssistantPickerBack: "Revenir au dossier parent",
+  sitesAssistantPickerSearch: "Rechercher dans ce dossier",
+  sitesAssistantPickerEmpty: "Rien dans ce dossier.",
   sitesAnalytics: "Statistiques",
   sitesAnalyticsLoadFailed:
     "Les statistiques de votre site n’ont pas pu être chargées. Réessayez.",

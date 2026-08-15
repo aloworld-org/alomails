@@ -2737,6 +2737,51 @@ export const nl: Partial<Catalog> = {
   sitesExportingSubmissions: "Export voorbereiden…",
   sitesSubmissionsExportFailed:
     "Uw inzendingen konden niet worden geëxporteerd. Probeer het opnieuw.",
+  sitesAssistant: "Assistent",
+  sitesAssistantTitle: "Site-assistent",
+  sitesAssistantLoadFailed:
+    "De instellingen van de assistent konden niet worden geladen. Probeer het opnieuw.",
+  sitesAssistantSwitchTitle: "De assistent en zijn budget",
+  sitesAssistantSwitchHint:
+    "Een chatassistent op uw gepubliceerde website die vragen van bezoekers beantwoordt vanuit uw gepubliceerde pagina's — en altijd de pagina noemt waar een antwoord vandaan komt.",
+  sitesAssistantEnable: "Vragen van bezoekers beantwoorden op de gepubliceerde website",
+  sitesAssistantBudgetLabel: "Maandbudget (€)",
+  sitesAssistantBudgetHint: (defaultBudget: string) =>
+    `Antwoorden kosten geld. Zodra de antwoorden van een maand dit budget bereiken, pauzeert de assistent en worden bezoekers naar uw contactformulier verwezen — u krijgt hiervan bericht. Zonder instelling is het budget ${defaultBudget}.`,
+  sitesAssistantBudgetNotANumber: "Voer het maandbudget in als een bedrag in euro's.",
+  sitesAssistantSpent: (spent: string, budget: string) =>
+    `${spent} van ${budget} uitgegeven deze maand.`,
+  sitesAssistantCeilingHit:
+    "Het budget van deze maand is op: de assistent is gepauzeerd en bezoekers krijgen uw contactformulier aangeboden. Het budget verhogen heropent hem onmiddellijk.",
+  sitesAssistantSave: "Opslaan",
+  sitesAssistantSaved: "Opgeslagen.",
+  sitesAssistantSaveFailed:
+    "De instellingen van de assistent konden niet worden opgeslagen. Probeer het opnieuw.",
+  sitesAssistantReadsTitle: "Wat de assistent leest",
+  sitesAssistantReadsRule:
+    "Alles wat de assistent kan lezen, kan iedereen op het internet lezen — hij beantwoordt er vreemden mee.",
+  sitesAssistantReadsPublishedSite: "Uw gepubliceerde website — elke live pagina",
+  sitesAssistantReadsPublishedPosts: "Uw gepubliceerde blogberichten",
+  sitesAssistantAlwaysRead: "altijd gelezen",
+  sitesAssistantNoKnowledge:
+    "Nog geen documenten naar de assistent gepubliceerd. Hij antwoordt alleen vanuit uw gepubliceerde website.",
+  sitesAssistantAddedOn: (date: string) => `gepubliceerd op ${date}`,
+  sitesAssistantTrashed: "in de prullenbak van Drive — wordt niet meer gelezen",
+  sitesAssistantWithdraw: (title: string) => `${title} intrekken`,
+  sitesAssistantWithdrawFailed:
+    "Het document kon niet uit de assistent worden teruggetrokken. Probeer het opnieuw.",
+  sitesAssistantInternetWarning:
+    "Iedereen op het internet zal dit kunnen lezen.",
+  sitesAssistantPublishDocument: "Een document naar de assistent publiceren…",
+  sitesAssistantPublishFailed:
+    "Het document kon niet naar de assistent worden gepubliceerd. Probeer het opnieuw.",
+  sitesAssistantPickerTitle: "Een document naar de assistent publiceren",
+  sitesAssistantPickerSubtitle:
+    "Kies één leesbaar document — de assistent beantwoordt er bezoekers mee.",
+  sitesAssistantPickerConfirm: "Naar de assistent publiceren",
+  sitesAssistantPickerBack: "Terug naar de bovenliggende map",
+  sitesAssistantPickerSearch: "Zoeken in deze map",
+  sitesAssistantPickerEmpty: "Niets in deze map.",
   sitesAnalytics: "Statistieken",
   sitesAnalyticsLoadFailed:
     "De statistieken van uw site konden niet worden geladen. Probeer het opnieuw.",

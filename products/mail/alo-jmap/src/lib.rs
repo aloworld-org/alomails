@@ -180,6 +180,7 @@ pub mod sites_chat;
 pub mod sites_conversions;
 pub mod sites_domain_purchases;
 pub mod sites_heatmap;
+pub mod sites_knowledge;
 pub mod sites_orders;
 pub mod sites_palette;
 pub mod sites_templates;
