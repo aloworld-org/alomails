@@ -290,7 +290,18 @@ mod tests {
                 "reschedule_event",
             ]
         );
-        assert_eq!(names(AgentProduct::Tasks), ["create_task"]);
+        assert_eq!(
+            names(AgentProduct::Tasks),
+            [
+                "my_plate",
+                "overdue_by_owner",
+                "thread_actions",
+                "create_task",
+                "set_task_priority",
+                "chase_task",
+                "capture_actions",
+            ]
+        );
         assert_eq!(names(AgentProduct::Chat), ["catch_up_room", "find_in_chat"]);
         assert_eq!(
             names(AgentProduct::Drive),
@@ -398,7 +409,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 60);
+        assert_eq!(workspace.len(), 66);
     }
 
     /// The boundary's question, over the whole registry: a product offers its
@@ -474,5 +485,17 @@ mod tests {
         assert!(offers(AgentProduct::Agenda, "meeting_prep"));
         assert!(!offers(AgentProduct::Mail, "meeting_prep"));
         assert!(!offers(AgentProduct::Agenda, "send_email"));
+        // …and the ones A2.7 adds. Reading a room to write down what was agreed
+        // in it is Tasks' — it ends in a task, and the Chat agent has no way to
+        // make one; chasing somebody is a comment on a task rather than a
+        // message, so it is not Chat's either, and Projects, which also deals
+        // in tasks, does not share the personal list's tools.
+        assert!(offers(AgentProduct::Tasks, "thread_actions"));
+        assert!(offers(AgentProduct::Tasks, "chase_task"));
+        assert!(!offers(AgentProduct::Chat, "thread_actions"));
+        assert!(!offers(AgentProduct::Chat, "capture_actions"));
+        assert!(!offers(AgentProduct::Projects, "my_plate"));
+        assert!(!offers(AgentProduct::Tasks, "catch_up_room"));
+        assert!(!offers(AgentProduct::Tasks, "project_status_summary"));
     }
 }

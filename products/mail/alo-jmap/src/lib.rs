@@ -31,6 +31,7 @@ pub mod agent_projects;
 pub mod agent_reads;
 pub mod agent_sheets;
 pub mod agent_sites;
+pub mod agent_tasks;
 pub mod agent_timesheet;
 mod agent_turn;
 pub mod ai;

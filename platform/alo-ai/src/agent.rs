@@ -617,6 +617,14 @@ mod tests {
                 // write and is not here.
                 "find_a_time",
                 "meeting_prep",
+                // A2.7: the Tasks agent reads the list it used to be able only
+                // to add to — what is unfinished, who is late on the boards
+                // the asker can open, and what a room agreed. Changing a
+                // priority, chasing somebody and writing a conversation's
+                // actions down are writes and are not here.
+                "my_plate",
+                "overdue_by_owner",
+                "thread_actions",
                 "catch_up_room",
                 "find_in_chat",
                 "find_file",
@@ -657,7 +665,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 60);
+        assert_eq!(all_tools().len(), 66);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -736,9 +744,13 @@ mod tests {
         assert!(drive.contains("find_file"));
         assert!(drive.contains("file_rename"));
 
-        // Tasks has exactly one and it changes something.
+        // Tasks was one-sided too — one tool, and it changed something — until
+        // A2.7 gave it the three reads that let it answer "what have I got on?"
+        // from the list instead of from a search.
         let tasks = system_prompt_for(AgentProduct::Tasks);
-        assert!(tasks.contains("Every tool you have CHANGES something"));
+        assert!(tasks.contains("These tools only READ"));
+        assert!(tasks.contains("Every other tool CHANGES something"));
+        assert!(tasks.contains("my_plate"));
         assert!(tasks.contains("create_task"));
     }
 

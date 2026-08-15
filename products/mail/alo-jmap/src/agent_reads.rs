@@ -128,7 +128,14 @@ pub async fn execute_am_i_free(account: &Account, args: &Value) -> Result<Json<V
 /// Find one channel by the name the user said. Returns `None` when no room of
 /// that name is the caller's to read — which is indistinguishable, on purpose,
 /// from there being no such room.
-async fn room_named(account: &Account, name: &str) -> Result<Option<ChatChannelId>, Problem> {
+///
+/// Shared with [`crate::agent_tasks`], whose two thread tools name a room the
+/// same way: two resolutions would eventually disagree about which room "the
+/// launch" is, and the looser one would be the real one.
+pub(crate) async fn room_named(
+    account: &Account,
+    name: &str,
+) -> Result<Option<ChatChannelId>, Problem> {
     let wanted = name.trim().trim_start_matches('#').to_lowercase();
     let channels = account.acc.channels().await.map_err(map_store_err)?;
     Ok(channels

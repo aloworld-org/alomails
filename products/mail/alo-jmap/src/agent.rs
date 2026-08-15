@@ -402,6 +402,24 @@ async fn dispatch(
 ) -> Result<Json<Value>, Problem> {
     match tool {
         "create_task" => execute_create_task(account, args).await,
+        // alo Tasks' set beyond that one (A2.7), on the same seam. The three
+        // reads answer from the list rather than from a search — what is on the
+        // caller's plate, who is late on the boards they can open, and what a
+        // room agreed together with what has already been written down out of
+        // it; the three writes change one task's priority, leave a chase on a
+        // late one, and capture a conversation's actions as proposals the user
+        // still accepts one at a time (ADR 0023). There is deliberately no way
+        // for an agent to close a task, to reassign one, or to move one between
+        // columns — finishing somebody's work is not a thing to do on their
+        // behalf.
+        "my_plate" => crate::agent_tasks::execute_my_plate(account, args).await,
+        "overdue_by_owner" => {
+            crate::agent_tasks::execute_overdue_by_owner(account, args, state).await
+        }
+        "thread_actions" => crate::agent_tasks::execute_thread_actions(account, args).await,
+        "set_task_priority" => crate::agent_tasks::execute_set_task_priority(account, args).await,
+        "chase_task" => crate::agent_tasks::execute_chase_task(account, args, state).await,
+        "capture_actions" => crate::agent_tasks::execute_capture_actions(account, args).await,
         "create_event" => execute_create_event(account, args).await,
         "mark_read" => execute_set_keyword(account, args, "$seen", "read").await,
         "flag_email" => execute_set_keyword(account, args, "$flagged", "flagged").await,
