@@ -1,0 +1,5 @@
+Sure! Here is the JSON you asked for:
+
+```json
+{"answer":"Our address is Keizersgracht 1, Amsterdam.","citations":[1]}
+```

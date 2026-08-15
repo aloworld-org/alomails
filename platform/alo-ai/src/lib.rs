@@ -34,6 +34,7 @@ pub mod agent_sites;
 pub mod agent_tasks;
 mod agent_tool;
 pub mod insights;
+pub mod site_chat;
 pub mod site_edits;
 pub mod site_translation;
 pub mod sites;
@@ -58,6 +59,11 @@ pub use agent_sites::SITES_TOOLS;
 pub use agent_tasks::TASKS_TOOLS;
 pub use agent_tool::{AgentTool, Effect, find_tool};
 pub use insights::{ChartReply, chart_messages, chart_turn, parse_chart_reply, repair_messages};
+pub use site_chat::{
+    MAX_QUESTION_CHARS, SiteChatCitation, SiteChatError, SiteChatRefusal, SiteChatReply,
+    SiteChatSource, answer_site_question, citation_path, parse_site_chat_reply,
+    retrieve_site_sources, site_chat_messages,
+};
 pub use site_edits::{
     SITE_EDIT_SCHEMA_VERSION, SiteEditEnvelope, SiteEditError, SiteEditOperation,
     SiteSectionTarget, apply_site_edit, parse_site_edit, propose_site_edit, site_edit_messages,
