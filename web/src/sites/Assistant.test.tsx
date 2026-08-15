@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => ({
   chatKnowledge: vi.fn(),
   addChatKnowledge: vi.fn(),
   removeChatKnowledge: vi.fn(),
+  chatActions: vi.fn(),
   chatAppearance: vi.fn(),
   setChatAppearance: vi.fn(),
   chatAppearancePreview: vi.fn(),
@@ -90,6 +91,7 @@ beforeEach(() => {
   mocks.site.mockResolvedValue({ id: "site-1", name: "Axon", theme: {} });
   mocks.chatSettings.mockResolvedValue(settings);
   mocks.chatKnowledge.mockResolvedValue([]);
+  mocks.chatActions.mockResolvedValue([]);
   mocks.chatAppearance.mockResolvedValue(appearance);
   mocks.chatAppearancePreview.mockResolvedValue("<!doctype html><p>preview</p>");
   mocks.themePresets.mockResolvedValue([]);
@@ -189,6 +191,66 @@ describe("the assistant screen", () => {
     // The new source appears without a reload; the dialog is gone.
     expect(await screen.findByText("Opening hours")).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  test("the transcript shows each action, the fact it used, and its page", async () => {
+    mocks.chatActions.mockResolvedValue([
+      {
+        id: "act-3",
+        kind: "lead_saved",
+        fact: null,
+        slotAt: null,
+        citations: [],
+        occurredAt: "2026-08-15T10:30:00Z",
+      },
+      {
+        id: "act-2",
+        kind: "booked",
+        fact: "Intro call",
+        slotAt: "2026-08-20T09:00:00Z",
+        citations: [],
+        occurredAt: "2026-08-15T10:10:00Z",
+      },
+      {
+        id: "act-1",
+        kind: "answered",
+        fact: null,
+        slotAt: null,
+        citations: [
+          { title: "Pricing", path: "/pricing" },
+          { title: "Opening hours", path: null },
+        ],
+        occurredAt: "2026-08-15T10:00:00Z",
+      },
+      {
+        // A kind a later release added: skipped, never broken on.
+        id: "act-0",
+        kind: "paid",
+        fact: null,
+        slotAt: null,
+        citations: [],
+        occurredAt: "2026-08-15T09:00:00Z",
+      },
+    ]);
+    mount();
+
+    // The answer names the pages the fact came from, path and all.
+    expect(
+      await screen.findByText(
+        strings.sitesAssistantDidAnsweredUsing("Pricing (/pricing), Opening hours"),
+      ),
+    ).toBeTruthy();
+    // The booking names the published service it used.
+    expect(
+      screen.getByText((text) => text.startsWith("Booked “Intro call” for")),
+    ).toBeTruthy();
+    expect(screen.getByText(strings.sitesAssistantDidLeadSaved)).toBeTruthy();
+    expect(screen.queryByText(strings.sitesAssistantDidEmpty)).toBeNull();
+  });
+
+  test("an assistant that did nothing yet says so", async () => {
+    mount();
+    expect(await screen.findByText(strings.sitesAssistantDidEmpty)).toBeTruthy();
   });
 
   test("withdrawing a source only ever touches that source", async () => {

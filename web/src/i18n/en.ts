@@ -3665,6 +3665,27 @@ export const en = {
   sitesAssistantPickerBack: "Back to the parent folder",
   sitesAssistantPickerSearch: "Search this folder",
   sitesAssistantPickerEmpty: "Nothing in this folder.",
+  // Sites — the assistant's action transcript (ADR 0040, S3.03e).
+  sitesAssistantDidTitle: "What the assistant did",
+  sitesAssistantDidHint:
+    "Each action the assistant took on your behalf, with the fact it used and the page that fact came from. What visitors typed is never stored.",
+  sitesAssistantDidEmpty:
+    "Nothing yet. When the assistant answers a question, offers free times, books a meeting, or saves a lead, each action appears here.",
+  sitesAssistantDidLoadFailed:
+    "What the assistant did could not be loaded. Try again.",
+  sitesAssistantDidAnswered: "Answered a question",
+  sitesAssistantDidAnsweredUsing: (pages: string) =>
+    `Answered a question using ${pages}`,
+  sitesAssistantDidRefused:
+    "Declined a question it could not answer from your published pages",
+  sitesAssistantDidBookingOffered: (service: string) =>
+    `Offered free times for “${service}”`,
+  sitesAssistantDidBooked: (service: string, when: string) =>
+    `Booked “${service}” for ${when} — the appointment is in your calendar`,
+  sitesAssistantDidLeadOffered: "Offered the contact form in the conversation",
+  sitesAssistantDidLeadSaved: "Saved a new lead to your CRM board",
+  sitesAssistantDidLeadKnown:
+    "Told a returning contact you already know them — no duplicate was made",
   // Sites — the assistant's appearance screen (ADR 0040 §5, S3.02g).
   sitesAssistantLookTitle: "How it looks and speaks",
   sitesAssistantLookHint:

@@ -405,6 +405,12 @@ pub fn app_with_site_boundaries(
             "/sites/{id}/chat-settings",
             get(sites_chat::get_chat_settings).put(sites_chat::put_chat_settings),
         )
+        // The assistant's action transcript (ADR 0040, S3.03e) — what it
+        // did, the fact it used, and the page that fact came from.
+        .route(
+            "/sites/{id}/chat-actions",
+            get(sites_chat::get_chat_actions),
+        )
         // The assistant's appearance and voice (ADR 0040 §5).
         .route(
             "/sites/{id}/chat-appearance",

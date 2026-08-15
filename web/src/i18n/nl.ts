@@ -2782,6 +2782,28 @@ export const nl: Partial<Catalog> = {
   sitesAssistantPickerBack: "Terug naar de bovenliggende map",
   sitesAssistantPickerSearch: "Zoeken in deze map",
   sitesAssistantPickerEmpty: "Niets in deze map.",
+  // Sites — het actielogboek van de assistent (ADR 0040, S3.03e).
+  sitesAssistantDidTitle: "Wat de assistent heeft gedaan",
+  sitesAssistantDidHint:
+    "Elke actie die de assistent namens u ondernam, met het gebruikte feit en de pagina waar dat feit vandaan komt. Wat bezoekers typen wordt nooit bewaard.",
+  sitesAssistantDidEmpty:
+    "Nog niets. Zodra de assistent een vraag beantwoordt, vrije tijden aanbiedt, een afspraak boekt of een lead opslaat, verschijnt elke actie hier.",
+  sitesAssistantDidLoadFailed:
+    "De acties van de assistent konden niet worden geladen. Probeer het opnieuw.",
+  sitesAssistantDidAnswered: "Beantwoordde een vraag",
+  sitesAssistantDidAnsweredUsing: (pages: string) =>
+    `Beantwoordde een vraag op basis van ${pages}`,
+  sitesAssistantDidRefused:
+    "Wees een vraag af die niet uit uw gepubliceerde pagina's te beantwoorden was",
+  sitesAssistantDidBookingOffered: (service: string) =>
+    `Bood vrije tijden aan voor “${service}”`,
+  sitesAssistantDidBooked: (service: string, when: string) =>
+    `Boekte “${service}” op ${when} — de afspraak staat in uw agenda`,
+  sitesAssistantDidLeadOffered:
+    "Bood het contactformulier aan in het gesprek",
+  sitesAssistantDidLeadSaved: "Zette een nieuwe lead op uw CRM-bord",
+  sitesAssistantDidLeadKnown:
+    "Liet een terugkerend contact weten dat u die al kent — er is geen duplicaat gemaakt",
   // Sites — het uiterlijk-scherm van de assistent (ADR 0040 §5, S3.02g).
   sitesAssistantLookTitle: "Hoe hij eruitziet en klinkt",
   sitesAssistantLookHint:

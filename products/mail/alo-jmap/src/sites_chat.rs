@@ -10,6 +10,13 @@
 //! roles (never free-form colours or CSS; the typed model rejects anything
 //! else).
 //!
+//! `GET /sites/:id/chat-actions` is the assistant's transcript (item
+//! S3.03e): what the assistant did — each answer with the pages it cited,
+//! each refusal, each booking offered and made, each lead raised — newest
+//! first, bounded by the store's own per-site cap. It shows the act and the
+//! tenant's own published facts, never the conversation: the store's type
+//! has no field a question, an answer text or a visitor could travel in.
+//!
 //! Auth and tenancy follow the `/sites/*` family exactly: [`authenticate`],
 //! then the account door, so a foreign site id is a clean 404 and a violated
 //! content rule is a 422 naming the rule.
@@ -171,6 +178,46 @@ pub async fn get_chat_appearance(
         .await
         .map_err(map_store_err)?;
     Ok(Json(appearance_json(&appearance, &record)))
+}
+
+/// `GET /sites/:id/chat-actions` → the transcript of what the assistant did,
+/// newest first. Owner-only like the rest of this screen: the transcript
+/// says which published facts the tenant's public voice is handing out.
+pub async fn get_chat_actions(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let site = SiteId::new(id);
+    require_settings_site(&account, &site).await?;
+    let actions = account
+        .acc
+        .site_chat_actions(&site)
+        .await
+        .map_err(map_store_err)?;
+    let rfc3339 = |t: time::OffsetDateTime| {
+        t.format(&time::format_description::well_known::Rfc3339)
+            .unwrap_or_default()
+    };
+    let actions: Vec<Value> = actions
+        .into_iter()
+        .map(|action| {
+            json!({
+                "id": action.id,
+                "kind": action.kind.as_str(),
+                "fact": action.fact,
+                "slotAt": action.slot_at.map(rfc3339),
+                "citations": action
+                    .citations
+                    .iter()
+                    .map(|c| json!({"title": c.title, "path": c.path}))
+                    .collect::<Vec<Value>>(),
+                "occurredAt": rfc3339(action.occurred_at),
+            })
+        })
+        .collect();
+    Ok(Json(json!({"actions": actions})))
 }
 
 /// The wire shape of a `PUT /sites/:id/chat-appearance` body: the complete

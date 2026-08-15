@@ -76,6 +76,7 @@ import type {
   SiteCollectionDraft,
   SiteCollectionPreview,
   SiteCollectionSource,
+  SiteChatAction,
   SiteChatAppearance,
   SiteChatAppearanceView,
   SiteChatSettings,
@@ -252,6 +253,15 @@ export class SitesApi {
       `/sites/${encodeURIComponent(siteId)}/chat-settings`,
       { enabled, monthlyCeilingCents },
     );
+  }
+
+  /** The transcript of what the assistant did (ADR 0040, S3.03e), newest
+   *  first: each act or offer with the published fact it used and the pages
+   *  that fact came from — never the conversation, never the visitor. */
+  chatActions(siteId: string): Promise<SiteChatAction[]> {
+    return this.#read<{ actions?: SiteChatAction[] }>(
+      `/sites/${encodeURIComponent(siteId)}/chat-actions`,
+    ).then((response) => response.actions ?? []);
   }
 
   /** The assistant's appearance and voice (ADR 0040 §5), with the server's

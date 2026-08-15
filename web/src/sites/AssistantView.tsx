@@ -10,7 +10,23 @@
 // once and remembered — it stands above the publish button on every pass.
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, BookOpenCheck, Bot, FileText, Globe2, Newspaper, X } from "lucide-react";
+import {
+  ArrowLeft,
+  BookOpenCheck,
+  Bot,
+  CalendarCheck,
+  CircleSlash,
+  Clock,
+  FileText,
+  Globe2,
+  ListChecks,
+  MessageCircle,
+  Newspaper,
+  UserCheck,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 
 import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
@@ -19,10 +35,71 @@ import { AssistantAppearance } from "./AssistantAppearance";
 import { funnelMoney } from "./funnelReading";
 import { KnowledgePickerDialog } from "./KnowledgePickerDialog";
 import { ErrorBanner } from "./parts";
-import type { SiteChatSettings, SiteDetail, SiteKnowledgeSource } from "./types";
+import type {
+  SiteChatAction,
+  SiteChatSettings,
+  SiteDetail,
+  SiteKnowledgeSource,
+} from "./types";
 import styles from "./SitesModule.module.css";
 
 const added = new Intl.DateTimeFormat(undefined, { dateStyle: "medium" });
+const acted = new Intl.DateTimeFormat(undefined, {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+/** The transcript entry as one sentence: the act, the fact it used, and the
+ *  pages that fact came from. `null` for a kind a later release added — the
+ *  entry is skipped rather than broken on. */
+function actionSentence(action: SiteChatAction): string | null {
+  switch (action.kind) {
+    case "answered": {
+      const pages = action.citations
+        .map((c) => (c.path === null ? c.title : `${c.title} (${c.path})`))
+        .join(", ");
+      return pages === ""
+        ? strings.sitesAssistantDidAnswered
+        : strings.sitesAssistantDidAnsweredUsing(pages);
+    }
+    case "refused":
+      return strings.sitesAssistantDidRefused;
+    case "booking_offered":
+      return strings.sitesAssistantDidBookingOffered(action.fact ?? "");
+    case "booked":
+      return strings.sitesAssistantDidBooked(
+        action.fact ?? "",
+        action.slotAt === null ? "" : acted.format(new Date(action.slotAt)),
+      );
+    case "lead_offered":
+      return strings.sitesAssistantDidLeadOffered;
+    case "lead_saved":
+      return strings.sitesAssistantDidLeadSaved;
+    case "lead_known":
+      return strings.sitesAssistantDidLeadKnown;
+    default:
+      return null;
+  }
+}
+
+function actionIcon(kind: SiteChatAction["kind"]) {
+  switch (kind) {
+    case "answered":
+      return MessageCircle;
+    case "refused":
+      return CircleSlash;
+    case "booking_offered":
+      return Clock;
+    case "booked":
+      return CalendarCheck;
+    case "lead_offered":
+      return UserPlus;
+    case "lead_saved":
+      return UserCheck;
+    default:
+      return Users;
+  }
+}
 
 export function AssistantView() {
   const { siteId = "" } = useParams();
@@ -30,6 +107,7 @@ export function AssistantView() {
   const [site, setSite] = useState<SiteDetail | null>(null);
   const [settings, setSettings] = useState<SiteChatSettings | null>(null);
   const [sources, setSources] = useState<SiteKnowledgeSource[]>([]);
+  const [actions, setActions] = useState<SiteChatAction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,14 +127,16 @@ export function AssistantView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [detail, chat, knowledge] = await Promise.all([
+      const [detail, chat, knowledge, did] = await Promise.all([
         api.site(siteId),
         api.chatSettings(siteId),
         api.chatKnowledge(siteId),
+        api.chatActions(siteId),
       ]);
       setSite(detail);
       setSettings(chat);
       setSources(knowledge);
+      setActions(did);
       setEnabled(chat.enabled);
       setBudgetInput((chat.monthlyCeilingCents / 100).toString());
       setError(null);
@@ -272,6 +352,51 @@ export function AssistantView() {
                 {strings.sitesAssistantPublishDocument}
               </Button>
             </div>
+          </section>
+        )}
+
+        {settings !== null && (
+          <section
+            className={styles.languagePanel}
+            aria-labelledby="assistant-did-title"
+          >
+            <div className={styles.languagePanelIntro}>
+              <span className={styles.languagePanelIcon} aria-hidden="true">
+                <ListChecks />
+              </span>
+              <div>
+                <h2 id="assistant-did-title" className={styles.languageTitle}>
+                  {strings.sitesAssistantDidTitle}
+                </h2>
+                {/* The accountability half of ADR 0040: every act, the fact
+                    it used, the page that fact came from — and never the
+                    conversation's words or the visitor (S3.03e). */}
+                <p className={styles.languageHint}>{strings.sitesAssistantDidHint}</p>
+              </div>
+            </div>
+
+            {actions.length === 0 ? (
+              <p className={styles.hint}>{strings.sitesAssistantDidEmpty}</p>
+            ) : (
+              <ul className={styles.assistantSources}>
+                {actions.map((action) => {
+                  const sentence = actionSentence(action);
+                  if (sentence === null) {
+                    return null;
+                  }
+                  const Icon = actionIcon(action.kind);
+                  return (
+                    <li className={styles.assistantSource} key={action.id}>
+                      <Icon size={16} aria-hidden="true" />
+                      <span>{sentence}</span>
+                      <span className={styles.assistantSourceMeta}>
+                        {acted.format(new Date(action.occurredAt))}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </section>
         )}
 

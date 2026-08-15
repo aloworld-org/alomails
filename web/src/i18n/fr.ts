@@ -2820,6 +2820,29 @@ export const fr: Partial<Catalog> = {
   sitesAssistantPickerBack: "Revenir au dossier parent",
   sitesAssistantPickerSearch: "Rechercher dans ce dossier",
   sitesAssistantPickerEmpty: "Rien dans ce dossier.",
+  // Sites — le journal des actions de l'assistant (ADR 0040, S3.03e).
+  sitesAssistantDidTitle: "Ce que l'assistant a fait",
+  sitesAssistantDidHint:
+    "Chaque action de l'assistant en votre nom, avec le fait utilisé et la page d'où ce fait provient. Ce que les visiteurs tapent n'est jamais conservé.",
+  sitesAssistantDidEmpty:
+    "Rien pour l'instant. Dès que l'assistant répond à une question, propose des créneaux, réserve un rendez-vous ou enregistre un prospect, chaque action apparaît ici.",
+  sitesAssistantDidLoadFailed:
+    "Les actions de l'assistant n'ont pas pu être chargées. Réessayez.",
+  sitesAssistantDidAnswered: "A répondu à une question",
+  sitesAssistantDidAnsweredUsing: (pages: string) =>
+    `A répondu à une question à partir de ${pages}`,
+  sitesAssistantDidRefused:
+    "A décliné une question à laquelle vos pages publiées ne permettaient pas de répondre",
+  sitesAssistantDidBookingOffered: (service: string) =>
+    `A proposé des créneaux pour « ${service} »`,
+  sitesAssistantDidBooked: (service: string, when: string) =>
+    `A réservé « ${service} » pour ${when} — le rendez-vous est dans votre calendrier`,
+  sitesAssistantDidLeadOffered:
+    "A proposé le formulaire de contact dans la conversation",
+  sitesAssistantDidLeadSaved:
+    "A enregistré un nouveau prospect sur votre tableau CRM",
+  sitesAssistantDidLeadKnown:
+    "A indiqué à un contact qui revenait que vous le connaissez déjà — aucun doublon n'a été créé",
   // Sites — l'écran d'apparence de l'assistant (ADR 0040 §5, S3.02g).
   sitesAssistantLookTitle: "Son apparence et sa voix",
   sitesAssistantLookHint:

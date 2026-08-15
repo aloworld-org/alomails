@@ -121,6 +121,39 @@ export interface SiteKnowledgeSource {
   addedAt: string;
 }
 
+/** What the assistant did (ADR 0040, S3.03e): the stored vocabulary of its
+ *  acts and offers. The server may grow this list additively; unknown words
+ *  are skipped by the screen rather than failed on. */
+export type SiteChatActionKind =
+  | "answered"
+  | "refused"
+  | "booking_offered"
+  | "booked"
+  | "lead_offered"
+  | "lead_saved"
+  | "lead_known";
+
+/** One published page (or knowledge document) an answer drew on. `path` is
+ *  site-relative; a knowledge document has none and is named by title. */
+export interface SiteChatActionCitation {
+  title: string;
+  path: string | null;
+}
+
+/** One entry of the assistant's transcript: the act, the published fact it
+ *  used, and the pages that fact came from — never the conversation's words
+ *  and never the visitor. */
+export interface SiteChatAction {
+  id: string;
+  kind: SiteChatActionKind;
+  /** The published fact the act used — today the booking service's name. */
+  fact: string | null;
+  /** The booked instant, for `kind === "booked"` (RFC 3339). */
+  slotAt: string | null;
+  citations: SiteChatActionCitation[];
+  occurredAt: string;
+}
+
 export interface SiteCollaboratorInvite {
   collaborator: SiteCollaborator;
   /** Present only for a new or refreshed pending invitation. */

@@ -178,6 +178,7 @@ pub mod site_catalog;
 pub mod site_catalog_import;
 pub mod site_catalog_items;
 pub mod site_catalog_publish;
+pub mod site_chat_actions;
 pub mod site_chat_appearance;
 pub mod site_chat_limits;
 pub mod site_collections;
@@ -525,6 +526,9 @@ pub use site_catalog_import::{
 pub use site_catalog_items::SiteCatalogItemInput;
 pub use site_catalog_publish::{
     SiteCatalogSnapshot, SiteCatalogSnapshotCategory, SiteCatalogSnapshotItem,
+};
+pub use site_chat_actions::{
+    CHAT_ACTIONS_KEPT, ChatActionCitation, NewChatAction, SiteChatAction, SiteChatActionKind,
 };
 pub use site_chat_appearance::{
     CHAT_APPEARANCE_SCHEMA_VERSION, CHAT_BOT_NAME_MAX_CHARS, CHAT_OFFLINE_MESSAGE_MAX_CHARS,
