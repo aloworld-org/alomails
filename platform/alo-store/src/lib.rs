@@ -68,6 +68,7 @@ pub mod crm_activities;
 pub mod crm_deal_threads;
 pub mod crm_deals;
 pub mod crm_handoff;
+pub mod crm_lead_capture;
 pub mod crm_lead_import;
 pub mod crm_next_steps;
 pub mod crm_pipelines;
@@ -313,6 +314,7 @@ pub use crm_activities::{Activity, ActivityKind, NewActivity};
 pub use crm_deal_threads::{DealThread, ThreadSuggestion};
 pub use crm_deals::{Deal, DealFilter, DealState, NewDeal, StageEvent, StageMove};
 pub use crm_handoff::DealHandoff;
+pub use crm_lead_capture::{CapturedLead, ConversationLead, CrmLeadCapture};
 pub use crm_lead_import::{
     DuplicateReason, DuplicateRow, DuplicateSource, LeadImportReport, LeadImportRequest,
     LeadMapping, LeadRow,
