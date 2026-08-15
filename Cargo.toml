@@ -122,3 +122,18 @@ dbg_macro = "deny"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
+
+# Test binaries carry no debug symbols, because on Windows they are the single
+# largest thing this workspace writes. There are ~185 test binaries and each
+# ships a ~150 MB `.pdb`, so `target/debug/deps` reaches roughly 17 GB of
+# symbols alone — which filled C: twice in one night, and a full disk here does
+# not present as a full disk. It presents as `rustc-LLVM ERROR: IO failure on
+# output stream`, as `LNK1318 Unexpected PDB error`, and as a Docker daemon that
+# stops answering `docker ps` for thirty minutes because it cannot write.
+#
+# This costs symbolised backtraces in test failures and nothing else: it applies
+# to test targets only, so no dependency is rebuilt. It lives here rather than in
+# a loop's environment because every checkout and every agent needs it, and the
+# advice version of this rule was written down and then not applied.
+[profile.test]
+debug = 0
