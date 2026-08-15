@@ -917,6 +917,37 @@ impl VersionRow {
 }
 
 impl AccountStore {
+    /// The caller's **own** spreadsheets, most recently changed first.
+    ///
+    /// [`Self::drive_find`] needs something to search for, and the Sheet agent
+    /// (queue item A2.2) has to answer two questions it cannot: "which
+    /// spreadsheet did they mean when they named none" and "which ones are
+    /// there" — the list a refusal names when a name matched nothing. Personal
+    /// only, folders and trash excluded, on exactly the reasoning in
+    /// [`Self::drive_find`]'s documentation.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn drive_sheets(&self, limit: i64) -> Result<Vec<DriveNode>> {
+        let limit = limit.clamp(1, 50);
+        let rows = sqlx::query_as::<_, NodeRow>(
+            "SELECT id, parent_id, location_kind, location_id, kind, name, blob_id, size, \
+                    content_type, trashed, source_kind, source_id, created_by, created_at, updated_at \
+             FROM drive_nodes \
+             WHERE tenant_id = $1 AND location_kind = 'personal' AND location_id = $2 \
+               AND trashed = false AND kind = 'sheet' \
+             ORDER BY updated_at DESC, lower(name) \
+             LIMIT $3",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .bind(limit)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(rows.into_iter().map(NodeRow::into_node).collect())
+    }
+
     /// Files in the caller's **own** Drive whose name matches `query`.
     ///
     /// Personal only, deliberately. A search that also swept every Space the

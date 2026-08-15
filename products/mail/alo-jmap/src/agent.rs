@@ -28,6 +28,7 @@ use crate::agent_finance_answers as finance_answers;
 use crate::agent_hr as hr;
 use crate::agent_inventory as inventory;
 use crate::agent_projects as projects;
+use crate::agent_sheets as sheets;
 use crate::agent_sites as sites;
 use crate::agent_timesheet as timesheet;
 use crate::ai::MAX_ASK_BYTES;
@@ -427,6 +428,17 @@ async fn dispatch(
         // alo Drive's tool set. It reads and nothing else — there is
         // deliberately no way for an agent to delete or share a file.
         "find_file" => crate::agent_drive::execute_find_file(account, args).await,
+        // alo Sheets' tools (A2.2), on the same seam. The three reads answer
+        // with the addresses of the cells they read; the two writes edit the
+        // stored workbook and therefore wait for the asker's own approval —
+        // `sheet_write_formula` puts a calculation in a cell and refuses
+        // anything that is not one, and `sheet_clean_column` changes how a
+        // column was typed and nothing about what it means.
+        "sheet_read" => sheets::execute_sheet_read(account, args).await,
+        "sheet_answer" => sheets::execute_sheet_answer(account, args).await,
+        "sheet_formula_explain" => sheets::execute_sheet_formula_explain(account, args).await,
+        "sheet_write_formula" => sheets::execute_sheet_write_formula(account, args).await,
+        "sheet_clean_column" => sheets::execute_sheet_clean_column(account, args).await,
         // The reading tools of Agenda, Chat and Contacts. Every one answers
         // from the record rather than the search snippets, and none writes.
         "whats_on" => crate::agent_reads::execute_whats_on(account, args).await,

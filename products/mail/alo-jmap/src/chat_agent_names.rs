@@ -35,7 +35,7 @@ pub struct AgentWordsTable {
     /// One line per product. Order is free — [`agent_seed_for`] looks each
     /// product up rather than reading positionally — but every product must
     /// appear, because the store refuses a seed that is short one.
-    pub agents: [AgentLine; 15],
+    pub agents: [AgentLine; 16],
 }
 
 /// The default table.
@@ -66,6 +66,11 @@ static EN: AgentWordsTable = AgentWordsTable {
             AgentProduct::Drive,
             "Drive",
             "Ask what a document says, where a file went, and what an attachment contains.",
+        ),
+        (
+            AgentProduct::Sheets,
+            "Sheets",
+            "Ask about a spreadsheet: what the figures say, what a formula does, and which column needs tidying.",
         ),
         (
             AgentProduct::Billing,
@@ -150,6 +155,11 @@ static FR: AgentWordsTable = AgentWordsTable {
             "Demandez ce que dit un document, où est passé un fichier, et ce que contient une pièce jointe.",
         ),
         (
+            AgentProduct::Sheets,
+            "Tableurs",
+            "Posez vos questions sur un tableur : ce que disent les chiffres, ce que fait une formule, et quelle colonne demande du rangement.",
+        ),
+        (
             AgentProduct::Billing,
             "Facturation",
             "Posez vos questions sur les devis et les factures : ce qui reste impayé, ce qu’un client doit, ce qui a été envoyé.",
@@ -230,6 +240,11 @@ static NL: AgentWordsTable = AgentWordsTable {
             AgentProduct::Drive,
             "Drive",
             "Vraag wat een document zegt, waar een bestand is gebleven, en wat een bijlage bevat.",
+        ),
+        (
+            AgentProduct::Sheets,
+            "Rekenbladen",
+            "Vraag naar een rekenblad: wat de cijfers zeggen, wat een formule doet, en welke kolom opgeruimd moet worden.",
         ),
         (
             AgentProduct::Billing,

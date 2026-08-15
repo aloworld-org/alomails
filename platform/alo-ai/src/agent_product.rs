@@ -30,6 +30,7 @@ use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
 use crate::agent_inventory::{INVENTORY_GUIDANCE, INVENTORY_TOOL_DOC, INVENTORY_TOOLS};
 use crate::agent_mail::{MAIL_GUIDANCE, MAIL_TOOL_DOC, MAIL_TOOLS};
 use crate::agent_projects::{PROJECTS_GUIDANCE, PROJECTS_TOOL_DOC, PROJECTS_TOOLS};
+use crate::agent_sheets::{SHEETS_GUIDANCE, SHEETS_TOOL_DOC, SHEETS_TOOLS};
 use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
 use crate::agent_tasks::{TASKS_GUIDANCE, TASKS_TOOL_DOC, TASKS_TOOLS};
 use crate::agent_tool::AgentTool;
@@ -74,6 +75,9 @@ const FINANCE_SET: ToolSet = set(FINANCE_TOOLS, FINANCE_TOOL_DOC, FINANCE_GUIDAN
 const INVENTORY_SET: ToolSet = set(INVENTORY_TOOLS, INVENTORY_TOOL_DOC, INVENTORY_GUIDANCE);
 const HR_SET: ToolSet = set(HR_TOOLS, HR_TOOL_DOC, HR_GUIDANCE);
 const SITES_SET: ToolSet = set(SITES_TOOLS, SITES_TOOL_DOC, SITES_GUIDANCE);
+/// alo Sheets, whose agent works on a spreadsheet the caller can already open —
+/// a Drive node, which is also what gates it (`AgentProduct::module`).
+const SHEETS_SET: ToolSet = set(SHEETS_TOOLS, SHEETS_TOOL_DOC, SHEETS_GUIDANCE);
 
 /// Mail's, including the address book.
 const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
@@ -81,6 +85,7 @@ const AGENDA: &[ToolSet] = &[AGENDA_SET];
 const TASKS: &[ToolSet] = &[TASKS_SET];
 const CHAT: &[ToolSet] = &[CHAT_SET];
 const DRIVE: &[ToolSet] = &[DRIVE_SET];
+const SHEETS: &[ToolSet] = &[SHEETS_SET];
 const BILLING: &[ToolSet] = &[BILLING_SET];
 const CRM: &[ToolSet] = &[CRM_SET];
 const PROJECTS: &[ToolSet] = &[PROJECTS_SET];
@@ -111,6 +116,7 @@ pub fn tool_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Tasks => TASKS,
         AgentProduct::Chat => CHAT,
         AgentProduct::Drive => DRIVE,
+        AgentProduct::Sheets => SHEETS,
         AgentProduct::Billing => BILLING,
         AgentProduct::Crm => CRM,
         AgentProduct::Projects => PROJECTS,
@@ -135,6 +141,7 @@ const WORKSPACE: &[ToolSet] = &[
     TASKS_SET,
     CHAT_SET,
     DRIVE_SET,
+    SHEETS_SET,
     BILLING_SET,
     CRM_SET,
     PROJECTS_SET,
@@ -163,6 +170,9 @@ pub fn headline(product: AgentProduct) -> &'static str {
             "You are the alo Chat agent. You work in the conversations this person can already read."
         }
         AgentProduct::Drive => "You are the alo Drive agent. You work in this person's files.",
+        AgentProduct::Sheets => {
+            "You are the alo Sheets agent. You work in this person's spreadsheets — the cells, the formulas and the figures in them."
+        }
         AgentProduct::Billing => {
             "You are the alo Billing agent. You work in this company's quotes and invoices."
         }
@@ -331,7 +341,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 40);
+        assert_eq!(workspace.len(), 45);
     }
 
     /// The boundary's question, over the whole registry: a product offers its

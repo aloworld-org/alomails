@@ -615,6 +615,9 @@ mod tests {
                 "catch_up_room",
                 "find_in_chat",
                 "find_file",
+                "sheet_read",
+                "sheet_answer",
+                "sheet_formula_explain",
                 "project_status_summary",
                 "vat_summary",
                 "flag_anomalies",
@@ -633,7 +636,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 40);
+        assert_eq!(all_tools().len(), 45);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

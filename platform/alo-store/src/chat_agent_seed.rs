@@ -2,7 +2,7 @@
 //! queue item A1.5).
 //!
 //! ADR 0034 says every product has an agent. Until this module that was true
-//! only of a tenant whose administrator had posted fifteen agents to
+//! only of a tenant whose administrator had posted an agent per product to
 //! `POST /chat/agents` by hand, handle by handle — a manual step between a new
 //! tenant and the feature the product is sold on. So the set is seeded on the
 //! first read of the agent list, the way Inventory's locations and Finance's
@@ -37,6 +37,24 @@ use crate::id::ChatAgentId;
 /// (a starting channel, say) is another key and not another table.
 pub const AGENT_SEED_KEY: &str = "default-agents";
 
+/// Products whose agent arrived **after** [`AGENT_SEED_KEY`] first ran, and the
+/// ledger key each is offered under.
+///
+/// The default set is written once and never revisited, which is the whole
+/// point of the ledger — a tenant that retires `@meet` must not find it back.
+/// But that same "once" would leave every existing tenant permanently without
+/// the agent of a product built later, and A1.5's promise is that a tenant gets
+/// its agents without anybody registering a handle by hand. So a product added
+/// after the fact is offered **once, under its own key**: a tenant that has
+/// never been offered it gets it, and a tenant that was offered it and threw it
+/// away keeps it thrown away.
+///
+/// A tenant seeded from scratch today already receives every product's agent in
+/// the first set, so the top-up finds the handle taken, writes nothing, and
+/// records the key — the same end state by either route.
+pub const LATER_AGENT_PRODUCTS: &[(AgentProduct, &str)] =
+    &[(AgentProduct::Sheets, "default-agents:sheets")];
+
 /// The words one default agent is written with, in the language of whoever
 /// opened the agent list first.
 #[derive(Debug, Clone)]
@@ -55,7 +73,7 @@ pub struct AgentWords {
 /// The set a tenant is seeded with: one entry per product, in any order.
 ///
 /// Every product must be present. A seed missing one is refused rather than
-/// silently producing a tenant with fourteen agents, because the fifteenth
+/// silently producing a tenant one agent short, because the missing one
 /// would then be missing forever — the ledger records that the seed ran, not
 /// which rows it wrote.
 #[derive(Debug, Clone)]
@@ -163,7 +181,61 @@ impl AccountStore {
                 Err(other) => return Err(other),
             }
         }
+        self.offer_later_agents(&rows).await?;
         self.agents().await
+    }
+
+    /// Offers, once each, the agents of products added after the default set
+    /// (see [`LATER_AGENT_PRODUCTS`]).
+    ///
+    /// One transaction per product, each claiming its own ledger key first, so
+    /// the race and the retirement rules are the ones
+    /// [`AccountStore::seed_agents`] already establishes rather than a second
+    /// set of them.
+    async fn offer_later_agents(&self, rows: &[SeedRow]) -> Result<()> {
+        for (product, key) in LATER_AGENT_PRODUCTS {
+            if self.agent_seed_ran(key).await? {
+                continue;
+            }
+            // The caller's own words for it, from the same table as the first
+            // set — never a name composed here, which would be one language's
+            // word written into every tenant's sidebar.
+            let Some(row) = rows.iter().find(|row| row.product == *product) else {
+                continue;
+            };
+            let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+            let claimed = sqlx::query(
+                "INSERT INTO chat_agent_seeds (tenant_id, system_key, seeded_by) \
+                 VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+            )
+            .bind(self.tenant.as_str())
+            .bind(*key)
+            .bind(self.user.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
+            if claimed.rows_affected() == 0 {
+                // Another read is offering it right now; theirs is this
+                // tenant's, and rolling back leaves nothing half-written.
+                tx.rollback().await.map_err(StoreError::Db)?;
+                continue;
+            }
+            sqlx::query(
+                "INSERT INTO chat_agents (tenant_id, id, handle, name, description, product) \
+                 VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING",
+            )
+            .bind(self.tenant.as_str())
+            .bind(ChatAgentId::generate().as_str())
+            .bind(row.handle)
+            .bind(&row.name)
+            .bind(row.description.as_deref())
+            .bind(row.product.as_str())
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
+            tx.commit().await.map_err(StoreError::Db)?;
+        }
+        Ok(())
     }
 
     /// Whether the seed named by `system_key` has ever run for this tenant —
@@ -184,13 +256,12 @@ impl AccountStore {
     }
 
     /// Writes the ledger row and every seeded agent in **one transaction**: a
-    /// tenant is never left holding nine of the fifteen, and never left with a
+    /// tenant is never left holding nine of the set, and never left with a
     /// ledger row and no agents.
     ///
     /// Each insert is `ON CONFLICT DO NOTHING` on top of that, so a tenant whose
     /// administrator had already registered `@mail` by hand keeps theirs — their
-    /// agent, their name for it, their description — and is given the fourteen
-    /// they were missing.
+    /// agent, their name for it, their description — and is given the rest.
     async fn seed_agents(&self, rows: &[SeedRow]) -> Result<()> {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         let claimed = sqlx::query(

@@ -152,13 +152,24 @@ const AGENT_COLUMNS: &str = "a.id, a.handle, a.name, a.description, a.product, a
 /// before the switch was thrown.
 ///
 /// **The existing gate, asked of a new subject — not a second one.** The join
-/// is `d.module = a.product` because the two vocabularies are the same words by
+/// is on the agent's product because the two vocabularies are the same words by
 /// construction (`AgentProduct::as_str` == `AppModule::as_str`, held by a test
 /// in [`crate::agent_product`]), and the two products that are not modules —
 /// `mail` and `workspace` — are exactly the two the 0208 CHECK will not store,
 /// so they can never match a denial row and are always visible. That is the
 /// right answer for both: mail is the account itself, and Ask alo is the
 /// workspace agent whose own scope is already whatever its human can reach.
+///
+/// **The one product whose word is not its module's is translated here.**
+/// `sheets` is a product with no rail app: a spreadsheet is a Drive node, so
+/// the switch that decides whether somebody may open one is Drive's
+/// ([`AgentProduct::module`]). Left untranslated, the join would compare
+/// `sheets` against a column that can never hold it, and a person denied Drive
+/// would keep `@sheets` — the exact failure A1.5 exists to prevent, and a
+/// silent one. [`AGENT_GATE`] is the mapping, and
+/// `only_sheets_is_gated_on_another_products_module` in
+/// [`crate::agent_product`] plus the test below keep it from falling behind a
+/// product added later.
 ///
 /// `NOT u.is_admin` is [`crate::AccessFacts::may_open`]'s admin arm, spelled in
 /// SQL rather than repeated as a judgement here: an administrator is never
@@ -171,7 +182,19 @@ const AGENT_VISIBLE: &str = "NOT EXISTS ( \
        SELECT 1 FROM tenant_user_module_denials d \
          JOIN users u ON u.tenant_id = d.tenant_id AND u.id = d.user_id \
         WHERE d.tenant_id = $1 AND d.user_id = $2 \
-          AND d.module = a.product AND NOT u.is_admin)";
+          AND d.module = AGENT_GATE AND NOT u.is_admin)";
+
+/// The rail module an agent's product is gated on, in SQL — `a.product` for
+/// every product whose word *is* its module's, and the module's word for the
+/// one that is not (see [`AGENT_VISIBLE`]).
+const AGENT_GATE: &str = "(CASE a.product WHEN 'sheets' THEN 'drive' ELSE a.product END)";
+
+/// [`AGENT_VISIBLE`] with the gate spliced in — what every query actually
+/// pastes. A function of two consts rather than one written-out string so the
+/// mapping appears once and the test below can read it.
+fn agent_visible() -> String {
+    AGENT_VISIBLE.replace("AGENT_GATE", AGENT_GATE)
+}
 
 /// Read one row.
 ///
@@ -267,9 +290,10 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on a database failure.
     pub async fn agents(&self) -> Result<Vec<ChatAgent>> {
+        let visible = agent_visible();
         let rows: Vec<AgentRow> = sqlx::query_as(&format!(
             "SELECT {AGENT_COLUMNS} FROM chat_agents a \
-             WHERE a.tenant_id = $1 AND {AGENT_VISIBLE} ORDER BY a.handle"
+             WHERE a.tenant_id = $1 AND {visible} ORDER BY a.handle"
         ))
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -292,9 +316,10 @@ impl AccountStore {
     /// the same answer an id that was never issued gets, so the refusal is
     /// never an oracle either.
     pub async fn agent(&self, id: &ChatAgentId) -> Result<ChatAgent> {
+        let visible = agent_visible();
         let row: Option<AgentRow> = sqlx::query_as(&format!(
             "SELECT {AGENT_COLUMNS} FROM chat_agents a \
-             WHERE a.tenant_id = $1 AND a.id = $3 AND {AGENT_VISIBLE}"
+             WHERE a.tenant_id = $1 AND a.id = $3 AND {visible}"
         ))
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
@@ -319,12 +344,13 @@ impl AccountStore {
     /// [`StoreError::NotFound`] if the room is not the caller's to see.
     pub async fn channel_agents(&self, channel: &ChatChannelId) -> Result<Vec<ChatAgent>> {
         self.channel(channel).await?;
+        let visible = agent_visible();
         let rows: Vec<AgentRow> = sqlx::query_as(&format!(
             "SELECT {AGENT_COLUMNS} \
              FROM chat_agents a \
              JOIN chat_agent_members m \
                ON m.tenant_id = a.tenant_id AND m.agent_id = a.id \
-             WHERE a.tenant_id = $1 AND m.channel_id = $3 AND {AGENT_VISIBLE} \
+             WHERE a.tenant_id = $1 AND m.channel_id = $3 AND {visible} \
              ORDER BY a.handle"
         ))
         .bind(self.tenant.as_str())
@@ -512,5 +538,50 @@ impl AccountStore {
             records.entry(agent).or_default().reads = reads;
         }
         Ok(records)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::agent_product::ALL_AGENT_PRODUCTS;
+
+    /// The module gate lives in two places — [`AgentProduct::module`] in Rust
+    /// and [`AGENT_GATE`] in SQL — and only the SQL one runs. This holds them
+    /// in step *by reading the Rust one*: every product whose word is not its
+    /// module's must be translated in the CASE, and a product whose word is its
+    /// module's must not appear there at all (a stray arm would gate an agent
+    /// on somebody else's switch).
+    ///
+    /// A product added later with a borrowed module fails here rather than in
+    /// production, where the symptom would be an agent a denial no longer
+    /// hides — silent, and on the permission side.
+    #[test]
+    fn the_sql_gate_translates_exactly_the_products_whose_word_is_not_their_module() {
+        for product in ALL_AGENT_PRODUCTS {
+            let arm = format!("WHEN '{}' THEN", product.as_str());
+            match product.module() {
+                Some(module) if module.as_str() != product.as_str() => {
+                    assert!(
+                        AGENT_GATE.contains(&format!("{arm} '{}'", module.as_str())),
+                        "{product} is gated on {module} in Rust and on nothing in SQL"
+                    );
+                }
+                _ => assert!(
+                    !AGENT_GATE.contains(&arm),
+                    "{product} is translated in SQL but is its own module in Rust"
+                ),
+            }
+        }
+        // …and the spliced predicate is what the queries paste: no placeholder
+        // survives into a statement, and the bound parameters are untouched.
+        let visible = agent_visible();
+        assert!(!visible.contains("AGENT_GATE"), "{visible}");
+        assert!(visible.contains(AGENT_GATE), "{visible}");
+        assert!(
+            visible.contains("d.tenant_id = $1 AND d.user_id = $2"),
+            "{visible}"
+        );
+        assert!(visible.contains("NOT u.is_admin"), "{visible}");
     }
 }

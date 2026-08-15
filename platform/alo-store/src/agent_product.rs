@@ -16,10 +16,20 @@
 //! [`AppModule`] already answers "which apps may this person open", per user,
 //! with an admin console behind it. Sharing its vocabulary is what lets A1.5
 //! gate an agent on the access that already exists rather than inventing a
-//! second permission system that can disagree with the first. The two places
-//! this set is wider are [`Self::Mail`] — mail has no denial row, because a
-//! denial there would be a broken account rather than a missing app (see
-//! [`AppModule`]) — and [`Self::Workspace`], which is not a product at all.
+//! second permission system that can disagree with the first. Three places this
+//! set is wider, and each is a deliberate exception:
+//!
+//! - [`Self::Mail`] — mail has no denial row, because a denial there would be a
+//!   broken account rather than a missing app (see [`AppModule`]);
+//! - [`Self::Workspace`] — not a product at all;
+//! - [`Self::Sheets`] — a product with **no rail app of its own**. A
+//!   spreadsheet is a Drive node (`kind = "sheet"`), opened from Drive, so the
+//!   switch that decides whether a person may open one is Drive's. Its
+//!   [`Self::module`] therefore answers [`AppModule::Drive`] rather than a
+//!   module of its own, which is the same rule A1.5 states — reuse the access
+//!   that exists — applied to a product the rail does not list separately.
+//!   Inventing a `sheets` denial row instead would be a second switch that can
+//!   disagree with the first about the same file.
 
 use crate::error::{Result, StoreError};
 use crate::user_modules::AppModule;
@@ -35,6 +45,10 @@ pub enum AgentProduct {
     Tasks,
     Chat,
     Drive,
+    /// alo Sheets (ADR 0034's "Sheet agent"; queue item A2.2) — the
+    /// spreadsheets in this workspace's Drive. A product without a rail app: a
+    /// sheet is a Drive node and [`Self::module`] gates it on Drive's switch.
+    Sheets,
     Billing,
     Crm,
     Projects,
@@ -53,12 +67,13 @@ pub enum AgentProduct {
 }
 
 /// Every product an agent can belong to, in the order the directory shows them.
-pub const ALL_AGENT_PRODUCTS: [AgentProduct; 15] = [
+pub const ALL_AGENT_PRODUCTS: [AgentProduct; 16] = [
     AgentProduct::Mail,
     AgentProduct::Agenda,
     AgentProduct::Tasks,
     AgentProduct::Chat,
     AgentProduct::Drive,
+    AgentProduct::Sheets,
     AgentProduct::Billing,
     AgentProduct::Crm,
     AgentProduct::Projects,
@@ -81,6 +96,7 @@ impl AgentProduct {
             Self::Tasks => "tasks",
             Self::Chat => "chat",
             Self::Drive => "drive",
+            Self::Sheets => "sheets",
             Self::Billing => "billing",
             Self::Crm => "crm",
             Self::Projects => "projects",
@@ -120,14 +136,23 @@ impl AgentProduct {
     /// sense to them — `None` when there is no such switch.
     ///
     /// Mail cannot be denied (see [`AppModule`]) and Workspace is not a module,
-    /// so neither has one. Everything else maps one-to-one, which is the point:
-    /// A1.5 gates an agent on the access an admin has already decided, and a
-    /// module somebody was denied yields no agent rather than a second list to
-    /// keep in step.
+    /// so neither has one. [`Self::Sheets`] is the one product whose gate is
+    /// **another product's** module: a spreadsheet is a Drive node, so the
+    /// switch that decides whether somebody may open one is Drive's. Everything
+    /// else maps one-to-one, which is the point: A1.5 gates an agent on the
+    /// access an admin has already decided, and a module somebody was denied
+    /// yields no agent rather than a second list to keep in step.
+    ///
+    /// The SQL that hides a denied agent
+    /// (`crate::chat_agents`'s `AGENT_VISIBLE`) has to know about the one
+    /// product whose word is not its module's; a test there reads this function
+    /// and holds the two in step.
     #[must_use]
     pub fn module(self) -> Option<AppModule> {
         match self {
             Self::Agenda => Some(AppModule::Agenda),
+            // A sheet is a Drive node, so Drive's switch is the gate.
+            Self::Sheets => Some(AppModule::Drive),
             Self::Tasks => Some(AppModule::Tasks),
             Self::Chat => Some(AppModule::Chat),
             Self::Drive => Some(AppModule::Drive),
@@ -167,7 +192,7 @@ mod tests {
                 product
             );
         }
-        for stranger in ["", "Mail", "workspaces", "payroll", "mail agent"] {
+        for stranger in ["", "Mail", "workspaces", "payroll", "mail agent", "sheet"] {
             let err = AgentProduct::parse(stranger).unwrap_err();
             assert!(matches!(err, StoreError::Validation(_)), "{stranger:?}");
         }
@@ -185,7 +210,29 @@ mod tests {
         // The two that are deliberately not modules.
         assert_eq!(AgentProduct::Mail.module(), None);
         assert_eq!(AgentProduct::Workspace.module(), None);
-        // ...and that is the whole difference between the two sets.
-        assert_eq!(ALL_AGENT_PRODUCTS.len(), ALL_MODULES.len() + 2);
+        // …and the one that is a product without a rail app of its own: a
+        // spreadsheet is a Drive node, so Drive's switch is its gate. Note the
+        // direction — Sheets answers Drive, but "drive" still parses to Drive,
+        // so the loop above is unaffected.
+        assert_eq!(AgentProduct::Sheets.module(), Some(AppModule::Drive));
+        // ...and those three are the whole difference between the two sets.
+        assert_eq!(ALL_AGENT_PRODUCTS.len(), ALL_MODULES.len() + 3);
+    }
+
+    /// Exactly one product is gated on a module that is not its own word, and
+    /// it is named here. The SQL in `chat_agents` special-cases that one; a
+    /// second such product added without updating it would be an agent a denial
+    /// no longer hides, so this test is the place the count is pinned.
+    #[test]
+    fn only_sheets_is_gated_on_another_products_module() {
+        let odd: Vec<AgentProduct> = ALL_AGENT_PRODUCTS
+            .into_iter()
+            .filter(|product| {
+                product
+                    .module()
+                    .is_some_and(|module| module.as_str() != product.as_str())
+            })
+            .collect();
+        assert_eq!(odd, vec![AgentProduct::Sheets]);
     }
 }

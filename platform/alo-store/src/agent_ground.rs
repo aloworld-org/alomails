@@ -88,7 +88,8 @@ pub fn sources_for(product: AgentProduct) -> &'static [GroundSource] {
         AgentProduct::Tasks => TASKS,
         AgentProduct::Chat => CHAT,
         AgentProduct::Drive => DRIVE,
-        AgentProduct::Billing
+        AgentProduct::Sheets
+        | AgentProduct::Billing
         | AgentProduct::Crm
         | AgentProduct::Projects
         | AgentProduct::Finance
@@ -311,6 +312,7 @@ mod tests {
         assert_eq!(sources_for(AgentProduct::Chat), [GroundSource::Chat]);
         assert_eq!(sources_for(AgentProduct::Drive), [GroundSource::Drive]);
         for by_tool in [
+            AgentProduct::Sheets,
             AgentProduct::Billing,
             AgentProduct::Crm,
             AgentProduct::Projects,

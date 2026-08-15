@@ -411,3 +411,114 @@ async fn a_seed_and_a_denial_are_never_another_tenants() {
     // And an id nobody ever issued is the same answer as a foreign one.
     assert_not_found(b.agent(&ChatAgentId::new("agent-that-never-was")).await);
 }
+
+/// A2.2's gate, which is A1.5's gate asked of a product with no rail app.
+///
+/// A spreadsheet is a Drive node, so `AgentProduct::Sheets` is gated on Drive's
+/// switch. That mapping lives in SQL (`AGENT_GATE`), and the failure it exists
+/// to prevent is silent and on the permission side: without it the predicate
+/// would compare 'sheets' against a column that can never hold it, and somebody
+/// denied Drive would keep `@sheets` — an agent that reads the very files they
+/// were denied.
+#[tokio::test]
+async fn denying_drive_takes_away_the_spreadsheet_agent_as_well() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("agentseed-sheets").await.unwrap();
+    let ts = store.for_tenant(t.clone());
+    let ua = ts.create_user("anna@agentseed-sheets.test").await.unwrap();
+    let ub = ts.create_user("ben@agentseed-sheets.test").await.unwrap();
+    let admin = ts.create_user("root@agentseed-sheets.test").await.unwrap();
+    ts.set_admin(&admin, true).await.unwrap();
+    let a = store.for_account(t.clone(), ua.clone());
+    let b = store.for_account(t.clone(), ub.clone());
+
+    a.agents_or_seed(&seed()).await.unwrap();
+    let sheets = by_handle(&a.agents().await.unwrap(), "sheets")
+        .expect("the Sheet agent is in the default set")
+        .id
+        .clone();
+    let room = a
+        .create_channel(
+            "figures",
+            Some("Figures"),
+            alo_store::ChannelVisibility::Public,
+        )
+        .await
+        .unwrap();
+    a.add_agent_to_channel(&room, &sheets).await.unwrap();
+    b.join_channel(&room).await.unwrap();
+
+    ts.set_module_access(&ua, AppModule::Drive, false, &admin)
+        .await
+        .unwrap();
+
+    // Both of Drive's agents are gone for her — the one named after the module
+    // and the one that only borrows its switch.
+    let hers = a.agents().await.unwrap();
+    assert!(by_handle(&hers, "drive").is_none());
+    assert!(
+        by_handle(&hers, "sheets").is_none(),
+        "the Sheet agent survived a Drive denial"
+    );
+    assert_eq!(hers.len(), ALL_AGENT_PRODUCTS.len() - 2);
+    // …and by id, and in the room they share, on the same terms as every other
+    // denied agent: not found, and not a member to name.
+    assert_not_found(a.agent(&sheets).await);
+    assert!(by_handle(&a.channel_agents(&room).await.unwrap(), "sheets").is_none());
+    assert_not_found(a.open_agent_dm(&sheets).await);
+
+    // Ben, who still has Drive, keeps both.
+    let his = b.agents().await.unwrap();
+    assert!(by_handle(&his, "drive").is_some());
+    assert!(by_handle(&his, "sheets").is_some());
+    assert!(b.agent(&sheets).await.is_ok());
+    assert!(by_handle(&b.channel_agents(&room).await.unwrap(), "sheets").is_some());
+}
+
+/// A product's agent built after the default set still reaches a tenant that
+/// was seeded before it existed.
+///
+/// The ledger's "once" is what makes a retired agent stay retired, and the same
+/// "once" would have left every tenant seeded before A2.2 permanently without
+/// the Sheet agent. The answer is one further offer under its own key: made
+/// once, recorded, and never repeated — which is what this pins, because a
+/// top-up that ran on every read would be a retired agent handed back the next
+/// morning.
+#[tokio::test]
+async fn a_product_added_after_the_first_set_is_offered_once_under_its_own_key() {
+    let store = common::test_store().await;
+    let t = store.create_tenant("agentseed-later").await.unwrap();
+    let ts = store.for_tenant(t.clone());
+    let u = ts.create_user("anna@agentseed-later.test").await.unwrap();
+    let a = store.for_account(t.clone(), u.clone());
+
+    // Nothing has been offered yet — neither the first set nor the later ones.
+    for (_, key) in alo_store::LATER_AGENT_PRODUCTS {
+        assert!(!a.agent_seed_ran(key).await.unwrap());
+    }
+
+    let seeded = a.agents_or_seed(&seed()).await.unwrap();
+    assert_eq!(seeded.len(), ALL_AGENT_PRODUCTS.len());
+    // Every later product has both its agent and its ledger row, so the offer
+    // is not repeated on the next read.
+    for (product, key) in alo_store::LATER_AGENT_PRODUCTS {
+        assert!(a.agent_seed_ran(key).await.unwrap(), "{product}");
+        assert!(
+            by_handle(&seeded, default_handle(*product)).is_some(),
+            "{product}"
+        );
+    }
+
+    // Reading again changes nothing: one agent per product, still, and no
+    // second row for any handle.
+    let again = a.agents_or_seed(&seed()).await.unwrap();
+    assert_eq!(again.len(), ALL_AGENT_PRODUCTS.len());
+    for product in ALL_AGENT_PRODUCTS {
+        let handle = default_handle(product);
+        assert_eq!(
+            again.iter().filter(|agent| agent.handle == handle).count(),
+            1,
+            "@{handle} was written twice"
+        );
+    }
+}
