@@ -175,6 +175,7 @@ pub mod site_catalog;
 pub mod site_catalog_import;
 pub mod site_catalog_items;
 pub mod site_catalog_publish;
+pub mod site_chat_limits;
 pub mod site_collections;
 pub mod site_conversions;
 pub mod site_custom_code;
@@ -514,6 +515,11 @@ pub use site_catalog_import::{
 pub use site_catalog_items::SiteCatalogItemInput;
 pub use site_catalog_publish::{
     SiteCatalogSnapshot, SiteCatalogSnapshotCategory, SiteCatalogSnapshotItem,
+};
+pub use site_chat_limits::{
+    ChatCeilingNotification, ChatGate, DEFAULT_CHAT_MONTHLY_CEILING_CENTS,
+    MAX_CHAT_MONTHLY_CEILING_CENTS, MIN_CHAT_MONTHLY_CEILING_CENTS, SiteChatSettings,
+    chat_month_key,
 };
 pub use site_collections::{
     SITE_COLLECTION_BODY_MAX_CHARS, SITE_COLLECTION_MAX_ITEMS, SITE_COLLECTION_NAME_MAX_CHARS,

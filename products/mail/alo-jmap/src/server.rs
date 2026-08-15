@@ -33,9 +33,9 @@ use crate::{
     projects_invoices, projects_plan, projects_reports, projects_templates, projects_time,
     projects_weeks, push, reset_route, schedule, scoped_roles, security, session, settings, share,
     signup_route, site_protection, site_schedule, site_version_preview, site_versions, sites,
-    sites_attribution, sites_bookings, sites_catalogs, sites_conversions, sites_domain_purchases,
-    sites_heatmap, sites_orders, sites_palette, sites_templates, snooze, spaces, tasks,
-    unsubscribe, wopi, workspace_search,
+    sites_attribution, sites_bookings, sites_catalogs, sites_chat, sites_conversions,
+    sites_domain_purchases, sites_heatmap, sites_orders, sites_palette, sites_templates, snooze,
+    spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -400,6 +400,11 @@ pub fn app_with_site_boundaries(
                 .delete(sites::delete_site),
         )
         .route("/sites/{id}/theme", put(sites::set_theme))
+        // The assistant's switch and monthly spend ceiling (ADR 0040 §3).
+        .route(
+            "/sites/{id}/chat-settings",
+            get(sites_chat::get_chat_settings).put(sites_chat::put_chat_settings),
+        )
         .route("/sites/{id}/publish", post(sites::publish_site))
         .route("/sites/{id}/unpublish", post(sites::unpublish_site))
         // Publishing at a chosen moment (S2.05b): the intention, and calling

@@ -177,6 +177,23 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Background assistant-ceiling notifier (alo Sites, ADR 0040 §3): tell
+    // the site owner, once per site-month, that their assistant's spending
+    // ceiling was hit and visitors are being offered the contact form.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(30));
+            loop {
+                tick.tick().await;
+                let delivered = alo_jmap::site_chat_notify::run_due(&store).await;
+                if delivered > 0 {
+                    tracing::info!(delivered, "assistant-ceiling notification sweep");
+                }
+            }
+        });
+    }
+
     // Background scheduled-publish sweeper (alo Sites, ADR 0036): put each
     // website whose chosen moment has arrived on the internet, through the
     // scheduling user's own account door. Every 30 seconds, so "09:00" means
