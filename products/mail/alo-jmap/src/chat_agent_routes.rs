@@ -139,6 +139,39 @@ pub async fn list_channel_agents(
     })))
 }
 
+/// `POST /chat/agents/{id}/dm` → open the caller's one-to-one with an agent
+/// (ADR 0048), creating it the first time and returning the same room every
+/// time after.
+///
+/// A route of its own rather than a third shape of `POST /chat/channels`: that
+/// body already means two different things depending on `kind`, and a DM there
+/// is opened `{with}` — a **user** id. Naming an agent in the same field is
+/// exactly the confusion the ADR refused in the schema, so it is refused on the
+/// wire too.
+///
+/// Idempotent, so a client may call it every time the person clicks the agent
+/// rather than tracking whether a room exists.
+///
+/// # Errors
+/// 404 when this tenant has no such agent; 422 when it is retired.
+pub async fn open_agent_dm(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let channel = account
+        .acc
+        .open_agent_dm(&ChatAgentId::new(id))
+        .await
+        .map_err(map_store_err)?;
+    let room = account.acc.channel(&channel).await.map_err(map_store_err)?;
+    // Its own human is its only member, so this reaches exactly one person —
+    // the one who just asked for it.
+    notify(&state, &account, &channel).await;
+    Ok(Json(crate::chat::channel_json(&room)))
+}
+
 #[derive(Deserialize)]
 pub struct AgentMemberBody {
     agent: String,

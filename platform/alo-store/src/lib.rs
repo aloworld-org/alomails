@@ -53,6 +53,7 @@ pub mod blob;
 pub mod calendar;
 pub mod changes;
 pub mod chat;
+pub mod chat_agent_dm;
 pub mod chat_agents;
 pub mod chat_attachments;
 pub mod chat_mentions;

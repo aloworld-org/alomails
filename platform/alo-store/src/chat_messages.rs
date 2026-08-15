@@ -98,8 +98,10 @@ pub struct ChatMessage {
 pub struct ChatChannelSummary {
     /// The room itself.
     pub channel: ChatChannel,
-    /// The other member's address for a DM. `None` for named rooms or when
-    /// the directory no longer resolves that member.
+    /// Who this one-to-one is with: the other member's address for a DM, and
+    /// `@handle` for an agent DM (ADR 0048) — an agent has no address, and its
+    /// handle is the name it is unique by in the tenant. `None` for named rooms
+    /// or when the directory no longer resolves that member.
     pub counterpart: Option<String>,
     /// Messages after the caller's read cursor, theirs excluded, tombstones
     /// excluded.
@@ -581,6 +583,7 @@ impl AccountStore {
             Option<String>,
             Option<String>,
             String,
+            Option<String>,
             String,
             OffsetDateTime,
             Option<OffsetDateTime>,
@@ -612,6 +615,9 @@ impl AccountStore {
                    WHERE other.tenant_id = c.tenant_id AND other.channel_id = c.id \
                      AND other.user_id <> $2 \
                    ORDER BY other.joined_at LIMIT 1 \
+                 ) WHEN c.kind = 'agent_dm' THEN ( \
+                   SELECT '@' || a.handle FROM chat_agents a \
+                   WHERE a.tenant_id = c.tenant_id AND a.id = c.agent_id \
                  ) END AS counterpart \
              FROM chat_channels c \
              JOIN chat_members m \
@@ -632,15 +638,15 @@ impl AccountStore {
 
         rows.into_iter()
             .map(|r| {
-                let channel: ChannelRow = (r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7);
+                let channel: ChannelRow = (r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8);
                 Ok(ChatChannelSummary {
                     channel: row_to_channel(channel)?,
-                    last_read_seq: r.8,
-                    unread: r.9,
-                    last_seq: r.10,
-                    last_at: r.11,
-                    last_body: r.12,
-                    counterpart: r.13,
+                    last_read_seq: r.9,
+                    unread: r.10,
+                    last_seq: r.11,
+                    last_at: r.12,
+                    last_body: r.13,
+                    counterpart: r.14,
                 })
             })
             .collect()

@@ -15,20 +15,28 @@ use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
-use crate::id::{ChatChannelId, UserId};
+use crate::id::{ChatAgentId, ChatChannelId, UserId};
 
 /// A channel name is a human label (`#general`), bounded for sanity.
 const CHANNEL_NAME_MAX_CHARS: usize = 80;
 /// A topic is one line describing the room, never a document.
 const CHANNEL_TOPIC_MAX_CHARS: usize = 300;
 
-/// What a room is: a named channel, or the pair a DM is.
+/// What a room is: a named channel, the pair a DM is, or the one-to-one a
+/// person has with an agent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChannelKind {
     /// A named room: `#general`, `#sales`.
     Channel,
     /// A direct conversation between exactly two people.
     Dm,
+    /// A direct conversation between one person and one agent (ADR 0048).
+    ///
+    /// Not a [`Self::Dm`] with something else in it: `dm_key` is a pair of
+    /// **user** ids and an agent is deliberately not a user, so this is its own
+    /// kind and every query that switches on `kind` refuses it rather than
+    /// misreading it as two humans.
+    AgentDm,
 }
 
 impl ChannelKind {
@@ -38,13 +46,26 @@ impl ChannelKind {
         match self {
             Self::Channel => "channel",
             Self::Dm => "dm",
+            Self::AgentDm => "agent_dm",
         }
+    }
+
+    /// Whether this is a one-to-one — with a person or with an agent.
+    ///
+    /// The rules a DM has because it is a one-to-one (its members are fixed
+    /// when it is opened, it has no name to change, it is not archived) are the
+    /// same rules an agent DM has, and asking this once is what keeps the two
+    /// from drifting apart a rule at a time.
+    #[must_use]
+    pub fn is_direct(self) -> bool {
+        matches!(self, Self::Dm | Self::AgentDm)
     }
 
     fn parse(token: &str) -> Result<Self> {
         match token {
             "channel" => Ok(Self::Channel),
             "dm" => Ok(Self::Dm),
+            "agent_dm" => Ok(Self::AgentDm),
             other => Err(StoreError::Validation(format!(
                 "unknown channel kind {other}"
             ))),
@@ -125,6 +146,10 @@ pub struct ChatChannel {
     pub topic: Option<String>,
     /// Public or private (a DM is always private).
     pub visibility: ChannelVisibility,
+    /// The agent this room is the one-to-one **with** (ADR 0048); `None` for
+    /// every other kind. Never a member id and never a user id: it is what
+    /// makes an [`ChannelKind::AgentDm`] identifiable at all.
+    pub agent: Option<ChatAgentId>,
     /// Who created it.
     pub created_by: UserId,
     /// When it was created.
@@ -150,7 +175,7 @@ pub struct ChatMember {
 
 /// The columns every channel read selects, in [`row_to_channel`]'s order.
 pub(crate) const CHANNEL_COLUMNS: &str =
-    "id, kind, name, topic, visibility, created_by, created_at, archived_at";
+    "id, kind, name, topic, visibility, agent_id, created_by, created_at, archived_at";
 
 pub(crate) type ChannelRow = (
     String,
@@ -158,6 +183,7 @@ pub(crate) type ChannelRow = (
     Option<String>,
     Option<String>,
     String,
+    Option<String>,
     String,
     OffsetDateTime,
     Option<OffsetDateTime>,
@@ -170,9 +196,10 @@ pub(crate) fn row_to_channel(row: ChannelRow) -> Result<ChatChannel> {
         name: row.2,
         topic: row.3,
         visibility: ChannelVisibility::parse(&row.4)?,
-        created_by: UserId::new(row.5),
-        created_at: row.6,
-        archived_at: row.7,
+        agent: row.5.map(ChatAgentId::new),
+        created_by: UserId::new(row.6),
+        created_at: row.7,
+        archived_at: row.8,
     })
 }
 
@@ -493,13 +520,14 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::NotFound`] if the caller is not a member of the room or
     /// the added user is not of this tenant; [`StoreError::Validation`] for a
-    /// DM, whose two people are fixed when it is opened.
+    /// DM or an agent DM, whose two participants are fixed when it is opened —
+    /// a one-to-one must not become a channel by accretion.
     pub async fn add_member(&self, id: &ChatChannelId, user: &UserId) -> Result<()> {
         let channel = self.channel(id).await?;
         if self.channel_role(id).await?.is_none() {
             return Err(StoreError::NotFound);
         }
-        if channel.kind == ChannelKind::Dm {
+        if channel.kind.is_direct() {
             return Err(StoreError::Validation(
                 "a direct message has exactly two people".to_owned(),
             ));
@@ -544,7 +572,7 @@ impl AccountStore {
     pub async fn remove_member(&self, id: &ChatChannelId, user: &UserId) -> Result<()> {
         let channel = self.channel(id).await?;
         let role = self.channel_role(id).await?.ok_or(StoreError::NotFound)?;
-        if channel.kind == ChannelKind::Dm {
+        if channel.kind.is_direct() {
             return Err(StoreError::Validation(
                 "a direct message keeps both people".to_owned(),
             ));
@@ -580,7 +608,7 @@ impl AccountStore {
     ) -> Result<()> {
         let channel = self.channel(id).await?;
         self.require_owner(id).await?;
-        if channel.kind == ChannelKind::Dm {
+        if channel.kind.is_direct() {
             return Err(StoreError::Validation(
                 "a direct message has no name to change".to_owned(),
             ));
@@ -615,7 +643,7 @@ impl AccountStore {
     pub async fn archive_channel(&self, id: &ChatChannelId) -> Result<()> {
         let channel = self.channel(id).await?;
         self.require_owner(id).await?;
-        if channel.kind == ChannelKind::Dm {
+        if channel.kind.is_direct() {
             return Err(StoreError::Validation(
                 "a direct message is not archived".to_owned(),
             ));
@@ -673,7 +701,7 @@ mod tests {
 
     #[test]
     fn tokens_round_trip_through_their_columns() {
-        for kind in [ChannelKind::Channel, ChannelKind::Dm] {
+        for kind in [ChannelKind::Channel, ChannelKind::Dm, ChannelKind::AgentDm] {
             assert_eq!(ChannelKind::parse(kind.as_str()).unwrap(), kind);
         }
         for visibility in [ChannelVisibility::Public, ChannelVisibility::Private] {
@@ -686,6 +714,12 @@ mod tests {
             assert_eq!(MemberRole::parse(role.as_str()).unwrap(), role);
         }
         assert!(ChannelKind::parse("broadcast").is_err());
+        // A one-to-one is a one-to-one whoever the counterpart is: the rules
+        // add_member, rename and archive apply hang off this, so a new kind
+        // cannot quietly acquire a channel's permissions.
+        assert!(ChannelKind::Dm.is_direct());
+        assert!(ChannelKind::AgentDm.is_direct());
+        assert!(!ChannelKind::Channel.is_direct());
         assert!(ChannelVisibility::parse("secret").is_err());
         assert!(MemberRole::parse("admin").is_err());
     }

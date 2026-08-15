@@ -1,9 +1,11 @@
 //! An agent taking a turn in a conversation (ADR 0034 §chat, ADR 0038;
 //! `docs/design/chat-agents.md`).
 //!
-//! Naming an agent in a message is the whole trigger. There is no separate
+//! Saying something to an agent is the whole trigger. There is no separate
 //! "ask the agent" route, because the trigger *is* the message — a second
-//! endpoint would let the two disagree about what was actually said.
+//! endpoint would let the two disagree about what was actually said. In a
+//! channel that means naming it; in a one-to-one with it (ADR 0048) every
+//! message is addressed to it already, so no handle is needed.
 //!
 //! The turn runs **after** the message is stored and **off the request**. A
 //! model call takes seconds, and making someone wait for it before their own
@@ -184,12 +186,47 @@ const UNCONFIGURED: &str = "I can't answer yet — no AI provider is set up for 
 /// about why: the reason is an operator's business, not a room's.
 const UNREACHABLE: &str = "I couldn't reach the model just now. Try me again in a moment.";
 
-/// Answer every agent named in a message, in the background.
+/// The agents a message is addressed to, which depends on the room it was said
+/// in.
+///
+/// In a one-to-one with an agent there is nobody else it could be for, so the
+/// room's own counterpart answers whatever was typed — ADR 0048's "every
+/// message from the human is the trigger". Everywhere else a handle is what
+/// addresses an agent, and a message naming none is not a question for one.
+///
+/// A retired agent answers in neither: `named_agents` already filters it out,
+/// and an agent DM whose counterpart has since been switched off simply stays
+/// readable, which is the rule `add_agent_to_channel` applies too.
+async fn asked_agents(
+    account: &Account,
+    channel: &ChatChannelId,
+    body: &str,
+    present: &[ChatAgent],
+) -> Vec<ChatAgent> {
+    match account.acc.channel_agent_counterpart(channel).await {
+        Ok(Some(counterpart)) => present
+            .iter()
+            .find(|agent| !agent.disabled && agent.id.as_str() == counterpart.as_str())
+            .cloned()
+            .into_iter()
+            .collect(),
+        // Not a one-to-one — or a room this caller cannot see, in which case
+        // they have nothing to be answered anyway.
+        _ => named_agents(body, present),
+    }
+}
+
+/// Answer every agent a message was addressed to, in the background.
+///
+/// Only ever called with a **person's** message: an agent's own words are
+/// posted through `post_as_agent`, which does not come this way. That is what
+/// keeps two agents from being arranged into a loop, and an agent from
+/// answering itself.
 ///
 /// Spawned rather than awaited: the asker's message is already stored and
 /// already delivered, and nothing about it should wait on inference. The reply
 /// reaches the room over the push stream the client is already holding open.
-pub(crate) fn answer_if_named(
+pub(crate) fn answer_if_asked(
     state: &AppState,
     account: &Account,
     channel: &ChatChannelId,
@@ -205,7 +242,7 @@ pub(crate) fn answer_if_named(
         let Ok(present) = acc.channel_agents(&channel).await else {
             return;
         };
-        for agent in named_agents(&body, &present) {
+        for agent in asked_agents(&account, &channel, &body, &present).await {
             // Registered before the call so the room can say who is thinking,
             // and forgotten afterwards however it ended.
             let (id, stopped) = state.turns.begin(

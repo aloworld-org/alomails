@@ -330,6 +330,10 @@ pub fn app_with_site_boundaries(
             get(chat_agent_routes::list_agents).post(chat_agent_routes::create_agent),
         )
         .route(
+            "/chat/agents/{id}/dm",
+            post(chat_agent_routes::open_agent_dm),
+        )
+        .route(
             "/chat/channels/{id}/agents",
             get(chat_agent_routes::list_channel_agents).post(chat_agent_routes::add_channel_agent),
         )

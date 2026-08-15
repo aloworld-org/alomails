@@ -1,8 +1,8 @@
 //! Reads answer, writes propose — in a real room, on the wire (ADR 0047, A1.1).
 //!
-//! **No live model is ever called here.** The tenant's AI backend is a scripted
-//! local socket handing back fixture completions in order, the shape
-//! `tests/insights_ask_http.rs` already uses. That is what makes the two-turn
+//! **No live model is ever called here.** The tenant's AI backend is the
+//! scripted local socket in `common::model`, handing back fixture completions in
+//! order and recording what it was asked. That is what makes the two-turn
 //! read loop testable at all: a first reply naming a *reading* tool, and a
 //! second reply that must have the tool's own result among its sources.
 //!
@@ -21,7 +21,6 @@
 
 mod common;
 
-use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use axum::Router;
@@ -30,112 +29,8 @@ use axum::http::{Request, StatusCode};
 use serde_json::{Value, json};
 
 use alo_store::{AgentProduct, ChatAgentId, ChatChannelId};
+use common::model::{says, scripted_model, use_model, wants};
 use common::{Harness, harness, send};
-
-// ---- a scripted, local, offline "model" -------------------------------------
-
-/// The request bodies the fake backend has been sent, in order.
-type Seen = Arc<Mutex<Vec<Value>>>;
-
-/// A minimal OpenAI-compatible chat-completions endpoint on localhost that
-/// answers `script` in order (the last entry repeats), recording what it was
-/// asked. It speaks just enough HTTP/1.1 for `reqwest`.
-async fn scripted_model(script: Vec<String>) -> (String, Seen) {
-    use tokio::io::{AsyncReadExt, AsyncWriteExt};
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-    let addr = listener.local_addr().unwrap();
-    let seen: Seen = Arc::new(Mutex::new(Vec::new()));
-    let record = Arc::clone(&seen);
-    tokio::spawn(async move {
-        loop {
-            let Ok((mut sock, _)) = listener.accept().await else {
-                return;
-            };
-            let record = Arc::clone(&record);
-            let script = script.clone();
-            tokio::spawn(async move {
-                let mut buf = Vec::new();
-                let mut chunk = [0u8; 8192];
-                let body = loop {
-                    let Ok(n) = sock.read(&mut chunk).await else {
-                        return;
-                    };
-                    if n == 0 {
-                        return;
-                    }
-                    buf.extend_from_slice(&chunk[..n]);
-                    let Some(end) = buf.windows(4).position(|w| w == b"\r\n\r\n") else {
-                        continue;
-                    };
-                    let head = String::from_utf8_lossy(&buf[..end]).into_owned();
-                    let length: usize = head
-                        .lines()
-                        .find_map(|l| {
-                            l.to_ascii_lowercase()
-                                .strip_prefix("content-length:")
-                                .map(|v| v.trim().parse().unwrap_or(0))
-                        })
-                        .unwrap_or(0);
-                    if buf.len() >= end + 4 + length {
-                        break buf[end + 4..end + 4 + length].to_vec();
-                    }
-                };
-                let turn = {
-                    let mut seen = record.lock().unwrap();
-                    seen.push(serde_json::from_slice(&body).unwrap_or(Value::Null));
-                    seen.len() - 1
-                };
-                let content = script
-                    .get(turn)
-                    .or_else(|| script.last())
-                    .cloned()
-                    .unwrap_or_default();
-                let answer =
-                    json!({ "choices": [{ "message": { "role": "assistant", "content": content } }] })
-                        .to_string();
-                let response = format!(
-                    "HTTP/1.1 200 OK\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
-                    answer.len(),
-                    answer
-                );
-                let _ = sock.write_all(response.as_bytes()).await;
-                let _ = sock.flush().await;
-            });
-        }
-    });
-    (format!("http://{addr}"), seen)
-}
-
-/// The decision envelope for a tool the model wants used.
-fn wants(tool: &str, args: Value, say: &str) -> String {
-    json!({ "kind": "action", "say": say, "action": { "tool": tool, "args": args } }).to_string()
-}
-
-/// The decision envelope for a sentence.
-fn says(answer: &str) -> String {
-    json!({ "kind": "answer", "answer": answer }).to_string()
-}
-
-/// Points the tenant's default AI provider at `base_url`.
-///
-/// The provider id carries the tenant, because these suites share one Postgres
-/// and a provider id is unique across it.
-async fn use_model(h: &Harness, base_url: &str) {
-    let id = format!("ai-{}", h.tenant.as_str());
-    h.acc
-        .upsert_ai_provider(
-            &id,
-            "openai",
-            "scripted",
-            base_url,
-            "test-model",
-            None,
-            true,
-        )
-        .await
-        .unwrap();
-    h.acc.set_default_ai_provider(&id).await.unwrap();
-}
 
 // ---- request helpers ---------------------------------------------------------
 

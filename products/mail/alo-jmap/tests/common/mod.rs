@@ -3,6 +3,9 @@
 //! router as a `tower::Service` (no socket).
 #![allow(clippy::unwrap_used, clippy::expect_used, dead_code)]
 
+/// The offline scripted model an agent suite drives its turns against.
+pub mod model;
+
 use std::sync::Arc;
 
 use alo_identity::{Identity, IdentityConfig};

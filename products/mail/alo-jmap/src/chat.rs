@@ -81,13 +81,18 @@ fn iso(at: OffsetDateTime) -> String {
     at.format(&Rfc3339).unwrap_or_default()
 }
 
-fn channel_json(c: &ChatChannel) -> Value {
+pub(crate) fn channel_json(c: &ChatChannel) -> Value {
     json!({
         "id": c.id.as_str(),
         "kind": c.kind.as_str(),
         "name": c.name,
         "topic": c.topic,
         "visibility": c.visibility.as_str(),
+        // Which agent an `agent_dm` is with (ADR 0048); `null` for every other
+        // kind. Additive: a client that predates agent DMs never sees a room
+        // of that kind in the first place, because only its own human is a
+        // member of one.
+        "agent": c.agent.as_ref().map(alo_store::ChatAgentId::as_str),
         "createdBy": c.created_by.as_str(),
         "createdAt": iso(c.created_at),
         "archivedAt": c.archived_at.map(iso),
@@ -701,9 +706,10 @@ pub async fn post_message(
     // happen to look.
     let named: Vec<UserId> = mentions.values().flatten().cloned().collect();
     notify_room(&state, &account, &message.channel, &named).await;
-    // Naming an agent is the whole trigger; the turn runs off this request so
-    // the words just said are not held up by a model call.
-    crate::chat_agent::answer_if_named(&state, &account, &message.channel, &message.body);
+    // Saying something to an agent is the whole trigger — by name in a room, or
+    // by being in a one-to-one with it (ADR 0048). The turn runs off this
+    // request so the words just said are not held up by a model call.
+    crate::chat_agent::answer_if_asked(&state, &account, &message.channel, &message.body);
     let emails = resolve_emails(&state, &account, std::slice::from_ref(&message.author)).await;
     let shared = account
         .acc
