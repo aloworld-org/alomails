@@ -7,6 +7,10 @@
 //! move to the module that owns them: this is what makes the Mail agent the
 //! agent *of* mail rather than a general assistant under a mail-shaped name.
 //!
+//! A2.8 added the two reads at the top of the list, which is a different kind of
+//! change: the nine below are all things an agent *does to* an email, and until
+//! the reads existed there was no way for it to look one up at all.
+//!
 //! The address book is Mail's too — see [`crate::agent_contacts`], whose one
 //! tool is offered alongside these.
 
@@ -15,10 +19,14 @@ use crate::agent_tool::AgentTool;
 /// What the Mail agent may do, each tool declaring whether it reads or writes
 /// (ADR 0047 §1).
 ///
-/// Every one of them writes. Mail's *answers* — "are we in contact with X",
-/// "who last replied" — are grounded in retrieval today and get their own
-/// reading tools in A2.8; until then this agent proposes and does not look up.
+/// The two reads come first because they are the agent's *answer* half (A2.8),
+/// and until they existed it had none: "are we in contact with X", "who last
+/// replied" and "what did we promise them" were answered from whatever a search
+/// happened to match, which can be right for the wrong reason. They are what
+/// makes a correspondence answer cite a message rather than a snippet.
 pub const MAIL_TOOLS: &[AgentTool] = &[
+    AgentTool::read("correspondence"),
+    AgentTool::read("message_read"),
     AgentTool::write("mark_read"),
     AgentTool::write("flag_email"),
     AgentTool::write("archive_email"),
@@ -35,6 +43,8 @@ pub const MAIL_TOOLS: &[AgentTool] = &[
 /// Read-versus-write is declared in [`MAIL_TOOLS`] and rendered into the prompt
 /// from there (ADR 0047 §1), never restated here.
 pub const MAIL_TOOL_DOC: &str = "\
+- correspondence: the exchange with one person or company, both ways and newest first — who wrote, when, whether it came from them or from you, and whether the last word was theirs or yours. args: {\"who\": string, a name, an email address or a company (required), \"about\": string (optional; narrows the exchange to the messages whose words match it), \"limit\": number (optional, 1-15, default 8)}. Use it for any question about being in contact with somebody, who replied last, or what has been said to them. The newest few messages come back with their text; the rest are listed with \"opened\": false.\n\
+- message_read: the full text of ONE message, with everyone it was addressed to and what is attached to it. args: {\"message\": string (required) — the \"id\" of a message in a correspondence result you have already been given}. Use it when a preview is not enough to say exactly what was said or promised. Never invent an id: only one that came back from correspondence will work.\n\
 - mark_read: mark an email read or unread. args: {\"source\": number, \"read\": boolean}.\n\
 - flag_email: flag (star) or unflag an email. args: {\"source\": number, \"flagged\": boolean}.\n\
 - archive_email: move an email out of the inbox into Archive. args: {\"source\": number}.\n\
@@ -50,4 +60,5 @@ pub const MAIL_TOOL_DOC: &str = "\
 /// The sentence about `source` numbers used to sit in the prompt's general
 /// rules, where every agent read it — including the ones with no tool that
 /// takes a `source`. It belongs to whoever has such a tool.
-pub const MAIL_GUIDANCE: &str = "For any tool that acts on an email, set \"source\" to the number [n] of that email in the numbered sources above; only propose it when the relevant email is present in the sources.\n";
+pub const MAIL_GUIDANCE: &str = "For any tool that acts on an email, set \"source\" to the number [n] of that email in the numbered sources above; only propose it when the relevant email is present in the sources.\n\
+Answer a question about a person or a company from their correspondence, never from a source that merely mentions them: look the exchange up first, then say which message you are relying on by its subject and its date. A message the result marks \"opened\": false was listed and NOT read — you may say that it exists and when it arrived, and never what it says; read it with message_read if the question turns on its contents.\n";

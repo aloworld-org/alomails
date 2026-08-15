@@ -608,6 +608,12 @@ mod tests {
         assert_eq!(
             reads,
             [
+                // A2.8: the Mail agent's answer half — the exchange with one
+                // person or company, and one message of it in full. Everything
+                // else Mail has acts on an email rather than reading one, and
+                // is a write.
+                "correspondence",
+                "message_read",
                 "find_contact",
                 "whats_on",
                 "am_i_free",
@@ -665,7 +671,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 66);
+        assert_eq!(all_tools().len(), 68);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

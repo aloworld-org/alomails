@@ -267,6 +267,8 @@ mod tests {
         assert_eq!(
             names(AgentProduct::Mail),
             [
+                "correspondence",
+                "message_read",
                 "mark_read",
                 "flag_email",
                 "archive_email",
@@ -409,7 +411,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 66);
+        assert_eq!(workspace.len(), 68);
     }
 
     /// The boundary's question, over the whole registry: a product offers its
@@ -471,6 +473,16 @@ mod tests {
         // out of one is Drive's rather than Mail's (A2.8 owns correspondence).
         assert!(offers(AgentProduct::Drive, "attachment_read"));
         assert!(!offers(AgentProduct::Mail, "attachment_read"));
+        // …and the two A2.8 adds, which are the other side of that line:
+        // reading a *message* of the asker's own correspondence is Mail's, and
+        // no other product may reach it. The Agenda agent's briefing opens the
+        // mail that goes with a meeting through `meeting_prep`, which is its
+        // own tool with its own bound — not by borrowing this one.
+        assert!(offers(AgentProduct::Mail, "correspondence"));
+        assert!(offers(AgentProduct::Mail, "message_read"));
+        assert!(!offers(AgentProduct::Drive, "message_read"));
+        assert!(!offers(AgentProduct::Agenda, "correspondence"));
+        assert!(!offers(AgentProduct::Crm, "correspondence"));
         // …and the ones A2.6 adds. Looking across several diaries and moving a
         // meeting that is already in one are Agenda's; a meeting is not a task
         // and not a room, so neither of the products that also deal in

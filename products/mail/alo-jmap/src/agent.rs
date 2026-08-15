@@ -421,6 +421,16 @@ async fn dispatch(
         "chase_task" => crate::agent_tasks::execute_chase_task(account, args, state).await,
         "capture_actions" => crate::agent_tasks::execute_capture_actions(account, args).await,
         "create_event" => execute_create_event(account, args).await,
+        // alo Mail's answer half (A2.8). Both read the asker's own mailbox and
+        // change nothing: `correspondence` is the exchange with one person or
+        // company in both directions, and `message_read` opens one message of it
+        // in full. They exist so a question about a correspondent is answered
+        // from the messages rather than from whatever a search matched — every
+        // Mail tool below this pair acts on an email instead of reading one.
+        "correspondence" => {
+            crate::agent_correspondence::execute_correspondence(account, args, state).await
+        }
+        "message_read" => crate::agent_correspondence::execute_message_read(account, args).await,
         "mark_read" => execute_set_keyword(account, args, "$seen", "read").await,
         "flag_email" => execute_set_keyword(account, args, "$flagged", "flagged").await,
         "archive_email" => execute_move_to_role(account, args, "archive", "Archive").await,

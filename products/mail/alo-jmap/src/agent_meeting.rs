@@ -58,9 +58,6 @@ const LOOK_BACK_DAYS: i64 = 7;
 const MAX_CANDIDATES: i64 = 10;
 const MAX_OPENED: usize = 3;
 
-/// The largest message this parses — the same ceiling `attachment_read` uses.
-const MAX_MESSAGE_BYTES: usize = 25 * 1024 * 1024;
-
 /// How much of an email's own body goes into a briefing.
 const PREVIEW_CHARS: usize = 600;
 
@@ -114,7 +111,12 @@ pub async fn execute_meeting_prep(account: &Account, args: &Value) -> Result<Jso
             // out of them: the body, what is attached, and the text of what can
             // be read — three round trips for one email would be three chances
             // to disagree about what it says.
-            if let Some(raw) = raw_message(account, &hit.id).await {
+            // Opened through the correspondence module's reader, so "how large
+            // a message may an agent open" is answered in one place (A2.8).
+            if let Some(raw) =
+                crate::agent_correspondence::raw_message(account, &MessageId::new(hit.id.clone()))
+                    .await
+            {
                 let parsed = mime_read::parse(&raw);
                 let preview: String = parsed
                     .text
@@ -356,18 +358,6 @@ fn when(event: &CalendarEvent) -> String {
         at.hour(),
         at.minute()
     )
-}
-
-/// The raw bytes of one of the caller's messages — or `None` when it cannot be
-/// opened or is too large to parse, which a briefing reports rather than fails
-/// on: one unreadable email does not make the meeting unpreparable.
-async fn raw_message(account: &Account, id: &str) -> Option<bytes::Bytes> {
-    let raw = account
-        .acc
-        .message_bytes(&MessageId::new(id.to_owned()))
-        .await
-        .ok()?;
-    (raw.len() <= MAX_MESSAGE_BYTES).then_some(raw)
 }
 
 /// The text of one attachment, and whether it was cut short. `None` when the
