@@ -618,6 +618,10 @@ mod tests {
                 "sheet_read",
                 "sheet_answer",
                 "sheet_formula_explain",
+                // A2.3: the Docs agent reads the document and finds a passage
+                // in it. Drafting and rewriting are writes and are not here.
+                "doc_read",
+                "doc_answer",
                 "project_status_summary",
                 "vat_summary",
                 "flag_anomalies",
@@ -636,7 +640,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 45);
+        assert_eq!(all_tools().len(), 49);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

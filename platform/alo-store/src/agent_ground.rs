@@ -28,7 +28,10 @@
 //! and reach their records the way ADR 0047 decided they should: through a
 //! **reading tool**, executed inside the turn, which carries the module's own
 //! gate with it. `stock_answer` is how the Inventory agent learns about stock.
-//! Insights, Meet and Sites have neither yet (A2.1, A2.4, A3.2) and say so.
+//! Insights and Meet have neither yet (A2.4, A3.2) and say so; Sites and Docs
+//! ground in nothing and reach their records through their own reading tools,
+//! for the same reason — a page and a document are fetched by name, not matched
+//! by a search across the workspace.
 //! Empty grounding is a narrower reach than the shared search they had before,
 //! never a wider one.
 //!
@@ -89,6 +92,7 @@ pub fn sources_for(product: AgentProduct) -> &'static [GroundSource] {
         AgentProduct::Chat => CHAT,
         AgentProduct::Drive => DRIVE,
         AgentProduct::Sheets
+        | AgentProduct::Docs
         | AgentProduct::Billing
         | AgentProduct::Crm
         | AgentProduct::Projects
@@ -313,6 +317,7 @@ mod tests {
         assert_eq!(sources_for(AgentProduct::Drive), [GroundSource::Drive]);
         for by_tool in [
             AgentProduct::Sheets,
+            AgentProduct::Docs,
             AgentProduct::Billing,
             AgentProduct::Crm,
             AgentProduct::Projects,

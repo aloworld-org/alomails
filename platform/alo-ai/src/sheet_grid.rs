@@ -595,12 +595,47 @@ pub struct RowMatch {
 /// words every question contains. Not a stop-word list for a language we might
 /// not be in — just the shape of a question — because a term nobody typed as
 /// data ("what", "the") matches nothing and only costs a scan.
+///
+/// Shared with [`crate::doc_blocks`], which asks the same question of a
+/// document: the list is about how people phrase a question, not about what a
+/// spreadsheet holds, so the words a document is *called* ("document",
+/// "section") are dropped here beside the words a sheet is called.
 #[must_use]
 pub fn search_terms(question: &str) -> Vec<String> {
     const ASKING: &[&str] = &[
-        "what", "which", "who", "whose", "where", "when", "how", "why", "the", "and", "for", "was",
-        "were", "are", "did", "does", "our", "this", "that", "with", "from", "much", "many",
-        "total", "sheet", "cell", "row", "column", "tab",
+        "what",
+        "which",
+        "who",
+        "whose",
+        "where",
+        "when",
+        "how",
+        "why",
+        "the",
+        "and",
+        "for",
+        "was",
+        "were",
+        "are",
+        "did",
+        "does",
+        "our",
+        "this",
+        "that",
+        "with",
+        "from",
+        "much",
+        "many",
+        "total",
+        "sheet",
+        "cell",
+        "row",
+        "column",
+        "tab",
+        "document",
+        "section",
+        "paragraph",
+        "page",
     ];
     let mut terms: Vec<String> = Vec::new();
     for word in question

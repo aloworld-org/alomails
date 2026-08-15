@@ -167,7 +167,7 @@ const AGENT_COLUMNS: &str = "a.id, a.handle, a.name, a.description, a.product, a
 /// `sheets` against a column that can never hold it, and a person denied Drive
 /// would keep `@sheets` — the exact failure A1.5 exists to prevent, and a
 /// silent one. [`AGENT_GATE`] is the mapping, and
-/// `only_sheets_is_gated_on_another_products_module` in
+/// `only_the_two_drive_documents_are_gated_on_another_products_module` in
 /// [`crate::agent_product`] plus the test below keep it from falling behind a
 /// product added later.
 ///
@@ -186,8 +186,10 @@ const AGENT_VISIBLE: &str = "NOT EXISTS ( \
 
 /// The rail module an agent's product is gated on, in SQL — `a.product` for
 /// every product whose word *is* its module's, and the module's word for the
-/// one that is not (see [`AGENT_VISIBLE`]).
-const AGENT_GATE: &str = "(CASE a.product WHEN 'sheets' THEN 'drive' ELSE a.product END)";
+/// two that are not: a spreadsheet and a document are both Drive nodes, so
+/// Drive's switch gates both agents (see [`AGENT_VISIBLE`]).
+const AGENT_GATE: &str =
+    "(CASE a.product WHEN 'sheets' THEN 'drive' WHEN 'docs' THEN 'drive' ELSE a.product END)";
 
 /// [`AGENT_VISIBLE`] with the gate spliced in — what every query actually
 /// pastes. A function of two consts rather than one written-out string so the

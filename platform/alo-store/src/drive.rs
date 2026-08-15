@@ -929,18 +929,44 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on a database failure.
     pub async fn drive_sheets(&self, limit: i64) -> Result<Vec<DriveNode>> {
+        self.drive_nodes_of_kind("sheet", limit).await
+    }
+
+    /// The caller's **own** documents, most recently changed first.
+    ///
+    /// The Docs agent (queue item A2.3) asks the same two questions the Sheet
+    /// agent does and cannot answer either from [`Self::drive_find`]: "which
+    /// document did they mean when they named none" and "which ones are there"
+    /// — the list a refusal names when a name matched nothing. Personal only,
+    /// folders and trash excluded, on exactly the reasoning in
+    /// [`Self::drive_find`]'s documentation.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on a database failure.
+    pub async fn drive_docs(&self, limit: i64) -> Result<Vec<DriveNode>> {
+        self.drive_nodes_of_kind("doc", limit).await
+    }
+
+    /// The caller's own nodes of one kind — what [`Self::drive_sheets`] and
+    /// [`Self::drive_docs`] both are.
+    ///
+    /// One statement rather than one per kind, so the access predicate that
+    /// makes these personal-only is written once: a second copy is a second
+    /// place to forget `location_kind = 'personal'`.
+    async fn drive_nodes_of_kind(&self, kind: &str, limit: i64) -> Result<Vec<DriveNode>> {
         let limit = limit.clamp(1, 50);
         let rows = sqlx::query_as::<_, NodeRow>(
             "SELECT id, parent_id, location_kind, location_id, kind, name, blob_id, size, \
                     content_type, trashed, source_kind, source_id, created_by, created_at, updated_at \
              FROM drive_nodes \
              WHERE tenant_id = $1 AND location_kind = 'personal' AND location_id = $2 \
-               AND trashed = false AND kind = 'sheet' \
+               AND trashed = false AND kind = $3 \
              ORDER BY updated_at DESC, lower(name) \
-             LIMIT $3",
+             LIMIT $4",
         )
         .bind(self.tenant.as_str())
         .bind(self.user.as_str())
+        .bind(kind)
         .bind(limit)
         .fetch_all(&self.pool)
         .await

@@ -23,6 +23,7 @@ use time::format_description::well_known::Rfc3339;
 
 use crate::agent_billing as billing;
 use crate::agent_crm as crm;
+use crate::agent_docs as docs;
 use crate::agent_finance as finance;
 use crate::agent_finance_answers as finance_answers;
 use crate::agent_hr as hr;
@@ -439,6 +440,15 @@ async fn dispatch(
         "sheet_formula_explain" => sheets::execute_sheet_formula_explain(account, args).await,
         "sheet_write_formula" => sheets::execute_sheet_write_formula(account, args).await,
         "sheet_clean_column" => sheets::execute_sheet_clean_column(account, args).await,
+        // alo Docs' tools (A2.3), on the same seam. The two reads answer with
+        // the block ids and the sections they read; the two writes edit the
+        // stored document and therefore wait for the asker's own approval —
+        // `doc_draft_section` only adds blocks, and `doc_rewrite` replaces the
+        // words of blocks that already exist and nothing else about them.
+        "doc_read" => docs::execute_doc_read(account, args).await,
+        "doc_answer" => docs::execute_doc_answer(account, args).await,
+        "doc_draft_section" => docs::execute_doc_draft_section(account, args).await,
+        "doc_rewrite" => docs::execute_doc_rewrite(account, args).await,
         // The reading tools of Agenda, Chat and Contacts. Every one answers
         // from the record rather than the search snippets, and none writes.
         "whats_on" => crate::agent_reads::execute_whats_on(account, args).await,

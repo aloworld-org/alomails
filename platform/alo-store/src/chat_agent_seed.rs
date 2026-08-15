@@ -52,8 +52,10 @@ pub const AGENT_SEED_KEY: &str = "default-agents";
 /// A tenant seeded from scratch today already receives every product's agent in
 /// the first set, so the top-up finds the handle taken, writes nothing, and
 /// records the key — the same end state by either route.
-pub const LATER_AGENT_PRODUCTS: &[(AgentProduct, &str)] =
-    &[(AgentProduct::Sheets, "default-agents:sheets")];
+pub const LATER_AGENT_PRODUCTS: &[(AgentProduct, &str)] = &[
+    (AgentProduct::Sheets, "default-agents:sheets"),
+    (AgentProduct::Docs, "default-agents:docs"),
+];
 
 /// The words one default agent is written with, in the language of whoever
 /// opened the agent list first.

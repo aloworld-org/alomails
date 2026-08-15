@@ -412,16 +412,18 @@ async fn a_seed_and_a_denial_are_never_another_tenants() {
     assert_not_found(b.agent(&ChatAgentId::new("agent-that-never-was")).await);
 }
 
-/// A2.2's gate, which is A1.5's gate asked of a product with no rail app.
+/// A2.2's and A2.3's gate, which is A1.5's gate asked of the products with no
+/// rail app.
 ///
-/// A spreadsheet is a Drive node, so `AgentProduct::Sheets` is gated on Drive's
-/// switch. That mapping lives in SQL (`AGENT_GATE`), and the failure it exists
-/// to prevent is silent and on the permission side: without it the predicate
-/// would compare 'sheets' against a column that can never hold it, and somebody
-/// denied Drive would keep `@sheets` — an agent that reads the very files they
-/// were denied.
+/// A spreadsheet and a document are both Drive nodes, so `AgentProduct::Sheets`
+/// and `AgentProduct::Docs` are gated on Drive's switch. That mapping lives in
+/// SQL (`AGENT_GATE`), and the failure it exists to prevent is silent and on the
+/// permission side: without it the predicate would compare 'sheets' or 'docs'
+/// against a column that can never hold either, and somebody denied Drive would
+/// keep `@sheets` and `@docs` — agents that read the very files they were
+/// denied.
 #[tokio::test]
-async fn denying_drive_takes_away_the_spreadsheet_agent_as_well() {
+async fn denying_drive_takes_away_the_spreadsheet_and_document_agents_as_well() {
     let store = common::test_store().await;
     let t = store.create_tenant("agentseed-sheets").await.unwrap();
     let ts = store.for_tenant(t.clone());
@@ -437,6 +439,10 @@ async fn denying_drive_takes_away_the_spreadsheet_agent_as_well() {
         .expect("the Sheet agent is in the default set")
         .id
         .clone();
+    let docs = by_handle(&a.agents().await.unwrap(), "docs")
+        .expect("the Docs agent is in the default set")
+        .id
+        .clone();
     let room = a
         .create_channel(
             "figures",
@@ -446,33 +452,46 @@ async fn denying_drive_takes_away_the_spreadsheet_agent_as_well() {
         .await
         .unwrap();
     a.add_agent_to_channel(&room, &sheets).await.unwrap();
+    a.add_agent_to_channel(&room, &docs).await.unwrap();
     b.join_channel(&room).await.unwrap();
 
     ts.set_module_access(&ua, AppModule::Drive, false, &admin)
         .await
         .unwrap();
 
-    // Both of Drive's agents are gone for her — the one named after the module
-    // and the one that only borrows its switch.
+    // All three of Drive's agents are gone for her — the one named after the
+    // module and the two that only borrow its switch.
     let hers = a.agents().await.unwrap();
     assert!(by_handle(&hers, "drive").is_none());
     assert!(
         by_handle(&hers, "sheets").is_none(),
         "the Sheet agent survived a Drive denial"
     );
-    assert_eq!(hers.len(), ALL_AGENT_PRODUCTS.len() - 2);
+    assert!(
+        by_handle(&hers, "docs").is_none(),
+        "the Docs agent survived a Drive denial"
+    );
+    assert_eq!(hers.len(), ALL_AGENT_PRODUCTS.len() - 3);
     // …and by id, and in the room they share, on the same terms as every other
     // denied agent: not found, and not a member to name.
-    assert_not_found(a.agent(&sheets).await);
-    assert!(by_handle(&a.channel_agents(&room).await.unwrap(), "sheets").is_none());
-    assert_not_found(a.open_agent_dm(&sheets).await);
+    for hidden in [&sheets, &docs] {
+        assert_not_found(a.agent(hidden).await);
+        assert_not_found(a.open_agent_dm(hidden).await);
+    }
+    let in_room = a.channel_agents(&room).await.unwrap();
+    assert!(by_handle(&in_room, "sheets").is_none());
+    assert!(by_handle(&in_room, "docs").is_none());
 
-    // Ben, who still has Drive, keeps both.
+    // Ben, who still has Drive, keeps all three.
     let his = b.agents().await.unwrap();
     assert!(by_handle(&his, "drive").is_some());
     assert!(by_handle(&his, "sheets").is_some());
+    assert!(by_handle(&his, "docs").is_some());
     assert!(b.agent(&sheets).await.is_ok());
-    assert!(by_handle(&b.channel_agents(&room).await.unwrap(), "sheets").is_some());
+    assert!(b.agent(&docs).await.is_ok());
+    let his_room = b.channel_agents(&room).await.unwrap();
+    assert!(by_handle(&his_room, "sheets").is_some());
+    assert!(by_handle(&his_room, "docs").is_some());
 }
 
 /// A product's agent built after the default set still reaches a tenant that

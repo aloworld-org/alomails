@@ -24,6 +24,7 @@ use crate::agent_billing::{BILLING_GUIDANCE, BILLING_TOOL_DOC, BILLING_TOOLS};
 use crate::agent_chat::{CHAT_GUIDANCE, CHAT_TOOL_DOC, CHAT_TOOLS};
 use crate::agent_contacts::{CONTACTS_GUIDANCE, CONTACTS_TOOL_DOC, CONTACTS_TOOLS};
 use crate::agent_crm::{CRM_GUIDANCE, CRM_TOOL_DOC, CRM_TOOLS};
+use crate::agent_docs::{DOCS_GUIDANCE, DOCS_TOOL_DOC, DOCS_TOOLS};
 use crate::agent_drive::{DRIVE_GUIDANCE, DRIVE_TOOL_DOC, DRIVE_TOOLS};
 use crate::agent_finance::{FINANCE_GUIDANCE, FINANCE_TOOL_DOC, FINANCE_TOOLS};
 use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
@@ -78,6 +79,10 @@ const SITES_SET: ToolSet = set(SITES_TOOLS, SITES_TOOL_DOC, SITES_GUIDANCE);
 /// alo Sheets, whose agent works on a spreadsheet the caller can already open —
 /// a Drive node, which is also what gates it (`AgentProduct::module`).
 const SHEETS_SET: ToolSet = set(SHEETS_TOOLS, SHEETS_TOOL_DOC, SHEETS_GUIDANCE);
+/// alo Docs, on exactly the same footing: a document is a Drive node too, so
+/// the same switch gates it and the same reads-answer/writes-propose split
+/// applies to it (A2.3).
+const DOCS_SET: ToolSet = set(DOCS_TOOLS, DOCS_TOOL_DOC, DOCS_GUIDANCE);
 
 /// Mail's, including the address book.
 const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
@@ -86,6 +91,7 @@ const TASKS: &[ToolSet] = &[TASKS_SET];
 const CHAT: &[ToolSet] = &[CHAT_SET];
 const DRIVE: &[ToolSet] = &[DRIVE_SET];
 const SHEETS: &[ToolSet] = &[SHEETS_SET];
+const DOCS: &[ToolSet] = &[DOCS_SET];
 const BILLING: &[ToolSet] = &[BILLING_SET];
 const CRM: &[ToolSet] = &[CRM_SET];
 const PROJECTS: &[ToolSet] = &[PROJECTS_SET];
@@ -117,6 +123,7 @@ pub fn tool_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Chat => CHAT,
         AgentProduct::Drive => DRIVE,
         AgentProduct::Sheets => SHEETS,
+        AgentProduct::Docs => DOCS,
         AgentProduct::Billing => BILLING,
         AgentProduct::Crm => CRM,
         AgentProduct::Projects => PROJECTS,
@@ -142,6 +149,7 @@ const WORKSPACE: &[ToolSet] = &[
     CHAT_SET,
     DRIVE_SET,
     SHEETS_SET,
+    DOCS_SET,
     BILLING_SET,
     CRM_SET,
     PROJECTS_SET,
@@ -172,6 +180,9 @@ pub fn headline(product: AgentProduct) -> &'static str {
         AgentProduct::Drive => "You are the alo Drive agent. You work in this person's files.",
         AgentProduct::Sheets => {
             "You are the alo Sheets agent. You work in this person's spreadsheets — the cells, the formulas and the figures in them."
+        }
+        AgentProduct::Docs => {
+            "You are the alo Docs agent. You work in this person's documents — the sections, the paragraphs and the words in them."
         }
         AgentProduct::Billing => {
             "You are the alo Billing agent. You work in this company's quotes and invoices."
@@ -270,6 +281,20 @@ mod tests {
         assert_eq!(names(AgentProduct::Chat), ["catch_up_room", "find_in_chat"]);
         assert_eq!(names(AgentProduct::Drive), ["find_file"]);
         assert_eq!(
+            names(AgentProduct::Sheets),
+            [
+                "sheet_read",
+                "sheet_answer",
+                "sheet_formula_explain",
+                "sheet_write_formula",
+                "sheet_clean_column",
+            ]
+        );
+        assert_eq!(
+            names(AgentProduct::Docs),
+            ["doc_read", "doc_answer", "doc_draft_section", "doc_rewrite"]
+        );
+        assert_eq!(
             names(AgentProduct::Billing),
             [
                 "create_invoice_draft",
@@ -341,7 +366,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 45);
+        assert_eq!(workspace.len(), 49);
     }
 
     /// The boundary's question, over the whole registry: a product offers its
@@ -376,5 +401,11 @@ mod tests {
         assert!(offers(AgentProduct::Sites, "site_publish"));
         assert!(!offers(AgentProduct::Mail, "site_publish"));
         assert!(!offers(AgentProduct::Sites, "send_email"));
+        // …and the one A2.3 adds: rewriting somebody's prose belongs to the
+        // Docs agent, and the two Drive-node products do not share a tool set
+        // just because they share a gate.
+        assert!(offers(AgentProduct::Docs, "doc_rewrite"));
+        assert!(!offers(AgentProduct::Sheets, "doc_rewrite"));
+        assert!(!offers(AgentProduct::Docs, "sheet_write_formula"));
     }
 }
