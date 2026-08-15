@@ -80,8 +80,8 @@ the numbered sources are whatever else matched, never your own records. Reach th
 your reading tools, and never answer a question about them from a source that merely mentions the \
 subject.\n";
 
-/// Said instead of a tool list to an agent whose product has none yet
-/// (Insights and Meet until their waves land).
+/// Said instead of a tool list to an agent whose product has none yet (Meet
+/// until its wave lands).
 const NO_TOOLS_YET: &str = "You have no tools in this product yet, so you ANSWER from the numbered sources and never \
      return an action. If the request needs something done, say plainly that you cannot do it yet.\n";
 
@@ -557,13 +557,12 @@ mod tests {
             assert!(prompt.starts_with("You are "));
             assert!(prompt.ends_with("no preamble."));
         }
-        // The two products whose agents are still to be built say so plainly
+        // The one product whose agent is still to be built says so plainly
         // rather than leaving an empty menu under a heading.
-        for empty in [AgentProduct::Insights, AgentProduct::Meet] {
-            let prompt = system_prompt_for(empty);
-            assert!(prompt.contains("no tools in this product yet"), "{empty}");
-            assert!(!prompt.contains("Available tools:"), "{empty}");
-        }
+        let empty = AgentProduct::Meet;
+        let prompt = system_prompt_for(empty);
+        assert!(prompt.contains("no tools in this product yet"), "{empty}");
+        assert!(!prompt.contains("Available tools:"), "{empty}");
         // And only Ask alo is free to answer about anything.
         assert!(!system_prompt_for(AgentProduct::Workspace).contains("not yours to answer"));
         assert!(system_prompt_for(AgentProduct::Hr).contains("not yours to answer"));
@@ -627,6 +626,13 @@ mod tests {
                 "flag_anomalies",
                 "stock_answer",
                 "who_is_off",
+                // A2.4: the Insights agent looks up the vocabulary a question
+                // has to be asked in, asks it, and asks it again over an
+                // earlier period. Pinning the answers to a board is
+                // `insight_report`, which is a write and is not here.
+                "insight_catalog",
+                "insight_answer",
+                "insight_change",
                 // A2.1: the Website agent reads the published site, one page of
                 // the draft, and what search engines will find missing. Putting
                 // any of it on the internet is `site_publish`, which is not
@@ -640,7 +646,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 49);
+        assert_eq!(all_tools().len(), 53);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }

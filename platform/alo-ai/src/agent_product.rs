@@ -28,6 +28,7 @@ use crate::agent_docs::{DOCS_GUIDANCE, DOCS_TOOL_DOC, DOCS_TOOLS};
 use crate::agent_drive::{DRIVE_GUIDANCE, DRIVE_TOOL_DOC, DRIVE_TOOLS};
 use crate::agent_finance::{FINANCE_GUIDANCE, FINANCE_TOOL_DOC, FINANCE_TOOLS};
 use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
+use crate::agent_insights::{INSIGHTS_GUIDANCE, INSIGHTS_TOOL_DOC, INSIGHTS_TOOLS};
 use crate::agent_inventory::{INVENTORY_GUIDANCE, INVENTORY_TOOL_DOC, INVENTORY_TOOLS};
 use crate::agent_mail::{MAIL_GUIDANCE, MAIL_TOOL_DOC, MAIL_TOOLS};
 use crate::agent_projects::{PROJECTS_GUIDANCE, PROJECTS_TOOL_DOC, PROJECTS_TOOLS};
@@ -83,6 +84,9 @@ const SHEETS_SET: ToolSet = set(SHEETS_TOOLS, SHEETS_TOOL_DOC, SHEETS_GUIDANCE);
 /// the same switch gates it and the same reads-answer/writes-propose split
 /// applies to it (A2.3).
 const DOCS_SET: ToolSet = set(DOCS_TOOLS, DOCS_TOOL_DOC, DOCS_GUIDANCE);
+/// alo Insights, whose agent reads the figures through the same query engine
+/// the boards do and writes nothing but a board of questions (A2.4).
+const INSIGHTS_SET: ToolSet = set(INSIGHTS_TOOLS, INSIGHTS_TOOL_DOC, INSIGHTS_GUIDANCE);
 
 /// Mail's, including the address book.
 const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
@@ -99,14 +103,14 @@ const FINANCE: &[ToolSet] = &[FINANCE_SET];
 const INVENTORY: &[ToolSet] = &[INVENTORY_SET];
 const HR: &[ToolSet] = &[HR_SET];
 const SITES: &[ToolSet] = &[SITES_SET];
+const INSIGHTS: &[ToolSet] = &[INSIGHTS_SET];
 
 /// A product whose agent has no tools yet.
 ///
-/// Insights and Meet are real products with real modules; their agents are
-/// queued (A2.4, A3.2) and their tool sets are what those items build. Until
-/// then such an agent answers from its grounding and proposes nothing — which is
-/// a truthful agent, and better than borrowing another product's tools to look
-/// busy.
+/// Meet is a real product with a real module; its agent is queued (A3.2) and
+/// its tool set is what that item builds. Until then such an agent answers from
+/// its grounding and proposes nothing — which is a truthful agent, and better
+/// than borrowing another product's tools to look busy.
 const NONE_YET: &[ToolSet] = &[];
 
 /// Every product's tool sets, in the order [`AgentProduct::Workspace`] renders
@@ -131,7 +135,8 @@ pub fn tool_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Inventory => INVENTORY,
         AgentProduct::Hr => HR,
         AgentProduct::Sites => SITES,
-        AgentProduct::Insights | AgentProduct::Meet => NONE_YET,
+        AgentProduct::Insights => INSIGHTS,
+        AgentProduct::Meet => NONE_YET,
         // Ask alo works across products, so it is offered all of them — the
         // one agent for which that is the decision rather than the default
         // (ADR 0034).
@@ -156,6 +161,7 @@ const WORKSPACE: &[ToolSet] = &[
     FINANCE_SET,
     INVENTORY_SET,
     HR_SET,
+    INSIGHTS_SET,
     SITES_SET,
 ];
 
@@ -327,6 +333,15 @@ mod tests {
             ["who_is_off", "draft_letter_from_template"]
         );
         assert_eq!(
+            names(AgentProduct::Insights),
+            [
+                "insight_catalog",
+                "insight_answer",
+                "insight_change",
+                "insight_report",
+            ]
+        );
+        assert_eq!(
             names(AgentProduct::Sites),
             [
                 "site_answer",
@@ -338,9 +353,10 @@ mod tests {
                 "site_publish",
             ]
         );
-        for empty in [AgentProduct::Insights, AgentProduct::Meet] {
-            assert!(tools_for(empty).is_empty(), "{empty} has no tools yet");
-        }
+        assert!(
+            tools_for(AgentProduct::Meet).is_empty(),
+            "Meet has no tools yet"
+        );
     }
 
     /// Every tool belongs to exactly one product, and Ask alo is the union.
@@ -366,7 +382,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 49);
+        assert_eq!(workspace.len(), 53);
     }
 
     /// The boundary's question, over the whole registry: a product offers its
@@ -407,5 +423,11 @@ mod tests {
         assert!(offers(AgentProduct::Docs, "doc_rewrite"));
         assert!(!offers(AgentProduct::Sheets, "doc_rewrite"));
         assert!(!offers(AgentProduct::Docs, "sheet_write_formula"));
+        // …and the one A2.4 adds: pinning a board of questions belongs to the
+        // Insights agent, whose reads are over figures the other agents' own
+        // products own and may not be reached from them.
+        assert!(offers(AgentProduct::Insights, "insight_report"));
+        assert!(!offers(AgentProduct::Billing, "insight_answer"));
+        assert!(!offers(AgentProduct::Insights, "create_invoice_draft"));
     }
 }

@@ -38,7 +38,13 @@ const MAX_READS: usize = 3;
 /// How much of a tool's result is shown to the model. Enough for a diary month
 /// or a stock record; short enough that one verbose tool cannot crowd out the
 /// question it was meant to answer.
-const MAX_RESULT_CHARS: usize = 4_000;
+///
+/// Crate-visible because one tool's result is written **against** it: the
+/// Insights catalog ([`crate::agent_insights`]) is a menu a model has to read
+/// whole, and half a menu is a menu with invented spellings at the end of it, so
+/// a test there holds the rendering under this number rather than under a copy
+/// of it.
+pub(crate) const MAX_RESULT_CHARS: usize = 4_000;
 
 /// The `kind` a tool result carries in the numbered sources, so the model can
 /// tell what it looked up from what a search happened to match.
@@ -395,12 +401,12 @@ mod tests {
                 }
             }
         }
-        // Twenty of them, which is the whole point of ADR 0047 — eleven from
-        // the products A1 covered, the Website agent's three (A2.1), its
-        // language count (A2.1b), the Sheet agent's three (A2.2), and the Docs
-        // agent's two (A2.3).
+        // Twenty-three of them, which is the whole point of ADR 0047 — eleven
+        // from the products A1 covered, the Website agent's three (A2.1), its
+        // language count (A2.1b), the Sheet agent's three (A2.2), the Docs
+        // agent's two (A2.3), and the Insights agent's three (A2.4).
         let reads = alo_ai::all_tools().iter().filter(|t| t.is_read()).count();
-        assert_eq!(reads, 20);
+        assert_eq!(reads, 23);
     }
 
     #[test]

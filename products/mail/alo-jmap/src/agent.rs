@@ -27,6 +27,7 @@ use crate::agent_docs as docs;
 use crate::agent_finance as finance;
 use crate::agent_finance_answers as finance_answers;
 use crate::agent_hr as hr;
+use crate::agent_insights as insights;
 use crate::agent_inventory as inventory;
 use crate::agent_projects as projects;
 use crate::agent_sheets as sheets;
@@ -491,6 +492,17 @@ async fn dispatch(
         "draft_letter_from_template" => {
             hr::execute_draft_letter_from_template(account, args, state).await
         }
+        // alo Insights' tools (A2.4), on the same seam. The three reads answer
+        // from the same query engine the boards draw from — the vocabulary a
+        // question has to be asked in, the figures one question comes back
+        // with, and what moved between two periods — and the one write pins
+        // those questions to a new board, which is why it waits for the
+        // asker's own approval. Nothing here changes a figure or a record any
+        // figure is read from.
+        "insight_catalog" => insights::execute_insight_catalog(account, args).await,
+        "insight_answer" => insights::execute_insight_answer(account, args).await,
+        "insight_change" => insights::execute_insight_change(account, args).await,
+        "insight_report" => insights::execute_insight_report(account, args).await,
         // alo Sites' tools (A2.1), on the same seam. The reads answer from the
         // published site and the draft; the two page writes land in the
         // **draft** and nowhere else, and `site_publish` is the only one of them

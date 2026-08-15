@@ -65,7 +65,11 @@ const MAX_QUESTION_CHARS: usize = 500;
 /// How wide a proposed chart wants to sit when it is pinned: a single figure is
 /// a small card, everything with a breakdown wants room to be read. The same
 /// two widths the gallery's own entries use (`insight_overview`).
-fn span_for(viz: Viz) -> i16 {
+///
+/// Shared with the Insights agent's report tool (`crate::agent_insights`, A2.4)
+/// rather than copied into it: a proposal from a room and a proposal from the
+/// ask box lay out the same way because they ask the same function.
+pub(crate) fn span_for(viz: Viz) -> i16 {
     match viz {
         Viz::Number => 1,
         Viz::Bar | Viz::Line | Viz::Pie | Viz::Table => 2,
