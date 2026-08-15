@@ -31,6 +31,7 @@ use crate::agent_hr::{HR_GUIDANCE, HR_TOOL_DOC, HR_TOOLS};
 use crate::agent_insights::{INSIGHTS_GUIDANCE, INSIGHTS_TOOL_DOC, INSIGHTS_TOOLS};
 use crate::agent_inventory::{INVENTORY_GUIDANCE, INVENTORY_TOOL_DOC, INVENTORY_TOOLS};
 use crate::agent_mail::{MAIL_GUIDANCE, MAIL_TOOL_DOC, MAIL_TOOLS};
+use crate::agent_meet::{MEET_GUIDANCE, MEET_TOOL_DOC, MEET_TOOLS};
 use crate::agent_projects::{PROJECTS_GUIDANCE, PROJECTS_TOOL_DOC, PROJECTS_TOOLS};
 use crate::agent_sheets::{SHEETS_GUIDANCE, SHEETS_TOOL_DOC, SHEETS_TOOLS};
 use crate::agent_sites::{SITES_GUIDANCE, SITES_TOOL_DOC, SITES_TOOLS};
@@ -87,6 +88,10 @@ const DOCS_SET: ToolSet = set(DOCS_TOOLS, DOCS_TOOL_DOC, DOCS_GUIDANCE);
 /// alo Insights, whose agent reads the figures through the same query engine
 /// the boards do and writes nothing but a board of questions (A2.4).
 const INSIGHTS_SET: ToolSet = set(INSIGHTS_TOOLS, INSIGHTS_TOOL_DOC, INSIGHTS_GUIDANCE);
+/// alo Meet, whose agent works on a meeting **after** it is over — the record
+/// it left behind, and the conversation it came out of (A3.2). Nothing here
+/// joins a call: the live participant is a media path and is not decided.
+const MEET_SET: ToolSet = set(MEET_TOOLS, MEET_TOOL_DOC, MEET_GUIDANCE);
 
 /// Mail's, including the address book.
 const MAIL: &[ToolSet] = &[MAIL_SET, CONTACTS_SET];
@@ -104,14 +109,7 @@ const INVENTORY: &[ToolSet] = &[INVENTORY_SET];
 const HR: &[ToolSet] = &[HR_SET];
 const SITES: &[ToolSet] = &[SITES_SET];
 const INSIGHTS: &[ToolSet] = &[INSIGHTS_SET];
-
-/// A product whose agent has no tools yet.
-///
-/// Meet is a real product with a real module; its agent is queued (A3.2) and
-/// its tool set is what that item builds. Until then such an agent answers from
-/// its grounding and proposes nothing — which is a truthful agent, and better
-/// than borrowing another product's tools to look busy.
-const NONE_YET: &[ToolSet] = &[];
+const MEET: &[ToolSet] = &[MEET_SET];
 
 /// Every product's tool sets, in the order [`AgentProduct::Workspace`] renders
 /// them.
@@ -136,7 +134,7 @@ pub fn tool_sets(product: AgentProduct) -> &'static [ToolSet] {
         AgentProduct::Hr => HR,
         AgentProduct::Sites => SITES,
         AgentProduct::Insights => INSIGHTS,
-        AgentProduct::Meet => NONE_YET,
+        AgentProduct::Meet => MEET,
         // Ask alo works across products, so it is offered all of them — the
         // one agent for which that is the decision rather than the default
         // (ADR 0034).
@@ -162,6 +160,7 @@ const WORKSPACE: &[ToolSet] = &[
     INVENTORY_SET,
     HR_SET,
     INSIGHTS_SET,
+    MEET_SET,
     SITES_SET,
 ];
 
@@ -382,9 +381,9 @@ mod tests {
                 "site_publish",
             ]
         );
-        assert!(
-            tools_for(AgentProduct::Meet).is_empty(),
-            "Meet has no tools yet"
+        assert_eq!(
+            names(AgentProduct::Meet),
+            ["meetings_recent", "meeting_record", "meeting_minutes"]
         );
     }
 
@@ -411,7 +410,7 @@ mod tests {
             .map(|tool| tool.name)
             .collect();
         assert_eq!(workspace, owned, "Ask alo is every product, in order");
-        assert_eq!(workspace.len(), 68);
+        assert_eq!(workspace.len(), 71);
     }
 
     /// The boundary's question, over the whole registry: a product offers its
@@ -509,5 +508,20 @@ mod tests {
         assert!(!offers(AgentProduct::Projects, "my_plate"));
         assert!(!offers(AgentProduct::Tasks, "catch_up_room"));
         assert!(!offers(AgentProduct::Tasks, "project_status_summary"));
+        // …and the ones A3.2 adds, which are the whole of "no second
+        // mechanism": Meet may write the minutes of a sitting into the room it
+        // came out of, and it may not put a task on anybody's board or an entry
+        // in anybody's diary — those stay the Tasks and Agenda agents' own
+        // proposals, accepted one at a time. Reading a meeting's record is
+        // Meet's alone: a meeting in the diary is an appointment, and what was
+        // said inside one is not the Agenda agent's to read.
+        assert!(offers(AgentProduct::Meet, "meeting_record"));
+        assert!(offers(AgentProduct::Meet, "meeting_minutes"));
+        assert!(!offers(AgentProduct::Meet, "create_task"));
+        assert!(!offers(AgentProduct::Meet, "capture_actions"));
+        assert!(!offers(AgentProduct::Meet, "create_event"));
+        assert!(!offers(AgentProduct::Agenda, "meeting_record"));
+        assert!(!offers(AgentProduct::Chat, "meeting_minutes"));
+        assert!(!offers(AgentProduct::Meet, "meeting_prep"));
     }
 }

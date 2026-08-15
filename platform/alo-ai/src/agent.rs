@@ -80,8 +80,13 @@ the numbered sources are whatever else matched, never your own records. Reach th
 your reading tools, and never answer a question about them from a source that merely mentions the \
 subject.\n";
 
-/// Said instead of a tool list to an agent whose product has none yet (Meet
-/// until its wave lands).
+/// Said instead of a tool list to an agent whose product has none yet.
+///
+/// Every product has a tool set today — Meet was the last without one, until
+/// A3.2. This stays because a product is routinely added a wave before its
+/// agent is built, and an agent with an empty menu under an "Available tools:"
+/// heading would propose actions it cannot run. [`tools_block`] is where the
+/// choice is made, and it is tested there.
 const NO_TOOLS_YET: &str = "You have no tools in this product yet, so you ANSWER from the numbered sources and never \
      return an action. If the request needs something done, say plainly that you cannot do it yet.\n";
 
@@ -110,11 +115,7 @@ pub fn system_prompt_for(product: AgentProduct) -> String {
         guidance.push_str(set.guidance);
     }
     let no_tools = sets.iter().all(|set| set.tools.is_empty());
-    let tools = if no_tools {
-        NO_TOOLS_YET.to_owned()
-    } else {
-        format!("Available tools:\n{docs}{}", effect_block(product))
-    };
+    let tools = tools_block(product, &docs, no_tools);
     // A product with tools but no retrieval is told where its records actually
     // are. One with neither is told nothing extra: it has no lookup to offer,
     // and `NO_TOOLS_YET` has already said so.
@@ -135,6 +136,21 @@ pub fn system_prompt_for(product: AgentProduct) -> String {
         "{}{stay}\n{AGENT_SYSTEM_HEAD}{tools}{ground}{guidance}{AGENT_SYSTEM_RULES}",
         crate::agent_product::headline(product)
     )
+}
+
+/// The tool half of one agent's prompt: its own tool lines and the read/write
+/// split rendered from them, or — for a product whose agent has no tools yet —
+/// the sentence that tells it to answer and never return an action.
+///
+/// A function of its own so the empty case stays testable now that no product
+/// takes it: the branch is defensive, and a defensive branch nothing exercises
+/// is one that rots.
+fn tools_block(product: AgentProduct, docs: &str, no_tools: bool) -> String {
+    if no_tools {
+        NO_TOOLS_YET.to_owned()
+    } else {
+        format!("Available tools:\n{docs}{}", effect_block(product))
+    }
 }
 
 /// Whether `tool` is a tool that exists at all — the allowlist the execution
@@ -557,12 +573,15 @@ mod tests {
             assert!(prompt.starts_with("You are "));
             assert!(prompt.ends_with("no preamble."));
         }
-        // The one product whose agent is still to be built says so plainly
-        // rather than leaving an empty menu under a heading.
-        let empty = AgentProduct::Meet;
-        let prompt = system_prompt_for(empty);
-        assert!(prompt.contains("no tools in this product yet"), "{empty}");
-        assert!(!prompt.contains("Available tools:"), "{empty}");
+        // Every product has a tool set now that Meet has one, so no prompt
+        // takes the empty branch — which is tested where the choice is made,
+        // in `a_product_with_no_tools_is_told_to_answer_and_never_act`.
+        for product in alo_store::ALL_AGENT_PRODUCTS {
+            assert!(
+                system_prompt_for(product).contains("Available tools:"),
+                "{product} has no tools"
+            );
+        }
         // And only Ask alo is free to answer about anything.
         assert!(!system_prompt_for(AgentProduct::Workspace).contains("not yours to answer"));
         assert!(system_prompt_for(AgentProduct::Hr).contains("not yours to answer"));
@@ -658,6 +677,13 @@ mod tests {
                 "insight_catalog",
                 "insight_answer",
                 "insight_change",
+                // A3.2: the Meet agent names the sittings this person was in
+                // and opens one of them in full — who was there, what was said
+                // and what has been posted in its room since. Writing the
+                // minutes into that room is `meeting_minutes`, which is a write
+                // and is not here.
+                "meetings_recent",
+                "meeting_record",
                 // A2.1: the Website agent reads the published site, one page of
                 // the draft, and what search engines will find missing. Putting
                 // any of it on the internet is `site_publish`, which is not
@@ -671,7 +697,7 @@ mod tests {
                 "site_translation_status",
             ]
         );
-        assert_eq!(all_tools().len(), 68);
+        assert_eq!(all_tools().len(), 71);
         for name in &reads {
             assert!(is_read_tool(name), "{name} is declared a read");
         }
@@ -690,6 +716,29 @@ mod tests {
                 "{stranger:?} must not run un-tapped"
             );
         }
+    }
+
+    /// A product added ahead of its agent is told to answer and never to act.
+    ///
+    /// No product takes this branch today — Meet was the last one and A3.2 gave
+    /// it tools — so it is tested at the function that makes the choice rather
+    /// than through a prompt. An empty menu under an "Available tools:" heading
+    /// is what this exists to prevent, and it would be a silent failure: the
+    /// model would propose actions the boundary then refuses.
+    #[test]
+    fn a_product_with_no_tools_is_told_to_answer_and_never_act() {
+        let empty = tools_block(AgentProduct::Meet, "", true);
+        assert_eq!(empty, NO_TOOLS_YET);
+        assert!(!empty.contains("Available tools:"));
+        assert!(empty.contains("never \n     return an action") || empty.contains("ANSWER"));
+        // …and the ordinary case still renders the lines it was given, with the
+        // split generated after them.
+        let full = tools_block(AgentProduct::Meet, "- meeting_record: …\n", false);
+        assert!(
+            full.starts_with("Available tools:\n- meeting_record: …\n"),
+            "{full}"
+        );
+        assert!(full.contains("meeting_minutes"), "{full}");
     }
 
     /// The prompt's statement of the split is generated from the same list the
