@@ -40,6 +40,7 @@ pub mod agent_tasks;
 mod agent_tool;
 pub mod doc_blocks;
 pub mod insights;
+pub mod sheet_charts;
 pub mod sheet_grid;
 pub mod site_chat;
 pub mod site_edits;

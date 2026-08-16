@@ -3,7 +3,7 @@
 // is the editor's own JSON snapshot stored in the node's blob; opening loads it,
 // edits auto-save a new version. Univer is heavy, so DriveModule code-splits this
 // out — it loads only when a sheet is opened.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronLeft, Download, MoreHorizontal, Pencil, X } from "lucide-react";
 
 // Univer's own UI + engine. Framework-agnostic: it mounts into a plain DOM
@@ -66,6 +66,12 @@ import { useJmapClient } from "../jmap";
 import { Menu, Spinner } from "../ds";
 import { driveErrorReason, saveBlob } from "./parts";
 import { univerSnapshotToXlsx } from "./exportOffice";
+import {
+  readSheetDocument,
+  writeSheetDocument,
+  type SheetChart,
+  type Snapshot as SheetSnapshot,
+} from "./sheetDocument";
 import { SheetRibbon, type BorderKind, type FormulaCategory, type SheetActions, type SheetSelectionFormatting } from "./SheetRibbon";
 import styles from "./SheetEditor.module.css";
 
@@ -159,8 +165,11 @@ const FORMULA_CATEGORIES: FormulaCategory[] = [
   { key: "array", label: strings.sheetFormulaArray, functions: supportedFunctions(FUNCTION_NAMES_ARRAY) },
 ].filter((category) => category.functions.length > 0);
 
-/** A Univer workbook snapshot — an opaque JSON object we persist verbatim. */
-type Snapshot = Record<string, unknown>;
+/** A Univer workbook snapshot — an opaque JSON object we persist verbatim.
+ *  The *stored* blob is an envelope around it (ADR 0051): the engine
+ *  regenerates this object from its own state on every save, so alo's charts
+ *  live beside it rather than inside it. `sheetDocument.ts` owns both shapes. */
+type Snapshot = SheetSnapshot;
 
 export function SheetEditor({
   nodeId,
@@ -181,6 +190,18 @@ export function SheetEditor({
   const dirtyRef = useRef(false);
   const savingRef = useRef(false);
   const [initial, setInitial] = useState<Snapshot | null>(null);
+  /** The charts read from the stored envelope, carried across saves. A ref
+   *  rather than state: nothing here re-renders on them yet, and losing them
+   *  to a stale closure in the auto-save interval would delete a chart. */
+  const chartsRef = useRef<SheetChart[]>([]);
+  const sheetBlob = useCallback(
+    (json: string) =>
+      writeSheetDocument({
+        workbook: JSON.parse(json) as Snapshot,
+        charts: chartsRef.current,
+      }),
+    [],
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [actionError, setActionError] = useState("");
@@ -200,7 +221,16 @@ export function SheetEditor({
     setLoadError(null);
     void client
       .driveSheetContent(nodeId)
-      .then((data) => live && setInitial((data as Snapshot | null) ?? {}))
+      .then((data) => {
+        if (!live) return;
+        // Either shape: an envelope hands back its workbook, a bare snapshot
+        // is its own. Charts are held so a save puts them back — an editor
+        // that dropped them would silently delete a chart on the next
+        // keystroke.
+        const stored = readSheetDocument(data ?? {});
+        chartsRef.current = stored.charts;
+        setInitial(stored.workbook);
+      })
       .catch((error: unknown) => {
         if (live) setLoadError(driveErrorReason(error) ?? strings.driveUnknownError);
       });
@@ -387,7 +417,7 @@ export function SheetEditor({
       savingRef.current = true;
       setSaveState("saving");
       void client
-        .driveSaveSheet(nodeId, JSON.parse(json) as Snapshot)
+        .driveSaveSheet(nodeId, sheetBlob(json))
         .then(() => {
           lastSaved.current = json;
           savingRef.current = false;
@@ -409,7 +439,7 @@ export function SheetEditor({
     if (api !== null) {
       const json = snapshotJson(api);
       if (json !== "" && json !== lastSaved.current) {
-        void client.driveSaveSheet(nodeId, JSON.parse(json) as Snapshot);
+        void client.driveSaveSheet(nodeId, sheetBlob(json));
       }
     }
     onClose();
