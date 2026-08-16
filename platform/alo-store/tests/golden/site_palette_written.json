@@ -178,6 +178,13 @@
     "ready": false
   },
   {
+    "kind": "tickets",
+    "ready": true,
+    "section": {
+      "type": "tickets"
+    }
+  },
+  {
     "kind": "custom_code",
     "needs": "code",
     "ready": false

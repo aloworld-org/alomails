@@ -557,6 +557,23 @@ pub struct BookingSection {
     pub heading: Option<String>,
 }
 
+/// The door to the site's ticket shop (ADR 0041, item S3.04f). The section
+/// stores presentation only — an optional heading and an optional line of the
+/// owner's own words. What is on sale, its price and what is left are live
+/// state read from the Billing seam on `/tix`, one navigation away, exactly
+/// as a booking section defers its free times: a published page is cached
+/// bytes, and a price or a seat count must never be.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct TicketsSection {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heading: Option<String>,
+    /// The owner's own sentence above the link (what the events are, why to
+    /// come).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body: Option<String>,
+}
+
 /// One section of a page — the closed v1 vocabulary. The wire tag is the
 /// `type` prop (`{"type": "hero", …}`); unknown tags and unknown props are
 /// rejected on write.
@@ -592,6 +609,8 @@ pub enum Section {
     Catalog(CatalogSection),
     /// Something a visitor may book, against the service's Agenda calendar.
     Booking(BookingSection),
+    /// The door to the site's live ticket shop (`/tix`).
+    Tickets(TicketsSection),
     /// The tenant's own HTML/CSS/JS, published inside a sandboxed frame.
     CustomCode(CustomCodeSection),
     /// Page footer.
@@ -620,6 +639,7 @@ pub const SECTION_KINDS: &[&str] = &[
     "collection",
     "catalog",
     "booking",
+    "tickets",
     "custom_code",
     "footer",
 ];
@@ -642,6 +662,7 @@ impl Section {
             Section::Collection(_) => "collection",
             Section::Catalog(_) => "catalog",
             Section::Booking(_) => "booking",
+            Section::Tickets(_) => "tickets",
             Section::CustomCode(_) => "custom_code",
             Section::Footer(_) => "footer",
         }
@@ -669,6 +690,7 @@ impl Section {
             | Section::Collection(_)
             | Section::Catalog(_)
             | Section::Booking(_)
+            | Section::Tickets(_)
             // A custom-code block owns no tenant blob: it has no network, so
             // the only image it can show is one carried inline in its markup.
             | Section::CustomCode(_)
@@ -803,6 +825,10 @@ impl Section {
             Section::Booking(s) => {
                 check_token(kind, "booking_id", s.booking_id.as_str())?;
                 check_opt_short(kind, "heading", s.heading.as_deref())
+            }
+            Section::Tickets(s) => {
+                check_opt_short(kind, "heading", s.heading.as_deref())?;
+                check_opt_long(kind, "body", s.body.as_deref())
             }
             // The block's own rules — byte caps, the capability/script pairing,
             // and everything that would break the frame's document — live with
@@ -1249,6 +1275,10 @@ mod tests {
                 booking_id: SiteBookingId::new("tasting-table"),
                 heading: Some("Book the tasting table".to_owned()),
             }),
+            Section::Tickets(TicketsSection {
+                heading: Some("Cupping evenings".to_owned()),
+                body: Some("Six seats around the roaster, once a month.".to_owned()),
+            }),
             Section::CustomCode(CustomCodeSection {
                 heading: Some("Roast timer".to_owned()),
                 title: "A timer counting down the current roast".to_owned(),
@@ -1278,7 +1308,7 @@ mod tests {
     #[test]
     fn every_variant_round_trips_fully_populated() {
         let before = envelope(full_sections());
-        assert_eq!(before.sections.len(), 16, "corpus must cover all variants");
+        assert_eq!(before.sections.len(), 17, "corpus must cover all variants");
         before.validate().unwrap();
         let value = before.to_value().unwrap();
         let after = SectionsEnvelope::from_value(value).unwrap();
@@ -1371,6 +1401,7 @@ mod tests {
             "collection",
             "catalog",
             "booking",
+            "tickets",
             "custom_code",
             "footer",
         ];

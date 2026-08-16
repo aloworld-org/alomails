@@ -32,7 +32,7 @@ const SEO_DESCRIPTION_MAX_CHARS: usize = 500;
 /// conventions. Checked after the syntax rules, so entries are all lowercase
 /// and slug-safe.
 const RESERVED_SLUGS: &[&str] = &[
-    "blog", "f", "feed", "rss", "atom", "sitemap", "robots", "healthz", "assets", "static",
+    "blog", "f", "feed", "rss", "atom", "sitemap", "robots", "healthz", "assets", "static", "tix",
 ];
 
 /// One page of a site. `sections` is returned as stored — always a value that

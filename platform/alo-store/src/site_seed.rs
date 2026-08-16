@@ -39,6 +39,7 @@ use crate::site_model::{
     BookingSection, CatalogSection, CollectionSection, ContactFormSection, CtaSection, FeatureItem,
     FeaturesSection, FooterSection, GallerySection, HeroSection, ImageSide, Link,
     MAX_LONG_TEXT_CHARS, MAX_SHORT_TEXT_CHARS, NavSection, Section, SiteImage, TextImageSection,
+    TicketsSection,
 };
 
 /// How many of the site's own pages a seeded menu or footer lists. A nav with
@@ -260,6 +261,7 @@ pub fn seed_section(kind: &str, ctx: &SeedContext) -> Option<SectionSeed> {
         "collection" => seed_collection(ctx),
         "catalog" => seed_catalog(ctx),
         "booking" => seed_booking(ctx),
+        "tickets" => seed_tickets(ctx),
         // A code block is the one section whose content is not writing but
         // behaviour. Nothing in a website's copy tells us what script the
         // owner meant, and guessing one would put bytes on their page that
@@ -494,6 +496,20 @@ fn seed_booking(ctx: &SeedContext) -> SectionSeed {
                 heading: short(&binding.name),
             }))
         })
+}
+
+/// The ticket-shop door always works: both props are optional, and what the
+/// link leads to is the site's own live shop. Any words come from an existing
+/// tickets section, never from us.
+fn seed_tickets(ctx: &SeedContext) -> SectionSeed {
+    let existing = ctx.first(|section| match section {
+        Section::Tickets(tickets) => Some(tickets),
+        _ => None,
+    });
+    SectionSeed::ready(Section::Tickets(TicketsSection {
+        heading: existing.and_then(|tickets| tickets.heading.clone()),
+        body: existing.and_then(|tickets| tickets.body.clone()),
+    }))
 }
 
 /// The foot of the page: the line the site already carries, over its own

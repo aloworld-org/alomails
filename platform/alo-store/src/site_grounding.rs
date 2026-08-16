@@ -410,6 +410,12 @@ pub fn section_text(section: &Section) -> Vec<String> {
             // Availability likewise: a tool call in a later slice, not prose.
             push_opt(out, section.heading.as_deref());
         }
+        Section::Tickets(section) => {
+            // Events and prices are live Billing state, never prose
+            // (ADR 0040): only the owner's own words enter the corpus.
+            push_opt(out, section.heading.as_deref());
+            push_opt(out, section.body.as_deref());
+        }
         Section::CustomCode(section) => {
             // Code is not prose: the heading and accessible title only.
             push_opt(out, section.heading.as_deref());
