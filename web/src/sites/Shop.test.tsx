@@ -184,6 +184,13 @@ describe("the shop screen", () => {
     ui();
 
     expect(await screen.findByText(strings.sitesCommerceReadOnly)).toBeTruthy();
+    // Announced, not just printed (S3.06b): the fact lands after the load,
+    // when a screen reader has already moved past the header.
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((el) => el.textContent === strings.sitesCommerceReadOnly),
+    ).toBe(true);
     expect(screen.getByText("Field guide")).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: strings.sitesShopAddProduct }),
@@ -289,6 +296,13 @@ describe("the shop screen", () => {
     fireEvent.click(await screen.findByRole("button", { name: strings.sitesShopRemove }));
     expect(lastWrite()).toBeUndefined();
     expect(screen.getByText(strings.sitesShopRemoveHint)).toBeTruthy();
+    // The arming renames a button, which nothing announces; the hint must be
+    // a live region so the second step is said out loud (S3.06b).
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((el) => el.textContent === strings.sitesShopRemoveHint),
+    ).toBe(true);
 
     fireEvent.click(screen.getByRole("button", { name: strings.sitesShopRemoveConfirm }));
 

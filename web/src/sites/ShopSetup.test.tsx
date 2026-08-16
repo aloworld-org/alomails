@@ -32,6 +32,15 @@ interface Reply {
 const calls: Call[] = [];
 let replies: Reply[] = [];
 
+/** The site detail is the owner's unless a test seeds its own reply, so the
+ *  screen exercises its full surface by default (S3.06a). */
+function fallbackBody(url: string, method: string): unknown {
+  if (method === "GET" && url.endsWith("/sites/site-1")) {
+    return { id: "site-1", name: "Site one", canManageCollaborators: true };
+  }
+  return {};
+}
+
 const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
   const method = init?.method ?? "GET";
   calls.push({
@@ -41,7 +50,9 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
   });
   const index = replies.findIndex((reply) => reply.match(url, method));
   const answer =
-    index === -1 ? { status: 200, body: {} } : (replies.splice(index, 1)[0] as Reply);
+    index === -1
+      ? { status: 200, body: fallbackBody(url, method) }
+      : (replies.splice(index, 1)[0] as Reply);
   return new Response(JSON.stringify(answer.body), {
     status: answer.status,
     headers: { "content-type": "application/json" },
@@ -259,6 +270,29 @@ describe("the shop-setup screen", () => {
       (call) => call.method === "PUT" && call.url.endsWith("/shop-settings"),
     );
     expect(shippingWrites).toHaveLength(1);
+  });
+
+  test("a collaborator is told the screen is the owner's — as a status, with the price list never asked for", async () => {
+    replies.push({
+      match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+      status: 200,
+      body: { id: "site-1", name: "Site one", canManageCollaborators: false },
+    });
+    ui();
+
+    // The read-only fact is announced, not just printed (S3.06b): it lands
+    // after the load, when a screen reader has already read the header.
+    expect(await screen.findByText(strings.sitesCommerceReadOnly)).toBeTruthy();
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((el) => el.textContent === strings.sitesCommerceReadOnly),
+    ).toBe(true);
+    // No describe box to type into, and the read the server would refuse a
+    // collaborator was never made.
+    expect(screen.queryByLabelText(strings.sitesShopSetupDescribeLabel)).toBeNull();
+    expect(calls.some((call) => call.url.endsWith("/ticket-products"))).toBe(false);
+    expect(calls.some((call) => call.url.endsWith("/shop-settings"))).toBe(false);
   });
 
   test("an AI-less deployment says so and keeps the manual path", async () => {

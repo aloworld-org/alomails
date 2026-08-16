@@ -323,8 +323,13 @@ export function TicketsView() {
 
       {error !== null && <ErrorBanner message={error} />}
 
+      {/* A status, not a paragraph: the read-only fact arrives after the
+          load, and a screen reader that has already moved past the header
+          would otherwise never hear it (S3.06a). */}
       {!loading && site !== null && !manager && (
-        <p className={styles.hint}>{strings.sitesCommerceReadOnly}</p>
+        <p className={styles.hint} role="status">
+          {strings.sitesCommerceReadOnly}
+        </p>
       )}
 
       {!loading && noProducts && (
@@ -438,7 +443,13 @@ export function TicketsView() {
         </div>
       )}
 
-      {armedId !== null && <p className={styles.hint}>{strings.sitesTicketDeleteHint}</p>}
+      {/* The arming is a renamed button, which nothing announces; this
+          sentence appearing in a live region is what says it out loud. */}
+      {armedId !== null && (
+        <p className={styles.hint} role="status">
+          {strings.sitesTicketDeleteHint}
+        </p>
+      )}
 
       {creating && products !== null && (
         <NewEventDialog

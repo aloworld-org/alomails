@@ -168,6 +168,13 @@ describe("the tickets screen", () => {
     ui();
 
     expect(await screen.findByText(strings.sitesCommerceReadOnly)).toBeTruthy();
+    // Announced, not just printed (S3.06b): the fact lands after the load,
+    // when a screen reader has already moved past the header.
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((el) => el.textContent === strings.sitesCommerceReadOnly),
+    ).toBe(true);
     expect(screen.getByText("Letterpress workshop")).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: strings.sitesNewTicketEvent }),

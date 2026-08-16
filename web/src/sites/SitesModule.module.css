@@ -3845,7 +3845,8 @@
   }
   /* The table already scrolls sideways when it must; the page around it
      should not also spend 48px of a 360px screen on its own margins. */
-  .tableWrap {
+  .tableWrap,
+  .tableWrapStatic {
     padding: 0 var(--space-4) var(--space-4);
   }
 }

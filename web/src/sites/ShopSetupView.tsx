@@ -129,11 +129,13 @@ export function ShopSetupView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [detail, items, shippingCents] = await Promise.all([
-        api.site(siteId),
-        api.ticketProducts(siteId),
-        api.shopShipping(siteId),
-      ]);
+      // The detail first: the price list is a read the server refuses a
+      // collaborator (S3.06a), and a screen that asks anyway greets them
+      // with a refusal banner instead of the read-only fact (S3.06b).
+      const detail = await api.site(siteId);
+      const [items, shippingCents] = detail.canManageCollaborators
+        ? await Promise.all([api.ticketProducts(siteId), api.shopShipping(siteId)])
+        : [null, null];
       setSite(detail);
       setProducts(items);
       setCurrentShipping(shippingCents);
@@ -252,6 +254,7 @@ export function ShopSetupView() {
     setApplying(false);
   }
 
+  const manager = site !== null && site.canManageCollaborators;
   const created = (rows ?? []).filter((row) => row.status === "created");
   const failed = (rows ?? []).some((row) => row.error !== null);
   const allDone =
@@ -292,7 +295,18 @@ export function ShopSetupView() {
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {!loading && rows === null && (
+      {/* A status, not a paragraph: the read-only fact arrives after the
+          load, and a screen reader that has already moved past the header
+          would otherwise never hear it (S3.06a, S3.06b). */}
+      {!loading && site !== null && !manager && (
+        <section className={styles.shopDescribe} aria-label={strings.sitesShopSetup}>
+          <p className={styles.hint} role="status">
+            {strings.sitesCommerceReadOnly}
+          </p>
+        </section>
+      )}
+
+      {!loading && manager && rows === null && (
         <section className={styles.shopDescribe} aria-label={strings.sitesShopSetup}>
           <p className={styles.shopIntro}>{strings.sitesShopSetupSubtitle}</p>
           {unconfigured ? (
