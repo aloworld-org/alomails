@@ -133,7 +133,7 @@ async fn the_palette_offers_every_type_seeded_from_the_callers_own_website() {
     // invents.
     let (status, body) = get(&h.app, &h.token, &palette).await;
     assert_eq!(status, StatusCode::OK, "{body}");
-    assert_eq!(body["items"].as_array().unwrap().len(), 17);
+    assert_eq!(body["items"].as_array().unwrap().len(), 18);
     assert_eq!(tile(&body, "hero")["ready"], json!(true));
     assert_eq!(
         tile(&body, "hero")["section"]["heading"],
@@ -149,10 +149,12 @@ async fn the_palette_offers_every_type_seeded_from_the_callers_own_website() {
     assert_eq!(tile(&body, "gallery")["needs"], json!("picture"));
     assert_eq!(tile(&body, "catalog")["needs"], json!("catalog"));
     assert_eq!(tile(&body, "custom_code")["needs"], json!("code"));
-    // The shop door is always offerable: the section stores words alone, and
-    // the shop reads what is on sale live (S3.04f2).
+    // The shop doors are always offerable: each section stores words alone,
+    // and what is on sale is read live (S3.04f2 tickets, S3.05a3 stock).
     assert_eq!(tile(&body, "tickets")["ready"], json!(true));
     assert_eq!(tile(&body, "tickets")["section"]["type"], json!("tickets"));
+    assert_eq!(tile(&body, "shop")["ready"], json!(true));
+    assert_eq!(tile(&body, "shop")["section"]["type"], json!("shop"));
     // A tile that is not ready carries no section for the editor to drop.
     assert_eq!(tile(&body, "catalog")["section"], Value::Null);
 

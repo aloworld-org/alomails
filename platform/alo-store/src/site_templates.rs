@@ -355,9 +355,11 @@ fn check_section_content(section: &Section) -> Result<(), String> {
         | Section::Faq(_)
         | Section::Cta(_)
         | Section::ContactForm(_)
-        // A tickets section binds nothing and claims nothing: the events and
-        // prices behind its link are the tenant's own live Billing state.
+        // A tickets or shop section binds nothing and claims nothing: the
+        // events, goods and prices behind their links are the tenant's own
+        // live Billing and Inventory state.
         | Section::Tickets(_)
+        | Section::Shop(_)
         | Section::Footer(_) => Ok(()),
     }
 }
@@ -397,8 +399,10 @@ fn section_hrefs(section: &Section) -> Vec<&str> {
         | Section::Collection(_)
         | Section::Catalog(_)
         | Section::Booking(_)
-        // Its `/tix` link is the renderer's own, not a stored href.
+        // Their `/tix` and `/shop` links are the renderer's own, not stored
+        // hrefs.
         | Section::Tickets(_)
+        | Section::Shop(_)
         | Section::CustomCode(_) => Vec::new(),
     }
 }

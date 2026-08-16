@@ -574,6 +574,23 @@ pub struct TicketsSection {
     pub body: Option<String>,
 }
 
+/// The door to the site's stock shop (ADR 0041, item S3.05a3) — the
+/// [`TicketsSection`] trade made again for goods on a shelf: the section
+/// stores presentation only, because what is for sale, its price and what is
+/// left are the owning seams' live answers served on `/shop`, one navigation
+/// away. A published page is cached bytes, and a price or a shelf count must
+/// never be.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ShopSection {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub heading: Option<String>,
+    /// The owner's own sentence above the link (what the shop sells, why to
+    /// buy here).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body: Option<String>,
+}
+
 /// One section of a page — the closed v1 vocabulary. The wire tag is the
 /// `type` prop (`{"type": "hero", …}`); unknown tags and unknown props are
 /// rejected on write.
@@ -611,6 +628,8 @@ pub enum Section {
     Booking(BookingSection),
     /// The door to the site's live ticket shop (`/tix`).
     Tickets(TicketsSection),
+    /// The door to the site's live stock shop (`/shop`).
+    Shop(ShopSection),
     /// The tenant's own HTML/CSS/JS, published inside a sandboxed frame.
     CustomCode(CustomCodeSection),
     /// Page footer.
@@ -640,6 +659,7 @@ pub const SECTION_KINDS: &[&str] = &[
     "catalog",
     "booking",
     "tickets",
+    "shop",
     "custom_code",
     "footer",
 ];
@@ -663,6 +683,7 @@ impl Section {
             Section::Catalog(_) => "catalog",
             Section::Booking(_) => "booking",
             Section::Tickets(_) => "tickets",
+            Section::Shop(_) => "shop",
             Section::CustomCode(_) => "custom_code",
             Section::Footer(_) => "footer",
         }
@@ -691,6 +712,7 @@ impl Section {
             | Section::Catalog(_)
             | Section::Booking(_)
             | Section::Tickets(_)
+            | Section::Shop(_)
             // A custom-code block owns no tenant blob: it has no network, so
             // the only image it can show is one carried inline in its markup.
             | Section::CustomCode(_)
@@ -827,6 +849,10 @@ impl Section {
                 check_opt_short(kind, "heading", s.heading.as_deref())
             }
             Section::Tickets(s) => {
+                check_opt_short(kind, "heading", s.heading.as_deref())?;
+                check_opt_long(kind, "body", s.body.as_deref())
+            }
+            Section::Shop(s) => {
                 check_opt_short(kind, "heading", s.heading.as_deref())?;
                 check_opt_long(kind, "body", s.body.as_deref())
             }
@@ -1279,6 +1305,10 @@ mod tests {
                 heading: Some("Cupping evenings".to_owned()),
                 body: Some("Six seats around the roaster, once a month.".to_owned()),
             }),
+            Section::Shop(ShopSection {
+                heading: Some("The roastery shop".to_owned()),
+                body: Some("Beans and brew gear, shipped from the roastery.".to_owned()),
+            }),
             Section::CustomCode(CustomCodeSection {
                 heading: Some("Roast timer".to_owned()),
                 title: "A timer counting down the current roast".to_owned(),
@@ -1308,7 +1338,7 @@ mod tests {
     #[test]
     fn every_variant_round_trips_fully_populated() {
         let before = envelope(full_sections());
-        assert_eq!(before.sections.len(), 17, "corpus must cover all variants");
+        assert_eq!(before.sections.len(), 18, "corpus must cover all variants");
         before.validate().unwrap();
         let value = before.to_value().unwrap();
         let after = SectionsEnvelope::from_value(value).unwrap();
@@ -1385,7 +1415,7 @@ mod tests {
     }
 
     #[test]
-    fn wire_tags_are_the_sixteen_snake_case_tokens() {
+    fn wire_tags_are_the_published_snake_case_tokens() {
         let expected = [
             "nav",
             "hero",
@@ -1402,6 +1432,7 @@ mod tests {
             "catalog",
             "booking",
             "tickets",
+            "shop",
             "custom_code",
             "footer",
         ];

@@ -185,6 +185,13 @@
     }
   },
   {
+    "kind": "shop",
+    "ready": true,
+    "section": {
+      "type": "shop"
+    }
+  },
+  {
     "kind": "custom_code",
     "needs": "code",
     "ready": false

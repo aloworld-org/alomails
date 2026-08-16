@@ -33,6 +33,7 @@ const SEO_DESCRIPTION_MAX_CHARS: usize = 500;
 /// and slug-safe.
 const RESERVED_SLUGS: &[&str] = &[
     "blog", "f", "feed", "rss", "atom", "sitemap", "robots", "healthz", "assets", "static", "tix",
+    "shop",
 ];
 
 /// One page of a site. `sections` is returned as stored — always a value that

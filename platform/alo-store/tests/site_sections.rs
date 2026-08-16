@@ -56,6 +56,7 @@ const SECTION_FIXTURES: &[(&str, &str)] = &[
         "tickets",
         include_str!("fixtures/site_sections/tickets.json"),
     ),
+    ("shop", include_str!("fixtures/site_sections/shop.json")),
     (
         "custom_code",
         include_str!("fixtures/site_sections/custom_code.json"),
@@ -98,7 +99,7 @@ fn section_goldens_cover_the_whole_vocabulary_exactly_once() {
     let mut names: Vec<&str> = SECTION_FIXTURES.iter().map(|(name, _)| *name).collect();
     names.sort_unstable();
     names.dedup();
-    assert_eq!(names.len(), 17, "one golden per section type, no gaps");
+    assert_eq!(names.len(), 18, "one golden per section type, no gaps");
 }
 
 /// The published list of section types and the fixture corpus are two

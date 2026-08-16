@@ -416,6 +416,12 @@ pub fn section_text(section: &Section) -> Vec<String> {
             push_opt(out, section.heading.as_deref());
             push_opt(out, section.body.as_deref());
         }
+        Section::Shop(section) => {
+            // Goods, prices and shelf counts are live seam state, never
+            // prose (ADR 0040/0041): only the owner's own words enter.
+            push_opt(out, section.heading.as_deref());
+            push_opt(out, section.body.as_deref());
+        }
         Section::CustomCode(section) => {
             // Code is not prose: the heading and accessible title only.
             push_opt(out, section.heading.as_deref());
