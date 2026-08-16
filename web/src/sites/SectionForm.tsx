@@ -40,6 +40,7 @@ import type {
   TeamDraft,
   TestimonialsDraft,
   TextImageDraft,
+  TicketsDraft,
 } from "./sectionDrafts";
 import type { Section, SectionKind, SectionLink } from "./sections";
 import type { SiteCopyAction, SiteEditEnvelope } from "./types";
@@ -1075,6 +1076,68 @@ function BookingFields({ draft, onChange }: { draft: BookingDraft; onChange: Cha
   );
 }
 
+/** The ticket shop's door on a page. The section carries the words above the
+ *  link and nothing else; the events, their prices and their seats live on
+ *  the Tickets screen, which this form links to rather than duplicating. A
+ *  site with nothing on sale yet is told so here — a visitor must never be
+ *  the one to discover an empty shop. */
+function TicketsFields({ draft, onChange }: { draft: TicketsDraft; onChange: Change }) {
+  const { siteId = "" } = useParams();
+  const navigate = useNavigate();
+  const api = useSitesApi();
+  const [onSale, setOnSale] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void api.ticketEvents(siteId).then(
+      (stored) => {
+        if (!cancelled) setOnSale(stored.events.length);
+      },
+      () => {
+        // A list that will not load costs the hint, not the form: the words
+        // above the link are editable regardless.
+        if (!cancelled) setOnSale(null);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [api, siteId]);
+
+  return (
+    <>
+      <TextField
+        label={strings.sitesTicketSectionHeading}
+        value={draft.heading}
+        onChange={(heading) => onChange({ ...draft, heading })}
+        autoFocus
+        copyPointer="/heading"
+      />
+      <LongTextField
+        label={strings.sitesTicketSectionBody}
+        value={draft.body}
+        onChange={(body) => onChange({ ...draft, body })}
+        copyPointer="/body"
+      />
+      {onSale === 0 ? (
+        <div className={styles.collectionFieldEmpty}>
+          <strong>{strings.sitesTicketSectionNoEvents}</strong>
+          <span>{strings.sitesTicketSectionNoEventsHint}</span>
+          <Button variant="ghost" onClick={() => navigate(`/sites/${siteId}/tickets`)}>
+            {strings.sitesTickets}
+          </Button>
+        </div>
+      ) : (
+        <p className={styles.hint}>
+          {onSale === null
+            ? strings.sitesTicketSectionHint
+            : strings.sitesTicketSectionOnSale(onSale)}
+        </p>
+      )}
+    </>
+  );
+}
+
 function FooterFields({ draft, onChange }: { draft: FooterDraft; onChange: Change }) {
   return (
     <>
@@ -1126,6 +1189,8 @@ function FormFields({ draft, onChange }: { draft: SectionDraft; onChange: Change
       return <CatalogFields draft={draft} onChange={onChange} />;
     case "booking":
       return <BookingFields draft={draft} onChange={onChange} />;
+    case "tickets":
+      return <TicketsFields draft={draft} onChange={onChange} />;
     case "custom_code":
       // No copy tools anywhere in this form: the assistant refuses to write
       // or change code by name (`alo-ai`'s sites module), so offering the

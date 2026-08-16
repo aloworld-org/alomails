@@ -25,6 +25,7 @@ import {
   ShoppingBag,
   Sparkles,
   Rows3,
+  Ticket,
   X,
 } from "lucide-react";
 
@@ -611,6 +612,14 @@ export function SiteView() {
                 onClick={() => navigate("orders")}
               >
                 {strings.sitesOrders}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Ticket size="var(--icon-size-inline)" />}
+                onClick={() => navigate("tickets")}
+              >
+                {strings.sitesTickets}
               </Button>
               <Button
                 variant="ghost"

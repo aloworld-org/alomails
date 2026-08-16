@@ -35,7 +35,8 @@ use crate::{
     settings, share, signup_route, site_protection, site_schedule, site_version_preview,
     site_versions, sites, sites_attribution, sites_bookings, sites_catalogs, sites_chat,
     sites_conversions, sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders,
-    sites_palette, sites_templates, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    sites_palette, sites_templates, sites_tickets, snooze, spaces, tasks, unsubscribe, wopi,
+    workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -564,6 +565,18 @@ pub fn app_with_site_boundaries(
             get(sites_bookings::get_booking)
                 .put(sites_bookings::update_booking)
                 .delete(sites_bookings::delete_booking),
+        )
+        .route(
+            "/sites/{id}/ticket-products",
+            get(sites_tickets::list_products),
+        )
+        .route(
+            "/sites/{id}/tickets",
+            get(sites_tickets::list_events).post(sites_tickets::create_event),
+        )
+        .route(
+            "/sites/{id}/tickets/{event}",
+            put(sites_tickets::set_capacity).delete(sites_tickets::delete_event),
         )
         .route(
             "/sites/{id}/catalogs",

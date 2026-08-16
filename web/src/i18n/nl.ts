@@ -4835,6 +4835,66 @@ export const nl: Partial<Catalog> = {
     "Deze dienst staat uit, dus de gepubliceerde pagina zegt dat er voorlopig geen reserveringen worden aangenomen.",
   sitesBookingSectionGone:
     "De dienst die deze sectie aanbood bestaat niet meer. Kies een andere, anders wordt de volgende publicatie geweigerd.",
+  // De ticketshop (ADR 0041): data die plaatsen verkopen van een artikel op
+  // de prijslijst. Niets wordt gekopieerd: namen en prijzen zijn het antwoord
+  // van Facturatie bij elke lezing, en een verkochte plaats is een record.
+  sitesSectionTickets: "Tickets",
+  sitesSectionTicketsDesc:
+    "De deur naar je ticketshop. Aanbod, prijzen en plaatsen blijven live.",
+  sitesTicketSectionHeading: "Kop erboven",
+  sitesTicketSectionBody: "Je eigen woorden boven de link",
+  sitesTicketSectionNoEvents: "Er staat nog niets te koop",
+  sitesTicketSectionNoEventsHint:
+    "De gepubliceerde sectie linkt naar je ticketshop. Maak een evenement zodat er iets te kopen valt.",
+  sitesTicketSectionHint:
+    "De gepubliceerde sectie linkt naar je ticketshop; evenementen, prijzen en plaatsen worden live gelezen wanneer een bezoeker aankomt.",
+  sitesTicketSectionOnSale: (count: number) =>
+    count === 1 ? "1 evenement staat te koop." : `${count} evenementen staan te koop.`,
+  sitesTickets: "Tickets",
+  sitesTicketsLoadFailed:
+    "De evenementen konden niet worden geladen. Controleer je verbinding en probeer opnieuw.",
+  sitesNoTicketEventsTitle: "Nog geen evenementen",
+  sitesNoTicketEventsBody:
+    "Een evenement verkoopt plaatsen van een artikel op je prijslijst, op een datum. De shop, het afrekenen en het plaatsen tellen bestaan al — maak het eerste evenement en je site kan het verkopen.",
+  sitesTicketNoProducts: "Je prijslijst is nog leeg",
+  sitesTicketNoProductsHint:
+    "Een evenement verkoopt plaatsen van een artikel op de prijslijst van Facturatie, tegen diens eigen prijs. Voeg het artikel daar eerst toe; naam en prijs blijven van Facturatie en worden hier nooit gekopieerd.",
+  sitesNewTicketEvent: "Nieuw evenement",
+  sitesNewTicketEventSubtitle:
+    "Een datum, wat een plaats verkoopt, en hoeveel plaatsen er zijn.",
+  sitesTicketCreateSubmit: "Evenement maken",
+  sitesTicketCreateFailed: "Het evenement kon niet worden gemaakt.",
+  sitesTicketEventProduct: "Wat een plaats verkoopt",
+  sitesTicketEventProductHint:
+    "Een artikel van je prijslijst. Naam en prijs worden live gelezen, nooit gekopieerd.",
+  sitesTicketProductOption: (name: string, price: string) => `${name} — ${price}`,
+  sitesTicketEventStartsAt: "Wanneer het begint",
+  sitesTicketEventCapacity: "Plaatsen",
+  sitesTicketEventCapacityHint:
+    "Vergroten mag altijd. Verkleinen stopt bij de plaatsen die al verkocht of vastgehouden zijn.",
+  sitesTicketCapacityTitle: "Plaatsen wijzigen",
+  sitesTicketCapacitySubtitle: (taken: number) =>
+    taken === 1
+      ? "1 plaats is al verkocht of vastgehouden."
+      : `${taken} plaatsen zijn al verkocht of vastgehouden.`,
+  sitesTicketCapacitySubmit: "Plaatsen opslaan",
+  sitesTicketCapacityFailed: "Het aantal plaatsen kon niet worden gewijzigd.",
+  sitesTicketChangeCapacity: "Plaatsen...",
+  sitesTicketDelete: "Verwijderen",
+  sitesTicketDeleteConfirm: "Echt verwijderen?",
+  sitesTicketDeleteHint:
+    "Een evenement waar niemand in kocht verdwijnt. Zodra er een plaats verkocht is, is het evenement een record van de verkoop en blijft het.",
+  sitesTicketDeleteFailed: "Het evenement kon niet worden verwijderd.",
+  sitesTicketWhen: "Wanneer",
+  sitesTicketWhat: "Wat",
+  sitesTicketPrice: "Prijs",
+  sitesTicketSeats: "Plaatsen",
+  sitesTicketSeatsCell: (sold: number, remaining: number, capacity: number) =>
+    `${sold} verkocht · ${remaining} van ${capacity} over`,
+  sitesTicketHeld: (held: number) =>
+    held === 1 ? "(1 in een afrekening)" : `(${held} in afrekeningen)`,
+  sitesTicketGoneProduct: "Niet meer op de prijslijst",
+  sitesAssistantSuggestedTickets: "Kan ik online tickets kopen?",
   sitesOrders: "Bestellingen",
   sitesOrdersLoadFailed:
     "De bestellingen konden niet worden geladen. Controleer uw verbinding en probeer het opnieuw.",

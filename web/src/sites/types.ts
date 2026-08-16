@@ -516,6 +516,48 @@ export interface SiteOrder {
   lines: SiteOrderLine[];
 }
 
+/** One item of the tenant's own price list as the event dialog offers it —
+ *  Billing's answer at this read, never a stored copy (ADR 0041). */
+export interface SiteTicketProduct {
+  id: string;
+  name: string;
+  unit: string;
+  unitPriceCents: number;
+  vatRateBp: number;
+}
+
+/** One ticketed event as the owner sees it. `productName` (and the price with
+ *  it) is null when the item has left the price list — a fact the screen
+ *  shows, not a stale price. Seat arithmetic is live at the read. */
+export interface SiteTicketEvent {
+  id: string;
+  productId: string;
+  productName: string | null;
+  unitPriceCents: number | null;
+  vatRateBp: number | null;
+  startsAt: string;
+  capacity: number;
+  sold: number;
+  held: number;
+  remaining: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** The event list with the money context every price on it is read in. */
+export interface SiteTicketEventList {
+  currency: string;
+  currencyExponent: number;
+  events: SiteTicketEvent[];
+}
+
+/** The price list an event may sell from, with the same money context. */
+export interface SiteTicketProductList {
+  currency: string;
+  currencyExponent: number;
+  products: SiteTicketProduct[];
+}
+
 /** One Agenda calendar a booking service may be attached to, as the Sites-owned
  *  seam describes it (S2.13a). `writable` is false for a calendar shared for
  *  reading only — visible in the picker, because hiding it would leave the

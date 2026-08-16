@@ -19,7 +19,7 @@
 use time::OffsetDateTime;
 
 use crate::account::AccountStore;
-use crate::billing_catalog_read::BillingCatalogRead;
+use crate::billing_catalog_read::{BillingCatalogRead, CatalogSaleItem};
 use crate::error::{Result, StoreError};
 use crate::id::{BillingProductId, SiteId, SiteTicketEventId};
 
@@ -52,6 +52,19 @@ struct SiteTicketEventRow {
     capacity: i32,
     created_at: OffsetDateTime,
     updated_at: OffsetDateTime,
+}
+
+/// The seats of one event that are already spoken for — sold outright, or
+/// inside a live hold — keyed by the event's id. One row per event of a site,
+/// so the owner's screen prices its whole list with one query rather than one
+/// per event.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SiteTicketSeatCount {
+    pub event: SiteTicketEventId,
+    /// Seats in completed holds — sold, and sold forever.
+    pub sold: i64,
+    /// Seats in holds that have not expired yet — a buyer mid-checkout.
+    pub held: i64,
 }
 
 impl SiteTicketEventRow {
@@ -264,6 +277,65 @@ impl AccountStore {
         .map_err(StoreError::Db)?;
         tx.commit().await.map_err(StoreError::Db)?;
         Ok(())
+    }
+
+    /// The tenant's own price list, read through the same seam the shop
+    /// prices with — the items the event dialog may offer, and the list
+    /// currency they are priced in. Nothing is copied: what this returns is
+    /// what Billing answers *now*.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn site_ticket_sale_items(&self) -> Result<(String, Vec<CatalogSaleItem>)> {
+        let door = BillingCatalogRead::open(
+            self.pool.clone(),
+            self.blobs.clone(),
+            self.tenant.clone(),
+            self.user.clone(),
+        );
+        let currency = door.currency().await?;
+        let items = door.sale_items().await?;
+        Ok((currency, items))
+    }
+
+    /// Sold and live-held seats for every event of one site at `now`, one
+    /// query for the whole screen. Events nobody has bought into simply have
+    /// zero rows' worth of holds and count as zero; a missing or foreign site
+    /// has no events and answers an empty list, exactly like
+    /// [`Self::site_ticket_events`].
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn site_ticket_seat_counts(
+        &self,
+        site: &SiteId,
+        now: OffsetDateTime,
+    ) -> Result<Vec<SiteTicketSeatCount>> {
+        let rows: Vec<(String, i64, i64)> = sqlx::query_as(
+            "SELECT e.id, \
+                    COALESCE(SUM(h.quantity) FILTER (WHERE h.state = 'completed'), 0), \
+                    COALESCE(SUM(h.quantity) \
+                             FILTER (WHERE h.state = 'held' AND h.expires_at > $3), 0) \
+             FROM site_ticket_events e \
+             LEFT JOIN site_ticket_holds h \
+               ON h.tenant_id = e.tenant_id AND h.event_id = e.id \
+             WHERE e.tenant_id = $1 AND e.site_id = $2 \
+             GROUP BY e.id",
+        )
+        .bind(self.tenant.as_str())
+        .bind(site.as_str())
+        .bind(now)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(rows
+            .into_iter()
+            .map(|(id, sold, held)| SiteTicketSeatCount {
+                event: SiteTicketEventId::new(id),
+                sold,
+                held,
+            })
+            .collect())
     }
 
     /// The product must be one the tenant's own catalog seam answers for —

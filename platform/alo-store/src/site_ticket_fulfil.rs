@@ -150,7 +150,11 @@ struct ClaimRow {
 }
 
 impl ClaimRow {
-    fn into_claim(self, fulfilment: SiteTicketFulfilmentId, token: String) -> ClaimedTicketFulfilment {
+    fn into_claim(
+        self,
+        fulfilment: SiteTicketFulfilmentId,
+        token: String,
+    ) -> ClaimedTicketFulfilment {
         ClaimedTicketFulfilment {
             tenant: TenantId::new(self.tenant_id),
             owner: UserId::new(self.owner),
@@ -341,8 +345,7 @@ impl Store {
         words: &TicketFulfilWords,
         description: &str,
     ) -> Result<(crate::id::BillingInvoiceId, String)> {
-        let account = self
-            .for_account(claim.tenant.clone(), claim.owner.clone());
+        let account = self.for_account(claim.tenant.clone(), claim.owner.clone());
         let seller = account.billing_settings().await?;
         if seller.country.is_empty() {
             // An invoice needs a place of supply; a seller profile without a
@@ -539,7 +542,10 @@ mod tests {
         ] {
             let net = net_within(amount, rate);
             let gross = billed_gross(net, rate);
-            assert!(gross <= amount, "amount {amount} rate {rate}: gross {gross}");
+            assert!(
+                gross <= amount,
+                "amount {amount} rate {rate}: gross {gross}"
+            );
             // The next cent of net would overshoot — nothing tighter exists.
             assert!(
                 billed_gross(net + 1, rate) > amount,

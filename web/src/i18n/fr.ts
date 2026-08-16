@@ -4894,6 +4894,66 @@ export const fr: Partial<Catalog> = {
     "Cette prestation est désactivée : la page publiée indiquera qu’elle n’accepte pas de réservation pour le moment.",
   sitesBookingSectionGone:
     "La prestation proposée par cette section n’existe plus. Choisissez-en une autre, sinon la prochaine publication sera refusée.",
+  // La billetterie (ADR 0041) : des dates qui vendent des places d'un article
+  // du tarif. Rien n'est copié : noms et prix sont la réponse de Billing à
+  // chaque lecture, et une place vendue est un enregistrement.
+  sitesSectionTickets: "Billets",
+  sitesSectionTicketsDesc:
+    "La porte de votre billetterie. L'offre, les prix et les places restent en direct.",
+  sitesTicketSectionHeading: "Titre au-dessus",
+  sitesTicketSectionBody: "Vos propres mots au-dessus du lien",
+  sitesTicketSectionNoEvents: "Rien n'est encore en vente",
+  sitesTicketSectionNoEventsHint:
+    "La section publiée mène à votre billetterie. Créez un événement pour qu'il y ait quelque chose à acheter.",
+  sitesTicketSectionHint:
+    "La section publiée mène à votre billetterie ; événements, prix et places sont lus en direct à l'arrivée du visiteur.",
+  sitesTicketSectionOnSale: (count: number) =>
+    count === 1 ? "1 événement est en vente." : `${count} événements sont en vente.`,
+  sitesTickets: "Billets",
+  sitesTicketsLoadFailed:
+    "Les événements n'ont pas pu être chargés. Vérifiez votre connexion et réessayez.",
+  sitesNoTicketEventsTitle: "Pas encore d'événement",
+  sitesNoTicketEventsBody:
+    "Un événement vend des places d'un article de votre tarif, à une date. La boutique, le paiement et le décompte des places existent déjà — créez le premier événement et votre site peut le vendre.",
+  sitesTicketNoProducts: "Votre tarif est encore vide",
+  sitesTicketNoProductsHint:
+    "Un événement vend des places d'un article du tarif de Facturation, à son propre prix. Ajoutez d'abord l'article là-bas ; son nom et son prix restent ceux de Facturation et ne sont jamais copiés ici.",
+  sitesNewTicketEvent: "Nouvel événement",
+  sitesNewTicketEventSubtitle:
+    "Une date, ce que vaut une place, et combien de places il y a.",
+  sitesTicketCreateSubmit: "Créer l'événement",
+  sitesTicketCreateFailed: "L'événement n'a pas pu être créé.",
+  sitesTicketEventProduct: "Ce qu'une place vend",
+  sitesTicketEventProductHint:
+    "Un article de votre tarif. Son nom et son prix sont lus en direct, jamais copiés.",
+  sitesTicketProductOption: (name: string, price: string) => `${name} — ${price}`,
+  sitesTicketEventStartsAt: "Quand cela commence",
+  sitesTicketEventCapacity: "Places",
+  sitesTicketEventCapacityHint:
+    "Augmenter est toujours permis. Réduire s'arrête aux places déjà vendues ou réservées.",
+  sitesTicketCapacityTitle: "Changer les places",
+  sitesTicketCapacitySubtitle: (taken: number) =>
+    taken === 1
+      ? "1 place est déjà vendue ou réservée."
+      : `${taken} places sont déjà vendues ou réservées.`,
+  sitesTicketCapacitySubmit: "Enregistrer les places",
+  sitesTicketCapacityFailed: "Le nombre de places n'a pas pu être changé.",
+  sitesTicketChangeCapacity: "Places...",
+  sitesTicketDelete: "Supprimer",
+  sitesTicketDeleteConfirm: "Vraiment supprimer ?",
+  sitesTicketDeleteHint:
+    "Un événement sans aucune vente disparaît. Dès qu'une place est vendue, l'événement est un enregistrement de la vente et reste.",
+  sitesTicketDeleteFailed: "L'événement n'a pas pu être supprimé.",
+  sitesTicketWhen: "Quand",
+  sitesTicketWhat: "Quoi",
+  sitesTicketPrice: "Prix",
+  sitesTicketSeats: "Places",
+  sitesTicketSeatsCell: (sold: number, remaining: number, capacity: number) =>
+    `${sold} vendues · ${remaining} sur ${capacity} restantes`,
+  sitesTicketHeld: (held: number) =>
+    held === 1 ? "(1 en cours d'achat)" : `(${held} en cours d'achat)`,
+  sitesTicketGoneProduct: "Plus au tarif",
+  sitesAssistantSuggestedTickets: "Puis-je acheter des billets en ligne ?",
   sitesOrders: "Commandes",
   sitesOrdersLoadFailed:
     "Les commandes n’ont pas pu être chargées. Vérifiez votre connexion et réessayez.",

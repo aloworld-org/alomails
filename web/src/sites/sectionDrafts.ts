@@ -167,6 +167,15 @@ export interface BookingDraft {
   heading: string;
 }
 
+/** The ticket shop's door on a page: the heading and the owner's sentence
+ *  above the link. The events, their prices and their seats are managed on
+ *  the Tickets screen and read live — nothing of them is edited here. */
+export interface TicketsDraft {
+  type: "tickets";
+  heading: string;
+  body: string;
+}
+
 /** A custom-code block while it is being written. The script is held even
  *  while the capability that runs it is switched off, so turning the switch
  *  back on does not cost the code that was typed — but a saved block never
@@ -209,6 +218,7 @@ export type SectionDraft =
   | CollectionDraft
   | CatalogDraft
   | BookingDraft
+  | TicketsDraft
   | CustomCodeDraft
   | FooterDraft;
 
@@ -420,6 +430,14 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         heading: s?.heading ?? "",
       };
     }
+    case "tickets": {
+      const s = from as Section & { type: "tickets" } | undefined;
+      return {
+        type: "tickets",
+        heading: s?.heading ?? "",
+        body: s?.body ?? "",
+      };
+    }
     case "custom_code": {
       const s = from as Section & { type: "custom_code" } | undefined;
       return {
@@ -622,6 +640,12 @@ export function toSection(draft: SectionDraft): Section {
         type: "booking",
         booking_id: req(draft.booking_id),
         heading: opt(draft.heading),
+      };
+    case "tickets":
+      return {
+        type: "tickets",
+        heading: opt(draft.heading),
+        body: opt(draft.body),
       };
     case "custom_code": {
       // A script is stored only together with the capability that runs it:

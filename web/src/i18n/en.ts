@@ -5699,6 +5699,67 @@ export const en = {
     "This service is switched off, so the published page will say it takes no bookings for now.",
   sitesBookingSectionGone:
     "The service this section offered is gone. Choose another one, or the next publish will be refused.",
+  // The ticket shop (ADR 0041): dated events selling seats to an item on the
+  // price list. Two facts repeat wherever they matter: nothing here is a
+  // second copy (names and prices are Billing's answer at every read), and
+  // sold seats are a record — capacity can only shrink to what is left.
+  sitesSectionTickets: "Tickets",
+  sitesSectionTicketsDesc:
+    "The door to your ticket shop. What is on sale, prices and seats stay live.",
+  sitesTicketSectionHeading: "Heading above it",
+  sitesTicketSectionBody: "Your own words above the link",
+  sitesTicketSectionNoEvents: "Nothing is on sale yet",
+  sitesTicketSectionNoEventsHint:
+    "The published section links to your ticket shop. Create an event so there is something to buy.",
+  sitesTicketSectionHint:
+    "The published section links to your ticket shop; events, prices and seats are read live when a visitor arrives.",
+  sitesTicketSectionOnSale: (count: number) =>
+    count === 1 ? "1 event is on sale." : `${count} events are on sale.`,
+  sitesTickets: "Tickets",
+  sitesTicketsLoadFailed:
+    "The events could not be loaded. Check your connection and try again.",
+  sitesNoTicketEventsTitle: "No events yet",
+  sitesNoTicketEventsBody:
+    "A ticketed event sells seats to an item on your price list, on a date. The shop, the checkout and the seat counting are already built — create the first event and your site can sell it.",
+  sitesTicketNoProducts: "Nothing is on your price list yet",
+  sitesTicketNoProductsHint:
+    "An event sells seats to an item from Billing's price list, at that item's own price. Add the item there first; its name and price stay Billing's and are never copied here.",
+  sitesNewTicketEvent: "New event",
+  sitesNewTicketEventSubtitle:
+    "A date, what a seat is sold as, and how many seats there are.",
+  sitesTicketCreateSubmit: "Create event",
+  sitesTicketCreateFailed: "The event could not be created.",
+  sitesTicketEventProduct: "What a seat is sold as",
+  sitesTicketEventProductHint:
+    "An item from your price list. Its name and price are read live, never copied.",
+  sitesTicketProductOption: (name: string, price: string) => `${name} — ${price}`,
+  sitesTicketEventStartsAt: "When it starts",
+  sitesTicketEventCapacity: "Seats",
+  sitesTicketEventCapacityHint:
+    "Growing is always allowed. Shrinking stops at the seats already sold or on hold.",
+  sitesTicketCapacityTitle: "Change the seats",
+  sitesTicketCapacitySubtitle: (taken: number) =>
+    taken === 1
+      ? "1 seat is already sold or on hold."
+      : `${taken} seats are already sold or on hold.`,
+  sitesTicketCapacitySubmit: "Save seats",
+  sitesTicketCapacityFailed: "The capacity could not be changed.",
+  sitesTicketChangeCapacity: "Seats...",
+  sitesTicketDelete: "Delete",
+  sitesTicketDeleteConfirm: "Really delete?",
+  sitesTicketDeleteHint:
+    "An event nobody has bought into disappears. Once a seat is sold the event is a record of the sale and stays.",
+  sitesTicketDeleteFailed: "The event could not be deleted.",
+  sitesTicketWhen: "When",
+  sitesTicketWhat: "What",
+  sitesTicketPrice: "Price",
+  sitesTicketSeats: "Seats",
+  sitesTicketSeatsCell: (sold: number, remaining: number, capacity: number) =>
+    `${sold} sold · ${remaining} of ${capacity} left`,
+  sitesTicketHeld: (held: number) =>
+    held === 1 ? "(1 in a checkout)" : `(${held} in checkouts)`,
+  sitesTicketGoneProduct: "No longer on the price list",
+  sitesAssistantSuggestedTickets: "Can I buy tickets online?",
   // The order inbox: what visitors asked to buy, and what the owner does next.
   sitesOrders: "Orders",
   sitesOrdersLoadFailed:

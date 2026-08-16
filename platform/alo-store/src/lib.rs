@@ -446,8 +446,7 @@ pub use id::{
     SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId,
     SitePostId, SitePublishId, SitePublishScheduleId, SiteTicketEventId, SiteTicketFulfilmentId,
     SiteTicketHoldId, SiteTicketOrderId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
-    TimeEntryId, TimeWeekId,
-    UserId,
+    TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -630,6 +629,10 @@ pub use site_public_heatmap::{
     PublicSiteHeatmapReport, SCROLL_DEPTH_BUCKETS, ScrollDepth, ViewportClass,
 };
 pub use site_public_protection::PublishedPageProtection;
+pub use site_public_shop::{
+    PublicTicketCheckout, PublicTicketEvent, PublicTicketOrderStatus, TICKET_CHECKOUT_HOLD_TTL,
+};
+pub use site_public_tickets::PublicTicket;
 pub use site_publish::{SitePageSnapshot, SitePublish};
 pub use site_publish_schedule::{
     DueSitePublish, MAX_SITE_PUBLISH_SCHEDULE_HISTORY, SITE_PUBLISH_CLAIM_STALE_MINUTES,
@@ -652,13 +655,7 @@ pub use site_theme::{
     DEFAULT_THEME_PRESET, SiteTheme, THEME_PRESETS, THEME_SCHEMA_VERSION, ThemePreset,
     ThemeSchemaError, theme_preset,
 };
-pub use site_public_shop::{
-    PublicTicketCheckout, PublicTicketEvent, PublicTicketOrderStatus, TICKET_CHECKOUT_HOLD_TTL,
-};
-pub use site_public_tickets::PublicTicket;
-pub use site_ticket_fulfil::{
-    ClaimedTicketFulfilment, TicketFulfilWords, TicketFulfilmentOutcome,
-};
+pub use site_ticket_fulfil::{ClaimedTicketFulfilment, TicketFulfilWords, TicketFulfilmentOutcome};
 pub use site_ticket_holds::{
     SiteTicketHold, SiteTicketHoldState, TICKET_HOLD_MAX_QUANTITY, TICKET_HOLD_MAX_TTL,
     TICKET_HOLD_MIN_TTL, TicketAvailability,
@@ -669,6 +666,7 @@ pub use site_ticket_orders::{
 };
 pub use site_tickets::{
     SITE_TICKET_EVENT_MAX_CAPACITY, SITE_TICKET_EVENT_MAX_PER_SITE, SiteTicketEvent,
+    SiteTicketSeatCount,
 };
 pub use site_translations::{
     SiteTranslationPageContent, SiteTranslationPageWrite, SiteTranslationPostContent,

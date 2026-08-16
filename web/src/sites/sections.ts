@@ -1,5 +1,5 @@
 // The TypeScript mirror of the sections schema v1 — the closed vocabulary of
-// sixteen section types a page is stacked from, exactly as the server's
+// seventeen section types a page is stacked from, exactly as the server's
 // `site_model` speaks it on the wire (`type`-tagged, snake_case props,
 // absent optionals as absent keys). This file changes only when the schema
 // version does; it carries NO validation — the store rules on every write and
@@ -213,6 +213,17 @@ export interface BookingSection {
   heading?: string | undefined;
 }
 
+/** The door to the site's ticket shop. Presentation only — an optional
+ *  heading and an optional line of the owner's own words above the link.
+ *  What is on sale, its price and what is left are live state read from the
+ *  price list on `/tix`, one navigation away; the events themselves are
+ *  managed on the Tickets screen, never stored here. */
+export interface TicketsSection {
+  type: "tickets";
+  heading?: string | undefined;
+  body?: string | undefined;
+}
+
 /** What the sandboxed frame around a custom-code block may do. Every field is
  *  default-deny, and the set is deliberately small: neither capability opens a
  *  network, and none of them ever will (`site_custom_code.rs`). Absent on the
@@ -269,13 +280,14 @@ export type Section =
   | CollectionSection
   | CatalogSection
   | BookingSection
+  | TicketsSection
   | CustomCodeSection
   | FooterSection;
 
 /** A section's wire tag. */
 export type SectionKind = Section["type"];
 
-/** The sixteen kinds in their natural page order — the picker's order. */
+/** The seventeen kinds in their natural page order — the picker's order. */
 export const SECTION_KINDS: readonly SectionKind[] = [
   "nav",
   "hero",
@@ -291,6 +303,7 @@ export const SECTION_KINDS: readonly SectionKind[] = [
   "collection",
   "catalog",
   "booking",
+  "tickets",
   "custom_code",
   "footer",
 ];

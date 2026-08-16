@@ -196,6 +196,7 @@ pub mod sites_knowledge;
 pub mod sites_orders;
 pub mod sites_palette;
 pub mod sites_templates;
+pub mod sites_tickets;
 pub mod snooze;
 pub mod spaces;
 pub mod state;

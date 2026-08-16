@@ -34,11 +34,11 @@ use crate::account::AccountStore;
 use crate::billing_catalog_read::BillingCatalogRead;
 use crate::error::{Result, StoreError};
 use crate::id::{SiteTicketEventId, SiteTicketOrderId, TenantId, UserId};
+use crate::site_payments::SitePaymentStatus;
 use crate::site_public::{PublishedSite, SitePublicStore};
 use crate::site_ticket_orders::{
     SiteTicketOrderState, TicketPaymentTarget, normalize_buyer_email, normalize_buyer_name,
 };
-use crate::site_payments::SitePaymentStatus;
 
 /// The longest id token this door will even send to the database. Real ids
 /// are 22 characters (base64url of 16 random bytes); anything far outside
@@ -113,7 +113,11 @@ struct PublicEventRow {
 }
 
 impl PublicEventRow {
-    fn into_event(self, item: &crate::billing_catalog_read::CatalogSaleItem, currency: &str) -> PublicTicketEvent {
+    fn into_event(
+        self,
+        item: &crate::billing_catalog_read::CatalogSaleItem,
+        currency: &str,
+    ) -> PublicTicketEvent {
         PublicTicketEvent {
             id: SiteTicketEventId::new(self.id),
             name: item.name.clone(),

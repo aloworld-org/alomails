@@ -669,3 +669,121 @@ async fn two_events_do_not_contend_for_each_others_seats() {
     a.unwrap();
     b.unwrap();
 }
+
+/// The owner's screen counts seats with one query per site (S3.04f3): sold
+/// and live-held per event, expired holds counting nothing, and the walls —
+/// a foreign tenant or the wrong site is answered an empty list, never a
+/// neighbour's arithmetic.
+#[tokio::test]
+async fn seat_counts_tally_per_event_and_stop_at_the_walls() {
+    let store = common::test_store().await;
+    let (account, site, product) = venue("counts").await;
+    let now = clock();
+    let selling = account
+        .create_site_ticket_event(&site, &product, now + Duration::days(7), 10)
+        .await
+        .unwrap();
+    let quiet = account
+        .create_site_ticket_event(&site, &product, now + Duration::days(8), 5)
+        .await
+        .unwrap();
+
+    // Two seats sold, three mid-checkout, one hold long expired.
+    let bought = account
+        .take_ticket_hold(&site, &selling, 2, TTL, now)
+        .await
+        .unwrap();
+    account
+        .complete_ticket_hold(&site, &bought.id, now)
+        .await
+        .unwrap();
+    account
+        .take_ticket_hold(&site, &selling, 3, TTL, now)
+        .await
+        .unwrap();
+    account
+        .take_ticket_hold(&site, &selling, 4, TICKET_HOLD_MIN_TTL, now)
+        .await
+        .unwrap();
+    let after_expiry = now + TICKET_HOLD_MIN_TTL + Duration::seconds(1);
+
+    let counts = account
+        .site_ticket_seat_counts(&site, after_expiry)
+        .await
+        .unwrap();
+    let of = |event: &alo_store::SiteTicketEventId| {
+        counts
+            .iter()
+            .find(|count| &count.event == event)
+            .expect("event missing from the tally")
+    };
+    assert_eq!((of(&selling).sold, of(&selling).held), (2, 3));
+    assert_eq!((of(&quiet).sold, of(&quiet).held), (0, 0));
+
+    // The walls: another tenant holding the real site id, and the same
+    // tenant asking through the wrong site, both hear "no events" — not zero
+    // rows of somebody else's sales.
+    let tenant_b = store.create_tenant("tickets-counts-b").await.unwrap();
+    let user_b = store
+        .for_tenant(tenant_b.clone())
+        .create_user("owner@counts-b.test")
+        .await
+        .unwrap();
+    let account_b = store.for_account(tenant_b, user_b);
+    assert!(
+        account_b
+            .site_ticket_seat_counts(&site, after_expiry)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    let site_b = account_b
+        .create_site("Venue B", &subdomain("counts-b"))
+        .await
+        .unwrap();
+    assert!(
+        account
+            .site_ticket_seat_counts(&site_b, after_expiry)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
+/// The event dialog's price list is the seam's answer *now*: the tenant's own
+/// items with their prices and the list currency, an archived item gone at
+/// the next read, and never a neighbour's list.
+#[tokio::test]
+async fn sale_items_are_the_tenants_own_price_list_read_live() {
+    let store = common::test_store().await;
+    let (account, _site, product) = venue("items").await;
+
+    let (currency, items) = account.site_ticket_sale_items().await.unwrap();
+    assert_eq!(currency, "EUR");
+    let workshop = items
+        .iter()
+        .find(|item| item.id == product)
+        .expect("the workshop is on the list");
+    assert_eq!(workshop.name, "Letterpress workshop");
+    assert_eq!(workshop.unit_price_cents, 8_500);
+    assert_eq!(workshop.vat_rate_bp, 2100);
+
+    // Archiving is visible at the very next read — nothing was copied.
+    account
+        .set_billing_product_archived(&product, true)
+        .await
+        .unwrap();
+    let (_, items) = account.site_ticket_sale_items().await.unwrap();
+    assert!(items.iter().all(|item| item.id != product));
+
+    // A second tenant reads its own (empty) list, not tenant A's.
+    let tenant_b = store.create_tenant("tickets-items-b").await.unwrap();
+    let user_b = store
+        .for_tenant(tenant_b.clone())
+        .create_user("owner@items-b.test")
+        .await
+        .unwrap();
+    let account_b = store.for_account(tenant_b, user_b);
+    let (_, items_b) = account_b.site_ticket_sale_items().await.unwrap();
+    assert!(items_b.is_empty());
+}

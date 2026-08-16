@@ -160,6 +160,22 @@ export function sectionThumbnail(kind: SectionKind): ReactNode {
           <rect x="36" y="27" width="14" height="6" rx="3" opacity="0.7" />
         </>
       );
+    case "tickets":
+      // Two ticket stubs, perforation line and all: what the block sells is
+      // an admission, and the date line under each name says it is dated.
+      return (
+        <>
+          {[6, 22].map((y) => (
+            <g key={y}>
+              <rect x="4" y={y} width="42" height="12" rx="2" opacity="0.3" />
+              <rect x="8" y={y + 3} width="22" height="3" rx="1.5" />
+              <rect x="8" y={y + 8} width="14" height="2" rx="1" opacity="0.5" />
+              <rect x="36" y={y + 2} width="1.5" height="8" rx="0.75" opacity="0.5" />
+              <rect x="50" y={y + 4} width="10" height="4" rx="2" opacity="0.7" />
+            </g>
+          ))}
+        </>
+      );
     case "custom_code":
       // A framed box with brackets in it: the block is code, and the frame
       // around it is the point rather than decoration.

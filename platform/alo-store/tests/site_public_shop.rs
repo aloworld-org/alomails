@@ -15,8 +15,8 @@ mod common;
 
 use alo_store::{
     AccountStore, BillingProductId, FixtureSitePayments, PublishedSite, SiteId,
-    SitePaymentProvider, SitePaymentRequest, SitePaymentStatus, SitePublicStore,
-    SiteTicketEventId, SiteTicketOrderState, Store, StoreError, TICKET_CHECKOUT_HOLD_TTL,
+    SitePaymentProvider, SitePaymentRequest, SitePaymentStatus, SitePublicStore, SiteTicketEventId,
+    SiteTicketOrderState, Store, StoreError, TICKET_CHECKOUT_HOLD_TTL,
 };
 use sqlx::postgres::PgPoolOptions;
 use time::{Duration, OffsetDateTime};
@@ -66,10 +66,7 @@ async fn venue(tag: &str, capacity: i32) -> Venue {
         .unwrap();
     let account = store.for_account(tenant, user);
     let site_subdomain = subdomain(tag);
-    let site = account
-        .create_site("Venue", &site_subdomain)
-        .await
-        .unwrap();
+    let site = account.create_site("Venue", &site_subdomain).await.unwrap();
     account
         .create_site_page(&site, "Home", "", true)
         .await
@@ -236,7 +233,9 @@ async fn the_arc_from_offer_to_ticket() {
     assert_eq!(checkout.amount_cents, 17_000);
     assert_eq!(checkout.currency, "EUR");
     assert!(
-        checkout.description.starts_with("2 × Letterpress workshop — "),
+        checkout
+            .description
+            .starts_with("2 × Letterpress workshop — "),
         "description was {:?}",
         checkout.description
     );
@@ -278,7 +277,10 @@ async fn the_arc_from_offer_to_ticket() {
         .unwrap()
         .expect("the return page can see its order");
     assert_eq!(waiting.state, SiteTicketOrderState::AwaitingPayment);
-    assert_eq!(waiting.checkout_url.as_deref(), Some(created.checkout_url.as_str()));
+    assert_eq!(
+        waiting.checkout_url.as_deref(),
+        Some(created.checkout_url.as_str())
+    );
     assert_eq!(
         waiting.provider_payment_id.as_deref(),
         Some(created.provider_payment_id.as_str())
@@ -326,13 +328,12 @@ async fn the_arc_from_offer_to_ticket() {
     // claim sweep is global and another suite may claim our row first, so
     // the truth is read from the table rather than from our claim's result.
     v.store.claim_ticket_fulfilments(500).await.unwrap();
-    let token: Option<String> = sqlx::query_scalar(
-        "SELECT token FROM site_ticket_fulfilments WHERE order_id = $1",
-    )
-    .bind(checkout.order.as_str())
-    .fetch_optional(&v.pool)
-    .await
-    .unwrap();
+    let token: Option<String> =
+        sqlx::query_scalar("SELECT token FROM site_ticket_fulfilments WHERE order_id = $1")
+            .bind(checkout.order.as_str())
+            .fetch_optional(&v.pool)
+            .await
+            .unwrap();
     let token = token.expect("the paid order was claimed for fulfilment");
     let with_ticket = v
         .public
@@ -366,7 +367,14 @@ async fn a_typo_costs_no_seat_and_the_seats_speak_for_themselves() {
     ] {
         let refused = v
             .public
-            .public_begin_ticket_checkout(&v.resolved, v.event.as_str(), quantity, name, email, v.now)
+            .public_begin_ticket_checkout(
+                &v.resolved,
+                v.event.as_str(),
+                quantity,
+                name,
+                email,
+                v.now,
+            )
             .await;
         assert!(
             matches!(refused, Err(StoreError::Validation(_))),
@@ -546,7 +554,11 @@ async fn the_walls_hold_on_every_door() {
             .is_none()
     );
     // B's own list is untouched by any of it.
-    let b_events = b.public.public_ticket_events(&b.resolved, b.now).await.unwrap();
+    let b_events = b
+        .public
+        .public_ticket_events(&b.resolved, b.now)
+        .await
+        .unwrap();
     assert_eq!(b_events.len(), 1);
     assert_eq!(b_events[0].remaining, 10);
 

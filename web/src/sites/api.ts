@@ -40,6 +40,9 @@ import type {
   SiteBookingDraft,
   SiteCrmBoard,
   SiteCrmColumn,
+  SiteTicketEvent,
+  SiteTicketEventList,
+  SiteTicketProductList,
   SiteLeadHandoff,
   SiteLeadLink,
   SiteDetail,
@@ -779,6 +782,61 @@ export class SitesApi {
       "DELETE",
       `${this.#catalogPath(siteId, catalogId)}/items/${encodeURIComponent(itemId)}`,
     );
+  }
+
+  /** The price-list items a ticketed event may sell, through the same seam
+   *  the shop prices with — Billing's answer now, never a copy. */
+  ticketProducts(siteId: string): Promise<SiteTicketProductList> {
+    return this.#read<SiteTicketProductList>(
+      `/sites/${encodeURIComponent(siteId)}/ticket-products`,
+    );
+  }
+
+  /** The site's ticketed events in start order, each priced at this read and
+   *  carrying its live seat arithmetic. */
+  ticketEvents(siteId: string): Promise<SiteTicketEventList> {
+    return this.#read<{
+      currency?: string;
+      currencyExponent?: number;
+      events?: SiteTicketEvent[];
+    }>(`/sites/${encodeURIComponent(siteId)}/tickets`).then((response) => ({
+      currency: response.currency ?? "EUR",
+      currencyExponent: response.currencyExponent ?? 2,
+      events: response.events ?? [],
+    }));
+  }
+
+  createTicketEvent(
+    siteId: string,
+    draft: { productId: string; startsAt: string; capacity: number },
+  ): Promise<SiteTicketEvent> {
+    return this.#write<{ event: SiteTicketEvent }>(
+      "POST",
+      `/sites/${encodeURIComponent(siteId)}/tickets`,
+      draft,
+    ).then((response) => response.event);
+  }
+
+  /** Capacity is the only fact an event changes once it exists; shrinking
+   *  below the seats already spoken for is the server's refusal, verbatim. */
+  setTicketCapacity(
+    siteId: string,
+    eventId: string,
+    capacity: number,
+  ): Promise<SiteTicketEvent> {
+    return this.#write<{ event: SiteTicketEvent }>(
+      "PUT",
+      this.#ticketPath(siteId, eventId),
+      { capacity },
+    ).then((response) => response.event);
+  }
+
+  deleteTicketEvent(siteId: string, eventId: string): Promise<void> {
+    return this.#discard("DELETE", this.#ticketPath(siteId, eventId));
+  }
+
+  #ticketPath(siteId: string, eventId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/tickets/${encodeURIComponent(eventId)}`;
   }
 
   /** The Agenda calendars a booking service of this site may be attached to,

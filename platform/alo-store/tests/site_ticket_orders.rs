@@ -754,14 +754,18 @@ fn fulfil_words() -> TicketFulfilWords {
 fn crm_seed() -> PipelineSeed {
     PipelineSeed {
         name: "Sales".to_owned(),
-        stages: [("New", false, false), ("Won", true, false), ("Lost", false, true)]
-            .into_iter()
-            .map(|(name, is_won, is_lost)| StageSeed {
-                name: name.to_owned(),
-                is_won,
-                is_lost,
-            })
-            .collect(),
+        stages: [
+            ("New", false, false),
+            ("Won", true, false),
+            ("Lost", false, true),
+        ]
+        .into_iter()
+        .map(|(name, is_won, is_lost)| StageSeed {
+            name: name.to_owned(),
+            is_won,
+            is_lost,
+        })
+        .collect(),
     }
 }
 
@@ -833,7 +837,10 @@ async fn a_paid_sale_is_made_good_once_and_walled() {
         })
         .await
         .unwrap();
-    let buyer = format!("maud@{}.example", SiteId::generate().as_str().to_lowercase());
+    let buyer = format!(
+        "maud@{}.example",
+        SiteId::generate().as_str().to_lowercase()
+    );
     let order = paid(&v, "fulfil-a", &v.hold, &buyer).await;
 
     // The claim carries the sale and mints the ticket.
@@ -913,7 +920,13 @@ async fn a_paid_sale_is_made_good_once_and_walled() {
         .await
         .unwrap()
         .unwrap();
-    assert!(public.public_ticket(&foreign, &claim.token).await.unwrap().is_none());
+    assert!(
+        public
+            .public_ticket(&foreign, &claim.token)
+            .await
+            .unwrap()
+            .is_none()
+    );
     let sibling_sub = subdomain("fulfil-sib");
     let sibling = v.account.create_site("Annex", &sibling_sub).await.unwrap();
     v.account
@@ -921,7 +934,11 @@ async fn a_paid_sale_is_made_good_once_and_walled() {
         .await
         .unwrap();
     v.account.publish_site(&sibling).await.unwrap();
-    let sibling_site = public.resolve_published(&sibling_sub).await.unwrap().unwrap();
+    let sibling_site = public
+        .resolve_published(&sibling_sub)
+        .await
+        .unwrap()
+        .unwrap();
     assert!(
         public
             .public_ticket(&sibling_site, &claim.token)
@@ -930,8 +947,20 @@ async fn a_paid_sale_is_made_good_once_and_walled() {
             .is_none(),
         "a ticket answers only on the site it was minted for"
     );
-    assert!(public.public_ticket(&site, "no-such-token").await.unwrap().is_none());
-    assert!(public.public_ticket(&site, "a token; drop").await.unwrap().is_none());
+    assert!(
+        public
+            .public_ticket(&site, "no-such-token")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        public
+            .public_ticket(&site, "a token; drop")
+            .await
+            .unwrap()
+            .is_none()
+    );
 
     // The same buyer again: Billing reuses the customer, CRM answers
     // already-customer rather than raising a twin card.
@@ -958,7 +987,14 @@ async fn a_paid_sale_is_made_good_once_and_walled() {
         "one buyer is one customer"
     );
     assert_eq!(v.account.billing_invoices(None).await.unwrap().len(), 2);
-    assert_eq!(v.account.crm_deals(&DealFilter::default()).await.unwrap().len(), 1);
+    assert_eq!(
+        v.account
+            .crm_deals(&DealFilter::default())
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
 
     // A venue that cannot invoice yet: the sale is still made good — ticket
     // and CRM — and the missing invoice is written down, not guessed.
@@ -971,9 +1007,19 @@ async fn a_paid_sale_is_made_good_once_and_walled() {
         .await
         .unwrap();
     assert!(!outcome3.invoiced, "no seller country, no invoice");
-    assert!(bare.account.billing_invoices(None).await.unwrap().is_empty());
+    assert!(
+        bare.account
+            .billing_invoices(None)
+            .await
+            .unwrap()
+            .is_empty()
+    );
     assert_eq!(
-        bare.account.crm_deals(&DealFilter::default()).await.unwrap().len(),
+        bare.account
+            .crm_deals(&DealFilter::default())
+            .await
+            .unwrap()
+            .len(),
         1,
         "the buyer still reaches CRM"
     );
