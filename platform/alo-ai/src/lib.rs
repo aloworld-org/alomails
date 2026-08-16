@@ -43,6 +43,7 @@ pub mod insights;
 pub mod sheet_grid;
 pub mod site_chat;
 pub mod site_edits;
+pub mod site_shop_config;
 pub mod site_translation;
 pub mod sites;
 pub use agent::{

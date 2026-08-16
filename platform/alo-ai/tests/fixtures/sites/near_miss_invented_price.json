@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "items": [
+    {
+      "name": "Glaze Basics",
+      "kind": "stock",
+      "unit": "piece",
+      "price_cents": 2400,
+      "vat_rate_bp": 600,
+      "vat_basis": "Belgian reduced rate for printed books",
+      "note": null
+    },
+    {
+      "name": "Wheel Notes",
+      "kind": "stock",
+      "unit": "piece",
+      "price_cents": 1950,
+      "vat_rate_bp": 600,
+      "vat_basis": "Belgian reduced rate for printed books",
+      "note": null
+    },
+    {
+      "name": "Pottery workshop",
+      "kind": "dated",
+      "unit": "seat",
+      "price_cents": 6000,
+      "vat_rate_bp": 2100,
+      "vat_basis": "Belgian standard rate for workshop admission",
+      "note": "Sold as dated tickets through the shop."
+    }
+  ],
+  "shipping_rate_cents": 500,
+  "shipping_note": "Flat rate per order for the books."
+}
