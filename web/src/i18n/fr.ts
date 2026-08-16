@@ -4956,6 +4956,67 @@ export const fr: Partial<Catalog> = {
     held === 1 ? "(1 en cours d'achat)" : `(${held} en cours d'achat)`,
   sitesTicketGoneProduct: "Plus au tarif",
   sitesAssistantSuggestedTickets: "Puis-je acheter des billets en ligne ?",
+  sitesShopSetup: "Configurer la boutique",
+  sitesShopSetupSubtitle:
+    "Décrivez votre activité et recevez une proposition de tarif, de TVA et de frais de livraison à relire. Rien n'est créé avant votre approbation.",
+  sitesShopSetupLoadFailed:
+    "L'écran de configuration de la boutique n'a pas pu être chargé. Vérifiez votre connexion et réessayez.",
+  sitesShopSetupDescribeLabel: "Que vendez-vous ?",
+  sitesShopSetupDescribeHint:
+    "Nommez ce que vous vendez et les prix que vous pratiquez. Les prix énoncés sont repris tels quels — tout le reste reste un champ vide ou une supposition signalée, à confirmer par vous.",
+  sitesShopSetupPropose: "Proposer une configuration",
+  sitesShopSetupProposeFailed: "Aucune configuration n'a pu être proposée. Réessayez.",
+  sitesShopSetupUnconfigured:
+    "Cet espace de travail n'a pas de fournisseur d'IA configuré, rien ne peut donc être proposé ici — établissez votre tarif à la main.",
+  sitesShopSetupManualPath: "Vous préférez le faire à la main ?",
+  sitesShopSetupManualTickets: "Gérer les événements à billets",
+  sitesShopSetupManualCatalogs: "Gérer les catalogues",
+  sitesShopSetupExisting: (count: number) =>
+    count === 1
+      ? "Votre tarif compte déjà 1 article. Approuver ajoute — rien n'est jamais remplacé."
+      : `Votre tarif compte déjà ${count} articles. Approuver ajoute — rien n'est jamais remplacé.`,
+  sitesShopSetupProposalTitle: "La proposition",
+  sitesShopSetupProposalIntro:
+    "Relisez chaque ligne avant d'approuver. Les prix affichés ont été énoncés dans votre description ; les champs vides sont à remplir par vous, et chaque taux de TVA est une supposition à confirmer.",
+  sitesShopSetupInclude: (name: string) => `Créer « ${name} »`,
+  sitesShopSetupItemName: "Nom",
+  sitesShopSetupItemUnit: "Unité",
+  sitesShopSetupItemPrice: (currency: string) => `Prix (${currency})`,
+  sitesShopSetupVatLabel: "TVA %",
+  sitesShopSetupVatGuessBadge: "TVA supposée",
+  sitesShopSetupNameMissing:
+    "Chaque article inclus doit porter un nom avant l'approbation.",
+  sitesShopSetupPriceMissing:
+    "Votre description n'énonce pas de prix — saisissez-en un avant d'approuver.",
+  sitesShopSetupVatMissing:
+    "Saisissez un pourcentage de TVA pour chaque article inclus avant d'approuver.",
+  sitesShopSetupKindStock: "Marchandises",
+  sitesShopSetupKindDated: "Billets",
+  sitesShopSetupKindService: "Service",
+  sitesShopSetupShippingTitle: "Livraison",
+  sitesShopSetupShippingNotNeeded:
+    "Rien dans cette proposition ne s'expédie, il n'y a donc pas de frais de livraison à fixer.",
+  sitesShopSetupShippingLabel: (currency: string) =>
+    `Frais de livraison fixes par commande (${currency})`,
+  sitesShopSetupShippingMissing:
+    "Des marchandises s'expédient, mais votre description n'énonce pas de frais de livraison — saisissez-les avant d'approuver.",
+  sitesShopSetupShippingCurrent: (price: string) => `Actuellement ${price}.`,
+  sitesShopSetupShippingSaved: "Frais de livraison enregistrés.",
+  sitesShopSetupShippingFailed:
+    "Les frais de livraison n'ont pas pu être enregistrés.",
+  sitesShopSetupNothingIncluded:
+    "Rien n'est coché — cochez au moins un article à créer.",
+  sitesShopSetupApprove: (count: number) =>
+    count === 1 ? "Approuver — créer 1 article" : `Approuver — créer ${count} articles`,
+  sitesShopSetupRetry: "Réessayer",
+  sitesShopSetupDiscard: "Abandonner la proposition",
+  sitesShopSetupCreated: "Créé",
+  sitesShopSetupCreateFailed: "Cet article n'a pas pu être créé.",
+  sitesShopSetupDone: (count: number) =>
+    count === 1
+      ? "1 article figure désormais à votre tarif."
+      : `${count} articles figurent désormais à votre tarif.`,
+  sitesShopSetupNextTickets: "Planifier les événements des billets",
   sitesOrders: "Commandes",
   sitesOrdersLoadFailed:
     "Les commandes n’ont pas pu être chargées. Vérifiez votre connexion et réessayez.",

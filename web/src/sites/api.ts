@@ -67,6 +67,7 @@ import type {
   SiteSubmission,
   SiteTemplate,
   TemplateSiteDraft,
+  ShopConfigProposal,
   SiteCatalog,
   SiteCatalogCategory,
   SiteCatalogDetail,
@@ -837,6 +838,61 @@ export class SitesApi {
 
   #ticketPath(siteId: string, eventId: string): string {
     return `/sites/${encodeURIComponent(siteId)}/tickets/${encodeURIComponent(eventId)}`;
+  }
+
+  /** Turns a plain-language business description into one complete shop
+   *  configuration proposal (S3.05b): the catalog, one VAT guess per item,
+   *  the delivery treatment — every guess flagged by the envelope itself.
+   *  Nothing is stored; applying is a separate, explicit act through the
+   *  owned routes below. Owner-only on the server: a site editor gets a 403,
+   *  and an AI-less deployment a `503 {"reason":"unconfigured"}`. */
+  proposeShopConfig(description: string): Promise<ShopConfigProposal> {
+    return this.#write<{ proposal: ShopConfigProposal }>(
+      "POST",
+      "/sites/shop-config/propose",
+      { description },
+    ).then((response) => response.proposal);
+  }
+
+  /** What the site charges for delivery, integer cents per order. A site that
+   *  has never set a rate answers `0` — what the public checkout would
+   *  actually charge. */
+  shopShipping(siteId: string): Promise<number> {
+    return this.#read<{ shippingCents?: number }>(this.#shopSettingsPath(siteId)).then(
+      (response) => response.shippingCents ?? 0,
+    );
+  }
+
+  /** Sets the site's flat delivery price. Bounds are the server's; a refusal
+   *  comes back as a `422` naming them. */
+  async setShopShipping(siteId: string, shippingCents: number): Promise<void> {
+    await this.#write<{ shippingCents?: number }>(
+      "PUT",
+      this.#shopSettingsPath(siteId),
+      { shippingCents },
+    );
+  }
+
+  /** Creates one item on Billing's price list, through Billing's own route —
+   *  the same door the Billing screens use, so Sites adds no second write
+   *  path and keeps no copy (ADR 0041). Approving a shop-setup proposal is a
+   *  sequence of these, one per confirmed row. */
+  createShopProduct(draft: {
+    name: string;
+    unit: string;
+    unitPriceCents: number;
+    vatRateBp: number;
+    stocked: boolean;
+  }): Promise<{ id: string }> {
+    return this.#write<{ product: { id: string } }>(
+      "POST",
+      "/billing/products",
+      draft,
+    ).then((response) => response.product);
+  }
+
+  #shopSettingsPath(siteId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/shop-settings`;
   }
 
   /** The Agenda calendars a booking service of this site may be attached to,

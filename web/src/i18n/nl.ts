@@ -4897,6 +4897,68 @@ export const nl: Partial<Catalog> = {
     held === 1 ? "(1 in een afrekening)" : `(${held} in afrekeningen)`,
   sitesTicketGoneProduct: "Niet meer op de prijslijst",
   sitesAssistantSuggestedTickets: "Kan ik online tickets kopen?",
+  sitesShopSetup: "Winkel inrichten",
+  sitesShopSetupSubtitle:
+    "Beschrijf uw zaak en ontvang een voorstel voor prijslijst, btw en verzendkosten om na te lezen. Er wordt niets aangemaakt vóór uw goedkeuring.",
+  sitesShopSetupLoadFailed:
+    "Het inrichtingsscherm van de winkel kon niet worden geladen. Controleer uw verbinding en probeer opnieuw.",
+  sitesShopSetupDescribeLabel: "Wat verkoopt u?",
+  sitesShopSetupDescribeHint:
+    "Benoem wat u verkoopt en welke prijzen u vraagt. Genoemde prijzen worden letterlijk overgenomen — al het andere blijft een leeg veld of een gemarkeerde gok, door u te bevestigen.",
+  sitesShopSetupPropose: "Stel een inrichting voor",
+  sitesShopSetupProposeFailed: "Er kon geen inrichting worden voorgesteld. Probeer opnieuw.",
+  sitesShopSetupUnconfigured:
+    "Deze werkruimte heeft geen AI-aanbieder ingesteld, dus hier kan niets worden voorgesteld — stel uw prijslijst met de hand samen.",
+  sitesShopSetupManualPath: "Doet u het liever met de hand?",
+  sitesShopSetupManualTickets: "Ticketevenementen beheren",
+  sitesShopSetupManualCatalogs: "Catalogi beheren",
+  sitesShopSetupExisting: (count: number) =>
+    count === 1
+      ? "Uw prijslijst telt al 1 artikel. Goedkeuren voegt toe — er wordt nooit iets vervangen."
+      : `Uw prijslijst telt al ${count} artikelen. Goedkeuren voegt toe — er wordt nooit iets vervangen.`,
+  sitesShopSetupProposalTitle: "Het voorstel",
+  sitesShopSetupProposalIntro:
+    "Lees elke regel na vóór u goedkeurt. Getoonde prijzen stonden in uw beschrijving; lege velden vult u zelf in, en elk btw-tarief is een gok om te bevestigen.",
+  sitesShopSetupInclude: (name: string) => `"${name}" aanmaken`,
+  sitesShopSetupItemName: "Naam",
+  sitesShopSetupItemUnit: "Eenheid",
+  sitesShopSetupItemPrice: (currency: string) => `Prijs (${currency})`,
+  sitesShopSetupVatLabel: "Btw %",
+  sitesShopSetupVatGuessBadge: "Btw is een gok",
+  sitesShopSetupNameMissing:
+    "Elk opgenomen artikel heeft een naam nodig vóór goedkeuring.",
+  sitesShopSetupPriceMissing:
+    "Uw beschrijving noemt geen prijs — vul er een in vóór u goedkeurt.",
+  sitesShopSetupVatMissing:
+    "Vul voor elk opgenomen artikel een btw-percentage in vóór u goedkeurt.",
+  sitesShopSetupKindStock: "Goederen",
+  sitesShopSetupKindDated: "Tickets",
+  sitesShopSetupKindService: "Dienst",
+  sitesShopSetupShippingTitle: "Levering",
+  sitesShopSetupShippingNotNeeded:
+    "Niets in dit voorstel wordt verzonden, dus er zijn geen verzendkosten in te stellen.",
+  sitesShopSetupShippingLabel: (currency: string) =>
+    `Vaste verzendkosten per bestelling (${currency})`,
+  sitesShopSetupShippingMissing:
+    "Er worden goederen verzonden, maar uw beschrijving noemt geen verzendkosten — vul ze in vóór u goedkeurt.",
+  sitesShopSetupShippingCurrent: (price: string) => `Nu ${price}.`,
+  sitesShopSetupShippingSaved: "Verzendkosten opgeslagen.",
+  sitesShopSetupShippingFailed: "De verzendkosten konden niet worden opgeslagen.",
+  sitesShopSetupNothingIncluded:
+    "Er is niets aangevinkt — vink minstens één artikel aan om aan te maken.",
+  sitesShopSetupApprove: (count: number) =>
+    count === 1
+      ? "Goedkeuren — 1 artikel aanmaken"
+      : `Goedkeuren — ${count} artikelen aanmaken`,
+  sitesShopSetupRetry: "Probeer opnieuw",
+  sitesShopSetupDiscard: "Voorstel verwerpen",
+  sitesShopSetupCreated: "Aangemaakt",
+  sitesShopSetupCreateFailed: "Dit artikel kon niet worden aangemaakt.",
+  sitesShopSetupDone: (count: number) =>
+    count === 1
+      ? "1 artikel staat nu op uw prijslijst."
+      : `${count} artikelen staan nu op uw prijslijst.`,
+  sitesShopSetupNextTickets: "Plan de evenementen waarvoor tickets verkocht worden",
   sitesOrders: "Bestellingen",
   sitesOrdersLoadFailed:
     "De bestellingen konden niet worden geladen. Controleer uw verbinding en probeer het opnieuw.",

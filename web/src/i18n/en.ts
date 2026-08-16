@@ -5762,6 +5762,67 @@ export const en = {
     held === 1 ? "(1 in a checkout)" : `(${held} in checkouts)`,
   sitesTicketGoneProduct: "No longer on the price list",
   sitesAssistantSuggestedTickets: "Can I buy tickets online?",
+  // Shop setup: the proposed configuration as an approval list (S3.05b3).
+  // Every guess is flagged; nothing exists until the owner approves it.
+  sitesShopSetup: "Shop setup",
+  sitesShopSetupSubtitle:
+    "Describe your business and get a proposed price list, VAT treatment and delivery rate to review. Nothing is created until you approve it.",
+  sitesShopSetupLoadFailed:
+    "The shop setup screen could not be loaded. Check your connection and try again.",
+  sitesShopSetupDescribeLabel: "What do you sell?",
+  sitesShopSetupDescribeHint:
+    "Name what you sell and the prices you charge. Stated prices are used as written — everything else stays a blank or a flagged guess for you to confirm.",
+  sitesShopSetupPropose: "Propose a setup",
+  sitesShopSetupProposeFailed: "A setup could not be proposed. Try again.",
+  sitesShopSetupUnconfigured:
+    "This workspace has no AI provider configured, so nothing can be proposed here — set up your price list by hand instead.",
+  sitesShopSetupManualPath: "Prefer to do it by hand?",
+  sitesShopSetupManualTickets: "Manage ticket events",
+  sitesShopSetupManualCatalogs: "Manage catalogs",
+  sitesShopSetupExisting: (count: number) =>
+    count === 1
+      ? "Your price list already has 1 item. Approving adds to it — it never replaces anything."
+      : `Your price list already has ${count} items. Approving adds to it — it never replaces anything.`,
+  sitesShopSetupProposalTitle: "The proposal",
+  sitesShopSetupProposalIntro:
+    "Review every row before approving. Prices shown were stated in your description; blanks are yours to fill in, and every VAT rate is a guess to confirm.",
+  sitesShopSetupInclude: (name: string) => `Create "${name}"`,
+  sitesShopSetupItemName: "Name",
+  sitesShopSetupItemUnit: "Unit",
+  sitesShopSetupItemPrice: (currency: string) => `Price (${currency})`,
+  sitesShopSetupVatLabel: "VAT %",
+  sitesShopSetupVatGuessBadge: "VAT is a guess",
+  sitesShopSetupNameMissing: "Every included item needs a name before approving.",
+  sitesShopSetupPriceMissing:
+    "Your description didn't state a price — enter one before approving.",
+  sitesShopSetupVatMissing:
+    "Enter a VAT percentage for every included item before approving.",
+  sitesShopSetupKindStock: "Goods",
+  sitesShopSetupKindDated: "Tickets",
+  sitesShopSetupKindService: "Service",
+  sitesShopSetupShippingTitle: "Delivery",
+  sitesShopSetupShippingNotNeeded:
+    "Nothing in this proposal ships, so there is no delivery rate to set.",
+  sitesShopSetupShippingLabel: (currency: string) =>
+    `Flat delivery price per order (${currency})`,
+  sitesShopSetupShippingMissing:
+    "Goods ship, but your description didn't state a delivery rate — enter one before approving.",
+  sitesShopSetupShippingCurrent: (price: string) => `Currently ${price}.`,
+  sitesShopSetupShippingSaved: "Delivery price saved.",
+  sitesShopSetupShippingFailed: "The delivery price could not be saved.",
+  sitesShopSetupNothingIncluded:
+    "Nothing is ticked — tick at least one item to create it.",
+  sitesShopSetupApprove: (count: number) =>
+    count === 1 ? "Approve — create 1 item" : `Approve — create ${count} items`,
+  sitesShopSetupRetry: "Try again",
+  sitesShopSetupDiscard: "Discard proposal",
+  sitesShopSetupCreated: "Created",
+  sitesShopSetupCreateFailed: "This item could not be created.",
+  sitesShopSetupDone: (count: number) =>
+    count === 1
+      ? "1 item is now on your price list."
+      : `${count} items are now on your price list.`,
+  sitesShopSetupNextTickets: "Schedule the events tickets are sold for",
   // The order inbox: what visitors asked to buy, and what the owner does next.
   sitesOrders: "Orders",
   sitesOrdersLoadFailed:

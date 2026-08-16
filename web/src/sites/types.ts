@@ -559,6 +559,41 @@ export interface SiteTicketProductList {
   products: SiteTicketProduct[];
 }
 
+/** A proposed unit price as the shop-setup envelope carries it (S3.05b):
+ *  either an amount the business description itself stated, or a flagged
+ *  blank the owner must fill in — the parser refuses invented numbers, so a
+ *  third shape cannot reach this screen. */
+export type ShopProposedPrice = { state: "stated"; cents: number } | { state: "needs_input" };
+
+/** The proposed flat delivery treatment: nothing ships, a stated rate
+ *  (`0` = stated-free), or goods that ship with no stated rate — a flagged
+ *  blank, exactly like a price. */
+export type ShopProposedShipping =
+  | { state: "not_needed" }
+  | { state: "stated"; cents: number }
+  | { state: "needs_input" };
+
+/** One proposed catalog item. The VAT field is named `vat_guess` on the wire
+ *  because that is what it always is — the envelope has no way to say
+ *  "confirmed"; confirmation is this screen's owner clicking Approve. */
+export interface ShopProposalItem {
+  name: string;
+  kind: "stock" | "dated" | "service";
+  unit: string;
+  price: ShopProposedPrice;
+  vat_guess: { rate_bp: number; basis: string };
+  note: string | null;
+}
+
+/** The complete proposed shop configuration, verbatim from
+ *  `POST /sites/shop-config/propose`. Receiving it creates nothing. */
+export interface ShopConfigProposal {
+  schema_version: number;
+  items: ShopProposalItem[];
+  shipping: ShopProposedShipping;
+  shipping_note: string | null;
+}
+
 /** One Agenda calendar a booking service may be attached to, as the Sites-owned
  *  seam describes it (S2.13a). `writable` is false for a calendar shared for
  *  reading only — visible in the picker, because hiding it would leave the

@@ -11,6 +11,7 @@ import { CatalogsView } from "./CatalogsView";
 import { CollectionsView } from "./CollectionsView";
 import { DomainsView } from "./DomainsView";
 import { OrdersView } from "./OrdersView";
+import { ShopSetupView } from "./ShopSetupView";
 import { TicketsView } from "./TicketsView";
 import { PostsView } from "./PostsView";
 import { SiteView } from "./SiteView";
@@ -35,6 +36,7 @@ export function SitesModule() {
         <Route path=":siteId/catalogs" element={<CatalogsView />} />
         <Route path=":siteId/orders" element={<OrdersView />} />
         <Route path=":siteId/tickets" element={<TicketsView />} />
+        <Route path=":siteId/shop-setup" element={<ShopSetupView />} />
         <Route path=":siteId/bookings" element={<BookingsView />} />
         <Route path=":siteId/collections" element={<CollectionsView />} />
         <Route path=":siteId/domains" element={<DomainsView />} />
