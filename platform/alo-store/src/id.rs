@@ -528,6 +528,15 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One web-shop reservation against the warehouse's own count (alo
+    /// Commerce wave two, ADR 0041, item S3.05a1) — taken before payment
+    /// through Inventory's stock-sale seam ([`crate::inv_stock_sale`]),
+    /// counting against available-to-sell until it completes into a real
+    /// movement, releases, or expires.
+    InvStockHoldId
+);
+
+opaque_id!(
     /// One order placed with a supplier (alo Inventory, ADR 0035, wave B5.05a)
     /// — what we asked for, at what price, and what has arrived against it.
     /// Distinct from a [`BillingBillId`], which is what they later charge us:

@@ -148,6 +148,7 @@ pub mod inv_so_deliver;
 pub mod inv_so_invoice;
 pub mod inv_so_lines;
 pub mod inv_stock;
+pub mod inv_stock_sale;
 pub mod inv_supplier_prices;
 pub mod inv_suppliers;
 pub mod maintenance;
@@ -441,8 +442,8 @@ pub use id::{
     HrEmploymentId, HrLeavePolicyId, HrLeaveRequestId, HrLetterTemplateId, HrOpeningId,
     HrPayrollExportId, InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId,
     InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId,
-    InvSoInvoiceId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId,
-    ProjectMilestoneId, SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId,
+    InvSoInvoiceId, InvStockHoldId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId,
+    ProjectId, ProjectMilestoneId, SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId,
     SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId,
     SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId,
     SitePostId, SitePublishId, SitePublishScheduleId, SiteTicketEventId, SiteTicketFulfilmentId,
