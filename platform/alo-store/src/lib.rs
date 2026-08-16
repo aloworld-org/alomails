@@ -657,7 +657,10 @@ pub use site_registrar::{
 };
 pub use site_registrar_fixture::FixtureRegistrar;
 pub use site_seed::{SectionSeed, SeedBinding, SeedContext, SeedNeed, SeedPage, seed_section};
-pub use site_shop_items::{SHOP_SHIPPING_MAX_CENTS, SITE_SHOP_ITEM_MAX_PER_SITE, SiteShopItem};
+pub use site_shop_items::{
+    SHOP_SHIPPING_MAX_CENTS, SITE_SHOP_ITEM_MAX_PER_SITE, SiteShopCandidate, SiteShopItem,
+    SiteShopShelfRow,
+};
 pub use site_stock_fulfil::{ClaimedStockFulfilment, StockFulfilWords, StockFulfilmentOutcome};
 pub use site_stock_orders::{
     MAX_SITE_STOCK_ORDERS, STOCK_ORDER_GOODS_GONE, STOCK_ORDER_PAID_AFTER_LAPSE, ShipTo,

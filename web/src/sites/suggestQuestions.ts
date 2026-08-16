@@ -55,6 +55,7 @@ export function draftSuggestedQuestions(
   if (kinds.has("pricing")) offer(strings.sitesAssistantSuggestedPricing);
   if (kinds.has("booking")) offer(strings.sitesAssistantSuggestedBooking);
   if (kinds.has("tickets")) offer(strings.sitesAssistantSuggestedTickets);
+  if (kinds.has("shop")) offer(strings.sitesAssistantSuggestedShop);
   if (kinds.has("catalog")) offer(strings.sitesAssistantSuggestedCatalog);
   if (kinds.has("contact_form")) offer(strings.sitesAssistantSuggestedContact);
 

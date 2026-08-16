@@ -176,6 +176,15 @@ export interface TicketsDraft {
   body: string;
 }
 
+/** The stock shop's door on a page: the heading and the owner's sentence
+ *  above the link. The shelf, its prices and its stock are managed on the
+ *  Shop screen and read live — nothing of them is edited here. */
+export interface ShopDraft {
+  type: "shop";
+  heading: string;
+  body: string;
+}
+
 /** A custom-code block while it is being written. The script is held even
  *  while the capability that runs it is switched off, so turning the switch
  *  back on does not cost the code that was typed — but a saved block never
@@ -219,6 +228,7 @@ export type SectionDraft =
   | CatalogDraft
   | BookingDraft
   | TicketsDraft
+  | ShopDraft
   | CustomCodeDraft
   | FooterDraft;
 
@@ -438,6 +448,14 @@ export function toDraft(kind: SectionKind, initial?: Section): SectionDraft {
         body: s?.body ?? "",
       };
     }
+    case "shop": {
+      const s = from as Section & { type: "shop" } | undefined;
+      return {
+        type: "shop",
+        heading: s?.heading ?? "",
+        body: s?.body ?? "",
+      };
+    }
     case "custom_code": {
       const s = from as Section & { type: "custom_code" } | undefined;
       return {
@@ -644,6 +662,12 @@ export function toSection(draft: SectionDraft): Section {
     case "tickets":
       return {
         type: "tickets",
+        heading: opt(draft.heading),
+        body: opt(draft.body),
+      };
+    case "shop":
+      return {
+        type: "shop",
         heading: opt(draft.heading),
         body: opt(draft.body),
       };

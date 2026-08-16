@@ -4897,6 +4897,63 @@ export const nl: Partial<Catalog> = {
     held === 1 ? "(1 in een afrekening)" : `(${held} in afrekeningen)`,
   sitesTicketGoneProduct: "Niet meer op de prijslijst",
   sitesAssistantSuggestedTickets: "Kan ik online tickets kopen?",
+  sitesSectionShop: "Winkel",
+  sitesSectionShopDesc:
+    "De deur naar uw winkel. Aanbod, prijzen en voorraad blijven live.",
+  sitesShopSectionHeading: "Kop erboven",
+  sitesShopSectionBody: "Uw eigen woorden boven de link",
+  sitesShopSectionNoItems: "Er ligt nog niets in de winkel",
+  sitesShopSectionNoItemsHint:
+    "Het blok linkt naar uw winkelpagina. Zet een voorraadproduct te koop op het Winkel-scherm en het verschijnt daar.",
+  sitesShopSectionHint:
+    "Het blok linkt naar uw winkelpagina. Aanbod, prijzen en voorraad worden live gelezen — er wordt niets in de pagina opgeslagen.",
+  sitesShopSectionListed: (count: number) =>
+    count === 1 ? "1 product ligt in de winkel." : `${count} producten liggen in de winkel.`,
+  sitesAssistantSuggestedShop: "Wat verkoopt u?",
+  sitesShop: "Winkel",
+  sitesShopLoadFailed:
+    "De winkel kon niet worden geladen. Controleer uw verbinding en probeer opnieuw.",
+  sitesShopAddProduct: "Product toevoegen",
+  sitesShopAddSubtitle:
+    "Kies een voorraadproduct van uw prijslijst. Naam, prijs en voorraad blijven van Facturatie en Voorraad — de winkel biedt het alleen aan.",
+  sitesShopAddSubmit: "In de winkel leggen",
+  sitesShopAddFailed: "Het product kon niet worden toegevoegd.",
+  sitesShopProduct: "Wat te verkopen",
+  sitesShopProductHint:
+    "Alleen voorraadproducten van uw prijslijst kunnen vanaf de plank worden verkocht.",
+  sitesShopProductOption: (name: string, price: string, units: number) =>
+    units === 1
+      ? `${name} — ${price} (1 op de plank)`
+      : `${name} — ${price} (${units} op de plank)`,
+  sitesShopColWhat: "Wat",
+  sitesShopColPrice: "Prijs",
+  sitesShopColShelf: "Op de plank",
+  sitesShopGoneProduct: "Niet meer op de prijslijst",
+  sitesShopNotStocked: "Geen voorraadartikel meer",
+  sitesShopUnits: (units: number) => (units === 1 ? "1 stuk" : `${units} stuks`),
+  sitesShopRemove: "Verwijderen",
+  sitesShopRemoveConfirm: "Echt verwijderen?",
+  sitesShopRemoveHint:
+    "Verwijderen haalt het product alleen uit de etalage. Al geplaatste bestellingen behouden het.",
+  sitesShopRemoveFailed: "Het product kon niet worden verwijderd.",
+  sitesShopNoProducts: "Er is nog niets op voorraad om te verkopen",
+  sitesShopNoProductsHint:
+    "De winkel verkoopt voorraadproducten van uw prijslijst. Voeg er een toe in Facturatie (of laat de winkelinrichting een lijst voorstellen), ontvang voorraad, en het verschijnt hier.",
+  sitesShopEmptyTitle: "Uw etalage is leeg",
+  sitesShopEmptyBody:
+    "Leg een voorraadproduct in de winkel en bezoekers kunnen het op uw site kopen, betaald op de pagina van de betaalprovider.",
+  sitesShopAllListed: "Elk voorraadproduct ligt al in de winkel.",
+  sitesShopDeliveryRate: (price: string) =>
+    `Verzending kost ${price} per bestelling.`,
+  sitesShopDeliveryFree: "Verzending is gratis.",
+  sitesShopDeliveryChange: "Verzending wijzigen…",
+  sitesShopDeliveryTitle: "Verzending per bestelling",
+  sitesShopDeliverySubtitle:
+    "Eén vast tarief per bestelling, aangerekend naast de goederen. De btw volgt de goederen.",
+  sitesShopDeliveryLabel: (currency: string) => `Verzendprijs (${currency})`,
+  sitesShopDeliveryHint: "0 betekent gratis verzending.",
+  sitesShopDeliverySave: "Verzending opslaan",
+  sitesShopDeliveryFailed: "De verzendprijs kon niet worden opgeslagen.",
   sitesShopSetup: "Winkel inrichten",
   sitesShopSetupSubtitle:
     "Beschrijf uw zaak en ontvang een voorstel voor prijslijst, btw en verzendkosten om na te lezen. Er wordt niets aangemaakt vóór uw goedkeuring.",

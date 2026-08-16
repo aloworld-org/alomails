@@ -4956,6 +4956,63 @@ export const fr: Partial<Catalog> = {
     held === 1 ? "(1 en cours d'achat)" : `(${held} en cours d'achat)`,
   sitesTicketGoneProduct: "Plus au tarif",
   sitesAssistantSuggestedTickets: "Puis-je acheter des billets en ligne ?",
+  sitesSectionShop: "Boutique",
+  sitesSectionShopDesc:
+    "La porte de votre boutique. Articles, prix et stock restent en direct.",
+  sitesShopSectionHeading: "Titre au-dessus",
+  sitesShopSectionBody: "Vos propres mots au-dessus du lien",
+  sitesShopSectionNoItems: "Rien n'est encore en boutique",
+  sitesShopSectionNoItemsHint:
+    "Le bloc mène à votre page boutique. Mettez un produit en stock en vente sur l'écran Boutique et il y apparaît.",
+  sitesShopSectionHint:
+    "Le bloc mène à votre page boutique. Articles, prix et stock sont lus en direct — rien n'est enregistré dans la page.",
+  sitesShopSectionListed: (count: number) =>
+    count === 1 ? "1 produit est en boutique." : `${count} produits sont en boutique.`,
+  sitesAssistantSuggestedShop: "Que vendez-vous ?",
+  sitesShop: "Boutique",
+  sitesShopLoadFailed:
+    "La boutique n'a pas pu être chargée. Vérifiez votre connexion et réessayez.",
+  sitesShopAddProduct: "Ajouter un produit",
+  sitesShopAddSubtitle:
+    "Choisissez un produit en stock de votre tarif. Son nom, son prix et son stock restent ceux de Facturation et d'Inventaire — la boutique ne fait que le proposer.",
+  sitesShopAddSubmit: "Ajouter à la boutique",
+  sitesShopAddFailed: "Le produit n'a pas pu être ajouté.",
+  sitesShopProduct: "Quoi vendre",
+  sitesShopProductHint:
+    "Seuls les produits en stock de votre tarif peuvent être vendus depuis le rayon.",
+  sitesShopProductOption: (name: string, price: string, units: number) =>
+    units === 1
+      ? `${name} — ${price} (1 en rayon)`
+      : `${name} — ${price} (${units} en rayon)`,
+  sitesShopColWhat: "Quoi",
+  sitesShopColPrice: "Prix",
+  sitesShopColShelf: "En rayon",
+  sitesShopGoneProduct: "Plus au tarif",
+  sitesShopNotStocked: "Plus suivi en stock",
+  sitesShopUnits: (units: number) => (units === 1 ? "1 unité" : `${units} unités`),
+  sitesShopRemove: "Retirer",
+  sitesShopRemoveConfirm: "Vraiment retirer ?",
+  sitesShopRemoveHint:
+    "Retirer ne fait que sortir le produit de la vitrine. Les commandes déjà passées le gardent.",
+  sitesShopRemoveFailed: "Le produit n'a pas pu être retiré.",
+  sitesShopNoProducts: "Rien en stock à vendre pour l'instant",
+  sitesShopNoProductsHint:
+    "La boutique vend les produits en stock de votre tarif. Ajoutez-en un dans Facturation (ou laissez la configuration en proposer), recevez du stock, et il apparaît ici.",
+  sitesShopEmptyTitle: "Votre vitrine est vide",
+  sitesShopEmptyBody:
+    "Mettez un produit en stock en vente et vos visiteurs peuvent l'acheter sur votre site, payé sur la page du prestataire de paiement.",
+  sitesShopAllListed: "Tous les produits en stock sont déjà en boutique.",
+  sitesShopDeliveryRate: (price: string) =>
+    `La livraison est facturée ${price} par commande.`,
+  sitesShopDeliveryFree: "La livraison est gratuite.",
+  sitesShopDeliveryChange: "Modifier la livraison…",
+  sitesShopDeliveryTitle: "Livraison par commande",
+  sitesShopDeliverySubtitle:
+    "Un tarif unique par commande, facturé avec les marchandises. La TVA suit les marchandises.",
+  sitesShopDeliveryLabel: (currency: string) => `Prix de livraison (${currency})`,
+  sitesShopDeliveryHint: "0 signifie que la livraison est gratuite.",
+  sitesShopDeliverySave: "Enregistrer la livraison",
+  sitesShopDeliveryFailed: "Le prix de livraison n'a pas pu être enregistré.",
   sitesShopSetup: "Configurer la boutique",
   sitesShopSetupSubtitle:
     "Décrivez votre activité et recevez une proposition de tarif, de TVA et de frais de livraison à relire. Rien n'est créé avant votre approbation.",

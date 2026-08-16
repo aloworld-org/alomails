@@ -21,11 +21,13 @@
 
 use time::OffsetDateTime;
 
+use std::collections::HashMap;
+
 use crate::account::AccountStore;
-use crate::billing_catalog_read::BillingCatalogRead;
+use crate::billing_catalog_read::{BillingCatalogRead, CatalogSaleItem};
 use crate::error::{Result, StoreError};
 use crate::id::{BillingProductId, SiteId, SiteShopItemId};
-use crate::inv_stock_sale::{InvStockSale, StockForSale};
+use crate::inv_stock_sale::{InvStockSale, StockForSale, available_units};
 
 /// Maximum products one site's shop may list. Two hundred is a full shop
 /// window; a thousand is a runaway loop.
@@ -43,6 +45,33 @@ pub struct SiteShopItem {
     pub id: SiteShopItemId,
     pub product: BillingProductId,
     pub created_at: OffsetDateTime,
+}
+
+/// One shelf listing resolved through both owning seams at the moment of the
+/// read — what the owner's Shop screen shows. Nothing here is stored: a
+/// `None` is the honest state of a reference whose product moved on, shown
+/// rather than hidden so the owner can act on it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SiteShopShelfRow {
+    pub id: SiteShopItemId,
+    pub product: BillingProductId,
+    pub created_at: OffsetDateTime,
+    /// The price list's answer now; `None` when the item has left the list
+    /// (the public shop skips it, and the owner is told instead).
+    pub item: Option<CatalogSaleItem>,
+    /// Whole units a buyer could take right now, by the stock-sale seam's own
+    /// arithmetic; `None` when the product is gone or no longer stocked.
+    pub available_units: Option<i64>,
+}
+
+/// A product the shop could list: on the active price list, stocked, with
+/// the shelf count a buyer would see. What the add-product picker offers.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SiteShopCandidate {
+    pub item: CatalogSaleItem,
+    /// Whole units a buyer could take right now — zero is still a candidate;
+    /// an empty shelf is sold out, not unsellable.
+    pub available_units: i64,
 }
 
 impl AccountStore {
@@ -236,5 +265,113 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         Ok(())
+    }
+
+    /// The site's shop shelf as the owner's screen shows it: every listing in
+    /// listing order, each resolved through the catalog and stock-sale seams
+    /// at this read. One price-list read and one availability query serve the
+    /// whole shelf — a full shop window must not cost 200 round trips.
+    ///
+    /// Returns the tenant's accounting currency alongside, so every price on
+    /// the screen is expressed in the one currency Billing keeps books in.
+    ///
+    /// The caller resolves the site first (`require_site` on the wire): a
+    /// missing or foreign site simply has an empty shelf here.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn site_shop_shelf(
+        &self,
+        site: &SiteId,
+        now: OffsetDateTime,
+    ) -> Result<(String, Vec<SiteShopShelfRow>)> {
+        let rows = self.site_shop_items(site).await?;
+        let catalog = BillingCatalogRead::open(
+            self.pool.clone(),
+            self.blobs.clone(),
+            self.tenant.clone(),
+            self.user.clone(),
+        );
+        let currency = catalog.currency().await?;
+        let items = catalog.sale_items().await?;
+        let shelves = self.stocked_shelf_counts(now).await?;
+        Ok((
+            currency,
+            rows.into_iter()
+                .map(|row| SiteShopShelfRow {
+                    item: items.iter().find(|item| item.id == row.product).cloned(),
+                    available_units: shelves.get(row.product.as_str()).copied(),
+                    id: row.id,
+                    product: row.product,
+                    created_at: row.created_at,
+                })
+                .collect(),
+        ))
+    }
+
+    /// The products a shop may list: the active price list narrowed to
+    /// stocked items, each with the shelf count a buyer would see right now.
+    /// An empty shelf is still offered — sold out is a state, not a refusal —
+    /// and which of these a given site already lists is the caller's own
+    /// shelf to check.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn site_shop_candidates(
+        &self,
+        now: OffsetDateTime,
+    ) -> Result<(String, Vec<SiteShopCandidate>)> {
+        let catalog = BillingCatalogRead::open(
+            self.pool.clone(),
+            self.blobs.clone(),
+            self.tenant.clone(),
+            self.user.clone(),
+        );
+        let currency = catalog.currency().await?;
+        let items = catalog.sale_items().await?;
+        let shelves = self.stocked_shelf_counts(now).await?;
+        Ok((
+            currency,
+            items
+                .into_iter()
+                .filter_map(|item| {
+                    shelves
+                        .get(item.id.as_str())
+                        .map(|units| SiteShopCandidate {
+                            available_units: *units,
+                            item,
+                        })
+                })
+                .collect(),
+        ))
+    }
+
+    /// Whole units a buyer could take of every stocked, active product of the
+    /// tenant, keyed by product id — the stock-sale seam's arithmetic
+    /// ([`available_units`]) computed in one statement instead of one per
+    /// product. A product absent from the map is gone or not stocked.
+    async fn stocked_shelf_counts(&self, now: OffsetDateTime) -> Result<HashMap<String, i64>> {
+        let counts: Vec<(String, i64, i64)> = sqlx::query_as(
+            "SELECT p.id, \
+                    COALESCE((SELECT SUM(s.qty_milli) FROM inv_stock s \
+                        JOIN inv_locations l \
+                          ON l.tenant_id = s.tenant_id AND l.id = s.location_id \
+                        WHERE s.tenant_id = p.tenant_id AND s.product_id = p.id \
+                          AND l.kind = 'stock'), 0)::bigint, \
+                    COALESCE((SELECT SUM(h.qty_milli) FROM inv_stock_sale_holds h \
+                        WHERE h.tenant_id = p.tenant_id AND h.product_id = p.id \
+                          AND h.state = 'held' AND h.expires_at > $2), 0)::bigint \
+             FROM billing_products p \
+             WHERE p.tenant_id = $1 AND p.stocked AND p.archived_at IS NULL",
+        )
+        .bind(self.tenant.as_str())
+        .bind(now)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        Ok(counts
+            .into_iter()
+            .map(|(id, on_hand, held)| (id, available_units(on_hand, held)))
+            .collect())
     }
 }

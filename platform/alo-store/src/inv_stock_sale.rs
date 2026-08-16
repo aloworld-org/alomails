@@ -571,7 +571,9 @@ impl InvStockSale {
 /// The availability arithmetic, named once: milli on hand minus milli held,
 /// floored to whole units and never below zero. Pure, so the flooring rule
 /// (2.5 on the shelf sells as 2) is unit-tested without a database.
-fn available_units(on_hand_milli: i64, held_milli: i64) -> i64 {
+/// `pub(crate)` so the shop shelf ([`crate::site_shop_items`]) floors the
+/// same way this seam does, rather than keeping a second arithmetic.
+pub(crate) fn available_units(on_hand_milli: i64, held_milli: i64) -> i64 {
     (on_hand_milli - held_milli)
         .div_euclid(MILLI_PER_UNIT)
         .max(0)

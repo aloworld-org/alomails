@@ -559,6 +559,49 @@ export interface SiteTicketProductList {
   products: SiteTicketProduct[];
 }
 
+/** One shelf listing as the owner's Shop screen sees it (S3.05c). The row
+ *  stores a product reference and nothing else; every other field is the
+ *  owning seam's answer at this read, and the nulls of a product that left
+ *  the price list arrive together — an honest state, never a stale price. */
+export interface SiteShopItemRow {
+  id: string;
+  productId: string;
+  productName: string | null;
+  unit: string | null;
+  unitPriceCents: number | null;
+  vatRateBp: number | null;
+  /** Whole units a buyer could take right now; null when the product is gone
+   *  or no longer stocked. */
+  availableUnits: number | null;
+  createdAt: string;
+}
+
+/** The shelf with the money context every price on it is read in. */
+export interface SiteShopItemList {
+  currency: string;
+  currencyExponent: number;
+  items: SiteShopItemRow[];
+}
+
+/** A product the shop could list: stocked, priced, with its live shelf
+ *  count. Zero units is still offered — sold out is a state, not a
+ *  refusal. */
+export interface SiteShopProduct {
+  id: string;
+  name: string;
+  unit: string;
+  unitPriceCents: number;
+  vatRateBp: number;
+  availableUnits: number;
+}
+
+/** The add-product picker's list, with the same money context. */
+export interface SiteShopProductList {
+  currency: string;
+  currencyExponent: number;
+  products: SiteShopProduct[];
+}
+
 /** A proposed unit price as the shop-setup envelope carries it (S3.05b):
  *  either an amount the business description itself stated, or a flagged
  *  blank the owner must fill in — the parser refuses invented numbers, so a

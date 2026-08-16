@@ -176,6 +176,21 @@ export function sectionThumbnail(kind: SectionKind): ReactNode {
           ))}
         </>
       );
+    case "shop":
+      // Two product cards, each a box with a picture, a name line and a price
+      // chip: what the block sells sits on a shelf, undated.
+      return (
+        <>
+          {[4, 34].map((x) => (
+            <g key={x}>
+              <rect x={x} y="6" width="26" height="28" rx="2" opacity="0.3" />
+              <rect x={x + 3} y="9" width="20" height="11" rx="1.5" opacity="0.5" />
+              <rect x={x + 3} y="23" width="14" height="3" rx="1.5" />
+              <rect x={x + 3} y="28" width="8" height="3" rx="1.5" opacity="0.7" />
+            </g>
+          ))}
+        </>
+      );
     case "custom_code":
       // A framed box with brackets in it: the block is code, and the frame
       // around it is the point rather than decoration.

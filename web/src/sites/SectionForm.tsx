@@ -40,6 +40,7 @@ import type {
   TeamDraft,
   TestimonialsDraft,
   TextImageDraft,
+  ShopDraft,
   TicketsDraft,
 } from "./sectionDrafts";
 import type { Section, SectionKind, SectionLink } from "./sections";
@@ -1138,6 +1139,69 @@ function TicketsFields({ draft, onChange }: { draft: TicketsDraft; onChange: Cha
   );
 }
 
+/** The stock shop's door on a page — the tickets form made again for goods
+ *  on a shelf. The section carries the words above the link and nothing
+ *  else; the shelf, its prices and its stock live on the Shop screen, which
+ *  this form links to rather than duplicating. A site with an empty shelf is
+ *  told so here — a visitor must never be the one to discover an empty
+ *  shop. */
+function ShopFields({ draft, onChange }: { draft: ShopDraft; onChange: Change }) {
+  const { siteId = "" } = useParams();
+  const navigate = useNavigate();
+  const api = useSitesApi();
+  const [listed, setListed] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void api.shopItems(siteId).then(
+      (stored) => {
+        if (!cancelled) setListed(stored.items.length);
+      },
+      () => {
+        // A list that will not load costs the hint, not the form: the words
+        // above the link are editable regardless.
+        if (!cancelled) setListed(null);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [api, siteId]);
+
+  return (
+    <>
+      <TextField
+        label={strings.sitesShopSectionHeading}
+        value={draft.heading}
+        onChange={(heading) => onChange({ ...draft, heading })}
+        autoFocus
+        copyPointer="/heading"
+      />
+      <LongTextField
+        label={strings.sitesShopSectionBody}
+        value={draft.body}
+        onChange={(body) => onChange({ ...draft, body })}
+        copyPointer="/body"
+      />
+      {listed === 0 ? (
+        <div className={styles.collectionFieldEmpty}>
+          <strong>{strings.sitesShopSectionNoItems}</strong>
+          <span>{strings.sitesShopSectionNoItemsHint}</span>
+          <Button variant="ghost" onClick={() => navigate(`/sites/${siteId}/shop`)}>
+            {strings.sitesShop}
+          </Button>
+        </div>
+      ) : (
+        <p className={styles.hint}>
+          {listed === null
+            ? strings.sitesShopSectionHint
+            : strings.sitesShopSectionListed(listed)}
+        </p>
+      )}
+    </>
+  );
+}
+
 function FooterFields({ draft, onChange }: { draft: FooterDraft; onChange: Change }) {
   return (
     <>
@@ -1191,6 +1255,8 @@ function FormFields({ draft, onChange }: { draft: SectionDraft; onChange: Change
       return <BookingFields draft={draft} onChange={onChange} />;
     case "tickets":
       return <TicketsFields draft={draft} onChange={onChange} />;
+    case "shop":
+      return <ShopFields draft={draft} onChange={onChange} />;
     case "custom_code":
       // No copy tools anywhere in this form: the assistant refuses to write
       // or change code by name (`alo-ai`'s sites module), so offering the

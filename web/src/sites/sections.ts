@@ -224,6 +224,18 @@ export interface TicketsSection {
   body?: string | undefined;
 }
 
+/** The door to the site's stock shop — the tickets trade made again for
+ *  goods on a shelf. Presentation only: an optional heading and an optional
+ *  line of the owner's own words above the link. What is on sale, its price
+ *  and what is on the shelf are live state read from Billing's price list and
+ *  Inventory's ledger on `/shop`, one navigation away; the shelf itself is
+ *  managed on the Shop screen, never stored here. */
+export interface ShopSection {
+  type: "shop";
+  heading?: string | undefined;
+  body?: string | undefined;
+}
+
 /** What the sandboxed frame around a custom-code block may do. Every field is
  *  default-deny, and the set is deliberately small: neither capability opens a
  *  network, and none of them ever will (`site_custom_code.rs`). Absent on the
@@ -281,13 +293,14 @@ export type Section =
   | CatalogSection
   | BookingSection
   | TicketsSection
+  | ShopSection
   | CustomCodeSection
   | FooterSection;
 
 /** A section's wire tag. */
 export type SectionKind = Section["type"];
 
-/** The seventeen kinds in their natural page order — the picker's order. */
+/** The eighteen kinds in their natural page order — the picker's order. */
 export const SECTION_KINDS: readonly SectionKind[] = [
   "nav",
   "hero",
@@ -304,6 +317,7 @@ export const SECTION_KINDS: readonly SectionKind[] = [
   "catalog",
   "booking",
   "tickets",
+  "shop",
   "custom_code",
   "footer",
 ];

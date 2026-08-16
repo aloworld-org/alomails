@@ -20,6 +20,7 @@ import {
   Languages,
   Lock,
   Newspaper,
+  Package,
   Palette,
   Receipt,
   ShoppingBag,
@@ -621,6 +622,14 @@ export function SiteView() {
                 onClick={() => navigate("tickets")}
               >
                 {strings.sitesTickets}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Package size="var(--icon-size-inline)" />}
+                onClick={() => navigate("shop")}
+              >
+                {strings.sitesShop}
               </Button>
               <Button
                 variant="ghost"

@@ -40,6 +40,10 @@ import type {
   SiteBookingDraft,
   SiteCrmBoard,
   SiteCrmColumn,
+  SiteShopItemList,
+  SiteShopItemRow,
+  SiteShopProduct,
+  SiteShopProductList,
   SiteTicketEvent,
   SiteTicketEventList,
   SiteTicketProductList,
@@ -838,6 +842,58 @@ export class SitesApi {
 
   #ticketPath(siteId: string, eventId: string): string {
     return `/sites/${encodeURIComponent(siteId)}/tickets/${encodeURIComponent(eventId)}`;
+  }
+
+  /** The stocked products a shop may list, priced and counted by the owning
+   *  seams at this read (S3.05c). An empty list is the honest dependency
+   *  state: nothing is stocked to sell yet. */
+  shopProducts(siteId: string): Promise<SiteShopProductList> {
+    return this.#read<{
+      currency?: string;
+      currencyExponent?: number;
+      products?: SiteShopProduct[];
+    }>(`/sites/${encodeURIComponent(siteId)}/shop-products`).then((response) => ({
+      currency: response.currency ?? "EUR",
+      currencyExponent: response.currencyExponent ?? 2,
+      products: response.products ?? [],
+    }));
+  }
+
+  /** The site's shop shelf in listing order, each row resolved at this
+   *  read — a listing whose product left the price list says so with nulls
+   *  rather than showing a price that is no longer anyone's. */
+  shopItems(siteId: string): Promise<SiteShopItemList> {
+    return this.#read<{
+      currency?: string;
+      currencyExponent?: number;
+      items?: SiteShopItemRow[];
+    }>(this.#shopItemsPath(siteId)).then((response) => ({
+      currency: response.currency ?? "EUR",
+      currencyExponent: response.currencyExponent ?? 2,
+      items: response.items ?? [],
+    }));
+  }
+
+  /** Lists a product on the site's shop. The store rules on it — not on the
+   *  price list, not stocked, or already listed is a 422 in its own words —
+   *  and the refusal sentence travels verbatim. */
+  addShopItem(siteId: string, productId: string): Promise<SiteShopItemRow> {
+    return this.#write<{ item: SiteShopItemRow }>("POST", this.#shopItemsPath(siteId), {
+      productId,
+    }).then((response) => response.item);
+  }
+
+  /** Takes a listing off the shop window. Orders already placed keep their
+   *  own product reference, so delisting never touches a sale. */
+  removeShopItem(siteId: string, itemId: string): Promise<void> {
+    return this.#discard(
+      "DELETE",
+      `${this.#shopItemsPath(siteId)}/${encodeURIComponent(itemId)}`,
+    );
+  }
+
+  #shopItemsPath(siteId: string): string {
+    return `/sites/${encodeURIComponent(siteId)}/shop-items`;
   }
 
   /** Turns a plain-language business description into one complete shop

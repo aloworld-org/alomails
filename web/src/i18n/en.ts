@@ -5762,6 +5762,65 @@ export const en = {
     held === 1 ? "(1 in a checkout)" : `(${held} in checkouts)`,
   sitesTicketGoneProduct: "No longer on the price list",
   sitesAssistantSuggestedTickets: "Can I buy tickets online?",
+  // The shop shelf (S3.05c): which stocked products a site sells, sharing
+  // wave one's checkout. Nothing here is a second copy — names, prices and
+  // shelf counts are Billing's and Inventory's answers at every read.
+  sitesSectionShop: "Shop",
+  sitesSectionShopDesc:
+    "The door to your shop. What is on sale, prices and stock stay live.",
+  sitesShopSectionHeading: "Heading above it",
+  sitesShopSectionBody: "Your own words above the link",
+  sitesShopSectionNoItems: "Nothing is in the shop yet",
+  sitesShopSectionNoItemsHint:
+    "The block links to your shop page. List a stocked product on the Shop screen and it appears there.",
+  sitesShopSectionHint:
+    "The block links to your shop page. What is on sale, prices and stock are read live — nothing is stored in the page.",
+  sitesShopSectionListed: (count: number) =>
+    count === 1 ? "1 product is in the shop." : `${count} products are in the shop.`,
+  sitesAssistantSuggestedShop: "What do you sell?",
+  sitesShop: "Shop",
+  sitesShopLoadFailed:
+    "The shop could not be loaded. Check your connection and try again.",
+  sitesShopAddProduct: "Add product",
+  sitesShopAddSubtitle:
+    "Pick a stocked product from your price list. Its name, price and stock stay Billing's and Inventory's — the shop only lists it.",
+  sitesShopAddSubmit: "Add to shop",
+  sitesShopAddFailed: "The product could not be added.",
+  sitesShopProduct: "What to sell",
+  sitesShopProductHint:
+    "Only stocked products from your price list can be sold from the shelf.",
+  sitesShopProductOption: (name: string, price: string, units: number) =>
+    units === 1
+      ? `${name} — ${price} (1 on the shelf)`
+      : `${name} — ${price} (${units} on the shelf)`,
+  sitesShopColWhat: "What",
+  sitesShopColPrice: "Price",
+  sitesShopColShelf: "On the shelf",
+  sitesShopGoneProduct: "No longer on the price list",
+  sitesShopNotStocked: "No longer stocked",
+  sitesShopUnits: (units: number) => (units === 1 ? "1 unit" : `${units} units`),
+  sitesShopRemove: "Remove",
+  sitesShopRemoveConfirm: "Really remove?",
+  sitesShopRemoveHint:
+    "Removing only takes the product out of the shop window. Orders already placed keep it.",
+  sitesShopRemoveFailed: "The product could not be removed.",
+  sitesShopNoProducts: "Nothing is stocked to sell yet",
+  sitesShopNoProductsHint:
+    "The shop sells stocked products from your price list. Add one in Billing (or let shop setup propose a list), receive stock, and it appears here.",
+  sitesShopEmptyTitle: "Your shop window is empty",
+  sitesShopEmptyBody:
+    "List a stocked product and visitors can buy it on your site, paid on the payment provider's page.",
+  sitesShopAllListed: "Every stocked product is already in the shop.",
+  sitesShopDeliveryRate: (price: string) => `Delivery is charged at ${price} per order.`,
+  sitesShopDeliveryFree: "Delivery is free.",
+  sitesShopDeliveryChange: "Change delivery…",
+  sitesShopDeliveryTitle: "Delivery per order",
+  sitesShopDeliverySubtitle:
+    "One flat rate per order, charged beside the goods. VAT follows the goods.",
+  sitesShopDeliveryLabel: (currency: string) => `Delivery price (${currency})`,
+  sitesShopDeliveryHint: "0 means delivery is free.",
+  sitesShopDeliverySave: "Save delivery",
+  sitesShopDeliveryFailed: "The delivery price could not be saved.",
   // Shop setup: the proposed configuration as an approval list (S3.05b3).
   // Every guess is flagged; nothing exists until the owner approves it.
   sitesShopSetup: "Shop setup",

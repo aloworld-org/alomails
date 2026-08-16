@@ -39,6 +39,8 @@ export function kindLabel(kind: SectionKind): string {
       return strings.sitesSectionBooking;
     case "tickets":
       return strings.sitesSectionTickets;
+    case "shop":
+      return strings.sitesSectionShop;
     case "custom_code":
       return strings.sitesSectionCustomCode;
     case "footer":
@@ -79,6 +81,8 @@ export function kindDescription(kind: SectionKind): string {
       return strings.sitesSectionBookingDesc;
     case "tickets":
       return strings.sitesSectionTicketsDesc;
+    case "shop":
+      return strings.sitesSectionShopDesc;
     case "custom_code":
       return strings.sitesSectionCustomCodeDesc;
     case "footer":
@@ -134,6 +138,11 @@ export function sectionSummary(section: Section): string {
       return (
         section.heading ??
         (section.body === undefined ? strings.sitesSectionTickets : clip(section.body))
+      );
+    case "shop":
+      return (
+        section.heading ??
+        (section.body === undefined ? strings.sitesSectionShop : clip(section.body))
       );
     case "custom_code":
       // The frame's accessible name is what a visitor is told this block is,
