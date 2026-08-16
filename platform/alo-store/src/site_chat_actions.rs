@@ -62,6 +62,10 @@ pub enum SiteChatActionKind {
     /// CRM answered that the visitor's address is already known; nothing was
     /// raised and the visitor heard only "we know you".
     LeadKnown,
+    /// The conversation pointed the visitor at one ticketed event's offer
+    /// page, priced by the catalog seam (S3.04g). The purchase itself never
+    /// happens in the conversation — money always leaves it (ADR 0040 §2).
+    TicketsOffered,
 }
 
 impl SiteChatActionKind {
@@ -76,6 +80,7 @@ impl SiteChatActionKind {
             Self::LeadOffered => "lead_offered",
             Self::LeadSaved => "lead_saved",
             Self::LeadKnown => "lead_known",
+            Self::TicketsOffered => "tickets_offered",
         }
     }
 
@@ -92,6 +97,7 @@ impl SiteChatActionKind {
             "lead_offered" => Self::LeadOffered,
             "lead_saved" => Self::LeadSaved,
             "lead_known" => Self::LeadKnown,
+            "tickets_offered" => Self::TicketsOffered,
             _ => return None,
         })
     }
@@ -190,6 +196,17 @@ impl NewChatAction {
     #[must_use]
     pub fn lead_known() -> Self {
         Self::bare(SiteChatActionKind::LeadKnown)
+    }
+
+    /// One ticketed event's offer page was pointed at. The fact is the
+    /// event's published label (the price list's name and the event's day) —
+    /// the same words the visitor was shown, never the model's.
+    #[must_use]
+    pub fn tickets_offered(event_label: &str) -> Self {
+        Self {
+            fact: Some(bounded(event_label)),
+            ..Self::bare(SiteChatActionKind::TicketsOffered)
+        }
     }
 
     const fn bare(kind: SiteChatActionKind) -> Self {
@@ -341,6 +358,7 @@ mod tests {
             SiteChatActionKind::LeadOffered,
             SiteChatActionKind::LeadSaved,
             SiteChatActionKind::LeadKnown,
+            SiteChatActionKind::TicketsOffered,
         ] {
             assert_eq!(SiteChatActionKind::from_stored(kind.as_str()), Some(kind));
         }

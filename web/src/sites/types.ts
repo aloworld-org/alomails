@@ -131,7 +131,8 @@ export type SiteChatActionKind =
   | "booked"
   | "lead_offered"
   | "lead_saved"
-  | "lead_known";
+  | "lead_known"
+  | "tickets_offered";
 
 /** One published page (or knowledge document) an answer drew on. `path` is
  *  site-relative; a knowledge document has none and is named by title. */

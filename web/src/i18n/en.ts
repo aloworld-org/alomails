@@ -3686,6 +3686,8 @@ export const en = {
   sitesAssistantDidLeadSaved: "Saved a new lead to your CRM board",
   sitesAssistantDidLeadKnown:
     "Told a returning contact you already know them — no duplicate was made",
+  sitesAssistantDidTicketsOffered: (event: string) =>
+    `Offered tickets for “${event}” at the price list's own price`,
   // Sites — the assistant's appearance screen (ADR 0040 §5, S3.02g).
   sitesAssistantLookTitle: "How it looks and speaks",
   sitesAssistantLookHint:

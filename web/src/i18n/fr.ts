@@ -2843,6 +2843,8 @@ export const fr: Partial<Catalog> = {
     "A enregistré un nouveau prospect sur votre tableau CRM",
   sitesAssistantDidLeadKnown:
     "A indiqué à un contact qui revenait que vous le connaissez déjà — aucun doublon n'a été créé",
+  sitesAssistantDidTicketsOffered: (event: string) =>
+    `A proposé des billets pour « ${event} » au prix de votre liste de prix`,
   // Sites — l'écran d'apparence de l'assistant (ADR 0040 §5, S3.02g).
   sitesAssistantLookTitle: "Son apparence et sa voix",
   sitesAssistantLookHint:

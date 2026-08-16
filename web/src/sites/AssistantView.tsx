@@ -22,6 +22,7 @@ import {
   ListChecks,
   MessageCircle,
   Newspaper,
+  Ticket,
   UserCheck,
   UserPlus,
   Users,
@@ -77,6 +78,8 @@ function actionSentence(action: SiteChatAction): string | null {
       return strings.sitesAssistantDidLeadSaved;
     case "lead_known":
       return strings.sitesAssistantDidLeadKnown;
+    case "tickets_offered":
+      return strings.sitesAssistantDidTicketsOffered(action.fact ?? "");
     default:
       return null;
   }
@@ -96,6 +99,8 @@ function actionIcon(kind: SiteChatAction["kind"]) {
       return UserPlus;
     case "lead_saved":
       return UserCheck;
+    case "tickets_offered":
+      return Ticket;
     default:
       return Users;
   }

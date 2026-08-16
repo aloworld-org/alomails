@@ -2804,6 +2804,8 @@ export const nl: Partial<Catalog> = {
   sitesAssistantDidLeadSaved: "Zette een nieuwe lead op uw CRM-bord",
   sitesAssistantDidLeadKnown:
     "Liet een terugkerend contact weten dat u die al kent — er is geen duplicaat gemaakt",
+  sitesAssistantDidTicketsOffered: (event: string) =>
+    `Bood tickets aan voor “${event}” tegen de prijs van uw prijslijst`,
   // Sites — het uiterlijk-scherm van de assistent (ADR 0040 §5, S3.02g).
   sitesAssistantLookTitle: "Hoe hij eruitziet en klinkt",
   sitesAssistantLookHint:
