@@ -213,6 +213,44 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Background ticket-mail sweeper (alo Sites, ADR 0050): send each
+    // fulfilled sale's buyer their ticket, from the deployment's own
+    // transactional address through the trusted submission listener. Spawned
+    // only when that address is configured — unset ALO_SITES_MAIL_FROM and
+    // no mail leaves (the feature's off-switch is the same config).
+    {
+        let from = std::env::var("ALO_SITES_MAIL_FROM")
+            .ok()
+            .map(|v| v.trim().to_owned())
+            .filter(|v| {
+                !v.is_empty()
+                    && v.chars().filter(|c| *c == '@').count() == 1
+                    && v.chars().all(|c| !c.is_whitespace() && !c.is_control())
+            });
+        let submission_addr = std::env::var("ALO_JMAP_SUBMISSION_ADDR").ok();
+        match (from, submission_addr) {
+            (Some(from), Some(addr)) => {
+                let store = Arc::clone(&store);
+                tokio::spawn(async move {
+                    let mut tick = tokio::time::interval(std::time::Duration::from_secs(30));
+                    loop {
+                        tick.tick().await;
+                        let sent = alo_jmap::site_ticket_mail::run_due(&store, &addr, &from).await;
+                        if sent > 0 {
+                            tracing::info!(sent, "ticket mail sweep");
+                        }
+                    }
+                });
+            }
+            _ => {
+                tracing::info!(
+                    "ticket mail sweep off: ALO_SITES_MAIL_FROM and the submission \
+                     listener must both be configured (ADR 0050)"
+                );
+            }
+        }
+    }
+
     // Background scheduled-publish sweeper (alo Sites, ADR 0036): put each
     // website whose chosen moment has arrived on the internet, through the
     // scheduling user's own account door. Every 30 seconds, so "09:00" means

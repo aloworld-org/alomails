@@ -737,7 +737,8 @@ async fn the_table_has_no_room_for_a_card() {
 
 use alo_store::{
     ClaimedTicketFulfilment, DealFilter, NewBillingSettings, PipelineSeed, SitePublicStore,
-    SiteTicketOrder, SiteTicketOrderId, StageSeed, Store, TicketFulfilWords,
+    SiteTicketFulfilmentId, SiteTicketOrder, SiteTicketOrderId, StageSeed, Store,
+    TicketFulfilWords, TicketMailNotification,
 };
 
 fn fulfil_words() -> TicketFulfilWords {
@@ -1054,6 +1055,9 @@ async fn the_fulfilment_table_has_no_buyer_column() {
             "invoice_id",
             "invoice_note",
             "invoice_number",
+            // The ticket email's at-most-once marker (ADR 0050): when the
+            // buyer was mailed, never who — the address stays on the order.
+            "mailed_at",
             "order_id",
             "site_id",
             "tenant_id",
@@ -1069,4 +1073,218 @@ async fn the_fulfilment_table_has_no_buyer_column() {
             );
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// The ticket email's claim (ADR 0050, item S3.04h). Every call to
+// `claim_ticket_mails` in the workspace lives inside the ONE test below: the
+// claim spans tenants (that is what a sweep is), so a second concurrent
+// claimer would take rows this test is watching — the same shape the other
+// sweep suites serialise in `.config/nextest.toml`, solved here by having no
+// second claimer at all.
+// ---------------------------------------------------------------------------
+
+/// Claims fulfilment rounds until every watched paid order has been offered.
+/// Watching several orders in one loop matters: a single round can claim two
+/// of them, and a per-order loop started afterwards would wait forever for a
+/// claim another loop already received.
+async fn claims_for(store: &Store, orders: &[&SiteTicketOrderId]) -> Vec<ClaimedTicketFulfilment> {
+    let mut got: Vec<ClaimedTicketFulfilment> = Vec::new();
+    for _ in 0..100 {
+        let round = store.claim_ticket_fulfilments(100).await.unwrap();
+        got.extend(
+            round
+                .into_iter()
+                .filter(|claim| orders.iter().any(|order| **order == claim.order)),
+        );
+        if got.len() >= orders.len() {
+            return got;
+        }
+    }
+    panic!("a paid order was never offered to the fulfilment sweep");
+}
+
+/// Claims mail rounds until every watched fulfilment was offered or the
+/// pending set drains; returns only the watched notifications. The shared
+/// database may hold other suites' fulfilled sales — they are claimed too
+/// (nothing else reads `mailed_at`), and only the watched ids are kept.
+async fn claim_mail_for(
+    store: &Store,
+    want: &[&SiteTicketFulfilmentId],
+    cap: i64,
+) -> Vec<TicketMailNotification> {
+    let mut got: Vec<TicketMailNotification> = Vec::new();
+    for _ in 0..100 {
+        let round = store.claim_ticket_mails(500, cap).await.unwrap();
+        let drained = round.is_empty();
+        got.extend(
+            round
+                .into_iter()
+                .filter(|n| want.iter().any(|w| **w == n.fulfilment)),
+        );
+        if drained || got.len() >= want.len() {
+            return got;
+        }
+    }
+    got
+}
+
+async fn mailed_at_of(
+    pool: &sqlx::PgPool,
+    fulfilment: &SiteTicketFulfilmentId,
+) -> Option<OffsetDateTime> {
+    sqlx::query_scalar::<_, Option<OffsetDateTime>>(
+        "SELECT mailed_at FROM site_ticket_fulfilments WHERE id = $1",
+    )
+    .bind(fulfilment.as_str())
+    .fetch_one(pool)
+    .await
+    .unwrap()
+}
+
+#[tokio::test]
+async fn the_ticket_mail_waits_for_fulfilment_claims_once_and_never_crosses_tenants() {
+    let store = common::test_store().await;
+    let pool = sqlx::postgres::PgPoolOptions::new()
+        .max_connections(2)
+        .connect(&common::database_url())
+        .await
+        .unwrap();
+
+    let a = venue("mail-a").await;
+    let b = venue("mail-b").await;
+    let order_a = paid(&a, "mail-a", &a.hold, "maud@mail-a.test").await;
+    let order_b = paid(&b, "mail-b", &b.hold, "nils@mail-b.test").await;
+    let claims = claims_for(&store, &[&order_a.id, &order_b.id]).await;
+    let claim_a = claims
+        .iter()
+        .find(|c| c.order == order_a.id)
+        .unwrap()
+        .clone();
+    let claim_b = claims
+        .iter()
+        .find(|c| c.order == order_b.id)
+        .unwrap()
+        .clone();
+
+    // Before the fulfilment act there is no description: the sale must not
+    // be offered to the mail sweep, however hard it claims.
+    let early = claim_mail_for(&store, &[&claim_a.fulfilment, &claim_b.fulfilment], 200).await;
+    assert!(
+        early.is_empty(),
+        "an unfulfilled sale was offered for mailing: {early:?}"
+    );
+    assert!(mailed_at_of(&pool, &claim_a.fulfilment).await.is_none());
+
+    store
+        .fulfil_claimed_ticket(&claim_a, &fulfil_words(), &crm_seed())
+        .await
+        .unwrap();
+    store
+        .fulfil_claimed_ticket(&claim_b, &fulfil_words(), &crm_seed())
+        .await
+        .unwrap();
+
+    // Fulfilled: each sale is offered exactly once, paired with its OWN
+    // tenant's site, buyer, token and owner.
+    let offered = claim_mail_for(&store, &[&claim_a.fulfilment, &claim_b.fulfilment], 200).await;
+    assert_eq!(
+        offered.len(),
+        2,
+        "each fulfilled sale is offered exactly once: {offered:?}"
+    );
+    let mail_a = offered
+        .iter()
+        .find(|n| n.fulfilment == claim_a.fulfilment)
+        .unwrap();
+    let mail_b = offered
+        .iter()
+        .find(|n| n.fulfilment == claim_b.fulfilment)
+        .unwrap();
+    assert_eq!(mail_a.tenant, *a.account.tenant());
+    assert_eq!(mail_a.owner, *a.account.user());
+    assert_eq!(mail_a.site, a.site);
+    assert_eq!(mail_a.buyer_email, "maud@mail-a.test");
+    assert_eq!(mail_a.token, claim_a.token);
+    assert!(
+        mail_a.description.starts_with("Letterpress workshop"),
+        "{}",
+        mail_a.description
+    );
+    assert_eq!(mail_a.quantity, 2);
+    assert_eq!(mail_a.amount_cents, 17_000);
+    assert_eq!(mail_b.tenant, *b.account.tenant());
+    assert_eq!(mail_b.buyer_email, "nils@mail-b.test");
+    assert_ne!(mail_a.tenant, mail_b.tenant);
+
+    // The identity the sweep replies through is tenant-scoped: the owner's
+    // address resolves inside the sale's own tenant and nowhere else — a
+    // foreign tenant's sale can never mail through another tenant's identity.
+    let own = store
+        .for_tenant(mail_a.tenant.clone())
+        .email_of(&mail_a.owner)
+        .await
+        .unwrap();
+    assert_eq!(own.as_deref(), Some("owner@mail-a.test"));
+    let foreign = store
+        .for_tenant(mail_b.tenant.clone())
+        .email_of(&mail_a.owner)
+        .await
+        .unwrap();
+    assert_eq!(
+        foreign, None,
+        "another tenant resolved this owner's address"
+    );
+
+    // At-most-once: the claim was the once; nothing is offered again.
+    let again = claim_mail_for(&store, &[&claim_a.fulfilment, &claim_b.fulfilment], 200).await;
+    assert!(
+        again.is_empty(),
+        "a mailed sale was offered again: {again:?}"
+    );
+    assert!(mailed_at_of(&pool, &claim_a.fulfilment).await.is_some());
+
+    // The daily ceiling defers, never drops: a tenant at the cap keeps its
+    // remaining sale pending for the next window, and a window with
+    // allowance left releases it.
+    let c = venue("mail-cap").await;
+    let order_c1 = paid(&c, "mail-c1", &c.hold, "one@mail-cap.test").await;
+    let second_hold = c
+        .account
+        .take_ticket_hold(&c.site, &c.event, 1, TTL, c.now)
+        .await
+        .unwrap();
+    let order_c2 = paid(&c, "mail-c2", &second_hold.id, "two@mail-cap.test").await;
+    let c_claims = claims_for(&store, &[&order_c1.id, &order_c2.id]).await;
+    for claim in &c_claims {
+        store
+            .fulfil_claimed_ticket(claim, &fulfil_words(), &crm_seed())
+            .await
+            .unwrap();
+    }
+    let c_fulfilments: Vec<&SiteTicketFulfilmentId> =
+        c_claims.iter().map(|c| &c.fulfilment).collect();
+
+    let capped = claim_mail_for(&store, &c_fulfilments, 1).await;
+    assert_eq!(
+        capped.len(),
+        1,
+        "a cap of one mails exactly one: {capped:?}"
+    );
+    let held_back = c_claims
+        .iter()
+        .find(|claim| claim.fulfilment != capped[0].fulfilment)
+        .unwrap();
+    let still_capped = claim_mail_for(&store, &[&held_back.fulfilment], 1).await;
+    assert!(still_capped.is_empty(), "the ceiling did not hold");
+    assert!(
+        mailed_at_of(&pool, &held_back.fulfilment).await.is_none(),
+        "deferred means still pending, not dropped"
+    );
+    let released = claim_mail_for(&store, &[&held_back.fulfilment], 200).await;
+    assert_eq!(
+        released.len(),
+        1,
+        "allowance left releases the deferred sale"
+    );
 }

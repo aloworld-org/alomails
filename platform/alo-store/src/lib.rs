@@ -224,6 +224,7 @@ pub mod site_templates;
 pub mod site_theme;
 pub mod site_ticket_fulfil;
 pub mod site_ticket_holds;
+pub mod site_ticket_mail;
 pub mod site_ticket_orders;
 pub mod site_tickets;
 pub mod site_translations;
@@ -660,6 +661,7 @@ pub use site_ticket_holds::{
     SiteTicketHold, SiteTicketHoldState, TICKET_HOLD_MAX_QUANTITY, TICKET_HOLD_MAX_TTL,
     TICKET_HOLD_MIN_TTL, TicketAvailability,
 };
+pub use site_ticket_mail::TicketMailNotification;
 pub use site_ticket_orders::{
     MAX_SITE_TICKET_ORDERS, SiteTicketOrder, SiteTicketOrderState, TICKET_BUYER_EMAIL_MAX_CHARS,
     TICKET_BUYER_NAME_MAX_CHARS, TICKET_ORDER_PAID_AFTER_LAPSE, TicketPaymentTarget,

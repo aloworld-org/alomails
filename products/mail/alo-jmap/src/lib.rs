@@ -181,6 +181,7 @@ pub mod site_order_notify;
 pub mod site_protection;
 pub mod site_publish_worker;
 pub mod site_schedule;
+pub mod site_ticket_mail;
 pub mod site_ticket_worker;
 pub mod site_version_preview;
 pub mod site_versions;

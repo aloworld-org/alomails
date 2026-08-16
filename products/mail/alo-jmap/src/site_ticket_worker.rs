@@ -11,9 +11,9 @@
 //! handed and invents none.
 //!
 //! Nothing that reaches a log here carries a buyer's name or address: only
-//! ids and coarse errors (Law 1). No mail leaves — the ticket email needs
-//! the outbound-to-strangers seam alo does not have (its own queue item,
-//! behind its own ADR).
+//! ids and coarse errors (Law 1). No mail leaves from this sweep — the
+//! ticket email is its sibling's act ([`crate::site_ticket_mail`], ADR
+//! 0050), which claims a sale only after this one has recorded it.
 
 use alo_store::{PipelineSeed, StageSeed, Store, TicketFulfilWords};
 

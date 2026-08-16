@@ -32,13 +32,13 @@
 //! double lead. The order stays in the owner's order list either way, so
 //! nothing is silently lost.
 //!
-//! What is deliberately absent: **the ticket email.** alo has no
-//! outbound-mail-to-strangers path — even a purchase order leaves as a draft
-//! a human sends through the one audited submission path (ADR 0034) — so the
-//! ticket travels on the checkout return page and in the buyer's own
-//! calendar (the public ticket page's `.ics`), and the email is its own
-//! queue item behind its own ADR. Nothing that reaches a log here carries a
-//! buyer's name or address: only ids and coarse errors (Law 1).
+//! The ticket email is **not this module's act**: once fulfilment has
+//! written the sale's description, the mail sweep claims the row through
+//! [`crate::site_ticket_mail`] on the terms ADR 0050 decided — the ticket
+//! also travels on the checkout return page and in the buyer's own calendar
+//! (the public ticket page's `.ics`), so the mail is the third telling.
+//! Nothing that reaches a log here carries a buyer's name or address: only
+//! ids and coarse errors (Law 1).
 
 use time::OffsetDateTime;
 
