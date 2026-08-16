@@ -292,8 +292,14 @@ describe("the shop screen", () => {
 
     ui();
 
-    // First click arms; nothing is deleted yet.
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesShopRemove }));
+    // First click arms; nothing is deleted yet. The button is named after
+    // its product (S3.06d2) — a shelf of rows must not be a column of
+    // identical "Remove" buttons to a screen reader.
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: strings.sitesShopRemoveFor("Field guide"),
+      }),
+    );
     expect(lastWrite()).toBeUndefined();
     expect(screen.getByText(strings.sitesShopRemoveHint)).toBeTruthy();
     // The arming renames a button, which nothing announces; the hint must be

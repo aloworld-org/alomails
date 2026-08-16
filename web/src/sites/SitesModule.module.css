@@ -86,7 +86,7 @@
   font-weight: var(--weight-medium);
 }
 .invitationForm small {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--text-xs);
   font-weight: var(--weight-regular);
 }
@@ -437,7 +437,7 @@
   font-weight: var(--weight-semibold);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
 }
 .input {
   width: 100%;
@@ -637,7 +637,16 @@
 }
 .hint {
   font-size: var(--text-xs);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
+}
+/* Links inside hints and the alo-address line inherit the ds link
+ * terracotta, which measures 3.84:1 on the warm grounds these lines sit
+ * on — below AA for small text. Same treatment as .liveLink: primary text
+ * with a permanent underline, so the affordance survives the color. */
+.hint a,
+.domainAloAddress a {
+  color: var(--text-primary);
+  text-decoration: underline;
 }
 .toggle {
   display: inline-flex;
@@ -2621,7 +2630,7 @@
 }
 .themeSlotState {
   font-size: var(--text-xs);
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 .uploadRow {
@@ -2848,7 +2857,7 @@
   font-weight: var(--weight-semibold);
 }
 .collectionListItem small {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--text-xs);
 }
 .collectionEditor {
@@ -2929,7 +2938,7 @@
   gap: var(--space-2);
 }
 .collectionMappingField small {
-  color: var(--text-tertiary);
+  color: var(--text-secondary);
   font-size: var(--text-xs);
   font-weight: var(--weight-regular);
 }

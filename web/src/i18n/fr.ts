@@ -4942,6 +4942,8 @@ export const fr: Partial<Catalog> = {
   sitesTicketCapacityFailed: "Le nombre de places n'a pas pu être changé.",
   sitesTicketChangeCapacity: "Places...",
   sitesTicketDelete: "Supprimer",
+  sitesTicketChangeCapacityFor: (event: string) => `Modifier les places de ${event}`,
+  sitesTicketDeleteFor: (event: string) => `Supprimer ${event}`,
   sitesTicketDeleteConfirm: "Vraiment supprimer ?",
   sitesTicketDeleteHint:
     "Un événement sans aucune vente disparaît. Dès qu'une place est vendue, l'événement est un enregistrement de la vente et reste.",
@@ -4991,6 +4993,7 @@ export const fr: Partial<Catalog> = {
   sitesShopNotStocked: "Plus suivi en stock",
   sitesShopUnits: (units: number) => (units === 1 ? "1 unité" : `${units} unités`),
   sitesShopRemove: "Retirer",
+  sitesShopRemoveFor: (product: string) => `Retirer ${product} de la boutique`,
   sitesShopRemoveConfirm: "Vraiment retirer ?",
   sitesShopRemoveHint:
     "Retirer ne fait que sortir le produit de la vitrine. Les commandes déjà passées le gardent.",

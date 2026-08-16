@@ -4883,6 +4883,8 @@ export const nl: Partial<Catalog> = {
   sitesTicketCapacityFailed: "Het aantal plaatsen kon niet worden gewijzigd.",
   sitesTicketChangeCapacity: "Plaatsen...",
   sitesTicketDelete: "Verwijderen",
+  sitesTicketChangeCapacityFor: (event: string) => `Plaatsen wijzigen voor ${event}`,
+  sitesTicketDeleteFor: (event: string) => `${event} verwijderen`,
   sitesTicketDeleteConfirm: "Echt verwijderen?",
   sitesTicketDeleteHint:
     "Een evenement waar niemand in kocht verdwijnt. Zodra er een plaats verkocht is, is het evenement een record van de verkoop en blijft het.",
@@ -4932,6 +4934,7 @@ export const nl: Partial<Catalog> = {
   sitesShopNotStocked: "Geen voorraadartikel meer",
   sitesShopUnits: (units: number) => (units === 1 ? "1 stuk" : `${units} stuks`),
   sitesShopRemove: "Verwijderen",
+  sitesShopRemoveFor: (product: string) => `${product} uit de winkel verwijderen`,
   sitesShopRemoveConfirm: "Echt verwijderen?",
   sitesShopRemoveHint:
     "Verwijderen haalt het product alleen uit de etalage. Al geplaatste bestellingen behouden het.",

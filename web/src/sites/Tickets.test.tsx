@@ -141,6 +141,13 @@ function lastWrite(): Call | undefined {
   return calls.filter((call) => call.method !== "GET").at(-1);
 }
 
+/** Accessible-name matcher for the event-named controls: the name carries the
+ *  row's date too, whose rendering is the machine's locale — match the part
+ *  the test owns. */
+function startsWith(prefix: string): RegExp {
+  return new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`);
+}
+
 beforeEach(() => {
   calls.length = 0;
   replies = [];
@@ -239,13 +246,42 @@ describe("the tickets screen", () => {
     });
   });
 
+  test("row controls are named after their event, not four identical buttons (S3.06d2)", async () => {
+    replies = [productsReply([WORKSHOP]), eventsReply([EVENING, ORPHANED])];
+
+    ui();
+
+    await screen.findByText("Letterpress workshop");
+    // Two rows: every control names its event, so a screen-reader rotor
+    // reads a box office, not "Seats..., Delete, Seats..., Delete".
+    const named = screen.getAllByRole("button", {
+      name: startsWith(strings.sitesTicketDeleteFor("Letterpress workshop")),
+    });
+    expect(named).toHaveLength(1);
+    // The orphaned row is named by the gone-product fact, and the two
+    // delete buttons never share an accessible name.
+    const deletes = screen
+      .getAllByRole("button")
+      .map((el) => el.getAttribute("aria-label"))
+      .filter((name) => name?.startsWith("Delete"));
+    expect(deletes).toHaveLength(2);
+    expect(new Set(deletes).size).toBe(2);
+    expect(
+      deletes.some((name) => name?.includes(strings.sitesTicketGoneProduct)),
+    ).toBe(true);
+  });
+
   test("shrinking below the seats already taken shows the server's sentence", async () => {
     replies = [productsReply([WORKSHOP]), eventsReply([EVENING])];
 
     ui();
 
     fireEvent.click(
-      await screen.findByRole("button", { name: strings.sitesTicketChangeCapacity }),
+      await screen.findByRole("button", {
+        name: startsWith(
+          strings.sitesTicketChangeCapacityFor("Letterpress workshop"),
+        ),
+      }),
     );
     fireEvent.change(screen.getByLabelText(strings.sitesTicketEventCapacity), {
       target: { value: "2" },
@@ -271,7 +307,11 @@ describe("the tickets screen", () => {
     ui();
 
     // First click arms; nothing is deleted yet.
-    fireEvent.click(await screen.findByRole("button", { name: strings.sitesTicketDelete }));
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: startsWith(strings.sitesTicketDeleteFor("Letterpress workshop")),
+      }),
+    );
     expect(lastWrite()).toBeUndefined();
 
     const refusal = "tickets have been sold to this event; it can no longer be deleted";

@@ -5748,6 +5748,10 @@ export const en = {
   sitesTicketCapacityFailed: "The capacity could not be changed.",
   sitesTicketChangeCapacity: "Seats...",
   sitesTicketDelete: "Delete",
+  // Named per event (S2.16b2 rule): two rows are otherwise four buttons
+  // called "Seats..." and "Delete" with nothing to say which event.
+  sitesTicketChangeCapacityFor: (event: string) => `Change seats for ${event}`,
+  sitesTicketDeleteFor: (event: string) => `Delete ${event}`,
   sitesTicketDeleteConfirm: "Really delete?",
   sitesTicketDeleteHint:
     "An event nobody has bought into disappears. Once a seat is sold the event is a record of the sale and stays.",
@@ -5800,6 +5804,9 @@ export const en = {
   sitesShopNotStocked: "No longer stocked",
   sitesShopUnits: (units: number) => (units === 1 ? "1 unit" : `${units} units`),
   sitesShopRemove: "Remove",
+  // Named per product (S2.16b2 rule): a shelf of rows is otherwise a column
+  // of buttons all called "Remove" with nothing to say which product.
+  sitesShopRemoveFor: (product: string) => `Remove ${product} from the shop`,
   sitesShopRemoveConfirm: "Really remove?",
   sitesShopRemoveHint:
     "Removing only takes the product out of the shop window. Orders already placed keep it.",

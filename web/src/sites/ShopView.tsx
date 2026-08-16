@@ -380,6 +380,15 @@ export function ShopView() {
                         variant={armedId === item.id ? "danger" : "ghost"}
                         size="sm"
                         icon={<Trash2 size="var(--icon-size-inline)" />}
+                        // Named per product (S2.16b2): a shelf of rows is
+                        // otherwise a column of identical "Remove" buttons.
+                        aria-label={
+                          armedId === item.id
+                            ? strings.sitesShopRemoveConfirm
+                            : strings.sitesShopRemoveFor(
+                                item.productName ?? strings.sitesShopGoneProduct,
+                              )
+                        }
                         disabled={busyId === item.id}
                         onClick={() => void remove(item.id)}
                       >

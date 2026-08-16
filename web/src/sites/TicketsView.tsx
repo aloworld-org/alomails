@@ -374,7 +374,14 @@ export function TicketsView() {
               </tr>
             </thead>
             <tbody>
-              {events.map((event) => (
+              {events.map((event) => {
+                // The row's controls are named after the event (S2.16b2):
+                // two rows are otherwise four buttons called "Seats..." and
+                // "Delete" with nothing to say which event they act on.
+                const eventLabel = `${
+                  event.productName ?? strings.sitesTicketGoneProduct
+                }, ${when.format(new Date(event.startsAt))}`;
+                return (
                 <tr key={event.id}>
                   <td>
                     <time dateTime={event.startsAt}>
@@ -414,6 +421,9 @@ export function TicketsView() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          aria-label={strings.sitesTicketChangeCapacityFor(
+                            eventLabel,
+                          )}
                           disabled={busyId === event.id}
                           onClick={() => {
                             setDialogError(null);
@@ -426,6 +436,11 @@ export function TicketsView() {
                           variant={armedId === event.id ? "danger" : "ghost"}
                           size="sm"
                           icon={<Trash2 size="var(--icon-size-inline)" />}
+                          aria-label={
+                            armedId === event.id
+                              ? strings.sitesTicketDeleteConfirm
+                              : strings.sitesTicketDeleteFor(eventLabel)
+                          }
                           disabled={busyId === event.id}
                           onClick={() => void remove(event)}
                         >
@@ -437,7 +452,8 @@ export function TicketsView() {
                     </td>
                   )}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
