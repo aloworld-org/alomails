@@ -197,6 +197,7 @@ pub mod sites_heatmap;
 pub mod sites_knowledge;
 pub mod sites_orders;
 pub mod sites_palette;
+pub mod sites_shop_config;
 pub mod sites_templates;
 pub mod sites_tickets;
 pub mod snooze;

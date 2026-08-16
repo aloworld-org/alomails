@@ -35,8 +35,8 @@ use crate::{
     settings, share, signup_route, site_protection, site_schedule, site_version_preview,
     site_versions, sites, sites_attribution, sites_bookings, sites_catalogs, sites_chat,
     sites_conversions, sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders,
-    sites_palette, sites_templates, sites_tickets, snooze, spaces, tasks, unsubscribe, wopi,
-    workspace_search,
+    sites_palette, sites_shop_config, sites_templates, sites_tickets, snooze, spaces, tasks,
+    unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -366,6 +366,14 @@ pub fn app_with_site_boundaries(
         .route(
             "/sites/generate",
             post(sites::generate_site).layer(DefaultBodyLimit::max(sites::MAX_SITE_GENERATE_BYTES)),
+        )
+        // Shop-setup proposal (S3.05b2). A static path on purpose: it is
+        // outside the site-editor allowlist in `scoped_roles`, so the
+        // restricted collaborator role never sees the prices and VAT it names.
+        .route(
+            "/sites/shop-config/propose",
+            post(sites_shop_config::propose)
+                .layer(DefaultBodyLimit::max(sites::MAX_SITE_GENERATE_BYTES)),
         )
         .route("/sites/subdomain-check", get(sites::check_subdomain))
         .route("/sites/theme-presets", get(sites::list_theme_presets))

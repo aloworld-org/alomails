@@ -90,7 +90,7 @@ const SITE_DOMAIN_VERIFY_VALUE_PREFIX: &str = "alo-site-verification=";
 /// A business description is prompt input, not a document upload. Bound it
 /// before buffering independently of the server's larger upload ceiling.
 pub const MAX_SITE_GENERATE_BYTES: usize = 16 * 1024;
-const MAX_SITE_DESCRIPTION_CHARS: usize = 8_000;
+pub(crate) const MAX_SITE_DESCRIPTION_CHARS: usize = 8_000;
 pub const MAX_SITE_EDIT_BYTES: usize = 64 * 1024;
 const MAX_SITE_EDIT_INSTRUCTION_CHARS: usize = 4_000;
 
