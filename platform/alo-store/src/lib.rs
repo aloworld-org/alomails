@@ -215,12 +215,16 @@ pub mod site_public_leads;
 pub mod site_public_orders;
 pub mod site_public_protection;
 pub mod site_public_shop;
+pub mod site_public_stock;
 pub mod site_public_tickets;
 pub mod site_publish;
 pub mod site_publish_schedule;
 pub mod site_registrar;
 pub mod site_registrar_fixture;
 pub mod site_seed;
+pub mod site_shop_items;
+pub mod site_stock_fulfil;
+pub mod site_stock_orders;
 pub mod site_templates;
 pub mod site_theme;
 pub mod site_ticket_fulfil;
@@ -446,9 +450,10 @@ pub use id::{
     ProjectId, ProjectMilestoneId, SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId,
     SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId,
     SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId,
-    SitePostId, SitePublishId, SitePublishScheduleId, SiteTicketEventId, SiteTicketFulfilmentId,
-    SiteTicketHoldId, SiteTicketOrderId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId,
-    TimeEntryId, TimeWeekId, UserId,
+    SitePostId, SitePublishId, SitePublishScheduleId, SiteShopItemId, SiteStockFulfilmentId,
+    SiteStockOrderId, SiteTicketEventId, SiteTicketFulfilmentId, SiteTicketHoldId,
+    SiteTicketOrderId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId,
+    UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
@@ -634,6 +639,9 @@ pub use site_public_protection::PublishedPageProtection;
 pub use site_public_shop::{
     PublicTicketCheckout, PublicTicketEvent, PublicTicketOrderStatus, TICKET_CHECKOUT_HOLD_TTL,
 };
+pub use site_public_stock::{
+    PublicStockCheckout, PublicStockItem, PublicStockOrderStatus, STOCK_CHECKOUT_HOLD_TTL,
+};
 pub use site_public_tickets::PublicTicket;
 pub use site_publish::{SitePageSnapshot, SitePublish};
 pub use site_publish_schedule::{
@@ -649,6 +657,12 @@ pub use site_registrar::{
 };
 pub use site_registrar_fixture::FixtureRegistrar;
 pub use site_seed::{SectionSeed, SeedBinding, SeedContext, SeedNeed, SeedPage, seed_section};
+pub use site_shop_items::{SHOP_SHIPPING_MAX_CENTS, SITE_SHOP_ITEM_MAX_PER_SITE, SiteShopItem};
+pub use site_stock_fulfil::{ClaimedStockFulfilment, StockFulfilWords, StockFulfilmentOutcome};
+pub use site_stock_orders::{
+    MAX_SITE_STOCK_ORDERS, STOCK_ORDER_GOODS_GONE, STOCK_ORDER_PAID_AFTER_LAPSE, ShipTo,
+    SiteStockOrder, SiteStockOrderState, StockPaymentTarget,
+};
 pub use site_templates::{
     SiteTemplate, SiteTemplatePage, TEMPLATE_PLACEHOLDER_PRICE, check_template, site_template,
     site_templates,

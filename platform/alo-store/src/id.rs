@@ -293,6 +293,26 @@ opaque_id!(
     SiteTicketFulfilmentId
 );
 opaque_id!(
+    /// One product listed for sale on a site's web shop (alo Commerce wave
+    /// two, ADR 0041, item S3.05a2) — a *reference* into Billing's price
+    /// list; what it costs and what is on the shelf are asked of the owning
+    /// seams at every read, never copied.
+    SiteShopItemId
+);
+opaque_id!(
+    /// One stock order — a buyer paying for the goods one Inventory hold
+    /// reserves, through a hosted payment page (ADR 0041, S3.05a2). Doubles
+    /// as the idempotency key the provider call is made under, so a retried
+    /// checkout never charges twice.
+    SiteStockOrderId
+);
+opaque_id!(
+    /// One fulfilment of a paid stock order — the record that the sale was
+    /// made good: the invoice raised, the contact in CRM (ADR 0041,
+    /// S3.05a2). One per order, inserted as the sweep's claim.
+    SiteStockFulfilmentId
+);
+opaque_id!(
     /// One domain a tenant is buying or renewing through alo — the whole
     /// arc from the price they were shown to the name serving their site.
     /// Doubles as the replay token the registrar call is made under, so a

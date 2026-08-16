@@ -435,7 +435,10 @@ impl SitePublicStore {
     /// owner — the same `(tenant, owner)` handshake every seam door uses,
     /// both halves read from the site's own row. `None` when the site row is
     /// gone from under its publish.
-    async fn catalog_door(&self, site: &PublishedSite) -> Result<Option<BillingCatalogRead>> {
+    pub(crate) async fn catalog_door(
+        &self,
+        site: &PublishedSite,
+    ) -> Result<Option<BillingCatalogRead>> {
         let owner: Option<String> =
             sqlx::query_scalar("SELECT created_by FROM sites WHERE tenant_id = $1 AND id = $2")
                 .bind(site.tenant.as_str())
@@ -455,7 +458,7 @@ impl SitePublicStore {
 
     /// The ticket machinery of the published site's tenant, opened as the
     /// site's owner. Same handshake as [`Self::catalog_door`].
-    async fn shop_door(&self, site: &PublishedSite) -> Result<Option<AccountStore>> {
+    pub(crate) async fn shop_door(&self, site: &PublishedSite) -> Result<Option<AccountStore>> {
         let owner: Option<String> =
             sqlx::query_scalar("SELECT created_by FROM sites WHERE tenant_id = $1 AND id = $2")
                 .bind(site.tenant.as_str())
@@ -493,7 +496,7 @@ fn describe_purchase(name: &str, starts_at: OffsetDateTime) -> String {
 
 /// The same shape gate every public door applies: refuse anything that cannot
 /// be a minted id before the database is involved at all.
-fn plausible(id: &str) -> Option<&str> {
+pub(crate) fn plausible(id: &str) -> Option<&str> {
     let id = id.trim();
     (!id.is_empty()
         && id.len() <= SHOP_ID_MAX_LEN

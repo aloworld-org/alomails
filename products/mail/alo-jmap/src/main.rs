@@ -213,6 +213,24 @@ async fn run(addr: SocketAddr) -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
+    // Background stock-fulfilment sweeper (alo Sites, ADR 0041, S3.05a2):
+    // put each paid web-shop sale on paper — the invoice in Billing, the
+    // contact in CRM — through the owning module's own door. The goods moved
+    // when the payment settled; this sweep owes the sale only its paper.
+    {
+        let store = Arc::clone(&store);
+        tokio::spawn(async move {
+            let mut tick = tokio::time::interval(std::time::Duration::from_secs(30));
+            loop {
+                tick.tick().await;
+                let fulfilled = alo_jmap::site_stock_worker::run_due(&store).await;
+                if fulfilled > 0 {
+                    tracing::info!(fulfilled, "stock fulfilment sweep");
+                }
+            }
+        });
+    }
+
     // Background ticket-mail sweeper (alo Sites, ADR 0050): send each
     // fulfilled sale's buyer their ticket, from the deployment's own
     // transactional address through the trusted submission listener. Spawned
