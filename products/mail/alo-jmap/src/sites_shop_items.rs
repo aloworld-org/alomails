@@ -19,7 +19,10 @@
 //! Errors follow the `/sites/{id}` contract: `401` unauthenticated, `404` for
 //! anything that does not resolve in the caller's tenant, `422` for a rule
 //! the store names (an already-listed product included — conflicts speak as
-//! 422 on this surface), `400` for a body that is not the shape.
+//! 422 on this surface), `400` for a body that is not the shape. The picker
+//! and both write verbs are owner-only (`403`, S3.06a): the picker reads the
+//! whole price list, and the shelf is what the business sells — only the
+//! shelf *as listed* is a collaborator's read.
 
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
@@ -35,7 +38,7 @@ use alo_store::{
 
 use crate::billing::iso;
 use crate::error::Problem;
-use crate::sites::{map_store_err, require_site};
+use crate::sites::{map_store_err, require_commerce_site, require_site};
 use crate::state::{AppState, authenticate};
 
 /// One shelf listing as the Shop screen shows it: the reference, and the
@@ -78,7 +81,7 @@ pub async fn list_products(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let site = SiteId::new(id);
-    require_site(&account, &site).await?;
+    require_commerce_site(&account, &site).await?;
     let (currency, candidates) = account
         .acc
         .site_shop_candidates(OffsetDateTime::now_utc())
@@ -131,7 +134,7 @@ pub async fn add_item(
     let account = authenticate(&state, &headers).await?;
     let req: AddItemBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let site = SiteId::new(id);
-    require_site(&account, &site).await?;
+    require_commerce_site(&account, &site).await?;
     let product = BillingProductId::new(req.product_id.trim().to_owned());
     let now = OffsetDateTime::now_utc();
     let created = account
@@ -164,7 +167,7 @@ pub async fn remove_item(
 ) -> Result<StatusCode, Problem> {
     let account = authenticate(&state, &headers).await?;
     let site = SiteId::new(id);
-    require_site(&account, &site).await?;
+    require_commerce_site(&account, &site).await?;
     account
         .acc
         .remove_site_shop_item(&site, &SiteShopItemId::new(item))

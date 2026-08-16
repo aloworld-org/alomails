@@ -149,11 +149,16 @@ export function ShopView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [detail, shelf, candidates, rate] = await Promise.all([
-        api.site(siteId),
+      // The detail first: whether the caller manages this site decides
+      // whether the picker — a read of the whole price list the server
+      // refuses a collaborator (S3.06a) — is asked for at all.
+      const detail = await api.site(siteId);
+      const [shelf, rate, candidates] = await Promise.all([
         api.shopItems(siteId),
-        api.shopProducts(siteId),
         api.shopShipping(siteId),
+        detail.canManageCollaborators
+          ? api.shopProducts(siteId)
+          : Promise.resolve(null),
       ]);
       setSite(detail);
       setList(shelf);
@@ -234,6 +239,7 @@ export function ShopView() {
     }
   }
 
+  const manager = site !== null && site.canManageCollaborators;
   const noCandidates = products !== null && products.products.length === 0;
   const allListed =
     addable !== null && addable.products.length === 0 && !noCandidates;
@@ -251,21 +257,27 @@ export function ShopView() {
         </div>
         <div className={styles.headerActions}>
           {loading && <Spinner size={16} />}
-          <Button
-            size="sm"
-            icon={<Plus size="var(--icon-size-inline)" />}
-            disabled={addable === null || addable.products.length === 0}
-            onClick={() => {
-              setDialogError(null);
-              setAdding(true);
-            }}
-          >
-            {strings.sitesShopAddProduct}
-          </Button>
+          {manager && (
+            <Button
+              size="sm"
+              icon={<Plus size="var(--icon-size-inline)" />}
+              disabled={addable === null || addable.products.length === 0}
+              onClick={() => {
+                setDialogError(null);
+                setAdding(true);
+              }}
+            >
+              {strings.sitesShopAddProduct}
+            </Button>
+          )}
         </div>
       </header>
 
       {error !== null && <ErrorBanner message={error} />}
+
+      {!loading && site !== null && !manager && (
+        <p className={styles.hint}>{strings.sitesCommerceReadOnly}</p>
+      )}
 
       {shipping !== null && list !== null && (
         <p className={styles.hint}>
@@ -274,20 +286,22 @@ export function ShopView() {
             : strings.sitesShopDeliveryRate(
                 formatPrice(shipping, list.currency, list.currencyExponent),
               )}{" "}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setDialogError(null);
-              setEditingDelivery(true);
-            }}
-          >
-            {strings.sitesShopDeliveryChange}
-          </Button>
+          {manager && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDialogError(null);
+                setEditingDelivery(true);
+              }}
+            >
+              {strings.sitesShopDeliveryChange}
+            </Button>
+          )}
         </p>
       )}
 
-      {!loading && noCandidates && items.length === 0 && (
+      {!loading && manager && noCandidates && items.length === 0 && (
         <EmptyState
           Icon={Package}
           title={strings.sitesShopNoProducts}
@@ -297,7 +311,7 @@ export function ShopView() {
         />
       )}
 
-      {!loading && !noCandidates && items.length === 0 && (
+      {!loading && manager && !noCandidates && items.length === 0 && (
         <EmptyState
           Icon={Package}
           title={strings.sitesShopEmptyTitle}
@@ -307,6 +321,14 @@ export function ShopView() {
             setDialogError(null);
             setAdding(true);
           }}
+        />
+      )}
+
+      {!loading && site !== null && !manager && items.length === 0 && (
+        <EmptyState
+          Icon={Package}
+          title={strings.sitesShopEmptyTitle}
+          body={strings.sitesCommerceReadOnly}
         />
       )}
 
@@ -320,7 +342,7 @@ export function ShopView() {
                 <th scope="col">{strings.sitesShopColWhat}</th>
                 <th scope="col">{strings.sitesShopColPrice}</th>
                 <th scope="col">{strings.sitesShopColShelf}</th>
-                <th scope="col">{strings.sitesColActions}</th>
+                {manager && <th scope="col">{strings.sitesColActions}</th>}
               </tr>
             </thead>
             <tbody>
@@ -347,19 +369,21 @@ export function ShopView() {
                       strings.sitesShopUnits(item.availableUnits)
                     )}
                   </td>
-                  <td>
-                    <Button
-                      variant={armedId === item.id ? "danger" : "ghost"}
-                      size="sm"
-                      icon={<Trash2 size="var(--icon-size-inline)" />}
-                      disabled={busyId === item.id}
-                      onClick={() => void remove(item.id)}
-                    >
-                      {armedId === item.id
-                        ? strings.sitesShopRemoveConfirm
-                        : strings.sitesShopRemove}
-                    </Button>
-                  </td>
+                  {manager && (
+                    <td>
+                      <Button
+                        variant={armedId === item.id ? "danger" : "ghost"}
+                        size="sm"
+                        icon={<Trash2 size="var(--icon-size-inline)" />}
+                        disabled={busyId === item.id}
+                        onClick={() => void remove(item.id)}
+                      >
+                        {armedId === item.id
+                          ? strings.sitesShopRemoveConfirm
+                          : strings.sitesShopRemove}
+                      </Button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

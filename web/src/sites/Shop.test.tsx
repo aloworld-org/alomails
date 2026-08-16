@@ -35,6 +35,15 @@ interface Reply {
 const calls: Call[] = [];
 let replies: Reply[] = [];
 
+/** The site detail is the owner's unless a test seeds its own reply, so the
+ *  screens exercise their full surface by default (S3.06a). */
+function fallbackBody(url: string, method: string): unknown {
+  if (method === "GET" && url.endsWith("/sites/site-1")) {
+    return { id: "site-1", name: "Site one", canManageCollaborators: true };
+  }
+  return {};
+}
+
 const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
   const method = init?.method ?? "GET";
   calls.push({
@@ -44,7 +53,9 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
   });
   const index = replies.findIndex((reply) => reply.match(url, method));
   const answer =
-    index === -1 ? { status: 200, body: {} } : (replies.splice(index, 1)[0] as Reply);
+    index === -1
+      ? { status: 200, body: fallbackBody(url, method) }
+      : (replies.splice(index, 1)[0] as Reply);
   return new Response(JSON.stringify(answer.body), {
     status: answer.status,
     headers: { "content-type": "application/json" },
@@ -115,6 +126,16 @@ function itemsReply(items: SiteShopItemRow[]): Reply {
   };
 }
 
+/** A restricted collaborator's view of the site (S3.06a): the server refuses
+ *  them the picker and the write verbs, so the screen must not offer either. */
+function collaboratorSiteReply(): Reply {
+  return {
+    match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+    status: 200,
+    body: { id: "site-1", name: "Site one", canManageCollaborators: false },
+  };
+}
+
 function shippingReply(cents: number): Reply {
   return {
     match: (url, method) => method === "GET" && url.endsWith("/shop-settings"),
@@ -155,6 +176,23 @@ describe("the shop screen", () => {
     expect(screen.getByText(strings.sitesShopNoProductsHint)).toBeTruthy();
     const add = screen.getByRole("button", { name: strings.sitesShopAddProduct });
     expect(add.hasAttribute("disabled")).toBe(true);
+  });
+
+  test("a collaborator reads the shelf and is offered nothing to change — and the price list is never asked for", async () => {
+    replies = [collaboratorSiteReply(), itemsReply([LISTED]), shippingReply(450)];
+
+    ui();
+
+    expect(await screen.findByText(strings.sitesCommerceReadOnly)).toBeTruthy();
+    expect(screen.getByText("Field guide")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: strings.sitesShopAddProduct }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: strings.sitesShopRemove })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: strings.sitesShopDeliveryChange }),
+    ).toBeNull();
+    expect(calls.some((call) => call.url.endsWith("/shop-products"))).toBe(false);
   });
 
   test("the shelf prices from the seams at this read; a gone product says so", async () => {
@@ -221,9 +259,12 @@ describe("the shop screen", () => {
 
     ui();
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: strings.sitesShopAddProduct }),
-    );
+    // Two doors to the same dialog exist here — the header button and the
+    // empty shelf's invitation — so take the first rather than assume one.
+    const [addDoor] = await screen.findAllByRole("button", {
+      name: strings.sitesShopAddProduct,
+    });
+    fireEvent.click(addDoor!);
 
     const refusal = "that item is not a stocked product; the shop sells from the shelf";
     replies = [

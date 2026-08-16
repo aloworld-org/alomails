@@ -5813,6 +5813,8 @@ export const en = {
   sitesShopAllListed: "Every stocked product is already in the shop.",
   sitesShopDeliveryRate: (price: string) => `Delivery is charged at ${price} per order.`,
   sitesShopDeliveryFree: "Delivery is free.",
+  sitesCommerceReadOnly:
+    "Only this website's owner can change what it sells and charges — you can look, not change.",
   sitesShopDeliveryChange: "Change delivery…",
   sitesShopDeliveryTitle: "Delivery per order",
   sitesShopDeliverySubtitle:

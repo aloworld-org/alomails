@@ -5005,6 +5005,8 @@ export const fr: Partial<Catalog> = {
   sitesShopDeliveryRate: (price: string) =>
     `La livraison est facturée ${price} par commande.`,
   sitesShopDeliveryFree: "La livraison est gratuite.",
+  sitesCommerceReadOnly:
+    "Seul le propriétaire de ce site peut modifier ce qu'il vend et ce qu'il facture — vous pouvez consulter, pas modifier.",
   sitesShopDeliveryChange: "Modifier la livraison…",
   sitesShopDeliveryTitle: "Livraison par commande",
   sitesShopDeliverySubtitle:

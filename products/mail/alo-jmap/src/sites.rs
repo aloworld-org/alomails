@@ -1097,6 +1097,25 @@ pub async fn get_site(
     Ok(Json(j))
 }
 
+/// The refusal on the commerce doors: what a website sells — and what its
+/// checkout charges — is the business's decision, not the website builder's.
+pub(crate) const COMMERCE_OWNER_ONLY: &str =
+    "Only this website's owner can change what it sells and charges.";
+
+/// The site, provided the caller may run the commerce behind it (S3.06a).
+/// A restricted collaborator (S2.03a) edits pages; the price-list pickers
+/// read Billing — a door their role exists to close — and the sale verbs
+/// (events, the shelf, the delivery rate) decide what the business sells.
+pub(crate) async fn require_commerce_site(
+    account: &Account,
+    site: &SiteId,
+) -> Result<Site, Problem> {
+    let site = require_site(account, site).await?;
+    require_site_manager(account, &site)
+        .map_err(|_| Problem::with(StatusCode::FORBIDDEN, COMMERCE_OWNER_ONLY))?;
+    Ok(site)
+}
+
 /// Admin, or the person who made this website. The line between editing a
 /// site (a collaborator's job, S2.03a) and administering one — inviting people
 /// to it, and buying domain names with the tenant's money

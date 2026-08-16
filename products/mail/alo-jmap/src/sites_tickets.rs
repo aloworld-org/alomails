@@ -20,7 +20,10 @@
 //!
 //! Errors follow the `/sites/{id}` contract: `401` unauthenticated, `404` for
 //! anything that does not resolve in the caller's tenant, `422` for a rule
-//! the store names, `400` for a body that is not the shape.
+//! the store names, `400` for a body that is not the shape. Everything but
+//! the event list is owner-only (`403`, S3.06a): the picker reads the whole
+//! price list and the verbs decide what is on sale — a restricted
+//! collaborator (S2.03a) edits pages, not the business behind them.
 
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, StatusCode};
@@ -37,7 +40,7 @@ use alo_store::{
 
 use crate::billing::iso;
 use crate::error::Problem;
-use crate::sites::{map_store_err, require_site};
+use crate::sites::{map_store_err, require_commerce_site, require_site};
 use crate::state::{Account, AppState, authenticate};
 
 /// One price-list item as the event dialog offers it: the seam's answer now,
@@ -79,7 +82,8 @@ fn event_json(
 
 /// `GET /sites/:id/ticket-products` -> the tenant's own price list through
 /// the same seam the shop prices with: what an event may sell, and the list
-/// currency. An empty list is an honest answer the dialog explains.
+/// currency. An empty list is an honest answer the dialog explains. Owner
+/// only (S3.06a): this is the whole price list, not the site's slice of it.
 pub async fn list_products(
     State(state): State<AppState>,
     headers: HeaderMap,
@@ -87,7 +91,7 @@ pub async fn list_products(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let site = SiteId::new(id);
-    require_site(&account, &site).await?;
+    require_commerce_site(&account, &site).await?;
     let (currency, items) = account
         .acc
         .site_ticket_sale_items()
@@ -172,6 +176,7 @@ pub async fn create_event(
         )
     })?;
     let site = SiteId::new(id);
+    require_commerce_site(&account, &site).await?;
     let product = BillingProductId::new(req.product_id.trim().to_owned());
     let created = account
         .acc
@@ -199,6 +204,7 @@ pub async fn set_capacity(
     let account = authenticate(&state, &headers).await?;
     let req: CapacityBody = serde_json::from_slice(&body).map_err(|_| Problem::not_json())?;
     let site = SiteId::new(id);
+    require_commerce_site(&account, &site).await?;
     let event = SiteTicketEventId::new(event);
     account
         .acc
@@ -216,9 +222,11 @@ pub async fn delete_event(
     Path((id, event)): Path<(String, String)>,
 ) -> Result<StatusCode, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let site = SiteId::new(id);
+    require_commerce_site(&account, &site).await?;
     account
         .acc
-        .delete_site_ticket_event(&SiteId::new(id), &SiteTicketEventId::new(event))
+        .delete_site_ticket_event(&site, &SiteTicketEventId::new(event))
         .await
         .map_err(map_store_err)?;
     Ok(StatusCode::NO_CONTENT)

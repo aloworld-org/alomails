@@ -33,6 +33,15 @@ interface Reply {
 const calls: Call[] = [];
 let replies: Reply[] = [];
 
+/** The site detail is the owner's unless a test seeds its own reply, so the
+ *  screens exercise their full surface by default (S3.06a). */
+function fallbackBody(url: string, method: string): unknown {
+  if (method === "GET" && url.endsWith("/sites/site-1")) {
+    return { id: "site-1", name: "Site one", canManageCollaborators: true };
+  }
+  return {};
+}
+
 const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
   const method = init?.method ?? "GET";
   calls.push({
@@ -42,7 +51,9 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
   });
   const index = replies.findIndex((reply) => reply.match(url, method));
   const answer =
-    index === -1 ? { status: 200, body: {} } : (replies.splice(index, 1)[0] as Reply);
+    index === -1
+      ? { status: 200, body: fallbackBody(url, method) }
+      : (replies.splice(index, 1)[0] as Reply);
   return new Response(JSON.stringify(answer.body), {
     status: answer.status,
     headers: { "content-type": "application/json" },
@@ -98,6 +109,16 @@ function productsReply(products: unknown[]): Reply {
   };
 }
 
+/** A restricted collaborator's view of the site (S3.06a): the server refuses
+ *  them the picker and the write verbs, so the screen must not offer either. */
+function collaboratorSiteReply(): Reply {
+  return {
+    match: (url, method) => method === "GET" && url.endsWith("/sites/site-1"),
+    status: 200,
+    body: { id: "site-1", name: "Site one", canManageCollaborators: false },
+  };
+}
+
 function eventsReply(events: SiteTicketEvent[]): Reply {
   return {
     match: (url, method) => method === "GET" && url.endsWith("/sites/site-1/tickets"),
@@ -139,6 +160,23 @@ describe("the tickets screen", () => {
     // Nothing can be created until Billing has an item, so the button says no.
     const create = screen.getByRole("button", { name: strings.sitesNewTicketEvent });
     expect(create.hasAttribute("disabled")).toBe(true);
+  });
+
+  test("a collaborator reads the box office and is offered nothing to change — and the price list is never asked for", async () => {
+    replies = [collaboratorSiteReply(), eventsReply([EVENING])];
+
+    ui();
+
+    expect(await screen.findByText(strings.sitesCommerceReadOnly)).toBeTruthy();
+    expect(screen.getByText("Letterpress workshop")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: strings.sitesNewTicketEvent }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: strings.sitesTicketChangeCapacity }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: strings.sitesTicketDelete })).toBeNull();
+    expect(calls.some((call) => call.url.endsWith("/ticket-products"))).toBe(false);
   });
 
   test("the list prices from the seam at this read; a gone item says so", async () => {

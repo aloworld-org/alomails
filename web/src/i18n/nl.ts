@@ -4946,6 +4946,8 @@ export const nl: Partial<Catalog> = {
   sitesShopDeliveryRate: (price: string) =>
     `Verzending kost ${price} per bestelling.`,
   sitesShopDeliveryFree: "Verzending is gratis.",
+  sitesCommerceReadOnly:
+    "Alleen de eigenaar van deze website kan wijzigen wat ze verkoopt en aanrekent — u kunt kijken, niet wijzigen.",
   sitesShopDeliveryChange: "Verzending wijzigen…",
   sitesShopDeliveryTitle: "Verzending per bestelling",
   sitesShopDeliverySubtitle:

@@ -205,10 +205,15 @@ export function TicketsView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [detail, events, items] = await Promise.all([
-        api.site(siteId),
+      // The detail first: whether the caller manages this site decides
+      // whether the picker — a read of the whole price list the server
+      // refuses a collaborator (S3.06a) — is asked for at all.
+      const detail = await api.site(siteId);
+      const [events, items] = await Promise.all([
         api.ticketEvents(siteId),
-        api.ticketProducts(siteId),
+        detail.canManageCollaborators
+          ? api.ticketProducts(siteId)
+          : Promise.resolve(null),
       ]);
       setSite(detail);
       setList(events);
@@ -284,6 +289,7 @@ export function TicketsView() {
     }
   }
 
+  const manager = site !== null && site.canManageCollaborators;
   const noProducts = products !== null && products.products.length === 0;
 
   return (
@@ -299,21 +305,27 @@ export function TicketsView() {
         </div>
         <div className={styles.headerActions}>
           {loading && <Spinner size={16} />}
-          <Button
-            size="sm"
-            icon={<Plus size="var(--icon-size-inline)" />}
-            disabled={products === null || noProducts}
-            onClick={() => {
-              setDialogError(null);
-              setCreating(true);
-            }}
-          >
-            {strings.sitesNewTicketEvent}
-          </Button>
+          {manager && (
+            <Button
+              size="sm"
+              icon={<Plus size="var(--icon-size-inline)" />}
+              disabled={products === null || noProducts}
+              onClick={() => {
+                setDialogError(null);
+                setCreating(true);
+              }}
+            >
+              {strings.sitesNewTicketEvent}
+            </Button>
+          )}
         </div>
       </header>
 
       {error !== null && <ErrorBanner message={error} />}
+
+      {!loading && site !== null && !manager && (
+        <p className={styles.hint}>{strings.sitesCommerceReadOnly}</p>
+      )}
 
       {!loading && noProducts && (
         <EmptyState
@@ -323,7 +335,7 @@ export function TicketsView() {
         />
       )}
 
-      {!loading && !noProducts && events.length === 0 && (
+      {!loading && manager && !noProducts && events.length === 0 && (
         <EmptyState
           Icon={Ticket}
           title={strings.sitesNoTicketEventsTitle}
@@ -336,6 +348,14 @@ export function TicketsView() {
         />
       )}
 
+      {!loading && site !== null && !manager && events.length === 0 && (
+        <EmptyState
+          Icon={Ticket}
+          title={strings.sitesNoTicketEventsTitle}
+          body={strings.sitesCommerceReadOnly}
+        />
+      )}
+
       {events.length > 0 && list !== null && (
         <div className={styles.tableWrapStatic}>
           <table className={styles.table}>
@@ -345,7 +365,7 @@ export function TicketsView() {
                 <th scope="col">{strings.sitesTicketWhat}</th>
                 <th scope="col">{strings.sitesTicketPrice}</th>
                 <th scope="col">{strings.sitesTicketSeats}</th>
-                <th scope="col">{strings.sitesColActions}</th>
+                {manager && <th scope="col">{strings.sitesColActions}</th>}
               </tr>
             </thead>
             <tbody>
@@ -383,32 +403,34 @@ export function TicketsView() {
                       </span>
                     )}
                   </td>
-                  <td>
-                    <div className={styles.catalogItemActions}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={busyId === event.id}
-                      onClick={() => {
-                        setDialogError(null);
-                        setResizing(event);
-                      }}
-                    >
-                      {strings.sitesTicketChangeCapacity}
-                    </Button>
-                    <Button
-                      variant={armedId === event.id ? "danger" : "ghost"}
-                      size="sm"
-                      icon={<Trash2 size="var(--icon-size-inline)" />}
-                      disabled={busyId === event.id}
-                      onClick={() => void remove(event)}
-                    >
-                      {armedId === event.id
-                        ? strings.sitesTicketDeleteConfirm
-                        : strings.sitesTicketDelete}
-                    </Button>
-                    </div>
-                  </td>
+                  {manager && (
+                    <td>
+                      <div className={styles.catalogItemActions}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={busyId === event.id}
+                          onClick={() => {
+                            setDialogError(null);
+                            setResizing(event);
+                          }}
+                        >
+                          {strings.sitesTicketChangeCapacity}
+                        </Button>
+                        <Button
+                          variant={armedId === event.id ? "danger" : "ghost"}
+                          size="sm"
+                          icon={<Trash2 size="var(--icon-size-inline)" />}
+                          disabled={busyId === event.id}
+                          onClick={() => void remove(event)}
+                        >
+                          {armedId === event.id
+                            ? strings.sitesTicketDeleteConfirm
+                            : strings.sitesTicketDelete}
+                        </Button>
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

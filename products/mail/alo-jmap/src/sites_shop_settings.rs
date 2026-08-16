@@ -13,7 +13,10 @@
 //! Errors follow the `/sites/{id}` contract: `401` unauthenticated, `404` for
 //! a site that does not resolve in the caller's tenant, `422` for a rate the
 //! store refuses (negative, or over its ceiling) with the store's sentence
-//! verbatim, `400` for a body that is not the shape.
+//! verbatim, `400` for a body that is not the shape. Reading the rate is a
+//! collaborator's read — the public checkout states it to strangers — but
+//! setting it is owner-only (`403`, S3.06a): it is a price the business
+//! charges.
 
 use axum::extract::{Path, State};
 use axum::http::HeaderMap;
@@ -25,7 +28,7 @@ use alo_store::SiteId;
 
 use crate::billing::parse_body;
 use crate::error::Problem;
-use crate::sites::{map_store_err, require_site};
+use crate::sites::{map_store_err, require_commerce_site, require_site};
 use crate::state::{AppState, authenticate};
 
 /// The one answer both verbs give: the settings as stored.
@@ -70,7 +73,7 @@ pub async fn set_settings(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let site = SiteId::new(id);
-    require_site(&account, &site).await?;
+    require_commerce_site(&account, &site).await?;
     let req: SettingsBody = parse_body(&body)?;
     account
         .acc

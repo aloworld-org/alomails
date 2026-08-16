@@ -631,14 +631,21 @@ export function SiteView() {
               >
                 {strings.sitesShop}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={<Store size="var(--icon-size-inline)" />}
-                onClick={() => navigate("shop-setup")}
-              >
-                {strings.sitesShopSetup}
-              </Button>
+              {/* Shop setup is all owner acts — the proposal names Billing
+                  prices and VAT, and every apply goes through owner-side
+                  routes (S3.06a) — so like the assistant it only renders for
+                  the person who can actually use it. Tickets and Shop stay:
+                  their lists are a collaborator's read. */}
+              {site.canManageCollaborators && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Store size="var(--icon-size-inline)" />}
+                  onClick={() => navigate("shop-setup")}
+                >
+                  {strings.sitesShopSetup}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"

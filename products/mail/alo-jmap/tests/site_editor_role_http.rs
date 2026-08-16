@@ -217,7 +217,10 @@ async fn the_editor_matrix_holds_over_the_surface_added_after_the_grant() {
         .unwrap();
 
     // The website itself, and the records it produced: this is the work the
-    // collaborator was invited to do.
+    // collaborator was invited to do. `tickets`, `shop-items` and
+    // `shop-settings` are the Wave-3 additions to this half — what is on sale
+    // and what delivery costs are facts the public pages already state, and
+    // the page editor's section forms read them.
     for path in [
         "pages",
         "posts",
@@ -230,6 +233,9 @@ async fn the_editor_matrix_holds_over_the_surface_added_after_the_grant() {
         "conversions",
         "domains",
         "publishes",
+        "tickets",
+        "shop-items",
+        "shop-settings",
     ] {
         let (status, body) = request(
             &h.app,
@@ -242,9 +248,23 @@ async fn the_editor_matrix_holds_over_the_surface_added_after_the_grant() {
         assert_eq!(status, StatusCode::OK, "{path}: {body}");
     }
 
-    // The money door, the guest list, and the CRM/Billing identities behind
-    // the enquiries — each refused by its own handler, not by the middleware.
-    for path in ["collaborators", "domain-purchases", "leads", "attribution"] {
+    // The money door, the guest list, the CRM/Billing identities behind the
+    // enquiries, the assistant (its budget is money, its knowledge is a
+    // publish-to-the-internet decision), and the commerce pickers that read
+    // the whole Billing price list — each refused by its own handler, not by
+    // the middleware.
+    for path in [
+        "collaborators",
+        "domain-purchases",
+        "leads",
+        "attribution",
+        "chat-settings",
+        "chat-appearance",
+        "chat-actions",
+        "chat-knowledge",
+        "ticket-products",
+        "shop-products",
+    ] {
         let (status, body) = request(
             &h.app,
             &token,
@@ -256,13 +276,49 @@ async fn the_editor_matrix_holds_over_the_surface_added_after_the_grant() {
         assert_eq!(status, StatusCode::FORBIDDEN, "{path}: {body}");
     }
 
-    // Buying is not reachable from the site-less half of the surface either.
-    for uri in [
-        "/api/sites/domain-catalog",
-        "/api/sites/domain-search?q=acme",
+    // Selling is not the collaborator's verb either: what is on sale, its
+    // capacity, and what checkout charges are the owner's decisions (S3.06a).
+    let denied_writes = [
+        (
+            "POST",
+            format!("/api/sites/{site}/tickets"),
+            json!({ "productId": "p", "startsAt": "2030-01-01T10:00:00Z", "capacity": 5 }),
+        ),
+        (
+            "POST",
+            format!("/api/sites/{site}/shop-items"),
+            json!({ "productId": "p" }),
+        ),
+        (
+            "PUT",
+            format!("/api/sites/{site}/shop-settings"),
+            json!({ "shippingCents": 100 }),
+        ),
+        (
+            "DELETE",
+            format!("/api/sites/{site}/tickets/not-an-event"),
+            json!({}),
+        ),
+        (
+            "DELETE",
+            format!("/api/sites/{site}/shop-items/not-an-item"),
+            json!({}),
+        ),
+    ];
+    for (method, uri, body) in denied_writes {
+        let (status, answer) = request(&h.app, &token, method, &uri, body).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{method} {uri}: {answer}");
+    }
+
+    // Buying — and the shop-setup proposal, which names Billing prices and
+    // VAT — is not reachable from the site-less half of the surface either.
+    for (method, uri) in [
+        ("GET", "/api/sites/domain-catalog"),
+        ("GET", "/api/sites/domain-search?q=acme"),
+        ("POST", "/api/sites/shop-config/propose"),
     ] {
-        let (status, body) = request(&h.app, &token, "GET", uri, json!({})).await;
-        assert_eq!(status, StatusCode::FORBIDDEN, "{uri}: {body}");
+        let (status, body) = request(&h.app, &token, method, uri, json!({})).await;
+        assert_eq!(status, StatusCode::FORBIDDEN, "{method} {uri}: {body}");
     }
 }
 
