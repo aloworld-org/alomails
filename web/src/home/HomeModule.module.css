@@ -775,10 +775,12 @@
   display: flex;
   align-items: center;
   gap: var(--space-4);
+  min-height: 92px;
   padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-lg);
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-tint);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-sm);
 }
 
 .askMark {
@@ -788,8 +790,8 @@
   width: 44px;
   height: 44px;
   flex-shrink: 0;
-  border-radius: var(--radius-full);
-  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  background: var(--accent-soft);
   color: var(--accent);
 }
 
