@@ -18,7 +18,8 @@ use crate::{
     admin, agent, agent_directory, ai, api, audit, audit_record, autoconfig, base, billing_bills,
     billing_customers, billing_fx, billing_invoices, billing_payments, billing_products,
     billing_quotes, billing_reminder, billing_reports, billing_schedules, billing_send,
-    billing_sepa, billing_settings, blob, calendar, carddav, chat, chat_agent_routes, contacts,
+    billing_sepa, billing_settings, blob, calendar, campaign_audience, campaign_consent,
+    campaign_segments, campaign_suppression, carddav, chat, chat_agent_routes, contacts,
     crm_activities, crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines,
     crm_reports, crm_stages, crm_threads, delegates, docs, drive, filters, finance_approvals,
     finance_bank, finance_bank_match, finance_chart, finance_expenses, finance_mileage,
@@ -1431,6 +1432,48 @@ pub fn app_with_site_boundaries(
         )
         .route("/crm/stages/{id}/move", post(crm_stages::move_stage))
         .route("/crm/stages/{id}/archive", post(crm_stages::archive_stage))
+        // alo Campaigns (ADR 0044, wave C1) — the audience and the question
+        // asked of it. NOTHING here sends: generating a campaign message needs
+        // the second sending IP the ADR requires, which is a purchase.
+        //
+        // The tally and the list both take the segment's conditions on the URL
+        // rather than a saved id, because the screen counts a question while it
+        // is still being typed — and a saved segment is the same conditions
+        // read back, so there is one counting path and not two.
+        .route("/campaigns/audience", get(campaign_audience::list_audience))
+        .route(
+            "/campaigns/audience/tally",
+            get(campaign_audience::audience_tally),
+        )
+        // Consent is append-only on the wire as well as in the table: recording
+        // the truth leaves both rows, where an edit would leave evidence that
+        // can be rewritten after a complaint arrives.
+        .route("/campaigns/consent", post(campaign_consent::record_consent))
+        .route(
+            "/campaigns/consent/{address}",
+            get(campaign_consent::consent_history),
+        )
+        // Suppression has no DELETE and never will (ADR 0044 §2): an API that
+        // can lift one is an API a bulk importer is eventually pointed at.
+        .route(
+            "/campaigns/suppressions",
+            get(campaign_suppression::list_suppressions)
+                .post(campaign_suppression::suppress_address),
+        )
+        .route(
+            "/campaigns/suppressions/{address}",
+            get(campaign_suppression::suppression_for),
+        )
+        .route(
+            "/campaigns/segments",
+            get(campaign_segments::list_segments).post(campaign_segments::create_segment),
+        )
+        .route(
+            "/campaigns/segments/{id}",
+            get(campaign_segments::get_segment)
+                .patch(campaign_segments::update_segment)
+                .delete(campaign_segments::delete_segment),
+        )
         // Deals. The move is its own POST for the same reason issuing an
         // invoice is: it writes a history row and can close the deal, so it must
         // never happen because an editor submitted a stale form.
