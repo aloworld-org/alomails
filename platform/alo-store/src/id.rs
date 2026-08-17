@@ -731,6 +731,14 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One recorded act of consent to be mailed (alo Campaigns, ADR 0044 §2,
+    /// wave C1.2). Identifies the *evidence*, never the person: consent is held
+    /// against an address, and a recipient carries this id so that "may we mail
+    /// them" and "how do we know" are answered from the same read.
+    CampaignConsentId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

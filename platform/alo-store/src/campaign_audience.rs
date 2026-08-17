@@ -49,23 +49,45 @@
 //! applied in SQL so the **count** is right, and mirrored by
 //! [`normalise_address`] so Rust and Postgres agree — a test holds them to it.
 //!
-//! ## What this module is not, yet
+//! ## Who exists, and who may be mailed
 //!
-//! It answers *who exists*, not *who may be mailed*. Consent (C1.2) and
-//! suppression (C1.3) are the gates on that, and both land inside
-//! [`sources_cte`] and [`people_cte`] rather than beside them: ADR 0044 §2 makes
-//! suppression absolute, which is only true if it is a property of this query
-//! instead of a rule the sender remembers. Archived customers are therefore
-//! **included** here — archiving hides a row from billing's pickers, it does not
-//! say the person asked us to stop, and conflating the two would quietly answer
-//! a consent question with a bookkeeping one.
+//! Two different questions, and this module answers both — from the same SQL,
+//! so they cannot disagree.
+//!
+//! - [`campaign_audience`](AccountStore::campaign_audience) is **who exists**:
+//!   every person the tenant holds a record of, each carrying their consent or
+//!   the absence of it. The audience screen (C1.5) needs the people it will not
+//!   mail, because "excluded, and here is why" is the only version of a count
+//!   that can be audited.
+//! - [`campaign_recipients`](AccountStore::campaign_recipients) is **who may be
+//!   mailed**: the same query with `consented_at IS NOT NULL` applied *inside*
+//!   it. ADR 0044 §2 says a campaign cannot be sent to somebody without a
+//!   consent record, and that is only true if it is a property of the query
+//!   rather than a filter every future caller remembers.
+//!
+//! The two return different types on purpose. A [`CampaignRecipient`] holds a
+//! [`ConsentEvidence`], not an `Option<ConsentEvidence>`, and nothing
+//! constructs one from an [`AudienceMember`] — so a sender that takes
+//! recipients cannot be handed the audience by mistake, and code that has a
+//! recipient in its hand is also holding the reason they are one.
+//!
+//! Suppression (C1.3) lands in the same place, for the same reason, and is
+//! stronger still: an unsubscribe, a hard bounce or a complaint removes
+//! somebody whatever their consent record says.
+//!
+//! Archived customers are **included** in both — archiving hides a row from
+//! billing's pickers, it does not say the person asked us to stop, and
+//! conflating the two would quietly answer a consent question with a
+//! bookkeeping one.
 //!
 //! Nothing in this module sends anything.
 
 use time::OffsetDateTime;
 
 use crate::account::AccountStore;
+use crate::campaign_consent::{ConsentEvidence, ConsentSource};
 use crate::error::{Result, StoreError};
+use crate::id::CampaignConsentId;
 
 /// The shape an address must have to be a recipient at all, as a POSIX regular
 /// expression Postgres and [`normalise_address`] both implement.
@@ -149,6 +171,38 @@ pub struct AudienceMember {
     /// When it last did — the freshest evidence the person is still in the
     /// tenant's orbit.
     pub last_seen_at: OffsetDateTime,
+    /// The freshest consent record for this address, or `None` when the tenant
+    /// has no evidence this person agreed to anything.
+    ///
+    /// `None` is not a gap to be filled in later by whoever sends: it is the
+    /// reason this person is not a [`CampaignRecipient`], and the audience
+    /// screen names it as such (C1.5).
+    pub consent: Option<ConsentEvidence>,
+}
+
+/// Somebody this tenant may actually mail.
+///
+/// The whole difference from [`AudienceMember`] is one field's type: consent is
+/// present, not optional. There is no constructor that takes an
+/// `Option<ConsentEvidence>` and no conversion from an audience member, so the
+/// only way to hold one of these is to have read it out of
+/// [`campaign_recipients`](AccountStore::campaign_recipients), which filters in
+/// SQL. ADR 0044 §2's "a campaign cannot be sent to somebody without one" is
+/// therefore a fact about the type a sender is handed, rather than a rule the
+/// sender has to apply.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CampaignRecipient {
+    /// The normalised address.
+    pub address: String,
+    /// The best name any source offers, or `None`.
+    pub name: Option<String>,
+    /// ISO 3166-1 alpha-2 where a billing customer names one.
+    pub country: Option<String>,
+    /// Every kind of record that holds this address.
+    pub sources: Vec<AudienceSource>,
+    /// How we know they agreed — the freshest record, and the id of the row to
+    /// read for its statement.
+    pub consent: ConsentEvidence,
 }
 
 /// A window onto the audience: keyset pagination by address.
@@ -261,15 +315,46 @@ fn sources_cte() -> String {
     )
 }
 
-/// The dedupe: source rows collapsed to one row per address.
+/// The freshest consent record per address, from
+/// [`campaign_consent`](crate::campaign_consent).
+///
+/// `DISTINCT ON` rather than a `max()` join, because the row we want is not
+/// just the newest timestamp: it is the whole record behind it, id included, so
+/// the caller can read the statement it was given for. The tie-break on `id`
+/// makes two records sharing a timestamp resolve to the same one on every read
+/// — a campaign that reported a different provenance on each refresh would be
+/// evidence of nothing.
+///
+/// A `LEFT JOIN` onto this, never an inner one: the audience must be able to
+/// show the people it may **not** mail, and the recipients query gets its
+/// exclusion from an explicit `consented_at IS NOT NULL` instead (see
+/// [`Reach`]).
+fn consent_cte() -> &'static str {
+    "consent AS ( \
+       SELECT DISTINCT ON (address) \
+              address, id AS consent_id, source AS consent_source, \
+              occurred_at AS consented_at \
+         FROM campaign_consent \
+        WHERE tenant_id = $1 \
+        ORDER BY address, occurred_at DESC, id DESC \
+     )"
+}
+
+/// The dedupe: source rows collapsed to one row per address, with that person's
+/// consent beside them.
 ///
 /// `min`/`max` over `seen_at` rather than one column per source, so adding a
 /// fourth source later changes [`sources_cte`] alone. The name and country are
 /// the first non-null by `rank` then age — deterministic, so the same tenant
 /// reads the same way twice.
+///
+/// Consent joins here, at the bottom, rather than in each query above it: that
+/// is what lets [`Reach::OnlyConsented`] be a predicate on a column instead of
+/// a rule four call sites have to remember, and it is where C1.3's suppression
+/// exclusion belongs too.
 fn people_cte() -> String {
     format!(
-        "WITH {sources}, people AS ( \
+        "WITH {sources}, {consent}, grouped AS ( \
            SELECT address, \
                   min(seen_at) AS first_seen_at, \
                   max(seen_at) AS last_seen_at, \
@@ -280,33 +365,78 @@ fn people_cte() -> String {
                      FILTER (WHERE country IS NOT NULL))[1] AS country \
              FROM sources \
             GROUP BY address \
+         ), people AS ( \
+           SELECT g.address, g.name, g.country, g.sources, \
+                  g.first_seen_at, g.last_seen_at, \
+                  c.consent_id, c.consent_source, c.consented_at \
+             FROM grouped g \
+             LEFT JOIN consent c ON c.address = g.address \
          )",
         sources = sources_cte(),
+        consent = consent_cte(),
     )
 }
 
-/// The SQL of one page of the audience.
+/// How far a query reaches: everybody the tenant holds, or only the people it
+/// may mail.
+///
+/// One enum instead of two hand-written query pairs, so "no consent record, no
+/// send" is a single string that the page query and the count query both build
+/// from and cannot drift apart on. A count that disagreed with the list it
+/// counts is the failure this shape exists to make impossible.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Reach {
+    /// Everybody, consented or not — what the audience screen shows, exclusions
+    /// included.
+    Anyone,
+    /// Only people with a consent record (ADR 0044 §2).
+    OnlyConsented,
+}
+
+impl Reach {
+    /// The predicate, always appended to an existing `WHERE`, so both queries
+    /// apply it identically or not at all.
+    fn predicate(self) -> &'static str {
+        match self {
+            Self::Anyone => "",
+            Self::OnlyConsented => " AND consented_at IS NOT NULL",
+        }
+    }
+}
+
+/// The columns both reads select, in the order [`MemberRow`] declares them.
+const MEMBER_COLUMNS: &str = "address, name, country, sources, first_seen_at, last_seen_at, \
+                              consent_id, consent_source, consented_at";
+
+/// The SQL of one page, at the given reach.
 ///
 /// The cursor is folded by **Postgres** (`lower(btrim($2))`), against the same
 /// collation that produced the addresses it is compared with — see
-/// [`normalise_address`] for why the comparison is not done in Rust.
-fn audience_page_sql() -> String {
+/// [`normalise_address`] for why the comparison is not done in Rust. The cursor
+/// test is parenthesised: an unbracketed `OR` with a reach predicate `AND`ed
+/// after it would bind the wrong way round and quietly return unconsented
+/// people on the first page.
+fn page_sql(reach: Reach) -> String {
     format!(
         "{people} \
-         SELECT address, name, country, sources, first_seen_at, last_seen_at \
+         SELECT {columns} \
            FROM people \
-          WHERE $2::text IS NULL OR address > lower(btrim($2::text)) \
+          WHERE ($2::text IS NULL OR address > lower(btrim($2::text))){reach} \
           ORDER BY address \
           LIMIT $3",
         people = people_cte(),
+        columns = MEMBER_COLUMNS,
+        reach = reach.predicate(),
     )
 }
 
-/// The SQL of the audience's size.
-fn audience_size_sql() -> String {
+/// The SQL of a count, at the given reach — counted in the database over the
+/// same CTEs the page walks, so the number and the list are the same question.
+fn count_sql(reach: Reach) -> String {
     format!(
-        "WITH {sources} SELECT count(DISTINCT address)::bigint FROM sources",
-        sources = sources_cte(),
+        "{people} SELECT count(*)::bigint FROM people WHERE true{reach}",
+        people = people_cte(),
+        reach = reach.predicate(),
     )
 }
 
@@ -318,7 +448,12 @@ fn audience_size_sql() -> String {
 /// counting them.
 #[cfg(test)]
 fn all_sql() -> Vec<String> {
-    vec![audience_page_sql(), audience_size_sql()]
+    vec![
+        page_sql(Reach::Anyone),
+        page_sql(Reach::OnlyConsented),
+        count_sql(Reach::Anyone),
+        count_sql(Reach::OnlyConsented),
+    ]
 }
 
 /// A row as the page query returns it.
@@ -330,6 +465,9 @@ struct MemberRow {
     sources: Vec<String>,
     first_seen_at: OffsetDateTime,
     last_seen_at: OffsetDateTime,
+    consent_id: Option<String>,
+    consent_source: Option<String>,
+    consented_at: Option<OffsetDateTime>,
 }
 
 impl MemberRow {
@@ -340,6 +478,45 @@ impl MemberRow {
     /// query changed under the enum, and reporting a person as reachable "from
     /// nowhere" would hide it.
     fn into_member(self) -> Result<AudienceMember> {
+        let sources = self.typed_sources()?;
+        let consent = self.consent()?;
+        Ok(AudienceMember {
+            address: self.address,
+            name: self.name,
+            country: self.country,
+            sources,
+            first_seen_at: self.first_seen_at,
+            last_seen_at: self.last_seen_at,
+            consent,
+        })
+    }
+
+    /// The same row read as somebody who may be mailed.
+    ///
+    /// Missing consent here is a **decode error rather than a skipped row**.
+    /// The query already excludes people without a record, so a row arriving
+    /// without one means the filter and this type have come apart — and
+    /// dropping the person quietly would turn that into a campaign that mails
+    /// fewer people than its count promised, which nobody would report as a
+    /// bug.
+    fn into_recipient(self) -> Result<CampaignRecipient> {
+        let sources = self.typed_sources()?;
+        let consent = self.consent()?.ok_or_else(|| {
+            StoreError::Db(sqlx::Error::Decode(
+                "the recipients query returned somebody with no consent record".into(),
+            ))
+        })?;
+        Ok(CampaignRecipient {
+            address: self.address,
+            name: self.name,
+            country: self.country,
+            sources,
+            consent,
+        })
+    }
+
+    /// The source tokens as the typed enum, ascending and without repeats.
+    fn typed_sources(&self) -> Result<Vec<AudienceSource>> {
         let mut sources = Vec::with_capacity(self.sources.len());
         for token in &self.sources {
             let source = AudienceSource::parse(token).ok_or_else(|| {
@@ -351,29 +528,105 @@ impl MemberRow {
         }
         sources.sort_unstable();
         sources.dedup();
-        Ok(AudienceMember {
-            address: self.address,
-            name: self.name,
-            country: self.country,
-            sources,
-            first_seen_at: self.first_seen_at,
-            last_seen_at: self.last_seen_at,
-        })
+        Ok(sources)
+    }
+
+    /// The joined consent, or `None` when this person has no record.
+    ///
+    /// The three columns come from one row of one table, so they are all
+    /// present or all absent; a partial triple means the join changed shape and
+    /// is reported rather than patched over with a default timestamp.
+    fn consent(&self) -> Result<Option<ConsentEvidence>> {
+        match (&self.consent_id, &self.consent_source, self.consented_at) {
+            (None, None, None) => Ok(None),
+            (Some(id), Some(token), Some(occurred_at)) => {
+                let source = ConsentSource::parse(token).ok_or_else(|| {
+                    StoreError::Db(sqlx::Error::Decode(
+                        "campaign consent names a source this build does not know".into(),
+                    ))
+                })?;
+                Ok(Some(ConsentEvidence {
+                    record: CampaignConsentId::new(id.clone()),
+                    source,
+                    occurred_at,
+                }))
+            }
+            _ => Err(StoreError::Db(sqlx::Error::Decode(
+                "a campaign consent join returned half a record".into(),
+            ))),
+        }
     }
 }
 
 impl AccountStore {
-    /// One page of the people this tenant could reach, in address order.
+    /// One page of the people this tenant holds a record of, in address order,
+    /// each carrying their consent or the absence of it.
     ///
-    /// Tenant-scoped by construction — every branch of [`sources_cte`] carries
-    /// `tenant_id = $1` — so a neighbour's customers, deals and form
-    /// submissions are not absent by filtering, they are unreachable.
+    /// **Who exists, not who may be mailed** — see
+    /// [`campaign_recipients`](Self::campaign_recipients) for that, and note
+    /// that these return different types precisely so the distinction cannot be
+    /// lost in a call. A member whose `consent` is `None` is a person this
+    /// tenant may not send to, shown because a count with no visible exclusions
+    /// is not auditable.
+    ///
+    /// Tenant-scoped by construction — every branch of [`sources_cte`] and the
+    /// consent join all carry `tenant_id = $1` — so a neighbour's customers,
+    /// deals, form submissions and consent records are not absent by filtering,
+    /// they are unreachable.
     ///
     /// # Errors
     /// [`StoreError::Validation`] when the page size is outside
     /// `1..=`[`AUDIENCE_PAGE_MAX`] or the cursor is not an address;
     /// [`StoreError::Db`] on failure.
     pub async fn campaign_audience(&self, page: &AudiencePage) -> Result<Vec<AudienceMember>> {
+        let rows = self.audience_rows(page, Reach::Anyone).await?;
+        rows.into_iter().map(MemberRow::into_member).collect()
+    }
+
+    /// How many people the tenant holds a record of — counted in the database
+    /// over the same CTEs, never by paging through them.
+    ///
+    /// The denominator the audience screen shows beside the number it may
+    /// actually mail.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn campaign_audience_size(&self) -> Result<i64> {
+        self.audience_count(Reach::Anyone).await
+    }
+
+    /// One page of the people this tenant **may mail**, in address order.
+    ///
+    /// The exclusion is `consented_at IS NOT NULL` inside the query (ADR 0044
+    /// §2): somebody with no consent record is not filtered out afterwards, they
+    /// are not in the result set, and a caller that forgets to check cannot
+    /// reach them because the type it gets back carries the evidence rather than
+    /// an `Option` of it.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] when the page size is outside
+    /// `1..=`[`AUDIENCE_PAGE_MAX`] or the cursor is not an address;
+    /// [`StoreError::Db`] on failure.
+    pub async fn campaign_recipients(&self, page: &AudiencePage) -> Result<Vec<CampaignRecipient>> {
+        let rows = self.audience_rows(page, Reach::OnlyConsented).await?;
+        rows.into_iter().map(MemberRow::into_recipient).collect()
+    }
+
+    /// How many people the tenant may mail.
+    ///
+    /// The honest number: the one a campaign's cost, its warm-up and its
+    /// complaint rate are all measured against, and never larger than
+    /// [`campaign_audience_size`](Self::campaign_audience_size).
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn campaign_recipient_count(&self) -> Result<i64> {
+        self.audience_count(Reach::OnlyConsented).await
+    }
+
+    /// The shared read behind both page methods: one validation of the page,
+    /// one bind order, one query builder.
+    async fn audience_rows(&self, page: &AudiencePage, reach: Reach) -> Result<Vec<MemberRow>> {
         if page.limit < 1 || page.limit > AUDIENCE_PAGE_MAX {
             return Err(StoreError::Validation(format!(
                 "a page of the audience is between 1 and {AUDIENCE_PAGE_MAX} people"
@@ -389,26 +642,18 @@ impl AccountStore {
                 )
             })?),
         };
-        let rows = sqlx::query_as::<_, MemberRow>(&audience_page_sql())
+        sqlx::query_as::<_, MemberRow>(&page_sql(reach))
             .bind(self.tenant.as_str())
             .bind(after)
             .bind(page.limit)
             .fetch_all(&self.pool)
             .await
-            .map_err(StoreError::Db)?;
-        rows.into_iter().map(MemberRow::into_member).collect()
+            .map_err(StoreError::Db)
     }
 
-    /// How many people the tenant could reach — counted in the database over the
-    /// same sources, never by paging through them.
-    ///
-    /// The number a segment's count (C1.4) is a subset of, and the denominator
-    /// the audience screen shows beside it.
-    ///
-    /// # Errors
-    /// [`StoreError::Db`] on failure.
-    pub async fn campaign_audience_size(&self) -> Result<i64> {
-        sqlx::query_scalar::<_, i64>(&audience_size_sql())
+    /// The shared count behind both count methods.
+    async fn audience_count(&self, reach: Reach) -> Result<i64> {
+        sqlx::query_scalar::<_, i64>(&count_sql(reach))
             .bind(self.tenant.as_str())
             .fetch_one(&self.pool)
             .await
@@ -446,7 +691,7 @@ mod tests {
     fn a_column_that_merely_mentions_a_contact_is_not_the_contacts_table() {
         // Guards the guard: the test above must keep passing for the right
         // reason, and `crm_deals.contact_email` is a source we depend on.
-        let sql = audience_page_sql();
+        let sql = page_sql(Reach::Anyone);
         assert!(identifiers(&sql).contains(&"contact_email"));
         assert!(identifiers(&sql).contains(&"contact_name"));
         assert!(!identifiers(&sql).contains(&"contacts"));
@@ -460,13 +705,61 @@ mod tests {
             for table in ["billing_customers", "crm_deals", "site_form_submissions"] {
                 assert!(names.contains(&table), "{table} missing from: {sql}");
             }
-            // One tenant predicate per source: no branch of the union may be
-            // reachable across tenants (Law 1).
+            // One tenant predicate per source, plus one on the consent join:
+            // nothing in this query may be reachable across tenants (Law 1),
+            // and a neighbour's consent record must not make our address
+            // mailable any more than their customer list does.
             assert_eq!(
                 sql.matches("tenant_id = $1").count(),
-                3,
-                "every source must carry its own tenant predicate: {sql}"
+                4,
+                "every source and the consent join must carry a tenant predicate: {sql}"
             );
+        }
+    }
+
+    #[test]
+    fn only_the_recipients_queries_exclude_people_with_no_consent_record() {
+        // ADR 0044 §2, as a property of the SQL: the exclusion is in the query
+        // the sender reads from, and it is *not* in the audience query, which
+        // has to show who was left out and why.
+        for consented in [
+            page_sql(Reach::OnlyConsented),
+            count_sql(Reach::OnlyConsented),
+        ] {
+            assert!(
+                consented.contains("consented_at IS NOT NULL"),
+                "a recipients query without the consent gate: {consented}"
+            );
+        }
+        for everyone in [page_sql(Reach::Anyone), count_sql(Reach::Anyone)] {
+            assert!(
+                !everyone.contains("consented_at IS NOT NULL"),
+                "the audience must show its exclusions: {everyone}"
+            );
+        }
+    }
+
+    #[test]
+    fn the_cursor_test_is_bracketed_so_the_consent_gate_cannot_be_ored_away() {
+        // `WHERE a OR b AND c` binds as `a OR (b AND c)`: without the brackets,
+        // the first page of the recipients — the one with no cursor — would
+        // return everybody, consent or not. The bug would be invisible in any
+        // test that starts by reading page one of a fully-consented tenant.
+        let sql = page_sql(Reach::OnlyConsented);
+        assert!(
+            sql.contains("WHERE ($2::text IS NULL OR address > lower(btrim($2::text)))"),
+            "the cursor test lost its brackets: {sql}"
+        );
+    }
+
+    #[test]
+    fn a_count_and_the_page_it_counts_are_the_same_question() {
+        // Both are built from `people_cte`, so a source added to one is added
+        // to the other. A count over a different set is how "1 200 recipients"
+        // becomes 900 sends.
+        let people = people_cte();
+        for sql in all_sql() {
+            assert!(sql.contains(&people), "a query built its own CTEs: {sql}");
         }
     }
 
@@ -528,33 +821,32 @@ mod tests {
         }
     }
 
-    #[test]
-    fn a_row_with_an_unknown_source_fails_the_read_rather_than_losing_provenance() {
-        let row = MemberRow {
+    /// A row as the page query would return it, with no consent joined.
+    fn member_row(sources: &[&str]) -> MemberRow {
+        MemberRow {
             address: "ann@x.test".to_owned(),
             name: None,
             country: None,
-            sources: vec!["billing_customer".to_owned(), "address_book".to_owned()],
+            sources: sources.iter().map(|s| (*s).to_owned()).collect(),
             first_seen_at: OffsetDateTime::UNIX_EPOCH,
             last_seen_at: OffsetDateTime::UNIX_EPOCH,
-        };
+            consent_id: None,
+            consent_source: None,
+            consented_at: None,
+        }
+    }
+
+    #[test]
+    fn a_row_with_an_unknown_source_fails_the_read_rather_than_losing_provenance() {
+        let row = member_row(&["billing_customer", "address_book"]);
         assert!(matches!(row.into_member(), Err(StoreError::Db(_))));
     }
 
     #[test]
     fn a_person_from_two_sources_is_one_member_naming_both() {
-        let row = MemberRow {
-            address: "ann@x.test".to_owned(),
-            name: Some("Ann Dupont".to_owned()),
-            country: Some("BE".to_owned()),
-            sources: vec![
-                "site_form".to_owned(),
-                "billing_customer".to_owned(),
-                "site_form".to_owned(),
-            ],
-            first_seen_at: OffsetDateTime::UNIX_EPOCH,
-            last_seen_at: OffsetDateTime::UNIX_EPOCH,
-        };
+        let mut row = member_row(&["site_form", "billing_customer", "site_form"]);
+        row.name = Some("Ann Dupont".to_owned());
+        row.country = Some("BE".to_owned());
         let member = row
             .into_member()
             .unwrap_or_else(|e| panic!("{e:?}"))
@@ -563,5 +855,61 @@ mod tests {
             member,
             [AudienceSource::BillingCustomer, AudienceSource::SiteForm]
         );
+    }
+
+    #[test]
+    fn a_person_with_no_consent_record_is_in_the_audience_and_is_not_a_recipient() {
+        // The two answers this module gives about the same person, at the type
+        // level: they exist, and they may not be mailed.
+        let member = member_row(&["billing_customer"])
+            .into_member()
+            .unwrap_or_else(|e| panic!("{e:?}"));
+        assert_eq!(member.consent, None);
+        assert!(matches!(
+            member_row(&["billing_customer"]).into_recipient(),
+            Err(StoreError::Db(_))
+        ));
+    }
+
+    #[test]
+    fn a_recipient_carries_the_evidence_they_are_one() {
+        let mut row = member_row(&["site_form"]);
+        row.consent_id = Some("cns".to_owned());
+        row.consent_source = Some("site_form".to_owned());
+        row.consented_at = Some(OffsetDateTime::UNIX_EPOCH);
+        let recipient = row.into_recipient().unwrap_or_else(|e| panic!("{e:?}"));
+        assert_eq!(
+            recipient.consent,
+            ConsentEvidence {
+                record: CampaignConsentId::new("cns"),
+                source: ConsentSource::SiteForm,
+                occurred_at: OffsetDateTime::UNIX_EPOCH,
+            }
+        );
+    }
+
+    #[test]
+    fn half_a_consent_record_is_reported_rather_than_completed() {
+        // All three columns come from one row of one table. A partial triple
+        // means the join changed shape, and inventing the missing part — a
+        // default timestamp, an "unknown" source — would put a person into a
+        // send with provenance we made up.
+        let mut row = member_row(&["crm_deal"]);
+        row.consent_id = Some("cns".to_owned());
+        assert!(matches!(row.into_member(), Err(StoreError::Db(_))));
+
+        let mut row = member_row(&["crm_deal"]);
+        row.consent_source = Some("import".to_owned());
+        row.consented_at = Some(OffsetDateTime::UNIX_EPOCH);
+        assert!(matches!(row.into_member(), Err(StoreError::Db(_))));
+    }
+
+    #[test]
+    fn a_consent_source_this_build_does_not_know_fails_the_read() {
+        let mut row = member_row(&["billing_customer"]);
+        row.consent_id = Some("cns".to_owned());
+        row.consent_source = Some("assumed".to_owned());
+        row.consented_at = Some(OffsetDateTime::UNIX_EPOCH);
+        assert!(matches!(row.into_member(), Err(StoreError::Db(_))));
     }
 }

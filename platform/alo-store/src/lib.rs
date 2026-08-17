@@ -54,6 +54,7 @@ pub mod blob;
 pub mod calendar;
 pub mod calendar_availability;
 pub mod campaign_audience;
+pub mod campaign_consent;
 pub mod changes;
 pub mod chat;
 pub mod chat_agent_dm;
@@ -316,7 +317,11 @@ pub use blob::GarageConfig;
 pub use blob::{BlobStore, ShareStream};
 pub use calendar_availability::{CalendarAvailability, CalendarBusySpan};
 pub use campaign_audience::{
-    AUDIENCE_PAGE_MAX, AudienceMember, AudiencePage, AudienceSource, normalise_address,
+    AUDIENCE_PAGE_MAX, AudienceMember, AudiencePage, AudienceSource, CampaignRecipient,
+    normalise_address,
+};
+pub use campaign_consent::{
+    CONSENT_STATEMENT_MAX, CampaignConsent, ConsentEvidence, ConsentSource, NewCampaignConsent,
 };
 pub use changes::Changes;
 pub use chat::{ChannelKind, ChannelVisibility, ChatChannel, ChatMember, MemberRole};
@@ -442,22 +447,22 @@ pub use id::{
     AttachmentId, BankLineId, BankMatchId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId,
     BaseViewId, BillingBillId, BillingCustomerId, BillingInvoiceId, BillingLineId,
     BillingPaymentId, BillingProductId, BillingQuoteId, BillingScheduleId, BlobId, CalendarId,
-    CategoryId, ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, ChatToolRunId,
-    CommentId, ContactId, CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId,
-    DriveNodeId, EventId, FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId,
-    FinMileageId, FinMileageRateId, FinPeriodId, FinPostingId, GroupId, HrApplicantId,
-    HrApplicantNoteId, HrChecklistStepId, HrChecklistTemplateId, HrDocumentId, HrEmployeeId,
-    HrEmploymentId, HrLeavePolicyId, HrLeaveRequestId, HrLetterTemplateId, HrOpeningId,
-    HrPayrollExportId, InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId,
-    InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId,
-    InvSoInvoiceId, InvStockHoldId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId,
-    ProjectId, ProjectMilestoneId, SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId,
-    SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId,
-    SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId,
-    SitePostId, SitePublishId, SitePublishScheduleId, SiteShopItemId, SiteStockFulfilmentId,
-    SiteStockOrderId, SiteTicketEventId, SiteTicketFulfilmentId, SiteTicketHoldId,
-    SiteTicketOrderId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId,
-    UserId,
+    CampaignConsentId, CategoryId, ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId,
+    ChatToolRunId, CommentId, ContactId, CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId,
+    CrmStageId, DriveNodeId, EventId, FinAccountId, FinCategoryId, FinEntryId, FinExpenseId,
+    FinMatchRuleId, FinMileageId, FinMileageRateId, FinPeriodId, FinPostingId, GroupId,
+    HrApplicantId, HrApplicantNoteId, HrChecklistStepId, HrChecklistTemplateId, HrDocumentId,
+    HrEmployeeId, HrEmploymentId, HrLeavePolicyId, HrLeaveRequestId, HrLetterTemplateId,
+    HrOpeningId, HrPayrollExportId, InsightDashboardId, InsightTileId, InvCountId, InvLocationId,
+    InvMoveId, InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId,
+    InvSoDeliveryId, InvSoInvoiceId, InvStockHoldId, InvSupplierId, LabelId, MailboxId, MeetingId,
+    MessageId, ProjectId, ProjectMilestoneId, SiteBookingAppointmentId, SiteBookingId,
+    SiteCatalogCategoryId, SiteCatalogId, SiteCatalogItemId, SiteCollectionId,
+    SiteDomainPurchaseId, SiteFormId, SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId,
+    SiteLeadLinkId, SiteOrderId, SitePageId, SitePostId, SitePublishId, SitePublishScheduleId,
+    SiteShopItemId, SiteStockFulfilmentId, SiteStockOrderId, SiteTicketEventId,
+    SiteTicketFulfilmentId, SiteTicketHoldId, SiteTicketOrderId, SpaceId, SubtaskId, TaskId,
+    TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,
