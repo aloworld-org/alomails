@@ -389,22 +389,25 @@ export function HomeModule() {
               </ul>
             )}
           </section>
+
+          <section className={`${styles.card} ${styles.ask}`}>
+            <div className={styles.cardHead}>
+              <div className={styles.askHeading}>
+                <span className={styles.askMark}>
+                  <Hand size={18} />
+                </span>
+                <h2 className={styles.cardHeadTitle}>{strings.homeAskTitle}</h2>
+              </div>
+              <button type="button" className={styles.link} onClick={() => navigate("/mail")}>
+                <Sparkles size={14} />
+                {strings.homeAskCta}
+                <ArrowRight size={14} />
+              </button>
+            </div>
+            <p className={styles.askBody}>{strings.homeAskBody}</p>
+          </section>
         </aside>
       </div>
-
-      <section className={styles.ask}>
-        <span className={styles.askMark}>
-          <Hand size={22} />
-        </span>
-        <div className={styles.askText}>
-          <p className={styles.askTitle}>{strings.homeAskTitle}</p>
-          <p className={styles.askBody}>{strings.homeAskBody}</p>
-        </div>
-        <button type="button" className={styles.askCta} onClick={() => navigate("/mail")}>
-          <Sparkles size={16} />
-          {strings.homeAskCta}
-        </button>
-      </section>
     </div>
   );
 }
