@@ -33,10 +33,10 @@ import { mostUsedApps } from "../shell/appUsage";
 
 type Tab = "recent" | "starred" | "unread";
 
-const cardClass = "rounded-lg border border-subtle bg-surface p-4 shadow-sm";
+const cardClass = "rounded-xl border border-subtle bg-surface p-5 shadow-sm";
 const cardHeadClass = "mb-3 flex items-center justify-between gap-3";
 const cardTitleClass = "m-0 text-md font-semibold text-primary";
-const linkClass = "inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md px-2 text-sm font-medium text-secondary transition-colors hover:bg-raised hover:text-accent";
+const linkClass = "inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md px-2 text-sm font-medium text-secondary transition-colors hover:bg-raised hover:text-accent focus-visible:outline-2 focus-visible:outline-accent";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -203,7 +203,7 @@ export function HomeModule() {
           </button>
           <button
             type="button"
-            className="inline-flex h-[42px] shrink-0 items-center gap-2 rounded-md bg-accent px-4 text-base font-semibold text-on-accent shadow-sm transition-colors hover:bg--hover"
+            className="inline-flex h-[42px] shrink-0 items-center gap-2 rounded-md !bg-accent px-4 text-base font-semibold !text-on-accent shadow-sm transition-colors hover:!bg--hover"
             onClick={() => navigate("/mail?compose=1")}
           >
             <PenLine size={17} />
@@ -243,8 +243,8 @@ export function HomeModule() {
       </section>
 
       {tools.length > 0 && (
-        <section className="rounded-lg border border-subtle bg-surface p-4 shadow-sm" aria-labelledby="home-tools-title">
-          <div className="mb-3 flex items-start justify-between">
+        <section className="rounded-xl border border-subtle bg-surface p-5 shadow-sm" aria-labelledby="home-tools-title">
+          <div className="mb-4 flex items-start justify-between">
             <div>
               <h2 id="home-tools-title" className="m-0 text-md font-semibold text-primary">
                 {strings.homeToolsTitle}
@@ -252,15 +252,15 @@ export function HomeModule() {
               <p className="mb-0 mt-0.5 text-xs text-tertiary">{strings.homeToolsSubtitle}</p>
             </div>
           </div>
-          <div className="grid grid-cols-6 gap-2 max-lg:grid-cols-3 max-sm:grid-cols-2">
+          <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-sm:grid-cols-2">
             {tools.map((tool) => (
               <button
                 key={tool.id}
                 type="button"
-                className="group grid min-h-[58px] min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-subtle bg-app px-3 py-2 text-left text-primary transition hover:-translate-y-px hover:border--tint hover:bg--soft"
+                className="group grid min-h-[54px] min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-transparent bg-raised px-3 py-2 text-left text-primary transition hover:-translate-y-px hover:border-[var(--accent-tint)] hover:bg-[var(--accent-soft)] focus-visible:outline-2 focus-visible:outline-accent"
                 onClick={() => navigate(tool.path)}
               >
-                <span className="inline-flex size-[34px] items-center justify-center rounded-md bg-surface text-accent" aria-hidden>
+                <span className="inline-flex size-8 items-center justify-center rounded-md bg-surface text-accent shadow-sm" aria-hidden>
                   <tool.Icon size={19} strokeWidth={1.8} />
                 </span>
                 <span className="min-w-0 truncate whitespace-nowrap text-sm font-semibold">{tool.label}</span>
@@ -271,10 +271,10 @@ export function HomeModule() {
         </section>
       )}
 
-      <div className="grid grid-cols-[minmax(0,2.05fr)_minmax(320px,1fr)] [grid-template-areas:'mail_calendar'_'ask_tasks'] items-stretch gap-4 max-lg:grid-cols-1 max-lg:[grid-template-areas:'mail'_'calendar'_'tasks'_'ask']">
+      <div className="grid grid-cols-[minmax(0,2fr)_minmax(320px,1fr)] [grid-template-areas:'mail_calendar'_'ask_tasks'] items-stretch gap-4 max-lg:grid-cols-1 max-lg:[grid-template-areas:'mail'_'calendar'_'tasks'_'ask']">
         <section className={`${cardClass} [grid-area:mail]`}>
           <div className={cardHeadClass}>
-            <div className="flex items-center gap-1" role="tablist">
+            <div className="flex items-center gap-2" role="tablist">
               <Tabs tab={tab} onChange={setTab} />
             </div>
             <button type="button" className={linkClass} onClick={() => navigate("/mail")}>
@@ -394,7 +394,7 @@ export function HomeModule() {
             )}
           </section>
 
-          <section className={`${cardClass} min-h-[132px] [grid-area:ask]`}>
+          <section className={`${cardClass} flex min-h-[168px] flex-col [grid-area:ask]`}>
             <div className={cardHeadClass}>
               <div className="flex min-w-0 items-center gap-2">
                 <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg--soft text-accent">
@@ -408,7 +408,9 @@ export function HomeModule() {
                 <ArrowRight size={14} />
               </button>
             </div>
-            <p className="mb-0 ml-11 mt-2 max-w-[34ch] text-sm leading-normal text-secondary max-sm:ml-0">{strings.homeAskBody}</p>
+            <div className="flex flex-1 items-center pl-11 max-sm:pl-0">
+              <p className="m-0 max-w-[42ch] text-sm leading-relaxed text-secondary">{strings.homeAskBody}</p>
+            </div>
           </section>
         </aside>
       </div>
@@ -452,13 +454,15 @@ function StatCard({ Icon, label, cta, onClick, value, loading, tone }: StatCardP
         ? "bg-[var(--success-bg)] text-[var(--success-text)]"
         : "bg-raised text-secondary";
   return (
-    <button type="button" className="group grid min-h-[104px] grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-2 items-center gap-x-3 rounded-lg border border-subtle bg-surface p-4 text-left shadow-sm transition hover:-translate-y-px hover:border-default hover:shadow-md max-sm:min-h-[92px]" onClick={onClick}>
-      <span className={`row-span-2 inline-flex size-11 items-center justify-center rounded-md ${iconClass}`}>
+    <button type="button" className="group flex min-h-[112px] items-center gap-4 rounded-xl border border-subtle bg-surface p-5 text-left shadow-sm transition hover:-translate-y-px hover:border-default hover:shadow-md focus-visible:outline-2 focus-visible:outline-accent max-sm:min-h-[96px]" onClick={onClick}>
+      <span className={`inline-flex size-11 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>
         <Icon size={20} />
       </span>
-      <span className="self-end text-2xl font-bold leading-none tabular-nums text-primary">{loading === true ? "—" : (value ?? 0)}</span>
-      <span className="self-start text-sm text-secondary">{label}</span>
-      <span className="row-span-2 inline-flex items-center gap-1 self-center text-xs font-medium text-tertiary transition-colors group-hover:text-accent">
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <span className="text-2xl font-bold leading-none tabular-nums text-primary">{loading === true ? "—" : (value ?? 0)}</span>
+        <span className="truncate text-sm text-secondary">{label}</span>
+      </span>
+      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-tertiary transition-colors group-hover:text-accent">
         {cta}
         <ArrowRight size={13} />
       </span>
@@ -490,7 +494,7 @@ function Tabs({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
           type="button"
           role="tab"
           aria-selected={tab === it.id}
-          className={tab === it.id ? "min-h-8 rounded-full bg--soft px-3 text-sm font-medium text-accent" : "min-h-8 rounded-full px-3 text-sm font-medium text-secondary transition-colors hover:bg-raised hover:text-primary"}
+          className={tab === it.id ? "min-h-8 rounded-full border border-[var(--accent-tint)] !bg-[var(--accent-soft)] px-3 text-sm font-semibold text-accent" : "min-h-8 rounded-full border border-transparent px-3 text-sm font-medium text-secondary transition-colors hover:border-subtle hover:bg-raised hover:text-primary"}
           onClick={() => onChange(it.id)}
         >
           {it.label}
