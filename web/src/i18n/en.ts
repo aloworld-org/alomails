@@ -58,7 +58,7 @@ export const en = {
   homeViewAll: "View all",
   homeNoRecent: "Nothing here yet.",
   homeQuickActions: "Quick actions",
-  homeCompose: "Compose email",
+  homeCompose: "Compose",
   homeCreateEvent: "Create event",
   homeStartChat: "Start chat",
   homeUploadFile: "Upload file",
@@ -68,6 +68,11 @@ export const en = {
   homeAskTitle: "Ask alo anything",
   homeAskBody: "Your AI assistant for everything at work.",
   homeAskCta: "Ask alo",
+  homeAskPlaceholder: "Ask me anything…",
+  homeAskUnavailable: "alo is unavailable right now. Please try again shortly.",
+  homeMailClearTitle: "You're all caught up!",
+  homeCalendarClearTitle: "No events today",
+  homeTasksClearTitle: "All clear!",
   moduleAi: "Ask AI",
 
   // shell

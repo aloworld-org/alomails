@@ -113,7 +113,7 @@ export const fr: Partial<Catalog> = {
   homeViewAll: "Tout voir",
   homeNoRecent: "Rien pour l’instant.",
   homeQuickActions: "Actions rapides",
-  homeCompose: "Écrire un courriel",
+  homeCompose: "Rédiger",
   homeCreateEvent: "Créer un événement",
   homeStartChat: "Démarrer une conversation",
   homeUploadFile: "Téléverser un fichier",
@@ -124,6 +124,11 @@ export const fr: Partial<Catalog> = {
   homeAskTitle: "Demandez tout à alo",
   homeAskBody: "Votre assistant IA pour tout votre travail.",
   homeAskCta: "Demander à alo",
+  homeAskPlaceholder: "Demandez-moi ce que vous voulez…",
+  homeAskUnavailable: "alo est indisponible pour le moment. Réessayez bientôt.",
+  homeMailClearTitle: "Vous êtes à jour !",
+  homeCalendarClearTitle: "Aucun événement aujourd’hui",
+  homeTasksClearTitle: "Tout est en ordre !",
   moduleAi: "Demander à l’IA",
 
   // shell

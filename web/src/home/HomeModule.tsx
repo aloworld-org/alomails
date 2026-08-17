@@ -14,7 +14,9 @@ import {
   Circle,
   Hand,
   Mail,
+  MessageCircle,
   PenLine,
+  Send,
   Search,
   Sparkles,
   Star,
@@ -30,6 +32,7 @@ import { formatDate, senderName, subjectOr } from "../mail/format";
 import { surface } from "../product";
 import { isModuleAllowed, useDeniedModules } from "../shell";
 import { mostUsedApps } from "../shell/appUsage";
+import { useChatApi } from "../chat/api";
 
 type Tab = "recent" | "starred" | "unread";
 
@@ -63,17 +66,22 @@ export function HomeModule() {
   const { identity } = useAuth();
   const navigate = useNavigate();
   const deniedModules = useDeniedModules();
+  const chatApi = useChatApi();
 
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [unreadEmails, setUnreadEmails] = useState<number | null>(null);
   const [upcomingEvents, setUpcomingEvents] = useState<number | null>(null);
   const [dueToday, setDueToday] = useState<number | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState<number | null>(null);
   const [recent, setRecent] = useState<EmailHeaders[]>([]);
   const [starred, setStarred] = useState<EmailHeaders[]>([]);
   const [todayEvents, setTodayEvents] = useState<CalendarEvent[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tab, setTab] = useState<Tab>("recent");
+  const [askText, setAskText] = useState("");
+  const [askReply, setAskReply] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -86,11 +94,12 @@ export function HomeModule() {
       const inbox = boxes.find((b) => b.role === "inbox") ?? boxes[0];
       setUnreadEmails(inbox?.unreadEmails ?? 0);
 
-      const [headers, flagged, plate, events] = await Promise.all([
+      const [headers, flagged, plate, events, rooms] = await Promise.all([
         inbox ? client.emailHeaders(inbox.id, 8) : Promise.resolve([]),
         client.flaggedHeaders(8).catch(() => []),
         client.myPlate().catch(() => []),
         client.calendarEvents(startOfToday.toISOString(), weekAhead.toISOString()).catch(() => []),
+        chatApi.channels().catch(() => []),
       ]);
 
       setRecent(headers);
@@ -105,12 +114,13 @@ export function HomeModule() {
           .sort((a, b) => a.startsAt.localeCompare(b.startsAt)),
       );
       setUpcomingEvents(events.filter((e) => new Date(e.startsAt) >= now).length);
+      setUnreadMessages(rooms.reduce((total, room) => total + room.unread, 0));
     } catch {
       // Best-effort: the dashboard degrades to empty states, never an error.
     } finally {
       setLoading(false);
     }
-  }, [client]);
+  }, [chatApi, client]);
 
   useEffect(() => {
     void load();
@@ -138,7 +148,7 @@ export function HomeModule() {
     const byId = new Map(available.map((module) => [module.id, module]));
     const preferredDefaults = ["mail", "agenda", "tasks", "chat", "meet", "drive"];
     const orderedIds = [
-      ...mostUsedApps(6),
+      ...mostUsedApps(8),
       ...preferredDefaults,
       ...available.map((module) => module.id),
     ];
@@ -146,7 +156,7 @@ export function HomeModule() {
     return [...new Set(orderedIds)]
       .map((id) => byId.get(id))
       .filter((module): module is NonNullable<typeof module> => module !== undefined)
-      .slice(0, 6);
+      .slice(0, 8);
   }, [deniedModules]);
 
   function runSearch(e: React.FormEvent) {
@@ -163,6 +173,24 @@ export function HomeModule() {
       await load();
     } catch {
       await load();
+    }
+  }
+
+  async function askAlo(e: React.FormEvent) {
+    e.preventDefault();
+    const query = askText.trim();
+    if (query.length === 0 || asking) return;
+    setAsking(true);
+    setAskReply(null);
+    try {
+      const reply = await client.askAgent(query);
+      setAskReply(
+        reply.answer ?? reply.action?.say ?? strings.homeAskUnavailable,
+      );
+    } catch {
+      setAskReply(strings.homeAskUnavailable);
+    } finally {
+      setAsking(false);
     }
   }
 
@@ -187,6 +215,7 @@ export function HomeModule() {
             placeholder={strings.homeSearchPlaceholder}
             aria-label={strings.homeSearchPlaceholder}
           />
+          <kbd className="hidden rounded-md bg-raised px-2 py-1 font-ui text-[11px] font-medium text-tertiary sm:inline-flex">Ctrl K</kbd>
         </form>
 
         <div className="flex shrink-0 items-center gap-3 max-sm:order-2">
@@ -240,6 +269,15 @@ export function HomeModule() {
           cta={strings.homeViewTasks}
           onClick={() => navigate("/tasks")}
         />
+        <StatCard
+          Icon={MessageCircle}
+          tone="message"
+          value={unreadMessages}
+          loading={loading}
+          label={strings.homeStatMessages}
+          cta={strings.moduleChat}
+          onClick={() => navigate("/chat")}
+        />
       </section>
 
       {tools.length > 0 && (
@@ -252,15 +290,15 @@ export function HomeModule() {
               <p className="mb-0 mt-0.5 text-xs text-tertiary">{strings.homeToolsSubtitle}</p>
             </div>
           </div>
-          <div className="grid grid-cols-6 gap-3 max-lg:grid-cols-3 max-sm:grid-cols-2">
-            {tools.map((tool) => (
+          <div className="grid grid-cols-8 gap-3 max-xl:grid-cols-4 max-sm:grid-cols-2">
+            {tools.map((tool, index) => (
               <button
                 key={tool.id}
                 type="button"
-                className="group grid min-h-[54px] min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-transparent bg-raised px-3 py-2 text-left text-primary transition hover:-translate-y-px hover:border-[var(--accent-tint)] hover:bg-[var(--accent-soft)] focus-visible:outline-2 focus-visible:outline-accent"
+                className="group grid min-h-[54px] min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-transparent bg-transparent px-2 py-2 text-left text-primary transition hover:bg-raised focus-visible:outline-2 focus-visible:outline-accent"
                 onClick={() => navigate(tool.path)}
               >
-                <span className="inline-flex size-8 items-center justify-center rounded-md bg-surface text-accent shadow-sm" aria-hidden>
+                <span className={`inline-flex size-9 items-center justify-center rounded-lg shadow-sm ${index % 3 === 1 ? "bg-[var(--success-bg)] text-[var(--success-text)]" : index % 3 === 2 ? "bg-[var(--accent-secondary-tint)] text-[var(--accent-secondary)]" : "bg-[var(--accent-soft)] text-accent"}`} aria-hidden>
                   <tool.Icon size={19} strokeWidth={1.8} />
                 </span>
                 <span className="min-w-0 truncate whitespace-nowrap text-sm font-semibold">{tool.label}</span>
@@ -287,7 +325,7 @@ export function HomeModule() {
               <Spinner size={20} />
             </div>
           ) : rows.length === 0 ? (
-            <EmptyState Icon={Mail} message={strings.homeNoRecent} action={strings.homeGoToMail} onAction={() => navigate("/mail")} />
+            <EmptyState Icon={Mail} title={strings.homeMailClearTitle} message={strings.homeNoRecent} action={strings.homeGoToMail} onAction={() => navigate("/mail")} />
           ) : (
             <ul className="m-0 list-none p-0">
               {rows.slice(0, 6).map((e) => {
@@ -331,7 +369,7 @@ export function HomeModule() {
                 <Spinner size={18} />
               </div>
             ) : todayEvents.length === 0 ? (
-              <EmptyState Icon={Calendar} message={strings.homeNoEventsToday} action={strings.homeViewCalendar} onAction={() => navigate("/agenda")} compact />
+              <EmptyState Icon={Calendar} title={strings.homeCalendarClearTitle} message={strings.homeNoEventsToday} action={strings.homeViewCalendar} onAction={() => navigate("/agenda")} compact />
             ) : (
               <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {todayEvents.slice(0, 4).map((e, i) => (
@@ -366,7 +404,7 @@ export function HomeModule() {
                 <Spinner size={18} />
               </div>
             ) : tasks.length === 0 ? (
-              <EmptyState Icon={CheckCircle2} message={strings.homeNoTasks} action={strings.homeViewTasks} onAction={() => navigate("/tasks")} compact />
+              <EmptyState Icon={CheckCircle2} title={strings.homeTasksClearTitle} message={strings.homeNoTasks} action={strings.homeViewTasks} onAction={() => navigate("/tasks")} compact />
             ) : (
               <ul className="m-0 flex list-none flex-col gap-1 p-0">
                 {tasks.slice(0, 5).map((t) => (
@@ -402,14 +440,28 @@ export function HomeModule() {
                 </span>
                 <h2 className={cardTitleClass}>{strings.homeAskTitle}</h2>
               </div>
-              <button type="button" className={linkClass} onClick={() => navigate("/mail")}>
-                <Sparkles size={14} />
-                {strings.homeAskCta}
-                <ArrowRight size={14} />
-              </button>
+              <Sparkles size={16} className="text-accent" aria-hidden />
             </div>
-            <div className="flex flex-1 items-center pl-11 max-sm:pl-0">
-              <p className="m-0 max-w-[42ch] text-sm leading-relaxed text-secondary">{strings.homeAskBody}</p>
+            <div className="flex flex-1 flex-col justify-center gap-3">
+              <p className="m-0 text-sm leading-relaxed text-secondary">{strings.homeAskBody}</p>
+              <form className="flex min-h-12 items-center gap-2 rounded-lg border border-subtle bg-app p-1.5 pl-4 transition focus-within:border-accent focus-within:ring-2 focus-within:ring-[var(--accent-tint)]" onSubmit={(e) => void askAlo(e)}>
+                <input
+                  className="min-w-0 flex-1 border-0 bg-transparent text-sm text-primary outline-none placeholder:text-tertiary"
+                  value={askText}
+                  onChange={(e) => setAskText(e.target.value)}
+                  placeholder={strings.homeAskPlaceholder}
+                  aria-label={strings.homeAskPlaceholder}
+                />
+                <button
+                  type="submit"
+                  className="inline-flex size-10 shrink-0 items-center justify-center rounded-md !bg-accent !text-on-accent transition-colors hover:!bg--hover disabled:cursor-not-allowed disabled:opacity-50"
+                  disabled={askText.trim().length === 0 || asking}
+                  aria-label={strings.homeAskCta}
+                >
+                  {asking ? <Spinner size={16} /> : <Send size={17} />}
+                </button>
+              </form>
+              {askReply !== null && <p className="m-0 line-clamp-2 text-sm leading-relaxed text-primary" aria-live="polite">{askReply}</p>}
             </div>
           </section>
         </aside>
@@ -443,7 +495,7 @@ interface StatCardProps {
   onClick: () => void;
   value?: number | null;
   loading?: boolean;
-  tone: "accent" | "neutral" | "success";
+  tone: "accent" | "neutral" | "success" | "message";
 }
 
 function StatCard({ Icon, label, cta, onClick, value, loading, tone }: StatCardProps) {
@@ -452,6 +504,8 @@ function StatCard({ Icon, label, cta, onClick, value, loading, tone }: StatCardP
       ? "bg--soft text-accent"
       : tone === "success"
         ? "bg-[var(--success-bg)] text-[var(--success-text)]"
+        : tone === "message"
+          ? "bg-[var(--accent-secondary-tint)] text-[var(--accent-secondary)]"
         : "bg-raised text-secondary";
   return (
     <button type="button" className="group flex min-h-[112px] items-center gap-4 rounded-xl border border-subtle bg-surface p-5 text-left shadow-sm transition hover:-translate-y-px hover:border-default hover:shadow-md focus-visible:outline-2 focus-visible:outline-accent max-sm:min-h-[96px]" onClick={onClick}>
@@ -462,18 +516,19 @@ function StatCard({ Icon, label, cta, onClick, value, loading, tone }: StatCardP
         <span className="text-2xl font-bold leading-none tabular-nums text-primary">{loading === true ? "—" : (value ?? 0)}</span>
         <span className="truncate text-sm text-secondary">{label}</span>
       </span>
-      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-tertiary transition-colors group-hover:text-accent">
-        {cta}
+      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-full text-secondary transition group-hover:translate-x-0.5 group-hover:bg-raised group-hover:text-accent" aria-label={cta}>
+        <span className="sr-only">{cta}</span>
         <ArrowRight size={13} />
       </span>
     </button>
   );
 }
 
-function EmptyState({ Icon, message, action, onAction, compact = false }: { Icon: LucideIcon; message: string; action: string; onAction: () => void; compact?: boolean }) {
+function EmptyState({ Icon, title, message, action, onAction, compact = false }: { Icon: LucideIcon; title: string; message: string; action: string; onAction: () => void; compact?: boolean }) {
   return (
     <div className={`flex flex-col items-center justify-center gap-2 p-5 text-center ${compact ? "min-h-[132px] py-3" : "min-h-[210px]"}`}>
-      <span className="inline-flex size-[42px] items-center justify-center rounded-lg bg--soft text-accent"><Icon size={19} aria-hidden="true" /></span>
+      <span className="inline-flex size-12 items-center justify-center rounded-full bg--soft text-accent"><Icon size={20} aria-hidden="true" /></span>
+      <strong className="text-sm font-semibold text-primary">{title}</strong>
       <p className="m-0 max-w-[34ch] text-sm leading-normal text-tertiary">{message}</p>
       <button className="inline-flex min-h-[34px] items-center gap-1 rounded-md border border-subtle bg-surface px-3 text-sm font-medium text-primary transition-colors hover:border-accent hover:bg--soft" type="button" onClick={onAction}>{action}<ArrowRight size={13} aria-hidden="true" /></button>
     </div>
@@ -494,7 +549,7 @@ function Tabs({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
           type="button"
           role="tab"
           aria-selected={tab === it.id}
-          className={tab === it.id ? "min-h-8 rounded-full border border-[var(--accent-tint)] !bg-[var(--accent-soft)] px-3 text-sm font-semibold text-accent" : "min-h-8 rounded-full border border-transparent px-3 text-sm font-medium text-secondary transition-colors hover:border-subtle hover:bg-raised hover:text-primary"}
+          className={tab === it.id ? "min-h-9 border-b-2 border-accent px-2 text-sm font-semibold text-primary" : "min-h-9 border-b-2 border-transparent px-2 text-sm font-medium text-secondary transition-colors hover:text-primary"}
           onClick={() => onChange(it.id)}
         >
           {it.label}

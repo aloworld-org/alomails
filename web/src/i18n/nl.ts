@@ -114,7 +114,7 @@ export const nl: Partial<Catalog> = {
   homeViewAll: "Alles bekijken",
   homeNoRecent: "Nog niets hier.",
   homeQuickActions: "Snelle acties",
-  homeCompose: "E-mail opstellen",
+  homeCompose: "Opstellen",
   homeCreateEvent: "Afspraak maken",
   homeStartChat: "Chat starten",
   homeUploadFile: "Bestand uploaden",
@@ -125,6 +125,11 @@ export const nl: Partial<Catalog> = {
   homeAskTitle: "Vraag alo alles",
   homeAskBody: "Uw AI-assistent voor al uw werk.",
   homeAskCta: "Vraag alo",
+  homeAskPlaceholder: "Vraag me alles…",
+  homeAskUnavailable: "alo is momenteel niet beschikbaar. Probeer het zo opnieuw.",
+  homeMailClearTitle: "U bent helemaal bij!",
+  homeCalendarClearTitle: "Geen afspraken vandaag",
+  homeTasksClearTitle: "Alles is klaar!",
   moduleAi: "Vraag AI",
 
   // shell
