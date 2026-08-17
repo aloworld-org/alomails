@@ -60,10 +60,11 @@
 //!   mail, because "excluded, and here is why" is the only version of a count
 //!   that can be audited.
 //! - [`campaign_recipients`](AccountStore::campaign_recipients) is **who may be
-//!   mailed**: the same query with `consented_at IS NOT NULL` applied *inside*
-//!   it. ADR 0044 §2 says a campaign cannot be sent to somebody without a
-//!   consent record, and that is only true if it is a property of the query
-//!   rather than a filter every future caller remembers.
+//!   mailed**: the same query with `consented_at IS NOT NULL AND suppressed_at
+//!   IS NULL` applied *inside* it. ADR 0044 §2 says a campaign cannot be sent
+//!   to somebody without a consent record and that suppression is absolute, and
+//!   both are only true if they are properties of the query rather than filters
+//!   every future caller remembers.
 //!
 //! The two return different types on purpose. A [`CampaignRecipient`] holds a
 //! [`ConsentEvidence`], not an `Option<ConsentEvidence>`, and nothing
@@ -71,9 +72,14 @@
 //! recipients cannot be handed the audience by mistake, and code that has a
 //! recipient in its hand is also holding the reason they are one.
 //!
-//! Suppression (C1.3) lands in the same place, for the same reason, and is
-//! stronger still: an unsubscribe, a hard bounce or a complaint removes
-//! somebody whatever their consent record says.
+//! Suppression ([`campaign_suppression`](crate::campaign_suppression), C1.3)
+//! sits in the same `WHERE`, and is the stronger of the two rules: an
+//! unsubscribe, a hard bounce or a complaint removes somebody **whatever their
+//! consent record says**, so an import that re-states an agreement cannot
+//! resurrect them. The audience still shows them, carrying the reason, because
+//! "excluded, and here is why" is the only version of a count that can be
+//! audited — and a person who unsubscribed is still a customer the tenant
+//! invoices.
 //!
 //! Archived customers are **included** in both — archiving hides a row from
 //! billing's pickers, it does not say the person asked us to stop, and
@@ -86,8 +92,9 @@ use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::campaign_consent::{ConsentEvidence, ConsentSource};
+use crate::campaign_suppression::{SuppressionEvidence, SuppressionReason};
 use crate::error::{Result, StoreError};
-use crate::id::CampaignConsentId;
+use crate::id::{CampaignConsentId, CampaignSuppressionId};
 
 /// The shape an address must have to be a recipient at all, as a POSIX regular
 /// expression Postgres and [`normalise_address`] both implement.
@@ -178,6 +185,15 @@ pub struct AudienceMember {
     /// reason this person is not a [`CampaignRecipient`], and the audience
     /// screen names it as such (C1.5).
     pub consent: Option<ConsentEvidence>,
+    /// Why this person may never be mailed again, or `None` when nothing has
+    /// suppressed them.
+    ///
+    /// `Some` **overrides consent entirely** (ADR 0044 §2: absolute and
+    /// tenant-wide), and it is carried here rather than merely acted on because
+    /// the audience screen has to be able to say *who* was excluded and *why* —
+    /// somebody who unsubscribed is still a customer the tenant invoices, and a
+    /// count that quietly dropped them would be unauditable.
+    pub suppression: Option<SuppressionEvidence>,
 }
 
 /// Somebody this tenant may actually mail.
@@ -190,6 +206,13 @@ pub struct AudienceMember {
 /// SQL. ADR 0044 §2's "a campaign cannot be sent to somebody without one" is
 /// therefore a fact about the type a sender is handed, rather than a rule the
 /// sender has to apply.
+///
+/// There is deliberately **no suppression field**: a suppressed person is not a
+/// recipient at all, so the only honest value would be a permanent `None`, and
+/// an `Option` a sender can read invites a sender that checks it — which is the
+/// caller-applied rule C1.3 exists to abolish. The absence is enforced twice:
+/// the query excludes them, and [`MemberRow::into_recipient`] refuses a row
+/// that arrives carrying one.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CampaignRecipient {
     /// The normalised address.
@@ -340,6 +363,28 @@ fn consent_cte() -> &'static str {
      )"
 }
 
+/// Who this tenant may never mail again, from
+/// [`campaign_suppression`](crate::campaign_suppression).
+///
+/// No `DISTINCT ON` and no ordering, because that table is keyed
+/// `(tenant_id, address)`: one person, one answer, decided by the schema rather
+/// than by a window function that a later migration could quietly change the
+/// meaning of.
+///
+/// A `LEFT JOIN` again, and for a sharper reason than consent's: a suppressed
+/// person must still appear in the audience, carrying their reason. They are
+/// usually somebody the tenant invoices — dropping them from the count of who
+/// it holds records for would answer a mailing question with a bookkeeping one,
+/// and the screen (C1.5) has to name them.
+fn suppression_cte() -> &'static str {
+    "suppression AS ( \
+       SELECT address, id AS suppression_id, reason AS suppression_reason, \
+              occurred_at AS suppressed_at \
+         FROM campaign_suppression \
+        WHERE tenant_id = $1 \
+     )"
+}
+
 /// The dedupe: source rows collapsed to one row per address, with that person's
 /// consent beside them.
 ///
@@ -348,13 +393,12 @@ fn consent_cte() -> &'static str {
 /// the first non-null by `rank` then age — deterministic, so the same tenant
 /// reads the same way twice.
 ///
-/// Consent joins here, at the bottom, rather than in each query above it: that
-/// is what lets [`Reach::OnlyConsented`] be a predicate on a column instead of
-/// a rule four call sites have to remember, and it is where C1.3's suppression
-/// exclusion belongs too.
+/// Consent and suppression both join here, at the bottom, rather than in each
+/// query above them: that is what lets [`Reach::Mailable`] be a predicate on two
+/// columns instead of a rule four call sites have to remember.
 fn people_cte() -> String {
     format!(
-        "WITH {sources}, {consent}, grouped AS ( \
+        "WITH {sources}, {consent}, {suppression}, grouped AS ( \
            SELECT address, \
                   min(seen_at) AS first_seen_at, \
                   max(seen_at) AS last_seen_at, \
@@ -368,45 +412,57 @@ fn people_cte() -> String {
          ), people AS ( \
            SELECT g.address, g.name, g.country, g.sources, \
                   g.first_seen_at, g.last_seen_at, \
-                  c.consent_id, c.consent_source, c.consented_at \
+                  c.consent_id, c.consent_source, c.consented_at, \
+                  s.suppression_id, s.suppression_reason, s.suppressed_at \
              FROM grouped g \
              LEFT JOIN consent c ON c.address = g.address \
+             LEFT JOIN suppression s ON s.address = g.address \
          )",
         sources = sources_cte(),
         consent = consent_cte(),
+        suppression = suppression_cte(),
     )
 }
 
 /// How far a query reaches: everybody the tenant holds, or only the people it
 /// may mail.
 ///
-/// One enum instead of two hand-written query pairs, so "no consent record, no
-/// send" is a single string that the page query and the count query both build
-/// from and cannot drift apart on. A count that disagreed with the list it
-/// counts is the failure this shape exists to make impossible.
+/// One enum instead of two hand-written query pairs, so "no consent record and
+/// no suppression, or no send" is a single string that the page query and the
+/// count query both build from and cannot drift apart on. A count that
+/// disagreed with the list it counts is the failure this shape exists to make
+/// impossible.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Reach {
-    /// Everybody, consented or not — what the audience screen shows, exclusions
-    /// included.
+    /// Everybody the tenant holds a record of — what the audience screen shows,
+    /// exclusions included and each carrying its reason.
     Anyone,
-    /// Only people with a consent record (ADR 0044 §2).
-    OnlyConsented,
+    /// Only people with a consent record and no suppression (ADR 0044 §2).
+    Mailable,
 }
 
 impl Reach {
     /// The predicate, always appended to an existing `WHERE`, so both queries
     /// apply it identically or not at all.
+    ///
+    /// Both halves in one string on purpose. They are two different rules —
+    /// consent is permission the tenant was given, suppression is permission
+    /// taken back and is the stronger of the two — but there is no query in
+    /// this crate that wants one without the other, and offering the choice is
+    /// how a "just the consented ones" call site eventually mails somebody who
+    /// unsubscribed.
     fn predicate(self) -> &'static str {
         match self {
             Self::Anyone => "",
-            Self::OnlyConsented => " AND consented_at IS NOT NULL",
+            Self::Mailable => " AND consented_at IS NOT NULL AND suppressed_at IS NULL",
         }
     }
 }
 
 /// The columns both reads select, in the order [`MemberRow`] declares them.
 const MEMBER_COLUMNS: &str = "address, name, country, sources, first_seen_at, last_seen_at, \
-                              consent_id, consent_source, consented_at";
+                              consent_id, consent_source, consented_at, \
+                              suppression_id, suppression_reason, suppressed_at";
 
 /// The SQL of one page, at the given reach.
 ///
@@ -450,9 +506,9 @@ fn count_sql(reach: Reach) -> String {
 fn all_sql() -> Vec<String> {
     vec![
         page_sql(Reach::Anyone),
-        page_sql(Reach::OnlyConsented),
+        page_sql(Reach::Mailable),
         count_sql(Reach::Anyone),
-        count_sql(Reach::OnlyConsented),
+        count_sql(Reach::Mailable),
     ]
 }
 
@@ -468,6 +524,9 @@ struct MemberRow {
     consent_id: Option<String>,
     consent_source: Option<String>,
     consented_at: Option<OffsetDateTime>,
+    suppression_id: Option<String>,
+    suppression_reason: Option<String>,
+    suppressed_at: Option<OffsetDateTime>,
 }
 
 impl MemberRow {
@@ -480,6 +539,7 @@ impl MemberRow {
     fn into_member(self) -> Result<AudienceMember> {
         let sources = self.typed_sources()?;
         let consent = self.consent()?;
+        let suppression = self.suppression()?;
         Ok(AudienceMember {
             address: self.address,
             name: self.name,
@@ -488,6 +548,7 @@ impl MemberRow {
             first_seen_at: self.first_seen_at,
             last_seen_at: self.last_seen_at,
             consent,
+            suppression,
         })
     }
 
@@ -501,6 +562,19 @@ impl MemberRow {
     /// bug.
     fn into_recipient(self) -> Result<CampaignRecipient> {
         let sources = self.typed_sources()?;
+        // Suppression is checked first and hardest. It is the stronger rule —
+        // a suppressed person is not a recipient however good their consent
+        // record is — and it is the one whose failure arrives at somebody who
+        // has already asked us to stop.
+        if let Some(suppression) = self.suppression()? {
+            return Err(StoreError::Db(sqlx::Error::Decode(
+                format!(
+                    "the recipients query returned somebody suppressed as {}",
+                    suppression.reason.as_str()
+                )
+                .into(),
+            )));
+        }
         let consent = self.consent()?.ok_or_else(|| {
             StoreError::Db(sqlx::Error::Decode(
                 "the recipients query returned somebody with no consent record".into(),
@@ -556,6 +630,38 @@ impl MemberRow {
             ))),
         }
     }
+
+    /// The joined suppression, or `None` when nothing has suppressed this
+    /// person.
+    ///
+    /// Same discipline as [`consent`](Self::consent), and the stakes are higher
+    /// in one direction: half a triple here would be a person the tenant is
+    /// told it may mail. Rather than guessing which half is right, the read
+    /// fails.
+    fn suppression(&self) -> Result<Option<SuppressionEvidence>> {
+        match (
+            &self.suppression_id,
+            &self.suppression_reason,
+            self.suppressed_at,
+        ) {
+            (None, None, None) => Ok(None),
+            (Some(id), Some(token), Some(occurred_at)) => {
+                let reason = SuppressionReason::parse(token).ok_or_else(|| {
+                    StoreError::Db(sqlx::Error::Decode(
+                        "campaign suppression names a reason this build does not know".into(),
+                    ))
+                })?;
+                Ok(Some(SuppressionEvidence {
+                    record: CampaignSuppressionId::new(id.clone()),
+                    reason,
+                    occurred_at,
+                }))
+            }
+            _ => Err(StoreError::Db(sqlx::Error::Decode(
+                "a campaign suppression join returned half a record".into(),
+            ))),
+        }
+    }
 }
 
 impl AccountStore {
@@ -565,14 +671,15 @@ impl AccountStore {
     /// **Who exists, not who may be mailed** — see
     /// [`campaign_recipients`](Self::campaign_recipients) for that, and note
     /// that these return different types precisely so the distinction cannot be
-    /// lost in a call. A member whose `consent` is `None` is a person this
-    /// tenant may not send to, shown because a count with no visible exclusions
-    /// is not auditable.
+    /// lost in a call. A member whose `consent` is `None`, or whose
+    /// `suppression` is `Some`, is a person this tenant may not send to — shown
+    /// with the reason, because a count with no visible exclusions is not
+    /// auditable.
     ///
-    /// Tenant-scoped by construction — every branch of [`sources_cte`] and the
-    /// consent join all carry `tenant_id = $1` — so a neighbour's customers,
-    /// deals, form submissions and consent records are not absent by filtering,
-    /// they are unreachable.
+    /// Tenant-scoped by construction — every branch of [`sources_cte`], the
+    /// consent join and the suppression join all carry `tenant_id = $1` — so a
+    /// neighbour's customers, deals, form submissions, consent records and
+    /// suppressions are not absent by filtering, they are unreachable.
     ///
     /// # Errors
     /// [`StoreError::Validation`] when the page size is outside
@@ -597,18 +704,22 @@ impl AccountStore {
 
     /// One page of the people this tenant **may mail**, in address order.
     ///
-    /// The exclusion is `consented_at IS NOT NULL` inside the query (ADR 0044
-    /// §2): somebody with no consent record is not filtered out afterwards, they
-    /// are not in the result set, and a caller that forgets to check cannot
-    /// reach them because the type it gets back carries the evidence rather than
-    /// an `Option` of it.
+    /// Two exclusions, both inside the query (ADR 0044 §2). `consented_at IS
+    /// NOT NULL`: somebody with no consent record is not filtered out
+    /// afterwards, they are not in the result set, and a caller that forgets to
+    /// check cannot reach them because the type it gets back carries the
+    /// evidence rather than an `Option` of it. `suppressed_at IS NULL`:
+    /// suppression is absolute and tenant-wide, so an unsubscribe, a hard
+    /// bounce or a complaint removes somebody here whatever their consent
+    /// record says — and no import that re-states an agreement can bring them
+    /// back, because the newer consent row does not touch the suppression join.
     ///
     /// # Errors
     /// [`StoreError::Validation`] when the page size is outside
     /// `1..=`[`AUDIENCE_PAGE_MAX`] or the cursor is not an address;
     /// [`StoreError::Db`] on failure.
     pub async fn campaign_recipients(&self, page: &AudiencePage) -> Result<Vec<CampaignRecipient>> {
-        let rows = self.audience_rows(page, Reach::OnlyConsented).await?;
+        let rows = self.audience_rows(page, Reach::Mailable).await?;
         rows.into_iter().map(MemberRow::into_recipient).collect()
     }
 
@@ -621,7 +732,7 @@ impl AccountStore {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn campaign_recipient_count(&self) -> Result<i64> {
-        self.audience_count(Reach::OnlyConsented).await
+        self.audience_count(Reach::Mailable).await
     }
 
     /// The shared read behind both page methods: one validation of the page,
@@ -705,14 +816,16 @@ mod tests {
             for table in ["billing_customers", "crm_deals", "site_form_submissions"] {
                 assert!(names.contains(&table), "{table} missing from: {sql}");
             }
-            // One tenant predicate per source, plus one on the consent join:
-            // nothing in this query may be reachable across tenants (Law 1),
-            // and a neighbour's consent record must not make our address
-            // mailable any more than their customer list does.
+            // One tenant predicate per source, plus one on the consent join
+            // and one on the suppression join: nothing in this query may be
+            // reachable across tenants (Law 1). A neighbour's consent record
+            // must not make our address mailable any more than their customer
+            // list does — and their suppression must not silence ours, which
+            // would be the same leak wearing the opposite sign.
             assert_eq!(
                 sql.matches("tenant_id = $1").count(),
-                4,
-                "every source and the consent join must carry a tenant predicate: {sql}"
+                5,
+                "every source and both joins must carry a tenant predicate: {sql}"
             );
         }
     }
@@ -722,10 +835,7 @@ mod tests {
         // ADR 0044 §2, as a property of the SQL: the exclusion is in the query
         // the sender reads from, and it is *not* in the audience query, which
         // has to show who was left out and why.
-        for consented in [
-            page_sql(Reach::OnlyConsented),
-            count_sql(Reach::OnlyConsented),
-        ] {
+        for consented in [page_sql(Reach::Mailable), count_sql(Reach::Mailable)] {
             assert!(
                 consented.contains("consented_at IS NOT NULL"),
                 "a recipients query without the consent gate: {consented}"
@@ -740,12 +850,54 @@ mod tests {
     }
 
     #[test]
+    fn the_recipients_queries_exclude_suppressed_people_in_sql() {
+        // C1.3, and the whole of it: "if the sender applies the rule, it is not
+        // absolute". So the rule is in the string the sender's query is built
+        // from, and there is no reach that has consent without suppression —
+        // one predicate, both halves, or the choice itself becomes the bug.
+        for mailable in [page_sql(Reach::Mailable), count_sql(Reach::Mailable)] {
+            assert!(
+                mailable.contains("consented_at IS NOT NULL AND suppressed_at IS NULL"),
+                "a recipients query that can be sent to somebody who unsubscribed: {mailable}"
+            );
+        }
+        // And the audience keeps them, with the reason: a suppressed person is
+        // usually still a customer, and a count that dropped them quietly could
+        // not be audited.
+        for everyone in [page_sql(Reach::Anyone), count_sql(Reach::Anyone)] {
+            assert!(
+                !everyone.contains("suppressed_at IS NULL"),
+                "the audience must show who was suppressed: {everyone}"
+            );
+        }
+        assert!(
+            page_sql(Reach::Anyone).contains("suppression_reason"),
+            "the audience must be able to say why somebody was excluded"
+        );
+    }
+
+    #[test]
+    fn nothing_but_a_suppression_row_can_suppress() {
+        // The join is on the suppression table alone, tenant-scoped, and the
+        // audience never derives suppression from anything else — an archived
+        // customer, a stale deal or a bounced invoice are bookkeeping, not a
+        // person asking to be left alone (see the module docs).
+        let sql = page_sql(Reach::Mailable);
+        assert!(identifiers(&sql).contains(&"campaign_suppression"));
+        assert_eq!(
+            sql.matches("campaign_suppression").count(),
+            1,
+            "suppression comes from one place, or it is not absolute: {sql}"
+        );
+    }
+
+    #[test]
     fn the_cursor_test_is_bracketed_so_the_consent_gate_cannot_be_ored_away() {
         // `WHERE a OR b AND c` binds as `a OR (b AND c)`: without the brackets,
         // the first page of the recipients — the one with no cursor — would
         // return everybody, consent or not. The bug would be invisible in any
         // test that starts by reading page one of a fully-consented tenant.
-        let sql = page_sql(Reach::OnlyConsented);
+        let sql = page_sql(Reach::Mailable);
         assert!(
             sql.contains("WHERE ($2::text IS NULL OR address > lower(btrim($2::text)))"),
             "the cursor test lost its brackets: {sql}"
@@ -833,6 +985,19 @@ mod tests {
             consent_id: None,
             consent_source: None,
             consented_at: None,
+            suppression_id: None,
+            suppression_reason: None,
+            suppressed_at: None,
+        }
+    }
+
+    /// The same row, with consent joined — somebody who would be a recipient.
+    fn consented_row(sources: &[&str]) -> MemberRow {
+        MemberRow {
+            consent_id: Some("cns".to_owned()),
+            consent_source: Some("site_form".to_owned()),
+            consented_at: Some(OffsetDateTime::UNIX_EPOCH),
+            ..member_row(sources)
         }
     }
 
@@ -911,5 +1076,86 @@ mod tests {
         row.consent_source = Some("assumed".to_owned());
         row.consented_at = Some(OffsetDateTime::UNIX_EPOCH);
         assert!(matches!(row.into_member(), Err(StoreError::Db(_))));
+    }
+
+    /// A row for somebody who consented and was later suppressed — the exact
+    /// shape an import that "re-confirmed" a person who had unsubscribed would
+    /// produce.
+    fn suppressed_row(reason: &str) -> MemberRow {
+        MemberRow {
+            suppression_id: Some("sup".to_owned()),
+            suppression_reason: Some(reason.to_owned()),
+            suppressed_at: Some(OffsetDateTime::UNIX_EPOCH),
+            ..consented_row(&["billing_customer"])
+        }
+    }
+
+    #[test]
+    fn a_suppressed_person_is_in_the_audience_carrying_the_reason() {
+        let member = suppressed_row("unsubscribe")
+            .into_member()
+            .unwrap_or_else(|e| panic!("{e:?}"));
+        let Some(suppression) = member.suppression else {
+            panic!("the audience must say why somebody was excluded")
+        };
+        assert_eq!(suppression.reason, SuppressionReason::Unsubscribe);
+        assert_eq!(suppression.record, CampaignSuppressionId::new("sup"));
+        // And they still carry their consent, because the record is real. The
+        // exclusion is not a claim that they never agreed — it is a stronger
+        // fact that arrived afterwards.
+        assert!(member.consent.is_some());
+    }
+
+    #[test]
+    fn a_suppressed_person_can_never_be_read_as_a_recipient() {
+        // The second of the two places C1.3's rule lives. The query already
+        // excludes them; if a row arrives anyway — a rewritten `Reach`, a hand
+        // -written query, a future join that drops the predicate — the read
+        // fails rather than handing a sender somebody who asked to stop. Every
+        // reason, because "we only forgot the bounces" is how this returns.
+        for reason in ["unsubscribe", "hard_bounce", "complaint", "manual"] {
+            assert!(
+                matches!(
+                    suppressed_row(reason).into_recipient(),
+                    Err(StoreError::Db(_))
+                ),
+                "a {reason} was handed to a sender"
+            );
+        }
+        // The control: without the suppression, the same row is a recipient.
+        assert!(
+            consented_row(&["billing_customer"])
+                .into_recipient()
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn half_a_suppression_record_is_reported_rather_than_completed() {
+        // Guessing here is worse than guessing at consent: the half we would
+        // have to invent is "there is no suppression", and that is a person the
+        // tenant is told it may mail.
+        let mut row = consented_row(&["crm_deal"]);
+        row.suppression_id = Some("sup".to_owned());
+        assert!(matches!(row.into_member(), Err(StoreError::Db(_))));
+
+        let mut row = consented_row(&["crm_deal"]);
+        row.suppression_reason = Some("complaint".to_owned());
+        row.suppressed_at = Some(OffsetDateTime::UNIX_EPOCH);
+        assert!(matches!(row.into_member(), Err(StoreError::Db(_))));
+    }
+
+    #[test]
+    fn a_suppression_reason_this_build_does_not_know_fails_the_read() {
+        assert!(matches!(
+            suppressed_row("changed_their_mind").into_member(),
+            Err(StoreError::Db(_))
+        ));
+        // And it fails on the recipients path too, rather than being read as
+        // "no suppression" and mailed.
+        assert!(matches!(
+            suppressed_row("changed_their_mind").into_recipient(),
+            Err(StoreError::Db(_))
+        ));
     }
 }

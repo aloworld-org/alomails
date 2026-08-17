@@ -739,6 +739,14 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One address this tenant may never mail again (alo Campaigns, ADR 0044
+    /// §2, wave C1.3). The *record*, not the person: suppression is keyed by
+    /// address, and this id is the handle a screen links to when it names
+    /// somebody as excluded and says why.
+    CampaignSuppressionId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.
