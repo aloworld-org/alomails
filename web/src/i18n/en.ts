@@ -6424,6 +6424,44 @@ export const en = {
     "People appear here as soon as this workspace has a customer, a deal with an email address, or somebody who filled in a form on its website. Personal address books are never used.",
   campaignsNothingSentYet:
     "Nothing is sent from this screen. Campaign sending needs its own address, separate from your everyday mail, so that a newsletter can never affect whether your invoices arrive.",
+
+  // The page at the end of an unsubscribe link — the only screen in this
+  // product a stranger reads, and they arrive at it already annoyed. Every
+  // sentence here is plain, short and says exactly what a press did: the
+  // alternative to understanding this page is the spam button, and that is the
+  // one signal a sending reputation does not survive.
+  //
+  // Nothing here names the recipient. A link is forwarded, quoted in replies and
+  // read by every scanner between the sender and the inbox, so the server never
+  // returns the address and no string may interpolate one.
+  campaignUnsubscribeLoading: "Checking this link…",
+  campaignUnsubscribeTitle: "Stop these emails",
+  campaignUnsubscribeSubtitle: (topic: string) =>
+    `This message was sent as “${topic}”. You can stop that kind on its own, or stop everything.`,
+  campaignUnsubscribeSubtitleUntopiced:
+    "You can stop receiving email from this workspace. One press is all it takes.",
+  campaignUnsubscribeStopTopic: (topic: string) => `Stop sending me “${topic}”`,
+  campaignUnsubscribeStopAll: "Stop sending me anything",
+  campaignUnsubscribeAlreadyStopped:
+    "This workspace has already been told to stop emailing you. You do not need to do anything else.",
+  campaignUnsubscribeAlreadyDeclined: (topic: string) =>
+    `You have already stopped “${topic}”. You can still stop everything else below.`,
+  campaignUnsubscribeDoneTitle: "Done",
+  campaignUnsubscribeDoneAll:
+    "This workspace will not email you again. Nothing further is needed.",
+  campaignUnsubscribeDoneTopic: (topic: string) =>
+    `You will not be sent “${topic}” again.`,
+  campaignUnsubscribeDoneTopicNote:
+    "Other kinds of email from this workspace — invoices and replies, for example — will still reach you. Come back to this link to stop those too.",
+  campaignUnsubscribeFinalNote:
+    "This cannot be undone from here. If you change your mind, ask the sender directly.",
+  campaignUnsubscribeNoAccountNote:
+    "No account and no sign-in is needed. This page is only about the address this message was sent to.",
+  campaignUnsubscribeUnknownTitle: "This link no longer works",
+  campaignUnsubscribeUnknownLink:
+    "We do not recognise this unsubscribe link. If you copied it from an email, open the link from the email itself — or reply to the sender and ask them to stop.",
+  campaignUnsubscribeFailed:
+    "That could not be saved just now. Please press the button again.",
 } as const;
 
 /** Every string key in the catalog. */

@@ -19,25 +19,25 @@ use crate::{
     billing_customers, billing_fx, billing_invoices, billing_payments, billing_products,
     billing_quotes, billing_reminder, billing_reports, billing_schedules, billing_send,
     billing_sepa, billing_settings, blob, calendar, campaign_audience, campaign_consent,
-    campaign_segments, campaign_suppression, carddav, chat, chat_agent_routes, contacts,
-    crm_activities, crm_deals, crm_handoff, crm_imports, crm_next_steps, crm_pipelines,
-    crm_reports, crm_stages, crm_threads, delegates, docs, drive, filters, finance_approvals,
-    finance_bank, finance_bank_match, finance_chart, finance_expenses, finance_mileage,
-    finance_periods, finance_receipts, finance_report_aged, finance_report_balance,
-    finance_report_pl, finance_report_vat, flagdue, hr_checklists, hr_documents, hr_employees,
-    hr_holidays, hr_leave_balances, hr_leave_policies, hr_leave_requests, hr_letters, hr_org,
-    hr_payroll, hr_recruitment, imap_import_route, insights, insights_ask, insights_eval,
-    insights_gallery, inventory_counts, inventory_locations, inventory_moves, inventory_po,
-    inventory_po_print, inventory_po_receipts, inventory_po_send, inventory_reorder,
-    inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice, inventory_stock,
-    inventory_supplier_prices, inventory_suppliers, invite_route, meet_routes, module_access,
-    projects_clients, projects_invoices, projects_plan, projects_reports, projects_templates,
-    projects_time, projects_weeks, push, reset_route, schedule, scoped_roles, security, session,
-    settings, share, signup_route, site_protection, site_schedule, site_version_preview,
-    site_versions, sites, sites_attribution, sites_bookings, sites_catalogs, sites_chat,
-    sites_conversions, sites_domain_purchases, sites_heatmap, sites_knowledge, sites_orders,
-    sites_palette, sites_shop_config, sites_shop_items, sites_shop_settings, sites_templates,
-    sites_tickets, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
+    chat_agent_routes, contacts, crm_activities, crm_deals, crm_handoff, crm_imports,
+    crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates, docs, drive,
+    filters, finance_approvals, finance_bank, finance_bank_match, finance_chart, finance_expenses,
+    finance_mileage, finance_periods, finance_receipts, finance_report_aged,
+    finance_report_balance, finance_report_pl, finance_report_vat, flagdue, hr_checklists,
+    hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
+    hr_leave_requests, hr_letters, hr_org, hr_payroll, hr_recruitment, imap_import_route, insights,
+    insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
+    inventory_moves, inventory_po, inventory_po_print, inventory_po_receipts, inventory_po_send,
+    inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice,
+    inventory_stock, inventory_supplier_prices, inventory_suppliers, invite_route, meet_routes,
+    module_access, projects_clients, projects_invoices, projects_plan, projects_reports,
+    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, scoped_roles,
+    security, session, settings, share, signup_route, site_protection, site_schedule,
+    site_version_preview, site_versions, sites, sites_attribution, sites_bookings, sites_catalogs,
+    sites_chat, sites_conversions, sites_domain_purchases, sites_heatmap, sites_knowledge,
+    sites_orders, sites_palette, sites_shop_config, sites_shop_items, sites_shop_settings,
+    sites_templates, sites_tickets, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -1473,6 +1473,27 @@ pub fn app_with_site_boundaries(
             get(campaign_segments::get_segment)
                 .patch(campaign_segments::update_segment)
                 .delete(campaign_segments::delete_segment),
+        )
+        // The page at the end of an unsubscribe link (wave C2s.2) — the one
+        // route in this product a **stranger** reaches: no account, no login,
+        // and the token in their mail is the whole credential. Deliberately
+        // outside the `/campaigns/*` surface above, all of which authenticates:
+        // a recipient is not a member of the workspace that mailed them.
+        //
+        // Under `/jmap/*` for the reason `/jmap/invite/{token}` is: the SPA owns
+        // `/unsubscribe/:token` — that is the page somebody opens from the mail
+        // — and Caddy proxies whole prefixes, so an API route at the same path
+        // would take the page away from the browser and answer it with JSON.
+        //
+        // GET draws the page and writes NOTHING; POST is the act. That split is
+        // RFC 8058's, and it is load-bearing: every link-prefetching scanner
+        // between us and the recipient fetches the URL before a human sees it,
+        // and a suppression cannot be lifted (ADR 0044 §2), so a GET with a side
+        // effect would permanently unsubscribe people who never clicked and
+        // would read as the feature working.
+        .route(
+            "/jmap/campaign-unsubscribe/{token}",
+            get(campaign_unsubscribe::show).post(campaign_unsubscribe::act),
         )
         // Deals. The move is its own POST for the same reason issuing an
         // invoice is: it writes a history row and can close the deal, so it must

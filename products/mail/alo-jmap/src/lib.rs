@@ -76,6 +76,7 @@ pub mod campaign_audience;
 pub mod campaign_consent;
 pub mod campaign_segments;
 pub mod campaign_suppression;
+pub mod campaign_unsubscribe;
 pub mod campaigns;
 pub mod carddav;
 pub mod chat;

@@ -766,6 +766,14 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One kind of mail one person has declined (alo Campaigns, ADR 0044 §3,
+    /// wave C2s.2). Identifies the *decision*, never the person: a preference is
+    /// held against an address, and this id is the handle a screen links to when
+    /// it names somebody as having asked for less rather than for nothing.
+    CampaignTopicOptOutId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.

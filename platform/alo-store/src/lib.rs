@@ -48,6 +48,7 @@ pub mod billing_sequence;
 pub mod billing_settings;
 pub mod billing_totals;
 pub mod billing_ubl_read;
+pub mod billing_vat;
 pub mod billing_vat_report;
 pub mod billing_xml_tree;
 pub mod blob;
@@ -57,6 +58,7 @@ pub mod campaign_audience;
 pub mod campaign_consent;
 pub mod campaign_segments;
 pub mod campaign_suppression;
+pub mod campaign_topic_optout;
 pub mod campaign_unsubscribe;
 pub mod changes;
 pub mod chat;
@@ -334,6 +336,9 @@ pub use campaign_segments::{
 pub use campaign_suppression::{
     CampaignSuppression, NewSuppression, SUPPRESSION_PAGE_MAX, SuppressionEvidence,
     SuppressionReason,
+};
+pub use campaign_topic_optout::{
+    CampaignTopicOptOut, NewTopicOptOut, TOPIC_MAX, TOPIC_SOURCE_REF_MAX, normalise_topic,
 };
 pub use campaign_unsubscribe::{
     IssuedUnsubscribeToken, NewUnsubscribeToken, UNSUBSCRIBE_SEND_REF_MAX, UnsubscribeTokenTarget,

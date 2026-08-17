@@ -27,6 +27,7 @@ import { StackBadge } from "./platform/StackBadge";
 import type { ProductModule } from "./product";
 import { DialogProvider } from "./ds";
 import { SiteInvitationView } from "./sites/SiteInvitationView";
+import { UnsubscribeView } from "./campaigns";
 
 /**
  * One module's route, with its per-user switch honoured (migration 0208).
@@ -82,6 +83,16 @@ export function App() {
                 <Route
                   path="/sites/invite/:token"
                   element={<SiteInvitationView />}
+                />
+                {/* The page at the end of an unsubscribe link (ADR 0044 §3).
+                  Public by design and more so than the routes above: the person
+                  holding it is not a customer of ours at all, they are somebody
+                  a customer mailed. The token is the whole credential, and the
+                  page must draw with no account, no session and no sign-in —
+                  anything else and they press the spam button instead. */}
+                <Route
+                  path="/unsubscribe/:token"
+                  element={<UnsubscribeView />}
                 />
                 {/* The OIDC redirect target; the login flow reads the code inline, so
                 a stray navigation here just returns to the app. */}

@@ -38,6 +38,17 @@
 //! else. The raw token exists once, in the return of the mint call, and is
 //! never readable again — `resolve` takes it and cannot produce it.
 //!
+//! **The kind of mail is on the token, and it is the one field a stranger may
+//! read back.** Added by migration 0504 for the landing page (wave C2s.2): the
+//! topic is a property of the *send*, decided once when the message is built and
+//! the same for every recipient of it, and this row is the only thing that knows
+//! which send a link came from. It describes the mail rather than the person, so
+//! showing it tells whoever holds the link only what they have already read —
+//! unlike the address, which is never in an answer. Nullable, because a send that
+//! names no kind is honest: the page then offers *stop all of it* and nothing
+//! else, rather than a narrower button that would decline a category no send
+//! matches.
+//!
 //! **The record id is the handle, and the token is not.**
 //! [`CampaignUnsubscribeTokenId`] is what a suppression names in its
 //! `source_ref` ([`crate::campaign_suppression`]), so *which send did they
@@ -71,6 +82,7 @@ use time::OffsetDateTime;
 
 use crate::blob::hash_hex;
 use crate::campaign_audience::normalise_address;
+use crate::campaign_topic_optout::TOPIC_MAX;
 use crate::error::{Result, StoreError};
 use crate::id::{CampaignUnsubscribeTokenId, TenantId, generate_token};
 use crate::store::{Store, TenantStore};
@@ -93,6 +105,15 @@ pub struct NewUnsubscribeToken<'a> {
     /// so the suppression this link eventually writes joins the audience rather
     /// than sitting beside it.
     pub address: &'a str,
+    /// The kind of mail this send is, **as the sender wrote it** — shown to a
+    /// human on the landing page, so it is not folded here (the comparable form
+    /// is [`crate::campaign_topic_optout::normalise_topic`], applied where a
+    /// preference is written).
+    ///
+    /// `None` is honest rather than lazy: a send that names no kind leaves the
+    /// page with one button — *stop all of it* — instead of a narrower one that
+    /// would decline a category no send matches. Blank is `None`.
+    pub topic: Option<&'a str>,
 }
 
 /// A freshly minted link — **the only time the raw token exists.**
@@ -131,6 +152,11 @@ pub struct UnsubscribeTokenTarget {
     /// landing page may print back, because a page that echoes the address
     /// turns a forwarded mail into a disclosure.
     pub address: String,
+    /// The kind of mail, as the sender wrote it, or `None` when the send named
+    /// none. Unlike the address this **is** safe to show: it describes the mail
+    /// rather than the person, so it tells whoever holds the link only what they
+    /// have already read.
+    pub topic: Option<String>,
     pub issued_at: OffsetDateTime,
 }
 
@@ -139,8 +165,8 @@ pub struct UnsubscribeTokenTarget {
 /// the mint is the correct response to one.
 fn mint_sql() -> &'static str {
     "INSERT INTO campaign_unsubscribe_tokens \
-         (token_hash, tenant_id, id, send_ref, address) \
-     VALUES ($1, $2, $3, $4, $5) \
+         (token_hash, tenant_id, id, send_ref, address, topic) \
+     VALUES ($1, $2, $3, $4, $5, $6) \
      RETURNING issued_at"
 }
 
@@ -152,7 +178,7 @@ fn mint_sql() -> &'static str {
 /// carried since 0026 — and the tenant comes back so every subsequent read and
 /// write goes through a tenant-scoped door.
 fn resolve_sql() -> &'static str {
-    "SELECT tenant_id, id, send_ref, address, issued_at \
+    "SELECT tenant_id, id, send_ref, address, topic, issued_at \
        FROM campaign_unsubscribe_tokens \
       WHERE token_hash = $1"
 }
@@ -169,7 +195,14 @@ fn all_sql() -> Vec<&'static str> {
 }
 
 /// A row as [`resolve_sql`] returns it.
-type TargetRow = (String, String, String, String, OffsetDateTime);
+type TargetRow = (
+    String,
+    String,
+    String,
+    String,
+    Option<String>,
+    OffsetDateTime,
+);
 
 /// Mints one token. 256 bits, from the same cryptographically-random,
 /// non-sequential source as every opaque id — two draws rather than one,
@@ -183,6 +216,7 @@ fn generate_unsubscribe_token() -> String {
 struct Validated {
     send_ref: String,
     address: String,
+    topic: Option<String>,
 }
 
 /// Checks one mint, once, in one place — separated from the write so the rules
@@ -206,9 +240,22 @@ fn validate(request: &NewUnsubscribeToken<'_>) -> Result<Validated> {
         )));
     }
 
+    // Trimmed but NOT folded: this label is read by a human on the landing page,
+    // and `Product Updates` is what the sender chose to call it. The folded form
+    // is what a preference is compared on, and it is derived where that
+    // comparison happens rather than stored twice — two spellings of one topic in
+    // two tables is the disagreement that mails somebody they declined.
+    let topic = request.topic.map(str::trim).filter(|t| !t.is_empty());
+    if topic.is_some_and(|t| t.chars().count() > TOPIC_MAX) {
+        return Err(StoreError::Validation(format!(
+            "a kind of mail is named in {TOPIC_MAX} characters, because a recipient reads it"
+        )));
+    }
+
     Ok(Validated {
         send_ref: send_ref.to_owned(),
         address,
+        topic: topic.map(str::to_owned),
     })
 }
 
@@ -230,8 +277,9 @@ impl TenantStore {
     /// account at all.
     ///
     /// # Errors
-    /// [`StoreError::Validation`] when the address is not one, or the send
-    /// reference is blank or too long; [`StoreError::Db`] on failure.
+    /// [`StoreError::Validation`] when the address is not one, the send
+    /// reference is blank or too long, or the topic label is too long;
+    /// [`StoreError::Db`] on failure.
     pub async fn mint_campaign_unsubscribe_token(
         &self,
         request: &NewUnsubscribeToken<'_>,
@@ -245,6 +293,7 @@ impl TenantStore {
             .bind(record.as_str())
             .bind(&valid.send_ref)
             .bind(&valid.address)
+            .bind(valid.topic.as_deref())
             .fetch_one(self.pool())
             .await
             .map_err(StoreError::Db)?;
@@ -283,15 +332,18 @@ impl Store {
             .fetch_optional(self.pool())
             .await
             .map_err(StoreError::Db)?;
-        Ok(row.map(
-            |(tenant, record, send_ref, address, issued_at)| UnsubscribeTokenTarget {
-                tenant: TenantId::new(tenant),
-                record: CampaignUnsubscribeTokenId::new(record),
-                send_ref,
-                address,
-                issued_at,
-            },
-        ))
+        Ok(
+            row.map(|(tenant, record, send_ref, address, topic, issued_at)| {
+                UnsubscribeTokenTarget {
+                    tenant: TenantId::new(tenant),
+                    record: CampaignUnsubscribeTokenId::new(record),
+                    send_ref,
+                    address,
+                    topic,
+                    issued_at,
+                }
+            }),
+        )
     }
 }
 
@@ -311,6 +363,7 @@ mod tests {
         NewUnsubscribeToken {
             send_ref: "send-2026-08",
             address: "Ann@Lead.TEST",
+            topic: Some("Newsletter"),
         }
     }
 
@@ -442,6 +495,61 @@ mod tests {
         let valid = validate(&new()).unwrap_or_else(|e| panic!("refused a good one: {e:?}"));
         assert_eq!(valid.address, "ann@lead.test");
         assert_eq!(valid.send_ref, "send-2026-08");
+    }
+
+    #[test]
+    fn a_link_keeps_the_kind_of_mail_as_the_sender_wrote_it() {
+        // The one field on this row a stranger is allowed to read back. It
+        // describes the MAIL rather than the person, so showing it tells whoever
+        // holds the link only what they have already read — and a page that could
+        // not name the kind of mail could only offer "stop everything", which is
+        // the failure C2s.2 exists to prevent.
+        //
+        // Not folded, deliberately: `campaign_topic_optout::normalise_topic` is
+        // applied where a preference is compared. Storing a second, folded copy
+        // here would be two spellings of one topic in two tables, which is the
+        // disagreement that mails somebody the kind they declined.
+        let padded = NewUnsubscribeToken {
+            topic: Some("  Product Updates  "),
+            ..new()
+        };
+        assert_eq!(
+            validate(&padded)
+                .unwrap_or_else(|e| panic!("{e:?}"))
+                .topic
+                .as_deref(),
+            Some("Product Updates")
+        );
+    }
+
+    #[test]
+    fn a_send_that_names_no_kind_of_mail_says_so_rather_than_inventing_one() {
+        // `None` and blank are the same thing, and the page then draws one
+        // button. A blank label stored as a topic would put an empty pair of
+        // quotes in a sentence a recipient reads under pressure, and would offer
+        // them a narrower choice that declines a category no send matches.
+        for absent in [None, Some(""), Some("   "), Some("\t\n")] {
+            let candidate = NewUnsubscribeToken {
+                topic: absent,
+                ..new()
+            };
+            assert_eq!(
+                validate(&candidate)
+                    .unwrap_or_else(|e| panic!("{e:?}"))
+                    .topic,
+                None,
+                "{absent:?} became a kind of mail"
+            );
+        }
+        let long = "n".repeat(TOPIC_MAX + 1);
+        let overlong = NewUnsubscribeToken {
+            topic: Some(&long),
+            ..new()
+        };
+        assert!(matches!(
+            validate(&overlong),
+            Err(StoreError::Validation(_))
+        ));
     }
 
     #[test]

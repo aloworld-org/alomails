@@ -149,3 +149,78 @@
   font-size: var(--text-xs);
   color: var(--text-tertiary);
 }
+
+/* ---- the page at the end of the link --------------------------------- */
+
+/* The only screen in this product a stranger reaches: no rail, no header, no
+   navigation, because there is nothing here to navigate to. A card centred on
+   an empty page, so the two choices are the only things to read.
+
+   The two buttons are deliberately the same width and the same weight. Making
+   "stop everything" quiet — a grey link under the fold — is how somebody who
+   cannot find it presses the spam button instead, and that is the signal that
+   ends a sending reputation. Tokens only. */
+
+.unsubscribePage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: var(--space-6) var(--space-4);
+  background: var(--bg-app);
+}
+.unsubscribeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 34rem;
+  padding: var(--space-8) var(--space-6);
+  text-align: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+.unsubscribeCard h1 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.unsubscribeCard p {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.unsubscribeMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+}
+.unsubscribeStatus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.unsubscribeChoices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 24rem;
+  margin-top: var(--space-2);
+}
+.unsubscribeNote {
+  font-size: var(--text-xs) !important;
+  color: var(--text-tertiary) !important;
+}
+.unsubscribeError {
+  font-size: var(--text-sm) !important;
+  color: var(--danger) !important;
+}

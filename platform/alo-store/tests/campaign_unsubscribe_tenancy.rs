@@ -47,6 +47,9 @@ async fn a_link_resolves_to_the_person_and_the_send_it_was_minted_for() {
             send_ref: "august-newsletter",
             // The casing the sender happens to hold them in.
             address: "  Ann@Lead.TEST ",
+            // The kind of mail, as the sender wrote it: the one field on this
+            // row the landing page may show back (C2s.2).
+            topic: Some("  Product Updates  "),
         })
         .await
         .unwrap();
@@ -65,6 +68,11 @@ async fn a_link_resolves_to_the_person_and_the_send_it_was_minted_for() {
     assert_eq!(target.record, issued.record);
     assert_eq!(target.send_ref, "august-newsletter");
     assert_eq!(target.address, "ann@lead.test");
+    // Trimmed but NOT folded: a human reads this one, and `Product Updates` is
+    // what the sender chose to call it. The comparable form is derived where a
+    // preference is written (`campaign_topic_optout::normalise_topic`), so one
+    // topic never has two spellings in two tables.
+    assert_eq!(target.topic.as_deref(), Some("Product Updates"));
     assert_eq!(target.issued_at, issued.issued_at);
 }
 
@@ -81,6 +89,7 @@ async fn a_link_cannot_be_guessed_from_the_person_it_is_for() {
     let request = NewUnsubscribeToken {
         send_ref: "august-newsletter",
         address: "ann@lead.test",
+        topic: Some("Newsletter"),
     };
     let first = ts.mint_campaign_unsubscribe_token(&request).await.unwrap();
     let second = ts.mint_campaign_unsubscribe_token(&request).await.unwrap();
@@ -136,6 +145,7 @@ async fn holding_the_stored_row_is_not_holding_the_link() {
         .mint_campaign_unsubscribe_token(&NewUnsubscribeToken {
             send_ref: "august-newsletter",
             address: "ann@lead.test",
+            topic: Some("Newsletter"),
         })
         .await
         .unwrap();
@@ -178,6 +188,7 @@ async fn a_guess_teaches_a_spammer_nothing_about_who_we_hold() {
     ts.mint_campaign_unsubscribe_token(&NewUnsubscribeToken {
         send_ref: "august-newsletter",
         address: "ann@lead.test",
+        topic: Some("Newsletter"),
     })
     .await
     .unwrap();
@@ -218,6 +229,7 @@ async fn a_neighbours_link_is_never_ours() {
         .mint_campaign_unsubscribe_token(&NewUnsubscribeToken {
             send_ref: "our-newsletter",
             address: "shared@person.test",
+            topic: Some("Our Newsletter"),
         })
         .await
         .unwrap();
@@ -227,6 +239,7 @@ async fn a_neighbours_link_is_never_ours() {
             // The same person: somebody is on both workspaces' lists, which is
             // ordinary and is exactly when a mixed-up tenant would leak.
             address: "shared@person.test",
+            topic: Some("Their Newsletter"),
         })
         .await
         .unwrap();
@@ -267,6 +280,7 @@ async fn a_link_nobody_could_use_is_refused_at_the_mint() {
             .mint_campaign_unsubscribe_token(&NewUnsubscribeToken {
                 send_ref: "august-newsletter",
                 address: junk,
+                topic: Some("Newsletter"),
             })
             .await;
         assert!(
@@ -284,6 +298,7 @@ async fn a_link_nobody_could_use_is_refused_at_the_mint() {
             .mint_campaign_unsubscribe_token(&NewUnsubscribeToken {
                 send_ref: bad_send,
                 address: "ann@lead.test",
+                topic: Some("Newsletter"),
             })
             .await;
         assert!(
