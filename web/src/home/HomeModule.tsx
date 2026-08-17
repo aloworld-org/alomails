@@ -508,7 +508,7 @@ function StatCard({ Icon, label, cta, onClick, value, loading, tone }: StatCardP
           ? "bg-[var(--accent-secondary-tint)] text-[var(--accent-secondary)]"
         : "bg-raised text-secondary";
   return (
-    <button type="button" className="group flex min-h-[112px] items-center gap-4 rounded-xl border border-subtle bg-surface p-5 text-left shadow-sm transition hover:-translate-y-px hover:border-default hover:shadow-md focus-visible:outline-2 focus-visible:outline-accent max-sm:min-h-[96px]" onClick={onClick}>
+    <button type="button" className="group flex min-h-[112px] items-center gap-4 rounded-xl border border-subtle bg-surface !px-6 !py-5 text-left shadow-sm transition hover:-translate-y-px hover:border-default hover:shadow-md focus-visible:outline-2 focus-visible:outline-accent max-sm:min-h-[96px] max-sm:!px-5" onClick={onClick}>
       <span className={`inline-flex size-11 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>
         <Icon size={20} />
       </span>
