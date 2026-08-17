@@ -72,7 +72,7 @@
 .toolbar {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-4);
   min-height: var(--control-height);
   padding: 0;
   border: 0;
@@ -81,7 +81,7 @@
   box-shadow: none;
   flex-shrink: 0;
 }
-.searchWrap { position: relative; display: flex; flex: 1; max-width: 330px; align-items: center; }
+.searchWrap { position: relative; display: flex; flex: 1; max-width: 380px; align-items: center; }
 .searchWrap > svg { position: absolute; right: var(--space-3); width: var(--icon-size-inline); color: var(--text-tertiary); pointer-events: none; }
 .search {
   width: 100%;
@@ -103,7 +103,7 @@
   gap: var(--space-2);
   font-size: var(--text-sm);
   color: var(--text-secondary);
-  margin-right: auto;
+  margin-left: auto;
   white-space: nowrap;
 }
 .toggle input {
@@ -251,13 +251,14 @@
   box-shadow: none;
   text-align: center;
 }
-.customerEmptyLayout { flex: 1; min-height: 0; overflow: auto; padding: 0 0 var(--space-6); }
-.customerEmptyCard { display: flex; min-height: 24rem; border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-xl); background: var(--bg-surface); box-shadow: var(--shadow-sm); }
+.customerEmptyLayout { display: flex; flex: 1; min-height: 0; overflow: auto; padding: 0 0 var(--space-2); }
+.customerEmptyCard { display: flex; flex: 1; min-height: 24rem; border: var(--border-width) solid var(--border-subtle); border-radius: var(--radius-xl); background: var(--bg-surface); box-shadow: var(--shadow-sm); }
 .customerEmptyCard .empty { width: 100%; }
 .customerEmptyCard .empty { border: 0; }
-.customerEmptyCard .emptyArt { position: relative; width: 88px; height: 88px; border-radius: var(--radius-full); }
+.customerEmptyCard .emptyArt { position: relative; width: 80px; height: 80px; margin-bottom: var(--space-2); border-radius: var(--radius-full); }
 .customerEmptyCard .emptyArt::after { content: "+"; position: absolute; right: -5px; bottom: 3px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 3px solid var(--bg-surface); border-radius: var(--radius-full); background: var(--accent); color: var(--text-on-accent); font-size: var(--text-xl); line-height: 1; }
-.customerEmptyCard .emptyTitle { font-size: var(--text-xl); }
+.customerEmptyCard .emptyTitle { font-size: var(--text-xl); line-height: var(--leading-tight); }
+.customerEmptyCard .emptyBody { margin-bottom: var(--space-4); }
 @media (max-width: 64rem) { .header { align-items: flex-start; flex-direction: column; gap: 0; }.tabs { width: 100%; overflow-x: auto; }.customerEmptyCard { min-height: var(--content-height-md); } }
 .emptyArt {
   display: inline-flex;
