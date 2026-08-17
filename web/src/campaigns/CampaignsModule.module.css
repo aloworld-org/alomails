@@ -1,0 +1,151 @@
+/* The Campaigns module's own styles. The chrome deliberately reads as CRM's and
+   Insights' — same header, same table, same empty state — because it is the
+   same kind of screen. What is different is that the loudest thing on it is a
+   count and the sentence that explains it: a number a colleague is about to
+   send several hundred emails on the strength of. Tokens only. */
+
+.campaigns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+  min-height: 0;
+  padding: var(--space-4) var(--space-5) var(--space-6);
+  overflow: auto;
+  background: var(--bg-app);
+}
+
+/* ---- chrome ---------------------------------------------------------- */
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.title {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+.subtitle {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.savedQuestions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+
+.error {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--danger-tint);
+  color: var(--danger-text);
+  font-size: var(--text-sm);
+}
+
+/* ---- the question ---------------------------------------------------- */
+
+.question {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  align-items: flex-start;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+.question > * {
+  min-width: 180px;
+}
+
+/* ---- the count, and who it leaves out -------------------------------- */
+
+.tally {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin: 0;
+  min-height: var(--space-6);
+}
+.tallyCount {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+/* The exclusions sit on the same line as the number on purpose: a count and its
+   explanation that need scrolling between them are two facts, and only one of
+   them gets read. */
+.exclusions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ---- the people ------------------------------------------------------ */
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+}
+.person {
+  display: block;
+  color: var(--text-primary);
+}
+.address {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+.more {
+  display: flex;
+  justify-content: center;
+}
+
+/* ---- first use ------------------------------------------------------- */
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+}
+.emptyArt {
+  color: var(--text-tertiary);
+}
+.emptyTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.emptyBody {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.footnote {
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}

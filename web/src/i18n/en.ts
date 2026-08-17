@@ -6367,6 +6367,63 @@ export const en = {
   hrNobodyAwayTitle: (month: string) => `Nobody is away in ${month}`,
   hrNobodyAwayBody:
     "Booked time off appears here for everybody in the company, so you can see who is out before you plan around them. Public holidays are marked too.",
+
+  // alo Campaigns (ADR 0044, wave C1) — the audience screen. Nothing on it
+  // sends: the sending identity waits on a second IP, and a button promising a
+  // send would be a promise the product cannot keep. The words that matter most
+  // here are the ones naming who will NOT be mailed — a count without them is
+  // a number a colleague finds out about by sending.
+  moduleCampaigns: "Campaigns",
+  campaignsTitle: "Audience",
+  campaignsSubtitle:
+    "Everyone this workspace could reach, and everyone it may not — with the reason.",
+  campaignsCountriesLabel: "Countries",
+  campaignsCountriesHint: "Two-letter codes, separated by commas. Empty means everywhere.",
+  campaignsCountriesPlaceholder: "BE, NL",
+  campaignsPurchaseLabel: "Purchases",
+  campaignsPurchaseAny: "Anyone",
+  campaignsPurchaseBought: "Has bought",
+  campaignsPurchaseNotBought: "Has not bought",
+  campaignsPeriodLabel: "In the last",
+  campaignsPeriodEver: "Ever",
+  campaignsPeriodDays: (days: number) => `${days} days`,
+  campaignsEveryone: "Everyone",
+  campaignsSegmentsLabel: "Saved questions",
+  campaignsSaveSegment: "Save this question",
+  campaignsSegmentNamePrompt: "What should this question be called?",
+  campaignsSegmentNamePlaceholder: "Belgian customers",
+  campaignsDeleteSegment: "Delete",
+  campaignsDeleteSegmentConfirm: (name: string) =>
+    `Delete the question “${name}”? Nobody’s agreement or unsubscribe is touched — only the question goes.`,
+  campaignsTallyMailable: (mailable: number, matched: number) =>
+    `${mailable} of ${matched} people will be mailed`,
+  campaignsTallyNobody: "Nobody in this workspace matches that question.",
+  campaignsExcludedCount: (people: number, reason: string) => `${people} · ${reason}`,
+  campaignsWillBeMailed: "Will be mailed",
+  campaignsReasonNoConsent: "Never agreed",
+  campaignsReasonUnsubscribe: "Unsubscribed",
+  campaignsReasonHardBounce: "Mail bounced",
+  campaignsReasonComplaint: "Reported as spam",
+  campaignsReasonManual: "Asked us to stop",
+  campaignsTableLabel: "People this question selects",
+  campaignsColPerson: "Person",
+  campaignsColCountry: "Country",
+  campaignsColKnownFrom: "Known from",
+  campaignsColStatus: "Status",
+  campaignsSourceBillingCustomer: "Customer",
+  campaignsSourceCrmDeal: "Deal",
+  campaignsSourceSiteForm: "Website form",
+  campaignsNoMatches: "Nobody matches that question.",
+  campaignsMore: "Show more people",
+  campaignsLoadFailed: "The audience could not be read.",
+  campaignsSegmentsFailed: "Your saved questions could not be read.",
+  campaignsSaveFailed: "That question could not be saved.",
+  campaignsDeleteFailed: "That question could not be removed.",
+  campaignsEmptyTitle: "Nobody to reach yet",
+  campaignsEmptyBody:
+    "People appear here as soon as this workspace has a customer, a deal with an email address, or somebody who filled in a form on its website. Personal address books are never used.",
+  campaignsNothingSentYet:
+    "Nothing is sent from this screen. Campaign sending needs its own address, separate from your everyday mail, so that a newsletter can never affect whether your invoices arrive.",
 } as const;
 
 /** Every string key in the catalog. */

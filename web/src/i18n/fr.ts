@@ -6299,4 +6299,61 @@ export const fr: Partial<Catalog> = {
   sitesDomainStepCancelled: "Annulé. Rien n’a été facturé.",
   sitesDomainOwnerOnly:
     "Seul le propriétaire de ce site peut acheter ou gérer ses noms de domaine. Vous pouvez toujours modifier et publier le site lui-même.",
+
+  // alo Campagnes (ADR 0044, vague C1) — l’écran de l’audience.
+  moduleCampaigns: "Campagnes",
+  campaignsTitle: "Audience",
+  campaignsSubtitle:
+    "Toutes les personnes que cet espace de travail peut atteindre, et celles qu’il ne peut pas — avec la raison.",
+  campaignsCountriesLabel: "Pays",
+  campaignsCountriesHint:
+    "Codes à deux lettres, séparés par des virgules. Vide signifie partout.",
+  campaignsCountriesPlaceholder: "BE, NL",
+  campaignsPurchaseLabel: "Achats",
+  campaignsPurchaseAny: "Tout le monde",
+  campaignsPurchaseBought: "A acheté",
+  campaignsPurchaseNotBought: "N’a pas acheté",
+  campaignsPeriodLabel: "Au cours des",
+  campaignsPeriodEver: "Depuis toujours",
+  campaignsPeriodDays: (days: number): string => `${days} derniers jours`,
+  campaignsEveryone: "Tout le monde",
+  campaignsSegmentsLabel: "Questions enregistrées",
+  campaignsSaveSegment: "Enregistrer cette question",
+  campaignsSegmentNamePrompt: "Quel nom donner à cette question ?",
+  campaignsSegmentNamePlaceholder: "Clients belges",
+  campaignsDeleteSegment: "Supprimer",
+  campaignsDeleteSegmentConfirm: (name: string): string =>
+    `Supprimer la question « ${name} » ? Aucun consentement ni aucune désinscription n’est touché — seule la question disparaît.`,
+  campaignsTallyMailable: (mailable: number, matched: number): string =>
+    `${mailable} personnes sur ${matched} recevront le message`,
+  campaignsTallyNobody:
+    "Personne dans cet espace de travail ne correspond à cette question.",
+  campaignsExcludedCount: (people: number, reason: string): string =>
+    `${people} · ${reason}`,
+  campaignsWillBeMailed: "Recevra le message",
+  campaignsReasonNoConsent: "N’a jamais donné son accord",
+  campaignsReasonUnsubscribe: "Désinscrit",
+  campaignsReasonHardBounce: "Message non distribué",
+  campaignsReasonComplaint: "Nous a signalés comme indésirables",
+  campaignsReasonManual: "Nous a demandé d’arrêter",
+  campaignsTableLabel: "Personnes sélectionnées par cette question",
+  campaignsColPerson: "Personne",
+  campaignsColCountry: "Pays",
+  campaignsColKnownFrom: "Connue par",
+  campaignsColStatus: "Statut",
+  campaignsSourceBillingCustomer: "Client",
+  campaignsSourceCrmDeal: "Affaire",
+  campaignsSourceSiteForm: "Formulaire du site",
+  campaignsNoMatches: "Personne ne correspond à cette question.",
+  campaignsMore: "Afficher plus de personnes",
+  campaignsLoadFailed: "L’audience n’a pas pu être lue.",
+  campaignsSegmentsFailed:
+    "Vos questions enregistrées n’ont pas pu être lues.",
+  campaignsSaveFailed: "Cette question n’a pas pu être enregistrée.",
+  campaignsDeleteFailed: "Cette question n’a pas pu être supprimée.",
+  campaignsEmptyTitle: "Personne à contacter pour l’instant",
+  campaignsEmptyBody:
+    "Les personnes apparaissent ici dès que cet espace de travail a un client, une affaire avec une adresse e-mail, ou quelqu’un qui a rempli un formulaire sur son site. Les carnets d’adresses personnels ne sont jamais utilisés.",
+  campaignsNothingSentYet:
+    "Rien n’est envoyé depuis cet écran. L’envoi de campagnes exige sa propre adresse, distincte de votre courrier quotidien, afin qu’une lettre d’information ne puisse jamais compromettre la remise de vos factures.",
 };

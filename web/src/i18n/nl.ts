@@ -6242,4 +6242,59 @@ export const nl: Partial<Catalog> = {
   sitesDomainStepCancelled: "Afbesteld. Er is niets in rekening gebracht.",
   sitesDomainOwnerOnly:
     "Alleen de eigenaar van deze website kan domeinnamen kopen of beheren. U kunt de website zelf gewoon bewerken en publiceren.",
+
+  // alo Campagnes (ADR 0044, golf C1) — het publieksscherm.
+  moduleCampaigns: "Campagnes",
+  campaignsTitle: "Publiek",
+  campaignsSubtitle:
+    "Iedereen die deze werkruimte kan bereiken, en iedereen die zij niet mag bereiken — met de reden.",
+  campaignsCountriesLabel: "Landen",
+  campaignsCountriesHint:
+    "Tweeletterige codes, gescheiden door komma’s. Leeg betekent overal.",
+  campaignsCountriesPlaceholder: "BE, NL",
+  campaignsPurchaseLabel: "Aankopen",
+  campaignsPurchaseAny: "Iedereen",
+  campaignsPurchaseBought: "Heeft gekocht",
+  campaignsPurchaseNotBought: "Heeft niet gekocht",
+  campaignsPeriodLabel: "In de laatste",
+  campaignsPeriodEver: "Ooit",
+  campaignsPeriodDays: (days: number): string => `${days} dagen`,
+  campaignsEveryone: "Iedereen",
+  campaignsSegmentsLabel: "Bewaarde vragen",
+  campaignsSaveSegment: "Deze vraag bewaren",
+  campaignsSegmentNamePrompt: "Hoe moet deze vraag heten?",
+  campaignsSegmentNamePlaceholder: "Belgische klanten",
+  campaignsDeleteSegment: "Verwijderen",
+  campaignsDeleteSegmentConfirm: (name: string): string =>
+    `De vraag “${name}” verwijderen? Niemands toestemming of afmelding wordt geraakt — alleen de vraag verdwijnt.`,
+  campaignsTallyMailable: (mailable: number, matched: number): string =>
+    `${mailable} van de ${matched} personen krijgen het bericht`,
+  campaignsTallyNobody: "Niemand in deze werkruimte past bij die vraag.",
+  campaignsExcludedCount: (people: number, reason: string): string =>
+    `${people} · ${reason}`,
+  campaignsWillBeMailed: "Krijgt het bericht",
+  campaignsReasonNoConsent: "Nooit ingestemd",
+  campaignsReasonUnsubscribe: "Afgemeld",
+  campaignsReasonHardBounce: "Bericht kwam niet aan",
+  campaignsReasonComplaint: "Meldde ons als spam",
+  campaignsReasonManual: "Vroeg ons te stoppen",
+  campaignsTableLabel: "Personen die deze vraag selecteert",
+  campaignsColPerson: "Persoon",
+  campaignsColCountry: "Land",
+  campaignsColKnownFrom: "Bekend via",
+  campaignsColStatus: "Status",
+  campaignsSourceBillingCustomer: "Klant",
+  campaignsSourceCrmDeal: "Verkoopkans",
+  campaignsSourceSiteForm: "Formulier op de website",
+  campaignsNoMatches: "Niemand past bij die vraag.",
+  campaignsMore: "Meer personen tonen",
+  campaignsLoadFailed: "Het publiek kon niet worden gelezen.",
+  campaignsSegmentsFailed: "Uw bewaarde vragen konden niet worden gelezen.",
+  campaignsSaveFailed: "Deze vraag kon niet worden bewaard.",
+  campaignsDeleteFailed: "Deze vraag kon niet worden verwijderd.",
+  campaignsEmptyTitle: "Nog niemand om te bereiken",
+  campaignsEmptyBody:
+    "Personen verschijnen hier zodra deze werkruimte een klant heeft, een verkoopkans met een e-mailadres, of iemand die een formulier op de website heeft ingevuld. Persoonlijke adresboeken worden nooit gebruikt.",
+  campaignsNothingSentYet:
+    "Vanaf dit scherm wordt niets verzonden. Campagnepost heeft een eigen adres nodig, los van uw dagelijkse e-mail, zodat een nieuwsbrief nooit invloed kan hebben op de bezorging van uw facturen.",
 };
