@@ -1567,6 +1567,7 @@ export const fr: Partial<Catalog> = {
   billingNoMatches: "Aucun résultat pour cette recherche.",
   billingNoCustomersTitle: "Aucun client pour l’instant",
   billingGetStarted: "Démarrez en 3 étapes simples",
+  billingGetStartedBody: "Tout ce qu’il vous faut pour facturer et être payé.",
   billingStepCustomerTitle: "Ajoutez votre premier client",
   billingStepCustomerBody: "Créez un profil client avec ses informations de facturation.",
   billingStepInvoiceTitle: "Créez votre première facture",

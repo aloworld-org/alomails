@@ -2496,6 +2496,7 @@ export const en = {
   billingNoCustomersBody:
     "A customer carries the address, VAT id and payment terms every invoice you raise for them starts from.",
   billingGetStarted: "Get started in 3 simple steps",
+  billingGetStartedBody: "Everything you need to start billing and get paid.",
   billingStepCustomerTitle: "Add your first customer",
   billingStepCustomerBody: "Create a customer profile with their billing details.",
   billingStepInvoiceTitle: "Create your first invoice",
