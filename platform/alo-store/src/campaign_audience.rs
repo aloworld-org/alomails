@@ -254,6 +254,49 @@ impl Default for AudiencePage {
     }
 }
 
+impl AudiencePage {
+    /// The cursor, checked — `None` for the first page.
+    ///
+    /// A cursor that is not an address is **refused rather than ignored**:
+    /// ignoring it would silently return page one, which reads as "the audience
+    /// restarted" rather than as the mistake it is, and a caller walking pages
+    /// would loop forever over the same people.
+    ///
+    /// Only judged here, never folded — [`normalise_address`] explains why the
+    /// value bound to the query is folded by Postgres instead.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] when the cursor is not an address.
+    pub(crate) fn validated_cursor(&self) -> Result<Option<String>> {
+        match self.after.as_deref() {
+            None => Ok(None),
+            Some(raw) => normalise_address(raw).map(Some).ok_or_else(|| {
+                StoreError::Validation(
+                    "the page cursor is not an address this audience could contain".to_owned(),
+                )
+            }),
+        }
+    }
+
+    /// The page size, checked against [`AUDIENCE_PAGE_MAX`].
+    ///
+    /// Shared with [`campaign_segments`](crate::campaign_segments) so a segment
+    /// page and an audience page are bounded by one rule rather than by two
+    /// that can drift.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] when the size is outside
+    /// `1..=`[`AUDIENCE_PAGE_MAX`].
+    pub(crate) fn validated_limit(&self) -> Result<i64> {
+        if !(1..=AUDIENCE_PAGE_MAX).contains(&self.limit) {
+            return Err(StoreError::Validation(format!(
+                "a page of the audience is between 1 and {AUDIENCE_PAGE_MAX} people"
+            )));
+        }
+        Ok(self.limit)
+    }
+}
+
 /// Trims and lowercases an address, returning `None` when the result is not a
 /// plausible one under [`ADDRESS_SHAPE`].
 ///
@@ -396,7 +439,15 @@ fn suppression_cte() -> &'static str {
 /// Consent and suppression both join here, at the bottom, rather than in each
 /// query above them: that is what lets [`Reach::Mailable`] be a predicate on two
 /// columns instead of a rule four call sites have to remember.
-fn people_cte() -> String {
+///
+/// Visible to the crate because
+/// [`campaign_segments`](crate::campaign_segments) (C1.4) narrows the audience
+/// rather than re-reading it: a segment is `SELECT … FROM people WHERE
+/// <conditions>`, so the privacy boundary, the consent join and the suppression
+/// join are the same text for a segment as for the whole audience. A segment
+/// that built its own `FROM` would be a second place `contacts` could be read
+/// and a second place suppression could be forgotten.
+pub(crate) fn people_cte() -> String {
     format!(
         "WITH {sources}, {consent}, {suppression}, grouped AS ( \
            SELECT address, \
@@ -433,7 +484,7 @@ fn people_cte() -> String {
 /// disagreed with the list it counts is the failure this shape exists to make
 /// impossible.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Reach {
+pub(crate) enum Reach {
     /// Everybody the tenant holds a record of — what the audience screen shows,
     /// exclusions included and each carrying its reason.
     Anyone,
@@ -451,7 +502,7 @@ impl Reach {
     /// this crate that wants one without the other, and offering the choice is
     /// how a "just the consented ones" call site eventually mails somebody who
     /// unsubscribed.
-    fn predicate(self) -> &'static str {
+    pub(crate) fn predicate(self) -> &'static str {
         match self {
             Self::Anyone => "",
             Self::Mailable => " AND consented_at IS NOT NULL AND suppressed_at IS NULL",
@@ -460,7 +511,7 @@ impl Reach {
 }
 
 /// The columns both reads select, in the order [`MemberRow`] declares them.
-const MEMBER_COLUMNS: &str = "address, name, country, sources, first_seen_at, last_seen_at, \
+pub(crate) const MEMBER_COLUMNS: &str = "address, name, country, sources, first_seen_at, last_seen_at, \
                               consent_id, consent_source, consented_at, \
                               suppression_id, suppression_reason, suppressed_at";
 
@@ -513,8 +564,14 @@ fn all_sql() -> Vec<String> {
 }
 
 /// A row as the page query returns it.
+///
+/// Visible to the crate so [`campaign_segments`](crate::campaign_segments) can
+/// read a narrowed audience back through the same two converters — the
+/// suppression refusal in [`into_recipient`](Self::into_recipient) is a rule
+/// about who may be handed to a sender, and a segment that decoded its own rows
+/// would be a way around it.
 #[derive(sqlx::FromRow)]
-struct MemberRow {
+pub(crate) struct MemberRow {
     address: String,
     name: Option<String>,
     country: Option<String>,
@@ -536,7 +593,7 @@ impl MemberRow {
     /// module writes those strings itself, so an unrecognised one means the
     /// query changed under the enum, and reporting a person as reachable "from
     /// nowhere" would hide it.
-    fn into_member(self) -> Result<AudienceMember> {
+    pub(crate) fn into_member(self) -> Result<AudienceMember> {
         let sources = self.typed_sources()?;
         let consent = self.consent()?;
         let suppression = self.suppression()?;
@@ -560,7 +617,7 @@ impl MemberRow {
     /// dropping the person quietly would turn that into a campaign that mails
     /// fewer people than its count promised, which nobody would report as a
     /// bug.
-    fn into_recipient(self) -> Result<CampaignRecipient> {
+    pub(crate) fn into_recipient(self) -> Result<CampaignRecipient> {
         let sources = self.typed_sources()?;
         // Suppression is checked first and hardest. It is the stronger rule —
         // a suppressed person is not a recipient however good their consent
@@ -738,25 +795,11 @@ impl AccountStore {
     /// The shared read behind both page methods: one validation of the page,
     /// one bind order, one query builder.
     async fn audience_rows(&self, page: &AudiencePage, reach: Reach) -> Result<Vec<MemberRow>> {
-        if page.limit < 1 || page.limit > AUDIENCE_PAGE_MAX {
-            return Err(StoreError::Validation(format!(
-                "a page of the audience is between 1 and {AUDIENCE_PAGE_MAX} people"
-            )));
-        }
-        // A cursor that is not an address would silently return page one, which
-        // reads as "the audience restarted" rather than as the mistake it is.
-        let after = match page.after.as_deref() {
-            None => None,
-            Some(raw) => Some(normalise_address(raw).ok_or_else(|| {
-                StoreError::Validation(
-                    "the page cursor is not an address this audience could contain".to_owned(),
-                )
-            })?),
-        };
+        let after = page.validated_cursor()?;
         sqlx::query_as::<_, MemberRow>(&page_sql(reach))
             .bind(self.tenant.as_str())
             .bind(after)
-            .bind(page.limit)
+            .bind(page.validated_limit()?)
             .fetch_all(&self.pool)
             .await
             .map_err(StoreError::Db)

@@ -55,6 +55,7 @@ pub mod calendar;
 pub mod calendar_availability;
 pub mod campaign_audience;
 pub mod campaign_consent;
+pub mod campaign_segments;
 pub mod campaign_suppression;
 pub mod changes;
 pub mod chat;
@@ -324,6 +325,11 @@ pub use campaign_audience::{
 pub use campaign_consent::{
     CONSENT_STATEMENT_MAX, CampaignConsent, ConsentEvidence, ConsentSource, NewCampaignConsent,
 };
+pub use campaign_segments::{
+    CampaignSegment, ExclusionReason, NewCampaignSegment, PurchaseCondition, PurchaseWindow,
+    SEGMENT_COUNTRIES_MAX, SEGMENT_NAME_MAX, SEGMENT_PAGE_MAX, SEGMENT_PERIOD_DAYS_MAX,
+    SegmentConditions, SegmentExclusion, SegmentTally,
+};
 pub use campaign_suppression::{
     CampaignSuppression, NewSuppression, SUPPRESSION_PAGE_MAX, SuppressionEvidence,
     SuppressionReason,
@@ -452,22 +458,23 @@ pub use id::{
     AttachmentId, BankLineId, BankMatchId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId,
     BaseViewId, BillingBillId, BillingCustomerId, BillingInvoiceId, BillingLineId,
     BillingPaymentId, BillingProductId, BillingQuoteId, BillingScheduleId, BlobId, CalendarId,
-    CampaignConsentId, CampaignSuppressionId, CategoryId, ChatAgentId, ChatChannelId,
-    ChatMessageId, ChatProposalId, ChatToolRunId, CommentId, ContactId, CrmActivityId, CrmDealId,
-    CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId, FinAccountId, FinCategoryId,
-    FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId, FinMileageRateId, FinPeriodId,
-    FinPostingId, GroupId, HrApplicantId, HrApplicantNoteId, HrChecklistStepId,
-    HrChecklistTemplateId, HrDocumentId, HrEmployeeId, HrEmploymentId, HrLeavePolicyId,
-    HrLeaveRequestId, HrLetterTemplateId, HrOpeningId, HrPayrollExportId, InsightDashboardId,
-    InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId, InvPurchaseOrderId,
-    InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId, InvStockHoldId,
-    InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId, ProjectMilestoneId,
-    SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId, SiteCatalogId,
-    SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId, SiteFormSubmissionId,
-    SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId, SitePostId,
-    SitePublishId, SitePublishScheduleId, SiteShopItemId, SiteStockFulfilmentId, SiteStockOrderId,
-    SiteTicketEventId, SiteTicketFulfilmentId, SiteTicketHoldId, SiteTicketOrderId, SpaceId,
-    SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId, UserId,
+    CampaignConsentId, CampaignSegmentId, CampaignSuppressionId, CategoryId, ChatAgentId,
+    ChatChannelId, ChatMessageId, ChatProposalId, ChatToolRunId, CommentId, ContactId,
+    CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
+    FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
+    FinMileageRateId, FinPeriodId, FinPostingId, GroupId, HrApplicantId, HrApplicantNoteId,
+    HrChecklistStepId, HrChecklistTemplateId, HrDocumentId, HrEmployeeId, HrEmploymentId,
+    HrLeavePolicyId, HrLeaveRequestId, HrLetterTemplateId, HrOpeningId, HrPayrollExportId,
+    InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId,
+    InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
+    InvStockHoldId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId,
+    ProjectMilestoneId, SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId,
+    SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId,
+    SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId,
+    SitePostId, SitePublishId, SitePublishScheduleId, SiteShopItemId, SiteStockFulfilmentId,
+    SiteStockOrderId, SiteTicketEventId, SiteTicketFulfilmentId, SiteTicketHoldId,
+    SiteTicketOrderId, SpaceId, SubtaskId, TaskId, TenantId, ThreadId, TimeEntryId, TimeWeekId,
+    UserId,
 };
 pub use identity::{
     AccessTokenRow, AuthCodeOutcome, AuthCodeRow, CredentialRow, OAuthClient, PublicKeyRow,

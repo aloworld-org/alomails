@@ -747,6 +747,15 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One saved question about who to mail (alo Campaigns, ADR 0044, wave
+    /// C1.4). Identifies the *conditions*, never a set of people: a segment
+    /// stores no membership, so this id resolves to a question that is re-asked
+    /// of the audience on every read rather than to an answer that can go
+    /// stale.
+    CampaignSegmentId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.
