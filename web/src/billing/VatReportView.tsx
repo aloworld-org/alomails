@@ -20,7 +20,7 @@
 // half-typed date never becomes a request — and so the figures on screen always
 // belong to the days written above them.
 import { useCallback, useEffect, useState } from "react";
-import { FileSpreadsheet } from "lucide-react";
+import { CalendarDays, FileSpreadsheet } from "lucide-react";
 
 import { Button, Spinner } from "../ds";
 import { strings, useLocale } from "../i18n";
@@ -97,55 +97,66 @@ export function VatReportView() {
   return (
     <div className={styles.page}>
       <form
-        className={styles.toolbar}
+        className={styles.reportToolbar}
         onSubmit={(e) => {
           e.preventDefault();
           setPeriod(form);
         }}
       >
-        <label className={styles.toggle}>
-          {strings.billingReportFrom}
-          <input
-            className={styles.input}
-            type="date"
-            value={form.from}
-            onChange={(e) => setForm({ ...form, from: e.target.value })}
-            required
-          />
-        </label>
-        <label className={styles.toggle}>
-          {strings.billingReportTo}
-          <input
-            className={styles.input}
-            type="date"
-            value={form.to}
-            onChange={(e) => setForm({ ...form, to: e.target.value })}
-            required
-          />
-        </label>
-        <Button type="submit">{strings.billingReportShow}</Button>
-        <button
-          type="button"
-          className={styles.linkAction}
-          onClick={() => pick(quarterOf(new Date()))}
-        >
-          {strings.billingReportThisQuarter}
-        </button>
-        <button
-          type="button"
-          className={styles.linkAction}
-          onClick={() => pick(previousQuarterOf(new Date()))}
-        >
-          {strings.billingReportLastQuarter}
-        </button>
-        {(loading || downloading) && <Spinner size={16} />}
-        <Button
-          variant="ghost"
-          onClick={() => void download()}
-          disabled={report === null || downloading}
-        >
-          {strings.billingReportDownloadCsv}
-        </Button>
+        <div className={styles.reportDates}>
+          <label className={styles.dateField}>
+            <span>{strings.billingReportFrom}</span>
+            <span className={styles.dateControl}>
+              <CalendarDays aria-hidden="true" />
+              <input
+                type="date"
+                value={form.from}
+                max={form.to}
+                onChange={(e) => setForm({ ...form, from: e.target.value })}
+                required
+              />
+            </span>
+          </label>
+          <span className={styles.dateRangeSeparator} aria-hidden="true" />
+          <label className={styles.dateField}>
+            <span>{strings.billingReportTo}</span>
+            <span className={styles.dateControl}>
+              <CalendarDays aria-hidden="true" />
+              <input
+                type="date"
+                value={form.to}
+                min={form.from}
+                onChange={(e) => setForm({ ...form, to: e.target.value })}
+                required
+              />
+            </span>
+          </label>
+          <Button type="submit">{strings.billingReportShow}</Button>
+        </div>
+        <div className={styles.reportActions}>
+          <button
+            type="button"
+            className={styles.linkAction}
+            onClick={() => pick(quarterOf(new Date()))}
+          >
+            {strings.billingReportThisQuarter}
+          </button>
+          <button
+            type="button"
+            className={styles.linkAction}
+            onClick={() => pick(previousQuarterOf(new Date()))}
+          >
+            {strings.billingReportLastQuarter}
+          </button>
+          {(loading || downloading) && <Spinner size={16} />}
+          <Button
+            variant="ghost"
+            onClick={() => void download()}
+            disabled={report === null || downloading}
+          >
+            {strings.billingReportDownloadCsv}
+          </Button>
+        </div>
       </form>
 
       <p className={styles.totalsNote}>
