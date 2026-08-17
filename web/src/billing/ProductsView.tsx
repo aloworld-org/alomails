@@ -81,6 +81,7 @@ export function ProductsView() {
         createLabel={strings.billingNewProduct}
         onCreate={() => setEditing(null)}
         busy={loading}
+        showCreate={products.length > 0}
       />
 
       {error !== null && <ErrorBanner message={error} />}

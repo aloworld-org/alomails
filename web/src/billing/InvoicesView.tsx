@@ -161,7 +161,9 @@ export function InvoicesView() {
           </select>
         </label>
         {loading && <Spinner size={16} />}
-        <Button onClick={() => void navigate("new")}>{strings.billingNewInvoice}</Button>
+        {(invoices.length > 0 || filter !== "all") && (
+          <Button onClick={() => void navigate("new")}>{strings.billingNewInvoice}</Button>
+        )}
       </div>
 
       {error !== null && <ErrorBanner message={error} />}

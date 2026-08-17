@@ -108,7 +108,9 @@ export function QuotesView() {
           </select>
         </label>
         {loading && <Spinner size={16} />}
-        <Button onClick={() => void navigate("new")}>{strings.billingNewQuote}</Button>
+        {(quotes.length > 0 || filter !== "all") && (
+          <Button onClick={() => void navigate("new")}>{strings.billingNewQuote}</Button>
+        )}
       </div>
 
       {error !== null && <ErrorBanner message={error} />}

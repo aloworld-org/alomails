@@ -93,7 +93,7 @@ export function EmptyState({
   onCta?: () => void;
 }) {
   return (
-    <div className={styles.empty}>
+    <div className={cta !== undefined ? `${styles.empty} ${styles.emptyWithAction}` : styles.empty}>
       <span className={styles.emptyArt} aria-hidden="true">
         <Icon size={38} />
       </span>
