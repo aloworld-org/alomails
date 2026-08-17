@@ -183,6 +183,100 @@
   border-color: var(--border-strong);
 }
 
+/* ---- personalised tools ---- */
+.tools {
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.toolsHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.toolsTitle {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.toolsSubtitle {
+  margin: 2px 0 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.toolsGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.tool {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  min-height: 58px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  text-align: left;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.tool:hover {
+  border-color: var(--accent-tint);
+  background: var(--accent-soft);
+  transform: translateY(-1px);
+}
+
+.toolIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--accent);
+}
+
+.toolLabel {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toolArrow {
+  color: var(--text-tertiary);
+  opacity: 0;
+  transform: translateX(-3px);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.tool:hover .toolArrow,
+.tool:focus-visible .toolArrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+
 .statIcon {
   grid-area: icon;
   display: inline-flex;
@@ -748,6 +842,7 @@
   .stats {
     grid-template-columns: repeat(2, 1fr);
   }
+  .toolsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .grid {
     grid-template-columns: 1fr;
   }
@@ -760,6 +855,7 @@
   .search { grid-row: 3; }
   .greeting { font-size: var(--text-2xl); }
   .stats { grid-template-columns: 1fr; }
+  .toolsGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .stat { min-height: 92px; }
   .ask { align-items: flex-start; flex-wrap: wrap; }
   .askCta { margin-left: 60px; }

@@ -5672,6 +5672,8 @@ export const nl: Partial<Catalog> = {
   homeSearchPlaceholder: "Zoek in e-mail, afspraken, taken…",
   homeStatTasks: "Taken voor vandaag",
   homeSubtitle: "Dit staat er vandaag te gebeuren.",
+  homeToolsTitle: "Uw tools",
+  homeToolsSubtitle: "Uw meest gebruikte apps, direct bij de hand.",
   homeTaskOverdue: "Te laat",
   homeTaskToday: "Vandaag",
   homeTodaysCalendar: "Agenda van vandaag",

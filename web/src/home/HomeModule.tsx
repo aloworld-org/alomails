@@ -27,6 +27,9 @@ import { KEYWORD_FLAGGED, KEYWORD_SEEN, useJmapClient } from "../jmap";
 import type { CalendarEvent, EmailHeaders, Task } from "../jmap";
 import { useAuth } from "../auth";
 import { formatDate, senderName, subjectOr } from "../mail/format";
+import { surface } from "../product";
+import { isModuleAllowed, useDeniedModules } from "../shell";
+import { mostUsedApps } from "../shell/appUsage";
 import styles from "./HomeModule.module.css";
 
 type Tab = "recent" | "starred" | "unread";
@@ -55,6 +58,7 @@ export function HomeModule() {
   const client = useJmapClient();
   const { identity } = useAuth();
   const navigate = useNavigate();
+  const deniedModules = useDeniedModules();
 
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
@@ -119,6 +123,27 @@ export function HomeModule() {
     [recent],
   );
   const rows = tab === "recent" ? recent : tab === "starred" ? starred : unreadList;
+
+  const tools = useMemo(() => {
+    const available = surface.modules.filter(
+      (module) =>
+        module.id !== "home" &&
+        module.enabled &&
+        isModuleAllowed(deniedModules, module.id),
+    );
+    const byId = new Map(available.map((module) => [module.id, module]));
+    const preferredDefaults = ["mail", "agenda", "tasks", "chat", "meet", "drive"];
+    const orderedIds = [
+      ...mostUsedApps(6),
+      ...preferredDefaults,
+      ...available.map((module) => module.id),
+    ];
+
+    return [...new Set(orderedIds)]
+      .map((id) => byId.get(id))
+      .filter((module): module is NonNullable<typeof module> => module !== undefined)
+      .slice(0, 6);
+  }, [deniedModules]);
 
   function runSearch(e: React.FormEvent) {
     e.preventDefault();
@@ -212,6 +237,35 @@ export function HomeModule() {
           onClick={() => navigate("/tasks")}
         />
       </section>
+
+      {tools.length > 0 && (
+        <section className={styles.tools} aria-labelledby="home-tools-title">
+          <div className={styles.toolsHead}>
+            <div>
+              <h2 id="home-tools-title" className={styles.toolsTitle}>
+                {strings.homeToolsTitle}
+              </h2>
+              <p className={styles.toolsSubtitle}>{strings.homeToolsSubtitle}</p>
+            </div>
+          </div>
+          <div className={styles.toolsGrid}>
+            {tools.map((tool) => (
+              <button
+                key={tool.id}
+                type="button"
+                className={styles.tool}
+                onClick={() => navigate(tool.path)}
+              >
+                <span className={styles.toolIcon} aria-hidden>
+                  <tool.Icon size={19} strokeWidth={1.8} />
+                </span>
+                <span className={styles.toolLabel}>{tool.label}</span>
+                <ArrowRight className={styles.toolArrow} size={16} aria-hidden />
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className={styles.grid}>
         <section className={styles.card}>

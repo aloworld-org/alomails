@@ -5738,6 +5738,8 @@ export const fr: Partial<Catalog> = {
   homeSearchPlaceholder: "Rechercher dans les e-mails, événements, tâches…",
   homeStatTasks: "Tâches à faire aujourd’hui",
   homeSubtitle: "Voici ce qui se passe aujourd’hui.",
+  homeToolsTitle: "Vos outils",
+  homeToolsSubtitle: "Les applications que vous utilisez le plus, à portée de main.",
   homeTaskOverdue: "En retard",
   homeTaskToday: "Aujourd’hui",
   homeTodaysCalendar: "Agenda du jour",

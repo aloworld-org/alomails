@@ -30,6 +30,8 @@ export const en = {
   homeStatFiles: "Documents",
   homeStatTasks: "Tasks due today",
   homeSubtitle: "Here's what's happening today.",
+  homeToolsTitle: "Your tools",
+  homeToolsSubtitle: "The apps you use most, ready when you need them.",
   homeSearchPlaceholder: "Search mail, events, tasks…",
   homeNotifications: "Notifications",
   homeTodaysCalendar: "Today's calendar",
