@@ -53,6 +53,7 @@ pub mod billing_xml_tree;
 pub mod blob;
 pub mod calendar;
 pub mod calendar_availability;
+pub mod campaign_audience;
 pub mod changes;
 pub mod chat;
 pub mod chat_agent_dm;
@@ -314,6 +315,9 @@ pub use billing_vat_report::{VatPeriod, VatPeriodBase, VatPeriodCurrency, VatPer
 pub use blob::GarageConfig;
 pub use blob::{BlobStore, ShareStream};
 pub use calendar_availability::{CalendarAvailability, CalendarBusySpan};
+pub use campaign_audience::{
+    AUDIENCE_PAGE_MAX, AudienceMember, AudiencePage, AudienceSource, normalise_address,
+};
 pub use changes::Changes;
 pub use chat::{ChannelKind, ChannelVisibility, ChatChannel, ChatMember, MemberRole};
 pub use chat_agent_seed::{
