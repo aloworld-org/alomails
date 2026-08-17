@@ -291,14 +291,14 @@ export function HomeModule() {
             </div>
           </div>
           <div className="grid grid-cols-8 gap-3 max-xl:grid-cols-4 max-sm:grid-cols-2">
-            {tools.map((tool, index) => (
+            {tools.map((tool) => (
               <button
                 key={tool.id}
                 type="button"
                 className="group grid min-h-[54px] min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-transparent bg-transparent px-2 py-2 text-left text-primary transition hover:bg-raised focus-visible:outline-2 focus-visible:outline-accent"
                 onClick={() => navigate(tool.path)}
               >
-                <span className={`inline-flex size-9 items-center justify-center rounded-lg shadow-sm ${index % 3 === 1 ? "bg-[var(--success-bg)] text-[var(--success-text)]" : index % 3 === 2 ? "bg-[var(--accent-secondary-tint)] text-[var(--accent-secondary)]" : "bg-[var(--accent-soft)] text-accent"}`} aria-hidden>
+                <span className="inline-flex size-9 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent shadow-sm" aria-hidden>
                   <tool.Icon size={19} strokeWidth={1.8} />
                 </span>
                 <span className="min-w-0 truncate whitespace-nowrap text-sm font-semibold">{tool.label}</span>
