@@ -268,7 +268,7 @@ export function HomeModule() {
       )}
 
       <div className={styles.grid}>
-        <section className={styles.card}>
+        <section className={`${styles.card} ${styles.mailCard}`}>
           <div className={styles.cardHead}>
             <div className={styles.tabs} role="tablist">
               <Tabs tab={tab} onChange={setTab} />
@@ -314,7 +314,7 @@ export function HomeModule() {
         </section>
 
         <aside className={styles.side}>
-          <section className={styles.card}>
+          <section className={`${styles.card} ${styles.calendarCard}`}>
             <div className={styles.cardHead}>
               <h2 className={styles.cardHeadTitle}>{strings.homeTodaysCalendar}</h2>
               <button type="button" className={styles.link} onClick={() => navigate("/agenda")}>
@@ -349,7 +349,7 @@ export function HomeModule() {
             )}
           </section>
 
-          <section className={styles.card}>
+          <section className={`${styles.card} ${styles.tasksCard}`}>
             <div className={styles.cardHead}>
               <h2 className={styles.cardHeadTitle}>{strings.homeMyTasks}</h2>
               <button type="button" className={styles.link} onClick={() => navigate("/tasks")}>

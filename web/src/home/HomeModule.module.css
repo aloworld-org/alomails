@@ -346,15 +346,21 @@
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 2.05fr) minmax(320px, 1fr);
+  grid-template-areas:
+    "mail calendar"
+    "ask tasks";
   gap: var(--space-4);
-  align-items: start;
+  align-items: stretch;
 }
 
 .side {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  display: contents;
 }
+
+.mailCard { grid-area: mail; }
+.calendarCard { grid-area: calendar; }
+.tasksCard { grid-area: tasks; }
+.ask { grid-area: ask; }
 
 .card {
   border: 1px solid var(--border-subtle);
@@ -772,7 +778,7 @@
 
 /* ---- Ask alo banner ---- */
 .ask {
-  min-height: 128px;
+  min-height: 132px;
 }
 
 .askHeading {
@@ -818,6 +824,11 @@
   .toolsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .grid {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "mail"
+      "calendar"
+      "tasks"
+      "ask";
   }
 }
 
