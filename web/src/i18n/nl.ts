@@ -1527,7 +1527,6 @@ export const nl: Partial<Catalog> = {
   billingNoMatches: "Niets komt overeen met die zoekopdracht.",
   billingNoCustomersTitle: "Nog geen klanten",
   billingGetStarted: "Begin in 3 eenvoudige stappen",
-  billingGetStartedBody: "Alles wat u nodig hebt om te factureren en betaald te worden.",
   billingStepCustomerTitle: "Voeg uw eerste klant toe",
   billingStepCustomerBody: "Maak een klantprofiel met de factuurgegevens.",
   billingStepInvoiceTitle: "Maak uw eerste factuur",
