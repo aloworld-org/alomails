@@ -57,6 +57,7 @@ pub mod campaign_audience;
 pub mod campaign_consent;
 pub mod campaign_segments;
 pub mod campaign_suppression;
+pub mod campaign_unsubscribe;
 pub mod changes;
 pub mod chat;
 pub mod chat_agent_dm;
@@ -334,6 +335,9 @@ pub use campaign_suppression::{
     CampaignSuppression, NewSuppression, SUPPRESSION_PAGE_MAX, SuppressionEvidence,
     SuppressionReason,
 };
+pub use campaign_unsubscribe::{
+    IssuedUnsubscribeToken, NewUnsubscribeToken, UNSUBSCRIBE_SEND_REF_MAX, UnsubscribeTokenTarget,
+};
 pub use changes::Changes;
 pub use chat::{ChannelKind, ChannelVisibility, ChatChannel, ChatMember, MemberRole};
 pub use chat_agent_seed::{
@@ -458,17 +462,17 @@ pub use id::{
     AttachmentId, BankLineId, BankMatchId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId,
     BaseViewId, BillingBillId, BillingCustomerId, BillingInvoiceId, BillingLineId,
     BillingPaymentId, BillingProductId, BillingQuoteId, BillingScheduleId, BlobId, CalendarId,
-    CampaignConsentId, CampaignSegmentId, CampaignSuppressionId, CategoryId, ChatAgentId,
-    ChatChannelId, ChatMessageId, ChatProposalId, ChatToolRunId, CommentId, ContactId,
-    CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId, DriveNodeId, EventId,
-    FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId, FinMileageId,
-    FinMileageRateId, FinPeriodId, FinPostingId, GroupId, HrApplicantId, HrApplicantNoteId,
-    HrChecklistStepId, HrChecklistTemplateId, HrDocumentId, HrEmployeeId, HrEmploymentId,
-    HrLeavePolicyId, HrLeaveRequestId, HrLetterTemplateId, HrOpeningId, HrPayrollExportId,
-    InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId, InvPoReceiptId,
-    InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId, InvSoInvoiceId,
-    InvStockHoldId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId, ProjectId,
-    ProjectMilestoneId, SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId,
+    CampaignConsentId, CampaignSegmentId, CampaignSuppressionId, CampaignUnsubscribeTokenId,
+    CategoryId, ChatAgentId, ChatChannelId, ChatMessageId, ChatProposalId, ChatToolRunId,
+    CommentId, ContactId, CrmActivityId, CrmDealId, CrmEventId, CrmPipelineId, CrmStageId,
+    DriveNodeId, EventId, FinAccountId, FinCategoryId, FinEntryId, FinExpenseId, FinMatchRuleId,
+    FinMileageId, FinMileageRateId, FinPeriodId, FinPostingId, GroupId, HrApplicantId,
+    HrApplicantNoteId, HrChecklistStepId, HrChecklistTemplateId, HrDocumentId, HrEmployeeId,
+    HrEmploymentId, HrLeavePolicyId, HrLeaveRequestId, HrLetterTemplateId, HrOpeningId,
+    HrPayrollExportId, InsightDashboardId, InsightTileId, InvCountId, InvLocationId, InvMoveId,
+    InvPoReceiptId, InvPurchaseOrderId, InvReorderRuleId, InvSalesOrderId, InvSoDeliveryId,
+    InvSoInvoiceId, InvStockHoldId, InvSupplierId, LabelId, MailboxId, MeetingId, MessageId,
+    ProjectId, ProjectMilestoneId, SiteBookingAppointmentId, SiteBookingId, SiteCatalogCategoryId,
     SiteCatalogId, SiteCatalogItemId, SiteCollectionId, SiteDomainPurchaseId, SiteFormId,
     SiteFormSubmissionId, SiteId, SiteKnowledgeSourceId, SiteLeadLinkId, SiteOrderId, SitePageId,
     SitePostId, SitePublishId, SitePublishScheduleId, SiteShopItemId, SiteStockFulfilmentId,

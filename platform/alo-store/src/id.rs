@@ -756,6 +756,16 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One recipient's one-click unsubscribe link (alo Campaigns, ADR 0044 §3,
+    /// wave C2s.1). Identifies the *record*, never the link: the token itself
+    /// is a separate 256-bit secret this id cannot be turned into, and only its
+    /// digest is stored. This is what a suppression names in its `source_ref`,
+    /// so "which send did they leave over" is answerable without the working
+    /// credential being copied into a second table.
+    CampaignUnsubscribeTokenId
+);
+
+opaque_id!(
     /// A meeting. Distinct from the opaque room name the media engine is told:
     /// that is generated separately so the engine cannot be correlated back to
     /// a workspace record by anyone reading its logs.
