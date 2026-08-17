@@ -244,7 +244,6 @@ export function HomeModule() {
       <section className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
         <StatCard
           Icon={Mail}
-          tone="accent"
           value={unreadEmails}
           loading={loading}
           label={strings.homeStatUnreadEmails}
@@ -253,7 +252,6 @@ export function HomeModule() {
         />
         <StatCard
           Icon={Calendar}
-          tone="neutral"
           value={upcomingEvents}
           loading={loading}
           label={strings.homeStatEvents}
@@ -262,7 +260,6 @@ export function HomeModule() {
         />
         <StatCard
           Icon={CheckCircle2}
-          tone="success"
           value={dueToday}
           loading={loading}
           label={strings.homeStatTasks}
@@ -271,7 +268,6 @@ export function HomeModule() {
         />
         <StatCard
           Icon={MessageCircle}
-          tone="message"
           value={unreadMessages}
           loading={loading}
           label={strings.homeStatMessages}
@@ -500,21 +496,12 @@ interface StatCardProps {
   onClick: () => void;
   value?: number | null;
   loading?: boolean;
-  tone: "accent" | "neutral" | "success" | "message";
 }
 
-function StatCard({ Icon, label, cta, onClick, value, loading, tone }: StatCardProps) {
-  const iconClass =
-    tone === "accent"
-      ? "bg--soft text-accent"
-      : tone === "success"
-        ? "bg-[var(--success-bg)] text-[var(--success-text)]"
-        : tone === "message"
-          ? "bg-[var(--accent-secondary-tint)] text-[var(--accent-secondary)]"
-        : "bg-raised text-secondary";
+function StatCard({ Icon, label, cta, onClick, value, loading }: StatCardProps) {
   return (
     <button type="button" className="group flex min-h-[112px] items-center gap-4 rounded-xl border border-subtle bg-surface !px-6 !py-5 text-left shadow-sm transition hover:-translate-y-px hover:border-default hover:shadow-md focus-visible:outline-2 focus-visible:outline-accent max-sm:min-h-[96px] max-sm:!px-5" onClick={onClick}>
-      <span className={`inline-flex size-11 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>
+      <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg bg--soft text-accent">
         <Icon size={20} />
       </span>
       <span className="flex min-w-0 flex-1 flex-col gap-1">
