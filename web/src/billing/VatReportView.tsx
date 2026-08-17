@@ -20,7 +20,7 @@
 // half-typed date never becomes a request — and so the figures on screen always
 // belong to the days written above them.
 import { useCallback, useEffect, useState } from "react";
-import { FileSpreadsheet } from "lucide-react";
+import { CalendarRange, Download, FileSpreadsheet } from "lucide-react";
 
 import { Button, Spinner } from "../ds";
 import { strings, useLocale } from "../i18n";
@@ -28,10 +28,20 @@ import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
 import { saveTextFile } from "../platform/download";
 import { formatAmount, formatRate } from "./money";
-import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
+import { ErrorBanner } from "./parts";
 import { previousQuarterOf, quarterOf, type Period } from "./period";
 import type { VatReport } from "./types";
-import styles from "./BillingModule.module.css";
+
+const dateInput =
+  "h-11 min-w-0 rounded-lg border border-default bg-surface px-3 text-sm text-primary outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/15";
+const quickAction =
+  "h-9 min-w-0 whitespace-nowrap rounded-md border border-transparent bg-transparent px-4 text-sm font-medium !text-secondary !no-underline transition-colors hover:bg-surface hover:!text-primary hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20";
+const tableShell = "min-h-0 overflow-auto rounded-xl border border-subtle bg-surface";
+const tableClass = "w-full border-collapse text-sm";
+const headCell =
+  "sticky top-0 z-[1] whitespace-nowrap border-b border-default bg-sunken px-4 py-3 text-left text-xs font-semibold text-tertiary";
+const bodyCell = "border-b border-subtle px-4 py-3 text-secondary";
+const numberCell = "text-right tabular-nums";
 
 /** What a saved summary is called and what it is: the server names the file in
  *  its own `Content-Disposition`, and this is the same name for the copy the
@@ -95,28 +105,50 @@ export function VatReportView() {
   const readable = (day: string) => formatDocumentDate(day, locale, day);
 
   return (
-    <div className={styles.page}>
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-8 pt-6 max-sm:px-4">
+      <header className="mb-5 flex items-start justify-between gap-4 max-sm:flex-col">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent">
+            <FileSpreadsheet className="size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h2 className="m-0 text-xl font-semibold text-primary">{strings.billingReports}</h2>
+            <p className="mt-1 max-w-4xl text-sm leading-relaxed text-secondary">
+              {strings.billingReportBasis(readable(period.from), readable(period.to))}
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="secondary"
+          icon={<Download className="size-4" aria-hidden="true" />}
+          onClick={() => void download()}
+          disabled={report === null || downloading}
+        >
+          {strings.billingReportDownloadCsv}
+        </Button>
+      </header>
+
       <form
-        className={styles.toolbar}
+        className="mb-5 flex shrink-0 flex-wrap items-end gap-3 rounded-xl border border-subtle bg-surface p-4 shadow-sm max-sm:items-stretch"
         onSubmit={(e) => {
           e.preventDefault();
           setPeriod(form);
         }}
       >
-        <label className={styles.toggle}>
-          {strings.billingReportFrom}
+        <label className="flex w-60 min-w-[12rem] flex-col gap-1.5 text-xs font-semibold text-tertiary max-sm:w-full">
+          <span>{strings.billingReportFrom}</span>
           <input
-            className={styles.input}
+            className={dateInput}
             type="date"
             value={form.from}
             onChange={(e) => setForm({ ...form, from: e.target.value })}
             required
           />
         </label>
-        <label className={styles.toggle}>
-          {strings.billingReportTo}
+        <label className="flex w-60 min-w-[12rem] flex-col gap-1.5 text-xs font-semibold text-tertiary max-sm:w-full">
+          <span>{strings.billingReportTo}</span>
           <input
-            className={styles.input}
+            className={dateInput}
             type="date"
             value={form.to}
             onChange={(e) => setForm({ ...form, to: e.target.value })}
@@ -124,56 +156,53 @@ export function VatReportView() {
           />
         </label>
         <Button type="submit">{strings.billingReportShow}</Button>
-        <button
-          type="button"
-          className={styles.linkAction}
-          onClick={() => pick(quarterOf(new Date()))}
-        >
-          {strings.billingReportThisQuarter}
-        </button>
-        <button
-          type="button"
-          className={styles.linkAction}
-          onClick={() => pick(previousQuarterOf(new Date()))}
-        >
-          {strings.billingReportLastQuarter}
-        </button>
+        <div className="grid shrink-0 grid-cols-2 divide-x divide-default overflow-hidden rounded-lg border border-subtle bg-raised p-1 max-sm:w-full">
+          <button
+            type="button"
+            className={quickAction}
+            onClick={() => pick(quarterOf(new Date()))}
+          >
+            {strings.billingReportThisQuarter}
+          </button>
+          <button
+            type="button"
+            className={quickAction}
+            onClick={() => pick(previousQuarterOf(new Date()))}
+          >
+            {strings.billingReportLastQuarter}
+          </button>
+        </div>
         {(loading || downloading) && <Spinner size={16} />}
-        <Button
-          variant="ghost"
-          onClick={() => void download()}
-          disabled={report === null || downloading}
-        >
-          {strings.billingReportDownloadCsv}
-        </Button>
       </form>
-
-      <p className={styles.totalsNote}>
-        {strings.billingReportBasis(readable(period.from), readable(period.to))}
-      </p>
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {loading ? <BillingLoading /> : report !== null && report.currencies.length === 0 ? (
-        <EmptyState
-          Icon={FileSpreadsheet}
-          title={strings.billingReportEmptyTitle}
-          body={strings.billingReportEmptyBody}
-        />
+      {loading ? (
+        <div className="flex min-h-72 flex-1 items-center justify-center rounded-xl border border-subtle bg-surface" role="status" aria-label={strings.billingLoading}>
+          <Spinner size={24} />
+        </div>
+      ) : report !== null && report.currencies.length === 0 ? (
+        <section className="flex min-h-72 flex-1 flex-col items-center justify-center rounded-xl border border-subtle bg-surface px-6 py-12 text-center shadow-sm">
+          <span className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-accent" aria-hidden="true">
+            <CalendarRange className="size-6" />
+          </span>
+          <h2 className="m-0 text-lg font-semibold text-primary">{strings.billingReportEmptyTitle}</h2>
+          <p className="mb-0 mt-2 max-w-lg text-sm leading-relaxed text-secondary">{strings.billingReportEmptyBody}</p>
+        </section>
       ) : (
         report?.currencies.map((group) => (
-          <section key={group.currency} className={styles.tableWrap}>
-            <table className={styles.table}>
-              <caption className={styles.srOnly}>
+          <section key={group.currency} className={tableShell}>
+            <table className={tableClass}>
+              <caption className="sr-only">
                 {strings.billingReportCaption(group.currency)}
               </caption>
               <thead>
                 <tr>
-                  <th scope="col">{strings.billingColVatRate}</th>
-                  <th scope="col" className={styles.numeric}>
+                  <th scope="col" className={headCell}>{strings.billingColVatRate}</th>
+                  <th scope="col" className={`${headCell} ${numberCell}`}>
                     {strings.billingColNet}
                   </th>
-                  <th scope="col" className={styles.numeric}>
+                  <th scope="col" className={`${headCell} ${numberCell}`}>
                     {strings.billingReportColVat}
                   </th>
                 </tr>
@@ -181,35 +210,35 @@ export function VatReportView() {
               <tbody>
                 {group.byRate.map((rate) => (
                   <tr key={rate.rateBp}>
-                    <td>{formatRate(rate.rateBp, locale)}</td>
-                    <td className={styles.numeric}>
+                    <td className={bodyCell}>{formatRate(rate.rateBp, locale)}</td>
+                    <td className={`${bodyCell} ${numberCell}`}>
                       {formatAmount(rate.netCents, locale, group.currency)}
                     </td>
-                    <td className={styles.numeric}>
+                    <td className={`${bodyCell} ${numberCell}`}>
                       {formatAmount(rate.vatCents, locale, group.currency)}
                     </td>
                   </tr>
                 ))}
               </tbody>
-              <tfoot>
+              <tfoot className="bg-raised text-primary">
                 <tr>
-                  <th scope="row">{strings.billingReportTotal}</th>
-                  <td className={styles.numeric}>
+                  <th scope="row" className="border-t border-default px-4 py-3 text-left font-semibold">{strings.billingReportTotal}</th>
+                  <td className={`border-t border-default px-4 py-3 ${numberCell}`}>
                     {formatAmount(group.netCents, locale, group.currency)}
                   </td>
-                  <td className={styles.numeric}>
+                  <td className={`border-t border-default px-4 py-3 ${numberCell}`}>
                     {formatAmount(group.vatCents, locale, group.currency)}
                   </td>
                 </tr>
                 <tr>
-                  <th scope="row">{strings.billingReportGross}</th>
-                  <td className={styles.numeric} colSpan={2}>
+                  <th scope="row" className="border-t border-default px-4 py-3 text-left font-semibold">{strings.billingReportGross}</th>
+                  <td className={`border-t border-default px-4 py-3 ${numberCell}`} colSpan={2}>
                     {formatAmount(group.grossCents, locale, group.currency)}
                   </td>
                 </tr>
               </tfoot>
             </table>
-            <p className={styles.totalsNote}>
+            <p className="m-0 px-4 py-3 text-xs text-tertiary">
               {strings.billingReportCounts(group.invoiceCount, group.creditNoteCount)}
             </p>
           </section>
@@ -221,24 +250,24 @@ export function VatReportView() {
           tenant that bills solely in its own currency would otherwise read the
           same figures twice. */}
       {report !== null && report.currencies.length > 0 && restatesAnything(report) && (
-        <section className={styles.tableWrap}>
-          <p className={styles.totalsNote}>
+        <section className={tableShell}>
+          <p className="m-0 border-b border-subtle px-4 py-3 text-sm text-secondary">
             {strings.billingReportBaseIntro(report.base.currency)}
           </p>
           {report.base.unconvertedCount > 0 && (
             <ErrorBanner message={strings.billingReportUnconverted(report.base.unconvertedCount)} />
           )}
-          <table className={styles.table}>
-            <caption className={styles.srOnly}>
+          <table className={tableClass}>
+            <caption className="sr-only">
               {strings.billingReportBaseCaption(report.base.currency)}
             </caption>
             <thead>
               <tr>
-                <th scope="col">{strings.billingColVatRate}</th>
-                <th scope="col" className={styles.numeric}>
+                <th scope="col" className={headCell}>{strings.billingColVatRate}</th>
+                <th scope="col" className={`${headCell} ${numberCell}`}>
                   {strings.billingColNet}
                 </th>
-                <th scope="col" className={styles.numeric}>
+                <th scope="col" className={`${headCell} ${numberCell}`}>
                   {strings.billingReportColVat}
                 </th>
               </tr>
@@ -246,29 +275,29 @@ export function VatReportView() {
             <tbody>
               {report.base.byRate.map((rate) => (
                 <tr key={rate.rateBp}>
-                  <td>{formatRate(rate.rateBp, locale)}</td>
-                  <td className={styles.numeric}>
+                  <td className={bodyCell}>{formatRate(rate.rateBp, locale)}</td>
+                  <td className={`${bodyCell} ${numberCell}`}>
                     {formatAmount(rate.netCents, locale, report.base.currency)}
                   </td>
-                  <td className={styles.numeric}>
+                  <td className={`${bodyCell} ${numberCell}`}>
                     {formatAmount(rate.vatCents, locale, report.base.currency)}
                   </td>
                 </tr>
               ))}
             </tbody>
-            <tfoot>
+            <tfoot className="bg-raised text-primary">
               <tr>
-                <th scope="row">{strings.billingReportTotal}</th>
-                <td className={styles.numeric}>
+                <th scope="row" className="border-t border-default px-4 py-3 text-left font-semibold">{strings.billingReportTotal}</th>
+                <td className={`border-t border-default px-4 py-3 ${numberCell}`}>
                   {formatAmount(report.base.netCents, locale, report.base.currency)}
                 </td>
-                <td className={styles.numeric}>
+                <td className={`border-t border-default px-4 py-3 ${numberCell}`}>
                   {formatAmount(report.base.vatCents, locale, report.base.currency)}
                 </td>
               </tr>
               <tr>
-                <th scope="row">{strings.billingReportGross}</th>
-                <td className={styles.numeric} colSpan={2}>
+                <th scope="row" className="border-t border-default px-4 py-3 text-left font-semibold">{strings.billingReportGross}</th>
+                <td className={`border-t border-default px-4 py-3 ${numberCell}`} colSpan={2}>
                   {formatAmount(report.base.grossCents, locale, report.base.currency)}
                 </td>
               </tr>

@@ -23,7 +23,7 @@ import { billingMessage, useBillingApi } from "./api";
 import { hundredthsToInput, parseHundredths } from "./money";
 import { DialogFrame, Field } from "./parts";
 import type { BillingProduct, ProductDraft } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** A supplier as this form needs one: a name to show and an id to send.
  *  Deliberately not the supplier record — the price list has no business

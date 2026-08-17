@@ -8,7 +8,7 @@
 import { cx } from "../ds";
 import { strings } from "../i18n";
 import type { BillingInvoiceSummary, BillingQuoteSummary, InvoiceStatus, QuoteStatus } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** The visual weight of a chip. Named after what it means, not its colour, so
  *  a theme can restyle it without renaming anything. */

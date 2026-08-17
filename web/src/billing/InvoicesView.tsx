@@ -26,7 +26,7 @@ import { formatAmount } from "./money";
 import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
 import { DocumentChips } from "./status";
 import type { BillingCustomer, BillingInvoiceSummary, InvoiceStatus } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** The filter's choices, in the order a document moves through them.
  *

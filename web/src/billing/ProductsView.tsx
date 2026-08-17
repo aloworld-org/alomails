@@ -14,7 +14,7 @@ import { formatAmount, formatRate } from "./money";
 import { ProductDialog } from "./ProductDialog";
 import { BillingLoading, EmptyState, ErrorBanner, Toolbar } from "./parts";
 import type { BillingProduct } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 export function ProductsView() {
   const api = useBillingApi();

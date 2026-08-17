@@ -21,7 +21,6 @@ import { QuotesView } from "./QuotesView";
 import { SchedulesView } from "./SchedulesView";
 import { VatReportView } from "./VatReportView";
 import { SettingsView } from "./SettingsView";
-import styles from "./BillingModule.module.css";
 
 /** The tabs: the documents that are the point of the module, then the offers
  *  that become them, then who they are made out to, then what they are made
@@ -43,24 +42,30 @@ const TABS = [
   // Last, and deliberately not first: it is filled in once and then printed on
   // every document, so it belongs beside the records rather than in front of
   // them. What it holds is who the tenant invoices AS (B1.16).
-  { path: "settings", label: () => strings.billingSettings, Icon: IdCard },
+  { path: "details", label: () => strings.billingSettings, Icon: IdCard },
 ] as const;
 
 const billingPath = (path: (typeof TABS)[number]["path"]) => `/billing/${path}`;
 
 export function BillingModule() {
   return (
-    <div className={styles.billing}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>{strings.moduleBilling}</h1>
-        <nav className={styles.tabs}>
+    <div className="flex h-full min-h-0 w-full flex-col bg-app">
+      <header className="shrink-0 border-b border-subtle px-8 pt-6 max-sm:px-4 max-sm:pt-4">
+        <h1 className="m-0 text-2xl font-bold text-primary">{strings.moduleBilling}</h1>
+        <nav className="mt-3 flex min-w-0 gap-1 overflow-x-auto" aria-label={strings.moduleBilling}>
           {TABS.map((t) => (
             <NavLink
               key={t.path}
               to={billingPath(t.path)}
-              className={({ isActive }) => (isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab)}
+              className={({ isActive }) =>
+                `inline-flex min-h-11 shrink-0 items-center gap-2 rounded-t-lg border-b-2 px-4 py-2.5 text-sm !no-underline transition-colors hover:!no-underline focus-visible:!no-underline ${
+                  isActive
+                    ? "border-accent bg-[var(--accent-soft)] font-semibold !text-accent"
+                    : "border-transparent bg-transparent !text-secondary hover:bg-raised hover:!text-primary"
+                }`
+              }
             >
-              <t.Icon aria-hidden="true" />
+              <t.Icon className="size-4" aria-hidden="true" />
               {t.label()}
             </NavLink>
           ))}
@@ -83,7 +88,9 @@ export function BillingModule() {
         <Route path="customers" element={<CustomersView />} />
         <Route path="products" element={<ProductsView />} />
         <Route path="reports" element={<VatReportView />} />
-        <Route path="settings" element={<SettingsView />} />
+        <Route path="details" element={<SettingsView />} />
+        {/* Keep old bookmarks working while exposing a clear, user-facing URL. */}
+        <Route path="settings" element={<Navigate to="/billing/details" replace />} />
         {/* An unknown billing path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to="/billing/customers" replace />} />
       </Routes>

@@ -7,7 +7,7 @@ import type { LucideIcon } from "lucide-react";
 
 import { strings } from "../i18n";
 import { Button, Spinner } from "../ds";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** The bar above a list: search, the archived toggle, and the create action. */
 export function Toolbar({
@@ -118,11 +118,11 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <label className={styles.field}>
-      <span className={styles.label}>{label}</span>
+    <label className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-xs font-semibold uppercase tracking-wide text-tertiary">{label}</span>
       {children}
-      {error !== undefined && <span className={styles.fieldError}>{error}</span>}
-      {error === undefined && hint !== undefined && <span className={styles.hint}>{hint}</span>}
+      {error !== undefined && <span className="text-xs leading-relaxed text-danger">{error}</span>}
+      {error === undefined && hint !== undefined && <span className="text-xs leading-relaxed text-tertiary">{hint}</span>}
     </label>
   );
 }
@@ -157,9 +157,9 @@ export function DialogFrame({
     if (!busy && canSubmit) onSubmit();
   }
   return (
-    <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-6 max-sm:p-3" role="presentation" onMouseDown={onClose}>
       <form
-        className={styles.modal}
+        className="flex max-h-[calc(100dvh-3rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-subtle bg-surface shadow-lg max-sm:max-h-[calc(100dvh-1.5rem)]"
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -169,28 +169,28 @@ export function DialogFrame({
           if (e.key === "Escape") onClose();
         }}
       >
-        <div className={styles.modalHead}>
-          <span className={styles.modalIcon} aria-hidden="true">
+        <div className="flex shrink-0 items-start gap-3 border-b border-subtle px-5 py-4">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent" aria-hidden="true">
             <Icon size={19} />
           </span>
-          <div className={styles.modalHeadText}>
-            <h2>{title}</h2>
-            <p>{subtitle}</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="m-0 text-lg font-semibold text-primary">{title}</h2>
+            <p className="mt-1 text-sm leading-relaxed text-secondary">{subtitle}</p>
           </div>
           <button
             type="button"
-            className={styles.modalClose}
+            className="flex size-9 shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors hover:bg-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             onClick={onClose}
             aria-label={strings.billingCancel}
           >
             <X size={18} />
           </button>
         </div>
-        <div className={styles.modalBody}>
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
           {error !== null && <ErrorBanner message={error} />}
           {children}
         </div>
-        <div className={styles.modalFooter}>
+        <div className="flex shrink-0 justify-end gap-2 border-t border-subtle bg-surface px-5 py-4">
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             {strings.billingCancel}
           </Button>

@@ -22,7 +22,7 @@ import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
 import { ErrorBanner, Field } from "./parts";
 import type { FxRate } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** The blank "add a rate" form. */
 const BLANK = { currency: "", date: "", rate: "" };

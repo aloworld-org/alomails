@@ -11,7 +11,7 @@ import { billingMessage, useBillingApi } from "./api";
 import { CustomerDialog } from "./CustomerDialog";
 import { BillingLoading, EmptyState, ErrorBanner, Toolbar } from "./parts";
 import type { BillingCustomer } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** Whether a customer answers the search box (name, city, country, VAT id). */
 function matches(c: BillingCustomer, needle: string): boolean {

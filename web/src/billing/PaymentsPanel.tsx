@@ -29,7 +29,7 @@ import { formatAmount, hundredthsToInput, parseHundredths } from "./money";
 import { DialogFrame, ErrorBanner, Field } from "./parts";
 import { StatusChip, type ChipTone } from "./status";
 import type { BillingInvoice, BillingPayment, DocumentSettlement, PaymentState } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** What to call a settlement state. An unknown one — a state added to the
  *  server before this client knows it — is shown verbatim rather than blanked. */

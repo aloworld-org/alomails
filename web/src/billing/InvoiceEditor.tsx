@@ -30,7 +30,7 @@ import { usePickers } from "./pickers";
 import { ScheduleDialog } from "./ScheduleDialog";
 import { DocumentChips } from "./status";
 import type { BillingInvoice, BillingInvoiceSummary } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 export function InvoiceEditor() {
   const { id } = useParams<{ id: string }>();

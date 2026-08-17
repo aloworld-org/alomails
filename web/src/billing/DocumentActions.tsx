@@ -15,7 +15,7 @@ import { useState } from "react";
 import { Button, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { billingMessage } from "./api";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** One thing that can be done to the document at its current state. */
 export interface DocumentAction {

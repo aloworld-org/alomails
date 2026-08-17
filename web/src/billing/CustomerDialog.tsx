@@ -14,7 +14,7 @@ import { strings } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { DialogFrame, Field } from "./parts";
 import type { BillingCustomer, CustomerDraft } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 interface Props {
   /** The record being edited, or `null` to create one. */

@@ -14,7 +14,7 @@
 // create bar, and the read-only rendering of a document that carries a number.
 import { useState } from "react";
 import type { ReactNode } from "react";
-import { ArrowLeft, Printer } from "lucide-react";
+import { ArrowLeft, FilePlus2, Printer } from "lucide-react";
 
 import { Button, Spinner, cx, useDialogs } from "../ds";
 import { strings } from "../i18n";
@@ -23,11 +23,11 @@ import { DocumentActions } from "./DocumentActions";
 import type { DocumentAction } from "./DocumentActions";
 import { DocumentLines } from "./DocumentLines";
 import type { DocumentDraft, StoredDocument } from "./documentDraft";
-import { ErrorBanner, Field } from "./parts";
+import { DialogFrame, ErrorBanner, Field } from "./parts";
 import type { Pickers } from "./pickers";
 import { printSheet } from "./printSheet";
 import { TotalsPanel } from "./TotalsPanel";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** Everything this shell says out loud, so no English lives in it. */
 export interface DocumentEditorLabels {
@@ -161,6 +161,81 @@ export function DocumentEditor<T extends StoredDocument, A>({
   const currency = document?.currency ?? "";
   const saved = draft.saveState === "saved";
   const error = draft.error ?? pickers.error;
+
+  if (document === null) {
+    const fieldLabel = "text-xs font-semibold uppercase tracking-wide text-tertiary";
+    const fieldControl =
+      "mt-2 min-h-11 w-full rounded-lg border border-default bg-surface px-3 text-sm text-primary outline-none transition-colors placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-[var(--accent-soft)]";
+
+    return (
+      <DialogFrame
+        Icon={FilePlus2}
+        title={labels.newTitle}
+        subtitle={labels.createHint}
+        error={error}
+        busy={draft.creating}
+        canSubmit={header.customerId !== ""}
+        submitLabel={labels.createLabel}
+        onClose={onBack}
+        onSubmit={() => void create()}
+      >
+            <div className="grid grid-cols-2 gap-5 max-md:grid-cols-1">
+              <label className="min-w-0">
+                <span className={fieldLabel}>{strings.billingFieldCustomer}</span>
+                <select
+                  className={fieldControl}
+                  value={header.customerId}
+                  onChange={(event) =>
+                    draft.edit({ header: { ...header, customerId: event.target.value } })
+                  }
+                  aria-label={strings.billingFieldCustomer}
+                >
+                  <option value="">{strings.billingChooseCustomer}</option>
+                  {pickable.map((customer) => (
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-2 block text-xs leading-relaxed text-tertiary">
+                  {labels.customerHint}
+                </span>
+              </label>
+
+              <label className="min-w-0">
+                <span className={fieldLabel}>{strings.billingFieldReference}</span>
+                <input
+                  className={fieldControl}
+                  value={header.reference}
+                  onChange={(event) =>
+                    draft.edit({ header: { ...header, reference: event.target.value } })
+                  }
+                  placeholder={strings.billingReferencePlaceholder}
+                />
+                <span className="mt-2 block text-xs leading-relaxed text-tertiary">
+                  {strings.billingReferenceHint}
+                </span>
+              </label>
+
+              <label className="col-span-2 min-w-0 max-md:col-span-1">
+                <span className={fieldLabel}>{strings.billingFieldNote}</span>
+                <textarea
+                  className={`${fieldControl} min-h-28 resize-y py-3 leading-relaxed`}
+                  value={header.note}
+                  rows={4}
+                  onChange={(event) =>
+                    draft.edit({ header: { ...header, note: event.target.value } })
+                  }
+                  placeholder={strings.billingNotePlaceholder}
+                />
+                <span className="mt-2 block text-xs leading-relaxed text-tertiary">
+                  {strings.billingNoteHint}
+                </span>
+              </label>
+            </div>
+      </DialogFrame>
+    );
+  }
 
   return (
     <div className={cx(styles.page, styles.editor)}>

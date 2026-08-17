@@ -19,7 +19,7 @@ import { formatAmount } from "./money";
 import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
 import { QuoteChips } from "./status";
 import type { BillingCustomer, BillingQuoteSummary, QuoteStatus } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** The filter's choices, in the order an offer moves through them. `all` is
  *  the absence of a filter, not a sixth status. */

@@ -12,7 +12,7 @@ import { strings, useLocale } from "../i18n";
 import { cx } from "../ds";
 import { formatAmount, formatRate } from "./money";
 import type { DocumentTotals } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 export function TotalsPanel({
   totals,

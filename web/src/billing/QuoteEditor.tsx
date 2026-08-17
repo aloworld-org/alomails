@@ -30,7 +30,7 @@ import { Field } from "./parts";
 import { usePickers } from "./pickers";
 import { QuoteChips } from "./status";
 import type { BillingQuote } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 export function QuoteEditor() {
   const { id } = useParams<{ id: string }>();

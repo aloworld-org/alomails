@@ -17,7 +17,7 @@ import { formatAmount, formatQty, formatRate } from "./money";
 import { blankRow, isBlankRow, rowFromProduct, rowProblem } from "./lineRows";
 import type { LineRow, RowProblem } from "./lineRows";
 import type { BillingProduct, DocumentLine } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** What to say about the row's first problem. A blank description is the
  *  common one — it is how a freshly added row starts — so it is worded as an

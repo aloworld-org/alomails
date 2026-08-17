@@ -29,7 +29,7 @@ import { ScheduleDialog } from "./ScheduleDialog";
 import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
 import { StatusChip } from "./status";
 import type { BillingCustomer, BillingScheduleSummary } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 /** The chips one arrangement wears, in reading order: what it is doing, then
  *  whether it is waiting on a run.

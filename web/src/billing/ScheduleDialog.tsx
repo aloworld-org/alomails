@@ -27,7 +27,7 @@ import type {
   ScheduleCadence,
   ScheduleDraft,
 } from "./types";
-import styles from "./BillingModule.module.css";
+import styles from "./billingStyles";
 
 interface Props {
   /** The arrangement being adjusted, or `null` when one is being set up. */
