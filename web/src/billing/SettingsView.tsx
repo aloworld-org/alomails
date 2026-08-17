@@ -196,7 +196,7 @@ export function SettingsView() {
       {error !== null && <ErrorBanner message={error} />}
 
       <div className={styles.settingsGrid}>
-      <section className={`${styles.lines} ${styles.settingsCard}`}>
+      <section className={`${styles.lines} ${styles.settingsCard} ${styles.settingsIdentityCard}`}>
         <h2 className={styles.sectionTitle}><Building2 aria-hidden="true" />{strings.billingSettingsIdentity}</h2>
         <Field label={strings.billingFieldLegalName} hint={strings.billingLegalNameHint}>
           <input {...text("legalName")} required />
@@ -241,63 +241,77 @@ export function SettingsView() {
         </div>
       </section>
 
-      <section className={`${styles.lines} ${styles.settingsCard}`}>
-        <h2 className={styles.sectionTitle}><Mail aria-hidden="true" />{strings.billingSettingsContact}</h2>
-        <div className={styles.row}>
-          <Field label={strings.billingFieldEmail}>
-            <input
-              {...text("email")}
-              type="email"
-              inputMode="email"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-          </Field>
-          <Field label={strings.billingFieldPhone}>
-            <input {...text("phone")} inputMode="tel" />
-          </Field>
+      <div className={styles.settingsSideColumn}>
+        <section className={`${styles.lines} ${styles.settingsCard}`}>
+          <h2 className={styles.sectionTitle}><Mail aria-hidden="true" />{strings.billingSettingsContact}</h2>
+          <div className={styles.row}>
+            <Field label={strings.billingFieldEmail}>
+              <input
+                {...text("email")}
+                type="email"
+                inputMode="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </Field>
+            <Field label={strings.billingFieldPhone}>
+              <input {...text("phone")} inputMode="tel" />
+            </Field>
+          </div>
           <Field label={strings.billingFieldWebsite}>
             <input {...text("website")} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
           </Field>
-        </div>
-      </section>
+        </section>
 
-      <section className={`${styles.lines} ${styles.settingsCard}`}>
-        <h2 className={styles.sectionTitle}><Landmark aria-hidden="true" />{strings.billingSettingsBank}</h2>
-        <div className={styles.row}>
-          <Field label={strings.billingFieldIban} hint={strings.billingIbanHint}>
-            <input
-              {...text("iban")}
-              placeholder={strings.billingIbanPlaceholder}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
+        <section className={`${styles.lines} ${styles.settingsCard}`}>
+          <h2 className={styles.sectionTitle}><Landmark aria-hidden="true" />{strings.billingSettingsBank}</h2>
+          <div className={styles.row}>
+            <Field label={strings.billingFieldIban} hint={strings.billingIbanHint}>
+              <input
+                {...text("iban")}
+                placeholder={strings.billingIbanPlaceholder}
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </Field>
+            <Field label={strings.billingFieldBic}>
+              <input
+                {...text("bic")}
+                placeholder={strings.billingBicPlaceholder}
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </Field>
+          </div>
+          <div className={styles.row}>
+            <Field label={strings.billingFieldBankName}>
+              <input {...text("bankName")} />
+            </Field>
+            <Field label={strings.billingFieldAccountHolder} hint={strings.billingAccountHolderHint}>
+              <input {...text("accountHolder")} />
+            </Field>
+          </div>
+        </section>
+
+        <section className={`${styles.lines} ${styles.settingsCard}`}>
+          <h2 className={styles.sectionTitle}><MessageSquareText aria-hidden="true" />{strings.billingSettingsFooter}</h2>
+          <Field label={strings.billingFieldFooterNote} hint={strings.billingFooterNoteHint}>
+            <textarea
+              className={`${styles.input} ${styles.textarea}`}
+              value={form.footerNote}
+              rows={3}
+              onChange={(e) => set("footerNote")(e.target.value)}
             />
           </Field>
-          <Field label={strings.billingFieldBic}>
-            <input
-              {...text("bic")}
-              placeholder={strings.billingBicPlaceholder}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-          </Field>
-        </div>
-        <div className={styles.row}>
-          <Field label={strings.billingFieldBankName}>
-            <input {...text("bankName")} />
-          </Field>
-          <Field label={strings.billingFieldAccountHolder} hint={strings.billingAccountHolderHint}>
-            <input {...text("accountHolder")} />
-          </Field>
-        </div>
-      </section>
+        </section>
+      </div>
 
-      <section className={`${styles.lines} ${styles.settingsCard}`}>
+      <section className={`${styles.lines} ${styles.settingsCard} ${styles.settingsAccountingCard}`}>
         <h2 className={styles.sectionTitle}><BadgeEuro aria-hidden="true" />{strings.billingSettingsAccounting}</h2>
-        <div className={styles.row}>
+        <div className={styles.settingsCurrencyField}>
           <Field label={strings.billingFieldBaseCurrency} hint={strings.billingBaseCurrencyHint}>
             <input
               {...text("baseCurrency")}
@@ -314,17 +328,6 @@ export function SettingsView() {
         <FxRatesPanel />
       </section>
 
-      <section className={`${styles.lines} ${styles.settingsCard}`}>
-        <h2 className={styles.sectionTitle}><MessageSquareText aria-hidden="true" />{strings.billingSettingsFooter}</h2>
-        <Field label={strings.billingFieldFooterNote} hint={strings.billingFooterNoteHint}>
-          <textarea
-            className={`${styles.input} ${styles.textarea}`}
-            value={form.footerNote}
-            rows={2}
-            onChange={(e) => set("footerNote")(e.target.value)}
-          />
-        </Field>
-      </section>
       </div>
 
       <div className={styles.createBar}>
