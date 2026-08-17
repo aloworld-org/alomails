@@ -232,7 +232,7 @@ export function HomeModule() {
           </button>
           <button
             type="button"
-            className="inline-flex h-[42px] shrink-0 items-center gap-2 rounded-md !bg-accent !px-5 text-base font-semibold !text-on-accent shadow-sm transition-colors hover:!bg--hover"
+            className="inline-flex h-[42px] shrink-0 items-center gap-2 rounded-md !bg-accent px-4 text-base font-semibold !text-on-accent shadow-sm transition-colors hover:!bg--hover"
             onClick={() => navigate("/mail?compose=1")}
           >
             <PenLine size={17} />
@@ -287,14 +287,14 @@ export function HomeModule() {
             </div>
           </div>
           <div className="grid grid-cols-8 gap-3 max-xl:grid-cols-4 max-sm:grid-cols-2">
-            {tools.map((tool) => (
+            {tools.map((tool, index) => (
               <button
                 key={tool.id}
                 type="button"
                 className="group grid min-h-[54px] min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-lg border border-transparent bg-transparent px-2 py-2 text-left text-primary transition hover:bg-raised focus-visible:outline-2 focus-visible:outline-accent"
                 onClick={() => navigate(tool.path)}
               >
-                <span className="inline-flex size-9 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent shadow-sm" aria-hidden>
+                <span className={`inline-flex size-9 items-center justify-center rounded-lg shadow-sm ${index % 3 === 1 ? "bg-[var(--success-bg)] text-[var(--success-text)]" : index % 3 === 2 ? "bg-[var(--accent-secondary-tint)] text-[var(--accent-secondary)]" : "bg-[var(--accent-soft)] text-accent"}`} aria-hidden>
                   <tool.Icon size={19} strokeWidth={1.8} />
                 </span>
                 <span className="min-w-0 truncate whitespace-nowrap text-sm font-semibold">{tool.label}</span>
@@ -440,16 +440,11 @@ export function HomeModule() {
             </div>
             <div className="flex flex-1 flex-col justify-center gap-3">
               <p className="m-0 text-sm leading-relaxed text-secondary">{strings.homeAskBody}</p>
-              <form className="flex min-h-12 items-end gap-2 rounded-lg border border-subtle bg-app p-1.5 pl-4 transition focus-within:border-accent focus-within:ring-2 focus-within:ring-[var(--accent-tint)]" onSubmit={(e) => void askAlo(e)}>
-                <textarea
-                  className="max-h-32 min-h-9 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent py-2 text-sm leading-5 text-primary !outline-none !ring-0 placeholder:text-tertiary focus:!border-transparent focus:!outline-none focus:!ring-0"
-                  rows={1}
+              <form className="flex min-h-12 items-center gap-2 rounded-lg border border-subtle bg-app p-1.5 pl-4 transition focus-within:border-accent focus-within:ring-2 focus-within:ring-[var(--accent-tint)]" onSubmit={(e) => void askAlo(e)}>
+                <input
+                  className="min-w-0 flex-1 border-0 bg-transparent text-sm text-primary outline-none placeholder:text-tertiary"
                   value={askText}
                   onChange={(e) => setAskText(e.target.value)}
-                  onInput={(e) => {
-                    e.currentTarget.style.height = "auto";
-                    e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 128)}px`;
-                  }}
                   placeholder={strings.homeAskPlaceholder}
                   aria-label={strings.homeAskPlaceholder}
                 />
