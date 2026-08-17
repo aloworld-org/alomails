@@ -85,6 +85,12 @@ const BLANK: FormState = {
   bic: "",
 };
 
+const settingsCard =
+  "flex min-w-0 flex-col gap-4 rounded-xl border border-subtle bg-surface p-6 shadow-sm max-sm:p-4";
+const settingsTitle =
+  "m-0 flex items-center gap-2 border-b border-subtle pb-3 text-base font-semibold tracking-normal text-primary";
+const settingsIcon = "size-5 shrink-0 text-accent";
+
 /** The stored record as the form shows it. A `null` is an empty box — the two
  *  are the same thing to a person, and `draftFrom` turns it back. */
 function formOf(settings: BillingSettings): FormState {
@@ -185,19 +191,24 @@ export function SettingsView() {
   });
 
   return (
-    <div className={`${styles.page} ${styles.settingsPage}`}>
-      <header className={styles.settingsHero}>
-        <span><Building2 aria-hidden="true" /></span>
-        <div>
-          <h2>{strings.billingSettings}</h2>
-          <p>{stored.stated ? strings.billingSettingsIntro : strings.billingSettingsFirstRun}</p>
+    <div className={`${styles.page} overflow-y-auto px-8 py-6 max-sm:p-3`}>
+      <header className="mx-auto mb-6 flex w-full max-w-[90rem] items-center gap-3 border-b border-subtle pb-5 max-sm:items-start">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg--soft text-accent">
+          <Building2 className="size-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="m-0 text-xl font-semibold text-primary">{strings.billingSettings}</h2>
+          <p className="mt-1 max-w-[70ch] text-sm leading-normal text-secondary">
+            {stored.stated ? strings.billingSettingsIntro : strings.billingSettingsFirstRun}
+          </p>
         </div>
       </header>
       {error !== null && <ErrorBanner message={error} />}
 
-      <div className={styles.settingsGrid}>
-      <section className={`${styles.lines} ${styles.settingsCard} ${styles.settingsIdentityCard}`}>
-        <h2 className={styles.sectionTitle}><Building2 aria-hidden="true" />{strings.billingSettingsIdentity}</h2>
+      <div className="mx-auto grid w-full max-w-[90rem] grid-cols-[minmax(0,1.08fr)_minmax(0,.92fr)] items-start gap-5 max-lg:grid-cols-1">
+      <div className="flex min-w-0 flex-col gap-5">
+      <section className={`${styles.lines} ${settingsCard}`}>
+        <h2 className={settingsTitle}><Building2 className={settingsIcon} aria-hidden="true" />{strings.billingSettingsIdentity}</h2>
         <Field label={strings.billingFieldLegalName} hint={strings.billingLegalNameHint}>
           <input {...text("legalName")} required />
         </Field>
@@ -207,7 +218,7 @@ export function SettingsView() {
         <Field label={strings.billingFieldAddress2}>
           <input {...text("addressLine2")} />
         </Field>
-        <div className={styles.row}>
+        <div className={`${styles.row} max-sm:flex-col`}>
           <Field label={strings.billingFieldPostalCode}>
             <input {...text("postalCode")} />
           </Field>
@@ -225,7 +236,7 @@ export function SettingsView() {
             />
           </Field>
         </div>
-        <div className={styles.row}>
+        <div className={`${styles.row} max-sm:flex-col`}>
           <Field label={strings.billingFieldVatId} hint={strings.billingIssuerVatIdHint}>
             <input
               {...text("vatId")}
@@ -241,10 +252,30 @@ export function SettingsView() {
         </div>
       </section>
 
-      <div className={styles.settingsSideColumn}>
-        <section className={`${styles.lines} ${styles.settingsCard}`}>
-          <h2 className={styles.sectionTitle}><Mail aria-hidden="true" />{strings.billingSettingsContact}</h2>
-          <div className={styles.row}>
+      <section className={`${styles.lines} ${settingsCard}`}>
+        <h2 className={settingsTitle}><BadgeEuro className={settingsIcon} aria-hidden="true" />{strings.billingSettingsAccounting}</h2>
+        <div className="w-full max-w-sm">
+          <Field label={strings.billingFieldBaseCurrency} hint={strings.billingBaseCurrencyHint}>
+            <input
+              {...text("baseCurrency")}
+              maxLength={3}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </Field>
+        </div>
+        {/* The rates themselves: only needed by a tenant that invoices in
+            another currency, so they sit under the currency that decides it
+            rather than on a page of their own. */}
+        <FxRatesPanel />
+      </section>
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-5">
+        <section className={`${styles.lines} ${settingsCard}`}>
+          <h2 className={settingsTitle}><Mail className={settingsIcon} aria-hidden="true" />{strings.billingSettingsContact}</h2>
+          <div className={`${styles.row} max-sm:flex-col`}>
             <Field label={strings.billingFieldEmail}>
               <input
                 {...text("email")}
@@ -264,9 +295,9 @@ export function SettingsView() {
           </Field>
         </section>
 
-        <section className={`${styles.lines} ${styles.settingsCard}`}>
-          <h2 className={styles.sectionTitle}><Landmark aria-hidden="true" />{strings.billingSettingsBank}</h2>
-          <div className={styles.row}>
+        <section className={`${styles.lines} ${settingsCard}`}>
+          <h2 className={settingsTitle}><Landmark className={settingsIcon} aria-hidden="true" />{strings.billingSettingsBank}</h2>
+          <div className={`${styles.row} max-sm:flex-col`}>
             <Field label={strings.billingFieldIban} hint={strings.billingIbanHint}>
               <input
                 {...text("iban")}
@@ -286,7 +317,7 @@ export function SettingsView() {
               />
             </Field>
           </div>
-          <div className={styles.row}>
+          <div className={`${styles.row} max-sm:flex-col`}>
             <Field label={strings.billingFieldBankName}>
               <input {...text("bankName")} />
             </Field>
@@ -296,8 +327,8 @@ export function SettingsView() {
           </div>
         </section>
 
-        <section className={`${styles.lines} ${styles.settingsCard}`}>
-          <h2 className={styles.sectionTitle}><MessageSquareText aria-hidden="true" />{strings.billingSettingsFooter}</h2>
+        <section className={`${styles.lines} ${settingsCard}`}>
+          <h2 className={settingsTitle}><MessageSquareText className={settingsIcon} aria-hidden="true" />{strings.billingSettingsFooter}</h2>
           <Field label={strings.billingFieldFooterNote} hint={strings.billingFooterNoteHint}>
             <textarea
               className={`${styles.input} ${styles.textarea}`}
@@ -309,31 +340,14 @@ export function SettingsView() {
         </section>
       </div>
 
-      <section className={`${styles.lines} ${styles.settingsCard} ${styles.settingsAccountingCard}`}>
-        <h2 className={styles.sectionTitle}><BadgeEuro aria-hidden="true" />{strings.billingSettingsAccounting}</h2>
-        <div className={styles.settingsCurrencyField}>
-          <Field label={strings.billingFieldBaseCurrency} hint={strings.billingBaseCurrencyHint}>
-            <input
-              {...text("baseCurrency")}
-              maxLength={3}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-          </Field>
-        </div>
-        {/* The rates themselves: only needed by a tenant that invoices in
-            another currency, so they sit under the currency that decides it
-            rather than on a page of their own. */}
-        <FxRatesPanel />
-      </section>
-
       </div>
 
-      <div className={styles.createBar}>
-        <p className={styles.hint} role="status">
-          {dirty ? strings.billingUnsaved : saved ? strings.billingSaved : ""}
-        </p>
+      <div className="sticky bottom-3 z-sticky mx-auto mt-5 flex w-full max-w-[90rem] items-center justify-end gap-3 py-2">
+        {(dirty || saved) && (
+          <p className="m-0 rounded-full bg-surface px-3 py-2 text-xs text-secondary shadow-sm" role="status">
+            {dirty ? strings.billingUnsaved : strings.billingSaved}
+          </p>
+        )}
         <Button icon={<Save aria-hidden="true" />} onClick={() => void save()} disabled={busy || !dirty || form.legalName.trim() === ""}>
           {strings.billingSave}
         </Button>
