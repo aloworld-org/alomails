@@ -232,7 +232,7 @@ export function HomeModule() {
           </button>
           <button
             type="button"
-            className="inline-flex h-[42px] shrink-0 items-center gap-2 rounded-md !bg-accent px-4 text-base font-semibold !text-on-accent shadow-sm transition-colors hover:!bg--hover"
+            className="inline-flex h-[42px] shrink-0 items-center gap-2 rounded-md !bg-accent !px-5 text-base font-semibold !text-on-accent shadow-sm transition-colors hover:!bg--hover"
             onClick={() => navigate("/mail?compose=1")}
           >
             <PenLine size={17} />
