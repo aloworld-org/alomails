@@ -31,7 +31,6 @@ export const REDEFINES_PRIMITIVES: readonly string[] = [
   "contacts/ContactsModal.module.css",
   "crm/CrmModule.module.css",
   "finance/FinanceModule.module.css",
-  "home/HomeModule.module.css",
   "hr/hr.module.css",
   "importer/ImportModal.module.css",
   "insights/InsightsModule.module.css",

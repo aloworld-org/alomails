@@ -30,9 +30,13 @@ import { formatDate, senderName, subjectOr } from "../mail/format";
 import { surface } from "../product";
 import { isModuleAllowed, useDeniedModules } from "../shell";
 import { mostUsedApps } from "../shell/appUsage";
-import styles from "./HomeModule.module.css";
 
 type Tab = "recent" | "starred" | "unread";
+
+const cardClass = "rounded-lg border border-subtle bg-surface p-4 shadow-sm";
+const cardHeadClass = "mb-3 flex items-center justify-between gap-3";
+const cardTitleClass = "m-0 text-md font-semibold text-primary";
+const linkClass = "inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md px-2 text-sm font-medium text-secondary transition-colors hover:bg-raised hover:text-accent";
 
 function greeting(): string {
   const h = new Date().getHours();
@@ -163,21 +167,21 @@ export function HomeModule() {
   }
 
   return (
-    <div className={styles.home}>
-      <header className={styles.head}>
-        <div className={styles.headLeft}>
-          <h1 className={styles.greeting}>
-            <Hand className={styles.wave} size={26} aria-hidden />
+    <div className="mx-auto flex h-full max-w-[1400px] flex-col gap-5 overflow-y-auto px-8 pb-8 pt-7 max-sm:p-4">
+      <header className="grid grid-cols-[minmax(260px,auto)_minmax(280px,520px)_auto] items-center gap-5 max-lg:grid-cols-[1fr_auto] max-sm:grid-cols-1">
+        <div className="shrink-0">
+          <h1 className="m-0 flex items-center gap-3 text-3xl font-bold tracking-[-0.01em] text-primary max-sm:text-2xl">
+            <Hand className="text-accent" size={26} aria-hidden />
             {greeting()}
             {firstName.length > 0 ? `, ${firstName}` : ""}
           </h1>
-          <p className={styles.welcome}>{strings.homeSubtitle}</p>
+          <p className="mb-0 mt-1 text-md text-secondary">{strings.homeSubtitle}</p>
         </div>
 
-        <form className={styles.search} onSubmit={runSearch} role="search">
-          <Search size={16} className={styles.searchIcon} aria-hidden />
+        <form className="m-0 flex h-[42px] w-full max-w-[520px] flex-1 items-center gap-2 rounded-full border border-default bg-surface px-3 transition focus-within:border-accent focus-within:ring-3 focus-within:ring-[color-mix(in_srgb,var(--accent)_13%,transparent)] max-lg:order-3 max-lg:col-span-full max-lg:max-w-none max-sm:order-3" onSubmit={runSearch} role="search">
+          <Search size={16} className="shrink-0 text-tertiary" aria-hidden />
           <input
-            className={styles.searchInput}
+            className="min-w-0 flex-1 border-0 bg-transparent text-base text-primary outline-none"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             placeholder={strings.homeSearchPlaceholder}
@@ -185,21 +189,21 @@ export function HomeModule() {
           />
         </form>
 
-        <div className={styles.headRight}>
+        <div className="flex shrink-0 items-center gap-3 max-sm:order-2">
           <button
             type="button"
-            className={styles.bell}
+            className="relative inline-flex size-[42px] items-center justify-center rounded-full border border-subtle bg-surface text-secondary transition-colors hover:bg-raised hover:text-primary"
             onClick={() => navigate("/mail")}
             aria-label={strings.homeNotifications}
           >
             <Bell size={18} />
             {unreadEmails !== null && unreadEmails > 0 && (
-              <span className={styles.bellBadge}>{unreadEmails > 9 ? "9+" : unreadEmails}</span>
+              <span className="absolute -right-[3px] -top-[3px] inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-app bg-accent px-1 text-[11px] font-bold tabular-nums text-on-accent">{unreadEmails > 9 ? "9+" : unreadEmails}</span>
             )}
           </button>
           <button
             type="button"
-            className={styles.compose}
+            className="inline-flex h-[42px] shrink-0 items-center gap-2 rounded-md bg-accent px-4 text-base font-semibold text-on-accent shadow-sm transition-colors hover:bg--hover"
             onClick={() => navigate("/mail?compose=1")}
           >
             <PenLine size={17} />
@@ -208,7 +212,7 @@ export function HomeModule() {
         </div>
       </header>
 
-      <section className={styles.stats}>
+      <section className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
         <StatCard
           Icon={Mail}
           tone="accent"
@@ -239,71 +243,71 @@ export function HomeModule() {
       </section>
 
       {tools.length > 0 && (
-        <section className={styles.tools} aria-labelledby="home-tools-title">
-          <div className={styles.toolsHead}>
+        <section className="rounded-lg border border-subtle bg-surface p-4 shadow-sm" aria-labelledby="home-tools-title">
+          <div className="mb-3 flex items-start justify-between">
             <div>
-              <h2 id="home-tools-title" className={styles.toolsTitle}>
+              <h2 id="home-tools-title" className="m-0 text-md font-semibold text-primary">
                 {strings.homeToolsTitle}
               </h2>
-              <p className={styles.toolsSubtitle}>{strings.homeToolsSubtitle}</p>
+              <p className="mb-0 mt-0.5 text-xs text-tertiary">{strings.homeToolsSubtitle}</p>
             </div>
           </div>
-          <div className={styles.toolsGrid}>
+          <div className="grid grid-cols-6 gap-2 max-lg:grid-cols-3 max-sm:grid-cols-2">
             {tools.map((tool) => (
               <button
                 key={tool.id}
                 type="button"
-                className={styles.tool}
+                className="group grid min-h-[58px] min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-subtle bg-app px-3 py-2 text-left text-primary transition hover:-translate-y-px hover:border--tint hover:bg--soft"
                 onClick={() => navigate(tool.path)}
               >
-                <span className={styles.toolIcon} aria-hidden>
+                <span className="inline-flex size-[34px] items-center justify-center rounded-md bg-surface text-accent" aria-hidden>
                   <tool.Icon size={19} strokeWidth={1.8} />
                 </span>
-                <span className={styles.toolLabel}>{tool.label}</span>
-                <ArrowRight className={styles.toolArrow} size={16} aria-hidden />
+                <span className="min-w-0 truncate whitespace-nowrap text-sm font-semibold">{tool.label}</span>
+                <ArrowRight className="-translate-x-[3px] text-tertiary opacity-0 transition group-hover:translate-x-0 group-hover:opacity-100 group-focus-visible:translate-x-0 group-focus-visible:opacity-100" size={16} aria-hidden />
               </button>
             ))}
           </div>
         </section>
       )}
 
-      <div className={styles.grid}>
-        <section className={`${styles.card} ${styles.mailCard}`}>
-          <div className={styles.cardHead}>
-            <div className={styles.tabs} role="tablist">
+      <div className="grid grid-cols-[minmax(0,2.05fr)_minmax(320px,1fr)] [grid-template-areas:'mail_calendar'_'ask_tasks'] items-stretch gap-4 max-lg:grid-cols-1 max-lg:[grid-template-areas:'mail'_'calendar'_'tasks'_'ask']">
+        <section className={`${cardClass} [grid-area:mail]`}>
+          <div className={cardHeadClass}>
+            <div className="flex items-center gap-1" role="tablist">
               <Tabs tab={tab} onChange={setTab} />
             </div>
-            <button type="button" className={styles.link} onClick={() => navigate("/mail")}>
+            <button type="button" className={linkClass} onClick={() => navigate("/mail")}>
               {strings.homeViewAll}
               <ArrowRight size={14} />
             </button>
           </div>
           {loading ? (
-            <div className={styles.state}>
+            <div className="p-8 text-center text-sm text-tertiary">
               <Spinner size={20} />
             </div>
           ) : rows.length === 0 ? (
             <EmptyState Icon={Mail} message={strings.homeNoRecent} action={strings.homeGoToMail} onAction={() => navigate("/mail")} />
           ) : (
-            <ul className={styles.list}>
+            <ul className="m-0 list-none p-0">
               {rows.slice(0, 6).map((e) => {
                 const unread = e.keywords[KEYWORD_SEEN] !== true;
                 const flagged = e.keywords[KEYWORD_FLAGGED] === true;
                 return (
                   <li key={e.id}>
-                    <button type="button" className={styles.row} onClick={() => navigate("/mail")}>
-                      <span className={styles.rowIcon}>
-                        {flagged ? <Star className={styles.star} size={16} /> : <Mail size={16} />}
+                    <button type="button" className="flex min-h-14 w-full items-center gap-3 border-b border-subtle px-2 py-2 text-left transition-colors last:border-b-0 hover:bg-raised" onClick={() => navigate("/mail")}>
+                      <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-md bg-app text-secondary">
+                        {flagged ? <Star className="fill-[var(--warning)] text-[var(--warning)]" size={16} /> : <Mail size={16} />}
                       </span>
-                      <span className={styles.rowText}>
-                        <span className={unread ? styles.subjectUnread : styles.subject}>
+                      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <span className={unread ? "truncate text-sm font-semibold text-primary" : "truncate text-sm font-medium text-primary"}>
                           {subjectOr(e)}
                         </span>
-                        <span className={styles.sender}>{senderName(e)}</span>
+                        <span className="truncate text-xs text-tertiary">{senderName(e)}</span>
                       </span>
-                      <span className={styles.rowTime}>
+                      <span className="inline-flex shrink-0 items-center gap-2 text-xs text-tertiary">
                         {formatDate(e.receivedAt)}
-                        {unread && <span className={styles.dot} aria-hidden />}
+                        {unread && <span className="size-[7px] rounded-full bg-[var(--unread)]" aria-hidden />}
                       </span>
                     </button>
                   </li>
@@ -313,34 +317,34 @@ export function HomeModule() {
           )}
         </section>
 
-        <aside className={styles.side}>
-          <section className={`${styles.card} ${styles.calendarCard}`}>
-            <div className={styles.cardHead}>
-              <h2 className={styles.cardHeadTitle}>{strings.homeTodaysCalendar}</h2>
-              <button type="button" className={styles.link} onClick={() => navigate("/agenda")}>
+        <aside className="contents">
+          <section className={`${cardClass} [grid-area:calendar]`}>
+            <div className={cardHeadClass}>
+              <h2 className={cardTitleClass}>{strings.homeTodaysCalendar}</h2>
+              <button type="button" className={linkClass} onClick={() => navigate("/agenda")}>
                 {strings.homeViewFullCalendar}
                 <ArrowRight size={14} />
               </button>
             </div>
             {loading ? (
-              <div className={styles.state}>
+              <div className="p-8 text-center text-sm text-tertiary">
                 <Spinner size={18} />
               </div>
             ) : todayEvents.length === 0 ? (
               <EmptyState Icon={Calendar} message={strings.homeNoEventsToday} action={strings.homeViewCalendar} onAction={() => navigate("/agenda")} compact />
             ) : (
-              <ul className={styles.agenda}>
+              <ul className="m-0 flex list-none flex-col gap-2 p-0">
                 {todayEvents.slice(0, 4).map((e, i) => (
-                  <li key={`${e.id}-${i}`} className={styles.agendaRow}>
-                    <span className={styles.agendaTime}>
-                      <span className={styles.agendaStart}>{e.allDay ? "—" : hm(e.startsAt)}</span>
-                      {!e.allDay && <span className={styles.agendaEnd}>{hm(e.endsAt)}</span>}
+                  <li key={`${e.id}-${i}`} className="grid min-h-12 grid-cols-[66px_3px_minmax(0,1fr)] items-center gap-3 rounded-md px-2 py-1 transition-colors hover:bg-raised">
+                    <span className="flex flex-col text-xs tabular-nums text-tertiary">
+                      <span className="font-medium text-secondary">{e.allDay ? "—" : hm(e.startsAt)}</span>
+                      {!e.allDay && <span>{hm(e.endsAt)}</span>}
                     </span>
-                    <span className={styles.agendaBar} aria-hidden />
-                    <span className={styles.agendaBody}>
-                      <span className={styles.agendaSummary}>{subjectFor(e)}</span>
+                    <span className="h-8 w-[3px] rounded-full bg-accent" aria-hidden />
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="truncate text-sm font-medium text-primary">{subjectFor(e)}</span>
                       {e.location !== null && e.location.length > 0 && (
-                        <span className={styles.agendaLocation}>{e.location}</span>
+                        <span className="truncate text-xs text-tertiary">{e.location}</span>
                       )}
                     </span>
                   </li>
@@ -349,36 +353,36 @@ export function HomeModule() {
             )}
           </section>
 
-          <section className={`${styles.card} ${styles.tasksCard}`}>
-            <div className={styles.cardHead}>
-              <h2 className={styles.cardHeadTitle}>{strings.homeMyTasks}</h2>
-              <button type="button" className={styles.link} onClick={() => navigate("/tasks")}>
+          <section className={`${cardClass} [grid-area:tasks]`}>
+            <div className={cardHeadClass}>
+              <h2 className={cardTitleClass}>{strings.homeMyTasks}</h2>
+              <button type="button" className={linkClass} onClick={() => navigate("/tasks")}>
                 {strings.homeViewAllTasks}
                 <ArrowRight size={14} />
               </button>
             </div>
             {loading ? (
-              <div className={styles.state}>
+              <div className="p-8 text-center text-sm text-tertiary">
                 <Spinner size={18} />
               </div>
             ) : tasks.length === 0 ? (
               <EmptyState Icon={CheckCircle2} message={strings.homeNoTasks} action={strings.homeViewTasks} onAction={() => navigate("/tasks")} compact />
             ) : (
-              <ul className={styles.taskList}>
+              <ul className="m-0 flex list-none flex-col gap-1 p-0">
                 {tasks.slice(0, 5).map((t) => (
-                  <li key={t.id} className={styles.taskRow}>
+                  <li key={t.id} className="group flex min-h-11 items-center gap-2 rounded-md px-2 transition-colors hover:bg-raised">
                     <button
                       type="button"
-                      className={styles.taskCheck}
+                      className="relative inline-flex size-8 shrink-0 items-center justify-center rounded-full text-tertiary hover:text-accent"
                       onClick={() => void completeTask(t)}
                       aria-label={t.title}
                     >
-                      <Circle className={styles.taskCircle} size={18} />
-                      <CheckCircle2 className={styles.taskCircleDone} size={18} />
+                      <Circle className="block group-hover:hidden" size={18} />
+                      <CheckCircle2 className="hidden text-accent group-hover:block" size={18} />
                     </button>
                     <button
                       type="button"
-                      className={styles.taskTitle}
+                      className="min-w-0 flex-1 truncate text-left text-sm font-medium text-primary"
                       onClick={() => navigate("/tasks")}
                     >
                       {t.title}
@@ -390,21 +394,21 @@ export function HomeModule() {
             )}
           </section>
 
-          <section className={`${styles.card} ${styles.ask}`}>
-            <div className={styles.cardHead}>
-              <div className={styles.askHeading}>
-                <span className={styles.askMark}>
+          <section className={`${cardClass} min-h-[132px] [grid-area:ask]`}>
+            <div className={cardHeadClass}>
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg--soft text-accent">
                   <Hand size={18} />
                 </span>
-                <h2 className={styles.cardHeadTitle}>{strings.homeAskTitle}</h2>
+                <h2 className={cardTitleClass}>{strings.homeAskTitle}</h2>
               </div>
-              <button type="button" className={styles.link} onClick={() => navigate("/mail")}>
+              <button type="button" className={linkClass} onClick={() => navigate("/mail")}>
                 <Sparkles size={14} />
                 {strings.homeAskCta}
                 <ArrowRight size={14} />
               </button>
             </div>
-            <p className={styles.askBody}>{strings.homeAskBody}</p>
+            <p className="mb-0 ml-11 mt-2 max-w-[34ch] text-sm leading-normal text-secondary max-sm:ml-0">{strings.homeAskBody}</p>
           </section>
         </aside>
       </div>
@@ -422,12 +426,12 @@ function DueLabel({ dueAt }: { dueAt: string | null }) {
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const due = new Date(dueAt);
   if (due < startOfToday) {
-    return <span className={`${styles.taskDue} ${styles.taskDueOverdue}`}>{strings.homeTaskOverdue}</span>;
+    return <span className="shrink-0 rounded-full bg-[var(--danger-bg)] px-2 py-0.5 text-xs font-medium text-[var(--danger-text)]">{strings.homeTaskOverdue}</span>;
   }
   if (sameDay(dueAt, now)) {
-    return <span className={`${styles.taskDue} ${styles.taskDueToday}`}>{strings.homeTaskToday}</span>;
+    return <span className="shrink-0 rounded-full bg--soft px-2 py-0.5 text-xs font-medium text-accent">{strings.homeTaskToday}</span>;
   }
-  return <span className={styles.taskDue}>{formatDate(dueAt)}</span>;
+  return <span className="shrink-0 rounded-full bg-raised px-2 py-0.5 text-xs font-medium text-tertiary">{formatDate(dueAt)}</span>;
 }
 
 interface StatCardProps {
@@ -443,18 +447,18 @@ interface StatCardProps {
 function StatCard({ Icon, label, cta, onClick, value, loading, tone }: StatCardProps) {
   const iconClass =
     tone === "accent"
-      ? `${styles.statIcon} ${styles.statIconAccent}`
+      ? "bg--soft text-accent"
       : tone === "success"
-        ? `${styles.statIcon} ${styles.statIconSuccess}`
-        : styles.statIcon;
+        ? "bg-[var(--success-bg)] text-[var(--success-text)]"
+        : "bg-raised text-secondary";
   return (
-    <button type="button" className={styles.stat} onClick={onClick}>
-      <span className={iconClass}>
+    <button type="button" className="group grid min-h-[104px] grid-cols-[auto_minmax(0,1fr)_auto] grid-rows-2 items-center gap-x-3 rounded-lg border border-subtle bg-surface p-4 text-left shadow-sm transition hover:-translate-y-px hover:border-default hover:shadow-md max-sm:min-h-[92px]" onClick={onClick}>
+      <span className={`row-span-2 inline-flex size-11 items-center justify-center rounded-md ${iconClass}`}>
         <Icon size={20} />
       </span>
-      <span className={styles.statValue}>{loading === true ? "—" : (value ?? 0)}</span>
-      <span className={styles.statLabel}>{label}</span>
-      <span className={styles.statCta}>
+      <span className="self-end text-2xl font-bold leading-none tabular-nums text-primary">{loading === true ? "—" : (value ?? 0)}</span>
+      <span className="self-start text-sm text-secondary">{label}</span>
+      <span className="row-span-2 inline-flex items-center gap-1 self-center text-xs font-medium text-tertiary transition-colors group-hover:text-accent">
         {cta}
         <ArrowRight size={13} />
       </span>
@@ -464,10 +468,10 @@ function StatCard({ Icon, label, cta, onClick, value, loading, tone }: StatCardP
 
 function EmptyState({ Icon, message, action, onAction, compact = false }: { Icon: LucideIcon; message: string; action: string; onAction: () => void; compact?: boolean }) {
   return (
-    <div className={compact ? `${styles.emptyState} ${styles.emptyStateCompact}` : styles.emptyState}>
-      <span className={styles.emptyIcon}><Icon size={19} aria-hidden="true" /></span>
-      <p>{message}</p>
-      <button type="button" onClick={onAction}>{action}<ArrowRight size={13} aria-hidden="true" /></button>
+    <div className={`flex flex-col items-center justify-center gap-2 p-5 text-center ${compact ? "min-h-[132px] py-3" : "min-h-[210px]"}`}>
+      <span className="inline-flex size-[42px] items-center justify-center rounded-lg bg--soft text-accent"><Icon size={19} aria-hidden="true" /></span>
+      <p className="m-0 max-w-[34ch] text-sm leading-normal text-tertiary">{message}</p>
+      <button className="inline-flex min-h-[34px] items-center gap-1 rounded-md border border-subtle bg-surface px-3 text-sm font-medium text-primary transition-colors hover:border-accent hover:bg--soft" type="button" onClick={onAction}>{action}<ArrowRight size={13} aria-hidden="true" /></button>
     </div>
   );
 }
@@ -486,7 +490,7 @@ function Tabs({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
           type="button"
           role="tab"
           aria-selected={tab === it.id}
-          className={tab === it.id ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+          className={tab === it.id ? "min-h-8 rounded-full bg--soft px-3 text-sm font-medium text-accent" : "min-h-8 rounded-full px-3 text-sm font-medium text-secondary transition-colors hover:bg-raised hover:text-primary"}
           onClick={() => onChange(it.id)}
         >
           {it.label}
