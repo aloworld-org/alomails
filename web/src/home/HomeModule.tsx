@@ -229,7 +229,7 @@ export function HomeModule() {
               <Spinner size={20} />
             </div>
           ) : rows.length === 0 ? (
-            <p className={styles.empty}>{strings.homeNoRecent}</p>
+            <EmptyState Icon={Mail} message={strings.homeNoRecent} action={strings.homeGoToMail} onAction={() => navigate("/mail")} />
           ) : (
             <ul className={styles.list}>
               {rows.slice(0, 6).map((e) => {
@@ -273,7 +273,7 @@ export function HomeModule() {
                 <Spinner size={18} />
               </div>
             ) : todayEvents.length === 0 ? (
-              <p className={styles.empty}>{strings.homeNoEventsToday}</p>
+              <EmptyState Icon={Calendar} message={strings.homeNoEventsToday} action={strings.homeViewCalendar} onAction={() => navigate("/agenda")} compact />
             ) : (
               <ul className={styles.agenda}>
                 {todayEvents.slice(0, 4).map((e, i) => (
@@ -308,7 +308,7 @@ export function HomeModule() {
                 <Spinner size={18} />
               </div>
             ) : tasks.length === 0 ? (
-              <p className={styles.empty}>{strings.homeNoTasks}</p>
+              <EmptyState Icon={CheckCircle2} message={strings.homeNoTasks} action={strings.homeViewTasks} onAction={() => navigate("/tasks")} compact />
             ) : (
               <ul className={styles.taskList}>
                 {tasks.slice(0, 5).map((t) => (
@@ -402,6 +402,16 @@ function StatCard({ Icon, label, cta, onClick, value, loading, tone }: StatCardP
         <ArrowRight size={13} />
       </span>
     </button>
+  );
+}
+
+function EmptyState({ Icon, message, action, onAction, compact = false }: { Icon: LucideIcon; message: string; action: string; onAction: () => void; compact?: boolean }) {
+  return (
+    <div className={compact ? `${styles.emptyState} ${styles.emptyStateCompact}` : styles.emptyState}>
+      <span className={styles.emptyIcon}><Icon size={19} aria-hidden="true" /></span>
+      <p>{message}</p>
+      <button type="button" onClick={onAction}>{action}<ArrowRight size={13} aria-hidden="true" /></button>
+    </div>
   );
 }
 
