@@ -444,11 +444,16 @@ export function HomeModule() {
             </div>
             <div className="flex flex-1 flex-col justify-center gap-3">
               <p className="m-0 text-sm leading-relaxed text-secondary">{strings.homeAskBody}</p>
-              <form className="flex min-h-12 items-center gap-2 rounded-lg border border-subtle bg-app p-1.5 pl-4 transition focus-within:border-accent focus-within:ring-2 focus-within:ring-[var(--accent-tint)]" onSubmit={(e) => void askAlo(e)}>
-                <input
-                  className="min-w-0 flex-1 border-0 bg-transparent text-sm text-primary outline-none placeholder:text-tertiary"
+              <form className="flex min-h-12 items-end gap-2 rounded-lg border border-subtle bg-app p-1.5 pl-4 transition focus-within:border-accent focus-within:ring-2 focus-within:ring-[var(--accent-tint)]" onSubmit={(e) => void askAlo(e)}>
+                <textarea
+                  className="max-h-32 min-h-9 min-w-0 flex-1 resize-none overflow-y-auto border-0 bg-transparent py-2 text-sm leading-5 text-primary !outline-none !ring-0 placeholder:text-tertiary focus:!border-transparent focus:!outline-none focus:!ring-0"
+                  rows={1}
                   value={askText}
                   onChange={(e) => setAskText(e.target.value)}
+                  onInput={(e) => {
+                    e.currentTarget.style.height = "auto";
+                    e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 128)}px`;
+                  }}
                   placeholder={strings.homeAskPlaceholder}
                   aria-label={strings.homeAskPlaceholder}
                 />
