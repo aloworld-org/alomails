@@ -47,6 +47,7 @@ use time::OffsetDateTime;
 
 use crate::account::AccountStore;
 use crate::campaign_content::CampaignContent;
+use crate::campaign_merge::{reject_merge_fields, validate_merge_text};
 use crate::campaign_topic_optout::{TOPIC_MAX, normalise_topic};
 use crate::error::{Result, StoreError};
 use crate::id::{CampaignId, UserId};
@@ -259,6 +260,10 @@ fn validate_subject(raw: &str) -> Result<String> {
             "a subject line fits in {CAMPAIGN_SUBJECT_MAX} characters"
         )));
     }
+    // The cap is measured on what the writer typed, not on what a recipient
+    // reads: a personalised subject is usually shorter once resolved, and a
+    // limit that moved per recipient would be one nobody could compose against.
+    validate_merge_text("the subject line", subject)?;
     Ok(subject.to_owned())
 }
 
@@ -272,6 +277,7 @@ fn validate_preheader(raw: Option<&str>) -> Result<Option<String>> {
             "preview text fits in {CAMPAIGN_PREHEADER_MAX} characters"
         )));
     }
+    validate_merge_text("preview text", preheader)?;
     Ok(Some(preheader.to_owned()))
 }
 
@@ -284,6 +290,10 @@ fn validate_preheader(raw: Option<&str>) -> Result<Option<String>> {
 /// a campaign whose recipients could not be offered "fewer".
 fn validate_topic(raw: &str) -> Result<String> {
     let collapsed = raw.split_whitespace().collect::<Vec<_>>().join(" ");
+    // A topic is drawn on the unsubscribe page and resolved by nothing on the
+    // way there, so a merge field in one would arrive in front of a leaving
+    // recipient verbatim. Refused by name rather than left to leak.
+    reject_merge_fields("a topic", &collapsed)?;
     if normalise_topic(&collapsed).is_none() {
         return Err(StoreError::Validation(format!(
             "a campaign says which kind of mail it is, in 1 to {TOPIC_MAX} characters — a \
@@ -486,6 +496,32 @@ mod tests {
             Some("monthly newsletter".to_owned()),
             "what the sender wrote and what a decline compares must fold together"
         );
+    }
+
+    #[test]
+    fn a_subject_or_a_preheader_with_an_undefaulted_merge_field_cannot_be_saved() {
+        // C3.4's rule, applied at the same gate as the body's — a subject that
+        // would arrive as "Hi ," is refused while somebody is writing it.
+        assert!(detail(validate_subject("Hi {{first_name}}, spring prices")).contains("fallback"));
+        assert!(
+            validate_subject("Hi {{first_name|there}}, spring prices").is_ok(),
+            "a defaulted field is ordinary text to save"
+        );
+        match validate_preheader(Some("Written to {{email}}")) {
+            Err(StoreError::Validation(reported)) => {
+                assert!(reported.starts_with("preview text: "), "{reported}");
+            }
+            other => panic!("expected a validation error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn a_topic_cannot_be_personalised_because_a_leaving_recipient_reads_it_as_written() {
+        // The unsubscribe page (C2s.2) draws the topic verbatim and nothing
+        // resolves it on the way there.
+        let reported = detail(validate_topic("News for {{first_name|you}}"));
+        assert!(reported.contains("as written"), "{reported}");
+        assert!(validate_topic("Monthly newsletter").is_ok());
     }
 
     #[test]

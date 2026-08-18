@@ -46,11 +46,15 @@
 //!   0044 refused to ship by default. Adding one needs that question answered —
 //!   who may fetch, what is logged, what a blocked image leaves behind (C3.5) —
 //!   and a new block variant is additive when it is.
-//! - **Merge fields and cross-references.** `{{ref:…}}` means a section number
-//!   in a document and nothing in an email, and personalisation with its
-//!   mandatory fallback is queue item C3.4. Text is stored as written here; the
-//!   placeholder rules land with the item that introduces them, in one place,
-//!   rather than as a half-rule this module guessed at.
+//! - **What a merge field means.** `{{ref:…}}` is a section number in a
+//!   document and nothing in an email; personalisation and its mandatory
+//!   fallback are [`crate::campaign_merge`] (C3.4), which owns the grammar, the
+//!   closed vocabulary and the resolution. This module *applies* that rule at
+//!   the gate — a heading, a paragraph and a table cell are each checked as
+//!   they are saved, so `Hi {{first_name}},` is refused while somebody is
+//!   writing rather than delivered as `Hi ,` — and decides nothing about it.
+//!   Text is still stored exactly as written: resolution happens per recipient,
+//!   once, before either renderer.
 //! - **How any of it looks.** This module is types and validation, with no
 //!   database and no HTML in it. The renderer (C3.2) consumes exactly these
 //!   types, so the vocabulary cannot drift between what is stored and what is
@@ -59,6 +63,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::campaign_merge::validate_merge_text;
 use crate::error::{Result, StoreError};
 
 /// The block-model version this build writes and reads.
@@ -183,6 +188,7 @@ impl CampaignBlock {
         check_id(self.id())?;
         match self {
             Self::Heading(block) => {
+                validate_merge_text("a heading", &block.text)?;
                 if !(1..=2).contains(&block.level) {
                     return Err(invalid(
                         "a heading in a campaign is level 1 or 2 — deeper hierarchy than that \
@@ -197,9 +203,14 @@ impl CampaignBlock {
                 check_length("a heading", &block.text, CAMPAIGN_HEADING_CHARS_MAX)
             }
             Self::Paragraph(block) => {
+                validate_merge_text("a paragraph", &block.text)?;
                 check_length("a paragraph", &block.text, CAMPAIGN_TEXT_CHARS_MAX)
             }
             Self::Table(block) => validate_table(block),
+            // A code block's `{{ … }}` is somebody else's template syntax and
+            // stays literal — [`crate::campaign_merge`] records the reasoning,
+            // and this is the one place a writer can put those braces in a
+            // campaign at all.
             Self::Code(block) => {
                 check_language(&block.language)?;
                 check_length("a code block", &block.code, CAMPAIGN_TEXT_CHARS_MAX)
@@ -437,6 +448,7 @@ fn validate_table(block: &TableBlock) -> Result<()> {
             )));
         }
         for cell in row {
+            validate_merge_text("a table cell", cell)?;
             check_length("a table cell", cell, CAMPAIGN_CELL_CHARS_MAX)?;
         }
     }
@@ -637,6 +649,55 @@ mod tests {
             .collect();
         let detail = rejected(json!({ "schema_version": 1, "blocks": blocks }));
         assert!(detail.contains("blocks"), "{detail}");
+    }
+
+    #[test]
+    fn a_merge_field_with_no_fallback_is_refused_wherever_the_writer_can_type_one() {
+        // C3.4's rule, applied at this gate: the letter that would arrive as
+        // "Hi ," cannot be saved. Every text-bearing block is covered, because
+        // a rule that held in paragraphs and not in table cells would be found
+        // by a customer's recipients.
+        for block in [
+            json!({ "type": "heading", "id": "b", "level": 1, "text": "For {{first_name}}" }),
+            json!({ "type": "paragraph", "id": "b", "text": "Hi {{first_name}}," }),
+            json!({ "type": "table", "id": "b", "rows": [["Who"], ["{{name}}"]] }),
+        ] {
+            let detail = rejected(json!({ "schema_version": 1, "blocks": [block.clone()] }));
+            assert!(
+                detail.contains("fallback"),
+                "{block} must be refused for the missing fallback: {detail}"
+            );
+        }
+        // Written with one, all three are ordinary bodies.
+        assert!(
+            CampaignContent::from_value(json!({
+                "schema_version": 1,
+                "blocks": [
+                    { "type": "heading", "id": "h", "level": 1, "text": "For {{first_name|you}}" },
+                    { "type": "paragraph", "id": "p", "text": "Hi {{first_name|there}}," },
+                    { "type": "table", "id": "t", "rows": [["Who"], ["{{name|a customer}}"]] },
+                ],
+            }))
+            .is_ok()
+        );
+    }
+
+    #[test]
+    fn a_code_block_keeps_its_braces_because_they_are_somebody_elses_template() {
+        // Handlebars, Vue, Angular, Jinja and Go all write `{{ … }}`. A campaign
+        // that could not carry a sample of one could not document any of them,
+        // and this is the one place in a letter those braces stay literal.
+        let content = CampaignContent::from_value(json!({
+            "schema_version": 1,
+            "blocks": [{
+                "type": "code",
+                "id": "c1",
+                "code": "<p>{{ user.name }}</p>",
+                "language": "html",
+            }],
+        }))
+        .expect("a code sample of a template is a legal campaign body");
+        assert_eq!(content.blocks.len(), 1);
     }
 
     #[test]

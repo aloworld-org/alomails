@@ -80,10 +80,11 @@
 //! - **It has no unsubscribe footer**, for the reason [`crate::campaign_html`]
 //!   records: the RFC 8058 link is per recipient and belongs to the send, which
 //!   waits on an IP (C2). It is additive on the day there is one.
-//! - **It does not personalise.** `{{first_name}}` is text here, exactly as it
-//!   is in the HTML part. Merge fields and their mandatory fallbacks are C3.4,
-//!   in one place — a half-rule applied here and again there would be a rule
-//!   that could disagree with itself between two parts of one mail.
+//! - **It does not personalise**, exactly as the HTML part does not.
+//!   [`crate::campaign_merge`] (C3.4) resolves the body once, for one
+//!   recipient, and both renderers are handed the same resolved words — a rule
+//!   applied here and again there would be a rule that could disagree with
+//!   itself between two parts of one mail.
 //! - **It emits no string of our own in any language.** The underlines are
 //!   punctuation and the labels are the writer's own header cells, so a text
 //!   part is in whatever language the letter was typed in and there is nothing

@@ -69,10 +69,13 @@
 //!   (C2 waits on an IP). A footer parameter that is `None` at every call site
 //!   would be pinned empty by every golden file, which is worse than absent.
 //!   It is additive on the day a send can fill it in.
-//! - **It does not personalise.** `{{first_name}}` is text here, escaped like
-//!   any other text and therefore inert. Merge fields and their mandatory
-//!   fallbacks are C3.4, in one place, rather than a half-rule guessed at in
-//!   the renderer and again in the validator.
+//! - **It does not personalise, and that is now a guarantee rather than a gap.**
+//!   [`crate::campaign_merge`] (C3.4) resolves a letter for one recipient
+//!   *before* it reaches here, so this renderer only ever sees finished words
+//!   and escapes them like any other. The order matters: escaping first would
+//!   put a fallback containing an apostrophe into the letter as `&#39;` while
+//!   the text part kept the apostrophe, which is two parts of one mail
+//!   disagreeing about a character.
 //! - **It does not draw images**, because the model has no image block and the
 //!   reason is a decision C3.1 recorded: a remote image is a fetch we can see,
 //!   which is the open-tracking pixel ADR 0044 refused.
