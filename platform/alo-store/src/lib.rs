@@ -57,6 +57,7 @@ pub mod calendar_availability;
 pub mod campaign_audience;
 pub mod campaign_consent;
 pub mod campaign_content;
+pub mod campaign_html;
 pub mod campaign_record;
 pub mod campaign_segments;
 pub mod campaign_suppression;
@@ -336,6 +337,7 @@ pub use campaign_content::{
     CAMPAIGN_TABLE_COLUMNS_MAX, CAMPAIGN_TABLE_ROWS_MAX, CAMPAIGN_TEXT_CHARS_MAX, CampaignBlock,
     CampaignContent, CodeBlock, HeadingBlock, ParagraphBlock, TableBlock,
 };
+pub use campaign_html::{CAMPAIGN_LETTER_WIDTH_PX, CampaignLetter, render_campaign_html};
 pub use campaign_record::{
     CAMPAIGN_PAGE_MAX, CAMPAIGN_PREHEADER_MAX, CAMPAIGN_SUBJECT_MAX, Campaign, CampaignSummary,
     NewCampaign,
