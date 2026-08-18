@@ -537,6 +537,31 @@ fn page_sql(reach: Reach) -> String {
     )
 }
 
+/// The SQL of one person, at [`Reach::Mailable`] and never at any other.
+///
+/// The lookup behind a preview or a seed test (C3.6): *show me this letter as
+/// this person will receive it.* It is deliberately not offered at
+/// [`Reach::Anyone`], because the only callers that want one person by address
+/// want to render a letter to them — and rendering a letter to somebody who
+/// unsubscribed is the rehearsal for sending them one. Somebody the tenant may
+/// not mail is therefore `None` here, exactly as somebody it has never heard
+/// of is; who they are and why they are out is the audience screen's question,
+/// answered by [`page_sql`] with the reasons attached.
+///
+/// The address is folded by Postgres for the reason the cursor is — same
+/// collation, same comparison as the addresses it is matched against.
+fn recipient_sql() -> String {
+    format!(
+        "{people} \
+         SELECT {columns} \
+           FROM people \
+          WHERE address = lower(btrim($2::text)){reach}",
+        people = people_cte(),
+        columns = MEMBER_COLUMNS,
+        reach = Reach::Mailable.predicate(),
+    )
+}
+
 /// The SQL of a count, at the given reach — counted in the database over the
 /// same CTEs the page walks, so the number and the list are the same question.
 fn count_sql(reach: Reach) -> String {
@@ -560,6 +585,7 @@ fn all_sql() -> Vec<String> {
         page_sql(Reach::Mailable),
         count_sql(Reach::Anyone),
         count_sql(Reach::Mailable),
+        recipient_sql(),
     ]
 }
 
@@ -790,6 +816,36 @@ impl AccountStore {
     /// [`StoreError::Db`] on failure.
     pub async fn campaign_recipient_count(&self) -> Result<i64> {
         self.audience_count(Reach::Mailable).await
+    }
+
+    /// One person this tenant **may mail**, by address, or `None`.
+    ///
+    /// `None` covers three different facts on purpose — this tenant has no
+    /// record of the address, or has one with no consent behind it, or has
+    /// suppressed it — because every caller of this method is about to render a
+    /// letter to whoever comes back, and there is no version of those three
+    /// where doing so is right. The audience screen is where the difference is
+    /// visible, with the reason beside it.
+    ///
+    /// The address is normalised here and folded again by Postgres: one rule,
+    /// applied at both ends, as everywhere else on this surface.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] when the text is not an address this audience
+    /// could hold; [`StoreError::Db`] on failure.
+    pub async fn campaign_recipient(&self, address: &str) -> Result<Option<CampaignRecipient>> {
+        let address = normalise_address(address).ok_or_else(|| {
+            StoreError::Validation(
+                "a recipient is named by an address this audience could hold".to_owned(),
+            )
+        })?;
+        let row: Option<MemberRow> = sqlx::query_as(&recipient_sql())
+            .bind(self.tenant.as_str())
+            .bind(&address)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+        row.map(MemberRow::into_recipient).transpose()
     }
 
     /// The shared read behind both page methods: one validation of the page,

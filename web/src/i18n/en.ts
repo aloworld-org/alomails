@@ -6425,6 +6425,61 @@ export const en = {
   campaignsNothingSentYet:
     "Nothing is sent from this screen. Campaign sending needs its own address, separate from your everyday mail, so that a newsletter can never affect whether your invoices arrive.",
 
+  // The letter as one person will actually receive it (wave C3.6). The words
+  // that matter most here are the caveat and the "show as" labels: a preview
+  // is our renderer's opinion, and the copy nobody proof-reads is the one that
+  // goes to everybody with no name on file.
+  campaignsViewsLabel: "What to look at",
+  campaignsTabAudience: "Audience",
+  campaignsTabLetters: "Letters",
+  campaignsLettersTitle: "Letters",
+  campaignsLettersSubtitle: "Each letter as one person will actually receive it.",
+  campaignsLetterLabel: "Letter",
+  campaignsNoLettersTitle: "No letters yet",
+  campaignsNoLettersBody:
+    "A letter is written in the same editor as a document: headings, paragraphs, tables and code. Once one exists it appears here, rendered exactly as it will arrive.",
+  campaignsShowAsLabel: "Show as",
+  campaignsShowAsHint: "Both are real. Half an audience has no name on file.",
+  campaignsShowAsRecipient: "Someone you can mail",
+  campaignsShowAsFallbacks: "Someone with nothing on file",
+  campaignsPartLabel: "Part",
+  campaignsPartHint: "Every letter carries both. Some people, and every filter, read the plain one.",
+  campaignsPartHtml: "Formatted",
+  campaignsPartText: "Plain text",
+  campaignsPreviewFrameLabel: "The letter as it will be received",
+  campaignsPreviewSubject: "Subject",
+  campaignsPreviewPreheader: "Preview text",
+  campaignsPreviewNoPreheader:
+    "None — mail clients will show the first line of the letter instead.",
+  campaignsAgainstRecipient: (person: string) => `This is the copy ${person} receives.`,
+  campaignsAgainstFallbacks:
+    "This is the copy everyone with nothing on file receives — every personalised value below is your own fallback wording.",
+  campaignsAgainstNobodyYet:
+    "There is nobody to mail yet, so this is the copy someone with nothing on file receives. Every personalised value below is your own fallback wording.",
+  campaignsPreviewCaveat:
+    "This is our renderer’s opinion, not proof. Outlook on Windows draws mail with Word’s engine and every client differs — put a test copy in your Drafts and read it where your recipients will.",
+  campaignsTestDraft: "Put a test copy in my Drafts",
+  campaignsTestDraftDone: (address: string) =>
+    `A copy is in your Drafts, addressed to ${address}. Nothing was sent — open it in your mail app, or send it to yourself to see how a real client draws it.`,
+  campaignsTestDraftFailed: "That test copy could not be written.",
+  campaignsFieldsTitle: "What the personalised values became",
+  campaignsColField: "Value",
+  campaignsColPrinted: "Reads as",
+  campaignsColWhoseWords: "Whose words",
+  campaignsFieldTheirs: "From their record",
+  campaignsFieldFallback: "Your fallback",
+  campaignsNoFields: "This letter says the same thing to everybody.",
+  campaignsFieldFirstName: "First name",
+  campaignsFieldName: "Full name",
+  campaignsFieldEmail: "Email address",
+  campaignsFieldCountry: "Country",
+  campaignsVocabularyTitle: "What you can personalise",
+  campaignsFieldExample: (field: string) => `{{${field}|your words}}`,
+  campaignsVocabularyHint:
+    "The words after the bar are what someone with nothing on file reads. They are not optional: a value with no fallback is where “Hi ,” comes from.",
+  campaignsLettersFailed: "Your letters could not be read.",
+  campaignsPreviewFailed: "That letter could not be rendered.",
+
   // The page at the end of an unsubscribe link — the only screen in this
   // product a stranger reads, and they arrive at it already annoyed. Every
   // sentence here is plain, short and says exactly what a press did: the

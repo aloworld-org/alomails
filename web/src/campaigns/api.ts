@@ -19,8 +19,12 @@ import { RestError, problemDetail, restMessage } from "../platform/rest";
 import type {
   AudienceMember,
   CampaignConsent,
+  CampaignPreview,
   CampaignSegment,
+  CampaignSummary,
   CampaignSuppression,
+  CampaignTestDraft,
+  PreviewAgainst,
   SegmentConditions,
   SegmentTally,
 } from "./types";
@@ -178,6 +182,64 @@ export class CampaignsApi {
       `/campaigns/segments/${encodeURIComponent(id)}`,
       segment,
     ).then((r) => r.segment);
+  }
+
+  /** The letters this workspace has written, newest first, without their
+   *  bodies. */
+  campaigns(): Promise<CampaignSummary[]> {
+    return this.#read<{ campaigns?: CampaignSummary[] }>("/campaigns/campaigns").then(
+      (r) => r.campaigns ?? [],
+    );
+  }
+
+  /**
+   * The vocabulary a letter can personalise with, read from the server.
+   *
+   * Deliberately not a constant in this file: a merge field added to the store
+   * has to appear in the composer without a web release, and a client-side copy
+   * of the list is a client-side copy that goes stale. The server answers names
+   * only — the words describing each one are ours, in three languages.
+   */
+  mergeFields(): Promise<string[]> {
+    return this.#read<{ fields?: string[] }>("/campaigns/merge-fields").then((r) => r.fields ?? []);
+  }
+
+  /**
+   * One letter as one person will receive it.
+   *
+   * `against` is an address, or `PREVIEW_AS_FALLBACKS`, or omitted for the
+   * first person this workspace may actually mail. A `404` covers all three of
+   * "no such letter", "not yours" and "not somebody you may mail" — the server
+   * will not say which, and neither does this method.
+   */
+  preview(id: string, against?: string): Promise<CampaignPreview> {
+    const query =
+      against === undefined || against === "" ? "" : `?as=${encodeURIComponent(against)}`;
+    return this.#read<{ preview: CampaignPreview }>(
+      `/campaigns/campaigns/${encodeURIComponent(id)}/preview${query}`,
+    ).then((r) => r.preview);
+  }
+
+  /**
+   * Writes a copy of the letter into the caller's own Drafts.
+   *
+   * **This sends nothing.** It is the same path every server-composed message
+   * in the product takes: the draft lands where the person who asked can read
+   * it in their own mail client, change it, and send it themselves. There is no
+   * recipient parameter, and that is the point — a field naming who a rendered
+   * campaign goes to is the first half of a sending API.
+   */
+  testDraft(
+    id: string,
+    against?: string,
+  ): Promise<{ draft: CampaignTestDraft; against: PreviewAgainst }> {
+    const query =
+      against === undefined || against === "" ? "" : `?as=${encodeURIComponent(against)}`;
+    return this.#write<{ draft: CampaignTestDraft; against: PreviewAgainst }>(
+      "POST",
+      `/campaigns/campaigns/${encodeURIComponent(id)}/test${query}`,
+      {},
+    );
   }
 
   /** Forgets a saved question. Never the evidence: consent records and

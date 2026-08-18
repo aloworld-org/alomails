@@ -60,6 +60,7 @@ pub mod campaign_content;
 pub mod campaign_html;
 pub mod campaign_merge;
 pub mod campaign_mime;
+pub mod campaign_preview;
 pub mod campaign_record;
 pub mod campaign_segments;
 pub mod campaign_suppression;
@@ -343,12 +344,13 @@ pub use campaign_content::{
 pub use campaign_html::{CAMPAIGN_LETTER_WIDTH_PX, CampaignLetter, render_campaign_html};
 pub use campaign_merge::{
     CAMPAIGN_MERGE_FALLBACK_MAX, CampaignMergeField, CampaignMergeValues, PersonalisedLetter,
-    personalise_campaign, reject_merge_fields, resolve_merge_content, resolve_merge_text,
-    validate_merge_text,
+    ResolvedMergeField, personalise_campaign, reject_merge_fields, resolve_merge_content,
+    resolve_merge_text, validate_merge_text,
 };
 pub use campaign_mime::{
     CAMPAIGN_HEADER_LINE_MAX, CAMPAIGN_MIME_LINE_MAX, CampaignMessage, render_campaign_message,
 };
+pub use campaign_preview::{CampaignPreview, FallbackReason, PreviewAgainst, PreviewAs};
 pub use campaign_record::{
     CAMPAIGN_PAGE_MAX, CAMPAIGN_PREHEADER_MAX, CAMPAIGN_SUBJECT_MAX, Campaign, CampaignSummary,
     NewCampaign,

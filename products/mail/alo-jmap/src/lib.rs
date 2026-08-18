@@ -74,6 +74,7 @@ pub mod blob;
 pub mod calendar;
 pub mod campaign_audience;
 pub mod campaign_consent;
+pub mod campaign_preview;
 pub mod campaign_record;
 pub mod campaign_segments;
 pub mod campaign_suppression;

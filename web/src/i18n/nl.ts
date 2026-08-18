@@ -6297,4 +6297,91 @@ export const nl: Partial<Catalog> = {
     "Personen verschijnen hier zodra deze werkruimte een klant heeft, een verkoopkans met een e-mailadres, of iemand die een formulier op de website heeft ingevuld. Persoonlijke adresboeken worden nooit gebruikt.",
   campaignsNothingSentYet:
     "Vanaf dit scherm wordt niets verzonden. Campagnepost heeft een eigen adres nodig, los van uw dagelijkse e-mail, zodat een nieuwsbrief nooit invloed kan hebben op de bezorging van uw facturen.",
+
+  // De brief zoals één persoon hem werkelijk ontvangt (golf C3.6). De
+  // belangrijkste woorden hier zijn het voorbehoud en de labels bij
+  // "Tonen als": een voorbeeld is de weergave van onze renderer, en de kopie
+  // die niemand naleest is die welke iedereen krijgt van wie geen naam is
+  // vastgelegd.
+  campaignsViewsLabel: "Wat u bekijkt",
+  campaignsTabAudience: "Publiek",
+  campaignsTabLetters: "Brieven",
+  campaignsLettersTitle: "Brieven",
+  campaignsLettersSubtitle: "Elke brief zoals één persoon hem werkelijk ontvangt.",
+  campaignsLetterLabel: "Brief",
+  campaignsNoLettersTitle: "Nog geen brieven",
+  campaignsNoLettersBody:
+    "Een brief schrijft u in dezelfde editor als een document: koppen, alinea’s, tabellen en code. Zodra er één bestaat verschijnt hij hier, precies weergegeven zoals hij aankomt.",
+  campaignsShowAsLabel: "Tonen als",
+  campaignsShowAsHint: "Beide zijn echt. De helft van een publiek heeft geen naam vastgelegd.",
+  campaignsShowAsRecipient: "Iemand die u mag mailen",
+  campaignsShowAsFallbacks: "Iemand van wie u niets weet",
+  campaignsPartLabel: "Deel",
+  campaignsPartHint:
+    "Elke brief bevat beide. Sommige mensen, en elk filter, lezen de eenvoudige versie.",
+  campaignsPartHtml: "Opgemaakt",
+  campaignsPartText: "Platte tekst",
+  campaignsPreviewFrameLabel: "De brief zoals hij ontvangen wordt",
+  campaignsPreviewSubject: "Onderwerp",
+  campaignsPreviewPreheader: "Voorbeeldtekst",
+  campaignsPreviewNoPreheader: "Geen — e-mailprogramma’s tonen dan de eerste regel van de brief.",
+  campaignsAgainstRecipient: (person: string) => `Dit is de kopie die ${person} ontvangt.`,
+  campaignsAgainstFallbacks:
+    "Dit is de kopie die iedereen ontvangt van wie u niets weet — elke gepersonaliseerde waarde hieronder is uw eigen terugvalformulering.",
+  campaignsAgainstNobodyYet:
+    "Er is nog niemand om te mailen, dus dit is de kopie die iemand ontvangt van wie u niets weet. Elke gepersonaliseerde waarde hieronder is uw eigen terugvalformulering.",
+  campaignsPreviewCaveat:
+    "Dit is de weergave van onze renderer, geen bewijs. Outlook op Windows tekent post met de motor van Word en elk programma verschilt — zet een testkopie in uw concepten en lees hem waar uw ontvangers dat doen.",
+  campaignsTestDraft: "Zet een testkopie in mijn concepten",
+  campaignsTestDraftDone: (address: string) =>
+    `Er staat een kopie in uw concepten, gericht aan ${address}. Er is niets verzonden — open hem in uw e-mailprogramma, of stuur hem naar uzelf om te zien hoe een echt programma hem tekent.`,
+  campaignsTestDraftFailed: "Die testkopie kon niet worden geschreven.",
+  campaignsFieldsTitle: "Wat de gepersonaliseerde waarden zijn geworden",
+  campaignsColField: "Waarde",
+  campaignsColPrinted: "Leest als",
+  campaignsColWhoseWords: "Wiens woorden",
+  campaignsFieldTheirs: "Uit hun gegevens",
+  campaignsFieldFallback: "Uw terugval",
+  campaignsNoFields: "Deze brief zegt tegen iedereen hetzelfde.",
+  campaignsFieldFirstName: "Voornaam",
+  campaignsFieldName: "Volledige naam",
+  campaignsFieldEmail: "E-mailadres",
+  campaignsFieldCountry: "Land",
+  campaignsVocabularyTitle: "Wat u kunt personaliseren",
+  campaignsFieldExample: (field: string) => `{{${field}|uw woorden}}`,
+  campaignsVocabularyHint:
+    "De woorden na de streep zijn wat iemand leest van wie u niets weet. Ze zijn niet optioneel: een waarde zonder terugval is waar „Hallo ,” vandaan komt.",
+  campaignsLettersFailed: "Uw brieven konden niet worden gelezen.",
+  campaignsPreviewFailed: "Die brief kon niet worden weergegeven.",
+
+  // De pagina aan het eind van een afmeldlink — het enige scherm in dit product
+  // dat een onbekende leest, en hij komt er al geïrriteerd aan. Elke zin is
+  // eenvoudig, kort en zegt precies wat een druk op de knop heeft gedaan.
+  campaignUnsubscribeLoading: "Deze link wordt gecontroleerd…",
+  campaignUnsubscribeTitle: "Deze e-mails stoppen",
+  campaignUnsubscribeSubtitle: (topic: string) =>
+    `Dit bericht is verstuurd als „${topic}”. U kunt dat soort apart stoppen, of alles stoppen.`,
+  campaignUnsubscribeSubtitleUntopiced:
+    "U kunt stoppen met het ontvangen van e-mail van deze werkruimte. Één druk op de knop volstaat.",
+  campaignUnsubscribeStopTopic: (topic: string) => `Stuur mij geen „${topic}” meer`,
+  campaignUnsubscribeStopAll: "Stuur mij helemaal niets meer",
+  campaignUnsubscribeAlreadyStopped:
+    "Deze werkruimte heeft al de opdracht gekregen u niet meer te mailen. U hoeft verder niets te doen.",
+  campaignUnsubscribeAlreadyDeclined: (topic: string) =>
+    `U hebt „${topic}” al gestopt. Hieronder kunt u nog steeds al het overige stoppen.`,
+  campaignUnsubscribeDoneTitle: "Gedaan",
+  campaignUnsubscribeDoneAll:
+    "Deze werkruimte zal u niet meer mailen. Verder is er niets nodig.",
+  campaignUnsubscribeDoneTopic: (topic: string) => `„${topic}” wordt u niet meer gestuurd.`,
+  campaignUnsubscribeDoneTopicNote:
+    "Andere soorten e-mail van deze werkruimte — facturen en antwoorden, bijvoorbeeld — bereiken u nog wel. Kom terug op deze link om ook die te stoppen.",
+  campaignUnsubscribeFinalNote:
+    "Dit kan hier niet ongedaan worden gemaakt. Bedenkt u zich, vraag het dan rechtstreeks aan de afzender.",
+  campaignUnsubscribeNoAccountNote:
+    "Er is geen account en geen aanmelding nodig. Deze pagina gaat alleen over het adres waarnaar dit bericht is verstuurd.",
+  campaignUnsubscribeUnknownTitle: "Deze link werkt niet meer",
+  campaignUnsubscribeUnknownLink:
+    "Wij herkennen deze afmeldlink niet. Hebt u hem uit een e-mail gekopieerd, open de link dan vanuit de e-mail zelf — of antwoord de afzender en vraag te stoppen.",
+  campaignUnsubscribeFailed:
+    "Dat kon nu niet worden opgeslagen. Druk opnieuw op de knop.",
 };

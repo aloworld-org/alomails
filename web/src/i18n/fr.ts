@@ -6356,4 +6356,94 @@ export const fr: Partial<Catalog> = {
     "Les personnes apparaissent ici dès que cet espace de travail a un client, une affaire avec une adresse e-mail, ou quelqu’un qui a rempli un formulaire sur son site. Les carnets d’adresses personnels ne sont jamais utilisés.",
   campaignsNothingSentYet:
     "Rien n’est envoyé depuis cet écran. L’envoi de campagnes exige sa propre adresse, distincte de votre courrier quotidien, afin qu’une lettre d’information ne puisse jamais compromettre la remise de vos factures.",
+
+  // La lettre telle qu’une personne la recevra réellement (vague C3.6). Les
+  // mots qui comptent le plus ici sont l’avertissement et les libellés
+  // "Afficher comme" : un aperçu est l’avis de notre moteur de rendu, et la
+  // copie que personne ne relit est celle qui part vers tous ceux dont aucun
+  // nom n’est enregistré.
+  campaignsViewsLabel: "Que regarder",
+  campaignsTabAudience: "Audience",
+  campaignsTabLetters: "Lettres",
+  campaignsLettersTitle: "Lettres",
+  campaignsLettersSubtitle: "Chaque lettre telle qu’une personne la recevra réellement.",
+  campaignsLetterLabel: "Lettre",
+  campaignsNoLettersTitle: "Aucune lettre pour l’instant",
+  campaignsNoLettersBody:
+    "Une lettre s’écrit dans le même éditeur qu’un document : titres, paragraphes, tableaux et code. Dès qu’il en existe une, elle apparaît ici, rendue exactement telle qu’elle arrivera.",
+  campaignsShowAsLabel: "Afficher comme",
+  campaignsShowAsHint: "Les deux sont réelles. La moitié d’une audience n’a aucun nom enregistré.",
+  campaignsShowAsRecipient: "Quelqu’un que vous pouvez contacter",
+  campaignsShowAsFallbacks: "Quelqu’un dont vous ne savez rien",
+  campaignsPartLabel: "Partie",
+  campaignsPartHint:
+    "Chaque lettre contient les deux. Certaines personnes, et tous les filtres, lisent la version simple.",
+  campaignsPartHtml: "Mise en forme",
+  campaignsPartText: "Texte simple",
+  campaignsPreviewFrameLabel: "La lettre telle qu’elle sera reçue",
+  campaignsPreviewSubject: "Objet",
+  campaignsPreviewPreheader: "Texte d’aperçu",
+  campaignsPreviewNoPreheader:
+    "Aucun — les logiciels de messagerie afficheront la première ligne de la lettre à la place.",
+  campaignsAgainstRecipient: (person: string) => `Voici la copie que reçoit ${person}.`,
+  campaignsAgainstFallbacks:
+    "Voici la copie que reçoit toute personne dont vous ne savez rien — chaque valeur personnalisée ci-dessous est votre propre formulation de repli.",
+  campaignsAgainstNobodyYet:
+    "Il n’y a encore personne à contacter : voici donc la copie que reçoit une personne dont vous ne savez rien. Chaque valeur personnalisée ci-dessous est votre propre formulation de repli.",
+  campaignsPreviewCaveat:
+    "Ceci est l’avis de notre moteur de rendu, pas une preuve. Sous Windows, Outlook dessine le courrier avec le moteur de Word et chaque logiciel diffère — placez une copie de test dans vos brouillons et lisez-la là où vos destinataires la liront.",
+  campaignsTestDraft: "Mettre une copie de test dans mes brouillons",
+  campaignsTestDraftDone: (address: string) =>
+    `Une copie se trouve dans vos brouillons, adressée à ${address}. Rien n’a été envoyé — ouvrez-la dans votre messagerie, ou envoyez-la-vous pour voir comment un vrai logiciel la dessine.`,
+  campaignsTestDraftFailed: "Cette copie de test n’a pas pu être écrite.",
+  campaignsFieldsTitle: "Ce que sont devenues les valeurs personnalisées",
+  campaignsColField: "Valeur",
+  campaignsColPrinted: "Se lit",
+  campaignsColWhoseWords: "Mots de qui",
+  campaignsFieldTheirs: "De leur fiche",
+  campaignsFieldFallback: "Votre repli",
+  campaignsNoFields: "Cette lettre dit la même chose à tout le monde.",
+  campaignsFieldFirstName: "Prénom",
+  campaignsFieldName: "Nom complet",
+  campaignsFieldEmail: "Adresse e-mail",
+  campaignsFieldCountry: "Pays",
+  campaignsVocabularyTitle: "Ce que vous pouvez personnaliser",
+  campaignsFieldExample: (field: string) => `{{${field}|vos mots}}`,
+  campaignsVocabularyHint:
+    "Les mots après la barre sont ce que lit une personne dont vous ne savez rien. Ils ne sont pas facultatifs : une valeur sans repli, c’est de là que vient « Bonjour , ».",
+  campaignsLettersFailed: "Vos lettres n’ont pas pu être lues.",
+  campaignsPreviewFailed: "Cette lettre n’a pas pu être rendue.",
+
+  // La page au bout d’un lien de désabonnement — le seul écran de ce produit
+  // qu’un inconnu lit, et il y arrive déjà agacé. Chaque phrase est simple,
+  // courte et dit exactement ce qu’une pression a fait.
+  campaignUnsubscribeLoading: "Vérification de ce lien…",
+  campaignUnsubscribeTitle: "Arrêter ces e-mails",
+  campaignUnsubscribeSubtitle: (topic: string) =>
+    `Ce message a été envoyé en tant que « ${topic} ». Vous pouvez arrêter ce type seul, ou tout arrêter.`,
+  campaignUnsubscribeSubtitleUntopiced:
+    "Vous pouvez cesser de recevoir des e-mails de cet espace de travail. Une seule pression suffit.",
+  campaignUnsubscribeStopTopic: (topic: string) =>
+    `Ne plus m’envoyer « ${topic} »`,
+  campaignUnsubscribeStopAll: "Ne plus rien m’envoyer",
+  campaignUnsubscribeAlreadyStopped:
+    "Cet espace de travail a déjà reçu la consigne de ne plus vous écrire. Vous n’avez rien d’autre à faire.",
+  campaignUnsubscribeAlreadyDeclined: (topic: string) =>
+    `Vous avez déjà arrêté « ${topic} ». Vous pouvez encore tout arrêter ci-dessous.`,
+  campaignUnsubscribeDoneTitle: "C’est fait",
+  campaignUnsubscribeDoneAll:
+    "Cet espace de travail ne vous écrira plus. Rien d’autre n’est nécessaire.",
+  campaignUnsubscribeDoneTopic: (topic: string) =>
+    `« ${topic} » ne vous sera plus envoyé.`,
+  campaignUnsubscribeDoneTopicNote:
+    "Les autres types d’e-mails de cet espace de travail — les factures et les réponses, par exemple — continueront de vous parvenir. Revenez sur ce lien pour les arrêter aussi.",
+  campaignUnsubscribeFinalNote:
+    "Cela ne peut pas être annulé depuis cette page. Si vous changez d’avis, demandez-le directement à l’expéditeur.",
+  campaignUnsubscribeNoAccountNote:
+    "Aucun compte et aucune connexion ne sont nécessaires. Cette page ne concerne que l’adresse à laquelle ce message a été envoyé.",
+  campaignUnsubscribeUnknownTitle: "Ce lien ne fonctionne plus",
+  campaignUnsubscribeUnknownLink:
+    "Nous ne reconnaissons pas ce lien de désabonnement. Si vous l’avez copié depuis un e-mail, ouvrez le lien depuis l’e-mail lui-même — ou répondez à l’expéditeur en lui demandant d’arrêter.",
+  campaignUnsubscribeFailed:
+    "Cela n’a pas pu être enregistré pour l’instant. Appuyez de nouveau sur le bouton.",
 };

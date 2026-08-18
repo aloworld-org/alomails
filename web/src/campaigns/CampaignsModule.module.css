@@ -51,6 +51,44 @@
   font-size: var(--text-sm);
 }
 
+/* ---- the two views --------------------------------------------------- */
+
+/* Who this would reach, and what they would get. Tabs rather than two rail
+   entries because a colleague moves between them while deciding one thing. */
+.views {
+  display: flex;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.view,
+.viewOpen {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.view:hover {
+  color: var(--text-primary);
+}
+.viewOpen {
+  color: var(--text-primary);
+  font-weight: var(--weight-semibold);
+  border-bottom-color: var(--accent);
+}
+/* The panel is a column of its own so the switch does not collapse a view's
+   sections into one flex item of the page. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 0;
+}
+
 /* ---- the question ---------------------------------------------------- */
 
 .question {
@@ -148,6 +186,108 @@
   margin: 0;
   font-size: var(--text-xs);
   color: var(--text-tertiary);
+}
+
+/* ---- the letter, as it will be received ------------------------------ */
+
+/* The frame carries a white background of its own rather than the app's
+   surface token: an email is drawn on whatever the client gives it, and
+   tinting it with our own theme would make the preview a claim about a
+   background nobody controls. */
+.previewFrame {
+  width: 100%;
+  min-height: 26rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: #ffffff;
+}
+.previewLoading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6);
+}
+/* The text part is shown as it will be sent — hard-wrapped by the renderer, in
+   a monospaced face, so a line that is too long is visible here rather than in
+   somebody's terminal mail client. */
+.previewText {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+.against {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+/* Subject and preview text side by side: together they are the whole of what a
+   recipient decides on before the letter is ever opened. */
+.inboxLine {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  font-size: var(--text-sm);
+}
+.inboxLine dt {
+  color: var(--text-secondary);
+}
+.inboxLine dd {
+  margin: 0;
+  color: var(--text-primary);
+}
+.testRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.testDone {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.sectionTitle {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.vocabulary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.vocabularyList {
+  display: flex;
+  gap: var(--space-2) var(--space-4);
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.vocabularyList li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.vocabularyList code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
 }
 
 /* ---- the page at the end of the link --------------------------------- */

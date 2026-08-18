@@ -229,6 +229,23 @@ impl From<&CampaignRecipient> for CampaignMergeValues {
     }
 }
 
+/// One merge field, as this recipient's copy of the letter prints it.
+///
+/// Reported rather than merely applied, because a preview (C3.6) that shows the
+/// finished words alone cannot answer the one question a writer has about
+/// personalisation: *is that name theirs, or is it my fallback?* Both read the
+/// same on screen, and only one of them means the letter is personalised.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedMergeField {
+    /// Which value it stands for.
+    pub field: CampaignMergeField,
+    /// The words that end up in this copy of the letter.
+    pub value: String,
+    /// True when this recipient had nothing recorded and the writer's fallback
+    /// was printed instead.
+    pub fell_back: bool,
+}
+
 /// A letter with one recipient's values already in it.
 ///
 /// Owned, because resolution produces new strings; [`letter`](Self::letter)
@@ -243,6 +260,14 @@ pub struct PersonalisedLetter {
     pub preheader: Option<String>,
     /// The body, resolved.
     pub content: CampaignContent,
+    /// Every distinct result a merge field produced, in the order the letter
+    /// reads: the subject, then the preview text, then the blocks.
+    ///
+    /// Distinct *results*, not distinct fields — one letter may greet with
+    /// `{{first_name|there}}` in the subject and `{{first_name|friend}}` in the
+    /// body, and a report that collapsed those to one row would hide the
+    /// fallback nobody proof-read.
+    pub fields: Vec<ResolvedMergeField>,
 }
 
 impl PersonalisedLetter {
@@ -273,7 +298,7 @@ impl PersonalisedLetter {
 /// over-long fallback, a field name this build does not know, or a `{{` that is
 /// never closed.
 pub fn validate_merge_text(what: &str, text: &str) -> Result<()> {
-    compile_at(what, text, None).map(|_| ())
+    compile_at(what, text, None, &mut Vec::new()).map(|_| ())
 }
 
 /// Refuses merge syntax outright, for the fields a letter never personalises.
@@ -300,7 +325,7 @@ pub fn reject_merge_fields(what: &str, text: &str) -> Result<()> {
 /// have been saved is refused here too, because [`CampaignContent`]'s fields
 /// are public and a value can reach a renderer without passing the gate.
 pub fn resolve_merge_text(text: &str, values: &CampaignMergeValues) -> Result<String> {
-    compile(text, Some(values))
+    compile(text, Some(values), &mut Vec::new())
 }
 
 /// Resolves a whole body against one recipient, leaving code blocks literal.
@@ -312,10 +337,19 @@ pub fn resolve_merge_content(
     content: &CampaignContent,
     values: &CampaignMergeValues,
 ) -> Result<CampaignContent> {
+    resolve_content_into(content, values, &mut Vec::new())
+}
+
+/// [`resolve_merge_content`], recording what each field printed.
+fn resolve_content_into(
+    content: &CampaignContent,
+    values: &CampaignMergeValues,
+    used: &mut Vec<ResolvedMergeField>,
+) -> Result<CampaignContent> {
     content.validate()?;
     let mut blocks = Vec::with_capacity(content.blocks.len());
     for block in &content.blocks {
-        blocks.push(resolve_block(block, values)?);
+        blocks.push(resolve_block(block, values, used)?);
     }
     Ok(CampaignContent {
         schema_version: content.schema_version,
@@ -337,36 +371,50 @@ pub fn personalise_campaign(
     letter: &CampaignLetter<'_>,
     values: &CampaignMergeValues,
 ) -> Result<PersonalisedLetter> {
+    let mut fields = Vec::new();
+    let subject = compile_at(
+        "the subject line",
+        letter.subject,
+        Some(values),
+        &mut fields,
+    )?;
+    let preheader = letter
+        .preheader
+        .map(|preheader| compile_at("preview text", preheader, Some(values), &mut fields))
+        .transpose()?;
+    let content = resolve_content_into(letter.content, values, &mut fields)?;
     Ok(PersonalisedLetter {
-        subject: compile_at("the subject line", letter.subject, Some(values))?,
-        preheader: letter
-            .preheader
-            .map(|preheader| compile_at("preview text", preheader, Some(values)))
-            .transpose()?,
-        content: resolve_merge_content(letter.content, values)?,
+        subject,
+        preheader,
+        content,
+        fields,
     })
 }
 
 /// One block, resolved. A total match over a closed vocabulary, as both
 /// renderers keep: a fifth block added to the model is a compile error here
 /// rather than a block that quietly stops being personalised.
-fn resolve_block(block: &CampaignBlock, values: &CampaignMergeValues) -> Result<CampaignBlock> {
+fn resolve_block(
+    block: &CampaignBlock,
+    values: &CampaignMergeValues,
+    used: &mut Vec<ResolvedMergeField>,
+) -> Result<CampaignBlock> {
     Ok(match block {
         CampaignBlock::Heading(heading) => {
             let mut resolved = heading.clone();
-            resolved.text = compile_at("a heading", &heading.text, Some(values))?;
+            resolved.text = compile_at("a heading", &heading.text, Some(values), used)?;
             CampaignBlock::Heading(resolved)
         }
         CampaignBlock::Paragraph(paragraph) => CampaignBlock::Paragraph(ParagraphBlock {
             id: paragraph.id.clone(),
-            text: compile_at("a paragraph", &paragraph.text, Some(values))?,
+            text: compile_at("a paragraph", &paragraph.text, Some(values), used)?,
         }),
         CampaignBlock::Table(table) => {
             let mut rows = Vec::with_capacity(table.rows.len());
             for row in &table.rows {
                 let mut cells = Vec::with_capacity(row.len());
                 for cell in row {
-                    cells.push(compile_at("a table cell", cell, Some(values))?);
+                    cells.push(compile_at("a table cell", cell, Some(values), used)?);
                 }
                 rows.push(cells);
             }
@@ -387,8 +435,13 @@ fn resolve_block(block: &CampaignBlock, values: &CampaignMergeValues) -> Result<
 /// and the same prefix is used by the write gate and by resolution — so the
 /// message somebody reads while composing is the message the send would have
 /// produced.
-fn compile_at(what: &str, text: &str, values: Option<&CampaignMergeValues>) -> Result<String> {
-    compile(text, values).map_err(|error| match error {
+fn compile_at(
+    what: &str,
+    text: &str,
+    values: Option<&CampaignMergeValues>,
+    used: &mut Vec<ResolvedMergeField>,
+) -> Result<String> {
+    compile(text, values, used).map_err(|error| match error {
         StoreError::Validation(detail) => StoreError::Validation(format!("{what}: {detail}")),
         other => other,
     })
@@ -403,7 +456,16 @@ fn compile_at(what: &str, text: &str, values: Option<&CampaignMergeValues>) -> R
 ///
 /// Substituted values are appended to the output and never re-examined, so a
 /// recipient whose name happens to contain `{{email|x}}` receives their name.
-fn compile(text: &str, values: Option<&CampaignMergeValues>) -> Result<String> {
+///
+/// `used` collects what each field printed, for the preview that has to tell a
+/// writer whether a name is the recipient's or their own fallback. Nothing is
+/// recorded when there are no values: validation is asking whether the letter
+/// *could* be sent, and there is no recipient to report about yet.
+fn compile(
+    text: &str,
+    values: Option<&CampaignMergeValues>,
+    used: &mut Vec<ResolvedMergeField>,
+) -> Result<String> {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(open) = rest.find(OPEN) {
@@ -418,9 +480,21 @@ fn compile(text: &str, values: Option<&CampaignMergeValues>) -> Result<String> {
         };
         let (field, fallback) = parse_placeholder(&after[..close])?;
         if let Some(values) = values {
-            match values.value(field) {
-                Some(value) => out.push_str(&value),
-                None => out.push_str(fallback),
+            let resolved = match values.value(field) {
+                Some(value) => ResolvedMergeField {
+                    field,
+                    value,
+                    fell_back: false,
+                },
+                None => ResolvedMergeField {
+                    field,
+                    value: fallback.to_owned(),
+                    fell_back: true,
+                },
+            };
+            out.push_str(&resolved.value);
+            if !used.contains(&resolved) {
+                used.push(resolved);
             }
         }
         rest = &after[close + CLOSE.len()..];
@@ -541,7 +615,7 @@ mod tests {
     }
 
     fn rejected(text: &str) -> String {
-        detail(compile(text, None))
+        detail(compile(text, None, &mut Vec::new()))
     }
 
     fn body(blocks: serde_json::Value) -> CampaignContent {
@@ -824,6 +898,93 @@ mod tests {
         assert!(
             reported.contains("the subject line"),
             "the writer is told which field to look at: {reported}"
+        );
+    }
+
+    #[test]
+    fn a_personalised_letter_reports_which_words_are_the_recipients_and_which_are_the_fallback() {
+        // What C3.6's preview has to answer. On screen "Hi there," and "Hi
+        // Jean," read the same way — as a letter that worked — and only one of
+        // them means the personalisation did anything.
+        let content = body(json!([
+            { "type": "paragraph", "id": "p1", "text": "Written to {{email|your address}} in {{country|your country}}." },
+            { "type": "code", "id": "c1", "code": "{{ not.ours }}", "language": "html" },
+        ]));
+        let letter = CampaignLetter {
+            subject: "Hi {{first_name|there}}",
+            preheader: Some("A note for {{first_name|a customer}}"),
+            content: &content,
+        };
+        let known = personalise_campaign(&letter, &values()).unwrap();
+        assert_eq!(
+            known.fields,
+            vec![
+                ResolvedMergeField {
+                    field: CampaignMergeField::FirstName,
+                    value: "Jean".to_owned(),
+                    fell_back: false,
+                },
+                ResolvedMergeField {
+                    field: CampaignMergeField::Email,
+                    value: "jean.dupont@example.fr".to_owned(),
+                    fell_back: false,
+                },
+                ResolvedMergeField {
+                    field: CampaignMergeField::Country,
+                    value: "FR".to_owned(),
+                    fell_back: false,
+                },
+            ],
+            "in the order the letter reads, and one row per distinct result — \
+             the subject and the preview text both printed \"Jean\", and the \
+             code block is nobody's merge field"
+        );
+
+        // The same letter to somebody the sources know only by address. The two
+        // different fallbacks for one field are two rows rather than one,
+        // because the second is the one nobody proof-read.
+        let unknown = personalise_campaign(&letter, &nameless()).unwrap();
+        let fell_back: Vec<(&str, &str)> = unknown
+            .fields
+            .iter()
+            .filter(|used| used.fell_back)
+            .map(|used| (used.field.as_str(), used.value.as_str()))
+            .collect();
+        assert_eq!(
+            fell_back,
+            vec![
+                ("first_name", "there"),
+                ("first_name", "a customer"),
+                ("country", "your country"),
+            ]
+        );
+        // `email` is the one value every recipient has by definition, so it is
+        // reported as theirs rather than as a fallback.
+        assert!(unknown.fields.iter().any(|used| {
+            used.field == CampaignMergeField::Email
+                && used.value == "someone@example.fr"
+                && !used.fell_back
+        }));
+    }
+
+    #[test]
+    fn a_letter_with_no_merge_fields_reports_none_rather_than_the_vocabulary() {
+        // Recognition over recall is the composer's job (it offers the list);
+        // this report is about *this* letter, so an unpersonalised one is empty
+        // rather than four rows of "not used".
+        let content = body(json!([
+            { "type": "paragraph", "id": "p1", "text": "Everything below is per litre." },
+        ]));
+        let letter = CampaignLetter {
+            subject: "Spring prices",
+            preheader: None,
+            content: &content,
+        };
+        assert!(
+            personalise_campaign(&letter, &values())
+                .unwrap()
+                .fields
+                .is_empty()
         );
     }
 

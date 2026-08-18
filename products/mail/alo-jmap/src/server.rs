@@ -19,13 +19,13 @@ use crate::{
     billing_customers, billing_fx, billing_invoices, billing_payments, billing_products,
     billing_quotes, billing_reminder, billing_reports, billing_schedules, billing_send,
     billing_sepa, billing_settings, blob, calendar, campaign_audience, campaign_consent,
-    campaign_record, campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
-    chat_agent_routes, contacts, crm_activities, crm_deals, crm_handoff, crm_imports,
-    crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates, docs, drive,
-    filters, finance_approvals, finance_bank, finance_bank_match, finance_chart, finance_expenses,
-    finance_mileage, finance_periods, finance_receipts, finance_report_aged,
-    finance_report_balance, finance_report_pl, finance_report_vat, flagdue, hr_checklists,
-    hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
+    campaign_preview, campaign_record, campaign_segments, campaign_suppression,
+    campaign_unsubscribe, carddav, chat, chat_agent_routes, contacts, crm_activities, crm_deals,
+    crm_handoff, crm_imports, crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads,
+    delegates, docs, drive, filters, finance_approvals, finance_bank, finance_bank_match,
+    finance_chart, finance_expenses, finance_mileage, finance_periods, finance_receipts,
+    finance_report_aged, finance_report_balance, finance_report_pl, finance_report_vat, flagdue,
+    hr_checklists, hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
     hr_leave_requests, hr_letters, hr_org, hr_payroll, hr_recruitment, imap_import_route, insights,
     insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
     inventory_moves, inventory_po, inventory_po_print, inventory_po_receipts, inventory_po_send,
@@ -1493,6 +1493,28 @@ pub fn app_with_site_boundaries(
             get(campaign_record::get_campaign)
                 .patch(campaign_record::update_campaign)
                 .delete(campaign_record::delete_campaign),
+        )
+        // Reading the letter as one person will receive it (wave C3.6), and
+        // putting a copy of it in your own Drafts. `/test` writes a draft and
+        // stops, exactly as `/billing/invoices/{id}/send` does: it is the
+        // transactional composer, addressed to the colleague who asked, and it
+        // is not the campaign send — that still waits on the second IP.
+        //
+        // The vocabulary is a route rather than a constant a client hard-codes,
+        // so a merge field added to the store appears in the composer without a
+        // web release. It answers names only: the words describing each field
+        // are user-facing strings and live in the i18n catalogues.
+        .route(
+            "/campaigns/merge-fields",
+            get(campaign_preview::list_merge_fields),
+        )
+        .route(
+            "/campaigns/campaigns/{id}/preview",
+            get(campaign_preview::preview_campaign),
+        )
+        .route(
+            "/campaigns/campaigns/{id}/test",
+            post(campaign_preview::test_campaign),
         )
         // The page at the end of an unsubscribe link (wave C2s.2) — the one
         // route in this product a **stranger** reaches: no account, no login,

@@ -129,3 +129,62 @@ export interface CampaignSuppression {
 
 /** The empty question — everybody in the audience. */
 export const NO_CONDITIONS: SegmentConditions = { countries: [], purchase: null };
+
+/** A letter in a list: everything except the body, plus how much body there is.
+ *  `blocks` of zero is a campaign named and not yet written, which is a real
+ *  state the picker has to be able to show. */
+export interface CampaignSummary {
+  id: string;
+  subject: string;
+  preheader: string | null;
+  topic: string;
+  blocks: number;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * One merge field, as one reader's copy prints it.
+ *
+ * `fellBack` is the entire reason this is reported rather than merely applied:
+ * "Hi there," and "Hi Jean," read identically as a finished letter, and only
+ * one of them means the personalisation did anything.
+ */
+export interface ResolvedMergeField {
+  field: string;
+  value: string;
+  fellBack: boolean;
+}
+
+/** Why a preview resolved against nobody. */
+export type FallbackReason = "asked" | "nobody_to_mail_yet";
+
+/** Whose values a preview used. A tagged union rather than a nullable address,
+ *  because "nobody" is an answer with a reason attached and a `null` is not. */
+export type PreviewAgainst =
+  | { kind: "recipient"; address: string; name: string | null; country: string | null }
+  | { kind: "fallbacks"; reason: FallbackReason };
+
+/** A letter rendered for one reader: both parts, and the account of how the
+ *  personalisation resolved. */
+export interface CampaignPreview {
+  subject: string;
+  preheader: string | null;
+  html: string;
+  text: string;
+  fields: ResolvedMergeField[];
+  against: PreviewAgainst;
+}
+
+/** What a seed test wrote. Always a **draft**, always to the caller — nothing
+ *  on this surface sends (ADR 0044 §1). */
+export interface CampaignTestDraft {
+  id: string;
+  to: string;
+  subject: string;
+}
+
+/** Whose copy to render. An address, or the literal that asks for the copy
+ *  every reader with nothing on file receives. */
+export const PREVIEW_AS_FALLBACKS = "fallbacks";
