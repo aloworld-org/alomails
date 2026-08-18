@@ -16,9 +16,44 @@ import {
   type Dialogs,
   type PromptOptions,
 } from "./DialogContext";
-import styles from "./Dialog.module.css";
 
 type Kind = "confirm" | "prompt" | "alert";
+
+// Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046).
+// The entrance keyframes are global names and live in `ds/global.css`; their
+// duration and easing are `--animation-dialog-*`.
+
+/** Warm workshop identity via tokens; never a raw browser popup. */
+const SCRIM =
+  "fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-6 " +
+  "bg-overlay animate-[alo-dialog-scrim_var(--animation-dialog-scrim)]";
+
+const PANEL =
+  "w-full max-w-[var(--dialog-width)] flex flex-col gap-3 p-6 " +
+  "bg-surface rounded-xl shadow-lg " +
+  "animate-[alo-dialog-panel_var(--animation-dialog-panel)]";
+
+const TITLE = "m-0 text-lg font-semibold text-primary";
+/** `whitespace-pre-wrap`, because callers pass messages with their own line
+ *  breaks and a confirm that reflows them reads as one run-on sentence. */
+const MESSAGE =
+  "m-0 text-secondary text-md leading-relaxed whitespace-pre-wrap";
+
+/** The prompt's field.
+ *
+ *  NOTE (flagged for the D1.55 wave check): this is a second `.input` inside
+ *  `ds/` — it sits on `--bg-app` and shows focus as a border plus a ring,
+ *  where `ds/Input` sits on a panel and shows focus as an outline. Adopting
+ *  `Input` here would change how every prompt looks, which is a restyle and
+ *  not what D1.52 was contracted to do (props, behaviour and appearance
+ *  unchanged), so the rules are carried across verbatim and the duplication is
+ *  recorded rather than quietly kept. */
+const FIELD =
+  "w-full mt-1 px-3 py-2 rounded-md border border-default bg-app text-primary " +
+  "font-[inherit] focus:outline-none focus:border-accent " +
+  "focus:shadow-[var(--focus-ring-soft)]";
+
+const ACTIONS = "flex justify-end gap-2 mt-2";
 
 interface Request extends PromptOptions {
   kind: Kind;
@@ -81,9 +116,9 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   return (
     <DialogContext.Provider value={api}>
       {children}
-      <div className={styles.scrim} role="presentation" onMouseDown={cancel}>
+      <div className={SCRIM} role="presentation" onMouseDown={cancel}>
         <div
-          className={styles.dialog}
+          className={PANEL}
           role="dialog"
           aria-modal="true"
           aria-label={request.title ?? request.message}
@@ -94,13 +129,13 @@ export function DialogProvider({ children }: { children: ReactNode }) {
           }}
         >
           {request.title !== undefined && (
-            <h2 className={styles.title}>{request.title}</h2>
+            <h2 className={TITLE}>{request.title}</h2>
           )}
-          <p className={styles.message}>{request.message}</p>
+          <p className={MESSAGE}>{request.message}</p>
           {request.kind === "prompt" && (
             <input
               ref={inputRef}
-              className={styles.input}
+              className={FIELD}
               name="dialog-value"
               autoComplete="off"
               aria-label={request.title ?? request.message}
@@ -112,7 +147,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
               }}
             />
           )}
-          <div className={styles.actions}>
+          <div className={ACTIONS}>
             {request.kind !== "alert" && (
               <Button variant="ghost" onClick={cancel}>
                 {request.cancelLabel ?? strings.dialogCancel}

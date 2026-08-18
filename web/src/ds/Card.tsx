@@ -2,10 +2,41 @@
 //
 // Twelve stylesheets declared `.card`, agreeing on the idea and on nothing
 // else. The variants below are the differences that were decisions; the rest
-// were accidents of whoever wrote the screen that week.
+// were accidents of whoever wrote the screen that week. Their disagreements,
+// for the record: padding from `--space-4` to `--space-8` and, in two of them,
+// a hardcoded `10px 12px`; radius from md to xl; border subtle or default;
+// shadow absent, `--shadow-sm`, `--shadow-md`, or a hand-mixed
+// `rgba(40, 30, 20, 0.04)`. `crm` and `hr` were byte-identical, hardcoded
+// values included — copied from one to the other, which is the honest way most
+// of this happened.
+//
+// Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046), so
+// `--radius-lg` and `rounded-lg` are one definition with two spellings. The
+// build that replaced this file's stylesheet changed no rule.
 import type { HTMLAttributes } from "react";
 
-import styles from "./Card.module.css";
+/** The surface itself: the border, the corner and the ground. Elevation and
+ *  padding are chosen below, because a variant replaces them rather than
+ *  layering over them — two utilities setting one property have no defined
+ *  winner, since Tailwind emits them in its own order rather than in the order
+ *  they appear in `class`. */
+const BASE = "rounded-lg border border-subtle bg-surface";
+
+/** The differences that were decisions. `sm` for a card in a dense list or a
+ *  grid of many; `lg` for a card that is the only thing on the screen — a
+ *  sign-in panel, an empty state — where the content should not sit against
+ *  the edge. */
+const PAD = { sm: "p-3", md: "p-5", lg: "p-8" } as const;
+
+/** Only when the whole card is a link or a button. A hover state on something
+ *  that does not respond to a click is a promise the screen does not keep.
+ *  The focus ring is the accent rather than `global.css`'s neutral one: this
+ *  card *is* the control, and it is the only thing on the row that moves. */
+const INTERACTIVE =
+  "cursor-pointer transition-[border-color,box-shadow] " +
+  "duration-[var(--duration-fast)] ease-standard " +
+  "hover:border-default hover:shadow-md " +
+  "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2";
 
 export interface CardProps extends HTMLAttributes<HTMLElement> {
   /** The element to draw the surface on. A card is a surface, not a meaning,
@@ -20,7 +51,8 @@ export interface CardProps extends HTMLAttributes<HTMLElement> {
   as?: "div" | "section" | "form" | "li" | undefined;
   /** `sm` for dense lists, `lg` for a card that is the whole screen. */
   pad?: "sm" | "md" | "lg" | undefined;
-  /** Drop the shadow, for a card sitting inside another surface. */
+  /** Drop the shadow, for a card sitting inside another surface: stacking two
+   *  elevations reads as a mistake rather than as depth. */
   flat?: boolean | undefined;
   /** Hover and focus affordances. Only when the card really is clickable —
    *  and then it needs a role and a key handler from the caller, or to be
@@ -37,10 +69,13 @@ export function Card({
   ...rest
 }: CardProps) {
   const classes = [
-    styles.card,
-    pad === "sm" ? styles.sm : pad === "lg" ? styles.lg : "",
-    flat === true ? styles.flat : "",
-    interactive === true ? styles.interactive : "",
+    BASE,
+    PAD[pad],
+    // Elevation is chosen once. `hover:shadow-md` still wins over either, which
+    // is the order the stylesheet resolved to: a flat card that is clickable
+    // lifts under the pointer.
+    flat === true ? "shadow-none" : "shadow-sm",
+    interactive === true ? INTERACTIVE : "",
     className ?? "",
   ]
     .filter(Boolean)

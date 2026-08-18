@@ -144,6 +144,32 @@ svg {
   background: transparent;
 }
 
+/* The branded dialog's entrance (`ds/Dialog`). A keyframe name is global — CSS
+   Modules used to scope these per file, and `ds/` no longer has a stylesheet to
+   scope them in — so they live here beside the reset and carry an `alo-` prefix
+   so a module stylesheet's own `@keyframes` cannot collide with them. Their
+   duration and easing are tokens (`--animation-dialog-*`); the reduced-motion
+   rule below already cuts both to nothing. */
+@keyframes alo-dialog-scrim {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes alo-dialog-panel {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

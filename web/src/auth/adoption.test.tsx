@@ -23,10 +23,28 @@ describe("the sign-in card is still the form you submit", () => {
     // The risk of adopting `ds/Card` here: wrapping the `<form>` in a card
     // `<div>` would put the padding and the border on something that is not
     // the thing you submit — which is why `Card` took an `as` prop instead.
+    //
+    // The claim is unchanged; only the way a card can be recognised is. Until
+    // D1.52 `Card` carried a hashed `.card` class from its stylesheet, and this
+    // asked for it by name. The stylesheet is gone and the surface is Tailwind
+    // utilities, so the check is on the surface itself — the ground, the border
+    // and the `lg` padding this screen asks for are on the `<form>`, and there
+    // is no other element drawing them.
     const { container } = open();
     const form = container.querySelector("form");
     expect(form).not.toBeNull();
-    expect(form!.className).toContain("card");
+    for (const surface of ["bg-surface", "border-subtle", "p-8"]) {
+      expect(form!.className).toContain(surface);
+      expect(
+        [...container.querySelectorAll("*")].filter(
+          // `getAttribute`, not `.className`: on an SVG that property is an
+          // `SVGAnimatedString` and stringifies to its type name, so a mark
+          // inside the card would silently never be checked.
+          (el) =>
+            el !== form && (el.getAttribute("class") ?? "").includes(surface),
+        ),
+      ).toEqual([]);
+    }
     expect(form!.querySelector("button[type=submit]")).not.toBeNull();
   });
 

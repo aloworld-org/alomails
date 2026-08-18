@@ -108,6 +108,11 @@
 
   /* Focus: a soft terracotta ring (brief, on-brand). */
   --focus-ring: 0 0 0 3px rgba(231, 111, 81, 0.22);
+  /* The same ring drawn opaque, for a field on `--bg-app` rather than on a
+     panel: the branded prompt dialog's input sits on the app ground, where a
+     22%-alpha wash of the accent all but disappears. Named here because a
+     utility must never carry the literal (ADR 0046, D1.52). */
+  --focus-ring-soft: 0 0 0 3px var(--accent-soft);
 
   /* ---- typography ---- */
   --font-ui:
@@ -169,6 +174,24 @@
   /* ---- surface geometry ---- */
   --border-width: 1px;
   --border-width-strong: 2px;
+  /* The dialog panels' own geometry (`ds/Modal`, `ds/Dialog`). A modal is one
+     of two widths — a question, or a dialog carrying a table or two columns —
+     and either takes the height of its content or one of two fixed heights:
+     `tall` for a dialog whose content resizes with every keystroke, `page` for
+     one that is a place with its own navigation and must not resize when you
+     change section. The branded confirm/prompt dialog is narrower than all of
+     them, because it holds one sentence.
+     These were literals inside the three stylesheets this replaces; they are
+     values of the system, so they are named once (D1.52). */
+  --modal-width: 30rem; /* 480px */
+  --modal-width-wide: 45rem; /* 720px */
+  --modal-height-tall: 38.75rem; /* 620px */
+  --modal-height-page: min(45rem, 86vh); /* 720px, capped on a tall display */
+  /* The panel never grows past the window less the overlay's own padding, so a
+     long form scrolls inside the panel instead of pushing its footer off the
+     screen. Tied to `--space-6` because that padding is what it subtracts. */
+  --modal-max-height: calc(100vh - var(--space-6) * 2);
+  --dialog-width: 26.25rem; /* 420px */
   --overlay-width-sm: 12rem;
   --overlay-width-md: 18rem;
   --overlay-width-lg: 31.25rem;
@@ -232,6 +255,15 @@
   --transition-fast: var(--duration-fast) var(--ease-standard);
   --transition-base: var(--duration-base) var(--ease-standard);
   --animation-skeleton: 1.2s ease-in-out infinite;
+  /* The branded dialog's entrance: the scrim fades, the panel rises the last
+     few pixels and settles. Duration and easing together, like
+     `--animation-skeleton` above, because a Tailwind `animate-` utility takes
+     the shorthand and cannot compose one from parts. The keyframes they name
+     are in `global.css`. The panel's curve decelerates hard — that is what
+     makes a dialog appear rather than blink — and its 140ms is its own value,
+     slower than a colour change and faster than a panel that slides. */
+  --animation-dialog-scrim: var(--duration-fast) ease-out;
+  --animation-dialog-panel: 140ms cubic-bezier(0.16, 1, 0.3, 1);
 
   /* ---- layout ---- */
   --rail-width: 72px;
