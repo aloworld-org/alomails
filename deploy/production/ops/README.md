@@ -20,6 +20,7 @@ procedure — is in [`docs/operations-runbook.md`](../../../docs/operations-runb
 | `systemd/alo-backup.{service,timer}` | Runs `backup.sh` daily at 03:30 (catches up if the server was off). |
 | `systemd/alo-backup-failed.service` | `OnFailure` hook that emails you if a backup fails. |
 | `systemd/alo-monitor.{service,timer}` | Runs `monitor.py` every 10 minutes. |
+| `systemd/alo-campaign-egress.service` | Rewrites the source address of campaign mail to the campaign IP (ADR 0044 §1). Only needed on a host with a second address; see below. |
 
 ## Install on the server (one time)
 
@@ -48,6 +49,42 @@ systemctl enable --now alo-backup.timer alo-monitor.timer
 # 5. prove alerting works — you should get an email
 python3 /opt/alo/monitoring/monitor.py --test
 ```
+
+## The campaign sending identity's egress (only with a second IP)
+
+ADR 0044 §1: bulk mail leaves by a different address from transactional mail, so
+a marketing reputation can never reach the domain carrying invoices and password
+resets. A container cannot bind one of the host's public addresses — it has its
+own network namespace — so `alo-smtp` binds a private address on the compose
+`egress` network and the host rewrites the source on the way out.
+
+```sh
+# The public address campaign mail must appear to come from. It must already be
+# held by the host (`ip -4 addr show`) and have forward-confirmed reverse DNS.
+echo 'CAMPAIGN_IP=159.195.89.28' > /etc/default/alo-campaign-egress
+chmod 600 /etc/default/alo-campaign-egress
+
+cp systemd/alo-campaign-egress.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now alo-campaign-egress.service
+
+# Tell alo-smtp which sending domain uses it, then recreate the service.
+#   ALO_SMTP_EGRESS_IPS=news.example.com=172.19.0.10   (in .env)
+docker compose up -d alo-smtp
+```
+
+**Prove it rather than assume it** — the whole point is an address a receiver
+checks:
+
+```sh
+docker compose exec alo-smtp sh -c 'curl -s --interface 172.19.0.10 https://ifconfig.me; echo'   # the campaign IP
+docker compose exec alo-smtp sh -c 'curl -s https://ifconfig.me; echo'                            # the primary IP
+```
+
+Then send one real message from the campaign domain and read
+`Authentication-Results` at the far end. `spf=pass` is the only evidence that
+the address, the SPF record and this rule agree; a rule that is present but
+wrong looks identical from the server.
 
 ## Not included here (needs an external account — see the runbook)
 

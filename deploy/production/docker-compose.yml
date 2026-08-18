@@ -27,6 +27,18 @@ name: alo
 
 networks:
   alo:
+  # The campaign sending identity's egress lane (ADR 0044 §1). A container
+  # cannot bind one of the host's public addresses — it has its own network
+  # namespace — so alo-smtp binds a private address on THIS network and the host
+  # rewrites the source to the campaign IP on the way out (see
+  # `ops/systemd/alo-campaign-egress.service`). Transactional mail binds
+  # nothing, takes the default route, and leaves by the primary address exactly
+  # as it did before. The subnet is fixed because the SNAT rule names an address
+  # inside it.
+  egress:
+    ipam:
+      config:
+        - subnet: 172.19.0.0/24
 
 volumes:
   # Pinned to the pre-rebrand names so the renamed `alo` project attaches to the
@@ -226,6 +238,13 @@ services:
       ALO_SMTP_DKIM_SELECTOR: ${ALO_SMTP_DKIM_SELECTOR:-}
       ALO_SMTP_DKIM_KEY: ${ALO_SMTP_DKIM_KEY:-}
       ALO_SMTP_DKIM_ALGORITHM: ${ALO_SMTP_DKIM_ALGORITHM:-rsa}
+      # Which source address a sending domain's mail leaves by, as
+      # `domain=ip[,domain=ip]` (ADR 0044 §1). The address is the CONTAINER-side
+      # one on the `egress` network; the host rewrites it to the public campaign
+      # IP. Unset means the kernel chooses, which is what a one-address
+      # deployment wants. An unparseable value refuses to start rather than
+      # silently sending campaign mail from the transactional address.
+      ALO_SMTP_EGRESS_IPS: ${ALO_SMTP_EGRESS_IPS:-}
       # Spam scoring (fail-closed if unreachable).
       ALO_SMTP_RSPAMD_URL: http://rspamd:11333
       # Malware scanning at DATA (fail-closed 451 when the scanner is
@@ -244,7 +263,12 @@ services:
       - "25:25"
       - "587:587"
       - "465:465"
-    networks: [alo]
+    networks:
+      alo:
+      # A fixed address so the host's SNAT rule and ALO_SMTP_EGRESS_IPS can
+      # both name it. Campaign mail binds this; everything else does not.
+      egress:
+        ipv4_address: 172.19.0.10
     healthcheck:
       test: ["CMD", "/usr/local/bin/alo-smtp", "--healthcheck"]
       interval: 15s

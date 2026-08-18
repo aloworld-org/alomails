@@ -4,6 +4,7 @@ use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use crate::egress::EgressMap;
 use crate::error::SmtpError;
 
 /// Environment variable naming the socket address to listen on.
@@ -44,6 +45,12 @@ pub const ENV_OUTBOUND_RATE_PER_MIN: &str = "ALO_SMTP_OUTBOUND_RATE_PER_MIN";
 /// Environment variable for the outbound rate burst depth (max
 /// instantaneous messages to one domain; defaults to the per-minute rate).
 pub const ENV_OUTBOUND_RATE_BURST: &str = "ALO_SMTP_OUTBOUND_RATE_BURST";
+/// Environment variable mapping a sending domain to the local address its mail
+/// leaves by: `news.example.com=203.0.113.7`, comma-separated for several
+/// (ADR 0044 §1 — a campaign identity's own IP). Unset means the kernel
+/// chooses, which is what a deployment with one address does. Matched on the
+/// **envelope-from** domain, because that is the identity SPF is evaluated for.
+pub const ENV_EGRESS_IPS: &str = "ALO_SMTP_EGRESS_IPS";
 /// Environment variable for the submission (STARTTLS) listener address.
 pub const ENV_SUBMISSION_ADDR: &str = "ALO_SMTP_SUBMISSION_ADDR";
 /// Environment variable for the implicit-TLS submission listener address.
@@ -312,6 +319,8 @@ pub struct OutboundConfig {
     pub rate_per_min: u32,
     /// Outbound rate burst depth. [`ENV_OUTBOUND_RATE_BURST`].
     pub rate_burst: u32,
+    /// Per-sending-domain source addresses. [`ENV_EGRESS_IPS`].
+    pub egress: EgressMap,
 }
 
 impl SmtpConfig {
@@ -636,6 +645,16 @@ impl SmtpConfig {
         // single-tenant server rarely needs it; a shared host does).
         let rate_per_min = env_u64(ENV_OUTBOUND_RATE_PER_MIN, 0)? as u32;
         let rate_burst = env_u64(ENV_OUTBOUND_RATE_BURST, u64::from(rate_per_min))? as u32;
+        // A sending identity's own source address (ADR 0044 §1). Unparseable is
+        // fatal on purpose: the fallback would be the transactional address,
+        // which is the separation silently undone.
+        let egress = EgressMap::parse(&std::env::var(ENV_EGRESS_IPS).unwrap_or_default()).map_err(
+            |reason| SmtpError::Config {
+                message: format!(
+                    "{ENV_EGRESS_IPS}: {reason}; expected e.g. news.example.com=203.0.113.7"
+                ),
+            },
+        )?;
         Ok(Some(OutboundConfig {
             smarthost,
             retry_base,
@@ -645,6 +664,7 @@ impl SmtpConfig {
             dane,
             rate_per_min,
             rate_burst,
+            egress,
         }))
     }
 }

@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::backoff;
 use crate::client::{DeliveryError, OutboundSession, RcptOutcome, SMTP_PORT, TlsRequirement};
 use crate::dsn::{self, FailedRecipient};
+use crate::egress::EgressMap;
 use crate::envelope::Envelope;
 use crate::resolver::{MailHost, MxResolve, ResolveFailure};
 use crate::spool::Spool;
@@ -50,6 +51,9 @@ pub struct QueuePolicy {
     pub rate_per_min: u32,
     /// Burst depth for the send-rate limiter.
     pub rate_burst: u32,
+    /// Which source address a message leaves by, chosen from its envelope
+    /// sender (ADR 0044 §1). Empty means the kernel chooses.
+    pub egress: EgressMap,
 }
 
 /// Per-recipient delivery progress, persisted in the state sidecar.
@@ -424,10 +428,13 @@ impl Queue {
         message: &[u8],
         rcpts: &[String],
     ) -> Result<Vec<RcptOutcome>, DeliveryError> {
+        // The sending identity's own address, when it has one. Read from the
+        // envelope sender because that is the identity SPF is evaluated for.
+        let source = self.policy.egress.source_for(envelope.mail_from.as_deref());
         let mut dane = "opportunistic";
         let mut session = match &self.policy.route {
             Route::Smarthost(addr) => {
-                OutboundSession::connect_addr(*addr, &self.policy.hostname).await?
+                OutboundSession::connect_addr(*addr, &self.policy.hostname, source).await?
             }
             Route::Mx => {
                 let mut last = DeliveryError::Connect {
@@ -442,6 +449,7 @@ impl Queue {
                         SMTP_PORT,
                         &self.policy.hostname,
                         host.tls.clone(),
+                        source,
                     )
                     .await
                     {
@@ -468,6 +476,7 @@ impl Queue {
             tls = session.is_tls(),
             dane,
             rcpts = rcpts.len(),
+            egress = source.map(|ip| ip.to_string()).unwrap_or_default(),
             "delivering outbound"
         );
         let result = session

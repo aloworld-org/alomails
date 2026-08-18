@@ -13,6 +13,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use alo_smtp::egress::EgressMap;
 use alo_smtp::envelope::Envelope;
 use alo_smtp::queue::{Queue, QueuePolicy, Route};
 use alo_smtp::resolver::{MxResolve, ResolveFailure, ResolveFuture};
@@ -131,6 +132,7 @@ fn policy(hostname: &str, smarthost: SocketAddr) -> QueuePolicy {
         max_attempts: 3,
         rate_per_min: 0, // rate limiting off in the delivery-path tests
         rate_burst: 0,
+        egress: EgressMap::default(), // the kernel chooses, as on a one-address host
     }
 }
 
@@ -173,6 +175,71 @@ async fn queue_rate_limited(
     policy.rate_burst = burst;
     let queue = Queue::new(Arc::clone(&spool), Arc::new(PanicResolver), policy);
     (spool, queue, dir)
+}
+
+/// A queue that sends `egress_domain`'s mail from an address this host does not
+/// hold — the only portable way to prove the source address was *chosen* rather
+/// than left to the kernel, since a bind that is ignored connects normally.
+async fn queue_with_egress(egress_domain: &str) -> (Arc<Spool>, Queue, tempfile::TempDir) {
+    let dir = tempfile::tempdir().unwrap();
+    let spool = Arc::new(Spool::new(dir.path()).unwrap());
+    let mock = MockServer::spawn(Behaviour::Accept).await;
+    let mut policy = policy("mx.alo.test", mock.addr);
+    // 192.0.2.1 is TEST-NET-1 (RFC 5737): no host holds it.
+    policy.egress = EgressMap::parse(&format!("{egress_domain}=192.0.2.1")).unwrap();
+    let queue = Queue::new(Arc::clone(&spool), Arc::new(PanicResolver), policy);
+    (spool, queue, dir)
+}
+
+#[tokio::test]
+async fn the_envelope_sender_decides_which_address_a_message_leaves_by() {
+    // ADR 0044 §1: a campaign identity leaves by its own IP. The envelope sender
+    // is the identity SPF is evaluated for, so it is the envelope — not the
+    // `From` header and not the destination — that selects the address.
+    let (spool, queue, _dir) = queue_with_egress("news.alo.test").await;
+
+    // Transactional mail: no dedicated address, delivered as always.
+    spool_message(
+        &spool,
+        Some("noreply@alo.test"),
+        &["alice@example.com"],
+        b"Subject: your invoice\r\n\r\nbody\r\n",
+    );
+    let report = queue.process_once().await.unwrap();
+    assert_eq!(
+        report.delivered, 1,
+        "a domain with no dedicated address must deliver exactly as before"
+    );
+
+    // Campaign mail: pinned to an address this host does not hold, so the
+    // attempt cannot succeed. Were the pin ignored it would deliver over the
+    // very same smarthost the message above just used.
+    spool_message(
+        &spool,
+        Some("bounces@news.alo.test"),
+        &["alice@example.com"],
+        b"Subject: our newsletter\r\n\r\nbody\r\n",
+    );
+    let report = queue.process_once().await.unwrap();
+    assert_eq!(
+        report.delivered, 0,
+        "campaign mail must not leave by the transactional address"
+    );
+    assert_eq!(
+        report.deferred, 1,
+        "it defers and retries rather than bouncing"
+    );
+
+    // And the null sender (a bounce) carries no identity to keep separate: it
+    // takes the default route rather than being stranded by the campaign pin.
+    spool_message(
+        &spool,
+        None,
+        &["alice@example.com"],
+        b"Subject: delivery report\r\n\r\nbody\r\n",
+    );
+    let report = queue.process_once().await.unwrap();
+    assert_eq!(report.delivered, 1, "a bounce is not campaign mail");
 }
 
 #[tokio::test]

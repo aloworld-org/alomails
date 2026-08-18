@@ -39,6 +39,14 @@ pub fn spawn(spool: Arc<Spool>, hostname: String, outbound: OutboundConfig) {
         Some(addr) => Route::Smarthost(addr),
         None => Route::Mx,
     };
+    if !outbound.egress.is_empty() {
+        // An operator checking that the campaign identity really leaves by its
+        // own address should not have to send a message to find out.
+        tracing::info!(
+            domains = ?outbound.egress.domains(),
+            "per-domain egress addresses configured"
+        );
+    }
     let policy = QueuePolicy {
         hostname,
         route,
@@ -47,6 +55,7 @@ pub fn spawn(spool: Arc<Spool>, hostname: String, outbound: OutboundConfig) {
         max_attempts: outbound.max_attempts,
         rate_per_min: outbound.rate_per_min,
         rate_burst: outbound.rate_burst,
+        egress: outbound.egress,
     };
     let interval = outbound.queue_interval;
     let queue = Queue::new(spool, resolver, policy);

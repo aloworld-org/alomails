@@ -247,7 +247,11 @@ pub(crate) async fn submit(
         .map_err(|e| format!("resolve: {e}"))?
         .next()
         .ok_or_else(|| "no address for submission host".to_owned())?;
-    let mut session = OutboundSession::connect_addr(sockaddr, "alo-jmap")
+    // No pinned source address: this hop reaches the co-located submission
+    // listener inside the deployment. The egress address that matters is chosen
+    // where the message actually leaves for the internet — alo-smtp's outbound
+    // queue (ADR 0044 §1).
+    let mut session = OutboundSession::connect_addr(sockaddr, "alo-jmap", None)
         .await
         .map_err(|e| format!("connect: {e}"))?;
     let outcomes = session

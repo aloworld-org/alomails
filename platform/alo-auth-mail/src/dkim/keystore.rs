@@ -209,6 +209,20 @@ pub fn ed25519_signing_key_from_seed(seed: &[u8]) -> Option<SigningKey> {
     })
 }
 
+/// Takes an Ed25519 PKCS#8 DER key apart into `(seed, public_raw)` — what the
+/// store persists and what DNS publishes — or `None` when it is not one.
+///
+/// The inverse of [`ed25519_signing_key_from_seed`], for importing a key
+/// somebody else generated. It lives here rather than in the importer because
+/// this crate is the one that owns key encodings; a service that had to reach
+/// for `ed25519_dalek` itself would be a second place the format is known.
+pub fn ed25519_key_from_pkcs8(pkcs8_der: &[u8]) -> Option<(Zeroizing<Vec<u8>>, Vec<u8>)> {
+    use ed25519_dalek::pkcs8::DecodePrivateKey;
+    let key = ed25519_dalek::SigningKey::from_pkcs8_der(pkcs8_der).ok()?;
+    let public = key.verifying_key().to_bytes().to_vec();
+    Some((Zeroizing::new(key.to_bytes().to_vec()), public))
+}
+
 /// A stored RSA signing key, from the PKCS#8 DER the store holds.
 ///
 /// The counterpart of [`ed25519_signing_key_from_seed`] for a domain that signs
@@ -236,9 +250,44 @@ pub fn ed25519_txt_record(public_raw: &[u8]) -> String {
     format!("v=DKIM1; k=ed25519; p={p}")
 }
 
-/// Loads a PKCS#8 PEM private key, refusing group/world-readable files.
-/// Returns a non-sensitive error string on failure.
-fn load_pkcs8_pem(path: &Path) -> Result<Zeroizing<Vec<u8>>, String> {
+/// The DKIM DNS TXT record value for an RSA public key (RFC 6376 §3.6.1):
+/// `v=DKIM1; k=rsa; p=<base64 SubjectPublicKeyInfo>`. `public_raw` is the SPKI
+/// DER — see [`super::rsa_public`] for why that encoding and not the PKCS#1 one.
+pub fn rsa_txt_record(public_raw: &[u8]) -> String {
+    use base64::Engine;
+    let p = base64::engine::general_purpose::STANDARD.encode(public_raw);
+    format!("v=DKIM1; k=rsa; p={p}")
+}
+
+/// The record to publish for a stored key, chosen by the algorithm tag the
+/// store holds beside it (`"rsa"` / `"ed25519"`), or `None` for a tag this
+/// build cannot render.
+///
+/// A domain that dual-signs has **one record per algorithm** and they are not
+/// interchangeable: publishing an RSA key under `k=ed25519` yields a record
+/// every verifier rejects, which reads as a signing bug rather than a DNS one.
+/// So the tag is read from the row rather than assumed, and an unknown one
+/// returns nothing rather than a guess.
+pub fn txt_record_for(algorithm: &str, public_raw: &[u8]) -> Option<String> {
+    match algorithm {
+        "rsa" => Some(rsa_txt_record(public_raw)),
+        "ed25519" => Some(ed25519_txt_record(public_raw)),
+        _ => None,
+    }
+}
+
+/// Loads a PKCS#8 PEM private key from disk, refusing group/world-readable
+/// files. Returns a non-sensitive error string on failure — the key bytes never
+/// appear in it.
+///
+/// Public so the operator key-import path applies exactly the same refusal as
+/// the signer: a key the server would decline to load must not be installable
+/// either.
+///
+/// # Errors
+/// A human-readable reason: insecure permissions, unreadable file, or not a
+/// PKCS#8 PEM private key.
+pub fn load_pkcs8_pem(path: &Path) -> Result<Zeroizing<Vec<u8>>, String> {
     refuse_insecure_permissions(path)?;
     let pem = std::fs::read_to_string(path).map_err(|e| format!("read failed: {e}"))?;
     let der = pem_to_der(&pem).ok_or_else(|| "not a PKCS#8 PEM private key".to_owned())?;
@@ -315,6 +364,28 @@ mod tests {
         let rec = ed25519_txt_record(&[0u8; 32]);
         assert!(rec.starts_with("v=DKIM1; k=ed25519; p="));
         assert!(rec.ends_with('='));
+    }
+
+    #[test]
+    fn a_record_is_rendered_for_the_algorithm_the_key_actually_is() {
+        // The two are not interchangeable: the same bytes under the wrong `k=`
+        // is a record every verifier rejects.
+        let ed = txt_record_for("ed25519", &[7u8; 32]).expect("ed25519 renders");
+        let rsa = txt_record_for("rsa", &[7u8; 32]).expect("rsa renders");
+        assert!(ed.contains("k=ed25519"));
+        assert!(rsa.contains("k=rsa"));
+        assert_ne!(ed, rsa);
+        // Same key material, so only the tag differs — which is exactly why a
+        // caller must not pick the renderer itself.
+        assert_eq!(
+            ed.replace("k=ed25519", "k=rsa"),
+            rsa,
+            "the two renderers must differ only in the algorithm tag"
+        );
+        // A tag this build cannot render is nothing, never a guess.
+        assert_eq!(txt_record_for("rsa2048", &[7u8; 32]), None);
+        assert_eq!(txt_record_for("", &[7u8; 32]), None);
+        assert_eq!(txt_record_for("RSA", &[7u8; 32]), None);
     }
 
     #[test]

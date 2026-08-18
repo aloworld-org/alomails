@@ -163,7 +163,7 @@ async fn serve(stream: TcpStream, acceptor: TlsAcceptor) {
 #[tokio::test]
 async fn delivers_over_starttls() {
     let addr = tls_mock().await;
-    let mut session = OutboundSession::connect_addr(addr, "client.local")
+    let mut session = OutboundSession::connect_addr(addr, "client.local", None)
         .await
         .expect("connect + STARTTLS upgrade");
     assert!(session.is_tls(), "session must be encrypted after STARTTLS");
@@ -201,6 +201,7 @@ async fn dane_ee_matching_tlsa_delivers() {
         addr.port(),
         "client.local",
         TlsRequirement::DaneEe(records),
+        None,
     )
     .await
     .expect("DANE-verified connect");
@@ -236,6 +237,7 @@ async fn dane_ee_mismatch_refuses() {
         addr.port(),
         "client.local",
         TlsRequirement::DaneEe(records),
+        None,
     )
     .await;
     match result {
@@ -261,6 +263,7 @@ async fn tls_required_without_starttls_refuses() {
         addr.port(),
         "client.local",
         TlsRequirement::Required,
+        None,
     )
     .await;
     match result {
@@ -283,6 +286,7 @@ async fn opportunistic_without_starttls_still_delivers() {
         addr.port(),
         "client.local",
         TlsRequirement::Opportunistic,
+        None,
     )
     .await
     .expect("cleartext connect");

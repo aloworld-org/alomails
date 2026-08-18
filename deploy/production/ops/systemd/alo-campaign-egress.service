@@ -1,0 +1,27 @@
+[Unit]
+# The campaign sending identity leaves by its own IP (ADR 0044 §1). alo-smtp
+# binds 172.19.0.10 on the compose `egress` network for mail from the campaign
+# domain; this rewrites that source to the public campaign address on the way
+# out. Without it, campaign mail is masqueraded to the primary address and fails
+# SPF against `v=spf1 ip4:<campaign ip> -all` — which is the confusing failure:
+# DKIM passes, and DMARC still fails on alignment.
+#
+# Inserted at position 1 so it takes effect before Docker's per-subnet
+# MASQUERADE rules. Idempotent: the -C check means a re-run adds nothing, and
+# Docker rewriting its own rules on restart is why this runs after it.
+Description=Source-NAT the campaign sending identity to its own IP
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+Environment=EGRESS_SOURCE=172.19.0.10
+# Set CAMPAIGN_IP in /etc/default/alo-campaign-egress — it is deployment data,
+# not code, and a wrong value here sends mail from an unauthorised address.
+EnvironmentFile=/etc/default/alo-campaign-egress
+ExecStart=/bin/sh -c '/usr/sbin/iptables -t nat -C POSTROUTING -s ${EGRESS_SOURCE}/32 -j SNAT --to-source ${CAMPAIGN_IP} 2>/dev/null || /usr/sbin/iptables -t nat -I POSTROUTING 1 -s ${EGRESS_SOURCE}/32 -j SNAT --to-source ${CAMPAIGN_IP}'
+ExecStop=/bin/sh -c '/usr/sbin/iptables -t nat -D POSTROUTING -s ${EGRESS_SOURCE}/32 -j SNAT --to-source ${CAMPAIGN_IP} 2>/dev/null || true'
+
+[Install]
+WantedBy=multi-user.target

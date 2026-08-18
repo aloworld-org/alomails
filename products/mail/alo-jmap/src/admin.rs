@@ -1051,19 +1051,49 @@ async fn ensure_dkim_key(state: &AppState, tenant: &alo_store::TenantId, domain:
     }
 }
 
-/// The active DKIM DNS record for `domain` (ADR 0014), or `null` if the domain
-/// has no key yet: `<selector>._domainkey.<domain>` TXT = the Ed25519 key.
-async fn dkim_record_json(ts: &alo_store::TenantStore, domain: &str) -> Value {
-    let keys = ts.list_dkim_keys(domain).await.unwrap_or_default();
-    match keys.iter().find(|k| k.active) {
-        Some(k) => json!({
-            "name": format!("{}._domainkey.{}", k.selector, domain),
-            "type": "TXT",
-            "value": alo_auth_mail::dkim::keystore::ed25519_txt_record(&k.public_raw),
-            "selector": k.selector,
-        }),
-        None => Value::Null,
-    }
+/// Every active DKIM DNS record for `domain` (ADR 0014):
+/// `<selector>._domainkey.<domain>` TXT, one per active key.
+///
+/// A domain may hold **one active key per algorithm** and sign with all of them
+/// at once (a campaign identity dual-signs so receivers that cannot read
+/// RFC 8463 still verify something). So there can be two records to publish, and
+/// each must carry its own `k=` tag — rendering an RSA key as `k=ed25519` would
+/// hand an operator a record no verifier can use, which reads as a signing bug
+/// rather than a DNS one.
+///
+/// RSA first, matching the order the signer emits signatures in.
+async fn dkim_records(ts: &alo_store::TenantStore, domain: &str) -> Vec<Value> {
+    let mut keys: Vec<_> = ts
+        .list_dkim_keys(domain)
+        .await
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|k| k.active)
+        .collect();
+    keys.sort_by_key(|k| (k.algorithm != "rsa", k.selector.clone()));
+    keys.iter()
+        .filter_map(|k| {
+            // A key whose algorithm this build cannot render is omitted rather
+            // than guessed at: a wrong record is worse than a missing one.
+            let value = alo_auth_mail::dkim::keystore::txt_record_for(&k.algorithm, &k.public_raw)?;
+            Some(json!({
+                "name": format!("{}._domainkey.{}", k.selector, domain),
+                "type": "TXT",
+                "value": value,
+                "selector": k.selector,
+                "algorithm": k.algorithm,
+            }))
+        })
+        .collect()
+}
+
+/// The domain's DKIM records as the API reports them: `dkim` is the first one
+/// (the shape this surface has always had, kept so anything scripted against it
+/// still works) and `dkimRecords` is all of them.
+async fn dkim_json(ts: &alo_store::TenantStore, domain: &str) -> (Value, Value) {
+    let records = dkim_records(ts, domain).await;
+    let first = records.first().cloned().unwrap_or(Value::Null);
+    (first, Value::Array(records))
 }
 
 /// `GET /admin/domains` → `{ domains: [...] }` — this tenant's own domains, each
@@ -1082,7 +1112,9 @@ pub async fn list_domains(
     let mut list = Vec::with_capacity(domains.len());
     for d in &domains {
         let mut obj = domain_json(d);
-        obj["dkim"] = dkim_record_json(&ts, &d.domain).await;
+        let (first, all) = dkim_json(&ts, &d.domain).await;
+        obj["dkim"] = first;
+        obj["dkimRecords"] = all;
         list.push(obj);
     }
     Ok(Json(json!({ "domains": list })))
@@ -1236,8 +1268,9 @@ pub async fn rotate_dkim(
         .map_err(store_admin_err)?;
     audit(&state, &account, "dkim.rotate", Some(&domain), None).await;
     let ts = state.store.for_tenant(account.tenant.clone());
+    let (first, all) = dkim_json(&ts, &domain).await;
     Ok(Json(
-        json!({ "domain": domain, "dkim": dkim_record_json(&ts, &domain).await }),
+        json!({ "domain": domain, "dkim": first, "dkimRecords": all }),
     ))
 }
 

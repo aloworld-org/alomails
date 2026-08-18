@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use rustls::pki_types::ServerName;
 use tokio::io::{AsyncWriteExt, BufReader};
-use tokio::net::TcpStream;
+use tokio::net::{TcpSocket, TcpStream};
 
 use crate::client_reply::{ReplyError, ServerReply, read_reply};
 use crate::tls::{MaybeTls, connector};
@@ -111,6 +111,10 @@ impl OutboundSession {
     /// greeting + EHLO exchange (falling back to HELO on a 5xx to
     /// EHLO, per §2.2.1 for ancient servers).
     ///
+    /// `source` pins the local address the connection leaves by (ADR 0044 §1 —
+    /// a sending identity with its own IP); `None` lets the kernel choose, which
+    /// is what every single-address deployment does.
+    ///
     /// # Errors
     /// [`DeliveryError`] — connect failures and pre-MAIL rejections.
     pub async fn connect(
@@ -119,16 +123,16 @@ impl OutboundSession {
         port: u16,
         our_hostname: &str,
         tls: TlsRequirement,
+        source: Option<IpAddr>,
     ) -> Result<Self, DeliveryError> {
         let mut last_reason = "no addresses to try".to_owned();
         for ip in ips {
             let addr = SocketAddr::new(*ip, port);
-            match tokio::time::timeout(CONNECT_TIMEOUT, TcpStream::connect(addr)).await {
-                Ok(Ok(stream)) => {
+            match connect_from(addr, source).await {
+                Ok(stream) => {
                     return Self::handshake(stream, addr, host, our_hostname, tls).await;
                 }
-                Ok(Err(error)) => last_reason = format!("{addr}: {error}"),
-                Err(_elapsed) => last_reason = format!("{addr}: connect timed out"),
+                Err(reason) => last_reason = format!("{addr}: {reason}"),
             }
         }
         Err(DeliveryError::Connect {
@@ -137,13 +141,18 @@ impl OutboundSession {
         })
     }
 
-    /// Connects to an explicit socket address (smarthost path).
+    /// Connects to an explicit socket address (smarthost path), optionally from
+    /// a pinned local address — see [`Self::connect`].
     ///
     /// # Errors
     /// [`DeliveryError`] — connect failures and pre-MAIL rejections.
-    pub async fn connect_addr(addr: SocketAddr, our_hostname: &str) -> Result<Self, DeliveryError> {
-        match tokio::time::timeout(CONNECT_TIMEOUT, TcpStream::connect(addr)).await {
-            Ok(Ok(stream)) => {
+    pub async fn connect_addr(
+        addr: SocketAddr,
+        our_hostname: &str,
+        source: Option<IpAddr>,
+    ) -> Result<Self, DeliveryError> {
+        match connect_from(addr, source).await {
+            Ok(stream) => {
                 Self::handshake(
                     stream,
                     addr,
@@ -153,13 +162,9 @@ impl OutboundSession {
                 )
                 .await
             }
-            Ok(Err(error)) => Err(DeliveryError::Connect {
+            Err(reason) => Err(DeliveryError::Connect {
                 host: addr.to_string(),
-                reason: error.to_string(),
-            }),
-            Err(_elapsed) => Err(DeliveryError::Connect {
-                host: addr.to_string(),
-                reason: "connect timed out".to_owned(),
+                reason,
             }),
         }
     }
@@ -438,6 +443,46 @@ impl OutboundSession {
             ))
         })??;
         Ok(())
+    }
+}
+
+/// Opens one TCP connection to `addr`, from `source` when a local address is
+/// pinned. Returns a non-sensitive reason on failure.
+///
+/// **A pinned source of the wrong address family fails the attempt** rather than
+/// falling back to the kernel's choice. A campaign identity's SPF record
+/// authorises one address and ends in `-all`; leaving by any other one is a
+/// message that arrives failing SPF, and mail deferred with a logged reason is
+/// recoverable where mail delivered under a failing identity is not.
+async fn connect_from(addr: SocketAddr, source: Option<IpAddr>) -> Result<TcpStream, String> {
+    let attempt = async {
+        match source {
+            None => TcpStream::connect(addr).await,
+            Some(source) => {
+                let socket = match (addr, source) {
+                    (SocketAddr::V4(_), IpAddr::V4(_)) => TcpSocket::new_v4()?,
+                    (SocketAddr::V6(_), IpAddr::V6(_)) => TcpSocket::new_v6()?,
+                    _ => {
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::AddrNotAvailable,
+                            format!(
+                                "egress address {source} cannot reach this destination \
+                                 (different IP family)"
+                            ),
+                        ));
+                    }
+                };
+                // Port 0: the kernel picks the source port, we pick only the
+                // address.
+                socket.bind(SocketAddr::new(source, 0))?;
+                socket.connect(addr).await
+            }
+        }
+    };
+    match tokio::time::timeout(CONNECT_TIMEOUT, attempt).await {
+        Ok(Ok(stream)) => Ok(stream),
+        Ok(Err(error)) => Err(error.to_string()),
+        Err(_elapsed) => Err("connect timed out".to_owned()),
     }
 }
 
