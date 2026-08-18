@@ -8,12 +8,62 @@
 //! Windows draws through Word's HTML engine, Gmail rewrites the document it is
 //! given, and several clients drop `<head>` entirely — so a rule that is not on
 //! the element it applies to is a rule that may not arrive. This module
-//! therefore emits **no `<style>` element, no `<link>`, and no `class`
-//! attribute at all**: every declaration sits in the `style=` of the tag it
-//! governs, beside the presentational HTML attribute (`width`, `align`,
-//! `bgcolor`, `cellpadding`) that Word honours when it ignores the CSS.
-//! [`tests::the_document_carries_no_stylesheet_because_a_mail_client_may_drop_one`]
+//! therefore emits **no `<link>` and no `class` attribute at all, and nothing
+//! a client can drop that the letter needs**: every declaration sits in the
+//! `style=` of the tag it governs, beside the presentational HTML attribute
+//! (`width`, `align`, `bgcolor`, `cellpadding`) that Word honours when it
+//! ignores the CSS. The single `<style>` element the document does carry holds
+//! only the dark-mode block, which can add nothing and can only swap a colour
+//! already declared inline — see the next section.
+//! [`tests::the_only_stylesheet_is_the_dark_block_and_the_letter_is_whole_without_it`]
 //! holds the promise to the output rather than to this paragraph.
+//!
+//! ## The one stylesheet, and why it is not a contradiction
+//!
+//! Wave C3.5 — *the mail must read with images blocked: alt text on every
+//! image, colour never the only carrier of meaning, and a dark-mode-safe
+//! palette* — adds the single exception to the paragraph above: a `<style>`
+//! element holding **one** `@media (prefers-color-scheme:dark)` block and
+//! nothing else. `prefers-color-scheme` is a media query and a media query
+//! cannot live in a `style=` attribute, so the choice was a stylesheet or no
+//! dark mode at all.
+//!
+//! It is an exception rather than a retreat because **the letter is complete
+//! without it**. Every element still declares its light colours on itself, no
+//! `class` and no `<link>` appears, and a client that drops the head draws
+//! exactly the document it drew before this wave — the dark block only ever
+//! *replaces* a colour that is already there.
+//! [`tests::the_only_stylesheet_is_the_dark_block_and_the_letter_is_whole_without_it`]
+//! holds both halves of that.
+//!
+//! The block is generated from [`LETTER_PALETTE`], which is the same table the
+//! renderer draws the light letter from, so the two cannot drift: each rule
+//! selects the elements that *declare* a light colour and swaps in its dark
+//! twin. No hook attribute is added to the markup for the stylesheet to aim at
+//! — the declaration itself is the hook, which is why a new element using
+//! `PAGE_BACKGROUND` is dark-mode-correct the moment it is written.
+//!
+//! ## The rest of C3.5: images and colour
+//!
+//! - **Images blocked is not a degraded reading of this letter, it is the same
+//!   one.** The model has no image block, so the document contains no `<img>`,
+//!   no `background-image` and no remote URL of any kind — there is nothing for
+//!   a client to block. That is a stronger promise than alt text and it is
+//!   pinned by
+//!   [`tests::a_letter_reads_the_same_with_images_blocked_because_it_has_none`].
+//!   Whether an image block should exist at all is the open question C3.1 left
+//!   and this wave did not answer: a remote image is a fetch we can see, which
+//!   is the open-tracking pixel ADR 0044 refused by default. It needs an ADR
+//!   about who may fetch and what is logged, and mandatory alt text is what
+//!   that ADR's block would carry.
+//! - **Nothing in the letter is told by colour alone.** The header row of a
+//!   table is `<th scope="col">` and bold before it is tinted; a code sample is
+//!   monospace, framed and labelled with its language in words before it is
+//!   tinted. Strip every colour out of the document and both still read as what
+//!   they are, which is what a reader with a colour vision deficiency, a
+//!   high-contrast mode, or a client that flattens backgrounds actually gets.
+//!   [`tests::nothing_in_the_letter_is_told_by_colour_alone`] strips them and
+//!   checks.
 //!
 //! ## What "email-safe" costs, itemised
 //!
@@ -36,6 +86,8 @@
 //!   cannot read a CSS custom property, so the tokens cannot be referenced —
 //!   only quoted. Each constant below names the token it was copied from, which
 //!   is the only thing that makes the drift findable when the palette moves.
+//!   The dark half is quoted from the same file's navy scale, because the
+//!   design system has no dark theme yet — see [`LETTER_PALETTE`].
 //! - **`mso-line-height-rule:exactly` on every text run**, because Word
 //!   otherwise reinterprets `line-height` as a minimum and the letter's spacing
 //!   changes shape between two recipients of the same mail.
@@ -78,7 +130,8 @@
 //!   disagreeing about a character.
 //! - **It does not draw images**, because the model has no image block and the
 //!   reason is a decision C3.1 recorded: a remote image is a fetch we can see,
-//!   which is the open-tracking pixel ADR 0044 refused.
+//!   which is the open-tracking pixel ADR 0044 refused. See the C3.5 section
+//!   above for what that costs and what would have to be decided first.
 //! - **It does not decide the plain-text part.** C3.3 reads the same
 //!   [`CampaignBlock`] values into a text alternative; that is why the table's
 //!   rectangular rule is enforced at save time and not in either renderer.
@@ -115,6 +168,68 @@ const HEADING_COLOUR: &str = "#102a43";
 const TEXT_COLOUR: &str = "#475569";
 /// `--border-default`.
 const RULE_COLOUR: &str = "#ded7cd";
+
+/// `--navy-700`, the ground a dark-mode letter sits on.
+const DARK_PAGE_BACKGROUND: &str = "#0c2036";
+/// `--navy-600` (`--ink`) — the card, one step up from the ground exactly as
+/// the light card is one step up from the light ground.
+const DARK_CARD_BACKGROUND: &str = "#102a43";
+/// `--navy-500`, "soft navy — rail hover, dark cards". A recessed surface is
+/// *lighter* than its card in the dark, which is the one place the dark palette
+/// is not a mirror of the light one: light sinks by darkening, dark sinks by
+/// lifting, and both read as "set back".
+const DARK_SUNKEN_BACKGROUND: &str = "#1f3d5b";
+/// `--warm-50` (`--cream`), what headings are set in on navy.
+const DARK_HEADING_COLOUR: &str = "#f8f6f2";
+/// `--navy-100`, the prose colour. Not white: a full-strength white on navy at
+/// 16 px halates, and the letter is read in long lines.
+const DARK_TEXT_COLOUR: &str = "#c6d2de";
+/// `--navy-400`.
+const DARK_RULE_COLOUR: &str = "#35506b";
+
+/// What a colour is *for*, which decides the declaration the dark block has to
+/// override.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ColourRole {
+    /// Something is painted with it — `background-color`.
+    Surface,
+    /// Something is written in it — `color`.
+    Ink,
+    /// Something is drawn with it — the `border` shorthand.
+    Rule,
+}
+
+/// The letter's whole palette: the light value every element declares on
+/// itself, the dark value the one stylesheet swaps in, and the role that
+/// decides how.
+///
+/// **This table is the dark-mode stylesheet.** [`dark_mode_style`] generates one
+/// rule per row and there is no second list to keep in step: a colour added
+/// here is a colour that inverts, and a colour used in the renderer but missing
+/// here is caught by
+/// [`tests::every_colour_the_letter_draws_with_has_a_dark_twin`] rather than
+/// arriving as a light patch in a dark letter.
+///
+/// **The dark values are the navy scale of `web/src/ds/tokens.css` read the
+/// other way up**, and none of them is invented here. That matters because the
+/// product has *no dark theme yet* — when the design system grows one, these
+/// six rows are the list to reconcile it against, and the reconciliation is a
+/// change to this table alone.
+///
+/// The light values are unchanged by this wave, so a light-mode recipient
+/// receives byte-for-byte what they received before it.
+const LETTER_PALETTE: [(&str, &str, ColourRole); 6] = [
+    (PAGE_BACKGROUND, DARK_PAGE_BACKGROUND, ColourRole::Surface),
+    (CARD_BACKGROUND, DARK_CARD_BACKGROUND, ColourRole::Surface),
+    (
+        SUNKEN_BACKGROUND,
+        DARK_SUNKEN_BACKGROUND,
+        ColourRole::Surface,
+    ),
+    (HEADING_COLOUR, DARK_HEADING_COLOUR, ColourRole::Ink),
+    (TEXT_COLOUR, DARK_TEXT_COLOUR, ColourRole::Ink),
+    (RULE_COLOUR, DARK_RULE_COLOUR, ColourRole::Rule),
+];
 
 /// How many invisible characters follow the preheader.
 ///
@@ -175,13 +290,21 @@ pub fn render_campaign_html(letter: &CampaignLetter<'_>) -> Result<String> {
     Ok(out)
 }
 
-/// The head: the four `<meta>` tags a mail client acts on, the title, and the
-/// Outlook DPI fix.
+/// The head: the `<meta>` tags a mail client acts on, the title, the Outlook
+/// DPI fix, and the dark-mode block.
 ///
 /// `x-apple-disable-message-reformatting` stops Apple Mail rescaling the
 /// column, and the `PixelsPerInch` block stops Outlook multiplying every pixel
 /// by 1.25 on a high-DPI screen — which is why a letter that looked right in
 /// the preview arrives with the table wider than the column.
+///
+/// The two colour-scheme declarations are what stop a client *inverting* the
+/// letter for us. Apple Mail and Outlook.com force their own transform on a
+/// document that does not say it handles both schemes, and a forced inversion
+/// on top of [`dark_mode_style`]'s repaint is a letter inverted twice — light
+/// text on a light card. Declaring both schemes says "we drew this one, leave
+/// it alone". `supported-color-schemes` is the older spelling and several
+/// shipped clients still read only that one, so both are emitted.
 fn head_html(subject: &str, out: &mut String) {
     out.push_str("<head>\n");
     out.push_str("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n");
@@ -190,6 +313,8 @@ fn head_html(subject: &str, out: &mut String) {
     out.push_str(
         "<meta name=\"format-detection\" content=\"telephone=no,date=no,address=no\" />\n",
     );
+    out.push_str("<meta name=\"color-scheme\" content=\"light dark\" />\n");
+    out.push_str("<meta name=\"supported-color-schemes\" content=\"light dark\" />\n");
     out.push_str("<title>");
     out.push_str(&esc(subject));
     out.push_str("</title>\n");
@@ -198,14 +323,63 @@ fn head_html(subject: &str, out: &mut String) {
          <o:PixelsPerInch>96</o:PixelsPerInch>\
          </o:OfficeDocumentSettings></xml><![endif]-->\n",
     );
+    dark_mode_style(out);
     out.push_str("</head>\n");
+}
+
+/// The only stylesheet in the document: one `@media (prefers-color-scheme:dark)`
+/// block, generated from [`LETTER_PALETTE`].
+///
+/// **Each rule selects on the light declaration it replaces** —
+/// `[style*="background-color:#f4f1ec"]` is every element that paints itself
+/// the light page colour — so the markup needs no `class` and no hook
+/// attribute, and an element written after this function is dark-correct
+/// without anybody remembering to label it. `!important` is required rather
+/// than shouted: an inline declaration outranks a stylesheet rule of any
+/// specificity, and every colour in this letter is inline.
+///
+/// Two things about the selectors are worth knowing before editing them.
+/// `background-color:#…` *contains* `color:#…`, so an ink rule would also match
+/// a surface that happened to use the same hex —
+/// [`tests::a_colour_means_one_thing_in_this_letter`] pins that no hex is used
+/// for two roles, which is what makes the substring match exact. And a light
+/// value and a *dark* value may legitimately be the same hex
+/// (`HEADING_COLOUR` and `DARK_CARD_BACKGROUND` are both `#102a43`) without any
+/// interaction at all: a selector reads the attribute the renderer wrote, never
+/// the colour the cascade computed.
+///
+/// Word ignores the whole element — it implements no media query — which is the
+/// intended outcome: Outlook on Windows draws the light letter.
+fn dark_mode_style(out: &mut String) {
+    out.push_str("<style type=\"text/css\">\n@media (prefers-color-scheme:dark){\n");
+    for (light, dark, role) in LETTER_PALETTE {
+        match role {
+            ColourRole::Surface => out.push_str(&format!(
+                "[style*=\"background-color:{light}\"]{{background-color:{dark}!important;}}\n"
+            )),
+            ColourRole::Ink => {
+                out.push_str(&format!(
+                    "[style*=\"color:{light}\"]{{color:{dark}!important;}}\n"
+                ));
+            }
+            ColourRole::Rule => out.push_str(&format!(
+                "[style*=\"solid {light}\"]{{border-color:{dark}!important;}}\n"
+            )),
+        }
+    }
+    out.push_str("}\n</style>\n");
 }
 
 /// The body: the hidden preheader, then the two nested layout tables that make
 /// a centred column of [`CAMPAIGN_LETTER_WIDTH_PX`].
 fn body_html(letter: &CampaignLetter<'_>, out: &mut String) {
+    // `color-scheme` is on the body as well as in the head because Apple Mail
+    // reads it there and iOS Mail has shipped versions that read only there.
+    // It is a declaration about which schemes the document handles, not a
+    // colour, so it does not belong in `LETTER_PALETTE`.
     out.push_str(&format!(
         "<body style=\"margin:0;padding:0;width:100%;background-color:{PAGE_BACKGROUND};\
+         color-scheme:light dark;supported-color-schemes:light dark;\
          -webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;\">\n"
     ));
 
@@ -345,13 +519,22 @@ fn table_html(table: &TableBlock, out: &mut String) {
             let weight = if header { "bold" } else { "normal" };
             let colour = if header { HEADING_COLOUR } else { TEXT_COLOUR };
             let scope = if header { " scope=\"col\"" } else { "" };
-            let background = if header {
-                format!("background-color:{SUNKEN_BACKGROUND};")
+            // The tint is stated twice for the same reason every other tinted
+            // cell in this document states it twice — Word honours the
+            // presentational attribute when it ignores the CSS. It is
+            // decoration either way: the header row is a `<th scope="col">` in
+            // bold before it is a colour, which is what a reader who never
+            // sees the tint has to go on.
+            let (bgcolor, background) = if header {
+                (
+                    format!(" bgcolor=\"{SUNKEN_BACKGROUND}\""),
+                    format!("background-color:{SUNKEN_BACKGROUND};"),
+                )
             } else {
-                String::new()
+                (String::new(), String::new())
             };
             out.push_str(&format!(
-                "<{tag}{scope} align=\"left\" valign=\"top\" \
+                "<{tag}{scope} align=\"left\" valign=\"top\"{bgcolor} \
                  style=\"padding:8px 10px;border:1px solid {RULE_COLOUR};{background}\
                  font-family:{SANS};font-size:14px;line-height:20px;font-weight:{weight};\
                  color:{colour};text-align:left;mso-line-height-rule:exactly;\">"
@@ -553,18 +736,290 @@ mod tests {
         assert_eq!(first, second, "the renderer must be a pure function");
     }
 
-    /// *A compiler, not a stylesheet.* A `<style>` block is dropped outright by
-    /// several clients and rewritten by Gmail, so a rule that is not on its own
-    /// element is a rule that may not arrive. A `class` is worse than useless
-    /// without one.
+    /// Everything between `<style>` and `</style>`, and the document without
+    /// it. A client that drops the head sees the second one, and so does every
+    /// test that is about the light letter.
+    fn split_stylesheet(html: &str) -> (String, String) {
+        let open = html.find("<style").expect("the dark-mode block");
+        let content_from = html[open..].find('>').expect("an unclosed <style") + open + 1;
+        let close = html.find("</style>").expect("an unclosed stylesheet");
+        let end = close + "</style>\n".len();
+        (
+            html[content_from..close].to_owned(),
+            format!("{}{}", &html[..open], &html[end..]),
+        )
+    }
+
+    /// *A compiler, not a stylesheet* — with the one exception C3.5 bought, and
+    /// this test is where the exception is spelled out rather than assumed.
+    ///
+    /// The document carries exactly one `<style>`, it holds nothing but the
+    /// dark-mode media query, and **the letter is whole without it**: every
+    /// light colour is still declared on the element it paints, so a client
+    /// that drops the head draws the same letter it drew before dark mode
+    /// existed. No `class` and no `<link>` — those would need a stylesheet to
+    /// *mean* anything, which is the difference.
     #[test]
-    fn the_document_carries_no_stylesheet_because_a_mail_client_may_drop_one() {
+    fn the_only_stylesheet_is_the_dark_block_and_the_letter_is_whole_without_it() {
         let html = render("Spring prices", Some("Per litre"), &letter());
-        assert!(!html.contains("<style"), "a <style> element: {html}");
-        assert!(!html.contains("</style>"), "a closing <style>: {html}");
+        assert_eq!(html.matches("<style").count(), 1, "{html}");
+        assert_eq!(html.matches("</style>").count(), 1, "{html}");
         assert!(!html.contains("<link"), "a linked stylesheet: {html}");
         assert!(!html.contains("class=\""), "a class attribute: {html}");
-        assert!(!html.contains("@media"), "a media query: {html}");
+
+        let (stylesheet, without) = split_stylesheet(&html);
+        let outside_the_media_block = stylesheet
+            .trim()
+            .strip_prefix("@media (prefers-color-scheme:dark){")
+            .and_then(|rest| rest.trim_end().strip_suffix('}'))
+            .expect("the stylesheet is one media block");
+        assert!(
+            !outside_the_media_block.contains('@') && !outside_the_media_block.contains('<'),
+            "the stylesheet holds more than the dark block: {stylesheet}"
+        );
+        assert!(!without.contains("@media"), "{without}");
+
+        // The letter without the stylesheet is still fully painted.
+        for (light, _, _) in LETTER_PALETTE {
+            assert!(
+                without.contains(light),
+                "{light} is drawn only by the stylesheet: {without}"
+            );
+        }
+    }
+
+    /// A colour the renderer draws with but [`LETTER_PALETTE`] does not know
+    /// about is a light patch in a dark letter — a white card under white text,
+    /// or a border that stays warm stone on navy. The palette is the list, and
+    /// this is what makes it the list.
+    #[test]
+    fn every_colour_the_letter_draws_with_has_a_dark_twin() {
+        let (_, without) = split_stylesheet(&render("Spring prices", Some("Per litre"), &letter()));
+        let known: Vec<&str> = LETTER_PALETTE.iter().map(|(light, _, _)| *light).collect();
+        let bytes: Vec<char> = without.chars().collect();
+        for (index, c) in bytes.iter().enumerate() {
+            if *c != '#' || index + 6 >= bytes.len() {
+                continue;
+            }
+            let candidate: String = bytes[index..index + 7].iter().collect();
+            if !candidate[1..].chars().all(|c| c.is_ascii_hexdigit()) {
+                continue;
+            }
+            assert!(
+                known.contains(&candidate.as_str()),
+                "{candidate} is drawn but has no dark twin: add it to LETTER_PALETTE"
+            );
+        }
+    }
+
+    /// The dark rules select on the light declaration they replace, and
+    /// `background-color:#…` contains `color:#…` — so a hex used both as ink and
+    /// as a surface would make one rule fire on the other's elements. Keeping
+    /// every colour to one role is what makes the substring match exact.
+    #[test]
+    fn a_colour_means_one_thing_in_this_letter() {
+        for (index, (light, dark, role)) in LETTER_PALETTE.iter().enumerate() {
+            for (other_light, other_dark, other_role) in LETTER_PALETTE.iter().skip(index + 1) {
+                assert_ne!(
+                    light, other_light,
+                    "{light} is both {role:?} and {other_role:?}"
+                );
+                assert_ne!(dark, other_dark, "the dark palette reuses {dark}");
+            }
+            assert_eq!(light.len(), 7, "{light} is not a six-digit hex");
+            assert_eq!(dark.len(), 7, "{dark} is not a six-digit hex");
+        }
+    }
+
+    /// A dark-mode reader gets the letter **repainted**, not inverted: our
+    /// colours swapped for ours, and the two colour-scheme declarations that
+    /// stop a client transforming it a second time on top.
+    #[test]
+    fn a_dark_mode_reader_gets_the_letter_repainted_rather_than_inverted() {
+        let html = render("Spring prices", Some("Per litre"), &letter());
+        assert!(html.contains("<meta name=\"color-scheme\" content=\"light dark\" />"));
+        assert!(html.contains("<meta name=\"supported-color-schemes\" content=\"light dark\" />"));
+        assert!(html.contains("color-scheme:light dark;"), "{html}");
+
+        let (stylesheet, without) = split_stylesheet(&html);
+        assert!(stylesheet.contains("@media (prefers-color-scheme:dark){"));
+        assert!(
+            stylesheet.contains(
+                "[style*=\"background-color:#f4f1ec\"]{background-color:#0c2036!important;}"
+            ),
+            "{stylesheet}"
+        );
+        assert!(
+            stylesheet.contains("[style*=\"color:#475569\"]{color:#c6d2de!important;}"),
+            "{stylesheet}"
+        );
+        assert!(
+            stylesheet.contains("[style*=\"solid #ded7cd\"]{border-color:#35506b!important;}"),
+            "{stylesheet}"
+        );
+        assert_eq!(
+            stylesheet.matches("!important").count(),
+            LETTER_PALETTE.len(),
+            "one rule per colour, and an inline declaration outranks a rule that does not shout"
+        );
+
+        // A dark value never reaches the markup: it exists only for a reader
+        // whose client asked for it.
+        for (_, dark, _) in LETTER_PALETTE {
+            if LETTER_PALETTE.iter().any(|(light, _, _)| *light == dark) {
+                continue; // #102a43 is the light ink and the dark card at once.
+            }
+            assert!(
+                !without.contains(dark),
+                "{dark} was drawn into the letter itself: {without}"
+            );
+        }
+    }
+
+    /// The relative luminance of a hex colour, WCAG 2.1 §relative luminance.
+    fn luminance(hex: &str) -> f64 {
+        let channel = |from: usize| {
+            let raw = u8::from_str_radix(&hex[from..from + 2], 16).expect("a six-digit hex");
+            let value = f64::from(raw) / 255.0;
+            if value <= 0.03928 {
+                value / 12.92
+            } else {
+                ((value + 0.055) / 1.055).powf(2.4)
+            }
+        };
+        0.2126 * channel(1) + 0.7152 * channel(3) + 0.0722 * channel(5)
+    }
+
+    /// The WCAG contrast ratio between two hex colours.
+    fn contrast(one: &str, other: &str) -> f64 {
+        let (a, b) = (luminance(one), luminance(other));
+        let (light, dark) = if a > b { (a, b) } else { (b, a) };
+        (light + 0.05) / (dark + 0.05)
+    }
+
+    fn by_role(role: ColourRole, dark: bool) -> Vec<&'static str> {
+        LETTER_PALETTE
+            .iter()
+            .filter(|(_, _, r)| *r == role)
+            .map(|(l, d, _)| if dark { *d } else { *l })
+            .collect()
+    }
+
+    /// *A dark-mode-safe palette*, measured rather than eyeballed.
+    ///
+    /// Every ink on every surface reads at WCAG AA for body text (4.5:1) in
+    /// both palettes — the letter is 16 px prose, so AA is the floor and not a
+    /// target. The border is the one element below that in both palettes, as it
+    /// is in the design system it was copied from and in every mail a recipient
+    /// already gets: it is decoration over a table that is already a table, so
+    /// the invariant it has to meet is *no worse in the dark than in the
+    /// light*.
+    #[test]
+    fn the_dark_palette_reads_at_least_as_well_as_the_light_one() {
+        for dark in [false, true] {
+            let which = if dark { "dark" } else { "light" };
+            for ink in by_role(ColourRole::Ink, dark) {
+                for surface in by_role(ColourRole::Surface, dark) {
+                    let ratio = contrast(ink, surface);
+                    assert!(
+                        ratio >= 4.5,
+                        "the {which} palette sets {ink} on {surface} at {ratio:.2}:1, under AA"
+                    );
+                }
+            }
+        }
+
+        let light_rule = by_role(ColourRole::Rule, false)[0];
+        let dark_rule = by_role(ColourRole::Rule, true)[0];
+        for (index, surface) in by_role(ColourRole::Surface, false).iter().enumerate() {
+            let dark_surface = by_role(ColourRole::Surface, true)[index];
+            let (light_ratio, dark_ratio) = (
+                contrast(light_rule, surface),
+                contrast(dark_rule, dark_surface),
+            );
+            assert!(
+                dark_ratio >= light_ratio,
+                "a border on {dark_surface} reads at {dark_ratio:.2}:1 where the light letter \
+                 gives {light_ratio:.2}:1"
+            );
+        }
+    }
+
+    /// Strips every colour out of the document. What is left is what a reader
+    /// with a colour vision deficiency, a forced high-contrast mode, or a
+    /// client that flattens backgrounds has to read the letter from.
+    ///
+    /// The dark-mode block goes first and whole: it is a list of colours by
+    /// definition, and it is the letter's own markup this test is about.
+    fn without_colour(html: &str) -> String {
+        let mut out = split_stylesheet(html).1;
+        for (light, dark, role) in LETTER_PALETTE {
+            for value in [light, dark] {
+                out = match role {
+                    ColourRole::Surface => out
+                        .replace(&format!("background-color:{value};"), "")
+                        .replace(&format!(" bgcolor=\"{value}\""), ""),
+                    ColourRole::Ink => out.replace(&format!("color:{value};"), ""),
+                    ColourRole::Rule => out.replace(&format!("solid {value}"), "solid"),
+                };
+            }
+        }
+        out
+    }
+
+    /// *Colour never the only carrier of meaning.* Every distinction the letter
+    /// draws is doubled by something that is not a colour, and the way to prove
+    /// it is to take the colours away and read what is left.
+    #[test]
+    fn nothing_in_the_letter_is_told_by_colour_alone() {
+        let flat = without_colour(&render("Spring prices", None, &letter()));
+        assert!(
+            !flat.contains("background-color") && !flat.contains("bgcolor"),
+            "a tint survived the strip, so the test proves nothing: {flat}"
+        );
+
+        // The header row: a header cell, scoped, in bold — three carriers
+        // before the tint that is now gone.
+        assert!(flat.contains("<th scope=\"col\""), "{flat}");
+        assert!(flat.contains("font-weight:bold"), "{flat}");
+        // The code sample: a monospace face, a frame, and its language written
+        // out in words rather than implied by the tint.
+        assert!(flat.contains(MONO), "{flat}");
+        assert!(flat.contains("border:1px solid;"), "{flat}");
+        assert!(flat.contains(">bash</td>"), "{flat}");
+        // The headings: their own tags and their own sizes.
+        assert!(flat.contains("<h1 style="), "{flat}");
+        assert!(flat.contains("font-size:28px"), "{flat}");
+        // And the prose is still prose.
+        assert!(flat.contains("Everything below is per litre."), "{flat}");
+    }
+
+    /// *The mail must read with images blocked. Half of recipients see that
+    /// version and they are not a degraded audience.*
+    ///
+    /// Here they see the same letter, because there is nothing to block: no
+    /// image element, no background image, no remote reference of any kind.
+    /// That is a stronger promise than alt text and it is the one this model
+    /// can make today — see the module docs for the block that does not exist
+    /// and the decision it waits on.
+    #[test]
+    fn a_letter_reads_the_same_with_images_blocked_because_it_has_none() {
+        let html = render("Spring prices", Some("Per litre"), &letter());
+        for absent in [
+            "<img",
+            "<picture",
+            "<svg",
+            "<video",
+            "background-image",
+            "url(",
+            " src=",
+            "list-style-image",
+        ] {
+            assert!(
+                !html.contains(absent),
+                "{absent} is something a client can block: {html}"
+            );
+        }
     }
 
     /// Drops everything between `<!--` and `-->`.

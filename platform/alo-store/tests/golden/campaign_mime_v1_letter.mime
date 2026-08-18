@@ -1,6 +1,6 @@
-Content-Type: multipart/alternative; boundary="=_alo_682839334b862ee0a8859b89"
+Content-Type: multipart/alternative; boundary="=_alo_8778821bd7969defa392b9b1"
 
---=_alo_682839334b862ee0a8859b89
+--=_alo_8778821bd7969defa392b9b1
 Content-Type: text/plain; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
@@ -27,7 +27,7 @@ Bestellen via de API
 Met vriendelijke groet,
 Nordwind & Co
 
---=_alo_682839334b862ee0a8859b89
+--=_alo_8778821bd7969defa392b9b1
 Content-Type: text/html; charset=utf-8
 Content-Transfer-Encoding: quoted-printable
 
@@ -42,12 +42,28 @@ ww.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <meta name=3D"x-apple-disable-message-reformatting" />
 <meta name=3D"format-detection" content=3D"telephone=3Dno,date=3Dno,addr=
 ess=3Dno" />
+<meta name=3D"color-scheme" content=3D"light dark" />
+<meta name=3D"supported-color-schemes" content=3D"light dark" />
 <title>Nieuwe prijzen vanaf maandag</title>
 <!--[if mso]><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:Pixel=
 sPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+<style type=3D"text/css">
+@media (prefers-color-scheme:dark){
+[style*=3D"background-color:#f4f1ec"]{background-color:#0c2036!important=
+;}
+[style*=3D"background-color:#fffefc"]{background-color:#102a43!important=
+;}
+[style*=3D"background-color:#f0ece6"]{background-color:#1f3d5b!important=
+;}
+[style*=3D"color:#102a43"]{color:#f8f6f2!important;}
+[style*=3D"color:#475569"]{color:#c6d2de!important;}
+[style*=3D"solid #ded7cd"]{border-color:#35506b!important;}
+}
+</style>
 </head>
-<body style=3D"margin:0;padding:0;width:100%;background-color:#f4f1ec;-w=
-ebkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+<body style=3D"margin:0;padding:0;width:100%;background-color:#f4f1ec;co=
+lor-scheme:light dark;supported-color-schemes:light dark;-webkit-text-si=
+ze-adjust:100%;-ms-text-size-adjust:100%;">
 <div style=3D"display:none;font-size:1px;line-height:1px;max-height:0;ma=
 x-width:0;opacity:0;overflow:hidden;mso-hide:all;">Olijfolie 12,50 =E2=
 =82=AC =E2=80=94 geldig vanaf 2 maart&#8204;&#160;&#8204;&#160;&#8204;&#=
@@ -89,18 +105,21 @@ t-size:16px;line-height:24px;color:#475569;mso-line-height-rule:exactly;=
 <table width=3D"100%" cellpadding=3D"0" cellspacing=3D"0" border=3D"0" s=
 tyle=3D"width:100%;border-collapse:collapse;margin:0 0 16px 0;">
 <tr>
-<th scope=3D"col" align=3D"left" valign=3D"top" style=3D"padding:8px 10p=
-x;border:1px solid #ded7cd;background-color:#f0ece6;font-family:Arial,He=
-lvetica,sans-serif;font-size:14px;line-height:20px;font-weight:bold;colo=
-r:#102a43;text-align:left;mso-line-height-rule:exactly;">Product</th>
-<th scope=3D"col" align=3D"left" valign=3D"top" style=3D"padding:8px 10p=
-x;border:1px solid #ded7cd;background-color:#f0ece6;font-family:Arial,He=
-lvetica,sans-serif;font-size:14px;line-height:20px;font-weight:bold;colo=
-r:#102a43;text-align:left;mso-line-height-rule:exactly;">Prijs</th>
-<th scope=3D"col" align=3D"left" valign=3D"top" style=3D"padding:8px 10p=
-x;border:1px solid #ded7cd;background-color:#f0ece6;font-family:Arial,He=
-lvetica,sans-serif;font-size:14px;line-height:20px;font-weight:bold;colo=
-r:#102a43;text-align:left;mso-line-height-rule:exactly;">Vanaf</th>
+<th scope=3D"col" align=3D"left" valign=3D"top" bgcolor=3D"#f0ece6" styl=
+e=3D"padding:8px 10px;border:1px solid #ded7cd;background-color:#f0ece6;=
+font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;f=
+ont-weight:bold;color:#102a43;text-align:left;mso-line-height-rule:exact=
+ly;">Product</th>
+<th scope=3D"col" align=3D"left" valign=3D"top" bgcolor=3D"#f0ece6" styl=
+e=3D"padding:8px 10px;border:1px solid #ded7cd;background-color:#f0ece6;=
+font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;f=
+ont-weight:bold;color:#102a43;text-align:left;mso-line-height-rule:exact=
+ly;">Prijs</th>
+<th scope=3D"col" align=3D"left" valign=3D"top" bgcolor=3D"#f0ece6" styl=
+e=3D"padding:8px 10px;border:1px solid #ded7cd;background-color:#f0ece6;=
+font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;f=
+ont-weight:bold;color:#102a43;text-align:left;mso-line-height-rule:exact=
+ly;">Vanaf</th>
 </tr>
 <tr>
 <td align=3D"left" valign=3D"top" style=3D"padding:8px 10px;border:1px s=
@@ -168,4 +187,4 @@ t-size:16px;line-height:24px;color:#475569;mso-line-height-rule:exactly;=
 </body>
 </html>
 
---=_alo_682839334b862ee0a8859b89--
+--=_alo_8778821bd7969defa392b9b1--
