@@ -160,13 +160,13 @@ export function ProjectsModule() {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-app">
-      <header className="flex flex-wrap items-center gap-4 border-b border-subtle bg-surface px-5 pt-4">
-        <h1 className="m-0 pb-4 text-xl font-semibold text-primary">{strings.moduleProjects}</h1>
-        <nav className="ml-auto flex items-end gap-1 overflow-x-auto" aria-label={strings.moduleProjects}>
+      <header className="flex flex-wrap items-center gap-4 border-b border-subtle bg-surface px-5 py-3">
+        <h1 className="m-0 text-xl font-semibold text-primary">{strings.moduleProjects}</h1>
+        <nav className="ml-auto flex items-center gap-1 overflow-x-auto" aria-label={strings.moduleProjects}>
           <NavLink
             to="list"
             className={({ isActive }) =>
-              `whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium no-underline transition-colors ${isActive ? "border-accent text-accent" : "border-transparent text-secondary hover:text-primary"}`
+              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
             }
           >
             {strings.projectsTabList}
@@ -174,7 +174,7 @@ export function ProjectsModule() {
           <NavLink
             to="week"
             className={({ isActive }) =>
-              `whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium no-underline transition-colors ${isActive ? "border-accent text-accent" : "border-transparent text-secondary hover:text-primary"}`
+              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
             }
           >
             {strings.projectsTabWeek}
@@ -182,7 +182,7 @@ export function ProjectsModule() {
           <NavLink
             to="plan"
             className={({ isActive }) =>
-              `whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium no-underline transition-colors ${isActive ? "border-accent text-accent" : "border-transparent text-secondary hover:text-primary"}`
+              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
             }
           >
             {strings.projectsTabPlan}
@@ -190,7 +190,7 @@ export function ProjectsModule() {
           <NavLink
             to="reports"
             className={({ isActive }) =>
-              `whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium no-underline transition-colors ${isActive ? "border-accent text-accent" : "border-transparent text-secondary hover:text-primary"}`
+              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
             }
           >
             {strings.projectsTabReports}
@@ -199,7 +199,7 @@ export function ProjectsModule() {
             <NavLink
               to="approvals"
               className={({ isActive }) =>
-                `whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium no-underline transition-colors ${isActive ? "border-accent text-accent" : "border-transparent text-secondary hover:text-primary"}`
+                `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
               }
             >
               {strings.projectsTabApprovals}
