@@ -16,7 +16,8 @@ export const channelLabel = (channel: ChannelSummary): string =>
  * carries profile names, turn the stable address local-part into a calm human
  * label while keeping the full address in the conversation header. */
 export const directMessageName = (channel: ChannelSummary): string => {
-  if (channel.kind !== "dm" || channel.counterpart === null) return channelLabel(channel);
+  if ((channel.kind !== "dm" && channel.kind !== "agent_dm") || channel.counterpart === null) return channelLabel(channel);
+  if (channel.kind === "agent_dm") return channel.counterpart.replace(/^@/, "");
   const local = channel.counterpart.split("@", 1)[0]?.replace(/[._-]+/g, " ").trim();
   if (!local) return channel.counterpart;
   return local.replace(/\b\p{L}/gu, (letter) => letter.toLocaleUpperCase());

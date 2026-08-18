@@ -3,8 +3,8 @@
 // is the editor's own JSON snapshot stored in the node's blob; opening loads it,
 // edits auto-save a new version. Univer is heavy, so DriveModule code-splits this
 // out — it loads only when a sheet is opened.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronLeft, Download, MoreHorizontal, Pencil, X } from "lucide-react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronLeft, Download, MoreHorizontal, Pencil, Trash2, X } from "lucide-react";
 
 // Univer's own UI + engine. Framework-agnostic: it mounts into a plain DOM
 // container we hand it, so we drive it from an effect rather than as JSX.
@@ -62,6 +62,7 @@ import "@univerjs/presets/lib/styles/preset-sheets-table.css";
 import "@univerjs/presets/lib/styles/preset-sheets-thread-comment.css";
 
 import { strings } from "../i18n";
+import { Chart } from "../insights/chart";
 import { useJmapClient } from "../jmap";
 import { Menu, Spinner } from "../ds";
 import { driveErrorReason, saveBlob } from "./parts";
@@ -70,8 +71,10 @@ import {
   readSheetDocument,
   writeSheetDocument,
   type SheetChart,
+  type SheetChartKind,
   type Snapshot as SheetSnapshot,
 } from "./sheetDocument";
+import { rangeReference, sheetChartModel } from "./sheetChartModel";
 import { SheetRibbon, type BorderKind, type FormulaCategory, type SheetActions, type SheetSelectionFormatting } from "./SheetRibbon";
 import styles from "./SheetEditor.module.css";
 
@@ -194,6 +197,8 @@ export function SheetEditor({
    *  rather than state: nothing here re-renders on them yet, and losing them
    *  to a stale closure in the auto-save interval would delete a chart. */
   const chartsRef = useRef<SheetChart[]>([]);
+  const [charts, setCharts] = useState<SheetChart[]>([]);
+  const [chartWorkbook, setChartWorkbook] = useState<SheetSnapshot>({});
   const sheetBlob = useCallback(
     (json: string) =>
       writeSheetDocument({
@@ -229,6 +234,8 @@ export function SheetEditor({
         // keystroke.
         const stored = readSheetDocument(data ?? {});
         chartsRef.current = stored.charts;
+        setCharts(stored.charts);
+        setChartWorkbook(stored.workbook);
         setInitial(stored.workbook);
       })
       .catch((error: unknown) => {
@@ -409,6 +416,7 @@ export function SheetEditor({
       if (api === null) return;
       const json = snapshotJson(api);
       if (json === "") return;
+      setChartWorkbook(JSON.parse(json) as SheetSnapshot);
       if (json === lastSaved.current) {
         dirtyRef.current = false;
         return;
@@ -689,6 +697,46 @@ export function SheetEditor({
       redo: () => {
         void wb()?.redo();
       },
+      addChart: (kind: SheetChartKind) => {
+        const api = apiRef.current;
+        const sheet = ws();
+        const selected = range()?.getRange();
+        if (api === null || sheet === null || selected === undefined) return;
+        const startRow = Math.min(selected.startRow, selected.endRow);
+        const endRow = Math.max(selected.startRow, selected.endRow);
+        const startColumn = Math.min(selected.startColumn, selected.endColumn);
+        const endColumn = Math.max(selected.startColumn, selected.endColumn);
+        if (endRow <= startRow || endColumn <= startColumn) {
+          setActionError(strings.sheetChartSelectionHint);
+          return;
+        }
+        const json = snapshotJson(api);
+        if (json === "") return;
+        const workbook = JSON.parse(json) as SheetSnapshot;
+        const tab = sheet.getSheetId();
+        const header = (column: number) => {
+          const sheets = (workbook as { sheets?: Record<string, { cellData?: Record<string, Record<string, { v?: unknown }>> }> }).sheets;
+          const value = sheets?.[tab]?.cellData?.[String(startRow)]?.[String(column)]?.v;
+          return value === undefined || value === null || String(value).trim() === ""
+            ? strings.sheetChartSeries(column - startColumn)
+            : String(value);
+        };
+        const columns = kind === "pie" ? [startColumn + 1] : Array.from({ length: endColumn - startColumn }, (_, index) => startColumn + index + 1);
+        const chart: SheetChart = {
+          id: globalThis.crypto?.randomUUID?.() ?? `chart-${Date.now()}`,
+          title: header(startColumn + 1),
+          kind,
+          tab,
+          categories: rangeReference({ row: startRow + 1, col: startColumn }, { row: endRow, col: startColumn }),
+          series: columns.map((column) => ({ name: header(column), range: rangeReference({ row: startRow + 1, col: column }, { row: endRow, col: column }) })),
+        };
+        chartsRef.current = [...chartsRef.current, chart];
+        setCharts(chartsRef.current);
+        setChartWorkbook(workbook);
+        lastSaved.current = "";
+        dirtyRef.current = true;
+        setActionError("");
+      },
     };
   }, []);
 
@@ -818,6 +866,24 @@ export function SheetEditor({
           </div>
         )}
         <div ref={containerRef} className={styles.univer} />
+        {charts.length > 0 && (
+          <aside className="absolute right-5 top-5 z-20 flex max-h-[calc(100%-2.5rem)] w-[min(26rem,calc(100%-2.5rem))] flex-col gap-3 overflow-y-auto rounded-2xl border border-subtle bg-surface/95 p-4 shadow-xl backdrop-blur" aria-label={strings.sheetCharts}>
+            <div className="border-b border-subtle pb-3">
+              <h2 className="m-0 text-base font-semibold text-primary">{strings.sheetCharts}</h2>
+              <p className="mb-0 mt-1 text-xs leading-5 text-tertiary">{strings.sheetChartExcelLimit}</p>
+            </div>
+            {charts.map((chart) => {
+              const result = sheetChartModel(chartWorkbook, chart);
+              return <section key={chart.id} className="rounded-xl border border-subtle bg-surface p-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 className="m-0 truncate text-sm font-semibold text-primary">{chart.title}</h3>
+                  <button type="button" className="flex size-9 shrink-0 items-center justify-center rounded-lg border-0 bg-transparent text-tertiary hover:bg-raised hover:text-primary" aria-label={strings.sheetChartRemove} title={strings.sheetChartRemove} onClick={() => { chartsRef.current = chartsRef.current.filter((item) => item.id !== chart.id); setCharts(chartsRef.current); lastSaved.current = ""; dirtyRef.current = true; }}><Trash2 size={16} /></button>
+                </div>
+                {"model" in result ? <div className="h-64"><Suspense fallback={<div className="grid h-full place-items-center"><Spinner /></div>}><Chart model={result.model} label={chart.title} /></Suspense></div> : <p className="m-0 rounded-lg bg-raised p-4 text-sm text-tertiary">{strings[result.error]}</p>}
+              </section>;
+            })}
+          </aside>
+        )}
       </div>
     </div>
   );

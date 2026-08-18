@@ -17,6 +17,7 @@ import {
   ArrowDownAZ,
   ArrowDownZA,
   Baseline,
+  BarChart3,
   Bold,
   ClipboardPaste,
   CalendarDays,
@@ -36,11 +37,13 @@ import {
   Link,
   ListChecks,
   ListTree,
+  LineChart,
   LockKeyhole,
   Maximize2,
   MessageSquare,
   MoreHorizontal,
   PaintBucket,
+  PieChart,
   Palette,
   PanelRightOpen,
   Grid3X3,
@@ -73,6 +76,7 @@ import {
 } from "lucide-react";
 
 import { strings } from "../i18n";
+import type { SheetChartKind } from "./sheetDocument";
 import styles from "./SheetRibbon.module.css";
 
 /** What the ribbon can ask the engine to do. Implemented by SheetEditor against
@@ -124,6 +128,7 @@ export interface SheetActions {
   stylePreset: (p: { size: number; bold: boolean; color?: string }) => void;
   undo: () => void;
   redo: () => void;
+  addChart: (kind: SheetChartKind) => void;
 }
 
 export interface FormulaCategory {
@@ -563,6 +568,13 @@ function HomeTab({ actions, disabled, selectionFormatting }: { actions: SheetAct
 
       <Group label={strings.sheetGroupStyles}>
         <StyleGallery actions={actions} disabled={disabled} />
+      </Group>
+      <Group label={strings.sheetGroupCharts}>
+        <div className={styles.toolStrip}>
+          <IconBtn label={strings.sheetChartBar} onClick={() => actions.addChart("bar")} disabled={disabled}><BarChart3 size={16} /></IconBtn>
+          <IconBtn label={strings.sheetChartLine} onClick={() => actions.addChart("line")} disabled={disabled}><LineChart size={16} /></IconBtn>
+          <IconBtn label={strings.sheetChartPie} onClick={() => actions.addChart("pie")} disabled={disabled}><PieChart size={16} /></IconBtn>
+        </div>
       </Group>
 
       <Group label={strings.sheetGroupCells}>

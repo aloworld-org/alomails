@@ -3,7 +3,7 @@
 // nothing here validates anything — these are the wire's own words.
 
 /** A named room, or the private pair a DM is. */
-export type ChannelKind = "channel" | "dm";
+export type ChannelKind = "channel" | "dm" | "agent_dm";
 
 /** Who may see a named channel. A DM is always private. */
 export type ChannelVisibility = "public" | "private";

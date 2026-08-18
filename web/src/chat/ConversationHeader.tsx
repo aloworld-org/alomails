@@ -1,4 +1,4 @@
-import { Archive, ChevronDown, ChevronLeft, Hash, MoreHorizontal, Pencil, UserPlus, Video } from "lucide-react";
+import { Archive, Bot, ChevronDown, ChevronLeft, Hash, MoreHorizontal, Pencil, UserPlus, Video } from "lucide-react";
 
 import { Avatar, IconButton } from "../ds";
 import { strings } from "../i18n";
@@ -18,15 +18,15 @@ type Props = {
 };
 
 export function ConversationHeader({ room, liveMeeting, onBack, onMeet, onPeople, onRename, onArchive }: Props) {
-  if (room.kind === "dm") {
+  if (room.kind === "dm" || room.kind === "agent_dm") {
     const name = directMessageName(room);
     return (
       <header className="shrink-0 bg-surface px-6 py-4">
         <div className="flex min-h-24 items-center gap-5 rounded-2xl border border-subtle bg-surface px-6 shadow-sm">
           <button type="button" className="flex size-11 shrink-0 items-center justify-center rounded-xl border-0 bg-transparent text-primary hover:bg-raised" onClick={onBack} aria-label={strings.chatBackToList}><ChevronLeft size={23} /></button>
-          <Avatar name={name} email={room.counterpart ?? undefined} size="lg" />
+          {room.kind === "agent_dm" ? <span className="flex size-12 shrink-0 items-center justify-center rounded-xl bg--tint text-accent"><Bot size={23} /></span> : <Avatar name={name} email={room.counterpart ?? undefined} size="lg" />}
           <div className="min-w-0 flex-1">
-            <h3 className="m-0 truncate text-lg font-bold text-primary">{name}</h3>
+            <h3 className="m-0 flex items-center gap-2 truncate text-lg font-bold text-primary">{name}{room.kind === "agent_dm" && <span className="rounded border border-subtle px-1.5 text-[0.65rem] font-bold uppercase tracking-wide text-accent">{strings.chatAgentTag}</span>}</h3>
             <p className="mb-0 mt-0.5 truncate text-sm text-tertiary">{room.counterpart}</p>
           </div>
           <div className="flex shrink-0 items-center gap-3">

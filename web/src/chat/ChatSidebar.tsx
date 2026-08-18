@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { Archive, ChevronDown, ChevronRight, Hash, Loader2, Lock, MoreHorizontal, Pencil, Search, SlidersHorizontal, Users, Video, X } from "lucide-react";
+import { Archive, Bot, ChevronDown, ChevronRight, Hash, Loader2, Lock, MoreHorizontal, Pencil, Search, SlidersHorizontal, Users, Video, X } from "lucide-react";
 
 import { Avatar, IconButton } from "../ds";
 import { strings } from "../i18n";
@@ -46,7 +46,7 @@ export function ChatSidebar(props: ChatSidebarProps) {
     || (filter === "threads" && room.lastSeq !== null));
   const sections = [
     { key: "channels", label: strings.chatSectionChannels, rooms: visibleRooms.filter((room) => room.kind === "channel" && room.archivedAt === null) },
-    { key: "direct", label: strings.chatSectionDirect, rooms: visibleRooms.filter((room) => room.kind === "dm" && room.archivedAt === null) },
+    { key: "direct", label: strings.chatSectionDirect, rooms: visibleRooms.filter((room) => (room.kind === "dm" || room.kind === "agent_dm") && room.archivedAt === null) },
     { key: "archived", label: strings.chatSectionArchived, rooms: visibleRooms.filter((room) => room.archivedAt !== null) },
   ].filter((section) => section.rooms.length > 0);
 
@@ -131,7 +131,9 @@ function sidebarTime(value: string | null): string | null {
 
 function RoomRow({ room, open, menuOpen, onOpen, onMenu, onRename, onArchive }: { room: ChannelSummary; open: boolean; menuOpen: boolean; onOpen: () => void; onMenu: () => void; onRename: () => void; onArchive: () => void }) {
   const roomIconClass = open ? "shrink-0 text-accent" : iconClass;
-  const label = room.kind === "dm" ? directMessageName(room) : channelLabel(room);
+  const direct = room.kind === "dm" || room.kind === "agent_dm";
+  const agent = room.kind === "agent_dm";
+  const label = direct ? directMessageName(room) : channelLabel(room);
   const at = sidebarTime(room.lastAt);
   const meetingPreview = room.lastBody?.startsWith("__meeting__:") === true;
   const rowStyle = {
@@ -142,12 +144,12 @@ function RoomRow({ room, open, menuOpen, onOpen, onMenu, onRename, onArchive }: 
 
   return (
     <li className="group relative flex items-center">
-      <button type="button" aria-current={open ? "page" : undefined} style={rowStyle} className={`${rowClass} ${room.kind === "dm" ? "!min-h-[4.5rem] py-3" : ""} ${open ? "font-medium" : ""} ${room.archivedAt !== null ? "opacity-60" : ""}`} onClick={onOpen}>
-        {room.kind === "dm" ? <Avatar name={label} email={room.counterpart ?? undefined} size="lg" /> : room.visibility === "private" ? <Lock size={18} className={roomIconClass} /> : <Hash size={18} className={roomIconClass} />}
+      <button type="button" aria-current={open ? "page" : undefined} style={rowStyle} className={`${rowClass} ${direct ? "!min-h-[4.5rem] py-3" : ""} ${open ? "font-medium" : ""} ${room.archivedAt !== null ? "opacity-60" : ""}`} onClick={onOpen}>
+        {agent ? <span className="relative flex size-11 shrink-0 items-center justify-center rounded-xl bg--tint text-accent"><Bot size={20} /><span className="absolute -bottom-1 -right-1 rounded border border-surface bg-surface px-1 text-[0.55rem] font-bold uppercase leading-4 text-accent">AI</span></span> : room.kind === "dm" ? <Avatar name={label} email={room.counterpart ?? undefined} size="lg" /> : room.visibility === "private" ? <Lock size={18} className={roomIconClass} /> : <Hash size={18} className={roomIconClass} />}
         <span className="min-w-0 flex-1">
-          {room.kind === "dm" ? (
+          {direct ? (
             <span className="grid min-w-0 grid-cols-[1fr_auto] items-center gap-x-3 gap-y-0.5">
-              <span className="truncate text-base font-semibold leading-5">{label}</span>
+                <span className="flex min-w-0 items-center gap-2"><span className="truncate text-base font-semibold leading-5">{label}</span>{agent && <span className="shrink-0 rounded border border-subtle px-1.5 text-[0.6rem] font-bold uppercase tracking-wide text-accent">{strings.chatAgentTag}</span>}</span>
               {at !== null && <span className="text-xs font-normal text-tertiary">{at}</span>}
               <span className="col-span-2 flex min-w-0 items-center gap-1.5 text-sm font-normal leading-5 text-tertiary">
                 {meetingPreview && <Video size={13} className="shrink-0 text-accent" aria-hidden="true" />}

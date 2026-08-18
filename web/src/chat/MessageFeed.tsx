@@ -33,7 +33,7 @@ export function MessageFeed({ room, messages, feedRef, moreBehind, loadingOlder,
     {!moreBehind && messages !== null && <div className="mx-auto my-10 flex w-full max-w-6xl items-center gap-6 rounded-2xl border border-subtle bg-surface p-8">
       {room.kind === "channel" && <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg--tint text-accent"><Hash size={36} /></span>}
       <div className="min-w-0 flex-1">
-        <h4 className="m-0 text-xl font-bold text-primary">{room.kind === "dm" ? strings.chatBeginningDm : strings.chatBeginning(`#${channelLabel(room)}`)}</h4>
+        <h4 className="m-0 text-xl font-bold text-primary">{room.kind !== "channel" ? strings.chatBeginningDm : strings.chatBeginning(`#${channelLabel(room)}`)}</h4>
         {room.topic !== null && <p className="mb-0 mt-2 text-base text-tertiary">{room.topic}</p>}
       </div>
       {room.kind === "channel" && room.archivedAt === null && <button type="button" className="flex min-h-12 shrink-0 items-center gap-3 rounded-xl border border-subtle bg-surface px-5 text-base font-medium text-secondary hover:bg-raised" onClick={onDescription}><Pencil size={19} />{room.topic === null ? strings.chatAddDescription : strings.chatEditDescription}</button>}
@@ -42,7 +42,7 @@ export function MessageFeed({ room, messages, feedRef, moreBehind, loadingOlder,
     {messages === null ? <p className="m-auto flex items-center gap-2 text-sm text-tertiary"><Loader2 className="animate-spin" size={14} /> {strings.chatLoading}</p> : messages.length === 0 ? <p className="m-auto text-sm text-tertiary">{strings.chatNoMessagesYet}</p> : messages.map((message, index) => <Fragment key={message.id}>
       {readUpTo !== null && message.seq > readUpTo && (messages[index - 1]?.seq ?? 0) <= readUpTo && index > 0 && <div className="my-4 flex items-center gap-3 text-accent before:h-px before:flex-1 before:bg-accent after:h-px after:flex-1 after:bg-accent"><span className="text-xs font-semibold uppercase tracking-wide">{strings.chatNewMessages}</span></div>}
       {(index === 0 || dayOf(message.createdAt) !== dayOf(messages[index - 1]!.createdAt)) && <div className="my-4 flex items-center gap-3 before:h-px before:flex-1 before:bg-subtle after:h-px after:flex-1 after:bg-subtle"><span className="rounded-full border border-subtle bg-surface px-3 py-1 text-xs font-semibold text-tertiary">{dayOf(message.createdAt)}</span></div>}
-      <MessageLine message={message} grouped={continues(message, messages[index - 1])} palette={room.archivedAt === null ? palette : []} me={me} onReact={(emoji) => onReact(message, emoji)} onOpenFile={onOpenFile} onDecide={onDecide} onEdit={onEdit} onWithdraw={onWithdraw} onReplyHere={room.archivedAt === null ? onReplyHere : undefined} onReplyPrivate={room.kind !== "dm" && message.authorKind === "user" && message.author !== me ? onReplyPrivate : undefined} onJoinMeeting={onJoinMeeting} />
+      <MessageLine message={message} grouped={continues(message, messages[index - 1])} palette={room.archivedAt === null ? palette : []} me={me} onReact={(emoji) => onReact(message, emoji)} onOpenFile={onOpenFile} onDecide={onDecide} onEdit={onEdit} onWithdraw={onWithdraw} onReplyHere={room.archivedAt === null ? onReplyHere : undefined} onReplyPrivate={room.kind === "channel" && message.authorKind === "user" && message.author !== me ? onReplyPrivate : undefined} onJoinMeeting={onJoinMeeting} />
     </Fragment>)}
   </div>;
 }
