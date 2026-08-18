@@ -109,24 +109,27 @@
   --danger: #dc2626;
   --danger-tint: #fbe3e3;
   --success: #2e8b57;
+  /* The ground a success badge sits on. It was missing for as long as there
+     were badges: eight stylesheets wrote `var(--success-tint, var(--bg-raised))`
+     and every one of them drew the fallback, so "succeeded" and "nothing in
+     particular" filled identically and only the ink told them apart (D1.55).
+     Mixed at the same 12% of white as `--danger-tint` is of `--danger`, so the
+     two states read as one pair. */
+  --success-tint: #e7f1eb;
   --warning: #f59e0b;
   --unread: var(--verdigris-500); /* unread dot — terracotta */
 
-  /* Focus: a soft terracotta ring (brief, on-brand). */
+  /* Focus: a soft terracotta ring (brief, on-brand). The stylesheets outside
+     `ds/` draw focus with this; every control inside `ds/` draws it as a real
+     `outline` in the accent instead, which is one treatment for the whole
+     design system rather than a shadow that a parent's `overflow: hidden` can
+     clip away.
+     There were briefly three of these — `--focus-ring-soft` at full opacity for
+     the prompt dialog's own field and `--focus-ring-faint` at 13% for
+     `DatePicker`'s trigger — which, with the outline, made four ways to say
+     "this control has focus". D1.55 settled it by giving both controls the
+     outline the rest of `ds/` uses and deleting the two extra rings. */
   --focus-ring: 0 0 0 3px rgba(231, 111, 81, 0.22);
-  /* The same ring drawn opaque, for a field on `--bg-app` rather than on a
-     panel: the branded prompt dialog's input sits on the app ground, where a
-     22%-alpha wash of the accent all but disappears. Named here because a
-     utility must never carry the literal (ADR 0046, D1.52). */
-  --focus-ring-soft: 0 0 0 3px var(--accent-soft);
-  /* The quietest of the three: `DatePicker`'s trigger draws its focus as a
-     border in the accent plus a 13% wash of it, where the ring is the second
-     signal rather than the only one. Named for the same reason as the two
-     above — a utility must never carry the literal (ADR 0046). That there are
-     now three rings at 13%, 22% and opaque is flagged for the D1.55 wave
-     check; reconciling them moves pixels and is not a restyle's business. */
-  --focus-ring-faint: 0 0 0 3px
-    color-mix(in srgb, var(--accent) 13%, transparent);
 
   /* ---- typography ---- */
   --font-ui:
@@ -178,8 +181,12 @@
      both as literals; they are the proportions every text button in the
      product is drawn at, so they are named here rather than spelled `h-7.5`
      and `h-9.5` in a class string, where nothing would connect them to the
-     control heights above or say that a 38px button beside a 40px field is a
-     discrepancy somebody has to decide about (flagged for D1.55, D1.54). */
+     control heights above (D1.54).
+     D1.55 counted the control heights this system draws and kept exactly
+     these: a button is shorter than the field beside it on purpose — it is
+     pressed, not typed into — and the sign-in screens' 46 is a deliberately
+     larger target. What it removed was the fourth, `DatePicker`'s 44px
+     trigger, which stands in for a field and now measures like one. */
   --button-height-sm: 1.875rem; /* 30px */
   --button-height-md: 2.375rem; /* 38px */
   /* The taller control the sign-in screens use. Both `Input` and `Select` had

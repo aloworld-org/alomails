@@ -96,3 +96,39 @@ describe("the design system owns the primitives", () => {
     expect(REDEFINES_PRIMITIVES.some((f) => f.startsWith("ds/"))).toBe(false);
   });
 });
+
+// The other half of the ratchet, added at the D1.55 wave check: the two
+// properties wave D1.5 spent four items establishing, checked by the build so
+// they cannot quietly come back one component at a time. Both were greps in a
+// queue item until now, and a grep only runs when somebody remembers it.
+describe("the design system draws with tokens", () => {
+  const DS = join(SRC, "ds");
+  const files = readdirSync(DS).filter((f) => f.endsWith(".tsx"));
+
+  test("ds/ has no stylesheet of its own", () => {
+    // Styles here are Tailwind utilities generated from the tokens (ADR 0046),
+    // so a `.module.css` reappearing means a component has grown a second
+    // source of truth for its own appearance — the drift this system exists to
+    // end, restarted from inside it.
+    expect(
+      stylesheets(DS).map(id),
+      "ds/ styles with utilities generated from tokens.css, not stylesheets",
+    ).toEqual([]);
+  });
+
+  test("no component writes a colour literal", () => {
+    // `bg-[#e76f51]` is a defect, not a shortcut (ADR 0046): a literal in a
+    // class string is a colour no token names, so it never changes with the
+    // theme and nothing can find it. Where the theme lacks a value, add the
+    // token and re-run scripts/gen-tailwind-theme.mjs.
+    const offenders = files.filter((file) =>
+      /\[#[0-9a-fA-F]{3,8}/.test(readFileSync(join(DS, file), "utf8")),
+    );
+    expect(
+      offenders,
+      `These write a colour literal into a utility. Add a token to ds/tokens.css` +
+        ` and re-run scripts/gen-tailwind-theme.mjs:\n  ` +
+        offenders.join("\n  "),
+    ).toEqual([]);
+  });
+});

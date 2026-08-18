@@ -118,4 +118,19 @@ describe("the table behaves for somebody not using a mouse and eyes", () => {
     expect(name.className).not.toContain("text-right");
     expect(name.className).not.toContain("tabular-nums");
   });
+
+  test("and so does the heading above them", () => {
+    list();
+    // The heading of a numeric column sits over its figures, not over the
+    // column to its left. It has to say so at a weight the base header rule
+    // cannot outrank — `.table th { text-align: left }` beat a plain
+    // `.numeric` on specificity, so this was wrong everywhere until D1.55 —
+    // and the marker that carries that weight is the attribute.
+    const heading = screen.getByRole("columnheader", { name: "Outstanding" });
+    expect(heading.getAttribute("data-align")).toBe("end");
+    expect(heading.className).toContain("[&[data-align]]:text-right");
+    // A header nobody aligned is still left, and carries no marker at all.
+    const plain = screen.getByRole("columnheader", { name: "Name" });
+    expect(plain.getAttribute("data-align")).toBe(null);
+  });
 });

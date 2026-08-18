@@ -22,17 +22,20 @@ const BASE =
   "inline-flex items-center py-px px-2 rounded-full " +
   "text-xs font-medium whitespace-nowrap";
 
-/** The tones, each a whole fill-and-ink pair. `success` fills with `bg-raised`
- *  because there is no `--success-tint` token: the stylesheet asked for one
- *  through a `var(--success-tint, var(--bg-raised))` fallback that has never
- *  resolved to anything else, so the fallback is written as what it draws.
- *  Adding the missing token would change how every success badge looks, which
- *  is a restyle and not this item's business — it is flagged instead. */
+/** The tones, each a whole fill-and-ink pair.
+ *
+ *  `success` filled with `bg-raised` until D1.55, and not because anybody chose
+ *  that: the eight stylesheets this replaced all asked for a tint through a
+ *  `var(--success-tint, var(--bg-raised))` fallback, and the token did not
+ *  exist, so every one of them drew the fallback. A "Paid" badge and an
+ *  "Unknown" badge sat on the same grey and only their ink told them apart —
+ *  which is the one signal somebody who cannot distinguish green from grey does
+ *  not get. The token exists now, so the tone fills like the other three. */
 const TONE = {
   neutral: "bg-raised text-tertiary",
   accent: "bg-accent-tint text-accent",
   danger: "bg-danger-tint text-danger",
-  success: "bg-raised text-success",
+  success: "bg-success-tint text-success",
 } as const;
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {

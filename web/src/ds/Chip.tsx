@@ -12,9 +12,8 @@
 // than quietly resolved.
 //
 // Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046).
-// The build that replaced this file's stylesheet changed no rule — including
-// one the stylesheet's own comment denied it was drawing, which is recorded on
-// `PRESSABLE_HOVER` below rather than fixed here.
+// One rule changed after that restyle, at the D1.55 wave check: a toned chip
+// no longer loses its colour under the pointer. See `PRESSABLE_HOVER` below.
 import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { X } from "lucide-react";
 
@@ -57,22 +56,21 @@ const PRESSABLE =
   "focus-visible:outline-2 focus-visible:outline-accent " +
   "focus-visible:outline-offset-1";
 
-/** The hover fill, and a defect preserved rather than fixed.
+/** The hover fill of a chip that has no tone to lose.
  *
- *  The stylesheet said, beside the ring below, that "a toned chip already
- *  carries a fill; darkening it would change what the tone says, so the hover
- *  is the ring of the surface under it" — but it never stopped the fill
- *  changing. `.pressable:hover` is a class and a pseudo-class; `.accent` is one
- *  class, so on hover an accent or danger chip lost its tone to
- *  `--border-default` and got the ring as well. Every pressable chip in the
- *  product is toned (mail's follow-up control is neutral, accent or danger by
- *  its due date), so this is what all of them do today.
+ *  The stylesheet this replaced said, beside the ring below, that "a toned chip
+ *  already carries a fill; darkening it would change what the tone says, so the
+ *  hover is the ring of the surface under it" — and then never stopped the fill
+ *  changing: `.pressable:hover` is a class and a pseudo-class, `.accent` is one
+ *  class, so an accent or danger chip took `--border-default` under the pointer
+ *  *and* got the ring. Since every pressable chip in the product is toned (mail
+ *  reads its follow-up control as neutral, accent or danger by the due date),
+ *  the ring was decoration on a chip that had already stopped saying what it
+ *  said — an overdue chip went grey the moment you pointed at it.
  *
- *  A `hover:` utility outranks its unvariant form by exactly the same margin,
- *  so the utilities reproduce it exactly — which is why this restyle draws
- *  every chip as it drew before. Fixing it means deciding what a toned chip
- *  should do under the pointer and moving pixels on a live control; flagged
- *  for the D1.55 wave check instead. */
+ *  D1.55 settled it the way the comment always intended: the fill is for the
+ *  untoned chip, and a toned one keeps its colour and answers with the ring
+ *  alone. */
 const PRESSABLE_HOVER = "hover:bg-default";
 
 /** The ring a toned chip gets on hover, in its own ink. `--border-width` is
@@ -151,7 +149,7 @@ export function Chip({
     BASE,
     color === undefined ? TONE[tone] : TINTED,
     onClick === undefined ? "" : PRESSABLE,
-    onClick === undefined ? "" : PRESSABLE_HOVER,
+    onClick !== undefined && !toned ? PRESSABLE_HOVER : "",
     onClick !== undefined && toned ? TONED_HOVER_RING : "",
     onRemove === undefined ? "" : REMOVABLE,
     className ?? "",

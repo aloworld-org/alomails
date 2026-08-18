@@ -26,10 +26,12 @@
 // and a column header that is present for a screen reader but not on screen.
 //
 // Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046), so
-// `--space-4` and `p-4` are one definition with two spellings. The build that
-// replaced this file's stylesheet changed no rule — including one it arguably
-// should have; see NUMERIC HEADERS below.
+// `--space-4` and `p-4` are one definition with two spellings. That restyle
+// changed no rule; the D1.55 wave check then changed exactly one — a numeric
+// column's header is now right-aligned over its figures. See `TH_ALIGN`.
 import type { ReactNode, TdHTMLAttributes, ThHTMLAttributes } from "react";
+
+import { cx } from "./cx";
 
 /** The scroll container itself. Its border, radius and ground are chosen once
  *  below rather than layered with a `flat` override: two utilities setting the
@@ -192,17 +194,28 @@ export interface ThProps extends Omit<
   hideLabel?: boolean | undefined;
 }
 
-/** A column header. `scope="col"` unless told otherwise, because an
- *  unscoped header does not associate with anything.
+/** How a header wins its own alignment back.
  *
- *  NUMERIC HEADERS: `numeric` and `align` reach the figures but not the header
- *  above them. `.table th { text-align: left }` was one class and one element
- *  and `.numeric` was one class, so the base rule outranked it — a `<Th
- *  numeric>` has never been right-aligned, in any of the ten copies or here.
- *  The utilities reproduce that ranking exactly, which is why this restyle
- *  draws every screen as it drew before. It is a defect rather than a decision
- *  and it is recorded as one (D1.53); fixing it moves pixels, and a restyle
- *  that moves pixels cannot be told from a regression. */
+ *  `numeric` and `align` used to reach the figures but not the header above
+ *  them: `.table th { text-align: left }` was one class and one element,
+ *  `.numeric` was one class, so the base rule outranked it and a `<Th numeric>`
+ *  was never right-aligned — in any of the ten copies, or in the restyle that
+ *  reproduced their ranking (D1.53). A column of amounts hung its heading over
+ *  the wrong end of itself, which is the one place alignment carries meaning.
+ *
+ *  Matching the attribute as well as the element is one class and one
+ *  attribute, which outranks the base rule's one class and one element: the
+ *  same move `TableEmpty` makes below, and the same one the stylesheet made
+ *  with `.table td.empty`. It only ever applies when a caller asked for an
+ *  alignment, so a plain `<Th>` still reads left. */
+const TH_ALIGN = {
+  start: "[&[data-align]]:text-left",
+  center: "[&[data-align]]:text-center",
+  end: "[&[data-align]]:text-right",
+} as const;
+
+/** A column header. `scope="col"` unless told otherwise, because an
+ *  unscoped header does not associate with anything. */
 export function Th({
   align,
   numeric,
@@ -212,8 +225,22 @@ export function Th({
   children,
   ...rest
 }: ThProps) {
+  // The same choice `cell` makes for the figures, said again at a weight the
+  // base header rule cannot outrank. Explicit `align` wins over `numeric`,
+  // which is the order the stylesheet resolved to.
+  const chosen =
+    align !== undefined ? align : numeric === true ? "end" : undefined;
+  const classes = cx(
+    cell(align, numeric, className),
+    chosen === undefined ? undefined : TH_ALIGN[chosen],
+  );
   return (
-    <th scope={scope} className={cell(align, numeric, className)} {...rest}>
+    <th
+      scope={scope}
+      {...(classes === "" ? {} : { className: classes })}
+      {...(chosen === undefined ? {} : { "data-align": chosen })}
+      {...rest}
+    >
       {hideLabel === true ? (
         <span className="sr-only">{children}</span>
       ) : (

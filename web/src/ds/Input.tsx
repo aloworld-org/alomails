@@ -18,7 +18,7 @@
 // on the element and be expected to resolve. A variant that overrides a base
 // value replaces it here instead. (A `variant:` utility does reliably beat its
 // own unvariant form, which is why the `focus-visible:` rules can layer.)
-import type { InputHTMLAttributes } from "react";
+import type { ComponentPropsWithRef } from "react";
 
 /** What both variants are. `font-[inherit]` keeps the page's typeface rather
  *  than the platform's form font, which is what every copy of this control
@@ -66,7 +66,8 @@ const CELL =
  *  it replaces resolved to. */
 function borderColor(variant: "field" | "cell", invalid: boolean): string {
   if (invalid) return "border-danger focus-visible:border-danger";
-  if (variant === "cell") return "border-transparent focus-visible:border-transparent";
+  if (variant === "cell")
+    return "border-transparent focus-visible:border-transparent";
   return "border-default focus-visible:border-strong";
 }
 
@@ -74,8 +75,14 @@ function borderColor(variant: "field" | "cell", invalid: boolean): string {
 // character count almost nobody wants, and the name is far more useful for the
 // control's height. A caller who genuinely needs the HTML attribute can set it
 // through `htmlSize`.
+//
+// `ComponentPropsWithRef` rather than `InputHTMLAttributes`, so `ref` reaches
+// the element: a caller that has to focus or select the field — the prompt
+// dialog does both, the moment it opens — would otherwise have to hand-roll an
+// input beside this one, which is exactly what it was doing (D1.55). React 19
+// passes `ref` as an ordinary prop, so the spread below is all it takes.
 export interface InputProps extends Omit<
-  InputHTMLAttributes<HTMLInputElement>,
+  ComponentPropsWithRef<"input">,
   "size"
 > {
   /** `lg` is the taller control the sign-in screens use. */

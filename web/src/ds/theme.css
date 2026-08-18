@@ -4,7 +4,7 @@
  * That is the whole point (ADR 0046): one definition, two spellings. To change
  * a colour, change tokens.css and re-run the generator.
  *
- * 74 utilities derived from 74 semantic tokens.
+ * 75 utilities derived from 75 semantic tokens.
  */
 @import "tailwindcss";
 
@@ -19,6 +19,21 @@
    * survive a redefinition of the size alone — so `text-base` would quietly
    * set a line-height no stylesheet here asked for. */
   --text-*: initial;
+
+  /* And its colour palette, for the reason the generator's own comment gives
+   * for keeping the raw scale private: a rule nothing checks is a rule that
+   * drifts. Until D1.55 cleared this, `bg-red-500` and `text-slate-400`
+   * compiled happily — 22 families of them — so "semantic utilities only" was
+   * a convention, and every hard-coded colour this design system spent a wave
+   * removing had a shorter way back in than the token it replaced. Now it does
+   * not compile, which is the same mechanism as `primitives.test.ts`: the
+   * build holds the line, not the reviewer.
+   *
+   * `transparent`, `current` and `inherit` are not theme values in Tailwind
+   * v4 — they are built into the utilities themselves — so `bg-transparent`
+   * and `border-transparent` survive this and are still the right way to say
+   * "no colour here". */
+  --color-*: initial;
 
   --color-app: var(--bg-app);
   --color-surface: var(--bg-surface);
@@ -51,6 +66,7 @@
   --color-danger: var(--danger);
   --color-danger-tint: var(--danger-tint);
   --color-success: var(--success);
+  --color-success-tint: var(--success-tint);
   --color-warning: var(--warning);
   --color-unread: var(--unread);
   --font-ui: var(--font-ui);

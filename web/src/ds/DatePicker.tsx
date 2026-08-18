@@ -16,19 +16,20 @@ import {
 import { getLocale, strings } from "../i18n";
 import { cx } from "./cx";
 
-/** The trigger reads as a field, because that is what it stands in for. Its
- *  focus is a border in the accent plus `--focus-ring-faint` — this control's
- *  own treatment, kept as it was: `ds/Input` shows focus as an outline, and
- *  reconciling the two moves pixels on every date field in the product
- *  (flagged for the D1.55 wave check). `h-11` is its 44px, a fourth control
- *  height beside the field's 40 and the button's 30 and 38, flagged with it. */
+/** The trigger reads as a field, because that is what it stands in for — and
+ *  after the D1.55 wave check it measures like one too. It had been 44px tall
+ *  where every other field is 40 (`--control-height`), and drew its focus as a
+ *  border in the accent plus a 13% ring of its own, where `ds/Input` draws an
+ *  outline: a date field in a form was visibly a different control from the
+ *  text field above it. Both are now the field's, so a row of inputs lines up
+ *  and one focus treatment covers the whole design system. */
 const TRIGGER =
-  "flex items-center gap-2 w-full min-w-0 px-3 h-11 " +
+  "flex items-center gap-2 w-full min-w-0 px-3 h-control " +
   "border border-default rounded-md bg-surface text-primary text-left " +
-  "transition-[border-color,box-shadow] duration-[var(--duration-fast)] " +
+  "transition-colors duration-[var(--duration-fast)] " +
   "ease-standard hover:border-strong " +
-  "focus-visible:outline-none focus-visible:border-accent " +
-  "focus-visible:shadow-[var(--focus-ring-faint)]";
+  "focus-visible:outline-2 focus-visible:outline-accent " +
+  "focus-visible:outline-offset-1 focus-visible:border-strong";
 
 /** The calendar. `w-[264px]` is seven cells and the padding around them — one
  *  drawing's width — and `z-60` is where the stylesheet put it: above the

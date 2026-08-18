@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 
 import { strings } from "../i18n";
 import { Button } from "./Button";
+import { Input } from "./Input";
 import {
   DialogContext,
   type Dialogs,
@@ -39,19 +40,16 @@ const TITLE = "m-0 text-lg font-semibold text-primary";
 const MESSAGE =
   "m-0 text-secondary text-md leading-relaxed whitespace-pre-wrap";
 
-/** The prompt's field.
+/** The one thing the prompt's field adds to `ds/Input`: room under the message.
  *
- *  NOTE (flagged for the D1.55 wave check): this is a second `.input` inside
- *  `ds/` — it sits on `--bg-app` and shows focus as a border plus a ring,
- *  where `ds/Input` sits on a panel and shows focus as an outline. Adopting
- *  `Input` here would change how every prompt looks, which is a restyle and
- *  not what D1.52 was contracted to do (props, behaviour and appearance
- *  unchanged), so the rules are carried across verbatim and the duplication is
- *  recorded rather than quietly kept. */
-const FIELD =
-  "w-full mt-1 px-3 py-2 rounded-md border border-default bg-app text-primary " +
-  "font-[inherit] focus:outline-none focus:border-accent " +
-  "focus:shadow-[var(--focus-ring-soft)]";
+ *  It was a hand-rolled `.input` until the D1.55 wave check — a second one
+ *  inside `ds/` itself, which is the exact duplication this design system
+ *  exists to end, and it was kept only because D1.52 was contracted not to
+ *  change how anything looked. Adopting `Input` changes two things and they are
+ *  both the point: the field sits on the panel's own surface rather than on the
+ *  app ground, and it shows focus as the outline every other control in `ds/`
+ *  shows. It is also 40px tall now, like every other field in the product. */
+const FIELD = "mt-1";
 
 const ACTIONS = "flex justify-end gap-2 mt-2";
 
@@ -133,7 +131,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
           )}
           <p className={MESSAGE}>{request.message}</p>
           {request.kind === "prompt" && (
-            <input
+            <Input
               ref={inputRef}
               className={FIELD}
               name="dialog-value"

@@ -40,6 +40,31 @@ describe("Chip", () => {
     expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 
+  test("a toned chip keeps its colour under the pointer", () => {
+    // What the tone says is the whole reason it has one: an overdue chip that
+    // goes grey the moment you point at it has stopped saying "overdue" at the
+    // exact moment somebody is about to act on it. It answers with a ring in
+    // its own ink instead — the fill belongs to the chip that has no tone to
+    // lose. (Wrong until D1.55, on specificity: `.pressable:hover` outranked
+    // `.accent`, and the utilities inherited the same ranking.)
+    render(
+      <Chip tone="danger" onClick={() => {}}>
+        Overdue
+      </Chip>,
+    );
+    const chip = screen.getByRole("button", { name: "Overdue" });
+    expect(chip.className).toContain("bg-danger-tint");
+    expect(chip.className).not.toContain("hover:bg-default");
+    expect(chip.className).toContain(
+      "hover:shadow-[inset_0_0_0_var(--border-width)_currentColor]",
+    );
+
+    cleanup();
+    render(<Chip onClick={() => {}}>Any date</Chip>);
+    const plain = screen.getByRole("button", { name: "Any date" });
+    expect(plain.className).toContain("hover:bg-default");
+  });
+
   test("asking for both is reported, in development", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     render(
