@@ -19,7 +19,7 @@ use crate::{
     billing_customers, billing_fx, billing_invoices, billing_payments, billing_products,
     billing_quotes, billing_reminder, billing_reports, billing_schedules, billing_send,
     billing_sepa, billing_settings, blob, calendar, campaign_audience, campaign_consent,
-    campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
+    campaign_record, campaign_segments, campaign_suppression, campaign_unsubscribe, carddav, chat,
     chat_agent_routes, contacts, crm_activities, crm_deals, crm_handoff, crm_imports,
     crm_next_steps, crm_pipelines, crm_reports, crm_stages, crm_threads, delegates, docs, drive,
     filters, finance_approvals, finance_bank, finance_bank_match, finance_chart, finance_expenses,
@@ -1473,6 +1473,26 @@ pub fn app_with_site_boundaries(
             get(campaign_segments::get_segment)
                 .patch(campaign_segments::update_segment)
                 .delete(campaign_segments::delete_segment),
+        )
+        // The letter itself (wave C3.1) — subject, preview text, and a body in
+        // the Docs block model, because the composer is that editor rather than
+        // a second one. Still nothing that sends: there is no `/send`, no
+        // schedule and no recipient list on this surface, and their absence is
+        // the wave's boundary rather than an unbuilt screen.
+        //
+        // The path says `campaigns` twice because every sibling above is a
+        // static prefix: hanging the record on `/campaigns/{id}` would make the
+        // day somebody adds `/campaigns/reports` the day one campaign quietly
+        // becomes unreachable.
+        .route(
+            "/campaigns/campaigns",
+            get(campaign_record::list_campaigns).post(campaign_record::create_campaign),
+        )
+        .route(
+            "/campaigns/campaigns/{id}",
+            get(campaign_record::get_campaign)
+                .patch(campaign_record::update_campaign)
+                .delete(campaign_record::delete_campaign),
         )
         // The page at the end of an unsubscribe link (wave C2s.2) — the one
         // route in this product a **stranger** reaches: no account, no login,

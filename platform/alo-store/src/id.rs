@@ -766,6 +766,15 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One campaign — the letter itself (alo Campaigns, ADR 0044, wave C3.1).
+    /// Identifies what the mail *says*: subject, preview text and a body in the
+    /// Docs block model. Never a send and never a list of people — a send
+    /// record is C5m.1 and carries its own id, so "what did we write" and "who
+    /// was it put in front of" can never be confused for one another.
+    CampaignId
+);
+
+opaque_id!(
     /// One kind of mail one person has declined (alo Campaigns, ADR 0044 §3,
     /// wave C2s.2). Identifies the *decision*, never the person: a preference is
     /// held against an address, and this id is the handle a screen links to when
