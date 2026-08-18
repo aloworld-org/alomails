@@ -12,6 +12,11 @@
 Description=Source-NAT the campaign sending identity to its own IP
 After=docker.service
 Requires=docker.service
+# Restarting Docker rebuilds its nat chains and can take this rule with them.
+# PartOf means this unit is restarted whenever docker.service is, so the
+# identity cannot quietly revert to the primary address after an engine restart
+# — a failure whose only symptom is mail that authenticates as somebody else.
+PartOf=docker.service
 
 [Service]
 Type=oneshot
