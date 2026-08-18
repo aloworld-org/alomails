@@ -12,6 +12,11 @@ import { Building2 } from "lucide-react";
 
 import { strings } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
+import {
+  BILLING_BASE_CURRENCY,
+  BILLING_HOME_COUNTRY,
+  BILLING_VAT_ID_EXAMPLE,
+} from "./conventions";
 import { DialogFrame, Field } from "./parts";
 import type { BillingCustomer, CustomerDraft } from "./types";
 import styles from "./billingStyles";
@@ -45,10 +50,12 @@ function initial(c: BillingCustomer | null): FormState {
     addressLine2: c?.addressLine2 ?? "",
     postalCode: c?.postalCode ?? "",
     city: c?.city ?? "",
-    country: c?.country ?? "",
+    country: c?.country ?? BILLING_HOME_COUNTRY,
     vatId: c?.vatId ?? "",
     email: c?.email ?? "",
     paymentTermsDays: c === null ? "" : String(c.paymentTermsDays),
+    // Keep this unstated on create so the server remains the authority for
+    // EUR; the shared convention is still shown as the field's example.
     currency: c?.currency ?? "",
   };
 }
@@ -188,7 +195,7 @@ export function CustomerDialog({ customer, onClose, onSaved }: Props) {
             className={styles.input}
             value={form.country}
             onChange={(e) => set("country")(e.target.value)}
-            placeholder={strings.billingCountryPlaceholder}
+            placeholder={BILLING_HOME_COUNTRY}
             maxLength={2}
             autoCapitalize="characters"
             autoCorrect="off"
@@ -202,7 +209,7 @@ export function CustomerDialog({ customer, onClose, onSaved }: Props) {
           className={styles.input}
           value={form.vatId}
           onChange={(e) => set("vatId")(e.target.value)}
-          placeholder={strings.billingVatIdPlaceholder}
+          placeholder={BILLING_VAT_ID_EXAMPLE}
           autoCapitalize="characters"
           autoCorrect="off"
           spellCheck={false}
@@ -224,7 +231,7 @@ export function CustomerDialog({ customer, onClose, onSaved }: Props) {
             className={styles.input}
             value={form.currency}
             onChange={(e) => set("currency")(e.target.value)}
-            placeholder={strings.billingCurrencyPlaceholder}
+            placeholder={BILLING_BASE_CURRENCY}
             maxLength={3}
             autoCapitalize="characters"
             autoCorrect="off"

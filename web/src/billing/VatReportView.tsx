@@ -35,8 +35,8 @@ import type { VatReport } from "./types";
 const dateInput =
   "h-11 min-w-0 rounded-lg border border-default bg-surface px-3 text-sm text-primary outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent/15";
 const quickAction =
-  "h-9 min-w-0 whitespace-nowrap rounded-md border border-transparent bg-transparent px-4 text-sm font-medium !text-secondary !no-underline transition-colors hover:bg-surface hover:!text-primary hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20";
-const tableShell = "min-h-0 overflow-auto rounded-xl border border-subtle bg-surface";
+  "inline-flex h-10 items-center justify-center whitespace-nowrap rounded-lg border border-default bg-surface px-4 text-sm font-medium !text-secondary !no-underline transition-colors hover:border-accent hover:bg-[var(--accent-soft)] hover:!text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/20";
+const tableShell = "min-h-0 overflow-auto rounded-xl border border-subtle bg-surface shadow-sm";
 const tableClass = "w-full border-collapse text-sm";
 const headCell =
   "sticky top-0 z-[1] whitespace-nowrap border-b border-default bg-sunken px-4 py-3 text-left text-xs font-semibold text-tertiary";
@@ -106,7 +106,7 @@ export function VatReportView() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-8 pb-8 pt-6 max-sm:px-4">
-      <header className="mb-5 flex items-start justify-between gap-4 max-sm:flex-col">
+      <header className="mx-auto mb-6 flex w-full max-w-[90rem] items-start justify-between gap-6 max-sm:flex-col">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent">
             <FileSpreadsheet className="size-5" aria-hidden="true" />
@@ -129,13 +129,13 @@ export function VatReportView() {
       </header>
 
       <form
-        className="mb-5 flex shrink-0 flex-wrap items-end gap-3 rounded-xl border border-subtle bg-surface p-4 shadow-sm max-sm:items-stretch"
+        className="mx-auto mb-6 grid w-full max-w-[90rem] shrink-0 grid-cols-[minmax(12rem,1fr)_minmax(12rem,1fr)_auto] items-end gap-4 rounded-xl border border-subtle bg-surface p-5 shadow-sm max-lg:grid-cols-2 max-sm:grid-cols-1"
         onSubmit={(e) => {
           e.preventDefault();
           setPeriod(form);
         }}
       >
-        <label className="flex w-60 min-w-[12rem] flex-col gap-1.5 text-xs font-semibold text-tertiary max-sm:w-full">
+        <label className="flex min-w-0 flex-col gap-2 text-xs font-semibold uppercase tracking-wide text-tertiary">
           <span>{strings.billingReportFrom}</span>
           <input
             className={dateInput}
@@ -145,7 +145,7 @@ export function VatReportView() {
             required
           />
         </label>
-        <label className="flex w-60 min-w-[12rem] flex-col gap-1.5 text-xs font-semibold text-tertiary max-sm:w-full">
+        <label className="flex min-w-0 flex-col gap-2 text-xs font-semibold uppercase tracking-wide text-tertiary">
           <span>{strings.billingReportTo}</span>
           <input
             className={dateInput}
@@ -155,8 +155,8 @@ export function VatReportView() {
             required
           />
         </label>
-        <Button type="submit">{strings.billingReportShow}</Button>
-        <div className="grid shrink-0 grid-cols-2 divide-x divide-default overflow-hidden rounded-lg border border-subtle bg-raised p-1 max-sm:w-full">
+        <div className="flex items-center gap-2 max-lg:col-span-2 max-sm:col-span-1 max-sm:flex-wrap">
+          <Button type="submit">{strings.billingReportShow}</Button>
           <button
             type="button"
             className={quickAction}
@@ -171,8 +171,8 @@ export function VatReportView() {
           >
             {strings.billingReportLastQuarter}
           </button>
+          {(loading || downloading) && <Spinner size={16} />}
         </div>
-        {(loading || downloading) && <Spinner size={16} />}
       </form>
 
       {error !== null && <ErrorBanner message={error} />}
@@ -191,7 +191,18 @@ export function VatReportView() {
         </section>
       ) : (
         report?.currencies.map((group) => (
-          <section key={group.currency} className={tableShell}>
+          <section key={group.currency} className={`${tableShell} mx-auto w-full max-w-[90rem]`}>
+            <div className="flex items-center justify-between border-b border-subtle px-5 py-4">
+              <div>
+                <h3 className="m-0 text-sm font-semibold text-primary">{strings.billingReportCaption(group.currency)}</h3>
+                <p className="mb-0 mt-1 text-xs text-tertiary">
+                  {strings.billingReportCounts(group.invoiceCount, group.creditNoteCount)}
+                </p>
+              </div>
+              <span className="rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-accent">
+                {group.currency}
+              </span>
+            </div>
             <table className={tableClass}>
               <caption className="sr-only">
                 {strings.billingReportCaption(group.currency)}
@@ -238,9 +249,6 @@ export function VatReportView() {
                 </tr>
               </tfoot>
             </table>
-            <p className="m-0 px-4 py-3 text-xs text-tertiary">
-              {strings.billingReportCounts(group.invoiceCount, group.creditNoteCount)}
-            </p>
           </section>
         ))
       )}

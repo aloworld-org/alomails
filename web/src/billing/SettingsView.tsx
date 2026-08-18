@@ -18,6 +18,13 @@ import { BadgeEuro, Building2, Landmark, Mail, MessageSquareText, Save } from "l
 import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
+import {
+  BILLING_BASE_CURRENCY,
+  BILLING_BIC_EXAMPLE,
+  BILLING_HOME_COUNTRY,
+  BILLING_IBAN_EXAMPLE,
+  BILLING_VAT_ID_EXAMPLE,
+} from "./conventions";
 import { FxRatesPanel } from "./FxRatesPanel";
 import { ErrorBanner, Field } from "./parts";
 import type { BillingSettings, SettingsDraft } from "./types";
@@ -228,7 +235,7 @@ export function SettingsView() {
           <Field label={strings.billingFieldCountry} hint={strings.billingCountryHint}>
             <input
               {...text("country")}
-              placeholder={strings.billingCountryPlaceholder}
+              placeholder={BILLING_HOME_COUNTRY}
               maxLength={2}
               autoCapitalize="characters"
               autoCorrect="off"
@@ -240,7 +247,7 @@ export function SettingsView() {
           <Field label={strings.billingFieldVatId} hint={strings.billingIssuerVatIdHint}>
             <input
               {...text("vatId")}
-              placeholder={strings.billingVatIdPlaceholder}
+              placeholder={BILLING_VAT_ID_EXAMPLE}
               autoCapitalize="characters"
               autoCorrect="off"
               spellCheck={false}
@@ -258,6 +265,7 @@ export function SettingsView() {
           <Field label={strings.billingFieldBaseCurrency} hint={strings.billingBaseCurrencyHint}>
             <input
               {...text("baseCurrency")}
+              placeholder={BILLING_BASE_CURRENCY}
               maxLength={3}
               autoCapitalize="characters"
               autoCorrect="off"
@@ -301,16 +309,16 @@ export function SettingsView() {
             <Field label={strings.billingFieldIban} hint={strings.billingIbanHint}>
               <input
                 {...text("iban")}
-                placeholder={strings.billingIbanPlaceholder}
+                placeholder={BILLING_IBAN_EXAMPLE}
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}
               />
             </Field>
-            <Field label={strings.billingFieldBic}>
+            <Field label={strings.billingFieldBic} hint={strings.billingBicHint}>
               <input
                 {...text("bic")}
-                placeholder={strings.billingBicPlaceholder}
+                placeholder={BILLING_BIC_EXAMPLE}
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}

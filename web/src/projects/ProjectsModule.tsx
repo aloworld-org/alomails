@@ -38,7 +38,6 @@ import { TemplateDialog } from "./TemplateDialog";
 import { announceTimerChanged } from "./timerBus";
 import { WeekView } from "./WeekView";
 import type { Project, ProjectTemplate } from "./types";
-import styles from "./ProjectsModule.module.css";
 
 /** Today as `YYYY-MM-DD` in the reader's own zone — the day a new project
  *  starts on unless they say otherwise. Local, not UTC: "today" is a fact about
@@ -160,14 +159,14 @@ export function ProjectsModule() {
   }
 
   return (
-    <div className={styles.projects}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>{strings.moduleProjects}</h1>
-        <nav className={styles.tabs}>
+    <div className="relative flex h-full min-h-0 flex-col bg-app">
+      <header className="flex flex-wrap items-center gap-4 border-b border-subtle bg-surface px-5 pt-4">
+        <h1 className="m-0 pb-4 text-xl font-semibold text-primary">{strings.moduleProjects}</h1>
+        <nav className="ml-auto flex items-end gap-1 overflow-x-auto" aria-label={strings.moduleProjects}>
           <NavLink
             to="list"
             className={({ isActive }) =>
-              isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+              `whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium no-underline transition-colors ${isActive ? "border-accent text-accent" : "border-transparent text-secondary hover:text-primary"}`
             }
           >
             {strings.projectsTabList}
@@ -175,7 +174,7 @@ export function ProjectsModule() {
           <NavLink
             to="week"
             className={({ isActive }) =>
-              isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+              `whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium no-underline transition-colors ${isActive ? "border-accent text-accent" : "border-transparent text-secondary hover:text-primary"}`
             }
           >
             {strings.projectsTabWeek}
@@ -183,7 +182,7 @@ export function ProjectsModule() {
           <NavLink
             to="plan"
             className={({ isActive }) =>
-              isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+              `whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium no-underline transition-colors ${isActive ? "border-accent text-accent" : "border-transparent text-secondary hover:text-primary"}`
             }
           >
             {strings.projectsTabPlan}
@@ -191,7 +190,7 @@ export function ProjectsModule() {
           <NavLink
             to="reports"
             className={({ isActive }) =>
-              isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+              `whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium no-underline transition-colors ${isActive ? "border-accent text-accent" : "border-transparent text-secondary hover:text-primary"}`
             }
           >
             {strings.projectsTabReports}
@@ -200,7 +199,7 @@ export function ProjectsModule() {
             <NavLink
               to="approvals"
               className={({ isActive }) =>
-                isActive ? `${styles.tab} ${styles.tabActive}` : styles.tab
+                `whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium no-underline transition-colors ${isActive ? "border-accent text-accent" : "border-transparent text-secondary hover:text-primary"}`
               }
             >
               {strings.projectsTabApprovals}
