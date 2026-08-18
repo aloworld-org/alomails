@@ -2596,6 +2596,7 @@ export const nl: Partial<Catalog> = {
   projectsTemplateUnmarkOn: (project: string) =>
     `${project} is een sjabloon — markering weghalen`,
   projectsTemplateEmptyTitle: "Nog geen sjablonen",
+  projectsTemplateChooseProject: "Kies een project",
   projectsTemplateEmptyBody:
     "Open een project dat u nog eens op dezelfde manier zou doen en druk op de ster ernaast. Het blijft een gewoon bord — het kan alleen worden gekopieerd.",
   projectsTemplateFailed: "Dat kon niet worden gedaan.",

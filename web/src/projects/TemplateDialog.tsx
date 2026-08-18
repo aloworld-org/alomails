@@ -17,12 +17,12 @@
 // No dates are computed here. The form sends the day the user picked and the
 // server shifts the whole plan onto it; what comes back says how much landed.
 import { useState } from "react";
-import { CopyPlus } from "lucide-react";
+import { CopyPlus, Star, X } from "lucide-react";
 
 import { useCustomers } from "../billing";
 import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
-import { DialogFrame, EmptyState, Field } from "./parts";
+import { DialogFrame, Field } from "./parts";
 import type { ProjectTemplate, TemplateCopy } from "./types";
 import styles from "./ProjectsModule.module.css";
 
@@ -76,6 +76,73 @@ export function TemplateDialog({
     }
   }
 
+  // An empty catalogue is not a form: there is nothing a person can submit.
+  // Keep that first-run state compact and give it one honest way forward
+  // instead of leaving a disabled "Create project" button in the footer.
+  if (templates.length === 0) {
+    return (
+      <div
+        className="fixed inset-0 z-modal flex items-center justify-center bg-overlay p-4"
+        role="presentation"
+        onMouseDown={onClose}
+      >
+        <section
+          className="w-full max-w-[39rem] overflow-hidden rounded-2xl border border-subtle bg-surface shadow-xl"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="empty-template-title"
+          onMouseDown={(event) => event.stopPropagation()}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") onClose();
+          }}
+        >
+          <header className="flex items-start gap-3 border-b border-subtle px-5 py-4">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg--soft text-accent">
+              <CopyPlus className="size-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 id="empty-template-title" className="m-0 text-lg font-semibold text-primary">
+                {strings.projectsTemplateNewTitle}
+              </h2>
+              <p className="m-0 mt-0.5 text-sm text-tertiary">
+                {strings.projectsTemplateNewSubtitle}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="flex size-9 shrink-0 items-center justify-center rounded-lg text-tertiary transition-colors hover:bg-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              onClick={onClose}
+              aria-label={strings.projectsCancel}
+            >
+              <X className="size-[18px]" aria-hidden="true" />
+            </button>
+          </header>
+
+          <div className="flex flex-col items-center px-8 py-8 text-center max-sm:px-5">
+            <span className="flex size-14 items-center justify-center rounded-2xl bg--soft text-accent">
+              <Star className="size-7" aria-hidden="true" />
+            </span>
+            <h3 className="m-0 mt-4 text-lg font-semibold text-primary">
+              {strings.projectsTemplateEmptyTitle}
+            </h3>
+            <p className="m-0 mt-2 max-w-[44ch] text-sm leading-6 text-secondary">
+              {strings.projectsTemplateEmptyBody}
+            </p>
+            <button
+              type="button"
+              autoFocus
+              className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-on-accent shadow-sm transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              onClick={onClose}
+            >
+              <Star className="size-4" aria-hidden="true" />
+              {strings.projectsTemplateChooseProject}
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <DialogFrame
       Icon={CopyPlus}
@@ -88,14 +155,7 @@ export function TemplateDialog({
       onClose={onClose}
       onSubmit={() => void create()}
     >
-      {templates.length === 0 ? (
-        <EmptyState
-          Icon={CopyPlus}
-          title={strings.projectsTemplateEmptyTitle}
-          body={strings.projectsTemplateEmptyBody}
-        />
-      ) : (
-        <>
+      <>
           <Field label={strings.projectsTemplateWhich} hint={strings.projectsTemplateWhichHint}>
             <select
               className={styles.select}
@@ -155,8 +215,7 @@ export function TemplateDialog({
           {chosen !== null && chosen.milestoneCount === 0 && (
             <p className={styles.hint}>{strings.projectsTemplateNoPlan}</p>
           )}
-        </>
-      )}
+      </>
     </DialogFrame>
   );
 }

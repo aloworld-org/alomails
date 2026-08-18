@@ -2635,6 +2635,7 @@ export const fr: Partial<Catalog> = {
   projectsTemplateUnmarkOn: (project: string) =>
     `${project} est un modèle — retirer la marque`,
   projectsTemplateEmptyTitle: "Aucun modèle pour l’instant",
+  projectsTemplateChooseProject: "Choisir un projet",
   projectsTemplateEmptyBody:
     "Ouvrez un projet que vous mèneriez de la même façon une deuxième fois et appuyez sur l’étoile à côté. Il reste un tableau ordinaire — il peut simplement être copié.",
   projectsTemplateFailed: "Cela n’a pas pu être fait.",

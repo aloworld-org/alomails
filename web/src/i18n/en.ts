@@ -4467,6 +4467,7 @@ export const en = {
   projectsTemplateUnmarkOn: (project: string) =>
     `${project} is a template — remove the mark`,
   projectsTemplateEmptyTitle: "No templates yet",
+  projectsTemplateChooseProject: "Choose a project",
   projectsTemplateEmptyBody:
     "Open a project you would run the same way again and press the star beside it. It stays an ordinary board — it can just be copied.",
   projectsTemplateFailed: "That could not be done.",
