@@ -21,6 +21,11 @@ use alo_smtp::spool::Spool;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 
+/// Every `EHLO`/`HELO` line the mock has seen, lowercased. Process-global
+/// because nextest gives each test its own process, so one test's greetings
+/// cannot be confused with another's.
+static GREETINGS: std::sync::Mutex<Vec<String>> = std::sync::Mutex::new(Vec::new());
+
 /// A resolver that must never be called (smarthost route bypasses it).
 struct PanicResolver;
 impl MxResolve for PanicResolver {
@@ -97,6 +102,15 @@ async fn handle_mock(stream: TcpStream, behaviour: Behaviour) {
         }
 
         let upper = line.to_ascii_uppercase();
+        if upper.starts_with("EHLO") || upper.starts_with("HELO") {
+            // Recorded so a test can assert which name we introduced ourselves
+            // by: a receiver compares it against the connecting address's
+            // reverse DNS, so it is part of the sending identity.
+            GREETINGS
+                .lock()
+                .expect("greeting log")
+                .push(line.trim_end().to_ascii_lowercase());
+        }
         let reply: &[u8] = if upper.starts_with("EHLO") || upper.starts_with("HELO") {
             b"250 mock.example\r\n"
         } else if upper.starts_with("MAIL") {
@@ -240,6 +254,48 @@ async fn the_envelope_sender_decides_which_address_a_message_leaves_by() {
     );
     let report = queue.process_once().await.unwrap();
     assert_eq!(report.delivered, 1, "a bounce is not campaign mail");
+}
+
+#[tokio::test]
+async fn a_campaign_identity_greets_by_its_own_name_and_transactional_mail_does_not() {
+    // The receiver checks the HELO name against the connecting address's
+    // reverse DNS. Mail that leaves by the campaign address while greeting as
+    // the transactional host reads as sent from somebody else's server, and is
+    // scored down for it — mail-tester deducts 3 of 10, and it was the only
+    // authentication deduction left once SPF, DKIM and DMARC all passed.
+    let dir = tempfile::tempdir().unwrap();
+    let spool = Arc::new(Spool::new(dir.path()).unwrap());
+    let mock = MockServer::spawn(Behaviour::Accept).await;
+    let mut policy = policy("mx.alo.test", mock.addr);
+    // A reachable pin, so the delivery actually happens and the greeting is
+    // observed rather than inferred: the mock listens on loopback.
+    policy.egress = EgressMap::parse("news.alo.test=127.0.0.1").unwrap();
+    let queue = Queue::new(Arc::clone(&spool), Arc::new(PanicResolver), policy);
+
+    spool_message(
+        &spool,
+        Some("bounces@news.alo.test"),
+        &["alice@example.com"],
+        b"Subject: our newsletter\r\n\r\nbody\r\n",
+    );
+    assert_eq!(queue.process_once().await.unwrap().delivered, 1);
+    spool_message(
+        &spool,
+        Some("noreply@alo.test"),
+        &["alice@example.com"],
+        b"Subject: your invoice\r\n\r\nbody\r\n",
+    );
+    assert_eq!(queue.process_once().await.unwrap().delivered, 1);
+
+    let greetings = GREETINGS.lock().unwrap().clone();
+    assert_eq!(
+        greetings,
+        vec![
+            "ehlo news.alo.test".to_owned(),
+            "ehlo mx.alo.test".to_owned()
+        ],
+        "the campaign identity greets as itself; everything else keeps the server's own name"
+    );
 }
 
 #[tokio::test]

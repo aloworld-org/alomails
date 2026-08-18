@@ -36,6 +36,16 @@ networks:
   # as it did before. The subnet is fixed because the SNAT rule names an address
   # inside it.
   egress:
+    driver_opts:
+      # Docker's own masquerade rule for a bridge is inserted at the TOP of nat
+      # POSTROUTING when the network is created, which puts it above the SNAT
+      # rule that picks the campaign address — so the mail leaves by the primary
+      # IP and fails SPF, while the log says the source was pinned. Turning
+      # masquerade off for THIS bridge removes the competing rule entirely, so
+      # the identity does not depend on winning a race against Docker's rule
+      # ordering. Nothing else uses this network, and the SNAT rule is what
+      # gives it egress.
+      com.docker.network.bridge.enable_ip_masquerade: "false"
     ipam:
       config:
         - subnet: 172.19.0.0/24

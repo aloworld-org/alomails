@@ -406,8 +406,18 @@ impl Queue {
                 .zip(outcomes)
                 .map(|(rcpt, outcome)| (rcpt, outcome_to_state(&outcome)))
                 .collect(),
-            Err(DeliveryError::Rejected { reply, .. }) if !reply.is_transient() => {
-                // A pre-RCPT 5xx (e.g. bad MAIL) fails the whole batch.
+            Err(DeliveryError::Rejected { reply, stage, .. }) if !reply.is_transient() => {
+                // A pre-RCPT 5xx (e.g. bad MAIL) fails the whole batch. Logged
+                // as loudly as a transient one: a permanent refusal is the more
+                // serious event, and until this line existed the only record of
+                // *why* was inside a DSN that a null-sender bounce could then
+                // discard — leaving an operator with "bounced=1" and nothing
+                // else. The reply is the receiver's own words about our mail; it
+                // carries no message content.
+                tracing::warn!(
+                    %domain, stage, code = reply.code, reply = %reply.first_line(),
+                    "permanent delivery failure; the message will bounce"
+                );
                 fail_all(
                     rcpts,
                     &reply_status(&reply),
@@ -430,11 +440,24 @@ impl Queue {
     ) -> Result<Vec<RcptOutcome>, DeliveryError> {
         // The sending identity's own address, when it has one. Read from the
         // envelope sender because that is the identity SPF is evaluated for.
-        let source = self.policy.egress.source_for(envelope.mail_from.as_deref());
+        let egress = self
+            .policy
+            .egress
+            .identity_for(envelope.mail_from.as_deref());
+        let source = egress.map(|(_, ip)| ip);
+        // ...and its own name in the greeting. A receiver compares the HELO
+        // against the connecting address's PTR, and a campaign identity that
+        // greets as the transactional host looks like mail sent from somebody
+        // else's server — mail-tester deducts 3 of 10 for exactly this, and it
+        // is a signal larger receivers weigh too. The sending domain is the
+        // right name because C2.1 requires the campaign address's reverse DNS
+        // to be that domain; forward-confirmed reverse DNS is the setup this
+        // follows rather than a second thing to configure and get wrong.
+        let hostname = egress.map_or(self.policy.hostname.as_str(), |(domain, _)| domain);
         let mut dane = "opportunistic";
         let mut session = match &self.policy.route {
             Route::Smarthost(addr) => {
-                OutboundSession::connect_addr(*addr, &self.policy.hostname, source).await?
+                OutboundSession::connect_addr(*addr, hostname, source).await?
             }
             Route::Mx => {
                 let mut last = DeliveryError::Connect {
@@ -447,7 +470,7 @@ impl Queue {
                         &host.host,
                         &host.ips,
                         SMTP_PORT,
-                        &self.policy.hostname,
+                        hostname,
                         host.tls.clone(),
                         source,
                     )
@@ -477,6 +500,7 @@ impl Queue {
             dane,
             rcpts = rcpts.len(),
             egress = source.map(|ip| ip.to_string()).unwrap_or_default(),
+            helo = hostname,
             "delivering outbound"
         );
         let result = session

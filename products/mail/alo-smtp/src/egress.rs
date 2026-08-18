@@ -61,8 +61,23 @@ impl EgressMap {
     /// no dedicated address (or the sender is the null path `<>`, which is a
     /// bounce — it carries no identity to keep separate).
     pub fn source_for(&self, mail_from: Option<&str>) -> Option<IpAddr> {
+        self.identity_for(mail_from).map(|(_, ip)| ip)
+    }
+
+    /// The whole sending identity for an envelope sender: **the domain as it is
+    /// configured here** and the address its mail leaves by.
+    ///
+    /// The caller needs the domain as well as the address because the greeting
+    /// belongs to the identity too. A receiver compares the `HELO` name against
+    /// the connecting address's reverse DNS, and mail that leaves by the
+    /// campaign address while greeting as the transactional host reads as sent
+    /// from somebody else's server. Returning the configured spelling rather
+    /// than the sender's means the name in the greeting is one an operator
+    /// wrote down, never one an envelope chose.
+    pub fn identity_for(&self, mail_from: Option<&str>) -> Option<(&str, IpAddr)> {
         let domain = sender_domain(mail_from?)?;
-        self.by_domain.get(&domain).copied()
+        let (domain, ip) = self.by_domain.get_key_value(&domain)?;
+        Some((domain.as_str(), *ip))
     }
 
     /// Whether any domain has a dedicated source address.
@@ -146,6 +161,23 @@ mod tests {
                 "sender {sender:?} must resolve to the campaign address"
             );
         }
+    }
+
+    #[test]
+    fn the_identity_carries_the_configured_name_not_the_senders_spelling() {
+        // The greeting is made from this name. Taking it from the envelope
+        // would let the message being sent choose how the server introduces
+        // itself; taking it from the configuration means it is always a name an
+        // operator wrote down and pointed reverse DNS at.
+        let map = EgressMap::parse("news.alomails.com=159.195.89.28").unwrap();
+        assert_eq!(
+            map.identity_for(Some("<Bounces@NEWS.AloMails.COM>")),
+            Some(("news.alomails.com", ip("159.195.89.28")))
+        );
+        // No dedicated address means no identity, and the caller keeps its own
+        // hostname.
+        assert_eq!(map.identity_for(Some("noreply@alomails.com")), None);
+        assert_eq!(map.identity_for(None), None);
     }
 
     #[test]
