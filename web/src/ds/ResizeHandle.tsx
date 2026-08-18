@@ -7,7 +7,28 @@ import { useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 
 import { cx } from "./cx";
-import styles from "./ResizeHandle.module.css";
+
+// Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046).
+// The build that replaced this file's stylesheet changed no rule.
+
+/** A 1px divider that is also the drag target. The `::before` widens the hit
+ *  area to ~9px without changing layout — 4px either side of a 1px rule — and
+ *  is the one part of this drawing with proportions of its own, so those stay
+ *  literals. `touch-action-none` keeps a drag from scrolling the pane under
+ *  the finger. */
+const BASE =
+  "basis-px grow-0 shrink-0 self-stretch relative bg-subtle " +
+  "cursor-col-resize touch-none " +
+  "transition-colors duration-[var(--duration-fast)] ease-standard " +
+  "before:content-[''] before:absolute before:inset-y-0 before:-inset-x-1 " +
+  "before:z-5 " +
+  // Neutral highlight, never the accent: a divider you are holding should be
+  // legible, not decorated. Focus replaces the global outline for the same
+  // reason — a 1px rule with a 2px outline around it is mostly outline.
+  "hover:bg-strong focus-visible:outline-none focus-visible:bg-tertiary";
+
+/** Held. Same fill as hover, applied while the pointer is down anywhere. */
+const DRAGGING = "bg-strong";
 
 interface ResizeHandleProps {
   /** Called with the horizontal drag delta in px. */
@@ -75,7 +96,7 @@ export function ResizeHandle({
 
   return (
     <div
-      className={cx(styles.handle, dragging && styles.dragging)}
+      className={cx(BASE, dragging && DRAGGING)}
       role="separator"
       aria-orientation="vertical"
       aria-label={ariaLabel}

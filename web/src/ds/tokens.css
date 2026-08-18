@@ -88,6 +88,12 @@
   --border-subtle: #e8e2d9;
   --border-default: #ded7cd;
   --border-strong: #cbd5e1; /* stone */
+  /* The unfilled part of a ring: the spinner's track, and the scrollbar's.
+     `Spinner` reached straight into the raw scale for this (`--warm-300`) —
+     the one raw-scale reference left in `ds/` — which the semantic layer has
+     no name for until here. Same value, said in the layer components are
+     allowed to read (D1.54). */
+  --border-track: var(--warm-300);
 
   /* ---- semantic: accents & states ---- */
   --accent: var(--verdigris-500);
@@ -113,6 +119,14 @@
      22%-alpha wash of the accent all but disappears. Named here because a
      utility must never carry the literal (ADR 0046, D1.52). */
   --focus-ring-soft: 0 0 0 3px var(--accent-soft);
+  /* The quietest of the three: `DatePicker`'s trigger draws its focus as a
+     border in the accent plus a 13% wash of it, where the ring is the second
+     signal rather than the only one. Named for the same reason as the two
+     above — a utility must never carry the literal (ADR 0046). That there are
+     now three rings at 13%, 22% and opaque is flagged for the D1.55 wave
+     check; reconciling them moves pixels and is not a restyle's business. */
+  --focus-ring-faint: 0 0 0 3px
+    color-mix(in srgb, var(--accent) 13%, transparent);
 
   /* ---- typography ---- */
   --font-ui:
@@ -160,6 +174,14 @@
 
   /* ---- interaction roles ---- */
   --control-height: 2.5rem; /* 40px minimum pointer and touch target */
+  /* The button's own two heights, which are not the field's. `Button` wrote
+     both as literals; they are the proportions every text button in the
+     product is drawn at, so they are named here rather than spelled `h-7.5`
+     and `h-9.5` in a class string, where nothing would connect them to the
+     control heights above or say that a 38px button beside a 40px field is a
+     discrepancy somebody has to decide about (flagged for D1.55, D1.54). */
+  --button-height-sm: 1.875rem; /* 30px */
+  --button-height-md: 2.375rem; /* 38px */
   /* The taller control the sign-in screens use. Both `Input` and `Select` had
      written this 46px as a literal so their two `lg` sizes would match; it is a
      decision of the system, so it is named here once. */
@@ -255,6 +277,13 @@
   --transition-fast: var(--duration-fast) var(--ease-standard);
   --transition-base: var(--duration-base) var(--ease-standard);
   --animation-skeleton: 1.2s ease-in-out infinite;
+  /* The spinner's turn: duration, timing and iteration together, because a
+     Tailwind `animate-` utility takes the shorthand. Its keyframes are
+     `alo-spin` in `global.css` — a keyframe name is global, and `ds/` no
+     longer has a stylesheet to scope one in (D1.52, D1.54). 0.7s is the value
+     the stylesheet carried; Tailwind's own `animate-spin` is 1s, which is why
+     this is a token rather than the built-in. */
+  --animation-spinner: 0.7s linear infinite;
   /* The branded dialog's entrance: the scrim fades, the panel rises the last
      few pixels and settles. Duration and easing together, like
      `--animation-skeleton` above, because a Tailwind `animate-` utility takes

@@ -10,10 +10,87 @@
 // Asking for both would nest a button inside a button. That renders perfectly
 // happily and then swallows one of the two clicks, so it is reported rather
 // than quietly resolved.
+//
+// Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046).
+// The build that replaced this file's stylesheet changed no rule — including
+// one the stylesheet's own comment denied it was drawing, which is recorded on
+// `PRESSABLE_HOVER` below rather than fixed here.
 import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { X } from "lucide-react";
 
-import styles from "./Chip.module.css";
+/** The pill. `py-0.5` is the stylesheet's 2px and `px-2` its `--space-2`. */
+const BASE =
+  "inline-flex items-center gap-1 py-0.5 px-2 rounded-full " +
+  "text-sm whitespace-nowrap";
+
+/** Tones, named and matched to `Badge`'s so the same fact reads the same way
+ *  whether it is stated or acted on. Mail's follow-up date arrived outlined
+ *  rather than filled — border in `--accent`, border in `--danger` — which was
+ *  the only chip in the product drawn that way; it is filled here like the
+ *  other thirteen. */
+const TONE = {
+  neutral: "bg-raised text-secondary",
+  accent: "bg-accent-tint text-accent",
+  danger: "bg-danger-tint text-danger",
+} as const;
+
+/** A colour that comes from the chip's value, not from its state: a Base
+ *  select field invents its own choices, so no named tone can cover them. The
+ *  colour is mixed rather than used raw — a fill at 16% and a label at 70%
+ *  against the text colour — which is what keeps a pale choice colour readable
+ *  as a label and a dark one readable as a fill.
+ *
+ *  The mix stays in the class rather than moving to an inline `style`, and the
+ *  distinction matters: an inline style would win over the hover rule below,
+ *  so a tinted chip that is also a button would stop responding to the pointer.
+ *  `--chip-color` is still set per element, so a caller never writes the mix. */
+const TINTED =
+  "bg-[color-mix(in_srgb,var(--chip-color)_16%,transparent)] " +
+  "text-[color-mix(in_srgb,var(--chip-color)_70%,var(--text-primary))]";
+
+/** The chip that is itself a button. The stylesheet's `border: none`,
+ *  `cursor: pointer` and `font-family: inherit` are the reset in `global.css`
+ *  said twice, so only the weight and the interaction states are left here. */
+const PRESSABLE =
+  "cursor-pointer font-medium " +
+  "transition-colors duration-[var(--duration-fast)] ease-standard " +
+  "focus-visible:outline-2 focus-visible:outline-accent " +
+  "focus-visible:outline-offset-1";
+
+/** The hover fill, and a defect preserved rather than fixed.
+ *
+ *  The stylesheet said, beside the ring below, that "a toned chip already
+ *  carries a fill; darkening it would change what the tone says, so the hover
+ *  is the ring of the surface under it" — but it never stopped the fill
+ *  changing. `.pressable:hover` is a class and a pseudo-class; `.accent` is one
+ *  class, so on hover an accent or danger chip lost its tone to
+ *  `--border-default` and got the ring as well. Every pressable chip in the
+ *  product is toned (mail's follow-up control is neutral, accent or danger by
+ *  its due date), so this is what all of them do today.
+ *
+ *  A `hover:` utility outranks its unvariant form by exactly the same margin,
+ *  so the utilities reproduce it exactly — which is why this restyle draws
+ *  every chip as it drew before. Fixing it means deciding what a toned chip
+ *  should do under the pointer and moving pixels on a live control; flagged
+ *  for the D1.55 wave check instead. */
+const PRESSABLE_HOVER = "hover:bg-default";
+
+/** The ring a toned chip gets on hover, in its own ink. `--border-width` is
+ *  the token the stylesheet's `inset 0 0 0 var(--border-width)` used. */
+const TONED_HOVER_RING =
+  "hover:shadow-[inset_0_0_0_var(--border-width)_currentColor]";
+
+/** Room for the button, so the text does not sit against it. */
+const REMOVABLE = "pr-1";
+
+/** The remove button. 18px is this drawing's own proportion — small enough to
+ *  sit inside the pill, large enough to hit — so it stays a literal. */
+const REMOVE =
+  "inline-flex items-center justify-center size-[18px] rounded-full " +
+  "bg-transparent text-tertiary leading-none cursor-pointer " +
+  "hover:bg-sunken hover:text-primary " +
+  "focus-visible:outline-2 focus-visible:outline-accent " +
+  "focus-visible:outline-offset-1";
 
 export interface ChipProps {
   children: ReactNode;
@@ -69,19 +146,22 @@ export function Chip({
     }
   }, [onClick, onRemove]);
 
+  const toned = color !== undefined || tone !== "neutral";
   const classes = [
-    styles.chip,
-    color === undefined ? (styles[tone] ?? "") : styles.tinted,
-    onClick === undefined ? "" : styles.pressable,
-    onRemove === undefined ? "" : styles.removable,
+    BASE,
+    color === undefined ? TONE[tone] : TINTED,
+    onClick === undefined ? "" : PRESSABLE,
+    onClick === undefined ? "" : PRESSABLE_HOVER,
+    onClick !== undefined && toned ? TONED_HOVER_RING : "",
+    onRemove === undefined ? "" : REMOVABLE,
     className ?? "",
   ]
     .filter(Boolean)
     .join(" ");
 
-  // The value's colour reaches the stylesheet as a custom property, so the
-  // mixing that keeps the label readable stays in CSS with the rest of the
-  // chip rather than being computed at every call site.
+  // The value's colour reaches the class as a custom property, so the mixing
+  // that keeps the label readable stays in the component rather than being
+  // computed at every call site.
   const tint =
     color === undefined
       ? undefined
@@ -109,7 +189,7 @@ export function Chip({
       {onRemove !== undefined && (
         <button
           type="button"
-          className={styles.remove}
+          className={REMOVE}
           onClick={onRemove}
           aria-label={removeLabel ?? "Remove"}
         >

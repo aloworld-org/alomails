@@ -170,6 +170,17 @@ svg {
   }
 }
 
+/* The spinner's turn (`ds/Spinner`), here for the same reason as the two
+   above: the keyframes were scoped inside `Spinner.module.css`, and that file
+   is gone. Its duration and timing are `--animation-spinner`. The
+   reduced-motion rule below flattens it to nothing, which for a spinner means
+   a still ring — the accessible outcome, and what the scoped version did too. */
+@keyframes alo-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
