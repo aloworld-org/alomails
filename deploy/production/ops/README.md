@@ -73,6 +73,16 @@ systemctl enable --now alo-campaign-egress.service
 docker compose up -d alo-smtp
 ```
 
+**Docker's own masquerade rule must be off for that bridge, and the compose file
+turns it off.** When Docker creates a bridge network it inserts a MASQUERADE
+rule at the *top* of nat `POSTROUTING`, above the SNAT rule this unit adds — so
+the mail leaves by the primary address while every log line correctly says the
+source was pinned. It cost an hour to find, and the only thing that named it was
+the receiver's own refusal (`SPF fail … ip=152.53.179.142`). The bridge carries
+`com.docker.network.bridge.enable_ip_masquerade: "false"` so there is no
+competing rule to be ordered against. If you ever see the chain grow a
+`-s 172.19.0.0/24 … -j MASQUERADE` line, that option has been lost.
+
 **Prove it rather than assume it** — the whole point is an address a receiver
 checks:
 
