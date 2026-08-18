@@ -12,7 +12,7 @@ use std::sync::Arc;
 use alo_auth_mail::arc;
 use alo_auth_mail::authres::AuthenticationResults;
 use alo_auth_mail::dkim::keystore::{
-    KeyFuture, KeyStore, KeyStoreError, ed25519_signing_key_from_seed,
+    KeyFuture, KeyStore, KeyStoreError, ed25519_signing_key_from_seed, rsa_signing_key_from_der,
 };
 use alo_auth_mail::dkim::{self, Message, SignParams};
 use alo_auth_mail::dmarc::{self, Disposition, DmarcResult};
@@ -29,6 +29,11 @@ use crate::rspamd::{RspamdAction, RspamdClient, RspamdMeta};
 struct SingleKeyStore {
     domain: String,
     selector: String,
+    /// The stored `a=` family. Held rather than assumed, because the same table
+    /// now carries both and reading an RSA key as an Ed25519 seed produces a
+    /// signature nothing can verify - which surfaces as delivery trouble weeks
+    /// later, not as an error here.
+    algorithm: String,
     seed: zeroize::Zeroizing<Vec<u8>>,
 }
 
@@ -36,11 +41,21 @@ impl KeyStore for SingleKeyStore {
     fn get<'a>(&'a self, domain: &'a str, selector: &'a str) -> KeyFuture<'a> {
         Box::pin(async move {
             if domain.eq_ignore_ascii_case(&self.domain) && selector == self.selector {
-                ed25519_signing_key_from_seed(&self.seed).ok_or_else(|| KeyStoreError::Unusable {
+                let unusable = |reason: &str| KeyStoreError::Unusable {
                     domain: domain.to_owned(),
                     selector: selector.to_owned(),
-                    reason: "stored DKIM seed unusable".to_owned(),
-                })
+                    reason: reason.to_owned(),
+                };
+                match self.algorithm.as_str() {
+                    "rsa" => rsa_signing_key_from_der(&self.seed)
+                        .ok_or_else(|| unusable("stored RSA DKIM key unusable")),
+                    "ed25519" => ed25519_signing_key_from_seed(&self.seed)
+                        .ok_or_else(|| unusable("stored Ed25519 DKIM seed unusable")),
+                    // Refused rather than guessed: signing with the wrong
+                    // algorithm produces a valid-looking signature that every
+                    // verifier rejects.
+                    other => Err(unusable(&format!("unknown DKIM algorithm {other:?}"))),
+                }
             } else {
                 Err(KeyStoreError::NotFound {
                     domain: domain.to_owned(),
@@ -432,20 +447,40 @@ impl AuthMail {
         // single-tenant path is byte-identical to before.
         if let Some(store) = &self.dkim_store
             && let Some(domain) = header_from_domain(&message)
-            && let Ok(Some(material)) = store.active_dkim_material(&domain).await
+            && let Ok(materials) = store.active_dkim_materials(&domain).await
+            && !materials.is_empty()
         {
-            let single = SingleKeyStore {
-                domain: domain.clone(),
-                selector: material.selector.clone(),
-                seed: zeroize::Zeroizing::new(material.seed),
-            };
-            let params = SignParams::new(&domain, &material.selector);
-            match dkim::sign(&single, &message, &params).await {
-                Ok(value) => return Some(format!("DKIM-Signature: {value}\r\n")),
-                Err(error) => {
-                    tracing::error!(%error, "per-tenant DKIM signing failed; trying the configured key");
+            // One signature per active key - a domain may hold an RSA key and an
+            // Ed25519 key at once, and a message carrying both verifies for
+            // receivers that read only one of them. RFC 6376 allows any number of
+            // signatures and a verifier takes the first it can check, so this is
+            // additive: a single-key domain produces exactly the header it
+            // produced before.
+            let mut headers = String::new();
+            for material in materials {
+                let single = SingleKeyStore {
+                    domain: domain.clone(),
+                    selector: material.selector.clone(),
+                    algorithm: material.algorithm.clone(),
+                    seed: zeroize::Zeroizing::new(material.seed),
+                };
+                let params = SignParams::new(&domain, &material.selector);
+                match dkim::sign(&single, &message, &params).await {
+                    Ok(value) => headers.push_str(&format!("DKIM-Signature: {value}\r\n")),
+                    Err(error) => {
+                        // One algorithm failing must not cost the other its
+                        // signature.
+                        tracing::error!(
+                            %error, %domain, selector = %material.selector,
+                            "per-domain DKIM signing failed for one key"
+                        );
+                    }
                 }
             }
+            if !headers.is_empty() {
+                return Some(headers);
+            }
+            tracing::error!(%domain, "no per-domain key signed; trying the configured key");
         }
 
         // Fallback: the configured deployment key (the single-tenant path).
@@ -495,9 +530,13 @@ impl AuthMail {
         if let Some(store) = &self.dkim_store
             && let Ok(Some(material)) = store.active_dkim_material(seal_domain).await
         {
+            // One seal, not one per algorithm: an ARC set is a chain with a
+            // single `i=` per hop, so sealing twice would be two competing chains
+            // rather than two readable signatures.
             let single = SingleKeyStore {
                 domain: seal_domain.to_owned(),
                 selector: material.selector.clone(),
+                algorithm: material.algorithm.clone(),
                 seed: zeroize::Zeroizing::new(material.seed),
             };
             let params = arc::SealParams::new(seal_domain, &material.selector, &authres);

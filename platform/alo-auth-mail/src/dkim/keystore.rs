@@ -209,6 +209,25 @@ pub fn ed25519_signing_key_from_seed(seed: &[u8]) -> Option<SigningKey> {
     })
 }
 
+/// A stored RSA signing key, from the PKCS#8 DER the store holds.
+///
+/// The counterpart of [`ed25519_signing_key_from_seed`] for a domain that signs
+/// with both algorithms. Ed25519 keeps a 32-byte seed and rebuilds the key from
+/// it; RSA has no such compact seed, so the stored bytes **are** the PKCS#8 DER
+/// and this only validates them.
+///
+/// **Validated here rather than at signing time, deliberately.** This is the
+/// same check `sign_rsa` makes, and making it at load turns an unusable key into
+/// a key-store error naming the domain and selector - rather than a signing
+/// failure on a message already on its way out.
+pub fn rsa_signing_key_from_der(pkcs8_der: &[u8]) -> Option<SigningKey> {
+    ring::signature::RsaKeyPair::from_pkcs8(pkcs8_der).ok()?;
+    Some(SigningKey {
+        algorithm: KeyAlgorithm::RsaSha256,
+        pkcs8_der: Zeroizing::new(pkcs8_der.to_vec()),
+    })
+}
+
 /// The DKIM DNS TXT record value for an Ed25519 public key (RFC 8463):
 /// `v=DKIM1; k=ed25519; p=<base64>`.
 pub fn ed25519_txt_record(public_raw: &[u8]) -> String {

@@ -86,6 +86,7 @@ async fn per_tenant_key_signs_and_validates_not_the_file_key() {
             &tenant,
             &db_domain,
             &key.selector,
+            "ed25519",
             key.seed.as_ref(),
             &key.public_raw,
         )

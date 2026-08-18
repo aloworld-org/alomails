@@ -40,24 +40,37 @@ impl Store {
         tenant: &TenantId,
         domain: &str,
         selector: &str,
+        // `"rsa"` or `"ed25519"` - the `a=` family this key signs with. A domain
+        // holds one active key per algorithm, not one overall.
+        algorithm: &str,
         seed: &[u8],
         public_raw: &[u8],
     ) -> Result<()> {
         let domain = domain.trim().to_lowercase();
         let mut tx = self.pool().begin().await.map_err(StoreError::Db)?;
-        sqlx::query("UPDATE dkim_keys SET active = FALSE WHERE tenant_id = $1 AND domain = $2")
-            .bind(tenant.as_str())
-            .bind(&domain)
-            .execute(&mut *tx)
-            .await?;
+        // Retires the previous key **of this algorithm only**. A domain that
+        // signs with both RSA and Ed25519 must be able to rotate one without
+        // unpublishing the other - retiring both here would halve its
+        // verifiable audience for as long as DNS took to catch up.
         sqlx::query(
-            "INSERT INTO dkim_keys (id, tenant_id, domain, selector, seed, public_raw, active) \
-             VALUES ($1, $2, $3, $4, $5, $6, TRUE)",
+            "UPDATE dkim_keys SET active = FALSE \
+             WHERE tenant_id = $1 AND domain = $2 AND algorithm = $3",
+        )
+        .bind(tenant.as_str())
+        .bind(&domain)
+        .bind(algorithm)
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query(
+            "INSERT INTO dkim_keys \
+                 (id, tenant_id, domain, selector, algorithm, seed, public_raw, active) \
+             VALUES ($1, $2, $3, $4, $5, $6, $7, TRUE)",
         )
         .bind(id::generate_token())
         .bind(tenant.as_str())
         .bind(&domain)
         .bind(selector)
+        .bind(algorithm)
         .bind(seed)
         .bind(public_raw)
         .execute(&mut *tx)
@@ -74,19 +87,38 @@ impl Store {
     /// # Errors
     /// [`StoreError::Db`] on failure.
     pub async fn active_dkim_material(&self, domain: &str) -> Result<Option<DkimSigningMaterial>> {
+        Ok(self.active_dkim_materials(domain).await?.into_iter().next())
+    }
+
+    /// **Every** active signing key for `domain` - one per algorithm, which is
+    /// what a dual-signing sender needs (roadmap C2.1a).
+    ///
+    /// RSA is ordered first. Both signatures are valid over the same message and
+    /// a verifier may take either, but RFC 8463 is young enough that some cannot
+    /// read Ed25519 at all, and a campaign is exactly where an unverifiable
+    /// signature costs delivery. Putting the widely-understood one first is a
+    /// courtesy to old verifiers rather than a correctness matter.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    pub async fn active_dkim_materials(&self, domain: &str) -> Result<Vec<DkimSigningMaterial>> {
         let domain = domain.trim().to_lowercase();
-        let row = sqlx::query_as::<_, (String, String, Vec<u8>)>(
+        let rows = sqlx::query_as::<_, (String, String, Vec<u8>)>(
             "SELECT selector, algorithm, seed FROM dkim_keys \
-             WHERE domain = $1 AND active LIMIT 1",
+             WHERE domain = $1 AND active \
+             ORDER BY (algorithm <> 'rsa'), selector",
         )
         .bind(&domain)
-        .fetch_optional(self.pool())
+        .fetch_all(self.pool())
         .await?;
-        Ok(row.map(|(selector, algorithm, seed)| DkimSigningMaterial {
-            selector,
-            algorithm,
-            seed,
-        }))
+        Ok(rows
+            .into_iter()
+            .map(|(selector, algorithm, seed)| DkimSigningMaterial {
+                selector,
+                algorithm,
+                seed,
+            })
+            .collect())
     }
 }
 

@@ -1041,6 +1041,7 @@ async fn ensure_dkim_key(state: &AppState, tenant: &alo_store::TenantId, domain:
             tenant,
             domain,
             &key.selector,
+            "ed25519",
             key.seed.as_ref(),
             &key.public_raw,
         )
@@ -1227,6 +1228,7 @@ pub async fn rotate_dkim(
             &account.tenant,
             &domain,
             &key.selector,
+            "ed25519",
             key.seed.as_ref(),
             &key.public_raw,
         )
