@@ -166,7 +166,7 @@ export function ProjectsModule() {
           <NavLink
             to="list"
             className={({ isActive }) =>
-              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
+              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
             }
           >
             {strings.projectsTabList}
@@ -174,7 +174,7 @@ export function ProjectsModule() {
           <NavLink
             to="week"
             className={({ isActive }) =>
-              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
+              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
             }
           >
             {strings.projectsTabWeek}
@@ -182,7 +182,7 @@ export function ProjectsModule() {
           <NavLink
             to="plan"
             className={({ isActive }) =>
-              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
+              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
             }
           >
             {strings.projectsTabPlan}
@@ -190,7 +190,7 @@ export function ProjectsModule() {
           <NavLink
             to="reports"
             className={({ isActive }) =>
-              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
+              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
             }
           >
             {strings.projectsTabReports}
@@ -199,7 +199,7 @@ export function ProjectsModule() {
             <NavLink
               to="approvals"
               className={({ isActive }) =>
-                `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium no-underline transition-colors hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
+                `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
               }
             >
               {strings.projectsTabApprovals}
