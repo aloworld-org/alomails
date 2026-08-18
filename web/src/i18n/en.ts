@@ -110,7 +110,11 @@ export const en = {
   contactNotes: "Notes",
   contactAddEmail: "Add email",
   contactAddPhone: "Add phone",
-  contactRemoveField: "Remove",
+  // Named after the row: a contact with two emails and two phones otherwise
+  // gives a screen reader four identical commands and four combo boxes
+  // announced as their own current value.
+  contactRemoveFieldNamed: (value: string) => `Remove ${value}`,
+  contactKindLabel: (value: string) => `Kind of ${value}`,
   contactKindWork: "Work",
   contactKindHome: "Home",
   contactKindMobile: "Mobile",

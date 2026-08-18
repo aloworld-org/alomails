@@ -56,6 +56,24 @@ export interface ModalProps {
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/** The focusable controls of the panel, in tab order, minus the ones that are
+ *  not on the page. A `hidden` control matches the selector above and cannot
+ *  take focus, so it has to be filtered in both places that walk the list —
+ *  the trap always did, and the opening focus did not, which meant a dialog
+ *  whose first element was a hidden file input (`contacts`, D2.06: the picker
+ *  the Import button clicks) opened with focus still on the page behind it.
+ *  `focus()` on a hidden element is a silent no-op, so nothing said so.
+ *
+ *  `offsetParent` would be the natural visibility test and is always null in
+ *  jsdom, which would silently empty this list and disable the trap under
+ *  test. Attributes work in both. */
+function focusableIn(node: HTMLElement): HTMLElement[] {
+  return [...node.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(
+    (el) =>
+      !el.hasAttribute("hidden") && el.getAttribute("aria-hidden") !== "true",
+  );
+}
+
 /** The scrim. It fills the viewport and centres the panel; the padding is what
  *  keeps a full-height dialog off the edges of the window, and what
  *  `--modal-max-height` subtracts. */
@@ -116,7 +134,7 @@ export function Modal({
     const node = panel.current;
     // Not `a?.focus() ?? b.focus()`: `focus()` returns undefined, so the
     // fallback ran every time and pulled focus straight back to the panel.
-    const firstControl = node?.querySelector<HTMLElement>(FOCUSABLE);
+    const firstControl = node === null ? undefined : focusableIn(node)[0];
     if (firstControl) firstControl.focus();
     else node?.focus();
 
@@ -130,16 +148,7 @@ export function Modal({
       // The trap. Tab from the last control returns to the first, and
       // Shift+Tab from the first goes to the last, so focus cannot leave a
       // dialog that is covering the page.
-      // `offsetParent` would be the natural visibility test and is always
-      // null in jsdom, which silently emptied this list and disabled the trap
-      // under test. Attributes work in both.
-      const focusable = [
-        ...node.querySelectorAll<HTMLElement>(FOCUSABLE),
-      ].filter(
-        (el) =>
-          !el.hasAttribute("hidden") &&
-          el.getAttribute("aria-hidden") !== "true",
-      );
+      const focusable = focusableIn(node);
       if (focusable.length === 0) return;
       const first = focusable[0]!;
       const last = focusable[focusable.length - 1]!;

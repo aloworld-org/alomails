@@ -4,13 +4,110 @@
 // Contact API (Contact/get + Contact/set). Kept as a modal (like Settings)
 // so it needs no route — no Caddy prefix to collide with the API.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Mail, Phone, Plus, Search, Trash2, Upload, UserPlus, X } from "lucide-react";
+import {
+  Download,
+  Mail,
+  Phone,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  UserPlus,
+  X,
+} from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner, cx, useDialogs } from "../ds";
+import {
+  Button,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  Select,
+  Spinner,
+  cx,
+  useDialogs,
+} from "../ds";
 import { useJmapClient } from "../jmap";
 import type { Contact, ContactDraft, ContactField } from "../jmap";
-import styles from "./ContactsModal.module.css";
+
+// The layout this screen keeps for itself (D2.06). Everything that was a
+// primitive — the panel, the scrim, the fields, the kind picker, the buttons —
+// is `ds/`; what is left below is the two-pane arrangement and the list row,
+// which are this screen's own shape rather than anything the design system
+// should own.
+//
+// Written as whole strings rather than layered, for the reason `ds/Modal`
+// gives: two utilities setting one property have no defined winner in
+// Tailwind's output order, so a state that replaces a value replaces the whole
+// string (see `ITEM` / `ITEM_ON`).
+
+/** The import/export report, above the two panes and across both. */
+const NOTICE =
+  "shrink-0 border-b border-subtle bg-raised px-5 py-2 text-sm text-secondary";
+
+/** The two panes. A fixed list column, and the detail taking the rest; on a
+ *  phone the list stacks above the detail, which is what the stylesheet's one
+ *  media query did. */
+const PANES = "grid min-h-0 flex-1 grid-cols-[300px_1fr] max-sm:grid-cols-1";
+const LIST =
+  "flex min-h-0 flex-col gap-0.5 overflow-y-auto border-r border-subtle p-3 max-sm:border-b max-sm:border-r-0";
+const DETAIL = "min-h-0 overflow-y-auto p-5";
+
+/** The search box: `ds/Input` with the magnifier laid over its trailing end,
+ *  which is how billing's search reads too. The icon is decoration — the input
+ *  carries the name — so it is out of the pointer's way and hidden from
+ *  assistive technology. */
+const SEARCH_WRAP =
+  "relative mb-2 shrink-0 [&>svg]:pointer-events-none [&>svg]:absolute [&>svg]:right-3 [&>svg]:top-1/2 [&>svg]:-translate-y-1/2 [&>svg]:text-tertiary";
+
+/** "New contact" and "Add email" — an accent line that starts an item. Not a
+ *  `ds/Button`: none of the four variants is a borderless accent row, and
+ *  widening `Button` for a list affordance would blur the thing it names. */
+const ADD_ROW =
+  "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-accent hover:bg-raised";
+
+/** A contact in the list. The selected row replaces the resting background
+ *  rather than layering over it, so the hover cannot win back over it. */
+const ITEM_BASE =
+  "flex w-full shrink-0 flex-col gap-px rounded-md px-3 py-2 text-left";
+const ITEM = "hover:bg-raised";
+const ITEM_ON = "bg-selected";
+const ITEM_NAME = "truncate text-sm font-medium text-primary";
+const ITEM_SUB = "truncate text-xs text-tertiary";
+
+/** The list's own three placeholders — loading, failed, empty. */
+const CENTERED =
+  "flex flex-col items-center gap-3 px-4 py-6 text-center text-sm text-tertiary";
+
+/** The detail pane before a contact is chosen. */
+const PLACEHOLDER =
+  "flex h-full flex-col items-center justify-center gap-3 text-center text-tertiary";
+
+const FORM = "flex flex-col gap-4";
+/** First/last name and organization/job title sit two to a row, and stack on a
+ *  phone with the panes. */
+const PAIR = "grid grid-cols-2 gap-3 max-sm:grid-cols-1";
+/** A multi-value group. `ds/Field` is one label over one control; this is one
+ *  label over a list of rows, so the `<fieldset>`/`<legend>` stays. */
+const FIELDSET = "flex flex-col gap-2 border-0 p-0 m-0";
+const LEGEND = "mb-1 p-0 text-sm font-medium text-primary";
+const MULTI_ROW = "flex items-center gap-2";
+const ROW_ICON = "inline-flex shrink-0 text-tertiary";
+const FORM_ERROR = "text-sm leading-snug text-danger";
+const ACTIONS =
+  "flex items-center justify-between gap-3 border-t border-subtle pt-3";
+const ACTIONS_RIGHT = "ml-auto flex gap-2";
+
+/** The notes box. There is no multi-line control in `ds/` yet (recorded for
+ *  D3.01), so this is `ds/Input`'s box written out for a `<textarea>` — the
+ *  same border, radius, height and focus ring, so the two do not read as
+ *  different kinds of control in one form. */
+const TEXTAREA =
+  "w-full resize-y rounded-md border border-default bg-surface px-3 py-2 " +
+  "font-[inherit] text-base text-primary placeholder:text-tertiary " +
+  "transition-colors duration-[var(--duration-fast)] ease-standard " +
+  "focus-visible:border-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-accent";
 
 interface ContactsModalProps {
   onClose: () => void;
@@ -45,7 +142,10 @@ export function toForm(c: Contact): FormState {
     firstName: c.firstName ?? "",
     lastName: c.lastName ?? "",
     displayName: c.name,
-    emails: c.emails.length > 0 ? c.emails.map((e) => ({ ...e })) : [{ kind: null, value: "" }],
+    emails:
+      c.emails.length > 0
+        ? c.emails.map((e) => ({ ...e }))
+        : [{ kind: null, value: "" }],
     phones: c.phones.map((p) => ({ ...p })),
     organization: c.organization ?? "",
     jobTitle: c.jobTitle ?? "",
@@ -100,14 +200,6 @@ export function ContactsModal({ onClose }: ContactsModalProps) {
   }, [client]);
 
   useEffect(load, [load]);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   const filtered = useMemo(() => {
     const list = contacts ?? [];
@@ -209,7 +301,13 @@ export function ContactsModal({ onClose }: ContactsModalProps) {
     if (selected === null || selected === "new") return;
     const contact = (contacts ?? []).find((c) => c.id === selected);
     const label = contact?.name ?? "";
-    if (!(await confirm({ message: strings.contactDeleteConfirm(label), danger: true }))) return;
+    if (
+      !(await confirm({
+        message: strings.contactDeleteConfirm(label),
+        danger: true,
+      }))
+    )
+      return;
     setBusy(true);
     try {
       await client.deleteContact(selected);
@@ -223,129 +321,126 @@ export function ContactsModal({ onClose }: ContactsModalProps) {
   }
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div
-        className={styles.modal}
-        role="dialog"
-        aria-modal="true"
-        aria-label={strings.contactsTitle}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className={styles.head}>
-          <h2 className={styles.title}>{strings.contactsTitle}</h2>
-          <div className={styles.headActions}>
-            <input
-              ref={fileInput}
-              type="file"
-              accept=".vcf,text/vcard"
-              hidden
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void onImportFile(file);
-              }}
+    <Modal
+      title={strings.contactsTitle}
+      onClose={onClose}
+      wide
+      tall="page"
+      actions={
+        <>
+          <input
+            ref={fileInput}
+            type="file"
+            accept=".vcf,text/vcard"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void onImportFile(file);
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Upload size={15} />}
+            onClick={() => fileInput.current?.click()}
+            disabled={busy}
+          >
+            {busy ? strings.contactsImporting : strings.contactsImport}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<Download size={15} />}
+            onClick={onExport}
+            disabled={busy}
+          >
+            {strings.contactsExport}
+          </Button>
+          <IconButton
+            label={strings.userClose}
+            icon={<X />}
+            onClick={onClose}
+          />
+        </>
+      }
+    >
+      {notice !== null && <p className={NOTICE}>{notice}</p>}
+
+      <div className={PANES}>
+        <div className={LIST}>
+          <div className={SEARCH_WRAP}>
+            <Input
+              type="search"
+              className="pr-9"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={strings.contactsSearchPlaceholder}
+              aria-label={strings.contactsSearchPlaceholder}
             />
-            <button
-              type="button"
-              className={styles.headBtn}
-              onClick={() => fileInput.current?.click()}
-              disabled={busy}
-            >
-              <Upload size={15} />
-              {busy ? strings.contactsImporting : strings.contactsImport}
-            </button>
-            <button
-              type="button"
-              className={styles.headBtn}
-              onClick={onExport}
-              disabled={busy}
-            >
-              <Download size={15} />
-              {strings.contactsExport}
-            </button>
-            <button
-              type="button"
-              className={styles.close}
-              onClick={onClose}
-              aria-label={strings.contactCancel}
-            >
-              <X size={18} />
-            </button>
+            <Search size={15} aria-hidden />
           </div>
-        </div>
-        {notice !== null && <p className={styles.notice}>{notice}</p>}
+          <button type="button" className={ADD_ROW} onClick={openNew}>
+            <UserPlus size={16} />
+            <span>{strings.contactsNew}</span>
+          </button>
 
-        <div className={styles.body}>
-          <div className={styles.list}>
-            <div className={styles.search}>
-              <Search size={15} aria-hidden />
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={strings.contactsSearchPlaceholder}
-                aria-label={strings.contactsSearchPlaceholder}
-              />
+          {contacts === null && !loadError && (
+            <div className={CENTERED}>
+              <Spinner size={20} />
             </div>
-            <button type="button" className={styles.newRow} onClick={openNew}>
-              <UserPlus size={16} />
-              <span>{strings.contactsNew}</span>
+          )}
+          {loadError && (
+            <div className={CENTERED}>
+              <p>{strings.contactsLoadError}</p>
+              <Button variant="secondary" size="sm" onClick={load}>
+                {strings.mailRetry}
+              </Button>
+            </div>
+          )}
+          {contacts !== null && !loadError && filtered.length === 0 && (
+            <p className={CENTERED}>
+              {query.trim() === ""
+                ? strings.contactsEmpty
+                : strings.contactsSearchEmpty}
+            </p>
+          )}
+          {filtered.map((c) => (
+            <button
+              type="button"
+              key={c.id}
+              className={cx(ITEM_BASE, selected === c.id ? ITEM_ON : ITEM)}
+              aria-current={selected === c.id}
+              onClick={() => openContact(c)}
+            >
+              <span className={ITEM_NAME}>{c.name}</span>
+              <span className={ITEM_SUB}>
+                {c.emails[0]?.value ?? c.organization ?? strings.contactNoEmail}
+              </span>
             </button>
+          ))}
+        </div>
 
-            {contacts === null && !loadError && (
-              <div className={styles.centered}>
-                <Spinner size={20} />
-              </div>
-            )}
-            {loadError && (
-              <div className={styles.centered}>
-                <p>{strings.contactsLoadError}</p>
-                <Button variant="secondary" size="sm" onClick={load}>
-                  {strings.mailRetry}
-                </Button>
-              </div>
-            )}
-            {contacts !== null && !loadError && filtered.length === 0 && (
-              <p className={styles.empty}>
-                {query.trim() === "" ? strings.contactsEmpty : strings.contactsSearchEmpty}
-              </p>
-            )}
-            {filtered.map((c) => (
-              <button
-                type="button"
-                key={c.id}
-                className={cx(styles.item, selected === c.id && styles.itemActive)}
-                onClick={() => openContact(c)}
-              >
-                <span className={styles.itemName}>{c.name}</span>
-                <span className={styles.itemSub}>
-                  {c.emails[0]?.value ?? c.organization ?? strings.contactNoEmail}
-                </span>
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.detail}>
-            {selected === null ? (
-              <div className={styles.placeholder}>
-                <Mail size={28} aria-hidden />
-                <p>{strings.contactsEmpty}</p>
-              </div>
-            ) : (
-              <ContactForm
-                form={form}
-                setForm={setForm}
-                isNew={selected === "new"}
-                busy={busy}
-                error={formError}
-                onSave={save}
-                onDelete={remove}
-                onCancel={() => setSelected(null)}
-              />
-            )}
-          </div>
+        <div className={DETAIL}>
+          {selected === null ? (
+            <div className={PLACEHOLDER}>
+              <Mail size={28} aria-hidden />
+              <p>{strings.contactsEmpty}</p>
+            </div>
+          ) : (
+            <ContactForm
+              form={form}
+              setForm={setForm}
+              isNew={selected === "new"}
+              busy={busy}
+              error={formError}
+              onSave={save}
+              onDelete={remove}
+              onCancel={() => setSelected(null)}
+            />
+          )}
         </div>
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -372,45 +467,62 @@ function ContactForm({
 }: ContactFormProps) {
   const patch = (p: Partial<FormState>) => setForm({ ...form, ...p });
 
-  const setField = (key: "emails" | "phones", i: number, next: Partial<ContactField>) => {
+  const setField = (
+    key: "emails" | "phones",
+    i: number,
+    next: Partial<ContactField>,
+  ) => {
     const arr = form[key].map((f, idx) => (idx === i ? { ...f, ...next } : f));
     patch({ [key]: arr } as Partial<FormState>);
   };
   const addField = (key: "emails" | "phones") =>
-    patch({ [key]: [...form[key], { kind: null, value: "" }] } as Partial<FormState>);
+    patch({
+      [key]: [...form[key], { kind: null, value: "" }],
+    } as Partial<FormState>);
   const removeField = (key: "emails" | "phones", i: number) =>
-    patch({ [key]: form[key].filter((_, idx) => idx !== i) } as Partial<FormState>);
+    patch({
+      [key]: form[key].filter((_, idx) => idx !== i),
+    } as Partial<FormState>);
 
   return (
     <form
-      className={styles.form}
+      className={FORM}
       onSubmit={(e) => {
         e.preventDefault();
         onSave();
       }}
     >
-      <div className={styles.names}>
-        <label className={styles.field}>
-          <span>{strings.contactFirstName}</span>
-          <input
-            value={form.firstName}
-            onChange={(e) => patch({ firstName: e.target.value })}
-            autoFocus={isNew}
-          />
-        </label>
-        <label className={styles.field}>
-          <span>{strings.contactLastName}</span>
-          <input value={form.lastName} onChange={(e) => patch({ lastName: e.target.value })} />
-        </label>
+      <div className={PAIR}>
+        <Field label={strings.contactFirstName}>
+          {(control) => (
+            <Input
+              {...control}
+              value={form.firstName}
+              onChange={(e) => patch({ firstName: e.target.value })}
+              autoFocus={isNew}
+            />
+          )}
+        </Field>
+        <Field label={strings.contactLastName}>
+          {(control) => (
+            <Input
+              {...control}
+              value={form.lastName}
+              onChange={(e) => patch({ lastName: e.target.value })}
+            />
+          )}
+        </Field>
       </div>
 
-      <label className={styles.field}>
-        <span>{strings.contactDisplayName}</span>
-        <input
-          value={form.displayName}
-          onChange={(e) => patch({ displayName: e.target.value })}
-        />
-      </label>
+      <Field label={strings.contactDisplayName}>
+        {(control) => (
+          <Input
+            {...control}
+            value={form.displayName}
+            onChange={(e) => patch({ displayName: e.target.value })}
+          />
+        )}
+      </Field>
 
       <FieldList
         legend={strings.contactEmail}
@@ -433,40 +545,67 @@ function ContactForm({
         onRemove={(i) => removeField("phones", i)}
       />
 
-      <div className={styles.names}>
-        <label className={styles.field}>
-          <span>{strings.contactOrganization}</span>
-          <input
-            value={form.organization}
-            onChange={(e) => patch({ organization: e.target.value })}
-          />
-        </label>
-        <label className={styles.field}>
-          <span>{strings.contactJobTitle}</span>
-          <input value={form.jobTitle} onChange={(e) => patch({ jobTitle: e.target.value })} />
-        </label>
+      <div className={PAIR}>
+        <Field label={strings.contactOrganization}>
+          {(control) => (
+            <Input
+              {...control}
+              value={form.organization}
+              onChange={(e) => patch({ organization: e.target.value })}
+            />
+          )}
+        </Field>
+        <Field label={strings.contactJobTitle}>
+          {(control) => (
+            <Input
+              {...control}
+              value={form.jobTitle}
+              onChange={(e) => patch({ jobTitle: e.target.value })}
+            />
+          )}
+        </Field>
       </div>
 
-      <label className={styles.field}>
-        <span>{strings.contactNotes}</span>
-        <textarea
-          rows={3}
-          value={form.notes}
-          onChange={(e) => patch({ notes: e.target.value })}
-        />
-      </label>
+      <Field label={strings.contactNotes}>
+        {(control) => (
+          <textarea
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            className={TEXTAREA}
+            rows={3}
+            value={form.notes}
+            onChange={(e) => patch({ notes: e.target.value })}
+          />
+        )}
+      </Field>
 
-      {error !== null && <p className={styles.error}>{error}</p>}
+      {error !== null && (
+        <p className={FORM_ERROR} role="alert">
+          {error}
+        </p>
+      )}
 
-      <div className={styles.actions}>
+      <div className={ACTIONS}>
         {!isNew && (
-          <Button type="button" variant="danger" size="sm" onClick={onDelete} disabled={busy}>
-            <Trash2 size={15} />
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            icon={<Trash2 size={15} />}
+            onClick={onDelete}
+            disabled={busy}
+          >
             {strings.contactDelete}
           </Button>
         )}
-        <div className={styles.actionsRight}>
-          <Button type="button" variant="ghost" size="sm" onClick={onCancel} disabled={busy}>
+        <div className={ACTIONS_RIGHT}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onCancel}
+            disabled={busy}
+          >
             {strings.contactCancel}
           </Button>
           <Button type="submit" size="sm" disabled={busy}>
@@ -489,7 +628,16 @@ interface FieldListProps {
   onRemove: (i: number) => void;
 }
 
-function FieldList({ legend, icon, addLabel, type, fields, onChange, onAdd, onRemove }: FieldListProps) {
+function FieldList({
+  legend,
+  icon,
+  addLabel,
+  type,
+  fields,
+  onChange,
+  onAdd,
+  onRemove,
+}: FieldListProps) {
   // Read inside render so the labels follow the active locale (a module-level
   // const would capture the language at import time and go stale on a switch).
   const kindOptions: ReadonlyArray<{ value: string; label: string }> = [
@@ -499,43 +647,53 @@ function FieldList({ legend, icon, addLabel, type, fields, onChange, onAdd, onRe
     { value: "other", label: strings.contactKindOther },
   ];
   return (
-    <fieldset className={styles.fieldset}>
-      <legend>{legend}</legend>
-      {fields.map((field, i) => (
-        <div className={styles.multiRow} key={i}>
-          <span className={styles.rowIcon}>{icon}</span>
-          <input
-            className={styles.rowValue}
-            type={type}
-            value={field.value}
-            onChange={(e) => onChange(i, { value: e.target.value })}
-            placeholder={legend}
-            aria-label={legend}
-          />
-          <select
-            className={styles.rowKind}
-            value={field.kind ?? ""}
-            onChange={(e) => onChange(i, { kind: e.target.value === "" ? null : e.target.value })}
-            aria-label={strings.contactKindOther}
-          >
-            <option value="">—</option>
-            {kindOptions.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className={styles.rowRemove}
-            onClick={() => onRemove(i)}
-            aria-label={strings.contactRemoveField}
-          >
-            <X size={14} />
-          </button>
-        </div>
-      ))}
-      <button type="button" className={styles.addRow} onClick={onAdd}>
+    <fieldset className={FIELDSET}>
+      <legend className={LEGEND}>{legend}</legend>
+      {fields.map((field, i) => {
+        // Every row of a group used to be announced identically — four
+        // "Remove" commands and four combo boxes reading out their own current
+        // value as their name. The row's value is what tells them apart, and a
+        // row with nothing in it yet falls back to the group's name rather
+        // than to nothing.
+        const rowName = field.value.trim() === "" ? legend : field.value.trim();
+        return (
+          <div className={MULTI_ROW} key={i}>
+            <span className={ROW_ICON} aria-hidden="true">
+              {icon}
+            </span>
+            <Input
+              type={type}
+              value={field.value}
+              onChange={(e) => onChange(i, { value: e.target.value })}
+              placeholder={legend}
+              aria-label={legend}
+            />
+            <Select
+              className="w-24 shrink-0"
+              value={field.kind ?? ""}
+              onChange={(e) =>
+                onChange(i, {
+                  kind: e.target.value === "" ? null : e.target.value,
+                })
+              }
+              aria-label={strings.contactKindLabel(rowName)}
+            >
+              <option value="">—</option>
+              {kindOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+            <IconButton
+              label={strings.contactRemoveFieldNamed(rowName)}
+              icon={<X />}
+              onClick={() => onRemove(i)}
+            />
+          </div>
+        );
+      })}
+      <button type="button" className={ADD_ROW} onClick={onAdd}>
         <Plus size={14} />
         {addLabel}
       </button>

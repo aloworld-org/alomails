@@ -39,6 +39,20 @@ describe("the modal behaves for somebody without a mouse", () => {
     expect(document.activeElement).toBe(screen.getByLabelText("email"));
   });
 
+  test("the opening focus skips a control that is not on the page", () => {
+    // A `hidden` file input — the picker an Import button clicks — matches the
+    // focusable selector and cannot take focus, and `focus()` on it is a
+    // silent no-op. The address book opens with exactly that as its first
+    // element (D2.06), so before this the caret stayed on the page behind.
+    render(
+      <Modal title="Contacts" onClose={() => {}}>
+        <input type="file" hidden aria-label="picker" />
+        <button>Import</button>
+      </Modal>,
+    );
+    expect(document.activeElement).toBe(screen.getByText("Import"));
+  });
+
   test("Tab cannot leave it", () => {
     open();
     const send = screen.getByText("Send");
