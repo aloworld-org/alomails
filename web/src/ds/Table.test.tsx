@@ -50,7 +50,12 @@ describe("the table behaves for somebody not using a mouse and eyes", () => {
 
   test("the name is read but not drawn, unless asked for", () => {
     const { unmount } = list();
-    expect(screen.getByText("Customers").className).toContain("srOnly");
+    // Hidden from the eye and never from the accessibility tree: `display:
+    // none` here would remove the table's name, which is the opposite of the
+    // point. The caption is the `<caption>` either way — the second assertion
+    // is what says so.
+    expect(screen.getByText("Customers").className).toContain("sr-only");
+    expect(screen.getByRole("table", { name: "Customers" })).toBeDefined();
     unmount();
 
     render(
@@ -62,7 +67,8 @@ describe("the table behaves for somebody not using a mouse and eyes", () => {
         </tbody>
       </Table>,
     );
-    expect(screen.getByText("Customers").className).not.toContain("srOnly");
+    expect(screen.getByText("Customers").className).not.toContain("sr-only");
+    expect(screen.getByRole("table", { name: "Customers" })).toBeDefined();
   });
 
   test("the scrolling region can be reached by keyboard", () => {
@@ -88,7 +94,7 @@ describe("the table behaves for somebody not using a mouse and eyes", () => {
     // the sighted reader does not need.
     const actions = screen.getByRole("columnheader", { name: "Actions" });
     expect(actions.textContent).toBe("Actions");
-    expect(actions.firstElementChild?.className).toContain("srOnly");
+    expect(actions.firstElementChild?.className).toContain("sr-only");
   });
 
   test("empty means a row saying so, not an empty grid", () => {
@@ -101,8 +107,15 @@ describe("the table behaves for somebody not using a mouse and eyes", () => {
 
   test("amounts line up", () => {
     list();
-    expect(screen.getByRole("cell", { name: "1 240,00" }).className).toContain(
-      "numeric",
-    );
+    // Two halves, and the second is the one a hand-rolled table forgot: right
+    // alignment puts the units under the units, and tabular figures make every
+    // digit the same width, without which they still do not line up.
+    const cell = screen.getByRole("cell", { name: "1 240,00" });
+    expect(cell.className).toContain("text-right");
+    expect(cell.className).toContain("tabular-nums");
+    // And no other cell in the row claims either.
+    const name = screen.getByRole("cell", { name: "Kaufmann GmbH" });
+    expect(name.className).not.toContain("text-right");
+    expect(name.className).not.toContain("tabular-nums");
   });
 });

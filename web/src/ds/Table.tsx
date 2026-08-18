@@ -24,9 +24,79 @@
 // is already styled correctly and a migration is a deletion. `Th` and `Td`
 // exist only for the things a class name was carrying: alignment, numerals,
 // and a column header that is present for a screen reader but not on screen.
+//
+// Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046), so
+// `--space-4` and `p-4` are one definition with two spellings. The build that
+// replaced this file's stylesheet changed no rule — including one it arguably
+// should have; see NUMERIC HEADERS below.
 import type { ReactNode, TdHTMLAttributes, ThHTMLAttributes } from "react";
 
-import styles from "./Table.module.css";
+/** The scroll container itself. Its border, radius and ground are chosen once
+ *  below rather than layered with a `flat` override: two utilities setting the
+ *  same property have no defined winner, because Tailwind emits them in its
+ *  own order rather than in the order they appear in `class`. */
+const REGION =
+  "overflow-auto " +
+  "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2";
+
+/** What `flat` drops, for a table sitting directly on a `Card` that already
+ *  draws all three. Omitting them is the whole of `flat`: a `<div>` has no
+ *  border, no radius and no background of its own. */
+const SURFACE = "rounded-lg border border-subtle bg-surface";
+
+const TABLE = "w-full border-collapse text-sm";
+
+/** The cell rules reach `th` and `td` *through* the table, exactly as the
+ *  stylesheet's descendant selectors did. That is what makes ordinary markup
+ *  inside `<Table>` already right and every migration a deletion — and it is
+ *  also why the two cell components below cannot simply layer over these: a
+ *  descendant utility is one class and one element, which outranks a plain
+ *  utility on the cell itself. */
+const CELLS =
+  "[&_th]:text-left [&_th]:text-tertiary [&_th]:font-medium [&_th]:whitespace-nowrap " +
+  "[&_td]:text-primary [&_td]:align-middle";
+
+/** Padding and borders together, because `grid` changes both and a data
+ *  table's rules and a grid's would otherwise be two utilities fighting over
+ *  one property with nothing to decide between them. `default` and `compact`
+ *  are the two densities; `grid` replaces the pair. */
+const RULED = {
+  default:
+    "[&_th]:px-4 [&_th]:py-3 [&_td]:px-4 [&_td]:py-3 " +
+    "[&_th]:border-b [&_th]:border-subtle [&_td]:border-b [&_td]:border-subtle " +
+    // The last row's separator would draw against the container's own border.
+    "[&_tbody_tr:last-child_td]:border-b-0",
+  compact:
+    "[&_th]:px-3 [&_th]:py-2 [&_td]:px-3 [&_td]:py-2 " +
+    "[&_th]:border-b [&_th]:border-subtle [&_td]:border-b [&_td]:border-subtle " +
+    "[&_tbody_tr:last-child_td]:border-b-0",
+} as const;
+
+/** A table you type into. Every cell bounded on all four sides, because a value
+ *  you are editing has to show where it ends and the next begins; and no cell
+ *  padding, because each cell is filled edge to edge by the control that edits
+ *  it. The outer edge is drawn by the cells themselves, so the last row keeps
+ *  the bottom border a data table drops. */
+const GRID =
+  "[&_th]:p-0 [&_td]:p-0 " +
+  "[&_th]:border [&_th]:border-subtle [&_td]:border [&_td]:border-subtle";
+
+/** Totals. billing's footer sat on `--bg-raised` and read as part of the
+ *  table's structure rather than as another row, which is right. Two elements
+ *  and a class, so it outranks the base cell rules above. */
+const FOOT =
+  "[&_tfoot]:bg-raised " +
+  "[&_tfoot_th]:border-t [&_tfoot_th]:border-default [&_tfoot_th]:border-b-0 [&_tfoot_th]:text-primary " +
+  "[&_tfoot_td]:border-t [&_tfoot_td]:border-default [&_tfoot_td]:border-b-0 [&_tfoot_td]:text-primary";
+
+/** A header that survives scrolling needs its own background, or the rows
+ *  scroll through it. */
+const STICKY =
+  "[&_thead_th]:sticky [&_thead_th]:top-0 [&_thead_th]:z-1 [&_thead_th]:bg-surface";
+
+const ROW_HOVER = "[&_tbody_tr:hover]:bg-raised";
+
+const CAPTION = "pb-2 text-left text-xs text-tertiary";
 
 /** Where the text in a cell sits. `numeric` is the common right-hand case and
  *  carries tabular figures with it, so a column of amounts lines up. */
@@ -69,7 +139,7 @@ export interface TableProps {
 export function Table({
   label,
   showLabel,
-  density,
+  density = "default",
   stickyHeader,
   interactiveRows,
   flat,
@@ -77,19 +147,16 @@ export function Table({
   children,
   className,
 }: TableProps) {
-  const region = [
-    styles.region,
-    flat === true ? styles.flat : "",
-    className ?? "",
-  ]
+  const region = [REGION, flat === true ? "" : SURFACE, className ?? ""]
     .filter(Boolean)
     .join(" ");
   const table = [
-    styles.table,
-    density === "compact" ? styles.compact : "",
-    stickyHeader === true ? styles.sticky : "",
-    interactiveRows === true ? styles.interactive : "",
-    grid === true ? styles.grid : "",
+    TABLE,
+    CELLS,
+    grid === true ? GRID : RULED[density],
+    FOOT,
+    stickyHeader === true ? STICKY : "",
+    interactiveRows === true ? ROW_HOVER : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -101,7 +168,7 @@ export function Table({
     // that tab stop from being an unexplained one.
     <div className={region} tabIndex={0} role="region" aria-label={label}>
       <table className={table}>
-        <caption className={showLabel === true ? styles.caption : styles.srOnly}>
+        <caption className={showLabel === true ? CAPTION : "sr-only"}>
           {label}
         </caption>
         {children}
@@ -112,8 +179,10 @@ export function Table({
 
 // `align` shadows the presentational HTML attribute of the same name, which
 // has been deprecated since HTML 4 and which nothing here should be setting.
-export interface ThProps
-  extends Omit<ThHTMLAttributes<HTMLTableCellElement>, "align"> {
+export interface ThProps extends Omit<
+  ThHTMLAttributes<HTMLTableCellElement>,
+  "align"
+> {
   align?: CellAlign | undefined;
   /** Right-aligned with tabular figures, for a column of amounts. */
   numeric?: boolean | undefined;
@@ -124,7 +193,16 @@ export interface ThProps
 }
 
 /** A column header. `scope="col"` unless told otherwise, because an
- *  unscoped header does not associate with anything. */
+ *  unscoped header does not associate with anything.
+ *
+ *  NUMERIC HEADERS: `numeric` and `align` reach the figures but not the header
+ *  above them. `.table th { text-align: left }` was one class and one element
+ *  and `.numeric` was one class, so the base rule outranked it — a `<Th
+ *  numeric>` has never been right-aligned, in any of the ten copies or here.
+ *  The utilities reproduce that ranking exactly, which is why this restyle
+ *  draws every screen as it drew before. It is a defect rather than a decision
+ *  and it is recorded as one (D1.53); fixing it moves pixels, and a restyle
+ *  that moves pixels cannot be told from a regression. */
 export function Th({
   align,
   numeric,
@@ -137,7 +215,7 @@ export function Th({
   return (
     <th scope={scope} className={cell(align, numeric, className)} {...rest}>
       {hideLabel === true ? (
-        <span className={styles.srOnly}>{children}</span>
+        <span className="sr-only">{children}</span>
       ) : (
         children
       )}
@@ -145,8 +223,10 @@ export function Th({
   );
 }
 
-export interface TdProps
-  extends Omit<TdHTMLAttributes<HTMLTableCellElement>, "align"> {
+export interface TdProps extends Omit<
+  TdHTMLAttributes<HTMLTableCellElement>,
+  "align"
+> {
   align?: CellAlign | undefined;
   /** Right-aligned with tabular figures, for a column of amounts. */
   numeric?: boolean | undefined;
@@ -162,29 +242,46 @@ export interface TableEmptyProps {
   children: ReactNode;
 }
 
+/** The cell rules above reach this `<td>` through the table, and a descendant
+ *  utility outranks a plain one on the cell itself — so `py-8` here would lose
+ *  to `[&_td]:py-3` and the empty state would silently take an ordinary row's
+ *  height. Matching the attribute is one class and one attribute, which
+ *  outranks both: the same move the stylesheet made with `.table td.empty`. */
+const EMPTY =
+  "[&[data-empty]]:px-4 [&[data-empty]]:py-8 [&[data-empty]]:text-center " +
+  "[&[data-empty]]:text-tertiary [&[data-empty]]:border-b-0";
+
 /** The "nothing here" row, inside `<tbody>`. Inside the table rather than
  *  beside it: a table whose explanation lives in a sibling paragraph reads,
  *  to anyone navigating by table, as a table with no rows and no reason. */
 export function TableEmpty({ cols, children }: TableEmptyProps) {
   return (
     <tr>
-      <td className={styles.empty} colSpan={cols}>
+      <td className={EMPTY} colSpan={cols} data-empty="">
         {children}
       </td>
     </tr>
   );
 }
 
+const ALIGN = {
+  start: "text-left",
+  center: "text-center",
+  end: "text-right",
+} as const;
+
 function cell(
   align: CellAlign | undefined,
   numeric: boolean | undefined,
   className: string | undefined,
 ): string | undefined {
+  // Alignment is chosen once rather than layered. The stylesheet resolved a
+  // `numeric` cell that also carried an explicit `align` by source order —
+  // `.center` was written after `.numeric`, so it won. Utilities have no such
+  // order, so the same answer is decided here instead.
   const classes = [
-    numeric === true ? styles.numeric : "",
-    align === "center" ? styles.center : "",
-    align === "end" ? styles.end : "",
-    align === "start" ? styles.start : "",
+    align !== undefined ? ALIGN[align] : numeric === true ? "text-right" : "",
+    numeric === true ? "tabular-nums whitespace-nowrap" : "",
     className ?? "",
   ]
     .filter(Boolean)

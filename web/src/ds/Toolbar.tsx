@@ -29,6 +29,10 @@
 // So a mixed toolbar is announced as a named group and every control keeps its
 // own tab stop, which is honest; `keyboard="roving"` opts into the toolbar
 // role and the behaviour that role promises.
+//
+// Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046), so
+// `--space-3` and `gap-3` are one definition with two spellings. The build that
+// replaced this file's stylesheet changed no rule.
 import {
   useEffect,
   useRef,
@@ -37,7 +41,30 @@ import {
   type ReactNode,
 } from "react";
 
-import styles from "./Toolbar.module.css";
+/** A wrapping row. `flex-wrap` is the base and not an option: seven of the
+ *  eleven copies could not wrap, so at a narrow width their last controls sat
+ *  outside the pane — gone, rather than merely unseen (WCAG 1.4.10). */
+const BASE = "flex flex-wrap";
+
+/** Centres or baselines. Chosen once rather than layered: two utilities
+ *  setting `align-items` have no defined winner, because Tailwind emits them
+ *  in its own order rather than in the order they appear in `class`. */
+const ALIGN = { center: "items-center", end: "items-end" } as const;
+
+/** `--space-3` between two icon buttons reads as two separate things, so a row
+ *  of them closes up. One gap each; same reason as `ALIGN`. */
+const GAP = { default: "gap-3", compact: "gap-2" } as const;
+
+/** The chrome the row draws. `shrink-0` on both of the two that draw any:
+ *  a toolbar is a header inside a flex column, and without it a long list
+ *  underneath squeezes the toolbar instead of scrolling. */
+const SURFACE = {
+  plain: "",
+  bar: "shrink-0 border-b border-subtle px-4 py-3",
+  card:
+    "shrink-0 min-h-16 rounded-lg border border-subtle bg-surface px-4 py-3 " +
+    "shadow-sm",
+} as const;
 
 export interface ToolbarProps {
   /** What this row of controls acts on — "Invoice list", "Formatting".
@@ -156,10 +183,10 @@ export function Toolbar({
   }
 
   const classes = [
-    styles.toolbar,
-    surface === "bar" ? styles.bar : surface === "card" ? styles.card : "",
-    density === "compact" ? styles.compact : "",
-    align === "end" ? styles.end : "",
+    BASE,
+    ALIGN[align ?? "center"],
+    GAP[density ?? "default"],
+    SURFACE[surface],
     className ?? "",
   ]
     .filter(Boolean)
@@ -198,7 +225,12 @@ export function ToolbarGroup({
   children,
   className,
 }: ToolbarGroupProps) {
-  const classes = [styles.group, className ?? ""].filter(Boolean).join(" ");
+  // A cluster the wrap moves as one item, so a segmented control never breaks
+  // across two lines. It wraps internally only when the cluster alone is wider
+  // than the toolbar.
+  const classes = ["flex flex-wrap items-center gap-1", className ?? ""]
+    .filter(Boolean)
+    .join(" ");
   return (
     <div
       className={classes}
@@ -213,11 +245,19 @@ export function ToolbarGroup({
 /** Pushes what follows it to the far end of the row. Three stylesheets had
  *  this as `.toolbarSpacer`, all of them `flex: 1`. */
 export function ToolbarSpacer() {
-  return <div className={styles.spacer} aria-hidden="true" />;
+  // `flex-1` per line, so on a wrapped toolbar it pushes within its own row
+  // rather than emptying one.
+  return <div className="flex-1" aria-hidden="true" />;
 }
 
 /** A rule between two clusters of an editor toolbar. Decoration, so it is
  *  hidden: the grouping it draws is carried by `ToolbarGroup`. */
 export function ToolbarDivider() {
-  return <div className={styles.divider} aria-hidden="true" />;
+  // `self-stretch` rather than a height, so the rule matches whatever the
+  // tallest control in the row is. `bg-subtle` is `--border-subtle`: the
+  // generated theme files every `--border-*` colour under one namespace, so a
+  // separator drawn as a filled sliver still names the border token it is.
+  return (
+    <div className="w-px min-h-5 self-stretch bg-subtle" aria-hidden="true" />
+  );
 }
