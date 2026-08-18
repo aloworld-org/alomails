@@ -23,9 +23,42 @@
 // brings another one. A checkbox that needs a hint belongs in a `Field` whose
 // label names the question, with the box's own label naming the answer — which
 // is what `billing/ProductDialog` does, correctly, today.
+//
+// Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046).
+// The four stylesheets that drew this row nearly agreed: `inline-flex`,
+// centred, `--text-sm`, `--text-secondary`, and a gap of 6px (crm, hr), 8px
+// (inventory) or `--space-2` (billing), which is 8px. crm and hr were
+// byte-identical again. So the row is settled; what none of the four had was
+// any rule at all for the box itself.
+//
+// That is the one visible change. Left unstyled, the box is whatever the
+// platform draws — on Chrome that is a blue tick, which makes the filter row
+// above a list the one place in the product where the accent colour is not
+// ours. `accent-color` fixes it in one declaration without replacing the
+// control: the native checkbox keeps its own focus behaviour, its
+// indeterminate drawing, and the size the platform thinks a touch target
+// should be.
+//
+// Dropped as a caller's concern rather than the control's: billing's
+// `margin-right: auto`, which pushed the rest of a toolbar to the right —
+// `ToolbarSpacer` is that, and it says so. Kept: `whitespace-nowrap` (billing
+// and inventory), so a two-word label breaks between controls now that
+// `Toolbar` wraps, and never down the middle of itself.
 import { type ReactNode } from "react";
 
-import styles from "./Checkbox.module.css";
+/** The row. Its disabled treatment reads the control's own state
+ *  (`has-[:disabled]`) rather than the prop, so the two can never disagree —
+ *  none of the four had a disabled state at all, and a box you cannot tick
+ *  should look unlike one you can and still be readable: `--text-tertiary` is
+ *  4.8:1 on the surface. */
+const ROW =
+  "inline-flex items-center gap-2 text-sm text-secondary whitespace-nowrap cursor-pointer " +
+  "has-[:disabled]:text-tertiary has-[:disabled]:cursor-not-allowed";
+
+/** The box. 16px is the size all four rows were built around. */
+const BOX =
+  "flex-none w-4 h-4 m-0 accent-accent cursor-pointer disabled:cursor-not-allowed " +
+  "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2";
 
 export interface CheckboxProps {
   /** Controlled: this component holds no state of its own. */
@@ -52,25 +85,21 @@ export function Checkbox({
   name,
   className,
 }: CheckboxProps) {
-  const classes = [
-    styles.checkbox,
-    disabled === true ? styles.disabled : "",
-    className ?? "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const classes = [ROW, className ?? ""].filter(Boolean).join(" ");
 
   return (
     <label className={classes}>
       <input
         type="checkbox"
-        className={styles.input}
+        className={BOX}
         checked={checked}
         disabled={disabled === true}
         {...(name === undefined ? {} : { name })}
         onChange={(e) => onChange(e.target.checked)}
       />
-      <span className={hideLabel === true ? styles.srOnly : undefined}>
+      {/* Read, not drawn — a checkbox in a table's select column, where the row
+          is the label. The name still has to exist. */}
+      <span className={hideLabel === true ? "sr-only" : undefined}>
         {label}
       </span>
     </label>

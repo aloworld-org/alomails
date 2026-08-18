@@ -134,6 +134,10 @@
   --weight-bold: 700;
 
   --leading-tight: 1.25;
+  /* The line height of a line of help — a hint or an error under a control.
+     Tighter than body copy because the run is short, looser than `tight`
+     because it is the text somebody reads when something has gone wrong. */
+  --leading-snug: 1.4;
   --leading-normal: 1.5;
   --leading-relaxed: 1.7;
 
@@ -151,6 +155,10 @@
 
   /* ---- interaction roles ---- */
   --control-height: 2.5rem; /* 40px minimum pointer and touch target */
+  /* The taller control the sign-in screens use. Both `Input` and `Select` had
+     written this 46px as a literal so their two `lg` sizes would match; it is a
+     decision of the system, so it is named here once. */
+  --control-height-lg: 2.875rem; /* 46px */
   --control-width-compact: 3.5rem;
   --control-width-medium: 6rem;
   --control-width-wide: 8.5rem;
@@ -212,9 +220,17 @@
   --shadow-lg:
     0 12px 32px rgba(16, 42, 67, 0.12), 0 4px 8px rgba(16, 42, 67, 0.06);
 
-  /* ---- motion ---- */
-  --transition-fast: 120ms ease;
-  --transition-base: 180ms ease;
+  /* ---- motion ----
+     The two shorthands are what stylesheets have always written. They are now
+     composed from their parts, because a utility cannot take a shorthand: a
+     Tailwind duration and a Tailwind easing are set separately, and a second
+     literal `120ms` written beside this one is exactly the drift the token
+     layer exists to prevent. */
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --ease-standard: ease;
+  --transition-fast: var(--duration-fast) var(--ease-standard);
+  --transition-base: var(--duration-base) var(--ease-standard);
   --animation-skeleton: 1.2s ease-in-out infinite;
 
   /* ---- layout ---- */

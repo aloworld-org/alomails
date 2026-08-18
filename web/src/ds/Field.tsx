@@ -5,9 +5,17 @@
 // that is not bound to its control is invisible to a screen reader, and an
 // error that is not announced is invisible to everyone not looking at it.
 // Doing that once, correctly, is the whole point of the component.
+//
+// Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046).
+// The seventeen agreed on the layout — a column with a small gap — while
+// disagreeing on everything around it: whether the hint sat above or below,
+// whether an error replaced the hint or joined it, and whether the label was
+// bound to the control at all.
 import { useId, type ReactNode } from "react";
 
-import styles from "./Field.module.css";
+/** The hint and the error read the same, because they are the same kind of
+ *  line: one short run of help under a control. */
+const HELP = "text-sm leading-snug";
 
 export interface FieldProps {
   label: string;
@@ -32,8 +40,8 @@ export function Field({ label, hint, error, children }: FieldProps) {
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
 
   return (
-    <div className={styles.field}>
-      <label className={styles.label} htmlFor={id}>
+    <div className="flex flex-col gap-2">
+      <label className="font-medium text-primary" htmlFor={id}>
         {label}
       </label>
       {children({
@@ -41,13 +49,17 @@ export function Field({ label, hint, error, children }: FieldProps) {
         invalid: error !== undefined,
         "aria-describedby": describedBy,
       })}
+      {/* The hint stays visible when an error appears. They answer different
+          questions — "what goes here" and "what went wrong" — and hiding the
+          first to show the second means somebody who has just made a mistake
+          loses the instruction that would prevent the next one. */}
       {hint !== undefined && (
-        <span className={styles.hint} id={hintId}>
+        <span className={`${HELP} text-secondary`} id={hintId}>
           {hint}
         </span>
       )}
       {error !== undefined && (
-        <span className={styles.error} id={errorId} role="alert">
+        <span className={`${HELP} text-danger`} id={errorId} role="alert">
           {error}
         </span>
       )}

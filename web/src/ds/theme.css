@@ -4,11 +4,22 @@
  * That is the whole point (ADR 0046): one definition, two spellings. To change
  * a colour, change tokens.css and re-run the generator.
  *
- * 59 utilities derived from 59 semantic tokens.
+ * 73 utilities derived from 73 semantic tokens.
  */
 @import "tailwindcss";
 
-@theme {
+/* `inline reference`, not a bare `@theme`: see the header of the generator.
+ * Four token families are spelled like the namespace they belong to, so an
+ * emitted `--radius-sm: var(--radius-sm)` would be a property that resolves to
+ * nothing. `inline` points each utility at the token; `reference` stops this
+ * block emitting any variable of its own. */
+@theme inline reference {
+  /* Tailwind's own type scale is cleared rather than partially overridden. Its
+   * sizes ship paired line-heights (`--text-base--line-height`), and those
+   * survive a redefinition of the size alone — so `text-base` would quietly
+   * set a line-height no stylesheet here asked for. */
+  --text-*: initial;
+
   --color-app: var(--bg-app);
   --color-surface: var(--bg-surface);
   --color-raised: var(--bg-raised);
@@ -29,25 +40,38 @@
   --color-default: var(--border-default);
   --color-strong: var(--border-strong);
   --color-accent: var(--accent);
-  --color--hover: var(--accent-hover);
-  --color--active: var(--accent-active);
-  --color--tint: var(--accent-tint);
-  --color--soft: var(--accent-soft);
-  --color--secondary: var(--accent-secondary);
-  --color--secondary-hover: var(--accent-secondary-hover);
-  --color--secondary-tint: var(--accent-secondary-tint);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-tint: var(--accent-tint);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-secondary: var(--accent-secondary);
+  --color-accent-secondary-hover: var(--accent-secondary-hover);
+  --color-accent-secondary-tint: var(--accent-secondary-tint);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-unread: var(--unread);
   --font-ui: var(--font-ui);
   --font-body: var(--font-body);
   --font-editorial: var(--font-editorial);
   --font-mono: var(--font-mono);
-  --color-xs: var(--text-xs);
-  --color-sm: var(--text-sm);
-  --color-base: var(--text-base);
-  --color-md: var(--text-md);
-  --color-lg: var(--text-lg);
-  --color-xl: var(--text-xl);
-  --color-2xl: var(--text-2xl);
-  --color-3xl: var(--text-3xl);
+  --text-xs: var(--text-xs);
+  --text-sm: var(--text-sm);
+  --text-base: var(--text-base);
+  --text-md: var(--text-md);
+  --text-lg: var(--text-lg);
+  --text-xl: var(--text-xl);
+  --text-2xl: var(--text-2xl);
+  --text-3xl: var(--text-3xl);
+  --font-weight-regular: var(--weight-regular);
+  --font-weight-medium: var(--weight-medium);
+  --font-weight-semibold: var(--weight-semibold);
+  --font-weight-bold: var(--weight-bold);
+  --leading-tight: var(--leading-tight);
+  --leading-snug: var(--leading-snug);
+  --leading-normal: var(--leading-normal);
+  --leading-relaxed: var(--leading-relaxed);
   --spacing-1: var(--space-1);
   --spacing-2: var(--space-2);
   --spacing-3: var(--space-3);
@@ -58,8 +82,8 @@
   --spacing-10: var(--space-10);
   --spacing-12: var(--space-12);
   --spacing-16: var(--space-16);
-  --color-width: var(--border-width);
-  --color-width-strong: var(--border-width-strong);
+  --spacing-control: var(--control-height);
+  --spacing-control-lg: var(--control-height-lg);
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
@@ -68,4 +92,5 @@
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
+  --ease-standard: var(--ease-standard);
 }

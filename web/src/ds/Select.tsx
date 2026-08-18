@@ -25,6 +25,37 @@
 //     choosable; where it is a prompt on a required field it must not be
 //     choosable again, and it must be `value=""` or the browser's own required
 //     check passes on the prompt. `placeholder` is that distinction, made once.
+//
+// Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046).
+// The seven copies agreed on nearly everything that matters — a 1px
+// `--border-default` on `--bg-surface`, `--radius-md`, `--text-primary`,
+// `font-family: inherit` — which is what makes the disagreements worth naming.
+//
+// The base is `Input`'s, not the majority's. Four of the seven wrote
+// `.input, .select, .textarea` in one rule, which is the codebase saying out
+// loud that these two controls stand side by side in a form row and must be
+// the same height; finance and projects were byte-identical doing it. So the
+// select follows `Input` (`h-control`, `text-base`) rather than the ~33px each
+// module had derived from padding. The toolbar copies (billing 6px 8px,
+// inventory 6px 10px, shell's 34px) sit beside a search field that is making
+// the same move, so the row stays level.
+//
+// Reconciled rather than offered as options:
+//
+//   * **One focus treatment.** There were four: an inset `outline` (finance,
+//     projects, inventory), `outline: none` traded for a `--focus-ring` shadow
+//     (billing), and none at all (both shell sections, left to the UA
+//     default). This is `Input`'s ring, because a select is not a different
+//     kind of field.
+//   * **One disabled state.** shell dimmed the whole control to
+//     `opacity: 0.55`, which takes its text below the contrast floor — a
+//     control you cannot use still has to be readable. `Input`'s build says it
+//     with surface and cursor.
+//   * **Room for the arrow.** Every copy padded both sides equally, so the
+//     platform's chevron sits on top of a long option's last characters.
+//     Nothing here sets `appearance: none`: the native control is the whole
+//     reason a select is a select on a phone, and drawing our own chevron
+//     would mean taking the platform's away on every device to fix it on one.
 import {
   useEffect,
   useRef,
@@ -32,7 +63,26 @@ import {
   type SelectHTMLAttributes,
 } from "react";
 
-import styles from "./Select.module.css";
+/** What every select is. `max-w-full` is never wider than what holds it — only
+ *  billing thought of this, and it is the difference between a long product
+ *  name and a broken toolbar. As on `Input`, utilities that set the same
+ *  property are chosen exclusively below rather than layered: Tailwind emits
+ *  them in its own order, not the order they are written in. */
+const BASE =
+  "max-w-full rounded-md border font-[inherit] text-base text-primary cursor-pointer " +
+  "transition-colors duration-[var(--duration-fast)] ease-standard " +
+  "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1 " +
+  "disabled:text-tertiary disabled:cursor-not-allowed";
+
+/** A select in a form: `Input`'s box, down to the same height, so a row of the
+ *  two does not step. */
+const OUTLINE = "bg-surface disabled:bg-raised";
+
+/** mail's formatting bar: a dozen controls in a row, where a box around each
+ *  one would read as a wall rather than a set. Same hover surface as
+ *  `IconButton`, its neighbour in that bar. A focused ghost still draws its
+ *  border, so the control the keyboard is on is never only an outline. */
+const GHOST = "bg-transparent hover:enabled:bg-raised";
 
 // `size` is omitted from the native attributes for the same reason as on
 // `Input`: HTML's `size` is a row count for a list box, and the name is far
@@ -104,12 +154,25 @@ export function Select({
     }
   }, []);
 
+  const ghost = variant === "ghost";
   const classes = [
-    styles.select,
-    size === "lg" ? styles.lg : "",
-    variant === "ghost" ? styles.ghost : "",
-    fullWidth === true ? styles.fullWidth : "",
-    invalid === true ? styles.invalid : "",
+    BASE,
+    ghost ? GHOST : OUTLINE,
+    // Border colour, chosen once: an error outranks both variants, which is the
+    // order the stylesheet this replaces resolved to.
+    invalid === true
+      ? "border-danger focus-visible:border-danger"
+      : ghost
+        ? "border-transparent focus-visible:border-strong"
+        : "border-default focus-visible:border-strong",
+    size === "lg" ? "h-control-lg" : "h-control",
+    // Room for the platform's chevron on the trailing side; a ghost sits
+    // tighter because it has no box to sit inside.
+    ghost ? "pl-2 pr-6" : size === "lg" ? "pl-4 pr-8" : "pl-3 pr-8",
+    // Take the width of the column rather than of the longest option. For a
+    // select in a form; a filter in a toolbar wants its natural width, because
+    // unlike a text input a select's natural width carries information.
+    fullWidth === true ? "w-full" : "",
     className ?? "",
   ]
     .filter(Boolean)
