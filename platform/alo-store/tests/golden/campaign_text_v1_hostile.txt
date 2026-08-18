@@ -1,0 +1,12 @@
+<script>alert('x')</script> & Co
+--------------------------------
+
+She said "it's <b>fine</b>" &amp; left — 5 > 3.
+
+</th></tr></table>            "quoted"
+----------------------------  --------
+<img src=x onerror=alert(1)>  a & b
+
+[html]
+    </td></tr></table><script>alert(1)</script>
+        const x = '<a href="#">';

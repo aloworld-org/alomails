@@ -58,9 +58,11 @@ pub mod campaign_audience;
 pub mod campaign_consent;
 pub mod campaign_content;
 pub mod campaign_html;
+pub mod campaign_mime;
 pub mod campaign_record;
 pub mod campaign_segments;
 pub mod campaign_suppression;
+pub mod campaign_text;
 pub mod campaign_topic_optout;
 pub mod campaign_unsubscribe;
 pub mod changes;
@@ -338,6 +340,9 @@ pub use campaign_content::{
     CampaignContent, CodeBlock, HeadingBlock, ParagraphBlock, TableBlock,
 };
 pub use campaign_html::{CAMPAIGN_LETTER_WIDTH_PX, CampaignLetter, render_campaign_html};
+pub use campaign_mime::{
+    CAMPAIGN_HEADER_LINE_MAX, CAMPAIGN_MIME_LINE_MAX, CampaignMessage, render_campaign_message,
+};
 pub use campaign_record::{
     CAMPAIGN_PAGE_MAX, CAMPAIGN_PREHEADER_MAX, CAMPAIGN_SUBJECT_MAX, Campaign, CampaignSummary,
     NewCampaign,
@@ -351,6 +356,7 @@ pub use campaign_suppression::{
     CampaignSuppression, NewSuppression, SUPPRESSION_PAGE_MAX, SuppressionEvidence,
     SuppressionReason,
 };
+pub use campaign_text::{CAMPAIGN_TEXT_WIDTH_COLS, render_campaign_text};
 pub use campaign_topic_optout::{
     CampaignTopicOptOut, NewTopicOptOut, TOPIC_MAX, TOPIC_SOURCE_REF_MAX, normalise_topic,
 };

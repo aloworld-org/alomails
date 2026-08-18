@@ -1,0 +1,171 @@
+Content-Type: multipart/alternative; boundary="=_alo_682839334b862ee0a8859b89"
+
+--=_alo_682839334b862ee0a8859b89
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Spring prices
+=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D=3D
+
+Beste klant,
+vanaf maandag gelden de prijzen hieronder. Alles is per liter.
+
+
+Product                   Prijs    Vanaf
+------------------------  -------  -------
+Olijfolie =E2=80=94 extra vierge  12,50 =E2=82=AC  2 maart
+Zonnebloemolie            6,00 =E2=82=AC   2 maart
+
+Bestellen via de API
+--------------------
+
+[bash]
+    curl https://api.alo.test/orders \
+      -H 'Accept: application/json' \
+      -d '{"sku": "olive-1l"}'   # =C3=A9=C3=A9n liter
+
+Met vriendelijke groet,
+Nordwind & Co
+
+--=_alo_682839334b862ee0a8859b89
+Content-Type: text/html; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://w=
+ww.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns=3D"http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv=3D"Content-Type" content=3D"text/html; charset=3Dutf-8"=
+ />
+<meta name=3D"viewport" content=3D"width=3Ddevice-width,initial-scale=3D=
+1" />
+<meta name=3D"x-apple-disable-message-reformatting" />
+<meta name=3D"format-detection" content=3D"telephone=3Dno,date=3Dno,addr=
+ess=3Dno" />
+<title>Nieuwe prijzen vanaf maandag</title>
+<!--[if mso]><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:Pixel=
+sPerInch></o:OfficeDocumentSettings></xml><![endif]-->
+</head>
+<body style=3D"margin:0;padding:0;width:100%;background-color:#f4f1ec;-w=
+ebkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+<div style=3D"display:none;font-size:1px;line-height:1px;max-height:0;ma=
+x-width:0;opacity:0;overflow:hidden;mso-hide:all;">Olijfolie 12,50 =E2=
+=82=AC =E2=80=94 geldig vanaf 2 maart&#8204;&#160;&#8204;&#160;&#8204;&#=
+160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8=
+204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#1=
+60;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#82=
+04;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#16=
+0;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#820=
+4;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160=
+;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204=
+;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;=
+&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;=
+&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&#8204;&#160;&=
+#8204;&#160;&#8204;&#160;</div>
+<table role=3D"presentation" width=3D"100%" cellpadding=3D"0" cellspacin=
+g=3D"0" border=3D"0" bgcolor=3D"#f4f1ec" style=3D"width:100%;border-coll=
+apse:collapse;background-color:#f4f1ec;">
+<tr>
+<td align=3D"center" style=3D"padding:24px 12px;">
+<!--[if mso]><table role=3D"presentation" width=3D"600" align=3D"center"=
+ cellpadding=3D"0" cellspacing=3D"0" border=3D"0" style=3D"width:600px;"=
+><tr><td><![endif]-->
+<div style=3D"max-width:600px;margin:0 auto;">
+<table role=3D"presentation" width=3D"100%" cellpadding=3D"0" cellspacin=
+g=3D"0" border=3D"0" bgcolor=3D"#fffefc" style=3D"width:100%;border-coll=
+apse:collapse;background-color:#fffefc;">
+<tr>
+<td style=3D"padding:32px 28px 16px 28px;">
+<h1 style=3D"margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;fo=
+nt-size:28px;line-height:34px;font-weight:bold;color:#102a43;mso-line-he=
+ight-rule:exactly;">Spring prices</h1>
+<p style=3D"margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;fon=
+t-size:16px;line-height:24px;color:#475569;mso-line-height-rule:exactly;=
+">Beste klant,<br />vanaf maandag gelden de prijzen hieronder. Alles is=20=
+per liter.</p>
+<p style=3D"margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;fon=
+t-size:16px;line-height:24px;color:#475569;mso-line-height-rule:exactly;=
+">&#160;</p>
+<table width=3D"100%" cellpadding=3D"0" cellspacing=3D"0" border=3D"0" s=
+tyle=3D"width:100%;border-collapse:collapse;margin:0 0 16px 0;">
+<tr>
+<th scope=3D"col" align=3D"left" valign=3D"top" style=3D"padding:8px 10p=
+x;border:1px solid #ded7cd;background-color:#f0ece6;font-family:Arial,He=
+lvetica,sans-serif;font-size:14px;line-height:20px;font-weight:bold;colo=
+r:#102a43;text-align:left;mso-line-height-rule:exactly;">Product</th>
+<th scope=3D"col" align=3D"left" valign=3D"top" style=3D"padding:8px 10p=
+x;border:1px solid #ded7cd;background-color:#f0ece6;font-family:Arial,He=
+lvetica,sans-serif;font-size:14px;line-height:20px;font-weight:bold;colo=
+r:#102a43;text-align:left;mso-line-height-rule:exactly;">Prijs</th>
+<th scope=3D"col" align=3D"left" valign=3D"top" style=3D"padding:8px 10p=
+x;border:1px solid #ded7cd;background-color:#f0ece6;font-family:Arial,He=
+lvetica,sans-serif;font-size:14px;line-height:20px;font-weight:bold;colo=
+r:#102a43;text-align:left;mso-line-height-rule:exactly;">Vanaf</th>
+</tr>
+<tr>
+<td align=3D"left" valign=3D"top" style=3D"padding:8px 10px;border:1px s=
+olid #ded7cd;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-=
+height:20px;font-weight:normal;color:#475569;text-align:left;mso-line-he=
+ight-rule:exactly;">Olijfolie =E2=80=94 extra vierge</td>
+<td align=3D"left" valign=3D"top" style=3D"padding:8px 10px;border:1px s=
+olid #ded7cd;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-=
+height:20px;font-weight:normal;color:#475569;text-align:left;mso-line-he=
+ight-rule:exactly;">12,50 =E2=82=AC</td>
+<td align=3D"left" valign=3D"top" style=3D"padding:8px 10px;border:1px s=
+olid #ded7cd;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-=
+height:20px;font-weight:normal;color:#475569;text-align:left;mso-line-he=
+ight-rule:exactly;">2 maart</td>
+</tr>
+<tr>
+<td align=3D"left" valign=3D"top" style=3D"padding:8px 10px;border:1px s=
+olid #ded7cd;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-=
+height:20px;font-weight:normal;color:#475569;text-align:left;mso-line-he=
+ight-rule:exactly;">Zonnebloemolie</td>
+<td align=3D"left" valign=3D"top" style=3D"padding:8px 10px;border:1px s=
+olid #ded7cd;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-=
+height:20px;font-weight:normal;color:#475569;text-align:left;mso-line-he=
+ight-rule:exactly;">6,00 =E2=82=AC</td>
+<td align=3D"left" valign=3D"top" style=3D"padding:8px 10px;border:1px s=
+olid #ded7cd;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-=
+height:20px;font-weight:normal;color:#475569;text-align:left;mso-line-he=
+ight-rule:exactly;">2 maart</td>
+</tr>
+</table>
+<h2 style=3D"margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;fo=
+nt-size:20px;line-height:26px;font-weight:bold;color:#102a43;mso-line-he=
+ight-rule:exactly;">Bestellen via de API</h2>
+<table role=3D"presentation" width=3D"100%" cellpadding=3D"0" cellspacin=
+g=3D"0" border=3D"0" style=3D"width:100%;table-layout:fixed;border-colla=
+pse:collapse;margin:0 0 16px 0;">
+<tr>
+<td align=3D"left" bgcolor=3D"#f0ece6" style=3D"padding:8px 12px;border:=
+1px solid #ded7cd;border-bottom:none;background-color:#f0ece6;font-famil=
+y:Consolas,Menlo,Monaco,'Courier New',monospace;font-size:12px;line-heig=
+ht:16px;color:#475569;text-align:left;mso-line-height-rule:exactly;">bas=
+h</td>
+</tr>
+<tr>
+<td align=3D"left" bgcolor=3D"#fffefc" style=3D"padding:12px;border:1px=20=
+solid #ded7cd;background-color:#fffefc;font-family:Consolas,Menlo,Monaco=
+,'Courier New',monospace;font-size:13px;line-height:20px;color:#102a43;t=
+ext-align:left;word-break:break-word;mso-line-height-rule:exactly;">curl=
+ https://api.alo.test/orders \<br />&#160;&#160;-H &#39;Accept: applicat=
+ion/json&#39; \<br />&#160;&#160;-d &#39;{&quot;sku&quot;: &quot;olive-1=
+l&quot;}&#39;&#160;&#160; # =C3=A9=C3=A9n liter</td>
+</tr>
+</table>
+<p style=3D"margin:0 0 16px 0;font-family:Arial,Helvetica,sans-serif;fon=
+t-size:16px;line-height:24px;color:#475569;mso-line-height-rule:exactly;=
+">Met vriendelijke groet,<br />Nordwind &amp; Co</p>
+</td>
+</tr>
+</table>
+</div>
+<!--[if mso]></td></tr></table><![endif]-->
+</td>
+</tr>
+</table>
+</body>
+</html>
+
+--=_alo_682839334b862ee0a8859b89--

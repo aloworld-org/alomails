@@ -13,3 +13,7 @@ platform/alo-store/tests/fixtures/bank/*.sta -text
 # CRLF, which is what half of Europe's portals write, and normalising it would
 # quietly delete the encoding fallback the reader is tested on.
 platform/alo-store/tests/fixtures/bank/*.csv -text
+# And for a pinned MIME entity: CRLF is not a line-ending preference in a mail
+# message, it is the format. A golden git had normalised would pin a body no
+# MTA would accept, and it would still look correct in a diff.
+platform/alo-store/tests/golden/*.mime -text

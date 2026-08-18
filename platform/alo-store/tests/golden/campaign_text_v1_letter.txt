@@ -1,0 +1,22 @@
+Spring prices
+=============
+
+Beste klant,
+vanaf maandag gelden de prijzen hieronder. Alles is per liter.
+
+
+Product                   Prijs    Vanaf
+------------------------  -------  -------
+Olijfolie — extra vierge  12,50 €  2 maart
+Zonnebloemolie            6,00 €   2 maart
+
+Bestellen via de API
+--------------------
+
+[bash]
+    curl https://api.alo.test/orders \
+      -H 'Accept: application/json' \
+      -d '{"sku": "olive-1l"}'   # één liter
+
+Met vriendelijke groet,
+Nordwind & Co
