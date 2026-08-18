@@ -15,9 +15,55 @@ import { Briefcase, CopyPlus, FolderKanban, Play, Star } from "lucide-react";
 
 import { Button, IconButton, Spinner } from "../ds";
 import { strings } from "../i18n";
-import { amountLabel, dayLabel, durationLabel, rateLabel } from "./format";
-import { BudgetBar, EmptyState } from "./parts";
+import { amountLabel, dayLabel, durationLabel, percentLabel, rateLabel } from "./format";
 import type { Project } from "./types";
+
+function ProjectsEmptyState() {
+  return (
+    <section className="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-subtle bg-surface px-6 py-12 text-center shadow-sm">
+      <span className="flex size-14 items-center justify-center rounded-2xl bg--soft text-accent">
+        <Briefcase className="size-7" aria-hidden="true" />
+      </span>
+      <h2 className="m-0 mt-4 text-lg font-semibold text-primary">
+        {strings.projectsEmptyTitle}
+      </h2>
+      <p className="m-0 mt-2 max-w-[46ch] text-sm leading-6 text-secondary">
+        {strings.projectsEmptyBody}
+      </p>
+    </section>
+  );
+}
+
+function ProjectBudget({ consumptionBp }: { consumptionBp: number | null }) {
+  if (consumptionBp === null) return <span className="text-tertiary">—</span>;
+
+  const percentage = Math.round(consumptionBp / 100);
+  const width = Math.min(100, Math.max(0, percentage));
+  const overBudget = consumptionBp > 10_000;
+
+  return (
+    <div className="flex items-center gap-2.5">
+      <span
+        className="h-1.5 min-w-20 flex-1 overflow-hidden rounded-full bg-raised"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percentage}
+        aria-label={strings.projectsBudgetUsed}
+      >
+        <span
+          className={`block h-full rounded-full ${overBudget ? "bg-danger" : "bg-accent"}`}
+          style={{ width: `${width}%` }}
+        />
+      </span>
+      <span
+        className={`shrink-0 text-xs font-semibold tabular-nums ${overBudget ? "text-danger" : "text-secondary"}`}
+      >
+        {percentLabel(consumptionBp)}
+      </span>
+    </div>
+  );
+}
 
 export function ProjectsView({
   projects,
@@ -51,11 +97,7 @@ export function ProjectsView({
       </div>
     ) : (
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6">
-        <EmptyState
-          Icon={Briefcase}
-          title={strings.projectsEmptyTitle}
-          body={strings.projectsEmptyBody}
-        />
+        <ProjectsEmptyState />
       </div>
     );
   }
@@ -81,6 +123,7 @@ export function ProjectsView({
             </div>
           </div>
           <Button
+            variant="primary"
             icon={<CopyPlus size={16} />}
             className="h-10 shrink-0 rounded-xl px-4 text-sm font-semibold"
             onClick={onNewFromTemplate}
@@ -153,10 +196,7 @@ export function ProjectsView({
                     )}
                   </td>
                   <td className="min-w-40 px-4 py-4">
-                    <BudgetBar
-                      consumptionBp={project.hours.budgetConsumptionBp}
-                      label={strings.projectsBudgetUsed}
-                    />
+                    <ProjectBudget consumptionBp={project.hours.budgetConsumptionBp} />
                     {client !== null && client.budgetCents !== null && (
                       <span className="mt-1 block text-xs text-tertiary">
                         {amountLabel(client.budgetCents, client.currency)}
@@ -198,7 +238,7 @@ export function ProjectsView({
                         />
                       )}
                       <Button
-                        variant={client === null ? "secondary" : "ghost"}
+                        variant={client === null ? "primary" : "ghost"}
                         className="h-9 shrink-0 rounded-lg px-4 text-sm font-semibold"
                         onClick={() => onEditClient(project)}
                       >
