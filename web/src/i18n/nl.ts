@@ -2471,6 +2471,7 @@ export const nl: Partial<Catalog> = {
   projectsStartsOn: "Start op",
   projectsMakeClientWork: "Klantwerk maken",
   projectsStartTimerOn: (project: string) => `Start de timer op ${project}`,
+  projectsStartTimer: "Timer starten",
   projectsEmptyTitle: "Nog geen projecten",
   projectsEmptyBody:
     "Een project is hier een bord uit Taken, gezien als klantwerk. Maak er een in Taken en zeg daarna voor wie het wordt gedaan.",

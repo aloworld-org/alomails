@@ -125,7 +125,7 @@ export function ProjectsView({
           <Button
             variant="primary"
             icon={<CopyPlus size={16} />}
-            className="h-10 shrink-0 rounded-xl px-4 text-sm font-semibold"
+            className="h-11 shrink-0 rounded-md px-5 text-sm font-semibold shadow-sm"
             onClick={onNewFromTemplate}
           >
             {strings.projectsTemplateNew}
@@ -210,12 +210,15 @@ export function ProjectsView({
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center justify-end gap-2">
-                      <IconButton
-                        label={strings.projectsStartTimerOn(project.name)}
+                      <Button
+                        variant="ghost"
                         icon={<Play size={16} />}
-                        size="sm"
+                        className="h-10 shrink-0 rounded-md px-4 text-sm font-medium"
+                        aria-label={strings.projectsStartTimerOn(project.name)}
                         onClick={() => onStartTimer(project)}
-                      />
+                      >
+                        {strings.projectsStartTimer}
+                      </Button>
                       {/* A personal board cannot be a template — the list of
                           templates is the whole workspace's — so the control is
                           absent there rather than offered and refused. */}
@@ -239,7 +242,7 @@ export function ProjectsView({
                       )}
                       <Button
                         variant={client === null ? "primary" : "ghost"}
-                        className="h-9 shrink-0 rounded-lg px-4 text-sm font-semibold"
+                        className="h-10 shrink-0 rounded-md px-5 text-sm font-semibold shadow-sm"
                         onClick={() => onEditClient(project)}
                       >
                         {client === null ? strings.projectsMakeClientWork : strings.projectsEdit}

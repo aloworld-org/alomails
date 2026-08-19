@@ -2513,6 +2513,7 @@ export const fr: Partial<Catalog> = {
   projectsMakeClientWork: "Passer en travail client",
   projectsStartTimerOn: (project: string) =>
     `Démarrer le chronomètre sur ${project}`,
+  projectsStartTimer: "Démarrer le chronomètre",
   projectsEmptyTitle: "Aucun projet pour l’instant",
   projectsEmptyBody:
     "Un projet, ici, est un tableau de Tâches vu comme du travail client. Créez-en un dans Tâches, puis dites pour qui il est réalisé.",

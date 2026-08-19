@@ -4344,6 +4344,7 @@ export const en = {
   projectsStartsOn: "Starts on",
   projectsMakeClientWork: "Make client work",
   projectsStartTimerOn: (project: string) => `Start the timer on ${project}`,
+  projectsStartTimer: "Start timer",
   projectsEmptyTitle: "No projects yet",
   projectsEmptyBody:
     "A project here is a board from Tasks, seen as client work. Create one in Tasks, then say who it is worked for.",
