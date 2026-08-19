@@ -4311,6 +4311,17 @@ export const en = {
   projectsSave: "Save",
   projectsEdit: "Edit",
   projectsActions: "Actions",
+  projectsNew: "New project",
+  projectsNewTitle: "Create a project",
+  projectsNewSubtitle: "Name the work and decide who it is for.",
+  projectsName: "Project name",
+  projectsNamePlaceholder: "For example, Website redesign",
+  projectsWorkType: "This work is for",
+  projectsClientWork: "A customer",
+  projectsInternalWork: "Our company",
+  projectsNewCustomerHint: "You can add rates and budgets after creating the project.",
+  projectsCreate: "Create project",
+  projectsCreateFailed: "The project could not be created.",
 
   // Durations and rates. `projectsNoTime` is the dash an empty cell shows: a
   // blank cell reads as broken, a zero reads as work that took no time.
@@ -4350,7 +4361,7 @@ export const en = {
   projectsStartTimer: "Start timer",
   projectsEmptyTitle: "No projects yet",
   projectsEmptyBody:
-    "A project here is a board from Tasks, seen as client work. Create one in Tasks, then say who it is worked for.",
+    "Create a project for customer work or for your own company, then start tracking time.",
 
   // The engagement form.
   projectsClientSubtitle:

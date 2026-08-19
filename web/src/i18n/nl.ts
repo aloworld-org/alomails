@@ -2435,6 +2435,17 @@ export const nl: Partial<Catalog> = {
   projectsSave: "Opslaan",
   projectsEdit: "Bewerken",
   projectsActions: "Acties",
+  projectsNew: "Nieuw project",
+  projectsNewTitle: "Project maken",
+  projectsNewSubtitle: "Geef het werk een naam en bepaal voor wie het is.",
+  projectsName: "Projectnaam",
+  projectsNamePlaceholder: "Bijvoorbeeld Website vernieuwen",
+  projectsWorkType: "Dit werk is voor",
+  projectsClientWork: "Een klant",
+  projectsInternalWork: "Ons bedrijf",
+  projectsNewCustomerHint: "Na het maken kunt u tarieven en budgetten toevoegen.",
+  projectsCreate: "Project maken",
+  projectsCreateFailed: "Het project kon niet worden gemaakt.",
 
   // Duren en tarieven. `projectsNoTime` is het streepje in een lege cel: een
   // blanco cel leest als kapot, een nul als werk dat geen tijd kostte.
@@ -2477,7 +2488,7 @@ export const nl: Partial<Catalog> = {
   projectsStartTimer: "Timer starten",
   projectsEmptyTitle: "Nog geen projecten",
   projectsEmptyBody:
-    "Een project is hier een bord uit Taken, gezien als klantwerk. Maak er een in Taken en zeg daarna voor wie het wordt gedaan.",
+    "Maak een project voor klantwerk of voor uw eigen bedrijf en begin daarna met tijd bijhouden.",
 
   // Het projectformulier.
   projectsClientSubtitle:

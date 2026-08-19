@@ -11,14 +11,14 @@
 // Every figure is the server's. The hours are the project's aggregate — nobody
 // is named, here or in the API — and the budget bar is drawn from basis points
 // the server computed, so two people looking at one engagement see one bar.
-import { Briefcase, CopyPlus, FolderKanban, Play, Star } from "lucide-react";
+import { Briefcase, CopyPlus, FolderKanban, Play, Plus, Star } from "lucide-react";
 
 import { Button, IconButton, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { amountLabel, dayLabel, durationLabel, percentLabel, rateLabel } from "./format";
 import type { Project } from "./types";
 
-function ProjectsEmptyState() {
+function ProjectsEmptyState({ onNewProject }: { onNewProject: () => void }) {
   return (
     <section className="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-subtle bg-surface px-6 py-12 text-center shadow-sm">
       <span className="flex size-14 items-center justify-center rounded-2xl bg--soft text-accent">
@@ -30,6 +30,9 @@ function ProjectsEmptyState() {
       <p className="m-0 mt-2 max-w-[46ch] text-sm leading-6 text-secondary">
         {strings.projectsEmptyBody}
       </p>
+      <Button className="mt-5" icon={<Plus size={16} />} onClick={onNewProject}>
+        {strings.projectsNew}
+      </Button>
     </section>
   );
 }
@@ -73,6 +76,7 @@ export function ProjectsView({
   onEditClient,
   onStartTimer,
   onToggleTemplate,
+  onNewProject,
   onNewFromTemplate,
 }: {
   projects: Project[];
@@ -88,6 +92,7 @@ export function ProjectsView({
   /** Marks the board reusable, or takes the mark off — the same control, because
    *  a board either is a template or is not. */
   onToggleTemplate: (project: Project) => void;
+  onNewProject: () => void;
   onNewFromTemplate: () => void;
 }) {
   if (projects.length === 0) {
@@ -97,7 +102,7 @@ export function ProjectsView({
       </div>
     ) : (
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6">
-        <ProjectsEmptyState />
+        <ProjectsEmptyState onNewProject={onNewProject} />
       </div>
     );
   }
@@ -122,13 +127,10 @@ export function ProjectsView({
               </p>
             </div>
           </div>
-          <Button
-            icon={<CopyPlus size={16} />}
-            className="shrink-0"
-            onClick={onNewFromTemplate}
-          >
-            {strings.projectsTemplateNew}
-          </Button>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <Button variant="ghost" icon={<CopyPlus size={16} />} onClick={onNewFromTemplate}>{strings.projectsTemplateNew}</Button>
+            <Button icon={<Plus size={16} />} onClick={onNewProject}>{strings.projectsNew}</Button>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[68rem] border-collapse text-sm">

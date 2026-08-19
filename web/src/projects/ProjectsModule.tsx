@@ -29,6 +29,8 @@ import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { ApprovalsView } from "./ApprovalsView";
 import { ClientDialog } from "./ClientDialog";
+import { NewProjectDialog } from "./NewProjectDialog";
+import type { NewProjectDraft } from "./NewProjectDialog";
 import { projectsMessage, useProjectsApi } from "./api";
 import { ErrorBanner } from "./parts";
 import { PlanView } from "./PlanView";
@@ -66,6 +68,7 @@ export function ProjectsModule() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
   const [editing, setEditing] = useState<Project | null>(null);
+  const [creating, setCreating] = useState(false);
   const [startingFromTemplate, setStartingFromTemplate] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -149,6 +152,14 @@ export function ProjectsModule() {
     }
   }
 
+  async function createProject(draft: NewProjectDraft) {
+    const project = await client.createTaskProject(draft.name);
+    if (draft.customerId !== null) await api.setClient(project.id, { customerId: draft.customerId });
+    setCreating(false);
+    setError(null);
+    bump();
+  }
+
   /** Marks a board reusable, or takes the mark off. One control, because a board
    *  either is a template or is not — and undoing it is the same click again,
    *  which is why nothing here asks for a confirmation: the mark is a claim, not
@@ -223,6 +234,7 @@ export function ProjectsModule() {
               onEditClient={setEditing}
               onStartTimer={(project) => void startTimer(project)}
               onToggleTemplate={(project) => void toggleTemplate(project)}
+              onNewProject={() => setCreating(true)}
               onNewFromTemplate={() => setStartingFromTemplate(true)}
             />
           }
@@ -264,6 +276,10 @@ export function ProjectsModule() {
             bump();
           }}
         />
+      )}
+
+      {creating && (
+        <NewProjectDialog customers={customers.filter((customer) => !customer.archived)} onClose={() => setCreating(false)} onCreate={createProject} />
       )}
 
       {editing !== null && (

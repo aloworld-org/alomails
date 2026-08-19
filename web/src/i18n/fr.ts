@@ -2476,6 +2476,17 @@ export const fr: Partial<Catalog> = {
   projectsSave: "Enregistrer",
   projectsEdit: "Modifier",
   projectsActions: "Actions",
+  projectsNew: "Nouveau projet",
+  projectsNewTitle: "Créer un projet",
+  projectsNewSubtitle: "Nommez le travail et indiquez pour qui il est réalisé.",
+  projectsName: "Nom du projet",
+  projectsNamePlaceholder: "Par exemple, Refonte du site web",
+  projectsWorkType: "Ce travail est destiné à",
+  projectsClientWork: "Un client",
+  projectsInternalWork: "Notre entreprise",
+  projectsNewCustomerHint: "Vous pourrez ajouter les tarifs et budgets après la création.",
+  projectsCreate: "Créer le projet",
+  projectsCreateFailed: "Le projet n’a pas pu être créé.",
 
   // Durées et taux. `projectsNoTime` est le tiret d’une case vide : une case
   // blanche se lit comme une panne, un zéro comme un travail sans durée.
@@ -2519,7 +2530,7 @@ export const fr: Partial<Catalog> = {
   projectsStartTimer: "Démarrer le chronomètre",
   projectsEmptyTitle: "Aucun projet pour l’instant",
   projectsEmptyBody:
-    "Un projet, ici, est un tableau de Tâches vu comme du travail client. Créez-en un dans Tâches, puis dites pour qui il est réalisé.",
+    "Créez un projet pour un client ou pour votre entreprise, puis commencez à suivre le temps.",
 
   // Le formulaire du projet.
   projectsClientSubtitle:
