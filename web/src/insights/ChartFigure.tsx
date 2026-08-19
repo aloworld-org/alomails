@@ -20,6 +20,11 @@ import { TableFigure } from "./TableFigure";
 import type { Series } from "./types";
 import styles from "./InsightsModule.module.css";
 
+/** The figures behind the pixels: present in the document, not on the screen.
+ *  Tailwind's own `sr-only`, which is the same declaration this module's
+ *  `.srOnly` was (D2.08). */
+const SCREEN_READER_ONLY = "sr-only";
+
 /** The vizzes this component draws — `number` and `table` are their own. */
 export type DrawnViz = "bar" | "line" | "pie";
 
@@ -36,7 +41,10 @@ export function ChartFigure({
   const models = useMemo(
     () =>
       viz === "pie"
-        ? series.series.map((group) => ({ key: group.key, model: chartModel(series, viz, group.key) }))
+        ? series.series.map((group) => ({
+            key: group.key,
+            model: chartModel(series, viz, group.key),
+          }))
         : [{ key: "all", model: chartModel(series, viz) }],
     [series, viz],
   );
@@ -46,12 +54,15 @@ export function ChartFigure({
       <div className={models.length > 1 ? styles.chartsSplit : styles.charts}>
         {models.map(({ key, model }) => (
           <Suspense key={key} fallback={<Spinner size={18} />}>
-            <Chart model={model} label={models.length > 1 ? `${title} — ${key}` : title} />
+            <Chart
+              model={model}
+              label={models.length > 1 ? `${title} — ${key}` : title}
+            />
           </Suspense>
         ))}
       </div>
-      <div className={styles.srOnly}>
-        <TableFigure series={series} caption={title} />
+      <div className={SCREEN_READER_ONLY}>
+        <TableFigure series={series} label={title} scrollable={false} />
       </div>
     </div>
   );

@@ -32,9 +32,11 @@ export function Figures({
   viz: Viz | null;
   title: string;
 }) {
-  if (!hasFigures(series)) return <p className={styles.quiet}>{strings.insightsNoFigures}</p>;
+  if (!hasFigures(series))
+    return <p className={styles.quiet}>{strings.insightsNoFigures}</p>;
   if (viz === "number") return <NumberFigure series={series} />;
-  if (viz === "table") return <TableFigure series={series} />;
-  const drawn: DrawnViz = viz === "line" ? "line" : viz === "pie" ? "pie" : "bar";
+  if (viz === "table") return <TableFigure series={series} label={title} />;
+  const drawn: DrawnViz =
+    viz === "line" ? "line" : viz === "pie" ? "pie" : "bar";
   return <ChartFigure series={series} viz={drawn} title={title} />;
 }

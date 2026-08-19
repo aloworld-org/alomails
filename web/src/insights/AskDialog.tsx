@@ -14,10 +14,13 @@
 // own question, not a phrase a model wrote — words on a European product's
 // screen come from the reader or from our catalogs, never from a model's idea
 // of what language they speak.
-import { useState } from "react";
+//
+// The frame is `ds/Modal` and the question box is a `ds/Field` since D2.08 —
+// the same change, and for the same reason, as `GalleryDialog` beside it.
+import { useId, useState } from "react";
 import { Sparkles, X } from "lucide-react";
 
-import { Button, Spinner } from "../ds";
+import { Button, Field, IconButton, Input, Modal, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { InsightsError, insightsMessage, useInsightsApi } from "./api";
 import { Figures } from "./Figures";
@@ -50,6 +53,7 @@ export function AskDialog({
   onClose: () => void;
 }) {
   const api = useInsightsApi();
+  const formId = useId();
   const [question, setQuestion] = useState("");
   /** The question the proposal on screen actually answers — kept apart from the
    *  box, so editing the text does not silently relabel the chart below it. */
@@ -82,79 +86,24 @@ export function AskDialog({
   const banner = pinError ?? error;
 
   return (
-    <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
-      <div
-        className={styles.modal}
-        role="dialog"
-        aria-modal="true"
-        aria-label={strings.insightsAsk}
-        onMouseDown={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onClose();
-        }}
-      >
-        <div className={styles.modalHead}>
-          <span className={styles.modalIcon} aria-hidden="true">
-            <Sparkles size={19} />
-          </span>
-          <div className={styles.modalHeadText}>
-            <h2>{strings.insightsAsk}</h2>
-            <p>{strings.insightsAskSubtitle}</p>
-          </div>
-          <button
-            type="button"
-            className={styles.modalClose}
-            onClick={onClose}
-            aria-label={strings.insightsAskClose}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className={styles.modalBody}>
-          <form
-            className={styles.askForm}
-            onSubmit={(e) => {
-              e.preventDefault();
-              ask();
-            }}
-          >
-            <label className={styles.askLabel} htmlFor="insights-ask">
-              {strings.insightsAskLabel}
-            </label>
-            <div className={styles.askRow}>
-              <input
-                id="insights-ask"
-                className={styles.askInput}
-                value={question}
-                placeholder={strings.insightsAskPlaceholder}
-                autoComplete="off"
-                disabled={busy}
-                onChange={(e) => setQuestion(e.target.value)}
-              />
-              <Button type="submit" disabled={question.trim() === "" || asking || busy}>
-                {strings.insightsAskSubmit}
-              </Button>
-            </div>
-          </form>
-
-          {banner !== null && <ErrorBanner message={banner} />}
-          {asking && <Spinner size={18} />}
-
-          {proposal !== null && (
-            <section className={styles.askPreview} aria-label={strings.insightsAskPreview}>
-              <h3 className={styles.askPreviewTitle}>{asked}</h3>
-              <Figures series={proposal.series} viz={proposal.viz} title={asked} />
-              {proposal.repaired && (
-                <p className={styles.quiet}>{strings.insightsAskRepaired}</p>
-              )}
-            </section>
-          )}
-        </div>
-
-        <div className={styles.modalFooter}>
+    <Modal
+      title={strings.insightsAsk}
+      onClose={onClose}
+      icon={<Sparkles size={19} />}
+      actions={
+        <IconButton
+          label={strings.insightsAskClose}
+          icon={<X size={18} />}
+          onClick={onClose}
+        />
+      }
+      footer={
+        <>
+          <div className="flex-1" />
           <Button variant="ghost" onClick={onClose} disabled={busy}>
-            {proposal === null ? strings.dialogCancel : strings.insightsAskDiscard}
+            {proposal === null
+              ? strings.dialogCancel
+              : strings.insightsAskDiscard}
           </Button>
           {proposal !== null && (
             <Button disabled={busy} onClick={() => onPin(proposal, asked)}>
@@ -162,8 +111,63 @@ export function AskDialog({
               {strings.insightsAskPin}
             </Button>
           )}
+        </>
+      }
+    >
+      <p className="m-0 text-sm text-tertiary">{strings.insightsAskSubtitle}</p>
+
+      <form
+        id={formId}
+        className="flex flex-col gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          ask();
+        }}
+      >
+        {/* The box and the button are one row, so the label sits above the box
+            and the button lines up on the field's bottom edge — which is what
+            `items-end` is for. `ds/Field` owns the binding between the two;
+            the id it generates replaces the hand-written one this had. */}
+        <div className="flex items-end gap-2">
+          <div className="min-w-0 flex-1">
+            <Field label={strings.insightsAskLabel}>
+              {(control) => (
+                <Input
+                  {...control}
+                  value={question}
+                  placeholder={strings.insightsAskPlaceholder}
+                  autoComplete="off"
+                  disabled={busy}
+                  onChange={(e) => setQuestion(e.target.value)}
+                />
+              )}
+            </Field>
+          </div>
+          <Button
+            type="submit"
+            form={formId}
+            disabled={question.trim() === "" || asking || busy}
+          >
+            {strings.insightsAskSubmit}
+          </Button>
         </div>
-      </div>
-    </div>
+      </form>
+
+      {banner !== null && <ErrorBanner message={banner} />}
+      {asking && <Spinner size={18} />}
+
+      {proposal !== null && (
+        <section
+          className={styles.askPreview}
+          aria-label={strings.insightsAskPreview}
+        >
+          <h3 className={styles.askPreviewTitle}>{asked}</h3>
+          <Figures series={proposal.series} viz={proposal.viz} title={asked} />
+          {proposal.repaired && (
+            <p className={styles.quiet}>{strings.insightsAskRepaired}</p>
+          )}
+        </section>
+      )}
+    </Modal>
   );
 }

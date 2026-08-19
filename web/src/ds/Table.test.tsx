@@ -80,6 +80,27 @@ describe("the table behaves for somebody not using a mouse and eyes", () => {
     expect(region.tabIndex).toBe(0);
   });
 
+  test("a table that does not scroll is not a tab stop", () => {
+    render(
+      <Table label="Revenue by month" scrollable={false}>
+        <tbody>
+          <tr>
+            <Td>January</Td>
+          </tr>
+        </tbody>
+      </Table>,
+    );
+    // The stop exists because the box scrolls. `insights` draws the figures
+    // behind every chart as a table for a screen reader, inside an `sr-only`
+    // container that scrolls nothing — nine charts on a board would have been
+    // nine tab stops that show nothing when they are reached.
+    expect(screen.queryByRole("region")).toBeNull();
+    // The name survives the region: it is the caption that carries it.
+    expect(
+      screen.getByRole("table", { name: "Revenue by month" }),
+    ).toBeDefined();
+  });
+
   test("a column header is associated with its column", () => {
     list();
     expect(

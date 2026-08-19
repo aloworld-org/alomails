@@ -13,9 +13,17 @@
 // narrower, move it, remove it. Changing the *question* is the builder's
 // (BI1.06) — and moving is its own request, so renaming can never rearrange a
 // board.
-import { ChevronLeft, ChevronRight, Maximize2, Minimize2, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Minimize2,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 
-import { Menu, Spinner, cx } from "../ds";
+import { Card, Menu, Spinner, cx } from "../ds";
 import type { MenuItem } from "../ds";
 import { strings } from "../i18n";
 import { Figures } from "./Figures";
@@ -110,7 +118,17 @@ export function TileCard({
   ];
 
   return (
-    <section className={cx(styles.tile, spanClass(tile.span))}>
+    // `pad="none"` because the card lays out its own three regions: the head
+    // holds a menu button that has to reach the corner, and the body is where
+    // the figure lives. See `ds/Card`.
+    <Card
+      as="section"
+      pad="none"
+      className={cx(
+        "flex flex-col min-w-0 min-h-[220px]",
+        spanClass(tile.span),
+      )}
+    >
       <header className={styles.tileHead}>
         <h3 className={styles.tileTitle}>{tile.title}</h3>
         {figures.loading && <Spinner size={14} />}
@@ -123,8 +141,12 @@ export function TileCard({
       <div className={styles.tileBody}>
         {!tile.readable && (
           <div className={styles.placeholder}>
-            <p className={styles.placeholderTitle}>{strings.insightsUnreadableTitle}</p>
-            <p className={styles.quiet}>{tile.specError ?? strings.insightsUnreadableBody}</p>
+            <p className={styles.placeholderTitle}>
+              {strings.insightsUnreadableTitle}
+            </p>
+            <p className={styles.quiet}>
+              {tile.specError ?? strings.insightsUnreadableBody}
+            </p>
           </div>
         )}
         {tile.readable && figures.error !== null && (
@@ -146,9 +168,11 @@ export function TileCard({
               </p>
             );
           })}
-          {figures.series.truncated && <p className={styles.quiet}>{strings.insightsTruncated}</p>}
+          {figures.series.truncated && (
+            <p className={styles.quiet}>{strings.insightsTruncated}</p>
+          )}
         </footer>
       )}
-    </section>
+    </Card>
   );
 }

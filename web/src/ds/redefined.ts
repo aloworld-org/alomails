@@ -28,8 +28,6 @@
 // is not a way to land a new hand-rolled input.
 export const REDEFINES_PRIMITIVES: readonly string[] = [
   "hr/hr.module.css",
-  "importer/ImportModal.module.css",
-  "insights/InsightsModule.module.css",
   "inventory/InventoryModule.module.css",
   "invite/InvitationView.module.css",
   "meet/MeetModule.module.css",

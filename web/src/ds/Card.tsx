@@ -25,8 +25,9 @@ const BASE = "rounded-lg border border-subtle bg-surface";
 /** The differences that were decisions. `sm` for a card in a dense list or a
  *  grid of many; `lg` for a card that is the only thing on the screen — a
  *  sign-in panel, an empty state — where the content should not sit against
- *  the edge. */
-const PAD = { sm: "p-3", md: "p-5", lg: "p-8" } as const;
+ *  the edge. `none` emits no padding utility at all rather than a `p-0` that
+ *  would have to out-rank one: see the prop. */
+const PAD = { none: "", sm: "p-3", md: "p-5", lg: "p-8" } as const;
 
 /** Only when the whole card is a link or a button. A hover state on something
  *  that does not respond to a click is a promise the screen does not keep.
@@ -55,8 +56,16 @@ export interface CardProps extends HTMLAttributes<HTMLElement> {
    *
    *  Added for `auth/TwoFactorScreen` (D2.05) and `home/StatCard` (D2.07b). */
   as?: "div" | "section" | "form" | "li" | "button" | undefined;
-  /** `sm` for dense lists, `lg` for a card that is the whole screen. */
-  pad?: "sm" | "md" | "lg" | undefined;
+  /** `sm` for dense lists, `lg` for a card that is the whole screen.
+   *
+   *  `none` is the card that lays out its own regions — a head, a body and a
+   *  foot, each with padding of its own, where a padding on the surface would
+   *  be a second inset inside the first and the head's controls would stop
+   *  reaching the corner. It has to be a variant rather than a `className` of
+   *  `p-0`, because two utilities setting one property have no defined winner:
+   *  Tailwind emits them in its own order, not in the order they appear in
+   *  `class`. Added for `insights/TileCard` (D2.08). */
+  pad?: "none" | "sm" | "md" | "lg" | undefined;
   /** Drop the shadow, for a card sitting inside another surface: stacking two
    *  elevations reads as a mistake rather than as depth. */
   flat?: boolean | undefined;

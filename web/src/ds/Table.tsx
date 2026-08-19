@@ -126,6 +126,20 @@ export interface TableProps {
   /** Drop the border, radius and background of the scroll region, for a table
    *  that sits directly on a `Card` that already draws them. */
   flat?: boolean | undefined;
+  /** The table does not scroll in a box of its own: whatever holds it decides
+   *  its size, and it takes its full height there.
+   *
+   *  This is not styling — it removes the tab stop. The wrapper is a keyboard
+   *  stop *because* it scrolls (see the region below), and a table that cannot
+   *  scroll is a stop that goes nowhere and shows nothing. The caller that
+   *  found it is `insights/ChartFigure`, whose every chart carries the same
+   *  figures as a table for a screen reader: nine charts on a board would have
+   *  been nine invisible tab stops in `sr-only` containers, which is worse for
+   *  a sighted keyboard user than the chart alone. The `<caption>` still names
+   *  the table, so nothing is lost to a screen reader.
+   *
+   *  Added for `insights/ChartFigure` (D2.08). */
+  scrollable?: boolean | undefined;
   /** A table that is typed into rather than read: every cell bounded on all
    *  four sides, and no cell padding, because each cell is filled edge to edge
    *  by the control that edits it. The Docs table block is the caller — an
@@ -146,10 +160,15 @@ export function Table({
   interactiveRows,
   flat,
   grid,
+  scrollable = true,
   children,
   className,
 }: TableProps) {
-  const region = [REGION, flat === true ? "" : SURFACE, className ?? ""]
+  const region = [
+    scrollable ? REGION : "",
+    flat === true ? "" : SURFACE,
+    className ?? "",
+  ]
     .filter(Boolean)
     .join(" ");
   const table = [
@@ -168,7 +187,17 @@ export function Table({
     // goes here rather than on the table: a region that scrolls has to be
     // reachable by keyboard, and giving it a role and a name is what stops
     // that tab stop from being an unexplained one.
-    <div className={region} tabIndex={0} role="region" aria-label={label}>
+    //
+    // Without `scrollable` the three go together: no overflow, so no tab stop,
+    // so no role and no name to explain one. A `<div>` carrying `aria-label`
+    // and no role names nothing anyway; the `<caption>` is what names the
+    // table, and it is there in both forms.
+    <div
+      className={region}
+      {...(scrollable
+        ? { tabIndex: 0, role: "region", "aria-label": label }
+        : {})}
+    >
       <table className={table}>
         <caption className={showLabel === true ? CAPTION : "sr-only"}>
           {label}
