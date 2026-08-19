@@ -78,6 +78,14 @@ const PRESSABLE_HOVER = "hover:bg-default";
 const TONED_HOVER_RING =
   "hover:shadow-[inset_0_0_0_var(--border-width)_currentColor]";
 
+/** The chip that is currently chosen, drawn as a ring in its own ink — the same
+ *  mark `TONED_HOVER_RING` makes under the pointer, made permanent. A ring
+ *  rather than a fill or a weight, for the reason `pressed` gives: the fill
+ *  belongs to the tone and would have to say two things at once, and a bold
+ *  label is a second utility setting `font-weight` against `PRESSABLE`'s, which
+ *  has no defined winner. */
+const PRESSED = "shadow-[inset_0_0_0_var(--border-width)_currentColor]";
+
 /** Room for the button, so the text does not sit against it. */
 const REMOVABLE = "pr-1";
 
@@ -112,6 +120,20 @@ export interface ChipProps {
    *  Like `tone`, it is never the only signal — a coloured chip still says
    *  what it is in its label. */
   color?: string | undefined;
+  /** A pressable chip that is *on* or *off* — one suggestion in a row of them,
+   *  where pressing it chooses that value and pressing another chooses that one
+   *  instead. It sets `aria-pressed`, which is the only thing that tells a
+   *  screen reader a button carries a state; without it a chosen chip is
+   *  announced exactly like the five beside it that were not chosen.
+   *
+   *  Only meaningful with `onClick` — an unpressable chip has no state to be
+   *  in — and it is deliberately not a tone: which chip is chosen and what the
+   *  chip *means* are two different facts, and a picker whose selection ate the
+   *  accent tone could no longer say "this one is overdue".
+   *
+   *  Added for `crm/LostReasonDialog` (D2.07): six suggested reasons, one
+   *  click each, filling the free-text field rather than replacing it. */
+  pressed?: boolean | undefined;
   /** Passed through on the button form, for a chip that opens a menu. */
   "aria-haspopup"?: "menu" | "dialog" | "listbox" | undefined;
   "aria-expanded"?: boolean | undefined;
@@ -126,6 +148,7 @@ export function Chip({
   removeLabel,
   tone = "neutral",
   color,
+  pressed,
   className,
   title,
   "aria-haspopup": hasPopup,
@@ -152,6 +175,7 @@ export function Chip({
     onClick !== undefined && !toned ? PRESSABLE_HOVER : "",
     onClick !== undefined && toned ? TONED_HOVER_RING : "",
     onRemove === undefined ? "" : REMOVABLE,
+    onClick !== undefined && pressed === true ? PRESSED : "",
     className ?? "",
   ]
     .filter(Boolean)
@@ -173,6 +197,7 @@ export function Chip({
         style={tint}
         onClick={onClick}
         title={title}
+        {...(pressed === undefined ? {} : { "aria-pressed": pressed })}
         {...(hasPopup === undefined ? {} : { "aria-haspopup": hasPopup })}
         {...(expanded === undefined ? {} : { "aria-expanded": expanded })}
       >

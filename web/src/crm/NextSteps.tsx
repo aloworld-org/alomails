@@ -14,7 +14,7 @@ import { useCallback, useEffect, useState } from "react";
 import { CalendarDays, CheckSquare, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { Button } from "../ds";
+import { Button, Input } from "../ds";
 import { strings } from "../i18n";
 import type { Task } from "../jmap";
 import { crmMessage, useCrmApi } from "./api";
@@ -50,8 +50,12 @@ export function NextSteps({ dealId }: { dealId: string }) {
       // A task's due date is an instant everywhere in Tasks, and the picker
       // gives a day: it is sent as that day's start in the browser's own zone,
       // which is the zone the person picking it is standing in.
-      const dueAt = due === "" ? undefined : new Date(`${due}T00:00`).toISOString();
-      await api.addNextStep(dealId, { title, ...(dueAt === undefined ? {} : { dueAt }) });
+      const dueAt =
+        due === "" ? undefined : new Date(`${due}T00:00`).toISOString();
+      await api.addNextStep(dealId, {
+        title,
+        ...(dueAt === undefined ? {} : { dueAt }),
+      });
       setTitle("");
       setDue("");
       await load();
@@ -77,15 +81,16 @@ export function NextSteps({ dealId }: { dealId: string }) {
           if (!busy && title.trim() !== "") void add();
         }}
       >
-        <input
-          className={styles.input}
+        {/* The step takes the room the row has left; the day takes its own. */}
+        <Input
+          className="flex-1 basis-[200px]"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder={strings.crmNextStepPlaceholder}
           aria-label={strings.crmNextStepPlaceholder}
         />
-        <input
-          className={styles.input}
+        <Input
+          className="flex-none basis-40"
           type="date"
           value={due}
           onChange={(e) => setDue(e.target.value)}
@@ -114,7 +119,9 @@ export function NextSteps({ dealId }: { dealId: string }) {
               <button
                 type="button"
                 className={styles.linkAction}
-                onClick={() => navigate(`/tasks?open=${encodeURIComponent(step.id)}`)}
+                onClick={() =>
+                  navigate(`/tasks?open=${encodeURIComponent(step.id)}`)
+                }
               >
                 <ExternalLink size={13} /> {strings.crmOpenInTasks}
               </button>

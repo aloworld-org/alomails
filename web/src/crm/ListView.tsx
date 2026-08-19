@@ -12,7 +12,18 @@ import { useMemo, useState } from "react";
 import { Handshake } from "lucide-react";
 
 import { useAuth } from "../auth";
-import { Button, Spinner } from "../ds";
+import {
+  Button,
+  Checkbox,
+  Input,
+  Select,
+  Spinner,
+  Table,
+  TableEmpty,
+  Td,
+  Th,
+  Toolbar,
+} from "../ds";
 import { strings } from "../i18n";
 import { dayLabel, dealValue } from "./format";
 import { EmptyState, ErrorBanner, StateChip } from "./parts";
@@ -23,7 +34,13 @@ import styles from "./CrmModule.module.css";
 /** Whether a deal answers the search box (title, company, contact, source). */
 function matches(deal: CrmDeal, needle: string): boolean {
   if (needle === "") return true;
-  const hay = [deal.title, deal.companyName, deal.contactName, deal.contactEmail, deal.source]
+  const hay = [
+    deal.title,
+    deal.companyName,
+    deal.contactName,
+    deal.contactEmail,
+    deal.source,
+  ]
     .join(" ")
     .toLowerCase();
   return hay.includes(needle);
@@ -46,7 +63,13 @@ interface Props {
   onCreate: () => void;
 }
 
-export function ListView({ pipelineId, stages, revision, onOpen, onCreate }: Props) {
+export function ListView({
+  pipelineId,
+  stages,
+  revision,
+  onOpen,
+  onCreate,
+}: Props) {
   const { identity } = useAuth();
   const [stageId, setStageId] = useState("");
   const [state, setState] = useState<DealState | "">("");
@@ -76,17 +99,18 @@ export function ListView({ pipelineId, stages, revision, onOpen, onCreate }: Pro
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <input
-          className={styles.search}
+      <Toolbar label={strings.crmDealFilters}>
+        {/* The search field takes the room the row has left, down to a width a
+            deal title is still readable in. */}
+        <Input
+          className="flex-1 basis-[220px] min-w-[180px]"
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={strings.crmSearchDeals}
           aria-label={strings.crmSearchDeals}
         />
-        <select
-          className={styles.filterSelect}
+        <Select
           value={stageId}
           onChange={(e) => setStageId(e.target.value)}
           aria-label={strings.crmFilterStage}
@@ -97,9 +121,8 @@ export function ListView({ pipelineId, stages, revision, onOpen, onCreate }: Pro
               {s.name}
             </option>
           ))}
-        </select>
-        <select
-          className={styles.filterSelect}
+        </Select>
+        <Select
           value={state}
           onChange={(e) => setState(e.target.value as DealState | "")}
           aria-label={strings.crmFilterState}
@@ -109,14 +132,15 @@ export function ListView({ pipelineId, stages, revision, onOpen, onCreate }: Pro
               {s.label()}
             </option>
           ))}
-        </select>
-        <label className={styles.toggle}>
-          <input type="checkbox" checked={mine} onChange={(e) => setMine(e.target.checked)} />
-          {strings.crmFilterMine}
-        </label>
+        </Select>
+        <Checkbox
+          checked={mine}
+          onChange={setMine}
+          label={strings.crmFilterMine}
+        />
         {loading && <Spinner size={16} />}
         <Button onClick={onCreate}>{strings.crmNewDeal}</Button>
-      </div>
+      </Toolbar>
 
       {error !== null && <ErrorBanner message={error} />}
 
@@ -128,25 +152,30 @@ export function ListView({ pipelineId, stages, revision, onOpen, onCreate }: Pro
           cta={strings.crmNewDeal}
           onCta={onCreate}
         />
-      ) : shown.length === 0 && !loading ? (
-        <p className={styles.noMatches}>{strings.crmNoMatches}</p>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.crmColDeal}</th>
-                <th scope="col">{strings.crmColCompany}</th>
-                <th scope="col">{strings.crmColStage}</th>
-                <th scope="col">{strings.crmColValue}</th>
-                <th scope="col">{strings.crmColExpectedClose}</th>
-                <th scope="col">{strings.crmColState}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((deal) => (
+        // Every row's first cell opens the deal, so the row really does respond
+        // to a click — which is what `interactiveRows` is for.
+        <Table label={strings.crmDealsTable} interactiveRows>
+          <thead>
+            <tr>
+              <Th>{strings.crmColDeal}</Th>
+              <Th>{strings.crmColCompany}</Th>
+              <Th>{strings.crmColStage}</Th>
+              <Th numeric>{strings.crmColValue}</Th>
+              <Th>{strings.crmColExpectedClose}</Th>
+              <Th>{strings.crmColState}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {/* Inside the table rather than beside it: a "no matches" line in a
+                sibling paragraph leaves anyone navigating by table in an empty
+                grid with no explanation. */}
+            {shown.length === 0 && !loading ? (
+              <TableEmpty cols={6}>{strings.crmNoMatches}</TableEmpty>
+            ) : (
+              shown.map((deal) => (
                 <tr key={deal.id}>
-                  <td>
+                  <Td>
                     <button
                       type="button"
                       className={styles.rowName}
@@ -154,19 +183,23 @@ export function ListView({ pipelineId, stages, revision, onOpen, onCreate }: Pro
                     >
                       {deal.title}
                     </button>
-                  </td>
-                  <td>{deal.companyName}</td>
-                  <td>{stageName(deal.stageId)}</td>
-                  <td className={styles.numeric}>{dealValue(deal)}</td>
-                  <td>{deal.expectedClose === null ? "" : dayLabel(deal.expectedClose)}</td>
-                  <td>
+                  </Td>
+                  <Td>{deal.companyName}</Td>
+                  <Td>{stageName(deal.stageId)}</Td>
+                  <Td numeric>{dealValue(deal)}</Td>
+                  <Td>
+                    {deal.expectedClose === null
+                      ? ""
+                      : dayLabel(deal.expectedClose)}
+                  </Td>
+                  <Td>
                     <StateChip state={deal.state} />
-                  </td>
+                  </Td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </Table>
       )}
     </div>
   );

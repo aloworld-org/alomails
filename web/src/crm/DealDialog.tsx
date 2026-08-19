@@ -13,9 +13,10 @@ import { useState } from "react";
 import { Handshake } from "lucide-react";
 
 import { hundredthsToInput, parseHundredths } from "../billing";
+import { Field, Input } from "../ds";
 import { strings } from "../i18n";
 import { crmMessage, useCrmApi } from "./api";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import type { CrmDeal, DealDraft } from "./types";
 import styles from "./CrmModule.module.css";
 
@@ -31,13 +32,21 @@ interface Props {
   onSaved: (deal: CrmDeal) => void;
 }
 
-export function DealDialog({ deal, pipelineId, stageId, onClose, onSaved }: Props) {
+export function DealDialog({
+  deal,
+  pipelineId,
+  stageId,
+  onClose,
+  onSaved,
+}: Props) {
   const api = useCrmApi();
   const [title, setTitle] = useState(deal?.title ?? "");
   const [company, setCompany] = useState(deal?.companyName ?? "");
   const [contactName, setContactName] = useState(deal?.contactName ?? "");
   const [contactEmail, setContactEmail] = useState(deal?.contactEmail ?? "");
-  const [value, setValue] = useState(deal === null ? "" : hundredthsToInput(deal.valueCents));
+  const [value, setValue] = useState(
+    deal === null ? "" : hundredthsToInput(deal.valueCents),
+  );
   const [currency, setCurrency] = useState(deal?.currency ?? "");
   const [expectedClose, setExpectedClose] = useState(deal?.expectedClose ?? "");
   const [source, setSource] = useState(deal?.source ?? "");
@@ -57,8 +66,13 @@ export function DealDialog({ deal, pipelineId, stageId, onClose, onSaved }: Prop
       // Only what changed is sent (the module rule billing set): a PATCH that
       // replays every field would overwrite a colleague's edit with a value
       // this form read minutes ago.
-      const put = <K extends keyof DealDraft>(key: K, next: DealDraft[K], stored: DealDraft[K]) => {
-        if (deal === null ? next !== "" && next !== null : next !== stored) draft[key] = next;
+      const put = <K extends keyof DealDraft>(
+        key: K,
+        next: DealDraft[K],
+        stored: DealDraft[K],
+      ) => {
+        if (deal === null ? next !== "" && next !== null : next !== stored)
+          draft[key] = next;
       };
       put("title", title.trim(), deal?.title);
       put("companyName", company.trim(), deal?.companyName);
@@ -69,8 +83,12 @@ export function DealDialog({ deal, pipelineId, stageId, onClose, onSaved }: Prop
       // A cleared day is an explicit `null` — "no expected close" is a decision,
       // and absent would mean "leave the old one".
       const day = expectedClose.trim() === "" ? null : expectedClose.trim();
-      if (deal === null ? day !== null : day !== deal.expectedClose) draft.expectedClose = day;
-      if (valueCents !== null && (deal === null || valueCents !== deal.valueCents)) {
+      if (deal === null ? day !== null : day !== deal.expectedClose)
+        draft.expectedClose = day;
+      if (
+        valueCents !== null &&
+        (deal === null || valueCents !== deal.valueCents)
+      ) {
         draft.valueCents = valueCents;
       }
       if (deal === null) {
@@ -98,38 +116,49 @@ export function DealDialog({ deal, pipelineId, stageId, onClose, onSaved }: Prop
       onSubmit={() => void save()}
     >
       <Field label={strings.crmFieldTitle}>
-        <input
-          className={styles.input}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          autoFocus
-          required
-        />
+        {(control) => (
+          <Input
+            {...control}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            autoFocus
+            required
+          />
+        )}
       </Field>
 
       <Field label={strings.crmFieldCompany} hint={strings.crmCompanyHint}>
-        <input
-          className={styles.input}
-          value={company}
-          onChange={(e) => setCompany(e.target.value)}
-        />
+        {(control) => (
+          <Input
+            {...control}
+            value={company}
+            onChange={(e) => setCompany(e.target.value)}
+          />
+        )}
       </Field>
 
       <div className={styles.row}>
         <Field label={strings.crmFieldContactName}>
-          <input
-            className={styles.input}
-            value={contactName}
-            onChange={(e) => setContactName(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={contactName}
+              onChange={(e) => setContactName(e.target.value)}
+            />
+          )}
         </Field>
-        <Field label={strings.crmFieldContactEmail} hint={strings.crmContactEmailHint}>
-          <input
-            className={styles.input}
-            type="email"
-            value={contactEmail}
-            onChange={(e) => setContactEmail(e.target.value)}
-          />
+        <Field
+          label={strings.crmFieldContactEmail}
+          hint={strings.crmContactEmailHint}
+        >
+          {(control) => (
+            <Input
+              {...control}
+              type="email"
+              value={contactEmail}
+              onChange={(e) => setContactEmail(e.target.value)}
+            />
+          )}
         </Field>
       </div>
 
@@ -139,40 +168,47 @@ export function DealDialog({ deal, pipelineId, stageId, onClose, onSaved }: Prop
           hint={strings.crmValueHint}
           error={valueError ? strings.crmNotAnAmount : undefined}
         >
-          <input
-            className={styles.input}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            inputMode="decimal"
-            aria-invalid={valueError}
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              inputMode="decimal"
+            />
+          )}
         </Field>
         <Field label={strings.crmFieldCurrency} hint={strings.crmCurrencyHint}>
-          <input
-            className={styles.input}
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
-            maxLength={3}
-            placeholder="EUR"
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+              maxLength={3}
+              placeholder="EUR"
+            />
+          )}
         </Field>
       </div>
 
       <div className={styles.row}>
         <Field label={strings.crmFieldExpectedClose}>
-          <input
-            className={styles.input}
-            type="date"
-            value={expectedClose}
-            onChange={(e) => setExpectedClose(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              {...control}
+              type="date"
+              value={expectedClose}
+              onChange={(e) => setExpectedClose(e.target.value)}
+            />
+          )}
         </Field>
         <Field label={strings.crmFieldSource} hint={strings.crmSourceHint}>
-          <input
-            className={styles.input}
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+            />
+          )}
         </Field>
       </div>
     </DialogFrame>

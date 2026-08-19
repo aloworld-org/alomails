@@ -13,9 +13,15 @@
 // drawer bumps it, and whichever view is on screen re-reads.
 import { useState } from "react";
 import { Handshake } from "lucide-react";
-import { NavLink, Navigate, Route, Routes, useSearchParams } from "react-router-dom";
+import {
+  NavLink,
+  Navigate,
+  Route,
+  Routes,
+  useSearchParams,
+} from "react-router-dom";
 
-import { Spinner } from "../ds";
+import { Select, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { crmMessage, useCrmApi } from "./api";
 import { BoardView } from "./BoardView";
@@ -84,8 +90,7 @@ export function CrmModule() {
       <header className={styles.header}>
         <h1 className={styles.title}>{strings.moduleCrm}</h1>
         {board.pipelines.length > 1 && (
-          <select
-            className={styles.pipelinePicker}
+          <Select
             value={board.pipelineId ?? ""}
             onChange={(e) => board.selectPipeline(e.target.value)}
             aria-label={strings.crmPipeline}
@@ -95,7 +100,7 @@ export function CrmModule() {
                 {p.name}
               </option>
             ))}
-          </select>
+          </Select>
         )}
         <nav className={styles.tabs}>
           {TABS.map((t) => (
@@ -113,7 +118,9 @@ export function CrmModule() {
         {(board.loading || deals.loading) && <Spinner size={16} />}
       </header>
 
-      {banner !== null && banner !== undefined && <ErrorBanner message={banner} />}
+      {banner !== null && banner !== undefined && (
+        <ErrorBanner message={banner} />
+      )}
 
       {board.pipelineId === null && !board.loading ? (
         <EmptyState
@@ -131,7 +138,9 @@ export function CrmModule() {
                 stages={board.stages}
                 deals={deals.deals}
                 onOpen={openDeal}
-                onMove={(id, stage, position) => void commitMove(id, stage, position)}
+                onMove={(id, stage, position) =>
+                  void commitMove(id, stage, position)
+                }
                 onAdd={setCreatingIn}
               />
             }
@@ -150,7 +159,9 @@ export function CrmModule() {
           />
           <Route
             path="report"
-            element={<ReportView pipelineId={board.pipelineId} revision={revision} />}
+            element={
+              <ReportView pipelineId={board.pipelineId} revision={revision} />
+            }
           />
           {/* An unknown CRM path is a stale link, not an error page. */}
           <Route path="*" element={<Navigate to="board" replace />} />

@@ -2023,6 +2023,8 @@ export const nl: Partial<Catalog> = {
     "Dit verwijdert de deal en alles wat erop is vastgelegd. Taken die eruit zijn ontstaan blijven in de lijst van hun eigenaar staan. Dit kan niet ongedaan worden gemaakt.",
 
   // De lijst
+  crmDealsTable: "Deals",
+  crmDealFilters: "Dealfilters",
   crmSearchDeals: "Deals zoeken",
   crmFilterStage: "Filteren op fase",
   crmFilterAnyStage: "Alle fasen",
@@ -2086,6 +2088,7 @@ export const nl: Partial<Catalog> = {
   // verloren. Elk bedrag komt van de server, en twee valuta's worden nooit
   // bij elkaar opgeteld.
   crmReport: "Rapport",
+  crmReportPeriod: "Rapportperiode",
   crmReportFrom: "Van",
   crmReportTo: "Tot",
   crmReportShow: "Tonen",

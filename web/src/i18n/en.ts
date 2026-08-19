@@ -2994,6 +2994,8 @@ export const en = {
     "This removes the deal and everything logged on it. Tasks raised from it stay in their owners' lists. It cannot be undone.",
 
   // The list
+  crmDealsTable: "Deals",
+  crmDealFilters: "Deal filters",
   crmSearchDeals: "Search deals",
   crmFilterStage: "Filter by stage",
   crmFilterAnyStage: "Any stage",
@@ -3057,6 +3059,7 @@ export const en = {
   // The report: value by stage, and what was won and lost in a period. Every
   // figure is the server's, and currencies are never added together.
   crmReport: "Report",
+  crmReportPeriod: "Report period",
   crmReportFrom: "From",
   crmReportTo: "To",
   crmReportShow: "Show",

@@ -15,10 +15,10 @@
 import { useCallback, useRef, useState } from "react";
 import { TrendingDown } from "lucide-react";
 
+import { Chip, Field, Input } from "../ds";
 import { strings } from "../i18n";
 import { DialogFrame } from "./parts";
 import type { CrmStage } from "./types";
-import styles from "./CrmModule.module.css";
 
 /** The reasons a deal is usually lost, offered as one click each. Ordinary
  *  suggestions, in the interface language — never stored as codes, because the
@@ -102,33 +102,31 @@ function LostReasonDialog({
       onClose={() => onSettle(null)}
       onSubmit={() => onSettle(trimmed)}
     >
-      <div className={styles.reasonPicker}>
+      {/* One click each, and they fill the field rather than replacing it —
+          which is why they are chips that carry a pressed state rather than a
+          set of radio buttons: the answer is still free text. */}
+      <div className="flex flex-wrap gap-1.5">
         {suggestions().map((suggested) => (
-          <button
+          <Chip
             key={suggested}
-            type="button"
-            className={
-              trimmed === suggested
-                ? `${styles.reasonChip} ${styles.reasonChipOn}`
-                : styles.reasonChip
-            }
-            aria-pressed={trimmed === suggested}
+            pressed={trimmed === suggested}
             onClick={() => setReason(suggested)}
           >
             {suggested}
-          </button>
+          </Chip>
         ))}
       </div>
-      <label className={styles.field}>
-        <span className={styles.label}>{strings.crmLostReasonLabel}</span>
-        <input
-          className={styles.input}
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder={strings.crmLostPlaceholder}
-          autoFocus
-        />
-      </label>
+      <Field label={strings.crmLostReasonLabel}>
+        {(control) => (
+          <Input
+            {...control}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder={strings.crmLostPlaceholder}
+            autoFocus
+          />
+        )}
+      </Field>
     </DialogFrame>
   );
 }

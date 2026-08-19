@@ -10,7 +10,7 @@ import { useCallback, useEffect, useState } from "react";
 import { FileText, Pencil, Receipt, Trash2, X } from "lucide-react";
 
 import { RecordHistory } from "../audit";
-import { useDialogs } from "../ds";
+import { Field, IconButton, Select, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { ActivityLog } from "./ActivityLog";
 import { crmMessage, useCrmApi } from "./api";
@@ -93,18 +93,22 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
   }
 
   return (
-    <aside className={styles.drawer} role="dialog" aria-modal="false" aria-label={strings.crmDeal}>
+    <aside
+      className={styles.drawer}
+      role="dialog"
+      aria-modal="false"
+      aria-label={strings.crmDeal}
+    >
       <header className={styles.drawerHead}>
         <div className={styles.drawerTitleRow}>
-          <h2 className={styles.drawerTitle}>{deal?.title ?? strings.crmDeal}</h2>
-          <button
-            type="button"
-            className={styles.iconAction}
+          <h2 className={styles.drawerTitle}>
+            {deal?.title ?? strings.crmDeal}
+          </h2>
+          <IconButton
+            label={strings.crmClose}
+            icon={<X size={18} />}
             onClick={onClose}
-            aria-label={strings.crmClose}
-          >
-            <X size={18} />
-          </button>
+          />
         </div>
         {deal !== null && (
           <>
@@ -125,30 +129,35 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
               </p>
             )}
             {deal.lostReason !== null && (
-              <p className={styles.drawerLost}>{strings.crmLostBecause(deal.lostReason)}</p>
+              <p className={styles.drawerLost}>
+                {strings.crmLostBecause(deal.lostReason)}
+              </p>
             )}
             <div className={styles.drawerActions}>
-              <label className={styles.stagePicker}>
-                <span className={styles.label}>{strings.crmStage}</span>
-                <select
-                  className={styles.filterSelect}
-                  value={deal.stageId}
-                  onChange={(e) => void move(e.target.value)}
-                >
-                  {/* A closed deal can sit in a column that has since been
-                      archived. Say so rather than let the select fall back to
-                      its first option, which would show the wrong column and
-                      turn an idle click into a move. */}
-                  {!stages.some((s) => s.id === deal.stageId) && (
-                    <option value={deal.stageId}>{strings.crmStageArchived}</option>
-                  )}
-                  {stages.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <Field label={strings.crmStage}>
+                {(control) => (
+                  <Select
+                    {...control}
+                    value={deal.stageId}
+                    onChange={(e) => void move(e.target.value)}
+                  >
+                    {/* A closed deal can sit in a column that has since been
+                        archived. Say so rather than let the select fall back to
+                        its first option, which would show the wrong column and
+                        turn an idle click into a move. */}
+                    {!stages.some((s) => s.id === deal.stageId) && (
+                      <option value={deal.stageId}>
+                        {strings.crmStageArchived}
+                      </option>
+                    )}
+                    {stages.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
               <span className={styles.cardSpacer} />
               {/* The handoff to billing (B2.08). Offered on any deal that has
                   not been lost, because quoting an open deal is how it is won —
@@ -171,10 +180,18 @@ export function DealDrawer({ dealId, stages, onClose, onChanged }: Props) {
                   </button>
                 </>
               )}
-              <button type="button" className={styles.linkAction} onClick={() => setEditing(true)}>
+              <button
+                type="button"
+                className={styles.linkAction}
+                onClick={() => setEditing(true)}
+              >
                 <Pencil size={13} /> {strings.crmEdit}
               </button>
-              <button type="button" className={styles.linkAction} onClick={() => void remove()}>
+              <button
+                type="button"
+                className={styles.linkAction}
+                onClick={() => void remove()}
+              >
                 <Trash2 size={13} /> {strings.crmDeleteDeal}
               </button>
             </div>

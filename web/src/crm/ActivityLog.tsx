@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MessageSquare, Trash2 } from "lucide-react";
 
-import { Button } from "../ds";
+import { Button, IconButton, Select } from "../ds";
 import { strings } from "../i18n";
 import { crmMessage, useCrmApi } from "./api";
 import { kindLabel, momentLabel } from "./format";
@@ -81,8 +81,7 @@ export function ActivityLog({ dealId }: { dealId: string }) {
           if (!busy && body.trim() !== "") void add();
         }}
       >
-        <select
-          className={styles.filterSelect}
+        <Select
           value={kind}
           onChange={(e) => setKind(e.target.value as ActivityKind)}
           aria-label={strings.crmActivityKind}
@@ -92,7 +91,7 @@ export function ActivityLog({ dealId }: { dealId: string }) {
               {kindLabel(k)}
             </option>
           ))}
-        </select>
+        </Select>
         <textarea
           className={styles.textarea}
           value={body}
@@ -113,18 +112,19 @@ export function ActivityLog({ dealId }: { dealId: string }) {
           {entries.map((entry) => (
             <li key={entry.id} className={styles.entry}>
               <div className={styles.entryHead}>
-                <span className={styles.entryKind}>{kindLabel(entry.kind)}</span>
-                <span className={styles.entryWhen}>{momentLabel(entry.happenedAt)}</span>
+                <span className={styles.entryKind}>
+                  {kindLabel(entry.kind)}
+                </span>
+                <span className={styles.entryWhen}>
+                  {momentLabel(entry.happenedAt)}
+                </span>
                 <span className={styles.cardSpacer} />
-                <button
-                  type="button"
-                  className={styles.iconAction}
+                <IconButton
+                  label={strings.crmActivityDelete}
+                  icon={<Trash2 size={14} />}
                   onClick={() => void remove(entry.id)}
-                  aria-label={strings.crmActivityDelete}
                   title={strings.crmActivityDelete}
-                >
-                  <Trash2 size={14} />
-                </button>
+                />
               </div>
               <p className={styles.entryBody}>{entry.body}</p>
             </li>

@@ -2062,6 +2062,8 @@ export const fr: Partial<Catalog> = {
     "Ceci supprime l’affaire et tout ce qui y est consigné. Les tâches qui en sont issues restent dans les listes de leurs responsables. C’est irréversible.",
 
   // La liste
+  crmDealsTable: "Affaires",
+  crmDealFilters: "Filtres des affaires",
   crmSearchDeals: "Rechercher une affaire",
   crmFilterStage: "Filtrer par étape",
   crmFilterAnyStage: "Toutes les étapes",
@@ -2126,6 +2128,7 @@ export const fr: Partial<Catalog> = {
   // une période. Chaque chiffre vient du serveur, et deux devises ne
   // s’additionnent jamais.
   crmReport: "Rapport",
+  crmReportPeriod: "Période du rapport",
   crmReportFrom: "Du",
   crmReportTo: "Au",
   crmReportShow: "Afficher",

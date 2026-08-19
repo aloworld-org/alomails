@@ -1,11 +1,17 @@
 // The pieces the CRM screens share, so the board, the list, the drawer and the
 // deal form are visibly one module. Presentational only: no data loading, no
 // rules, no arithmetic.
-import type { FormEvent, ReactNode } from "react";
+//
+// Since D2.07 the primitives underneath are the design system's: the state
+// word is a `ds/Badge`, and the dialog frame is a `ds/Modal` rather than this
+// module's own scrim and panel. The module's own `Field` is gone entirely —
+// `ds/Field` binds the label to the control and announces the error, which is
+// the part a hand-rolled column never had.
+import { useId, type FormEvent, type ReactNode } from "react";
 import { X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-import { Button } from "../ds";
+import { Badge, Button, IconButton, Modal } from "../ds";
 import { strings } from "../i18n";
 import { stateLabel } from "./format";
 import type { DealState } from "./types";
@@ -43,43 +49,36 @@ export function EmptyState({
       </span>
       <h2 className={styles.emptyTitle}>{title}</h2>
       <p className={styles.emptyBody}>{body}</p>
-      {cta !== undefined && onCta !== undefined && <Button onClick={onCta}>{cta}</Button>}
+      {cta !== undefined && onCta !== undefined && (
+        <Button onClick={onCta}>{cta}</Button>
+      )}
     </div>
   );
 }
 
-/** The coloured word for where a deal stands, as the server derived it. */
+/** Where a deal stands, as the server derived it. A `Badge` rather than a
+ *  `Chip`: the design system's line is that a badge is read and a chip is acted
+ *  on, and nothing about this word is pressable. The name stays `StateChip`
+ *  because that is what two screens call it.
+ *
+ *  The tone is never the only signal — the word itself says "Won" or "Lost" —
+ *  which is why an open deal takes the accent tone rather than needing a fifth
+ *  one of its own. */
 export function StateChip({ state }: { state: DealState }) {
   const tone =
-    state === "won" ? styles.chipGood : state === "lost" ? styles.chipBad : styles.chipInfo;
-  return <span className={`${styles.chip} ${tone}`}>{stateLabel(state)}</span>;
+    state === "won" ? "success" : state === "lost" ? "danger" : "accent";
+  return <Badge tone={tone}>{stateLabel(state)}</Badge>;
 }
 
-/** One labelled control in a form. `hint` explains a rule the server owns;
- *  `error` is what the edge could not turn into what the server takes. */
-export function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string | undefined;
-  children: ReactNode;
-}) {
-  return (
-    <label className={styles.field}>
-      <span className={styles.label}>{label}</span>
-      {children}
-      {error !== undefined && <span className={styles.fieldError}>{error}</span>}
-      {error === undefined && hint !== undefined && <span className={styles.hint}>{hint}</span>}
-    </label>
-  );
-}
-
-/** The modal chrome the deal form sits in: header, scrolling body, and a footer
- *  whose primary action is the form's submit. */
+/** The modal chrome the deal form sits in: a `ds/Modal` whose body is the form
+ *  and whose footer submits it.
+ *
+ *  Body and footer are siblings inside the panel, so the submit button is tied
+ *  to the form by id rather than nested in it — which is also what keeps Enter
+ *  in any field working.
+ *
+ *  The header carries the close button and the footer carries Cancel, both
+ *  named "Cancel": two ways out of the same question, said the same way. */
 export function DialogFrame({
   Icon,
   title,
@@ -103,53 +102,43 @@ export function DialogFrame({
   onSubmit: () => void;
   children: ReactNode;
 }) {
+  const formId = useId();
   function submit(e: FormEvent) {
     e.preventDefault();
     if (!busy && canSubmit) onSubmit();
   }
   return (
-    <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
-      <form
-        className={styles.modal}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        onSubmit={submit}
-        onMouseDown={(e) => e.stopPropagation()}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") onClose();
-        }}
-      >
-        <div className={styles.modalHead}>
-          <span className={styles.modalIcon} aria-hidden="true">
-            <Icon size={19} />
-          </span>
-          <div className={styles.modalHeadText}>
-            <h2>{title}</h2>
-            <p>{subtitle}</p>
-          </div>
-          <button
-            type="button"
-            className={styles.modalClose}
-            onClick={onClose}
-            aria-label={strings.crmCancel}
-          >
-            <X size={18} />
-          </button>
-        </div>
-        <div className={styles.modalBody}>
-          {error !== null && <ErrorBanner message={error} />}
-          {children}
-        </div>
-        <div className={styles.modalFooter}>
+    <Modal
+      title={title}
+      onClose={onClose}
+      icon={<Icon size={19} />}
+      actions={
+        <IconButton
+          label={strings.crmCancel}
+          icon={<X size={18} />}
+          onClick={onClose}
+        />
+      }
+      footer={
+        <>
+          <div className="flex-1" />
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             {strings.crmCancel}
           </Button>
-          <Button type="submit" disabled={busy || !canSubmit}>
+          <Button type="submit" form={formId} disabled={busy || !canSubmit}>
             {submitLabel}
           </Button>
-        </div>
+        </>
+      }
+    >
+      {/* The sentence under the title. `ds/Modal`'s header is the name and the
+          controls, so the question this dialog is asking reads as the first
+          line of the body rather than as a second heading. */}
+      <p className="m-0 text-sm text-tertiary">{subtitle}</p>
+      {error !== null && <ErrorBanner message={error} />}
+      <form id={formId} className="flex flex-col gap-4" onSubmit={submit}>
+        {children}
       </form>
-    </div>
+    </Modal>
   );
 }

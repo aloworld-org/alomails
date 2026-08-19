@@ -19,7 +19,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link2, Mail, Sparkles, Unlink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { Button, Spinner } from "../ds";
+import { Button, IconButton, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { crmMessage, useCrmApi } from "./api";
 import { momentLabel } from "./format";
@@ -31,7 +31,9 @@ export function LinkedThreads({ dealId }: { dealId: string }) {
   const api = useCrmApi();
   const navigate = useNavigate();
   const [threads, setThreads] = useState<DealThread[]>([]);
-  const [suggestions, setSuggestions] = useState<ThreadSuggestion[] | null>(null);
+  const [suggestions, setSuggestions] = useState<ThreadSuggestion[] | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -99,29 +101,37 @@ export function LinkedThreads({ dealId }: { dealId: string }) {
               <div className={styles.entryHead}>
                 <span className={styles.entryKind}>{thread.subject}</span>
                 <span className={styles.cardSpacer} />
-                <button
-                  type="button"
-                  className={styles.iconAction}
+                <IconButton
+                  label={strings.crmThreadUnlink}
+                  icon={<Unlink size={14} />}
                   onClick={() => void unlink(thread.threadId)}
-                  aria-label={strings.crmThreadUnlink}
                   title={strings.crmThreadUnlink}
-                >
-                  <Unlink size={14} />
-                </button>
+                />
               </div>
               <div className={styles.entryMeta}>
-                <span>{strings.crmThreadLinkedBy(thread.linkedBy, momentLabel(thread.linkedAt))}</span>
+                <span>
+                  {strings.crmThreadLinkedBy(
+                    thread.linkedBy,
+                    momentLabel(thread.linkedAt),
+                  )}
+                </span>
               </div>
               {thread.readable ? (
                 <button
                   type="button"
                   className={styles.linkAction}
-                  onClick={() => navigate(`/mail?thread=${encodeURIComponent(thread.threadId)}`)}
+                  onClick={() =>
+                    navigate(
+                      `/mail?thread=${encodeURIComponent(thread.threadId)}`,
+                    )
+                  }
                 >
                   <Mail size={13} /> {strings.crmThreadOpenInMail}
                 </button>
               ) : (
-                <p className={styles.hint}>{strings.crmThreadNotYours}</p>
+                <p className="m-0 text-xs text-tertiary">
+                  {strings.crmThreadNotYours}
+                </p>
               )}
             </li>
           ))}
@@ -145,7 +155,9 @@ export function LinkedThreads({ dealId }: { dealId: string }) {
                 <div className={styles.entryHead}>
                   <span className={styles.entryKind}>{candidate.subject}</span>
                   <span className={styles.cardSpacer} />
-                  <span className={styles.entryWhen}>{momentLabel(candidate.lastMessageAt)}</span>
+                  <span className={styles.entryWhen}>
+                    {momentLabel(candidate.lastMessageAt)}
+                  </span>
                 </div>
                 <div className={styles.entryMeta}>
                   <span>

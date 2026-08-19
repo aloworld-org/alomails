@@ -16,6 +16,7 @@
 import { useState } from "react";
 import { CalendarDays, Plus } from "lucide-react";
 
+import { Card } from "../ds";
 import { strings } from "../i18n";
 import { dayLabel, dealValue } from "./format";
 import type { CrmDeal, CrmStage } from "./types";
@@ -36,7 +37,9 @@ export function BoardView({ stages, deals, onOpen, onMove, onAdd }: Props) {
   const [overStage, setOverStage] = useState<string | null>(null);
 
   const inColumn = (stageId: string) =>
-    deals.filter((d) => d.stageId === stageId).sort((a, b) => a.position - b.position);
+    deals
+      .filter((d) => d.stageId === stageId)
+      .sort((a, b) => a.position - b.position);
 
   function clearDrag() {
     setDragId(null);
@@ -90,12 +93,20 @@ export function BoardView({ stages, deals, onOpen, onMove, onAdd }: Props) {
             {/* The cards are their own list, named after the column, so a
                 screen reader (and a test) can say which column it is in
                 without the "add" button below pretending to be a card. */}
-            <div className={styles.cards} role="list" aria-label={stage.name}>
+            <div
+              className="flex flex-col gap-2 min-h-2"
+              role="list"
+              aria-label={stage.name}
+            >
               {cards.map((deal) => (
-                <div
+                // A deal card is a `ds/Card`: dense padding, and `interactive`
+                // because clicking it really does open the deal.
+                <Card
                   key={deal.id}
+                  pad="sm"
+                  interactive
+                  className={`flex flex-col gap-1.5 ${dragId === deal.id ? styles.cardDragging : ""}`}
                   role="listitem"
-                  className={`${styles.card} ${dragId === deal.id ? styles.cardDragging : ""}`}
                   draggable
                   onDragStart={() => setDragId(deal.id)}
                   onDragEnd={clearDrag}
@@ -119,10 +130,14 @@ export function BoardView({ stages, deals, onOpen, onMove, onAdd }: Props) {
                       </span>
                     )}
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
-            <button type="button" className={styles.cardAdd} onClick={() => onAdd(stage.id)}>
+            <button
+              type="button"
+              className={styles.cardAdd}
+              onClick={() => onAdd(stage.id)}
+            >
               <Plus size={15} /> {strings.crmNewDeal}
             </button>
           </div>

@@ -1,7 +1,14 @@
-/* The CRM module's own styles. The board deliberately reads as the Tasks board
+/* The CRM module's own layout. The board deliberately reads as the Tasks board
    — same column width, same card shape, same drop outline — because it IS the
-   same interaction with stages instead of statuses; the list and the dialogs
-   read as billing's, because they are the same kind of screen. */
+   same interaction with stages instead of statuses.
+
+   Since D2.07 the primitives are not here: the deal card is `ds/Card`, the list
+   and the report are `ds/Table`, the filter rows are `ds/Toolbar` with `ds/Input`,
+   `ds/Select` and `ds/Checkbox` in them, the dialogs are `ds/Modal` with
+   `ds/Field`, the state word is a `ds/Badge` and the lost-reason suggestions are
+   `ds/Chip`. What is left below is this module's own arrangement of them — the
+   board's columns, the drawer, the panels in it — plus the one control the
+   design system does not have yet. */
 
 .crm {
   display: flex;
@@ -47,14 +54,6 @@
   background: var(--accent-tint);
   color: var(--accent-active);
 }
-.pipelinePicker {
-  padding: 6px 10px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-}
 
 .page {
   display: flex;
@@ -63,42 +62,6 @@
   padding: var(--space-4) var(--space-5);
   min-height: 0;
   overflow: auto;
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-.search {
-  flex: 1 1 220px;
-  min-width: 180px;
-  padding: 8px 12px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-}
-.search:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
-}
-.filterSelect {
-  padding: 8px 10px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-}
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
 }
 
 /* ---- the board ------------------------------------------------------- */
@@ -155,27 +118,8 @@
   color: var(--text-tertiary);
   font-weight: var(--weight-regular);
 }
-.cards {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-height: 8px;
-}
-.card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  box-shadow: 0 1px 2px rgba(40, 30, 20, 0.04);
-  cursor: pointer;
-}
-.card:hover {
-  border-color: var(--border-default);
-  box-shadow: 0 2px 6px rgba(40, 30, 20, 0.08);
-}
+/* The card being dragged: the surface is `ds/Card`, and this is only what
+   happens to it while it is in the air. */
 .cardDragging {
   opacity: 0.4;
 }
@@ -228,38 +172,7 @@
 
 /* ---- the list -------------------------------------------------------- */
 
-.tableWrap {
-  overflow-x: auto;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-}
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-}
-.table th {
-  text-align: left;
-  padding: 10px 14px;
-  color: var(--text-tertiary);
-  font-weight: var(--weight-medium);
-  border-bottom: 1px solid var(--border-subtle);
-  white-space: nowrap;
-}
-.table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  vertical-align: middle;
-}
-.table tbody tr:hover {
-  background: var(--bg-raised);
-}
-.numeric {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
+/* The deal's name in its own row: the cell that opens the record. */
 .rowName {
   color: var(--text-link);
   font-weight: var(--weight-medium);
@@ -268,35 +181,8 @@
 .rowName:hover {
   text-decoration: underline;
 }
-.noMatches {
-  padding: var(--space-5);
-  color: var(--text-tertiary);
-  font-size: var(--text-sm);
-}
 
 /* ---- states ---------------------------------------------------------- */
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
-}
-.chipInfo {
-  background: var(--navy-50);
-  color: var(--navy-600);
-}
-.chipGood {
-  background: #e3f3e9;
-  color: #1f6b45;
-}
-.chipBad {
-  background: #fbe6e2;
-  color: #9b3222;
-}
 
 .error {
   margin: var(--space-3) var(--space-5);
@@ -395,11 +281,6 @@
   gap: var(--space-3);
   flex-wrap: wrap;
 }
-.stagePicker {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
 .drawerBody {
   flex: 1;
   min-height: 0;
@@ -481,15 +362,8 @@
   color: var(--text-secondary);
   white-space: pre-wrap;
 }
-.iconAction {
-  color: var(--text-tertiary);
-  padding: 2px;
-  border-radius: var(--radius-sm);
-}
-.iconAction:hover {
-  color: var(--accent);
-  background: var(--bg-raised);
-}
+/* A word that acts, inline in a run of text — not a button with a box round it,
+   which is why it is not `ds/Button`'s ghost. */
 .linkAction {
   display: inline-flex;
   align-items: center;
@@ -504,71 +378,7 @@
 
 /* ---- the deal form --------------------------------------------------- */
 
-.scrim {
-  position: fixed;
-  inset: 0;
-  background: var(--bg-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4);
-  z-index: 60;
-}
-.modal {
-  width: min(560px, 100%);
-  max-height: 90vh;
-  background: var(--bg-surface);
-  border-radius: var(--radius-lg);
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  box-shadow: 0 18px 48px rgba(16, 42, 67, 0.24);
-}
-.modalHead {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-}
-.modalIcon {
-  color: var(--accent);
-}
-.modalHeadText {
-  flex: 1;
-}
-.modalHeadText h2 {
-  margin: 0;
-  font-size: var(--text-base);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-}
-.modalHeadText p {
-  margin: 2px 0 0;
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-}
-.modalClose {
-  color: var(--text-tertiary);
-}
-.modalClose:hover {
-  color: var(--text-primary);
-}
-.modalBody {
-  padding: var(--space-4);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-height: 0;
-}
-.modalFooter {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-top: 1px solid var(--border-subtle);
-}
+/* Two fields side by side inside the dialog, stacking on a phone. */
 .row {
   display: flex;
   gap: var(--space-3);
@@ -576,53 +386,29 @@
 .row > * {
   flex: 1;
 }
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.label {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--text-secondary);
-}
-.input {
-  padding: 8px 12px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  width: 100%;
-}
-.input:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
-}
-.input[aria-invalid="true"] {
-  border-color: #c53030;
-}
+
+/* The one control the design system does not have yet: there is still no
+   multi-line input in `ds/`, so this is `ds/Input`'s box written out for a
+   `<textarea>` — same border, same radius, same focus ring. It goes the moment
+   the component exists. One caller: the log composer. */
 .textarea {
   flex: 1 1 200px;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   background: var(--bg-surface);
   color: var(--text-primary);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-family: inherit;
   resize: vertical;
 }
-.hint {
-  font-size: var(--text-xs);
-  color: var(--text-tertiary);
-}
-.fieldError {
-  font-size: var(--text-xs);
-  color: #9b3222;
+.textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--border-strong);
 }
 
-/* ---- the report, and the questions closing a deal asks (B2.08) -------- */
+/* ---- the report ------------------------------------------------------ */
 
 /* The sentence under a table that says what it covers — the period, the
    instant the open board was counted at, the win rate. */
@@ -630,42 +416,6 @@
   font-size: var(--text-xs);
   color: var(--text-secondary);
   margin: 0;
-}
-
-/* A table caption is a heading here, not a hidden label: the two tables of one
-   currency answer two different questions and have to say which. */
-.reportCaption {
-  text-align: left;
-  padding: 0 0 var(--space-2);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-/* The suggested lost reasons: one click each, and they fill the field rather
-   than replacing it. */
-.reasonPicker {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.reasonChip {
-  padding: 5px 10px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-pill, 999px);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  cursor: pointer;
-}
-.reasonChip:hover {
-  border-color: var(--accent);
-  color: var(--text-primary);
-}
-.reasonChipOn {
-  border-color: var(--accent);
-  color: var(--text-primary);
-  font-weight: 600;
 }
 
 @media (max-width: 720px) {

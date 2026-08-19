@@ -17,8 +17,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3 } from "lucide-react";
 
-import { formatAmount, formatRate, previousQuarterOf, quarterOf, type Period } from "../billing";
-import { Button, Spinner } from "../ds";
+import {
+  formatAmount,
+  formatRate,
+  previousQuarterOf,
+  quarterOf,
+  type Period,
+} from "../billing";
+import { Button, Field, Input, Spinner, Table, Td, Th, Toolbar } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { saveTextFile } from "../platform/download";
 import { crmMessage, useCrmApi } from "./api";
@@ -85,7 +91,11 @@ export function ReportView({ pipelineId, revision }: Props) {
     if (pipelineId === null) return;
     setDownloading(true);
     try {
-      const csv = await api.pipelineReportCsv(pipelineId, period.from, period.to);
+      const csv = await api.pipelineReportCsv(
+        pipelineId,
+        period.from,
+        period.to,
+      );
       saveTextFile(csv, fileName(pipelineId, period), "text/csv;charset=utf-8");
       setError(null);
     } catch (err) {
@@ -98,55 +108,60 @@ export function ReportView({ pipelineId, revision }: Props) {
   return (
     <div className={styles.page}>
       <form
-        className={styles.toolbar}
         onSubmit={(e) => {
           e.preventDefault();
           setPeriod(form);
         }}
       >
-        <label className={styles.toggle}>
-          {strings.crmReportFrom}
-          <input
-            className={styles.filterSelect}
-            type="date"
-            value={form.from}
-            onChange={(e) => setForm({ ...form, from: e.target.value })}
-            required
-          />
-        </label>
-        <label className={styles.toggle}>
-          {strings.crmReportTo}
-          <input
-            className={styles.filterSelect}
-            type="date"
-            value={form.to}
-            onChange={(e) => setForm({ ...form, to: e.target.value })}
-            required
-          />
-        </label>
-        <Button type="submit">{strings.crmReportShow}</Button>
-        <button
-          type="button"
-          className={styles.linkAction}
-          onClick={() => pick(quarterOf(new Date()))}
-        >
-          {strings.crmReportThisQuarter}
-        </button>
-        <button
-          type="button"
-          className={styles.linkAction}
-          onClick={() => pick(previousQuarterOf(new Date()))}
-        >
-          {strings.crmReportLastQuarter}
-        </button>
-        {(loading || downloading) && <Spinner size={16} />}
-        <Button
-          variant="ghost"
-          onClick={() => void download()}
-          disabled={report === null || downloading}
-        >
-          {strings.crmReportDownloadCsv}
-        </Button>
+        {/* `align="end"` because this row is labelled fields beside buttons: on
+            centres, the labels drag the two date fields out of line. */}
+        <Toolbar label={strings.crmReportPeriod} align="end">
+          <Field label={strings.crmReportFrom}>
+            {(control) => (
+              <Input
+                {...control}
+                type="date"
+                value={form.from}
+                onChange={(e) => setForm({ ...form, from: e.target.value })}
+                required
+              />
+            )}
+          </Field>
+          <Field label={strings.crmReportTo}>
+            {(control) => (
+              <Input
+                {...control}
+                type="date"
+                value={form.to}
+                onChange={(e) => setForm({ ...form, to: e.target.value })}
+                required
+              />
+            )}
+          </Field>
+          <Button type="submit">{strings.crmReportShow}</Button>
+          <button
+            type="button"
+            className={styles.linkAction}
+            onClick={() => pick(quarterOf(new Date()))}
+          >
+            {strings.crmReportThisQuarter}
+          </button>
+          <button
+            type="button"
+            className={styles.linkAction}
+            onClick={() => pick(previousQuarterOf(new Date()))}
+          >
+            {strings.crmReportLastQuarter}
+          </button>
+          {(loading || downloading) && <Spinner size={16} />}
+          <Button
+            variant="ghost"
+            onClick={() => void download()}
+            disabled={report === null || downloading}
+          >
+            {strings.crmReportDownloadCsv}
+          </Button>
+        </Toolbar>
       </form>
 
       {error !== null && <ErrorBanner message={error} />}
@@ -176,71 +191,66 @@ export function ReportView({ pipelineId, revision }: Props) {
 /** One currency: the open board column by column, then what closed in the
  *  period. Two tables rather than one, because they answer two questions and a
  *  single table would invite reading a column total across both. */
-function CurrencyTables({ group, locale }: { group: PipelineCurrency; locale: string }) {
+function CurrencyTables({
+  group,
+  locale,
+}: {
+  group: PipelineCurrency;
+  locale: string;
+}) {
   const money = (cents: number) => formatAmount(cents, locale, group.currency);
   return (
-    <section className={styles.tableWrap}>
-      <table className={styles.table}>
-        <caption className={styles.reportCaption}>
-          {strings.crmReportOpenCaption(group.currency)}
-        </caption>
+    // Two tables and a sentence, in their own column. Each table is its own
+    // labelled, scrollable region now — the caption stays drawn, because the
+    // two answer different questions and have to say which.
+    <section className="flex flex-col gap-3">
+      <Table label={strings.crmReportOpenCaption(group.currency)} showLabel>
         <thead>
           <tr>
-            <th scope="col">{strings.crmColStage}</th>
-            <th scope="col" className={styles.numeric}>
-              {strings.crmReportColDeals}
-            </th>
-            <th scope="col" className={styles.numeric}>
-              {strings.crmColValue}
-            </th>
+            <Th>{strings.crmColStage}</Th>
+            <Th numeric>{strings.crmReportColDeals}</Th>
+            <Th numeric>{strings.crmColValue}</Th>
           </tr>
         </thead>
         <tbody>
           {group.stages.map((row) => (
             <tr key={row.stageId}>
-              <td>{row.name}</td>
-              <td className={styles.numeric}>{row.open.dealCount}</td>
-              <td className={styles.numeric}>{money(row.open.valueCents)}</td>
+              <Td>{row.name}</Td>
+              <Td numeric>{row.open.dealCount}</Td>
+              <Td numeric>{money(row.open.valueCents)}</Td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr>
-            <th scope="row">{strings.crmReportOpenTotal}</th>
-            <td className={styles.numeric}>{group.open.dealCount}</td>
-            <td className={styles.numeric}>{money(group.open.valueCents)}</td>
+            <Th scope="row">{strings.crmReportOpenTotal}</Th>
+            <Td numeric>{group.open.dealCount}</Td>
+            <Td numeric>{money(group.open.valueCents)}</Td>
           </tr>
         </tfoot>
-      </table>
+      </Table>
 
-      <table className={styles.table}>
-        <caption className={styles.reportCaption}>
-          {strings.crmReportClosedCaption(group.currency)}
-        </caption>
+      <Table label={strings.crmReportClosedCaption(group.currency)} showLabel>
         <thead>
           <tr>
-            <th scope="col">{strings.crmColState}</th>
-            <th scope="col" className={styles.numeric}>
-              {strings.crmReportColDeals}
-            </th>
-            <th scope="col" className={styles.numeric}>
-              {strings.crmColValue}
-            </th>
+            <Th>{strings.crmColState}</Th>
+            <Th numeric>{strings.crmReportColDeals}</Th>
+            <Th numeric>{strings.crmColValue}</Th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>{strings.crmStateWon}</td>
-            <td className={styles.numeric}>{group.won.dealCount}</td>
-            <td className={styles.numeric}>{money(group.won.valueCents)}</td>
+            <Td>{strings.crmStateWon}</Td>
+            <Td numeric>{group.won.dealCount}</Td>
+            <Td numeric>{money(group.won.valueCents)}</Td>
           </tr>
           <tr>
-            <td>{strings.crmStateLost}</td>
-            <td className={styles.numeric}>{group.lost.dealCount}</td>
-            <td className={styles.numeric}>{money(group.lost.valueCents)}</td>
+            <Td>{strings.crmStateLost}</Td>
+            <Td numeric>{group.lost.dealCount}</Td>
+            <Td numeric>{money(group.lost.valueCents)}</Td>
           </tr>
         </tbody>
-      </table>
+      </Table>
       {/* A win rate over no closed deals is unanswered, not zero — so the
           sentence is absent rather than reading "0 %". */}
       <p className={styles.reportBasis}>

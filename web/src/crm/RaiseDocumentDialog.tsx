@@ -22,9 +22,10 @@ import { FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { formatAmount, parseHundredths } from "../billing";
+import { Field, Input } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { crmMessage, useCrmApi } from "./api";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import type { CrmDeal, DocumentKind, RaisedDocument } from "./types";
 import styles from "./CrmModule.module.css";
 
@@ -63,7 +64,8 @@ export function RaiseDocumentDialog({ deal, kind, onClose, onRaised }: Props) {
   // sending something it will refuse.
   const rateBp = needsRate ? parseHundredths(rate) : null;
   const canSubmit =
-    (!needsRate || rateBp !== null) && (!needsCountry || country.trim().length === 2);
+    (!needsRate || rateBp !== null) &&
+    (!needsCountry || country.trim().length === 2);
 
   async function submit() {
     setBusy(true);
@@ -107,7 +109,11 @@ export function RaiseDocumentDialog({ deal, kind, onClose, onRaised }: Props) {
       >
         <p className={styles.reportBasis}>
           {strings.crmRaisedWorth(
-            formatAmount(raised.document.totals.grossCents, locale, raised.document.currency),
+            formatAmount(
+              raised.document.totals.grossCents,
+              locale,
+              raised.document.currency,
+            ),
           )}
         </p>
         <Link
@@ -134,31 +140,43 @@ export function RaiseDocumentDialog({ deal, kind, onClose, onRaised }: Props) {
       onSubmit={() => void submit()}
     >
       <p className={styles.reportBasis}>
-        {strings.crmRaiseFrom(deal.title, formatAmount(deal.valueCents, locale, deal.currency))}
+        {strings.crmRaiseFrom(
+          deal.title,
+          formatAmount(deal.valueCents, locale, deal.currency),
+        )}
       </p>
       {needsRate && (
-        <Field label={strings.crmFieldVatRate} hint={strings.crmVatRateHint}>
-          <input
-            className={styles.input}
-            inputMode="decimal"
-            value={rate}
-            onChange={(e) => setRate(e.target.value)}
-            placeholder="21"
-            aria-invalid={rate !== "" && rateBp === null}
-            autoFocus
-          />
+        <Field
+          label={strings.crmFieldVatRate}
+          hint={strings.crmVatRateHint}
+          error={
+            rate !== "" && rateBp === null ? strings.crmNotAnAmount : undefined
+          }
+        >
+          {(control) => (
+            <Input
+              {...control}
+              inputMode="decimal"
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+              placeholder="21"
+              autoFocus
+            />
+          )}
         </Field>
       )}
       {needsCountry && (
         <Field label={strings.crmFieldCountry} hint={strings.crmCountryHint}>
-          <input
-            className={styles.input}
-            value={country}
-            onChange={(e) => setCountry(e.target.value.toUpperCase())}
-            maxLength={2}
-            placeholder="DE"
-            autoFocus={!needsRate}
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={country}
+              onChange={(e) => setCountry(e.target.value.toUpperCase())}
+              maxLength={2}
+              placeholder="DE"
+              autoFocus={!needsRate}
+            />
+          )}
         </Field>
       )}
     </DialogFrame>
