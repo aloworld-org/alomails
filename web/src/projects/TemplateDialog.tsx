@@ -20,6 +20,7 @@ import { useState } from "react";
 import { CopyPlus, Star, X } from "lucide-react";
 
 import { useCustomers } from "../billing";
+import { Button } from "../ds";
 import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
 import { DialogFrame, Field } from "./parts";
@@ -128,15 +129,15 @@ export function TemplateDialog({
             <p className="m-0 mt-2 max-w-[44ch] text-sm leading-6 text-secondary">
               {strings.projectsTemplateEmptyBody}
             </p>
-            <button
-              type="button"
+            <Button
+              variant="primary"
               autoFocus
-              className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-on-accent shadow-sm transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              icon={<Star className="size-4" aria-hidden="true" />}
+              className="mt-6 h-10 rounded-xl px-4 text-sm font-semibold shadow-sm"
               onClick={onClose}
             >
-              <Star className="size-4" aria-hidden="true" />
               {strings.projectsTemplateChooseProject}
-            </button>
+            </Button>
           </div>
         </section>
       </div>

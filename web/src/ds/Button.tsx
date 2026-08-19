@@ -1,6 +1,6 @@
 // Button — the one text button primitive. Variants map to the palette:
-// primary (verdigris fill), secondary (copper fill), ghost (quiet), and
-// danger. Every button in the app uses this; none restyle a raw <button>.
+// primary (brand-orange fill), secondary (deep-orange fill), ghost (quiet),
+// and danger. Every button in the app uses this; none restyle a raw <button>.
 //
 // Styled with Tailwind utilities generated from `ds/tokens.css` (ADR 0046), so
 // `--radius-md` and `rounded-md` are one definition with two spellings. The
@@ -47,6 +47,8 @@ const DISABLED_NEUTRAL = "disabled:bg-default disabled:text-tertiary";
 const DISABLED_DIM = "disabled:opacity-50";
 
 const VARIANT = {
+  // Primary is the universal call-to-action treatment. `--accent` is alo's
+  // brand orange (#e76f51); screens must not replace it with a local fill.
   primary:
     "bg-accent text-on-accent " +
     "enabled:hover:bg-accent-hover enabled:active:bg-accent-active " +
