@@ -174,32 +174,32 @@ export function ProjectsModule() {
         </div>
         <nav className="mt-3 flex min-w-0 gap-1 overflow-x-auto" aria-label={strings.moduleProjects}>
           <NavLink
-            to="list"
+            to="/projects/list"
             className={projectTabClass}
           >
             {strings.projectsTabList}
           </NavLink>
           <NavLink
-            to="week"
+            to="/projects/week"
             className={projectTabClass}
           >
             {strings.projectsTabWeek}
           </NavLink>
           <NavLink
-            to="plan"
+            to="/projects/plan"
             className={projectTabClass}
           >
             {strings.projectsTabPlan}
           </NavLink>
           <NavLink
-            to="reports"
+            to="/projects/reports"
             className={projectTabClass}
           >
             {strings.projectsTabReports}
           </NavLink>
           {isAdmin && (
             <NavLink
-              to="approvals"
+              to="/projects/approvals"
               className={projectTabClass}
             >
               {strings.projectsTabApprovals}
@@ -211,7 +211,7 @@ export function ProjectsModule() {
       {error !== null && <ErrorBanner message={error} />}
 
       <Routes>
-        <Route index element={<Navigate to="list" replace />} />
+        <Route index element={<Navigate to="/projects/list" replace />} />
         <Route
           path="list"
           element={
@@ -251,7 +251,7 @@ export function ProjectsModule() {
             rather than a page that pretends the inbox is empty. */}
         <Route path="approvals" element={<ApprovalsView onDecided={bump} />} />
         {/* An unknown Projects path is a stale link, not an error page. */}
-        <Route path="*" element={<Navigate to="list" replace />} />
+        <Route path="*" element={<Navigate to="/projects/list" replace />} />
       </Routes>
 
       {startingFromTemplate && (
