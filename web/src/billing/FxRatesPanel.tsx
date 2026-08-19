@@ -16,7 +16,7 @@
 // the user pastes, which is what makes their books' conversion auditable.
 import { useCallback, useEffect, useState } from "react";
 
-import { Button, Spinner } from "../ds";
+import { Button, Input, Spinner, Table, Td, Th } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
@@ -29,7 +29,9 @@ const BLANK = { currency: "", date: "", rate: "" };
 
 /** How a stored rate got there, in words rather than in the wire's code. */
 function sourceLabel(source: FxRate["source"]): string {
-  return source === "ecb" ? strings.billingFxSourceEcb : strings.billingFxSourceManual;
+  return source === "ecb"
+    ? strings.billingFxSourceEcb
+    : strings.billingFxSourceManual;
 }
 
 export function FxRatesPanel() {
@@ -104,8 +106,7 @@ export function FxRatesPanel() {
 
       <div className={styles.row}>
         <Field label={strings.billingColCurrency}>
-          <input
-            className={styles.input}
+          <Input
             value={form.currency}
             maxLength={3}
             autoCapitalize="characters"
@@ -115,16 +116,17 @@ export function FxRatesPanel() {
           />
         </Field>
         <Field label={strings.billingFxColDate}>
-          <input
-            className={styles.input}
+          <Input
             type="date"
             value={form.date}
             onChange={(e) => setForm({ ...form, date: e.target.value })}
           />
         </Field>
-        <Field label={strings.billingFxColRate} hint={strings.billingFxRateHint}>
-          <input
-            className={styles.input}
+        <Field
+          label={strings.billingFxColRate}
+          hint={strings.billingFxRateHint}
+        >
+          <Input
             value={form.rate}
             inputMode="decimal"
             onChange={(e) => setForm({ ...form, rate: e.target.value })}
@@ -134,7 +136,10 @@ export function FxRatesPanel() {
           variant="ghost"
           onClick={() => void add()}
           disabled={
-            busy || form.currency.trim() === "" || form.date === "" || form.rate.trim() === ""
+            busy ||
+            form.currency.trim() === "" ||
+            form.date === "" ||
+            form.rate.trim() === ""
           }
         >
           {strings.billingFxAdd}
@@ -143,7 +148,7 @@ export function FxRatesPanel() {
 
       <Field label={strings.billingFxImport} hint={strings.billingFxImportHint}>
         <textarea
-          className={`${styles.input} ${styles.textarea}`}
+          className={styles.textarea}
           value={file}
           rows={3}
           spellCheck={false}
@@ -152,7 +157,11 @@ export function FxRatesPanel() {
       </Field>
       <div className={styles.createBar}>
         {busy && <Spinner size={16} />}
-        <Button variant="ghost" onClick={() => void importFile()} disabled={busy || file.trim() === ""}>
+        <Button
+          variant="ghost"
+          onClick={() => void importFile()}
+          disabled={busy || file.trim() === ""}
+        >
           {strings.billingFxImportRun}
         </Button>
       </div>
@@ -160,33 +169,30 @@ export function FxRatesPanel() {
       {rates !== null && rates.length === 0 ? (
         <p className={styles.hint}>{strings.billingFxEmpty}</p>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <caption className={styles.srOnly}>{strings.billingFxRates}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{strings.billingColCurrency}</th>
-                <th scope="col">{strings.billingFxColDate}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingFxColRate}
-                </th>
-                <th scope="col">{strings.billingFxColSource}</th>
+        <Table label={strings.billingFxRates} density="compact">
+          <thead>
+            <tr>
+              <Th>{strings.billingColCurrency}</Th>
+              <Th>{strings.billingFxColDate}</Th>
+              <Th numeric>{strings.billingFxColRate}</Th>
+              <Th>{strings.billingFxColSource}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {(rates ?? []).map((rate) => (
+              <tr key={`${rate.currency}-${rate.date}`}>
+                <td>{rate.currency}</td>
+                <td>{readable(rate.date)}</td>
+                {/* The server's own formatting of its stored integer: the
+                    browser never turns micro-units back into a rate. */}
+                <Td numeric className={styles.mono}>
+                  {rate.rate}
+                </Td>
+                <td>{sourceLabel(rate.source)}</td>
               </tr>
-            </thead>
-            <tbody>
-              {(rates ?? []).map((rate) => (
-                <tr key={`${rate.currency}-${rate.date}`}>
-                  <td>{rate.currency}</td>
-                  <td>{readable(rate.date)}</td>
-                  {/* The server's own formatting of its stored integer: the
-                      browser never turns micro-units back into a rate. */}
-                  <td className={`${styles.numeric} ${styles.mono}`}>{rate.rate}</td>
-                  <td>{sourceLabel(rate.source)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

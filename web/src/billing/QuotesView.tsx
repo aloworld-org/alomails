@@ -11,14 +11,29 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileSignature } from "lucide-react";
 
-import { Button, Spinner, cx } from "../ds";
+import {
+  Button,
+  Input,
+  Select,
+  Spinner,
+  Table,
+  Td,
+  Th,
+  Toolbar,
+  ToolbarSpacer,
+  cx,
+} from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
 import { formatAmount } from "./money";
 import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
 import { QuoteChips } from "./status";
-import type { BillingCustomer, BillingQuoteSummary, QuoteStatus } from "./types";
+import type {
+  BillingCustomer,
+  BillingQuoteSummary,
+  QuoteStatus,
+} from "./types";
 import styles from "./billingStyles";
 
 /** The filter's choices, in the order an offer moves through them. `all` is
@@ -36,9 +51,16 @@ type Filter = (typeof FILTERS)[number]["value"];
 
 /** Whether an offer answers the search box: its number, its customer's name or
  *  the customer's own reference. */
-function matches(quote: BillingQuoteSummary, customer: string, needle: string): boolean {
+function matches(
+  quote: BillingQuoteSummary,
+  customer: string,
+  needle: string,
+): boolean {
   if (needle === "") return true;
-  return [quote.number ?? "", customer, quote.reference].join(" ").toLowerCase().includes(needle);
+  return [quote.number ?? "", customer, quote.reference]
+    .join(" ")
+    .toLowerCase()
+    .includes(needle);
 }
 
 export function QuotesView() {
@@ -58,7 +80,9 @@ export function QuotesView() {
     setLoading(true);
     try {
       const [list, people] = await Promise.all([
-        api.quotes(filter === "all" ? undefined : (filter satisfies QuoteStatus)),
+        api.quotes(
+          filter === "all" ? undefined : (filter satisfies QuoteStatus),
+        ),
         api.customers(true),
       ]);
       setQuotes(list);
@@ -75,28 +99,33 @@ export function QuotesView() {
     void load();
   }, [load]);
 
-  const names = useMemo(() => new Map(customers.map((c) => [c.id, c.name] as const)), [customers]);
+  const names = useMemo(
+    () => new Map(customers.map((c) => [c.id, c.name] as const)),
+    [customers],
+  );
 
   const shown = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return quotes.filter((q) => matches(q, names.get(q.customerId) ?? "", needle));
+    return quotes.filter((q) =>
+      matches(q, names.get(q.customerId) ?? "", needle),
+    );
   }, [quotes, names, search]);
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <input
-          className={styles.search}
+      <Toolbar label={strings.billingQuotes} className={styles.listBar}>
+        <Input
+          className="max-w-[380px] flex-1"
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={strings.billingSearchQuotes}
           aria-label={strings.billingSearchQuotes}
         />
-        <label className={styles.toggle}>
+        <ToolbarSpacer />
+        <label className={styles.filterLabel}>
           {strings.billingFilterStatus}
-          <select
-            className={styles.select}
+          <Select
             value={filter}
             onChange={(e) => setFilter(e.target.value as Filter)}
           >
@@ -105,17 +134,21 @@ export function QuotesView() {
                 {f.label()}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         {loading && <Spinner size={16} />}
         {(quotes.length > 0 || filter !== "all") && (
-          <Button onClick={() => void navigate("new")}>{strings.billingNewQuote}</Button>
+          <Button onClick={() => void navigate("new")}>
+            {strings.billingNewQuote}
+          </Button>
         )}
-      </div>
+      </Toolbar>
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {loading ? <BillingLoading /> : quotes.length === 0 && filter === "all" ? (
+      {loading ? (
+        <BillingLoading />
+      ) : quotes.length === 0 && filter === "all" ? (
         <EmptyState
           Icon={FileSignature}
           title={strings.billingNoQuotesTitle}
@@ -126,49 +159,71 @@ export function QuotesView() {
       ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.billingColNumber}</th>
-                <th scope="col">{strings.billingColCustomer}</th>
-                <th scope="col">{strings.billingColSentDate}</th>
-                <th scope="col">{strings.billingColValidUntil}</th>
-                <th scope="col">{strings.billingColStatus}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingColTotal}
-                </th>
+        <Table
+          label={strings.billingQuotes}
+          className={styles.listTable}
+          stickyHeader
+          interactiveRows
+        >
+          <thead>
+            <tr>
+              <Th>{strings.billingColNumber}</Th>
+              <Th>{strings.billingColCustomer}</Th>
+              <Th>{strings.billingColSentDate}</Th>
+              <Th>{strings.billingColValidUntil}</Th>
+              <Th>{strings.billingColStatus}</Th>
+              <Th numeric>{strings.billingColTotal}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((quote) => (
+              <tr
+                key={quote.id}
+                className={cx(
+                  quote.status === "sent" && quote.expired && styles.overdueRow,
+                )}
+              >
+                <td>
+                  <button
+                    type="button"
+                    className={cx(styles.rowName, styles.mono)}
+                    onClick={() => void navigate(quote.id)}
+                  >
+                    {quote.number ?? strings.billingNotNumbered}
+                  </button>
+                </td>
+                <td>
+                  {names.get(quote.customerId) ??
+                    strings.billingUnknownCustomer}
+                </td>
+                <td>
+                  {formatDocumentDate(
+                    quote.sentDate,
+                    locale,
+                    strings.billingNoDate,
+                  )}
+                </td>
+                <td>
+                  {formatDocumentDate(
+                    quote.validUntil,
+                    locale,
+                    strings.billingNoDate,
+                  )}
+                </td>
+                <td className={styles.chips}>
+                  <QuoteChips quote={quote} />
+                </td>
+                <Td numeric>
+                  {formatAmount(
+                    quote.totals.grossCents,
+                    locale,
+                    quote.currency,
+                  )}
+                </Td>
               </tr>
-            </thead>
-            <tbody>
-              {shown.map((quote) => (
-                <tr
-                  key={quote.id}
-                  className={cx(quote.status === "sent" && quote.expired && styles.overdueRow)}
-                >
-                  <td>
-                    <button
-                      type="button"
-                      className={cx(styles.rowName, styles.mono)}
-                      onClick={() => void navigate(quote.id)}
-                    >
-                      {quote.number ?? strings.billingNotNumbered}
-                    </button>
-                  </td>
-                  <td>{names.get(quote.customerId) ?? strings.billingUnknownCustomer}</td>
-                  <td>{formatDocumentDate(quote.sentDate, locale, strings.billingNoDate)}</td>
-                  <td>{formatDocumentDate(quote.validUntil, locale, strings.billingNoDate)}</td>
-                  <td className={styles.chips}>
-                    <QuoteChips quote={quote} />
-                  </td>
-                  <td className={styles.numeric}>
-                    {formatAmount(quote.totals.grossCents, locale, quote.currency)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

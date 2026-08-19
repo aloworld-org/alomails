@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { RefreshCw } from "lucide-react";
 
-import { Button, Spinner, useDialogs } from "../ds";
+import { Button, Spinner, Table, Td, Th, Toolbar, useDialogs } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { cadenceLabel } from "./cadence";
@@ -39,15 +39,21 @@ import styles from "./billingStyles";
  *  to be able to tell which. */
 function ScheduleChips({ schedule }: { schedule: BillingScheduleSummary }) {
   if (!schedule.active) {
-    return <StatusChip tone="muted" label={strings.billingScheduleStatusPaused} />;
+    return (
+      <StatusChip tone="muted" label={strings.billingScheduleStatusPaused} />
+    );
   }
   if (schedule.ended) {
-    return <StatusChip tone="muted" label={strings.billingScheduleStatusEnded} />;
+    return (
+      <StatusChip tone="muted" label={strings.billingScheduleStatusEnded} />
+    );
   }
   return (
     <>
       <StatusChip tone="good" label={strings.billingScheduleStatusActive} />
-      {schedule.due && <StatusChip tone="warn" label={strings.billingScheduleStatusDue} />}
+      {schedule.due && (
+        <StatusChip tone="warn" label={strings.billingScheduleStatusDue} />
+      )}
     </>
   );
 }
@@ -70,7 +76,10 @@ export function SchedulesView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [list, people] = await Promise.all([api.schedules(), api.customers(true)]);
+      const [list, people] = await Promise.all([
+        api.schedules(),
+        api.customers(true),
+      ]);
       setSchedules(list);
       setCustomers(people);
       setError(null);
@@ -146,13 +155,13 @@ export function SchedulesView() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
+      <Toolbar label={strings.billingRecurringTitle} className={styles.listBar}>
         <h2 className={styles.sectionTitle}>{strings.billingRecurringTitle}</h2>
         {loading && <Spinner size={16} />}
         <Button onClick={() => void runDue()} disabled={running || loading}>
           {strings.billingScheduleRunDue}
         </Button>
-      </div>
+      </Toolbar>
       <p className={styles.hint}>{strings.billingScheduleRunHint}</p>
 
       {error !== null && <ErrorBanner message={error} />}
@@ -162,7 +171,9 @@ export function SchedulesView() {
         </p>
       )}
 
-      {loading ? <BillingLoading /> : schedules.length === 0 ? (
+      {loading ? (
+        <BillingLoading />
+      ) : schedules.length === 0 ? (
         <EmptyState
           Icon={RefreshCw}
           title={strings.billingNoSchedulesTitle}
@@ -171,80 +182,88 @@ export function SchedulesView() {
           onCta={() => void navigate("../invoices")}
         />
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.billingScheduleName}</th>
-                <th scope="col">{strings.billingColCustomer}</th>
-                <th scope="col">{strings.billingScheduleCadence}</th>
-                <th scope="col">{strings.billingScheduleNext}</th>
-                <th scope="col">{strings.billingColStatus}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingScheduleEach}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingScheduleRaised}
-                </th>
-                <th scope="col">
-                  <span className={styles.srOnly}>{strings.billingColActions}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {schedules.map((schedule) => (
-                <tr key={schedule.id}>
-                  <td>
-                    <button
-                      type="button"
-                      className={styles.rowName}
-                      onClick={() => setEditing(schedule)}
-                    >
-                      {schedule.name}
-                    </button>
-                  </td>
-                  <td>{names.get(schedule.customerId) ?? strings.billingUnknownCustomer}</td>
-                  <td>{cadenceLabel(schedule.cadence)}</td>
-                  {/* The server's date, formatted — never recomputed here. */}
-                  <td>
-                    {schedule.ended
-                      ? strings.billingNoDate
-                      : formatDocumentDate(schedule.nextRunDate, locale, strings.billingNoDate)}
-                  </td>
-                  <td className={styles.chips}>
-                    <ScheduleChips schedule={schedule} />
-                  </td>
-                  <td className={styles.numeric}>
-                    {formatAmount(schedule.totals.grossCents, locale, schedule.currency)}
-                  </td>
-                  <td className={styles.numeric}>{schedule.raisedCount}</td>
-                  <td className={styles.rowActions}>
+        <Table
+          label={strings.billingRecurringTitle}
+          className={styles.listTable}
+          stickyHeader
+          interactiveRows
+        >
+          <thead>
+            <tr>
+              <Th>{strings.billingScheduleName}</Th>
+              <Th>{strings.billingColCustomer}</Th>
+              <Th>{strings.billingScheduleCadence}</Th>
+              <Th>{strings.billingScheduleNext}</Th>
+              <Th>{strings.billingColStatus}</Th>
+              <Th numeric>{strings.billingScheduleEach}</Th>
+              <Th numeric>{strings.billingScheduleRaised}</Th>
+              <Th hideLabel>{strings.billingColActions}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {schedules.map((schedule) => (
+              <tr key={schedule.id}>
+                <td>
+                  <button
+                    type="button"
+                    className={styles.rowName}
+                    onClick={() => setEditing(schedule)}
+                  >
+                    {schedule.name}
+                  </button>
+                </td>
+                <td>
+                  {names.get(schedule.customerId) ??
+                    strings.billingUnknownCustomer}
+                </td>
+                <td>{cadenceLabel(schedule.cadence)}</td>
+                {/* The server's date, formatted — never recomputed here. */}
+                <td>
+                  {schedule.ended
+                    ? strings.billingNoDate
+                    : formatDocumentDate(
+                        schedule.nextRunDate,
+                        locale,
+                        strings.billingNoDate,
+                      )}
+                </td>
+                <td className={styles.chips}>
+                  <ScheduleChips schedule={schedule} />
+                </td>
+                <Td numeric>
+                  {formatAmount(
+                    schedule.totals.grossCents,
+                    locale,
+                    schedule.currency,
+                  )}
+                </Td>
+                <Td numeric>{schedule.raisedCount}</Td>
+                <td className={styles.rowActions}>
+                  <button
+                    type="button"
+                    className={styles.linkAction}
+                    onClick={() => void setActive(schedule, !schedule.active)}
+                  >
+                    {schedule.active
+                      ? strings.billingSchedulePause
+                      : strings.billingScheduleResume}
+                  </button>
+                  {/* Offered only where it can succeed: an arrangement that
+                        has raised documents is paused, not deleted. */}
+                  {schedule.raisedCount === 0 && (
                     <button
                       type="button"
                       className={styles.linkAction}
-                      onClick={() => void setActive(schedule, !schedule.active)}
+                      onClick={() => void remove(schedule)}
                     >
-                      {schedule.active
-                        ? strings.billingSchedulePause
-                        : strings.billingScheduleResume}
+                      {strings.billingScheduleDelete}
                     </button>
-                    {/* Offered only where it can succeed: an arrangement that
-                        has raised documents is paused, not deleted. */}
-                    {schedule.raisedCount === 0 && (
-                      <button
-                        type="button"
-                        className={styles.linkAction}
-                        onClick={() => void remove(schedule)}
-                      >
-                        {strings.billingScheduleDelete}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       )}
 
       {editing !== null && (

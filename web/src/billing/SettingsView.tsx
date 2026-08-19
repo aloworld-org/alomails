@@ -13,9 +13,16 @@
 // not written — the surface is last-writer-wins. And **a cleared box sends
 // `null`**, which is how a VAT id or a bank account comes off the record.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { BadgeEuro, Building2, Landmark, Mail, MessageSquareText, Save } from "lucide-react";
+import {
+  BadgeEuro,
+  Building2,
+  Landmark,
+  Mail,
+  MessageSquareText,
+  Save,
+} from "lucide-react";
 
-import { Button, Spinner } from "../ds";
+import { Button, Input, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import {
@@ -144,7 +151,8 @@ export function SettingsView() {
         if (live) adopt(settings);
       })
       .catch((err: unknown) => {
-        if (live) setError(billingMessage(err, strings.billingSettingsLoadFailed));
+        if (live)
+          setError(billingMessage(err, strings.billingSettingsLoadFailed));
       });
     return () => {
       live = false;
@@ -191,8 +199,9 @@ export function SettingsView() {
     );
   }
 
+  // The wiring every text box on this page shares. The styling is `ds/Input`'s
+  // now, so what is left here is the binding (D2.06b).
   const text = (key: TextKey | NullableKey) => ({
-    className: styles.input,
     value: form[key],
     onChange: (e: { target: { value: string } }) => set(key)(e.target.value),
   });
@@ -204,159 +213,219 @@ export function SettingsView() {
           <Building2 className="size-5" aria-hidden="true" />
         </span>
         <div className="min-w-0">
-          <h2 className="m-0 text-xl font-semibold text-primary">{strings.billingSettings}</h2>
+          <h2 className="m-0 text-xl font-semibold text-primary">
+            {strings.billingSettings}
+          </h2>
           <p className="mt-1 max-w-[70ch] text-sm leading-normal text-secondary">
-            {stored.stated ? strings.billingSettingsIntro : strings.billingSettingsFirstRun}
+            {stored.stated
+              ? strings.billingSettingsIntro
+              : strings.billingSettingsFirstRun}
           </p>
         </div>
       </header>
       {error !== null && <ErrorBanner message={error} />}
 
       <div className="mx-auto grid w-full max-w-[90rem] grid-cols-[minmax(0,1.08fr)_minmax(0,.92fr)] items-start gap-5 max-lg:grid-cols-1">
-      <div className="flex min-w-0 flex-col gap-5">
-      <section className={`${styles.lines} ${settingsCard}`}>
-        <h2 className={settingsTitle}><Building2 className={settingsIcon} aria-hidden="true" />{strings.billingSettingsIdentity}</h2>
-        <Field label={strings.billingFieldLegalName} hint={strings.billingLegalNameHint}>
-          <input {...text("legalName")} required />
-        </Field>
-        <Field label={strings.billingFieldAddress}>
-          <input {...text("addressLine1")} placeholder={strings.billingAddressPlaceholder} />
-        </Field>
-        <Field label={strings.billingFieldAddress2}>
-          <input {...text("addressLine2")} />
-        </Field>
-        <div className={`${styles.row} max-sm:flex-col`}>
-          <Field label={strings.billingFieldPostalCode}>
-            <input {...text("postalCode")} />
-          </Field>
-          <Field label={strings.billingFieldCity}>
-            <input {...text("city")} />
-          </Field>
-          <Field label={strings.billingFieldCountry} hint={strings.billingCountryHint}>
-            <input
-              {...text("country")}
-              placeholder={BILLING_HOME_COUNTRY}
-              maxLength={2}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-          </Field>
-        </div>
-        <div className={`${styles.row} max-sm:flex-col`}>
-          <Field label={strings.billingFieldVatId} hint={strings.billingIssuerVatIdHint}>
-            <input
-              {...text("vatId")}
-              placeholder={BILLING_VAT_ID_EXAMPLE}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-          </Field>
-          <Field label={strings.billingFieldRegistrationNo} hint={strings.billingRegistrationHint}>
-            <input {...text("registrationNo")} />
-          </Field>
-        </div>
-      </section>
+        <div className="flex min-w-0 flex-col gap-5">
+          <section className={`${styles.lines} ${settingsCard}`}>
+            <h2 className={settingsTitle}>
+              <Building2 className={settingsIcon} aria-hidden="true" />
+              {strings.billingSettingsIdentity}
+            </h2>
+            <Field
+              label={strings.billingFieldLegalName}
+              hint={strings.billingLegalNameHint}
+            >
+              <Input {...text("legalName")} required />
+            </Field>
+            <Field label={strings.billingFieldAddress}>
+              <Input
+                {...text("addressLine1")}
+                placeholder={strings.billingAddressPlaceholder}
+              />
+            </Field>
+            <Field label={strings.billingFieldAddress2}>
+              <Input {...text("addressLine2")} />
+            </Field>
+            <div className={`${styles.row} max-sm:flex-col`}>
+              <Field label={strings.billingFieldPostalCode}>
+                <Input {...text("postalCode")} />
+              </Field>
+              <Field label={strings.billingFieldCity}>
+                <Input {...text("city")} />
+              </Field>
+              <Field
+                label={strings.billingFieldCountry}
+                hint={strings.billingCountryHint}
+              >
+                <Input
+                  {...text("country")}
+                  placeholder={BILLING_HOME_COUNTRY}
+                  maxLength={2}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </Field>
+            </div>
+            <div className={`${styles.row} max-sm:flex-col`}>
+              <Field
+                label={strings.billingFieldVatId}
+                hint={strings.billingIssuerVatIdHint}
+              >
+                <Input
+                  {...text("vatId")}
+                  placeholder={BILLING_VAT_ID_EXAMPLE}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </Field>
+              <Field
+                label={strings.billingFieldRegistrationNo}
+                hint={strings.billingRegistrationHint}
+              >
+                <Input {...text("registrationNo")} />
+              </Field>
+            </div>
+          </section>
 
-      <section className={`${styles.lines} ${settingsCard}`}>
-        <h2 className={settingsTitle}><BadgeEuro className={settingsIcon} aria-hidden="true" />{strings.billingSettingsAccounting}</h2>
-        <div className="w-full max-w-sm">
-          <Field label={strings.billingFieldBaseCurrency} hint={strings.billingBaseCurrencyHint}>
-            <input
-              {...text("baseCurrency")}
-              placeholder={BILLING_BASE_CURRENCY}
-              maxLength={3}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-          </Field>
-        </div>
-        {/* The rates themselves: only needed by a tenant that invoices in
+          <section className={`${styles.lines} ${settingsCard}`}>
+            <h2 className={settingsTitle}>
+              <BadgeEuro className={settingsIcon} aria-hidden="true" />
+              {strings.billingSettingsAccounting}
+            </h2>
+            <div className="w-full max-w-sm">
+              <Field
+                label={strings.billingFieldBaseCurrency}
+                hint={strings.billingBaseCurrencyHint}
+              >
+                <Input
+                  {...text("baseCurrency")}
+                  placeholder={BILLING_BASE_CURRENCY}
+                  maxLength={3}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </Field>
+            </div>
+            {/* The rates themselves: only needed by a tenant that invoices in
             another currency, so they sit under the currency that decides it
             rather than on a page of their own. */}
-        <FxRatesPanel />
-      </section>
-      </div>
+            <FxRatesPanel />
+          </section>
+        </div>
 
-      <div className="flex min-w-0 flex-col gap-5">
-        <section className={`${styles.lines} ${settingsCard}`}>
-          <h2 className={settingsTitle}><Mail className={settingsIcon} aria-hidden="true" />{strings.billingSettingsContact}</h2>
-          <div className={`${styles.row} max-sm:flex-col`}>
-            <Field label={strings.billingFieldEmail}>
-              <input
-                {...text("email")}
-                type="email"
-                inputMode="email"
+        <div className="flex min-w-0 flex-col gap-5">
+          <section className={`${styles.lines} ${settingsCard}`}>
+            <h2 className={settingsTitle}>
+              <Mail className={settingsIcon} aria-hidden="true" />
+              {strings.billingSettingsContact}
+            </h2>
+            <div className={`${styles.row} max-sm:flex-col`}>
+              <Field label={strings.billingFieldEmail}>
+                <Input
+                  {...text("email")}
+                  type="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </Field>
+              <Field label={strings.billingFieldPhone}>
+                <Input {...text("phone")} inputMode="tel" />
+              </Field>
+            </div>
+            <Field label={strings.billingFieldWebsite}>
+              <Input
+                {...text("website")}
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck={false}
               />
             </Field>
-            <Field label={strings.billingFieldPhone}>
-              <input {...text("phone")} inputMode="tel" />
-            </Field>
-          </div>
-          <Field label={strings.billingFieldWebsite}>
-            <input {...text("website")} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
-          </Field>
-        </section>
+          </section>
 
-        <section className={`${styles.lines} ${settingsCard}`}>
-          <h2 className={settingsTitle}><Landmark className={settingsIcon} aria-hidden="true" />{strings.billingSettingsBank}</h2>
-          <div className={`${styles.row} max-sm:flex-col`}>
-            <Field label={strings.billingFieldIban} hint={strings.billingIbanHint}>
-              <input
-                {...text("iban")}
-                placeholder={BILLING_IBAN_EXAMPLE}
-                autoCapitalize="characters"
-                autoCorrect="off"
-                spellCheck={false}
+          <section className={`${styles.lines} ${settingsCard}`}>
+            <h2 className={settingsTitle}>
+              <Landmark className={settingsIcon} aria-hidden="true" />
+              {strings.billingSettingsBank}
+            </h2>
+            <div className={`${styles.row} max-sm:flex-col`}>
+              <Field
+                label={strings.billingFieldIban}
+                hint={strings.billingIbanHint}
+              >
+                <Input
+                  {...text("iban")}
+                  placeholder={BILLING_IBAN_EXAMPLE}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </Field>
+              <Field
+                label={strings.billingFieldBic}
+                hint={strings.billingBicHint}
+              >
+                <Input
+                  {...text("bic")}
+                  placeholder={BILLING_BIC_EXAMPLE}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                />
+              </Field>
+            </div>
+            <div className={`${styles.row} max-sm:flex-col`}>
+              <Field label={strings.billingFieldBankName}>
+                <Input {...text("bankName")} />
+              </Field>
+              <Field
+                label={strings.billingFieldAccountHolder}
+                hint={strings.billingAccountHolderHint}
+              >
+                <Input {...text("accountHolder")} />
+              </Field>
+            </div>
+          </section>
+
+          <section className={`${styles.lines} ${settingsCard}`}>
+            <h2 className={settingsTitle}>
+              <MessageSquareText className={settingsIcon} aria-hidden="true" />
+              {strings.billingSettingsFooter}
+            </h2>
+            <Field
+              label={strings.billingFieldFooterNote}
+              hint={strings.billingFooterNoteHint}
+            >
+              <textarea
+                className={styles.textarea}
+                value={form.footerNote}
+                rows={3}
+                onChange={(e) => set("footerNote")(e.target.value)}
               />
             </Field>
-            <Field label={strings.billingFieldBic} hint={strings.billingBicHint}>
-              <input
-                {...text("bic")}
-                placeholder={BILLING_BIC_EXAMPLE}
-                autoCapitalize="characters"
-                autoCorrect="off"
-                spellCheck={false}
-              />
-            </Field>
-          </div>
-          <div className={`${styles.row} max-sm:flex-col`}>
-            <Field label={strings.billingFieldBankName}>
-              <input {...text("bankName")} />
-            </Field>
-            <Field label={strings.billingFieldAccountHolder} hint={strings.billingAccountHolderHint}>
-              <input {...text("accountHolder")} />
-            </Field>
-          </div>
-        </section>
-
-        <section className={`${styles.lines} ${settingsCard}`}>
-          <h2 className={settingsTitle}><MessageSquareText className={settingsIcon} aria-hidden="true" />{strings.billingSettingsFooter}</h2>
-          <Field label={strings.billingFieldFooterNote} hint={strings.billingFooterNoteHint}>
-            <textarea
-              className={`${styles.input} ${styles.textarea}`}
-              value={form.footerNote}
-              rows={3}
-              onChange={(e) => set("footerNote")(e.target.value)}
-            />
-          </Field>
-        </section>
-      </div>
-
+          </section>
+        </div>
       </div>
 
       <div className="sticky bottom-3 z-sticky mx-auto mt-5 flex w-full max-w-[90rem] items-center justify-end gap-3 py-2">
         {(dirty || saved) && (
-          <p className="m-0 rounded-full bg-surface px-3 py-2 text-xs text-secondary shadow-sm" role="status">
+          <p
+            className="m-0 rounded-full bg-surface px-3 py-2 text-xs text-secondary shadow-sm"
+            role="status"
+          >
             {dirty ? strings.billingUnsaved : strings.billingSaved}
           </p>
         )}
-        <Button icon={<Save aria-hidden="true" />} onClick={() => void save()} disabled={busy || !dirty || form.legalName.trim() === ""}>
+        <Button
+          icon={<Save aria-hidden="true" />}
+          onClick={() => void save()}
+          disabled={busy || !dirty || form.legalName.trim() === ""}
+        >
           {strings.billingSave}
         </Button>
       </div>

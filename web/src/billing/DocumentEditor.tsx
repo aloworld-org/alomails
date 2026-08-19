@@ -16,7 +16,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import { ArrowLeft, FilePlus2, Printer } from "lucide-react";
 
-import { Button, Spinner, cx, useDialogs } from "../ds";
+import { Button, Input, Select, Spinner, cx, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { billingMessage } from "./api";
 import { DocumentActions } from "./DocumentActions";
@@ -93,8 +93,11 @@ export function DocumentEditor<T extends StoredDocument, A>({
   // An archived customer is still offered on the document already raised for
   // them — otherwise the picker would silently show no one and the next edit
   // would change who is being billed.
-  const pickable = pickers.customers.filter((c) => !c.archived || c.id === header.customerId);
-  const customerName = pickers.customers.find((c) => c.id === header.customerId)?.name ?? "";
+  const pickable = pickers.customers.filter(
+    (c) => !c.archived || c.id === header.customerId,
+  );
+  const customerName =
+    pickers.customers.find((c) => c.id === header.customerId)?.name ?? "";
 
   if (draft.loading) {
     return (
@@ -163,9 +166,12 @@ export function DocumentEditor<T extends StoredDocument, A>({
   const error = draft.error ?? pickers.error;
 
   if (document === null) {
-    const fieldLabel = "text-xs font-semibold uppercase tracking-wide text-tertiary";
-    const fieldControl =
-      "mt-2 min-h-11 w-full rounded-lg border border-default bg-surface px-3 text-sm text-primary outline-none transition-colors placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-[var(--accent-soft)]";
+    // The label above a control on the create form. The controls themselves are
+    // now `ds/Input` and `ds/Select`: this screen declared a control recipe of
+    // its own beside them, which was the same reimplementation `billingStyles`
+    // was carrying, and it is gone with it (D2.06b).
+    const fieldLabel =
+      "mb-2 block text-xs font-semibold uppercase tracking-wide text-tertiary";
 
     return (
       <DialogFrame
@@ -179,60 +185,63 @@ export function DocumentEditor<T extends StoredDocument, A>({
         onClose={onBack}
         onSubmit={() => void create()}
       >
-            <div className="grid grid-cols-2 gap-5 max-md:grid-cols-1">
-              <label className="min-w-0">
-                <span className={fieldLabel}>{strings.billingFieldCustomer}</span>
-                <select
-                  className={fieldControl}
-                  value={header.customerId}
-                  onChange={(event) =>
-                    draft.edit({ header: { ...header, customerId: event.target.value } })
-                  }
-                  aria-label={strings.billingFieldCustomer}
-                >
-                  <option value="">{strings.billingChooseCustomer}</option>
-                  {pickable.map((customer) => (
-                    <option key={customer.id} value={customer.id}>
-                      {customer.name}
-                    </option>
-                  ))}
-                </select>
-                <span className="mt-2 block text-xs leading-relaxed text-tertiary">
-                  {labels.customerHint}
-                </span>
-              </label>
+        <div className="grid grid-cols-2 gap-5 max-md:grid-cols-1">
+          <label className="min-w-0">
+            <span className={fieldLabel}>{strings.billingFieldCustomer}</span>
+            <Select
+              fullWidth
+              value={header.customerId}
+              onChange={(event) =>
+                draft.edit({
+                  header: { ...header, customerId: event.target.value },
+                })
+              }
+              aria-label={strings.billingFieldCustomer}
+            >
+              <option value="">{strings.billingChooseCustomer}</option>
+              {pickable.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
+            </Select>
+            <span className="mt-2 block text-xs leading-relaxed text-tertiary">
+              {labels.customerHint}
+            </span>
+          </label>
 
-              <label className="min-w-0">
-                <span className={fieldLabel}>{strings.billingFieldReference}</span>
-                <input
-                  className={fieldControl}
-                  value={header.reference}
-                  onChange={(event) =>
-                    draft.edit({ header: { ...header, reference: event.target.value } })
-                  }
-                  placeholder={strings.billingReferencePlaceholder}
-                />
-                <span className="mt-2 block text-xs leading-relaxed text-tertiary">
-                  {strings.billingReferenceHint}
-                </span>
-              </label>
+          <label className="min-w-0">
+            <span className={fieldLabel}>{strings.billingFieldReference}</span>
+            <Input
+              value={header.reference}
+              onChange={(event) =>
+                draft.edit({
+                  header: { ...header, reference: event.target.value },
+                })
+              }
+              placeholder={strings.billingReferencePlaceholder}
+            />
+            <span className="mt-2 block text-xs leading-relaxed text-tertiary">
+              {strings.billingReferenceHint}
+            </span>
+          </label>
 
-              <label className="col-span-2 min-w-0 max-md:col-span-1">
-                <span className={fieldLabel}>{strings.billingFieldNote}</span>
-                <textarea
-                  className={`${fieldControl} min-h-28 resize-y py-3 leading-relaxed`}
-                  value={header.note}
-                  rows={4}
-                  onChange={(event) =>
-                    draft.edit({ header: { ...header, note: event.target.value } })
-                  }
-                  placeholder={strings.billingNotePlaceholder}
-                />
-                <span className="mt-2 block text-xs leading-relaxed text-tertiary">
-                  {strings.billingNoteHint}
-                </span>
-              </label>
-            </div>
+          <label className="col-span-2 min-w-0 max-md:col-span-1">
+            <span className={fieldLabel}>{strings.billingFieldNote}</span>
+            <textarea
+              className={cx(styles.textarea, "min-h-28 py-3 leading-relaxed")}
+              value={header.note}
+              rows={4}
+              onChange={(event) =>
+                draft.edit({ header: { ...header, note: event.target.value } })
+              }
+              placeholder={strings.billingNotePlaceholder}
+            />
+            <span className="mt-2 block text-xs leading-relaxed text-tertiary">
+              {strings.billingNoteHint}
+            </span>
+          </label>
+        </div>
       </DialogFrame>
     );
   }
@@ -244,7 +253,9 @@ export function DocumentEditor<T extends StoredDocument, A>({
           <ArrowLeft size={14} aria-hidden="true" /> {labels.back}
         </button>
         <h2 className={styles.editorTitle}>
-          {document === null ? labels.newTitle : (document.number ?? labels.draftTitle)}
+          {document === null
+            ? labels.newTitle
+            : (document.number ?? labels.draftTitle)}
         </h2>
         <span className={styles.chips}>{chips}</span>
         <span className={styles.saveState} role="status">
@@ -259,7 +270,11 @@ export function DocumentEditor<T extends StoredDocument, A>({
                   : strings.billingSaved}
         </span>
         {draft.saveState === "failed" && (
-          <button type="button" className={styles.linkAction} onClick={draft.saveNow}>
+          <button
+            type="button"
+            className={styles.linkAction}
+            onClick={draft.saveNow}
+          >
             {strings.billingSaveNow}
           </button>
         )}
@@ -275,7 +290,11 @@ export function DocumentEditor<T extends StoredDocument, A>({
           </button>
         )}
         {document !== null && !readOnly && (
-          <button type="button" className={styles.linkAction} onClick={() => void discard()}>
+          <button
+            type="button"
+            className={styles.linkAction}
+            onClick={() => void discard()}
+          >
             {labels.discardLabel}
           </button>
         )}
@@ -286,14 +305,21 @@ export function DocumentEditor<T extends StoredDocument, A>({
 
       <div className={styles.editorBody}>
         <div className={styles.headerFields}>
-          <Field label={strings.billingFieldCustomer} hint={labels.customerHint}>
+          <Field
+            label={strings.billingFieldCustomer}
+            hint={labels.customerHint}
+          >
             {readOnly ? (
               <p className={styles.readOnlyValue}>{customerName}</p>
             ) : (
-              <select
-                className={styles.input}
+              <Select
+                fullWidth
                 value={header.customerId}
-                onChange={(e) => draft.edit({ header: { ...header, customerId: e.target.value } })}
+                onChange={(e) =>
+                  draft.edit({
+                    header: { ...header, customerId: e.target.value },
+                  })
+                }
                 aria-label={strings.billingFieldCustomer}
               >
                 <option value="">{strings.billingChooseCustomer}</option>
@@ -302,18 +328,24 @@ export function DocumentEditor<T extends StoredDocument, A>({
                     {c.name}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
           </Field>
 
-          <Field label={strings.billingFieldReference} hint={strings.billingReferenceHint}>
+          <Field
+            label={strings.billingFieldReference}
+            hint={strings.billingReferenceHint}
+          >
             {readOnly ? (
               <p className={styles.readOnlyValue}>{header.reference}</p>
             ) : (
-              <input
-                className={styles.input}
+              <Input
                 value={header.reference}
-                onChange={(e) => draft.edit({ header: { ...header, reference: e.target.value } })}
+                onChange={(e) =>
+                  draft.edit({
+                    header: { ...header, reference: e.target.value },
+                  })
+                }
                 placeholder={strings.billingReferencePlaceholder}
               />
             )}
@@ -327,10 +359,12 @@ export function DocumentEditor<T extends StoredDocument, A>({
             <p className={styles.readOnlyValue}>{header.note}</p>
           ) : (
             <textarea
-              className={cx(styles.input, styles.textarea)}
+              className={styles.textarea}
               value={header.note}
               rows={2}
-              onChange={(e) => draft.edit({ header: { ...header, note: e.target.value } })}
+              onChange={(e) =>
+                draft.edit({ header: { ...header, note: e.target.value } })
+              }
               placeholder={strings.billingNotePlaceholder}
             />
           )}
@@ -339,7 +373,10 @@ export function DocumentEditor<T extends StoredDocument, A>({
         {document === null ? (
           <div className={styles.createBar}>
             <p className={styles.hint}>{labels.createHint}</p>
-            <Button onClick={() => void create()} disabled={draft.creating || header.customerId === ""}>
+            <Button
+              onClick={() => void create()}
+              disabled={draft.creating || header.customerId === ""}
+            >
               {labels.createLabel}
             </Button>
           </div>
@@ -355,8 +392,16 @@ export function DocumentEditor<T extends StoredDocument, A>({
               onChange={(next) => draft.edit({ rows: next })}
               nextKey={draft.nextKey}
             />
-            <TotalsPanel totals={document.totals} currency={currency} stale={!saved} />
-            <DocumentActions actions={actions} unsaved={!saved} onFailed={draft.fail} />
+            <TotalsPanel
+              totals={document.totals}
+              currency={currency}
+              stale={!saved}
+            />
+            <DocumentActions
+              actions={actions}
+              unsaved={!saved}
+              onFailed={draft.fail}
+            />
             {footer}
           </>
         )}

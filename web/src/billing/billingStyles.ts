@@ -1,64 +1,100 @@
-// Shared Tailwind recipes for Billing. Keeping repeated patterns here gives
-// every ledger, form and document the same rhythm without a CSS module.
+// Billing's own layout, as Tailwind recipes. Keeping repeated patterns here
+// gives every ledger, form and document the same rhythm without a CSS module.
+//
+// # What does NOT belong here
+//
+// The primitives. Until D2.06b this file also declared `input`, `select`,
+// `chip`, `badge`, `table`, `toolbar` and `toggle` — a seventh through
+// thirteenth copy of controls `ds/` owns, read by nineteen `.tsx` files. They
+// survived the whole D1/D2 wave for one reason: `ds/redefined.ts` lists
+// *stylesheets*, and `primitives.test.ts` reads `.module.css`. A recipe in a
+// `.ts` file is invisible to both. So the rule this file has to keep itself is
+// the one the build cannot: **a control belongs to `ds/`, and what is left
+// here is arrangement** — where things sit, how wide they are, what a table row
+// means. If a screen needs a control this module does not have, widen the `ds/`
+// component; do not start a fourteenth copy in here.
+//
+// The one deliberate exception is `textarea`, and it is temporary: the design
+// system still has no multi-line control, so the box below is `ds/Input`'s
+// written out for a `<textarea>`. It goes when that component exists.
 const styles = {
   page: "flex min-h-0 flex-1 flex-col gap-5 overflow-hidden px-8 pb-8 pt-5 max-[52rem]:p-3",
-  toolbar: "flex min-h-11 shrink-0 items-center gap-4 max-[52rem]:flex-wrap max-[52rem]:items-stretch",
-  searchWrap: "relative flex max-w-[380px] flex-1 items-center [&>svg]:pointer-events-none [&>svg]:absolute [&>svg]:right-3 [&>svg]:size-4 [&>svg]:text-tertiary max-[52rem]:max-w-none max-[52rem]:basis-full",
-  search: "w-full rounded-lg border border-default bg-surface py-2.5 pl-3 pr-10 text-sm text-primary outline-none focus:border-accent focus:ring-2 focus:ring-[var(--accent-soft)]",
-  toggle: "ml-auto inline-flex items-center gap-2 whitespace-nowrap text-sm text-secondary [&>input]:order-2 [&>input]:m-0 [&>input]:h-5 [&>input]:w-9 [&>input]:cursor-pointer [&>input]:appearance-none [&>input]:rounded-full [&>input]:bg-default [&>input]:transition-colors [&>input]:after:m-0.5 [&>input]:after:block [&>input]:after:size-4 [&>input]:after:rounded-full [&>input]:after:bg-surface [&>input]:after:shadow-sm [&>input]:after:transition-transform [&>input:checked]:bg-accent [&>input:checked]:after:translate-x-4",
-  tableWrap: "min-h-0 flex-1 overflow-auto rounded-xl border border-subtle bg-surface",
-  table: "w-full border-collapse text-sm [&_th]:sticky [&_th]:top-0 [&_th]:z-[1] [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-default [&_th]:bg-sunken [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:text-tertiary [&_td]:border-b [&_td]:border-subtle [&_td]:px-4 [&_td]:py-3 [&_td]:align-middle [&_td]:text-secondary [&_tbody_tr]:transition-colors [&_tbody_tr:hover]:bg-[color-mix(in_srgb,var(--accent-tint)_28%,var(--bg-surface))] [&_tfoot]:bg-raised [&_tfoot_th]:border-t [&_tfoot_th]:border-default [&_tfoot_th]:px-4 [&_tfoot_th]:py-3 [&_tfoot_td]:border-t [&_tfoot_td]:border-default [&_tfoot_td]:px-4 [&_tfoot_td]:py-3",
+  /** What billing adds to `ds/Toolbar` above a list: a minimum height so a bar
+   *  with only a heading in it still reads as a bar, and controls that stretch
+   *  rather than centre once the row has wrapped. */
+  listBar: "min-h-11 shrink-0 max-[52rem]:items-stretch",
+  searchWrap:
+    "relative flex max-w-[380px] flex-1 items-center [&>svg]:pointer-events-none [&>svg]:absolute [&>svg]:right-3 [&>svg]:size-4 [&>svg]:text-tertiary max-[52rem]:max-w-none max-[52rem]:basis-full",
+  /** A filter's name, sitting beside the `ds/Select` it names. */
+  filterLabel:
+    "inline-flex items-center gap-2 whitespace-nowrap text-sm text-secondary",
+  /** What a list's `ds/Table` adds: it is the page's scrolling region, so it
+   *  takes the space the toolbar above it leaves. */
+  listTable: "min-h-0 flex-1",
+  /** A column of a line grid that holds a short figure — a quantity, a rate.
+   *  The width is on the column rather than on the control inside it: the
+   *  control is `ds/Input`, which fills what holds it. */
+  narrowCol: "w-[8ch]",
   numeric: "text-right tabular-nums",
   mono: "font-mono text-sm",
-  rowName: "rounded-md text-left text-sm font-medium text-primary hover:text-accent",
+  rowName:
+    "rounded-md text-left text-sm font-medium text-primary hover:text-accent",
   archivedRow: "opacity-60",
-  badge: "ml-2 inline-block rounded-full border border-default bg-raised px-2 py-0.5 align-middle text-xs text-tertiary",
   rowActions: "whitespace-nowrap text-right",
-  linkAction: "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm !text-secondary !no-underline transition-colors hover:bg-raised hover:!text-accent hover:!no-underline",
-  srOnly: "sr-only",
-  empty: "flex min-h-72 flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-subtle bg-surface p-8 text-center",
+  linkAction:
+    "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm !text-secondary !no-underline transition-colors hover:bg-raised hover:!text-accent hover:!no-underline",
+  empty:
+    "flex min-h-72 flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-subtle bg-surface p-8 text-center",
   customerEmptyLayout: "flex min-h-0 flex-1 overflow-auto pb-2",
-  customerEmptyCard: "flex min-h-96 flex-1 rounded-xl border border-subtle bg-surface shadow-sm [&>div]:w-full [&>div]:border-0",
-  emptyArt: "relative inline-flex size-12 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-accent",
+  customerEmptyCard:
+    "flex min-h-96 flex-1 rounded-xl border border-subtle bg-surface shadow-sm [&>div]:w-full [&>div]:border-0",
+  emptyArt:
+    "relative inline-flex size-12 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-accent",
   emptyWithAction: "[&>span]:mb-2",
   emptyTitle: "m-0 text-xl font-semibold text-primary",
   emptyBody: "mb-2 max-w-[50ch] text-sm leading-relaxed text-secondary",
-  noMatches: "min-h-48 rounded-xl border border-dashed border-default bg-surface px-6 py-8 text-center text-sm text-tertiary",
-  error: "m-0 rounded-lg border border-danger bg-[var(--danger-tint)] p-3 text-sm text-primary",
+  noMatches:
+    "min-h-48 rounded-xl border border-dashed border-default bg-surface px-6 py-8 text-center text-sm text-tertiary",
+  error:
+    "m-0 rounded-lg border border-danger bg-[var(--danger-tint)] p-3 text-sm text-primary",
   row: "flex gap-4 [&>*]:min-w-0 [&>*]:flex-1",
-  input: "w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary outline-none focus:border-accent focus:ring-2 focus:ring-[var(--accent-soft)] aria-invalid:border-danger",
   hint: "text-xs leading-relaxed text-tertiary",
   fieldError: "text-xs leading-relaxed text-danger",
-  textarea: "min-h-16 resize-y font-ui",
-  select: "max-w-full rounded-lg border border-default bg-surface px-2 py-1.5 text-sm text-primary outline-none focus:border-accent focus:ring-2 focus:ring-[var(--accent-soft)]",
+  /** `ds/Input`'s box, written out for a `<textarea>` — the same border,
+   *  radius, height rhythm and focus ring — because the design system has no
+   *  multi-line control yet. The moment it has one, this key and its three
+   *  callers go. Do not reach for it as a general text-box recipe: a
+   *  single-line field is `ds/Input`. */
+  textarea:
+    "w-full min-h-16 resize-y rounded-md border border-default bg-surface px-3 py-2 font-[inherit] text-base text-primary placeholder:text-tertiary transition-colors duration-[var(--duration-fast)] ease-standard focus-visible:border-strong focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-1",
   chips: "inline-flex flex-wrap items-center gap-2",
-  chip: "inline-block whitespace-nowrap rounded-full border border-default bg-raised px-2 py-0.5 text-xs font-medium text-secondary",
-  chip_neutral: "border-default bg-raised text-secondary",
-  chip_info: "border-accent bg-[var(--accent-soft)] text-accent",
-  chip_good: "border-success text-success",
-  chip_warn: "border-danger bg-[var(--danger-tint)] text-danger",
-  chip_muted: "text-tertiary",
   overdueRow: "[&_td]:bg-[var(--danger-tint)]",
-  notice: "m-0 rounded-lg border border-default bg-raised p-3 text-sm text-secondary",
+  notice:
+    "m-0 rounded-lg border border-default bg-raised p-3 text-sm text-secondary",
   loading: "flex flex-1 items-center justify-center p-10",
-  dataLoading: "flex min-h-48 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-subtle bg-surface text-sm text-secondary",
+  dataLoading:
+    "flex min-h-48 flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-subtle bg-surface text-sm text-secondary",
   editor: "overflow-auto",
-  editorHead: "flex flex-wrap items-center gap-3 border-b border-subtle px-6 pb-4 pt-5",
+  editorHead:
+    "flex flex-wrap items-center gap-3 border-b border-subtle px-6 pb-4 pt-5",
   editorTitle: "m-0 text-lg font-semibold text-primary",
   saveState: "ml-auto whitespace-nowrap text-xs text-tertiary",
   editorBody: "flex flex-col gap-5 px-6 pb-8 pt-5",
   headerFields: "grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4",
   readOnlyValue: "m-0 min-h-5 py-2 text-sm text-primary",
-  createBar: "flex items-center gap-4 border-t border-subtle pt-2 [&>p]:mr-auto",
+  createBar:
+    "flex items-center gap-4 border-t border-subtle pt-2 [&>p]:mr-auto",
   lines: "flex flex-col gap-2",
   linesHead: "flex items-center justify-between gap-3",
-  sectionTitle: "m-0 text-xs font-semibold uppercase tracking-wide text-tertiary",
+  sectionTitle:
+    "m-0 text-xs font-semibold uppercase tracking-wide text-tertiary",
   lineDescription: "flex min-w-[260px] flex-col gap-1",
-  inputNarrow: "min-w-[8ch] w-[8ch]",
-  creditList: "flex flex-col gap-2 [&_li]:flex [&_li]:items-center [&_li]:gap-2",
+  creditList:
+    "flex flex-col gap-2 [&_li]:flex [&_li]:items-center [&_li]:gap-2",
   totals: "min-w-[min(320px,100%)] self-end",
   totalsList: "m-0 flex flex-col gap-1",
-  totalsRow: "flex justify-between gap-6 text-sm text-secondary [&_dd]:m-0 [&_dt]:m-0",
+  totalsRow:
+    "flex justify-between gap-6 text-sm text-secondary [&_dd]:m-0 [&_dt]:m-0",
   totalsGross: "mt-2 border-t border-default pt-2 font-semibold text-primary",
   totalsNote: "mt-2 text-xs text-tertiary",
   stale: "opacity-55",

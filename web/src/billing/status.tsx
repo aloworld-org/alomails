@@ -5,18 +5,45 @@
 // invoice past its due date is "overdue", which the server computes against
 // its own date (`overdue` on every invoice response) rather than the browser's.
 // So the chip a row shows is derived from the pair, never from `status` alone.
-import { cx } from "../ds";
+import { Badge, type BadgeProps } from "../ds";
 import { strings } from "../i18n";
-import type { BillingInvoiceSummary, BillingQuoteSummary, InvoiceStatus, QuoteStatus } from "./types";
-import styles from "./billingStyles";
+import type {
+  BillingInvoiceSummary,
+  BillingQuoteSummary,
+  InvoiceStatus,
+  QuoteStatus,
+} from "./types";
 
 /** The visual weight of a chip. Named after what it means, not its colour, so
  *  a theme can restyle it without renaming anything. */
 export type ChipTone = "neutral" | "info" | "good" | "warn" | "muted";
 
-/** A small state label. */
+/** How billing's five meanings are drawn by the design system's four tones
+ *  (D2.06b).
+ *
+ *  `neutral` and `muted` land on the same one, and that is a reconciliation
+ *  rather than a loss. Billing drew them a single step apart — `--text-secondary`
+ *  against `--text-tertiary` on the same grey pill — which is not a difference
+ *  anybody reads, and `Badge`'s own rule is that a tone is never the only
+ *  signal: a draft says "Draft" and a cancelled document says "Void". The two
+ *  names stay because the *meaning* they carry is still two things, and
+ *  `statusTone` is where that distinction is stated. */
+const BADGE_TONE = {
+  neutral: "neutral",
+  info: "accent",
+  good: "success",
+  warn: "danger",
+  muted: "neutral",
+} as const satisfies Record<ChipTone, NonNullable<BadgeProps["tone"]>>;
+
+/** A small state label.
+ *
+ *  It is a `Badge` and not a `Chip`: the design system's distinction is that a
+ *  badge is read and a chip is acted on, and nothing here is pressable. The
+ *  name is kept because it is what three files call it and what the product
+ *  calls the thing on screen. */
 export function StatusChip({ tone, label }: { tone: ChipTone; label: string }) {
-  return <span className={cx(styles.chip, styles[`chip_${tone}`])}>{label}</span>;
+  return <Badge tone={BADGE_TONE[tone]}>{label}</Badge>;
 }
 
 /** What to call a status. An unknown one — a state added to the server before
@@ -57,9 +84,16 @@ export function statusTone(status: InvoiceStatus): ChipTone {
 export function DocumentChips({ invoice }: { invoice: BillingInvoiceSummary }) {
   return (
     <>
-      {invoice.creditNote && <StatusChip tone="warn" label={strings.billingCreditNote} />}
-      <StatusChip tone={statusTone(invoice.status)} label={statusLabel(invoice.status)} />
-      {invoice.overdue && <StatusChip tone="warn" label={strings.billingStatusOverdue} />}
+      {invoice.creditNote && (
+        <StatusChip tone="warn" label={strings.billingCreditNote} />
+      )}
+      <StatusChip
+        tone={statusTone(invoice.status)}
+        label={statusLabel(invoice.status)}
+      />
+      {invoice.overdue && (
+        <StatusChip tone="warn" label={strings.billingStatusOverdue} />
+      )}
       {/* Where the document came from, when a standing arrangement raised it
           (B2.11). Quiet on purpose — it is provenance, not a state — but it is
           the one thing that explains why a draft nobody typed is sitting in the
@@ -117,7 +151,10 @@ export function quoteStatusTone(status: QuoteStatus): ChipTone {
 export function QuoteChips({ quote }: { quote: BillingQuoteSummary }) {
   return (
     <>
-      <StatusChip tone={quoteStatusTone(quote.status)} label={quoteStatusLabel(quote.status)} />
+      <StatusChip
+        tone={quoteStatusTone(quote.status)}
+        label={quoteStatusLabel(quote.status)}
+      />
       {quote.status === "sent" && quote.expired && (
         <StatusChip tone="warn" label={strings.billingQuoteLapsed} />
       )}

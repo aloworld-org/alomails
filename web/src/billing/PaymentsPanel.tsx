@@ -21,14 +21,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { Banknote } from "lucide-react";
 
-import { Button, Spinner } from "../ds";
+import { Button, Input, Spinner, Table, Td, Th } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
 import { formatAmount, hundredthsToInput, parseHundredths } from "./money";
 import { DialogFrame, ErrorBanner, Field } from "./parts";
 import { StatusChip, type ChipTone } from "./status";
-import type { BillingInvoice, BillingPayment, DocumentSettlement, PaymentState } from "./types";
+import type {
+  BillingInvoice,
+  BillingPayment,
+  DocumentSettlement,
+  PaymentState,
+} from "./types";
 import styles from "./billingStyles";
 
 /** What to call a settlement state. An unknown one — a state added to the
@@ -124,7 +129,9 @@ export function PaymentsPanel({
           tone={settlementTone(settlement.state)}
           label={settlementLabel(settlement.state)}
         />
-        <Button onClick={() => setRecording(true)}>{strings.billingRecordPayment}</Button>
+        <Button onClick={() => setRecording(true)}>
+          {strings.billingRecordPayment}
+        </Button>
       </div>
 
       {error !== null && <ErrorBanner message={error} />}
@@ -144,48 +151,56 @@ export function PaymentsPanel({
       )}
 
       {payments.length === 0 ? (
-        !loading && <p className={styles.noMatches}>{strings.billingNoPayments}</p>
+        !loading && (
+          <p className={styles.noMatches}>{strings.billingNoPayments}</p>
+        )
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.billingColPaidOn}</th>
-                <th scope="col">{strings.billingColMethod}</th>
-                <th scope="col">{strings.billingColPaymentReference}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingColAmount}
-                </th>
-                <th scope="col">
-                  <span className={styles.srOnly}>{strings.billingColActions}</span>
-                </th>
+        <Table label={strings.billingPayments}>
+          <thead>
+            <tr>
+              <Th>{strings.billingColPaidOn}</Th>
+              <Th>{strings.billingColMethod}</Th>
+              <Th>{strings.billingColPaymentReference}</Th>
+              <Th numeric>{strings.billingColAmount}</Th>
+              <Th hideLabel>{strings.billingColActions}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {payments.map((payment) => (
+              <tr key={payment.id}>
+                <td>
+                  {formatDocumentDate(
+                    payment.paidOn,
+                    locale,
+                    strings.billingNoDate,
+                  )}
+                </td>
+                <td>
+                  {payment.method === ""
+                    ? strings.billingNoDate
+                    : payment.method}
+                </td>
+                <td className={styles.mono}>
+                  {payment.reference === ""
+                    ? strings.billingNoDate
+                    : payment.reference}
+                </td>
+                <Td numeric>
+                  {formatAmount(payment.amountCents, locale, currency)}
+                </Td>
+                <td className={styles.rowActions}>
+                  <button
+                    type="button"
+                    className={styles.linkAction}
+                    onClick={() => void remove(payment.id)}
+                  >
+                    {strings.billingRemovePayment}
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {payments.map((payment) => (
-                <tr key={payment.id}>
-                  <td>{formatDocumentDate(payment.paidOn, locale, strings.billingNoDate)}</td>
-                  <td>{payment.method === "" ? strings.billingNoDate : payment.method}</td>
-                  <td className={styles.mono}>
-                    {payment.reference === "" ? strings.billingNoDate : payment.reference}
-                  </td>
-                  <td className={styles.numeric}>
-                    {formatAmount(payment.amountCents, locale, currency)}
-                  </td>
-                  <td className={styles.rowActions}>
-                    <button
-                      type="button"
-                      className={styles.linkAction}
-                      onClick={() => void remove(payment.id)}
-                    >
-                      {strings.billingRemovePayment}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
 
       {recording && (
@@ -276,36 +291,45 @@ function PaymentDialog({
         <Field
           label={strings.billingFieldAmount(currency)}
           hint={strings.billingFieldAmountHint}
-          error={amount !== "" && amountCents === null ? strings.billingNotAnAmount : undefined}
+          error={
+            amount !== "" && amountCents === null
+              ? strings.billingNotAnAmount
+              : undefined
+          }
         >
-          <input
-            className={styles.input}
+          <Input
             inputMode="decimal"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            aria-invalid={amount !== "" && amountCents === null}
+            invalid={amount !== "" && amountCents === null}
           />
         </Field>
-        <Field label={strings.billingFieldPaidOn} hint={strings.billingFieldPaidOnHint}>
-          <input
-            className={styles.input}
+        <Field
+          label={strings.billingFieldPaidOn}
+          hint={strings.billingFieldPaidOnHint}
+        >
+          <Input
             type="date"
             value={paidOn}
             onChange={(e) => setPaidOn(e.target.value)}
           />
         </Field>
       </div>
-      <Field label={strings.billingFieldMethod} hint={strings.billingFieldMethodHint}>
-        <input
-          className={styles.input}
+      <Field
+        label={strings.billingFieldMethod}
+        hint={strings.billingFieldMethodHint}
+      >
+        <Input
           value={method}
           onChange={(e) => setMethod(e.target.value)}
           placeholder={strings.billingMethodPlaceholder}
         />
       </Field>
-      <Field label={strings.billingFieldPaymentReference} hint={strings.billingFieldPaymentRefHint}>
-        <input
-          className={styles.input}
+      <Field
+        label={strings.billingFieldPaymentReference}
+        hint={strings.billingFieldPaymentRefHint}
+      >
+        <Input
           value={reference}
           onChange={(e) => setReference(e.target.value)}
         />

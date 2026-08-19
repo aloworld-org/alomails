@@ -6,7 +6,14 @@
 //
 // Only the network is fake. The real router, the real module routes, the real
 // client and the real money parser all run.
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -107,7 +114,12 @@ const PART_PAID: BillingInvoice = {
     grossCents: 22688,
     vatByRate: [{ rateBp: 2100, netCents: 18750, vatCents: 3938 }],
   },
-  fx: { baseCurrency: "EUR", rateMicro: 1_000_000, rate: "1.0", rateDate: "2026-08-06" },
+  fx: {
+    baseCurrency: "EUR",
+    rateMicro: 1_000_000,
+    rate: "1.0",
+    rateDate: "2026-08-06",
+  },
   settlement: {
     grossCents: 22688,
     paidCents: 10000,
@@ -133,7 +145,12 @@ const SETTLED: BillingInvoice = {
   ...PART_PAID,
   status: "paid",
   overdue: false,
-  settlement: { grossCents: 22688, paidCents: 22688, outstandingCents: 0, state: "paid" },
+  settlement: {
+    grossCents: 22688,
+    paidCents: 22688,
+    outstandingCents: 0,
+    state: "paid",
+  },
 };
 
 /** A credit note: money owed the other way, which never carries payments. */
@@ -144,7 +161,12 @@ const CREDIT_NOTE: BillingInvoice = {
   creditNote: true,
   creditsInvoiceId: "inv-2",
   overdue: false,
-  settlement: { grossCents: -22688, paidCents: 0, outstandingCents: -22688, state: "unpaid" },
+  settlement: {
+    grossCents: -22688,
+    paidCents: 0,
+    outstandingCents: -22688,
+    state: "unpaid",
+  },
 };
 
 const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
@@ -155,7 +177,10 @@ const fakeFetch = vi.fn(async (url: string, init?: RequestInit) => {
     body: typeof init?.body === "string" ? JSON.parse(init.body) : undefined,
   });
   const index = replies.findIndex((r) => r.match(url, method));
-  const answer = index === -1 ? fallback(url, method) : (replies.splice(index, 1)[0] as Reply);
+  const answer =
+    index === -1
+      ? fallback(url, method)
+      : (replies.splice(index, 1)[0] as Reply);
   return new Response(JSON.stringify(answer.body), {
     status: answer.status,
     headers: { "content-type": "application/json" },
@@ -212,12 +237,22 @@ describe("the payment ledger of an invoice", () => {
       payments: [FIRST_PAYMENT],
       settlement: PART_PAID.settlement,
     });
-    reply("/billing/invoices/inv-2", "GET", { invoice: PART_PAID, creditNotes: [], payments: [] });
+    reply("/billing/invoices/inv-2", "GET", {
+      invoice: PART_PAID,
+      creditNotes: [],
+      payments: [],
+    });
     ui("/billing/invoices/inv-2");
 
     // The ledger is its own read, so the row arrives after the section does.
     expect(await screen.findByText("SEPA direct debit")).toBeTruthy();
-    expect(screen.getByText(strings.billingPayments)).toBeTruthy();
+    // By role rather than by text: the ledger is a `ds/Table` since D2.06b, and
+    // a table carries its own name for a screen reader, so "Payments" is on the
+    // page twice — as this heading and as the table's caption. The assertion
+    // always meant the heading.
+    expect(
+      screen.getByRole("heading", { name: strings.billingPayments }),
+    ).toBeTruthy();
     // €100.00 received of €226.88, so €126.88 is left — all three are the
     // server's numbers; nothing here subtracts anything.
     // Twice: once as the summary's "received", once as the row's own amount —
@@ -230,27 +265,45 @@ describe("the payment ledger of an invoice", () => {
   });
 
   test("a typed amount is sent as integer cents, and an empty date box sends no date", async () => {
-    reply("/billing/invoices/inv-2", "GET", { invoice: PART_PAID, creditNotes: [], payments: [] });
+    reply("/billing/invoices/inv-2", "GET", {
+      invoice: PART_PAID,
+      creditNotes: [],
+      payments: [],
+    });
     ui("/billing/invoices/inv-2");
-    fireEvent.click(await screen.findByRole("button", { name: strings.billingRecordPayment }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.billingRecordPayment }),
+    );
 
-    const amount = screen.getByLabelText(strings.billingFieldAmount("EUR"), { exact: false });
+    const amount = screen.getByLabelText(strings.billingFieldAmount("EUR"), {
+      exact: false,
+    });
     // The box starts at what is still outstanding — €126.88, the server's
     // figure — so settling in full is a confirmation, not a retyping.
     expect((amount as HTMLInputElement).value).toBe("126.88");
     fireEvent.change(amount, { target: { value: "126.88" } });
-    fireEvent.change(screen.getByLabelText(strings.billingFieldMethod, { exact: false }), {
-      target: { value: "bank transfer" },
-    });
-    fireEvent.change(screen.getByLabelText(strings.billingFieldPaymentReference, { exact: false }), {
-      target: { value: "NL02RABO0123456789" },
-    });
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFieldMethod, { exact: false }),
+      {
+        target: { value: "bank transfer" },
+      },
+    );
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFieldPaymentReference, {
+        exact: false,
+      }),
+      {
+        target: { value: "NL02RABO0123456789" },
+      },
+    );
 
     reply("/payments", "POST", {
       payment: { ...FIRST_PAYMENT, id: "pay-2", amountCents: 12688 },
       invoice: SETTLED,
     });
-    const buttons = screen.getAllByRole("button", { name: strings.billingRecordPayment });
+    const buttons = screen.getAllByRole("button", {
+      name: strings.billingRecordPayment,
+    });
     fireEvent.click(buttons[buttons.length - 1] as HTMLElement);
 
     await waitFor(() => expect(lastWrite()?.method).toBe("POST"));
@@ -274,23 +327,39 @@ describe("the payment ledger of an invoice", () => {
       payments: [FIRST_PAYMENT],
       settlement: SETTLED.settlement,
     });
-    reply("/billing/invoices/inv-2", "GET", { invoice: SETTLED, creditNotes: [], payments: [] });
+    reply("/billing/invoices/inv-2", "GET", {
+      invoice: SETTLED,
+      creditNotes: [],
+      payments: [],
+    });
     ui("/billing/invoices/inv-2");
     await screen.findByText("SEPA direct debit");
 
     reply("/payments/pay-1", "DELETE", { status: "ok", invoice: PART_PAID });
-    fireEvent.click(screen.getByRole("button", { name: strings.billingRemovePayment }));
+    fireEvent.click(
+      screen.getByRole("button", { name: strings.billingRemovePayment }),
+    );
 
     await waitFor(() => expect(lastWrite()?.method).toBe("DELETE"));
-    expect(lastWrite()?.url).toContain("/billing/invoices/inv-2/payments/pay-1");
+    expect(lastWrite()?.url).toContain(
+      "/billing/invoices/inv-2/payments/pay-1",
+    );
     // Back to owed: the money is not there, so the screen says so.
-    expect(await screen.findByText(strings.billingPaymentPartiallyPaid)).toBeTruthy();
+    expect(
+      await screen.findByText(strings.billingPaymentPartiallyPaid),
+    ).toBeTruthy();
   });
 
   test("the server's refusal is shown, never swallowed", async () => {
-    reply("/billing/invoices/inv-2", "GET", { invoice: PART_PAID, creditNotes: [], payments: [] });
+    reply("/billing/invoices/inv-2", "GET", {
+      invoice: PART_PAID,
+      creditNotes: [],
+      payments: [],
+    });
     ui("/billing/invoices/inv-2");
-    fireEvent.click(await screen.findByRole("button", { name: strings.billingRecordPayment }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: strings.billingRecordPayment }),
+    );
 
     reply(
       "/payments",
@@ -298,14 +367,22 @@ describe("the payment ledger of an invoice", () => {
       { detail: "a payment cannot be dated in the future", status: 422 },
       422,
     );
-    const buttons = screen.getAllByRole("button", { name: strings.billingRecordPayment });
+    const buttons = screen.getAllByRole("button", {
+      name: strings.billingRecordPayment,
+    });
     fireEvent.click(buttons[buttons.length - 1] as HTMLElement);
 
-    expect(await screen.findByText("a payment cannot be dated in the future")).toBeTruthy();
+    expect(
+      await screen.findByText("a payment cannot be dated in the future"),
+    ).toBeTruthy();
   });
 
   test("a credit note is never offered the panel — it is money owed the other way", async () => {
-    reply("/billing/invoices/inv-3", "GET", { invoice: CREDIT_NOTE, creditNotes: [], payments: [] });
+    reply("/billing/invoices/inv-3", "GET", {
+      invoice: CREDIT_NOTE,
+      creditNotes: [],
+      payments: [],
+    });
     ui("/billing/invoices/inv-3");
 
     expect(await screen.findByText("INV-2026-00008")).toBeTruthy();
@@ -324,12 +401,17 @@ describe("the overdue view", () => {
     expect(within(screen.getByRole("table")).getByText("€126.88")).toBeTruthy();
 
     reply("/billing/invoices?overdue=1", "GET", { invoices: [PART_PAID] });
-    fireEvent.change(screen.getByLabelText(strings.billingFilterStatus, { exact: false }), {
-      target: { value: "overdue" },
-    });
+    fireEvent.change(
+      screen.getByLabelText(strings.billingFilterStatus, { exact: false }),
+      {
+        target: { value: "overdue" },
+      },
+    );
 
     await waitFor(() =>
-      expect(calls.some((c) => c.url.includes("/billing/invoices?overdue=1"))).toBe(true),
+      expect(
+        calls.some((c) => c.url.includes("/billing/invoices?overdue=1")),
+      ).toBe(true),
     );
     // Never as a status: `?status=overdue` would be a 422 from the server, and
     // asking for it at all would mean this client had invented a fifth state.

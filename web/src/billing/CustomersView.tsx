@@ -6,17 +6,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { UserRound } from "lucide-react";
 
 import { strings } from "../i18n";
-import { useDialogs } from "../ds";
+import { Badge, Table, Th, useDialogs } from "../ds";
 import { billingMessage, useBillingApi } from "./api";
 import { CustomerDialog } from "./CustomerDialog";
-import { BillingLoading, EmptyState, ErrorBanner, Toolbar } from "./parts";
+import { BillingLoading, EmptyState, ErrorBanner, ListToolbar } from "./parts";
 import type { BillingCustomer } from "./types";
 import styles from "./billingStyles";
 
 /** Whether a customer answers the search box (name, city, country, VAT id). */
 function matches(c: BillingCustomer, needle: string): boolean {
   if (needle === "") return true;
-  const hay = [c.name, c.city, c.country, c.vatId ?? "", c.email ?? ""].join(" ").toLowerCase();
+  const hay = [c.name, c.city, c.country, c.vatId ?? "", c.email ?? ""]
+    .join(" ")
+    .toLowerCase();
   return hay.includes(needle);
 }
 
@@ -29,7 +31,9 @@ export function CustomersView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   /** `undefined` = closed, `null` = creating, a record = editing it. */
-  const [editing, setEditing] = useState<BillingCustomer | null | undefined>(undefined);
+  const [editing, setEditing] = useState<BillingCustomer | null | undefined>(
+    undefined,
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,7 +77,8 @@ export function CustomersView() {
 
   return (
     <div className={styles.page}>
-      <Toolbar
+      <ListToolbar
+        label={strings.billingCustomers}
         search={search}
         onSearch={setSearch}
         searchLabel={strings.billingSearchCustomers}
@@ -87,62 +92,82 @@ export function CustomersView() {
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {loading ? <BillingLoading /> : customers.length === 0 ? (
+      {loading ? (
+        <BillingLoading />
+      ) : customers.length === 0 ? (
         <div className={styles.customerEmptyLayout}>
           <div className={styles.customerEmptyCard}>
-            <EmptyState Icon={UserRound} title={strings.billingNoCustomersTitle} body={strings.billingNoCustomersBody} cta={strings.billingNewCustomer} onCta={() => setEditing(null)} />
+            <EmptyState
+              Icon={UserRound}
+              title={strings.billingNoCustomersTitle}
+              body={strings.billingNoCustomersBody}
+              cta={strings.billingNewCustomer}
+              onCta={() => setEditing(null)}
+            />
           </div>
         </div>
       ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.billingColName}</th>
-                <th scope="col">{strings.billingColLocation}</th>
-                <th scope="col">{strings.billingColVatId}</th>
-                <th scope="col">{strings.billingColEmail}</th>
-                <th scope="col">{strings.billingColTerms}</th>
-                <th scope="col">{strings.billingColCurrency}</th>
-                <th scope="col">
-                  <span className={styles.srOnly}>{strings.billingColActions}</span>
-                </th>
+        <Table
+          label={strings.billingCustomers}
+          className={styles.listTable}
+          stickyHeader
+          interactiveRows
+        >
+          <thead>
+            <tr>
+              <Th>{strings.billingColName}</Th>
+              <Th>{strings.billingColLocation}</Th>
+              <Th>{strings.billingColVatId}</Th>
+              <Th>{strings.billingColEmail}</Th>
+              <Th>{strings.billingColTerms}</Th>
+              <Th>{strings.billingColCurrency}</Th>
+              <Th hideLabel>{strings.billingColActions}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((c) => (
+              <tr
+                key={c.id}
+                className={c.archived ? styles.archivedRow : undefined}
+              >
+                <td>
+                  <button
+                    type="button"
+                    className={styles.rowName}
+                    onClick={() => setEditing(c)}
+                  >
+                    {c.name}
+                  </button>
+                  {c.archived && (
+                    <Badge className="ml-2 align-middle">
+                      {strings.billingArchived}
+                    </Badge>
+                  )}
+                </td>
+                <td>
+                  {[c.city, c.country].filter((v) => v !== "").join(", ")}
+                </td>
+                <td className={styles.mono}>{c.vatId ?? ""}</td>
+                <td>{c.email ?? ""}</td>
+                <td>{strings.billingTermsDays(c.paymentTermsDays)}</td>
+                <td>{c.currency}</td>
+                <td className={styles.rowActions}>
+                  <button
+                    type="button"
+                    className={styles.linkAction}
+                    onClick={() => void toggleArchived(c)}
+                  >
+                    {c.archived
+                      ? strings.billingRestore
+                      : strings.billingArchive}
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {shown.map((c) => (
-                <tr key={c.id} className={c.archived ? styles.archivedRow : undefined}>
-                  <td>
-                    <button
-                      type="button"
-                      className={styles.rowName}
-                      onClick={() => setEditing(c)}
-                    >
-                      {c.name}
-                    </button>
-                    {c.archived && <span className={styles.badge}>{strings.billingArchived}</span>}
-                  </td>
-                  <td>{[c.city, c.country].filter((v) => v !== "").join(", ")}</td>
-                  <td className={styles.mono}>{c.vatId ?? ""}</td>
-                  <td>{c.email ?? ""}</td>
-                  <td>{strings.billingTermsDays(c.paymentTermsDays)}</td>
-                  <td>{c.currency}</td>
-                  <td className={styles.rowActions}>
-                    <button
-                      type="button"
-                      className={styles.linkAction}
-                      onClick={() => void toggleArchived(c)}
-                    >
-                      {c.archived ? strings.billingRestore : strings.billingArchive}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
 
       {editing !== undefined && (

@@ -17,6 +17,7 @@
 import { useState } from "react";
 import { RefreshCw } from "lucide-react";
 
+import { Input, Select } from "../ds";
 import { strings } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { CADENCES } from "./cadence";
@@ -54,11 +55,21 @@ function todayValue(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-export function ScheduleDialog({ schedule, from, suggestedName, onClose, onSaved }: Props) {
+export function ScheduleDialog({
+  schedule,
+  from,
+  suggestedName,
+  onClose,
+  onSaved,
+}: Props) {
   const api = useBillingApi();
   const [name, setName] = useState(schedule?.name ?? suggestedName ?? "");
-  const [cadence, setCadence] = useState<ScheduleCadence>(schedule?.cadence ?? "monthly");
-  const [startDate, setStartDate] = useState(schedule?.startDate ?? todayValue());
+  const [cadence, setCadence] = useState<ScheduleCadence>(
+    schedule?.cadence ?? "monthly",
+  );
+  const [startDate, setStartDate] = useState(
+    schedule?.startDate ?? todayValue(),
+  );
   const [endDate, setEndDate] = useState(schedule?.endDate ?? "");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -114,18 +125,26 @@ export function ScheduleDialog({ schedule, from, suggestedName, onClose, onSaved
   return (
     <DialogFrame
       Icon={RefreshCw}
-      title={schedule === null ? strings.billingScheduleFrom : strings.billingRecurringTitle}
+      title={
+        schedule === null
+          ? strings.billingScheduleFrom
+          : strings.billingRecurringTitle
+      }
       subtitle={strings.billingScheduleFromHint}
       error={error}
       busy={busy}
       canSubmit={name.trim() !== "" && startDate !== ""}
-      submitLabel={schedule === null ? strings.billingCreate : strings.billingSave}
+      submitLabel={
+        schedule === null ? strings.billingCreate : strings.billingSave
+      }
       onClose={onClose}
       onSubmit={() => void save()}
     >
-      <Field label={strings.billingScheduleName} hint={strings.billingScheduleNameHint}>
-        <input
-          className={styles.input}
+      <Field
+        label={strings.billingScheduleName}
+        hint={strings.billingScheduleNameHint}
+      >
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoFocus
@@ -135,8 +154,8 @@ export function ScheduleDialog({ schedule, from, suggestedName, onClose, onSaved
 
       <div className={styles.row}>
         <Field label={strings.billingScheduleCadence}>
-          <select
-            className={styles.select}
+          <Select
+            fullWidth
             value={cadence}
             onChange={(e) => setCadence(e.target.value as ScheduleCadence)}
           >
@@ -145,7 +164,7 @@ export function ScheduleDialog({ schedule, from, suggestedName, onClose, onSaved
                 {c.label()}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         {/* The start date is the day the arrangement is anchored to, and an
             arrangement IS its start date — so it is set once and then shown
@@ -157,8 +176,7 @@ export function ScheduleDialog({ schedule, from, suggestedName, onClose, onSaved
             : { hint: strings.billingScheduleAnchorHint(anchorDay) })}
         >
           {schedule === null ? (
-            <input
-              className={styles.input}
+            <Input
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
@@ -168,9 +186,11 @@ export function ScheduleDialog({ schedule, from, suggestedName, onClose, onSaved
             <p className={styles.readOnlyValue}>{startDate}</p>
           )}
         </Field>
-        <Field label={strings.billingScheduleEnd} hint={strings.billingScheduleEndNever}>
-          <input
-            className={styles.input}
+        <Field
+          label={strings.billingScheduleEnd}
+          hint={strings.billingScheduleEndNever}
+        >
+          <Input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}

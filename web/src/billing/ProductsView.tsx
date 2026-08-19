@@ -8,11 +8,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Package } from "lucide-react";
 
 import { strings, useLocale } from "../i18n";
-import { useDialogs } from "../ds";
+import { Badge, Table, Td, Th, useDialogs } from "../ds";
 import { billingMessage, useBillingApi } from "./api";
 import { formatAmount, formatRate } from "./money";
 import { ProductDialog } from "./ProductDialog";
-import { BillingLoading, EmptyState, ErrorBanner, Toolbar } from "./parts";
+import { BillingLoading, EmptyState, ErrorBanner, ListToolbar } from "./parts";
 import type { BillingProduct } from "./types";
 import styles from "./billingStyles";
 
@@ -26,7 +26,9 @@ export function ProductsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   /** `undefined` = closed, `null` = creating, a record = editing it. */
-  const [editing, setEditing] = useState<BillingProduct | null | undefined>(undefined);
+  const [editing, setEditing] = useState<BillingProduct | null | undefined>(
+    undefined,
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -47,7 +49,8 @@ export function ProductsView() {
   const shown = useMemo(() => {
     const needle = search.trim().toLowerCase();
     return products.filter(
-      (p) => needle === "" || `${p.name} ${p.unit}`.toLowerCase().includes(needle),
+      (p) =>
+        needle === "" || `${p.name} ${p.unit}`.toLowerCase().includes(needle),
     );
   }, [products, search]);
 
@@ -72,7 +75,8 @@ export function ProductsView() {
 
   return (
     <div className={styles.page}>
-      <Toolbar
+      <ListToolbar
+        label={strings.billingProducts}
         search={search}
         onSearch={setSearch}
         searchLabel={strings.billingSearchProducts}
@@ -86,7 +90,9 @@ export function ProductsView() {
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {loading ? <BillingLoading /> : products.length === 0 ? (
+      {loading ? (
+        <BillingLoading />
+      ) : products.length === 0 ? (
         <EmptyState
           Icon={Package}
           title={strings.billingNoProductsTitle}
@@ -97,49 +103,59 @@ export function ProductsView() {
       ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.billingColName}</th>
-                <th scope="col">{strings.billingColUnit}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingColUnitPrice}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingColVatRate}
-                </th>
-                <th scope="col">
-                  <span className={styles.srOnly}>{strings.billingColActions}</span>
-                </th>
+        <Table
+          label={strings.billingProducts}
+          className={styles.listTable}
+          stickyHeader
+          interactiveRows
+        >
+          <thead>
+            <tr>
+              <Th>{strings.billingColName}</Th>
+              <Th>{strings.billingColUnit}</Th>
+              <Th numeric>{strings.billingColUnitPrice}</Th>
+              <Th numeric>{strings.billingColVatRate}</Th>
+              <Th hideLabel>{strings.billingColActions}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((p) => (
+              <tr
+                key={p.id}
+                className={p.archived ? styles.archivedRow : undefined}
+              >
+                <td>
+                  <button
+                    type="button"
+                    className={styles.rowName}
+                    onClick={() => setEditing(p)}
+                  >
+                    {p.name}
+                  </button>
+                  {p.archived && (
+                    <Badge className="ml-2 align-middle">
+                      {strings.billingArchived}
+                    </Badge>
+                  )}
+                </td>
+                <td>{p.unit}</td>
+                <Td numeric>{formatAmount(p.unitPriceCents, locale)}</Td>
+                <Td numeric>{formatRate(p.vatRateBp, locale)}</Td>
+                <td className={styles.rowActions}>
+                  <button
+                    type="button"
+                    className={styles.linkAction}
+                    onClick={() => void toggleArchived(p)}
+                  >
+                    {p.archived
+                      ? strings.billingRestore
+                      : strings.billingArchive}
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {shown.map((p) => (
-                <tr key={p.id} className={p.archived ? styles.archivedRow : undefined}>
-                  <td>
-                    <button type="button" className={styles.rowName} onClick={() => setEditing(p)}>
-                      {p.name}
-                    </button>
-                    {p.archived && <span className={styles.badge}>{strings.billingArchived}</span>}
-                  </td>
-                  <td>{p.unit}</td>
-                  <td className={styles.numeric}>{formatAmount(p.unitPriceCents, locale)}</td>
-                  <td className={styles.numeric}>{formatRate(p.vatRateBp, locale)}</td>
-                  <td className={styles.rowActions}>
-                    <button
-                      type="button"
-                      className={styles.linkAction}
-                      onClick={() => void toggleArchived(p)}
-                    >
-                      {p.archived ? strings.billingRestore : strings.billingArchive}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
 
       {editing !== undefined && (

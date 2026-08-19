@@ -18,14 +18,29 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FileText } from "lucide-react";
 
-import { Button, Spinner, cx } from "../ds";
+import {
+  Button,
+  Input,
+  Select,
+  Spinner,
+  Table,
+  Td,
+  Th,
+  Toolbar,
+  ToolbarSpacer,
+  cx,
+} from "../ds";
 import { strings, useLocale } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { formatDocumentDate } from "./dates";
 import { formatAmount } from "./money";
 import { BillingLoading, EmptyState, ErrorBanner } from "./parts";
 import { DocumentChips } from "./status";
-import type { BillingCustomer, BillingInvoiceSummary, InvoiceStatus } from "./types";
+import type {
+  BillingCustomer,
+  BillingInvoiceSummary,
+  InvoiceStatus,
+} from "./types";
 import styles from "./billingStyles";
 
 /** The filter's choices, in the order a document moves through them.
@@ -51,12 +66,18 @@ type Filter = (typeof FILTERS)[number]["value"];
  *  never has to hold both in its head. */
 function listFor(api: ReturnType<typeof useBillingApi>, filter: Filter) {
   if (filter === "overdue") return api.overdueInvoices();
-  return api.invoices(filter === "all" ? undefined : (filter satisfies InvoiceStatus));
+  return api.invoices(
+    filter === "all" ? undefined : (filter satisfies InvoiceStatus),
+  );
 }
 
 /** Whether a document answers the search box: its number, its customer's name
  *  or the customer's own reference. */
-function matches(invoice: BillingInvoiceSummary, customer: string, needle: string): boolean {
+function matches(
+  invoice: BillingInvoiceSummary,
+  customer: string,
+  needle: string,
+): boolean {
   if (needle === "") return true;
   return [invoice.number ?? "", customer, invoice.reference]
     .join(" ")
@@ -85,7 +106,10 @@ export function InvoicesView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [list, people] = await Promise.all([listFor(api, filter), api.customers(true)]);
+      const [list, people] = await Promise.all([
+        listFor(api, filter),
+        api.customers(true),
+      ]);
       setInvoices(list);
       setCustomers(people);
       setError(null);
@@ -107,7 +131,9 @@ export function InvoicesView() {
 
   const shown = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return invoices.filter((i) => matches(i, names.get(i.customerId) ?? "", needle));
+    return invoices.filter((i) =>
+      matches(i, names.get(i.customerId) ?? "", needle),
+    );
   }, [invoices, names, search]);
 
   /** Chase one late invoice: the server writes the letter from the stored
@@ -137,19 +163,19 @@ export function InvoicesView() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <input
-          className={styles.search}
+      <Toolbar label={strings.billingInvoices} className={styles.listBar}>
+        <Input
+          className="max-w-[380px] flex-1"
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={strings.billingSearchInvoices}
           aria-label={strings.billingSearchInvoices}
         />
-        <label className={styles.toggle}>
+        <ToolbarSpacer />
+        <label className={styles.filterLabel}>
           {strings.billingFilterStatus}
-          <select
-            className={styles.select}
+          <Select
             value={filter}
             onChange={(e) => setFilter(e.target.value as Filter)}
           >
@@ -158,13 +184,15 @@ export function InvoicesView() {
                 {f.label()}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         {loading && <Spinner size={16} />}
         {(invoices.length > 0 || filter !== "all") && (
-          <Button onClick={() => void navigate("new")}>{strings.billingNewInvoice}</Button>
+          <Button onClick={() => void navigate("new")}>
+            {strings.billingNewInvoice}
+          </Button>
         )}
-      </div>
+      </Toolbar>
 
       {error !== null && <ErrorBanner message={error} />}
       {reminded !== null && (
@@ -173,7 +201,9 @@ export function InvoicesView() {
         </p>
       )}
 
-      {loading ? <BillingLoading /> : invoices.length === 0 && filter === "overdue" ? (
+      {loading ? (
+        <BillingLoading />
+      ) : invoices.length === 0 && filter === "overdue" ? (
         <p className={styles.noMatches}>{strings.billingNothingOverdue}</p>
       ) : invoices.length === 0 && filter === "all" ? (
         <EmptyState
@@ -186,74 +216,97 @@ export function InvoicesView() {
       ) : shown.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoMatches}</p>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.billingColNumber}</th>
-                <th scope="col">{strings.billingColCustomer}</th>
-                <th scope="col">{strings.billingColIssueDate}</th>
-                <th scope="col">{strings.billingColDueDate}</th>
-                <th scope="col">{strings.billingColStatus}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingColTotal}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingColOutstanding}
-                </th>
-                <th scope="col">
-                  <span className={styles.srOnly}>{strings.billingColActions}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((invoice) => (
-                <tr key={invoice.id} className={cx(invoice.overdue && styles.overdueRow)}>
-                  <td>
+        <Table
+          label={strings.billingInvoices}
+          className={styles.listTable}
+          stickyHeader
+          interactiveRows
+        >
+          <thead>
+            <tr>
+              <Th>{strings.billingColNumber}</Th>
+              <Th>{strings.billingColCustomer}</Th>
+              <Th>{strings.billingColIssueDate}</Th>
+              <Th>{strings.billingColDueDate}</Th>
+              <Th>{strings.billingColStatus}</Th>
+              <Th numeric>{strings.billingColTotal}</Th>
+              <Th numeric>{strings.billingColOutstanding}</Th>
+              <Th hideLabel>{strings.billingColActions}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((invoice) => (
+              <tr
+                key={invoice.id}
+                className={cx(invoice.overdue && styles.overdueRow)}
+              >
+                <td>
+                  <button
+                    type="button"
+                    className={cx(styles.rowName, styles.mono)}
+                    onClick={() => void navigate(invoice.id)}
+                  >
+                    {invoice.number ?? strings.billingNotNumbered}
+                  </button>
+                </td>
+                <td>
+                  {names.get(invoice.customerId) ??
+                    strings.billingUnknownCustomer}
+                </td>
+                <td>
+                  {formatDocumentDate(
+                    invoice.issueDate,
+                    locale,
+                    strings.billingNoDate,
+                  )}
+                </td>
+                <td>
+                  {formatDocumentDate(
+                    invoice.dueDate,
+                    locale,
+                    strings.billingNoDate,
+                  )}
+                </td>
+                <td className={styles.chips}>
+                  <DocumentChips invoice={invoice} />
+                </td>
+                <Td numeric>
+                  {formatAmount(
+                    invoice.totals.grossCents,
+                    locale,
+                    invoice.currency,
+                  )}
+                </Td>
+                {/* The server's figure, like every other one here: what is
+                    left after the payments recorded against this document. */}
+                <Td numeric>
+                  {formatAmount(
+                    invoice.settlement.outstandingCents,
+                    locale,
+                    invoice.currency,
+                  )}
+                </Td>
+                {/* Only a late document is chased. A draft owes nothing yet,
+                    a settled one owes nothing any more, and the server
+                    refuses both — so the button is not offered for them
+                    rather than shown and then refused. */}
+                <td className={styles.rowActions}>
+                  {invoice.overdue && (
                     <button
                       type="button"
-                      className={cx(styles.rowName, styles.mono)}
-                      onClick={() => void navigate(invoice.id)}
+                      className={styles.linkAction}
+                      disabled={reminding !== null}
+                      title={strings.billingRemindHint}
+                      onClick={() => void remind(invoice)}
                     >
-                      {invoice.number ?? strings.billingNotNumbered}
+                      {strings.billingRemind}
                     </button>
-                  </td>
-                  <td>{names.get(invoice.customerId) ?? strings.billingUnknownCustomer}</td>
-                  <td>{formatDocumentDate(invoice.issueDate, locale, strings.billingNoDate)}</td>
-                  <td>{formatDocumentDate(invoice.dueDate, locale, strings.billingNoDate)}</td>
-                  <td className={styles.chips}>
-                    <DocumentChips invoice={invoice} />
-                  </td>
-                  <td className={styles.numeric}>
-                    {formatAmount(invoice.totals.grossCents, locale, invoice.currency)}
-                  </td>
-                  {/* The server's figure, like every other one here: what is
-                      left after the payments recorded against this document. */}
-                  <td className={styles.numeric}>
-                    {formatAmount(invoice.settlement.outstandingCents, locale, invoice.currency)}
-                  </td>
-                  {/* Only a late document is chased. A draft owes nothing yet,
-                      a settled one owes nothing any more, and the server
-                      refuses both — so the button is not offered for them
-                      rather than shown and then refused. */}
-                  <td className={styles.rowActions}>
-                    {invoice.overdue && (
-                      <button
-                        type="button"
-                        className={styles.linkAction}
-                        disabled={reminding !== null}
-                        title={strings.billingRemindHint}
-                        onClick={() => void remind(invoice)}
-                      >
-                        {strings.billingRemind}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

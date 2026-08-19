@@ -18,6 +18,7 @@
 import { useState } from "react";
 import { Package } from "lucide-react";
 
+import { Input, Select, Toggle } from "../ds";
 import { strings } from "../i18n";
 import { billingMessage, useBillingApi } from "./api";
 import { hundredthsToInput, parseHundredths } from "./money";
@@ -60,16 +61,26 @@ interface Props {
   onSaved: () => void;
 }
 
-export function ProductDialog({ product, suppliers, initialBarcode, onClose, onSaved }: Props) {
+export function ProductDialog({
+  product,
+  suppliers,
+  initialBarcode,
+  onClose,
+  onSaved,
+}: Props) {
   const api = useBillingApi();
   const [name, setName] = useState(product?.name ?? "");
   const [unit, setUnit] = useState(product?.unit ?? "");
   const [price, setPrice] = useState(
     product === null ? "" : hundredthsToInput(product.unitPriceCents),
   );
-  const [rate, setRate] = useState(product === null ? "" : hundredthsToInput(product.vatRateBp));
+  const [rate, setRate] = useState(
+    product === null ? "" : hundredthsToInput(product.vatRateBp),
+  );
   const [sku, setSku] = useState(product?.sku ?? "");
-  const [barcode, setBarcode] = useState(product?.barcode ?? initialBarcode ?? "");
+  const [barcode, setBarcode] = useState(
+    product?.barcode ?? initialBarcode ?? "",
+  );
   // A thing that was scanned is a thing on a shelf. The box is still a
   // checkbox — a scanned code can belong to something a tenant never stocks —
   // but the form opens on the answer that is right nearly every time.
@@ -87,7 +98,8 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
   // zero-rated) applies, on an edit the stored value stays.
   const priceCents = price.trim() === "" ? null : parseHundredths(price);
   const rateBp = rate.trim() === "" ? null : parseHundredths(rate);
-  const purchaseCents = purchase.trim() === "" ? null : parseHundredths(purchase);
+  const purchaseCents =
+    purchase.trim() === "" ? null : parseHundredths(purchase);
   const priceError = price.trim() !== "" && priceCents === null;
   const rateError = rate.trim() !== "" && rateBp === null;
   const purchaseError = purchase.trim() !== "" && purchaseCents === null;
@@ -99,16 +111,26 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
       const draft: ProductDraft = {};
       const trimmedName = name.trim();
       const trimmedUnit = unit.trim();
-      if (product === null ? trimmedName !== "" : trimmedName !== product.name) {
+      if (
+        product === null ? trimmedName !== "" : trimmedName !== product.name
+      ) {
         draft.name = trimmedName;
       }
-      if (product === null ? trimmedUnit !== "" : trimmedUnit !== product.unit) {
+      if (
+        product === null ? trimmedUnit !== "" : trimmedUnit !== product.unit
+      ) {
         draft.unit = trimmedUnit;
       }
-      if (priceCents !== null && (product === null || priceCents !== product.unitPriceCents)) {
+      if (
+        priceCents !== null &&
+        (product === null || priceCents !== product.unitPriceCents)
+      ) {
         draft.unitPriceCents = priceCents;
       }
-      if (rateBp !== null && (product === null || rateBp !== product.vatRateBp)) {
+      if (
+        rateBp !== null &&
+        (product === null || rateBp !== product.vatRateBp)
+      ) {
         draft.vatRateBp = rateBp;
       }
       // The catalog half. A code cleared on an edit IS a change and is sent as
@@ -119,7 +141,11 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
       if (product === null ? trimmedSku !== "" : trimmedSku !== product.sku) {
         draft.sku = trimmedSku;
       }
-      if (product === null ? trimmedBarcode !== "" : trimmedBarcode !== product.barcode) {
+      if (
+        product === null
+          ? trimmedBarcode !== ""
+          : trimmedBarcode !== product.barcode
+      ) {
         draft.barcode = trimmedBarcode;
       }
       if (product === null ? stocked : stocked !== product.stocked) {
@@ -133,7 +159,10 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
       }
       // Only where there was a picker to answer with: a screen that does not
       // offer suppliers must not send a field that clears one.
-      if (suppliers !== undefined && supplier !== (product?.defaultSupplierId ?? "")) {
+      if (
+        suppliers !== undefined &&
+        supplier !== (product?.defaultSupplierId ?? "")
+      ) {
         draft.defaultSupplierId = supplier === "" ? null : supplier;
       }
       if (product === null) await api.createProduct(draft);
@@ -149,18 +178,25 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
   return (
     <DialogFrame
       Icon={Package}
-      title={product === null ? strings.billingNewProduct : strings.billingEditProduct}
+      title={
+        product === null
+          ? strings.billingNewProduct
+          : strings.billingEditProduct
+      }
       subtitle={strings.billingProductSubtitle}
       error={error}
       busy={busy}
-      canSubmit={name.trim() !== "" && !priceError && !rateError && !purchaseError}
-      submitLabel={product === null ? strings.billingCreate : strings.billingSave}
+      canSubmit={
+        name.trim() !== "" && !priceError && !rateError && !purchaseError
+      }
+      submitLabel={
+        product === null ? strings.billingCreate : strings.billingSave
+      }
       onClose={onClose}
       onSubmit={() => void save()}
     >
       <Field label={strings.billingFieldName}>
-        <input
-          className={styles.input}
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           autoFocus
@@ -169,8 +205,7 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
       </Field>
 
       <Field label={strings.billingFieldUnit} hint={strings.billingUnitHint}>
-        <input
-          className={styles.input}
+        <Input
           value={unit}
           onChange={(e) => setUnit(e.target.value)}
           placeholder={strings.billingUnitPlaceholder}
@@ -183,13 +218,12 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
           hint={strings.billingPriceHint}
           error={priceError ? strings.billingNotAnAmount : undefined}
         >
-          <input
-            className={styles.input}
+          <Input
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder={strings.billingAmountPlaceholder}
             inputMode="decimal"
-            aria-invalid={priceError}
+            invalid={priceError}
           />
         </Field>
         <Field
@@ -197,13 +231,12 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
           hint={strings.billingRateHint}
           error={rateError ? strings.billingNotARate : undefined}
         >
-          <input
-            className={styles.input}
+          <Input
             value={rate}
             onChange={(e) => setRate(e.target.value)}
             placeholder={strings.billingRatePlaceholder}
             inputMode="decimal"
-            aria-invalid={rateError}
+            invalid={rateError}
           />
         </Field>
       </div>
@@ -213,16 +246,17 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
           about a product as its price, and a form that hides half of itself is
           a form people fill in twice. */}
       <div className={styles.row}>
-        <Field label={strings.inventoryFieldSku} hint={strings.inventorySkuHint}>
-          <input
-            className={styles.input}
-            value={sku}
-            onChange={(e) => setSku(e.target.value)}
-          />
+        <Field
+          label={strings.inventoryFieldSku}
+          hint={strings.inventorySkuHint}
+        >
+          <Input value={sku} onChange={(e) => setSku(e.target.value)} />
         </Field>
-        <Field label={strings.inventoryFieldBarcode} hint={strings.inventoryBarcodeHint}>
-          <input
-            className={styles.input}
+        <Field
+          label={strings.inventoryFieldBarcode}
+          hint={strings.inventoryBarcodeHint}
+        >
+          <Input
             value={barcode}
             onChange={(e) => setBarcode(e.target.value)}
             inputMode="numeric"
@@ -236,13 +270,12 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
           hint={strings.inventoryPurchasePriceHint}
           error={purchaseError ? strings.billingNotAnAmount : undefined}
         >
-          <input
-            className={styles.input}
+          <Input
             value={purchase}
             onChange={(e) => setPurchase(e.target.value)}
             placeholder={strings.billingAmountPlaceholder}
             inputMode="decimal"
-            aria-invalid={purchaseError}
+            invalid={purchaseError}
           />
         </Field>
         {/* Only where there is something to pick — Billing's price list loads no
@@ -253,8 +286,8 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
             label={strings.inventoryFieldDefaultSupplier}
             hint={strings.inventoryDefaultSupplierHint}
           >
-            <select
-              className={styles.input}
+            <Select
+              fullWidth
               value={supplier}
               onChange={(e) => setSupplier(e.target.value)}
             >
@@ -264,7 +297,7 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
                   {choice.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
         )}
       </div>
@@ -273,15 +306,15 @@ export function ProductDialog({ product, suppliers, initialBarcode, onClose, onS
           ledger refuses a movement of a service, and turning it off again on a
           product that already moved is the server's `409`. Said here, where the
           box is, rather than discovered on a receipt. */}
-      <Field label={strings.inventoryFieldStocked} hint={strings.inventoryStockedHint}>
-        <span className={styles.toggle}>
-          <input
-            type="checkbox"
-            checked={stocked}
-            onChange={(e) => setStocked(e.target.checked)}
-          />
-          {strings.inventoryStockedLabel}
-        </span>
+      <Field
+        label={strings.inventoryFieldStocked}
+        hint={strings.inventoryStockedHint}
+      >
+        <Toggle
+          checked={stocked}
+          onChange={setStocked}
+          label={strings.inventoryStockedLabel}
+        />
       </Field>
     </DialogFrame>
   );

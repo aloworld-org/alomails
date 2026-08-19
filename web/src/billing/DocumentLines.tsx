@@ -11,7 +11,7 @@
 // never does.
 import { Plus, Trash2 } from "lucide-react";
 
-import { IconButton, cx } from "../ds";
+import { IconButton, Input, Select, Table, Td, Th, cx } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { formatAmount, formatQty, formatRate } from "./money";
 import { blankRow, isBlankRow, rowFromProduct, rowProblem } from "./lineRows";
@@ -98,163 +98,176 @@ export function DocumentLines({
       {rows.length === 0 ? (
         <p className={styles.noMatches}>{strings.billingNoLines}</p>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.billingColDescription}</th>
-                <th scope="col">{strings.billingColUnit}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingColQty}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingColUnitPrice}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingColVatRate}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.billingColNet}
-                </th>
-                {!readOnly && (
-                  <th scope="col">
-                    <span className={styles.srOnly}>{strings.billingColActions}</span>
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, index) => {
-                const problem = isBlankRow(row) ? null : rowProblem(row);
-                const line = stored.get(row.key);
-                return (
-                  <tr key={row.key}>
-                    <td className={styles.lineDescription}>
-                      {readOnly ? (
-                        row.description
-                      ) : (
-                        <>
-                          <input
-                            className={styles.input}
-                            value={row.description}
-                            onChange={(e) => replace(index, { ...row, description: e.target.value })}
-                            placeholder={strings.billingDescriptionPlaceholder}
-                            aria-label={strings.billingColDescription}
-                            aria-invalid={problem === "description"}
-                          />
-                          {products.length > 0 && (
-                            <select
-                              className={styles.select}
-                              value=""
-                              aria-label={strings.billingPickProduct}
-                              onChange={(e) => {
-                                const picked = products.find((p) => p.id === e.target.value);
-                                if (picked !== undefined) replace(index, rowFromProduct(row, picked));
-                              }}
-                            >
-                              <option value="">{strings.billingPickProduct}</option>
-                              {products.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name}
-                                </option>
-                              ))}
-                            </select>
-                          )}
-                          {problem !== null && (
-                            <span className={styles.fieldError}>{problemMessage(problem)}</span>
-                          )}
-                        </>
-                      )}
-                    </td>
-                    <td>
-                      {readOnly ? (
-                        row.unit
-                      ) : (
-                        <input
-                          className={cx(styles.input, styles.inputNarrow)}
-                          value={row.unit}
-                          onChange={(e) => replace(index, { ...row, unit: e.target.value })}
-                          placeholder={strings.billingUnitPlaceholder}
-                          aria-label={strings.billingColUnit}
+        <Table label={strings.billingLines}>
+          <thead>
+            <tr>
+              <Th>{strings.billingColDescription}</Th>
+              <Th className={styles.narrowCol}>{strings.billingColUnit}</Th>
+              <Th numeric className={styles.narrowCol}>
+                {strings.billingColQty}
+              </Th>
+              <Th numeric className={styles.narrowCol}>
+                {strings.billingColUnitPrice}
+              </Th>
+              <Th numeric className={styles.narrowCol}>
+                {strings.billingColVatRate}
+              </Th>
+              <Th numeric>{strings.billingColNet}</Th>
+              {!readOnly && <Th hideLabel>{strings.billingColActions}</Th>}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const problem = isBlankRow(row) ? null : rowProblem(row);
+              const line = stored.get(row.key);
+              return (
+                <tr key={row.key}>
+                  <td className={styles.lineDescription}>
+                    {readOnly ? (
+                      row.description
+                    ) : (
+                      <>
+                        <Input
+                          value={row.description}
+                          onChange={(e) =>
+                            replace(index, {
+                              ...row,
+                              description: e.target.value,
+                            })
+                          }
+                          placeholder={strings.billingDescriptionPlaceholder}
+                          aria-label={strings.billingColDescription}
+                          invalid={problem === "description"}
                         />
-                      )}
-                    </td>
-                    <td className={styles.numeric}>
-                      {readOnly ? (
-                        line === undefined ? (
-                          row.qty
-                        ) : (
-                          formatQty(line.qtyMilli, locale)
-                        )
-                      ) : (
-                        <input
-                          className={cx(styles.input, styles.inputNarrow, styles.numeric)}
-                          value={row.qty}
-                          onChange={(e) => replace(index, { ...row, qty: e.target.value })}
-                          placeholder={strings.billingQtyPlaceholder}
-                          inputMode="decimal"
-                          aria-label={strings.billingColQty}
-                          aria-invalid={problem === "qty"}
-                        />
-                      )}
-                    </td>
-                    <td className={styles.numeric}>
-                      {readOnly ? (
-                        line === undefined ? (
-                          row.price
-                        ) : (
-                          formatAmount(line.unitPriceCents, locale, currency)
-                        )
-                      ) : (
-                        <input
-                          className={cx(styles.input, styles.inputNarrow, styles.numeric)}
-                          value={row.price}
-                          onChange={(e) => replace(index, { ...row, price: e.target.value })}
-                          placeholder={strings.billingAmountPlaceholder}
-                          inputMode="decimal"
-                          aria-label={strings.billingColUnitPrice}
-                          aria-invalid={problem === "price"}
-                        />
-                      )}
-                    </td>
-                    <td className={styles.numeric}>
-                      {readOnly ? (
-                        line === undefined ? (
-                          row.rate
-                        ) : (
-                          formatRate(line.vatRateBp, locale)
-                        )
-                      ) : (
-                        <input
-                          className={cx(styles.input, styles.inputNarrow, styles.numeric)}
-                          value={row.rate}
-                          onChange={(e) => replace(index, { ...row, rate: e.target.value })}
-                          placeholder={strings.billingRatePlaceholder}
-                          inputMode="decimal"
-                          aria-label={strings.billingColVatRate}
-                          aria-invalid={problem === "rate"}
-                        />
-                      )}
-                    </td>
-                    <td className={cx(styles.numeric, !saved && styles.stale)}>
-                      {line === undefined ? "" : formatAmount(line.netCents, locale, currency)}
-                    </td>
-                    {!readOnly && (
-                      <td className={styles.rowActions}>
-                        <IconButton
-                          label={strings.billingRemoveLine}
-                          icon={<Trash2 size={15} />}
-                          size="sm"
-                          onClick={() => onChange(rows.filter((_, i) => i !== index))}
-                        />
-                      </td>
+                        {products.length > 0 && (
+                          <Select
+                            value=""
+                            aria-label={strings.billingPickProduct}
+                            onChange={(e) => {
+                              const picked = products.find(
+                                (p) => p.id === e.target.value,
+                              );
+                              if (picked !== undefined)
+                                replace(index, rowFromProduct(row, picked));
+                            }}
+                          >
+                            <option value="">
+                              {strings.billingPickProduct}
+                            </option>
+                            {products.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </Select>
+                        )}
+                        {problem !== null && (
+                          <span className={styles.fieldError}>
+                            {problemMessage(problem)}
+                          </span>
+                        )}
+                      </>
                     )}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  </td>
+                  <td>
+                    {readOnly ? (
+                      row.unit
+                    ) : (
+                      <Input
+                        value={row.unit}
+                        onChange={(e) =>
+                          replace(index, { ...row, unit: e.target.value })
+                        }
+                        placeholder={strings.billingUnitPlaceholder}
+                        aria-label={strings.billingColUnit}
+                      />
+                    )}
+                  </td>
+                  <Td numeric>
+                    {readOnly ? (
+                      line === undefined ? (
+                        row.qty
+                      ) : (
+                        formatQty(line.qtyMilli, locale)
+                      )
+                    ) : (
+                      <Input
+                        className={styles.numeric}
+                        value={row.qty}
+                        onChange={(e) =>
+                          replace(index, { ...row, qty: e.target.value })
+                        }
+                        placeholder={strings.billingQtyPlaceholder}
+                        inputMode="decimal"
+                        aria-label={strings.billingColQty}
+                        invalid={problem === "qty"}
+                      />
+                    )}
+                  </Td>
+                  <Td numeric>
+                    {readOnly ? (
+                      line === undefined ? (
+                        row.price
+                      ) : (
+                        formatAmount(line.unitPriceCents, locale, currency)
+                      )
+                    ) : (
+                      <Input
+                        className={styles.numeric}
+                        value={row.price}
+                        onChange={(e) =>
+                          replace(index, { ...row, price: e.target.value })
+                        }
+                        placeholder={strings.billingAmountPlaceholder}
+                        inputMode="decimal"
+                        aria-label={strings.billingColUnitPrice}
+                        invalid={problem === "price"}
+                      />
+                    )}
+                  </Td>
+                  <Td numeric>
+                    {readOnly ? (
+                      line === undefined ? (
+                        row.rate
+                      ) : (
+                        formatRate(line.vatRateBp, locale)
+                      )
+                    ) : (
+                      <Input
+                        className={styles.numeric}
+                        value={row.rate}
+                        onChange={(e) =>
+                          replace(index, { ...row, rate: e.target.value })
+                        }
+                        placeholder={strings.billingRatePlaceholder}
+                        inputMode="decimal"
+                        aria-label={strings.billingColVatRate}
+                        invalid={problem === "rate"}
+                      />
+                    )}
+                  </Td>
+                  <Td numeric className={cx(!saved && styles.stale)}>
+                    {line === undefined
+                      ? ""
+                      : formatAmount(line.netCents, locale, currency)}
+                  </Td>
+                  {!readOnly && (
+                    <td className={styles.rowActions}>
+                      <IconButton
+                        label={strings.billingRemoveLine}
+                        icon={<Trash2 size={15} />}
+                        size="sm"
+                        onClick={() =>
+                          onChange(rows.filter((_, i) => i !== index))
+                        }
+                      />
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </Table>
       )}
     </section>
   );

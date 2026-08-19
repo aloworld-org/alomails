@@ -1,16 +1,29 @@
 // The pieces the two billing list pages and the two billing dialogs share, so
 // customers and the price list are visibly one module rather than two screens
 // that drifted apart. Presentational only: no data loading, no rules.
-import { cloneElement, isValidElement, type FormEvent, type ReactNode } from "react";
+import {
+  cloneElement,
+  isValidElement,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { Info, Plus, Search, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { strings } from "../i18n";
-import { Button, Spinner } from "../ds";
+import { Button, Input, Spinner, Toggle, Toolbar, ToolbarSpacer } from "../ds";
 import styles from "./billingStyles";
 
-/** The bar above a list: search, the archived toggle, and the create action. */
-export function Toolbar({
+/**
+ * The bar above a list: search, the archived toggle, and the create action.
+ *
+ * Named for what it is rather than for the primitive it is built from: it is
+ * one arrangement of `ds/Toolbar`, not a second toolbar (D2.06b). `label` is
+ * that toolbar's accessible name — the thing every hand-built bar in this
+ * codebase left out — so it says which list the row acts on.
+ */
+export function ListToolbar({
+  label,
   search,
   onSearch,
   searchLabel,
@@ -21,6 +34,7 @@ export function Toolbar({
   busy,
   showCreate = true,
 }: {
+  label: string;
   search: string;
   onSearch: (v: string) => void;
   searchLabel: string;
@@ -32,22 +46,31 @@ export function Toolbar({
   showCreate?: boolean;
 }) {
   return (
-    <div className={styles.toolbar}>
+    <Toolbar label={label} className={styles.listBar}>
       <label className={styles.searchWrap}>
-        <input className={styles.search} type="search" value={search} onChange={(e) => onSearch(e.target.value)} placeholder={searchLabel} aria-label={searchLabel} />
+        <Input
+          className="pr-10"
+          type="search"
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          placeholder={searchLabel}
+          aria-label={searchLabel}
+        />
         <Search aria-hidden="true" />
       </label>
-      <label className={styles.toggle}>
-        <input
-          type="checkbox"
-          checked={includeArchived}
-          onChange={(e) => onIncludeArchived(e.target.checked)}
-        />
-        {strings.billingShowArchived}
-      </label>
+      <ToolbarSpacer />
+      <Toggle
+        checked={includeArchived}
+        onChange={onIncludeArchived}
+        label={strings.billingShowArchived}
+      />
       {busy && <Spinner size={16} />}
-      {showCreate && <Button icon={<Plus aria-hidden="true" />} onClick={onCreate}>{createLabel}</Button>}
-    </div>
+      {showCreate && (
+        <Button icon={<Plus aria-hidden="true" />} onClick={onCreate}>
+          {createLabel}
+        </Button>
+      )}
+    </Toolbar>
   );
 }
 
@@ -64,7 +87,11 @@ export function ErrorBanner({ message }: { message: string }) {
  * before the backend has answered, without pretending that records exist. */
 export function BillingLoading() {
   return (
-    <div className={styles.dataLoading} role="status" aria-label={strings.billingLoading}>
+    <div
+      className={styles.dataLoading}
+      role="status"
+      aria-label={strings.billingLoading}
+    >
       <Spinner size={24} />
       <span>{strings.billingLoading}</span>
     </div>
@@ -93,13 +120,21 @@ export function EmptyState({
   onCta?: () => void;
 }) {
   return (
-    <div className={cta !== undefined ? `${styles.empty} ${styles.emptyWithAction}` : styles.empty}>
+    <div
+      className={
+        cta !== undefined
+          ? `${styles.empty} ${styles.emptyWithAction}`
+          : styles.empty
+      }
+    >
       <span className={styles.emptyArt} aria-hidden="true">
         <Icon size={38} />
       </span>
       <h2 className={styles.emptyTitle}>{title}</h2>
       <p className={styles.emptyBody}>{body}</p>
-      {cta !== undefined && onCta !== undefined && <Button onClick={onCta}>{cta}</Button>}
+      {cta !== undefined && onCta !== undefined && (
+        <Button onClick={onCta}>{cta}</Button>
+      )}
     </div>
   );
 }
@@ -118,7 +153,9 @@ export function Field({
   children: ReactNode;
 }) {
   const control = isValidElement<{ "aria-label"?: string }>(children)
-    ? cloneElement(children, { "aria-label": children.props["aria-label"] ?? label })
+    ? cloneElement(children, {
+        "aria-label": children.props["aria-label"] ?? label,
+      })
     : children;
 
   return (
@@ -142,7 +179,9 @@ export function Field({
         )}
       </div>
       {control}
-      {error !== undefined && <span className="text-xs leading-relaxed text-danger">{error}</span>}
+      {error !== undefined && (
+        <span className="text-xs leading-relaxed text-danger">{error}</span>
+      )}
     </div>
   );
 }
@@ -177,7 +216,11 @@ export function DialogFrame({
     if (!busy && canSubmit) onSubmit();
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-6 max-sm:p-3" role="presentation" onMouseDown={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-6 max-sm:p-3"
+      role="presentation"
+      onMouseDown={onClose}
+    >
       <form
         className="flex max-h-[calc(100dvh-3rem)] w-full max-w-2xl flex-col overflow-hidden rounded-xl border border-subtle bg-surface shadow-lg max-sm:max-h-[calc(100dvh-1.5rem)]"
         role="dialog"
@@ -190,12 +233,17 @@ export function DialogFrame({
         }}
       >
         <div className="flex shrink-0 items-start gap-3 border-b border-subtle px-5 py-4">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent" aria-hidden="true">
+          <span
+            className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent"
+            aria-hidden="true"
+          >
             <Icon size={19} />
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="m-0 text-lg font-semibold text-primary">{title}</h2>
-            <p className="mt-1 text-sm leading-relaxed text-secondary">{subtitle}</p>
+            <p className="mt-1 text-sm leading-relaxed text-secondary">
+              {subtitle}
+            </p>
           </div>
           <button
             type="button"
