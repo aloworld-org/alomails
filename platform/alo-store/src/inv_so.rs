@@ -50,12 +50,12 @@ use crate::billing_invoices::{INVOICE_NOTE_MAX_CHARS, INVOICE_REFERENCE_MAX_CHAR
 use crate::billing_line::{FiguresRow, group_figures};
 use crate::billing_totals::{LineFigures, Totals, totals};
 use crate::error::{Result, StoreError};
-use crate::id::{BillingCustomerId, InvSalesOrderId};
+use crate::id::{BillingCustomerId, BillingQuoteId, InvSalesOrderId};
 use crate::inv_so_lines::{self, NewSoLine, NormalizedSoLine, SoLine};
 
 /// The columns every read of an order selects, in `SoRow` order.
 const SO_COLS: &str = "id, customer_id, status, currency, number, confirmed_date, expected_date, \
-     closed_date, reference, note, created_by, created_at, updated_at";
+     closed_date, reference, note, quote_id, created_by, created_at, updated_at";
 
 /// Where an order is in its life.
 ///
@@ -321,12 +321,17 @@ pub struct NewSalesOrder {
     pub reference: String,
     /// Free-text note printed under the lines.
     pub note: String,
+    /// The offer this order was taken from, or `None` for one taken over a
+    /// counter or a telephone (ADR 0054 §4, migration 0700). It must be one of
+    /// **this tenant's** quotes, and one quote yields at most one order.
+    pub quote_id: Option<BillingQuoteId>,
 }
 
 impl NewSalesOrder {
     /// The blank header a new draft starts from: this customer, their currency,
-    /// no promised date, no reference and no note. There is deliberately no
-    /// [`Default`] — an order without a customer is not a document.
+    /// no promised date, no reference, no note and no offer behind it. There is
+    /// deliberately no [`Default`] — an order without a customer is not a
+    /// document.
     pub fn for_customer(customer_id: BillingCustomerId) -> Self {
         Self {
             customer_id,
@@ -334,7 +339,15 @@ impl NewSalesOrder {
             expected_date: None,
             reference: String::new(),
             note: String::new(),
+            quote_id: None,
         }
+    }
+
+    /// The same header, recording the offer the customer accepted.
+    #[must_use]
+    pub fn from_quote(mut self, quote_id: BillingQuoteId) -> Self {
+        self.quote_id = Some(quote_id);
+        self
     }
 }
 
@@ -363,6 +376,9 @@ pub struct SalesOrder {
     pub reference: String,
     /// Free-text note.
     pub note: String,
+    /// The offer this order was taken from, `None` for one that came from no
+    /// quote at all — which is most of them.
+    pub quote_id: Option<BillingQuoteId>,
     /// The user who took the order.
     pub created_by: String,
     /// Creation time.
@@ -420,6 +436,7 @@ struct NormalizedSo {
     expected_date: Option<Date>,
     reference: String,
     note: String,
+    quote_id: Option<String>,
 }
 
 impl AccountStore {
@@ -447,12 +464,31 @@ impl AccountStore {
             Some(code) => currency(code)?,
             None => customer.currency,
         };
+        // The offer, held to this tenant's own quotes before it is written. The
+        // composite foreign key would refuse a stranger's id anyway, but it
+        // would refuse it as a database error rather than as the clean
+        // not-found every other cross-tenant reference in this module answers
+        // with — and a foreign id must never be distinguishable from one that
+        // never existed.
+        let quote_id = match &input.quote_id {
+            None => None,
+            Some(id) => Some(
+                self.billing_quote(id)
+                    .await?
+                    .ok_or(StoreError::NotFound)?
+                    .quote
+                    .id
+                    .as_str()
+                    .to_owned(),
+            ),
+        };
         Ok(NormalizedSo {
             customer_id: customer.id.as_str().to_owned(),
             currency: resolved_currency,
             expected_date: input.expected_date,
             reference: bounded("reference", &input.reference, INVOICE_REFERENCE_MAX_CHARS)?,
             note: bounded("note", &input.note, INVOICE_NOTE_MAX_CHARS)?,
+            quote_id,
         })
     }
 
@@ -556,16 +592,18 @@ impl AccountStore {
     /// confirming assigns those.
     ///
     /// # Errors
-    /// [`StoreError::NotFound`] when the customer is not this tenant's;
-    /// [`StoreError::Validation`] when the customer is archived or a header
-    /// field breaks its rule; [`StoreError::Db`] on failure.
+    /// [`StoreError::NotFound`] when the customer — or the quote, when one is
+    /// named — is not this tenant's; [`StoreError::Validation`] when the
+    /// customer is archived or a header field breaks its rule;
+    /// [`StoreError::Conflict`] when that quote already produced an order;
+    /// [`StoreError::Db`] on failure.
     pub async fn create_inv_sales_order(&self, input: &NewSalesOrder) -> Result<InvSalesOrderId> {
         let header = self.normalize_sales_order(input).await?;
         let id = InvSalesOrderId::generate();
         sqlx::query(
             "INSERT INTO inv_sales_orders (tenant_id, id, customer_id, status, currency, \
-                 expected_date, reference, note, created_by) \
-             VALUES ($1, $2, $3, 'draft', $4, $5, $6, $7, $8)",
+                 expected_date, reference, note, quote_id, created_by) \
+             VALUES ($1, $2, $3, 'draft', $4, $5, $6, $7, $8, $9)",
         )
         .bind(self.tenant.as_str())
         .bind(id.as_str())
@@ -574,10 +612,20 @@ impl AccountStore {
         .bind(header.expected_date)
         .bind(&header.reference)
         .bind(&header.note)
+        .bind(header.quote_id.as_deref())
         .bind(self.user.as_str())
         .execute(&self.pool)
         .await
-        .map_err(StoreError::Db)?;
+        // The partial unique index is what makes "the order taken from this
+        // offer" a single row; a second attempt is a conflict rather than a
+        // second order, and it is the database saying so rather than a check
+        // that could be raced past.
+        .map_err(|error| match &error {
+            sqlx::Error::Database(db) if db.constraint() == Some("inv_sales_orders_from_quote") => {
+                StoreError::Conflict("that offer has already been taken up as an order".to_owned())
+            }
+            _ => StoreError::Db(error),
+        })?;
         Ok(id)
     }
 
@@ -875,6 +923,7 @@ struct SoRow {
     closed_date: Option<Date>,
     reference: String,
     note: String,
+    quote_id: Option<String>,
     created_by: String,
     created_at: OffsetDateTime,
     updated_at: OffsetDateTime,
@@ -898,6 +947,7 @@ impl SoRow {
             closed_date: self.closed_date,
             reference: self.reference,
             note: self.note,
+            quote_id: self.quote_id.map(BillingQuoteId::new),
             created_by: self.created_by,
             created_at: self.created_at,
             updated_at: self.updated_at,
@@ -1165,6 +1215,7 @@ mod tests {
             confirmed_date: when,
             expected_date: when,
             closed_date: None,
+            quote_id: None,
             reference: String::new(),
             note: String::new(),
             created_by: "u".to_owned(),

@@ -44,7 +44,9 @@ use alo_store::inv_so::{
 };
 use alo_store::inv_so_invoice::invoiceable;
 use alo_store::inv_so_lines::{NewSoLine, SoLine};
-use alo_store::{AccountStore, BillingCustomerId, BillingProductId, InvSalesOrderId};
+use alo_store::{
+    AccountStore, BillingCustomerId, BillingProductId, BillingQuoteId, InvSalesOrderId,
+};
 
 use crate::billing::{absent_or_null, iso, iso_date, map_store_err, parse_body, parse_iso_date};
 use crate::billing_document::{LineBody, today, totals_json};
@@ -71,6 +73,10 @@ fn order_json(o: &SalesOrder, customer_name: &str, today: Date) -> Value {
         "late": o.is_late(today),
         "reference": o.reference,
         "note": o.note,
+        // The offer this order came from, or null for one taken over a counter
+        // or a telephone. Additive: `billing_invoices` has carried the same link
+        // for the other branch of an acceptance since B1.12.
+        "quoteId": o.quote_id.as_ref().map(BillingQuoteId::as_str),
         "createdBy": o.created_by,
         "createdAt": iso(o.created_at),
         "updatedAt": iso(o.updated_at),
@@ -187,6 +193,10 @@ fn editable(o: &SalesOrder) -> NewSalesOrder {
         expected_date: o.expected_date,
         reference: o.reference.clone(),
         note: o.note.clone(),
+        // Carried through, never re-stated. Where an order came from is
+        // provenance rather than a field: an edit must not lose it, and no
+        // request may rewrite it — see [`OrderBody`].
+        quote_id: o.quote_id.clone(),
     }
 }
 
@@ -200,6 +210,11 @@ fn editable(o: &SalesOrder) -> NewSalesOrder {
 /// There is no `status`, `number`, `confirmedDate` or `closedDate` here. They
 /// are not writable from a request at all: they move only through the lifecycle
 /// routes.
+///
+/// **Nor is there a `quoteId`.** Where an order came from is provenance, written
+/// once by the acceptance that produced it and never afterwards: a request that
+/// could restate it could claim an order came from an offer it did not, which is
+/// the one thing the link exists to answer.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct OrderBody {
@@ -254,6 +269,7 @@ impl OrderBody {
             expected_date,
             reference: self.reference.clone().unwrap_or(base.reference),
             note: self.note.clone().unwrap_or(base.note),
+            quote_id: base.quote_id,
         })
     }
 
@@ -578,6 +594,7 @@ mod tests {
             expected_date: Date::from_calendar_date(2026, time::Month::September, 1).ok(),
             reference: "Their PO 4711".to_owned(),
             note: "Deliver before noon".to_owned(),
+            quote_id: Some(BillingQuoteId::new("quo-1")),
         }
     }
 
@@ -599,6 +616,30 @@ mod tests {
         assert_eq!(unchanged.currency.as_deref(), Some("CHF"));
         assert_eq!(unchanged.reference, "Their PO 4711");
         assert!(unchanged.expected_date.is_some());
+    }
+
+    #[test]
+    fn no_request_can_state_or_clear_where_an_order_came_from() {
+        // Provenance, not a field. An order that could be told it came from an
+        // offer it did not come from would make the link worthless in exactly
+        // the case it exists for, so `quoteId` is absent from the body: sending
+        // one is an unknown field, ignored like any other.
+        let carried = merged(json!({ "quoteId": "quo-somebody-elses" }));
+        assert_eq!(
+            carried.quote_id.as_ref().map(BillingQuoteId::as_str),
+            Some("quo-1"),
+            "a stated quote id must be ignored, never adopted"
+        );
+        // Nor can it be cleared, by null or by editing everything around it.
+        let still_there = merged(json!({ "quoteId": null, "reference": "New ref" }));
+        assert_eq!(
+            still_there.quote_id.as_ref().map(BillingQuoteId::as_str),
+            Some("quo-1")
+        );
+        assert_eq!(still_there.reference, "New ref", "the rest still merges");
+        // And a body naming only the quote states no header at all, so a PATCH
+        // carrying it does not even re-resolve the customer.
+        assert!(!body(json!({ "quoteId": "quo-2" })).states_header());
     }
 
     #[test]
