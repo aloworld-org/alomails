@@ -212,7 +212,7 @@ export function ProjectsView({
                       <Button
                         variant="ghost"
                         icon={<Play size={16} />}
-                        className="shrink-0"
+                        className="shrink-0 !border-transparent enabled:hover:!border-transparent enabled:hover:!bg-accent-soft enabled:hover:!text-primary"
                         aria-label={strings.projectsStartTimerOn(project.name)}
                         onClick={() => onStartTimer(project)}
                       >
