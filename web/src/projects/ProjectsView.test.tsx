@@ -47,10 +47,8 @@ describe("ProjectsView running timer", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("region", { name: strings.projectsTimerRunning }).textContent,
-    ).toContain(project.name);
     expect(screen.getByRole("button", { name: strings.projectsStopTimer })).toBeTruthy();
+    expect(screen.getByText(strings.projectsTimerRunning)).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: strings.projectsStartTimerOn(project.name) }),
     ).toBeNull();
