@@ -8,8 +8,8 @@ describe("Button", () => {
     render(<Button>Continue</Button>);
 
     const button = screen.getByRole("button", { name: "Continue" });
-    expect(button.className).toContain("bg-accent");
-    expect(button.className).toContain("text-on-accent");
-    expect(button.className).toContain("enabled:hover:bg-accent-hover");
+    expect(button.className).toContain("!bg-accent");
+    expect(button.className).toContain("!text-on-accent");
+    expect(button.className).toContain("enabled:hover:!bg-accent-hover");
   });
 });

@@ -43,15 +43,15 @@ const SIZE = {
  *  a disabled primary or danger becomes a clean neutral instead of dimming.
  *  Carried by the two variants that fill with a signal colour; the other two
  *  dim, which is what the stylesheet did. */
-const DISABLED_NEUTRAL = "disabled:bg-default disabled:text-tertiary";
+const DISABLED_NEUTRAL = "disabled:!bg-default disabled:!text-tertiary";
 const DISABLED_DIM = "disabled:opacity-50";
 
 const VARIANT = {
   // Primary is the universal call-to-action treatment. `--accent` is alo's
   // brand orange (#e76f51); screens must not replace it with a local fill.
   primary:
-    "bg-accent text-on-accent " +
-    "enabled:hover:bg-accent-hover enabled:active:bg-accent-active " +
+    "!bg-accent !text-on-accent " +
+    "enabled:hover:!bg-accent-hover enabled:active:!bg-accent-active " +
     DISABLED_NEUTRAL,
   secondary:
     "bg-accent-secondary text-on-accent " +

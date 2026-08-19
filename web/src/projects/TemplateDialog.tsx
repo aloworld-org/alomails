@@ -25,7 +25,6 @@ import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
 import { DialogFrame, Field } from "./parts";
 import type { ProjectTemplate, TemplateCopy } from "./types";
-import styles from "./ProjectsModule.module.css";
 
 export function TemplateDialog({
   templates,
@@ -159,7 +158,7 @@ export function TemplateDialog({
       <>
           <Field label={strings.projectsTemplateWhich} hint={strings.projectsTemplateWhichHint}>
             <select
-              className={styles.select}
+              className="h-10 w-full rounded-md border border-default bg-surface px-3 text-sm text-primary outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent-tint"
               autoFocus
               value={templateId}
               onChange={(e) => setTemplateId(e.target.value)}
@@ -178,17 +177,17 @@ export function TemplateDialog({
 
           <Field label={strings.projectsTemplateName} hint={strings.projectsTemplateNameHint}>
             <input
-              className={styles.input}
+              className="h-10 w-full rounded-md border border-default bg-surface px-3 text-sm text-primary outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent-tint"
               value={name}
               maxLength={120}
               onChange={(e) => setName(e.target.value)}
             />
           </Field>
 
-          <div className={styles.row}>
+          <div className="grid grid-cols-2 gap-4 max-sm:grid-cols-1">
             <Field label={strings.projectsTemplateStarts} hint={strings.projectsTemplateStartsHint}>
               <input
-                className={styles.input}
+                className="h-10 w-full rounded-md border border-default bg-surface px-3 text-sm text-primary outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent-tint"
                 type="date"
                 value={startsOn}
                 onChange={(e) => setStartsOn(e.target.value)}
@@ -199,7 +198,7 @@ export function TemplateDialog({
               hint={strings.projectsTemplateCustomerHint}
             >
               <select
-                className={styles.select}
+                className="h-10 w-full rounded-md border border-default bg-surface px-3 text-sm text-primary outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-accent-tint"
                 value={customerId}
                 onChange={(e) => setCustomerId(e.target.value)}
               >
@@ -214,7 +213,7 @@ export function TemplateDialog({
           </div>
 
           {chosen !== null && chosen.milestoneCount === 0 && (
-            <p className={styles.hint}>{strings.projectsTemplateNoPlan}</p>
+            <p className="m-0 text-sm leading-5 text-tertiary">{strings.projectsTemplateNoPlan}</p>
           )}
       </>
     </DialogFrame>

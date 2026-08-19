@@ -28,7 +28,7 @@ describe("the project template dialog", () => {
     expect(screen.queryByRole("button", { name: "Create project" })).toBeNull();
     const choose = screen.getByRole("button", { name: "Choose a project" });
     expect((choose as HTMLButtonElement).disabled).toBe(false);
-    expect(choose.className).toContain("bg-accent");
+    expect(choose.className).toContain("!bg-accent");
 
     fireEvent.click(choose);
     expect(close).toHaveBeenCalledOnce();
