@@ -186,9 +186,11 @@ export function PlanView({
         </label>
         <span className={styles.toolbarSpacer} />
         {loading && <Spinner size={16} />}
-        <Button onClick={() => setEditing("new")} disabled={projectId === ""}>
-          <Plus size={15} /> {strings.projectsMilestoneAdd}
-        </Button>
+        {plan.milestones.length > 0 && (
+          <Button onClick={() => setEditing("new")} disabled={projectId === ""}>
+            <Plus size={15} /> {strings.projectsMilestoneAdd}
+          </Button>
+        )}
       </div>
 
       {error !== null && <ErrorBanner message={error} />}
