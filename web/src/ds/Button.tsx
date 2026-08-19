@@ -33,10 +33,12 @@ const BASE =
 
 /** The two heights, from `--button-height-*`: they are the button's own scale
  *  rather than steps on the 4px spacing scale, and naming them is what keeps
- *  the 38 of a button and the 40 of a field visibly a decision. */
+ *  the 38 of a button and the 40 of a field visibly a decision. Padding is
+ *  important because `global.css` follows the Tailwind import and its native
+ *  button reset would otherwise win the cascade and flatten it to zero. */
 const SIZE = {
-  sm: "min-h-10 px-5 py-2 text-sm",
-  md: "min-h-10 px-6 py-2.5 text-base",
+  sm: "min-h-10 !px-[var(--space-5)] !py-[var(--space-2)] text-sm",
+  md: "min-h-10 !px-[var(--space-6)] !py-[0.625rem] text-base",
 } as const;
 
 /** A faded accent reads as a broken button rather than an unavailable one, so
