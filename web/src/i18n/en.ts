@@ -4395,7 +4395,12 @@ export const en = {
     "The entry goes for good. Its week has to be open for that.",
   projectsWeekEmptyTitle: "Nothing logged this week",
   projectsWeekEmptyBody:
-    "Start the timer on a project, or add a row below and write the hours straight into a day.",
+    "Add your first time entry. Choose a project, enter the duration and note, and it will appear in this weekly review.",
+  projectsWeekTitle: "Weekly timesheet",
+  projectsWeekPurpose: "Log your work, review the week, then submit it for approval.",
+  projectsAddTime: "Add time",
+  projectsChooseTimeProject: "What did you work on?",
+  projectsChooseTimeProjectHint: "Choose a project to add a time entry for this week.",
   projectsBillableOfWeek: (duration: string) => `${duration} billable`,
   projectsProposedInWeek: (duration: string) =>
     `${duration} suggested, not yet accepted`,

@@ -2520,7 +2520,12 @@ export const nl: Partial<Catalog> = {
     "De regel verdwijnt voorgoed. Daarvoor moet de week openstaan.",
   projectsWeekEmptyTitle: "Deze week nog niets geregistreerd",
   projectsWeekEmptyBody:
-    "Start de timer op een project, of voeg hieronder een regel toe en schrijf de uren rechtstreeks in een dag.",
+    "Voeg je eerste tijdregistratie toe. Kies een project, vul de duur en notitie in en bekijk ze daarna in dit weekoverzicht.",
+  projectsWeekTitle: "Weekstaat",
+  projectsWeekPurpose: "Registreer je werk, controleer de week en dien ze daarna ter goedkeuring in.",
+  projectsAddTime: "Tijd toevoegen",
+  projectsChooseTimeProject: "Waaraan heb je gewerkt?",
+  projectsChooseTimeProjectHint: "Kies een project om deze week een tijdregistratie toe te voegen.",
   projectsBillableOfWeek: (duration: string) =>
     `waarvan ${duration} factureerbaar`,
   projectsProposedInWeek: (duration: string) =>

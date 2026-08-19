@@ -27,7 +27,7 @@
 //   submitted has no record yet and asking a person to create one first would
 //   be a round trip that exists only to satisfy REST.
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Plus, X } from "lucide-react";
 
 import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
@@ -41,7 +41,7 @@ import {
   shiftWeek,
   weekDays,
 } from "./format";
-import { EmptyState, ErrorBanner, WeekChip } from "./parts";
+import { ErrorBanner, WeekChip } from "./parts";
 import type { Project, TimeEntry, TimeTotals, TimesheetWeek } from "./types";
 import styles from "./ProjectsModule.module.css";
 
@@ -83,6 +83,7 @@ export function WeekView({
   const [deciding, setDeciding] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
+  const [choosingProject, setChoosingProject] = useState(false);
 
   const days = useMemo(() => weekDays(monday), [monday]);
   const sunday = days[6] ?? monday;
@@ -128,8 +129,6 @@ export function WeekView({
     const worked = new Set(entries.map((e) => e.projectId));
     return projects.filter((p) => worked.has(p.id) || extraRows.includes(p.id));
   }, [projects, entries, extraRows]);
-
-  const unusedProjects = projects.filter((p) => !rows.some((row) => row.id === p.id));
 
   /** The entries in one cell. A cell is a project on a day, and a person can
    *  have written more than one — two sittings on the same job is not a
@@ -199,9 +198,30 @@ export function WeekView({
     }
   }
 
+  function startEntry(projectId: string) {
+    const workDate = days.includes(today) ? today : monday;
+    setExtraRows((current) =>
+      current.includes(projectId) ? current : [...current, projectId],
+    );
+    setChoosingProject(false);
+    setTarget({ projectId, workDate, entry: null });
+  }
+
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
+      <section className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-default bg-surface px-5 py-4 shadow-sm">
+        <div className="min-w-0">
+          <p className="text-lg font-semibold text-primary">{strings.projectsWeekTitle}</p>
+          <p className="mt-1 text-sm text-secondary">{strings.projectsWeekPurpose}</p>
+        </div>
+        {!locked && projects.length > 0 && (
+          <Button icon={<Plus size={17} />} onClick={() => setChoosingProject(true)}>
+            {strings.projectsAddTime}
+          </Button>
+        )}
+      </section>
+
+      <div className={`${styles.toolbar} rounded-xl border border-default bg-surface px-3 py-2`}>
         <Button
           variant="ghost"
           size="sm"
@@ -232,11 +252,18 @@ export function WeekView({
       {error !== null && <ErrorBanner message={error} />}
 
       {rows.length === 0 && !loading ? (
-        <EmptyState
-          Icon={CalendarDays}
-          title={strings.projectsWeekEmptyTitle}
-          body={strings.projectsWeekEmptyBody}
-        />
+        <section className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-default bg-surface px-6 py-12 text-center shadow-sm">
+          <span className="flex size-14 items-center justify-center rounded-2xl bg--soft text-accent">
+            <CalendarDays size={26} aria-hidden="true" />
+          </span>
+          <h2 className="mt-5 text-xl font-semibold text-primary">{strings.projectsWeekEmptyTitle}</h2>
+          <p className="mt-2 max-w-md text-sm leading-6 text-secondary">{strings.projectsWeekEmptyBody}</p>
+          {!locked && projects.length > 0 && (
+            <Button className="mt-6" icon={<Clock3 size={17} />} onClick={() => setChoosingProject(true)}>
+              {strings.projectsAddTime}
+            </Button>
+          )}
+        </section>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.grid}>
@@ -315,24 +342,30 @@ export function WeekView({
         </div>
       )}
 
-      {!locked && unusedProjects.length > 0 && (
-        <div className={styles.toolbar}>
-          <Plus size={16} aria-hidden="true" />
-          <select
-            className={styles.select}
-            value=""
-            aria-label={strings.projectsAddRow}
-            onChange={(e) => {
-              if (e.target.value !== "") setExtraRows((rows) => [...rows, e.target.value]);
-            }}
-          >
-            <option value="">{strings.projectsAddRow}</option>
-            {unusedProjects.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
+      {choosingProject && !locked && (
+        <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-overlay p-4">
+        <section role="dialog" aria-modal="true" className="w-full max-w-2xl rounded-2xl border border-default bg-surface p-5 shadow-xl" aria-labelledby="week-project-picker-title">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 id="week-project-picker-title" className="font-semibold text-primary">{strings.projectsChooseTimeProject}</h2>
+              <p className="mt-1 text-sm text-secondary">{strings.projectsChooseTimeProjectHint}</p>
+            </div>
+            <button type="button" className="flex size-9 shrink-0 items-center justify-center rounded-lg text-secondary transition-colors hover:bg-raised hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" aria-label={strings.close} onClick={() => setChoosingProject(false)}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project) => (
+              <button key={project.id} type="button" className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-default bg-surface px-4 py-3 text-left transition-colors hover:border-accent hover:bg--soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" onClick={() => startEntry(project.id)}>
+                <span className="min-w-0">
+                  <span className="block truncate font-medium text-primary">{project.name}</span>
+                  <span className="mt-0.5 block truncate text-xs text-secondary">{project.client === null ? strings.projectsInternal : strings.projectsCustomer}</span>
+                </span>
+                <ChevronRight size={17} className="shrink-0 text-secondary" aria-hidden="true" />
+              </button>
             ))}
-          </select>
+          </div>
+        </section>
         </div>
       )}
 

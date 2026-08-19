@@ -2562,7 +2562,12 @@ export const fr: Partial<Catalog> = {
     "La saisie disparaît définitivement. Sa semaine doit être ouverte pour cela.",
   projectsWeekEmptyTitle: "Rien de saisi cette semaine",
   projectsWeekEmptyBody:
-    "Démarrez le chronomètre sur un projet, ou ajoutez une ligne ci-dessous et écrivez les heures directement dans un jour.",
+    "Ajoutez votre première saisie de temps. Choisissez un projet, indiquez la durée et une note, puis retrouvez-la dans ce récapitulatif hebdomadaire.",
+  projectsWeekTitle: "Feuille de temps hebdomadaire",
+  projectsWeekPurpose: "Saisissez votre travail, vérifiez la semaine, puis soumettez-la pour approbation.",
+  projectsAddTime: "Ajouter du temps",
+  projectsChooseTimeProject: "Sur quoi avez-vous travaillé ?",
+  projectsChooseTimeProjectHint: "Choisissez un projet pour ajouter une saisie de temps cette semaine.",
   projectsBillableOfWeek: (duration: string) => `dont ${duration} facturables`,
   projectsProposedInWeek: (duration: string) =>
     `${duration} proposées, pas encore acceptées`,
