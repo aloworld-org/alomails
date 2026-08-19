@@ -76,6 +76,7 @@ export function ProjectsView({
   onEditClient,
   onStartTimer,
   onToggleTemplate,
+  onOpenTasks,
   onNewProject,
   onNewFromTemplate,
 }: {
@@ -92,6 +93,8 @@ export function ProjectsView({
   /** Marks the board reusable, or takes the mark off — the same control, because
    *  a board either is a template or is not. */
   onToggleTemplate: (project: Project) => void;
+  /** Opens the task workspace already scoped to this project. */
+  onOpenTasks: (project: Project) => void;
   onNewProject: () => void;
   onNewFromTemplate: () => void;
 }) {
@@ -128,7 +131,14 @@ export function ProjectsView({
             </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            <Button variant="ghost" icon={<CopyPlus size={16} />} onClick={onNewFromTemplate}>{strings.projectsTemplateNew}</Button>
+            <Button
+              variant="ghost"
+              icon={<CopyPlus size={16} />}
+              className="!border-transparent !bg-raised enabled:hover:!bg-default enabled:hover:!text-primary"
+              onClick={onNewFromTemplate}
+            >
+              {strings.projectsTemplateNew}
+            </Button>
             <Button icon={<Plus size={16} />} onClick={onNewProject}>{strings.projectsNew}</Button>
           </div>
         </div>
@@ -162,7 +172,7 @@ export function ProjectsView({
                     <button
                       type="button"
                       className="flex items-center gap-3 text-left text-sm font-semibold text-primary no-underline outline-none hover:text-accent focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-accent"
-                      onClick={() => onEditClient(project)}
+                      onClick={() => onOpenTasks(project)}
                     >
                       <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg--soft text-accent">
                         <Briefcase className="size-4" aria-hidden="true" />
@@ -214,7 +224,7 @@ export function ProjectsView({
                       <Button
                         variant="ghost"
                         icon={<Play size={16} />}
-                        className="shrink-0 !border-transparent enabled:hover:!border-transparent enabled:hover:!bg-accent-soft enabled:hover:!text-primary"
+                        className="shrink-0 !border-transparent !bg-raised enabled:hover:!bg-default enabled:hover:!text-primary"
                         aria-label={strings.projectsStartTimerOn(project.name)}
                         onClick={() => onStartTimer(project)}
                       >

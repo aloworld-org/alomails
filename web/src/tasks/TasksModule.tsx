@@ -67,6 +67,18 @@ export function TasksModule() {
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState<{ status?: string; dueDate?: string } | null>(null);
 
+  // Projects links here with a stable project id. Keep the query in the URL so
+  // refreshes and shared links reopen the same task workspace.
+  useEffect(() => {
+    const requested = searchParams.get("project");
+    if (requested === null || !projects.some((project) => project.id === requested)) return;
+    setMode((current) =>
+      current.type === "project" && current.id === requested
+        ? current
+        : { type: "project", id: requested },
+    );
+  }, [projects, searchParams]);
+
   const projectName = useCallback(
     (id: string) => projects.find((p) => p.id === id)?.name ?? "",
     [projects],

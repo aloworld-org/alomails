@@ -21,7 +21,7 @@
 // the point — so the copy here says *client project* wherever the distinction
 // carries weight, and the Tasks module's own strings are left alone.
 import { useCallback, useEffect, useState } from "react";
-import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
 
 import { useCustomers } from "../billing";
 import { Spinner } from "../ds";
@@ -59,6 +59,7 @@ const projectTabClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 export function ProjectsModule() {
+  const navigate = useNavigate();
   const api = useProjectsApi();
   const client = useJmapClient();
   // Archived customers included: a project attached to one before it was
@@ -234,6 +235,7 @@ export function ProjectsModule() {
               onEditClient={setEditing}
               onStartTimer={(project) => void startTimer(project)}
               onToggleTemplate={(project) => void toggleTemplate(project)}
+              onOpenTasks={(project) => navigate(`/tasks?project=${encodeURIComponent(project.id)}`)}
               onNewProject={() => setCreating(true)}
               onNewFromTemplate={() => setStartingFromTemplate(true)}
             />
