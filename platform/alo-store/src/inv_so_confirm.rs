@@ -14,6 +14,22 @@
 //! answered by summing the open orders' outstanding lines, which is the shortage
 //! query's job (B5.07) and costs nothing to keep true.
 //!
+//! **It does, since ADR 0054, refuse a promise the goods cannot back — unless
+//! the seller says otherwise.** Storing nothing was always the right call;
+//! making no check at all was the gap beside it, and until it was closed two
+//! people confirming in the same second could each sell the last fan. The
+//! question "can these goods exist" is [`crate::inv_so_commit`]'s, asked inside
+//! this transaction before anything is written, so a refusal leaves the order a
+//! draft, unnumbered, and exactly as it was found.
+//!
+//! The escape is deliberate and is the same shape as cancelling a part-delivered
+//! order: **`allow_backorder` makes the caller say it out loud.** Taking an order
+//! you intend to buy stock for is ordinary trade, and `inv_reorder` states in its
+//! own tests that more promised than exists is *legitimately* negative — that is
+//! the state its shortage report exists to report. What must not happen is
+//! promising goods nobody decided to be short of, so the default refuses and a
+//! backorder is a sentence somebody typed.
+//!
 //! It is [`crate::inv_po_send`] with the letter left out, and the letter is left
 //! out for a reason rather than an omission: placing an order with a supplier
 //! *is* asking them, so an order marked sent that nobody sent is a lie the
@@ -39,7 +55,7 @@ impl AccountStore {
     /// stamps today as the confirmation date and moves the order to
     /// `confirmed` — in one transaction.
     ///
-    /// Three refusals, all before anything is written:
+    /// Four refusals, all before anything is written:
     ///
     /// - an order that is **not a draft** — already confirmed, delivered or
     ///   cancelled — is a [`StoreError::Conflict`] naming its state, so
@@ -47,15 +63,25 @@ impl AccountStore {
     /// - an order with **no lines** is a [`StoreError::Validation`]: a
     ///   confirmation of nothing promises nothing, and the delivery note it
     ///   would eventually print would be a blank sheet;
+    /// - an order whose stocked lines ask for **more than can exist** is a
+    ///   [`StoreError::Conflict`] naming the product and the shortfall
+    ///   ([`crate::inv_so_commit`]) — the refusal that stops one fan being sold
+    ///   twice — **unless `allow_backorder`**, which is the seller deciding to
+    ///   promise goods they will buy;
     /// - an order that is **not this tenant's** is a [`StoreError::NotFound`],
     ///   indistinguishable from one that does not exist.
     ///
     /// # Errors
     /// The three above, and [`StoreError::Db`] on failure. Every one of them
     /// leaves the order exactly as it was.
+    /// `allow_backorder` promises goods that are neither on the shelf nor on
+    /// their way: the order is taken and the shortage report shows it, which is
+    /// what that report is for. `false` — the default every caller should pass
+    /// unless a person chose otherwise — refuses instead.
     pub async fn confirm_inv_sales_order(
         &self,
         id: &InvSalesOrderId,
+        allow_backorder: bool,
     ) -> Result<SalesOrderDocument> {
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         // The status under the row lock is the authority: a `PATCH` or a second
@@ -71,6 +97,20 @@ impl AccountStore {
                  confirming it"
                     .to_owned(),
             ));
+        }
+
+        // Can the goods exist? Asked here rather than by the caller, and under
+        // this transaction's locks, so the count and the promise are one act. A
+        // backorder skips the question rather than answering it differently:
+        // the seller has already decided, and `inv_reorder` will report the
+        // shortage that decision creates.
+        if !allow_backorder {
+            crate::inv_so_commit::refuse_over_commitment(
+                &mut tx,
+                self.tenant.as_str(),
+                id.as_str(),
+            )
+            .await?;
         }
 
         // One clock for the whole transaction, and the same clock the row's own

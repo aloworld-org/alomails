@@ -321,7 +321,7 @@ fn map_rule_conflict(error: sqlx::Error) -> StoreError {
 /// is not on order (nobody has been told), and `received`/`cancelled` have
 /// nothing left to arrive. Free-text lines carry no product and a negative
 /// quantity is a supplier's discount, so both fall out of the fold.
-const ON_ORDER_SQL: &str = "SELECT pol.product_id, \
+pub(crate) const ON_ORDER_SQL: &str = "SELECT pol.product_id, \
      SUM(GREATEST(pol.qty_milli, 0) - pol.received_qty_milli)::bigint AS qty_milli \
      FROM inv_purchase_order_lines pol \
      JOIN inv_purchase_orders po ON po.tenant_id = pol.tenant_id AND po.id = pol.po_id \
@@ -332,7 +332,7 @@ const ON_ORDER_SQL: &str = "SELECT pol.product_id, \
 /// The undelivered remainder of every **confirmed** sales-order line, per
 /// product. A draft order has promised nobody anything; a delivered or
 /// cancelled one has nothing left to go out.
-const COMMITTED_SQL: &str = "SELECT sol.product_id, \
+pub(crate) const COMMITTED_SQL: &str = "SELECT sol.product_id, \
      SUM(GREATEST(sol.qty_milli, 0) - sol.delivered_qty_milli)::bigint AS qty_milli \
      FROM inv_sales_order_lines sol \
      JOIN inv_sales_orders so ON so.tenant_id = sol.tenant_id AND so.id = sol.so_id \

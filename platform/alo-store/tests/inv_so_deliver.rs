@@ -203,7 +203,10 @@ impl Selling {
             )
             .await
             .unwrap();
-        self.door.confirm_inv_sales_order(&order).await.unwrap();
+        self.door
+            .confirm_inv_sales_order(&order, true)
+            .await
+            .unwrap();
         order
     }
 
@@ -306,7 +309,9 @@ async fn confirming_numbers_the_order_freezes_it_and_moves_nothing() {
     // again would draw a second number for one document.
     let refused = conflict(yard.door.set_inv_sales_order_lines(&yard.order, &[]).await);
     assert!(refused.contains("draft"), "{refused}");
-    assert!(conflict(yard.door.confirm_inv_sales_order(&yard.order).await).contains("confirmed"));
+    assert!(
+        conflict(yard.door.confirm_inv_sales_order(&yard.order, false).await).contains("confirmed")
+    );
     assert!(conflict(yard.door.delete_inv_sales_order(&yard.order).await).contains("draft"));
 }
 
@@ -319,7 +324,7 @@ async fn a_confirmation_of_nothing_is_refused() {
         .create_inv_sales_order(&NewSalesOrder::for_customer(yard.customer.clone()))
         .await
         .unwrap();
-    let refused = invalid(yard.door.confirm_inv_sales_order(&empty).await);
+    let refused = invalid(yard.door.confirm_inv_sales_order(&empty, false).await);
     assert!(refused.contains("no lines"), "{refused}");
     // And it is still a draft, still unnumbered, still deletable.
     let document = yard.door.inv_sales_order(&empty).await.unwrap().unwrap();
@@ -750,7 +755,11 @@ async fn another_tenants_order_can_never_be_delivered() {
     );
     // Their confirmation, their cancellation and their draft-only guards are
     // equally unreachable, and their list never shows ours.
-    assert_not_found(ours.door.confirm_inv_sales_order(&theirs.order).await);
+    assert_not_found(
+        ours.door
+            .confirm_inv_sales_order(&theirs.order, false)
+            .await,
+    );
     assert_not_found(ours.door.cancel_inv_sales_order(&theirs.order, true).await);
     assert_not_found(ours.door.delete_inv_sales_order(&theirs.order).await);
     assert_not_found(

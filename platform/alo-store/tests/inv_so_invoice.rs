@@ -202,7 +202,10 @@ impl Selling {
 
     async fn confirmed_order(&self) -> InvSalesOrderId {
         let order = self.draft_order().await;
-        self.door.confirm_inv_sales_order(&order).await.unwrap();
+        self.door
+            .confirm_inv_sales_order(&order, true)
+            .await
+            .unwrap();
         order
     }
 

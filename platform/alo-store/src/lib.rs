@@ -157,6 +157,7 @@ pub mod inv_po_receive;
 pub mod inv_po_send;
 pub mod inv_reorder;
 pub mod inv_so;
+mod inv_so_commit;
 pub mod inv_so_confirm;
 pub mod inv_so_deliver;
 pub mod inv_so_invoice;

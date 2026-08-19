@@ -251,7 +251,10 @@ impl Buying {
             )
             .await
             .unwrap();
-        self.door.confirm_inv_sales_order(&order).await.unwrap();
+        self.door
+            .confirm_inv_sales_order(&order, true)
+            .await
+            .unwrap();
     }
 
     async fn shortages(&self) -> Vec<Shortage> {

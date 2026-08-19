@@ -467,14 +467,35 @@ pub async fn delete_sales_order(
     Ok(Json(json!({ "status": "ok" })))
 }
 
-/// `POST /inventory/sales-orders/{id}/confirm` → `{"salesOrder":{…}}` — say yes
-/// to the customer: draw `SO-YYYY-NNNNN`, stamp today, freeze the document.
+/// The body of a confirmation: whether the caller accepts promising goods that
+/// are not there.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ConfirmBody {
+    /// `true` takes the order even though the goods are neither on the shelf nor
+    /// on their way — a backorder, which the shortage report then shows. Needed
+    /// only when the stock will not cover it: an empty body confirms an order the
+    /// warehouse can back, which is the ordinary case.
+    #[serde(default)]
+    allow_backorder: bool,
+}
+
+/// `POST /inventory/sales-orders/{id}/confirm` `{"allowBackorder":false}` →
+/// `{"salesOrder":{…}}` — say yes to the customer: draw `SO-YYYY-NNNNN`, stamp
+/// today, freeze the document.
 ///
 /// **No stock moves and nothing is reserved.** A sales order is a promise; goods
 /// move when they are picked, which is what a delivery is for. Confirming twice
 /// is a `409` naming the state, so one document can never carry two numbers, and
 /// an order with no lines is a `422` — a confirmation of nothing promises
 /// nothing.
+///
+/// **An order the warehouse cannot back is a `409` naming the product and the
+/// shortfall**, so two people cannot each sell the last fan (ADR 0054 §3).
+/// `allowBackorder: true` takes it anyway — promising goods you intend to buy is
+/// ordinary trade, and the shortage report is where that decision shows up. As
+/// with `shortClose` on a cancellation, the store refuses without it rather than
+/// deciding on a seller's behalf.
 ///
 /// Nothing is emailed. Confirming records an answer we already gave the
 /// customer; sending them the confirmation is a letter the tenant writes,
@@ -483,11 +504,13 @@ pub async fn confirm_sales_order(
     State(state): State<AppState>,
     headers: HeaderMap,
     Path(id): Path<String>,
+    body: axum::body::Bytes,
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
+    let req: ConfirmBody = parse_body(if body.is_empty() { b"{}" } else { &body })?;
     let document = account
         .acc
-        .confirm_inv_sales_order(&InvSalesOrderId::new(id))
+        .confirm_inv_sales_order(&InvSalesOrderId::new(id), req.allow_backorder)
         .await
         .map_err(map_store_err)?;
     Ok(Json(
