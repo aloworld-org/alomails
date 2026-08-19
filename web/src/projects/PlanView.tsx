@@ -195,7 +195,11 @@ export function PlanView({
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {plan.milestones.length === 0 ? (
+      {loading && plan.milestones.length === 0 ? (
+        <div className="flex min-h-80 items-center justify-center">
+          <Spinner size={20} />
+        </div>
+      ) : plan.milestones.length === 0 ? (
         <EmptyState
           Icon={Flag}
           title={strings.projectsPlanEmptyTitle}

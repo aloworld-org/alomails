@@ -17,28 +17,10 @@ import { useEffect, useState } from "react";
 import { Button, IconButton, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { amountLabel, dayLabel, durationLabel, elapsedMinutes, percentLabel, rateLabel } from "./format";
+import { EmptyState } from "./parts";
 import type { Project, RunningTimer } from "./types";
 
 const TIMER_TICK_MS = 15_000;
-
-function ProjectsEmptyState({ onNewProject }: { onNewProject: () => void }) {
-  return (
-    <section className="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-subtle bg-surface px-6 py-12 text-center shadow-sm">
-      <span className="flex size-14 items-center justify-center rounded-2xl bg--soft text-accent">
-        <Briefcase className="size-7" aria-hidden="true" />
-      </span>
-      <h2 className="m-0 mt-4 text-lg font-semibold text-primary">
-        {strings.projectsEmptyTitle}
-      </h2>
-      <p className="m-0 mt-2 max-w-[46ch] text-sm leading-6 text-secondary">
-        {strings.projectsEmptyBody}
-      </p>
-      <Button className="mt-5" icon={<Plus size={16} />} onClick={onNewProject}>
-        {strings.projectsNew}
-      </Button>
-    </section>
-  );
-}
 
 function ProjectBudget({ consumptionBp }: { consumptionBp: number | null }) {
   if (consumptionBp === null) return <span className="text-tertiary">—</span>;
@@ -128,7 +110,13 @@ export function ProjectsView({
       </div>
     ) : (
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-6">
-        <ProjectsEmptyState onNewProject={onNewProject} />
+        <EmptyState
+          Icon={Briefcase}
+          title={strings.projectsEmptyTitle}
+          body={strings.projectsEmptyBody}
+          cta={strings.projectsNew}
+          onCta={onNewProject}
+        />
       </div>
     );
   }
@@ -138,7 +126,7 @@ export function ProjectsView({
       <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
         <div className="flex items-center justify-between gap-4 border-b border-subtle px-5 py-4 max-sm:items-start">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg--soft text-accent">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-accent">
               <FolderKanban className="size-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
@@ -200,7 +188,7 @@ export function ProjectsView({
                       className="flex items-center gap-3 text-left text-sm font-semibold text-primary no-underline outline-none hover:text-accent focus-visible:rounded-md focus-visible:ring-2 focus-visible:ring-accent"
                       onClick={() => onOpenTasks(project)}
                     >
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg--soft text-accent">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--accent-soft)] text-accent">
                         <Briefcase className="size-4" aria-hidden="true" />
                       </span>
                       <span className="min-w-0">

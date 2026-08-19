@@ -37,14 +37,19 @@ export function EmptyState({
   onCta?: () => void;
 }) {
   return (
-    <div className="flex flex-col items-center gap-3 px-5 py-8 text-center text-secondary">
-      <span className="text-tertiary" aria-hidden="true">
-        <Icon size={38} />
+    <section className="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-subtle bg-surface px-6 py-12 text-center shadow-sm">
+      <span
+        className="flex size-14 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-accent"
+        aria-hidden="true"
+      >
+        <Icon size={26} />
       </span>
-      <h2 className="m-0 text-lg font-semibold text-primary">{title}</h2>
-      <p className="m-0 max-w-[46ch] text-sm">{body}</p>
-      {cta !== undefined && onCta !== undefined && <Button onClick={onCta}>{cta}</Button>}
-    </div>
+      <h2 className="m-0 mt-4 text-lg font-semibold text-primary">{title}</h2>
+      <p className="m-0 mt-2 max-w-[46ch] text-sm leading-6 text-secondary">{body}</p>
+      {cta !== undefined && onCta !== undefined && (
+        <Button className="mt-5" onClick={onCta}>{cta}</Button>
+      )}
+    </section>
   );
 }
 
@@ -175,7 +180,7 @@ export function DialogFrame({
         }}
       >
         <div className="flex items-start gap-3 border-b border-subtle px-5 py-4">
-          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg--soft text-accent" aria-hidden="true">
+          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-[var(--accent-soft)] text-accent" aria-hidden="true">
             <Icon size={19} />
           </span>
           <div className="min-w-0 flex-1">

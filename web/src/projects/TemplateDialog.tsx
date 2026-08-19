@@ -97,7 +97,7 @@ export function TemplateDialog({
           }}
         >
           <header className="flex items-start gap-3 border-b border-subtle px-5 py-4">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg--soft text-accent">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-accent">
               <CopyPlus className="size-5" aria-hidden="true" />
             </span>
             <div className="min-w-0 flex-1">
@@ -119,7 +119,7 @@ export function TemplateDialog({
           </header>
 
           <div className="flex flex-col items-center px-8 py-8 text-center max-sm:px-5">
-            <span className="flex size-14 items-center justify-center rounded-2xl bg--soft text-accent">
+            <span className="flex size-14 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-accent">
               <Star className="size-7" aria-hidden="true" />
             </span>
             <h3 className="m-0 mt-4 text-lg font-semibold text-primary">

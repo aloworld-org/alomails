@@ -27,7 +27,7 @@
 //   submitted has no record yet and asking a person to create one first would
 //   be a round trip that exists only to satisfy REST.
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Plus, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 
 import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
@@ -41,7 +41,7 @@ import {
   shiftWeek,
   weekDays,
 } from "./format";
-import { ErrorBanner, WeekChip } from "./parts";
+import { EmptyState, ErrorBanner, WeekChip } from "./parts";
 import type { Project, TimeEntry, TimeTotals, TimesheetWeek } from "./types";
 const styles = {
   page: "flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4",
@@ -275,18 +275,14 @@ export function WeekView({
       {error !== null && <ErrorBanner message={error} />}
 
       {rows.length === 0 && !loading ? (
-        <section className="flex min-h-72 flex-col items-center justify-center rounded-2xl border border-default bg-surface px-6 py-12 text-center shadow-sm">
-          <span className="flex size-14 items-center justify-center rounded-2xl bg--soft text-accent">
-            <CalendarDays size={26} aria-hidden="true" />
-          </span>
-          <h2 className="mt-5 text-xl font-semibold text-primary">{strings.projectsWeekEmptyTitle}</h2>
-          <p className="mt-2 max-w-md text-sm leading-6 text-secondary">{strings.projectsWeekEmptyBody}</p>
-          {!locked && projects.length > 0 && (
-            <Button className="mt-6" icon={<Clock3 size={17} />} onClick={() => setChoosingProject(true)}>
-              {strings.projectsAddTime}
-            </Button>
-          )}
-        </section>
+        <EmptyState
+          Icon={CalendarDays}
+          title={strings.projectsWeekEmptyTitle}
+          body={strings.projectsWeekEmptyBody}
+          {...(!locked && projects.length > 0
+            ? { cta: strings.projectsAddTime, onCta: () => setChoosingProject(true) }
+            : {})}
+        />
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.grid}>
@@ -379,7 +375,7 @@ export function WeekView({
           </div>
           <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => (
-              <button key={project.id} type="button" className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-default bg-surface px-4 py-3 text-left transition-colors hover:border-accent hover:bg--soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" onClick={() => startEntry(project.id)}>
+              <button key={project.id} type="button" className="flex min-h-14 items-center justify-between gap-3 rounded-xl border border-default bg-surface px-4 py-3 text-left transition-colors hover:border-accent hover:bg-[var(--accent-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" onClick={() => startEntry(project.id)}>
                 <span className="min-w-0">
                   <span className="block truncate font-medium text-primary">{project.name}</span>
                   <span className="mt-0.5 block truncate text-xs text-secondary">{project.client === null ? strings.projectsInternal : strings.projectsCustomer}</span>
