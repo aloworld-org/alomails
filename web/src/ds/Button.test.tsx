@@ -18,11 +18,12 @@ describe("Button", () => {
 
     let button = screen.getByRole("button", { name: "Save changes" });
     expect(button.className).toContain("min-h-10");
-    expect(button.className).toContain("px-5");
+    expect(button.className).toContain("px-6");
+    expect(button.className).toContain("shrink-0");
 
     rerender(<Button size="sm">Save changes</Button>);
     button = screen.getByRole("button", { name: "Save changes" });
     expect(button.className).toContain("min-h-10");
-    expect(button.className).toContain("px-4");
+    expect(button.className).toContain("px-5");
   });
 });

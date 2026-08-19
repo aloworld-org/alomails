@@ -25,7 +25,7 @@ export type ButtonSize = "sm" | "md";
  *  reset in `global.css` already strips it from `button` in every state, and a
  *  rule that is a duplicate of the reset only looks like a decision. */
 const BASE =
-  "inline-flex items-center justify-center gap-2 rounded-md " +
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md " +
   "font-ui font-medium leading-none whitespace-nowrap " +
   "transition-[background-color,color,border-color,box-shadow] " +
   "duration-[var(--duration-fast)] ease-standard " +
@@ -35,8 +35,8 @@ const BASE =
  *  rather than steps on the 4px spacing scale, and naming them is what keeps
  *  the 38 of a button and the 40 of a field visibly a decision. */
 const SIZE = {
-  sm: "min-h-10 px-4 py-2 text-sm",
-  md: "min-h-10 px-5 py-2.5 text-base",
+  sm: "min-h-10 px-5 py-2 text-sm",
+  md: "min-h-10 px-6 py-2.5 text-base",
 } as const;
 
 /** A faded accent reads as a broken button rather than an unavailable one, so
