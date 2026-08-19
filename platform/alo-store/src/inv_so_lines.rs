@@ -181,26 +181,41 @@ pub(crate) fn products_named(lines: &[NormalizedSoLine]) -> Vec<String> {
 /// its own and does not: crediting corrects an invoice, the goods stay billed
 /// against it, and re-billing them would charge a customer twice.
 ///
+/// How much of an ordered line has been billed, as a correlated sum against the
+/// line aliased `l` — **the one definition of "invoiced", spliced in rather than
+/// restated**.
+///
+/// It counts only documents that still stand, so a draft thrown away and an
+/// issued invoice that was voided both release what they carried; a credit note
+/// does not, because crediting corrects an invoice and re-billing the goods
+/// would charge the customer twice.
+///
+/// Shared with [`crate::inv_so_book`], which needs the same number across many
+/// orders at once. A second reading of what has been billed would let the order
+/// book and the order document disagree about one line — the two-truths failure
+/// this wave has now avoided three times.
+pub(crate) const INVOICED_QTY_SQL: &str = "coalesce(( \
+     SELECT sum(il.qty_milli)::bigint FROM inv_so_invoice_lines il \
+     JOIN inv_so_invoices si \
+       ON si.tenant_id = il.tenant_id AND si.id = il.so_invoice_id \
+     JOIN billing_invoices bi \
+       ON bi.tenant_id = si.tenant_id AND bi.id = si.invoice_id \
+     WHERE il.tenant_id = l.tenant_id AND il.so_line_id = l.id \
+       AND bi.status <> 'void'), 0)";
+
 /// # Errors
 /// [`StoreError::Db`] on failure.
 pub(crate) async fn read<'e, E>(executor: E, tenant: &str, so_id: &str) -> Result<Vec<SoLine>>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
 {
-    let rows: Vec<SoLineRow> = sqlx::query_as(
+    let rows: Vec<SoLineRow> = sqlx::query_as(&format!(
         "SELECT l.id, l.line_order, l.description, l.unit, l.qty_milli, l.unit_price_cents, \
              l.vat_rate_bp, l.product_id, l.delivered_qty_milli, \
-             coalesce(( \
-                 SELECT sum(il.qty_milli)::bigint FROM inv_so_invoice_lines il \
-                 JOIN inv_so_invoices si \
-                   ON si.tenant_id = il.tenant_id AND si.id = il.so_invoice_id \
-                 JOIN billing_invoices bi \
-                   ON bi.tenant_id = si.tenant_id AND bi.id = si.invoice_id \
-                 WHERE il.tenant_id = l.tenant_id AND il.so_line_id = l.id \
-                   AND bi.status <> 'void'), 0) AS invoiced_qty_milli \
+             {INVOICED_QTY_SQL} AS invoiced_qty_milli \
          FROM inv_sales_order_lines l \
-         WHERE l.tenant_id = $1 AND l.so_id = $2 ORDER BY l.line_order",
-    )
+         WHERE l.tenant_id = $1 AND l.so_id = $2 ORDER BY l.line_order"
+    ))
     .bind(tenant)
     .bind(so_id)
     .fetch_all(executor)

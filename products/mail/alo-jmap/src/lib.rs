@@ -142,6 +142,7 @@ pub mod inventory_counts;
 pub mod inventory_location_names;
 pub mod inventory_locations;
 pub mod inventory_moves;
+pub mod inventory_order_book;
 pub mod inventory_po;
 pub mod inventory_po_print;
 pub mod inventory_po_receipts;

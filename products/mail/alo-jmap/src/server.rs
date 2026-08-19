@@ -28,16 +28,17 @@ use crate::{
     hr_checklists, hr_documents, hr_employees, hr_holidays, hr_leave_balances, hr_leave_policies,
     hr_leave_requests, hr_letters, hr_org, hr_payroll, hr_recruitment, imap_import_route, insights,
     insights_ask, insights_eval, insights_gallery, inventory_counts, inventory_locations,
-    inventory_moves, inventory_po, inventory_po_print, inventory_po_receipts, inventory_po_send,
-    inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries, inventory_so_invoice,
-    inventory_stock, inventory_supplier_prices, inventory_suppliers, invite_route, meet_routes,
-    module_access, projects_clients, projects_invoices, projects_plan, projects_reports,
-    projects_templates, projects_time, projects_weeks, push, reset_route, schedule, scoped_roles,
-    security, session, settings, share, signup_route, site_protection, site_schedule,
-    site_version_preview, site_versions, sites, sites_attribution, sites_bookings, sites_catalogs,
-    sites_chat, sites_conversions, sites_domain_purchases, sites_heatmap, sites_knowledge,
-    sites_orders, sites_palette, sites_shop_config, sites_shop_items, sites_shop_settings,
-    sites_templates, sites_tickets, snooze, spaces, tasks, unsubscribe, wopi, workspace_search,
+    inventory_moves, inventory_order_book, inventory_po, inventory_po_print, inventory_po_receipts,
+    inventory_po_send, inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries,
+    inventory_so_invoice, inventory_stock, inventory_supplier_prices, inventory_suppliers,
+    invite_route, meet_routes, module_access, projects_clients, projects_invoices, projects_plan,
+    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
+    schedule, scoped_roles, security, session, settings, share, signup_route, site_protection,
+    site_schedule, site_version_preview, site_versions, sites, sites_attribution, sites_bookings,
+    sites_catalogs, sites_chat, sites_conversions, sites_domain_purchases, sites_heatmap,
+    sites_knowledge, sites_orders, sites_palette, sites_shop_config, sites_shop_items,
+    sites_shop_settings, sites_templates, sites_tickets, snooze, spaces, tasks, unsubscribe, wopi,
+    workspace_search,
 };
 
 /// Builds the JMAP router over the given state. The OpenID Connect /
@@ -893,6 +894,14 @@ pub fn app_with_site_boundaries(
         .route(
             "/inventory/sales-orders",
             get(inventory_so::list_sales_orders).post(inventory_so::create_sales_order),
+        )
+        // The order book: what is promised, gone, billed and still owed, across
+        // every order at once. Its own path rather than a sub-path of
+        // `/inventory/sales-orders`, which would sit under that route's `{id}`
+        // and make "book" a reserved order id.
+        .route(
+            "/inventory/order-book",
+            get(inventory_order_book::get_order_book),
         )
         .route(
             "/inventory/sales-orders/{id}",
