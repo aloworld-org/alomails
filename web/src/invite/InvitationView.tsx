@@ -10,7 +10,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { KeyRound, Check } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
-import { Button, Spinner } from "../ds";
+import { Button, Card, Field, Input, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { accept, invitation, type Invitation } from "./api";
 import styles from "./InvitationView.module.css";
@@ -79,11 +79,11 @@ export function InvitationView() {
   if (invite === null) {
     return (
       <div className={styles.wrap}>
-        <div className={styles.card}>
+        <Card pad="lg" className={styles.panel}>
           <h1 className={styles.title}>{strings.inviteUnavailable}</h1>
           <p className={styles.body}>{error ?? strings.inviteLoadFailed}</p>
           <p className={styles.body}>{strings.inviteAskAdmin}</p>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -91,7 +91,7 @@ export function InvitationView() {
   if (done) {
     return (
       <div className={styles.wrap}>
-        <div className={styles.card}>
+        <Card pad="lg" className={styles.panel}>
           <div className={styles.mark}>
             <Check strokeWidth={1.5} />
           </div>
@@ -100,7 +100,7 @@ export function InvitationView() {
           <Link to="/login" className={styles.action}>
             {strings.inviteGoToSignIn}
           </Link>
-        </div>
+        </Card>
       </div>
     );
   }
@@ -109,7 +109,12 @@ export function InvitationView() {
 
   return (
     <div className={styles.wrap}>
-      <form className={styles.card} onSubmit={(e) => void submit(e)}>
+      <Card
+        as="form"
+        pad="lg"
+        className={styles.panel}
+        onSubmit={(e) => void submit(e)}
+      >
         <div className={styles.mark}>
           <KeyRound strokeWidth={1.5} />
         </div>
@@ -118,33 +123,34 @@ export function InvitationView() {
             was created as, and what the credential will be installed under. */}
         <p className={styles.body}>{strings.inviteFor(invite.email)}</p>
 
-        <label className={styles.field}>
-          <span className={styles.label}>{strings.invitePassword}</span>
-          <input
-            className={styles.input}
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-            autoFocus
-          />
-          <span className={styles.hint}>{strings.invitePasswordHint}</span>
-        </label>
+        <Field label={strings.invitePassword} hint={strings.invitePasswordHint}>
+          {(control) => (
+            <Input
+              {...control}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              autoFocus
+            />
+          )}
+        </Field>
 
-        <label className={styles.field}>
-          <span className={styles.label}>{strings.inviteRecovery}</span>
-          <input
-            className={styles.input}
-            type="email"
-            value={recovery}
-            onChange={(e) => setRecovery(e.target.value)}
-            placeholder={strings.inviteRecoveryPlaceholder}
-            autoComplete="email"
-          />
-          {/* Why it is asked for, in the place it is asked. Somebody typing
-              their own address into a stranger's form deserves the reason. */}
-          <span className={styles.hint}>{strings.inviteRecoveryHint}</span>
-        </label>
+        {/* The hint says why the address is asked for, in the place it is asked.
+            Somebody typing their own address into a stranger's form deserves
+            the reason. */}
+        <Field label={strings.inviteRecovery} hint={strings.inviteRecoveryHint}>
+          {(control) => (
+            <Input
+              {...control}
+              type="email"
+              value={recovery}
+              onChange={(e) => setRecovery(e.target.value)}
+              placeholder={strings.inviteRecoveryPlaceholder}
+              autoComplete="email"
+            />
+          )}
+        </Field>
 
         {error !== null && (
           <p className={styles.error} role="alert">
@@ -155,7 +161,7 @@ export function InvitationView() {
         <Button type="submit" disabled={!ready || busy}>
           {busy ? strings.inviteWorking : strings.inviteSubmit}
         </Button>
-      </form>
+      </Card>
     </div>
   );
 }
