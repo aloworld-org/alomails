@@ -23,7 +23,8 @@ describe("the new project journey", () => {
 
     fireEvent.change(screen.getByLabelText("Project name"), { target: { value: "Website" } });
     expect((screen.getByRole("button", { name: "Create project" }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.change(screen.getByRole("combobox"), { target: { value: "customer-1" } });
+    fireEvent.click(screen.getByRole("combobox"));
+    fireEvent.click(screen.getByRole("option", { name: "Acme" }));
     fireEvent.click(screen.getByRole("button", { name: "Create project" }));
 
     await waitFor(() => expect(create).toHaveBeenCalledWith({ name: "Website", customerId: "customer-1" }));
