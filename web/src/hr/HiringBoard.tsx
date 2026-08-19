@@ -21,9 +21,10 @@
 import { useState } from "react";
 import { FileText, Mail, Plus } from "lucide-react";
 
+import { Card } from "../ds";
 import { strings } from "../i18n";
 import { isOutcome, stageLabel } from "./format";
-import { Chip } from "./parts";
+import { StateBadge } from "./parts";
 import type { HrApplicant } from "./types";
 import styles from "./hr.module.css";
 
@@ -40,11 +41,19 @@ interface Props {
   onAdd: () => void;
 }
 
-export function HiringBoard({ stages, applicants, addStage, onOpen, onMove, onAdd }: Props) {
+export function HiringBoard({
+  stages,
+  applicants,
+  addStage,
+  onOpen,
+  onMove,
+  onAdd,
+}: Props) {
   const [dragId, setDragId] = useState<string | null>(null);
   const [overStage, setOverStage] = useState<string | null>(null);
 
-  const inColumn = (stage: string) => applicants.filter((a) => a.stage === stage);
+  const inColumn = (stage: string) =>
+    applicants.filter((a) => a.stage === stage);
 
   function clearDrag() {
     setDragId(null);
@@ -53,7 +62,8 @@ export function HiringBoard({ stages, applicants, addStage, onOpen, onMove, onAd
 
   function dropOn(stage: string) {
     const dragged = applicants.find((a) => a.id === dragId);
-    if (dragged !== undefined && dragged.stage !== stage) onMove(dragged.id, stage);
+    if (dragged !== undefined && dragged.stage !== stage)
+      onMove(dragged.id, stage);
     clearDrag();
   }
 
@@ -76,7 +86,11 @@ export function HiringBoard({ stages, applicants, addStage, onOpen, onMove, onAd
             <div className={styles.columnHead}>
               <span
                 className={`${styles.columnDot} ${
-                  outcome === "good" ? styles.dotHired : outcome === "bad" ? styles.dotClosed : ""
+                  outcome === "good"
+                    ? styles.dotHired
+                    : outcome === "bad"
+                      ? styles.dotClosed
+                      : ""
                 }`}
                 aria-hidden="true"
               />
@@ -86,12 +100,20 @@ export function HiringBoard({ stages, applicants, addStage, onOpen, onMove, onAd
             {/* The cards are their own list, named after the column, so a screen
                 reader (and a test) can say which column somebody is in without
                 the "add" button below pretending to be a candidate. */}
-            <div className={styles.cards} role="list" aria-label={stageLabel(stage)}>
+            <div
+              className="flex flex-col gap-2 min-h-2"
+              role="list"
+              aria-label={stageLabel(stage)}
+            >
               {cards.map((person) => (
-                <div
+                // A candidate's card is a `ds/Card`: dense padding, and
+                // `interactive` because the whole surface opens the record.
+                <Card
                   key={person.id}
                   role="listitem"
-                  className={`${styles.card} ${dragId === person.id ? styles.cardDragging : ""}`}
+                  pad="sm"
+                  interactive
+                  className={`flex flex-col gap-1 ${dragId === person.id ? styles.cardDragging : ""}`}
                   draggable
                   onDragStart={() => setDragId(person.id)}
                   onDragEnd={clearDrag}
@@ -116,10 +138,12 @@ export function HiringBoard({ stages, applicants, addStage, onOpen, onMove, onAd
                     )}
                     <span className={styles.cardSpacer} />
                     {person.retentionExpired && (
-                      <Chip tone="bad">{strings.hrRetentionExpired}</Chip>
+                      <StateBadge tone="bad">
+                        {strings.hrRetentionExpired}
+                      </StateBadge>
                     )}
                   </div>
-                </div>
+                </Card>
               ))}
             </div>
             {addStage === stage && (

@@ -34,7 +34,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarOff, CalendarPlus, Inbox as InboxIcon } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
-import { Button, Spinner, useDialogs } from "../ds";
+import {
+  Button,
+  Card,
+  Select,
+  Spinner,
+  Table,
+  Td,
+  Th,
+  Toolbar,
+  useDialogs,
+} from "../ds";
 import { strings } from "../i18n";
 import { hrMessage, useHrApi } from "./api";
 import { announceApprovalsChanged } from "./approvalsBus";
@@ -49,9 +59,14 @@ import {
   leaveStatusLabel,
   leaveStatusTone,
 } from "./leave";
-import { Chip, EmptyState, ErrorBanner } from "./parts";
+import { EmptyState, ErrorBanner, StateBadge } from "./parts";
 import { useLeaveScope } from "./queues";
-import type { HrLeaveBalances, HrLeaveRequest, HrPolicyBalance, LeaveStatus } from "./types";
+import type {
+  HrLeaveBalances,
+  HrLeaveRequest,
+  HrPolicyBalance,
+  LeaveStatus,
+} from "./types";
 import styles from "./hr.module.css";
 
 /** Whose leave is on screen. Three server-side questions, never a filter. */
@@ -166,12 +181,16 @@ export function LeaveView() {
   const me = balances?.employeeId ?? null;
   // The server's day when there is one, this device's when there is not — and
   // either way the act itself is re-checked against the server's calendar.
-  const today = balances !== null && balances.on !== "" ? balances.on : browserToday();
+  const today =
+    balances !== null && balances.on !== "" ? balances.on : browserToday();
   /** The policies somebody may ask on: the live ones the balance read named.
    *  A retired policy has a balance and no future — it is in the cards and not
    *  in the picker. */
   const policies = useMemo(
-    () => (balances?.balances ?? []).map((entry) => entry.policy).filter((p) => !p.archived),
+    () =>
+      (balances?.balances ?? [])
+        .map((entry) => entry.policy)
+        .filter((p) => !p.archived),
     [balances],
   );
 
@@ -209,11 +228,19 @@ export function LeaveView() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
+      <Toolbar
+        label={strings.hrLeaveControls}
+        align="end"
+        className="px-5 pt-4"
+      >
         {/* Drawn only for somebody who has a second question to ask. Most
             members have one, and a switch with a single position is furniture. */}
         {door.scope !== null && (
-          <div className={styles.segmented} role="group" aria-label={strings.hrLeaveWhose}>
+          <div
+            className={styles.segmented}
+            role="group"
+            aria-label={strings.hrLeaveWhose}
+          >
             <button
               type="button"
               className={scope === "mine" ? styles.segmentOn : styles.segment}
@@ -243,28 +270,35 @@ export function LeaveView() {
           </div>
         )}
 
-        <label className={styles.toggle}>
+        {/* A `<label>` around the control names it, which is the one thing a
+            bare filter in a toolbar usually lacks. */}
+        <label className="inline-flex items-center gap-2 text-sm text-secondary">
           {strings.hrLeaveShow}
-          <select
-            className={styles.filterSelect}
+          <Select
             value={show}
-            onChange={(e) => setParams({ show: e.target.value === "all" ? null : e.target.value })}
+            onChange={(e) =>
+              setParams({
+                show: e.target.value === "all" ? null : e.target.value,
+              })
+            }
           >
             <option value="all">{strings.hrShowEverything}</option>
             <option value="waiting">{strings.hrShowWaiting}</option>
             <option value="booked">{strings.hrShowBooked}</option>
-          </select>
+          </Select>
         </label>
 
-        <span className={styles.cardSpacer} />
+        <span className="flex-1" />
         {(!settled || busy !== null) && <Spinner size={16} />}
         {/* Asking is only offered to somebody the tenant has a record for: the
             server refuses the rest with a sentence about linking the record,
             and a button that exists to collect that sentence teaches nothing. */}
         {balances !== null && (
-          <Button onClick={() => setAsking(true)}>{strings.hrAskForLeave}</Button>
+          <Button onClick={() => setAsking(true)}>
+            {strings.hrAskForLeave}
+          </Button>
         )}
-      </div>
+      </Toolbar>
 
       <div className={styles.inbox}>
         {error !== null && <ErrorBanner message={error} />}
@@ -279,7 +313,9 @@ export function LeaveView() {
                 <BalanceCard key={entry.policy.id} entry={entry} />
               ))}
             </div>
-            <p className={styles.subtle}>{strings.hrBalanceAsOf(dayLabel(balances.on))}</p>
+            <p className={styles.subtle}>
+              {strings.hrBalanceAsOf(dayLabel(balances.on))}
+            </p>
           </>
         )}
 
@@ -313,101 +349,120 @@ export function LeaveView() {
             />
           )
         ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  {showingPerson && <th scope="col">{strings.hrPerson}</th>}
-                  <th scope="col">{strings.hrLeaveKind}</th>
-                  <th scope="col">{strings.hrLeaveWhen}</th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.hrLeaveDays}
-                  </th>
-                  <th scope="col">{strings.hrLeaveWhy}</th>
-                  <th scope="col">{strings.hrLeaveState}</th>
-                  <th scope="col" aria-label={strings.hrActions} />
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map((request) => (
-                  <tr
-                    key={request.id}
-                    className={request.id === marked ? styles.rowMarked : undefined}
-                    aria-current={request.id === marked ? "true" : undefined}
-                  >
-                    {showingPerson && <td>{request.employeeName}</td>}
-                    <td>{request.policyName}</td>
-                    <td>
-                      <span>{strings.hrLeaveBetween(dayLabel(request.fromDay), dayLabel(request.toDay))}</span>
-                      {/* Why a week can cost four days. The figure is the
+          <Table label={strings.hrLeaveTable}>
+            <thead>
+              <tr>
+                {showingPerson && <Th>{strings.hrPerson}</Th>}
+                <Th>{strings.hrLeaveKind}</Th>
+                <Th>{strings.hrLeaveWhen}</Th>
+                <Th numeric>{strings.hrLeaveDays}</Th>
+                <Th>{strings.hrLeaveWhy}</Th>
+                <Th>{strings.hrLeaveState}</Th>
+                <Th hideLabel>{strings.hrActions}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {requests.map((request) => (
+                <tr
+                  key={request.id}
+                  className={
+                    request.id === marked ? styles.rowMarked : undefined
+                  }
+                  aria-current={request.id === marked ? "true" : undefined}
+                >
+                  {showingPerson && <Td>{request.employeeName}</Td>}
+                  <Td>{request.policyName}</Td>
+                  <Td>
+                    <span>
+                      {strings.hrLeaveBetween(
+                        dayLabel(request.fromDay),
+                        dayLabel(request.toDay),
+                      )}
+                    </span>
+                    {/* Why a week can cost four days. The figure is the
                           server's; this line is why it is not five. */}
-                      {request.holidayMinutes > 0 && (
-                        <span className={styles.subtle}>{strings.hrHolidaysInside}</span>
+                    {request.holidayMinutes > 0 && (
+                      <span className={styles.subtle}>
+                        {strings.hrHolidaysInside}
+                      </span>
+                    )}
+                  </Td>
+                  <Td numeric>{strings.hrWorkingDays(request.workingDays)}</Td>
+                  <Td className={styles.subtle}>{request.note}</Td>
+                  <Td>
+                    <StateBadge tone={leaveStatusTone(request.status)}>
+                      {leaveStatusLabel(request.status)}
+                    </StateBadge>
+                    {request.decidedAt !== null && (
+                      <span className={styles.subtle}>
+                        {momentLabel(request.decidedAt)}
+                      </span>
+                    )}
+                    {request.decisionNote !== "" && (
+                      <span className={styles.subtle}>
+                        {request.decisionNote}
+                      </span>
+                    )}
+                  </Td>
+                  <Td>
+                    <div className={styles.rowActions}>
+                      {canWithdraw(request, me) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={busy !== null}
+                          onClick={() =>
+                            void act(request.id, () =>
+                              api.withdrawLeaveRequest(request.id),
+                            )
+                          }
+                        >
+                          {strings.hrWithdraw}
+                        </Button>
                       )}
-                    </td>
-                    <td className={styles.numeric}>{strings.hrWorkingDays(request.workingDays)}</td>
-                    <td className={styles.subtle}>{request.note}</td>
-                    <td>
-                      <Chip tone={leaveStatusTone(request.status)}>
-                        {leaveStatusLabel(request.status)}
-                      </Chip>
-                      {request.decidedAt !== null && (
-                        <span className={styles.subtle}>{momentLabel(request.decidedAt)}</span>
+                      {canCancel(request, today) && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={busy !== null}
+                          onClick={() =>
+                            void act(request.id, () =>
+                              api.cancelLeaveRequest(request.id),
+                            )
+                          }
+                        >
+                          {strings.hrCancelLeave}
+                        </Button>
                       )}
-                      {request.decisionNote !== "" && (
-                        <span className={styles.subtle}>{request.decisionNote}</span>
-                      )}
-                    </td>
-                    <td>
-                      <div className={styles.rowActions}>
-                        {canWithdraw(request, me) && (
+                      {showingPerson && canDecide(request, me) && (
+                        <>
                           <Button
                             variant="ghost"
                             size="sm"
                             disabled={busy !== null}
-                            onClick={() => void act(request.id, () => api.withdrawLeaveRequest(request.id))}
+                            onClick={() => void sendBack(request)}
                           >
-                            {strings.hrWithdraw}
+                            {strings.hrSendBack}
                           </Button>
-                        )}
-                        {canCancel(request, today) && (
                           <Button
-                            variant="ghost"
                             size="sm"
                             disabled={busy !== null}
-                            onClick={() => void act(request.id, () => api.cancelLeaveRequest(request.id))}
+                            onClick={() =>
+                              void act(request.id, () =>
+                                api.approveLeaveRequest(request.id),
+                              )
+                            }
                           >
-                            {strings.hrCancelLeave}
+                            {strings.hrApprove}
                           </Button>
-                        )}
-                        {showingPerson && canDecide(request, me) && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={busy !== null}
-                              onClick={() => void sendBack(request)}
-                            >
-                              {strings.hrSendBack}
-                            </Button>
-                            <Button
-                              size="sm"
-                              disabled={busy !== null}
-                              onClick={() =>
-                                void act(request.id, () => api.approveLeaveRequest(request.id))
-                              }
-                            >
-                              {strings.hrApprove}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        </>
+                      )}
+                    </div>
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
         )}
       </div>
 
@@ -432,20 +487,50 @@ export function LeaveView() {
  *  conversation). */
 function BalanceCard({ entry }: { entry: HrPolicyBalance }) {
   return (
-    <div className={styles.balanceCard}>
+    <Card
+      flat
+      pad="none"
+      className="flex flex-col gap-0.5 min-w-[200px] px-4 py-3"
+    >
       <div className={styles.balanceHead}>
         <span className={styles.balanceName}>{entry.policy.name}</span>
-        {!entry.policy.paid && <Chip tone="info">{strings.hrUnpaid}</Chip>}
-        {!entry.policy.requiresApproval && <Chip tone="info">{strings.hrNotDecided}</Chip>}
+        {!entry.policy.paid && (
+          <StateBadge tone="info">{strings.hrUnpaid}</StateBadge>
+        )}
+        {!entry.policy.requiresApproval && (
+          <StateBadge tone="info">{strings.hrNotDecided}</StateBadge>
+        )}
       </div>
-      <strong className={styles.balanceFigure}>{daysLabel(entry.remainingDaysTenths)}</strong>
+      <strong className={styles.balanceFigure}>
+        {daysLabel(entry.remainingDaysTenths)}
+      </strong>
       <span className={styles.balanceLabel}>{strings.hrBalanceLeft}</span>
       <div className={styles.balanceWorking}>
-        <span>{strings.hrFactOf(strings.hrBalanceThisYear, daysLabel(entry.entitlementDaysTenths))}</span>
-        <span>{strings.hrFactOf(strings.hrBalanceTaken, daysLabel(entry.takenDaysTenths))}</span>
-        <span>{strings.hrFactOf(strings.hrBalanceBooked, daysLabel(entry.bookedDaysTenths))}</span>
-        <span>{strings.hrFactOf(strings.hrBalanceWaiting, daysLabel(entry.pendingDaysTenths))}</span>
+        <span>
+          {strings.hrFactOf(
+            strings.hrBalanceThisYear,
+            daysLabel(entry.entitlementDaysTenths),
+          )}
+        </span>
+        <span>
+          {strings.hrFactOf(
+            strings.hrBalanceTaken,
+            daysLabel(entry.takenDaysTenths),
+          )}
+        </span>
+        <span>
+          {strings.hrFactOf(
+            strings.hrBalanceBooked,
+            daysLabel(entry.bookedDaysTenths),
+          )}
+        </span>
+        <span>
+          {strings.hrFactOf(
+            strings.hrBalanceWaiting,
+            daysLabel(entry.pendingDaysTenths),
+          )}
+        </span>
       </div>
-    </div>
+    </Card>
   );
 }

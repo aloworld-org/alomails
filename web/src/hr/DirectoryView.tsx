@@ -26,13 +26,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Network, Search, Users } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
-import { Avatar, Spinner } from "../ds";
+import { Avatar, Checkbox, Spinner, Table, Td, Th, Toolbar } from "../ds";
 import { strings } from "../i18n";
 import { hrMessage, useHrApi } from "./api";
-import { byId, countOrg, filterDirectory, filterOrg, managerName } from "./directory";
+import {
+  byId,
+  countOrg,
+  filterDirectory,
+  filterOrg,
+  managerName,
+} from "./directory";
 import { dayLabel } from "./format";
 import { OrgChart } from "./OrgChart";
-import { Chip, EmptyState, ErrorBanner } from "./parts";
+import { EmptyState, ErrorBanner, StateBadge } from "./parts";
 import type { HrDirectoryEntry, HrOrgNode } from "./types";
 import styles from "./hr.module.css";
 
@@ -143,8 +149,14 @@ export function DirectoryView() {
   }, [api, view, chart]);
 
   const index = useMemo(() => byId(entries), [entries]);
-  const shown = useMemo(() => filterDirectory(entries, query), [entries, query]);
-  const shownChart = useMemo(() => filterOrg(chart ?? [], query), [chart, query]);
+  const shown = useMemo(
+    () => filterDirectory(entries, query),
+    [entries, query],
+  );
+  const shownChart = useMemo(
+    () => filterOrg(chart ?? [], query),
+    [chart, query],
+  );
 
   const total = view === "org" ? countOrg(chart ?? []) : entries.length;
   const matching = view === "org" ? countOrg(shownChart) : shown.length;
@@ -152,7 +164,11 @@ export function DirectoryView() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
+      <Toolbar
+        label={strings.hrDirectoryControls}
+        align="end"
+        className="px-5 pt-4"
+      >
         <label className={styles.search}>
           <Search size={15} aria-hidden="true" />
           <input
@@ -165,7 +181,11 @@ export function DirectoryView() {
           />
         </label>
 
-        <div className={styles.segmented} role="group" aria-label={strings.hrDirectoryViews}>
+        <div
+          className={styles.segmented}
+          role="group"
+          aria-label={strings.hrDirectoryViews}
+        >
           <button
             type="button"
             className={view === "people" ? styles.segmentOn : styles.segment}
@@ -190,22 +210,21 @@ export function DirectoryView() {
             the route ignores the flag for them, so the control would change
             nothing and say something untrue about what they can see. */}
         {isHr && view === "people" && (
-          <label className={styles.toggle}>
-            <input
-              type="checkbox"
-              checked={includeArchived}
-              onChange={(e) => setIncludeArchived(e.target.checked)}
-            />
-            {strings.hrIncludeLeavers}
-          </label>
+          <Checkbox
+            checked={includeArchived}
+            onChange={setIncludeArchived}
+            label={strings.hrIncludeLeavers}
+          />
         )}
 
-        <span className={styles.cardSpacer} />
+        <span className="flex-1" />
         {loading && <Spinner size={16} />}
         <span className={styles.muted}>
-          {searching ? strings.hrShowingOf(matching, total) : strings.hrPeopleCount(total)}
+          {searching
+            ? strings.hrShowingOf(matching, total)
+            : strings.hrPeopleCount(total)}
         </span>
-      </div>
+      </Toolbar>
 
       <div className={styles.directoryBody}>
         {error !== null && <ErrorBanner message={error} />}
@@ -257,72 +276,77 @@ function PeopleTable({
   onShowInChart: (id: string) => void;
 }) {
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th scope="col">{strings.hrPerson}</th>
-            <th scope="col">{strings.hrFieldRole}</th>
-            <th scope="col">{strings.hrFieldTeam}</th>
-            <th scope="col">{strings.hrContact}</th>
-            <th scope="col">{strings.hrManager}</th>
-            <th scope="col">{strings.hrSince}</th>
-            <th scope="col" aria-label={strings.hrDirectoryViews} />
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((entry) => {
-            const manager = managerName(entry, index);
-            return (
-              <tr key={entry.id}>
-                <td>
-                  <span className={styles.personCell}>
-                    <Avatar name={entry.name} email={entry.workEmail} size="sm" />
-                    <span className={styles.personName}>
-                      {/* The name in an element of its own, never mixed with
+    <Table label={strings.hrDirectoryTable}>
+      <thead>
+        <tr>
+          <Th>{strings.hrPerson}</Th>
+          <Th>{strings.hrFieldRole}</Th>
+          <Th>{strings.hrFieldTeam}</Th>
+          <Th>{strings.hrContact}</Th>
+          <Th>{strings.hrManager}</Th>
+          <Th>{strings.hrSince}</Th>
+          <Th hideLabel>{strings.hrDirectoryViews}</Th>
+        </tr>
+      </thead>
+      <tbody>
+        {entries.map((entry) => {
+          const manager = managerName(entry, index);
+          return (
+            <tr key={entry.id}>
+              <Td>
+                <span className={styles.personCell}>
+                  <Avatar name={entry.name} email={entry.workEmail} size="sm" />
+                  <span className={styles.personName}>
+                    {/* The name in an element of its own, never mixed with
                           the tag beside it: it is what a reader scans for. */}
-                      <span>{entry.name}</span>
-                      {entry.id === selfId && (
-                        <span className={styles.selfTag}>{strings.hrYou}</span>
-                      )}
-                    </span>
-                    {entry.archived && <Chip tone="bad">{strings.hrLeft}</Chip>}
+                    <span>{entry.name}</span>
+                    {entry.id === selfId && (
+                      <span className={styles.selfTag}>{strings.hrYou}</span>
+                    )}
                   </span>
-                </td>
-                <td>{entry.jobTitle}</td>
-                <td>{entry.team}</td>
-                <td>
-                  {entry.workEmail !== "" && (
-                    <a className={styles.rowLink} href={`mailto:${entry.workEmail}`}>
-                      {entry.workEmail}
-                    </a>
+                  {entry.archived && (
+                    <StateBadge tone="bad">{strings.hrLeft}</StateBadge>
                   )}
-                  {entry.workPhone !== "" && (
-                    <a className={styles.subtle} href={`tel:${entry.workPhone}`}>
-                      {entry.workPhone}
-                    </a>
-                  )}
-                </td>
-                <td className={manager === null ? styles.muted : undefined}>{manager ?? "—"}</td>
-                <td className={styles.muted}>{dayLabel(entry.startedOn)}</td>
-                <td>
-                  {/* Only for people the chart actually holds: it is the active
+                </span>
+              </Td>
+              <Td>{entry.jobTitle}</Td>
+              <Td>{entry.team}</Td>
+              <Td>
+                {entry.workEmail !== "" && (
+                  <a
+                    className={styles.rowLink}
+                    href={`mailto:${entry.workEmail}`}
+                  >
+                    {entry.workEmail}
+                  </a>
+                )}
+                {entry.workPhone !== "" && (
+                  <a className={styles.subtle} href={`tel:${entry.workPhone}`}>
+                    {entry.workPhone}
+                  </a>
+                )}
+              </Td>
+              <Td className={manager === null ? styles.muted : undefined}>
+                {manager ?? "—"}
+              </Td>
+              <Td className={styles.muted}>{dayLabel(entry.startedOn)}</Td>
+              <Td>
+                {/* Only for people the chart actually holds: it is the active
                       tenant, so a colleague who has left has no place in it. */}
-                  {!entry.archived && (
-                    <button
-                      type="button"
-                      className={styles.linkAction}
-                      onClick={() => onShowInChart(entry.id)}
-                    >
-                      {strings.hrShowInChart}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                {!entry.archived && (
+                  <button
+                    type="button"
+                    className={styles.linkAction}
+                    onClick={() => onShowInChart(entry.id)}
+                  >
+                    {strings.hrShowInChart}
+                  </button>
+                )}
+              </Td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </Table>
   );
 }

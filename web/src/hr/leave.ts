@@ -24,7 +24,7 @@
 // not against the reader's device. [`browserToday`] is the fallback for the one
 // caller who has no balance to read, and it decides nothing but a default.
 import { getLocale, strings } from "../i18n";
-import type { ChipTone } from "./parts";
+import type { StateTone } from "./parts";
 import type { HrAbsenceDay, HrAbsentPerson, HrHoliday, HrLeaveRequest } from "./types";
 
 /** A day written the way every `/hr` route writes one. */
@@ -78,7 +78,7 @@ export function leaveStatusLabel(status: string): string {
 
 /** How a state is coloured: approved is good, refused and taken-back are not,
  *  waiting is neither. */
-export function leaveStatusTone(status: string): ChipTone {
+export function leaveStatusTone(status: string): StateTone {
   if (status === "approved") return "good";
   if (status === "rejected" || status === "cancelled" || status === "withdrawn") return "bad";
   return "info";

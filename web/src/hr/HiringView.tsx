@@ -18,7 +18,15 @@ import { useCallback, useEffect, useState } from "react";
 import { Briefcase, Plus } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { Button, Spinner, useDialogs } from "../ds";
+import {
+  Button,
+  Checkbox,
+  Field,
+  Select,
+  Spinner,
+  Toolbar,
+  useDialogs,
+} from "../ds";
 import { strings } from "../i18n";
 import { hrMessage, useHrApi } from "./api";
 import { ApplicantDialog } from "./ApplicantDialog";
@@ -27,7 +35,7 @@ import { HireDialog } from "./HireDialog";
 import { HiringBoard } from "./HiringBoard";
 import { dayLabel, kindLabel, openingLabel, statusLabel } from "./format";
 import { OpeningDialog } from "./OpeningDialog";
-import { Chip, EmptyState, ErrorBanner } from "./parts";
+import { EmptyState, ErrorBanner, StateBadge } from "./parts";
 import type { HrApplicant, HrOpening } from "./types";
 import styles from "./hr.module.css";
 
@@ -95,7 +103,8 @@ export function HiringView() {
         setError(null);
         setSearchParams(
           (params) => {
-            if (all.some((round) => round.id === params.get("opening"))) return params;
+            if (all.some((round) => round.id === params.get("opening")))
+              return params;
             const next = new URLSearchParams(params);
             const first = all[0]?.id;
             if (first === undefined) next.delete("opening");
@@ -147,7 +156,9 @@ export function HiringView() {
     setError(null);
     try {
       const moved = await api.moveApplicant(id, stage);
-      setApplicants((all) => all.map((person) => (person.id === id ? moved : person)));
+      setApplicants((all) =>
+        all.map((person) => (person.id === id ? moved : person)),
+      );
     } catch (err) {
       setError(hrMessage(err, strings.hrSaveFailed));
       bump();
@@ -195,31 +206,37 @@ export function HiringView() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
+      <Toolbar
+        label={strings.hrHiringControls}
+        align="end"
+        className="px-5 pt-4"
+      >
         {openings.length > 0 && (
-          <label className={styles.stagePicker}>
-            <span className={styles.label}>{strings.hrOpening}</span>
-            <select
-              className={styles.filterSelect}
-              value={opening?.id ?? ""}
-              onChange={(e) => {
-                setParam("applicant", null);
-                setParam("opening", e.target.value);
-              }}
-            >
-              {openings.map((round) => (
-                <option key={round.id} value={round.id}>
-                  {openingLabel(round)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <Field label={strings.hrOpening}>
+            {(control) => (
+              <Select
+                {...control}
+                className="max-w-[320px]"
+                value={opening?.id ?? ""}
+                onChange={(e) => {
+                  setParam("applicant", null);
+                  setParam("opening", e.target.value);
+                }}
+              >
+                {openings.map((round) => (
+                  <option key={round.id} value={round.id}>
+                    {openingLabel(round)}
+                  </option>
+                ))}
+              </Select>
+            )}
+          </Field>
         )}
         {opening !== null && (
           <>
-            <Chip tone={opening.status === "closed" ? "bad" : "info"}>
+            <StateBadge tone={opening.status === "closed" ? "bad" : "info"}>
               {statusLabel(opening.status)}
-            </Chip>
+            </StateBadge>
             <span className={styles.openingFacts}>
               {[
                 kindLabel(opening.employmentKind),
@@ -235,18 +252,19 @@ export function HiringView() {
             </span>
           </>
         )}
-        <span className={styles.cardSpacer} />
+        <span className="flex-1" />
         {loading && <Spinner size={16} />}
-        <label className={styles.toggle}>
-          <input
-            type="checkbox"
-            checked={includeClosed}
-            onChange={(e) => setIncludeClosed(e.target.checked)}
-          />
-          {strings.hrIncludeClosed}
-        </label>
+        <Checkbox
+          checked={includeClosed}
+          onChange={setIncludeClosed}
+          label={strings.hrIncludeClosed}
+        />
         {opening !== null && opening.status === "draft" && (
-          <Button variant="ghost" disabled={busy} onClick={() => void publish(opening.id)}>
+          <Button
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void publish(opening.id)}
+          >
             {strings.hrPublishOpening}
           </Button>
         )}
@@ -259,7 +277,11 @@ export function HiringView() {
             >
               {strings.hrEditOpening}
             </Button>
-            <Button variant="ghost" disabled={busy} onClick={() => void close(opening)}>
+            <Button
+              variant="ghost"
+              disabled={busy}
+              onClick={() => void close(opening)}
+            >
               {strings.hrCloseOpening}
             </Button>
           </>
@@ -270,7 +292,7 @@ export function HiringView() {
         >
           {strings.hrNewOpening}
         </Button>
-      </div>
+      </Toolbar>
 
       {error !== null && <ErrorBanner message={error} />}
 

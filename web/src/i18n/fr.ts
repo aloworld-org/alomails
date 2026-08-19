@@ -5886,6 +5886,7 @@ export const fr: Partial<Catalog> = {
   hrApprovalsNoneBody:
     "C’est ici que les congés, les notes de frais et les semaines de temps attendent la personne qui tranche. Vous le verrez lorsque quelqu’un vous sera rattaché, ou lorsque vous tiendrez les comptes.",
   hrApprovalsNoneTitle: "Rien ne vous revient pour décision",
+  hrApprovalsTable: "En attente d’une décision",
   hrApprovalsWidgetLabel: "en attente",
   hrApprovalsWidgetTitle:
     "Congés, notes de frais et semaines en attente de votre décision",
@@ -5894,6 +5895,7 @@ export const fr: Partial<Catalog> = {
   hrAskSubmit: "Demander",
   hrAskSubtitle:
     "Les jours sont déduits du solde du type que vous choisissez, calculés d’après votre propre rythme de travail — vous ne saisissez jamais un nombre de jours.",
+  hrAwayControls: "Mois",
   hrAwayCalendar: "Qui est absent, jour par jour",
   hrBalanceBooked: "Réservé",
   hrBalanceLeft: "restants",
@@ -5924,10 +5926,12 @@ export const fr: Partial<Catalog> = {
   hrCvTrashed: "Le CV qui était au dossier a été mis à la corbeille RH.",
   hrCvUploadFailed:
     "Ce fichier n’a pas été importé, donc rien n’a été enregistré. Réessayez, ou enregistrez les informations sans lui.",
+  hrDirectoryControls: "Filtres de l’annuaire",
   hrDirectoryEmptyBody:
     "Dès que les RH auront inscrit la première personne, c’est ici que chacun trouvera ses collègues — qui ils sont, comment les joindre, et à qui ils sont rattachés.",
   hrDirectoryEmptyTitle: "Personne n’est encore dans l’annuaire",
   hrDirectorySearch: "Rechercher des personnes",
+  hrDirectoryTable: "Personnes",
   hrDirectoryViews: "Comment lire l’annuaire",
   hrEditCandidate: "Modifier les informations",
   hrEditOpening: "Modifier le poste",
@@ -5949,6 +5953,7 @@ export const fr: Partial<Catalog> = {
   hrFieldTeam: "Équipe",
   hrFieldWorkEmail: "E-mail professionnel",
   hrFigure: "Montant",
+  hrHiringControls: "Poste à pourvoir",
   hrHire: "Les ajouter à l’annuaire",
   hrHireEmailHint:
     "Leur adresse professionnelle, si elle est déjà connue. Elle peut être ajoutée plus tard.",
@@ -5977,6 +5982,7 @@ export const fr: Partial<Catalog> = {
   hrLastDayHint: "Le jour de votre retour n’en fait pas partie.",
   hrLeaveApproved: "Réservé",
   hrLeaveCancelled: "Annulé",
+  hrLeaveControls: "Filtres des congés",
   hrLeaveDays: "Jours",
   hrLeaveEmptyBody:
     "Demandez ici un jour ou quinze jours. Vous verrez ce que cela coûte à votre solde avant que quiconque ne décide, et qui d’autre est déjà absent ces jours-là.",
@@ -5989,6 +5995,7 @@ export const fr: Partial<Catalog> = {
   hrLeaveRequested: "En attente",
   hrLeaveShow: "Afficher",
   hrLeaveState: "État",
+  hrLeaveTable: "Demandes de congé",
   hrLeaveTeamEmptyBody:
     "Lorsqu’une personne qui vous est rattachée demande des jours de congé, cela arrive ici et dans vos approbations — avec les dates, ce que cela coûte à son solde, et qui d’autre est absent à ce moment-là.",
   hrLeaveTeamEmptyTitle: "Personne n’a demandé de congé",

@@ -22,12 +22,23 @@
 import { useEffect, useState } from "react";
 import { UserCheck } from "lucide-react";
 
+import { Field, Input, Select } from "../ds";
 import { strings } from "../i18n";
 import { hrMessage, useHrApi } from "./api";
-import { alreadyInDirectory, canHire, employeeDraft, hirePrefill } from "./hire";
+import {
+  alreadyInDirectory,
+  canHire,
+  employeeDraft,
+  hirePrefill,
+} from "./hire";
 import { kindLabel } from "./format";
-import { DialogFrame, Field } from "./parts";
-import type { HrApplicant, HrCreatedEmployee, HrDirectoryEntry, HrOpening } from "./types";
+import { DialogFrame } from "./parts";
+import type {
+  HrApplicant,
+  HrCreatedEmployee,
+  HrDirectoryEntry,
+  HrOpening,
+} from "./types";
 import { EMPLOYMENT_KINDS } from "./types";
 import styles from "./hr.module.css";
 
@@ -110,84 +121,103 @@ export function HireDialog({ applicant, opening, onClose, onHired }: Props) {
 
       <div className={styles.row}>
         <Field label={strings.hrFieldGivenName} hint={strings.hrHireNameHint}>
-          <input
-            className={styles.input}
-            value={fields.givenName}
-            onChange={(e) => set("givenName", e.target.value)}
-            autoFocus
-            required
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={fields.givenName}
+              onChange={(e) => set("givenName", e.target.value)}
+              autoFocus
+              required
+            />
+          )}
         </Field>
         <Field label={strings.hrFieldFamilyName}>
-          <input
-            className={styles.input}
-            value={fields.familyName}
-            onChange={(e) => set("familyName", e.target.value)}
-            required
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={fields.familyName}
+              onChange={(e) => set("familyName", e.target.value)}
+              required
+            />
+          )}
         </Field>
       </div>
 
       <Field label={strings.hrFieldWorkEmail} hint={strings.hrHireEmailHint}>
-        <input
-          className={styles.input}
-          type="email"
-          value={fields.workEmail}
-          onChange={(e) => set("workEmail", e.target.value)}
-        />
+        {(control) => (
+          <Input
+            {...control}
+            type="email"
+            value={fields.workEmail}
+            onChange={(e) => set("workEmail", e.target.value)}
+          />
+        )}
       </Field>
 
       <div className={styles.row}>
         <Field label={strings.hrFieldJobTitle}>
-          <input
-            className={styles.input}
-            value={fields.jobTitle}
-            onChange={(e) => set("jobTitle", e.target.value)}
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={fields.jobTitle}
+              onChange={(e) => set("jobTitle", e.target.value)}
+            />
+          )}
         </Field>
         <Field label={strings.hrFieldTeam}>
-          <input
-            className={styles.input}
-            value={fields.team}
-            onChange={(e) => set("team", e.target.value)}
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={fields.team}
+              onChange={(e) => set("team", e.target.value)}
+            />
+          )}
         </Field>
       </div>
 
       <div className={styles.row}>
         <Field label={strings.hrFieldEmployment}>
-          <select
-            className={styles.input}
-            value={fields.contractKind}
-            onChange={(e) => set("contractKind", e.target.value)}
-          >
-            {/* A word this build does not know — an older round on a newer
-                server — stays selected rather than becoming the first in the
-                list, and the server refuses anything it does not accept. */}
-            {fields.contractKind === "" ||
-            (EMPLOYMENT_KINDS as readonly string[]).includes(fields.contractKind) ? null : (
-              <option value={fields.contractKind}>{kindLabel(fields.contractKind)}</option>
-            )}
-            <option value="">{strings.hrHireNoKind}</option>
-            {EMPLOYMENT_KINDS.map((kind) => (
-              <option key={kind} value={kind}>
-                {kindLabel(kind)}
-              </option>
-            ))}
-          </select>
+          {(control) => (
+            <Select
+              {...control}
+              fullWidth
+              value={fields.contractKind}
+              onChange={(e) => set("contractKind", e.target.value)}
+            >
+              {/* A word this build does not know — an older round on a newer
+                  server — stays selected rather than becoming the first in the
+                  list, and the server refuses anything it does not accept. */}
+              {fields.contractKind === "" ||
+              (EMPLOYMENT_KINDS as readonly string[]).includes(
+                fields.contractKind,
+              ) ? null : (
+                <option value={fields.contractKind}>
+                  {kindLabel(fields.contractKind)}
+                </option>
+              )}
+              <option value="">{strings.hrHireNoKind}</option>
+              {EMPLOYMENT_KINDS.map((kind) => (
+                <option key={kind} value={kind}>
+                  {kindLabel(kind)}
+                </option>
+              ))}
+            </Select>
+          )}
         </Field>
         <Field label={strings.hrFieldStartedOn} hint={strings.hrHireStartHint}>
-          <input
-            className={styles.input}
-            type="date"
-            value={fields.startedOn}
-            onChange={(e) => set("startedOn", e.target.value)}
-            required
-          />
+          {(control) => (
+            <Input
+              {...control}
+              type="date"
+              value={fields.startedOn}
+              onChange={(e) => set("startedOn", e.target.value)}
+              required
+            />
+          )}
         </Field>
       </div>
 
-      <p className={styles.hint}>{strings.hrHireNoAccount}</p>
+      <p className="text-xs text-tertiary">{strings.hrHireNoAccount}</p>
     </DialogFrame>
   );
 }

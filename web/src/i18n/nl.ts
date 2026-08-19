@@ -5832,6 +5832,7 @@ export const nl: Partial<Catalog> = {
   hrApprovalsNoneBody:
     "Hier wachten verlof, onkostennota's en urenweken op wie erover beslist. U ziet dit zodra iemand aan u rapporteert, of wanneer u de boeken bijhoudt.",
   hrApprovalsNoneTitle: "Er komt niets bij u ter beslissing",
+  hrApprovalsTable: "Wacht op een beslissing",
   hrApprovalsWidgetLabel: "wachtend",
   hrApprovalsWidgetTitle:
     "Verlof, nota's en weken die op uw beslissing wachten",
@@ -5840,6 +5841,7 @@ export const nl: Partial<Catalog> = {
   hrAskSubmit: "Aanvragen",
   hrAskSubtitle:
     "De dagen gaan af van het saldo voor de soort die u kiest, berekend op uw eigen werkpatroon — u typt nooit zelf een aantal dagen.",
+  hrAwayControls: "Maand",
   hrAwayCalendar: "Wie is afwezig, per dag",
   hrBalanceBooked: "Geboekt",
   hrBalanceLeft: "over",
@@ -5870,10 +5872,12 @@ export const nl: Partial<Catalog> = {
   hrCvTrashed: "Het cv dat aanwezig was, is naar de HR-prullenbak verplaatst.",
   hrCvUploadFailed:
     "Dat bestand is niet geüpload, dus er is niets opgeslagen. Probeer het opnieuw, of sla de gegevens zonder cv op.",
+  hrDirectoryControls: "Filters van het adresboek",
   hrDirectoryEmptyBody:
     "Zodra HR de eerste persoon opschrijft, vindt iedereen hier zijn collega's — wie ze zijn, hoe u ze bereikt, en aan wie ze rapporteren.",
   hrDirectoryEmptyTitle: "Er staat nog niemand in het adresboek",
   hrDirectorySearch: "Mensen zoeken",
+  hrDirectoryTable: "Mensen",
   hrDirectoryViews: "Hoe u het adresboek leest",
   hrEditCandidate: "Gegevens bewerken",
   hrEditOpening: "Rol bewerken",
@@ -5895,6 +5899,7 @@ export const nl: Partial<Catalog> = {
   hrFieldTeam: "Team",
   hrFieldWorkEmail: "Werkmail",
   hrFigure: "Bedrag",
+  hrHiringControls: "Wervingsronde",
   hrHire: "Toevoegen aan de directory",
   hrHireEmailHint:
     "Hun werkadres, als dat al bekend is. Het kan later worden toegevoegd.",
@@ -5923,6 +5928,7 @@ export const nl: Partial<Catalog> = {
   hrLastDayHint: "De dag waarop u terugkomt hoort er niet bij.",
   hrLeaveApproved: "Geboekt",
   hrLeaveCancelled: "Geannuleerd",
+  hrLeaveControls: "Verloffilters",
   hrLeaveDays: "Dagen",
   hrLeaveEmptyBody:
     "Vraag hier een dag of twee weken aan. U ziet wat het uw saldo kost voordat iemand beslist, en wie er in die dagen al weg is.",
@@ -5935,6 +5941,7 @@ export const nl: Partial<Catalog> = {
   hrLeaveRequested: "Wachtend",
   hrLeaveShow: "Tonen",
   hrLeaveState: "Status",
+  hrLeaveTable: "Verlofaanvragen",
   hrLeaveTeamEmptyBody:
     "Wanneer iemand die aan u rapporteert vrije dagen aanvraagt, komt dat hier binnen en in uw goedkeuringen — met de data, wat het hun saldo kost, en wie er dan nog meer weg is.",
   hrLeaveTeamEmptyTitle: "Niemand heeft verlof aangevraagd",

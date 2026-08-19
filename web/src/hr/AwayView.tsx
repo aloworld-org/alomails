@@ -20,7 +20,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 
-import { Button, Spinner } from "../ds";
+import { Button, Spinner, Toolbar } from "../ds";
 import { strings } from "../i18n";
 import { hrMessage, useHrApi } from "./api";
 import {
@@ -47,7 +47,9 @@ const NAMES_PER_DAY = 3;
 /** `2026-08` or nothing at all. A month this build cannot read is this month:
  *  an address somebody mistyped opens the calendar rather than an error. */
 function pickMonth(raw: string | null): string {
-  return raw !== null && /^\d{4}-(0[1-9]|1[0-2])$/.test(raw) ? raw : monthOf(browserToday());
+  return raw !== null && /^\d{4}-(0[1-9]|1[0-2])$/.test(raw)
+    ? raw
+    : monthOf(browserToday());
 }
 
 export function AwayView() {
@@ -106,10 +108,11 @@ export function AwayView() {
   useEffect(() => {
     let live = true;
     const years = yearsOf([from, to]);
-    void Promise.all(years.map((year) => api.holidays(year).catch(() => [])))
-      .then((answers) => {
-        if (live) setHolidays(holidayIndex(answers.flat()));
-      });
+    void Promise.all(
+      years.map((year) => api.holidays(year).catch(() => [])),
+    ).then((answers) => {
+      if (live) setHolidays(holidayIndex(answers.flat()));
+    });
     return () => {
       live = false;
     };
@@ -119,14 +122,18 @@ export function AwayView() {
   /** How many distinct people are away at some point *in the month itself* —
    *  the spill days belong to the months either side of it. */
   const inMonth = useMemo(
-    () => peopleAway(days.filter((day) => day.day.startsWith(month)), null).length,
+    () =>
+      peopleAway(
+        days.filter((day) => day.day.startsWith(month)),
+        null,
+      ).length,
     [days, month],
   );
   const weekdays = weekdayNames();
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
+      <Toolbar label={strings.hrAwayControls} className="px-5 pt-4">
         <div className={styles.monthNav}>
           <Button
             variant="ghost"
@@ -146,16 +153,20 @@ export function AwayView() {
             <ChevronRight size={16} />
           </Button>
           {month !== monthOf(today) && (
-            <Button variant="ghost" size="sm" onClick={() => goTo(monthOf(today))}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => goTo(monthOf(today))}
+            >
               {strings.hrThisMonth}
             </Button>
           )}
         </div>
 
-        <span className={styles.cardSpacer} />
+        <span className="flex-1" />
         {loading && <Spinner size={16} />}
         <span className={styles.muted}>{strings.hrAwayThisMonth(inMonth)}</span>
-      </div>
+      </Toolbar>
 
       <div className={styles.inbox}>
         {error !== null && <ErrorBanner message={error} />}
@@ -168,7 +179,11 @@ export function AwayView() {
           />
         )}
 
-        <div className={styles.calendar} role="grid" aria-label={strings.hrAwayCalendar}>
+        <div
+          className={styles.calendar}
+          role="grid"
+          aria-label={strings.hrAwayCalendar}
+        >
           <div className={styles.calendarHead} role="row">
             {weekdays.map((name) => (
               <span key={name} className={styles.weekday} role="columnheader">
@@ -193,10 +208,17 @@ export function AwayView() {
                     role="gridcell"
                     aria-label={strings.hrDayAway(day, people.length)}
                   >
-                    <span className={styles.cellDay}>{Number(day.slice(8))}</span>
-                    {holiday !== undefined && <span className={styles.cellNote}>{holiday}</span>}
+                    <span className={styles.cellDay}>
+                      {Number(day.slice(8))}
+                    </span>
+                    {holiday !== undefined && (
+                      <span className={styles.cellNote}>{holiday}</span>
+                    )}
                     {people.slice(0, NAMES_PER_DAY).map((person) => (
-                      <span key={person.employeeId} className={styles.cellPerson}>
+                      <span
+                        key={person.employeeId}
+                        className={styles.cellPerson}
+                      >
                         {person.name}
                       </span>
                     ))}

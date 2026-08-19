@@ -30,14 +30,14 @@ import { useState } from "react";
 import { Inbox as InboxIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
-import { Button, Spinner, useDialogs } from "../ds";
+import { Button, Spinner, Table, Td, Th, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import type { Approval } from "../platform/approvals";
 import { hrMessage } from "./api";
 import { momentLabel } from "./format";
 import { useApprovalInbox } from "./inbox";
 import { kindLabel } from "./queueLabels";
-import { Chip, EmptyState, ErrorBanner } from "./parts";
+import { EmptyState, ErrorBanner, StateBadge } from "./parts";
 import styles from "./hr.module.css";
 
 export function ApprovalsView() {
@@ -111,7 +111,9 @@ export function ApprovalsView() {
       )}
 
       <div className={styles.counts}>
-        <strong className={styles.countTotal}>{strings.hrWaitingCount(inbox.total)}</strong>
+        <strong className={styles.countTotal}>
+          {strings.hrWaitingCount(inbox.total)}
+        </strong>
         {kinds.map(([kind, count]) => (
           <span key={kind} className={styles.count}>
             {strings.hrCountOf(kindLabel(kind), count)}
@@ -126,61 +128,61 @@ export function ApprovalsView() {
           body={strings.hrApprovalsEmptyBody}
         />
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.hrPerson}</th>
-                <th scope="col">{strings.hrWhat}</th>
-                <th scope="col">{strings.hrQueue}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.hrFigure}
-                </th>
-                <th scope="col">{strings.hrWaitingSince}</th>
-                <th scope="col" aria-label={strings.hrActions} />
+        <Table label={strings.hrApprovalsTable}>
+          <thead>
+            <tr>
+              <Th>{strings.hrPerson}</Th>
+              <Th>{strings.hrWhat}</Th>
+              <Th>{strings.hrQueue}</Th>
+              <Th numeric>{strings.hrFigure}</Th>
+              <Th>{strings.hrWaitingSince}</Th>
+              <Th hideLabel>{strings.hrActions}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {inbox.items.map((item) => (
+              <tr key={rowKey(item)}>
+                <Td>{item.person}</Td>
+                <Td>
+                  <Link className={styles.rowLink} to={item.href}>
+                    {item.what}
+                  </Link>
+                  {item.detail !== "" && (
+                    <span className={styles.subtle}>{item.detail}</span>
+                  )}
+                </Td>
+                <Td>
+                  <StateBadge tone="info">{kindLabel(item.kind)}</StateBadge>
+                </Td>
+                <Td numeric>{item.figure}</Td>
+                <Td className={styles.muted}>
+                  {item.waitingSince === null
+                    ? ""
+                    : momentLabel(item.waitingSince)}
+                </Td>
+                <Td>
+                  <div className={styles.rowActions}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={busy !== null}
+                      onClick={() => void decide(item, "reject")}
+                    >
+                      {strings.hrSendBack}
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={busy !== null}
+                      onClick={() => void decide(item, "approve")}
+                    >
+                      {strings.hrApprove}
+                    </Button>
+                  </div>
+                </Td>
               </tr>
-            </thead>
-            <tbody>
-              {inbox.items.map((item) => (
-                <tr key={rowKey(item)}>
-                  <td>{item.person}</td>
-                  <td>
-                    <Link className={styles.rowLink} to={item.href}>
-                      {item.what}
-                    </Link>
-                    {item.detail !== "" && <span className={styles.subtle}>{item.detail}</span>}
-                  </td>
-                  <td>
-                    <Chip tone="info">{kindLabel(item.kind)}</Chip>
-                  </td>
-                  <td className={styles.numeric}>{item.figure}</td>
-                  <td className={styles.muted}>
-                    {item.waitingSince === null ? "" : momentLabel(item.waitingSince)}
-                  </td>
-                  <td>
-                    <div className={styles.rowActions}>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={busy !== null}
-                        onClick={() => void decide(item, "reject")}
-                      >
-                        {strings.hrSendBack}
-                      </Button>
-                      <Button
-                        size="sm"
-                        disabled={busy !== null}
-                        onClick={() => void decide(item, "approve")}
-                      >
-                        {strings.hrApprove}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
     </div>
   );

@@ -8,10 +8,11 @@
 import { useState } from "react";
 import { Briefcase } from "lucide-react";
 
+import { Field, Input, Select } from "../ds";
 import { strings } from "../i18n";
 import { hrMessage, useHrApi } from "./api";
 import { kindLabel } from "./format";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import { EMPLOYMENT_KINDS, type HrOpening } from "./types";
 import styles from "./hr.module.css";
 
@@ -40,16 +41,28 @@ export function OpeningDialog({ opening, onClose, onSaved }: Props) {
       // Only what changed is sent (the module rule billing set): a PATCH that
       // replayed every field would overwrite a colleague's edit with a value
       // this form read minutes ago.
-      const draft: { title?: string; team?: string; location?: string; employmentKind?: string } =
-        {};
-      if (opening === null || title.trim() !== opening.title) draft.title = title.trim();
-      if (opening === null ? team.trim() !== "" : team.trim() !== opening.team) {
+      const draft: {
+        title?: string;
+        team?: string;
+        location?: string;
+        employmentKind?: string;
+      } = {};
+      if (opening === null || title.trim() !== opening.title)
+        draft.title = title.trim();
+      if (
+        opening === null ? team.trim() !== "" : team.trim() !== opening.team
+      ) {
         draft.team = team.trim();
       }
-      if (opening === null ? location.trim() !== "" : location.trim() !== opening.location) {
+      if (
+        opening === null
+          ? location.trim() !== ""
+          : location.trim() !== opening.location
+      ) {
         draft.location = location.trim();
       }
-      if (opening === null || kind !== opening.employmentKind) draft.employmentKind = kind;
+      if (opening === null || kind !== opening.employmentKind)
+        draft.employmentKind = kind;
       onSaved(
         opening === null
           ? await api.createOpening(draft)
@@ -75,50 +88,59 @@ export function OpeningDialog({ opening, onClose, onSaved }: Props) {
       onSubmit={() => void save()}
     >
       <Field label={strings.hrFieldRole}>
-        <input
-          className={styles.input}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          autoFocus
-          required
-        />
+        {(control) => (
+          <Input
+            {...control}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            autoFocus
+            required
+          />
+        )}
       </Field>
 
       <div className={styles.row}>
         <Field label={strings.hrFieldTeam}>
-          <input
-            className={styles.input}
-            value={team}
-            onChange={(e) => setTeam(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={team}
+              onChange={(e) => setTeam(e.target.value)}
+            />
+          )}
         </Field>
         <Field label={strings.hrFieldLocation} hint={strings.hrLocationHint}>
-          <input
-            className={styles.input}
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+            />
+          )}
         </Field>
       </div>
 
       <Field label={strings.hrFieldEmployment}>
-        <select
-          className={styles.input}
-          value={kind}
-          onChange={(e) => setKind(e.target.value)}
-        >
-          {/* A word an older record carries that this build has dropped stays
-              selectable, so editing the team of such an opening cannot silently
-              change what it is a contract for. */}
-          {(EMPLOYMENT_KINDS as readonly string[]).includes(kind) ? null : (
-            <option value={kind}>{kindLabel(kind)}</option>
-          )}
-          {EMPLOYMENT_KINDS.map((word) => (
-            <option key={word} value={word}>
-              {kindLabel(word)}
-            </option>
-          ))}
-        </select>
+        {(control) => (
+          <Select
+            {...control}
+            fullWidth
+            value={kind}
+            onChange={(e) => setKind(e.target.value)}
+          >
+            {/* A word an older record carries that this build has dropped stays
+                selectable, so editing the team of such an opening cannot
+                silently change what it is a contract for. */}
+            {(EMPLOYMENT_KINDS as readonly string[]).includes(kind) ? null : (
+              <option value={kind}>{kindLabel(kind)}</option>
+            )}
+            {EMPLOYMENT_KINDS.map((word) => (
+              <option key={word} value={word}>
+                {kindLabel(word)}
+              </option>
+            ))}
+          </Select>
+        )}
       </Field>
     </DialogFrame>
   );

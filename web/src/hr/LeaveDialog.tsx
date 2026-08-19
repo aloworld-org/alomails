@@ -20,11 +20,11 @@
 import { useEffect, useState } from "react";
 import { CalendarPlus } from "lucide-react";
 
-import { DatePicker } from "../ds";
+import { DatePicker, Field, Select } from "../ds";
 import { strings } from "../i18n";
 import { hrMessage, useHrApi } from "./api";
 import { peopleAway } from "./leave";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import type { HrAbsentPerson, HrLeavePolicy, HrLeaveRequest } from "./types";
 import styles from "./hr.module.css";
 
@@ -48,7 +48,8 @@ export function LeaveDialog({ policies, onClose, onAsked }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const policy = policies.find((candidate) => candidate.id === policyId) ?? null;
+  const policy =
+    policies.find((candidate) => candidate.id === policyId) ?? null;
   const ranged = fromDay !== "" && toDay !== "" && fromDay <= toDay;
 
   // Who else is off between these dates. A window that is not a window yet is
@@ -77,7 +78,12 @@ export function LeaveDialog({ policies, onClose, onAsked }: Props) {
     setBusy(true);
     setError(null);
     try {
-      const draft = { policyId, fromDay, toDay, ...(note.trim() === "" ? {} : { note: note.trim() }) };
+      const draft = {
+        policyId,
+        fromDay,
+        toDay,
+        ...(note.trim() === "" ? {} : { note: note.trim() }),
+      };
       onAsked(await api.createLeaveRequest(draft));
     } catch (err) {
       setError(hrMessage(err, strings.hrSaveFailed));
@@ -104,23 +110,33 @@ export function LeaveDialog({ policies, onClose, onAsked }: Props) {
           ? { hint: strings.hrPolicyRecordedHint }
           : {})}
       >
-        <select
-          className={styles.input}
-          value={policyId}
-          onChange={(e) => setPolicyId(e.target.value)}
-          autoFocus
-        >
-          {policies.map((candidate) => (
-            <option key={candidate.id} value={candidate.id}>
-              {candidate.name}
-            </option>
-          ))}
-        </select>
+        {(control) => (
+          <Select
+            {...control}
+            fullWidth
+            value={policyId}
+            onChange={(e) => setPolicyId(e.target.value)}
+            autoFocus
+          >
+            {policies.map((candidate) => (
+              <option key={candidate.id} value={candidate.id}>
+                {candidate.name}
+              </option>
+            ))}
+          </Select>
+        )}
       </Field>
 
       <div className={styles.row}>
         <Field label={strings.hrFieldFirstDay}>
-          <DatePicker value={fromDay} onChange={setFromDay} />
+          {(control) => (
+            <DatePicker
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              value={fromDay}
+              onChange={setFromDay}
+            />
+          )}
         </Field>
         <Field
           label={strings.hrFieldLastDay}
@@ -129,7 +145,14 @@ export function LeaveDialog({ policies, onClose, onAsked }: Props) {
             ? { error: strings.hrRangeBackwards }
             : {})}
         >
-          <DatePicker value={toDay} onChange={setToDay} />
+          {(control) => (
+            <DatePicker
+              id={control.id}
+              aria-describedby={control["aria-describedby"]}
+              value={toDay}
+              onChange={setToDay}
+            />
+          )}
         </Field>
       </div>
 
@@ -142,18 +165,27 @@ export function LeaveDialog({ policies, onClose, onAsked }: Props) {
           {away === null || away.length === 0 ? (
             <p className={styles.panelEmpty}>{strings.hrNobodyAway}</p>
           ) : (
-            <p className={styles.awayNames}>{away.map((person) => person.name).join(", ")}</p>
+            <p className={styles.awayNames}>
+              {away.map((person) => person.name).join(", ")}
+            </p>
           )}
         </div>
       )}
 
+      {/* `ds/` still has no multi-line control, so the box is drawn locally
+          rather than approximated with a taller `Input` — the sixth module
+          waiting on one, flagged for D3.01. */}
       <Field label={strings.hrLeaveWhy} hint={strings.hrWhyHint}>
-        <textarea
-          className={styles.textarea}
-          rows={3}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-        />
+        {(control) => (
+          <textarea
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            className={styles.textarea}
+            rows={3}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        )}
       </Field>
     </DialogFrame>
   );

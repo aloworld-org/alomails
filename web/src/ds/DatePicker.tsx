@@ -79,6 +79,18 @@ interface Props {
   placeholder?: string;
   /** Show a leading calendar icon in the trigger (default true). */
   icon?: boolean;
+  /** The id `ds/Field`'s label points at, and the hint or error it wants read
+   *  out with the control. Without them a `DatePicker` inside a `Field` is a
+   *  labelled box whose label names nothing: `htmlFor` needs an element to
+   *  reach, and the trigger is a `<button>` with no id of its own.
+   *
+   *  It was the wrapping `<label>` of a hand-rolled field that made this work
+   *  until now — a `<button>` is labelable, so the words above it did reach
+   *  it — and every module that has since adopted `ds/Field` lost that quietly.
+   *  Added for `hr/LeaveDialog` (D2.08b), whose two date fields are the first
+   *  `DatePicker`s inside a `Field`. */
+  id?: string | undefined;
+  "aria-describedby"?: string | undefined;
 }
 
 function ymd(d: Date): string {
@@ -112,6 +124,8 @@ export function DatePicker({
   onChange,
   placeholder,
   icon = true,
+  id,
+  "aria-describedby": describedBy,
 }: Props) {
   const locale = getLocale();
   const [open, setOpen] = useState(false);
@@ -177,6 +191,10 @@ export function DatePicker({
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="dialog"
         aria-expanded={open}
+        {...(id === undefined ? {} : { id })}
+        {...(describedBy === undefined
+          ? {}
+          : { "aria-describedby": describedBy })}
       >
         {icon && <CalendarIcon size={16} className="text-tertiary shrink-0" />}
         <span

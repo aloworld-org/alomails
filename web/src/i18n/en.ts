@@ -6277,6 +6277,17 @@ export const en = {
   hrFigure: "Amount",
   hrWaitingSince: "Handed in",
   hrActions: "Decision",
+  // The names the design system asks for and never draws: what a row of
+  // controls acts on (`ds/Toolbar`), and what a table lists (`ds/Table`'s
+  // caption). Read out by a screen reader, which is the only place two
+  // toolbars on one screen are told apart (D2.08b).
+  hrHiringControls: "Hiring round",
+  hrLeaveControls: "Leave filters",
+  hrAwayControls: "Month",
+  hrDirectoryControls: "Directory filters",
+  hrLeaveTable: "Leave requests",
+  hrApprovalsTable: "Waiting for a decision",
+  hrDirectoryTable: "People",
   hrApprove: "Approve",
   hrSendBack: "Send back",
   hrSendBackTitle: "Send this back?",

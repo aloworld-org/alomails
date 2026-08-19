@@ -16,16 +16,24 @@
 // **Nothing here reads the CV.** It is downloaded through Drive's own HR-gated
 // path, byte for byte, and never parsed, extracted, indexed or scored.
 import { useCallback, useEffect, useState } from "react";
-import { Download, FileText, Pencil, Trash2, Upload, UserCheck, X } from "lucide-react";
+import {
+  Download,
+  FileText,
+  Pencil,
+  Trash2,
+  Upload,
+  UserCheck,
+  X,
+} from "lucide-react";
 
 import { saveBlob } from "../drive";
-import { Button, IconButton, Spinner, useDialogs } from "../ds";
+import { Button, Field, IconButton, Select, Spinner, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { hrMessage, useHrApi } from "./api";
 import { dayLabel, momentLabel, stageLabel } from "./format";
 import { HIRED_STAGE } from "./hire";
-import { Chip, ErrorBanner } from "./parts";
+import { ErrorBanner, StateBadge } from "./parts";
 import type { HrApplicant, HrApplicantNote } from "./types";
 import styles from "./hr.module.css";
 
@@ -151,10 +159,15 @@ export function ApplicantDrawer({
   }
 
   return (
-    <aside className={styles.drawer} aria-label={applicant?.name ?? strings.hrCandidate}>
+    <aside
+      className={styles.drawer}
+      aria-label={applicant?.name ?? strings.hrCandidate}
+    >
       <div className={styles.drawerHead}>
         <div className={styles.drawerTitleRow}>
-          <h2 className={styles.drawerTitle}>{applicant?.name ?? strings.hrCandidate}</h2>
+          <h2 className={styles.drawerTitle}>
+            {applicant?.name ?? strings.hrCandidate}
+          </h2>
           {loading && <Spinner size={16} />}
           {applicant !== null && (
             <IconButton
@@ -163,13 +176,20 @@ export function ApplicantDrawer({
               onClick={() => onEdit(applicant)}
             />
           )}
-          <IconButton label={strings.hrClose} icon={<X size={18} />} onClick={onClose} />
+          <IconButton
+            label={strings.hrClose}
+            icon={<X size={18} />}
+            onClick={onClose}
+          />
         </div>
         {applicant !== null && (
           <>
             <div className={styles.drawerFacts}>
               {applicant.email !== null && applicant.email !== "" && (
-                <a className={styles.drawerLink} href={`mailto:${applicant.email}`}>
+                <a
+                  className={styles.drawerLink}
+                  href={`mailto:${applicant.email}`}
+                >
                   {applicant.email}
                 </a>
               )}
@@ -181,27 +201,31 @@ export function ApplicantDrawer({
               )}
             </div>
             <div className={styles.drawerActions}>
-              <label className={styles.stagePicker}>
-                <span className={styles.label}>{strings.hrStage}</span>
-                <select
-                  className={styles.input}
-                  value={applicant.stage}
-                  disabled={busy}
-                  onChange={(e) => void move(e.target.value)}
-                >
-                  {/* A stage this build does not know about — an older record on
-                      a newer server — stays selected rather than silently
-                      becoming the first word in the list. */}
-                  {stages.includes(applicant.stage) ? null : (
-                    <option value={applicant.stage}>{stageLabel(applicant.stage)}</option>
-                  )}
-                  {stages.map((stage) => (
-                    <option key={stage} value={stage}>
-                      {stageLabel(stage)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <Field label={strings.hrStage}>
+                {(control) => (
+                  <Select
+                    {...control}
+                    fullWidth
+                    value={applicant.stage}
+                    disabled={busy}
+                    onChange={(e) => void move(e.target.value)}
+                  >
+                    {/* A stage this build does not know about — an older record
+                        on a newer server — stays selected rather than silently
+                        becoming the first word in the list. */}
+                    {stages.includes(applicant.stage) ? null : (
+                      <option value={applicant.stage}>
+                        {stageLabel(applicant.stage)}
+                      </option>
+                    )}
+                    {stages.map((stage) => (
+                      <option key={stage} value={stage}>
+                        {stageLabel(stage)}
+                      </option>
+                    ))}
+                  </Select>
+                )}
+              </Field>
             </div>
           </>
         )}
@@ -257,7 +281,10 @@ export function ApplicantDrawer({
                 {strings.hrHired}
               </h3>
               <p className={styles.panelEmpty}>{strings.hrHiredExplainer}</p>
-              <Button icon={<UserCheck size={15} />} onClick={() => onHire(applicant)}>
+              <Button
+                icon={<UserCheck size={15} />}
+                onClick={() => onHire(applicant)}
+              >
                 {strings.hrHire}
               </Button>
             </section>
@@ -273,7 +300,10 @@ export function ApplicantDrawer({
                 placeholder={strings.hrNotePlaceholder}
                 onChange={(e) => setNote(e.target.value)}
               />
-              <Button onClick={() => void addNote()} disabled={busy || note.trim() === ""}>
+              <Button
+                onClick={() => void addNote()}
+                disabled={busy || note.trim() === ""}
+              >
                 {strings.hrAddNote}
               </Button>
             </div>
@@ -284,7 +314,9 @@ export function ApplicantDrawer({
                 {notes.map((written) => (
                   <li key={written.id} className={styles.entry}>
                     <div className={styles.entryHead}>
-                      <span className={styles.entryWhen}>{momentLabel(written.createdAt)}</span>
+                      <span className={styles.entryWhen}>
+                        {momentLabel(written.createdAt)}
+                      </span>
                     </div>
                     <p className={styles.entryBody}>{written.body}</p>
                   </li>
@@ -298,7 +330,9 @@ export function ApplicantDrawer({
             <p className={styles.panelEmpty}>
               {strings.hrRetentionUntil(dayLabel(applicant.retainUntil))}
             </p>
-            {applicant.retentionExpired && <Chip tone="bad">{strings.hrRetentionExpired}</Chip>}
+            {applicant.retentionExpired && (
+              <StateBadge tone="bad">{strings.hrRetentionExpired}</StateBadge>
+            )}
             <p className={styles.panelEmpty}>{strings.hrRetentionExplainer}</p>
             <Button
               variant="danger"
@@ -310,7 +344,9 @@ export function ApplicantDrawer({
             </Button>
           </section>
 
-          <p className={styles.drawerFact}>{strings.hrAppliedOn(momentLabel(applicant.createdAt))}</p>
+          <p className={styles.drawerFact}>
+            {strings.hrAppliedOn(momentLabel(applicant.createdAt))}
+          </p>
         </div>
       )}
     </aside>

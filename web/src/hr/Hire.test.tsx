@@ -166,16 +166,18 @@ function writes(): Call[] {
   return calls.filter((c) => c.method !== "GET");
 }
 
-/** The control inside a labelled field.
+/** The control a label names.
  *
- *  `getByLabelText` matches a wrapping label's whole text, and every field here
- *  carries a hint under the control — so the label is found by its own words and
- *  the control taken from inside it. */
+ *  It used to be found by walking up from the words to the `<label>` wrapping
+ *  them and back down to whatever control was inside, because a wrapping label
+ *  matches on its *whole* text and every field here carries a hint under the
+ *  control. Since D2.08b these are `ds/Field`s, where the label is bound to the
+ *  control by `htmlFor` and the hint is `aria-describedby` — so the accessible
+ *  name is the label's own words, which is what the two calls above this one
+ *  were already using. The assertions are unchanged; only how a control is
+ *  reached is. */
 function field(scope: HTMLElement, label: string): HTMLElement {
-  const wrapper = within(scope).getByText(label).closest("label");
-  const control = wrapper?.querySelector("input, select, textarea");
-  if (!(control instanceof HTMLElement)) throw new Error(`no control labelled ${label}`);
-  return control;
+  return within(scope).getByLabelText(label);
 }
 
 /** Opens the drawer on the candidate the fake is serving. */

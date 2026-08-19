@@ -25,10 +25,11 @@
 import { useState } from "react";
 import { UserPlus } from "lucide-react";
 
+import { Checkbox, Field, Input } from "../ds";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
 import { hrMessage, useHrApi } from "./api";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import type { ApplicantDraft, HrApplicant } from "./types";
 import styles from "./hr.module.css";
 
@@ -41,7 +42,12 @@ interface Props {
   onSaved: (applicant: HrApplicant) => void;
 }
 
-export function ApplicantDialog({ applicant, openingId, onClose, onSaved }: Props) {
+export function ApplicantDialog({
+  applicant,
+  openingId,
+  onClose,
+  onSaved,
+}: Props) {
   const api = useHrApi();
   const client = useJmapClient();
   const [name, setName] = useState(applicant?.name ?? "");
@@ -58,7 +64,8 @@ export function ApplicantDialog({ applicant, openingId, onClose, onSaved }: Prop
    *  has since been trashed through Drive is not one: the record keeps the
    *  honest statement that there was one, and the only useful act left is
    *  attaching another. */
-  const hasCv = applicant !== null && applicant.cvNodeId !== null && !applicant.cvTrashed;
+  const hasCv =
+    applicant !== null && applicant.cvNodeId !== null && !applicant.cvTrashed;
 
   async function save() {
     setBusy(true);
@@ -86,11 +93,20 @@ export function ApplicantDialog({ applicant, openingId, onClose, onSaved }: Prop
       } else if (removeCv && hasCv) {
         draft.cv = null;
       }
-      if (applicant === null || name.trim() !== applicant.name) draft.name = name.trim();
-      if (applicant === null ? phone.trim() !== "" : phone.trim() !== applicant.phone) {
+      if (applicant === null || name.trim() !== applicant.name)
+        draft.name = name.trim();
+      if (
+        applicant === null
+          ? phone.trim() !== ""
+          : phone.trim() !== applicant.phone
+      ) {
         draft.phone = phone.trim();
       }
-      if (applicant === null ? source.trim() !== "" : source.trim() !== applicant.source) {
+      if (
+        applicant === null
+          ? source.trim() !== ""
+          : source.trim() !== applicant.source
+      ) {
         draft.source = source.trim();
       }
       // An emptied address is an explicit `null` — "we have no address for
@@ -123,7 +139,9 @@ export function ApplicantDialog({ applicant, openingId, onClose, onSaved }: Prop
   return (
     <DialogFrame
       Icon={UserPlus}
-      title={applicant === null ? strings.hrAddCandidate : strings.hrEditCandidate}
+      title={
+        applicant === null ? strings.hrAddCandidate : strings.hrEditCandidate
+      }
       subtitle={strings.hrCandidateSubtitle}
       error={error}
       busy={busy}
@@ -133,74 +151,93 @@ export function ApplicantDialog({ applicant, openingId, onClose, onSaved }: Prop
       onSubmit={() => void save()}
     >
       <Field label={strings.hrFieldName}>
-        <input
-          className={styles.input}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          autoFocus
-          required
-        />
+        {(control) => (
+          <Input
+            {...control}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoFocus
+            required
+          />
+        )}
       </Field>
 
       <div className={styles.row}>
         <Field label={strings.hrFieldEmail}>
-          <input
-            className={styles.input}
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              {...control}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          )}
         </Field>
         <Field label={strings.hrFieldPhone}>
-          <input
-            className={styles.input}
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
+          )}
         </Field>
       </div>
 
       <Field label={strings.hrFieldSource} hint={strings.hrSourceHint}>
-        <input
-          className={styles.input}
-          value={source}
-          onChange={(e) => setSource(e.target.value)}
-        />
+        {(control) => (
+          <Input
+            {...control}
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+          />
+        )}
       </Field>
 
       <Field
         label={hasCv ? strings.hrCvReplace : strings.hrCv}
-        hint={hasCv ? strings.hrCvOnFile(applicant.cvFileName ?? "") : strings.hrCvHint}
+        hint={
+          hasCv
+            ? strings.hrCvOnFile(applicant.cvFileName ?? "")
+            : strings.hrCvHint
+        }
       >
-        <input
-          className={styles.fileInput}
-          type="file"
-          onChange={(e) => {
-            setCv(e.target.files?.[0] ?? null);
-            setRemoveCv(false);
-          }}
-        />
+        {/* The browser draws the button inside this one, so the control only
+            has to hold it — which `ds/Input` does, at the height every other
+            field in the form is drawn at. The local `.fileInput` this replaces
+            was six pixels shorter than its neighbours and said so in a comment:
+            the reasoning was right and the second declaration of a text field
+            was not. */}
+        {(control) => (
+          <Input
+            {...control}
+            type="file"
+            onChange={(e) => {
+              setCv(e.target.files?.[0] ?? null);
+              setRemoveCv(false);
+            }}
+          />
+        )}
       </Field>
 
       {hasCv && (
-        <label className={styles.toggle}>
-          <input
-            type="checkbox"
-            checked={removeCv}
-            disabled={cv !== null}
-            onChange={(e) => setRemoveCv(e.target.checked)}
-          />
-          {strings.hrCvRemove}
-        </label>
+        <Checkbox
+          checked={removeCv}
+          disabled={cv !== null}
+          onChange={setRemoveCv}
+          label={strings.hrCvRemove}
+        />
       )}
 
       <Field label={strings.hrFieldRetainUntil} hint={strings.hrRetainHint}>
-        <input
-          className={styles.input}
-          type="date"
-          value={retainUntil}
-          onChange={(e) => setRetainUntil(e.target.value)}
-        />
+        {(control) => (
+          <Input
+            {...control}
+            type="date"
+            value={retainUntil}
+            onChange={(e) => setRetainUntil(e.target.value)}
+          />
+        )}
       </Field>
     </DialogFrame>
   );

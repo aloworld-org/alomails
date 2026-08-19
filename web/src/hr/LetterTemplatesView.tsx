@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
 import { FileText, Plus, Trash2 } from "lucide-react";
 
-import { Button, Spinner, useDialogs } from "../ds";
+import {
+  Button,
+  Card,
+  Chip,
+  Field,
+  IconButton,
+  Input,
+  Spinner,
+  useDialogs,
+} from "../ds";
 import { strings } from "../i18n";
 import { hrMessage, useHrApi } from "./api";
-import { DialogFrame, EmptyState, ErrorBanner, Field } from "./parts";
+import { DialogFrame, EmptyState, ErrorBanner } from "./parts";
 import type { HrLetterTemplate, HrLetterTemplateDraft } from "./types";
 import styles from "./hr.module.css";
 
@@ -80,9 +89,19 @@ export function LetterTemplatesView() {
           onCta={() => setEditing("new")}
         />
       ) : (
-        <div className={styles.templateGrid}>
+        <ul className={styles.templateGrid}>
           {templates?.map((template) => (
-            <article className={styles.templateCard} key={template.id}>
+            // The surface is a `ds/Card` laying out its own regions: the whole
+            // face opens the template, so the padding belongs to the button
+            // inside it rather than to the card — which is also what lets the
+            // delete control reach the corner.
+            <Card
+              as="li"
+              pad="none"
+              key={template.id}
+              interactive
+              className="relative"
+            >
               <button
                 className={styles.templateOpen}
                 type="button"
@@ -95,17 +114,16 @@ export function LetterTemplatesView() {
                   {strings.hrTemplateFields(template.fields.length)}
                 </small>
               </button>
-              <button
-                type="button"
-                className={styles.templateDelete}
-                aria-label={strings.hrTemplateDeleteTitle(template.name)}
-                onClick={() => void remove(template)}
-              >
-                <Trash2 size={17} />
-              </button>
-            </article>
+              <span className="absolute top-3 right-3">
+                <IconButton
+                  label={strings.hrTemplateDeleteTitle(template.name)}
+                  icon={<Trash2 size={17} />}
+                  onClick={() => void remove(template)}
+                />
+              </span>
+            </Card>
           ))}
-        </div>
+        </ul>
       )}
       {editing !== null && (
         <TemplateEditor
@@ -178,33 +196,53 @@ function TemplateEditor({
       onSubmit={() => void save()}
     >
       <Field label={strings.hrTemplateName}>
-        <input
-          value={draft.name}
-          onChange={(event) => setDraft({ ...draft, name: event.target.value })}
-        />
+        {(control) => (
+          <Input
+            {...control}
+            value={draft.name}
+            onChange={(event) =>
+              setDraft({ ...draft, name: event.target.value })
+            }
+          />
+        )}
       </Field>
       <Field label={strings.hrTemplateSubject}>
-        <input
-          value={draft.subject}
-          onChange={(event) =>
-            setDraft({ ...draft, subject: event.target.value })
-          }
-        />
+        {(control) => (
+          <Input
+            {...control}
+            value={draft.subject}
+            onChange={(event) =>
+              setDraft({ ...draft, subject: event.target.value })
+            }
+          />
+        )}
       </Field>
+      {/* `ds/` still has no multi-line control, so the letter itself is drawn
+          locally — the one box on this screen that is not the design
+          system's. */}
       <Field label={strings.hrTemplateBody} hint={strings.hrTemplateBodyHint}>
-        <textarea
-          className={styles.templateBody}
-          value={draft.body}
-          onChange={(event) => setDraft({ ...draft, body: event.target.value })}
-        />
+        {(control) => (
+          <textarea
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            className={styles.templateBody}
+            value={draft.body}
+            onChange={(event) =>
+              setDraft({ ...draft, body: event.target.value })
+            }
+          />
+        )}
       </Field>
       <div className={styles.fieldPicker}>
         <span>{strings.hrTemplateInsertField}</span>
         <div>
+          {/* Each of these is pressed — it writes a placeholder into the letter
+              — so they are `ds/Chip`s rather than words drawn to look like
+              one. */}
           {fields.map((field) => (
-            <button
-              type="button"
+            <Chip
               key={field}
+              tone="accent"
               onClick={() =>
                 setDraft({
                   ...draft,
@@ -213,7 +251,7 @@ function TemplateEditor({
               }
             >
               {field}
-            </button>
+            </Chip>
           ))}
         </div>
       </div>
