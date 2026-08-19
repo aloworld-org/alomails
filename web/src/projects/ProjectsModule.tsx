@@ -49,6 +49,13 @@ function today(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
+const projectTabClass = ({ isActive }: { isActive: boolean }) =>
+  `inline-flex min-h-11 shrink-0 items-center rounded-t-lg border-b-2 px-4 py-2.5 text-sm !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+    isActive
+      ? "border-accent bg-[var(--accent-soft)] font-semibold text-accent"
+      : "border-transparent font-medium text-secondary hover:bg-raised hover:text-primary"
+  }`;
+
 export function ProjectsModule() {
   const api = useProjectsApi();
   const client = useJmapClient();
@@ -160,53 +167,45 @@ export function ProjectsModule() {
 
   return (
     <div className="relative flex h-full min-h-0 flex-col bg-app">
-      <header className="flex flex-wrap items-center gap-4 border-b border-subtle bg-surface px-5 py-3">
-        <h1 className="m-0 text-xl font-semibold text-primary">{strings.moduleProjects}</h1>
-        <nav className="ml-auto flex items-center gap-1 overflow-x-auto" aria-label={strings.moduleProjects}>
+      <header className="shrink-0 border-b border-subtle bg-surface px-8 pt-6 max-sm:px-4 max-sm:pt-4">
+        <div className="flex items-center gap-3">
+          <h1 className="m-0 text-2xl font-bold text-primary">{strings.moduleProjects}</h1>
+          {loading && <Spinner size={16} />}
+        </div>
+        <nav className="mt-3 flex min-w-0 gap-1 overflow-x-auto" aria-label={strings.moduleProjects}>
           <NavLink
             to="list"
-            className={({ isActive }) =>
-              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
-            }
+            className={projectTabClass}
           >
             {strings.projectsTabList}
           </NavLink>
           <NavLink
             to="week"
-            className={({ isActive }) =>
-              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
-            }
+            className={projectTabClass}
           >
             {strings.projectsTabWeek}
           </NavLink>
           <NavLink
             to="plan"
-            className={({ isActive }) =>
-              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
-            }
+            className={projectTabClass}
           >
             {strings.projectsTabPlan}
           </NavLink>
           <NavLink
             to="reports"
-            className={({ isActive }) =>
-              `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
-            }
+            className={projectTabClass}
           >
             {strings.projectsTabReports}
           </NavLink>
           {isAdmin && (
             <NavLink
               to="approvals"
-              className={({ isActive }) =>
-                `whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium !no-underline transition-colors hover:!no-underline focus:!no-underline active:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${isActive ? "bg--soft text-accent" : "text-secondary hover:bg-raised hover:text-primary"}`
-              }
+              className={projectTabClass}
             >
               {strings.projectsTabApprovals}
             </NavLink>
           )}
         </nav>
-        {loading && <Spinner size={16} />}
       </header>
 
       {error !== null && <ErrorBanner message={error} />}

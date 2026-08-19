@@ -12,4 +12,17 @@ describe("Button", () => {
     expect(button.className).toContain("!text-on-accent");
     expect(button.className).toContain("enabled:hover:!bg-accent-hover");
   });
+
+  test("protects every label from the button edges", () => {
+    const { rerender } = render(<Button>Save changes</Button>);
+
+    let button = screen.getByRole("button", { name: "Save changes" });
+    expect(button.className).toContain("min-h-10");
+    expect(button.className).toContain("px-5");
+
+    rerender(<Button size="sm">Save changes</Button>);
+    button = screen.getByRole("button", { name: "Save changes" });
+    expect(button.className).toContain("min-h-10");
+    expect(button.className).toContain("px-4");
+  });
 });

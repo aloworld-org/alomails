@@ -19,7 +19,6 @@ import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
 import { DialogFrame, Field } from "./parts";
 import type { Milestone } from "./types";
-import styles from "./ProjectsModule.module.css";
 
 export function MilestoneDialog({
   milestone,
@@ -107,7 +106,7 @@ export function MilestoneDialog({
     >
       <Field label={strings.projectsMilestoneName} hint={strings.projectsMilestoneNameHint}>
         <input
-          className={styles.input}
+          className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
           autoFocus
           value={name}
           maxLength={120}
@@ -116,7 +115,7 @@ export function MilestoneDialog({
       </Field>
       <Field label={strings.projectsMilestoneDue} hint={strings.projectsMilestoneDueHint}>
         <input
-          className={styles.input}
+          className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
           type="date"
           value={dueOn}
           onChange={(e) => setDueOn(e.target.value)}

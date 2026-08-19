@@ -10,12 +10,11 @@ import { Button } from "../ds";
 import { strings } from "../i18n";
 import { percentLabel, weekStatusLabel } from "./format";
 import type { WeekStatus } from "./types";
-import styles from "./ProjectsModule.module.css";
 
 /** A failure the page could not hide: shown, never swallowed. */
 export function ErrorBanner({ message }: { message: string }) {
   return (
-    <p className={styles.error} role="alert">
+    <p className="mx-5 my-3 rounded-md bg-[var(--danger-tint)] px-3.5 py-2.5 text-sm text-danger" role="alert">
       {message}
     </p>
   );
@@ -38,12 +37,12 @@ export function EmptyState({
   onCta?: () => void;
 }) {
   return (
-    <div className={styles.empty}>
-      <span className={styles.emptyArt} aria-hidden="true">
+    <div className="flex flex-col items-center gap-3 px-5 py-8 text-center text-secondary">
+      <span className="text-tertiary" aria-hidden="true">
         <Icon size={38} />
       </span>
-      <h2 className={styles.emptyTitle}>{title}</h2>
-      <p className={styles.emptyBody}>{body}</p>
+      <h2 className="m-0 text-lg font-semibold text-primary">{title}</h2>
+      <p className="m-0 max-w-[46ch] text-sm">{body}</p>
       {cta !== undefined && onCta !== undefined && <Button onClick={onCta}>{cta}</Button>}
     </div>
   );
@@ -53,13 +52,13 @@ export function EmptyState({
 export function WeekChip({ status }: { status: WeekStatus }) {
   const tone =
     status === "approved"
-      ? styles.chipGood
+      ? "bg-[var(--success-tint)] text-success"
       : status === "rejected"
-        ? styles.chipBad
+        ? "bg-[var(--danger-tint)] text-danger"
         : status === "submitted"
-          ? styles.chipInfo
-          : styles.chipQuiet;
-  return <span className={`${styles.chip} ${tone}`}>{weekStatusLabel(status)}</span>;
+          ? "bg-[var(--navy-50)] text-[var(--navy-600)]"
+          : "bg-raised text-secondary";
+  return <span className={`inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}>{weekStatusLabel(status)}</span>;
 }
 
 /**
@@ -85,9 +84,9 @@ export function BudgetBar({
   const over = consumptionBp > 10_000;
   const width = Math.min(100, Math.max(0, consumptionBp / 100));
   return (
-    <div className={styles.budget}>
+    <div className="flex min-w-32 items-center gap-2">
       <div
-        className={styles.budgetTrack}
+        className="h-1.5 flex-1 overflow-hidden rounded-full bg-raised"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
@@ -95,11 +94,11 @@ export function BudgetBar({
         aria-label={label}
       >
         <span
-          className={`${styles.budgetFill} ${over ? styles.budgetOver : ""}`}
+          className={`block h-full rounded-full ${over ? "bg-danger" : "bg-accent"}`}
           style={{ width: `${width}%` }}
         />
       </div>
-      <span className={over ? styles.budgetTextOver : styles.budgetText}>
+      <span className={`text-xs tabular-nums ${over ? "font-medium text-danger" : "text-tertiary"}`}>
         {percentLabel(consumptionBp)}
       </span>
     </div>
@@ -120,11 +119,11 @@ export function Field({
   children: ReactNode;
 }) {
   return (
-    <label className={styles.field}>
-      <span className={styles.label}>{label}</span>
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-secondary">{label}</span>
       {children}
-      {error !== undefined && <span className={styles.fieldError}>{error}</span>}
-      {error === undefined && hint !== undefined && <span className={styles.hint}>{hint}</span>}
+      {error !== undefined && <span className="text-xs text-danger">{error}</span>}
+      {error === undefined && hint !== undefined && <span className="text-xs text-tertiary">{hint}</span>}
     </label>
   );
 }
@@ -163,9 +162,9 @@ export function DialogFrame({
     if (!busy && canSubmit) onSubmit();
   }
   return (
-    <div className={styles.scrim} role="presentation" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-overlay p-4" role="presentation" onMouseDown={onClose}>
       <form
-        className={styles.modal}
+        className="flex max-h-[90vh] min-h-0 w-full max-w-[35rem] flex-col rounded-xl bg-surface shadow-lg"
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -175,34 +174,34 @@ export function DialogFrame({
           if (e.key === "Escape") onClose();
         }}
       >
-        <div className={styles.modalHead}>
-          <span className={styles.modalIcon} aria-hidden="true">
+        <div className="flex items-start gap-3 border-b border-subtle px-5 py-4">
+          <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg--soft text-accent" aria-hidden="true">
             <Icon size={19} />
           </span>
-          <div className={styles.modalHeadText}>
-            <h2>{title}</h2>
-            <p>{subtitle}</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="m-0 text-lg font-semibold text-primary">{title}</h2>
+            <p className="m-0 mt-0.5 text-sm text-tertiary">{subtitle}</p>
           </div>
           <button
             type="button"
-            className={styles.modalClose}
+            className="rounded-sm p-1 text-tertiary hover:bg-raised hover:text-primary"
             onClick={onClose}
             aria-label={strings.projectsCancel}
           >
             <X size={18} />
           </button>
         </div>
-        <div className={styles.modalBody}>
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-5">
           {error !== null && <ErrorBanner message={error} />}
           {children}
         </div>
-        <div className={styles.modalFooter}>
+        <div className="flex items-center gap-2 border-t border-subtle px-5 py-4">
           {extraAction !== undefined && (
             <Button variant="ghost" onClick={extraAction.onClick} disabled={busy}>
               {extraAction.label}
             </Button>
           )}
-          <span className={styles.modalFooterSpacer} />
+          <span className="flex-1" />
           <Button variant="ghost" onClick={onClose} disabled={busy}>
             {strings.projectsCancel}
           </Button>

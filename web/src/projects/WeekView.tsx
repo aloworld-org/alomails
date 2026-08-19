@@ -43,7 +43,30 @@ import {
 } from "./format";
 import { ErrorBanner, WeekChip } from "./parts";
 import type { Project, TimeEntry, TimeTotals, TimesheetWeek } from "./types";
-import styles from "./ProjectsModule.module.css";
+const styles = {
+  page: "flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4",
+  toolbar: "flex flex-wrap items-center gap-3",
+  periodLabel: "min-w-[15ch] text-base font-medium text-primary",
+  toolbarSpacer: "flex-1",
+  tableWrap: "overflow-x-auto rounded-lg border border-subtle bg-surface",
+  grid: "w-full border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:px-2.5 [&_th]:py-2 [&_th]:text-right [&_th]:font-medium [&_th]:text-tertiary [&_th:first-child]:min-w-52 [&_th:first-child]:text-left [&_td]:border-b [&_td]:border-subtle [&_td]:px-1.5 [&_td]:py-1",
+  gridToday: "text-accent",
+  gridProject: "flex !px-3.5 flex-col gap-0.5",
+  gridProjectName: "font-medium",
+  internal: "italic text-tertiary",
+  gridCell: "w-full min-w-14 rounded-sm border border-transparent bg-transparent px-2 py-1.5 text-right text-sm tabular-nums text-primary hover:border-default hover:bg-surface disabled:cursor-default disabled:text-tertiary",
+  gridCellFilled: "font-medium",
+  muted: "text-tertiary",
+  numeric: "whitespace-nowrap text-right tabular-nums",
+  gridTotals: "[&_td]:border-b-0 [&_td]:border-t-2 [&_td]:border-default [&_td]:p-2.5 [&_td]:text-right [&_td]:font-semibold [&_td]:tabular-nums [&_td:first-child]:pl-3.5 [&_td:first-child]:text-left",
+  table: "w-full border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:px-3.5 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-medium [&_th]:text-tertiary [&_td]:border-b [&_td]:border-subtle [&_td]:px-3.5 [&_td]:py-2.5 [&_td]:align-middle [&_tbody_tr:hover]:bg-raised",
+  rowActions: "flex items-center justify-end gap-2",
+  weekFoot: "flex flex-wrap items-center gap-3 py-3",
+  weekFootFacts: "flex flex-col gap-0.5",
+  weekFootTotal: "text-lg font-semibold tabular-nums text-primary",
+  weekFootNote: "m-0 text-sm text-tertiary",
+  weekFootDecision: "m-0 max-w-[60ch] text-sm text-danger",
+} as const;
 
 /** Which cell of the grid is being written into. */
 interface CellTarget {

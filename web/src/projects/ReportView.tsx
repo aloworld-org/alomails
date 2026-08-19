@@ -27,7 +27,6 @@ import { projectsMessage, useProjectsApi } from "./api";
 import { dayLabel, durationLabel } from "./format";
 import { BudgetBar, EmptyState, ErrorBanner } from "./parts";
 import type { ProfitabilityCurrency, ProfitabilityReport, ProjectProfitability } from "./types";
-import styles from "./ProjectsModule.module.css";
 
 interface Props {
   /** A customer's own name for an id, or `null` when this reader cannot see
@@ -96,28 +95,28 @@ export function ReportView({ customerName, revision }: Props) {
   }
 
   return (
-    <div className={styles.page}>
+    <div className="flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4">
       <form
-        className={styles.toolbar}
+        className="flex flex-wrap items-center gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           setPeriod(form);
         }}
       >
-        <label className={styles.periodField}>
+        <label className="inline-flex items-center gap-2 text-sm text-secondary">
           {strings.projectsReportFrom}
           <input
-            className={styles.periodInput}
+            className="rounded-md border border-default bg-surface px-2.5 py-1.5 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
             type="date"
             value={form.from}
             onChange={(e) => setForm({ ...form, from: e.target.value })}
             required
           />
         </label>
-        <label className={styles.periodField}>
+        <label className="inline-flex items-center gap-2 text-sm text-secondary">
           {strings.projectsReportTo}
           <input
-            className={styles.periodInput}
+            className="rounded-md border border-default bg-surface px-2.5 py-1.5 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
             type="date"
             value={form.to}
             onChange={(e) => setForm({ ...form, to: e.target.value })}
@@ -127,20 +126,20 @@ export function ReportView({ customerName, revision }: Props) {
         <Button type="submit">{strings.projectsReportShow}</Button>
         <button
           type="button"
-          className={styles.linkAction}
+          className="p-0 text-sm text-link"
           onClick={() => pick(quarterOf(new Date()))}
         >
           {strings.projectsReportThisQuarter}
         </button>
         <button
           type="button"
-          className={styles.linkAction}
+          className="p-0 text-sm text-link"
           onClick={() => pick(previousQuarterOf(new Date()))}
         >
           {strings.projectsReportLastQuarter}
         </button>
         {(loading || downloading) && <Spinner size={16} />}
-        <span className={styles.toolbarSpacer} />
+        <span className="flex-1" />
         <Button
           variant="ghost"
           onClick={() => void download()}
@@ -163,7 +162,7 @@ export function ReportView({ customerName, revision }: Props) {
       )}
 
       {report !== null && report.projects.length > 0 && (
-        <p className={styles.reportBasis}>
+        <p className="m-0 text-xs text-tertiary">
           {strings.projectsReportBasis(dayLabel(report.from), dayLabel(report.to))}{" "}
           {strings.projectsReportBudgetBasis(dayLabel(report.to))}
         </p>
@@ -182,28 +181,28 @@ function ReportTable({
 }) {
   const locale = useLocale();
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
+    <div className="overflow-x-auto rounded-lg border border-subtle bg-surface">
+      <table className="w-full border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:px-3.5 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-medium [&_th]:text-tertiary [&_td]:border-b [&_td]:border-subtle [&_td]:px-3.5 [&_td]:py-2.5 [&_td]:align-middle [&_td]:text-primary [&_tbody_tr:hover]:bg-raised">
         <thead>
           <tr>
             <th scope="col">{strings.projectsProject}</th>
             <th scope="col">{strings.projectsCustomer}</th>
-            <th scope="col" className={styles.numeric}>
+            <th scope="col" className="whitespace-nowrap text-right tabular-nums">
               {strings.projectsHoursLogged}
             </th>
-            <th scope="col" className={styles.numeric}>
+            <th scope="col" className="whitespace-nowrap text-right tabular-nums">
               {strings.projectsBillableHours}
             </th>
-            <th scope="col" className={styles.numeric}>
+            <th scope="col" className="whitespace-nowrap text-right tabular-nums">
               {strings.projectsReportColValue}
             </th>
-            <th scope="col" className={styles.numeric}>
+            <th scope="col" className="whitespace-nowrap text-right tabular-nums">
               {strings.projectsReportColInvoiced}
             </th>
-            <th scope="col" className={styles.numeric}>
+            <th scope="col" className="whitespace-nowrap text-right tabular-nums">
               {strings.projectsReportColToInvoice}
             </th>
-            <th scope="col" className={styles.numeric}>
+            <th scope="col" className="whitespace-nowrap text-right tabular-nums">
               {strings.projectsReportColToDate}
             </th>
             <th scope="col">{strings.projectsReportColBudget}</th>
@@ -224,19 +223,19 @@ function ReportTable({
             <th scope="row" colSpan={2}>
               {strings.projectsReportTotals}
             </th>
-            <td className={styles.numeric}>{durationLabel(report.totals.minutes)}</td>
-            <td className={styles.numeric}>{durationLabel(report.totals.billableMinutes)}</td>
-            <td className={styles.numeric}>
+            <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(report.totals.minutes)}</td>
+            <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(report.totals.billableMinutes)}</td>
+            <td className="whitespace-nowrap text-right tabular-nums">
               <Money rows={report.totals.byCurrency} pick={(row) => row.netCents} locale={locale} />
             </td>
-            <td className={styles.numeric}>
+            <td className="whitespace-nowrap text-right tabular-nums">
               <Money
                 rows={report.totals.byCurrency}
                 pick={(row) => row.billedNetCents}
                 locale={locale}
               />
             </td>
-            <td className={styles.numeric}>
+            <td className="whitespace-nowrap text-right tabular-nums">
               <Money
                 rows={report.totals.byCurrency}
                 pick={(row) => row.unbilledNetCents}
@@ -269,37 +268,37 @@ function ProjectRow({
   return (
     <tr>
       <td>
-        <span className={styles.gridProjectName}>{project.projectName}</span>
+        <span className="font-medium">{project.projectName}</span>
         {/* Chargeable hours nobody has priced are named where they were
             worked, because that is where somebody can do something about
             them — never folded into a value of zero. */}
         {project.unratedMinutes > 0 && (
-          <span className={styles.subtle} title={strings.projectsReportUnratedHint}>
+          <span className="block text-xs text-tertiary" title={strings.projectsReportUnratedHint}>
             {strings.projectsReportUnrated(durationLabel(project.unratedMinutes))}
           </span>
         )}
       </td>
-      <td className={customer === null ? styles.internal : undefined}>
+      <td className={customer === null ? "italic text-tertiary" : undefined}>
         {customer ?? strings.projectsCustomerUnknown}
       </td>
-      <td className={styles.numeric}>{durationLabel(project.minutes)}</td>
-      <td className={styles.numeric}>{durationLabel(project.billableMinutes)}</td>
-      <td className={styles.numeric}>
+      <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(project.minutes)}</td>
+      <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(project.billableMinutes)}</td>
+      <td className="whitespace-nowrap text-right tabular-nums">
         <Money rows={project.byCurrency} pick={(row) => row.netCents} locale={locale} />
       </td>
-      <td className={styles.numeric}>
+      <td className="whitespace-nowrap text-right tabular-nums">
         <Money rows={project.byCurrency} pick={(row) => row.billedNetCents} locale={locale} />
       </td>
-      <td className={styles.numeric}>
+      <td className="whitespace-nowrap text-right tabular-nums">
         <Money rows={project.byCurrency} pick={(row) => row.unbilledNetCents} locale={locale} />
       </td>
-      <td className={styles.numeric}>{durationLabel(project.toDateMinutes)}</td>
+      <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(project.toDateMinutes)}</td>
       <td>
         <BudgetBar
           consumptionBp={project.budgetConsumptionBp ?? project.hoursConsumptionBp}
           label={strings.projectsReportColBudget}
         />
-        <span className={styles.subtle}>
+        <span className="block text-xs text-tertiary">
           {remaining === null
             ? strings.projectsReportNoBudget
             : remaining < 0
@@ -327,11 +326,11 @@ function Money({
   pick: (row: ProfitabilityCurrency) => number;
   locale: string;
 }) {
-  if (rows.length === 0) return <span className={styles.muted}>{strings.projectsReportNoValue}</span>;
+  if (rows.length === 0) return <span className="text-tertiary">{strings.projectsReportNoValue}</span>;
   return (
     <>
       {rows.map((row) => (
-        <span key={row.currency} className={styles.moneyLine}>
+        <span key={row.currency} className="block tabular-nums">
           {formatAmount(pick(row), locale, row.currency)}
         </span>
       ))}

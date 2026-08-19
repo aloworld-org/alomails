@@ -30,7 +30,6 @@ import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
 import { DialogFrame, Field } from "./parts";
 import type { Project } from "./types";
-import styles from "./ProjectsModule.module.css";
 
 /** Minutes typed as whole hours, and back. A budget is stated in hours by
  *  everybody who has ever agreed one; the API holds minutes so it can be
@@ -145,11 +144,11 @@ export function ClientDialog({
       onClose={onClose}
       onSubmit={() => void save()}
     >
-      {!teamProject && <p className={styles.hint}>{strings.projectsPersonalBoard}</p>}
+      {!teamProject && <p className="text-xs text-tertiary">{strings.projectsPersonalBoard}</p>}
 
       <Field label={strings.projectsCustomer} hint={strings.projectsCustomerHint}>
         <select
-          className={styles.select}
+          className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
           value={customerId}
           disabled={!teamProject}
           onChange={(e) => setCustomerId(e.target.value)}
@@ -163,10 +162,10 @@ export function ClientDialog({
         </select>
       </Field>
 
-      <div className={styles.row}>
+      <div className="flex flex-wrap gap-3 [&>*]:min-w-40 [&>*]:flex-1">
         <Field label={strings.projectsRate} hint={strings.projectsRateHint} error={rateError}>
           <input
-            className={styles.input}
+            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
             inputMode="decimal"
             value={rate}
             disabled={!teamProject}
@@ -175,7 +174,7 @@ export function ClientDialog({
         </Field>
         <Field label={strings.projectsStartsOn}>
           <input
-            className={styles.input}
+            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
             type="date"
             value={startsOn}
             disabled={!teamProject}
@@ -184,14 +183,14 @@ export function ClientDialog({
         </Field>
       </div>
 
-      <div className={styles.row}>
+      <div className="flex flex-wrap gap-3 [&>*]:min-w-40 [&>*]:flex-1">
         <Field
           label={strings.projectsBudgetHours}
           hint={strings.projectsBudgetHint}
           error={budgetHoursError}
         >
           <input
-            className={styles.input}
+            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
             inputMode="numeric"
             value={budgetHours}
             disabled={!teamProject}
@@ -200,7 +199,7 @@ export function ClientDialog({
         </Field>
         <Field label={strings.projectsBudgetAmount} error={budgetAmountError}>
           <input
-            className={styles.input}
+            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
             inputMode="decimal"
             value={budgetAmount}
             disabled={!teamProject}

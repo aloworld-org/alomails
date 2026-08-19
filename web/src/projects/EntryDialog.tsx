@@ -24,7 +24,6 @@ import { projectsMessage, useProjectsApi } from "./api";
 import { dayLabel, durationInput, parseDuration } from "./format";
 import { DialogFrame, Field } from "./parts";
 import type { Project, TimeEntry } from "./types";
-import styles from "./ProjectsModule.module.css";
 
 export function EntryDialog({
   entry,
@@ -113,7 +112,7 @@ export function EntryDialog({
       onClose={onClose}
       onSubmit={() => void save()}
     >
-      <div className={styles.row}>
+      <div className="flex flex-wrap gap-3 [&>*]:min-w-40 [&>*]:flex-1">
         <Field
           label={strings.projectsDuration}
           hint={strings.projectsDurationHint}
@@ -123,7 +122,7 @@ export function EntryDialog({
               in, and anything else costs the person a second click per day of
               the week. */}
           <input
-            className={styles.input}
+            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
             autoFocus
             inputMode="text"
             value={duration}
@@ -132,7 +131,7 @@ export function EntryDialog({
         </Field>
         <Field label={strings.projectsDay}>
           <input
-            className={styles.input}
+            className="w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
             type="date"
             value={day}
             onChange={(e) => setDay(e.target.value)}
@@ -140,7 +139,7 @@ export function EntryDialog({
         </Field>
       </div>
 
-      <label className={styles.check}>
+      <label className="inline-flex items-center gap-2 text-sm text-secondary">
         <input
           type="checkbox"
           checked={billable}
@@ -151,7 +150,7 @@ export function EntryDialog({
 
       <Field label={strings.projectsNote} hint={strings.projectsNoteHint}>
         <textarea
-          className={styles.textarea}
+          className="min-h-20 w-full resize-y rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent"
           value={note}
           maxLength={500}
           onChange={(e) => setNote(e.target.value)}

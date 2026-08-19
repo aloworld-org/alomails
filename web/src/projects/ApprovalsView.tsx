@@ -21,7 +21,6 @@ import { projectsMessage, useProjectsApi } from "./api";
 import { dayLabel, durationLabel, momentLabel } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { PendingWeek } from "./types";
-import styles from "./ProjectsModule.module.css";
 
 export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
   const api = useProjectsApi();
@@ -91,14 +90,14 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
 
   if (loading && weeks.length === 0) {
     return (
-      <div className={styles.page}>
+      <div className="flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4">
         <Spinner size={20} />
       </div>
     );
   }
 
   return (
-    <div className={styles.page}>
+    <div className="flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4">
       {error !== null && <ErrorBanner message={error} />}
       {weeks.length === 0 ? (
         <EmptyState
@@ -107,16 +106,16 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
           body={strings.projectsApprovalsEmptyBody}
         />
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <div className="overflow-x-auto rounded-lg border border-subtle bg-surface">
+          <table className="w-full border-collapse text-sm [&_th]:whitespace-nowrap [&_th]:border-b [&_th]:border-subtle [&_th]:px-3.5 [&_th]:py-2.5 [&_th]:text-left [&_th]:font-medium [&_th]:text-tertiary [&_td]:border-b [&_td]:border-subtle [&_td]:px-3.5 [&_td]:py-2.5 [&_td]:align-middle [&_td]:text-primary [&_tbody_tr:hover]:bg-raised">
             <thead>
               <tr>
                 <th scope="col">{strings.projectsPerson}</th>
                 <th scope="col">{strings.projectsWeek}</th>
-                <th scope="col" className={styles.numeric}>
+                <th scope="col" className="whitespace-nowrap text-right tabular-nums">
                   {strings.projectsHoursLogged}
                 </th>
-                <th scope="col" className={styles.numeric}>
+                <th scope="col" className="whitespace-nowrap text-right tabular-nums">
                   {strings.projectsBillableHours}
                 </th>
                 <th scope="col">{strings.projectsSubmittedAt}</th>
@@ -133,13 +132,13 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
                       dayLabel(week.weekEnd),
                     )}
                   </td>
-                  <td className={styles.numeric}>{durationLabel(week.minutes)}</td>
-                  <td className={styles.numeric}>{durationLabel(week.billableMinutes)}</td>
-                  <td className={styles.muted}>
+                  <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(week.minutes)}</td>
+                  <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(week.billableMinutes)}</td>
+                  <td className="text-tertiary">
                     {week.submittedAt === null ? "" : momentLabel(week.submittedAt)}
                   </td>
                   <td>
-                    <div className={styles.rowActions}>
+                    <div className="flex items-center justify-end gap-2">
                       <Button
                         variant="ghost"
                         size="sm"

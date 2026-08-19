@@ -27,7 +27,14 @@ import { projectsMessage, useProjectsApi } from "./api";
 import { durationLabel, elapsedMinutes } from "./format";
 import { announceTimerChanged, onTimerChanged } from "./timerBus";
 import type { RunningTimer } from "./types";
-import styles from "./TimerWidget.module.css";
+const styles = {
+  wrap: "flex w-full flex-col items-center gap-1",
+  widget: "flex w-full flex-col items-center gap-1 rounded-md bg-rail-active px-1.5 py-2 text-on-rail !no-underline hover:bg-rail-hover hover:!no-underline",
+  elapsed: "flex items-center gap-1 text-sm font-semibold tabular-nums",
+  dot: "h-1.5 w-1.5 shrink-0 rounded-full bg-accent",
+  project: "max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs text-on-rail-muted",
+  stop: "mt-0.5 inline-flex items-center gap-1 rounded-full bg-accent px-3 py-1 text-xs font-medium text-on-accent hover:bg-accent-hover disabled:opacity-60",
+} as const;
 
 /** How often the elapsed display is recomputed. A minute's resolution needs no
  *  faster tick, and a second's would repaint the rail 60 times for nothing. */

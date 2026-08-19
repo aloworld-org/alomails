@@ -35,8 +35,8 @@ const BASE =
  *  rather than steps on the 4px spacing scale, and naming them is what keeps
  *  the 38 of a button and the 40 of a field visibly a decision. */
 const SIZE = {
-  sm: "h-[var(--button-height-sm)] px-3 text-sm",
-  md: "h-[var(--button-height-md)] px-4 text-base",
+  sm: "min-h-10 px-4 py-2 text-sm",
+  md: "min-h-10 px-5 py-2.5 text-base",
 } as const;
 
 /** A faded accent reads as a broken button rather than an unavailable one, so

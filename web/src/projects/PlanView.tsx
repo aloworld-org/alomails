@@ -31,7 +31,34 @@ import { dayLabel, dayString, dayValue } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
 import { MilestoneDialog } from "./MilestoneDialog";
 import type { Milestone, Project, ProjectPlan } from "./types";
-import styles from "./ProjectsModule.module.css";
+const styles = {
+  page: "flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4",
+  toolbar: "flex flex-wrap items-center gap-3",
+  inlineField: "inline-flex items-center gap-2 text-sm",
+  label: "text-sm font-medium text-secondary",
+  select: "w-full rounded-md border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-2 focus-visible:outline-accent",
+  toolbarSpacer: "flex-1",
+  timeline: "relative mx-3 mt-2 h-12",
+  timelineTrack: "absolute inset-x-0 top-2.5 h-0.5 bg-subtle",
+  timelineMark: "absolute top-0 flex -translate-x-1/2 flex-col items-center gap-1",
+  timelineDot: "mt-1 h-3 w-3 rounded-full border-2 border-tertiary bg-surface",
+  timelineDotDone: "!border-success !bg-success",
+  timelineDotLate: "!border-danger !bg-danger",
+  timelineDay: "whitespace-nowrap text-xs text-tertiary",
+  plan: "m-0 flex list-none flex-col gap-3 p-0",
+  milestone: "rounded-md border border-subtle bg-surface",
+  milestoneHead: "flex flex-wrap items-center gap-3 px-4 py-2.5",
+  rowName: "text-left font-medium text-link",
+  muted: "text-tertiary",
+  chip: "inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium",
+  chipGood: "bg-[var(--success-tint)] text-success",
+  chipBad: "bg-[var(--danger-tint)] text-danger",
+  milestoneTasks: "m-0 list-none border-t border-subtle p-0",
+  milestoneTask: "flex items-center gap-3 border-b border-subtle px-4 py-2 text-sm text-primary last:border-b-0",
+  taskDone: "text-tertiary line-through",
+  unplaced: "rounded-md border border-dashed border-default",
+  unplacedTitle: "m-0 px-4 py-2.5 text-sm font-medium text-secondary",
+} as const;
 
 /** Where a milestone sits along the timeline, as a percentage of the plan's
  *  span. `null` when the plan has no span to place it on — a single date, or

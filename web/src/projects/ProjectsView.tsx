@@ -123,9 +123,8 @@ export function ProjectsView({
             </div>
           </div>
           <Button
-            variant="primary"
             icon={<CopyPlus size={16} />}
-            className="h-11 shrink-0 rounded-md px-5 text-sm font-semibold shadow-sm"
+            className="shrink-0"
             onClick={onNewFromTemplate}
           >
             {strings.projectsTemplateNew}
@@ -213,7 +212,7 @@ export function ProjectsView({
                       <Button
                         variant="ghost"
                         icon={<Play size={16} />}
-                        className="h-10 shrink-0 rounded-md px-4 text-sm font-medium"
+                        className="shrink-0"
                         aria-label={strings.projectsStartTimerOn(project.name)}
                         onClick={() => onStartTimer(project)}
                       >
@@ -242,7 +241,7 @@ export function ProjectsView({
                       )}
                       <Button
                         variant={client === null ? "primary" : "ghost"}
-                        className="h-10 shrink-0 rounded-md px-5 text-sm font-semibold shadow-sm"
+                        className="shrink-0"
                         onClick={() => onEditClient(project)}
                       >
                         {client === null ? strings.projectsMakeClientWork : strings.projectsEdit}
