@@ -11,12 +11,15 @@
 // Every figure is the server's. The hours are the project's aggregate — nobody
 // is named, here or in the API — and the budget bar is drawn from basis points
 // the server computed, so two people looking at one engagement see one bar.
-import { Briefcase, CopyPlus, FolderKanban, Play, Plus, Star } from "lucide-react";
+import { Briefcase, Clock3, CopyPlus, FolderKanban, Play, Plus, Square, Star } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { Button, IconButton, Spinner } from "../ds";
 import { strings } from "../i18n";
-import { amountLabel, dayLabel, durationLabel, percentLabel, rateLabel } from "./format";
-import type { Project } from "./types";
+import { amountLabel, dayLabel, durationLabel, elapsedMinutes, percentLabel, rateLabel } from "./format";
+import type { Project, RunningTimer } from "./types";
+
+const TIMER_TICK_MS = 15_000;
 
 function ProjectsEmptyState({ onNewProject }: { onNewProject: () => void }) {
   return (
@@ -71,10 +74,12 @@ function ProjectBudget({ consumptionBp }: { consumptionBp: number | null }) {
 export function ProjectsView({
   projects,
   loading,
+  runningTimer,
   customerName,
   isTemplate,
   onEditClient,
   onStartTimer,
+  onStopTimer,
   onToggleTemplate,
   onOpenTasks,
   onNewProject,
@@ -82,6 +87,7 @@ export function ProjectsView({
 }: {
   projects: Project[];
   loading: boolean;
+  runningTimer: RunningTimer | null;
   /** The customer's own name for an id, or `null` while the list is loading or
    *  when the customer is one this reader cannot see. Resolved by the caller,
    *  which owns the billing read. */
@@ -90,6 +96,7 @@ export function ProjectsView({
   isTemplate: (projectId: string) => boolean;
   onEditClient: (project: Project) => void;
   onStartTimer: (project: Project) => void;
+  onStopTimer: () => void;
   /** Marks the board reusable, or takes the mark off — the same control, because
    *  a board either is a template or is not. */
   onToggleTemplate: (project: Project) => void;
@@ -98,6 +105,25 @@ export function ProjectsView({
   onNewProject: () => void;
   onNewFromTemplate: () => void;
 }) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (runningTimer === null) return;
+    setNow(Date.now());
+    const tick = window.setInterval(() => setNow(Date.now()), TIMER_TICK_MS);
+    return () => window.clearInterval(tick);
+  }, [runningTimer]);
+
+  const runningProject = runningTimer === null
+    ? null
+    : projects.find((project) => project.id === runningTimer.projectId) ?? null;
+  const runningMinutes = runningTimer === null ? null : elapsedMinutes(runningTimer.startedAt, now);
+  const runningElapsed = runningMinutes === null
+    ? null
+    : runningMinutes === 0
+      ? strings.projectsMinutesShort(0)
+      : durationLabel(runningMinutes);
+
   if (projects.length === 0) {
     return loading ? (
       <div className="flex min-h-0 flex-1 items-center justify-center p-8">
@@ -112,6 +138,35 @@ export function ProjectsView({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-8 pt-4 max-sm:px-3">
+      {runningTimer !== null && (
+        <section
+          className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-accent/30 bg-[var(--accent-soft)] px-5 py-4 shadow-sm"
+          aria-label={strings.projectsTimerRunning}
+        >
+          <div className="flex min-w-0 items-center gap-3.5">
+            <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-surface text-accent shadow-sm">
+              <Clock3 className="size-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-accent">
+                  {strings.projectsTimerRunning}
+                </span>
+                <span className="size-1.5 rounded-full bg-success" aria-hidden="true" />
+              </div>
+              <div className="mt-0.5 flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+                <strong className="truncate text-base font-semibold text-primary">
+                  {runningProject?.name ?? strings.projectsTimerRunning}
+                </strong>
+                <span className="font-medium tabular-nums text-secondary">{runningElapsed}</span>
+              </div>
+            </div>
+          </div>
+          <Button icon={<Square size={15} />} onClick={onStopTimer}>
+            {strings.projectsStopTimer}
+          </Button>
+        </section>
+      )}
       <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
         <div className="flex items-center justify-between gap-4 border-b border-subtle px-5 py-4 max-sm:items-start">
           <div className="flex min-w-0 items-center gap-3">
@@ -163,6 +218,7 @@ export function ProjectsView({
             {projects.map((project) => {
               const client = project.client;
               const customer = client === null ? null : customerName(client.customerId);
+              const isRunning = runningTimer?.projectId === project.id;
               return (
                 <tr
                   key={project.id}
@@ -221,15 +277,23 @@ export function ProjectsView({
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        icon={<Play size={16} />}
-                        className="shrink-0 !border-transparent !bg-raised enabled:hover:!bg-default enabled:hover:!text-primary"
-                        aria-label={strings.projectsStartTimerOn(project.name)}
-                        onClick={() => onStartTimer(project)}
-                      >
-                        {strings.projectsStartTimer}
-                      </Button>
+                      {isRunning ? (
+                        <span className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-raised px-4 py-2 text-sm font-semibold text-primary">
+                          <span className="size-2 rounded-full bg-success" aria-hidden="true" />
+                          <span>{strings.projectsTimerRunning}</span>
+                          <span className="tabular-nums text-secondary">{runningElapsed}</span>
+                        </span>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          icon={<Play size={16} />}
+                          className="shrink-0 !border-transparent !bg-raised enabled:hover:!bg-default enabled:hover:!text-primary"
+                          aria-label={strings.projectsStartTimerOn(project.name)}
+                          onClick={() => onStartTimer(project)}
+                        >
+                          {strings.projectsStartTimer}
+                        </Button>
+                      )}
                       {/* A personal board cannot be a template — the list of
                           templates is the whole workspace's — so the control is
                           absent there rather than offered and refused. */}

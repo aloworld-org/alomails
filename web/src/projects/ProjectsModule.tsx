@@ -37,9 +37,9 @@ import { PlanView } from "./PlanView";
 import { ProjectsView } from "./ProjectsView";
 import { ReportView } from "./ReportView";
 import { TemplateDialog } from "./TemplateDialog";
-import { announceTimerChanged } from "./timerBus";
+import { announceTimerChanged, onTimerChanged } from "./timerBus";
 import { WeekView } from "./WeekView";
-import type { Project, ProjectTemplate } from "./types";
+import type { Project, ProjectTemplate, RunningTimer } from "./types";
 
 /** Today as `YYYY-MM-DD` in the reader's own zone — the day a new project
  *  starts on unless they say otherwise. Local, not UTC: "today" is a fact about
@@ -74,9 +74,23 @@ export function ProjectsModule() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
+  const [runningTimer, setRunningTimer] = useState<RunningTimer | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const bump = useCallback(() => setRevision((r) => r + 1), []);
+
+  const loadRunningTimer = useCallback(async () => {
+    try {
+      setRunningTimer(await api.timer());
+    } catch {
+      setRunningTimer(null);
+    }
+  }, [api]);
+
+  useEffect(() => {
+    void loadRunningTimer();
+    return onTimerChanged(() => void loadRunningTimer());
+  }, [loadRunningTimer]);
 
   useEffect(() => {
     let live = true;
@@ -145,11 +159,24 @@ export function ProjectsModule() {
    *  one that is running. */
   async function startTimer(project: Project) {
     try {
-      await api.startTimer({ projectId: project.id });
+      const timer = await api.startTimer({ projectId: project.id });
+      setRunningTimer(timer);
       setError(null);
       announceTimerChanged();
     } catch (err) {
       setError(projectsMessage(err, strings.projectsStartFailed));
+    }
+  }
+
+  async function stopTimer() {
+    try {
+      await api.stopTimer();
+      setRunningTimer(null);
+      setError(null);
+      announceTimerChanged();
+      bump();
+    } catch (err) {
+      setError(projectsMessage(err, strings.projectsStopFailed));
     }
   }
 
@@ -230,10 +257,12 @@ export function ProjectsModule() {
             <ProjectsView
               projects={projects}
               loading={loading}
+              runningTimer={runningTimer}
               customerName={customerName}
               isTemplate={(projectId) => templates.some((t) => t.projectId === projectId)}
               onEditClient={setEditing}
               onStartTimer={(project) => void startTimer(project)}
+              onStopTimer={() => void stopTimer()}
               onToggleTemplate={(project) => void toggleTemplate(project)}
               onOpenTasks={(project) => navigate(`/tasks?project=${encodeURIComponent(project.id)}`)}
               onNewProject={() => setCreating(true)}
