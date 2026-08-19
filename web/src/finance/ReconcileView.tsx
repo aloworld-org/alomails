@@ -23,13 +23,36 @@ import { useCallback, useEffect, useState } from "react";
 import { CheckCheck } from "lucide-react";
 
 import type { BillingInvoiceSummary } from "../billing";
-import { Button, Spinner, cx, useDialogs } from "../ds";
+import {
+  Badge,
+  Button,
+  Select,
+  Spinner,
+  Table,
+  Td,
+  Th,
+  Toolbar,
+  ToolbarSpacer,
+  cx,
+  useDialogs,
+} from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
-import { amountLabel, dayLabel, evidenceLabel, lineStatusLabel, lineStatusTone } from "./format";
-import { EmptyState, ErrorBanner } from "./parts";
+import {
+  amountLabel,
+  dayLabel,
+  evidenceLabel,
+  lineStatusLabel,
+  lineStatusTone,
+} from "./format";
+import { BADGE_TONE, EmptyState, ErrorBanner } from "./parts";
 import { InvoicePicker } from "./InvoicePicker";
-import type { BankLine, BankStatement, BankSuggestions, LikelyMatch } from "./types";
+import type {
+  BankLine,
+  BankStatement,
+  BankSuggestions,
+  LikelyMatch,
+} from "./types";
 import styles from "./FinanceModule.module.css";
 
 /** Everything the screen is drawn from, in one read each. */
@@ -45,7 +68,11 @@ const NOTHING: Pile = {
   setAside: [],
 };
 
-export function ReconcileView({ revision: outerRevision }: { revision: number }) {
+export function ReconcileView({
+  revision: outerRevision,
+}: {
+  revision: number;
+}) {
   const api = useFinanceApi();
   const dialogs = useDialogs();
   const [statements, setStatements] = useState<BankStatement[]>([]);
@@ -90,8 +117,14 @@ export function ReconcileView({ revision: outerRevision }: { revision: number })
         // of them for an instant after every confirm.
         const [suggestions, settled, setAside] = await Promise.all([
           api.bankSuggestions(narrow),
-          api.bankLines({ ...(narrow === undefined ? {} : { statement: narrow }), status: "matched" }),
-          api.bankLines({ ...(narrow === undefined ? {} : { statement: narrow }), status: "ignored" }),
+          api.bankLines({
+            ...(narrow === undefined ? {} : { statement: narrow }),
+            status: "matched",
+          }),
+          api.bankLines({
+            ...(narrow === undefined ? {} : { statement: narrow }),
+            status: "ignored",
+          }),
         ]);
         if (live) {
           setPile({ suggestions, settled, setAside });
@@ -110,12 +143,21 @@ export function ReconcileView({ revision: outerRevision }: { revision: number })
 
   /** Attributes a line to a document. `amountCents` is the line's own: one line
    *  settles one document, and the server compares rather than believes. */
-  async function match(line: BankLine, invoiceId: string, ruleId?: string | null) {
+  async function match(
+    line: BankLine,
+    invoiceId: string,
+    ruleId?: string | null,
+  ) {
     setBusy(line.id);
     setError(null);
     setPickError(null);
     try {
-      await api.matchBankLine(line.id, invoiceId, line.amountCents, ruleId ?? null);
+      await api.matchBankLine(
+        line.id,
+        invoiceId,
+        line.amountCents,
+        ruleId ?? null,
+      );
       setPicking(null);
       reload();
       return true;
@@ -185,7 +227,12 @@ export function ReconcileView({ revision: outerRevision }: { revision: number })
 
   const { suggestions, settled, setAside } = pile;
 
-  if (loading && suggestions.lines.length === 0 && settled.length === 0 && setAside.length === 0) {
+  if (
+    loading &&
+    suggestions.lines.length === 0 &&
+    settled.length === 0 &&
+    setAside.length === 0
+  ) {
     return (
       <div className={styles.page}>
         <Spinner size={20} />
@@ -195,25 +242,26 @@ export function ReconcileView({ revision: outerRevision }: { revision: number })
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
+      <Toolbar label={strings.financeBankFilters}>
         <label className={styles.periodField}>
           {strings.financeBankStatement}
-          <select
-            className={styles.periodInput}
+          {/* "Every statement" is an answer somebody must be able to return
+              to, so it stays choosable. */}
+          <Select
             value={statement}
+            placeholder={strings.financeBankAllStatements}
             onChange={(e) => setStatement(e.target.value)}
           >
-            <option value="">{strings.financeBankAllStatements}</option>
             {statements.map((one) => (
               <option key={one.id} value={one.id}>
                 {`${one.accountIban} · ${dayLabel(one.fromDate, "—")} – ${dayLabel(one.toDate, "—")}`}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
-        <span className={styles.toolbarSpacer} />
+        <ToolbarSpacer />
         {loading && <Spinner size={16} />}
-      </div>
+      </Toolbar>
 
       {error !== null && <ErrorBanner message={error} />}
       {/* Never silent about a short list: a bookkeeper who sees five lines and
@@ -237,16 +285,24 @@ export function ReconcileView({ revision: outerRevision }: { revision: number })
             {suggestions.lines.map((entry) => (
               <li key={entry.line.id} className={styles.lineCard}>
                 <div className={styles.lineFacts}>
-                  <span className={styles.lineDay}>{dayLabel(entry.line.bookedOn, "—")}</span>
+                  <span className={styles.lineDay}>
+                    {dayLabel(entry.line.bookedOn, "—")}
+                  </span>
                   <span className={styles.lineWho}>
-                    {entry.line.counterpartyName ?? strings.financeBankNoCounterparty}
+                    {entry.line.counterpartyName ??
+                      strings.financeBankNoCounterparty}
                     {entry.line.counterpartyIban !== null && (
-                      <span className={styles.subtle}>{entry.line.counterpartyIban}</span>
+                      <span className={styles.subtle}>
+                        {entry.line.counterpartyIban}
+                      </span>
                     )}
                   </span>
-                  {entry.line.remittance !== null && entry.line.remittance !== "" && (
-                    <span className={styles.lineRemittance}>{entry.line.remittance}</span>
-                  )}
+                  {entry.line.remittance !== null &&
+                    entry.line.remittance !== "" && (
+                      <span className={styles.lineRemittance}>
+                        {entry.line.remittance}
+                      </span>
+                    )}
                   <span
                     className={cx(
                       styles.lineAmount,
@@ -259,15 +315,19 @@ export function ReconcileView({ revision: outerRevision }: { revision: number })
 
                 <div className={styles.lineGuesses}>
                   {entry.exact.map((exact) => (
-                    <div key={`exact-${exact.invoiceId}`} className={styles.guess}>
+                    <div
+                      key={`exact-${exact.invoiceId}`}
+                      className={styles.guess}
+                    >
                       <span className={styles.guessNumber}>
                         {exact.number}
-                        <span className={cx(styles.chip, styles.chip_good)}>
+                        <Badge tone="success">
                           {strings.financeBankCertain}
-                        </span>
+                        </Badge>
                       </span>
                       <span className={styles.guessWhy}>
-                        {strings.financeBankWhyNumberQuoted} · {strings.financeBankWhyWholeAmount}
+                        {strings.financeBankWhyNumberQuoted} ·{" "}
+                        {strings.financeBankWhyWholeAmount}
                       </span>
                       <Button
                         size="sm"
@@ -285,12 +345,16 @@ export function ReconcileView({ revision: outerRevision }: { revision: number })
                       likely={likely}
                       currency={entry.line.currency}
                       disabled={busy !== null}
-                      onPick={() => void match(entry.line, likely.invoiceId, likely.ruleId)}
+                      onPick={() =>
+                        void match(entry.line, likely.invoiceId, likely.ruleId)
+                      }
                     />
                   ))}
 
                   {entry.exact.length === 0 && entry.likely.length === 0 && (
-                    <p className={styles.guessNone}>{strings.financeBankNoGuess}</p>
+                    <p className={styles.guessNone}>
+                      {strings.financeBankNoGuess}
+                    </p>
                   )}
 
                   <div className={styles.rowActions}>
@@ -324,6 +388,7 @@ export function ReconcileView({ revision: outerRevision }: { revision: number })
       {settled.length > 0 && (
         <Settled
           title={strings.financeBankSettledTitle}
+          tableLabel={strings.financeBankSettledTable}
           note={strings.financeBankSettledNote}
           lines={settled}
           busy={busy}
@@ -335,6 +400,7 @@ export function ReconcileView({ revision: outerRevision }: { revision: number })
       {setAside.length > 0 && (
         <Settled
           title={strings.financeBankSetAsideTitle}
+          tableLabel={strings.financeBankSetAsideTable}
           note={strings.financeBankSetAsideNote}
           lines={setAside}
           busy={busy}
@@ -352,7 +418,9 @@ export function ReconcileView({ revision: outerRevision }: { revision: number })
             setPicking(null);
             setPickError(null);
           }}
-          onPick={(invoice: BillingInvoiceSummary) => void match(picking, invoice.id)}
+          onPick={(invoice: BillingInvoiceSummary) =>
+            void match(picking, invoice.id)
+          }
         />
       )}
     </div>
@@ -382,7 +450,9 @@ function Guess({
       <span className={styles.guessNumber}>
         {likely.number}
         <span className={styles.subtle}>
-          {strings.financeBankStillOwedIs(amountLabel(likely.outstandingCents, currency))}
+          {strings.financeBankStillOwedIs(
+            amountLabel(likely.outstandingCents, currency),
+          )}
         </span>
       </span>
       <span className={styles.guessWhy}>{why.join(" · ")}</span>
@@ -396,6 +466,7 @@ function Guess({
 /** A list of lines nobody has to look at again, and the undo beside each. */
 function Settled({
   title,
+  tableLabel,
   note,
   lines,
   busy,
@@ -403,6 +474,10 @@ function Settled({
   onUndo,
 }: {
   title: string;
+  /** What the rows are, for the table's own name. Deliberately not `title`:
+   *  the heading says which part of the pile this is, and two tables on one
+   *  screen have to be told apart by something a screen reader can hear. */
+  tableLabel: string;
   note: string;
   lines: BankLine[];
   busy: string | null;
@@ -413,54 +488,52 @@ function Settled({
     <section className={styles.section}>
       <h2 className={styles.sectionTitle}>{title}</h2>
       <p className={styles.sectionNote}>{note}</p>
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th scope="col">{strings.financeBankBookedOn}</th>
-              <th scope="col">{strings.financeBankCounterparty}</th>
-              <th scope="col">{strings.financeBankRemittance}</th>
-              <th scope="col" className={styles.numeric}>
-                {strings.financeGross}
-              </th>
-              <th scope="col">{strings.financeStatus}</th>
-              <th scope="col" aria-label={strings.financeActions} />
+      <Table label={tableLabel}>
+        <thead>
+          <tr>
+            <Th>{strings.financeBankBookedOn}</Th>
+            <Th>{strings.financeBankCounterparty}</Th>
+            <Th>{strings.financeBankRemittance}</Th>
+            <Th numeric>{strings.financeGross}</Th>
+            <Th>{strings.financeStatus}</Th>
+            <Th hideLabel>{strings.financeActions}</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {lines.map((line) => (
+            <tr key={line.id}>
+              <Td>{dayLabel(line.bookedOn, "—")}</Td>
+              <Td>
+                {line.counterpartyName ?? strings.financeBankNoCounterparty}
+              </Td>
+              <Td className={styles.muted}>
+                {line.remittance ?? ""}
+                {line.ignoredReason !== null && line.ignoredReason !== "" && (
+                  <span className={styles.subtle}>{line.ignoredReason}</span>
+                )}
+              </Td>
+              <Td numeric>{amountLabel(line.amountCents, line.currency)}</Td>
+              <Td>
+                <Badge tone={BADGE_TONE[lineStatusTone(line.status)]}>
+                  {lineStatusLabel(line.status)}
+                </Badge>
+              </Td>
+              <Td>
+                <div className={styles.rowActions}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={busy !== null}
+                    onClick={() => onUndo(line)}
+                  >
+                    {undoLabel}
+                  </Button>
+                </div>
+              </Td>
             </tr>
-          </thead>
-          <tbody>
-            {lines.map((line) => (
-              <tr key={line.id}>
-                <td>{dayLabel(line.bookedOn, "—")}</td>
-                <td>{line.counterpartyName ?? strings.financeBankNoCounterparty}</td>
-                <td className={styles.muted}>
-                  {line.remittance ?? ""}
-                  {line.ignoredReason !== null && line.ignoredReason !== "" && (
-                    <span className={styles.subtle}>{line.ignoredReason}</span>
-                  )}
-                </td>
-                <td className={styles.numeric}>{amountLabel(line.amountCents, line.currency)}</td>
-                <td>
-                  <span className={cx(styles.chip, styles[`chip_${lineStatusTone(line.status)}`])}>
-                    {lineStatusLabel(line.status)}
-                  </span>
-                </td>
-                <td>
-                  <div className={styles.rowActions}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={busy !== null}
-                      onClick={() => onUndo(line)}
-                    >
-                      {undoLabel}
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </Table>
     </section>
   );
 }

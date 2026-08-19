@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Banknote, Inbox } from "lucide-react";
 
-import { Button, Spinner, useDialogs } from "../ds";
+import { Button, Spinner, Table, Td, Th, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
 import { amountLabel, dayLabel, methodLabel, momentLabel } from "./format";
@@ -130,78 +130,78 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
             body={strings.financeWaitingEmptyBody}
           />
         ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th scope="col">{strings.financePerson}</th>
-                  <th scope="col">{strings.financeSpentOn}</th>
-                  <th scope="col">{strings.financeMerchant}</th>
-                  <th scope="col">{strings.financeCategory}</th>
-                  <th scope="col">{strings.financeMethod}</th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.financeGross}
-                  </th>
-                  <th scope="col">{strings.financeSubmittedAt}</th>
-                  <th scope="col" aria-label={strings.financeActions} />
+          <Table label={strings.financePendingClaimsTable}>
+            <thead>
+              <tr>
+                <Th>{strings.financePerson}</Th>
+                <Th>{strings.financeSpentOn}</Th>
+                <Th>{strings.financeMerchant}</Th>
+                <Th>{strings.financeCategory}</Th>
+                <Th>{strings.financeMethod}</Th>
+                <Th numeric>{strings.financeGross}</Th>
+                <Th>{strings.financeSubmittedAt}</Th>
+                <Th hideLabel>{strings.financeActions}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {waiting.map((claim) => (
+                <tr key={claim.id}>
+                  <Td>{claim.userEmail}</Td>
+                  <Td>{dayLabel(claim.spentOn)}</Td>
+                  <Td>
+                    {claim.merchant === "" ? (
+                      <span className={styles.muted}>
+                        {strings.financeNoMerchant}
+                      </span>
+                    ) : (
+                      claim.merchant
+                    )}
+                    {claim.description !== "" && (
+                      <span className={styles.subtle}>{claim.description}</span>
+                    )}
+                  </Td>
+                  <Td className={styles.muted}>
+                    {claim.categoryName ?? strings.financeUncategorised}
+                  </Td>
+                  <Td className={styles.muted}>{methodLabel(claim.method)}</Td>
+                  <Td numeric>
+                    {amountLabel(claim.grossCents, claim.currency)}
+                    {claim.vatCents !== 0 && (
+                      <span className={styles.subtle}>
+                        {strings.financeOfWhichVat(
+                          amountLabel(claim.vatCents, claim.currency),
+                        )}
+                      </span>
+                    )}
+                  </Td>
+                  <Td className={styles.muted}>
+                    {claim.submittedAt === null
+                      ? ""
+                      : momentLabel(claim.submittedAt)}
+                  </Td>
+                  <Td>
+                    <div className={styles.rowActions}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={busy !== null}
+                        onClick={() => void reject(claim)}
+                      >
+                        {strings.financeReject}
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={busy !== null}
+                        onClick={() => void approve(claim)}
+                      >
+                        {strings.financeApprove}
+                      </Button>
+                    </div>
+                  </Td>
                 </tr>
-              </thead>
-              <tbody>
-                {waiting.map((claim) => (
-                  <tr key={claim.id}>
-                    <td>{claim.userEmail}</td>
-                    <td>{dayLabel(claim.spentOn)}</td>
-                    <td>
-                      {claim.merchant === "" ? (
-                        <span className={styles.muted}>{strings.financeNoMerchant}</span>
-                      ) : (
-                        claim.merchant
-                      )}
-                      {claim.description !== "" && (
-                        <span className={styles.subtle}>{claim.description}</span>
-                      )}
-                    </td>
-                    <td className={styles.muted}>
-                      {claim.categoryName ?? strings.financeUncategorised}
-                    </td>
-                    <td className={styles.muted}>{methodLabel(claim.method)}</td>
-                    <td className={styles.numeric}>
-                      {amountLabel(claim.grossCents, claim.currency)}
-                      {claim.vatCents !== 0 && (
-                        <span className={styles.subtle}>
-                          {strings.financeOfWhichVat(
-                            amountLabel(claim.vatCents, claim.currency),
-                          )}
-                        </span>
-                      )}
-                    </td>
-                    <td className={styles.muted}>
-                      {claim.submittedAt === null ? "" : momentLabel(claim.submittedAt)}
-                    </td>
-                    <td>
-                      <div className={styles.rowActions}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          disabled={busy !== null}
-                          onClick={() => void reject(claim)}
-                        >
-                          {strings.financeReject}
-                        </Button>
-                        <Button
-                          size="sm"
-                          disabled={busy !== null}
-                          onClick={() => void approve(claim)}
-                        >
-                          {strings.financeApprove}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </Table>
         )}
       </section>
 
@@ -215,57 +215,59 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
             body={strings.financeOwedEmptyBody}
           />
         ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th scope="col">{strings.financePerson}</th>
-                  <th scope="col">{strings.financeSpentOn}</th>
-                  <th scope="col">{strings.financeMerchant}</th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.financeGross}
-                  </th>
-                  <th scope="col">{strings.financeApprovedAt}</th>
-                  <th scope="col" aria-label={strings.financeActions} />
+          <Table label={strings.financeOwedClaimsTable}>
+            <thead>
+              <tr>
+                <Th>{strings.financePerson}</Th>
+                <Th>{strings.financeSpentOn}</Th>
+                <Th>{strings.financeMerchant}</Th>
+                <Th numeric>{strings.financeGross}</Th>
+                <Th>{strings.financeApprovedAt}</Th>
+                <Th hideLabel>{strings.financeActions}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {owed.map((claim) => (
+                <tr key={claim.id}>
+                  <Td>{claim.userEmail}</Td>
+                  <Td>{dayLabel(claim.spentOn)}</Td>
+                  <Td>
+                    {claim.merchant === "" ? (
+                      <span className={styles.muted}>
+                        {strings.financeNoMerchant}
+                      </span>
+                    ) : (
+                      claim.merchant
+                    )}
+                    {claim.decisionNote !== "" && (
+                      <span className={styles.subtle}>
+                        {claim.decisionNote}
+                      </span>
+                    )}
+                  </Td>
+                  <Td numeric>
+                    {amountLabel(claim.grossCents, claim.currency)}
+                  </Td>
+                  <Td className={styles.muted}>
+                    {claim.decidedAt === null
+                      ? ""
+                      : momentLabel(claim.decidedAt)}
+                  </Td>
+                  <Td>
+                    <div className={styles.rowActions}>
+                      <Button
+                        size="sm"
+                        disabled={busy !== null}
+                        onClick={() => setPaying(claim)}
+                      >
+                        {strings.financeMarkPaidBack}
+                      </Button>
+                    </div>
+                  </Td>
                 </tr>
-              </thead>
-              <tbody>
-                {owed.map((claim) => (
-                  <tr key={claim.id}>
-                    <td>{claim.userEmail}</td>
-                    <td>{dayLabel(claim.spentOn)}</td>
-                    <td>
-                      {claim.merchant === "" ? (
-                        <span className={styles.muted}>{strings.financeNoMerchant}</span>
-                      ) : (
-                        claim.merchant
-                      )}
-                      {claim.decisionNote !== "" && (
-                        <span className={styles.subtle}>{claim.decisionNote}</span>
-                      )}
-                    </td>
-                    <td className={styles.numeric}>
-                      {amountLabel(claim.grossCents, claim.currency)}
-                    </td>
-                    <td className={styles.muted}>
-                      {claim.decidedAt === null ? "" : momentLabel(claim.decidedAt)}
-                    </td>
-                    <td>
-                      <div className={styles.rowActions}>
-                        <Button
-                          size="sm"
-                          disabled={busy !== null}
-                          onClick={() => setPaying(claim)}
-                        >
-                          {strings.financeMarkPaidBack}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </Table>
         )}
       </section>
 

@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Hourglass } from "lucide-react";
 
+import { Select, Table, Td, Th } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
 import { amountLabel, dayLabel, today } from "./format";
@@ -63,20 +64,24 @@ export function AgedReportView() {
         onForm={setForm}
         onApply={setOn}
         onDownload={() =>
-          csv.download(() => api.agedReportCsv(on, side), `aged-${side}-${on}.csv`)
+          csv.download(
+            () => api.agedReportCsv(on, side),
+            `aged-${side}-${on}.csv`,
+          )
         }
       >
         {/* Which side, said in the toolbar rather than assumed. */}
         <label className={styles.periodField}>
           {strings.financeReportSide}
-          <select
-            className={styles.select}
+          <Select
             value={side}
             onChange={(e) => setSide(e.target.value as AgedSide)}
           >
-            <option value="receivable">{strings.financeReportReceivable}</option>
+            <option value="receivable">
+              {strings.financeReportReceivable}
+            </option>
             <option value="payable">{strings.financeReportPayable}</option>
-          </select>
+          </Select>
         </label>
       </DayToolbar>
 
@@ -86,7 +91,9 @@ export function AgedReportView() {
 
       {/* Money that is in no band, counted rather than quietly dropped. */}
       {report !== null && report.unconvertedCount > 0 && (
-        <ErrorBanner message={strings.financeReportUnconverted(report.unconvertedCount)} />
+        <ErrorBanner
+          message={strings.financeReportUnconverted(report.unconvertedCount)}
+        />
       )}
 
       {report !== null && report.parties.length === 0 && !loading ? (
@@ -101,64 +108,53 @@ export function AgedReportView() {
         />
       ) : (
         report !== null && (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <caption className={styles.srOnly}>
-                {side === "receivable"
-                  ? strings.financeReportReceivable
-                  : strings.financeReportPayable}
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">{strings.financeReportParty}</th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.financeReportBandCurrent}
-                  </th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.financeReportBand1To30}
-                  </th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.financeReportBand31To60}
-                  </th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.financeReportBand61To90}
-                  </th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.financeReportBand90Plus}
-                  </th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.financeReportTotal}
-                  </th>
+          <Table
+            label={
+              side === "receivable"
+                ? strings.financeReportReceivable
+                : strings.financeReportPayable
+            }
+          >
+            <thead>
+              <tr>
+                <Th>{strings.financeReportParty}</Th>
+                <Th numeric>{strings.financeReportBandCurrent}</Th>
+                <Th numeric>{strings.financeReportBand1To30}</Th>
+                <Th numeric>{strings.financeReportBand31To60}</Th>
+                <Th numeric>{strings.financeReportBand61To90}</Th>
+                <Th numeric>{strings.financeReportBand90Plus}</Th>
+                <Th numeric>{strings.financeReportTotal}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {report.parties.map((party) => (
+                <tr key={party.partyId}>
+                  <Td>
+                    {party.name}
+                    {/* What is behind the bands: the oldest document is the
+                        one somebody is about to be asked about. */}
+                    <span className={styles.subtle}>
+                      {strings.financeReportOpenDocuments(
+                        party.documents.length,
+                      )}
+                      {party.documents.length > 0 &&
+                        ` · ${party.documents[0]?.number ?? ""} ${dayLabel(
+                          party.documents[0]?.dueDate ?? null,
+                          "",
+                        )}`}
+                    </span>
+                  </Td>
+                  <Bands buckets={party.buckets} currency={report.currency} />
                 </tr>
-              </thead>
-              <tbody>
-                {report.parties.map((party) => (
-                  <tr key={party.partyId}>
-                    <td>
-                      {party.name}
-                      {/* What is behind the bands: the oldest document is the
-                          one somebody is about to be asked about. */}
-                      <span className={styles.subtle}>
-                        {strings.financeReportOpenDocuments(party.documents.length)}
-                        {party.documents.length > 0 &&
-                          ` · ${party.documents[0]?.number ?? ""} ${dayLabel(
-                            party.documents[0]?.dueDate ?? null,
-                            "",
-                          )}`}
-                      </span>
-                    </td>
-                    <Bands buckets={party.buckets} currency={report.currency} />
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row">{strings.financeReportTotal}</th>
-                  <Bands buckets={report.buckets} currency={report.currency} />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <Th scope="row">{strings.financeReportTotal}</Th>
+                <Bands buckets={report.buckets} currency={report.currency} />
+              </tr>
+            </tfoot>
+          </Table>
         )
       )}
     </div>
@@ -166,7 +162,13 @@ export function AgedReportView() {
 }
 
 /** The five bands and their total, as the six numeric cells of a row. */
-function Bands({ buckets, currency }: { buckets: AgedBuckets; currency: string }) {
+function Bands({
+  buckets,
+  currency,
+}: {
+  buckets: AgedBuckets;
+  currency: string;
+}) {
   return (
     <>
       {[
@@ -177,9 +179,9 @@ function Bands({ buckets, currency }: { buckets: AgedBuckets; currency: string }
         buckets.d90_plusCents,
         buckets.totalCents,
       ].map((cents, index) => (
-        <td key={index} className={styles.numeric}>
+        <Td key={index} numeric>
           {amountLabel(cents, currency)}
-        </td>
+        </Td>
       ))}
     </>
   );

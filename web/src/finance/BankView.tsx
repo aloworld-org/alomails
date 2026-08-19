@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Landmark, Upload } from "lucide-react";
 
-import { Button, Spinner } from "../ds";
+import { Button, Spinner, Table, Td, Th, Toolbar, ToolbarSpacer } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
 import { BankImportDialog } from "./BankImportDialog";
@@ -56,13 +56,13 @@ export function BankView({ onImported }: { onImported: () => void }) {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <span className={styles.toolbarSpacer} />
+      <Toolbar label={strings.financeTabBank}>
+        <ToolbarSpacer />
         {loading && <Spinner size={16} />}
         <Button onClick={() => setImporting(true)}>
           <Upload size={16} /> {strings.financeBankImportStatement}
         </Button>
-      </div>
+      </Toolbar>
 
       {error !== null && <ErrorBanner message={error} />}
       {/* What the commit actually did, in the server's own counts. The
@@ -80,50 +80,55 @@ export function BankView({ onImported }: { onImported: () => void }) {
           onCta={() => setImporting(true)}
         />
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <thead>
-              <tr>
-                <th scope="col">{strings.financeBankPeriod}</th>
-                <th scope="col">{strings.financeBankAccount}</th>
-                <th scope="col">{strings.financeBankFormat}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.financeBankLines}
-                </th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.financeBankClosingBalance}
-                </th>
-                <th scope="col">{strings.financeBankImportedAt}</th>
+        <Table label={strings.financeStatementsTable}>
+          <thead>
+            <tr>
+              <Th>{strings.financeBankPeriod}</Th>
+              <Th>{strings.financeBankAccount}</Th>
+              <Th>{strings.financeBankFormat}</Th>
+              <Th numeric>{strings.financeBankLines}</Th>
+              <Th numeric>{strings.financeBankClosingBalance}</Th>
+              <Th>{strings.financeBankImportedAt}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {statements.map((statement) => (
+              <tr key={statement.id}>
+                <Td>
+                  {dayLabel(statement.fromDate, "—")} –{" "}
+                  {dayLabel(statement.toDate, "—")}
+                  {statement.statementRef !== null &&
+                    statement.statementRef !== "" && (
+                      <span className={styles.subtle}>
+                        {statement.statementRef}
+                      </span>
+                    )}
+                </Td>
+                <Td>
+                  {statement.accountIban}
+                  <span className={styles.subtle}>{statement.currency}</span>
+                </Td>
+                <Td className={styles.muted}>
+                  {sourceLabel(statement.source)}
+                </Td>
+                <Td numeric>{statement.lineCount}</Td>
+                <Td numeric>
+                  {statement.closingBalanceCents === null ? (
+                    <span className={styles.muted}>{strings.financeNoVat}</span>
+                  ) : (
+                    amountLabel(
+                      statement.closingBalanceCents,
+                      statement.currency,
+                    )
+                  )}
+                </Td>
+                <Td className={styles.muted}>
+                  {momentLabel(statement.importedAt)}
+                </Td>
               </tr>
-            </thead>
-            <tbody>
-              {statements.map((statement) => (
-                <tr key={statement.id}>
-                  <td>
-                    {dayLabel(statement.fromDate, "—")} – {dayLabel(statement.toDate, "—")}
-                    {statement.statementRef !== null && statement.statementRef !== "" && (
-                      <span className={styles.subtle}>{statement.statementRef}</span>
-                    )}
-                  </td>
-                  <td>
-                    {statement.accountIban}
-                    <span className={styles.subtle}>{statement.currency}</span>
-                  </td>
-                  <td className={styles.muted}>{sourceLabel(statement.source)}</td>
-                  <td className={styles.numeric}>{statement.lineCount}</td>
-                  <td className={styles.numeric}>
-                    {statement.closingBalanceCents === null ? (
-                      <span className={styles.muted}>{strings.financeNoVat}</span>
-                    ) : (
-                      amountLabel(statement.closingBalanceCents, statement.currency)
-                    )}
-                  </td>
-                  <td className={styles.muted}>{momentLabel(statement.importedAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </Table>
       )}
 
       {importing && (

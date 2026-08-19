@@ -20,7 +20,17 @@ import { useCallback, useEffect, useState } from "react";
 import { BookOpen, Plus } from "lucide-react";
 
 import { yearOf, type Period } from "../billing";
-import { Button, Spinner, cx } from "../ds";
+import {
+  Button,
+  Checkbox,
+  Input,
+  Spinner,
+  Table,
+  Td,
+  Th,
+  Toolbar,
+  ToolbarSpacer,
+} from "../ds";
 import { strings } from "../i18n";
 import { AccountDialog } from "./AccountDialog";
 import { financeMessage, useFinanceApi } from "./api";
@@ -31,7 +41,13 @@ import styles from "./FinanceModule.module.css";
 
 /** The five kinds in the order a chart is laid out — assets first, because that
  *  is the order every printed chart in Europe is read in. */
-const SECTIONS: AccountType[] = ["asset", "liability", "equity", "income", "expense"];
+const SECTIONS: AccountType[] = [
+  "asset",
+  "liability",
+  "equity",
+  "income",
+  "expense",
+];
 
 /** What is being edited: an existing account, or the new one being added. */
 type Editing = { account: ChartAccount | null };
@@ -56,7 +72,11 @@ export function AccountsView() {
     setLoading(true);
     void (async () => {
       try {
-        const read = await api.chart({ includeInactive, from: period.from, to: period.to });
+        const read = await api.chart({
+          includeInactive,
+          from: period.from,
+          to: period.to,
+        });
         if (live) {
           setChart(read);
           setError(null);
@@ -115,60 +135,58 @@ export function AccountsView() {
   return (
     <div className={styles.page}>
       <form
-        className={styles.toolbar}
         onSubmit={(e) => {
           e.preventDefault();
           setPeriod(form);
         }}
       >
-        <label className={styles.periodField}>
-          {strings.financeReportFrom}
-          <input
-            className={styles.periodInput}
-            type="date"
-            value={form.from}
-            onChange={(e) => setForm({ ...form, from: e.target.value })}
-            required
-          />
-        </label>
-        <label className={styles.periodField}>
-          {strings.financeReportTo}
-          <input
-            className={styles.periodInput}
-            type="date"
-            value={form.to}
-            onChange={(e) => setForm({ ...form, to: e.target.value })}
-            required
-          />
-        </label>
-        <Button type="submit" variant="ghost">
-          {strings.financeReportShow}
-        </Button>
-        <label className={styles.periodField}>
-          <input
-            type="checkbox"
+        <Toolbar label={strings.financeChartFilters}>
+          <label className={styles.periodField}>
+            {strings.financeReportFrom}
+            <Input
+              type="date"
+              value={form.from}
+              onChange={(e) => setForm({ ...form, from: e.target.value })}
+              required
+            />
+          </label>
+          <label className={styles.periodField}>
+            {strings.financeReportTo}
+            <Input
+              type="date"
+              value={form.to}
+              onChange={(e) => setForm({ ...form, to: e.target.value })}
+              required
+            />
+          </label>
+          <Button type="submit" variant="ghost">
+            {strings.financeReportShow}
+          </Button>
+          <Checkbox
             checked={includeInactive}
-            onChange={(e) => setIncludeInactive(e.target.checked)}
+            onChange={setIncludeInactive}
+            label={strings.financeAccountShowRetired}
           />
-          {strings.financeAccountShowRetired}
-        </label>
-        <span className={styles.toolbarSpacer} />
-        {loading && <Spinner size={16} />}
-        <Button
-          onClick={() => {
-            setDialogError(null);
-            setEditing({ account: null });
-          }}
-        >
-          <Plus size={16} /> {strings.financeAccountAdd}
-        </Button>
+          <ToolbarSpacer />
+          {loading && <Spinner size={16} />}
+          <Button
+            onClick={() => {
+              setDialogError(null);
+              setEditing({ account: null });
+            }}
+          >
+            <Plus size={16} /> {strings.financeAccountAdd}
+          </Button>
+        </Toolbar>
       </form>
 
       {error !== null && <ErrorBanner message={error} />}
 
       {/* Where twenty accounts nobody typed came from, said once, on the read
           that wrote them. */}
-      {chart?.seeded === true && <p className={styles.notice}>{strings.financeChartSeeded}</p>}
+      {chart?.seeded === true && (
+        <p className={styles.notice}>{strings.financeChartSeeded}</p>
+      )}
 
       {accounts.length === 0 && !loading ? (
         <EmptyState
@@ -188,68 +206,75 @@ export function AccountsView() {
           return (
             <section key={kind} className={styles.section}>
               <h2 className={styles.sectionTitle}>{accountTypeLabel(kind)}</h2>
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th scope="col">{strings.financeAccountCode}</th>
-                      <th scope="col">{strings.financeAccountName}</th>
-                      <th scope="col">{strings.financeAccountRole}</th>
-                      <th scope="col" className={styles.numeric}>
-                        {strings.financeAccountMovement}
-                      </th>
-                      <th scope="col" className={styles.numeric}>
-                        {strings.financeAccountPostings}
-                      </th>
-                      <th scope="col">
-                        <span className={styles.srOnly}>{strings.financeAccountEdit}</span>
-                      </th>
+              {/* Named by its own kind: five tables on one screen are told
+                  apart by nothing but the eye until each says what it lists.
+                  Not the heading repeated — the heading says which part of the
+                  chart, and the table's name says what its rows are. */}
+              <Table
+                label={strings.financeChartTableOf(accountTypeLabel(kind))}
+              >
+                <thead>
+                  <tr>
+                    <Th>{strings.financeAccountCode}</Th>
+                    <Th>{strings.financeAccountName}</Th>
+                    <Th>{strings.financeAccountRole}</Th>
+                    <Th numeric>{strings.financeAccountMovement}</Th>
+                    <Th numeric>{strings.financeAccountPostings}</Th>
+                    <Th hideLabel>{strings.financeAccountEdit}</Th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((account) => (
+                    <tr
+                      key={account.id}
+                      className={account.active ? undefined : styles.declined}
+                    >
+                      <Td>{account.code}</Td>
+                      <Td>
+                        {account.name}
+                        {!account.active && (
+                          <span className={styles.subtle}>
+                            {strings.financeAccountRetired}
+                          </span>
+                        )}
+                      </Td>
+                      <Td className={styles.muted}>
+                        {account.role === null ? (
+                          <span className={styles.muted}>
+                            {strings.financeNoVat}
+                          </span>
+                        ) : (
+                          accountRoleLabel(account.role)
+                        )}
+                      </Td>
+                      <Td numeric>
+                        {account.balanceCents === null || currency === null ? (
+                          <span className={styles.muted}>
+                            {strings.financeNoVat}
+                          </span>
+                        ) : (
+                          amountLabel(account.balanceCents, currency)
+                        )}
+                      </Td>
+                      <Td numeric className={styles.muted}>
+                        {account.postings ?? ""}
+                      </Td>
+                      <Td className={styles.rowActions}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDialogError(null);
+                            setEditing({ account });
+                          }}
+                        >
+                          {strings.financeAccountEdit}
+                        </Button>
+                      </Td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((account) => (
-                      <tr key={account.id} className={account.active ? undefined : styles.declined}>
-                        <td>{account.code}</td>
-                        <td>
-                          {account.name}
-                          {!account.active && (
-                            <span className={styles.subtle}>{strings.financeAccountRetired}</span>
-                          )}
-                        </td>
-                        <td className={styles.muted}>
-                          {account.role === null ? (
-                            <span className={styles.muted}>{strings.financeNoVat}</span>
-                          ) : (
-                            accountRoleLabel(account.role)
-                          )}
-                        </td>
-                        <td className={styles.numeric}>
-                          {account.balanceCents === null || currency === null ? (
-                            <span className={styles.muted}>{strings.financeNoVat}</span>
-                          ) : (
-                            amountLabel(account.balanceCents, currency)
-                          )}
-                        </td>
-                        <td className={cx(styles.numeric, styles.muted)}>
-                          {account.postings ?? ""}
-                        </td>
-                        <td className={styles.rowActions}>
-                          <button
-                            type="button"
-                            className={styles.linkAction}
-                            onClick={() => {
-                              setDialogError(null);
-                              setEditing({ account });
-                            }}
-                          >
-                            {strings.financeAccountEdit}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+              </Table>
             </section>
           );
         })

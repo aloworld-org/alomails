@@ -26,12 +26,16 @@
 import { useState } from "react";
 import { Landmark } from "lucide-react";
 
-import { Button } from "../ds";
+import { Button, Field, Input, Select, Table, Td, Th } from "../ds";
 import { strings } from "../i18n";
 import { BankImportRefused, financeMessage, useFinanceApi } from "./api";
 import { amountLabel, dayLabel, sourceLabel } from "./format";
-import { DialogFrame, ErrorBanner, Field } from "./parts";
-import type { BankCsvMapping, BankImportOptions, BankImportReport } from "./types";
+import { DialogFrame, ErrorBanner } from "./parts";
+import type {
+  BankCsvMapping,
+  BankImportOptions,
+  BankImportReport,
+} from "./types";
 import styles from "./FinanceModule.module.css";
 
 /** The mapping fields, in the order a person reads a bank export left to right:
@@ -168,7 +172,8 @@ export function BankImportDialog({
 
   const csv = report !== null && report.source === "csv";
   const columns = report?.columns ?? [];
-  const readable = report !== null && report.counts.lines > 0 && report.errors.length === 0;
+  const readable =
+    report !== null && report.counts.lines > 0 && report.errors.length === 0;
   // Which act the primary button performs. Anything but a fresh, readable
   // report means the next step is to look again, never to stage.
   const checking = report === null || stale || !readable;
@@ -181,36 +186,50 @@ export function BankImportDialog({
       error={error}
       busy={busy}
       canSubmit={file !== null}
-      submitLabel={checking ? strings.financeBankCheckFile : strings.financeBankImport}
+      submitLabel={
+        checking ? strings.financeBankCheckFile : strings.financeBankImport
+      }
       onClose={onClose}
       onSubmit={() => void (checking ? preview() : commit())}
     >
       <Field label={strings.financeBankFile} hint={strings.financeBankFileHint}>
-        <input
-          className={styles.input}
-          type="file"
-          onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
-        />
+        {(control) => (
+          <Input
+            {...control}
+            type="file"
+            onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
+          />
+        )}
       </Field>
 
       <div className={styles.row}>
-        <Field label={strings.financeBankAccount} hint={strings.financeBankAccountHint}>
-          <input
-            className={styles.input}
-            value={account}
-            onChange={(e) => setAccount(e.target.value)}
-            placeholder="DE02 1203 0000 0000 2020 51"
-            autoComplete="off"
-          />
+        <Field
+          label={strings.financeBankAccount}
+          hint={strings.financeBankAccountHint}
+        >
+          {(control) => (
+            <Input
+              {...control}
+              value={account}
+              onChange={(e) => setAccount(e.target.value)}
+              placeholder="DE02 1203 0000 0000 2020 51"
+              autoComplete="off"
+            />
+          )}
         </Field>
-        <Field label={strings.financeCurrency} hint={strings.financeBankCurrencyHint}>
-          <input
-            className={styles.input}
-            value={currency}
-            onChange={(e) => setCurrency(e.target.value.toUpperCase())}
-            maxLength={3}
-            autoComplete="off"
-          />
+        <Field
+          label={strings.financeCurrency}
+          hint={strings.financeBankCurrencyHint}
+        >
+          {(control) => (
+            <Input
+              {...control}
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+              maxLength={3}
+              autoComplete="off"
+            />
+          )}
         </Field>
       </div>
 
@@ -220,63 +239,87 @@ export function BankImportDialog({
 
           {csv && (
             <section className={styles.section}>
-              <h3 className={styles.sectionTitle}>{strings.financeBankMappingTitle}</h3>
-              <p className={styles.sectionNote}>{strings.financeBankMappingNote}</p>
+              <h3 className={styles.sectionTitle}>
+                {strings.financeBankMappingTitle}
+              </h3>
+              <p className={styles.sectionNote}>
+                {strings.financeBankMappingNote}
+              </p>
               <div className={styles.row}>
                 <Field label={strings.financeBankDates}>
-                  <select
-                    className={styles.select}
-                    value={dates}
-                    onChange={(e) => correct(() => setDates(e.target.value))}
-                  >
-                    {DATE_CONVENTIONS.map((convention) => (
-                      <option key={convention} value={convention}>
-                        {conventionLabel(convention)}
-                      </option>
-                    ))}
-                  </select>
+                  {(control) => (
+                    <Select
+                      {...control}
+                      fullWidth
+                      value={dates}
+                      onChange={(e) => correct(() => setDates(e.target.value))}
+                    >
+                      {DATE_CONVENTIONS.map((convention) => (
+                        <option key={convention} value={convention}>
+                          {conventionLabel(convention)}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
                 </Field>
                 <Field label={strings.financeBankDecimal}>
-                  <select
-                    className={styles.select}
-                    value={decimal}
-                    onChange={(e) => correct(() => setDecimal(e.target.value))}
-                  >
-                    {DECIMAL_CONVENTIONS.map((convention) => (
-                      <option key={convention} value={convention}>
-                        {conventionLabel(convention)}
-                      </option>
-                    ))}
-                  </select>
+                  {(control) => (
+                    <Select
+                      {...control}
+                      fullWidth
+                      value={decimal}
+                      onChange={(e) =>
+                        correct(() => setDecimal(e.target.value))
+                      }
+                    >
+                      {DECIMAL_CONVENTIONS.map((convention) => (
+                        <option key={convention} value={convention}>
+                          {conventionLabel(convention)}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
                 </Field>
               </div>
               <div className={styles.mappingGrid}>
                 {MAPPING_FIELDS.map((field) => (
                   <Field key={field.key} label={field.label()}>
-                    <select
-                      className={styles.select}
-                      value={mapping[field.key] ?? ""}
-                      onChange={(e) =>
-                        correct(() =>
-                          setMapping({
-                            ...mapping,
-                            [field.key]: e.target.value === "" ? null : e.target.value,
-                          }),
-                        )
-                      }
-                    >
-                      <option value="">{strings.financeBankColumnNone}</option>
-                      {columns.map((column) => (
-                        <option key={column} value={column}>
-                          {column}
-                        </option>
-                      ))}
-                    </select>
+                    {(control) => (
+                      // "This file has no such column" is an answer, not a
+                      // prompt: most exports leave several of the eleven empty.
+                      <Select
+                        {...control}
+                        fullWidth
+                        placeholder={strings.financeBankColumnNone}
+                        value={mapping[field.key] ?? ""}
+                        onChange={(e) =>
+                          correct(() =>
+                            setMapping({
+                              ...mapping,
+                              [field.key]:
+                                e.target.value === "" ? null : e.target.value,
+                            }),
+                          )
+                        }
+                      >
+                        {columns.map((column) => (
+                          <option key={column} value={column}>
+                            {column}
+                          </option>
+                        ))}
+                      </Select>
+                    )}
                   </Field>
                 ))}
               </div>
-              {stale && <p className={styles.sectionNote}>{strings.financeBankStale}</p>}
-              <Button variant="ghost" onClick={() => void preview()} disabled={busy}>
+              {stale && (
+                <p className={styles.sectionNote}>{strings.financeBankStale}</p>
+              )}
+              <Button
+                variant="ghost"
+                onClick={() => void preview()}
+                disabled={busy}
+              >
                 {strings.financeBankCheckAgain}
               </Button>
             </section>
@@ -284,7 +327,9 @@ export function BankImportDialog({
 
           {report.errors.length > 0 && (
             <section className={styles.section}>
-              <ErrorBanner message={strings.financeBankRowsRefused(report.errors.length)} />
+              <ErrorBanner
+                message={strings.financeBankRowsRefused(report.errors.length)}
+              />
               <ul className={styles.rowErrors}>
                 {report.errors.map((row, index) => (
                   <li key={`${row.line ?? "?"}-${index}`}>
@@ -317,7 +362,9 @@ function ReadingSummary({ report }: { report: BankImportReport }) {
       </div>
       <div>
         <dt>{strings.financeBankRows}</dt>
-        <dd>{strings.financeBankRowsRead(report.counts.lines, report.totalRows)}</dd>
+        <dd>
+          {strings.financeBankRowsRead(report.counts.lines, report.totalRows)}
+        </dd>
       </div>
       {report.counts.skipped > 0 && (
         <div>
@@ -341,7 +388,8 @@ function ReadingSummary({ report }: { report: BankImportReport }) {
         <div>
           <dt>{strings.financeBankPeriod}</dt>
           <dd>
-            {dayLabel(report.period.from, "—")} – {dayLabel(report.period.to, "—")}
+            {dayLabel(report.period.from, "—")} –{" "}
+            {dayLabel(report.period.to, "—")}
           </dd>
         </div>
       )}
@@ -365,34 +413,30 @@ function SamplePreview({ report }: { report: BankImportReport }) {
   return (
     <section className={styles.section}>
       <h3 className={styles.sectionTitle}>{strings.financeBankSampleTitle}</h3>
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th scope="col">{strings.financeBankBookedOn}</th>
-              <th scope="col">{strings.financeBankCounterparty}</th>
-              <th scope="col">{strings.financeBankRemittance}</th>
-              <th scope="col" className={styles.numeric}>
-                {strings.financeGross}
-              </th>
+      <Table label={strings.financeBankSampleTable}>
+        <thead>
+          <tr>
+            <Th>{strings.financeBankBookedOn}</Th>
+            <Th>{strings.financeBankCounterparty}</Th>
+            <Th>{strings.financeBankRemittance}</Th>
+            <Th numeric>{strings.financeGross}</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {report.sample.map((line, index) => (
+            <tr key={`${line.line ?? index}`}>
+              <Td>{dayLabel(line.bookedOn, "—")}</Td>
+              <Td>{line.counterpartyName ?? ""}</Td>
+              <Td className={styles.muted}>{line.remittance ?? ""}</Td>
+              <Td numeric>{amountLabel(line.amountCents, line.currency)}</Td>
             </tr>
-          </thead>
-          <tbody>
-            {report.sample.map((line, index) => (
-              <tr key={`${line.line ?? index}`}>
-                <td>{dayLabel(line.bookedOn, "—")}</td>
-                <td>{line.counterpartyName ?? ""}</td>
-                <td className={styles.muted}>{line.remittance ?? ""}</td>
-                <td className={styles.numeric}>
-                  {amountLabel(line.amountCents, line.currency)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </Table>
       {report.sampleTruncated && (
-        <p className={styles.sectionNote}>{strings.financeBankSampleTruncated}</p>
+        <p className={styles.sectionNote}>
+          {strings.financeBankSampleTruncated}
+        </p>
       )}
     </section>
   );

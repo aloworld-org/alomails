@@ -4560,6 +4560,22 @@ export const en = {
   moduleFinance: "Finance",
   financeTabExpenses: "Expenses",
   financeTabApprovals: "Approvals",
+  // The names `ds/Table` and `ds/Toolbar` require: a table is announced as
+  // "table, seven columns" and a row of controls as nothing at all until each
+  // says what it lists or acts on. Read, not drawn — every one of these screens
+  // already carries the heading a sighted reader needs.
+  financeClaimsTable: "Your claims",
+  financeClaimFilters: "Claim filters",
+  financeChartFilters: "Chart period",
+  financeStatementsTable: "Imported statements",
+  financeChartTableOf: (kind: string) => `Accounts — ${kind}`,
+  financePendingClaimsTable: "Claims to decide on",
+  financeOwedClaimsTable: "Claims to pay back",
+  financeBankSampleTable: "Sample transactions",
+  financeBankSettledTable: "Matched bank lines",
+  financeBankSetAsideTable: "Bank lines set aside",
+  financeBankFilters: "Statement filter",
+  financeReportPeriod: "Report period",
   financeLoadFailed: "Your expense claims could not be loaded.",
   financeSaveFailed: "The change could not be saved.",
   financeCancel: "Cancel",

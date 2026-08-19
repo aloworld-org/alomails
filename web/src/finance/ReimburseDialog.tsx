@@ -12,12 +12,12 @@
 import { useState } from "react";
 import { Banknote } from "lucide-react";
 
+import { Field, Input } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
 import { amountLabel, today } from "./format";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import type { PendingExpense } from "./types";
-import styles from "./FinanceModule.module.css";
 
 export function ReimburseDialog({
   claim,
@@ -61,14 +61,19 @@ export function ReimburseDialog({
       onClose={onClose}
       onSubmit={() => void pay()}
     >
-      <Field label={strings.financeReimbursedOn} hint={strings.financeReimbursedOnHint}>
-        <input
-          className={styles.input}
-          type="date"
-          value={day}
-          onChange={(e) => setDay(e.target.value)}
-          required
-        />
+      <Field
+        label={strings.financeReimbursedOn}
+        hint={strings.financeReimbursedOnHint}
+      >
+        {(control) => (
+          <Input
+            {...control}
+            type="date"
+            value={day}
+            onChange={(e) => setDay(e.target.value)}
+            required
+          />
+        )}
       </Field>
     </DialogFrame>
   );

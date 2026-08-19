@@ -1,8 +1,15 @@
-/* The Finance module's own styles. The claims list, the approver's queues and
+/* The Finance module's own layout. The claims list, the approver's queues and
    the claim form read as Billing's, CRM's and Projects' screens, because they
    are the same kind of screen — a table of records and a modal that edits one.
    Tokens only: no literal colour that is not a token lives here, so a theme
-   change reaches this module without touching it. */
+   change reaches this module without touching it.
+
+   Since D2.07b that likeness is a shared component rather than a shared habit:
+   the table, the toolbar, the dialog, the field, the text box, the dropdown and
+   the state chip are all `ds/`, and the rules that drew them here are gone. What
+   is left is this module's own — where a screen's sections sit, what a bank line
+   and its guesses look like beside each other, and the one control the design
+   system has no answer for yet. */
 
 .finance {
   display: flex;
@@ -58,16 +65,6 @@
   overflow: auto;
 }
 
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
-}
-.toolbarSpacer {
-  flex: 1;
-}
-
 /* Two lists on the approver's screen — what is waiting, and what is owed. Each
    keeps its own heading, because "approve" and "pay" are different acts and a
    single table of both would invite doing one while meaning the other. */
@@ -89,41 +86,8 @@
   max-width: 70ch;
 }
 
-/* ---- tables ---------------------------------------------------------- */
+/* ---- what a row of a table still carries ------------------------------ */
 
-.tableWrap {
-  overflow-x: auto;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-}
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-sm);
-}
-.table th {
-  text-align: left;
-  padding: 10px 14px;
-  color: var(--text-tertiary);
-  font-weight: var(--weight-medium);
-  border-bottom: 1px solid var(--border-subtle);
-  white-space: nowrap;
-}
-.table td {
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-primary);
-  vertical-align: middle;
-}
-.table tbody tr:hover {
-  background: var(--bg-raised);
-}
-.numeric {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
 .rowActions {
   display: flex;
   align-items: center;
@@ -151,36 +115,9 @@
 
 /* ---- states ---------------------------------------------------------- */
 
-/* The chips are Billing's, down to the tokens: a state chip in Finance and a
-   state chip on an invoice must not be two different visual languages. */
-.chip {
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--border-default);
-  background: var(--bg-raised);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
-}
-.chip_info {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.chip_good {
-  border-color: var(--success);
-  color: var(--success);
-}
-.chip_bad {
-  border-color: var(--danger);
-  background: var(--danger-tint);
-  color: var(--danger);
-}
-.chip_quiet {
-  color: var(--text-tertiary);
-}
+/* The state chip is `ds/Badge` since D2.07b — a badge, not a chip, because
+   nothing about "Approved" or "Set aside" is pressable. `parts.tsx` maps this
+   module's four loudnesses onto its four named tones. */
 
 .error {
   padding: 10px 14px;
@@ -216,118 +153,25 @@
 
 /* ---- the forms ------------------------------------------------------- */
 
-.scrim {
-  position: fixed;
-  inset: 0;
-  background: var(--bg-overlay);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-4);
-  z-index: var(--z-modal);
-}
-.modal {
-  width: min(560px, 100%);
-  max-height: 90vh;
-  background: var(--bg-surface);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-.modalHead {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--border-subtle);
-}
-.modalIcon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-md);
-  background: var(--accent-tint);
-  color: var(--accent-active);
-  flex-shrink: 0;
-}
-.modalHeadText {
-  flex: 1;
-  min-width: 0;
-}
-.modalHeadText h2 {
-  margin: 0;
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-}
-.modalHeadText p {
-  margin: 2px 0 0;
-  font-size: var(--text-sm);
-  color: var(--text-tertiary);
-}
-.modalClose {
-  color: var(--text-tertiary);
-  padding: 4px;
-  border-radius: var(--radius-sm);
-}
-.modalClose:hover {
-  color: var(--text-primary);
-  background: var(--bg-raised);
-}
-.modalBody {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding: var(--space-5);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-.modalFooter {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-5);
-  border-top: 1px solid var(--border-subtle);
-}
-.modalFooterSpacer {
-  flex: 1;
-}
+/* The dialog, the labelled field, the text box and the dropdown are all `ds/`
+   since D2.07b. What stayed is below, and each one is here for a reason.
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-/* The label wraps its control (implicit association, no ids to keep in sync);
-   the hint and the error are siblings of it, so neither becomes part of the
-   control's accessible name. */
-.fieldLabel {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.label {
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
-  color: var(--text-secondary);
-}
+   A note beside a form, where the sentence is not any one control's — "you
+   cannot delete a seeded account". `ds/Field` owns the hint that belongs to a
+   control; this is the paragraph that belongs to the form. */
 .hint {
   font-size: var(--text-xs);
   color: var(--text-tertiary);
 }
-.fieldError {
-  font-size: var(--text-xs);
-  color: var(--danger);
-}
-.input,
-.select,
+/* The one control the design system has no answer for: there is still no
+   multi-line text box in `ds/`, and 27 `<textarea>` elements across the app are
+   each styled where they stand. This is `ds/Input`'s box written out for one,
+   and it goes the moment a `Textarea` primitive exists — flagged for D3.01
+   rather than invented mid-migration. */
 .textarea {
   width: 100%;
+  min-height: 72px;
+  resize: vertical;
   padding: 8px 12px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
@@ -336,12 +180,6 @@
   font-size: var(--text-sm);
   font-family: inherit;
 }
-.textarea {
-  min-height: 72px;
-  resize: vertical;
-}
-.input:focus-visible,
-.select:focus-visible,
 .textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -1px;
@@ -355,25 +193,17 @@
   flex: 1 1 160px;
 }
 
+/* A control named beside itself rather than above itself: "From [ 1 Jan ]" in a
+   toolbar, where a stacked `ds/Field` would make the row twice as tall and push
+   the list it filters off the first screen. The `<label>` wraps the control, so
+   the binding needs no ids; only the question's own type is set here, because
+   the box is `ds/Input`'s or `ds/Select`'s. */
 .periodField {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: var(--text-sm);
   color: var(--text-secondary);
-}
-.periodInput {
-  padding: 6px 10px;
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-family: inherit;
-}
-.periodInput:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
 }
 
 /* ---- the bank and the reconciliation screen (B4.13b) ------------------- */
@@ -538,7 +368,10 @@
 }
 .pickRow {
   display: grid;
-  grid-template-columns: auto minmax(120px, 2fr) minmax(90px, 1fr) minmax(110px, 1fr);
+  grid-template-columns: auto minmax(120px, 2fr) minmax(90px, 1fr) minmax(
+      110px,
+      1fr
+    );
   align-items: center;
   gap: var(--space-3);
   padding: 8px 10px;
@@ -563,39 +396,9 @@
 }
 
 /* ---- the chart and the reports (B4.13c) ------------------------------- */
-/* A quiet verb inside a row or a toolbar: "Edit", "This quarter". It is a
-   button and not a link — nothing navigates — but it must not carry a
-   button's weight beside the one action a screen actually leads with. */
-.linkAction {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 3px 6px;
-  border-radius: var(--radius-sm);
-}
-.linkAction:hover {
-  color: var(--accent);
-  background: var(--bg-raised);
-}
-/* A caption a screen reader reads and a sighted reader does not need: every
-   report table says which report it is, without repeating the heading above
-   it on screen. */
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-/* A heading row inside a report table — "Income", "What is owned". A row of
-   the table rather than a table of its own, so both sides of a result share
-   one column width and read as one document. */
-.table .sectionTitle {
-  padding-top: var(--space-3);
-  text-align: left;
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
+/* The quiet verb inside a row or a toolbar — "Edit", "This quarter" — is
+   `ds/Button variant="ghost" size="sm"` since D2.07b, so it is outlined where
+   it used to be bare text. The caption every report table carries is
+   `ds/Table`'s own, read always and drawn only when asked for, and the heading
+   row inside one is `reportParts.SectionHeading`, which has to say its rules
+   through an attribute selector to outrank `ds/Table`'s own cell rules. */

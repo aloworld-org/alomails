@@ -19,12 +19,23 @@
 import { useCallback, useEffect, useState } from "react";
 import { Receipt } from "lucide-react";
 
-import { formatRate, previousQuarterOf, quarterOf, type Period } from "../billing";
+import {
+  formatRate,
+  previousQuarterOf,
+  quarterOf,
+  type Period,
+} from "../billing";
+import { Table, Td, Th } from "../ds";
 import { getLocale, strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
 import { amountLabel } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
-import { PeriodToolbar, ReportBasis, useCsvDownload } from "./reportParts";
+import {
+  PeriodToolbar,
+  ReportBasis,
+  SectionHeading,
+  useCsvDownload,
+} from "./reportParts";
 import type { VatReturn, VatReturnSide } from "./types";
 import styles from "./FinanceModule.module.css";
 
@@ -32,7 +43,9 @@ export function VatReturnView() {
   const api = useFinanceApi();
   // The quarter that is being *declared* is the one that has ended — which is
   // why this screen opens on it and not on the one being lived through.
-  const [period, setPeriod] = useState<Period>(() => previousQuarterOf(new Date()));
+  const [period, setPeriod] = useState<Period>(() =>
+    previousQuarterOf(new Date()),
+  );
   const [form, setForm] = useState<Period>(period);
   const [report, setReport] = useState<VatReturn | null>(null);
   const [loading, setLoading] = useState(true);
@@ -68,7 +81,10 @@ export function VatReturnView() {
       <PeriodToolbar
         form={form}
         picks={[
-          { label: strings.financeReportLastQuarter, period: previousQuarterOf(today) },
+          {
+            label: strings.financeReportLastQuarter,
+            period: previousQuarterOf(today),
+          },
           { label: strings.financeReportThisQuarter, period: quarterOf(today) },
         ]}
         busy={loading || csv.downloading}
@@ -97,48 +113,41 @@ export function VatReturnView() {
 
       {report !== null && !empty && (
         <>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <caption className={styles.srOnly}>{strings.financeReportVat}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">{strings.financeReportVatRate}</th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.financeReportVatBase}
-                  </th>
-                  <th scope="col" className={styles.numeric}>
-                    {strings.financeReportVatTax}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <Side
-                  title={strings.financeReportVatOutput}
-                  side={report.output}
-                  currency={report.currency}
-                  totalLabel={strings.financeReportVatOutputTotal}
-                />
-                <Side
-                  title={strings.financeReportVatInput}
-                  side={report.input}
-                  currency={report.currency}
-                  totalLabel={strings.financeReportVatInputTotal}
-                />
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th scope="row" colSpan={2}>
-                    {report.netPayableCents < 0
-                      ? strings.financeReportVatRefund
-                      : strings.financeReportVatPayable}
-                  </th>
-                  <td className={styles.numeric}>
-                    {amountLabel(report.netPayableCents, report.currency)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+          <Table label={strings.financeReportVat}>
+            <thead>
+              <tr>
+                <Th>{strings.financeReportVatRate}</Th>
+                <Th numeric>{strings.financeReportVatBase}</Th>
+                <Th numeric>{strings.financeReportVatTax}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              <Side
+                title={strings.financeReportVatOutput}
+                side={report.output}
+                currency={report.currency}
+                totalLabel={strings.financeReportVatOutputTotal}
+              />
+              <Side
+                title={strings.financeReportVatInput}
+                side={report.input}
+                currency={report.currency}
+                totalLabel={strings.financeReportVatInputTotal}
+              />
+            </tbody>
+            <tfoot>
+              <tr>
+                <Th scope="row" colSpan={2}>
+                  {report.netPayableCents < 0
+                    ? strings.financeReportVatRefund
+                    : strings.financeReportVatPayable}
+                </Th>
+                <Td numeric>
+                  {amountLabel(report.netPayableCents, report.currency)}
+                </Td>
+              </tr>
+            </tfoot>
+          </Table>
           <p className={styles.sectionNote}>{strings.financeReportVatNote}</p>
         </>
       )}
@@ -165,27 +174,23 @@ function Side({
 }) {
   return (
     <>
-      <tr>
-        <th scope="colgroup" colSpan={3} className={styles.sectionTitle}>
-          {title}
-        </th>
-      </tr>
+      <SectionHeading title={title} cols={3} />
       {side.rates.map((rate) => (
         <tr key={rate.rateBp}>
-          <td>{formatRate(rate.rateBp, getLocale())}</td>
-          <td className={styles.numeric}>{amountLabel(rate.baseCents, currency)}</td>
-          <td className={styles.numeric}>{amountLabel(rate.vatCents, currency)}</td>
+          <Td>{formatRate(rate.rateBp, getLocale())}</Td>
+          <Td numeric>{amountLabel(rate.baseCents, currency)}</Td>
+          <Td numeric>{amountLabel(rate.vatCents, currency)}</Td>
         </tr>
       ))}
       <tr>
-        <td className={styles.muted}>{strings.financeReportVatUnrated}</td>
-        <td className={styles.numeric}>{amountLabel(side.unratedBaseCents, currency)}</td>
-        <td className={styles.numeric}>{amountLabel(side.unratedVatCents, currency)}</td>
+        <Td className={styles.muted}>{strings.financeReportVatUnrated}</Td>
+        <Td numeric>{amountLabel(side.unratedBaseCents, currency)}</Td>
+        <Td numeric>{amountLabel(side.unratedVatCents, currency)}</Td>
       </tr>
       <tr>
-        <th scope="row">{totalLabel}</th>
-        <td className={styles.numeric}>{amountLabel(side.baseCents, currency)}</td>
-        <td className={styles.numeric}>{amountLabel(side.vatCents, currency)}</td>
+        <Th scope="row">{totalLabel}</Th>
+        <Td numeric>{amountLabel(side.baseCents, currency)}</Td>
+        <Td numeric>{amountLabel(side.vatCents, currency)}</Td>
       </tr>
     </>
   );

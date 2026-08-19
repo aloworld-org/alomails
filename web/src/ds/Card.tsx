@@ -47,8 +47,14 @@ export interface CardProps extends HTMLAttributes<HTMLElement> {
    *  you submit, so the element is a prop instead. Defaults to `div`, which is
    *  what a card with nothing else to say should be.
    *
-   *  Added for `auth/TwoFactorScreen` (D2.05). */
-  as?: "div" | "section" | "form" | "li" | undefined;
+   *  `"button"` is the card that *is* the control — home's four stat tiles,
+   *  where the whole surface is the thing you press. It carries `type="button"`
+   *  of its own, for the reason `ds/Button` does: a bare `<button>` inside a
+   *  form submits it, and a card is not where anybody would look for that.
+   *  Pair it with `interactive`, which is the affordance the press deserves.
+   *
+   *  Added for `auth/TwoFactorScreen` (D2.05) and `home/StatCard` (D2.07b). */
+  as?: "div" | "section" | "form" | "li" | "button" | undefined;
   /** `sm` for dense lists, `lg` for a card that is the whole screen. */
   pad?: "sm" | "md" | "lg" | undefined;
   /** Drop the shadow, for a card sitting inside another surface: stacking two
@@ -80,5 +86,11 @@ export function Card({
   ]
     .filter(Boolean)
     .join(" ");
-  return <Element className={classes} {...rest} />;
+  return (
+    <Element
+      className={classes}
+      {...(Element === "button" ? { type: "button" as const } : {})}
+      {...rest}
+    />
+  );
 }

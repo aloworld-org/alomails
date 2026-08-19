@@ -11,11 +11,17 @@ import { useCallback, useEffect, useState } from "react";
 import { TrendingUp } from "lucide-react";
 
 import { previousQuarterOf, quarterOf, yearOf, type Period } from "../billing";
+import { Table, Td, Th } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
 import { amountLabel, dayLabel } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
-import { PeriodToolbar, ReportBasis, useCsvDownload } from "./reportParts";
+import {
+  PeriodToolbar,
+  ReportBasis,
+  SectionHeading,
+  useCsvDownload,
+} from "./reportParts";
 import type { PlLine, PlReport } from "./types";
 import styles from "./FinanceModule.module.css";
 
@@ -54,7 +60,10 @@ export function PlReportView() {
         picks={[
           { label: strings.financeReportThisYear, period: yearOf(today) },
           { label: strings.financeReportThisQuarter, period: quarterOf(today) },
-          { label: strings.financeReportLastQuarter, period: previousQuarterOf(today) },
+          {
+            label: strings.financeReportLastQuarter,
+            period: previousQuarterOf(today),
+          },
         ]}
         busy={loading || csv.downloading}
         canDownload={report !== null}
@@ -83,26 +92,25 @@ export function PlReportView() {
           />
         )}
 
-      {report !== null && (report.income.length > 0 || report.expense.length > 0) && (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <caption className={styles.srOnly}>{strings.financeReportPl}</caption>
+      {report !== null &&
+        (report.income.length > 0 || report.expense.length > 0) && (
+          // The caption is `Table`'s own — read always, drawn only on the two
+          // report tables whose heading does not already say which they are.
+          <Table label={strings.financeReportPl}>
             <thead>
               <tr>
-                <th scope="col">{strings.financeAccountCode}</th>
-                <th scope="col">{strings.financeAccountName}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.financeReportAmount}
-                </th>
+                <Th>{strings.financeAccountCode}</Th>
+                <Th>{strings.financeAccountName}</Th>
+                <Th numeric>{strings.financeReportAmount}</Th>
                 {/* The comparative the SERVER chose, named by its own days: a
-                    column headed "previous" that does not say which days it
-                    covers is a figure nobody can check. */}
-                <th scope="col" className={styles.numeric}>
+                  column headed "previous" that does not say which days it
+                  covers is a figure nobody can check. */}
+                <Th numeric>
                   {strings.financeReportPrevious(
                     dayLabel(report.previousFrom, report.previousFrom),
                     dayLabel(report.previousTo, report.previousTo),
                   )}
-                </th>
+                </Th>
               </tr>
             </thead>
             <tbody>
@@ -125,22 +133,21 @@ export function PlReportView() {
             </tbody>
             <tfoot>
               <tr>
-                <th scope="row" colSpan={2}>
+                <Th scope="row" colSpan={2}>
                   {report.resultCents < 0
                     ? strings.financeReportLoss
                     : strings.financeReportProfit}
-                </th>
-                <td className={styles.numeric}>
+                </Th>
+                <Td numeric>
                   {amountLabel(report.resultCents, report.currency)}
-                </td>
-                <td className={styles.numeric}>
+                </Td>
+                <Td numeric>
                   {amountLabel(report.previousResultCents, report.currency)}
-                </td>
+                </Td>
               </tr>
             </tfoot>
-          </table>
-        </div>
-      )}
+          </Table>
+        )}
     </div>
   );
 }
@@ -165,25 +172,21 @@ function Section({
 }) {
   return (
     <>
-      <tr>
-        <th scope="colgroup" colSpan={4} className={styles.sectionTitle}>
-          {title}
-        </th>
-      </tr>
+      <SectionHeading title={title} cols={4} />
       {lines.map((line) => (
         <tr key={line.accountId}>
-          <td>{line.code}</td>
-          <td>{line.name}</td>
-          <td className={styles.numeric}>{amountLabel(line.amountCents, currency)}</td>
-          <td className={styles.numeric}>{amountLabel(line.previousCents, currency)}</td>
+          <Td>{line.code}</Td>
+          <Td>{line.name}</Td>
+          <Td numeric>{amountLabel(line.amountCents, currency)}</Td>
+          <Td numeric>{amountLabel(line.previousCents, currency)}</Td>
         </tr>
       ))}
       <tr>
-        <th scope="row" colSpan={2}>
+        <Th scope="row" colSpan={2}>
           {totalLabel}
-        </th>
-        <td className={styles.numeric}>{amountLabel(totalCents, currency)}</td>
-        <td className={styles.numeric}>{amountLabel(previousCents, currency)}</td>
+        </Th>
+        <Td numeric>{amountLabel(totalCents, currency)}</Td>
+        <Td numeric>{amountLabel(previousCents, currency)}</Td>
       </tr>
     </>
   );

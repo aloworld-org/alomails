@@ -24,10 +24,11 @@ import { useState } from "react";
 import { ReceiptText } from "lucide-react";
 
 import { hundredthsToInput, parseHundredths } from "../billing";
+import { Field, Input, Select } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
 import { today } from "./format";
-import { DialogFrame, Field } from "./parts";
+import { DialogFrame } from "./parts";
 import type { Expense, ExpenseDraft, ExpenseMethod } from "./types";
 import styles from "./FinanceModule.module.css";
 
@@ -107,13 +108,20 @@ export function ExpenseDialog({
 
   const grossCents = parseHundredths(form.gross);
   const vatCents = form.vat.trim() === "" ? 0 : parseHundredths(form.vat);
-  const vatRateBp = form.vatRate.trim() === "" ? null : parseHundredths(form.vatRate);
+  const vatRateBp =
+    form.vatRate.trim() === "" ? null : parseHundredths(form.vatRate);
   const grossError =
-    form.gross.trim() !== "" && grossCents === null ? strings.financeAmountInvalid : undefined;
+    form.gross.trim() !== "" && grossCents === null
+      ? strings.financeAmountInvalid
+      : undefined;
   const vatError =
-    form.vat.trim() !== "" && vatCents === null ? strings.financeAmountInvalid : undefined;
+    form.vat.trim() !== "" && vatCents === null
+      ? strings.financeAmountInvalid
+      : undefined;
   const rateError =
-    form.vatRate.trim() !== "" && vatRateBp === null ? strings.financeRateInvalid : undefined;
+    form.vatRate.trim() !== "" && vatRateBp === null
+      ? strings.financeRateInvalid
+      : undefined;
   const canSubmit =
     form.spentOn !== "" &&
     grossCents !== null &&
@@ -137,7 +145,9 @@ export function ExpenseDialog({
       vatRateBp,
       method: form.method,
       projectId: form.projectId === "" ? null : form.projectId,
-      ...(form.currency.trim() === "" ? {} : { currency: form.currency.trim().toUpperCase() }),
+      ...(form.currency.trim() === ""
+        ? {}
+        : { currency: form.currency.trim().toUpperCase() }),
     };
     setBusy(true);
     setError(null);
@@ -155,109 +165,151 @@ export function ExpenseDialog({
   return (
     <DialogFrame
       Icon={ReceiptText}
-      title={claim === null ? strings.financeNewClaim : strings.financeEditClaim}
+      title={
+        claim === null ? strings.financeNewClaim : strings.financeEditClaim
+      }
       subtitle={strings.financeClaimSubtitle}
       error={error}
       busy={busy}
       canSubmit={canSubmit}
       submitLabel={strings.financeSave}
       extraAction={
-        onDelete === undefined ? undefined : { label: strings.financeDelete, onClick: onDelete }
+        onDelete === undefined
+          ? undefined
+          : { label: strings.financeDelete, onClick: onDelete }
       }
       onClose={onClose}
       onSubmit={() => void save()}
     >
       <div className={styles.row}>
         <Field label={strings.financeSpentOn} hint={strings.financeSpentOnHint}>
-          <input
-            className={styles.input}
-            type="date"
-            value={form.spentOn}
-            onChange={(e) => set("spentOn", e.target.value)}
-            required
-          />
+          {(control) => (
+            <Input
+              {...control}
+              type="date"
+              value={form.spentOn}
+              onChange={(e) => set("spentOn", e.target.value)}
+              required
+            />
+          )}
         </Field>
         <Field label={strings.financeMethod} hint={strings.financeMethodHint}>
-          <select
-            className={styles.select}
-            value={form.method}
-            onChange={(e) => set("method", e.target.value as ExpenseMethod)}
-          >
-            {METHODS.map((method) => (
-              <option key={method} value={method}>
-                {methodOption(method)}
-              </option>
-            ))}
-          </select>
+          {(control) => (
+            <Select
+              {...control}
+              fullWidth
+              value={form.method}
+              onChange={(e) => set("method", e.target.value as ExpenseMethod)}
+            >
+              {METHODS.map((method) => (
+                <option key={method} value={method}>
+                  {methodOption(method)}
+                </option>
+              ))}
+            </Select>
+          )}
         </Field>
       </div>
 
       <Field label={strings.financeMerchant} hint={strings.financeMerchantHint}>
-        <input
-          className={styles.input}
-          value={form.merchant}
-          onChange={(e) => set("merchant", e.target.value)}
-        />
+        {(control) => (
+          <Input
+            {...control}
+            value={form.merchant}
+            onChange={(e) => set("merchant", e.target.value)}
+          />
+        )}
       </Field>
 
+      {/* The one control here that is not the design system's. `ds/` has no
+          multi-line text control yet, so the box is still drawn locally rather
+          than approximated with a taller `Input` — flagged for D3.01, where the
+          four modules waiting on one are counted. */}
       <Field label={strings.financeDescription}>
-        <textarea
-          className={styles.textarea}
-          value={form.description}
-          onChange={(e) => set("description", e.target.value)}
-        />
+        {(control) => (
+          <textarea
+            id={control.id}
+            aria-describedby={control["aria-describedby"]}
+            className={styles.textarea}
+            value={form.description}
+            onChange={(e) => set("description", e.target.value)}
+          />
+        )}
       </Field>
 
       <div className={styles.row}>
         <Field label={strings.financeGross} error={grossError}>
-          <input
-            className={styles.input}
-            inputMode="decimal"
-            value={form.gross}
-            onChange={(e) => set("gross", e.target.value)}
-            required
-          />
+          {(control) => (
+            <Input
+              {...control}
+              inputMode="decimal"
+              value={form.gross}
+              onChange={(e) => set("gross", e.target.value)}
+              required
+            />
+          )}
         </Field>
-        <Field label={strings.financeVat} hint={strings.financeVatHint} error={vatError}>
-          <input
-            className={styles.input}
-            inputMode="decimal"
-            value={form.vat}
-            onChange={(e) => set("vat", e.target.value)}
-          />
+        <Field
+          label={strings.financeVat}
+          hint={strings.financeVatHint}
+          error={vatError}
+        >
+          {(control) => (
+            <Input
+              {...control}
+              inputMode="decimal"
+              value={form.vat}
+              onChange={(e) => set("vat", e.target.value)}
+            />
+          )}
         </Field>
-        <Field label={strings.financeVatRate} hint={strings.financeVatRateHint} error={rateError}>
-          <input
-            className={styles.input}
-            inputMode="decimal"
-            value={form.vatRate}
-            onChange={(e) => set("vatRate", e.target.value)}
-          />
+        <Field
+          label={strings.financeVatRate}
+          hint={strings.financeVatRateHint}
+          error={rateError}
+        >
+          {(control) => (
+            <Input
+              {...control}
+              inputMode="decimal"
+              value={form.vatRate}
+              onChange={(e) => set("vatRate", e.target.value)}
+            />
+          )}
         </Field>
       </div>
 
       <div className={styles.row}>
-        <Field label={strings.financeCurrency} hint={strings.financeCurrencyHint}>
-          <input
-            className={styles.input}
-            value={form.currency}
-            maxLength={3}
-            onChange={(e) => set("currency", e.target.value)}
-          />
+        <Field
+          label={strings.financeCurrency}
+          hint={strings.financeCurrencyHint}
+        >
+          {(control) => (
+            <Input
+              {...control}
+              value={form.currency}
+              maxLength={3}
+              onChange={(e) => set("currency", e.target.value)}
+            />
+          )}
         </Field>
         <Field label={strings.financeProject} hint={strings.financeProjectHint}>
-          <select
-            className={styles.select}
-            value={form.projectId}
-            onChange={(e) => set("projectId", e.target.value)}
-          >
-            <option value="">{strings.financeNoProject}</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
+          {(control) => (
+            // "No engagement" is an answer, not a prompt: most claims have none.
+            <Select
+              {...control}
+              fullWidth
+              placeholder={strings.financeNoProject}
+              value={form.projectId}
+              onChange={(e) => set("projectId", e.target.value)}
+            >
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </Select>
+          )}
         </Field>
       </div>
     </DialogFrame>

@@ -21,14 +21,26 @@
 import { useState } from "react";
 import { BookOpen } from "lucide-react";
 
+import { Field, Input, Select } from "../ds";
 import { strings } from "../i18n";
 import { accountRoleLabel } from "./format";
-import { DialogFrame, Field } from "./parts";
-import type { AccountDraft, AccountRole, AccountType, ChartAccount } from "./types";
+import { DialogFrame } from "./parts";
+import type {
+  AccountDraft,
+  AccountRole,
+  AccountType,
+  ChartAccount,
+} from "./types";
 import styles from "./FinanceModule.module.css";
 
 /** The five kinds, in the order a chart is laid out. */
-const TYPES: AccountType[] = ["asset", "liability", "equity", "income", "expense"];
+const TYPES: AccountType[] = [
+  "asset",
+  "liability",
+  "equity",
+  "income",
+  "expense",
+];
 
 /** Every posting-rule job, in the order the default chart introduces them —
  *  the server's own order (`AccountRole::ALL`), so the two lists read the
@@ -79,7 +91,12 @@ export function AccountDialog({
 
   function submit() {
     if (kind === "") return;
-    const draft: AccountDraft = { code: code.trim(), name: name.trim(), type: kind, role };
+    const draft: AccountDraft = {
+      code: code.trim(),
+      name: name.trim(),
+      type: kind,
+      role,
+    };
     // `active` is a field of the edit only: an account somebody just added is
     // one they mean to use, and a switch to turn it on would exist for nobody.
     if (editing) draft.active = active;
@@ -89,8 +106,14 @@ export function AccountDialog({
   return (
     <DialogFrame
       Icon={BookOpen}
-      title={editing ? strings.financeAccountEditTitle : strings.financeAccountNewTitle}
-      subtitle={editing ? strings.financeAccountEditBody : strings.financeAccountNewBody}
+      title={
+        editing
+          ? strings.financeAccountEditTitle
+          : strings.financeAccountNewTitle
+      }
+      subtitle={
+        editing ? strings.financeAccountEditBody : strings.financeAccountNewBody
+      }
       error={error}
       busy={busy}
       canSubmit={canSubmit}
@@ -104,74 +127,106 @@ export function AccountDialog({
       onSubmit={submit}
     >
       <div className={styles.row}>
-        <Field label={strings.financeAccountCode} hint={strings.financeAccountCodeHint}>
-          <input
-            className={styles.input}
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            maxLength={20}
-            required
-            autoFocus={!editing}
-          />
+        <Field
+          label={strings.financeAccountCode}
+          hint={strings.financeAccountCodeHint}
+        >
+          {(control) => (
+            <Input
+              {...control}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              maxLength={20}
+              required
+              autoFocus={!editing}
+            />
+          )}
         </Field>
         <Field label={strings.financeAccountName}>
-          <input
-            className={styles.input}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={120}
-            required
-          />
+          {(control) => (
+            <Input
+              {...control}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={120}
+              required
+            />
+          )}
         </Field>
       </div>
 
-      <Field label={strings.financeAccountType} hint={strings.financeAccountTypeHint}>
-        <select
-          className={styles.select}
-          value={kind}
-          onChange={(e) => setKind(e.target.value as AccountType | "")}
-          required
-        >
-          <option value="">{strings.financeAccountTypeUnset}</option>
-          {TYPES.map((option) => (
-            <option key={option} value={option}>
-              {typeSentence(option)}
-            </option>
-          ))}
-        </select>
+      <Field
+        label={strings.financeAccountType}
+        hint={strings.financeAccountTypeHint}
+      >
+        {(control) => (
+          // A prompt, not an answer: `Select` disables it on a required field,
+          // which is also the only spelling the browser's own required check
+          // understands — a sentinel value passes it.
+          <Select
+            {...control}
+            fullWidth
+            placeholder={strings.financeAccountTypeUnset}
+            value={kind}
+            onChange={(e) => setKind(e.target.value as AccountType | "")}
+            required
+          >
+            {TYPES.map((option) => (
+              <option key={option} value={option}>
+                {typeSentence(option)}
+              </option>
+            ))}
+          </Select>
+        )}
       </Field>
 
-      <Field label={strings.financeAccountRole} hint={strings.financeAccountRoleHint}>
-        <select
-          className={styles.select}
-          value={role}
-          onChange={(e) => setRole(e.target.value as AccountRole | "")}
-        >
-          <option value="">{strings.financeRoleNone}</option>
-          {ROLES.map((option) => (
-            <option key={option} value={option}>
-              {accountRoleLabel(option)}
-            </option>
-          ))}
-        </select>
+      <Field
+        label={strings.financeAccountRole}
+        hint={strings.financeAccountRoleHint}
+      >
+        {(control) => (
+          // "No job" is a real answer here — most accounts have none — so it
+          // stays choosable.
+          <Select
+            {...control}
+            fullWidth
+            placeholder={strings.financeRoleNone}
+            value={role}
+            onChange={(e) => setRole(e.target.value as AccountRole | "")}
+          >
+            {ROLES.map((option) => (
+              <option key={option} value={option}>
+                {accountRoleLabel(option)}
+              </option>
+            ))}
+          </Select>
+        )}
       </Field>
 
       {editing && (
-        <Field label={strings.financeAccountActive} hint={strings.financeAccountActiveHint}>
-          <select
-            className={styles.select}
-            value={active ? "yes" : "no"}
-            onChange={(e) => setActive(e.target.value === "yes")}
-          >
-            <option value="yes">{strings.financeAccountInUse}</option>
-            <option value="no">{strings.financeAccountRetired}</option>
-          </select>
+        <Field
+          label={strings.financeAccountActive}
+          hint={strings.financeAccountActiveHint}
+        >
+          {(control) => (
+            <Select
+              {...control}
+              fullWidth
+              value={active ? "yes" : "no"}
+              onChange={(e) => setActive(e.target.value === "yes")}
+            >
+              <option value="yes">{strings.financeAccountInUse}</option>
+              <option value="no">{strings.financeAccountRetired}</option>
+            </Select>
+          )}
         </Field>
       )}
 
       {/* What a seeded account is, said where somebody is about to wonder why
           they cannot delete it. */}
-      {account?.system === true && <p className={styles.hint}>{strings.financeAccountSystemNote}</p>}
+      {account?.system === true && (
+        <p className={styles.hint}>{strings.financeAccountSystemNote}</p>
+      )}
     </DialogFrame>
   );
 }

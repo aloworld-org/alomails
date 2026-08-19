@@ -1,5 +1,6 @@
-// What the four report screens share: the dates they are asked for, and the
-// button that saves what is on screen as a file.
+// What the four report screens share: the dates they are asked for, the button
+// that saves what is on screen as a file, and the heading row that divides one
+// report table into its sides.
 //
 // One toolbar rather than four is not only about repetition. The server refuses
 // a report with no period on purpose — a figure printed under a heading nobody
@@ -8,6 +9,10 @@
 // never becomes a request, and the figures on screen always belong to the days
 // written above them. Four copies of that rule would eventually be three.
 //
+// The `<form>` is still the element that carries the submit; `ds/Toolbar` is
+// the row inside it, because a toolbar is a named group of controls and a form
+// is what Enter acts on. Wrapping rather than replacing keeps both facts true.
+//
 // The CSV is fetched with the session's token and saved from memory, never
 // linked: the route is authenticated, and a plain `<a href>` downloads a `401`
 // named like a report (`platform/download.ts`).
@@ -15,7 +20,7 @@ import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 
 import type { Period } from "../billing";
-import { Button, Spinner } from "../ds";
+import { Button, Input, Spinner, Th, Toolbar, ToolbarSpacer } from "../ds";
 import { strings } from "../i18n";
 import { saveTextFile } from "../platform/download";
 import { financeMessage } from "./api";
@@ -50,54 +55,57 @@ export function PeriodToolbar({
 }) {
   return (
     <form
-      className={styles.toolbar}
       onSubmit={(e) => {
         e.preventDefault();
         onApply(form);
       }}
     >
-      <label className={styles.periodField}>
-        {strings.financeReportFrom}
-        <input
-          className={styles.periodInput}
-          type="date"
-          value={form.from}
-          onChange={(e) => onForm({ ...form, from: e.target.value })}
-          required
-        />
-      </label>
-      <label className={styles.periodField}>
-        {strings.financeReportTo}
-        <input
-          className={styles.periodInput}
-          type="date"
-          value={form.to}
-          onChange={(e) => onForm({ ...form, to: e.target.value })}
-          required
-        />
-      </label>
-      <Button type="submit" variant="ghost">
-        {strings.financeReportShow}
-      </Button>
-      {picks.map((pick) => (
-        <button
-          key={pick.label}
-          type="button"
-          className={styles.linkAction}
-          onClick={() => {
-            onForm(pick.period);
-            onApply(pick.period);
-          }}
+      <Toolbar label={strings.financeReportPeriod}>
+        <label className={styles.periodField}>
+          {strings.financeReportFrom}
+          <Input
+            type="date"
+            value={form.from}
+            onChange={(e) => onForm({ ...form, from: e.target.value })}
+            required
+          />
+        </label>
+        <label className={styles.periodField}>
+          {strings.financeReportTo}
+          <Input
+            type="date"
+            value={form.to}
+            onChange={(e) => onForm({ ...form, to: e.target.value })}
+            required
+          />
+        </label>
+        <Button type="submit" variant="ghost">
+          {strings.financeReportShow}
+        </Button>
+        {picks.map((pick) => (
+          <Button
+            key={pick.label}
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              onForm(pick.period);
+              onApply(pick.period);
+            }}
+          >
+            {pick.label}
+          </Button>
+        ))}
+        {children}
+        <ToolbarSpacer />
+        {busy && <Spinner size={16} />}
+        <Button
+          variant="ghost"
+          onClick={onDownload}
+          disabled={!canDownload || busy}
         >
-          {pick.label}
-        </button>
-      ))}
-      {children}
-      <span className={styles.toolbarSpacer} />
-      {busy && <Spinner size={16} />}
-      <Button variant="ghost" onClick={onDownload} disabled={!canDownload || busy}>
-        {strings.financeReportDownloadCsv}
-      </Button>
+          {strings.financeReportDownloadCsv}
+        </Button>
+      </Toolbar>
     </form>
   );
 }
@@ -126,44 +134,48 @@ export function DayToolbar({
 }) {
   return (
     <form
-      className={styles.toolbar}
       onSubmit={(e) => {
         e.preventDefault();
         onApply(form);
       }}
     >
-      <label className={styles.periodField}>
-        {strings.financeReportOn}
-        <input
-          className={styles.periodInput}
-          type="date"
-          value={form}
-          onChange={(e) => onForm(e.target.value)}
-          required
-        />
-      </label>
-      <Button type="submit" variant="ghost">
-        {strings.financeReportShow}
-      </Button>
-      {picks.map((pick) => (
-        <button
-          key={pick.label}
-          type="button"
-          className={styles.linkAction}
-          onClick={() => {
-            onForm(pick.on);
-            onApply(pick.on);
-          }}
+      <Toolbar label={strings.financeReportPeriod}>
+        <label className={styles.periodField}>
+          {strings.financeReportOn}
+          <Input
+            type="date"
+            value={form}
+            onChange={(e) => onForm(e.target.value)}
+            required
+          />
+        </label>
+        <Button type="submit" variant="ghost">
+          {strings.financeReportShow}
+        </Button>
+        {picks.map((pick) => (
+          <Button
+            key={pick.label}
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              onForm(pick.on);
+              onApply(pick.on);
+            }}
+          >
+            {pick.label}
+          </Button>
+        ))}
+        {children}
+        <ToolbarSpacer />
+        {busy && <Spinner size={16} />}
+        <Button
+          variant="ghost"
+          onClick={onDownload}
+          disabled={!canDownload || busy}
         >
-          {pick.label}
-        </button>
-      ))}
-      {children}
-      <span className={styles.toolbarSpacer} />
-      {busy && <Spinner size={16} />}
-      <Button variant="ghost" onClick={onDownload} disabled={!canDownload || busy}>
-        {strings.financeReportDownloadCsv}
-      </Button>
+          {strings.financeReportDownloadCsv}
+        </Button>
+      </Toolbar>
     </form>
   );
 }
@@ -178,6 +190,37 @@ export function ReportBasis({ from, to }: { from: string; to?: string }) {
         ? strings.financeReportBasisOn(dayLabel(from, from))
         : strings.financeReportBasis(dayLabel(from, from), dayLabel(to, to))}
     </p>
+  );
+}
+
+/** A heading row inside a report table — "Income", "What is owned".
+ *
+ *  A row of the table rather than a table of its own, so both sides of a result
+ *  share one column width and read as one document.
+ *
+ *  Every utility is written through `[&[data-section]]:` on purpose. `ds/Table`
+ *  styles its cells with descendant utilities (`[&_th]:text-tertiary`), which
+ *  are one class *and* one element and therefore outrank a plain utility on the
+ *  cell itself — the same specificity fact `Th`'s own `TH_ALIGN` had to answer,
+ *  and the same move the stylesheet made when it wrote `.table .sectionTitle`.
+ *  One class and one attribute beats both. */
+const SECTION =
+  "[&[data-section]]:pt-3 [&[data-section]]:text-xs [&[data-section]]:uppercase " +
+  "[&[data-section]]:tracking-[0.04em] [&[data-section]]:text-secondary";
+
+export function SectionHeading({
+  title,
+  cols,
+}: {
+  title: string;
+  cols: number;
+}) {
+  return (
+    <tr>
+      <Th scope="colgroup" colSpan={cols} data-section="" className={SECTION}>
+        {title}
+      </Th>
+    </tr>
   );
 }
 
@@ -198,20 +241,23 @@ export function useCsvDownload(): {
 } {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const download = useCallback((fetchCsv: () => Promise<string>, fileName: string) => {
-    setDownloading(true);
-    void (async () => {
-      try {
-        saveTextFile(await fetchCsv(), fileName, "text/csv;charset=utf-8");
-        setError(null);
-      } catch (err) {
-        // The server's own sentence when it sent one: a `422` here names the
-        // date it could not read, which is a thing the person can fix.
-        setError(financeMessage(err, strings.financeReportDownloadFailed));
-      } finally {
-        setDownloading(false);
-      }
-    })();
-  }, []);
+  const download = useCallback(
+    (fetchCsv: () => Promise<string>, fileName: string) => {
+      setDownloading(true);
+      void (async () => {
+        try {
+          saveTextFile(await fetchCsv(), fileName, "text/csv;charset=utf-8");
+          setError(null);
+        } catch (err) {
+          // The server's own sentence when it sent one: a `422` here names the
+          // date it could not read, which is a thing the person can fix.
+          setError(financeMessage(err, strings.financeReportDownloadFailed));
+        } finally {
+          setDownloading(false);
+        }
+      })();
+    },
+    [],
+  );
   return { downloading, error, download };
 }

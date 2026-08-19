@@ -18,11 +18,17 @@ import { useCallback, useEffect, useState } from "react";
 import { Scale } from "lucide-react";
 
 import { previousYearOf } from "../billing";
+import { Table, Td, Th } from "../ds";
 import { strings } from "../i18n";
 import { financeMessage, useFinanceApi } from "./api";
 import { amountLabel, today } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
-import { DayToolbar, ReportBasis, useCsvDownload } from "./reportParts";
+import {
+  DayToolbar,
+  ReportBasis,
+  SectionHeading,
+  useCsvDownload,
+} from "./reportParts";
 import type { BalanceLine, BalanceSheet } from "./types";
 import styles from "./FinanceModule.module.css";
 
@@ -64,7 +70,10 @@ export function BalanceSheetView() {
         form={form}
         picks={[
           { label: strings.financeReportToday, on: today() },
-          { label: strings.financeReportLastYearEnd, on: previousYearOf(new Date()).to },
+          {
+            label: strings.financeReportLastYearEnd,
+            on: previousYearOf(new Date()).to,
+          },
         ]}
         busy={loading || csv.downloading}
         canDownload={sheet !== null}
@@ -97,69 +106,62 @@ export function BalanceSheetView() {
       )}
 
       {sheet !== null && !empty && (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
-            <caption className={styles.srOnly}>{strings.financeReportBalance}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{strings.financeAccountCode}</th>
-                <th scope="col">{strings.financeAccountName}</th>
-                <th scope="col" className={styles.numeric}>
-                  {strings.financeReportAmount}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <Section
-                title={strings.financeReportAssets}
-                lines={sheet.assets}
-                currency={sheet.currency}
-                totalLabel={strings.financeReportAssetsTotal}
-                totalCents={sheet.assetCents}
-              />
-              <Section
-                title={strings.financeReportLiabilities}
-                lines={sheet.liabilities}
-                currency={sheet.currency}
-                totalLabel={strings.financeReportLiabilitiesTotal}
-                totalCents={sheet.liabilityCents}
-              />
-              <Section
-                title={strings.financeReportEquity}
-                lines={sheet.equity}
-                currency={sheet.currency}
-                totalLabel={strings.financeReportEquityTotal}
-                totalCents={sheet.equityCents}
-              />
-              <tr>
-                <th scope="row" colSpan={2}>
-                  {strings.financeReportResultToDate}
-                </th>
-                <td className={styles.numeric}>
-                  {amountLabel(sheet.resultCents, sheet.currency)}
-                </td>
-              </tr>
-            </tbody>
-            <tfoot>
-              <tr>
-                <th scope="row" colSpan={2}>
-                  {strings.financeReportLiabilitiesEquityTotal}
-                </th>
-                <td className={styles.numeric}>
-                  {amountLabel(sheet.liabilityEquityCents, sheet.currency)}
-                </td>
-              </tr>
-              <tr>
-                <th scope="row" colSpan={2}>
-                  {strings.financeReportDifference}
-                </th>
-                <td className={styles.numeric}>
-                  {amountLabel(sheet.differenceCents, sheet.currency)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <Table label={strings.financeReportBalance}>
+          <thead>
+            <tr>
+              <Th>{strings.financeAccountCode}</Th>
+              <Th>{strings.financeAccountName}</Th>
+              <Th numeric>{strings.financeReportAmount}</Th>
+            </tr>
+          </thead>
+          <tbody>
+            <Section
+              title={strings.financeReportAssets}
+              lines={sheet.assets}
+              currency={sheet.currency}
+              totalLabel={strings.financeReportAssetsTotal}
+              totalCents={sheet.assetCents}
+            />
+            <Section
+              title={strings.financeReportLiabilities}
+              lines={sheet.liabilities}
+              currency={sheet.currency}
+              totalLabel={strings.financeReportLiabilitiesTotal}
+              totalCents={sheet.liabilityCents}
+            />
+            <Section
+              title={strings.financeReportEquity}
+              lines={sheet.equity}
+              currency={sheet.currency}
+              totalLabel={strings.financeReportEquityTotal}
+              totalCents={sheet.equityCents}
+            />
+            <tr>
+              <Th scope="row" colSpan={2}>
+                {strings.financeReportResultToDate}
+              </Th>
+              <Td numeric>{amountLabel(sheet.resultCents, sheet.currency)}</Td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr>
+              <Th scope="row" colSpan={2}>
+                {strings.financeReportLiabilitiesEquityTotal}
+              </Th>
+              <Td numeric>
+                {amountLabel(sheet.liabilityEquityCents, sheet.currency)}
+              </Td>
+            </tr>
+            <tr>
+              <Th scope="row" colSpan={2}>
+                {strings.financeReportDifference}
+              </Th>
+              <Td numeric>
+                {amountLabel(sheet.differenceCents, sheet.currency)}
+              </Td>
+            </tr>
+          </tfoot>
+        </Table>
       )}
     </div>
   );
@@ -182,23 +184,19 @@ function Section({
 }) {
   return (
     <>
-      <tr>
-        <th scope="colgroup" colSpan={3} className={styles.sectionTitle}>
-          {title}
-        </th>
-      </tr>
+      <SectionHeading title={title} cols={3} />
       {lines.map((line) => (
         <tr key={line.accountId}>
-          <td>{line.code}</td>
-          <td>{line.name}</td>
-          <td className={styles.numeric}>{amountLabel(line.amountCents, currency)}</td>
+          <Td>{line.code}</Td>
+          <Td>{line.name}</Td>
+          <Td numeric>{amountLabel(line.amountCents, currency)}</Td>
         </tr>
       ))}
       <tr>
-        <th scope="row" colSpan={2}>
+        <Th scope="row" colSpan={2}>
           {totalLabel}
-        </th>
-        <td className={styles.numeric}>{amountLabel(totalCents, currency)}</td>
+        </Th>
+        <Td numeric>{amountLabel(totalCents, currency)}</Td>
       </tr>
     </>
   );

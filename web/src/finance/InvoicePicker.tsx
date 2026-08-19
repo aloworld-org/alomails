@@ -19,11 +19,15 @@
 import { useMemo, useState } from "react";
 import { FileText } from "lucide-react";
 
-import { formatAmount, useOpenInvoices, type BillingInvoiceSummary } from "../billing";
-import { Spinner } from "../ds";
+import {
+  formatAmount,
+  useOpenInvoices,
+  type BillingInvoiceSummary,
+} from "../billing";
+import { Field, Input, Spinner } from "../ds";
 import { getLocale, strings } from "../i18n";
 import { amountLabel, dayLabel } from "./format";
-import { DialogFrame, ErrorBanner, Field } from "./parts";
+import { DialogFrame, ErrorBanner } from "./parts";
 import type { BankLine } from "./types";
 import styles from "./FinanceModule.module.css";
 
@@ -69,7 +73,9 @@ export function InvoicePicker({
     <DialogFrame
       Icon={FileText}
       title={strings.financeBankPickTitle}
-      subtitle={strings.financeBankPickSubtitle(amountLabel(line.amountCents, line.currency))}
+      subtitle={strings.financeBankPickSubtitle(
+        amountLabel(line.amountCents, line.currency),
+      )}
       error={error}
       busy={busy}
       canSubmit={chosen !== null}
@@ -98,19 +104,26 @@ export function InvoicePicker({
 
       {loadError !== null && <ErrorBanner message={loadError} />}
 
-      <Field label={strings.financeBankFindInvoice} hint={strings.financeBankFindInvoiceHint}>
-        <input
-          className={styles.input}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          autoComplete="off"
-        />
+      <Field
+        label={strings.financeBankFindInvoice}
+        hint={strings.financeBankFindInvoiceHint}
+      >
+        {(control) => (
+          <Input
+            {...control}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoComplete="off"
+          />
+        )}
       </Field>
 
       {loading && shown.length === 0 ? (
         <Spinner size={18} />
       ) : shown.length === 0 ? (
-        <p className={styles.sectionNote}>{strings.financeBankNoOpenInvoices}</p>
+        <p className={styles.sectionNote}>
+          {strings.financeBankNoOpenInvoices}
+        </p>
       ) : (
         <ul className={styles.pickList}>
           {shown.map((invoice) => (
@@ -132,12 +145,20 @@ export function InvoicePicker({
                 <span className={styles.pickDue}>
                   {dayLabel(invoice.dueDate, "—")}
                   {invoice.overdue && (
-                    <span className={styles.declined}>{strings.financeBankOverdue}</span>
+                    <span className={styles.declined}>
+                      {strings.financeBankOverdue}
+                    </span>
                   )}
                 </span>
                 <span className={styles.pickAmount}>
-                  {formatAmount(invoice.settlement.outstandingCents, getLocale(), invoice.currency)}
-                  <span className={styles.subtle}>{strings.financeBankStillOwed}</span>
+                  {formatAmount(
+                    invoice.settlement.outstandingCents,
+                    getLocale(),
+                    invoice.currency,
+                  )}
+                  <span className={styles.subtle}>
+                    {strings.financeBankStillOwed}
+                  </span>
                 </span>
               </label>
             </li>
