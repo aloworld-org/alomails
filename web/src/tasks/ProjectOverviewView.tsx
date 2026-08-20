@@ -1,4 +1,4 @@
-import { BarChart3, CalendarDays, CheckCircle2, CircleAlert, Clock3, Flag, ListTodo, MessageSquareText, PencilLine, ReceiptText, Send } from "lucide-react";
+import { ArrowRight, BarChart3, CalendarDays, CheckCircle2, CircleAlert, Clock3, Flag, ListTodo, MessageSquareText, PencilLine, ReceiptText, Send } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { strings } from "../i18n";
@@ -29,6 +29,25 @@ export function canCreateProjectInvoice(project: Project): boolean {
   return project.client !== null && project.hours.approvedUnbilledMinutes > 0;
 }
 
+export type ProjectNextStep = "tasks" | "time" | "approval" | "invoice" | "continue";
+
+/** One honest next action for the engagement. The overview is the hand-off
+ * between project management and billing, so it must not make people infer
+ * whether their hours still need recording, approval, or invoicing. */
+export function projectNextStep(project: Project, taskCount: number): ProjectNextStep {
+  if (taskCount === 0) return "tasks";
+  if (project.hours.minutes === 0) return "time";
+  if (canCreateProjectInvoice(project)) return "invoice";
+  const awaitingApproval = Math.max(
+    0,
+    project.hours.billableMinutes
+      - project.hours.approvedUnbilledMinutes
+      - project.hours.billedMinutes,
+  );
+  if (project.client !== null && awaitingApproval > 0) return "approval";
+  return "continue";
+}
+
 export function ProjectOverviewView({
   project,
   plan,
@@ -51,6 +70,19 @@ export function ProjectOverviewView({
   const [updateSaving, setUpdateSaving] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const nextStep = projectNextStep(project, tasks.length);
+  const workflowLabels = project.client === null
+    ? [
+        strings.projectsWorkflowTasks,
+        strings.projectsWorkflowTime,
+        strings.projectsWorkflowApproval,
+      ]
+    : [
+        strings.projectsWorkflowTasks,
+        strings.projectsWorkflowTime,
+        strings.projectsWorkflowApproval,
+        strings.projectsWorkflowInvoice,
+      ];
 
   useEffect(() => {
     let active = true;
@@ -169,6 +201,67 @@ export function ProjectOverviewView({
           )}
         </div>
       </section>
+      <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm" aria-labelledby="project-next-step-title">
+        <div className="flex flex-wrap items-center justify-between gap-5">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wide text-accent">{strings.projectsWorkflowEyebrow}</p>
+            <h2 id="project-next-step-title" className="mt-1 text-base font-semibold text-primary">
+              {{
+                tasks: strings.projectsWorkflowTasksTitle,
+                time: strings.projectsWorkflowTimeTitle,
+                approval: strings.projectsWorkflowApprovalTitle,
+                invoice: strings.projectsWorkflowInvoiceTitle,
+                continue: strings.projectsWorkflowContinueTitle,
+              }[nextStep]}
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-secondary">
+              {{
+                tasks: strings.projectsWorkflowTasksBody,
+                time: strings.projectsWorkflowTimeBody,
+                approval: strings.projectsWorkflowApprovalBody,
+                invoice: strings.projectsReadyToInvoiceBody(durationLabel(project.hours.approvedUnbilledMinutes)),
+                continue: strings.projectsWorkflowContinueBody,
+              }[nextStep]}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent !no-underline transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+            onClick={() => {
+              if (nextStep === "tasks") onAddTask();
+              else if (nextStep === "invoice") setInvoiceOpen(true);
+              else onOpenTimesheet();
+            }}
+          >
+            {{
+              tasks: strings.taskCreateFirst,
+              time: strings.projectsAddTime,
+              approval: strings.projectsReviewTimesheet,
+              invoice: strings.projectsCreateInvoice,
+              continue: strings.projectsAddTime,
+            }[nextStep]}
+            <ArrowRight size={16} aria-hidden="true" />
+          </button>
+        </div>
+        <ol
+          className={`mt-5 grid gap-2 border-t border-subtle pt-4 ${project.client === null ? "sm:grid-cols-3" : "sm:grid-cols-4"}`}
+          aria-label={strings.projectsWorkflowLabel}
+        >
+          {workflowLabels.map((label, index) => {
+            const activeIndex = { tasks: 0, time: 1, approval: 2, invoice: 3, continue: project.client === null ? 2 : 3 }[nextStep];
+            const reached = index <= activeIndex;
+            return (
+              <li key={label} className={`flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm ${reached ? "bg-accent-soft font-medium text-accent" : "bg-raised text-secondary"}`}>
+                <span className={`inline-flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${reached ? "bg-accent text-on-accent" : "bg-surface text-secondary"}`}>
+                  {index + 1}
+                </span>
+                <span className="truncate">{label}</span>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={strings.taskOverview}>
         <Metric
           icon={<ListTodo size={18} />}
@@ -330,20 +423,6 @@ export function ProjectOverviewView({
             </div>
           </div>
 
-          {canCreateProjectInvoice(project) && (
-            <div className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
-              <div className="flex items-start gap-3">
-                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><ReceiptText size={18} /></span>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base font-semibold text-primary">{strings.projectsReadyToInvoice}</h2>
-                  <p className="mt-1 text-sm leading-6 text-secondary">{strings.projectsReadyToInvoiceBody(durationLabel(project.hours.approvedUnbilledMinutes))}</p>
-                </div>
-              </div>
-              <button type="button" className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent !no-underline transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" onClick={() => setInvoiceOpen(true)}>
-                <ReceiptText size={16} /> {strings.projectsCreateInvoice}
-              </button>
-            </div>
-          )}
         </div>
       </section>
 
