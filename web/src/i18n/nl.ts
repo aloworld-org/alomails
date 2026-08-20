@@ -2562,6 +2562,8 @@ export const nl: Partial<Catalog> = {
   projectsReadyToInvoiceBody: (duration: string) => `${duration} goedgekeurde tijd is nog niet gefactureerd.`,
   projectsCreateInvoice: "Factuur maken",
   projectsCreateInvoiceSubtitle: "Kies de goedgekeurde tijd voor een nieuwe conceptfactuur.",
+  projectsInvoiceThrough: "Factureren tot en met",
+  projectsInvoiceCutoffHint: "Alleen goedgekeurde, niet-gefactureerde tijd tot en met deze datum wordt opgenomen.",
   projectsNothingToInvoice: "Niets klaar om te factureren",
   projectsNothingToInvoiceBody: "Goedgekeurde tijd verschijnt hier nadat de week is goedgekeurd.",
   projectsUnratedTime: "Voor deze tijd is geen uurtarief ingesteld",

@@ -2604,6 +2604,8 @@ export const fr: Partial<Catalog> = {
   projectsReadyToInvoiceBody: (duration: string) => `${duration} de temps approuvé n’a pas encore été facturé.`,
   projectsCreateInvoice: "Créer une facture",
   projectsCreateInvoiceSubtitle: "Choisissez le temps approuvé à ajouter à une nouvelle facture brouillon.",
+  projectsInvoiceThrough: "Facturer jusqu’au",
+  projectsInvoiceCutoffHint: "Seul le temps approuvé et non facturé jusqu’à cette date est inclus.",
   projectsNothingToInvoice: "Rien à facturer",
   projectsNothingToInvoiceBody: "Le temps approuvé apparaîtra ici après l’approbation de la semaine.",
   projectsUnratedTime: "Aucun tarif horaire n’est défini pour ce temps",

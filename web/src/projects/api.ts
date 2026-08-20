@@ -134,8 +134,9 @@ export class ProjectsApi {
     }).then((r) => r.update);
   }
 
-  unbilledTime(customerId: string): Promise<UnbilledTime> {
+  unbilledTime(customerId: string, to?: string): Promise<UnbilledTime> {
     const query = new URLSearchParams({ customerId });
+    if (to !== undefined && to !== "") query.set("to", to);
     return this.#read<UnbilledTime>(`/projects/unbilled?${query.toString()}`);
   }
 

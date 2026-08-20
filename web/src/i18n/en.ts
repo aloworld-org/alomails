@@ -4437,6 +4437,8 @@ export const en = {
   projectsReadyToInvoiceBody: (duration: string) => `${duration} of approved time has not been invoiced yet.`,
   projectsCreateInvoice: "Create invoice",
   projectsCreateInvoiceSubtitle: "Choose the approved time to carry into a new draft invoice.",
+  projectsInvoiceThrough: "Invoice through",
+  projectsInvoiceCutoffHint: "Only approved, unbilled time through this date is included.",
   projectsNothingToInvoice: "Nothing ready to invoice",
   projectsNothingToInvoiceBody: "Approved time will appear here after the week is approved.",
   projectsUnratedTime: "No hourly rate is set for this time",

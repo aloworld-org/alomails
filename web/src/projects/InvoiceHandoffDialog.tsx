@@ -1,4 +1,4 @@
-import { Check, FileText, X } from "lucide-react";
+import { CalendarDays, Check, FileText, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { strings } from "../i18n";
@@ -19,12 +19,15 @@ export function InvoiceHandoffDialog({ project, onClose, onCreated }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cutoff, setCutoff] = useState(() => new Date().toISOString().slice(0, 10));
   const customerId = project.client?.customerId;
 
   useEffect(() => {
     if (customerId === undefined) return;
     let active = true;
-    void api.unbilledTime(customerId).then((result) => {
+    setLoading(true);
+    setError(null);
+    void api.unbilledTime(customerId, cutoff).then((result) => {
       if (!active) return;
       const matching = result.groups.filter((group) => group.projectId === project.id);
       setGroups(matching);
@@ -35,7 +38,7 @@ export function InvoiceHandoffDialog({ project, onClose, onCreated }: Props) {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [api, customerId, project.id]);
+  }, [api, cutoff, customerId, project.id]);
 
   const selectedGroups = useMemo(() => groups.filter((group) =>
     group.entryIds.some((id) => selected.has(id))), [groups, selected]);
@@ -74,6 +77,19 @@ export function InvoiceHandoffDialog({ project, onClose, onCreated }: Props) {
           <button type="button" className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-secondary !no-underline hover:bg-raised hover:text-primary hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent" onClick={onClose} aria-label={strings.close}><X size={19} /></button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3 rounded-xl border border-subtle bg-raised p-4">
+            <div className="min-w-0">
+              <p className="font-semibold text-primary">{project.name}</p>
+              <p className="mt-1 text-sm text-secondary">{strings.projectsInvoiceCutoffHint}</p>
+            </div>
+            <label className="block shrink-0 text-sm font-medium text-primary">
+              <span className="mb-1.5 block">{strings.projectsInvoiceThrough}</span>
+              <span className="relative block">
+                <CalendarDays className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-secondary" size={17} />
+                <input type="date" value={cutoff} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setCutoff(event.target.value)} className="min-h-10 rounded-lg border border-subtle bg-surface py-2 pl-10 pr-3 text-sm text-primary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent-soft" />
+              </span>
+            </label>
+          </div>
           {loading ? <p className="py-10 text-center text-sm text-secondary">{strings.chatLoading}</p> : groups.length === 0 ? (
             <div className="py-10 text-center"><p className="font-semibold text-primary">{strings.projectsNothingToInvoice}</p><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-secondary">{strings.projectsNothingToInvoiceBody}</p></div>
           ) : <div className="space-y-3">{groups.map((group) => {
