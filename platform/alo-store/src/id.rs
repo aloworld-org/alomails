@@ -411,6 +411,11 @@ opaque_id!(
     ProjectMilestoneId
 );
 opaque_id!(
+    /// One durable status update on a project: a human account of progress,
+    /// risk or completion, kept with the work it describes.
+    ProjectUpdateId
+);
+opaque_id!(
     /// One account of a tenant's chart of accounts — a place money can be
     /// (alo Finance, ADR 0035, wave B4). A posting rule finds it by its
     /// `role`, never by this id and never by its code.

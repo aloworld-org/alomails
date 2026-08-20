@@ -71,6 +71,18 @@ export interface ProjectDraft {
   targetOn: string | null;
 }
 
+export type ProjectUpdateState = "on_track" | "at_risk" | "off_track" | "complete";
+
+export interface ProjectUpdate {
+  id: string;
+  projectId: string;
+  state: ProjectUpdateState;
+  body: string;
+  authorId: string;
+  authorEmail: string;
+  createdAt: string;
+}
+
 /** The client facts a form sends. A whole record: an omitted field is cleared,
  *  which is what "save" has to mean for a form that shows every field. */
 export interface ProjectClientDraft {

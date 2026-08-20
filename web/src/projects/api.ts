@@ -35,6 +35,8 @@ import type {
   ProjectClientDraft,
   ProjectPlan,
   ProjectTemplate,
+  ProjectUpdate,
+  ProjectUpdateState,
   RunningTimer,
   TemplateCopy,
   TemplateInstanceDraft,
@@ -116,6 +118,18 @@ export class ProjectsApi {
       `/projects/${encodeURIComponent(id)}`,
       draft,
     ).then((r) => r.project);
+  }
+
+  projectUpdates(projectId: string): Promise<ProjectUpdate[]> {
+    const query = new URLSearchParams({ projectId });
+    return this.#read<{ updates: ProjectUpdate[] }>(`/projects/updates?${query.toString()}`)
+      .then((r) => r.updates);
+  }
+
+  createProjectUpdate(projectId: string, state: ProjectUpdateState, body: string): Promise<ProjectUpdate> {
+    return this.#write<{ update: ProjectUpdate }>("POST", "/projects/updates", {
+      projectId, state, body,
+    }).then((r) => r.update);
   }
 
   /** Makes a project client work, or replaces the facts that already say so.

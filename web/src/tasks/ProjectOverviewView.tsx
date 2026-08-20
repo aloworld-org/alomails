@@ -1,10 +1,11 @@
-import { CalendarDays, CheckCircle2, CircleAlert, Clock3, Flag, ListTodo, PencilLine, ReceiptText } from "lucide-react";
-import type { ReactNode } from "react";
+import { CalendarDays, CheckCircle2, CircleAlert, Clock3, Flag, ListTodo, MessageSquareText, PencilLine, ReceiptText, Send } from "lucide-react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { strings } from "../i18n";
 import type { Task, TaskDepEdgeDto } from "../jmap";
 import { durationLabel } from "../projects/format";
-import type { Project, ProjectPlan } from "../projects/types";
+import { projectsMessage, useProjectsApi } from "../projects/api";
+import type { Project, ProjectPlan, ProjectUpdate, ProjectUpdateState } from "../projects/types";
 
 interface Props {
   project: Project;
@@ -29,6 +30,43 @@ export function ProjectOverviewView({
   onOpenTimeline,
   onEditProject,
 }: Props) {
+  const api = useProjectsApi();
+  const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
+  const [updateState, setUpdateState] = useState<ProjectUpdateState>("on_track");
+  const [updateBody, setUpdateBody] = useState("");
+  const [updatesLoading, setUpdatesLoading] = useState(true);
+  const [updateSaving, setUpdateSaving] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setUpdatesLoading(true);
+    setUpdateError(null);
+    void api.projectUpdates(project.id).then((loaded) => {
+      if (active) setUpdates(loaded);
+    }).catch((error: unknown) => {
+      if (active) setUpdateError(projectsMessage(error, strings.projectsUpdatesLoadFailed));
+    }).finally(() => {
+      if (active) setUpdatesLoading(false);
+    });
+    return () => { active = false; };
+  }, [api, project.id]);
+
+  async function publishUpdate() {
+    const body = updateBody.trim();
+    if (body === "" || updateSaving) return;
+    setUpdateSaving(true);
+    setUpdateError(null);
+    try {
+      const created = await api.createProjectUpdate(project.id, updateState, body);
+      setUpdates((current) => [created, ...current]);
+      setUpdateBody("");
+    } catch (error) {
+      setUpdateError(projectsMessage(error, strings.projectsUpdateSaveFailed));
+    } finally {
+      setUpdateSaving(false);
+    }
+  }
   const done = tasks.filter((task) => task.status === "done").length;
   const open = tasks.length - done;
   const today = new Date();
@@ -263,6 +301,62 @@ export function ProjectOverviewView({
           </div>
         </div>
       </section>
+
+      <section className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
+        <div className="flex items-start gap-3 border-b border-subtle pb-4">
+          <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
+            <MessageSquareText size={19} aria-hidden="true" />
+          </span>
+          <div>
+            <h2 className="text-base font-semibold text-primary">{strings.projectsUpdates}</h2>
+            <p className="mt-1 text-sm text-secondary">{strings.projectsUpdatesSubtitle}</p>
+          </div>
+        </div>
+        <div className="mt-4 rounded-xl bg-raised p-4">
+          <div className="flex flex-wrap gap-2" role="group" aria-label={strings.projectsUpdateHealth}>
+            {(["on_track", "at_risk", "off_track", "complete"] as const).map((state) => (
+              <button key={state} type="button"
+                className={`min-h-9 rounded-full px-3 py-1.5 text-xs font-semibold !no-underline transition-colors hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${updateState === state ? "bg-accent text-on-accent" : "bg-surface text-secondary hover:text-primary"}`}
+                aria-pressed={updateState === state} onClick={() => setUpdateState(state)}>
+                {updateStateLabel(state)}
+              </button>
+            ))}
+          </div>
+          <textarea className="mt-3 min-h-24 w-full resize-y rounded-xl border border-subtle bg-surface px-4 py-3 text-sm leading-6 text-primary placeholder:text-secondary focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            maxLength={4000} placeholder={strings.projectsUpdatePlaceholder} value={updateBody}
+            onChange={(event) => setUpdateBody(event.target.value)} />
+          <div className="mt-3 flex items-center justify-between gap-4">
+            <p className="text-xs text-secondary">{strings.projectsUpdateHint}</p>
+            <button type="button"
+              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent !no-underline transition-colors hover:bg-accent-hover hover:!no-underline disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+              disabled={updateBody.trim() === "" || updateSaving} onClick={() => void publishUpdate()}>
+              <Send size={15} aria-hidden="true" /> {updateSaving ? strings.billingSaving : strings.projectsPublishUpdate}
+            </button>
+          </div>
+          {updateError !== null && <p className="mt-3 text-sm text-danger" role="alert">{updateError}</p>}
+        </div>
+        {updatesLoading ? (
+          <p className="py-6 text-sm text-secondary">{strings.chatLoading}</p>
+        ) : updates.length === 0 ? (
+          <div className="py-8 text-center">
+            <p className="font-medium text-primary">{strings.projectsUpdatesEmpty}</p>
+            <p className="mt-1 text-sm text-secondary">{strings.projectsUpdatesEmptyBody}</p>
+          </div>
+        ) : (
+          <ol className="mt-2 divide-y divide-subtle">
+            {updates.slice(0, 8).map((update) => (
+              <li key={update.id} className="py-4 first:pt-3">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="font-semibold text-primary">{update.authorEmail || strings.projectsSomeone}</span>
+                  <span className="rounded-full bg-raised px-2 py-0.5 text-xs font-medium text-secondary">{updateStateLabel(update.state)}</span>
+                  <time className="text-xs text-secondary" dateTime={update.createdAt}>{friendlyDateTime(update.createdAt)}</time>
+                </div>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-primary">{update.body}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
     </div>
   );
 }
@@ -279,6 +373,21 @@ function HealthDatum({ label, value, warning }: { label: string; value: number; 
 function friendlyDate(value: string): string {
   const date = new Date(`${value.slice(0, 10)}T12:00:00`);
   return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(date);
+}
+
+function friendlyDateTime(value: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function updateStateLabel(state: ProjectUpdateState): string {
+  return {
+    on_track: strings.projectsHealthOnTrack,
+    at_risk: strings.projectsHealthAtRisk,
+    off_track: strings.projectsUpdateOffTrack,
+    complete: strings.projectsStatusCompleted,
+  }[state];
 }
 
 function Metric({ icon, label, value, detail, warning = false }: { icon: ReactNode; label: string; value: string; detail: string; warning?: boolean }) {

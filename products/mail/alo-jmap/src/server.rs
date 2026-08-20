@@ -32,7 +32,8 @@ use crate::{
     inventory_po_send, inventory_reorder, inventory_scan, inventory_so, inventory_so_deliveries,
     inventory_so_invoice, inventory_stock, inventory_supplier_prices, inventory_suppliers,
     invite_route, meet_routes, module_access, projects_clients, projects_invoices, projects_plan,
-    projects_reports, projects_templates, projects_time, projects_weeks, push, reset_route,
+    projects_reports, projects_templates, projects_time, projects_updates, projects_weeks, push,
+    reset_route,
     schedule, scoped_roles, security, session, settings, share, signup_route, site_protection,
     site_schedule, site_version_preview, site_versions, sites, sites_attribution, sites_bookings,
     sites_catalogs, sites_chat, sites_conversions, sites_domain_purchases, sites_heatmap,
@@ -1832,6 +1833,10 @@ pub fn app_with_site_boundaries(
         .route(
             "/projects/milestones/{id}/done",
             post(projects_plan::set_milestone_done),
+        )
+        .route(
+            "/projects/updates",
+            get(projects_updates::list_updates).post(projects_updates::create_update),
         )
         // A task's place in the plan, filed against the task whose place it is
         // (`projects.task.milestone.*`): one milestone per task, so putting it

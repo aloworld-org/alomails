@@ -170,6 +170,7 @@ pub mod projects_plan;
 pub mod projects_reports;
 pub mod projects_templates;
 pub mod projects_time;
+pub mod projects_updates;
 pub mod projects_weeks;
 pub mod push;
 pub mod reset_route;
