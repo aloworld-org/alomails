@@ -48,10 +48,19 @@
 //!   "recent customers" send who bought nothing.
 //! - **Has or has not received a given campaign** is what ADR 0044 also names,
 //!   and it is **not built here** — deliberately, and recorded in the migration
-//!   too. There is no campaign to name yet (the campaign record is queue item
-//!   C3.1, the per-recipient send record C5m.1), so the column would reference
-//!   a table that does not exist. It is an additive column and an extra CTE on
-//!   the day there is something for it to point at.
+//!   too. It was deferred because the column would have referenced a table
+//!   that did not exist.
+//!
+//!   **Both tables it needs now exist**: the campaign record (C3.1,
+//!   [`crate::campaign_record`]) and the per-recipient send ledger (C4.1,
+//!   [`crate::campaign_send`], migration 0800). `campaign_send_recipients` is
+//!   keyed `(tenant_id, campaign_id, address)`, which is exactly the index this
+//!   condition wants to probe. What remains is what was always described: one
+//!   additive column and one extra CTE.
+//!
+//!   It was not built in the change that unblocked it, because a segment
+//!   condition is a saved query somebody's mail depends on and deserves its own
+//!   tests rather than a corner of another item's.
 //!
 //! Nothing in this module sends anything.
 
