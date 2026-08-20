@@ -392,6 +392,7 @@ export function TasksModule({
               project={engagement}
               plan={projectPlan}
               tasks={tasks}
+              edges={edges}
               onAddTask={() => openCreate()}
               onOpenTask={setSelected}
               onOpenTasks={() => openView("list")}
