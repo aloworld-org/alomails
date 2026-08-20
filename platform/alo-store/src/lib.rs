@@ -69,6 +69,7 @@ pub mod campaign_suppression;
 pub mod campaign_text;
 pub mod campaign_topic_optout;
 pub mod campaign_unsubscribe;
+pub mod campaign_unsubscribe_link;
 pub mod changes;
 pub mod chat;
 pub mod chat_agent_dm;

@@ -3,9 +3,13 @@
 //!
 //! What is held here:
 //!
-//! - **nobody is mailed twice** — and specifically, not by a *second send of
-//!   the same campaign*, which is the accident the weaker per-send uniqueness
-//!   would let through: press send, spot the typo, stop, fix, press send again;
+//! - **nobody is mailed twice, and nobody is stranded** — a second send of a
+//!   campaign reaches exactly the people the first did not *mail*. Keying that
+//!   on the send would re-mail everybody; keying it on any enrolled row would
+//!   leave a send stopped before it mailed anybody permanently unsendable, the
+//!   safety button killing the campaign;
+//! - a settled recipient does not settle twice, so a dispatcher retrying after
+//!   a crash cannot mail somebody again;
 //! - enrolment **resumes rather than restarts**, so re-running a page a caller
 //!   is unsure about writes nothing the second time;
 //! - somebody who declined the topic is **recorded as skipped**, not quietly
@@ -68,9 +72,17 @@ fn a_campaign(subject: &str) -> NewCampaign<'_> {
     }
 }
 
+/// What one walk of enrolment did: enrolled, skipped, already mailed.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct Walk {
+    enrolled: i64,
+    skipped: i64,
+    already_mailed: i64,
+}
+
 /// Walks enrolment to exhaustion, the way a caller is meant to.
-async fn enrol_all(acc: &AccountStore, send: &CampaignSendId) -> (i64, i64, i64) {
-    let (mut enrolled, mut skipped, mut already) = (0, 0, 0);
+async fn enrol_all(acc: &AccountStore, send: &CampaignSendId) -> Walk {
+    let mut walk = Walk::default();
     let mut after = None;
     loop {
         let page = AudiencePage {
@@ -78,19 +90,19 @@ async fn enrol_all(acc: &AccountStore, send: &CampaignSendId) -> (i64, i64, i64)
             limit: 2,
         };
         let done = acc.enrol_campaign_send_page(send, &page).await.unwrap();
-        enrolled += done.enrolled;
-        skipped += done.skipped;
-        already += done.already_enrolled;
+        walk.enrolled += done.enrolled;
+        walk.skipped += done.skipped;
+        walk.already_mailed += done.already_mailed;
         match done.next_cursor {
             None => break,
             Some(cursor) => after = Some(cursor),
         }
     }
-    (enrolled, skipped, already)
+    walk
 }
 
 #[tokio::test]
-async fn a_second_send_of_one_campaign_cannot_reach_anybody_it_already_did() {
+async fn a_second_send_reaches_exactly_the_people_the_first_did_not_mail() {
     let store = common::test_store().await;
     let (acc, _, _) = tenant(&store, "twice").await;
     mailable(&acc, "Ann", "ann@example.test").await;
@@ -99,26 +111,102 @@ async fn a_second_send_of_one_campaign_cannot_reach_anybody_it_already_did() {
     let campaign = acc.create_campaign(&a_campaign("Spring")).await.unwrap();
 
     let first = acc.open_campaign_send(&campaign.id).await.unwrap();
-    let (enrolled, _, _) = enrol_all(&acc, &first.id).await;
-    assert_eq!(enrolled, 2, "both mailable people are enrolled once");
+    assert_eq!(enrol_all(&acc, &first.id).await.enrolled, 2);
 
-    // The operator spots the typo and stops the send.
+    // The dispatcher gets through Ann before anybody notices the typo.
+    assert!(
+        acc.mark_campaign_recipient_sent(&first.id, "ann@example.test")
+            .await
+            .unwrap()
+    );
     let stopped = acc
         .stop_campaign_send(&first.id, Some("typo"))
         .await
         .unwrap();
     assert_eq!(stopped.state, SendState::Stopped);
 
-    // They fix it and press send again. THIS is the accident the campaign-wide
-    // uniqueness exists for: with per-send uniqueness both people would be
-    // enrolled a second time and receive the letter twice.
+    // Fixed, and sent again. This is the case the whole design turns on:
+    //
+    // - Ann HAS been mailed, so she must not be mailed twice;
+    // - Ben was enrolled and never mailed, so he must still be reachable —
+    //   keying the uniqueness on any row rather than on `sent` would leave him
+    //   permanently unreachable and the campaign effectively dead.
     let second = acc.open_campaign_send(&campaign.id).await.unwrap();
-    let (enrolled, _, already) = enrol_all(&acc, &second.id).await;
-    assert_eq!(enrolled, 0, "nobody is enrolled a second time");
-    assert_eq!(already, 2, "and the ledger says why, rather than silently");
+    let walk = enrol_all(&acc, &second.id).await;
+    assert_eq!(walk.enrolled, 1, "Ben, who never received it");
+    assert_eq!(walk.already_mailed, 1, "Ann, who did");
 
     let tally = acc.campaign_send_tally(&second.id).await.unwrap();
-    assert_eq!(tally.total(), 0, "the second send reaches nobody at all");
+    assert_eq!(tally.pending, 1);
+    assert_eq!(
+        tally.total(),
+        1,
+        "the second send is about the one person the first did not reach"
+    );
+}
+
+#[tokio::test]
+async fn stopping_a_send_before_it_mailed_anybody_does_not_kill_the_campaign() {
+    let store = common::test_store().await;
+    let (acc, _, _) = tenant(&store, "notdead").await;
+    mailable(&acc, "Ann", "ann@example.test").await;
+    mailable(&acc, "Ben", "ben@example.test").await;
+
+    let campaign = acc.create_campaign(&a_campaign("Oops")).await.unwrap();
+
+    // Enrolment finishes seconds after the button is pressed; the dispatcher
+    // has not sent a thing. The operator reads their own subject line and
+    // stops.
+    let first = acc.open_campaign_send(&campaign.id).await.unwrap();
+    assert_eq!(enrol_all(&acc, &first.id).await.enrolled, 2);
+    acc.stop_campaign_send(&first.id, Some("wrong subject"))
+        .await
+        .unwrap();
+
+    // The campaign must still be sendable to everybody. Keyed on any enrolled
+    // row instead of on `sent`, this would be zero — the safety button having
+    // quietly destroyed the campaign.
+    let second = acc.open_campaign_send(&campaign.id).await.unwrap();
+    let walk = enrol_all(&acc, &second.id).await;
+    assert_eq!(walk.enrolled, 2, "both are still reachable");
+    assert_eq!(walk.already_mailed, 0, "because neither was ever mailed");
+}
+
+#[tokio::test]
+async fn a_recipient_settles_once_and_a_retry_cannot_move_them_again() {
+    let store = common::test_store().await;
+    let (acc, _, _) = tenant(&store, "settle").await;
+    mailable(&acc, "Ann", "ann@example.test").await;
+
+    let campaign = acc.create_campaign(&a_campaign("Once")).await.unwrap();
+    let send = acc.open_campaign_send(&campaign.id).await.unwrap();
+    enrol_all(&acc, &send.id).await;
+
+    assert!(
+        acc.mark_campaign_recipient_sent(&send.id, "ann@example.test")
+            .await
+            .unwrap(),
+        "the pending row moves"
+    );
+    // A dispatcher repeating itself after a crash must not be able to settle
+    // somebody twice — the second call reports that it changed nothing rather
+    // than mailing them again.
+    assert!(
+        !acc.mark_campaign_recipient_sent(&send.id, "ann@example.test")
+            .await
+            .unwrap(),
+        "a settled row does not move a second time"
+    );
+    // The address is folded by the same rule as everywhere else.
+    assert!(
+        !acc.mark_campaign_recipient_sent(&send.id, "ANN@Example.Test")
+            .await
+            .unwrap()
+    );
+
+    let tally = acc.campaign_send_tally(&send.id).await.unwrap();
+    assert_eq!(tally.sent, 1);
+    assert_eq!(tally.pending, 0);
 }
 
 #[tokio::test]
@@ -168,10 +256,13 @@ async fn somebody_who_declined_the_topic_is_recorded_rather_than_dropped() {
 
     let campaign = acc.create_campaign(&a_campaign("Spring")).await.unwrap();
     let send = acc.open_campaign_send(&campaign.id).await.unwrap();
-    let (enrolled, skipped, _) = enrol_all(&acc, &send.id).await;
+    let walk = enrol_all(&acc, &send.id).await;
 
-    assert_eq!(enrolled, 1, "only Ann is to be mailed");
-    assert_eq!(skipped, 1, "and Ben is accounted for rather than missing");
+    assert_eq!(walk.enrolled, 1, "only Ann is to be mailed");
+    assert_eq!(
+        walk.skipped, 1,
+        "and Ben is accounted for rather than missing"
+    );
 
     let tally = acc.campaign_send_tally(&send.id).await.unwrap();
     assert_eq!(tally.pending, 1);
@@ -368,8 +459,8 @@ async fn a_send_of_an_empty_audience_is_finished_rather_than_stuck() {
 
     let campaign = acc.create_campaign(&a_campaign("Nobody")).await.unwrap();
     let send = acc.open_campaign_send(&campaign.id).await.unwrap();
-    let (enrolled, skipped, _) = enrol_all(&acc, &send.id).await;
-    assert_eq!((enrolled, skipped), (0, 0));
+    let walk = enrol_all(&acc, &send.id).await;
+    assert_eq!((walk.enrolled, walk.skipped), (0, 0));
 
     let read = acc.campaign_send(&send.id).await.unwrap().unwrap();
     assert_eq!(

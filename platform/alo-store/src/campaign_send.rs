@@ -33,15 +33,28 @@
 //! `ON CONFLICT DO NOTHING` against the uniqueness described below, so a caller
 //! that is unsure whether its last page landed simply asks for it again.
 //!
-//! ## Once per campaign, not once per send
+//! ## Mailed once per campaign — not *enrolled* once
 //!
-//! C4.1 asks for *idempotency on (campaign, address)*. That is stronger than
-//! the obvious reading, and the migration's index enforces the strong one: a
-//! person enrolled by any send of a campaign cannot be enrolled by another send
-//! of the same campaign. The accident it prevents is the common one — somebody
-//! presses send, spots the typo, stops it, fixes it, and presses send again;
-//! with per-send uniqueness everybody who got the broken copy also gets the
-//! fixed one.
+//! C4.1 asks for *idempotency on (campaign, address)*, and the state it is
+//! keyed on is the whole design.
+//!
+//! Keying it on **any** row is the trap: enrolment writes every recipient as
+//! `pending` within seconds of the button being pressed, long before anything
+//! is dispatched. So a send stopped before it had mailed a single person would
+//! leave a full set of rows behind, and the campaign could never be sent to
+//! anybody again — the safety button killing the campaign. Keying it on the
+//! send instead lets a second send of the same campaign re-mail everybody the
+//! first already reached.
+//!
+//! So it is keyed on `sent`: a campaign reaches a given person at most once,
+//! ever, while somebody enrolled and never mailed stays reachable. Stop a send
+//! halfway and the next one reaches exactly the people the first did not, which
+//! is what an operator means by "fix it and send it again".
+//!
+//! Mailing the same people the same campaign a second time remains impossible.
+//! Doing it deliberately means writing a second campaign — the honest model for
+//! bulk mail, since a "resend" that quietly re-enrols is how somebody receives
+//! four copies from a system that believes it is behaving correctly.
 //!
 //! ## A declined topic is recorded, not omitted
 //!
@@ -192,10 +205,15 @@ pub struct EnrolledPage {
     pub enrolled: i64,
     /// Rows written as `skipped` by this call.
     pub skipped: i64,
-    /// Addresses this page saw that were already enrolled by an earlier send of
-    /// the same campaign, and were therefore left alone. Not a failure — it is
-    /// the idempotency working, and it is surfaced so a caller can say so.
+    /// Addresses this page saw that this same send had already written — a
+    /// caller repeating a page it was unsure about. Not a failure; it is what
+    /// makes enrolment resumable.
     pub already_enrolled: i64,
+    /// Addresses an **earlier send of this campaign already mailed**, and which
+    /// this one therefore leaves alone. This is the idempotency C4.1 asks for,
+    /// counted rather than silent so a caller can say why a send reached fewer
+    /// people than the audience offered.
+    pub already_mailed: i64,
     /// Where to continue from, or `None` when the audience is exhausted. When
     /// this is `None` the send has moved from `Enrolling` to `Sending`.
     pub next_cursor: Option<String>,
@@ -364,6 +382,7 @@ impl AccountStore {
                 enrolled: 0,
                 skipped: 0,
                 already_enrolled: 0,
+                already_mailed: 0,
                 next_cursor: None,
             });
         }
@@ -377,10 +396,32 @@ impl AccountStore {
             .campaign_topic_decliners(&send.topic_fold, &addresses)
             .await?;
 
+        // Who an earlier send of this campaign already MAILED. Asked in a batch
+        // for the same reason the opt-outs are.
+        //
+        // Keyed on `sent` rather than on any row, which is the whole of C4.1's
+        // idempotency: enrolment writes everybody as `pending` seconds after
+        // the button is pressed, so treating a pending row as "already reached"
+        // would mean that stopping a send which had not yet mailed anybody left
+        // the campaign permanently unsendable. See migration 0800.
+        let mailed = self
+            .campaign_addresses_already_mailed(&send.campaign_id, &addresses)
+            .await?;
+
         let mut enrolled = 0_i64;
         let mut skipped = 0_i64;
         let mut already = 0_i64;
+        let mut already_mailed = 0_i64;
         for address in &addresses {
+            // An earlier send reached them. Not enrolled again, and not written
+            // as a skip either: this send never offered them anything, and a
+            // `skipped` row here would put them in this send's tally as though
+            // it had considered and declined them.
+            if mailed.iter().any(|m| m == address) {
+                already_mailed += 1;
+                continue;
+            }
+
             let declined_topic = declined.iter().any(|d| d == address);
             let (state, why) = if declined_topic {
                 (RecipientState::Skipped, Some(reason::TOPIC_DECLINED))
@@ -400,8 +441,9 @@ impl AccountStore {
                 .map_err(StoreError::Db)?;
 
             match written {
-                // `RETURNING` yields nothing when the row already existed, which
-                // is the conflict clause doing its job.
+                // `RETURNING` yields nothing when THIS send already wrote the
+                // row — a caller repeating a page, which is the intended
+                // recovery rather than a fault.
                 None => already += 1,
                 Some(_) if declined_topic => skipped += 1,
                 Some(_) => enrolled += 1,
@@ -409,16 +451,84 @@ impl AccountStore {
         }
 
         // The cursor is the last address of the page, whatever became of it —
-        // including the ones already enrolled by an earlier send. Advancing
-        // only past the rows this call wrote would loop forever over a page
-        // that is entirely already-enrolled.
+        // including the ones skipped as already mailed. Advancing only past the
+        // rows this call wrote would loop forever over a page that is entirely
+        // already-mailed.
         let next_cursor = addresses.last().cloned();
         Ok(EnrolledPage {
             enrolled,
             skipped,
             already_enrolled: already,
+            already_mailed,
             next_cursor,
         })
+    }
+
+    /// Which of `addresses` an earlier send of this campaign already mailed.
+    ///
+    /// Reads only `sent` rows, which is what the campaign-wide uniqueness is
+    /// keyed on — the partial index in migration 0800 serves this query
+    /// directly.
+    ///
+    /// # Errors
+    /// [`StoreError::Db`] on failure.
+    async fn campaign_addresses_already_mailed(
+        &self,
+        campaign_id: &CampaignId,
+        addresses: &[String],
+    ) -> Result<Vec<String>> {
+        if addresses.is_empty() {
+            return Ok(Vec::new());
+        }
+        let rows: Vec<(String,)> = sqlx::query_as(ALREADY_MAILED_SQL)
+            .bind(self.tenant.as_str())
+            .bind(campaign_id.as_str())
+            .bind(addresses)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+        Ok(rows.into_iter().map(|row| row.0).collect())
+    }
+
+    /// Records that one enrolled recipient was handed to submission.
+    ///
+    /// The seam the dispatcher (C4.2) will use, and the transition without
+    /// which this module's central claim cannot be true: "a campaign reaches a
+    /// person at most once" is enforced on rows in the `sent` state, so a
+    /// ledger with no way to reach that state guarantees nothing.
+    ///
+    /// Moves only a `pending` row. A recipient already settled — sent, failed
+    /// or skipped — is left exactly as they are and answered `false`, because a
+    /// dispatcher retrying after a crash must not be able to turn a recorded
+    /// failure into a success, nor mail somebody a second time by re-settling
+    /// them.
+    ///
+    /// # Errors
+    /// [`StoreError::NotFound`] when the send is not this tenant's;
+    /// [`StoreError::Validation`] when the address is not one the audience
+    /// could hold; [`StoreError::Db`] on failure.
+    pub async fn mark_campaign_recipient_sent(
+        &self,
+        id: &CampaignSendId,
+        address: &str,
+    ) -> Result<bool> {
+        let address = crate::campaign_audience::normalise_address(address).ok_or_else(|| {
+            StoreError::Validation("a recipient is named by an address".to_owned())
+        })?;
+        // Tenant-scoped existence first, so a wrong-tenant send is `NotFound`
+        // rather than a silent `false` that reads as "already settled".
+        self.campaign_send(id).await?.ok_or(StoreError::NotFound)?;
+
+        let moved = sqlx::query(MARK_SENT_SQL)
+            .bind(self.tenant.as_str())
+            .bind(id.as_str())
+            .bind(&address)
+            .bind(RecipientState::Sent.as_str())
+            .bind(RecipientState::Pending.as_str())
+            .execute(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+        Ok(moved.rows_affected() > 0)
     }
 
     /// Marks enrolment finished: the send moves to [`SendState::Sending`].
@@ -632,6 +742,18 @@ fn select_sends_sql() -> String {
 
 const TALLY_SQL: &str = "SELECT state, count(*) FROM campaign_send_recipients \
      WHERE tenant_id = $1 AND send_id = $2 GROUP BY state";
+
+/// Served directly by `campaign_send_recipients_mailed_once_per_campaign`,
+/// which is partial on exactly this predicate.
+const ALREADY_MAILED_SQL: &str = "SELECT address FROM campaign_send_recipients \
+     WHERE tenant_id = $1 AND campaign_id = $2 AND state = 'sent' \
+       AND address = ANY($3)";
+
+/// `state = $5` in the WHERE is what makes this safe to retry: only a pending
+/// row moves, so a dispatcher repeating itself cannot re-settle somebody.
+const MARK_SENT_SQL: &str = "UPDATE campaign_send_recipients \
+     SET state = $4, settled_at = now() \
+     WHERE tenant_id = $1 AND send_id = $2 AND address = $3 AND state = $5";
 
 /// `RETURNING address` yields nothing when the row was already there, which is
 /// how the caller counts what the idempotency skipped.

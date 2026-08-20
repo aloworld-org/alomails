@@ -147,23 +147,48 @@ CREATE TABLE campaign_send_recipients (
 );
 
 -- THE IDEMPOTENCY C4.1 ASKS FOR: "nobody is mailed twice — idempotency on
--- (campaign, address)".
+-- (campaign, address)" — keyed on who was MAILED, not on who was enrolled.
 --
--- Per CAMPAIGN, not per send, and the difference is the whole point. A unique
--- key on (send, address) — which the primary key above already gives — stops
--- one send from enrolling somebody twice, and would happily let a SECOND send
--- of the same campaign mail them again. That is precisely the accident that
--- happens when somebody presses send, sees the typo, stops it, fixes it and
--- presses send again: the people who already received the broken copy get the
--- fixed one as well, and the people who did not, do not.
+-- The distinction is the whole design, and getting it wrong is worse than not
+-- having the constraint at all. Three candidates:
 --
--- The consequence is deliberate: a campaign reaches a given person at most
--- once, ever. Mailing the same people again is a new campaign, which is the
--- honest model — the alternative is a "resend" that quietly re-enrols, and that
--- is how somebody receives four copies from a system that believes it is
--- behaving correctly.
-CREATE UNIQUE INDEX campaign_send_recipients_once_per_campaign
-    ON campaign_send_recipients (tenant_id, campaign_id, address);
+--   (send, address)     — the primary key above. Stops one send from enrolling
+--                         somebody twice, and happily lets a SECOND send of the
+--                         same campaign mail them again. That is the
+--                         press-send, spot-the-typo, stop, fix, send-again
+--                         accident: everyone who got the broken copy also gets
+--                         the fixed one.
+--
+--   (campaign, address) — over EVERY row, whatever became of it. Prevents the
+--                         double mail, and creates a far worse failure:
+--                         enrolment writes every recipient as `pending` within
+--                         seconds, long before the dispatcher sends anything,
+--                         so stopping a send that had not yet mailed a soul
+--                         leaves a full set of rows behind and the campaign can
+--                         never be sent to anybody, ever. The safety button
+--                         becomes the thing that kills the campaign.
+--
+--   (campaign, address) — this one. The guarantee people actually want: a
+--   WHERE state = 'sent'  campaign reaches a given person at most once, ever,
+--                         while somebody who was enrolled and never mailed
+--                         remains reachable by a later attempt.
+--
+-- So: stop a send halfway and the next one reaches exactly the people the first
+-- did not — which is what an operator means by "fix it and send it again", and
+-- what neither of the other two gives them.
+--
+-- The consequence that IS deliberate: mailing the same people the same campaign
+-- a second time is impossible, and doing it on purpose means writing a second
+-- campaign. That is the honest model for bulk mail; a "resend" that quietly
+-- re-enrols is how somebody receives four copies from a system that believes it
+-- is behaving correctly.
+--
+-- Postgres allows any number of rows outside a partial index's predicate, so
+-- the pending and skipped rows of an abandoned send never collide with a later
+-- attempt.
+CREATE UNIQUE INDEX campaign_send_recipients_mailed_once_per_campaign
+    ON campaign_send_recipients (tenant_id, campaign_id, address)
+    WHERE state = 'sent';
 
 -- The dispatcher's claim query: the pending rows of one send, oldest first.
 CREATE INDEX campaign_send_recipients_pending
