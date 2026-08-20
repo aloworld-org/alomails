@@ -21,7 +21,7 @@
 // the point — so the copy here says *client project* wherever the distinction
 // carries weight, and the Tasks module's own strings are left alone.
 import { useCallback, useEffect, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useCustomers } from "../billing";
 import { Spinner } from "../ds";
@@ -60,6 +60,7 @@ const projectTabClass = ({ isActive }: { isActive: boolean }) =>
 
 export function ProjectsModule() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const api = useProjectsApi();
   const client = useJmapClient();
   // Archived customers included: a project attached to one before it was
@@ -185,8 +186,16 @@ export function ProjectsModule() {
     if (draft.customerId !== null) await api.setClient(project.id, { customerId: draft.customerId });
     setCreating(false);
     setError(null);
-    bump();
+    navigate(`/tasks?project=${encodeURIComponent(project.id)}&view=overview`);
   }
+
+  useEffect(() => {
+    if (searchParams.get("new") !== "1") return;
+    setCreating(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("new");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   /** Marks a board reusable, or takes the mark off. One control, because a board
    *  either is a template or is not — and undoing it is the same click again,
@@ -264,7 +273,7 @@ export function ProjectsModule() {
               onStartTimer={(project) => void startTimer(project)}
               onStopTimer={() => void stopTimer()}
               onToggleTemplate={(project) => void toggleTemplate(project)}
-              onOpenTasks={(project) => navigate(`/tasks?project=${encodeURIComponent(project.id)}`)}
+              onOpenTasks={(project) => navigate(`/tasks?project=${encodeURIComponent(project.id)}&view=overview`)}
               onNewProject={() => setCreating(true)}
               onNewFromTemplate={() => setStartingFromTemplate(true)}
             />
@@ -302,9 +311,9 @@ export function ProjectsModule() {
           templates={templates}
           defaultDay={today()}
           onClose={() => setStartingFromTemplate(false)}
-          onCreated={() => {
+          onCreated={(copy) => {
             setStartingFromTemplate(false);
-            bump();
+            navigate(`/tasks?project=${encodeURIComponent(copy.projectId)}&view=overview`);
           }}
         />
       )}

@@ -4,7 +4,7 @@
 // (propose-then-approve). All data goes through the authenticated /tasks API;
 // the board's grouping and the list's flattening are the client's job.
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   CalendarRange,
   ClipboardList,
@@ -21,7 +21,7 @@ import {
 
 import { strings } from "../i18n";
 import { useJmapClient, type Task, type TaskDepEdgeDto, type TaskProject } from "../jmap";
-import { Spinner, useDialogs } from "../ds";
+import { Spinner } from "../ds";
 import { useAuth } from "../auth";
 import { BoardView } from "./BoardView";
 import { ListView } from "./ListView";
@@ -42,12 +42,12 @@ type Mode = { type: "project"; id: string } | { type: "plate" } | { type: "propo
 
 export function TasksModule() {
   const client = useJmapClient();
-  const { prompt } = useDialogs();
+  const navigate = useNavigate();
   const { identity } = useAuth();
   const [projects, setProjects] = useState<TaskProject[]>([]);
   const [edges, setEdges] = useState<TaskDepEdgeDto[]>([]);
   const [mode, setMode] = useState<Mode>({ type: "plate" });
-  const [view, setView] = useState<View>("list");
+  const [view, setView] = useState<View>("overview");
   const [config, setConfig] = useState<ViewConfig>(DEFAULT_CONFIG);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [proposals, setProposals] = useState<Task[]>([]);
@@ -78,6 +78,32 @@ export function TasksModule() {
         : { type: "project", id: requested },
     );
   }, [projects, searchParams]);
+
+  useEffect(() => {
+    const requested = searchParams.get("view");
+    if (
+      requested === "overview" || requested === "list" || requested === "board" ||
+      requested === "timeline" || requested === "calendar" || requested === "files"
+    ) {
+      setView(requested);
+    }
+  }, [searchParams]);
+
+  function openProject(id: string) {
+    const next = new URLSearchParams(searchParams);
+    next.set("project", id);
+    next.set("view", "overview");
+    setSearchParams(next);
+    setMode({ type: "project", id });
+    setView("overview");
+  }
+
+  function openView(nextView: View) {
+    setView(nextView);
+    const next = new URLSearchParams(searchParams);
+    next.set("view", nextView);
+    setSearchParams(next, { replace: true });
+  }
 
   const projectName = useCallback(
     (id: string) => projects.find((p) => p.id === id)?.name ?? "",
@@ -164,14 +190,6 @@ export function TasksModule() {
     }
   }
 
-  async function newProject() {
-    const name = (await prompt({ message: strings.taskNewProjectPrompt }))?.trim();
-    if (!name) return;
-    const p = await client.createTaskProject(name);
-    await loadProjects();
-    setMode({ type: "project", id: p.id });
-  }
-
   const title =
     mode.type === "plate"
       ? strings.taskMyPlate
@@ -207,7 +225,7 @@ export function TasksModule() {
             <button
               type="button"
               className={styles.iconBtn}
-              onClick={() => void newProject()}
+              onClick={() => navigate("/projects/list?new=1")}
               aria-label={strings.taskNewProject}
               title={strings.taskNewProject}
             >
@@ -221,7 +239,7 @@ export function TasksModule() {
               className={`${styles.projItem} ${
                 mode.type === "project" && mode.id === p.id ? styles.projActive : ""
               }`}
-              onClick={() => setMode({ type: "project", id: p.id })}
+              onClick={() => openProject(p.id)}
             >
               <span
                 className={styles.projDot}
@@ -253,9 +271,11 @@ export function TasksModule() {
           </form>
           <div className={styles.topActions}>
             {loading && <Spinner size={16} />}
-            <button type="button" className={styles.newTaskBtn} onClick={() => openCreate()}>
-              <Plus size={16} /> {strings.taskNew}
-            </button>
+            {tasks.length > 0 && mode.type !== "proposals" && (
+              <button type="button" className={styles.newTaskBtn} onClick={() => openCreate()}>
+                <Plus size={16} /> {strings.taskNew}
+              </button>
+            )}
           </div>
         </header>
 
@@ -277,7 +297,7 @@ export function TasksModule() {
                 role="tab"
                 aria-selected={view === t.id}
                 className={view === t.id ? `${styles.tab} ${styles.tabActive}` : styles.tab}
-                onClick={() => setView(t.id)}
+                onClick={() => openView(t.id)}
               >
                 <t.Icon size={16} /> {t.label}
               </button>
@@ -315,7 +335,7 @@ export function TasksModule() {
               me={identity?.email}
               onOpen={setSelected}
               onAdd={() => openCreate()}
-              onViewAll={() => setView("list")}
+              onViewAll={() => openView("list")}
             />
           ) : view === "board" ? (
             <BoardView
