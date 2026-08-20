@@ -21,7 +21,8 @@
 // the point — so the copy here says *client project* wherever the distinction
 // carries weight, and the Tasks module's own strings are left alone.
 import { useCallback, useEffect, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { FolderKanban } from "lucide-react";
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useCustomers } from "../billing";
 import { Spinner } from "../ds";
@@ -71,8 +72,39 @@ const projectTabClass = ({ isActive }: { isActive: boolean }) =>
       : "border-transparent bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"
   }`;
 
+const TOP_LEVEL_PROJECT_ROUTES = new Set([
+  "list",
+  "my-work",
+  "week",
+  "plan",
+  "timeline",
+  "reports",
+  "approvals",
+]);
+
+/** Keep the engagement visible while somebody moves through its work, time,
+ * plan, and financial views. The path owns workspace scope; the three
+ * aggregate views carry the same scope in their `project` query parameter. */
+export function projectContextId(pathname: string, projectQuery: string | null): string | null {
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts[0] !== "projects") return null;
+  const segment = parts[1];
+  if (segment !== undefined && !TOP_LEVEL_PROJECT_ROUTES.has(segment)) {
+    try {
+      return decodeURIComponent(segment);
+    } catch {
+      return segment;
+    }
+  }
+  if (segment === "week" || segment === "timeline" || segment === "reports") {
+    return projectQuery;
+  }
+  return null;
+}
+
 export function ProjectsModule() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const api = useProjectsApi();
   const client = useJmapClient();
@@ -88,6 +120,10 @@ export function ProjectsModule() {
   const [startingFromTemplate, setStartingFromTemplate] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const contextProjectId = projectContextId(location.pathname, searchParams.get("project"));
+  const contextProject = contextProjectId === null
+    ? null
+    : projects.find((project) => project.id === contextProjectId) ?? null;
   const [revision, setRevision] = useState(0);
   const [runningTimer, setRunningTimer] = useState<RunningTimer | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -254,6 +290,17 @@ export function ProjectsModule() {
           >
             {strings.projectsTabMyWork}
           </NavLink>
+          {contextProject !== null && (
+            <NavLink
+              to={`/projects/${encodeURIComponent(contextProject.id)}/overview`}
+              className={({ isActive }) => projectTabClass({
+                isActive: isActive || location.pathname.startsWith(`/projects/${encodeURIComponent(contextProject.id)}/`),
+              })}
+            >
+              <FolderKanban className="mr-2" size={16} aria-hidden="true" />
+              <span className="max-w-48 truncate">{contextProject.name}</span>
+            </NavLink>
+          )}
           <NavLink
             to="/projects/week"
             className={projectTabClass}
