@@ -8,7 +8,7 @@
 // point of the item is that a quote and an invoice are the same screen, and a
 // test against stubs could not tell.
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useParams } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { DialogProvider } from "../ds";
@@ -189,12 +189,21 @@ vi.mock("../auth", () => ({
 }));
 
 /** The module as it is really mounted: at `/billing/*`, routing itself. */
+/** Stands in for the order screen, which belongs to another module. What this
+ *  file has to prove is only that an accepted offer for goods leaves for the
+ *  right order id. */
+function OrderScreenStub() {
+  const { id } = useParams<{ id: string }>();
+  return <p>order screen for {id}</p>;
+}
+
 function ui(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <DialogProvider>
         <Routes>
           <Route path="/billing/*" element={<BillingModule />} />
+          <Route path="/inventory/sales-orders/:id" element={<OrderScreenStub />} />
         </Routes>
       </DialogProvider>
     </MemoryRouter>,
@@ -409,6 +418,11 @@ describe("the offer's transitions", () => {
 
     fireEvent.click(screen.getByRole("button", { name: strings.billingAcceptQuote }));
     expect(await screen.findByText(strings.billingAcceptQuoteConfirm)).toBeTruthy();
+    // Deliberately no `salesOrder` key at all, not `salesOrder: null` — this
+    // is the shape a server that predates the order routing answers with, and
+    // the screen must still land on the invoice. Do not "complete" this
+    // fixture: reading an absent field as a raised order is the exact bug it
+    // exists to catch.
     reply("/billing/quotes/quo-2/accept", "POST", {
       quote: { ...SENT, status: "accepted", decidedDate: "2026-08-07" },
       invoice: FROM_QUOTE,
@@ -433,6 +447,29 @@ describe("the offer's transitions", () => {
     fireEvent.click(screen.getByRole("button", { name: strings.billingFromQuote }));
     expect(await screen.findByText("QUO-2026-00004")).toBeTruthy();
     expect(screen.getByText(strings.billingQuoteStatusAccepted)).toBeTruthy();
+  });
+
+  test("an accepted offer for goods lands on the order it raised, not an invoice", async () => {
+    reply("/billing/quotes/quo-2", "GET", { quote: SENT, invoiceId: null });
+    ui("/billing/quotes/quo-2");
+    await screen.findByText(strings.billingQuoteSentNotice);
+
+    fireEvent.click(screen.getByRole("button", { name: strings.billingAcceptQuote }));
+    expect(await screen.findByText(strings.billingAcceptQuoteConfirm)).toBeTruthy();
+    // An offer whose lines name stocked items is for goods: the server raises
+    // a sales order and no invoice, because nothing is billed until something
+    // is delivered.
+    reply("/billing/quotes/quo-2/accept", "POST", {
+      quote: { ...SENT, status: "accepted", decidedDate: "2026-08-07" },
+      invoice: null,
+      salesOrder: { id: "so-7" },
+    });
+    press(strings.billingAcceptQuote);
+
+    await waitFor(() => expect(lastWrite()?.url).toContain("/billing/quotes/quo-2/accept"));
+    expect(await screen.findByText("order screen for so-7")).toBeTruthy();
+    // And it did not go looking for an invoice that was never raised.
+    expect(calls.some((c) => c.url.includes("/billing/invoices/"))).toBe(false);
   });
 
   test("declining closes the offer for good, in the server's own answer", async () => {

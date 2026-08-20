@@ -4453,6 +4453,26 @@ export const nl: Partial<Catalog> = {
   inventoryColState: "Status",
   inventoryColTotal: "Totaal",
 
+  // Het orderboek.
+  inventoryTabOrderBook: "Orderboek",
+  inventoryOrderBookLoadFailed: "Het orderboek kon niet worden geladen.",
+  inventoryFilterScope: "Tonen",
+  inventoryScopeOpen: "Lopende orders",
+  inventoryScopeAll: "Alle orders",
+  inventoryColOrdered: "Besteld",
+  inventoryColReserved: "Gereserveerd",
+  inventoryColInvoiced: "Gefactureerd",
+  inventoryBookTotal: "Over alle orders",
+  inventoryBookMixedCurrencies: (currencies: string) =>
+    `Deze orders staan in ${currencies}; één totaal zou niets betekenen. De cijfers per order kloppen wel.`,
+  inventoryBookQtyHint: (qtyMilli: string) => `${qtyMilli} nog te leveren`,
+  inventoryOrderBookEmptyTitle: "Er staat niets open",
+  inventoryOrderBookEmptyBody:
+    "Het orderboek laat zien waar klanten op wachten en wat u hun nog moet factureren. Bevestig een verkooporder en die staat hier tot alles geleverd en gefactureerd is.",
+  inventoryOrderBookEmptyAllTitle: "Er zijn nog geen orders",
+  inventoryOrderBookEmptyAllBody:
+    "Er is nog niets verkocht, zelfs geen concept. Het orderboek vult zichzelf zodra er orders bij komen.",
+
   // Het document.
   inventoryBackToPurchaseOrders: "Alle inkooporders",
   inventoryBackToSalesOrders: "Alle verkooporders",

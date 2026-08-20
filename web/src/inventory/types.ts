@@ -395,3 +395,60 @@ export interface OrderPatch {
   note?: string;
   lines?: OrderLineDraft[];
 }
+
+// ---- the order book ------------------------------------------------------
+
+/**
+ * The five money figures and the four quantity ones, exactly as the server
+ * computed them.
+ *
+ * **Nothing derives one from another here**, including the tempting ones:
+ * outstanding is not ordered-minus-delivered on this side of the wire, because
+ * a short-closed order is owed nothing while that subtraction still says it is
+ * owed. The server knows which orders were given up on; a screen doing the
+ * arithmetic would not, and would be wrong in exactly the cases that matter.
+ *
+ * Quantities are meaningful only where goods can actually move — an order of
+ * pure services counts zero of everything and is still worth money.
+ */
+export interface OrderBookFigures {
+  orderedNetCents: number;
+  reservedNetCents: number;
+  deliveredNetCents: number;
+  invoicedNetCents: number;
+  outstandingNetCents: number;
+  orderedQtyMilli: number;
+  reservedQtyMilli: number;
+  deliveredQtyMilli: number;
+  outstandingQtyMilli: number;
+}
+
+/** One order's line in the book. */
+export interface OrderBookRow {
+  id: string;
+  number: string | null;
+  customerId: string;
+  customerName: string;
+  status: SalesOrderStatus;
+  currency: string;
+  figures: OrderBookFigures;
+}
+
+/** Which orders the book covers: the live ones, or every one ever raised. */
+export type BookScope = "open" | "all";
+
+/**
+ * The whole book: the orders in scope, the totals across them, and which
+ * currencies those totals are made of.
+ *
+ * `currencies` exists so the screen can refuse to print a meaningless number.
+ * A tenant selling in euros and pounds has a "total outstanding" that is the
+ * sum of two different things, and the honest answer is to say so rather than
+ * to show a figure that looks authoritative and is not.
+ */
+export interface OrderBook {
+  scope: BookScope;
+  orders: OrderBookRow[];
+  totals: OrderBookFigures;
+  currencies: string[];
+}

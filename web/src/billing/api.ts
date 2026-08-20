@@ -37,6 +37,7 @@ import type {
   InvoiceStatus,
   PaymentDraft,
   ProductDraft,
+  QuoteAcceptance,
   QuoteDraft,
   QuoteStatus,
   ScheduleDraft,
@@ -386,11 +387,15 @@ export class BillingApi {
   }
 
   /** The customer took the offer. One server transaction closes the quote and
-   *  raises the draft invoice for it, so both documents come back. */
-  acceptQuote(id: string): Promise<{ quote: BillingQuote; invoice: BillingInvoice }> {
-    return this.#act<{ quote: BillingQuote; invoice: BillingInvoice }>(
-      `/billing/quotes/${encodeURIComponent(id)}/accept`,
-    );
+   *  raises the document it becomes, so both come back.
+   *
+   *  **Which document depends on the offer's lines.** One naming a price-list
+   *  item is for goods and becomes a draft *sales order* — goods are reserved,
+   *  picked and delivered before anybody is billed — and `invoice` is then null.
+   *  An offer of services becomes the draft invoice it always did, with
+   *  `salesOrder` null. Exactly one of the two is ever present. */
+  acceptQuote(id: string): Promise<QuoteAcceptance> {
+    return this.#act<QuoteAcceptance>(`/billing/quotes/${encodeURIComponent(id)}/accept`);
   }
 
   /** The offer was turned down, or withdrawn. Terminal: a change of mind is a

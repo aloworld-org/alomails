@@ -5213,6 +5213,32 @@ export const en = {
   inventoryColState: "State",
   inventoryColTotal: "Total",
 
+  // The order book (O1.d) — one screen for what is promised, what has gone out,
+  // what has been billed and what is still owed. `inventoryColDelivered` and
+  // `inventoryColOutstanding` are the line grid's own and are reused here on
+  // purpose: the same word must mean the same thing on both screens.
+  inventoryTabOrderBook: "Order book",
+  inventoryOrderBookLoadFailed: "The order book could not be loaded.",
+  inventoryFilterScope: "Show",
+  inventoryScopeOpen: "Open orders",
+  inventoryScopeAll: "Every order",
+  inventoryColOrdered: "Ordered",
+  inventoryColReserved: "Reserved",
+  inventoryColInvoiced: "Invoiced",
+  inventoryBookTotal: "Across all of them",
+  // Said rather than shown: adding euros to pounds gives a number that looks
+  // authoritative and means nothing, so the total is withheld and the reason
+  // given.
+  inventoryBookMixedCurrencies: (currencies: string) =>
+    `These orders are in ${currencies}, so there is no single total to show. Each order's own figures are exact.`,
+  inventoryBookQtyHint: (qtyMilli: string) => `${qtyMilli} still to go out`,
+  inventoryOrderBookEmptyTitle: "Nothing is outstanding",
+  inventoryOrderBookEmptyBody:
+    "The order book shows what customers are waiting for and what you have yet to bill them for. Confirm a sales order and it appears here until the last of it has gone out and been invoiced.",
+  inventoryOrderBookEmptyAllTitle: "No orders have been raised",
+  inventoryOrderBookEmptyAllBody:
+    "Nothing has been sold yet — not even a draft. The order book will fill itself in as orders are raised.",
+
   // The document.
   inventoryBackToPurchaseOrders: "All purchase orders",
   inventoryBackToSalesOrders: "All sales orders",

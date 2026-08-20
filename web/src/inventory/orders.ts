@@ -28,8 +28,10 @@ import { API_BASE } from "../platform/runtime";
 import { problemDetail } from "../platform/rest";
 import { InventoryError } from "./api";
 import type {
+  BookScope,
   Delivery,
   FulfilmentDraft,
+  OrderBook,
   OrderDraftMail,
   OrderPatch,
   PurchaseOrder,
@@ -233,6 +235,22 @@ export class InventoryOrdersApi {
       `${path("sales-orders", id)}/invoice`,
       "POST",
     ).then((r) => ({ order: r.salesOrder, invoice: r.invoice }));
+  }
+
+  // ---- what it all adds up to --------------------------------------------
+
+  /**
+   * The order book: what has been promised, reserved, delivered, billed and is
+   * still owed — per order and in total (O1.d).
+   *
+   * Defaults to the open orders, which is the question somebody actually opens
+   * this screen to ask. Every figure in the answer is the server's; this client
+   * adds nothing up, and neither does the screen above it.
+   */
+  orderBook(scope?: BookScope): Promise<OrderBook> {
+    return this.#read<OrderBook>(
+      `/inventory/order-book${scope === undefined ? "" : `?scope=${encodeURIComponent(scope)}`}`,
+    );
   }
 
   // ---- plumbing ----------------------------------------------------------

@@ -4510,6 +4510,26 @@ export const fr: Partial<Catalog> = {
   inventoryColState: "État",
   inventoryColTotal: "Total",
 
+  // Le carnet de commandes.
+  inventoryTabOrderBook: "Carnet de commandes",
+  inventoryOrderBookLoadFailed: "Le carnet de commandes n’a pas pu être chargé.",
+  inventoryFilterScope: "Afficher",
+  inventoryScopeOpen: "Commandes en cours",
+  inventoryScopeAll: "Toutes les commandes",
+  inventoryColOrdered: "Commandé",
+  inventoryColReserved: "Réservé",
+  inventoryColInvoiced: "Facturé",
+  inventoryBookTotal: "Toutes commandes confondues",
+  inventoryBookMixedCurrencies: (currencies: string) =>
+    `Ces commandes sont en ${currencies} : aucun total unique n’a de sens. Les chiffres de chaque commande, eux, sont exacts.`,
+  inventoryBookQtyHint: (qtyMilli: string) => `${qtyMilli} restant à livrer`,
+  inventoryOrderBookEmptyTitle: "Rien n’est en attente",
+  inventoryOrderBookEmptyBody:
+    "Le carnet de commandes montre ce que vos clients attendent et ce qu’il vous reste à leur facturer. Confirmez une commande client et elle y figure jusqu’à ce que tout soit livré et facturé.",
+  inventoryOrderBookEmptyAllTitle: "Aucune commande n’a été créée",
+  inventoryOrderBookEmptyAllBody:
+    "Rien n’a encore été vendu, pas même un brouillon. Le carnet se remplira au fur et à mesure.",
+
   // Le document.
   inventoryBackToPurchaseOrders: "Toutes les commandes d’achat",
   inventoryBackToSalesOrders: "Toutes les commandes clients",

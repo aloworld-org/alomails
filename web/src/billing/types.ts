@@ -116,6 +116,9 @@ export type InvoiceStatus = "draft" | "issued" | "paid" | "void";
 export interface DocumentLine {
   id: string;
   description: string;
+  /** The price-list item this line sells, or absent for a charge in words.
+   *  Present on a quote's lines; never on an invoice's. */
+  productId?: string | null;
   /** Unit label; empty for a unitless line. */
   unit: string;
   /** Quantity in milli-units (1.5 hours = 1500). Negative on a discount line. */
@@ -265,6 +268,15 @@ export interface LineDraft {
   qtyMilli: number;
   unitPriceCents: number;
   vatRateBp: number;
+  /**
+   * The price-list item this line sells, when it was picked from one.
+   *
+   * **Only a quote records it**, and it is what decides what accepting the offer
+   * raises — goods become a sales order, services a draft invoice. Invoices,
+   * bills and recurring templates ignore it: they are money documents, and only
+   * an offer can become an order. It never prices anything.
+   */
+  productId?: string | undefined;
 }
 
 /**
@@ -613,4 +625,20 @@ export interface ScheduleDraft {
   reference?: string;
   note?: string;
   lines?: LineDraft[];
+}
+
+/**
+ * What accepting an offer produced. **Exactly one of the two is present**: an
+ * offer naming a price-list item is for goods and becomes a draft sales order,
+ * one naming none becomes the draft invoice it always did.
+ *
+ * Two nullable fields rather than a tagged union because that is what the server
+ * sends; a caller should branch on which is present rather than assume either.
+ */
+export interface QuoteAcceptance {
+  quote: BillingQuote;
+  invoice: BillingInvoice | null;
+  /** The draft order, when the offer was for goods. Only its id is needed here:
+   *  following it leaves Billing for the Inventory screen. */
+  salesOrder: { id: string } | null;
 }

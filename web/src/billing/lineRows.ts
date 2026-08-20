@@ -30,6 +30,20 @@ export interface LineRow {
   price: string;
   /** VAT rate in percent, as typed. Blank means zero-rated. */
   rate: string;
+  /**
+   * The price-list item this line was picked from, when it was picked from one.
+   *
+   * Every document sends it; **only a quote has anywhere to put it**, and there
+   * it decides what accepting the offer raises: an offer naming a stocked item
+   * is for goods and becomes a sales order, one naming none becomes a draft
+   * invoice. An invoice has no such column and its server drops the field. It
+   * never prices anything — the description, unit, price and rate beside it are
+   * the snapshot and stay the snapshot.
+   *
+   * Editing the description afterwards does not clear it: the line is still
+   * that item, described in the seller's own words.
+   */
+  productId?: string | undefined;
 }
 
 /** What is wrong with a row, or `null` when it is a line. The order is the
@@ -50,6 +64,10 @@ export function rowFromLine(line: DocumentLine): LineRow {
     qty: milliToInput(line.qtyMilli),
     price: hundredthsToInput(line.unitPriceCents),
     rate: hundredthsToInput(line.vatRateBp),
+    // Carried back out of the stored line, so editing an offer and saving it
+    // again does not quietly turn goods into a charge in words — which would
+    // change what accepting it raises.
+    productId: line.productId ?? undefined,
   };
 }
 
@@ -64,6 +82,10 @@ export function rowFromProduct(row: LineRow, product: BillingProduct): LineRow {
     qty: row.qty,
     price: hundredthsToInput(product.unitPriceCents),
     rate: hundredthsToInput(product.vatRateBp),
+    // Which item was picked, kept beside the copy of its figures. On a quote
+    // this is what makes an accepted offer become an order somebody can
+    // deliver against; everywhere else it is carried and ignored.
+    productId: product.id,
   };
 }
 
@@ -99,6 +121,7 @@ export function rowDraft(row: LineRow): LineDraft | null {
     qtyMilli: row.qty.trim() === "" ? 1000 : (parseMilli(row.qty) ?? 0),
     unitPriceCents: row.price.trim() === "" ? 0 : (parseHundredths(row.price) ?? 0),
     vatRateBp: row.rate.trim() === "" ? 0 : (parseHundredths(row.rate) ?? 0),
+    productId: row.productId,
   };
 }
 

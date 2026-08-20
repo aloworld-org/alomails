@@ -95,8 +95,21 @@ export function QuoteEditor() {
           message: strings.billingAcceptQuoteConfirm,
           primary: true,
           run: async () => {
+            // What the offer became depends on its lines: one naming a
+            // price-list item is for goods and raises a sales order, one naming
+            // none raises a draft invoice. Follow whichever the server actually
+            // made — assuming either is how a screen ends up navigating to a
+            // document that was never created.
+            // Truthiness rather than `!== null`, deliberately: an older server
+            // omits the field entirely, and `undefined !== null` would have
+            // navigated to `/sales-orders/undefined`. A test caught exactly
+            // that.
             const accepted = await api.acceptQuote(id);
-            await openInvoice(accepted.invoice.id);
+            if (accepted.salesOrder) {
+              await navigate(`/inventory/sales-orders/${accepted.salesOrder.id}`);
+            } else if (accepted.invoice) {
+              await openInvoice(accepted.invoice.id);
+            }
           },
         },
         {

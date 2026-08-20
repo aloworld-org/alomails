@@ -21,6 +21,7 @@ import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 
 import { strings } from "../i18n";
 import { CatalogView } from "./CatalogView";
+import { OrderBookView } from "./OrderBookView";
 import { PurchaseOrderEditor } from "./PurchaseOrderEditor";
 import { PurchaseOrdersView } from "./PurchaseOrdersView";
 import { SalesOrderEditor } from "./SalesOrderEditor";
@@ -42,13 +43,15 @@ import styles from "./InventoryModule.module.css";
 const INVENTORY_ROOT = "/inventory";
 
 /** The tabs, in the order the module is worked through: what we sell and stock,
- *  how much of it there is, and then the two documents that change that number
- *  — what we have asked for, and what we have promised. */
+ *  how much of it there is, then the two documents that change that number —
+ *  what we have asked for, and what we have promised — and last the book that
+ *  reads across every one of the latter at once. */
 const TABS: { path: string; label: () => string }[] = [
   { path: "catalog", label: () => strings.inventoryTabCatalog },
   { path: "stock", label: () => strings.inventoryTabStock },
   { path: "purchase-orders", label: () => strings.inventoryTabPurchasing },
   { path: "sales-orders", label: () => strings.inventoryTabSales },
+  { path: "order-book", label: () => strings.inventoryTabOrderBook },
 ];
 
 export function InventoryModule() {
@@ -87,6 +90,9 @@ export function InventoryModule() {
           <Route path="new" element={<SalesOrderEditor />} />
           <Route path=":id" element={<SalesOrderEditor />} />
         </Route>
+        {/* A read across every sales order at once, and the only screen here
+            with no acts of its own — each row is a way into the document. */}
+        <Route path="order-book" element={<OrderBookView />} />
         {/* An unknown Inventory path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to={`${INVENTORY_ROOT}/catalog`} replace />} />
       </Routes>

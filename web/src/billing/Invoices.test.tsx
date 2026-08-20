@@ -390,6 +390,11 @@ describe("the draft editor", () => {
       qtyMilli: 1000,
       unitPriceCents: 12500,
       vatRateBp: 2100,
+      // Which item was picked travels beside the copy of its figures. An
+      // invoice has no column for it and its server drops it; on a *quote* it
+      // is what decides whether accepting the offer raises an order or an
+      // invoice, and the line grid is one grid shared by both.
+      productId: "p-1",
     });
   });
 
