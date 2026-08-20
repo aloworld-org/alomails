@@ -46,8 +46,8 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 
 use alo_store::{
-    BillingCustomerId, NewProjectClient, ProjectClient, ProjectHours, ProjectId, TaskProject,
-    TaskProjectEdit,
+    BillingCustomerId, NewProjectClient, ProjectClient, ProjectHours, ProjectId,
+    ProjectWorkSummary, TaskProject, TaskProjectEdit,
 };
 
 use crate::billing::{blank_to_none, iso, iso_date, map_store_err, parse_body, parse_iso_date};
@@ -99,6 +99,7 @@ fn project_json(
     project: &TaskProject,
     client: Option<&ProjectClient>,
     hours: &ProjectHours,
+    work: Option<&ProjectWorkSummary>,
 ) -> Value {
     json!({
         "id": project.id.as_str(),
@@ -117,6 +118,12 @@ fn project_json(
         "updatedAt": iso(project.updated_at),
         "client": client_json(client),
         "hours": hours_json(hours, client.and_then(|c| c.budget_minutes)),
+        "work": {
+            "openTasks": work.map_or(0, |w| w.open_tasks),
+            "overdueTasks": work.map_or(0, |w| w.overdue_tasks),
+            "blockedTasks": work.map_or(0, |w| w.blocked_tasks),
+            "nextDueAt": work.and_then(|w| w.next_due_at).map(iso),
+        },
     })
 }
 
@@ -192,8 +199,14 @@ pub async fn update_project(
         .project_hours_for(&project.id)
         .await
         .map_err(map_store_err)?;
+    let work = account
+        .acc
+        .project_work_summaries()
+        .await
+        .map_err(map_store_err)?;
+    let summary = work.iter().find(|summary| summary.project_id == project.id);
     Ok(Json(
-        json!({ "project": project_json(&project, client.as_ref(), &hours) }),
+        json!({ "project": project_json(&project, client.as_ref(), &hours, summary) }),
     ))
 }
 
@@ -268,6 +281,11 @@ pub async fn list_projects(
     let projects = account.acc.task_projects().await.map_err(map_store_err)?;
     let clients = account.acc.project_clients().await.map_err(map_store_err)?;
     let hours = account.acc.project_hours().await.map_err(map_store_err)?;
+    let work = account
+        .acc
+        .project_work_summaries()
+        .await
+        .map_err(map_store_err)?;
     let listed: Vec<Value> = projects
         .iter()
         .map(|project| {
@@ -279,7 +297,8 @@ pub async fn list_projects(
                 .find(|h| h.project_id == project.id)
                 .cloned()
                 .unwrap_or_else(|| ProjectHours::none_yet(project.id.clone()));
-            project_json(project, client, &worked)
+            let summary = work.iter().find(|w| w.project_id == project.id);
+            project_json(project, client, &worked, summary)
         })
         .collect();
     Ok(Json(json!({ "projects": listed })))
@@ -318,8 +337,14 @@ pub async fn get_project(
         .project_client(&project_id)
         .await
         .map_err(map_store_err)?;
+    let work = account
+        .acc
+        .project_work_summaries()
+        .await
+        .map_err(map_store_err)?;
+    let summary = work.iter().find(|w| w.project_id == project.id);
     Ok(Json(
-        json!({ "project": project_json(&project, client.as_ref(), &hours) }),
+        json!({ "project": project_json(&project, client.as_ref(), &hours, summary) }),
     ))
 }
 
@@ -430,7 +455,7 @@ mod tests {
     #[test]
     fn an_internal_project_says_so_by_absence() {
         let hours = ProjectHours::none_yet(ProjectId::new("p1".to_owned()));
-        let value = project_json(&project(), None, &hours);
+        let value = project_json(&project(), None, &hours, None);
         assert!(value["client"].is_null(), "never a sentinel customer");
         assert_eq!(value["hours"]["minutes"], json!(0));
         assert!(
@@ -442,6 +467,23 @@ mod tests {
         assert_eq!(value["description"], json!("A useful engagement"));
         assert_eq!(value["status"], json!("active"));
         assert_eq!(value["createdAt"], json!("1970-01-01T00:00:00Z"));
+    }
+
+    #[test]
+    fn a_project_summary_carries_work_that_needs_attention() {
+        let hours = ProjectHours::none_yet(ProjectId::new("p1".to_owned()));
+        let work = ProjectWorkSummary {
+            project_id: ProjectId::new("p1".to_owned()),
+            open_tasks: 7,
+            overdue_tasks: 2,
+            blocked_tasks: 1,
+            next_due_at: Some(OffsetDateTime::UNIX_EPOCH),
+        };
+        let value = project_json(&project(), None, &hours, Some(&work));
+        assert_eq!(value["work"]["openTasks"], json!(7));
+        assert_eq!(value["work"]["overdueTasks"], json!(2));
+        assert_eq!(value["work"]["blockedTasks"], json!(1));
+        assert_eq!(value["work"]["nextDueAt"], json!("1970-01-01T00:00:00Z"));
     }
 
     #[test]
@@ -466,7 +508,7 @@ mod tests {
             last_worked_on: time::Date::from_calendar_date(2026, Month::August, 5).ok(),
             ..ProjectHours::none_yet(ProjectId::new("p1".to_owned()))
         };
-        let value = project_json(&project(), Some(&facts()), &hours);
+        let value = project_json(&project(), Some(&facts()), &hours, None);
         assert_eq!(value["hours"]["budgetConsumptionBp"], json!(5_000));
         assert_eq!(value["hours"]["billableMinutes"], json!(2_400));
         assert_eq!(value["hours"]["billedMinutes"], json!(600));
@@ -481,7 +523,7 @@ mod tests {
             minutes: 9_000,
             ..ProjectHours::none_yet(ProjectId::new("p1".to_owned()))
         };
-        let value = project_json(&project(), Some(&facts()), &hours);
+        let value = project_json(&project(), Some(&facts()), &hours, None);
         assert_eq!(value["hours"]["budgetConsumptionBp"], json!(15_000));
     }
 

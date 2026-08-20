@@ -156,7 +156,7 @@ export function ProjectsView({
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[68rem] border-collapse text-sm">
+          <table className="w-full min-w-[76rem] border-collapse text-sm">
           <thead>
             <tr className="bg-raised/60 text-left text-xs font-semibold uppercase tracking-wide text-tertiary">
               <th scope="col" className="px-5 py-3">{strings.projectsProject}</th>
@@ -169,6 +169,7 @@ export function ProjectsView({
               </th>
               <th scope="col" className="px-4 py-3">{strings.projectsBudget}</th>
               <th scope="col" className="px-4 py-3">{strings.projectsLastWorked}</th>
+              <th scope="col" className="px-4 py-3">{strings.projectsWorkspaceTasks}</th>
               <th scope="col" className="px-5 py-3" aria-label={strings.projectsActions} />
             </tr>
           </thead>
@@ -258,6 +259,30 @@ export function ProjectsView({
                     {project.hours.lastWorkedOn === null
                       ? strings.projectsNeverWorked
                       : dayLabel(project.hours.lastWorkedOn)}
+                  </td>
+                  <td className="min-w-48 px-4 py-4">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {(project.work?.overdueTasks ?? 0) > 0 && (
+                        <span className="inline-flex rounded-full bg-danger/10 px-2.5 py-1 text-xs font-semibold text-danger">
+                          {strings.projectsOverdueTasks(project.work?.overdueTasks ?? 0)}
+                        </span>
+                      )}
+                      {(project.work?.blockedTasks ?? 0) > 0 && (
+                        <span className="inline-flex rounded-full bg-raised px-2.5 py-1 text-xs font-semibold text-primary">
+                          {strings.projectsBlockedTasks(project.work?.blockedTasks ?? 0)}
+                        </span>
+                      )}
+                      {(project.work?.overdueTasks ?? 0) === 0 && (project.work?.blockedTasks ?? 0) === 0 && (
+                        <span className="text-sm text-secondary">
+                          {strings.projectsOpenTasks(project.work?.openTasks ?? 0)}
+                        </span>
+                      )}
+                    </div>
+                    {project.work?.nextDueAt != null && (
+                      <span className="mt-1 block text-xs text-tertiary">
+                        {strings.projectsNextWeek}: {dayLabel(project.work.nextDueAt)}
+                      </span>
+                    )}
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center justify-end gap-2">

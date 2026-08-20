@@ -40,6 +40,16 @@ pub struct TaskProjectEdit {
     pub target_on: Option<Date>,
 }
 
+/// The small operational roll-up shown beside a project in the portfolio.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProjectWorkSummary {
+    pub project_id: ProjectId,
+    pub open_tasks: i64,
+    pub overdue_tasks: i64,
+    pub blocked_tasks: i64,
+    pub next_due_at: Option<OffsetDateTime>,
+}
+
 /// The core task record, plus the small counts the card/list need.
 #[derive(Debug, Clone)]
 pub struct Task {
@@ -210,6 +220,33 @@ impl AccountStore {
         .fetch_all(&self.pool)
         .await?;
         Ok(rows.into_iter().map(ProjectRow::into_project).collect())
+    }
+
+    /// Operational task totals for every visible project in one query.
+    pub async fn project_work_summaries(&self) -> Result<Vec<ProjectWorkSummary>> {
+        let rows = sqlx::query_as::<_, ProjectWorkSummaryRow>(
+            "SELECT p.id AS project_id, \
+                    count(t.id) FILTER (WHERE t.state = 'active' AND t.completed_at IS NULL) AS open_tasks, \
+                    count(t.id) FILTER (WHERE t.state = 'active' AND t.completed_at IS NULL AND t.due_at < now()) AS overdue_tasks, \
+                    count(t.id) FILTER (WHERE t.state = 'active' AND t.completed_at IS NULL \
+                        AND EXISTS (SELECT 1 FROM task_dependencies d \
+                            JOIN tasks blocker ON blocker.tenant_id = d.tenant_id AND blocker.id = d.depends_on_task_id \
+                            WHERE d.tenant_id = p.tenant_id AND d.task_id = t.id AND blocker.completed_at IS NULL)) AS blocked_tasks, \
+                    min(t.due_at) FILTER (WHERE t.state = 'active' AND t.completed_at IS NULL AND t.due_at >= now()) AS next_due_at \
+             FROM task_projects p \
+             LEFT JOIN tasks t ON t.tenant_id = p.tenant_id AND t.project_id = p.id \
+             WHERE p.tenant_id = $1 AND p.archived = false \
+               AND (p.kind = 'team' OR (p.kind = 'personal' AND p.owner_user_id = $2)) \
+             GROUP BY p.id",
+        )
+        .bind(self.tenant.as_str())
+        .bind(self.user.as_str())
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(ProjectWorkSummaryRow::into_summary)
+            .collect())
     }
 
     /// The caller's personal project id, creating it if absent (deterministic
@@ -1376,6 +1413,26 @@ struct TaskRow {
     subtask_done: i64,
     subtask_total: i64,
     comment_count: i64,
+}
+
+#[derive(sqlx::FromRow)]
+struct ProjectWorkSummaryRow {
+    project_id: String,
+    open_tasks: i64,
+    overdue_tasks: i64,
+    blocked_tasks: i64,
+    next_due_at: Option<OffsetDateTime>,
+}
+impl ProjectWorkSummaryRow {
+    fn into_summary(self) -> ProjectWorkSummary {
+        ProjectWorkSummary {
+            project_id: ProjectId::new(self.project_id),
+            open_tasks: self.open_tasks,
+            overdue_tasks: self.overdue_tasks,
+            blocked_tasks: self.blocked_tasks,
+            next_due_at: self.next_due_at,
+        }
+    }
 }
 impl TaskRow {
     fn into_task(self) -> Task {

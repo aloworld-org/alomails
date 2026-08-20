@@ -767,8 +767,8 @@ pub use sites::{
 pub use spaces::{Space, SpaceMember, SpaceRole};
 pub use store::{CATEGORY_KEYWORD_PREFIX, SEEN, Store, TenantStore, category_keyword};
 pub use tasks::{
-    NewTask, Subtask, Task, TaskActivity, TaskComment, TaskDepRef, TaskEdit, TaskLabel,
-    TaskProject, TaskProjectEdit,
+    NewTask, ProjectWorkSummary, Subtask, Task, TaskActivity, TaskComment, TaskDepRef, TaskEdit,
+    TaskLabel, TaskProject, TaskProjectEdit,
 };
 pub use tenant_roles::{AccessFacts, TenantRole};
 pub use time_entries::{

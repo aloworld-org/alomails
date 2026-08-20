@@ -45,6 +45,13 @@ export interface ProjectHours {
   budgetConsumptionBp: number | null;
 }
 
+export interface ProjectWorkSummary {
+  openTasks: number;
+  overdueTasks: number;
+  blockedTasks: number;
+  nextDueAt: string | null;
+}
+
 /** One engagement: the board Tasks shows, seen as client work. */
 export interface Project {
   id: string;
@@ -61,6 +68,7 @@ export interface Project {
   updatedAt: string;
   client: ProjectClient | null;
   hours: ProjectHours;
+  work?: ProjectWorkSummary;
 }
 
 export interface ProjectDraft {

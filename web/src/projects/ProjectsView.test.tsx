@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { strings } from "../i18n";
 import { ProjectsView } from "./ProjectsView";
@@ -25,6 +25,12 @@ const project: Project = {
     budgetConsumptionBp: null,
     lastWorkedOn: null,
   },
+  work: {
+    openTasks: 5,
+    overdueTasks: 2,
+    blockedTasks: 1,
+    nextDueAt: "2026-08-24T12:00:00Z",
+  },
 };
 
 const timer: RunningTimer = {
@@ -34,6 +40,8 @@ const timer: RunningTimer = {
   billable: false,
   note: "",
 };
+
+afterEach(cleanup);
 
 describe("ProjectsView running timer", () => {
   it("shows the active timer in the main workspace and replaces the row start action", () => {
@@ -60,5 +68,29 @@ describe("ProjectsView running timer", () => {
     expect(
       screen.queryByRole("button", { name: strings.projectsStartTimerOn(project.name) }),
     ).toBeNull();
+  });
+
+  it("surfaces overdue and blocked work before neutral task totals", () => {
+    render(
+      <ProjectsView
+        projects={[project]}
+        loading={false}
+        runningTimer={null}
+        customerName={() => null}
+        isTemplate={() => false}
+        onEditClient={vi.fn()}
+        onEditProject={vi.fn()}
+        onStartTimer={vi.fn()}
+        onStopTimer={vi.fn()}
+        onToggleTemplate={vi.fn()}
+        onOpenTasks={vi.fn()}
+        onNewProject={vi.fn()}
+        onNewFromTemplate={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(strings.projectsOverdueTasks(2))).toBeTruthy();
+    expect(screen.getByText(strings.projectsBlockedTasks(1))).toBeTruthy();
+    expect(screen.queryByText(strings.projectsOpenTasks(5))).toBeNull();
   });
 });
