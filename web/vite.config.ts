@@ -131,5 +131,9 @@ export default defineConfig(({ command }) => ({
   },
   test: {
     environment: "jsdom",
+    // Raises Testing Library's async timeout off its one-second default, which
+    // a loaded runner blows through — the gate was failing a different
+    // innocent test on every run. See `vitest.setup.ts` for the evidence.
+    setupFiles: ["./vitest.setup.ts"],
   },
 }));
