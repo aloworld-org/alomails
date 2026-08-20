@@ -95,7 +95,7 @@ export function ProjectsModule() {
   const workspaceProject = useMemo(() => {
     const [, moduleName, candidate] = location.pathname.split("/");
     if (moduleName !== "projects" || candidate === undefined) return undefined;
-    if (["list", "week", "plan", "reports", "approvals"].includes(candidate)) return undefined;
+    if (["list", "my-work", "week", "plan", "reports", "approvals"].includes(candidate)) return undefined;
     const id = decodeURIComponent(candidate);
     return projects.find((project) => project.id === id);
   }, [location.pathname, projects]);
@@ -249,6 +249,12 @@ export function ProjectsModule() {
           >
             {strings.projectsTabList}
           </NavLink>
+          <NavLink
+            to="/projects/my-work"
+            className={projectTabClass}
+          >
+            {strings.projectsTabMyWork}
+          </NavLink>
           {workspaceProject !== undefined && (
             <NavLink
               to={`/projects/${encodeURIComponent(workspaceProject.id)}/overview`}
@@ -309,6 +315,10 @@ export function ProjectsModule() {
               onNewFromTemplate={() => setStartingFromTemplate(true)}
             />
           }
+        />
+        <Route
+          path="my-work"
+          element={<TasksModule projectsContext />}
         />
         <Route
           path="week"

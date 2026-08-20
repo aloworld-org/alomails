@@ -48,9 +48,11 @@ type Mode = { type: "project"; id: string } | { type: "plate" } | { type: "propo
 
 export function TasksModule({
   projectId,
+  projectsContext = false,
   workspaceView,
 }: {
   projectId?: string;
+  projectsContext?: boolean;
   workspaceView?: string;
 } = {}) {
   const client = useJmapClient();
@@ -101,7 +103,7 @@ export function TasksModule({
   }, [searchParams, workspaceView]);
 
   function openProject(id: string) {
-    if (projectId !== undefined) {
+    if (projectId !== undefined || projectsContext) {
       navigate(`/projects/${encodeURIComponent(id)}/overview`);
       return;
     }
@@ -207,7 +209,7 @@ export function TasksModule({
 
   const title =
     mode.type === "plate"
-      ? strings.taskMyPlate
+      ? (projectsContext ? strings.projectsTabMyWork : strings.taskMyPlate)
       : mode.type === "proposals"
         ? strings.taskProposals
         : (activeProject?.name ?? strings.moduleTasks);
@@ -232,7 +234,7 @@ export function TasksModule({
               className={`${styles.plateBtn} ${mode.type === "plate" ? styles.projActive : ""}`}
               onClick={() => setMode({ type: "plate" })}
             >
-              <Sun size={16} /> {strings.taskMyPlate}
+              <Sun size={16} /> {projectsContext ? strings.projectsTabMyWork : strings.taskMyPlate}
             </button>
             <button
               type="button"

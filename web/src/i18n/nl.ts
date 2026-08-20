@@ -2422,8 +2422,9 @@ export const nl: Partial<Catalog> = {
   // „1,75” op het ene scherm naast „1 u 45 min” op het andere zijn twee
   // getallen die iemand met elkaar moet rijmen.
   moduleProjects: "Projecten",
-  projectsTabList: "Projecten",
-  projectsTabWeek: "Mijn week",
+  projectsTabList: "Alle projecten",
+  projectsTabMyWork: "Mijn werk",
+  projectsTabWeek: "Urenstaat",
   projectsTabApprovals: "Goedkeuringen",
   projectsTabReports: "Rapporten",
   projectsTabPlan: "Planning",

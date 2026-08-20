@@ -4298,8 +4298,9 @@ export const en = {
   // hours: "1.75" on one screen beside "1h 45m" on another is two numbers
   // somebody has to reconcile.
   moduleProjects: "Projects",
-  projectsTabList: "Projects",
-  projectsTabWeek: "My week",
+  projectsTabList: "All projects",
+  projectsTabMyWork: "My work",
+  projectsTabWeek: "Timesheet",
   projectsTabApprovals: "Approvals",
   projectsTabReports: "Reports",
   projectsTabPlan: "Plan",

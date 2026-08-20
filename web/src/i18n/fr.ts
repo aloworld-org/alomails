@@ -2463,8 +2463,9 @@ export const fr: Partial<Catalog> = {
   // décimales : « 1,75 » sur un écran à côté de « 1 h 45 » sur un autre, ce
   // sont deux nombres que quelqu’un doit rapprocher.
   moduleProjects: "Projets",
-  projectsTabList: "Projets",
-  projectsTabWeek: "Ma semaine",
+  projectsTabList: "Tous les projets",
+  projectsTabMyWork: "Mon travail",
+  projectsTabWeek: "Feuille de temps",
   projectsTabApprovals: "Validations",
   projectsTabReports: "Rapports",
   projectsTabPlan: "Planning",
