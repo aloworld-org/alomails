@@ -30,12 +30,15 @@ import { TimelineView } from "./TimelineView";
 import { CalendarView } from "./CalendarView";
 import { TaskToolbar } from "./TaskToolbar";
 import { OverviewView } from "./OverviewView";
+import { ProjectOverviewView } from "./ProjectOverviewView";
 import { FilesView } from "./FilesView";
 import { NewTaskModal } from "./NewTaskModal";
 import { TaskDetail } from "./TaskDetail";
 import { Avatar, DueChip, PriorityChip } from "./parts";
 import { DEFAULT_CONFIG, filterTasks, type ViewConfig } from "./viewConfig";
 import styles from "./TasksModule.module.css";
+import { useProjectsApi } from "../projects/api";
+import type { Project, ProjectPlan } from "../projects/types";
 
 type View = "overview" | "list" | "board" | "timeline" | "calendar" | "files";
 
@@ -56,6 +59,7 @@ export function TasksModule({
   workspaceView?: string;
 } = {}) {
   const client = useJmapClient();
+  const projectsApi = useProjectsApi();
   const navigate = useNavigate();
   const { identity } = useAuth();
   const [projects, setProjects] = useState<TaskProject[]>([]);
@@ -69,6 +73,8 @@ export function TasksModule({
   const [proposals, setProposals] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
+  const [engagement, setEngagement] = useState<Project | null>(null);
+  const [projectPlan, setProjectPlan] = useState<ProjectPlan>({ milestones: [], placements: [] });
 
   // Open a task arrived at from workspace search (?open=<taskId>).
   const [searchParams, setSearchParams] = useSearchParams();
@@ -191,6 +197,28 @@ export function TasksModule({
   useEffect(() => {
     void reload();
   }, [reload]);
+
+  useEffect(() => {
+    if (projectId === undefined) {
+      setEngagement(null);
+      setProjectPlan({ milestones: [], placements: [] });
+      return;
+    }
+    let current = true;
+    void Promise.all([
+      projectsApi.project(projectId),
+      projectsApi.plan(projectId),
+    ]).then(([nextProject, nextPlan]) => {
+      if (!current) return;
+      setEngagement(nextProject);
+      setProjectPlan(nextPlan);
+    }).catch(() => {
+      if (!current) return;
+      setEngagement(null);
+      setProjectPlan({ milestones: [], placements: [] });
+    });
+    return () => { current = false; };
+  }, [projectId, projectsApi]);
 
   const activeProject = useMemo(
     () => (mode.type === "project" ? projects.find((p) => p.id === mode.id) : undefined),
@@ -348,6 +376,16 @@ export function TasksModule({
                 await loadProposals();
                 await reload();
               }}
+            />
+          ) : view === "overview" && projectId !== undefined && engagement !== null ? (
+            <ProjectOverviewView
+              project={engagement}
+              plan={projectPlan}
+              tasks={tasks}
+              onAddTask={() => openCreate()}
+              onOpenTask={setSelected}
+              onOpenTasks={() => openView("list")}
+              onOpenTimeline={() => navigate(`/projects/timeline?project=${encodeURIComponent(projectId)}`)}
             />
           ) : tasks.length === 0 ? (
             <div className={styles.emptyState}>
