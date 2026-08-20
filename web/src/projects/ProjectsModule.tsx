@@ -21,12 +21,13 @@
 // the point — so the copy here says *client project* wherever the distinction
 // carries weight, and the Tasks module's own strings are left alone.
 import { useCallback, useEffect, useState } from "react";
-import { NavLink, Navigate, Route, Routes, useNavigate, useSearchParams } from "react-router-dom";
+import { NavLink, Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useCustomers } from "../billing";
 import { Spinner } from "../ds";
 import { strings } from "../i18n";
 import { useJmapClient } from "../jmap";
+import { TasksModule } from "../tasks";
 import { ApprovalsView } from "./ApprovalsView";
 import { ClientDialog } from "./ClientDialog";
 import { NewProjectDialog } from "./NewProjectDialog";
@@ -49,6 +50,17 @@ function today(): string {
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
   return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function ProjectWorkspaceRoute() {
+  const { projectId, workspaceView } = useParams<{
+    projectId: string;
+    workspaceView: string;
+  }>();
+  if (projectId === undefined) return <Navigate to="/projects/list" replace />;
+  return workspaceView === undefined
+    ? <TasksModule projectId={projectId} />
+    : <TasksModule projectId={projectId} workspaceView={workspaceView} />;
 }
 
 const projectTabClass = ({ isActive }: { isActive: boolean }) =>
@@ -186,7 +198,7 @@ export function ProjectsModule() {
     if (draft.customerId !== null) await api.setClient(project.id, { customerId: draft.customerId });
     setCreating(false);
     setError(null);
-    navigate(`/tasks?project=${encodeURIComponent(project.id)}&view=overview`);
+    navigate(`/projects/${encodeURIComponent(project.id)}/overview`);
   }
 
   useEffect(() => {
@@ -273,7 +285,7 @@ export function ProjectsModule() {
               onStartTimer={(project) => void startTimer(project)}
               onStopTimer={() => void stopTimer()}
               onToggleTemplate={(project) => void toggleTemplate(project)}
-              onOpenTasks={(project) => navigate(`/tasks?project=${encodeURIComponent(project.id)}&view=overview`)}
+              onOpenTasks={(project) => navigate(`/projects/${encodeURIComponent(project.id)}/overview`)}
               onNewProject={() => setCreating(true)}
               onNewFromTemplate={() => setStartingFromTemplate(true)}
             />
@@ -302,6 +314,8 @@ export function ProjectsModule() {
             non-admin who follows one gets the server's own `403` on the read
             rather than a page that pretends the inbox is empty. */}
         <Route path="approvals" element={<ApprovalsView onDecided={bump} />} />
+        <Route path=":projectId" element={<ProjectWorkspaceRoute />} />
+        <Route path=":projectId/:workspaceView" element={<ProjectWorkspaceRoute />} />
         {/* An unknown Projects path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to="/projects/list" replace />} />
       </Routes>
@@ -313,7 +327,7 @@ export function ProjectsModule() {
           onClose={() => setStartingFromTemplate(false)}
           onCreated={(copy) => {
             setStartingFromTemplate(false);
-            navigate(`/tasks?project=${encodeURIComponent(copy.projectId)}&view=overview`);
+            navigate(`/projects/${encodeURIComponent(copy.projectId)}/overview`);
           }}
         />
       )}

@@ -38,16 +38,29 @@ import styles from "./TasksModule.module.css";
 
 type View = "overview" | "list" | "board" | "timeline" | "calendar" | "files";
 
+function isView(value: string | undefined | null): value is View {
+  return value === "overview" || value === "list" || value === "board" ||
+    value === "timeline" || value === "calendar" || value === "files";
+}
+
 type Mode = { type: "project"; id: string } | { type: "plate" } | { type: "proposals" };
 
-export function TasksModule() {
+export function TasksModule({
+  projectId,
+  workspaceView,
+}: {
+  projectId?: string;
+  workspaceView?: string;
+} = {}) {
   const client = useJmapClient();
   const navigate = useNavigate();
   const { identity } = useAuth();
   const [projects, setProjects] = useState<TaskProject[]>([]);
   const [edges, setEdges] = useState<TaskDepEdgeDto[]>([]);
   const [mode, setMode] = useState<Mode>({ type: "plate" });
-  const [view, setView] = useState<View>("overview");
+  const [view, setView] = useState<View>(
+    isView(workspaceView) ? workspaceView : "overview",
+  );
   const [config, setConfig] = useState<ViewConfig>(DEFAULT_CONFIG);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [proposals, setProposals] = useState<Task[]>([]);
@@ -70,26 +83,27 @@ export function TasksModule() {
   // Projects links here with a stable project id. Keep the query in the URL so
   // refreshes and shared links reopen the same task workspace.
   useEffect(() => {
-    const requested = searchParams.get("project");
+    const requested = projectId ?? searchParams.get("project");
     if (requested === null || !projects.some((project) => project.id === requested)) return;
     setMode((current) =>
       current.type === "project" && current.id === requested
         ? current
         : { type: "project", id: requested },
     );
-  }, [projects, searchParams]);
+  }, [projectId, projects, searchParams]);
 
   useEffect(() => {
-    const requested = searchParams.get("view");
-    if (
-      requested === "overview" || requested === "list" || requested === "board" ||
-      requested === "timeline" || requested === "calendar" || requested === "files"
-    ) {
+    const requested = workspaceView ?? searchParams.get("view");
+    if (isView(requested)) {
       setView(requested);
     }
-  }, [searchParams]);
+  }, [searchParams, workspaceView]);
 
   function openProject(id: string) {
+    if (projectId !== undefined) {
+      navigate(`/projects/${encodeURIComponent(id)}/overview`);
+      return;
+    }
     const next = new URLSearchParams(searchParams);
     next.set("project", id);
     next.set("view", "overview");
@@ -100,6 +114,10 @@ export function TasksModule() {
 
   function openView(nextView: View) {
     setView(nextView);
+    if (projectId !== undefined) {
+      navigate(`/projects/${encodeURIComponent(projectId)}/${nextView}`);
+      return;
+    }
     const next = new URLSearchParams(searchParams);
     next.set("view", nextView);
     setSearchParams(next, { replace: true });
@@ -134,10 +152,6 @@ export function TasksModule() {
     try {
       const ps = await client.taskProjects();
       setProjects(ps);
-      // Land on the personal project's board by default.
-      setMode((m) =>
-        m.type === "plate" && ps[0] ? { type: "project", id: ps[0].id } : m,
-      );
     } catch {
       /* keep */
     }
@@ -200,24 +214,28 @@ export function TasksModule() {
   return (
     <div className={styles.tasks}>
       <aside className={styles.sidebar}>
-        <button
-          type="button"
-          className={`${styles.plateBtn} ${mode.type === "plate" ? styles.projActive : ""}`}
-          onClick={() => setMode({ type: "plate" })}
-        >
-          <Sun size={16} /> {strings.taskMyPlate}
-        </button>
-        <button
-          type="button"
-          className={`${styles.plateBtn} ${mode.type === "proposals" ? styles.projActive : ""}`}
-          onClick={() => {
-            void loadProposals();
-            setMode({ type: "proposals" });
-          }}
-        >
-          <Sparkles size={16} /> {strings.taskProposals}
-          {proposals.length > 0 && <span className={styles.badge}>{proposals.length}</span>}
-        </button>
+        {projectId === undefined && (
+          <>
+            <button
+              type="button"
+              className={`${styles.plateBtn} ${mode.type === "plate" ? styles.projActive : ""}`}
+              onClick={() => setMode({ type: "plate" })}
+            >
+              <Sun size={16} /> {strings.taskMyPlate}
+            </button>
+            <button
+              type="button"
+              className={`${styles.plateBtn} ${mode.type === "proposals" ? styles.projActive : ""}`}
+              onClick={() => {
+                void loadProposals();
+                setMode({ type: "proposals" });
+              }}
+            >
+              <Sparkles size={16} /> {strings.taskProposals}
+              {proposals.length > 0 && <span className={styles.badge}>{proposals.length}</span>}
+            </button>
+          </>
+        )}
 
         <div className={styles.projList}>
           <div className={styles.sideHead}>
