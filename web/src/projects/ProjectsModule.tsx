@@ -329,7 +329,7 @@ export function ProjectsModule() {
             personal data). */}
         <Route
           path="reports"
-          element={<ReportView customerName={customerName} revision={revision} />}
+          element={<ReportView projects={projects} projectsLoading={loading} customerName={customerName} revision={revision} />}
         />
         {/* The admin tab is a route too, so a manager's bookmark works — and a
             non-admin who follows one gets the server's own `403` on the read

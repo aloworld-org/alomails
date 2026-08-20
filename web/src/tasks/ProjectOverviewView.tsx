@@ -1,4 +1,4 @@
-import { CalendarDays, CheckCircle2, CircleAlert, Clock3, Flag, ListTodo, MessageSquareText, PencilLine, ReceiptText, Send } from "lucide-react";
+import { BarChart3, CalendarDays, CheckCircle2, CircleAlert, Clock3, Flag, ListTodo, MessageSquareText, PencilLine, ReceiptText, Send } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { strings } from "../i18n";
@@ -17,6 +17,7 @@ interface Props {
   onOpenTask: (id: string) => void;
   onOpenTasks: () => void;
   onOpenTimeline: () => void;
+  onOpenReport: () => void;
   onEditProject: () => void;
   onOpenInvoice: (id: string) => void;
 }
@@ -30,6 +31,7 @@ export function ProjectOverviewView({
   onOpenTask,
   onOpenTasks,
   onOpenTimeline,
+  onOpenReport,
   onEditProject,
   onOpenInvoice,
 }: Props) {
@@ -133,15 +135,24 @@ export function ProjectOverviewView({
             {project.description ?? strings.projectsDetailsSubtitle}
           </p>
         </div>
-        {project.kind === "team" && (
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-raised px-4 py-2 text-sm font-medium text-primary !no-underline transition-colors hover:bg-default hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            onClick={onEditProject}
+            onClick={onOpenReport}
           >
-            <PencilLine size={16} aria-hidden="true" /> {strings.projectsEdit}
+            <BarChart3 size={16} aria-hidden="true" /> {strings.projectsTabReports}
           </button>
-        )}
+          {project.kind === "team" && (
+            <button
+              type="button"
+              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-raised px-4 py-2 text-sm font-medium text-primary !no-underline transition-colors hover:bg-default hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              onClick={onEditProject}
+            >
+              <PencilLine size={16} aria-hidden="true" /> {strings.projectsEdit}
+            </button>
+          )}
+        </div>
       </section>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={strings.taskOverview}>
         <Metric

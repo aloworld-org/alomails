@@ -18,6 +18,7 @@
 // half-typed date never becomes a request.
 import { useCallback, useEffect, useState } from "react";
 import { PieChart } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import { formatAmount, previousQuarterOf, quarterOf, type Period } from "../billing";
 import { Button, Spinner } from "../ds";
@@ -26,9 +27,11 @@ import { saveTextFile } from "../platform/download";
 import { projectsMessage, useProjectsApi } from "./api";
 import { dayLabel, durationLabel } from "./format";
 import { BudgetBar, EmptyState, ErrorBanner } from "./parts";
-import type { ProfitabilityCurrency, ProfitabilityReport, ProjectProfitability } from "./types";
+import type { ProfitabilityCurrency, ProfitabilityReport, Project, ProjectProfitability } from "./types";
 
 interface Props {
+  projects: Project[];
+  projectsLoading: boolean;
   /** A customer's own name for an id, or `null` when this reader cannot see
    *  them — the row says "unknown" rather than printing a raw id at somebody. */
   customerName: (customerId: string) => string | null;
@@ -44,8 +47,13 @@ function fileName(period: Period): string {
   return `profitability-${period.from}-to-${period.to}.csv`;
 }
 
-export function ReportView({ customerName, revision }: Props) {
+export function ReportView({ projects, projectsLoading, customerName, revision }: Props) {
   const api = useProjectsApi();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedProjectId = searchParams.get("project");
+  const projectId = requestedProjectId !== null && (projectsLoading || projects.some((project) => project.id === requestedProjectId))
+    ? requestedProjectId
+    : null;
   // The form opens on the quarter being lived through; the one being reviewed
   // is one click away.
   const [period, setPeriod] = useState<Period>(() => quarterOf(new Date()));
@@ -56,9 +64,10 @@ export function ReportView({ customerName, revision }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (projectsLoading) return;
     setLoading(true);
     try {
-      setReport(await api.profitability(period.from, period.to));
+      setReport(await api.profitability(period.from, period.to, projectId ?? undefined));
       setError(null);
     } catch (err) {
       // The server's own sentence when it sent one — it names the rule that was
@@ -68,7 +77,7 @@ export function ReportView({ customerName, revision }: Props) {
     } finally {
       setLoading(false);
     }
-  }, [api, period, revision]);
+  }, [api, period, projectId, projectsLoading, revision]);
 
   useEffect(() => {
     void load();
@@ -84,7 +93,7 @@ export function ReportView({ customerName, revision }: Props) {
   async function download() {
     setDownloading(true);
     try {
-      const csv = await api.profitabilityCsv(period.from, period.to);
+      const csv = await api.profitabilityCsv(period.from, period.to, projectId ?? undefined);
       saveTextFile(csv, fileName(period), "text/csv;charset=utf-8");
       setError(null);
     } catch (err) {
@@ -96,6 +105,31 @@ export function ReportView({ customerName, revision }: Props) {
 
   return (
     <div className="flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4">
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-subtle bg-surface p-4">
+        <label className="flex min-w-64 flex-1 flex-col gap-1.5 text-sm font-medium text-primary">
+          {strings.projectsProject}
+          <select
+            className="min-h-10 w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            value={projectId ?? ""}
+            onChange={(event) => {
+              const next = new URLSearchParams(searchParams);
+              if (event.target.value === "") next.delete("project");
+              else next.set("project", event.target.value);
+              setSearchParams(next);
+            }}
+          >
+            <option value="">{strings.projectsAllProjects}</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>{project.name}</option>
+            ))}
+          </select>
+        </label>
+        <p className="max-w-xl pb-2 text-sm text-secondary">
+          {projectId === null
+            ? strings.projectsReportAllScope
+            : strings.projectsReportProjectScope(projects.find((project) => project.id === projectId)?.name ?? "")}
+        </p>
+      </div>
       <form
         className="flex flex-wrap items-center gap-3"
         onSubmit={(e) => {
