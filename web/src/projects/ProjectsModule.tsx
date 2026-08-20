@@ -21,7 +21,6 @@
 // the point — so the copy here says *client project* wherever the distinction
 // carries weight, and the Tasks module's own strings are left alone.
 import { useCallback, useEffect, useState } from "react";
-import { FolderKanban } from "lucide-react";
 import { NavLink, Navigate, Route, Routes, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import { useCustomers } from "../billing";
@@ -132,9 +131,6 @@ export function ProjectsModule() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const contextProjectId = projectContextId(location.pathname, searchParams.get("project"));
-  const contextProject = contextProjectId === null
-    ? null
-    : projects.find((project) => project.id === contextProjectId) ?? null;
   const [revision, setRevision] = useState(0);
   const [runningTimer, setRunningTimer] = useState<RunningTimer | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -301,17 +297,6 @@ export function ProjectsModule() {
           >
             {strings.projectsTabMyWork}
           </NavLink>
-          {contextProject !== null && (
-            <NavLink
-              to={`/projects/${encodeURIComponent(contextProject.id)}/overview`}
-              className={({ isActive }) => projectTabClass({
-                isActive: isActive || location.pathname.startsWith(`/projects/${encodeURIComponent(contextProject.id)}/`),
-              })}
-            >
-              <FolderKanban className="mr-2" size={16} aria-hidden="true" />
-              <span className="max-w-48 truncate">{contextProject.name}</span>
-            </NavLink>
-          )}
           <NavLink
             to={projectScopedPath("week", contextProjectId)}
             className={projectTabClass}
