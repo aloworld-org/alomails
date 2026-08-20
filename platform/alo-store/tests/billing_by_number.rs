@@ -79,7 +79,7 @@ async fn sent_quote(account: &AccountStore, customer: &BillingCustomerId) -> Str
         .await
         .unwrap();
     account
-        .set_billing_quote_lines(&id, &[consulting()])
+        .set_billing_quote_lines(&id, &[consulting().into()])
         .await
         .unwrap();
     account

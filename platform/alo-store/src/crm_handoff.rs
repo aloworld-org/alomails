@@ -84,7 +84,18 @@ impl AccountStore {
         // Written as a second call because the lines are validated as a set;
         // a refusal here leaves an empty draft rather than a wrong one, and an
         // empty draft is a document a human can finish or delete.
-        self.set_billing_quote_lines(&quote, &lines).await?;
+        // A deal becomes one line **in words**, never a catalog item: what a
+        // deal names is a piece of work, and inventing a product for it would
+        // put an item nobody chose onto an offer. So this offer still routes to
+        // an invoice on acceptance, exactly as it did before ADR 0054 §5.
+        let quote_lines: Vec<crate::billing_quote_lines::NewQuoteLine> = lines
+            .into_iter()
+            .map(|line| crate::billing_quote_lines::NewQuoteLine {
+                product_id: None,
+                line,
+            })
+            .collect();
+        self.set_billing_quote_lines(&quote, &quote_lines).await?;
         Ok(quote)
     }
 

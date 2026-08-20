@@ -208,11 +208,13 @@ pub(crate) const INVOICE_LINES: LineTable = LineTable {
     doc_column: "invoice_id",
 };
 
-/// The lines of a quote ([`crate::billing_quotes`]).
-pub(crate) const QUOTE_LINES: LineTable = LineTable {
-    table: "billing_quote_lines",
-    doc_column: "quote_id",
-};
+// A quote's lines are deliberately NOT a `LineTable`. Alone among billing
+// documents an offer may name the catalog item it sells (migration 0701), because
+// accepting it can raise a sales order and an order line with no product is one
+// nothing can ever be delivered against. That difference lives in
+// [`crate::billing_quote_lines`], which reuses this module's line model and field
+// rules and adds exactly one column — so a quote line and an invoice line are
+// still the same thing where they are the same thing.
 
 /// The template lines of a recurring arrangement
 /// ([`crate::billing_schedules`], B2.11) — what next month's draft will say.

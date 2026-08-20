@@ -41,6 +41,7 @@ pub mod billing_invoices;
 pub mod billing_line;
 pub mod billing_payments;
 pub mod billing_products;
+pub mod billing_quote_lines;
 pub mod billing_quotes;
 pub mod billing_schedules;
 pub mod billing_sepa;

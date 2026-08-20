@@ -49,13 +49,14 @@ use crate::billing_field::{bounded, currency};
 use crate::billing_invoices::{
     INVOICE_NOTE_MAX_CHARS, INVOICE_REFERENCE_MAX_CHARS, InvoiceFromQuote,
 };
-use crate::billing_line::{FiguresRow, INVOICE_LINES, Line, NewLine, QUOTE_LINES, group_figures};
+use crate::billing_line::{FiguresRow, INVOICE_LINES, group_figures};
+use crate::billing_quote_lines::{self, NewQuoteLine, QuoteLine};
 use crate::billing_sequence::{
     QUOTE_NUMBER_PREFIX, QUOTE_SEQUENCE_KIND, document_number, draw_next,
 };
 use crate::billing_totals::{LineFigures, Totals, totals};
 use crate::error::{Result, StoreError};
-use crate::id::{BillingCustomerId, BillingInvoiceId, BillingQuoteId};
+use crate::id::{BillingCustomerId, BillingInvoiceId, BillingProductId, BillingQuoteId};
 
 /// How long an offer stands when the caller states nothing — a month, the
 /// common European B2B habit.
@@ -321,23 +322,59 @@ pub struct QuoteDocument {
     /// The header.
     pub quote: Quote,
     /// The lines, in print order.
-    pub lines: Vec<Line>,
+    pub lines: Vec<QuoteLine>,
     /// Net, VAT breakdown and gross, derived from `lines`.
     pub totals: Totals,
 }
 
-/// What accepting an offer produces: the closed quote, and the id of the draft
-/// invoice raised from it in the same transaction.
+/// What accepting an offer produces: the closed quote, and the document raised
+/// from it in the same transaction.
 ///
 /// Two values rather than one because they are two documents, and a caller that
-/// only wanted to record the answer still gets the invoice's id — there is no
-/// second call that could tell it which document its acceptance created.
+/// only wanted to record the answer still gets what its acceptance created —
+/// there is no second call that could tell it.
 #[derive(Debug, Clone)]
 pub struct QuoteAcceptance {
     /// The quote, now `accepted` and stamped with the day it was decided.
     pub quote: QuoteDocument,
-    /// The draft invoice carrying a copy of the offer's lines.
-    pub invoice_id: BillingInvoiceId,
+    /// What the offer became.
+    pub outcome: AcceptedAs,
+}
+
+/// The document an accepted offer became — **an enum rather than two nullable
+/// ids**, so a caller cannot read the one that was not raised.
+///
+/// Which it is depends on the lines (ADR 0054 §5): an offer naming any catalog
+/// item is goods and becomes an order, because goods are reserved, picked and
+/// delivered before anybody is billed; an offer of services becomes the draft
+/// invoice it always did.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AcceptedAs {
+    /// A draft invoice carrying a copy of the offer's lines — the services path,
+    /// unchanged since B1.12.
+    InvoiceDraft(BillingInvoiceId),
+    /// A **draft** sales order carrying the offer's lines and their products.
+    /// Confirming it is a separate act, so accepting an offer never quietly
+    /// commits stock.
+    SalesOrder(crate::id::InvSalesOrderId),
+}
+
+impl AcceptedAs {
+    /// The draft invoice, when that is what was raised.
+    pub fn invoice_id(&self) -> Option<&BillingInvoiceId> {
+        match self {
+            Self::InvoiceDraft(id) => Some(id),
+            Self::SalesOrder(_) => None,
+        }
+    }
+
+    /// The draft sales order, when that is what was raised.
+    pub fn sales_order_id(&self) -> Option<&crate::id::InvSalesOrderId> {
+        match self {
+            Self::SalesOrder(id) => Some(id),
+            Self::InvoiceDraft(_) => None,
+        }
+    }
 }
 
 /// The header, validated and with the customer's defaults resolved.
@@ -541,10 +578,9 @@ impl AccountStore {
         else {
             return Ok(None);
         };
-        let lines = QUOTE_LINES
-            .read(&self.pool, self.tenant.as_str(), id.as_str())
-            .await?;
-        let figures: Vec<LineFigures> = lines.iter().map(Line::figures).collect();
+        let lines =
+            billing_quote_lines::read(&self.pool, self.tenant.as_str(), id.as_str()).await?;
+        let figures: Vec<LineFigures> = lines.iter().map(|l| l.line.figures()).collect();
         Ok(Some(QuoteDocument {
             quote: row.into_quote()?,
             lines,
@@ -641,15 +677,26 @@ impl AccountStore {
     pub async fn set_billing_quote_lines(
         &self,
         id: &BillingQuoteId,
-        lines: &[NewLine],
+        lines: &[NewQuoteLine],
     ) -> Result<()> {
+        // Every product the offer names is held to **this tenant's** catalog
+        // before a row is written — the same discipline `inv_so` applies to an
+        // order's lines, and the reason a guessed id from elsewhere is a clean
+        // `NotFound` rather than a foreign-key error.
+        // **The state is checked first, and the order matters.** A frozen quote
+        // refuses an edit whatever the payload says — the state is the reason,
+        // and it outranks any complaint about content, which is what a caller
+        // needs to hear to stop trying. Validating first would answer a sent
+        // quote with "line 1: description is required", sending somebody to fix
+        // a document that cannot be edited at all.
         let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
         self.lock_quote(&mut tx, id)
             .await?
             .status
             .ensure_editable()?;
-        QUOTE_LINES
-            .replace(&mut tx, self.tenant.as_str(), id.as_str(), lines)
+        let normalized = billing_quote_lines::normalize_quote_lines(lines)?;
+        self.check_quote_line_products(&normalized).await?;
+        billing_quote_lines::replace(&mut tx, self.tenant.as_str(), id.as_str(), &normalized)
             .await?;
         sqlx::query(
             "UPDATE billing_quotes SET updated_at = now() WHERE tenant_id = $1 AND id = $2",
@@ -660,6 +707,54 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         tx.commit().await.map_err(StoreError::Db)?;
+        Ok(())
+    }
+
+    /// Holds every product a line set names to **this tenant's** catalog.
+    ///
+    /// A product that is not ours is a [`StoreError::NotFound`] — existence is
+    /// never disclosed across tenants — and an archived one is a
+    /// [`StoreError::Validation`] naming the line, because archiving means the
+    /// tenant has stopped carrying it and offering more is a mistake worth
+    /// reporting. Both are decided before a single row is written.
+    ///
+    /// This is `inv_so`'s own `normalize_so_lines` check, applied to the offer
+    /// for the same reason: the product on a quote line becomes the product on
+    /// an order line, and an order line pointing at somebody else's item is not
+    /// a document anybody can deliver.
+    async fn check_quote_line_products(
+        &self,
+        lines: &[crate::billing_quote_lines::NormalizedQuoteLine],
+    ) -> Result<()> {
+        let named = billing_quote_lines::products_named(lines);
+        if named.is_empty() {
+            return Ok(());
+        }
+        let rows: Vec<(String, bool)> = sqlx::query_as(
+            "SELECT id, archived_at IS NOT NULL FROM billing_products \
+             WHERE tenant_id = $1 AND id = ANY($2)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(&named)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(StoreError::Db)?;
+        for (position, line) in lines.iter().enumerate() {
+            let Some(product) = line.product_id.as_deref() else {
+                continue;
+            };
+            let found = rows.iter().find(|(id, _)| id == product);
+            match found {
+                None => return Err(StoreError::NotFound),
+                Some((_, true)) => {
+                    return Err(StoreError::Validation(format!(
+                        "line {}: that item is archived; restore it before offering it again",
+                        position + 1
+                    )));
+                }
+                Some((_, false)) => {}
+            }
+        }
         Ok(())
     }
 
@@ -861,45 +956,117 @@ impl AccountStore {
         let locked = self.lock_quote(&mut tx, id).await?;
         locked.status.ensure_transition(QuoteStatus::Accepted)?;
 
-        let invoice_id = self
-            .insert_invoice_from_quote(
-                &mut tx,
-                &InvoiceFromQuote {
-                    quote_id: id.as_str(),
-                    customer_id: &locked.customer_id,
-                    currency: &locked.currency,
-                    reference: &locked.reference,
-                },
-            )
-            .await?;
-
-        // The copy: the same descriptions, units, quantities, prices and rates,
-        // in the same print order, read under the lock that froze them when the
-        // offer was sent. A sent quote always has at least one line (an empty
-        // one cannot be sent), so the draft is never a document that says
+        // The lines, read under the lock that froze them when the offer was
+        // sent. A sent quote always has at least one (an empty one cannot be
+        // sent), so neither branch below ever raises a document that says
         // nothing.
-        let source = QUOTE_LINES
-            .read(&mut *tx, self.tenant.as_str(), id.as_str())
-            .await?;
-        for line in &source {
-            INVOICE_LINES
-                .write(
+        let source = billing_quote_lines::read(&mut *tx, self.tenant.as_str(), id.as_str()).await?;
+
+        // **The routing, and it is decided by the lines rather than by a
+        // setting** (ADR 0054 §5): an offer with goods on it becomes a sales
+        // order, because goods have to be reserved, picked and delivered before
+        // anybody is billed for them. An offer of services has nothing to
+        // reserve and nothing to pick, so it goes straight to a draft invoice —
+        // exactly as every accepted quote has since B1.12, byte for byte.
+        let sells_goods = source.iter().any(|l| l.product_id.is_some());
+        let outcome = if sells_goods {
+            let order_id = self
+                .insert_order_from_quote(&mut tx, id, &locked, &source)
+                .await?;
+            AcceptedAs::SalesOrder(order_id)
+        } else {
+            let invoice_id = self
+                .insert_invoice_from_quote(
                     &mut tx,
-                    self.tenant.as_str(),
-                    invoice_id.as_str(),
-                    line.line_order,
-                    &line.copied(),
+                    &InvoiceFromQuote {
+                        quote_id: id.as_str(),
+                        customer_id: &locked.customer_id,
+                        currency: &locked.currency,
+                        reference: &locked.reference,
+                    },
                 )
                 .await?;
-        }
+            // The copy: the same descriptions, units, quantities, prices and
+            // rates, in the same print order.
+            for line in &source {
+                INVOICE_LINES
+                    .write(
+                        &mut tx,
+                        self.tenant.as_str(),
+                        invoice_id.as_str(),
+                        line.line.line_order,
+                        &line.line.copied(),
+                    )
+                    .await?;
+            }
+            AcceptedAs::InvoiceDraft(invoice_id)
+        };
 
         self.write_close(&mut tx, id, QuoteStatus::Accepted).await?;
         tx.commit().await.map_err(StoreError::Db)?;
 
         Ok(QuoteAcceptance {
             quote: self.billing_quote(id).await?.ok_or(StoreError::NotFound)?,
-            invoice_id,
+            outcome,
         })
+    }
+
+    /// Raises the **draft sales order** an accepted goods quote becomes, inside
+    /// the accepting transaction, carrying every line with its product.
+    ///
+    /// A draft, deliberately, and for the reason the invoice branch is a draft:
+    /// what was offered is what will be supplied, but confirming it is a
+    /// separate act that draws the order's number, freezes the document and —
+    /// since O1.a — refuses to promise goods that cannot exist. Raising a
+    /// *confirmed* order here would make an acceptance quietly commit stock.
+    ///
+    /// The order records the offer it came from (migration 0700), so the two
+    /// documents can each answer what became of the other.
+    async fn insert_order_from_quote(
+        &self,
+        tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+        quote_id: &BillingQuoteId,
+        locked: &LockedQuote,
+        lines: &[QuoteLine],
+    ) -> Result<crate::id::InvSalesOrderId> {
+        let order_id = crate::id::InvSalesOrderId::generate();
+        sqlx::query(
+            "INSERT INTO inv_sales_orders (tenant_id, id, customer_id, status, currency, \
+                 reference, note, quote_id, created_by) \
+             VALUES ($1, $2, $3, 'draft', $4, $5, '', $6, $7)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(order_id.as_str())
+        .bind(&locked.customer_id)
+        .bind(&locked.currency)
+        .bind(&locked.reference)
+        .bind(quote_id.as_str())
+        .bind(self.user.as_str())
+        .execute(&mut **tx)
+        .await
+        .map_err(StoreError::Db)?;
+
+        for line in lines {
+            sqlx::query(
+                "INSERT INTO inv_sales_order_lines (tenant_id, so_id, id, line_order, \
+                     description, unit, qty_milli, unit_price_cents, vat_rate_bp, product_id) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+            )
+            .bind(self.tenant.as_str())
+            .bind(order_id.as_str())
+            .bind(crate::id::BillingLineId::generate().as_str())
+            .bind(line.line.line_order)
+            .bind(&line.line.description)
+            .bind(&line.line.unit)
+            .bind(line.line.qty_milli)
+            .bind(line.line.unit_price_cents)
+            .bind(line.line.vat_rate_bp)
+            .bind(line.product_id.as_ref().map(BillingProductId::as_str))
+            .execute(&mut **tx)
+            .await
+            .map_err(StoreError::Db)?;
+        }
+        Ok(order_id)
     }
 
     /// Declines a **sent** quote: the customer turned the offer down, or the

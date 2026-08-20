@@ -13,6 +13,7 @@
 
 mod common;
 
+use alo_store::billing_quote_lines::NewQuoteLine;
 use alo_store::{
     AccountStore, BillingCustomerId, BillingQuoteId, InvoiceStatus, NewCustomer, NewLine, NewQuote,
     QuoteStatus, Store, StoreError, TenantId,
@@ -98,6 +99,18 @@ fn offered_lines() -> Vec<NewLine> {
     ]
 }
 
+/// The same offer as quote lines. **None of them names a catalog item**, which
+/// is the whole point of this suite: consultancy, a printed manual charged in
+/// words and a discount are services, so accepting must go on raising a draft
+/// invoice directly (ADR 0054 §5). The day one of these grows a `product_id` is
+/// the day this suite stops testing the services path.
+fn offered_quote_lines() -> Vec<NewQuoteLine> {
+    offered_lines()
+        .into_iter()
+        .map(NewQuoteLine::from)
+        .collect()
+}
+
 /// A sent quote with the three lines above, and the reference the customer
 /// will look for on both documents.
 async fn sent_quote(account: &AccountStore, customer: &BillingCustomerId) -> BillingQuoteId {
@@ -111,7 +124,7 @@ async fn sent_quote(account: &AccountStore, customer: &BillingCustomerId) -> Bil
         .await
         .unwrap();
     account
-        .set_billing_quote_lines(&id, &offered_lines())
+        .set_billing_quote_lines(&id, &offered_quote_lines())
         .await
         .unwrap();
     account.send_billing_quote(&id).await.unwrap();
@@ -134,7 +147,12 @@ async fn an_accepted_offer_becomes_an_editable_draft_worth_exactly_the_same() {
     );
 
     let invoice = a
-        .billing_invoice(&accepted.invoice_id)
+        .billing_invoice(
+            accepted
+                .outcome
+                .invoice_id()
+                .expect("a services offer becomes an invoice"),
+        )
         .await
         .unwrap()
         .expect("acceptance raised the invoice");
@@ -161,15 +179,15 @@ async fn an_accepted_offer_becomes_an_editable_draft_worth_exactly_the_same() {
     // ---- the lines are the offer's lines, in the offer's order -------------
     assert_eq!(invoice.lines.len(), 3);
     for (copy, original) in invoice.lines.iter().zip(offered.lines.iter()) {
-        assert_eq!(copy.description, original.description);
-        assert_eq!(copy.unit, original.unit);
-        assert_eq!(copy.qty_milli, original.qty_milli);
-        assert_eq!(copy.unit_price_cents, original.unit_price_cents);
-        assert_eq!(copy.vat_rate_bp, original.vat_rate_bp);
-        assert_eq!(copy.line_order, original.line_order);
+        assert_eq!(copy.description, original.line.description);
+        assert_eq!(copy.unit, original.line.unit);
+        assert_eq!(copy.qty_milli, original.line.qty_milli);
+        assert_eq!(copy.unit_price_cents, original.line.unit_price_cents);
+        assert_eq!(copy.vat_rate_bp, original.line.vat_rate_bp);
+        assert_eq!(copy.line_order, original.line.line_order);
         assert_ne!(
             copy.id.as_str(),
-            original.id.as_str(),
+            original.line.id.as_str(),
             "a copied line is a line of its own, not a shadow of the offer's"
         );
     }
@@ -203,7 +221,15 @@ async fn an_accepted_offer_becomes_an_editable_draft_worth_exactly_the_same() {
             .await
             .unwrap()
             .map(|i| i.as_str().to_owned()),
-        Some(accepted.invoice_id.as_str().to_owned())
+        Some(
+            accepted
+                .outcome
+                .invoice_id()
+                .expect("a services offer becomes an invoice")
+                .clone()
+                .as_str()
+                .to_owned()
+        )
     );
 
     // ---- and it really is editable, and issues like any other draft --------
@@ -215,10 +241,24 @@ async fn an_accepted_offer_becomes_an_editable_draft_worth_exactly_the_same() {
         unit_price_cents: 25,
         vat_rate_bp: 2100,
     });
-    a.set_billing_invoice_lines(&accepted.invoice_id, &edited)
+    a.set_billing_invoice_lines(
+        accepted
+            .outcome
+            .invoice_id()
+            .expect("a services offer becomes an invoice"),
+        &edited,
+    )
+    .await
+    .unwrap();
+    let issued = a
+        .issue_billing_invoice(
+            accepted
+                .outcome
+                .invoice_id()
+                .expect("a services offer becomes an invoice"),
+        )
         .await
         .unwrap();
-    let issued = a.issue_billing_invoice(&accepted.invoice_id).await.unwrap();
     let year = OffsetDateTime::now_utc().date().year();
     assert_eq!(
         issued.invoice.number,
@@ -294,7 +334,14 @@ async fn an_offer_is_billed_once_and_only_when_it_was_accepted() {
             .await
             .unwrap()
             .map(|i| i.as_str().to_owned()),
-        Some(first.invoice_id.as_str().to_owned())
+        Some(
+            first
+                .outcome
+                .invoice_id()
+                .expect("a services offer becomes an invoice")
+                .as_str()
+                .to_owned()
+        )
     );
 
     // ---- a closed offer stays closed, and its invoice stands alone ---------
@@ -308,7 +355,14 @@ async fn an_offer_is_billed_once_and_only_when_it_was_accepted() {
     // Deleting the *invoice* is allowed while it is a draft — it never
     // consumed a number — and it leaves the offer accepted, with its record of
     // what was agreed intact.
-    a.delete_billing_invoice(&first.invoice_id).await.unwrap();
+    a.delete_billing_invoice(
+        first
+            .outcome
+            .invoice_id()
+            .expect("a services offer becomes an invoice"),
+    )
+    .await
+    .unwrap();
     assert_eq!(
         a.billing_quote(&accepted_quote)
             .await
@@ -341,7 +395,12 @@ async fn an_offer_to_a_customer_since_archived_can_still_be_honoured() {
         .unwrap();
     let accepted = a.accept_billing_quote(&quote_id).await.unwrap();
     let invoice = a
-        .billing_invoice(&accepted.invoice_id)
+        .billing_invoice(
+            accepted
+                .outcome
+                .invoice_id()
+                .expect("a services offer becomes an invoice"),
+        )
         .await
         .unwrap()
         .unwrap();
@@ -408,18 +467,45 @@ async fn another_tenant_can_neither_accept_an_offer_nor_see_what_it_billed() {
     let accepted = a.accept_billing_quote(&quote_id).await.unwrap();
     assert!(b.billing_invoices(None).await.unwrap().is_empty());
     assert!(
-        b.billing_invoice(&accepted.invoice_id)
-            .await
-            .unwrap()
-            .is_none(),
+        b.billing_invoice(
+            accepted
+                .outcome
+                .invoice_id()
+                .expect("a services offer becomes an invoice")
+        )
+        .await
+        .unwrap()
+        .is_none(),
         "a foreign invoice id reads as absent, never as data"
     );
     assert_not_found(
-        b.set_billing_invoice_lines(&accepted.invoice_id, &offered_lines())
-            .await,
+        b.set_billing_invoice_lines(
+            accepted
+                .outcome
+                .invoice_id()
+                .expect("a services offer becomes an invoice"),
+            &offered_lines(),
+        )
+        .await,
     );
-    assert_not_found(b.issue_billing_invoice(&accepted.invoice_id).await);
-    assert_not_found(b.delete_billing_invoice(&accepted.invoice_id).await);
+    assert_not_found(
+        b.issue_billing_invoice(
+            accepted
+                .outcome
+                .invoice_id()
+                .expect("a services offer becomes an invoice"),
+        )
+        .await,
+    );
+    assert_not_found(
+        b.delete_billing_invoice(
+            accepted
+                .outcome
+                .invoice_id()
+                .expect("a services offer becomes an invoice"),
+        )
+        .await,
+    );
 
     let owner: Option<String> =
         sqlx::query_scalar("SELECT tenant_id FROM billing_invoices WHERE quote_id = $1")
@@ -429,12 +515,17 @@ async fn another_tenant_can_neither_accept_an_offer_nor_see_what_it_billed() {
             .unwrap();
     assert_eq!(owner.as_deref(), Some(tenant_a.as_str()));
     assert_eq!(
-        a.billing_invoice(&accepted.invoice_id)
-            .await
-            .unwrap()
-            .unwrap()
-            .lines
-            .len(),
+        a.billing_invoice(
+            accepted
+                .outcome
+                .invoice_id()
+                .expect("a services offer becomes an invoice")
+        )
+        .await
+        .unwrap()
+        .unwrap()
+        .lines
+        .len(),
         3,
         "and B's attempts left A's document exactly as acceptance made it"
     );

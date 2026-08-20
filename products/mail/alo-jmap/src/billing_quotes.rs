@@ -38,8 +38,11 @@ use serde::Deserialize;
 use serde_json::{Value, json};
 use time::Date;
 
-use alo_store::billing_quotes::{NewQuote, Quote, QuoteDocument, QuoteStatus, QuoteSummary};
-use alo_store::{AccountStore, BillingCustomerId, BillingQuoteId, NewLine};
+use alo_store::billing_quote_lines::NewQuoteLine;
+use alo_store::billing_quotes::{
+    AcceptedAs, NewQuote, Quote, QuoteDocument, QuoteStatus, QuoteSummary,
+};
+use alo_store::{AccountStore, BillingCustomerId, BillingProductId, BillingQuoteId, Line};
 
 use crate::billing::{iso, iso_date, map_store_err, parse_body};
 use crate::billing_document::{LineBody, today, with_body, with_totals};
@@ -74,8 +77,27 @@ fn quote_json(q: &Quote, today: Date) -> Value {
 }
 
 /// A whole offer: header, lines in print order, totals.
+///
+/// A quote line carries `productId` where an invoice line does not — it is the
+/// field that decides what accepting the offer raises, so a client editing an
+/// offer has to be able to see and set it.
 pub(crate) fn document_json(d: &QuoteDocument, today: Date) -> Value {
-    with_body(quote_json(&d.quote, today), &d.lines, &d.totals)
+    let plain: Vec<Line> = d.lines.iter().map(|l| l.line.clone()).collect();
+    let mut body = with_body(quote_json(&d.quote, today), &plain, &d.totals);
+    if let Some(lines) = body.get_mut("lines").and_then(Value::as_array_mut) {
+        for (rendered, stored) in lines.iter_mut().zip(&d.lines) {
+            if let Some(object) = rendered.as_object_mut() {
+                object.insert(
+                    "productId".to_owned(),
+                    stored
+                        .product_id
+                        .as_ref()
+                        .map_or(Value::Null, |id| Value::String(id.as_str().to_owned())),
+                );
+            }
+        }
+    }
+    body
 }
 
 /// A list entry: the header and what the offer is worth, without the lines.
@@ -126,7 +148,36 @@ struct QuoteBody {
     /// alone; `[]` empties the offer, which is a legitimate thing to do to a
     /// draft (it simply cannot then be sent).
     #[serde(default)]
-    lines: Option<Vec<LineBody>>,
+    lines: Option<Vec<QuoteLineBody>>,
+}
+
+/// One offered line as a client states it: the shared line body, plus the
+/// catalog item it sells.
+///
+/// Flattened rather than nested so a quote line reads on the wire exactly as an
+/// invoice line does with one field more — the same shape a sales-order line
+/// already has, and the field that decides what accepting the offer raises
+/// (ADR 0054 §5).
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct QuoteLineBody {
+    /// The item being sold. Absent, `null` or `""` is a charge in words —
+    /// assembly, delivery, a discount — and an offer made only of those becomes
+    /// an invoice rather than an order.
+    #[serde(default)]
+    product_id: Option<String>,
+    #[serde(flatten)]
+    line: LineBody,
+}
+
+impl QuoteLineBody {
+    fn into_line(self) -> NewQuoteLine {
+        NewQuoteLine {
+            // A cleared picker sends `""`; the store reads that as no product.
+            product_id: self.product_id.map(BillingProductId::new),
+            line: self.line.into_line(),
+        }
+    }
 }
 
 impl QuoteBody {
@@ -160,8 +211,9 @@ impl QuoteBody {
     }
 
     /// The line set the body asks for, if it states one.
-    fn lines(self) -> Option<Vec<NewLine>> {
-        self.lines.map(LineBody::into_lines)
+    fn lines(self) -> Option<Vec<NewQuoteLine>> {
+        self.lines
+            .map(|lines| lines.into_iter().map(QuoteLineBody::into_line).collect())
     }
 }
 
@@ -257,7 +309,7 @@ pub async fn create_quote(
     if let Some(lines) = lines.as_deref() {
         account
             .acc
-            .billing_line_totals(lines)
+            .billing_line_totals(&lines.iter().map(|l| l.line.clone()).collect::<Vec<_>>())
             .map_err(map_store_err)?;
     }
     let id = account
@@ -325,7 +377,7 @@ pub async fn update_quote(
     if let Some(lines) = lines.as_deref() {
         account
             .acc
-            .billing_line_totals(lines)
+            .billing_line_totals(&lines.iter().map(|l| l.line.clone()).collect::<Vec<_>>())
             .map_err(map_store_err)?;
     }
     if let Some(header) = header {
@@ -394,11 +446,22 @@ pub async fn send_quote(
 /// `POST /billing/quotes/{id}/accept` → `{"quote":{…},"invoice":{…}}` — the
 /// customer took the offer.
 ///
-/// One store transaction closes the quote and raises the **draft invoice** for
-/// it, carrying a copy of every line at the price it was offered at, so the
-/// response can hand back both documents: the offer with its decision date, and
-/// an editable draft worth exactly the same. Nothing is issued — the number and
-/// the dates come from the ordinary `/billing/invoices/{id}/issue`.
+/// One store transaction closes the quote and raises the document it becomes, so
+/// the response hands back both: the offer with its decision date, and what it
+/// turned into.
+///
+/// **Which document depends on the lines** (ADR 0054 §5). An offer naming any
+/// catalog item is for goods and becomes a **draft sales order**, because goods
+/// are reserved, picked and delivered before anybody is billed for them; the
+/// body then carries `salesOrder` and `invoice` is `null`. An offer of services
+/// names no item, has nothing to pick, and becomes the **draft invoice** it
+/// always did — that path is unchanged, and a client that only ever sells
+/// services sees exactly what it saw before.
+///
+/// Nothing is issued and nothing is confirmed. The invoice's number comes from
+/// the ordinary `/billing/invoices/{id}/issue`, and the order's from
+/// `/inventory/sales-orders/{id}/confirm` — which is also where an over-promise
+/// is refused, so accepting an offer can never quietly commit stock.
 ///
 /// A lapsed offer can still be accepted: honouring one a few days late is a
 /// decision the tenant is entitled to make, and the store refuses on state,
@@ -414,17 +477,33 @@ pub async fn accept_quote(
         .accept_billing_quote(&BillingQuoteId::new(id))
         .await
         .map_err(map_store_err)?;
-    let invoice = account
-        .acc
-        .billing_invoice(&accepted.invoice_id)
-        .await
-        .map_err(map_store_err)?
-        .ok_or_else(Problem::server_error)?;
     let today = today();
-    Ok(Json(json!({
+    let mut body = json!({
         "quote": document_json(&accepted.quote, today),
-        "invoice": crate::billing_invoices::document_json(&invoice, today),
-    })))
+        "invoice": Value::Null,
+        "salesOrder": Value::Null,
+    });
+    match &accepted.outcome {
+        AcceptedAs::InvoiceDraft(invoice_id) => {
+            let invoice = account
+                .acc
+                .billing_invoice(invoice_id)
+                .await
+                .map_err(map_store_err)?
+                .ok_or_else(Problem::server_error)?;
+            body["invoice"] = crate::billing_invoices::document_json(&invoice, today);
+        }
+        AcceptedAs::SalesOrder(order_id) => {
+            let order = account
+                .acc
+                .inv_sales_order(order_id)
+                .await
+                .map_err(map_store_err)?
+                .ok_or_else(Problem::server_error)?;
+            body["salesOrder"] = crate::inventory_so::document_json(&order, today);
+        }
+    }
+    Ok(Json(body))
 }
 
 /// `POST /billing/quotes/{id}/decline` → `{"quote":{…}}` — the customer turned
@@ -508,7 +587,14 @@ pub async fn print_quote(
         payment_terms_days: None,
         credits_number: None,
         party: print::Party::customer(&customer),
-        lines: &document.lines,
+        // The printed document is the offer as the customer reads it: a
+        // description, a quantity, a price. Which of our catalog items a line
+        // happens to be is our bookkeeping and belongs on no printed page.
+        lines: &document
+            .lines
+            .iter()
+            .map(|l| l.line.clone())
+            .collect::<Vec<_>>(),
         totals: &document.totals,
         // An offer is not a tax point: nothing is chargeable on it, so there is
         // no rate to freeze and nothing to restate (B1.21). It is converted, if

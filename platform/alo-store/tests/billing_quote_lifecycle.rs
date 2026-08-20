@@ -14,6 +14,7 @@
 
 mod common;
 
+use alo_store::billing_quote_lines::NewQuoteLine;
 use alo_store::{
     AccountStore, BillingCustomerId, BillingQuoteId, InvoiceStatus, NewCustomer, NewInvoice,
     NewLine, NewQuote, QuoteStatus, Store, StoreError, TenantId,
@@ -61,7 +62,16 @@ async fn tenant_with_customer(
     (account, tenant, customer)
 }
 
-fn consulting(hours_milli: i64) -> NewLine {
+/// A charge in words: consultancy names no catalog item, which is what makes
+/// every offer in this suite the **services** path — the one that must go on
+/// becoming a draft invoice directly (ADR 0054 §5).
+fn consulting(hours_milli: i64) -> NewQuoteLine {
+    consulting_line(hours_milli).into()
+}
+
+/// The same line as a plain billing line, for the few places that build one by
+/// hand to break a field rule.
+fn consulting_line(hours_milli: i64) -> NewLine {
     NewLine {
         description: "Consulting".to_owned(),
         unit: "hour".to_owned(),
@@ -153,10 +163,10 @@ async fn sending_numbers_and_dates_a_quote_and_freezes_it() {
     assert_conflict(
         a.set_billing_quote_lines(
             &id,
-            &[NewLine {
+            &[NewQuoteLine::from(NewLine {
                 description: "   ".to_owned(),
-                ..consulting(1_000)
-            }],
+                ..consulting_line(1_000)
+            })],
         )
         .await,
     );
@@ -366,7 +376,7 @@ async fn quotes_and_invoices_count_in_separate_series() {
         .create_billing_invoice(&NewInvoice::for_customer(customer.clone()))
         .await
         .unwrap();
-    a.set_billing_invoice_lines(&invoice, &[consulting(1_000)])
+    a.set_billing_invoice_lines(&invoice, &[consulting_line(1_000)])
         .await
         .unwrap();
     let issued = a.issue_billing_invoice(&invoice).await.unwrap();

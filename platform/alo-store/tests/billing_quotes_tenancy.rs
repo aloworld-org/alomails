@@ -12,6 +12,7 @@
 
 mod common;
 
+use alo_store::billing_quote_lines::NewQuoteLine;
 use alo_store::{
     AccountStore, BillingCustomerId, BillingQuoteId, NewCustomer, NewLine, NewQuote, QuoteStatus,
     Store, StoreError, TenantId,
@@ -60,7 +61,12 @@ async fn tenant_with_customer(
     (account, tenant, customer)
 }
 
-fn consulting(hours_milli: i64) -> NewLine {
+fn consulting(hours_milli: i64) -> NewQuoteLine {
+    consulting_line(hours_milli).into()
+}
+
+/// The same line as a plain billing line, for the sites that build one by hand.
+fn consulting_line(hours_milli: i64) -> NewLine {
     NewLine {
         description: "Consulting".to_owned(),
         unit: "hour".to_owned(),
@@ -103,20 +109,20 @@ async fn billing_quotes_round_trip_and_never_cross_tenant() {
         &id,
         &[
             consulting(10_000),
-            NewLine {
+            NewQuoteLine::from(NewLine {
                 description: "Travel".to_owned(),
                 unit: "km".to_owned(),
                 qty_milli: 120_000,
                 unit_price_cents: 42,
                 vat_rate_bp: 600,
-            },
-            NewLine {
+            }),
+            NewQuoteLine::from(NewLine {
                 description: "Introductory discount".to_owned(),
                 qty_milli: -1_000,
                 unit_price_cents: 12_000,
                 vat_rate_bp: 2100,
                 ..Default::default()
-            },
+            }),
         ],
     )
     .await
@@ -126,7 +132,7 @@ async fn billing_quotes_round_trip_and_never_cross_tenant() {
     assert_eq!(
         doc.lines
             .iter()
-            .map(|line| (line.line_order, line.description.as_str()))
+            .map(|line| (line.line.line_order, line.line.description.as_str()))
             .collect::<Vec<_>>(),
         vec![
             (0, "Consulting"),
@@ -138,7 +144,7 @@ async fn billing_quotes_round_trip_and_never_cross_tenant() {
     // 10 h × €120 = €1200, less 1 h = €1080 at 21 %; 120 km × €0.42 = €50.40
     // at 6 %. The money is the store's arithmetic, never the caller's.
     assert_eq!(doc.totals.net_cents, 108_000 + 5_040);
-    assert_eq!(doc.lines[2].net_cents(), -12_000);
+    assert_eq!(doc.lines[2].line.net_cents(), -12_000);
     let by_rate: Vec<(i32, i64, i64)> = doc
         .totals
         .vat_by_rate
@@ -280,11 +286,11 @@ async fn a_quote_refuses_the_content_rules_every_billing_document_shares() {
             &id,
             &[
                 consulting(2_000),
-                NewLine {
+                NewQuoteLine::from(NewLine {
                     description: "Secret project".to_owned(),
                     qty_milli: i64::MAX,
-                    ..consulting(0)
-                },
+                    ..consulting_line(0)
+                }),
             ],
         )
         .await,
@@ -293,5 +299,5 @@ async fn a_quote_refuses_the_content_rules_every_billing_document_shares() {
     assert!(!message.contains("Secret"), "{message}");
     let doc = a.billing_quote(&id).await.unwrap().unwrap();
     assert_eq!(doc.lines.len(), 1, "the rejected set wrote nothing");
-    assert_eq!(doc.lines[0].qty_milli, 1_000);
+    assert_eq!(doc.lines[0].line.qty_milli, 1_000);
 }

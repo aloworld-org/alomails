@@ -19,6 +19,7 @@
 mod common;
 
 use alo_store::billing_line::NewLine;
+use alo_store::billing_quote_lines::NewQuoteLine;
 use alo_store::billing_quotes::NewQuote;
 use alo_store::inv_so::NewSalesOrder;
 use alo_store::{AccountStore, BillingCustomerId, BillingQuoteId, NewCustomer, Store, StoreError};
@@ -81,13 +82,13 @@ impl Trading {
         self.door
             .set_billing_quote_lines(
                 &id,
-                &[NewLine {
+                &[NewQuoteLine::from(NewLine {
                     description: "AF-630 axial fan".to_owned(),
                     unit: "piece".to_owned(),
                     qty_milli: 6_000,
                     unit_price_cents: 129_500,
                     vat_rate_bp: 2100,
-                }],
+                })],
             )
             .await
             .unwrap();
