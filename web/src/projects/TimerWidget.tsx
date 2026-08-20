@@ -111,7 +111,7 @@ export function TimerWidget() {
   return (
     <div className={styles.wrap}>
       <Link
-        to="/projects/week"
+        to={`/projects/week?project=${encodeURIComponent(timer.projectId)}`}
         className={styles.widget}
         title={error ?? projectName ?? strings.projectsTimerRunning}
       >

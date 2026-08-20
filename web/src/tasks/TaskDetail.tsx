@@ -16,8 +16,11 @@ import {
   FolderClosed,
   Link2,
   Paperclip,
+  Play,
   Plus,
+  Square,
   Tag,
+  Timer,
   Trash2,
   User,
   X,
@@ -34,6 +37,9 @@ import {
 } from "../jmap";
 import { DatePicker, Spinner } from "../ds";
 import { Avatar, COLUMNS, LABEL_PALETTE, statusColor } from "./parts";
+import { projectsMessage, useProjectsApi } from "../projects/api";
+import { announceTimerChanged, onTimerChanged } from "../projects/timerBus";
+import type { RunningTimer } from "../projects/types";
 import styles from "./TasksModule.module.css";
 
 /** Human file size (kB/MB) for the attachment rows. */
@@ -51,8 +57,19 @@ interface Props {
   onChanged: () => void;
 }
 
+export type TaskTimerState = "idle" | "this-task" | "another-task";
+
+/** A task owns the stop action only when the running timer names that task.
+ *  A project-only timer, or a timer on a sibling task, remains visible but is
+ *  never silently replaced: stopping time is a billable write. */
+export function taskTimerState(timer: RunningTimer | null, taskId: string): TaskTimerState {
+  if (timer === null) return "idle";
+  return timer.taskId === taskId ? "this-task" : "another-task";
+}
+
 export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
   const client = useJmapClient();
+  const projectsApi = useProjectsApi();
   const navigate = useNavigate();
   const [data, setData] = useState<TaskDetailData | null>(null);
   const [newSub, setNewSub] = useState("");
@@ -66,6 +83,22 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
   const [blockMenu, setBlockMenu] = useState(false);
   const [siblings, setSiblings] = useState<Task[]>([]);
   const blockWrapRef = useRef<HTMLDivElement>(null);
+  const [runningTimer, setRunningTimer] = useState<RunningTimer | null>(null);
+  const [timerBusy, setTimerBusy] = useState(false);
+  const [timerError, setTimerError] = useState<string | null>(null);
+
+  const loadTimer = useCallback(async () => {
+    try {
+      setRunningTimer(await projectsApi.timer());
+    } catch {
+      setRunningTimer(null);
+    }
+  }, [projectsApi]);
+
+  useEffect(() => {
+    void loadTimer();
+    return onTimerChanged(() => void loadTimer());
+  }, [loadTimer]);
 
   useEffect(() => {
     if (!labelMenu) return undefined;
@@ -239,6 +272,36 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
     }
   }
 
+  async function toggleTimer() {
+    const state = taskTimerState(runningTimer, t.id);
+    if (state === "another-task" || timerBusy) return;
+    setTimerBusy(true);
+    setTimerError(null);
+    try {
+      if (state === "this-task") {
+        await projectsApi.stopTimer();
+        setRunningTimer(null);
+      } else {
+        const timer = await projectsApi.startTimer({
+          projectId: t.projectId,
+          taskId: t.id,
+          note: t.title,
+        });
+        setRunningTimer(timer);
+      }
+      announceTimerChanged();
+      onChanged();
+    } catch (error) {
+      await loadTimer();
+      setTimerError(projectsMessage(
+        error,
+        state === "this-task" ? strings.projectsStopFailed : strings.projectsStartFailed,
+      ));
+    } finally {
+      setTimerBusy(false);
+    }
+  }
+
   const dueDate = t.dueAt ? t.dueAt.slice(0, 10) : "";
   const done = t.status === "done";
   const labelIds = new Set(data.labels.map((l) => l.id));
@@ -248,6 +311,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
   );
   const subDone = data.subtasks.filter((s) => s.done).length;
   const subTotal = data.subtasks.length;
+  const timerState = taskTimerState(runningTimer, t.id);
   const prioClass =
     t.priority === "high"
       ? styles.prioDotHigh
@@ -325,6 +389,38 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
               <Link2 size={14} /> {strings.taskFromEvent}
             </span>
           )}
+
+          <section className="flex items-center justify-between gap-4 rounded-xl border border-subtle bg-surface px-4 py-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-soft text-accent">
+                <Timer size={17} aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-primary">{strings.taskTimeTracking}</span>
+                <span className="mt-0.5 block text-xs text-secondary">
+                  {timerState === "this-task"
+                    ? strings.taskTimerRunningOnTask
+                    : timerState === "another-task"
+                      ? strings.taskTimerRunningElsewhere
+                      : strings.taskTimeTrackingHint}
+                </span>
+              </span>
+            </div>
+            <button
+              type="button"
+              className={`inline-flex min-h-10 shrink-0 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold !no-underline transition-colors hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-55 ${
+                timerState === "idle"
+                  ? "bg-accent text-on-accent hover:bg-accent-hover"
+                  : "bg-raised text-primary hover:bg-strong"
+              }`}
+              onClick={() => void toggleTimer()}
+              disabled={timerBusy || timerState === "another-task"}
+            >
+              {timerState === "this-task" ? <Square size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
+              {timerState === "this-task" ? strings.projectsStopTimer : strings.projectsStartTimer}
+            </button>
+          </section>
+          {timerError !== null && <p className="text-sm text-danger" role="alert">{timerError}</p>}
 
           <div className={styles.tdFields}>
             <label className={styles.tdField}>
