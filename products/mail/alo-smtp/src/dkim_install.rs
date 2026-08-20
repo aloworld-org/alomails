@@ -380,12 +380,32 @@ mod tests {
         assert!(validate_selector(&"a".repeat(64)).is_err());
     }
 
+    /// Writes a key file the way an operator is expected to leave one: readable
+    /// by its owner and by nobody else.
+    ///
+    /// [`load_pkcs8_pem`] refuses a group- or world-readable key, which is the
+    /// behaviour we want. `fs::write` creates `0644` on Unix, so a test that
+    /// wrote a key and read it straight back was refused on **Linux — the
+    /// platform this ships on — while passing on Windows**, which has no Unix
+    /// mode for the check to read. A test that only holds on the machine it was
+    /// written on is worse than no test.
+    fn write_key_file(path: &Path, contents: &[u8]) {
+        std::fs::write(path, contents).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600)).unwrap();
+        }
+    }
+
     #[test]
     fn a_key_file_that_is_not_a_key_is_refused_by_name() {
         let dir = std::env::temp_dir().join(format!("alo-dkim-install-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("not-a-key.pem");
-        std::fs::write(&path, b"-----BEGIN CERTIFICATE-----\nnope\n").unwrap();
+        // Owner-only, so the refusal asserted below is for the reason this test
+        // names rather than for the file's permissions.
+        write_key_file(&path, b"-----BEGIN CERTIFICATE-----\nnope\n");
         let error = read_key(&path).expect_err("a certificate is not a signing key");
         assert!(
             matches!(error, InstallError::Key(_)),
@@ -414,7 +434,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("alo-dkim-ed-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("ed25519.pem");
-        std::fs::write(&path, pem).unwrap();
+        write_key_file(&path, pem.as_bytes());
 
         let (algorithm, seed, public) = read_key(&path).expect("an Ed25519 key");
         assert_eq!(algorithm, "ed25519");
