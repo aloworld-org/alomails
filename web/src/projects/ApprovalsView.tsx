@@ -13,16 +13,22 @@
 // with no sentence is a manager making somebody guess. The server accepts an
 // empty one; this screen prompts for it.
 import { useEffect, useState } from "react";
-import { Inbox } from "lucide-react";
+import { ArrowRight, CheckCircle2, Inbox } from "lucide-react";
 
 import { Button, Spinner, useDialogs } from "../ds";
 import { strings } from "../i18n";
 import { projectsMessage, useProjectsApi } from "./api";
 import { dayLabel, durationLabel, momentLabel } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
-import type { PendingWeek } from "./types";
+import type { PendingProjectHours, PendingWeek } from "./types";
 
-export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
+export function ApprovalsView({
+  onDecided,
+  onOpenProject,
+}: {
+  onDecided: () => void;
+  onOpenProject: (projectId: string) => void;
+}) {
   const api = useProjectsApi();
   const dialogs = useDialogs();
   const [weeks, setWeeks] = useState<PendingWeek[]>([]);
@@ -30,6 +36,7 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
+  const [approvedProjects, setApprovedProjects] = useState<PendingProjectHours[]>([]);
 
   useEffect(() => {
     let live = true;
@@ -57,6 +64,8 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
     setError(null);
     try {
       await api.approveWeek(week.id);
+      setApprovedProjects(week.projects);
+      setWeeks((current) => current.filter((candidate) => candidate.id !== week.id));
       setReload((r) => r + 1);
       onDecided();
     } catch (err) {
@@ -79,6 +88,7 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
     setError(null);
     try {
       await api.rejectWeek(week.id, note);
+      setWeeks((current) => current.filter((candidate) => candidate.id !== week.id));
       setReload((r) => r + 1);
       onDecided();
     } catch (err) {
@@ -99,6 +109,28 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
   return (
     <div className="flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4">
       {error !== null && <ErrorBanner message={error} />}
+      {approvedProjects.length > 0 && (
+        <section className="flex flex-wrap items-center gap-4 rounded-xl border border-success/30 bg-success/10 px-4 py-3" role="status">
+          <CheckCircle2 className="size-5 shrink-0 text-success" aria-hidden="true" />
+          <div className="min-w-52 flex-1">
+            <p className="font-semibold text-primary">{strings.projectsApprovalComplete}</p>
+            <p className="mt-0.5 text-sm text-secondary">{strings.projectsApprovalCompleteBody}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {approvedProjects.map((project) => (
+              <button
+                key={project.projectId}
+                type="button"
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-surface px-4 py-2 text-sm font-semibold text-primary shadow-sm ring-1 ring-inset ring-subtle !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                onClick={() => onOpenProject(project.projectId)}
+              >
+                <span className="max-w-48 truncate">{project.projectName}</span>
+                <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       {weeks.length === 0 ? (
         <EmptyState
           Icon={Inbox}
@@ -137,7 +169,13 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
                     <div className="flex min-w-48 flex-col gap-1.5">
                       {week.projects.map((project) => (
                         <div key={project.projectId} className="flex items-center justify-between gap-4 rounded-md bg-raised px-2.5 py-1.5">
-                          <span className="min-w-0 truncate font-medium text-primary">{project.projectName}</span>
+                          <button
+                            type="button"
+                            className="min-w-0 truncate rounded text-left font-medium text-primary !no-underline hover:text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                            onClick={() => onOpenProject(project.projectId)}
+                          >
+                            {project.projectName}
+                          </button>
                           <span className="shrink-0 text-xs tabular-nums text-secondary">
                             {durationLabel(project.minutes)}
                             {project.billableMinutes > 0 && ` · ${durationLabel(project.billableMinutes)} ${strings.projectsBillableHours.toLocaleLowerCase()}`}

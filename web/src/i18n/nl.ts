@@ -2688,6 +2688,8 @@ export const nl: Partial<Catalog> = {
   projectsPerson: "Persoon",
   projectsSubmittedAt: "Ingediend op",
   projectsApprove: "Goedkeuren",
+  projectsApprovalComplete: "Week goedgekeurd",
+  projectsApprovalCompleteBody: "Bekijk de betrokken projecten en factureer klantwerk dat klaarstaat.",
   projectsReject: "Terugsturen",
   projectsRejectTitle: "Deze week terugsturen?",
   projectsRejectBody: (person: string) =>

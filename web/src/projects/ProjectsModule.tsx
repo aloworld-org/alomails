@@ -381,7 +381,15 @@ export function ProjectsModule() {
         {/* The admin tab is a route too, so a manager's bookmark works — and a
             non-admin who follows one gets the server's own `403` on the read
             rather than a page that pretends the inbox is empty. */}
-        <Route path="approvals" element={<ApprovalsView onDecided={bump} />} />
+        <Route
+          path="approvals"
+          element={(
+            <ApprovalsView
+              onDecided={bump}
+              onOpenProject={(projectId) => navigate(`/projects/${encodeURIComponent(projectId)}/overview`)}
+            />
+          )}
+        />
         <Route path=":projectId" element={<ProjectWorkspaceRoute />} />
         <Route path=":projectId/:workspaceView" element={<ProjectWorkspaceRoute />} />
         {/* An unknown Projects path is a stale link, not an error page. */}

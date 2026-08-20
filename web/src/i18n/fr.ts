@@ -2727,6 +2727,8 @@ export const fr: Partial<Catalog> = {
   projectsPerson: "Personne",
   projectsSubmittedAt: "Remise le",
   projectsApprove: "Valider",
+  projectsApprovalComplete: "Semaine validée",
+  projectsApprovalCompleteBody: "Consultez les projets concernés et facturez le travail client prêt à l’être.",
   projectsReject: "Renvoyer",
   projectsRejectTitle: "Renvoyer cette semaine ?",
   projectsRejectBody: (person: string) =>

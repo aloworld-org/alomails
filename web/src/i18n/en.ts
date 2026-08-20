@@ -4561,6 +4561,8 @@ export const en = {
   projectsPerson: "Person",
   projectsSubmittedAt: "Handed in",
   projectsApprove: "Approve",
+  projectsApprovalComplete: "Week approved",
+  projectsApprovalCompleteBody: "Review the affected projects and invoice any customer work that is ready.",
   projectsReject: "Send back",
   projectsRejectTitle: "Send this week back?",
   projectsRejectBody: (person: string) =>
