@@ -52,6 +52,25 @@ async fn get(app: &Router, token: &str, uri: &str) -> (StatusCode, Value) {
     send(app, req).await
 }
 
+/// A moment truncated to the microsecond — the finest one Postgres keeps.
+///
+/// `timestamptz` stores microseconds, while `OffsetDateTime::now_utc()` on this
+/// platform carries finer precision than that. A moment taken straight from the
+/// clock therefore comes back from a round trip a few hundred nanoseconds
+/// shorter than it went in, and comparing the two fails — except on the roughly
+/// one run in ten where the clock lands on a whole microsecond, which is how
+/// this read as flakiness rather than as the truncation it is.
+///
+/// Truncating here rather than comparing loosely at the assertion keeps the
+/// test's claim exact: the moment we asked for is the moment that comes back,
+/// with no tolerance to hide a real drift.
+fn to_micros(moment: OffsetDateTime) -> OffsetDateTime {
+    let micros = moment.nanosecond() / 1_000 * 1_000;
+    moment
+        .replace_nanosecond(micros)
+        .expect("a truncated nanosecond is always in range")
+}
+
 /// A subdomain unique to this harness run — the namespace is global.
 fn sub(tag: &str, h: &Harness) -> String {
     let salt: String = h
@@ -173,7 +192,7 @@ async fn a_publish_is_scheduled_moved_and_called_off() {
     );
 
     // 09:00 in Amsterdam is a moment, not a string: it comes back in UTC.
-    let chosen = OffsetDateTime::now_utc() + time::Duration::days(2);
+    let chosen = to_micros(OffsetDateTime::now_utc() + time::Duration::days(2));
     let (status, scheduled) = post(
         &h.app,
         &h.token,
@@ -199,7 +218,7 @@ async fn a_publish_is_scheduled_moved_and_called_off() {
 
     // Moving the moment keeps the id, so a surface watching one schedule keeps
     // watching it — and there is still exactly one intention.
-    let moved_to = OffsetDateTime::now_utc() + time::Duration::days(3);
+    let moved_to = to_micros(OffsetDateTime::now_utc() + time::Duration::days(3));
     let (status, moved) = post(
         &h.app,
         &h.token,
