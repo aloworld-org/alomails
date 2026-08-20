@@ -232,7 +232,9 @@ async fn the_fan_order_walks_from_offer_to_two_invoices_and_the_book_agrees_at_e
         .clone();
     assert_eq!(confirmed["status"], "confirmed");
     assert!(
-        confirmed["number"].as_str().is_some_and(|n| n.starts_with("SO-")),
+        confirmed["number"]
+            .as_str()
+            .is_some_and(|n| n.starts_with("SO-")),
         "confirming draws the order's own number: {confirmed}"
     );
 
@@ -345,7 +347,10 @@ async fn the_fan_order_walks_from_offer_to_two_invoices_and_the_book_agrees_at_e
         "the NEW quantity only — the first four are not billed twice"
     );
     let second_id = second_invoice["invoice"]["invoiceId"].as_str().unwrap();
-    assert_ne!(second_id, first_id, "a second consignment, a second document");
+    assert_ne!(
+        second_id, first_id,
+        "a second consignment, a second document"
+    );
     let billed_again = ok(
         "read the second invoice",
         get(&h.app, &h.token, &format!("/billing/invoices/{second_id}")).await,
@@ -377,7 +382,8 @@ async fn the_fan_order_walks_from_offer_to_two_invoices_and_the_book_agrees_at_e
         get(&h.app, &h.token, "/inventory/order-book").await,
     );
     assert_eq!(
-        open["orders"], json!([]),
+        open["orders"],
+        json!([]),
         "a finished order is not open business"
     );
 }

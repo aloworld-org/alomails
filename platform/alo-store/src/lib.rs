@@ -64,6 +64,7 @@ pub mod campaign_mime;
 pub mod campaign_preview;
 pub mod campaign_record;
 pub mod campaign_segments;
+pub mod campaign_send;
 pub mod campaign_suppression;
 pub mod campaign_text;
 pub mod campaign_topic_optout;
@@ -499,7 +500,7 @@ pub use id::{
     AttachmentId, BankLineId, BankMatchId, BankStatementId, BaseFieldId, BaseRecordId, BaseTableId,
     BaseViewId, BillingBillId, BillingCustomerId, BillingInvoiceId, BillingLineId,
     BillingPaymentId, BillingProductId, BillingQuoteId, BillingScheduleId, BlobId, CalendarId,
-    CampaignConsentId, CampaignId, CampaignSegmentId, CampaignSuppressionId,
+    CampaignConsentId, CampaignId, CampaignSegmentId, CampaignSendId, CampaignSuppressionId,
     CampaignUnsubscribeTokenId, CategoryId, ChatAgentId, ChatChannelId, ChatMessageId,
     ChatProposalId, ChatToolRunId, CommentId, ContactId, CrmActivityId, CrmDealId, CrmEventId,
     CrmPipelineId, CrmStageId, DriveNodeId, EventId, FinAccountId, FinCategoryId, FinEntryId,

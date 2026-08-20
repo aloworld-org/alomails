@@ -191,7 +191,23 @@ fn declined_sql() -> &'static str {
 /// checked against the strings rather than asserted in a comment.
 #[cfg(test)]
 fn all_sql() -> Vec<&'static str> {
-    vec![decline_sql(), declined_sql()]
+    vec![decline_sql(), declined_sql(), decliners_sql()]
+}
+
+/// Which of these addresses have declined this one topic.
+///
+/// The batch counterpart of [`declined_sql`], and it exists because a send
+/// enrols a page of people at a time ([`crate::campaign_send`]): asking per
+/// recipient would be a page of round trips to answer what one `= ANY`
+/// answers.
+///
+/// Returns only the addresses that declined. The caller knows which it asked
+/// about, and returning the ones with no preference would be a page-sized
+/// answer to a question about a minority.
+fn decliners_sql() -> &'static str {
+    "SELECT address \
+       FROM campaign_topic_optouts \
+      WHERE tenant_id = $1 AND topic = $2 AND address = ANY($3)"
 }
 
 /// A row as either query returns it.
@@ -332,6 +348,47 @@ impl TenantStore {
             .await
             .map_err(StoreError::Db)?;
         Ok(rows.into_iter().map(row_to_optout).collect())
+    }
+}
+
+impl crate::AccountStore {
+    /// Which of `addresses` have declined `topic`, folded.
+    ///
+    /// On [`AccountStore`](crate::AccountStore) rather than [`TenantStore`]
+    /// because its caller is a send, which always has an account behind it —
+    /// somebody in the tenant pressed the button. The public unsubscribe
+    /// endpoints keep the [`TenantStore`] methods above, which have no login at
+    /// all.
+    ///
+    /// The topic is folded here by the same [`normalise_topic`] the column was
+    /// written through, so a caller holding the label as a person typed it gets
+    /// the same answer as one holding the fold.
+    ///
+    /// # Errors
+    /// [`StoreError::Validation`] when the topic cannot be folded;
+    /// [`StoreError::Db`] on failure.
+    pub async fn campaign_topic_decliners(
+        &self,
+        topic: &str,
+        addresses: &[String],
+    ) -> Result<Vec<String>> {
+        let topic = normalise_topic(topic).ok_or_else(|| {
+            StoreError::Validation("a preference is held against a kind of mail".to_owned())
+        })?;
+        if addresses.is_empty() {
+            // No round trip to ask about nobody. Postgres would answer the
+            // same, but a send enrolling an empty page is a normal event and
+            // should not cost a query.
+            return Ok(Vec::new());
+        }
+        let rows: Vec<(String,)> = sqlx::query_as(decliners_sql())
+            .bind(self.tenant().as_str())
+            .bind(&topic)
+            .bind(addresses)
+            .fetch_all(&self.pool)
+            .await
+            .map_err(StoreError::Db)?;
+        Ok(rows.into_iter().map(|row| row.0).collect())
     }
 }
 

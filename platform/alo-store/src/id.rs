@@ -780,6 +780,17 @@ opaque_id!(
 );
 
 opaque_id!(
+    /// One act of sending one campaign (alo Campaigns, ADR 0044, wave C4.1).
+    /// Identifies the *act*, never the letter: a campaign that was started,
+    /// stopped halfway and never touched again is one [`CampaignId`] and one
+    /// `CampaignSendId`, and the two answer different questions — "what did we
+    /// write" and "what did we do with it". The per-recipient ledger hangs off
+    /// this id, so "who has already been mailed" survives the crash of whatever
+    /// was doing the mailing.
+    CampaignSendId
+);
+
+opaque_id!(
     /// One kind of mail one person has declined (alo Campaigns, ADR 0044 §3,
     /// wave C2s.2). Identifies the *decision*, never the person: a preference is
     /// held against an address, and this id is the handle a screen links to when
