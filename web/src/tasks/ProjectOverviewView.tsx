@@ -23,6 +23,12 @@ interface Props {
   onOpenInvoice: (id: string) => void;
 }
 
+/** A project may offer the billing handoff only when the server has confirmed
+ * that approved, billable, uninvoiced time exists. */
+export function canCreateProjectInvoice(project: Project): boolean {
+  return project.client !== null && project.hours.approvedUnbilledMinutes > 0;
+}
+
 export function ProjectOverviewView({
   project,
   plan,
@@ -324,13 +330,13 @@ export function ProjectOverviewView({
             </div>
           </div>
 
-          {project.client !== null && project.hours.billableMinutes > project.hours.billedMinutes && (
+          {canCreateProjectInvoice(project) && (
             <div className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
               <div className="flex items-start gap-3">
                 <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><ReceiptText size={18} /></span>
                 <div className="min-w-0 flex-1">
                   <h2 className="text-base font-semibold text-primary">{strings.projectsReadyToInvoice}</h2>
-                  <p className="mt-1 text-sm leading-6 text-secondary">{strings.projectsReadyToInvoiceBody(durationLabel(project.hours.billableMinutes - project.hours.billedMinutes))}</p>
+                  <p className="mt-1 text-sm leading-6 text-secondary">{strings.projectsReadyToInvoiceBody(durationLabel(project.hours.approvedUnbilledMinutes))}</p>
                 </div>
               </div>
               <button type="button" className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent !no-underline transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" onClick={() => setInvoiceOpen(true)}>

@@ -102,6 +102,17 @@ export function projectContextId(pathname: string, projectQuery: string | null):
   return null;
 }
 
+/** Builds the canonical route for a project-aware portfolio view. */
+export function projectScopedPath(
+  view: "week" | "timeline" | "reports",
+  projectId: string | null,
+): string {
+  const path = `/projects/${view}`;
+  return projectId === null
+    ? path
+    : `${path}?project=${encodeURIComponent(projectId)}`;
+}
+
 export function ProjectsModule() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -302,19 +313,19 @@ export function ProjectsModule() {
             </NavLink>
           )}
           <NavLink
-            to="/projects/week"
+            to={projectScopedPath("week", contextProjectId)}
             className={projectTabClass}
           >
             {strings.projectsTabWeek}
           </NavLink>
           <NavLink
-            to="/projects/timeline"
+            to={projectScopedPath("timeline", contextProjectId)}
             className={projectTabClass}
           >
             {strings.projectsTabPlan}
           </NavLink>
           <NavLink
-            to="/projects/reports"
+            to={projectScopedPath("reports", contextProjectId)}
             className={projectTabClass}
           >
             {strings.projectsTabReports}

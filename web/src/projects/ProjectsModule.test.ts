@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { projectContextId } from "./ProjectsModule";
+import { projectContextId, projectScopedPath } from "./ProjectsModule";
 
 describe("projectContextId", () => {
   it("keeps a project workspace visible across its nested task views", () => {
@@ -18,5 +18,23 @@ describe("projectContextId", () => {
     expect(projectContextId("/projects/list", "project-1")).toBeNull();
     expect(projectContextId("/projects/my-work", null)).toBeNull();
     expect(projectContextId("/projects/approvals", "project-1")).toBeNull();
+  });
+});
+
+describe("projectScopedPath", () => {
+  it("carries project context between time, timeline, and report views", () => {
+    expect(projectScopedPath("week", "project/one")).toBe(
+      "/projects/week?project=project%2Fone",
+    );
+    expect(projectScopedPath("timeline", "project-1")).toBe(
+      "/projects/timeline?project=project-1",
+    );
+    expect(projectScopedPath("reports", "project-1")).toBe(
+      "/projects/reports?project=project-1",
+    );
+  });
+
+  it("keeps portfolio routes free of an empty project query", () => {
+    expect(projectScopedPath("week", null)).toBe("/projects/week");
   });
 });

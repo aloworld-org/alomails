@@ -51,6 +51,10 @@ pub struct ProjectHours {
     /// The subset somebody marked chargeable. Never larger than
     /// [`Self::minutes`].
     pub billable_minutes: i64,
+    /// Billable minutes in an approved week that have not yet been carried
+    /// onto an invoice. This is the only total that may be presented as ready
+    /// to invoice.
+    pub approved_unbilled_minutes: i64,
     /// The subset already carried onto a billing document. Never larger than
     /// [`Self::billable_minutes`] — only a billable hour can be billed.
     pub billed_minutes: i64,
@@ -70,6 +74,7 @@ impl ProjectHours {
             project_id,
             minutes: 0,
             billable_minutes: 0,
+            approved_unbilled_minutes: 0,
             billed_minutes: 0,
             last_worked_on: None,
         }
@@ -103,6 +108,8 @@ const VISIBLE_PROJECT: &str = "(p.kind = 'team' OR (p.kind = 'personal' AND p.ow
 const HOURS_COLS: &str = "e.project_id, \
      COALESCE(SUM(e.minutes), 0)::bigint AS minutes, \
      COALESCE(SUM(CASE WHEN e.billable THEN e.minutes ELSE 0 END), 0)::bigint AS billable_minutes, \
+     COALESCE(SUM(CASE WHEN e.billable AND e.invoice_id IS NULL AND w.status = 'approved' \
+         THEN e.minutes ELSE 0 END), 0)::bigint AS approved_unbilled_minutes, \
      COALESCE(SUM(CASE WHEN e.invoice_id IS NOT NULL THEN e.minutes ELSE 0 END), 0)::bigint \
          AS billed_minutes, \
      MAX(e.work_date) AS last_worked_on";
@@ -123,6 +130,8 @@ impl AccountStore {
         let rows = sqlx::query_as::<_, HoursRow>(&format!(
             "SELECT {HOURS_COLS} FROM time_entries e \
              JOIN task_projects p ON p.tenant_id = e.tenant_id AND p.id = e.project_id \
+             LEFT JOIN time_weeks w ON w.tenant_id = e.tenant_id AND w.user_id = e.user_id \
+               AND w.week_start = date_trunc('week', e.work_date)::date \
              WHERE e.tenant_id = $1 AND e.state = 'active' AND {VISIBLE_PROJECT} \
              GROUP BY e.project_id \
              ORDER BY MAX(e.work_date) DESC, e.project_id"
@@ -165,6 +174,8 @@ impl AccountStore {
         let row = sqlx::query_as::<_, HoursRow>(&format!(
             "SELECT {HOURS_COLS} FROM time_entries e \
              JOIN task_projects p ON p.tenant_id = e.tenant_id AND p.id = e.project_id \
+             LEFT JOIN time_weeks w ON w.tenant_id = e.tenant_id AND w.user_id = e.user_id \
+               AND w.week_start = date_trunc('week', e.work_date)::date \
              WHERE e.tenant_id = $1 AND e.state = 'active' AND e.project_id = $3 \
                AND {VISIBLE_PROJECT} \
              GROUP BY e.project_id"
@@ -189,6 +200,7 @@ struct HoursRow {
     project_id: String,
     minutes: i64,
     billable_minutes: i64,
+    approved_unbilled_minutes: i64,
     billed_minutes: i64,
     last_worked_on: Option<Date>,
 }
@@ -199,6 +211,7 @@ impl HoursRow {
             project_id: ProjectId::new(self.project_id),
             minutes: self.minutes,
             billable_minutes: self.billable_minutes,
+            approved_unbilled_minutes: self.approved_unbilled_minutes,
             billed_minutes: self.billed_minutes,
             last_worked_on: self.last_worked_on,
         }
@@ -221,6 +234,7 @@ mod tests {
         let empty = ProjectHours::none_yet(ProjectId::new("p"));
         assert_eq!(empty.minutes, 0);
         assert_eq!(empty.billable_minutes, 0);
+        assert_eq!(empty.approved_unbilled_minutes, 0);
         assert_eq!(empty.billed_minutes, 0);
         assert_eq!(empty.last_worked_on, None);
     }

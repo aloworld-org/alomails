@@ -39,7 +39,7 @@ const project: Project = {
     createdAt: "2026-08-20T08:00:00Z",
     updatedAt: "2026-08-20T08:00:00Z",
   },
-  hours: { minutes: 120, billableMinutes: 120, billedMinutes: 0, lastWorkedOn: "2026-08-20", budgetConsumptionBp: null },
+  hours: { minutes: 120, billableMinutes: 120, approvedUnbilledMinutes: 120, billedMinutes: 0, lastWorkedOn: "2026-08-20", budgetConsumptionBp: null },
 };
 
 describe("InvoiceHandoffDialog", () => {

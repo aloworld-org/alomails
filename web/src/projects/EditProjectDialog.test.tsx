@@ -18,7 +18,7 @@ const project: Project = {
   createdAt: "2026-08-20T08:00:00Z",
   updatedAt: "2026-08-20T08:00:00Z",
   client: null,
-  hours: { minutes: 0, billableMinutes: 0, billedMinutes: 0, lastWorkedOn: null, budgetConsumptionBp: null },
+  hours: { minutes: 0, billableMinutes: 0, approvedUnbilledMinutes: 0, billedMinutes: 0, lastWorkedOn: null, budgetConsumptionBp: null },
 };
 
 describe("EditProjectDialog", () => {

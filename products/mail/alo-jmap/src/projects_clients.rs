@@ -87,6 +87,7 @@ fn hours_json(hours: &ProjectHours, budget_minutes: Option<i64>) -> Value {
     json!({
         "minutes": hours.minutes,
         "billableMinutes": hours.billable_minutes,
+        "approvedUnbilledMinutes": hours.approved_unbilled_minutes,
         "billedMinutes": hours.billed_minutes,
         "lastWorkedOn": hours.last_worked_on.map(iso_date),
         "budgetConsumptionBp": hours.budget_consumption_bp(budget_minutes),
@@ -511,6 +512,7 @@ mod tests {
         let value = project_json(&project(), Some(&facts()), &hours, None);
         assert_eq!(value["hours"]["budgetConsumptionBp"], json!(5_000));
         assert_eq!(value["hours"]["billableMinutes"], json!(2_400));
+        assert_eq!(value["hours"]["approvedUnbilledMinutes"], json!(0));
         assert_eq!(value["hours"]["billedMinutes"], json!(600));
         assert_eq!(value["hours"]["lastWorkedOn"], json!("2026-08-05"));
         assert_eq!(value["client"]["customerId"], json!("c1"));

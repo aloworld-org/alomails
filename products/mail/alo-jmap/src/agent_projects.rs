@@ -169,6 +169,7 @@ fn hours_json(hours: &ProjectHours) -> Value {
     json!({
         "minutes": hours.minutes,
         "billableMinutes": hours.billable_minutes,
+        "approvedUnbilledMinutes": hours.approved_unbilled_minutes,
         "billedMinutes": hours.billed_minutes,
         "lastWorkedOn": hours.last_worked_on.map(iso_date),
     })
@@ -500,6 +501,7 @@ mod tests {
             project_id: ProjectId::new("p1"),
             minutes: 600,
             billable_minutes: 540,
+            approved_unbilled_minutes: 420,
             billed_minutes: 120,
             last_worked_on: Some(day("2026-08-07")),
         };
@@ -510,6 +512,7 @@ mod tests {
         let told = hours_json(&hours);
         assert_eq!(told["minutes"], 600);
         assert_eq!(told["billableMinutes"], 540);
+        assert_eq!(told["approvedUnbilledMinutes"], 420);
         assert_eq!(told["billedMinutes"], 120);
         assert_eq!(told["lastWorkedOn"], "2026-08-07");
         // Nobody has worked on it: the day is null, not an invented one.
