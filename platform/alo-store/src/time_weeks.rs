@@ -56,6 +56,8 @@
 //! inbox and the decision cross that line by design and only behind the admin
 //! gate; a decision note can name a person or a case, so it never reaches a log.
 
+use std::collections::HashMap;
+
 use sqlx::PgConnection;
 use time::{Date, Duration, OffsetDateTime};
 
@@ -233,6 +235,18 @@ pub struct PendingWeek {
     /// Every real (non-proposed) minute in the week.
     pub minutes: i64,
     /// The subset of those that is chargeable to a customer.
+    pub billable_minutes: i64,
+    /// Privacy-safe project totals that let an approver understand what the
+    /// submitted week contains without exposing individual entry notes.
+    pub projects: Vec<PendingProjectHours>,
+}
+
+/// One project's contribution to a submitted week.
+#[derive(Debug, Clone)]
+pub struct PendingProjectHours {
+    pub project_id: String,
+    pub project_name: String,
+    pub minutes: i64,
     pub billable_minutes: i64,
 }
 
@@ -513,7 +527,50 @@ impl TenantStore {
         .fetch_all(self.pool())
         .await
         .map_err(StoreError::Db)?;
-        Ok(rows.into_iter().map(PendingRow::into_pending).collect())
+        let mut weeks = rows
+            .into_iter()
+            .map(PendingRow::into_pending)
+            .collect::<Vec<_>>();
+        if weeks.is_empty() {
+            return Ok(weeks);
+        }
+
+        let week_ids = weeks
+            .iter()
+            .map(|pending| pending.week.id.as_str().to_owned())
+            .collect::<Vec<_>>();
+        let project_rows = sqlx::query_as::<_, PendingProjectRow>(
+            "SELECT w.id AS week_id, e.project_id, p.name AS project_name, \
+                    SUM(e.minutes)::bigint AS minutes, \
+                    COALESCE(SUM(e.minutes) FILTER (WHERE e.billable), 0)::bigint AS billable_minutes \
+             FROM time_weeks w \
+             JOIN time_entries e ON e.tenant_id = w.tenant_id AND e.user_id = w.user_id \
+                AND e.state = 'active' AND e.work_date >= w.week_start \
+                AND e.work_date < w.week_start + 7 \
+             JOIN task_projects p ON p.tenant_id = e.tenant_id AND p.id = e.project_id \
+             WHERE w.tenant_id = $1 AND w.id = ANY($2) \
+             GROUP BY w.id, e.project_id, p.name \
+             ORDER BY p.name, e.project_id",
+        )
+        .bind(self.tenant().as_str())
+        .bind(&week_ids)
+        .fetch_all(self.pool())
+        .await
+        .map_err(StoreError::Db)?;
+        let mut projects_by_week = HashMap::<String, Vec<PendingProjectHours>>::new();
+        for row in project_rows {
+            let week_id = row.week_id.clone();
+            projects_by_week
+                .entry(week_id)
+                .or_default()
+                .push(row.into_project());
+        }
+        for pending in &mut weeks {
+            pending.projects = projects_by_week
+                .remove(pending.week.id.as_str())
+                .unwrap_or_default();
+        }
+        Ok(weeks)
     }
 
     /// One of this tenant's weeks by id, whoever it belongs to — **admin only**,
@@ -751,6 +808,27 @@ impl PendingRow {
         PendingWeek {
             week: self.week.into_week(),
             user_email: self.user_email,
+            minutes: self.minutes,
+            billable_minutes: self.billable_minutes,
+            projects: Vec::new(),
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct PendingProjectRow {
+    week_id: String,
+    project_id: String,
+    project_name: String,
+    minutes: i64,
+    billable_minutes: i64,
+}
+
+impl PendingProjectRow {
+    fn into_project(self) -> PendingProjectHours {
+        PendingProjectHours {
+            project_id: self.project_id,
+            project_name: self.project_name,
             minutes: self.minutes,
             billable_minutes: self.billable_minutes,
         }

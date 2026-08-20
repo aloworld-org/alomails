@@ -88,6 +88,21 @@ fn pending_json(pending: &PendingWeek) -> Value {
             "billableMinutes".to_owned(),
             json!(pending.billable_minutes),
         );
+        object.insert(
+            "projects".to_owned(),
+            json!(
+                pending
+                    .projects
+                    .iter()
+                    .map(|project| json!({
+                        "projectId": project.project_id,
+                        "projectName": project.project_name,
+                        "minutes": project.minutes,
+                        "billableMinutes": project.billable_minutes,
+                    }))
+                    .collect::<Vec<_>>()
+            ),
+        );
     }
     value
 }

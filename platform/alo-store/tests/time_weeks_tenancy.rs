@@ -158,6 +158,10 @@ async fn a_week_is_submitted_decided_and_reopened() {
     assert_eq!(inbox[0].user_email, "arc@weeks.test");
     assert_eq!(inbox[0].minutes, 120, "every real minute in the week");
     assert_eq!(inbox[0].billable_minutes, 90);
+    assert_eq!(inbox[0].projects.len(), 1);
+    assert_eq!(inbox[0].projects[0].project_id, project.as_str());
+    assert_eq!(inbox[0].projects[0].minutes, 120);
+    assert_eq!(inbox[0].projects[0].billable_minutes, 90);
 
     // ---- withdraw, and submit again ---------------------------------------
     let withdrawn = a.withdraw_week(monday()).await.unwrap();

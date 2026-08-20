@@ -183,6 +183,14 @@ export interface PendingWeek extends TimesheetWeek {
   userEmail: string;
   minutes: number;
   billableMinutes: number;
+  projects: PendingProjectHours[];
+}
+
+export interface PendingProjectHours {
+  projectId: string;
+  projectName: string;
+  minutes: number;
+  billableMinutes: number;
 }
 
 /** What one currency's rated hours are worth over the report's period. The

@@ -112,6 +112,7 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
               <tr>
                 <th scope="col">{strings.projectsPerson}</th>
                 <th scope="col">{strings.projectsWeek}</th>
+                <th scope="col">{strings.projectsProject}</th>
                 <th scope="col" className="whitespace-nowrap text-right tabular-nums">
                   {strings.projectsHoursLogged}
                 </th>
@@ -131,6 +132,19 @@ export function ApprovalsView({ onDecided }: { onDecided: () => void }) {
                       dayLabel(week.weekStart, { day: "numeric", month: "short" }),
                       dayLabel(week.weekEnd),
                     )}
+                  </td>
+                  <td>
+                    <div className="flex min-w-48 flex-col gap-1.5">
+                      {week.projects.map((project) => (
+                        <div key={project.projectId} className="flex items-center justify-between gap-4 rounded-md bg-raised px-2.5 py-1.5">
+                          <span className="min-w-0 truncate font-medium text-primary">{project.projectName}</span>
+                          <span className="shrink-0 text-xs tabular-nums text-secondary">
+                            {durationLabel(project.minutes)}
+                            {project.billableMinutes > 0 && ` · ${durationLabel(project.billableMinutes)} ${strings.projectsBillableHours.toLocaleLowerCase()}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </td>
                   <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(week.minutes)}</td>
                   <td className="whitespace-nowrap text-right tabular-nums">{durationLabel(week.billableMinutes)}</td>

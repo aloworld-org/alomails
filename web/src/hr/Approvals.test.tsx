@@ -106,6 +106,12 @@ const WEEK: PendingWeek = {
   decisionNote: "",
   minutes: 2250,
   billableMinutes: 1800,
+  projects: [{
+    projectId: "project-1",
+    projectName: "Website redesign",
+    minutes: 2250,
+    billableMinutes: 1800,
+  }],
   createdAt: "2026-08-05T07:00:00Z",
   updatedAt: "2026-08-05T07:00:00Z",
 };

@@ -786,8 +786,8 @@ pub use time_report::{
 };
 pub use time_timer::{RunningTimer, StartTimer, StoppedTimer};
 pub use time_weeks::{
-    DECISION_NOTE_MAX, PendingWeek, TimesheetWeek, WeekDecision, WeekStatus, require_monday,
-    week_end, week_start,
+    DECISION_NOTE_MAX, PendingProjectHours, PendingWeek, TimesheetWeek, WeekDecision, WeekStatus,
+    require_monday, week_end, week_start,
 };
 pub use user_invites::{INVITE_TTL_DAYS, InviteStore, UserInviteTarget};
 pub use user_modules::{ALL_MODULES, AppModule};
