@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import { strings } from "../i18n";
 import type { Task, TaskDepEdgeDto } from "../jmap";
+import { InvoiceHandoffDialog } from "../projects/InvoiceHandoffDialog";
 import { durationLabel } from "../projects/format";
 import { projectsMessage, useProjectsApi } from "../projects/api";
 import type { Project, ProjectPlan, ProjectUpdate, ProjectUpdateState } from "../projects/types";
@@ -17,6 +18,7 @@ interface Props {
   onOpenTasks: () => void;
   onOpenTimeline: () => void;
   onEditProject: () => void;
+  onOpenInvoice: (id: string) => void;
 }
 
 export function ProjectOverviewView({
@@ -29,6 +31,7 @@ export function ProjectOverviewView({
   onOpenTasks,
   onOpenTimeline,
   onEditProject,
+  onOpenInvoice,
 }: Props) {
   const api = useProjectsApi();
   const [updates, setUpdates] = useState<ProjectUpdate[]>([]);
@@ -37,6 +40,7 @@ export function ProjectOverviewView({
   const [updatesLoading, setUpdatesLoading] = useState(true);
   const [updateSaving, setUpdateSaving] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -299,6 +303,21 @@ export function ProjectOverviewView({
               <p className="text-right text-sm text-secondary">{project.hours.lastWorkedOn === null ? strings.projectsNeverWorked : friendlyDate(project.hours.lastWorkedOn)}</p>
             </div>
           </div>
+
+          {project.client !== null && project.hours.billableMinutes > project.hours.billedMinutes && (
+            <div className="rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent"><ReceiptText size={18} /></span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-base font-semibold text-primary">{strings.projectsReadyToInvoice}</h2>
+                  <p className="mt-1 text-sm leading-6 text-secondary">{strings.projectsReadyToInvoiceBody(durationLabel(project.hours.billableMinutes - project.hours.billedMinutes))}</p>
+                </div>
+              </div>
+              <button type="button" className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent !no-underline transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" onClick={() => setInvoiceOpen(true)}>
+                <ReceiptText size={16} /> {strings.projectsCreateInvoice}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -357,6 +376,7 @@ export function ProjectOverviewView({
           </ol>
         )}
       </section>
+      {invoiceOpen && <InvoiceHandoffDialog project={project} onClose={() => setInvoiceOpen(false)} onCreated={onOpenInvoice} />}
     </div>
   );
 }

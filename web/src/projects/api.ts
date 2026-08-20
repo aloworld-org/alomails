@@ -37,6 +37,8 @@ import type {
   ProjectTemplate,
   ProjectUpdate,
   ProjectUpdateState,
+  ProjectInvoiceDraft,
+  UnbilledTime,
   RunningTimer,
   TemplateCopy,
   TemplateInstanceDraft,
@@ -130,6 +132,19 @@ export class ProjectsApi {
     return this.#write<{ update: ProjectUpdate }>("POST", "/projects/updates", {
       projectId, state, body,
     }).then((r) => r.update);
+  }
+
+  unbilledTime(customerId: string): Promise<UnbilledTime> {
+    const query = new URLSearchParams({ customerId });
+    return this.#read<UnbilledTime>(`/projects/unbilled?${query.toString()}`);
+  }
+
+  createTimeInvoice(customerId: string, entryIds: string[]): Promise<ProjectInvoiceDraft> {
+    return this.#write<ProjectInvoiceDraft>("POST", "/projects/invoices", {
+      customerId,
+      vatRateBp: 2100,
+      entryIds,
+    });
   }
 
   /** Makes a project client work, or replaces the facts that already say so.

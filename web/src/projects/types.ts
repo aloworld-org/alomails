@@ -83,6 +83,28 @@ export interface ProjectUpdate {
   createdAt: string;
 }
 
+export interface UnbilledTimeGroup {
+  projectId: string;
+  projectName: string;
+  rateCents: number | null;
+  currency: string | null;
+  minutes: number;
+  netCents: number | null;
+  entryIds: string[];
+}
+
+export interface UnbilledTime {
+  customerId: string;
+  groups: UnbilledTimeGroup[];
+}
+
+export interface ProjectInvoiceDraft {
+  id: string;
+  entries: number;
+  lines: number;
+  minutes: number;
+}
+
 /** The client facts a form sends. A whole record: an omitted field is cleared,
  *  which is what "save" has to mean for a form that shows every field. */
 export interface ProjectClientDraft {

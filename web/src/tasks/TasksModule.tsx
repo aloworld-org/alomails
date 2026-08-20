@@ -398,6 +398,7 @@ export function TasksModule({
               onOpenTasks={() => openView("list")}
               onOpenTimeline={() => navigate(`/projects/timeline?project=${encodeURIComponent(projectId)}`)}
               onEditProject={() => setEditingProject(true)}
+              onOpenInvoice={(id) => navigate(`/billing/invoices/${encodeURIComponent(id)}`)}
             />
           ) : tasks.length === 0 ? (
             <div className={styles.emptyState}>
