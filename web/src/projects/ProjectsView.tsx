@@ -11,7 +11,7 @@
 // Every figure is the server's. The hours are the project's aggregate — nobody
 // is named, here or in the API — and the budget bar is drawn from basis points
 // the server computed, so two people looking at one engagement see one bar.
-import { Briefcase, CopyPlus, FolderKanban, Play, Plus, Square, Star } from "lucide-react";
+import { Briefcase, CopyPlus, FolderKanban, PencilLine, Play, Plus, Square, Star } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button, IconButton, Spinner } from "../ds";
@@ -60,6 +60,7 @@ export function ProjectsView({
   customerName,
   isTemplate,
   onEditClient,
+  onEditProject,
   onStartTimer,
   onStopTimer,
   onToggleTemplate,
@@ -77,6 +78,7 @@ export function ProjectsView({
   /** Whether this board is already marked reusable. */
   isTemplate: (projectId: string) => boolean;
   onEditClient: (project: Project) => void;
+  onEditProject: (project: Project) => void;
   onStartTimer: (project: Project) => void;
   onStopTimer: () => void;
   /** Marks the board reusable, or takes the mark off — the same control, because
@@ -193,6 +195,20 @@ export function ProjectsView({
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate">{project.name}</span>
+                        <span className="mt-1 flex flex-wrap items-center gap-2 text-xs font-medium text-secondary">
+                          <span className="inline-flex rounded-full bg-raised px-2 py-0.5">
+                            {{
+                              planned: strings.projectsStatusPlanned,
+                              active: strings.projectsStatusActive,
+                              on_hold: strings.projectsStatusOnHold,
+                              completed: strings.projectsStatusCompleted,
+                              cancelled: strings.projectsStatusCancelled,
+                            }[project.status]}
+                          </span>
+                          {project.targetOn !== null && (
+                            <span>{strings.projectsTargetOn}: {dayLabel(project.targetOn)}</span>
+                          )}
+                        </span>
                         {isRunning && (
                           <span className="mt-1 flex items-center gap-1.5 text-xs font-medium text-secondary">
                             <span className="size-1.5 shrink-0 rounded-full bg-success" aria-hidden="true" />
@@ -245,6 +261,14 @@ export function ProjectsView({
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center justify-end gap-2">
+                      {project.kind === "team" && (
+                        <IconButton
+                          label={`${strings.projectsEdit} ${project.name}`}
+                          icon={<PencilLine size={16} />}
+                          size="sm"
+                          onClick={() => onEditProject(project)}
+                        />
+                      )}
                       {isRunning ? (
                         <Button icon={<Square size={15} />} onClick={onStopTimer}>
                           {strings.projectsStopTimer}

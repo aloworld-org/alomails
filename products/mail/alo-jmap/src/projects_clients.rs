@@ -47,6 +47,7 @@ use serde_json::{Value, json};
 
 use alo_store::{
     BillingCustomerId, NewProjectClient, ProjectClient, ProjectHours, ProjectId, TaskProject,
+    TaskProjectEdit,
 };
 
 use crate::billing::{blank_to_none, iso, iso_date, map_store_err, parse_body, parse_iso_date};
@@ -107,9 +108,93 @@ fn project_json(
         // not on offer instead of showing a control that always refuses.
         "kind": project.kind,
         "color": project.color,
+        "ownerId": project.owner,
+        "description": project.description,
+        "status": project.status,
+        "startsOn": project.starts_on.map(iso_date),
+        "targetOn": project.target_on.map(iso_date),
+        "createdAt": iso(project.created_at),
+        "updatedAt": iso(project.updated_at),
         "client": client_json(client),
         "hours": hours_json(hours, client.and_then(|c| c.budget_minutes)),
     })
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProjectBody {
+    name: String,
+    #[serde(default)]
+    description: Option<String>,
+    status: String,
+    #[serde(default)]
+    starts_on: Option<String>,
+    #[serde(default)]
+    target_on: Option<String>,
+}
+
+/// `PATCH /projects/{id}` replaces the editable lifecycle facts of a team
+/// project. Client pricing remains a separate whole-record write.
+pub async fn update_project(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: ProjectBody = parse_body(&body)?;
+    let name = req.name.trim();
+    if name.is_empty() {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "name is required",
+        ));
+    }
+    if !matches!(
+        req.status.as_str(),
+        "planned" | "active" | "on_hold" | "completed" | "cancelled"
+    ) {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "status is invalid",
+        ));
+    }
+    let starts_on = optional_day("startsOn", req.starts_on.as_deref())?;
+    let target_on = optional_day("targetOn", req.target_on.as_deref())?;
+    if starts_on
+        .zip(target_on)
+        .is_some_and(|(start, target)| target < start)
+    {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "targetOn must not be before startsOn",
+        ));
+    }
+    let edit = TaskProjectEdit {
+        name: name.to_owned(),
+        description: blank_to_none(req.description),
+        status: req.status,
+        starts_on,
+        target_on,
+    };
+    let project = account
+        .acc
+        .update_task_project(&ProjectId::new(id), &edit)
+        .await
+        .map_err(map_store_err)?;
+    let client = account
+        .acc
+        .project_client(&project.id)
+        .await
+        .map_err(map_store_err)?;
+    let hours = account
+        .acc
+        .project_hours_for(&project.id)
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(
+        json!({ "project": project_json(&project, client.as_ref(), &hours) }),
+    ))
 }
 
 /// The body of `PUT /projects/clients/{id}` — the whole set of client facts,
@@ -319,6 +404,12 @@ mod tests {
             kind: "team".to_owned(),
             owner: "u1".to_owned(),
             color: None,
+            description: Some("A useful engagement".to_owned()),
+            status: "active".to_owned(),
+            starts_on: None,
+            target_on: None,
+            created_at: OffsetDateTime::UNIX_EPOCH,
+            updated_at: OffsetDateTime::UNIX_EPOCH,
         }
     }
 
@@ -347,6 +438,10 @@ mod tests {
             "no budget is no proportion"
         );
         assert!(value["hours"]["lastWorkedOn"].is_null());
+        assert_eq!(value["ownerId"], json!("u1"));
+        assert_eq!(value["description"], json!("A useful engagement"));
+        assert_eq!(value["status"], json!("active"));
+        assert_eq!(value["createdAt"], json!("1970-01-01T00:00:00Z"));
     }
 
     #[test]

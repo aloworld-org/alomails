@@ -38,7 +38,8 @@ import { Avatar, DueChip, PriorityChip } from "./parts";
 import { DEFAULT_CONFIG, filterTasks, type ViewConfig } from "./viewConfig";
 import styles from "./TasksModule.module.css";
 import { useProjectsApi } from "../projects/api";
-import type { Project, ProjectPlan } from "../projects/types";
+import { EditProjectDialog } from "../projects/EditProjectDialog";
+import type { Project, ProjectDraft, ProjectPlan } from "../projects/types";
 
 type View = "overview" | "list" | "board" | "timeline" | "calendar" | "files";
 
@@ -74,6 +75,7 @@ export function TasksModule({
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
   const [engagement, setEngagement] = useState<Project | null>(null);
+  const [editingProject, setEditingProject] = useState(false);
   const [projectPlan, setProjectPlan] = useState<ProjectPlan>({ milestones: [], placements: [] });
 
   // Open a task arrived at from workspace search (?open=<taskId>).
@@ -224,6 +226,14 @@ export function TasksModule({
     () => (mode.type === "project" ? projects.find((p) => p.id === mode.id) : undefined),
     [mode, projects],
   );
+
+  async function updateEngagement(draft: ProjectDraft) {
+    if (engagement === null) return;
+    const updated = await projectsApi.updateProject(engagement.id, draft);
+    setEngagement(updated);
+    setEditingProject(false);
+    await loadProjects();
+  }
 
   /** Optimistic move: update local state instantly, then persist. */
   async function move(id: string, status: string, position: number) {
@@ -386,6 +396,7 @@ export function TasksModule({
               onOpenTask={setSelected}
               onOpenTasks={() => openView("list")}
               onOpenTimeline={() => navigate(`/projects/timeline?project=${encodeURIComponent(projectId)}`)}
+              onEditProject={() => setEditingProject(true)}
             />
           ) : tasks.length === 0 ? (
             <div className={styles.emptyState}>
@@ -440,6 +451,13 @@ export function TasksModule({
             />
           )}
         </div>
+        {editingProject && engagement?.kind === "team" && (
+          <EditProjectDialog
+            project={engagement}
+            onClose={() => setEditingProject(false)}
+            onSave={updateEngagement}
+          />
+        )}
       </section>
 
       {selected !== null && (

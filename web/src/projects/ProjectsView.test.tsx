@@ -10,6 +10,13 @@ const project: Project = {
   name: "Website redesign",
   color: "#ed6b4f",
   kind: "team",
+  ownerId: "user-1",
+  description: "Refresh the public website.",
+  status: "active",
+  startsOn: "2026-08-01",
+  targetOn: "2026-09-30",
+  createdAt: "2026-08-01T09:00:00Z",
+  updatedAt: "2026-08-01T09:00:00Z",
   client: null,
   hours: {
     minutes: 0,
@@ -38,6 +45,7 @@ describe("ProjectsView running timer", () => {
         customerName={() => null}
         isTemplate={() => false}
         onEditClient={vi.fn()}
+        onEditProject={vi.fn()}
         onStartTimer={vi.fn()}
         onStopTimer={vi.fn()}
         onToggleTemplate={vi.fn()}

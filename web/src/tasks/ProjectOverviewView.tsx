@@ -1,4 +1,4 @@
-import { CalendarDays, CheckCircle2, CircleAlert, Clock3, Flag, ListTodo, ReceiptText } from "lucide-react";
+import { CalendarDays, CheckCircle2, CircleAlert, Clock3, Flag, ListTodo, PencilLine, ReceiptText } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { strings } from "../i18n";
@@ -14,6 +14,7 @@ interface Props {
   onOpenTask: (id: string) => void;
   onOpenTasks: () => void;
   onOpenTimeline: () => void;
+  onEditProject: () => void;
 }
 
 export function ProjectOverviewView({
@@ -24,6 +25,7 @@ export function ProjectOverviewView({
   onOpenTask,
   onOpenTasks,
   onOpenTimeline,
+  onEditProject,
 }: Props) {
   const done = tasks.filter((task) => task.status === "done").length;
   const open = tasks.length - done;
@@ -46,6 +48,39 @@ export function ProjectOverviewView({
 
   return (
     <div className="mx-auto flex w-full max-w-[88rem] flex-col gap-5 px-6 py-6 lg:px-8">
+      <section className="flex flex-wrap items-start justify-between gap-5 rounded-2xl border border-subtle bg-surface p-5 shadow-sm">
+        <div className="min-w-0 max-w-3xl">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex rounded-full bg-accent-soft px-2.5 py-1 text-xs font-semibold text-accent">
+              {{
+                planned: strings.projectsStatusPlanned,
+                active: strings.projectsStatusActive,
+                on_hold: strings.projectsStatusOnHold,
+                completed: strings.projectsStatusCompleted,
+                cancelled: strings.projectsStatusCancelled,
+              }[project.status]}
+            </span>
+            {project.targetOn !== null && (
+              <span className="inline-flex items-center gap-1.5 text-sm text-secondary">
+                <CalendarDays size={15} aria-hidden="true" />
+                {strings.projectsTargetOn}: {friendlyDate(project.targetOn)}
+              </span>
+            )}
+          </div>
+          <p className="mt-3 text-sm leading-6 text-secondary">
+            {project.description ?? strings.projectsDetailsSubtitle}
+          </p>
+        </div>
+        {project.kind === "team" && (
+          <button
+            type="button"
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-raised px-4 py-2 text-sm font-medium text-primary !no-underline transition-colors hover:bg-default hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            onClick={onEditProject}
+          >
+            <PencilLine size={16} aria-hidden="true" /> {strings.projectsEdit}
+          </button>
+        )}
+      </section>
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label={strings.taskOverview}>
         <Metric
           icon={<ListTodo size={18} />}

@@ -30,6 +30,7 @@ import { useJmapClient } from "../jmap";
 import { TasksModule } from "../tasks";
 import { ApprovalsView } from "./ApprovalsView";
 import { ClientDialog } from "./ClientDialog";
+import { EditProjectDialog } from "./EditProjectDialog";
 import { NewProjectDialog } from "./NewProjectDialog";
 import type { NewProjectDraft } from "./NewProjectDialog";
 import { projectsMessage, useProjectsApi } from "./api";
@@ -40,7 +41,7 @@ import { ReportView } from "./ReportView";
 import { TemplateDialog } from "./TemplateDialog";
 import { announceTimerChanged, onTimerChanged } from "./timerBus";
 import { WeekView } from "./WeekView";
-import type { Project, ProjectTemplate, RunningTimer } from "./types";
+import type { Project, ProjectDraft, ProjectTemplate, RunningTimer } from "./types";
 
 /** Today as `YYYY-MM-DD` in the reader's own zone — the day a new project
  *  starts on unless they say otherwise. Local, not UTC: "today" is a fact about
@@ -82,6 +83,7 @@ export function ProjectsModule() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [templates, setTemplates] = useState<ProjectTemplate[]>([]);
   const [editing, setEditing] = useState<Project | null>(null);
+  const [editingDetails, setEditingDetails] = useState<Project | null>(null);
   const [creating, setCreating] = useState(false);
   const [startingFromTemplate, setStartingFromTemplate] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -201,6 +203,13 @@ export function ProjectsModule() {
     navigate(`/projects/${encodeURIComponent(project.id)}/overview`);
   }
 
+  async function updateProject(project: Project, draft: ProjectDraft) {
+    await api.updateProject(project.id, draft);
+    setEditingDetails(null);
+    setError(null);
+    bump();
+  }
+
   useEffect(() => {
     if (searchParams.get("new") !== "1") return;
     setCreating(true);
@@ -288,6 +297,7 @@ export function ProjectsModule() {
               customerName={customerName}
               isTemplate={(projectId) => templates.some((t) => t.projectId === projectId)}
               onEditClient={setEditing}
+              onEditProject={setEditingDetails}
               onStartTimer={(project) => void startTimer(project)}
               onStopTimer={() => void stopTimer()}
               onToggleTemplate={(project) => void toggleTemplate(project)}
@@ -355,6 +365,14 @@ export function ProjectsModule() {
             setEditing(null);
             bump();
           }}
+        />
+      )}
+
+      {editingDetails !== null && (
+        <EditProjectDialog
+          project={editingDetails}
+          onClose={() => setEditingDetails(null)}
+          onSave={(draft) => updateProject(editingDetails, draft)}
         />
       )}
     </div>

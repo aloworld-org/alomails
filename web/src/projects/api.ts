@@ -30,6 +30,7 @@ import type {
   PendingWeek,
   ProfitabilityReport,
   Project,
+  ProjectDraft,
   ProjectClient,
   ProjectClientDraft,
   ProjectPlan,
@@ -106,6 +107,15 @@ export class ProjectsApi {
     return this.#read<{ project: Project }>(`/projects/${encodeURIComponent(id)}`).then(
       (r) => r.project,
     );
+  }
+
+  /** Replaces the lifecycle facts shown by every project view. */
+  updateProject(id: string, draft: ProjectDraft): Promise<Project> {
+    return this.#write<{ project: Project }>(
+      "PATCH",
+      `/projects/${encodeURIComponent(id)}`,
+      draft,
+    ).then((r) => r.project);
   }
 
   /** Makes a project client work, or replaces the facts that already say so.

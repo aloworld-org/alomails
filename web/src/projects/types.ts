@@ -52,8 +52,23 @@ export interface Project {
   /** `team` or `personal`. Only a team board can be client work. */
   kind: string;
   color: string | null;
+  ownerId: string;
+  description: string | null;
+  status: "planned" | "active" | "on_hold" | "completed" | "cancelled";
+  startsOn: string | null;
+  targetOn: string | null;
+  createdAt: string;
+  updatedAt: string;
   client: ProjectClient | null;
   hours: ProjectHours;
+}
+
+export interface ProjectDraft {
+  name: string;
+  description: string | null;
+  status: Project["status"];
+  startsOn: string | null;
+  targetOn: string | null;
 }
 
 /** The client facts a form sends. A whole record: an omitted field is cleared,

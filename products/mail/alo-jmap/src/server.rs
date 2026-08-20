@@ -1862,7 +1862,10 @@ pub fn app_with_site_boundaries(
         // `milestones`, `tasks`, `templates`)
         // wins over this capture, and an id — a base64url'd 16-byte token —
         // can never spell one of them anyway.
-        .route("/projects/{id}", get(projects_clients::get_project))
+        .route(
+            "/projects/{id}",
+            get(projects_clients::get_project).patch(projects_clients::update_project),
+        )
         // Finance — expense claims (B4.05) and the flow that decides them.
         //
         // `/finance` is a NEW top-level prefix: the production Caddyfile needs

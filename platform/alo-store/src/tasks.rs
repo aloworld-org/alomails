@@ -8,7 +8,7 @@
 //! returned as active work until accepted (ADR 0023).
 
 use serde_json::json;
-use time::OffsetDateTime;
+use time::{Date, OffsetDateTime};
 
 use crate::account::AccountStore;
 use crate::error::{Result, StoreError};
@@ -23,6 +23,21 @@ pub struct TaskProject {
     pub kind: String,
     pub owner: String,
     pub color: Option<String>,
+    pub description: Option<String>,
+    pub status: String,
+    pub starts_on: Option<Date>,
+    pub target_on: Option<Date>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
+}
+
+/// The whole editable lifecycle record of a team project.
+pub struct TaskProjectEdit {
+    pub name: String,
+    pub description: Option<String>,
+    pub status: String,
+    pub starts_on: Option<Date>,
+    pub target_on: Option<Date>,
 }
 
 /// The core task record, plus the small counts the card/list need.
@@ -184,7 +199,8 @@ impl AccountStore {
     pub async fn task_projects(&self) -> Result<Vec<TaskProject>> {
         self.ensure_personal_project().await?;
         let rows = sqlx::query_as::<_, ProjectRow>(
-            "SELECT id, name, kind, owner_user_id, color FROM task_projects \
+            "SELECT id, name, kind, owner_user_id, color, description, status, \
+                    starts_on, target_on, created_at, updated_at FROM task_projects \
              WHERE tenant_id = $1 AND archived = false \
                AND (kind = 'team' OR (kind = 'personal' AND owner_user_id = $2)) \
              ORDER BY (kind = 'personal') DESC, created_at, id",
@@ -244,6 +260,32 @@ impl AccountStore {
         .await
         .map_err(StoreError::Db)?;
         Ok(id)
+    }
+
+    /// Replaces the editable lifecycle facts of a visible team project.
+    pub async fn update_task_project(
+        &self,
+        id: &ProjectId,
+        edit: &TaskProjectEdit,
+    ) -> Result<TaskProject> {
+        let row = sqlx::query_as::<_, ProjectRow>(
+            "UPDATE task_projects SET name = $3, description = $4, status = $5, \
+                    starts_on = $6, target_on = $7, updated_at = now() \
+             WHERE tenant_id = $1 AND id = $2 AND kind = 'team' AND archived = false \
+             RETURNING id, name, kind, owner_user_id, color, description, status, \
+                       starts_on, target_on, created_at, updated_at",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(&edit.name)
+        .bind(&edit.description)
+        .bind(&edit.status)
+        .bind(edit.starts_on)
+        .bind(edit.target_on)
+        .fetch_optional(&self.pool)
+        .await?
+        .ok_or(StoreError::NotFound)?;
+        Ok(row.into_project())
     }
 
     /// Whether the caller can see (and, v1, edit) the project.
@@ -1288,6 +1330,12 @@ struct ProjectRow {
     kind: String,
     owner_user_id: String,
     color: Option<String>,
+    description: Option<String>,
+    status: String,
+    starts_on: Option<Date>,
+    target_on: Option<Date>,
+    created_at: OffsetDateTime,
+    updated_at: OffsetDateTime,
 }
 impl ProjectRow {
     fn into_project(self) -> TaskProject {
@@ -1297,6 +1345,12 @@ impl ProjectRow {
             kind: self.kind,
             owner: self.owner_user_id,
             color: self.color,
+            description: self.description,
+            status: self.status,
+            starts_on: self.starts_on,
+            target_on: self.target_on,
+            created_at: self.created_at,
+            updated_at: self.updated_at,
         }
     }
 }
