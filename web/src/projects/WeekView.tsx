@@ -28,6 +28,7 @@
 //   be a round trip that exists only to satisfy REST.
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
@@ -82,16 +83,23 @@ const OPEN_WEEK_STATUS = "open" as const;
 
 export function WeekView({
   projects,
+  projectsLoading,
   revision,
   onChanged,
 }: {
   projects: Project[];
+  projectsLoading: boolean;
   /** Bumped by the module when something outside this screen wrote an hour —
    *  the timer stopping, most of all. */
   revision: number;
   onChanged: () => void;
 }) {
   const api = useProjectsApi();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedProjectId = searchParams.get("project");
+  const projectId = requestedProjectId !== null && (projectsLoading || projects.some((project) => project.id === requestedProjectId))
+    ? requestedProjectId
+    : null;
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [totals, setTotals] = useState<TimeTotals | null>(null);
@@ -113,12 +121,13 @@ export function WeekView({
   const today = dayString(new Date());
 
   useEffect(() => {
+    if (projectsLoading) return;
     let live = true;
     setLoading(true);
     void (async () => {
       try {
         const [period, weeks] = await Promise.all([
-          api.time(monday, sunday),
+          api.time(monday, sunday, projectId ?? undefined),
           api.weeks(monday, sunday),
         ]);
         if (!live) return;
@@ -135,7 +144,7 @@ export function WeekView({
     return () => {
       live = false;
     };
-  }, [api, monday, sunday, reload, revision]);
+  }, [api, monday, projectId, projectsLoading, sunday, reload, revision]);
 
   // Changing week starts a fresh set of rows: a project somebody added to look
   // at last week is not a project they are working on this one.
@@ -150,8 +159,10 @@ export function WeekView({
    *  plus the ones this person has opened a row for. */
   const rows = useMemo(() => {
     const worked = new Set(entries.map((e) => e.projectId));
-    return projects.filter((p) => worked.has(p.id) || extraRows.includes(p.id));
-  }, [projects, entries, extraRows]);
+    return projects.filter((p) =>
+      (projectId === null || p.id === projectId) && (worked.has(p.id) || extraRows.includes(p.id))
+    );
+  }, [projects, entries, extraRows, projectId]);
 
   /** The entries in one cell. A cell is a project on a day, and a person can
    *  have written more than one — two sittings on the same job is not a
@@ -232,13 +243,41 @@ export function WeekView({
 
   return (
     <div className={styles.page}>
+      <section className="flex flex-wrap items-end gap-3 rounded-xl border border-subtle bg-surface p-4">
+        <label className="flex min-w-64 flex-1 flex-col gap-1.5 text-sm font-medium text-primary">
+          {strings.projectsProject}
+          <select
+            className="min-h-10 w-full rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            value={projectId ?? ""}
+            onChange={(event) => {
+              const next = new URLSearchParams(searchParams);
+              if (event.target.value === "") next.delete("project");
+              else next.set("project", event.target.value);
+              setSearchParams(next);
+            }}
+          >
+            <option value="">{strings.projectsAllProjects}</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>{project.name}</option>
+            ))}
+          </select>
+        </label>
+        <p className="max-w-xl pb-2 text-sm text-secondary">
+          {projectId === null
+            ? strings.projectsWeekAllScope
+            : strings.projectsWeekProjectScope(projects.find((project) => project.id === projectId)?.name ?? "")}
+        </p>
+      </section>
       <section className="flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-default bg-surface px-5 py-4 shadow-sm">
         <div className="min-w-0">
           <p className="text-lg font-semibold text-primary">{strings.projectsWeekTitle}</p>
           <p className="mt-1 text-sm text-secondary">{strings.projectsWeekPurpose}</p>
         </div>
         {!locked && projects.length > 0 && (
-          <Button icon={<Plus size={17} />} onClick={() => setChoosingProject(true)}>
+          <Button icon={<Plus size={17} />} onClick={() => {
+            if (projectId !== null) startEntry(projectId);
+            else setChoosingProject(true);
+          }}>
             {strings.projectsAddTime}
           </Button>
         )}
@@ -280,7 +319,10 @@ export function WeekView({
           title={strings.projectsWeekEmptyTitle}
           body={strings.projectsWeekEmptyBody}
           {...(!locked && projects.length > 0
-            ? { cta: strings.projectsAddTime, onCta: () => setChoosingProject(true) }
+            ? { cta: strings.projectsAddTime, onCta: () => {
+                if (projectId !== null) startEntry(projectId);
+                else setChoosingProject(true);
+              } }
             : {})}
         />
       ) : (

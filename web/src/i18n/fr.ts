@@ -2623,6 +2623,8 @@ export const fr: Partial<Catalog> = {
     "Ajoutez votre première saisie de temps. Choisissez un projet, indiquez la durée et une note, puis retrouvez-la dans ce récapitulatif hebdomadaire.",
   projectsWeekTitle: "Feuille de temps hebdomadaire",
   projectsWeekPurpose: "Saisissez votre travail, vérifiez la semaine, puis soumettez-la pour approbation.",
+  projectsWeekAllScope: "Votre semaine complète pour tous les projets.",
+  projectsWeekProjectScope: (project: string) => `Temps consacré à ${project}. La soumission envoie toujours votre semaine complète pour approbation.`,
   projectsAddTime: "Ajouter du temps",
   projectsChooseTimeProject: "Sur quoi avez-vous travaillé ?",
   projectsChooseTimeProjectHint: "Choisissez un projet pour ajouter une saisie de temps cette semaine.",

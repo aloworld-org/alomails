@@ -4456,6 +4456,8 @@ export const en = {
     "Add your first time entry. Choose a project, enter the duration and note, and it will appear in this weekly review.",
   projectsWeekTitle: "Weekly timesheet",
   projectsWeekPurpose: "Log your work, review the week, then submit it for approval.",
+  projectsWeekAllScope: "Your complete week across every project.",
+  projectsWeekProjectScope: (project: string) => `Time for ${project}. Submitting still sends your complete week for approval.`,
   projectsAddTime: "Add time",
   projectsChooseTimeProject: "What did you work on?",
   projectsChooseTimeProjectHint: "Choose a project to add a time entry for this week.",

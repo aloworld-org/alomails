@@ -313,7 +313,7 @@ export function ProjectsModule() {
         />
         <Route
           path="week"
-          element={<WeekView projects={projects} revision={revision} onChanged={bump} />}
+          element={<WeekView projects={projects} projectsLoading={loading} revision={revision} onChanged={bump} />}
         />
         {/* The plan is a rendering of the board Tasks already shows — the same
             rows, grouped by the dates somebody planned them against — so it is

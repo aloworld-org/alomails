@@ -396,6 +396,7 @@ export function TasksModule({
               onAddTask={() => openCreate()}
               onOpenTask={setSelected}
               onOpenTasks={() => openView("list")}
+              onOpenTimesheet={() => navigate(`/projects/week?project=${encodeURIComponent(projectId)}`)}
               onOpenTimeline={() => navigate(`/projects/timeline?project=${encodeURIComponent(projectId)}`)}
               onOpenReport={() => navigate(`/projects/reports?project=${encodeURIComponent(projectId)}`)}
               onEditProject={() => setEditingProject(true)}

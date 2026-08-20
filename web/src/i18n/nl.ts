@@ -2581,6 +2581,8 @@ export const nl: Partial<Catalog> = {
     "Voeg je eerste tijdregistratie toe. Kies een project, vul de duur en notitie in en bekijk ze daarna in dit weekoverzicht.",
   projectsWeekTitle: "Weekstaat",
   projectsWeekPurpose: "Registreer je werk, controleer de week en dien ze daarna ter goedkeuring in.",
+  projectsWeekAllScope: "Je volledige week over alle projecten.",
+  projectsWeekProjectScope: (project: string) => `Tijd voor ${project}. Bij indienen wordt nog steeds je volledige week ter goedkeuring verstuurd.`,
   projectsAddTime: "Tijd toevoegen",
   projectsChooseTimeProject: "Waaraan heb je gewerkt?",
   projectsChooseTimeProjectHint: "Kies een project om deze week een tijdregistratie toe te voegen.",

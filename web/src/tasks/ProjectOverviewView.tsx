@@ -16,6 +16,7 @@ interface Props {
   onAddTask: () => void;
   onOpenTask: (id: string) => void;
   onOpenTasks: () => void;
+  onOpenTimesheet: () => void;
   onOpenTimeline: () => void;
   onOpenReport: () => void;
   onEditProject: () => void;
@@ -30,6 +31,7 @@ export function ProjectOverviewView({
   onAddTask,
   onOpenTask,
   onOpenTasks,
+  onOpenTimesheet,
   onOpenTimeline,
   onOpenReport,
   onEditProject,
@@ -136,6 +138,13 @@ export function ProjectOverviewView({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-raised px-4 py-2 text-sm font-medium text-primary !no-underline transition-colors hover:bg-default hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            onClick={onOpenTimesheet}
+          >
+            <Clock3 size={16} aria-hidden="true" /> {strings.projectsTabWeek}
+          </button>
           <button
             type="button"
             className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-lg bg-raised px-4 py-2 text-sm font-medium text-primary !no-underline transition-colors hover:bg-default hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
