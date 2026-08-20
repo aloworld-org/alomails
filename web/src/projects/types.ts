@@ -139,6 +139,8 @@ export interface TimeEntry {
   id: string;
   projectId: string;
   taskId: string | null;
+  /** Current task title, populated by period reads for navigable timesheets. */
+  taskTitle?: string | null;
   /** `YYYY-MM-DD` — the day the person says they worked. */
   workDate: string;
   /** RFC 3339 provenance: when a timer or an event produced it, else `null`. */

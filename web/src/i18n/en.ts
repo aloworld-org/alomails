@@ -4422,6 +4422,7 @@ export const en = {
   projectsBillableOf: (hours: string) => `${hours} billable`,
   projectsWeek: "Week",
   projectsDay: "Day",
+  projectsTask: "Task",
   projectsDuration: "Duration",
   projectsDurationHint:
     "90, 1:30 and 1,5 all mean an hour and a half. 2h means two hours.",

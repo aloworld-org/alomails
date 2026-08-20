@@ -2589,6 +2589,7 @@ export const fr: Partial<Catalog> = {
   projectsBillableOf: (hours: string) => `dont ${hours} facturables`,
   projectsWeek: "Semaine",
   projectsDay: "Jour",
+  projectsTask: "Tâche",
   projectsDuration: "Durée",
   projectsDurationHint:
     "90, 1:30 et 1,5 signifient tous une heure et demie. 2h signifie deux heures.",

@@ -7,6 +7,8 @@
 //! tenant-wide (v1). AI-created tasks land in `state = 'proposed'` and are never
 //! returned as active work until accepted (ADR 0023).
 
+use std::collections::HashMap;
+
 use serde_json::json;
 use time::{Date, OffsetDateTime};
 
@@ -383,6 +385,30 @@ impl AccountStore {
             .fetch_optional(&self.pool)
             .await?;
         Ok(row.map(TaskRow::into_task))
+    }
+
+    /// Titles for a bounded set of tasks visible to the caller, keyed by id.
+    ///
+    /// This is the lightweight companion read used by cross-product surfaces
+    /// such as a timesheet. It keeps those screens from fetching every task
+    /// individually merely to render its name.
+    pub async fn task_titles(&self, ids: &[String]) -> Result<HashMap<String, String>> {
+        if ids.is_empty() {
+            return Ok(HashMap::new());
+        }
+        let sql = format!(
+            "SELECT t.id, t.title FROM tasks t \
+             WHERE t.tenant_id = $1 AND t.id = ANY($3) \
+               AND ({vis} OR t.assignee_user_id = $2)",
+            vis = visible_projects(),
+        );
+        let rows = sqlx::query_as::<_, (String, String)>(&sql)
+            .bind(self.tenant.as_str())
+            .bind(self.user.as_str())
+            .bind(ids)
+            .fetch_all(&self.pool)
+            .await?;
+        Ok(rows.into_iter().collect())
     }
 
     /// Creates a task on a project the caller can see, appending it to the end

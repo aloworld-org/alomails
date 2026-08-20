@@ -64,11 +64,12 @@ const MAX_PERIOD_DAYS: i64 = 366;
 /// when a timer or a calendar event produced it. A reader can see both rather
 /// than being told a story about one, exactly as an activity's `happenedAt` and
 /// `createdAt` are both shown.
-fn entry_json(e: &TimeEntry) -> Value {
+fn entry_json(e: &TimeEntry, task_title: Option<&str>) -> Value {
     json!({
         "id": e.id.as_str(),
         "projectId": e.project_id.as_str(),
         "taskId": e.task_id.as_ref().map(TaskId::as_str),
+        "taskTitle": task_title,
         "workDate": iso_date(e.work_date),
         "startedAt": e.started_at.map(iso),
         "minutes": e.minutes,
@@ -354,7 +355,7 @@ pub async fn stop_timer(
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({
-        "entry": entry_json(&entry),
+        "entry": entry_json(&entry, None),
         "elapsedMinutes": elapsed_minutes,
         "cappedAtDayLimit": capped,
     })))
@@ -385,8 +386,20 @@ pub async fn list_time(
         .time_entries(from, to, project.as_ref())
         .await
         .map_err(map_store_err)?;
+    let task_ids = entries
+        .iter()
+        .filter_map(|entry| entry.task_id.as_ref().map(|id| id.as_str().to_owned()))
+        .collect::<Vec<_>>();
+    let task_titles = account
+        .acc
+        .task_titles(&task_ids)
+        .await
+        .map_err(map_store_err)?;
     Ok(Json(json!({
-        "entries": entries.iter().map(entry_json).collect::<Vec<_>>(),
+        "entries": entries.iter().map(|entry| {
+            let title = entry.task_id.as_ref().and_then(|id| task_titles.get(id.as_str()));
+            entry_json(entry, title.map(String::as_str))
+        }).collect::<Vec<_>>(),
         "totals": totals_json(week_totals(&entries)),
     })))
 }
@@ -421,7 +434,7 @@ pub async fn create_time(
         ..NewTimeEntry::worked(project, work_date, minutes)
     };
     let entry = account.acc.log_time(&new).await.map_err(map_store_err)?;
-    Ok(Json(json!({ "entry": entry_json(&entry) })))
+    Ok(Json(json!({ "entry": entry_json(&entry, None) })))
 }
 
 /// `GET /projects/time/{id}` → `{"entry": {…}}` — one of the caller's own
@@ -446,7 +459,7 @@ pub async fn get_time(
         .await
         .map_err(map_store_err)?
         .ok_or_else(|| Problem::with(StatusCode::NOT_FOUND, "no such entry"))?;
-    Ok(Json(json!({ "entry": entry_json(&entry) })))
+    Ok(Json(json!({ "entry": entry_json(&entry, None) })))
 }
 
 /// `PATCH /projects/time/{id}` `{workDate, minutes, taskId?, billable?, note?}`
@@ -496,7 +509,7 @@ pub async fn update_time(
         .edit_time_entry(&id, &edit)
         .await
         .map_err(map_store_err)?;
-    Ok(Json(json!({ "entry": entry_json(&entry) })))
+    Ok(Json(json!({ "entry": entry_json(&entry, None) })))
 }
 
 /// `DELETE /projects/time/{id}` → `{"deleted": true}` — remove one of the
@@ -541,7 +554,7 @@ pub async fn list_proposals(
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({
-        "entries": entries.iter().map(entry_json).collect::<Vec<_>>(),
+        "entries": entries.iter().map(|entry| entry_json(entry, None)).collect::<Vec<_>>(),
     })))
 }
 
@@ -569,7 +582,7 @@ pub async fn accept_time(
         .accept_time_entry(&TimeEntryId::new(id))
         .await
         .map_err(map_store_err)?;
-    Ok(Json(json!({ "entry": entry_json(&entry) })))
+    Ok(Json(json!({ "entry": entry_json(&entry, None) })))
 }
 
 /// `POST /projects/time/{id}/reject` → `{"rejected": true}` — the human "no",
@@ -602,6 +615,7 @@ pub async fn reject_time(
 #[allow(clippy::unwrap_used, clippy::expect_used)]
 mod tests {
     use super::*;
+    use time::{Month, OffsetDateTime};
 
     fn query(from: &str, to: &str) -> WeekQuery {
         WeekQuery {
@@ -705,5 +719,34 @@ mod tests {
     #[test]
     fn a_timer_that_is_not_running_is_null_not_an_empty_object() {
         assert_eq!(timer_json(None), Value::Null);
+    }
+
+    #[test]
+    fn a_time_entry_names_its_linked_task() {
+        let now = OffsetDateTime::UNIX_EPOCH;
+        let entry = TimeEntry {
+            id: TimeEntryId::new("time-1"),
+            user_id: alo_store::UserId::new("user-1"),
+            project_id: ProjectId::new("project-1"),
+            task_id: Some(TaskId::new("task-1")),
+            work_date: Date::from_calendar_date(2026, Month::August, 20).expect("valid work date"),
+            started_at: Some(now),
+            minutes: 45,
+            billable: true,
+            rate_cents: Some(12_500),
+            currency: Some("EUR".to_owned()),
+            note: "Reviewed the launch checklist".to_owned(),
+            state: "active".to_owned(),
+            source_kind: None,
+            source_id: None,
+            invoice_id: None,
+            billed_at: None,
+            created_at: now,
+            updated_at: now,
+        };
+
+        let value = entry_json(&entry, Some("Launch the website"));
+        assert_eq!(value["taskId"], "task-1");
+        assert_eq!(value["taskTitle"], "Launch the website");
     }
 }

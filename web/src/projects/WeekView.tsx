@@ -28,7 +28,7 @@
 //   be a round trip that exists only to satisfy REST.
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
@@ -441,6 +441,7 @@ export function WeekView({
               <tr>
                 <th scope="col">{strings.projectsDay}</th>
                 <th scope="col">{strings.projectsProject}</th>
+                <th scope="col">{strings.projectsTask}</th>
                 <th scope="col">{strings.projectsNote}</th>
                 <th scope="col" className={styles.numeric}>
                   {strings.projectsDuration}
@@ -455,6 +456,18 @@ export function WeekView({
                     {dayLabel(entry.workDate, { weekday: "short", day: "numeric", month: "short" })}
                   </td>
                   <td>{projectName(entry.projectId)}</td>
+                  <td>
+                    {entry.taskId !== null && entry.taskTitle ? (
+                      <Link
+                        className="inline-flex max-w-64 items-center rounded-md px-2 py-1 font-medium text-primary transition-colors hover:bg-raised hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                        to={`/projects/${encodeURIComponent(entry.projectId)}/list?open=${encodeURIComponent(entry.taskId)}`}
+                      >
+                        <span className="truncate">{entry.taskTitle}</span>
+                      </Link>
+                    ) : (
+                      <span className={styles.muted}>—</span>
+                    )}
+                  </td>
                   <td className={styles.muted}>
                     {entry.note === "" ? strings.projectsNoNote : entry.note}
                     {!entry.billable && ` · ${strings.projectsNotBillable}`}
