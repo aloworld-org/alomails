@@ -274,6 +274,7 @@ PATCH /inventory/sales-orders/{id} -> inventory.sales_order.update
 PATCH /inventory/suppliers/{id} -> inventory.supplier.update
 PATCH /projects/milestones/{id} -> projects.milestone.update
 PATCH /projects/time/{id} -> projects.time.update
+PATCH /projects/{id} -> projects.project.update
 POST /billing/bills/import -> billing.bill.import
 POST /billing/bills/sepa.xml -> billing.bill.sepa_xml
 POST /billing/bills/{id}/approve -> billing.bill.approve
@@ -381,6 +382,7 @@ POST /projects/time/{id}/accept -> projects.time.accept
 POST /projects/time/{id}/reject -> projects.time.reject
 POST /projects/timer/start -> projects.timer.start
 POST /projects/timer/stop -> projects.timer.stop
+POST /projects/updates -> projects.update.create
 POST /projects/weeks/{monday}/submit -> projects.week.submit
 POST /projects/weeks/{monday}/withdraw -> projects.week.withdraw
 PUT /billing/fx/rates -> billing.fx.rates.update

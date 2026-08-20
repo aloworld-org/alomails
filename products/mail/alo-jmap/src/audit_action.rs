@@ -118,24 +118,40 @@ pub fn event_for(method: &str, template: &str, path: &str) -> Option<AuditEvent>
         return None;
     }
     let collection = *template_segments.get(1)?;
-    if is_param(collection) {
-        return None;
-    }
-    let entity_type = format!("{}.{}", module, name_of(singular(collection)));
 
-    // The record's own id, when the template names one right after the
-    // collection. Read from the actual path at the same index — the router
-    // matched them segment for segment, so the positions line up.
-    let names_record = template_segments.get(2).copied().is_some_and(is_param);
+    // Which segment names the collection, and which would name the record.
+    //
+    // Almost every route reads `/module/collection/{id}/...`, so the collection
+    // is segment 1 and the id segment 2. **`/projects/{id}` is the exception**:
+    // there the record hangs directly off the module name, which is therefore
+    // its own collection and shifts the id one segment earlier.
+    //
+    // Returning `None` for that shape — which this did — meant a mutating route
+    // wrote nothing to the audit trail, silently. `server.rs` records the
+    // convention beside the projects routes and shapes them
+    // `/projects/clients/{id}` to respect it; the record route itself cannot be
+    // reshaped the same way without breaking every client that addresses a
+    // project by id, so the derivation learns the case instead.
+    let (collection_name, id_at) = if is_param(collection) {
+        (module, 1_usize)
+    } else {
+        (collection, 2_usize)
+    };
+    let entity_type = format!("{}.{}", module, name_of(singular(collection_name)));
+
+    // The record's own id, when the template names one. Read from the actual
+    // path at the same index — the router matched them segment for segment, so
+    // the positions line up.
+    let names_record = template_segments.get(id_at).copied().is_some_and(is_param);
     let entity_id = if names_record {
-        path_segments.get(2).map(|s| (*s).to_owned())
+        path_segments.get(id_at).map(|s| (*s).to_owned())
     } else {
         None
     };
 
     let tail: Vec<&str> = template_segments
         .into_iter()
-        .skip(if names_record { 3 } else { 2 })
+        .skip(if names_record { id_at + 1 } else { id_at })
         .collect();
     let action = format!("{entity_type}.{}", verb(method, &tail));
     Some(AuditEvent {
