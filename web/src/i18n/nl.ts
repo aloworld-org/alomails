@@ -2428,7 +2428,7 @@ export const nl: Partial<Catalog> = {
   projectsTabWeek: "Urenstaat",
   projectsTabApprovals: "Goedkeuringen",
   projectsTabReports: "Rapporten",
-  projectsTabPlan: "Planning",
+  projectsTabPlan: "Tijdlijn",
   projectsLoadFailed: "Uw projecten zijn niet geladen.",
   projectsSaveFailed: "De wijziging kon niet worden opgeslagen.",
   projectsStartFailed: "De timer kon niet worden gestart.",
@@ -2460,6 +2460,7 @@ export const nl: Partial<Catalog> = {
 
   // De projectenlijst.
   projectsProject: "Project",
+  projectsAllProjects: "Alle projecten",
   projectsCustomer: "Klant",
   projectsCustomerHint:
     "De klant aan wie de uren van dit project worden gefactureerd.",
@@ -2593,6 +2594,9 @@ export const nl: Partial<Catalog> = {
 
   // Sjablonen: een bord dat herbruikbaar is gemarkeerd, en de kopie die eruit
   // begint.
+  projectsTimelineAllEmptyTitle: "Geen mijlpalen in je projecten",
+  projectsTimelineAllEmptyBody:
+    "Kies hierboven een project om de eerste mijlpaal toe te voegen, of houd Alle projecten voor de portfoliotijdlijn.",
   projectsTemplateNew: "Nieuw uit sjabloon",
   projectsTemplateNewTitle: "Beginnen vanuit een sjabloon",
   projectsTemplateNewSubtitle: "De vorm van het werk, op nieuwe data",

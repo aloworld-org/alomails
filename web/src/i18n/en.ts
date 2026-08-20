@@ -4304,7 +4304,7 @@ export const en = {
   projectsTabWeek: "Timesheet",
   projectsTabApprovals: "Approvals",
   projectsTabReports: "Reports",
-  projectsTabPlan: "Plan",
+  projectsTabPlan: "Timeline",
   projectsLoadFailed: "Your projects could not be loaded.",
   projectsSaveFailed: "The change could not be saved.",
   projectsStartFailed: "The timer could not be started.",
@@ -4336,6 +4336,7 @@ export const en = {
 
   // The engagement list.
   projectsProject: "Project",
+  projectsAllProjects: "All projects",
   projectsCustomer: "Customer",
   projectsCustomerHint: "The customer this project's hours are billed to.",
   projectsCustomerPick: "Choose a customer…",
@@ -4464,6 +4465,9 @@ export const en = {
   projectsPlanEmptyTitle: "No plan yet",
   projectsPlanEmptyBody:
     "A milestone is a named date on this project \u2014 the dates a client asks about. Add the first one, then put the board\u2019s tasks under it.",
+  projectsTimelineAllEmptyTitle: "No milestones across your projects",
+  projectsTimelineAllEmptyBody:
+    "Choose a project above to add its first milestone, or keep this view on All projects for the portfolio timeline.",
 
   // Templates: a board marked reusable, and the copy started from it. The copy
   // says what travels and what does not, because a person about to start a

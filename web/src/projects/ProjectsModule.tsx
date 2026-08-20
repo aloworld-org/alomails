@@ -252,7 +252,7 @@ export function ProjectsModule() {
             {strings.projectsTabWeek}
           </NavLink>
           <NavLink
-            to="/projects/plan"
+            to="/projects/timeline"
             className={projectTabClass}
           >
             {strings.projectsTabPlan}
@@ -308,8 +308,9 @@ export function ProjectsModule() {
         {/* The plan is a rendering of the board Tasks already shows — the same
             rows, grouped by the dates somebody planned them against — so it is
             everybody's tab too, and it names no person at all. */}
+        <Route path="plan" element={<Navigate to="/projects/timeline" replace />} />
         <Route
-          path="plan"
+          path="timeline"
           element={<PlanView projects={projects} revision={revision} onChanged={bump} />}
         />
         {/* Profitability is a PROJECT aggregate — engagements, minutes and

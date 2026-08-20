@@ -2469,7 +2469,7 @@ export const fr: Partial<Catalog> = {
   projectsTabWeek: "Feuille de temps",
   projectsTabApprovals: "Validations",
   projectsTabReports: "Rapports",
-  projectsTabPlan: "Planning",
+  projectsTabPlan: "Chronologie",
   projectsLoadFailed: "Vos projets n’ont pas pu être chargés.",
   projectsSaveFailed: "La modification n’a pas pu être enregistrée.",
   projectsStartFailed: "Le chronomètre n’a pas pu être démarré.",
@@ -2501,6 +2501,7 @@ export const fr: Partial<Catalog> = {
 
   // La liste des projets.
   projectsProject: "Projet",
+  projectsAllProjects: "Tous les projets",
   projectsCustomer: "Client",
   projectsCustomerHint:
     "Le client à qui les heures de ce projet sont facturées.",
@@ -2633,6 +2634,9 @@ export const fr: Partial<Catalog> = {
     "Un jalon est une date nommée sur ce projet — les dates dont un client vous parle. Ajoutez la première, puis placez les tâches du tableau en dessous.",
 
   // Les modèles : un tableau marqué réutilisable, et la copie qu’on en tire.
+  projectsTimelineAllEmptyTitle: "Aucun jalon dans vos projets",
+  projectsTimelineAllEmptyBody:
+    "Choisissez un projet ci-dessus pour ajouter son premier jalon, ou gardez Tous les projets pour la chronologie du portefeuille.",
   projectsTemplateNew: "Nouveau depuis un modèle",
   projectsTemplateNewTitle: "Partir d’un modèle",
   projectsTemplateNewSubtitle: "La forme du travail, sur de nouvelles dates",

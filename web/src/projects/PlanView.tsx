@@ -21,6 +21,7 @@
 //   milestone is a date, and it is shown as one.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Flag, Plus } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
@@ -60,6 +61,8 @@ const styles = {
   unplacedTitle: "m-0 px-4 py-2.5 text-sm font-medium text-secondary",
 } as const;
 
+const ALL_PROJECTS = "all";
+
 /** Where a milestone sits along the timeline, as a percentage of the plan's
  *  span. `null` when the plan has no span to place it on — a single date, or
  *  several on one day — in which case the markers are simply spread evenly and
@@ -86,8 +89,9 @@ export function PlanView({
 }) {
   const api = useProjectsApi();
   const client = useJmapClient();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [projectId, setProjectId] = useState<string>("");
+  const [projectId, setProjectId] = useState<string>(ALL_PROJECTS);
   const [plan, setPlan] = useState<ProjectPlan>({ milestones: [], placements: [] });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [editing, setEditing] = useState<Milestone | "new" | null>(null);
@@ -97,27 +101,50 @@ export function PlanView({
 
   const bump = useCallback(() => setLocalRevision((r) => r + 1), []);
 
-  // The first project is the one a plan opens on, so the screen is never a
-  // picker in front of an empty page.
+  // Scope is explicit and survives reload/back/forward. An absent, stale, or
+  // inaccessible project id means the honest portfolio view; it must never
+  // silently become whichever project happens to sort first.
   useEffect(() => {
-    if (projectId === "" && projects.length > 0) setProjectId(projects[0]?.id ?? "");
-  }, [projects, projectId]);
+    const requested = searchParams.get("project");
+    const next = requested !== null && projects.some((project) => project.id === requested)
+      ? requested
+      : ALL_PROJECTS;
+    setProjectId(next);
+  }, [projects, searchParams]);
+
+  function selectProject(next: string) {
+    setProjectId(next);
+    const params = new URLSearchParams(searchParams);
+    if (next === ALL_PROJECTS) params.delete("project");
+    else params.set("project", next);
+    setSearchParams(params);
+  }
 
   useEffect(() => {
-    if (projectId === "") return;
     let live = true;
     setLoading(true);
     void (async () => {
       try {
-        // The plan and the board in parallel: they are two reads of one screen,
-        // and one waiting on the other is a loading state nobody needed.
-        const [loadedPlan, loadedTasks] = await Promise.all([
-          api.plan(projectId),
-          client.tasks(projectId),
-        ]);
+        const scopedProjects = projectId === ALL_PROJECTS
+          ? projects
+          : projects.filter((project) => project.id === projectId);
+        // Each project is fetched in parallel. The portfolio timeline is the
+        // same plans combined, never a separate source of truth.
+        const loaded = await Promise.all(
+          scopedProjects.map(async (project) => {
+            const [loadedPlan, loadedTasks] = await Promise.all([
+              api.plan(project.id),
+              client.tasks(project.id),
+            ]);
+            return { plan: loadedPlan, tasks: loadedTasks };
+          }),
+        );
         if (live) {
-          setPlan(loadedPlan);
-          setTasks(loadedTasks);
+          setPlan({
+            milestones: loaded.flatMap((result) => result.plan.milestones),
+            placements: loaded.flatMap((result) => result.plan.placements),
+          });
+          setTasks(loaded.flatMap((result) => result.tasks));
           setError(null);
         }
       } catch (err) {
@@ -129,9 +156,13 @@ export function PlanView({
     return () => {
       live = false;
     };
-  }, [api, client, projectId, revision, localRevision]);
+  }, [api, client, projectId, projects, revision, localRevision]);
 
   const project = projects.find((p) => p.id === projectId) ?? null;
+  const projectById = useMemo(
+    () => new Map(projects.map((item) => [item.id, item])),
+    [projects],
+  );
   const placedIn = useMemo(() => {
     const byTask = new Map<string, string>();
     for (const placement of plan.placements) byTask.set(placement.taskId, placement.milestoneId);
@@ -175,8 +206,9 @@ export function PlanView({
           <select
             className={styles.select}
             value={projectId}
-            onChange={(e) => setProjectId(e.target.value)}
+            onChange={(e) => selectProject(e.target.value)}
           >
+            <option value={ALL_PROJECTS}>{strings.projectsAllProjects}</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -186,8 +218,8 @@ export function PlanView({
         </label>
         <span className={styles.toolbarSpacer} />
         {loading && <Spinner size={16} />}
-        {plan.milestones.length > 0 && (
-          <Button onClick={() => setEditing("new")} disabled={projectId === ""}>
+        {project !== null && plan.milestones.length > 0 && (
+          <Button onClick={() => setEditing("new")}>
             <Plus size={15} /> {strings.projectsMilestoneAdd}
           </Button>
         )}
@@ -202,9 +234,13 @@ export function PlanView({
       ) : plan.milestones.length === 0 ? (
         <EmptyState
           Icon={Flag}
-          title={strings.projectsPlanEmptyTitle}
-          body={strings.projectsPlanEmptyBody}
-          {...(projectId === ""
+          title={project === null
+            ? strings.projectsTimelineAllEmptyTitle
+            : strings.projectsPlanEmptyTitle}
+          body={project === null
+            ? strings.projectsTimelineAllEmptyBody
+            : strings.projectsPlanEmptyBody}
+          {...(project === null
             ? {}
             : { cta: strings.projectsMilestoneAdd, onCta: () => setEditing("new") })}
         />
@@ -245,10 +281,18 @@ export function PlanView({
                     <button
                       type="button"
                       className={styles.rowName}
-                      onClick={() => setEditing(milestone)}
+                      onClick={() => {
+                        if (projectId === ALL_PROJECTS) selectProject(milestone.projectId);
+                        setEditing(milestone);
+                      }}
                     >
                       {milestone.name}
                     </button>
+                    {projectId === ALL_PROJECTS && (
+                      <span className={`${styles.chip} bg-subtle text-secondary`}>
+                        {projectById.get(milestone.projectId)?.name ?? strings.projectsProject}
+                      </span>
+                    )}
                     <span className={styles.muted}>{dayLabel(milestone.dueOn)}</span>
                     {milestone.done ? (
                       <span className={`${styles.chip} ${styles.chipGood}`}>
@@ -325,9 +369,11 @@ export function PlanView({
                     >
                       <option value="">{strings.projectsPlanPlace}</option>
                       {plan.milestones.map((milestone) => (
-                        <option key={milestone.id} value={milestone.id}>
-                          {milestone.name}
-                        </option>
+                        milestone.projectId === task.projectId ? (
+                          <option key={milestone.id} value={milestone.id}>
+                            {milestone.name}
+                          </option>
+                        ) : null
                       ))}
                     </select>
                   </li>
