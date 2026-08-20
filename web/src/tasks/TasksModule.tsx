@@ -216,76 +216,76 @@ export function TasksModule({
 
   return (
     <div className={styles.tasks}>
-      <aside className={styles.sidebar}>
-        {projectId !== undefined && (
+      {projectId === undefined && (
+        <aside className={styles.sidebar}>
           <button
             type="button"
-            className="mx-3 mb-4 inline-flex min-h-11 w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg bg-raised px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-[var(--accent-soft)] hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            onClick={() => navigate("/projects/list")}
+            className={`${styles.plateBtn} ${mode.type === "plate" ? styles.projActive : ""}`}
+            onClick={() => setMode({ type: "plate" })}
           >
-            <ArrowLeft size={16} aria-hidden="true" />
-            {strings.projectsTabList}
+            <Sun size={16} /> {projectsContext ? strings.projectsTabMyWork : strings.taskMyPlate}
           </button>
-        )}
-        {projectId === undefined && (
-          <>
-            <button
-              type="button"
-              className={`${styles.plateBtn} ${mode.type === "plate" ? styles.projActive : ""}`}
-              onClick={() => setMode({ type: "plate" })}
-            >
-              <Sun size={16} /> {projectsContext ? strings.projectsTabMyWork : strings.taskMyPlate}
-            </button>
-            <button
-              type="button"
-              className={`${styles.plateBtn} ${mode.type === "proposals" ? styles.projActive : ""}`}
-              onClick={() => {
-                void loadProposals();
-                setMode({ type: "proposals" });
-              }}
-            >
-              <Sparkles size={16} /> {strings.taskProposals}
-              {proposals.length > 0 && <span className={styles.badge}>{proposals.length}</span>}
-            </button>
-          </>
-        )}
+          <button
+            type="button"
+            className={`${styles.plateBtn} ${mode.type === "proposals" ? styles.projActive : ""}`}
+            onClick={() => {
+              void loadProposals();
+              setMode({ type: "proposals" });
+            }}
+          >
+            <Sparkles size={16} /> {strings.taskProposals}
+            {proposals.length > 0 && <span className={styles.badge}>{proposals.length}</span>}
+          </button>
 
-        <div className={styles.projList}>
-          <div className={styles.sideHead}>
-            <span>{strings.taskProjects}</span>
-            <button
-              type="button"
-              className={styles.iconBtn}
-              onClick={() => navigate("/projects/list?new=1")}
-              aria-label={strings.taskNewProject}
-              title={strings.taskNewProject}
-            >
-              <Plus size={15} />
-            </button>
+          <div className={styles.projList}>
+            <div className={styles.sideHead}>
+              <span>{strings.taskProjects}</span>
+              <button
+                type="button"
+                className={styles.iconBtn}
+                onClick={() => navigate("/projects/list?new=1")}
+                aria-label={strings.taskNewProject}
+                title={strings.taskNewProject}
+              >
+                <Plus size={15} />
+              </button>
+            </div>
+            {projects.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={`${styles.projItem} ${
+                  mode.type === "project" && mode.id === p.id ? styles.projActive : ""
+                }`}
+                onClick={() => openProject(p.id)}
+              >
+                <span
+                  className={styles.projDot}
+                  style={{ background: p.color ?? "var(--accent)" }}
+                  aria-hidden="true"
+                />
+                <span className={styles.projName}>{p.name}</span>
+              </button>
+            ))}
           </div>
-          {projects.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`${styles.projItem} ${
-                mode.type === "project" && mode.id === p.id ? styles.projActive : ""
-              }`}
-              onClick={() => openProject(p.id)}
-            >
-              <span
-                className={styles.projDot}
-                style={{ background: p.color ?? "var(--accent)" }}
-                aria-hidden="true"
-              />
-              <span className={styles.projName}>{p.name}</span>
-            </button>
-          ))}
-        </div>
-      </aside>
+        </aside>
+      )}
 
       <section className={styles.main}>
         <header className={styles.topbar}>
-          <h1 className={styles.pageTitle}>{title}</h1>
+          <div className="min-w-0 shrink-0">
+            {projectId !== undefined && (
+              <button
+                type="button"
+                className="mb-1 inline-flex min-h-8 items-center gap-1.5 rounded-md px-2 text-sm font-medium text-secondary !no-underline transition-colors hover:bg-raised hover:text-primary hover:!no-underline focus:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                onClick={() => navigate("/projects/list")}
+              >
+                <ArrowLeft size={15} aria-hidden="true" />
+                {strings.projectsTabList}
+              </button>
+            )}
+            <h1 className={styles.pageTitle}>{title}</h1>
+          </div>
           <form
             className={styles.searchWrap}
             role="search"
@@ -315,7 +315,7 @@ export function TasksModule({
             {(
               [
                 { id: "overview", label: strings.taskOverview, Icon: LayoutDashboard },
-                { id: "list", label: strings.taskList, Icon: List },
+                { id: "list", label: projectId !== undefined ? strings.projectsWorkspaceTasks : strings.taskList, Icon: List },
                 { id: "board", label: strings.taskBoard, Icon: LayoutGrid },
                 { id: "timeline", label: strings.taskTimeline, Icon: GanttChartSquare },
                 { id: "calendar", label: strings.taskCalendar, Icon: CalendarRange },

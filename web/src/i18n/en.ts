@@ -4300,6 +4300,7 @@ export const en = {
   moduleProjects: "Projects",
   projectsTabList: "All projects",
   projectsTabMyWork: "My work",
+  projectsWorkspaceTasks: "Tasks",
   projectsTabWeek: "Timesheet",
   projectsTabApprovals: "Approvals",
   projectsTabReports: "Reports",

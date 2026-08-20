@@ -2424,6 +2424,7 @@ export const nl: Partial<Catalog> = {
   moduleProjects: "Projecten",
   projectsTabList: "Alle projecten",
   projectsTabMyWork: "Mijn werk",
+  projectsWorkspaceTasks: "Taken",
   projectsTabWeek: "Urenstaat",
   projectsTabApprovals: "Goedkeuringen",
   projectsTabReports: "Rapporten",

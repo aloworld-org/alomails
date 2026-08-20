@@ -2465,6 +2465,7 @@ export const fr: Partial<Catalog> = {
   moduleProjects: "Projets",
   projectsTabList: "Tous les projets",
   projectsTabMyWork: "Mon travail",
+  projectsWorkspaceTasks: "Tâches",
   projectsTabWeek: "Feuille de temps",
   projectsTabApprovals: "Validations",
   projectsTabReports: "Rapports",
