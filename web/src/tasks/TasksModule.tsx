@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
+  ArrowLeft,
   CalendarRange,
   ClipboardList,
   GanttChartSquare,
@@ -214,6 +215,16 @@ export function TasksModule({
   return (
     <div className={styles.tasks}>
       <aside className={styles.sidebar}>
+        {projectId !== undefined && (
+          <button
+            type="button"
+            className="mx-3 mb-4 inline-flex min-h-11 w-[calc(100%-1.5rem)] items-center gap-2 rounded-lg bg-raised px-4 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-[var(--accent-soft)] hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            onClick={() => navigate("/projects/list")}
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            {strings.projectsTabList}
+          </button>
+        )}
         {projectId === undefined && (
           <>
             <button
