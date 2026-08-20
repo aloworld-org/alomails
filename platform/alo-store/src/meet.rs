@@ -181,18 +181,25 @@ fn to_meeting(row: MeetingRow) -> Meeting {
     }
 }
 
-fn to_recording(
-    row: (
-        String,
-        String,
-        Option<String>,
-        String,
-        Option<String>,
-        OffsetDateTime,
-        Option<OffsetDateTime>,
-        Option<OffsetDateTime>,
-    ),
-) -> MeetingRecording {
+/// One `meeting_recordings` row, in the column order every query here selects:
+/// `id, requested_by, egress_id, status, file_path, requested_at, started_at,
+/// stopped_at`.
+///
+/// Named rather than spelled out at each use, so the readers and the insert
+/// cannot drift into disagreeing about the shape — and so a column added to the
+/// table is one edit rather than three.
+type RecordingRow = (
+    String,
+    String,
+    Option<String>,
+    String,
+    Option<String>,
+    OffsetDateTime,
+    Option<OffsetDateTime>,
+    Option<OffsetDateTime>,
+);
+
+fn to_recording(row: RecordingRow) -> MeetingRecording {
     MeetingRecording {
         id: row.0,
         requested_by: UserId::new(row.1),
@@ -316,7 +323,7 @@ impl AccountStore {
             ));
         }
         let id = generate_token();
-        let row: (String,String,Option<String>,String,Option<String>,OffsetDateTime,Option<OffsetDateTime>,Option<OffsetDateTime>) = sqlx::query_as(
+        let row: RecordingRow = sqlx::query_as(
             "INSERT INTO meeting_recordings (tenant_id,meeting_id,id,requested_by) VALUES ($1,$2,$3,$4) RETURNING id,requested_by,egress_id,status,file_path,requested_at,started_at,stopped_at"
         ).bind(self.tenant.as_str()).bind(meeting_id.as_str()).bind(&id).bind(self.user.as_str()).fetch_one(&self.pool).await.map_err(StoreError::Db)?;
         Ok(to_recording(row))
