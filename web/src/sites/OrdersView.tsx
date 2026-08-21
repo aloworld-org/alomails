@@ -27,7 +27,50 @@ import { sitesMessage, useSitesApi } from "./api";
 import { formatPrice } from "./catalogPricing";
 import { EmptyState, ErrorBanner } from "./parts";
 import type { SiteDetail, SiteOrder, SiteOrderStatus } from "./types";
-import styles from "./SitesModule.module.css";
+
+const styles = {
+  page: "mx-auto flex w-full max-w-[90rem] flex-col gap-6 px-5 py-6 sm:px-8 lg:px-10",
+  header:
+    "flex flex-col gap-4 rounded-2xl border border-subtle bg-surface px-5 py-5 shadow-sm sm:flex-row sm:items-center",
+  backLink:
+    "inline-flex min-h-10 shrink-0 items-center gap-2 self-start rounded-xl border border-subtle bg-surface px-3.5 text-sm font-semibold text-primary no-underline transition-colors hover:bg-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+  siteHead: "min-w-0 flex-1",
+  title: "m-0 text-2xl font-semibold tracking-tight text-primary",
+  submissionSiteName: "mt-1 block truncate text-sm text-secondary",
+  headerActions: "flex min-h-10 items-center gap-3 sm:ml-auto",
+  hint: "m-0 text-sm leading-6 text-secondary",
+  orderFilters:
+    "flex flex-wrap items-center gap-2 rounded-2xl border border-subtle bg-surface p-2 shadow-sm",
+  orderFilter:
+    "min-h-10 rounded-xl border border-transparent bg-transparent px-4 text-sm font-semibold text-secondary transition-colors hover:bg-app hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+  orderFilterActive: "!bg-accent-soft !text-accent",
+  orderFilterEmpty: "m-0 px-5 py-8 text-center text-sm text-secondary",
+  submissionsLayout:
+    "grid min-h-[34rem] overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm lg:grid-cols-[minmax(18rem,0.75fr)_minmax(0,1.6fr)]",
+  submissionList:
+    "min-w-0 border-b border-subtle bg-surface lg:border-b-0 lg:border-r",
+  submissionRow:
+    "flex w-full flex-col gap-2 border-b border-subtle bg-transparent px-5 py-4 text-left transition-colors last:border-b-0 hover:bg-app focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent",
+  submissionRowSelected: "!bg-accent-soft",
+  submissionRowTop:
+    "flex items-start justify-between gap-3 text-sm text-primary",
+  submissionEmail: "truncate text-sm text-secondary",
+  submissionRowBottom:
+    "flex items-center justify-between gap-3 text-xs text-secondary",
+  open: "rounded-full bg-accent-soft px-2.5 py-1 font-semibold text-accent",
+  handled: "rounded-full bg-app px-2.5 py-1 font-semibold text-secondary",
+  submissionDetail: "min-w-0 space-y-6 p-5 sm:p-7",
+  submissionDetailHead:
+    "flex flex-col gap-4 border-b border-subtle pb-5 sm:flex-row sm:items-start sm:justify-between [&_h2]:m-0 [&_h2]:text-xl [&_h2]:font-semibold [&_h2]:text-primary [&_a]:text-sm [&_a]:text-accent [&_a]:no-underline hover:[&_a]:text-accent-hover",
+  submissionMeta:
+    "grid gap-4 rounded-xl bg-app p-4 sm:grid-cols-3 [&_div]:min-w-0 [&_dt]:text-xs [&_dt]:font-semibold [&_dt]:uppercase [&_dt]:tracking-wide [&_dt]:text-secondary [&_dd]:m-0 [&_dd]:mt-1 [&_dd]:break-words [&_dd]:text-sm [&_dd]:text-primary [&_a]:text-accent [&_a]:no-underline",
+  orderStatusBar: "flex flex-wrap items-center gap-2",
+  orderLines:
+    "w-full border-separate border-spacing-0 overflow-hidden rounded-xl border border-subtle text-left text-sm [&_th]:border-b [&_th]:border-subtle [&_th]:bg-app [&_th]:px-4 [&_th]:py-3 [&_th]:font-semibold [&_td]:border-b [&_td]:border-subtle [&_td]:px-4 [&_td]:py-3 [&_tfoot_th]:border-b-0 [&_tfoot_td]:border-b-0 [&_tfoot_th]:bg-app [&_tfoot_td]:bg-app [&_tfoot_th]:font-semibold [&_tfoot_td]:font-semibold",
+  orderLinesCaption: "sr-only",
+  submissionMessage:
+    "m-0 whitespace-pre-wrap rounded-xl border border-subtle bg-app p-4 text-sm leading-6 text-primary",
+} as const;
 
 const received = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -35,7 +78,12 @@ const received = new Intl.DateTimeFormat(undefined, {
 });
 
 /** The four workflow words, left to right as an order travels through them. */
-const STATUSES: readonly SiteOrderStatus[] = ["new", "confirmed", "fulfilled", "cancelled"];
+const STATUSES: readonly SiteOrderStatus[] = [
+  "new",
+  "confirmed",
+  "fulfilled",
+  "cancelled",
+];
 
 /** What to call a status in the reader's language. The server owns the word
  *  itself; this is the only place it is translated. */
@@ -77,7 +125,10 @@ export function OrdersView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [detail, rows] = await Promise.all([api.site(siteId), api.orders(siteId)]);
+      const [detail, rows] = await Promise.all([
+        api.site(siteId),
+        api.orders(siteId),
+      ]);
       setSite(detail);
       setOrders(rows);
       setSelectedId((current) =>
@@ -98,7 +149,10 @@ export function OrdersView() {
   }, [load]);
 
   const shown = useMemo(
-    () => (filter === "all" ? orders : orders.filter((order) => order.status === filter)),
+    () =>
+      filter === "all"
+        ? orders
+        : orders.filter((order) => order.status === filter),
     [filter, orders],
   );
   const selected = useMemo(
@@ -122,7 +176,9 @@ export function OrdersView() {
     setError(null);
     try {
       const stored = await api.setOrderStatus(siteId, order.id, status);
-      setOrders((rows) => rows.map((row) => (row.id === stored.id ? stored : row)));
+      setOrders((rows) =>
+        rows.map((row) => (row.id === stored.id ? stored : row)),
+      );
     } catch (reason) {
       setError(sitesMessage(reason, strings.sitesOrderStatusFailed));
     } finally {
@@ -158,7 +214,11 @@ export function OrdersView() {
     setError(null);
     try {
       const csv = await api.ordersCsv(siteId);
-      saveTextFile(csv, `orders-${site.subdomain}.csv`, "text/csv;charset=utf-8");
+      saveTextFile(
+        csv,
+        `orders-${site.subdomain}.csv`,
+        "text/csv;charset=utf-8",
+      );
     } catch (reason) {
       setError(sitesMessage(reason, strings.sitesOrdersExportFailed));
     } finally {
@@ -175,7 +235,9 @@ export function OrdersView() {
         </Link>
         <div className={styles.siteHead}>
           <h1 className={styles.title}>{strings.sitesOrders}</h1>
-          {site !== null && <span className={styles.submissionSiteName}>{site.name}</span>}
+          {site !== null && (
+            <span className={styles.submissionSiteName}>{site.name}</span>
+          )}
         </div>
         <div className={styles.headerActions}>
           {loading && <Spinner size={16} />}
@@ -186,189 +248,247 @@ export function OrdersView() {
             disabled={site === null || orders.length === 0 || exporting}
             onClick={() => void exportCsv()}
           >
-            {exporting ? strings.sitesOrdersExporting : strings.sitesOrdersExport}
+            {exporting
+              ? strings.sitesOrdersExporting
+              : strings.sitesOrdersExport}
           </Button>
         </div>
       </header>
 
       {error !== null && <ErrorBanner message={error} />}
 
-      {!loading && orders.length === 0 ? (
-        <EmptyState
-          Icon={ShoppingBag}
-          title={strings.sitesNoOrdersTitle}
-          body={strings.sitesNoOrdersBody}
-          cta={strings.sitesCatalogs}
-          onCta={() => navigate(`/sites/${encodeURIComponent(siteId)}/catalogs`)}
-        />
-      ) : (
-        <>
-          <div className={styles.orderFilters} role="group" aria-label={strings.sitesOrderFilter}>
-            {(["all", ...STATUSES] as Array<SiteOrderStatus | "all">).map((value) => {
-              const label =
-                value === "all" ? strings.sitesOrderFilterAll : orderStatusLabel(value);
-              const count = value === "all" ? orders.length : (counts.get(value) ?? 0);
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  className={`${styles.orderFilter} ${
-                    filter === value ? styles.orderFilterActive : ""
-                  }`}
-                  aria-pressed={filter === value}
-                  onClick={() => setFilter(value)}
-                >
-                  {strings.sitesOrderFilterOption(label, count)}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className={styles.submissionsLayout}>
-            <section className={styles.submissionList} aria-label={strings.sitesOrderList}>
-              {shown.length === 0 ? (
-                <p className={styles.orderFilterEmpty}>{strings.sitesOrderFilterEmpty}</p>
-              ) : (
-                shown.map((order) => (
-                  <button
-                    type="button"
-                    key={order.id}
-                    className={`${styles.submissionRow} ${
-                      selectedId === order.id ? styles.submissionRowSelected : ""
-                    }`}
-                    onClick={() => setSelectedId(order.id)}
-                    aria-pressed={selectedId === order.id}
-                  >
-                    <span className={styles.submissionRowTop}>
-                      <strong>{order.customerName}</strong>
-                      <time dateTime={order.receivedAt}>
-                        {received.format(new Date(order.receivedAt))}
-                      </time>
-                    </span>
-                    <span className={styles.submissionEmail}>
-                      {strings.sitesOrderLineCount(order.lines.length)} ·{" "}
-                      {formatPrice(order.totalCents, order.currency, order.currencyExponent)}
-                    </span>
-                    <span className={styles.submissionRowBottom}>
-                      <span>{order.catalogName}</span>
-                      <span
-                        className={order.status === "new" ? styles.open : styles.handled}
-                      >
-                        {orderStatusLabel(order.status)}
-                      </span>
-                    </span>
-                  </button>
-                ))
-              )}
-            </section>
-
-            {selected !== null && (
-              <article className={styles.submissionDetail} aria-label={strings.sitesOrderDetail}>
-                <header className={styles.submissionDetailHead}>
-                  <div>
-                    <h2>{selected.customerName}</h2>
-                    <a href={`mailto:${selected.customerEmail}`}>{selected.customerEmail}</a>
-                  </div>
-                  <Button
-                    variant={armedId === selected.id ? "danger" : "ghost"}
-                    size="sm"
-                    icon={<Trash2 size="var(--icon-size-inline)" />}
-                    disabled={busyId === selected.id}
-                    onClick={() => void remove(selected)}
-                  >
-                    {armedId === selected.id
-                      ? strings.sitesOrderDeleteConfirm
-                      : strings.sitesOrderDelete}
-                  </Button>
-                </header>
-
-                {armedId === selected.id && (
-                  <p className={styles.hint}>{strings.sitesOrderDeleteHint}</p>
-                )}
-
-                <dl className={styles.submissionMeta}>
-                  <div>
-                    <dt>{strings.sitesOrderCatalog}</dt>
-                    <dd>{selected.catalogName}</dd>
-                  </div>
-                  <div>
-                    <dt>{strings.sitesReceived}</dt>
-                    <dd>{received.format(new Date(selected.receivedAt))}</dd>
-                  </div>
-                  {selected.customerPhone !== null && (
-                    <div>
-                      <dt>{strings.sitesOrderPhone}</dt>
-                      <dd>
-                        <a href={`tel:${selected.customerPhone}`}>{selected.customerPhone}</a>
-                      </dd>
-                    </div>
-                  )}
-                </dl>
-
-                <div className={styles.orderStatusBar} role="group" aria-label={strings.sitesOrderStatus}>
-                  {STATUSES.map((status) => (
-                    <Button
-                      key={status}
-                      variant={selected.status === status ? "primary" : "ghost"}
-                      size="sm"
-                      aria-pressed={selected.status === status}
-                      disabled={busyId === selected.id}
-                      onClick={() => void move(selected, status)}
-                    >
-                      {orderStatusLabel(status)}
-                    </Button>
-                  ))}
-                </div>
-
-                <table className={styles.orderLines}>
-                  <caption className={styles.orderLinesCaption}>
-                    {strings.sitesOrderLinesCaption}
-                  </caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">{strings.sitesOrderItem}</th>
-                      <th scope="col">{strings.sitesOrderQuantity}</th>
-                      <th scope="col">{strings.sitesOrderUnitPrice}</th>
-                      <th scope="col">{strings.sitesOrderLineTotal}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selected.lines.map((line) => (
-                      <tr key={line.itemSlug}>
-                        <th scope="row">{line.itemName}</th>
-                        <td>{line.quantity}</td>
-                        <td>{lineMoney(line.unitPriceCents, selected)}</td>
-                        <td>{lineMoney(line.lineTotalCents, selected)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr>
-                      <th scope="row" colSpan={3}>
-                        {strings.sitesOrderTotal}
-                      </th>
-                      <td>
-                        {formatPrice(
-                          selected.totalCents,
-                          selected.currency,
-                          selected.currencyExponent,
-                        )}
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
-                {selected.lines.some((line) => line.lineTotalCents === null) && (
-                  <p className={styles.hint}>{strings.sitesOrderQuotedHint}</p>
-                )}
-
-                {selected.note !== null && (
-                  <p className={styles.submissionMessage}>{selected.note}</p>
-                )}
-              </article>
-            )}
-          </div>
-        </>
+      {loading && (
+        <div
+          className="flex min-h-64 items-center justify-center rounded-2xl border border-subtle bg-surface shadow-sm"
+          role="status"
+          aria-label={strings.sitesOrders}
+        >
+          <Spinner size={22} />
+        </div>
       )}
+
+      {!loading &&
+        (orders.length === 0 ? (
+          <EmptyState
+            Icon={ShoppingBag}
+            title={strings.sitesNoOrdersTitle}
+            body={strings.sitesNoOrdersBody}
+            cta={strings.sitesCatalogs}
+            onCta={() =>
+              navigate(`/sites/${encodeURIComponent(siteId)}/catalogs`)
+            }
+          />
+        ) : (
+          <>
+            <div
+              className={styles.orderFilters}
+              role="group"
+              aria-label={strings.sitesOrderFilter}
+            >
+              {(["all", ...STATUSES] as Array<SiteOrderStatus | "all">).map(
+                (value) => {
+                  const label =
+                    value === "all"
+                      ? strings.sitesOrderFilterAll
+                      : orderStatusLabel(value);
+                  const count =
+                    value === "all" ? orders.length : (counts.get(value) ?? 0);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`${styles.orderFilter} ${
+                        filter === value ? styles.orderFilterActive : ""
+                      }`}
+                      aria-pressed={filter === value}
+                      onClick={() => setFilter(value)}
+                    >
+                      {strings.sitesOrderFilterOption(label, count)}
+                    </button>
+                  );
+                },
+              )}
+            </div>
+
+            <div className={styles.submissionsLayout}>
+              <section
+                className={styles.submissionList}
+                aria-label={strings.sitesOrderList}
+              >
+                {shown.length === 0 ? (
+                  <p className={styles.orderFilterEmpty}>
+                    {strings.sitesOrderFilterEmpty}
+                  </p>
+                ) : (
+                  shown.map((order) => (
+                    <button
+                      type="button"
+                      key={order.id}
+                      className={`${styles.submissionRow} ${
+                        selectedId === order.id
+                          ? styles.submissionRowSelected
+                          : ""
+                      }`}
+                      onClick={() => setSelectedId(order.id)}
+                      aria-pressed={selectedId === order.id}
+                    >
+                      <span className={styles.submissionRowTop}>
+                        <strong>{order.customerName}</strong>
+                        <time dateTime={order.receivedAt}>
+                          {received.format(new Date(order.receivedAt))}
+                        </time>
+                      </span>
+                      <span className={styles.submissionEmail}>
+                        {strings.sitesOrderLineCount(order.lines.length)} ·{" "}
+                        {formatPrice(
+                          order.totalCents,
+                          order.currency,
+                          order.currencyExponent,
+                        )}
+                      </span>
+                      <span className={styles.submissionRowBottom}>
+                        <span>{order.catalogName}</span>
+                        <span
+                          className={
+                            order.status === "new"
+                              ? styles.open
+                              : styles.handled
+                          }
+                        >
+                          {orderStatusLabel(order.status)}
+                        </span>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </section>
+
+              {selected !== null && (
+                <article
+                  className={styles.submissionDetail}
+                  aria-label={strings.sitesOrderDetail}
+                >
+                  <header className={styles.submissionDetailHead}>
+                    <div>
+                      <h2>{selected.customerName}</h2>
+                      <a href={`mailto:${selected.customerEmail}`}>
+                        {selected.customerEmail}
+                      </a>
+                    </div>
+                    <Button
+                      variant={armedId === selected.id ? "danger" : "ghost"}
+                      size="sm"
+                      icon={<Trash2 size="var(--icon-size-inline)" />}
+                      disabled={busyId === selected.id}
+                      onClick={() => void remove(selected)}
+                    >
+                      {armedId === selected.id
+                        ? strings.sitesOrderDeleteConfirm
+                        : strings.sitesOrderDelete}
+                    </Button>
+                  </header>
+
+                  {armedId === selected.id && (
+                    <p className={styles.hint}>
+                      {strings.sitesOrderDeleteHint}
+                    </p>
+                  )}
+
+                  <dl className={styles.submissionMeta}>
+                    <div>
+                      <dt>{strings.sitesOrderCatalog}</dt>
+                      <dd>{selected.catalogName}</dd>
+                    </div>
+                    <div>
+                      <dt>{strings.sitesReceived}</dt>
+                      <dd>{received.format(new Date(selected.receivedAt))}</dd>
+                    </div>
+                    {selected.customerPhone !== null && (
+                      <div>
+                        <dt>{strings.sitesOrderPhone}</dt>
+                        <dd>
+                          <a href={`tel:${selected.customerPhone}`}>
+                            {selected.customerPhone}
+                          </a>
+                        </dd>
+                      </div>
+                    )}
+                  </dl>
+
+                  <div
+                    className={styles.orderStatusBar}
+                    role="group"
+                    aria-label={strings.sitesOrderStatus}
+                  >
+                    {STATUSES.map((status) => (
+                      <Button
+                        key={status}
+                        variant={
+                          selected.status === status ? "primary" : "ghost"
+                        }
+                        size="sm"
+                        aria-pressed={selected.status === status}
+                        disabled={busyId === selected.id}
+                        onClick={() => void move(selected, status)}
+                      >
+                        {orderStatusLabel(status)}
+                      </Button>
+                    ))}
+                  </div>
+
+                  <table className={styles.orderLines}>
+                    <caption className={styles.orderLinesCaption}>
+                      {strings.sitesOrderLinesCaption}
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">{strings.sitesOrderItem}</th>
+                        <th scope="col">{strings.sitesOrderQuantity}</th>
+                        <th scope="col">{strings.sitesOrderUnitPrice}</th>
+                        <th scope="col">{strings.sitesOrderLineTotal}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selected.lines.map((line) => (
+                        <tr key={line.itemSlug}>
+                          <th scope="row">{line.itemName}</th>
+                          <td>{line.quantity}</td>
+                          <td>{lineMoney(line.unitPriceCents, selected)}</td>
+                          <td>{lineMoney(line.lineTotalCents, selected)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <th scope="row" colSpan={3}>
+                          {strings.sitesOrderTotal}
+                        </th>
+                        <td>
+                          {formatPrice(
+                            selected.totalCents,
+                            selected.currency,
+                            selected.currencyExponent,
+                          )}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  {selected.lines.some(
+                    (line) => line.lineTotalCents === null,
+                  ) && (
+                    <p className={styles.hint}>
+                      {strings.sitesOrderQuotedHint}
+                    </p>
+                  )}
+
+                  {selected.note !== null && (
+                    <p className={styles.submissionMessage}>{selected.note}</p>
+                  )}
+                </article>
+              )}
+            </div>
+          </>
+        ))}
     </div>
   );
 }
