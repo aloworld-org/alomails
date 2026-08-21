@@ -8,7 +8,8 @@ import { strings } from "../i18n";
 import { useJmapClient, type DriveNodeDto, type ProjectFileDto, type Task } from "../jmap";
 import { Spinner } from "../ds";
 import { DriveAttachmentPicker } from "./DriveAttachmentPicker";
-import styles from "./TasksModule.module.css";
+
+const secondaryButton = "inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-raised px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-accent-tint hover:text-accent disabled:cursor-wait disabled:opacity-60";
 
 function fileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -111,19 +112,19 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
 
   if (files === null || tasks === null) {
     return (
-      <div className={styles.empty}>
+      <div className="grid min-h-80 place-items-center text-tertiary">
         <Spinner size={20} />
       </div>
     );
   }
   if (tasks.length === 0) {
     return (
-      <div className={styles.emptyState}>
-        <span className={styles.emptyArt}>
+      <div className="flex min-h-[26rem] flex-col items-center justify-center gap-3 px-6 text-center">
+        <span className="grid size-16 place-items-center rounded-2xl bg-accent-tint text-accent">
           <Paperclip size={36} />
         </span>
-        <p className={styles.emptyBody}>{strings.taskFilesNeedTask}</p>
-        <button type="button" className={styles.emptyCta} onClick={onCreate}>
+        <p className="m-0 max-w-sm text-sm leading-6 text-secondary">{strings.taskFilesNeedTask}</p>
+        <button type="button" className="inline-flex min-h-10 items-center rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-on-accent hover:bg-accent-hover" onClick={onCreate}>
           {strings.taskCreateFirst}
         </button>
       </div>
@@ -132,42 +133,42 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
 
   return (
     <div
-      className={`${styles.filesView} ${files.length === 0 ? styles.filesViewEmpty : ""}`}
+      className={`flex w-full flex-col px-6 py-4 ${files.length === 0 ? "min-h-[26rem]" : "max-w-3xl"}`}
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
         void upload(event.dataTransfer.files);
       }}
     >
-      <div className={styles.filesToolbar}>
-        <div className={styles.filesTaskPicker} ref={taskPickerRef}>
-          <span>{strings.taskFilesAttachTo}</span>
+      <div className="mb-4 flex flex-wrap items-end gap-3 max-sm:flex-col max-sm:items-stretch">
+        <div className="relative flex min-w-56 max-w-80 flex-1 flex-col gap-1.5 max-sm:max-w-none" ref={taskPickerRef}>
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">{strings.taskFilesAttachTo}</span>
           <button
             type="button"
-            className={`${styles.filesTaskTrigger} ${taskMenuOpen ? styles.filesTaskTriggerOpen : ""}`}
+            className={`flex min-h-10 w-full items-center justify-between gap-2 rounded-lg border bg-surface px-3 text-left text-sm text-primary transition-shadow ${taskMenuOpen ? "border-accent ring-2 ring-accent/15" : "border-default hover:border-accent"}`}
             onClick={() => setTaskMenuOpen((open) => !open)}
             aria-haspopup="listbox"
             aria-expanded={taskMenuOpen}
           >
-            <span>{tasks.find((task) => task.id === taskId)?.title ?? strings.taskFilesAttachTo}</span>
-            <ChevronDown size={16} />
+            <span className="min-w-0 flex-1 truncate">{tasks.find((task) => task.id === taskId)?.title ?? strings.taskFilesAttachTo}</span>
+            <ChevronDown className={`shrink-0 transition-transform ${taskMenuOpen ? "rotate-180 text-accent" : ""}`} size={16} />
           </button>
           {taskMenuOpen && (
-            <div className={styles.filesTaskMenu} role="listbox">
+            <div className="absolute inset-x-0 top-full z-dropdown mt-1 max-h-60 overflow-y-auto rounded-lg border border-default bg-surface p-1 shadow-lg" role="listbox">
               {tasks.map((task) => (
                 <button
                   key={task.id}
                   type="button"
                   role="option"
                   aria-selected={task.id === taskId}
-                  className={task.id === taskId ? styles.filesTaskOptionSelected : ""}
+                  className={`flex min-h-10 w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm hover:bg-accent-tint hover:text-accent ${task.id === taskId ? "bg-accent-tint font-semibold text-accent" : "text-primary"}`}
                   onClick={() => {
                     setTaskId(task.id);
                     setTaskMenuOpen(false);
                   }}
                 >
-                  <span>{task.title}</span>
-                  {task.id === taskId && <Check size={16} />}
+                  <span className="truncate">{task.title}</span>
+                  {task.id === taskId && <Check className="shrink-0" size={16} />}
                 </button>
               ))}
             </div>
@@ -175,7 +176,7 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
         </div>
         <input
           ref={fileRef}
-          className={styles.visuallyHidden}
+          className="sr-only"
           type="file"
           multiple
           onChange={(event) => {
@@ -184,41 +185,41 @@ export function FilesView({ projectId, onOpen, onCreate }: Props) {
         />
         <button
           type="button"
-          className={styles.filesUpload}
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent hover:bg-accent-hover disabled:cursor-wait disabled:opacity-60"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
         >
           <Upload size={17} />
           {uploading ? strings.taskUploading : strings.taskAddAttachment}
         </button>
-        <button type="button" className={styles.filesDriveButton} onClick={() => setDriveOpen(true)}>
+        <button type="button" className={secondaryButton} onClick={() => setDriveOpen(true)}>
           <HardDrive size={17} /> {strings.taskChooseFromDrive}
         </button>
       </div>
-      {uploadError && <p className={styles.filesError}>{strings.taskFilesUploadError}</p>}
+      {uploadError && <p className="mb-3 text-sm text-danger">{strings.taskFilesUploadError}</p>}
       {files.length === 0 && (
-        <div className={styles.filesDropEmpty}>
-          <span className={styles.emptyArt}><Paperclip size={36} /></span>
-          <p className={styles.emptyBody}>{strings.taskFilesEmpty}</p>
-          <p className={styles.filesDropHint}>{strings.taskFilesDropHint}</p>
+        <div className="flex min-h-80 flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-default px-6 text-center">
+          <span className="grid size-16 place-items-center rounded-2xl bg-accent-tint text-accent"><Paperclip size={32} /></span>
+          <p className="m-0 max-w-sm text-sm leading-6 text-secondary">{strings.taskFilesEmpty}</p>
+          <p className="m-0 text-sm text-tertiary">{strings.taskFilesDropHint}</p>
         </div>
       )}
       {files.map((f) => (
-        <div key={f.id} className={styles.fileRow}>
-          <span className={styles.fileIcon}>
+        <div key={f.id} className="mb-2 flex items-center gap-3 rounded-xl border border-subtle bg-surface p-3 transition-colors hover:border-default">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-accent-tint text-accent">
             <Paperclip size={16} />
           </span>
-          <span className={styles.fileMeta}>
-            <button type="button" className={styles.fileName} onClick={() => onOpen(f.taskId)}>
+          <span className="flex min-w-0 flex-1 flex-col">
+            <button type="button" className="truncate text-left text-sm font-medium text-primary hover:text-accent" onClick={() => onOpen(f.taskId)}>
               {f.filename}
             </button>
-            <span className={styles.fileSub}>
+            <span className="truncate text-xs text-tertiary">
               {f.taskTitle} · {fileSize(f.size)}
             </span>
           </span>
           <button
             type="button"
-            className={styles.fileDl}
+            className="grid size-9 shrink-0 place-items-center rounded-lg text-tertiary hover:bg-raised hover:text-accent"
             onClick={() => void download(f)}
             aria-label={strings.taskDownload}
           >
