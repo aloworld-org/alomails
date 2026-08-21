@@ -36,7 +36,60 @@ import type {
   SiteCatalogDraft,
   SiteCatalogItem,
 } from "./types";
-import styles from "./SitesModule.module.css";
+
+const styles = {
+  page: "mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8",
+  header: "flex flex-wrap items-start gap-4 border-b border-subtle pb-5",
+  backLink:
+    "inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-secondary no-underline transition hover:bg-muted hover:text-primary",
+  title: "text-2xl font-semibold tracking-tight text-primary",
+  collectionPageHint: "mt-1 max-w-2xl text-sm leading-6 text-secondary",
+  collectionLoading:
+    "flex min-h-64 items-center justify-center gap-3 rounded-2xl border border-subtle bg-surface text-sm text-secondary shadow-sm",
+  catalogWorkspace:
+    "grid min-h-[36rem] gap-5 lg:grid-cols-[18rem_minmax(0,1fr)]",
+  catalogList:
+    "flex min-w-0 flex-col gap-2 rounded-2xl border border-subtle bg-surface p-3 shadow-sm",
+  collectionListEmpty:
+    "flex flex-col items-center gap-2 px-4 py-10 text-center text-sm text-secondary [&_svg]:size-8 [&_svg]:text-tertiary [&_strong]:text-primary",
+  collectionListItem:
+    "flex min-h-16 w-full items-center gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left text-primary transition hover:bg-muted [&>svg]:size-5 [&>svg]:shrink-0 [&>svg]:text-secondary [&_span]:min-w-0 [&_strong]:block [&_strong]:truncate [&_small]:mt-0.5 [&_small]:block [&_small]:truncate [&_small]:text-xs [&_small]:text-secondary",
+  collectionListItemActive:
+    "!border-accent/20 !bg-accent-soft shadow-sm [&>svg]:!text-accent",
+  catalogEditor: "flex min-w-0 flex-col gap-5",
+  catalogPanel:
+    "flex flex-col gap-5 rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6",
+  collectionPanelHead:
+    "flex flex-wrap items-start justify-between gap-4 border-b border-subtle pb-4 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-primary [&_p]:mt-1 [&_p]:text-sm [&_p]:leading-6 [&_p]:text-secondary",
+  collectionSourceFields:
+    "grid gap-4 sm:grid-cols-[minmax(0,1fr)_10rem] [&_label]:flex [&_label]:flex-col [&_label]:gap-2 [&_label>span]:text-xs [&_label>span]:font-semibold [&_label>span]:uppercase [&_label>span]:tracking-wide [&_label>span]:text-secondary",
+  input:
+    "min-h-11 w-full rounded-xl border border-default bg-surface px-3.5 py-2.5 text-primary outline-none transition placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/15 disabled:bg-muted",
+  hint: "text-sm leading-6 text-secondary",
+  catalogOrdersToggle:
+    "flex cursor-pointer items-start gap-3 rounded-xl bg-muted px-4 py-3.5 [&_input]:mt-0.5 [&_input]:size-5 [&_input]:accent-[var(--accent)] [&_span]:min-w-0 [&_strong]:block [&_strong]:text-sm [&_strong]:text-primary [&_small]:mt-1 [&_small]:block [&_small]:text-sm [&_small]:leading-5 [&_small]:text-secondary",
+  collectionActions:
+    "flex flex-wrap items-center justify-between gap-3 border-t border-subtle pt-4",
+  collectionDisconnectGroup:
+    "flex flex-wrap items-center gap-3 text-xs text-danger",
+  catalogItemsPanel:
+    "flex flex-col gap-5 rounded-2xl border border-subtle bg-surface p-5 shadow-sm sm:p-6",
+  catalogGroups:
+    "flex flex-col gap-2 rounded-xl border border-subtle bg-muted/40 p-4 [&_h3]:font-semibold [&_h3]:text-primary [&_p]:text-sm [&_p]:text-secondary",
+  catalogGroupRows: "mt-2 grid gap-2",
+  catalogGroupRow: "grid items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto]",
+  catalogItems:
+    "flex list-none flex-col divide-y divide-subtle overflow-hidden rounded-xl border border-subtle p-0",
+  catalogItem:
+    "grid min-w-0 gap-4 bg-surface p-4 sm:grid-cols-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center",
+  catalogItemText:
+    "min-w-0 [&_strong]:block [&_strong]:truncate [&_strong]:text-primary [&_small]:mt-1 [&_small]:block [&_small]:text-xs [&_small]:text-secondary [&_p]:mt-2 [&_p]:line-clamp-2 [&_p]:text-sm [&_p]:leading-5 [&_p]:text-secondary",
+  catalogItemPrice:
+    "flex flex-wrap items-center gap-2 text-sm font-semibold text-primary",
+  chip: "inline-flex min-h-7 items-center rounded-full bg-muted px-2.5 text-xs font-semibold text-secondary",
+  catalogItemActions:
+    "flex flex-wrap items-center justify-end gap-2 sm:col-span-2 lg:col-span-1",
+};
 
 /** A new catalog starts in euros: the product is sold in the eurozone, and a
  *  blank currency field is a question nobody wants to answer twice. */
@@ -129,7 +182,8 @@ export function CatalogsView() {
     };
   }, [api, selectedId, siteId]);
 
-  const selected = catalogs.find((catalog) => catalog.id === selectedId) ?? null;
+  const selected =
+    catalogs.find((catalog) => catalog.id === selectedId) ?? null;
 
   function select(catalog: SiteCatalog) {
     setSelectedId(catalog.id);
@@ -162,12 +216,15 @@ export function CatalogsView() {
     setBusy(true);
     setError(null);
     try {
-      const stored = creating || selectedId === null
-        ? await api.createCatalog(siteId, draft)
-        : await api.updateCatalog(siteId, selectedId, draft);
+      const stored =
+        creating || selectedId === null
+          ? await api.createCatalog(siteId, draft)
+          : await api.updateCatalog(siteId, selectedId, draft);
       setCatalogs((current) =>
         current.some((catalog) => catalog.id === stored.id)
-          ? current.map((catalog) => (catalog.id === stored.id ? stored : catalog))
+          ? current.map((catalog) =>
+              catalog.id === stored.id ? stored : catalog,
+            )
           : [...current, stored],
       );
       setSelectedId(stored.id);
@@ -220,10 +277,16 @@ export function CatalogsView() {
   }
 
   async function renameGroup(group: SiteCatalogCategory, name: string) {
-    if (selectedId === null || name.trim() === "" || name === group.name) return;
+    if (selectedId === null || name.trim() === "" || name === group.name)
+      return;
     setError(null);
     try {
-      await api.updateCatalogCategory(siteId, selectedId, group.id, name.trim());
+      await api.updateCatalogCategory(
+        siteId,
+        selectedId,
+        group.id,
+        name.trim(),
+      );
       await refreshDetail(selectedId);
     } catch (reason) {
       setError(sitesMessage(reason, strings.sitesCatalogGroupSaveFailed));
@@ -266,13 +329,18 @@ export function CatalogsView() {
   function groupName(item: SiteCatalogItem): string | null {
     if (item.categoryId === null) return null;
     return (
-      detail?.categories.find((group) => group.id === item.categoryId)?.name ?? null
+      detail?.categories.find((group) => group.id === item.categoryId)?.name ??
+      null
     );
   }
 
   function priceOf(item: SiteCatalogItem, catalog: SiteCatalog): string {
     if (item.priceCents === null) return strings.sitesCatalogNoPrice;
-    const price = formatPrice(item.priceCents, catalog.currency, catalog.currencyExponent);
+    const price = formatPrice(
+      item.priceCents,
+      catalog.currency,
+      catalog.currencyExponent,
+    );
     return item.priceNote === null ? price : `${price} ${item.priceNote}`;
   }
 
@@ -283,12 +351,17 @@ export function CatalogsView() {
           <ArrowLeft size="var(--icon-size-inline)" aria-hidden="true" />
           {strings.sitesBack}
         </Link>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className={styles.title}>{strings.sitesCatalogs}</h1>
-          <p className={styles.collectionPageHint}>{strings.sitesCatalogsHint}</p>
+          <p className={styles.collectionPageHint}>
+            {strings.sitesCatalogsHint}
+          </p>
         </div>
         {!loading && catalogs.length > 0 && (
-          <Button icon={<Plus size="var(--icon-size-inline)" />} onClick={startCreate}>
+          <Button
+            icon={<Plus size="var(--icon-size-inline)" />}
+            onClick={startCreate}
+          >
             {strings.sitesNewCatalog}
           </Button>
         )}
@@ -311,7 +384,10 @@ export function CatalogsView() {
         />
       ) : (
         <div className={styles.catalogWorkspace}>
-          <aside className={styles.catalogList} aria-label={strings.sitesCatalogs}>
+          <aside
+            className={styles.catalogList}
+            aria-label={strings.sitesCatalogs}
+          >
             {catalogs.length === 0 && (
               <div className={styles.collectionListEmpty}>
                 <ShoppingBag aria-hidden="true" />
@@ -324,7 +400,9 @@ export function CatalogsView() {
                 key={catalog.id}
                 type="button"
                 className={`${styles.collectionListItem} ${
-                  catalog.id === selectedId ? styles.collectionListItemActive : ""
+                  catalog.id === selectedId
+                    ? styles.collectionListItemActive
+                    : ""
                 }`}
                 aria-pressed={catalog.id === selectedId}
                 onClick={() => select(catalog)}
@@ -344,7 +422,10 @@ export function CatalogsView() {
           </aside>
 
           <div className={styles.catalogEditor}>
-            <section className={styles.catalogPanel} aria-labelledby="catalog-settings-title">
+            <section
+              className={styles.catalogPanel}
+              aria-labelledby="catalog-settings-title"
+            >
               <div className={styles.collectionPanelHead}>
                 <div>
                   <h2 id="catalog-settings-title">
@@ -363,7 +444,10 @@ export function CatalogsView() {
                     className={styles.input}
                     value={draft.name}
                     onChange={(event) =>
-                      setDraft((current) => ({ ...current, name: event.target.value }))
+                      setDraft((current) => ({
+                        ...current,
+                        name: event.target.value,
+                      }))
                     }
                   />
                 </label>
@@ -377,10 +461,15 @@ export function CatalogsView() {
                     autoCorrect="off"
                     spellCheck={false}
                     onChange={(event) =>
-                      setDraft((current) => ({ ...current, currency: event.target.value }))
+                      setDraft((current) => ({
+                        ...current,
+                        currency: event.target.value,
+                      }))
                     }
                   />
-                  <small className={styles.hint}>{strings.sitesCatalogCurrencyHint}</small>
+                  <small className={styles.hint}>
+                    {strings.sitesCatalogCurrencyHint}
+                  </small>
                 </label>
               </div>
 
@@ -414,7 +503,9 @@ export function CatalogsView() {
                         ? strings.sitesCatalogDeleteConfirm
                         : strings.sitesCatalogDelete}
                     </Button>
-                    {deleteArmed && <span>{strings.sitesCatalogDeleteHint}</span>}
+                    {deleteArmed && (
+                      <span>{strings.sitesCatalogDeleteHint}</span>
+                    )}
                   </div>
                 )}
                 <Button
@@ -429,10 +520,15 @@ export function CatalogsView() {
             </section>
 
             {!creating && selected !== null && (
-              <section className={styles.catalogItemsPanel} aria-labelledby="catalog-items-title">
+              <section
+                className={styles.catalogItemsPanel}
+                aria-labelledby="catalog-items-title"
+              >
                 <div className={styles.collectionPanelHead}>
                   <div>
-                    <h2 id="catalog-items-title">{strings.sitesCatalogItems}</h2>
+                    <h2 id="catalog-items-title">
+                      {strings.sitesCatalogItems}
+                    </h2>
                     <p>{strings.sitesCatalogItemsHint}</p>
                   </div>
                   <Button
@@ -453,14 +549,18 @@ export function CatalogsView() {
                           className={styles.input}
                           defaultValue={group.name}
                           aria-label={strings.sitesCatalogGroupName}
-                          onBlur={(event) => void renameGroup(group, event.target.value)}
+                          onBlur={(event) =>
+                            void renameGroup(group, event.target.value)
+                          }
                         />
                         <Button
                           variant="ghost"
                           size="sm"
                           icon={<Trash2 size="var(--icon-size-inline)" />}
                           disabled={busy}
-                          aria-label={strings.sitesCatalogGroupRemove(group.name)}
+                          aria-label={strings.sitesCatalogGroupRemove(
+                            group.name,
+                          )}
                           onClick={() => void removeGroup(group)}
                         >
                           {strings.sitesCatalogGroupRemoveShort}
@@ -518,7 +618,9 @@ export function CatalogsView() {
                               {item.slug}
                               {group !== null && ` · ${group}`}
                             </small>
-                            {item.description !== null && <p>{item.description}</p>}
+                            {item.description !== null && (
+                              <p>{item.description}</p>
+                            )}
                           </div>
                           <div className={styles.catalogItemPrice}>
                             <span>{priceOf(item, selected)}</span>
@@ -533,20 +635,28 @@ export function CatalogsView() {
                               variant="ghost"
                               size="sm"
                               icon={<Pencil size="var(--icon-size-inline)" />}
-                              aria-label={strings.sitesCatalogEditItem(item.name)}
+                              aria-label={strings.sitesCatalogEditItem(
+                                item.name,
+                              )}
                               onClick={() => setItemDialog(item)}
                             >
                               {strings.sitesCatalogEdit}
                             </Button>
                             <Button
-                              variant={armedItemId === item.id ? "danger" : "ghost"}
+                              variant={
+                                armedItemId === item.id ? "danger" : "ghost"
+                              }
                               size="sm"
                               icon={<Trash2 size="var(--icon-size-inline)" />}
                               disabled={busy}
                               aria-label={
                                 armedItemId === item.id
-                                  ? strings.sitesCatalogItemDeleteConfirmLabel(item.name)
-                                  : strings.sitesCatalogItemDeleteLabel(item.name)
+                                  ? strings.sitesCatalogItemDeleteConfirmLabel(
+                                      item.name,
+                                    )
+                                  : strings.sitesCatalogItemDeleteLabel(
+                                      item.name,
+                                    )
                               }
                               onClick={() => void removeItem(item)}
                             >
