@@ -38,7 +38,6 @@ import { NewTaskModal } from "./NewTaskModal";
 import { TaskDetail } from "./TaskDetail";
 import { Avatar, DueChip, PriorityChip } from "./parts";
 import { DEFAULT_CONFIG, filterTasks, type ViewConfig } from "./viewConfig";
-import styles from "./TasksModule.module.css";
 import { projectsMessage, useProjectsApi } from "../projects/api";
 import { EditProjectDialog } from "../projects/EditProjectDialog";
 import type { Project, ProjectDraft, ProjectPlan } from "../projects/types";
@@ -532,26 +531,26 @@ function ProposalsInbox({ proposals, onDone }: { proposals: Task[]; onDone: () =
   const client = useJmapClient();
   if (proposals.length === 0) {
     return (
-      <div className={`${styles.emptyState} ${styles.proposalEmpty}`}>
-        <span className={styles.emptyArt}>
+      <div className="flex min-h-[min(35rem,calc(100vh-11.875rem))] flex-col items-center justify-center gap-3 px-6 py-10 text-center">
+        <span className="mb-2 inline-flex size-[88px] items-center justify-center rounded-full bg-accent-tint text-accent-hover ring-1 ring-inset ring-accent/20">
           <Sparkles size={38} />
         </span>
-        <h2 className={styles.emptyTitle}>{strings.taskNoProposalsTitle}</h2>
-        <p className={styles.emptyBody}>{strings.taskNoProposals}</p>
+        <h2 className="m-0 text-xl font-bold text-primary">{strings.taskNoProposalsTitle}</h2>
+        <p className="m-0 max-w-[360px] text-base leading-relaxed text-secondary">{strings.taskNoProposals}</p>
       </div>
     );
   }
   return (
-    <div style={{ padding: "var(--space-4)", maxWidth: 640 }}>
+    <div className="w-full max-w-2xl p-4">
       {proposals.map((t) => (
-        <div key={t.id} className={styles.proposal}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span className={styles.aiPill}>
+        <div key={t.id} className="mb-3 flex flex-col gap-2 rounded-lg border border-default bg-surface p-3">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent-tint px-2 py-0.5 text-[11px] font-semibold text-accent">
               <Sparkles size={11} /> {strings.taskAiSuggested}
             </span>
-            <strong style={{ fontSize: "var(--text-sm)" }}>{t.title}</strong>
+            <strong className="text-sm text-primary">{t.title}</strong>
           </div>
-          <div className={styles.proposalMeta}>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-secondary">
             {t.assignee && <Avatar email={t.assignee} />}
             {t.assignee && <span>{t.assignee}</span>}
             {t.dueAt && <DueChip iso={t.dueAt} done={false} />}
@@ -560,10 +559,10 @@ function ProposalsInbox({ proposals, onDone }: { proposals: Task[]; onDone: () =
               <span>· {t.sourceKind === "event" ? strings.taskFromEvent : strings.taskFromEmail}</span>
             )}
           </div>
-          <div className={styles.proposalActions}>
+          <div className="flex gap-2">
             <button
               type="button"
-              className={styles.accept}
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
               onClick={async () => {
                 await client.acceptTask(t.id);
                 onDone();
@@ -573,7 +572,7 @@ function ProposalsInbox({ proposals, onDone }: { proposals: Task[]; onDone: () =
             </button>
             <button
               type="button"
-              className={styles.reject}
+              className="inline-flex min-h-10 items-center justify-center rounded-lg bg-raised px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-accent-tint hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
               onClick={async () => {
                 await client.rejectTask(t.id);
                 onDone();

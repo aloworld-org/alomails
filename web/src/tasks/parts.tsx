@@ -5,7 +5,6 @@ import { Calendar, Link2 } from "lucide-react";
 
 import { strings } from "../i18n";
 import type { Task, TaskLabelDto, TaskPriority } from "../jmap";
-import styles from "./TasksModule.module.css";
 
 /** A default palette offered when creating a label without a chosen colour. */
 export const LABEL_PALETTE = ["#e76f51", "#4b83c4", "#2e8b57", "#9b6dd6", "#e0a63b", "#d1568f", "#3aa8a0"];
@@ -14,12 +13,15 @@ export const LABEL_PALETTE = ["#e76f51", "#4b83c4", "#2e8b57", "#9b6dd6", "#e0a6
 export function LabelChips({ labels }: { labels?: TaskLabelDto[] | undefined }) {
   if (labels === undefined || labels.length === 0) return null;
   return (
-    <span className={styles.labelChips}>
+    <span className="inline-flex flex-wrap items-center gap-1">
       {labels.map((l) => (
         <span
           key={l.id}
-          className={styles.labelChip}
-          style={{ ["--lc"]: l.color ?? "var(--accent)" } as React.CSSProperties}
+          className="whitespace-nowrap rounded-full px-2 py-0.5 text-[0.68rem] font-medium"
+          style={{
+            background: `color-mix(in srgb, ${l.color ?? "var(--accent)"} 15%, transparent)`,
+            color: `color-mix(in srgb, ${l.color ?? "var(--accent)"} 72%, var(--text-primary))`,
+          }}
         >
           {l.name}
         </span>
@@ -81,20 +83,23 @@ export function isOverdue(iso: string): boolean {
 
 export function PriorityChip({ priority }: { priority: TaskPriority }) {
   if (priority === "none") return null;
-  const cls =
-    priority === "high" ? styles.prioHigh : priority === "medium" ? styles.prioMedium : styles.prioLow;
+  const cls = priority === "high"
+    ? "bg-[#fbe0d8] text-[#b23c22]"
+    : priority === "medium"
+      ? "bg-[#fdf0d8] text-[#9a6a12]"
+      : "bg-[#eef6f2] text-secondary";
   const label =
     priority === "high"
       ? strings.taskPrioHigh
       : priority === "medium"
         ? strings.taskPrioMedium
         : strings.taskPrioLow;
-  return <span className={`${styles.priority} ${cls}`}>{label}</span>;
+  return <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize ${cls}`}>{label}</span>;
 }
 
 export function DueChip({ iso, done }: { iso: string; done: boolean }) {
   return (
-    <span className={`${styles.due} ${!done && isOverdue(iso) ? styles.dueOverdue : ""}`}>
+    <span className={`inline-flex items-center gap-1 text-xs ${!done && isOverdue(iso) ? "text-danger" : "text-secondary"}`}>
       <Calendar size={12} /> {dueLabel(iso)}
     </span>
   );
@@ -111,7 +116,7 @@ function avatarColor(email: string): string {
 
 export function Avatar({ email }: { email: string }) {
   return (
-    <span className={styles.avatar} style={{ background: avatarColor(email) }} title={email}>
+    <span className="inline-flex size-[22px] shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-white" style={{ background: avatarColor(email) }} title={email}>
       {initials(email)}
     </span>
   );
@@ -122,7 +127,7 @@ export function SourceMark({ task }: { task: Task }) {
   if (!task.sourceKind) return null;
   const label = task.sourceKind === "email" ? strings.taskFromEmail : strings.taskFromEvent;
   return (
-    <span className={`${styles.metaIcon} ${styles.sourceIcon}`} title={label}>
+    <span className="inline-flex items-center gap-1 text-xs text-accent" title={label}>
       <Link2 size={13} />
     </span>
   );

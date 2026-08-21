@@ -30,5 +30,4 @@ export const REDEFINES_PRIMITIVES: readonly string[] = [
   "inventory/InventoryModule.module.css",
   "platform/StackBadge.module.css",
   "sites/SitesModule.module.css",
-  "tasks/TasksModule.module.css",
 ] as const;
