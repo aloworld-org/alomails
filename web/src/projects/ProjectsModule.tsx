@@ -250,8 +250,7 @@ export function ProjectsModule() {
   }
 
   async function createProject(draft: NewProjectDraft) {
-    const project = await client.createTaskProject(draft.name);
-    if (draft.customerId !== null) await api.setClient(project.id, { customerId: draft.customerId });
+    const project = await api.createProject(draft.name, draft.customerId);
     setCreating(false);
     setError(null);
     navigate(`/projects/${encodeURIComponent(project.id)}/overview`);

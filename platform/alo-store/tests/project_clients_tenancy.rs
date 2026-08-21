@@ -198,6 +198,45 @@ async fn a_project_becomes_client_work_and_back_again() {
 }
 
 #[tokio::test]
+async fn project_creation_and_customer_link_are_atomic() {
+    let store = common::test_store().await;
+    let (a, tenant) = tenant_with_user(&store, "atomic-create").await;
+    let acme = a
+        .create_billing_customer(&customer("Acme GmbH", "eur"))
+        .await
+        .unwrap();
+
+    let project = a
+        .create_project(
+            "Portal rebuild",
+            None,
+            Some(&NewProjectClient::for_customer(acme.clone())),
+        )
+        .await
+        .unwrap();
+    let linked = a.project_client(&project).await.unwrap().unwrap();
+    assert_eq!(linked.customer_id, acme);
+    assert_eq!(linked.currency, "EUR");
+
+    let before = a.task_projects().await.unwrap().len();
+    assert_not_found(
+        a.create_project(
+            "Must not survive",
+            None,
+            Some(&NewProjectClient::for_customer(BillingCustomerId::new(
+                "missing-customer",
+            ))),
+        )
+        .await,
+    );
+    let projects = a.task_projects().await.unwrap();
+    assert_eq!(projects.len(), before);
+    assert!(projects.iter().all(|item| item.name != "Must not survive"));
+
+    store.delete_tenant(&tenant).await.unwrap();
+}
+
+#[tokio::test]
 async fn another_tenant_can_never_read_or_write_our_engagement() {
     let store = common::test_store().await;
     let (a, t1) = tenant_with_user(&store, "iso-a").await;

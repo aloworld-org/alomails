@@ -105,6 +105,12 @@ export class ProjectsApi {
     return this.#read<{ projects?: Project[] }>("/projects").then((r) => r.projects ?? []);
   }
 
+  /** Creates the board and optional customer relationship as one server-side
+   * transaction, so a failed client link cannot leave an orphan project. */
+  createProject(name: string, customerId: string | null): Promise<{ id: string }> {
+    return this.#write<{ id: string }>("POST", "/projects", { name, customerId });
+  }
+
   /** One engagement. Another tenant's project, a colleague's private board and
    *  an id that never existed are all the same `404`. */
   project(id: string): Promise<Project> {

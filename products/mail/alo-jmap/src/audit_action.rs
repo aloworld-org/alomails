@@ -66,6 +66,11 @@ pub struct AuditEvent {
 /// route from the moment one is registered.
 const AUDITED_MODULES: [&str; 6] = ["billing", "crm", "projects", "finance", "inventory", "hr"];
 
+/// Audited resources whose collection lives at the module root rather than at
+/// `/module/collection`. A bare module route is not a resource unless it is
+/// deliberately named here.
+const ROOT_COLLECTIONS: [(&str, &str); 1] = [("projects", "project")];
+
 /// `POST` routes that mutate nothing — a dry run whose whole point is to answer
 /// "what *would* this do". Auditing them would file a paper trail for looking.
 /// Kept as an explicit, short list: the default is that a `POST` writes.
@@ -117,7 +122,19 @@ pub fn event_for(method: &str, template: &str, path: &str) -> Option<AuditEvent>
     if !AUDITED_MODULES.contains(&module) {
         return None;
     }
-    let collection = *template_segments.get(1)?;
+    let collection = template_segments.get(1).copied();
+    if collection.is_none() {
+        let root_entity = ROOT_COLLECTIONS
+            .iter()
+            .find_map(|(root, entity)| (*root == module).then_some(*entity))?;
+        let entity_type = format!("{module}.{root_entity}");
+        return Some(AuditEvent {
+            action: format!("{entity_type}.{}", verb(method, &[])),
+            entity_type,
+            entity_id: None,
+        });
+    }
+    let collection = collection.expect("checked above");
 
     // Which segment names the collection, and which would name the record.
     //
@@ -378,6 +395,14 @@ mod tests {
         assert!(event_for("POST", "/tasks", "/tasks").is_none());
         assert!(event_for("POST", "/calendar/events", "/calendar/events").is_none());
         assert!(event_for("POST", "/billing", "/billing").is_none());
+    }
+
+    #[test]
+    fn audits_the_projects_collection_at_its_module_root() {
+        let created = event_for("POST", "/projects", "/projects").expect("projects create");
+        assert_eq!(created.entity_type, "projects.project");
+        assert_eq!(created.entity_id, None);
+        assert_eq!(created.action, "projects.project.create");
     }
 
     #[test]

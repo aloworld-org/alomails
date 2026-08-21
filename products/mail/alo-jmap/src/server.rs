@@ -1700,7 +1700,10 @@ pub fn app_with_site_boundaries(
         // reads the matched template mechanically and needs the collection in
         // the second segment — the record it files against is still the
         // project (`projects_clients`'s module note has the trade in full).
-        .route("/projects", get(projects_clients::list_projects))
+        .route(
+            "/projects",
+            get(projects_clients::list_projects).post(projects_clients::create_project),
+        )
         .route(
             "/projects/clients/{id}",
             put(projects_clients::set_project_client)

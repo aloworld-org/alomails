@@ -141,6 +141,57 @@ struct ProjectBody {
     target_on: Option<String>,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CreateProjectBody {
+    name: String,
+    #[serde(default)]
+    color: Option<String>,
+    #[serde(default)]
+    customer_id: Option<String>,
+}
+
+/// `POST /projects` creates an internal project or a client engagement as one
+/// atomic operation. The latter must not become a stray internal project when
+/// its customer is unavailable or invalid.
+pub async fn create_project(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: axum::body::Bytes,
+) -> Result<Json<Value>, Problem> {
+    let account = authenticate(&state, &headers).await?;
+    let req: CreateProjectBody = parse_body(&body)?;
+    let name = req.name.trim();
+    if name.is_empty() {
+        return Err(Problem::with(
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "name is required",
+        ));
+    }
+    let color = req
+        .color
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty());
+    let client = req
+        .customer_id
+        .as_deref()
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+        .map(|id| NewProjectClient::for_customer(BillingCustomerId::new(id)));
+    let id = account
+        .acc
+        .create_project(name, color, client.as_ref())
+        .await
+        .map_err(map_store_err)?;
+    Ok(Json(json!({
+        "id": id.as_str(),
+        "name": name,
+        "kind": "team",
+        "color": color,
+    })))
+}
+
 /// `PATCH /projects/{id}` replaces the editable lifecycle facts of a team
 /// project. Client pricing remains a separate whole-record write.
 pub async fn update_project(

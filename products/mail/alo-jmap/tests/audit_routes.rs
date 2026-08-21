@@ -119,9 +119,9 @@ fn business_routes() -> Vec<(String, String)> {
         .into_iter()
         .filter_map(|call| template_of(call).map(|template| (template, call)))
         .filter(|(template, _)| {
-            AUDITED_PREFIXES
-                .iter()
-                .any(|prefix| template.starts_with(prefix))
+            AUDITED_PREFIXES.iter().any(|prefix| {
+                template.starts_with(prefix) || *template == prefix.trim_end_matches('/')
+            })
         })
         .flat_map(|(template, call)| {
             methods_of(call)
@@ -369,6 +369,7 @@ POST /inventory/sales-orders/{id}/deliveries -> inventory.sales_order.delivery.c
 POST /inventory/sales-orders/{id}/invoice -> inventory.sales_order.invoice
 POST /inventory/suppliers -> inventory.supplier.create
 POST /inventory/suppliers/{id}/archive -> inventory.supplier.archive
+POST /projects -> projects.project.create
 POST /projects/approvals/{id}/approve -> projects.approval.approve
 POST /projects/approvals/{id}/reject -> projects.approval.reject
 POST /projects/approvals/{id}/reopen -> projects.approval.reopen

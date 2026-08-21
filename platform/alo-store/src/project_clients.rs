@@ -197,6 +197,75 @@ pub(crate) fn normalize(input: &NewProjectClient, customer_currency: &str) -> Re
 }
 
 impl AccountStore {
+    /// Creates a team project and, when supplied, its client facts in one
+    /// transaction. A client engagement is one user intent: a failed customer
+    /// lookup or facts write must never leave an unrelated internal board
+    /// behind.
+    pub async fn create_project(
+        &self,
+        name: &str,
+        color: Option<&str>,
+        input: Option<&NewProjectClient>,
+    ) -> Result<ProjectId> {
+        let mut tx = self.pool.begin().await.map_err(StoreError::Db)?;
+        let prepared = if let Some(input) = input {
+            let customer = sqlx::query_as::<_, (String, Option<OffsetDateTime>)>(
+                "SELECT currency, archived_at FROM billing_customers \
+                 WHERE tenant_id = $1 AND id = $2",
+            )
+            .bind(self.tenant.as_str())
+            .bind(input.customer_id.as_str())
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?
+            .ok_or(StoreError::NotFound)?;
+            if customer.1.is_some() {
+                return Err(StoreError::Validation(
+                    "the customer is archived; restore it before billing work to it".to_owned(),
+                ));
+            }
+            Some(normalize(input, &customer.0)?)
+        } else {
+            None
+        };
+
+        let id = ProjectId::generate();
+        sqlx::query(
+            "INSERT INTO task_projects (tenant_id, id, name, kind, owner_user_id, color) \
+             VALUES ($1, $2, $3, 'team', $4, $5)",
+        )
+        .bind(self.tenant.as_str())
+        .bind(id.as_str())
+        .bind(name)
+        .bind(self.user.as_str())
+        .bind(color)
+        .execute(&mut *tx)
+        .await
+        .map_err(StoreError::Db)?;
+
+        if let (Some(input), Some(facts)) = (input, prepared) {
+            sqlx::query(
+                "INSERT INTO project_clients (tenant_id, project_id, customer_id, currency, \
+                     rate_cents, budget_minutes, budget_cents, starts_on) \
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+            )
+            .bind(self.tenant.as_str())
+            .bind(id.as_str())
+            .bind(input.customer_id.as_str())
+            .bind(facts.currency)
+            .bind(facts.rate_cents)
+            .bind(facts.budget_minutes)
+            .bind(facts.budget_cents)
+            .bind(facts.starts_on)
+            .execute(&mut *tx)
+            .await
+            .map_err(StoreError::Db)?;
+        }
+
+        tx.commit().await.map_err(StoreError::Db)?;
+        Ok(id)
+    }
+
     /// Sets — or wholly replaces — a project's client facts, making it client
     /// work.
     ///
