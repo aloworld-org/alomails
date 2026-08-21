@@ -21,6 +21,7 @@ pub mod connect;
 pub mod direct2;
 pub mod execute;
 pub mod logon;
+pub mod logon_response;
 pub mod response;
 pub mod rop;
 pub mod router;
