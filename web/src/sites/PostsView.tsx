@@ -21,7 +21,30 @@ import { sitesMessage, useSitesApi } from "./api";
 import { EmptyState, ErrorBanner } from "./parts";
 import { PostPublishDialog } from "./PostPublishDialog";
 import type { SiteDetail, SitePost } from "./types";
-import styles from "./SitesModule.module.css";
+
+const styles = {
+  page: "mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8",
+  header: "flex flex-wrap items-start gap-4 border-b border-subtle pb-5",
+  backLink:
+    "inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-secondary no-underline transition hover:bg-muted hover:text-primary",
+  siteHead: "min-w-0 flex-1",
+  title: "text-2xl font-semibold tracking-tight text-primary",
+  postSiteName: "mt-1 block truncate text-sm text-secondary",
+  headerActions: "flex flex-wrap items-center gap-2 sm:ml-auto",
+  postSkeletons:
+    "grid gap-3 rounded-2xl border border-subtle bg-surface p-5 shadow-sm [&_span]:h-20 [&_span]:animate-pulse [&_span]:rounded-xl [&_span]:bg-muted",
+  tableWrap:
+    "overflow-x-auto rounded-2xl border border-subtle bg-surface shadow-sm",
+  table:
+    "w-full min-w-[52rem] border-collapse text-sm [&_th]:border-b [&_th]:border-subtle [&_th]:bg-muted/60 [&_th]:px-5 [&_th]:py-3 [&_th]:text-left [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-secondary [&_td]:border-b [&_td]:border-subtle [&_td]:px-5 [&_td]:py-4 [&_td]:align-middle [&_tbody_tr:last-child_td]:border-b-0 [&_tbody_tr]:transition [&_tbody_tr:hover]:bg-muted/35",
+  postTitle: "block max-w-xl truncate font-semibold text-primary",
+  postExcerpt: "mt-1 block max-w-xl truncate text-sm leading-5 text-secondary",
+  chip: "inline-flex min-h-7 items-center rounded-full bg-muted px-2.5 text-xs font-semibold text-secondary",
+  chipLive: "bg-success/10 text-success ring-1 ring-inset ring-success/20",
+  postDate: "whitespace-nowrap text-secondary",
+  postActionCell: "min-w-[22rem]",
+  postActions: "flex flex-wrap items-center justify-end gap-2",
+};
 
 const updated = new Intl.DateTimeFormat(undefined, {
   dateStyle: "medium",
@@ -57,7 +80,10 @@ export function PostsView() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [detail, rows] = await Promise.all([api.site(siteId), api.posts(siteId)]);
+      const [detail, rows] = await Promise.all([
+        api.site(siteId),
+        api.posts(siteId),
+      ]);
       setSite(detail);
       setPosts(rows);
       setError(null);
@@ -82,7 +108,11 @@ export function PostsView() {
     setError(null);
     let documentId: string | null = null;
     try {
-      documentId = await jmap.driveCreateDoc(null, null, strings.sitesUntitledArticle);
+      documentId = await jmap.driveCreateDoc(
+        null,
+        null,
+        strings.sitesUntitledArticle,
+      );
       await api.createPost(siteId, {
         docNodeId: documentId,
         slug: draftSlug(documentId),
@@ -127,11 +157,15 @@ export function PostsView() {
         </Link>
         <div className={styles.siteHead}>
           <h1 className={styles.title}>{strings.sitesPosts}</h1>
-          {site !== null && <span className={styles.postSiteName}>{site.name}</span>}
+          {site !== null && (
+            <span className={styles.postSiteName}>{site.name}</span>
+          )}
         </div>
         <div className={styles.headerActions}>
           <Button
-            icon={<FilePenLine size="var(--icon-size-inline)" aria-hidden="true" />}
+            icon={
+              <FilePenLine size="var(--icon-size-inline)" aria-hidden="true" />
+            }
             disabled={creating}
             onClick={() => void writeInDocs()}
           >
@@ -193,12 +227,19 @@ export function PostsView() {
                         : strings.sitesPostStatusDraft}
                     </span>
                   </td>
-                  <td className={styles.postDate}>{updated.format(new Date(post.updatedAt))}</td>
+                  <td className={styles.postDate}>
+                    {updated.format(new Date(post.updatedAt))}
+                  </td>
                   <td className={styles.postActionCell}>
                     <div className={styles.postActions}>
                       <Button
                         variant="ghost"
-                        icon={<ExternalLink size="var(--icon-size-inline)" aria-hidden="true" />}
+                        icon={
+                          <ExternalLink
+                            size="var(--icon-size-inline)"
+                            aria-hidden="true"
+                          />
+                        }
                         onClick={() => edit(post)}
                       >
                         {strings.sitesEditInDocs}
@@ -207,9 +248,15 @@ export function PostsView() {
                         variant={post.status === "draft" ? "primary" : "ghost"}
                         icon={
                           post.status === "draft" ? (
-                            <Send size="var(--icon-size-inline)" aria-hidden="true" />
+                            <Send
+                              size="var(--icon-size-inline)"
+                              aria-hidden="true"
+                            />
                           ) : (
-                            <PencilLine size="var(--icon-size-inline)" aria-hidden="true" />
+                            <PencilLine
+                              size="var(--icon-size-inline)"
+                              aria-hidden="true"
+                            />
                           )
                         }
                         onClick={() => setEditingPost(post)}
@@ -221,7 +268,12 @@ export function PostsView() {
                       {post.status === "published" && (
                         <Button
                           variant="ghost"
-                          icon={<Undo2 size="var(--icon-size-inline)" aria-hidden="true" />}
+                          icon={
+                            <Undo2
+                              size="var(--icon-size-inline)"
+                              aria-hidden="true"
+                            />
+                          }
                           disabled={unpublishingId === post.id}
                           onClick={() => void unpublish(post)}
                         >
