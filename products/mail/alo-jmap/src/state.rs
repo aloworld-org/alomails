@@ -49,6 +49,14 @@ pub struct AppState {
     /// From `ALO_JMAP_SESSION_ORIGINS`, comma-separated hosts (no scheme).
     pub session_origins: Vec<String>,
 
+    /// Whether the MAPI-over-HTTP adapter is served here (ADR 0051), from
+    /// `ALO_MAPI_HTTP_ENABLED`. **Off by default, deliberately:** while it is
+    /// off Autodiscover stays silent about `mapiHttp`, because an Outlook told
+    /// to speak a protocol we do not answer does not fall back to the IMAP
+    /// settings sitting in the same document — it fails to configure at all.
+    /// Turning this on is the rollout; turning it off is the rollback.
+    pub mapi_http: bool,
+
     /// Junk training: Rspamd learn calls on moves into/out of Junk.
     /// `None` disables training (mail management is unaffected).
     pub junk_learner: Option<std::sync::Arc<crate::junk_learn::JunkLearner>>,

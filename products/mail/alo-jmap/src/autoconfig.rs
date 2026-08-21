@@ -143,14 +143,81 @@ pub async fn mozilla(State(state): State<AppState>, Query(q): Query<MozillaQuery
     xml_response(body)
 }
 
+/// The highest MAPI-over-HTTP version this server speaks (ADR 0051).
+const MAPI_HTTP_VERSION: u32 = 1;
+
+/// The `mapiHttp` protocol block for the Autodiscover response — or nothing.
+///
+/// Two gates, and **both** must open:
+///
+/// * **The deployment must have the adapter switched on**
+///   (`ALO_MAPI_HTTP_ENABLED`, off by default). Advertising an endpoint we do
+///   not serve is worse than staying quiet: an Outlook told to speak MAPI/HTTP
+///   does not quietly fall back to the IMAP block below it, so advertising
+///   before the endpoint exists breaks the mail that works today.
+/// * **The client must have asked**, by sending `X-MapiHttpCapability` with a
+///   version above zero ([MS-OXDSCLI] §3.1.5.1.1). The `Version` we answer must
+///   be at least one and no greater than what the client offered, so we answer
+///   the lower of theirs and ours — never assume a client understands the
+///   version we happen to implement.
+///
+/// Note the shape: `Type` is an **attribute** here, where the IMAP and SMTP
+/// blocks spell it as a child element. The asymmetry is the specification's,
+/// not ours, and getting it wrong yields a document Outlook ignores in silence.
+///
+/// `host` arrives already XML-escaped; nothing else here is caller-influenced.
+fn mapi_http_protocol(enabled: bool, capability: Option<&str>, host: &str) -> String {
+    if !enabled {
+        return String::new();
+    }
+    let Some(offered) = capability
+        .map(str::trim)
+        .and_then(|value| value.parse::<u32>().ok())
+    else {
+        return String::new();
+    };
+    let version = offered.min(MAPI_HTTP_VERSION);
+    if version == 0 {
+        return String::new();
+    }
+    format!(
+        r#"
+      <Protocol Type="mapiHttp" Version="{version}">
+        <MailStore>
+          <InternalUrl>https://{host}/mapi/emsmdb/</InternalUrl>
+          <ExternalUrl>https://{host}/mapi/emsmdb/</ExternalUrl>
+        </MailStore>
+        <AddressBook>
+          <InternalUrl>https://{host}/mapi/nspi/</InternalUrl>
+          <ExternalUrl>https://{host}/mapi/nspi/</ExternalUrl>
+        </AddressBook>
+      </Protocol>"#
+    )
+}
+
 /// The Microsoft POX Autodiscover document (Outlook).
 ///
 /// Accepts both `GET` and `POST`; Outlook POSTs an XML request whose
 /// `<EMailAddress>` we echo (escaped) as the login name, and falls back to
 /// the address the user typed when we omit it. We only ever emit public
 /// connection settings.
-pub async fn outlook(State(state): State<AppState>, body: axum::body::Bytes) -> Response {
+///
+/// When the MAPI-over-HTTP adapter is switched on and the client declares the
+/// capability, a `mapiHttp` block is added *alongside* IMAP and SMTP rather
+/// than replacing them, so a client that cannot use it still configures.
+pub async fn outlook(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    body: axum::body::Bytes,
+) -> Response {
     let host = xml_escape(&server_host(&state.base_url));
+    let mapi = mapi_http_protocol(
+        state.mapi_http,
+        headers
+            .get("x-mapihttpcapability")
+            .and_then(|value| value.to_str().ok()),
+        &host,
+    );
     let login = extract_email(&body)
         .filter(|e| is_email(e))
         .map(|e| format!("<LoginName>{}</LoginName>", xml_escape(&e)))
@@ -178,7 +245,7 @@ pub async fn outlook(State(state): State<AppState>, body: axum::body::Bytes) -> 
         <SSL>on</SSL>
         <SPA>off</SPA>
         <AuthRequired>on</AuthRequired>
-      </Protocol>
+      </Protocol>{mapi}
     </Account>
   </Response>
 </Autodiscover>
@@ -215,6 +282,79 @@ fn is_email(s: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Silence is the default, and it is the safe one: an Outlook told to speak
+    /// MAPI/HTTP does not fall back to the IMAP block in the same document, so
+    /// advertising before the endpoint answers breaks working mail.
+    #[test]
+    fn mapi_http_is_not_advertised_until_the_deployment_serves_it() {
+        // Off: not even a client that asks is told about it.
+        assert_eq!(mapi_http_protocol(false, Some("1"), "mail.test"), "");
+        assert_eq!(mapi_http_protocol(false, Some("99"), "mail.test"), "");
+        // On, but nobody asked — the header is how a client says it can.
+        assert_eq!(mapi_http_protocol(true, None, "mail.test"), "");
+    }
+
+    /// [MS-OXDSCLI] §3.1.5.1.1: the `Version` answered is at least one and no
+    /// greater than the client offered — so we answer the lower of theirs and
+    /// ours, and never assume they understand the version we implement.
+    #[test]
+    fn mapi_http_answers_the_lower_of_the_two_versions() {
+        let ours = MAPI_HTTP_VERSION;
+
+        // A client offering exactly what we speak.
+        let block = mapi_http_protocol(true, Some("1"), "mail.test");
+        assert!(block.contains(r#"Version="1""#), "{block}");
+
+        // A future client offering more than we implement is answered with
+        // ours, never with its own number echoed back.
+        let block = mapi_http_protocol(true, Some("99"), "mail.test");
+        assert!(
+            block.contains(&format!(r#"Version="{ours}""#)),
+            "echoed the client's version instead of our own: {block}"
+        );
+        assert!(!block.contains(r#"Version="99""#), "{block}");
+
+        // Zero and nonsense are not versions. `-1` and `1.0` fail to parse as
+        // the unsigned integer the spec calls for, which is the intent.
+        for junk in ["0", "", "  ", "one", "-1", "1.0"] {
+            assert_eq!(
+                mapi_http_protocol(true, Some(junk), "mail.test"),
+                "",
+                "advertised on a capability of {junk:?}"
+            );
+        }
+    }
+
+    /// The `Type` is an **attribute** here while IMAP and SMTP spell it as a
+    /// child element. Getting that wrong yields a document Outlook ignores
+    /// without complaining, so it is pinned rather than left to review.
+    #[test]
+    fn mapi_http_block_has_the_shape_the_spec_asks_for() {
+        let block = mapi_http_protocol(true, Some("1"), "mail.test");
+        assert!(block.contains(r#"<Protocol Type="mapiHttp""#), "{block}");
+        assert!(
+            !block.contains("<Type>mapiHttp</Type>"),
+            "spelled Type as an element: {block}"
+        );
+        // Both stores, both URLs each, on the host we were given.
+        assert!(block.contains("<MailStore>"), "{block}");
+        assert!(block.contains("<AddressBook>"), "{block}");
+        assert!(
+            block.contains("<InternalUrl>https://mail.test/mapi/emsmdb/</InternalUrl>"),
+            "{block}"
+        );
+        assert!(
+            block.contains("<ExternalUrl>https://mail.test/mapi/emsmdb/</ExternalUrl>"),
+            "{block}"
+        );
+        assert!(
+            block.contains("<InternalUrl>https://mail.test/mapi/nspi/</InternalUrl>"),
+            "{block}"
+        );
+        // Always TLS: this is a credentialed mailbox protocol.
+        assert!(!block.contains("http://"), "advertised cleartext: {block}");
+    }
 
     #[test]
     fn server_host_strips_scheme_port_path() {

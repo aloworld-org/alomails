@@ -2394,6 +2394,8 @@ pub fn app_state(store: Arc<Store>, identity: Identity, base_url: impl Into<Stri
                     .collect()
             })
             .unwrap_or_default(),
+        mapi_http: std::env::var("ALO_MAPI_HTTP_ENABLED")
+            .is_ok_and(|v| matches!(v.trim(), "1" | "true" | "yes" | "on")),
         junk_learner: crate::junk_learn::JunkLearner::from_env(),
         personal_domains: std::env::var("ALO_PERSONAL_DOMAINS")
             .ok()

@@ -105,6 +105,40 @@ async fn outlook_autodiscover_echoes_escaped_login() {
     );
 }
 
+/// Through the real router, with the deployment default: Autodiscover says
+/// nothing about MAPI/HTTP even to an Outlook that announces it can speak it.
+///
+/// This is the safety property of stage 1 (ADR 0051), and it is worth a wire
+/// test rather than only a unit one. Outlook that is handed a `mapiHttp` block
+/// does **not** fall back to the IMAP settings sitting beside it in the same
+/// document — so if this ever advertises by default before the endpoint
+/// answers, every Outlook that autodiscovers stops being able to set itself up,
+/// and the mail that works today breaks.
+#[tokio::test]
+async fn outlook_autodiscover_is_silent_about_mapi_http_by_default() {
+    let h = harness("autoconf-mapi-off").await;
+    let req = Request::builder()
+        .method("POST")
+        .uri("/autodiscover/autodiscover.xml")
+        // Exactly what a MAPI-capable Outlook sends.
+        .header("X-MapiHttpCapability", "1")
+        .body(Body::from(
+            "<Request><EMailAddress>someone@acme.eu</EMailAddress></Request>",
+        ))
+        .unwrap();
+    let (status, _ctype, body) = text(&h, req).await;
+
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        !body.contains("mapiHttp"),
+        "advertised MAPI/HTTP with the adapter off: {body}"
+    );
+    assert!(!body.contains("/mapi/"), "leaked a MAPI endpoint: {body}");
+    // ...and the settings that do work are still there, unharmed.
+    assert!(body.contains("<Type>IMAP</Type>"), "{body}");
+    assert!(body.contains("<Type>SMTP</Type>"), "{body}");
+}
+
 #[tokio::test]
 async fn outlook_autodiscover_omits_login_for_junk_body() {
     let h = harness("autoconf-out2").await;
