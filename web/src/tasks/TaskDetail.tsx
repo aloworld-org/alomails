@@ -40,7 +40,6 @@ import { Avatar, COLUMNS, LABEL_PALETTE, statusColor } from "./parts";
 import { projectsMessage, useProjectsApi } from "../projects/api";
 import { announceTimerChanged, onTimerChanged } from "../projects/timerBus";
 import type { RunningTimer } from "../projects/types";
-import styles from "./TasksModule.module.css";
 
 /** Human file size (kB/MB) for the attachment rows. */
 function fileSize(bytes: number): string {
@@ -503,17 +502,21 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
               <span className="inline-flex items-center gap-2 pt-1.5 text-sm text-secondary [&>svg]:text-tertiary">
                 <Tag size={15} /> {strings.taskLabelsTitle}
               </span>
-              <div className={styles.tdLabels} ref={labelWrapRef}>
+              <div className="relative flex min-w-0 flex-wrap items-center gap-2" ref={labelWrapRef}>
                 {data.labels.map((l) => (
                   <span
                     key={l.id}
-                    className={styles.tdLabelChip}
-                    style={{ ["--lc"]: l.color ?? "var(--accent)" } as React.CSSProperties}
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-raised px-2.5 py-1 text-sm font-medium text-primary"
                   >
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ backgroundColor: l.color ?? "var(--accent)" }}
+                      aria-hidden
+                    />
                     {l.name}
                     <button
                       type="button"
-                      className={styles.tdLabelDel}
+                      className="-mr-1 inline-flex rounded-full p-1 text-tertiary hover:bg-surface hover:text-danger"
                       onClick={() => void toggleLabel(l.id, true)}
                       aria-label={strings.taskDelete}
                     >
@@ -521,41 +524,42 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                     </button>
                   </span>
                 ))}
-                <span className={styles.tdLabelAddWrap}>
+                <span className="relative inline-flex">
                   <button
                     type="button"
-                    className={styles.tdLabelAdd}
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-medium text-secondary hover:bg-accent-tint hover:text-accent"
                     onClick={() => setLabelMenu((v) => !v)}
                   >
                     <Plus size={12} /> {strings.taskAddLabel}
                   </button>
                   {labelMenu && (
-                    <div className={styles.tdLabelMenu}>
+                    <div className="absolute right-0 top-[calc(100%+0.375rem)] z-dropdown flex max-h-72 min-w-64 flex-col gap-1 overflow-y-auto rounded-xl border border-default bg-surface p-2 shadow-lg">
                       {allLabels.map((l) => {
                         const on = labelIds.has(l.id);
                         return (
                           <button
                             key={l.id}
                             type="button"
-                            className={styles.tdLabelOption}
+                            className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-primary hover:bg-accent-tint hover:text-accent"
                             onClick={() => void toggleLabel(l.id, on)}
                           >
                             <span
-                              className={styles.tdLabelDot}
+                              className="size-2.5 shrink-0 rounded-full"
                               style={{ background: l.color ?? "var(--accent)" }}
                               aria-hidden
                             />
                             {l.name}
                             {on && (
-                              <span className={styles.tdLabelCheck}>
+                              <span className="ml-auto inline-flex text-accent">
                                 <Check size={14} />
                               </span>
                             )}
                           </button>
                         );
                       })}
-                      <div className={styles.tdLabelNew}>
+                      <div className="mt-1 flex gap-2 border-t border-subtle pt-2">
                         <input
+                          className="min-w-0 flex-1 rounded-lg border border-default bg-surface px-3 py-2 text-sm text-primary outline-none placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/15"
                           value={newLabel}
                           onChange={(e) => setNewLabel(e.target.value)}
                           placeholder={strings.taskNewLabelPlaceholder}
@@ -565,8 +569,9 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                         />
                         <button
                           type="button"
-                          className={styles.tdLabelNewBtn}
+                          className="shrink-0 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-on-accent hover:bg-accent-hover disabled:opacity-50"
                           onClick={() => void createAndAddLabel()}
+                          disabled={!newLabel.trim()}
                         >
                           {strings.taskCreateLabel}
                         </button>
@@ -578,22 +583,25 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
             </div>
           </div>
 
-          <div className={styles.tdSection}>
-            <span className={styles.tdSectionLabel}>
+          <section className="flex flex-col gap-2 border-t border-subtle pt-4">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary [&>svg]:text-tertiary">
               <Ban size={15} /> {strings.taskBlockedBy}
             </span>
-            <div className={styles.tdBlockers} ref={blockWrapRef}>
+            <div className="relative flex flex-wrap items-center gap-2" ref={blockWrapRef}>
               {data.blockedBy.map((b) => (
                 <span
                   key={b.id}
-                  className={styles.tdBlockerChip}
-                  style={{ ["--bc"]: statusColor(b.status) } as React.CSSProperties}
+                  className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-raised px-2.5 py-1 text-sm font-medium text-primary"
                 >
-                  <span className={styles.tdBlockerDot} aria-hidden />
+                  <span
+                    className="size-2 shrink-0 rounded-full"
+                    style={{ backgroundColor: statusColor(b.status) }}
+                    aria-hidden
+                  />
                   {b.title}
                   <button
                     type="button"
-                    className={styles.tdLabelDel}
+                    className="-mr-1 inline-flex rounded-full p-1 text-tertiary hover:bg-surface hover:text-danger"
                     onClick={() => void removeBlocker(b.id)}
                     aria-label={strings.taskDelete}
                   >
@@ -601,28 +609,30 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                   </button>
                 </span>
               ))}
-              <span className={styles.tdLabelAddWrap}>
+              <span className="relative inline-flex">
                 <button
                   type="button"
-                  className={styles.tdLabelAdd}
+                  className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-medium text-secondary hover:bg-accent-tint hover:text-accent"
                   onClick={() => setBlockMenu((v) => !v)}
                 >
                   <Plus size={12} /> {strings.taskAddBlocker}
                 </button>
                 {blockMenu && (
-                  <div className={styles.tdLabelMenu}>
+                  <div className="absolute left-0 top-[calc(100%+0.375rem)] z-dropdown flex max-h-72 min-w-64 flex-col gap-1 overflow-y-auto rounded-xl border border-default bg-surface p-2 shadow-lg">
                     {blockerCandidates.length === 0 ? (
-                      <div className={styles.tdBlockerEmpty}>{strings.taskNoBlockerCandidates}</div>
+                      <div className="px-3 py-4 text-center text-sm text-tertiary">
+                        {strings.taskNoBlockerCandidates}
+                      </div>
                     ) : (
                       blockerCandidates.map((s) => (
                         <button
                           key={s.id}
                           type="button"
-                          className={styles.tdLabelOption}
+                          className="flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-primary hover:bg-accent-tint hover:text-accent"
                           onClick={() => void addBlocker(s.id)}
                         >
                           <span
-                            className={styles.tdLabelDot}
+                            className="size-2.5 shrink-0 rounded-full"
                             style={{ background: statusColor(s.status) }}
                             aria-hidden
                           />
@@ -634,14 +644,14 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 )}
               </span>
             </div>
-          </div>
+          </section>
 
-          <div className={styles.tdSection}>
-            <span className={styles.tdSectionLabel}>
+          <section className="flex flex-col gap-2 border-t border-subtle pt-4">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary [&>svg]:text-tertiary">
               <AlignLeft size={15} /> {strings.taskDescription}
             </span>
             <textarea
-              className={styles.tdDescription}
+              className="min-h-24 w-full resize-y rounded-xl border border-default bg-surface px-3 py-2.5 text-sm text-primary outline-none placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/15"
               rows={3}
               defaultValue={t.description ?? ""}
               placeholder={strings.taskDescriptionPlaceholder}
@@ -649,40 +659,43 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 if ((e.target.value || "") !== (t.description ?? "")) void save({ description: e.target.value || null });
               }}
             />
-          </div>
+          </section>
 
-          <div className={styles.tdSection}>
-            <div className={styles.tdSubHead}>
-              <span className={styles.tdSectionLabel}>{strings.taskSubtasks}</span>
+          <section className="flex flex-col gap-2 border-t border-subtle pt-4">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-sm font-semibold text-primary">{strings.taskSubtasks}</span>
               {subTotal > 0 && (
-                <span className={styles.tdProgressWrap}>
-                  <span className={styles.tdProgressText}>
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-xs tabular-nums text-tertiary">
                     {subDone}/{subTotal}
                   </span>
-                  <span className={styles.tdProgressBar}>
+                  <span className="h-1.5 w-20 overflow-hidden rounded-full bg-raised">
                     <span
-                      className={styles.tdProgressFill}
+                      className="block h-full rounded-full bg-success transition-[width] duration-200"
                       style={{ width: `${subTotal === 0 ? 0 : (subDone / subTotal) * 100}%` }}
                     />
                   </span>
                 </span>
               )}
             </div>
-            <div className={styles.subtasks}>
+            <div className="flex flex-col gap-1">
               {data.subtasks.map((s) => (
-                <div key={s.id} className={`${styles.subtask} ${s.done ? styles.subtaskDone : ""}`}>
+                <div key={s.id} className="group flex min-h-9 items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-raised">
                   <input
                     type="checkbox"
+                    className="size-4 accent-accent"
                     checked={s.done}
                     onChange={async (e) => {
                       await client.setSubtask(t.id, s.id, e.target.checked);
                       await load();
                     }}
                   />
-                  <span>{s.title}</span>
+                  <span className={`min-w-0 flex-1 text-sm text-primary ${s.done ? "text-tertiary line-through" : ""}`}>
+                    {s.title}
+                  </span>
                   <button
                     type="button"
-                    className={styles.subtaskDel}
+                    className="inline-flex shrink-0 rounded-md p-1.5 text-tertiary opacity-0 hover:bg-surface hover:text-danger group-hover:opacity-100 focus:opacity-100"
                     aria-label={strings.taskDelete}
                     onClick={async () => {
                       await client.deleteSubtask(t.id, s.id);
@@ -695,7 +708,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
               ))}
             </div>
             <input
-              className={styles.tdSubAdd}
+              className="w-full rounded-xl border border-default bg-surface px-3 py-2.5 text-sm text-primary outline-none placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/15"
               value={newSub}
               placeholder={strings.taskAddSubtask}
               onChange={(e) => setNewSub(e.target.value)}
@@ -708,24 +721,24 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 }
               }}
             />
-          </div>
+          </section>
 
-          <div className={styles.tdSection}>
-            <span className={styles.tdSectionLabel}>
+          <section className="flex flex-col gap-2 border-t border-subtle pt-4">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary [&>svg]:text-tertiary">
               <Paperclip size={15} /> {strings.taskAttachments}
             </span>
             {data.attachments.map((f) => (
-              <div key={f.id} className={styles.tdFile}>
-                <span className={styles.tdFileIcon}>
+              <div key={f.id} className="group flex items-center gap-3 rounded-xl border border-subtle p-2.5">
+                <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent-tint text-accent">
                   <Paperclip size={14} />
                 </span>
-                <span className={styles.tdFileMeta}>
-                  <span className={styles.tdFileName}>{f.filename}</span>
-                  <span className={styles.tdFileSize}>{fileSize(f.size)}</span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-sm font-medium text-primary">{f.filename}</span>
+                  <span className="text-xs text-tertiary">{fileSize(f.size)}</span>
                 </span>
                 <button
                   type="button"
-                  className={styles.tdFileBtn}
+                  className="inline-flex shrink-0 rounded-lg p-2 text-tertiary hover:bg-raised hover:text-accent"
                   onClick={() => void downloadAttachment(f.id, f.filename)}
                   aria-label={strings.taskDownload}
                 >
@@ -733,7 +746,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 </button>
                 <button
                   type="button"
-                  className={styles.tdFileBtn}
+                  className="inline-flex shrink-0 rounded-lg p-2 text-tertiary hover:bg-raised hover:text-danger"
                   onClick={async () => {
                     await client.deleteTaskAttachment(t.id, f.id);
                     await load();
@@ -747,7 +760,7 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
             <input
               ref={fileRef}
               type="file"
-              style={{ display: "none" }}
+              className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file !== undefined) void uploadAttachment(file);
@@ -756,27 +769,27 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
             />
             <button
               type="button"
-              className={styles.tdSubAdd}
+              className="inline-flex min-h-10 w-fit items-center gap-2 rounded-lg bg-raised px-3 py-2 text-sm font-medium text-primary hover:bg-accent-tint hover:text-accent disabled:cursor-wait disabled:opacity-60"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
             >
               <Paperclip size={15} /> {uploading ? strings.taskUploading : strings.taskAddAttachment}
             </button>
-          </div>
+          </section>
 
-          <div className={styles.tdSection}>
-            <span className={styles.tdSectionLabel}>{strings.taskComments}</span>
+          <section className="flex flex-col gap-2 border-t border-subtle pt-4">
+            <span className="text-sm font-semibold text-primary">{strings.taskComments}</span>
             {data.comments.map((c) => (
-              <div key={c.id} className={styles.comment}>
-                <div className={styles.commentHead}>
+              <div key={c.id} className="flex flex-col gap-1 border-b border-subtle py-2.5 last:border-b-0">
+                <div className="flex items-center gap-2 text-xs text-secondary">
                   <strong>{c.author}</strong>
                   <span>{new Date(c.createdAt).toLocaleString()}</span>
                 </div>
-                <div className={styles.commentBody}>{c.body}</div>
+                <div className="whitespace-pre-wrap text-sm text-primary">{c.body}</div>
               </div>
             ))}
             <textarea
-              className={styles.tdSubAdd}
+              className="min-h-20 w-full resize-y rounded-xl border border-default bg-surface px-3 py-2.5 text-sm text-primary outline-none placeholder:text-tertiary focus:border-accent focus:ring-2 focus:ring-accent/15"
               rows={2}
               value={newComment}
               placeholder={strings.taskAddComment}
@@ -790,31 +803,35 @@ export function TaskDetail({ taskId, projectName, onClose, onChanged }: Props) {
                 }
               }}
             />
-          </div>
+          </section>
 
-          <div className={styles.tdSection}>
-            <div className={styles.tdFollowRow}>
-              <span className={styles.tdSectionLabel}>{strings.taskFollowers}</span>
-              <div className={styles.tdFollowerAvatars}>
+          <section className="border-t border-subtle pt-4">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-semibold text-primary">{strings.taskFollowers}</span>
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
                 {data.followers.map((email, i) => (
                   <Avatar key={i} email={email} />
                 ))}
               </div>
-              <button type="button" className={styles.tdFollowBtn} onClick={() => void toggleFollow()}>
+              <button
+                type="button"
+                className="shrink-0 rounded-lg bg-raised px-3 py-2 text-sm font-medium text-primary hover:bg-accent-tint hover:text-accent"
+                onClick={() => void toggleFollow()}
+              >
                 {data.following ? strings.taskLeave : strings.taskFollow}
               </button>
             </div>
-          </div>
+          </section>
 
           {data.activity.length > 0 && (
-            <div className={styles.tdSection}>
-              <span className={styles.tdSectionLabel}>{strings.taskActivity}</span>
+            <section className="flex flex-col gap-1.5 border-t border-subtle pt-4">
+              <span className="mb-1 text-sm font-semibold text-primary">{strings.taskActivity}</span>
               {data.activity.slice(0, 12).map((a, i) => (
-                <div key={i} className={styles.activity}>
+                <div key={i} className="text-xs leading-relaxed text-secondary">
                   {a.actor} · {strings.taskActivityKind(a.kind)} · {new Date(a.createdAt).toLocaleString()}
                 </div>
               ))}
-            </div>
+            </section>
           )}
         </div>
       </div>
