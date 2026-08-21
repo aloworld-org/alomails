@@ -472,7 +472,14 @@ export function ProjectsModule() {
           onClose={() => setInvoiceHandoff(null)}
           onCreated={(invoiceId) => {
             setInvoiceHandoff(null);
-            navigate(`/billing/invoices/${encodeURIComponent(invoiceId)}`);
+            navigate(`/billing/invoices/${encodeURIComponent(invoiceId)}`, {
+              state: {
+                fromProject: {
+                  id: invoiceHandoff.project.id,
+                  name: invoiceHandoff.project.name,
+                },
+              },
+            });
           }}
         />
       )}

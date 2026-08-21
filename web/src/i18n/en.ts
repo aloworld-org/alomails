@@ -2603,6 +2603,7 @@ export const en = {
   billingUnknownCustomer: "Unknown customer",
   billingDraftInvoice: "Draft invoice",
   billingBackToInvoices: "All invoices",
+  billingBackToProject: (name: string) => `Back to ${name}`,
   billingInvoiceGone: "This document no longer exists.",
   billingFieldCustomer: "Customer",
   billingChooseCustomer: "Choose a customer…",

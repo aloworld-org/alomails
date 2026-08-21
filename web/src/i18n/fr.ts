@@ -1671,6 +1671,7 @@ export const fr: Partial<Catalog> = {
   billingUnknownCustomer: "Client inconnu",
   billingDraftInvoice: "Facture en brouillon",
   billingBackToInvoices: "Toutes les factures",
+  billingBackToProject: (name: string) => `Retour à ${name}`,
   billingInvoiceGone: "Ce document n’existe plus.",
   billingFieldCustomer: "Client",
   billingChooseCustomer: "Choisissez un client…",

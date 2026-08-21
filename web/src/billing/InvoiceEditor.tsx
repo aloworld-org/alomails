@@ -14,7 +14,7 @@
 // the document's row lock, and what comes back — the frozen document, or the
 // new draft — is what the screen then shows.
 import { useCallback, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { RecordHistory } from "../audit";
 import { strings, useLocale } from "../i18n";
@@ -36,8 +36,20 @@ export function InvoiceEditor() {
   const { id } = useParams<{ id: string }>();
   const api = useBillingApi();
   const locale = useLocale();
+  const location = useLocation();
   const navigate = useNavigate();
   const pickers = usePickers();
+  const locationState = location.state as {
+    fromProject?: { id?: unknown; name?: unknown };
+  } | null;
+  const fromProject = locationState?.fromProject;
+  const projectOrigin =
+    typeof fromProject?.id === "string" &&
+    fromProject.id !== "" &&
+    typeof fromProject.name === "string" &&
+    fromProject.name !== ""
+      ? { id: fromProject.id, name: fromProject.name }
+      : null;
 
   // The ports are memoized because the draft hook keys its load effect and its
   // autosave debounce on them: a fresh closure per render would restart the
@@ -129,7 +141,10 @@ export function InvoiceEditor() {
       labels={{
         newTitle: strings.billingNewInvoice,
         draftTitle: strings.billingDraftInvoice,
-        back: strings.billingBackToInvoices,
+        back:
+          projectOrigin === null
+            ? strings.billingBackToInvoices
+            : strings.billingBackToProject(projectOrigin.name),
         gone: strings.billingInvoiceGone,
         customerHint: strings.billingCustomerFixedHint,
         createHint: strings.billingCreateDraftHint,
@@ -259,7 +274,15 @@ export function InvoiceEditor() {
           </>
         )
       }
-      onBack={() => void navigate("..")}
+      onBack={() => {
+        if (projectOrigin !== null) {
+          void navigate(
+            `/projects/${encodeURIComponent(projectOrigin.id)}/overview`,
+          );
+          return;
+        }
+        void navigate("..");
+      }}
       onCreated={(created) => {
         // Replaces the /new entry, so Back goes to the list rather than to a
         // form for a document that now exists.

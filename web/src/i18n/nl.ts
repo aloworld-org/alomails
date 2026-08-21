@@ -1631,6 +1631,7 @@ export const nl: Partial<Catalog> = {
   billingUnknownCustomer: "Onbekende klant",
   billingDraftInvoice: "Conceptfactuur",
   billingBackToInvoices: "Alle facturen",
+  billingBackToProject: (name: string) => `Terug naar ${name}`,
   billingInvoiceGone: "Dit document bestaat niet meer.",
   billingFieldCustomer: "Klant",
   billingChooseCustomer: "Kies een klant…",

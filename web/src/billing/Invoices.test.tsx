@@ -192,12 +192,18 @@ vi.mock("../auth", () => ({
 }));
 
 /** The module as it is really mounted: at `/billing/*`, routing itself. */
-function ui(path: string) {
+function ui(path: string, state?: unknown) {
   return render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter
+      initialEntries={[state === undefined ? path : { pathname: path, state }]}
+    >
       <DialogProvider>
         <Routes>
           <Route path="/billing/*" element={<BillingModule />} />
+          <Route
+            path="/projects/:projectId/overview"
+            element={<p>Project overview destination</p>}
+          />
         </Routes>
       </DialogProvider>
     </MemoryRouter>,
@@ -280,6 +286,20 @@ describe("raising a draft", () => {
 });
 
 describe("the draft editor", () => {
+  test("returns a project-created draft to its originating project", async () => {
+    reply("/billing/invoices/inv-1", "GET", { invoice: DRAFT, creditNotes: [] });
+    ui("/billing/invoices/inv-1", {
+      fromProject: { id: "project/website", name: "Website redesign" },
+    });
+
+    const back = await screen.findByRole("button", {
+      name: strings.billingBackToProject("Website redesign"),
+    });
+    fireEvent.click(back);
+
+    expect(await screen.findByText("Project overview destination")).toBeTruthy();
+  });
+
   test("a typed quantity is saved as milli-units and the new totals are the server's", async () => {
     reply("/billing/invoices/inv-1", "GET", { invoice: DRAFT, creditNotes: [] });
     ui("/billing/invoices/inv-1");
