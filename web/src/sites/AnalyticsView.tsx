@@ -248,12 +248,12 @@ export function AnalyticsView() {
               {report.daily.map((day) => (
                 <li
                   key={day.date}
+                  className="flex h-full min-w-1 flex-1 items-end"
                   aria-label={strings.sitesAnalyticsDayLabel(
                     dates.format(new Date(`${day.date}T00:00:00`)),
                     day.visits,
                   )}
                 >
-                  className="flex h-full min-w-1 flex-1 items-end"
                   <span
                     className="block min-h-1 w-full rounded-t-md bg-accent transition-[height]"
                     style={{
