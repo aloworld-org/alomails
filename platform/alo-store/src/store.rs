@@ -113,6 +113,22 @@ impl Store {
         }
     }
 
+    /// A [`TenantStore`] for the tenant an account already belongs to.
+    ///
+    /// `pub(crate)` and narrow on purpose, and it widens nothing: the handle is
+    /// scoped to the account's **own** tenant, read from the account rather
+    /// than passed in, so it cannot be used to reach sideways. What it avoids
+    /// is a caller inside this crate holding a whole [`Store`] just to reach a
+    /// tenant-level record it is already entitled to — the campaign dispatcher
+    /// mints an unsubscribe token per recipient, and tokens are tenant-level
+    /// because the endpoint that redeems them has no logged-in user at all.
+    pub(crate) fn tenant_scope(account: &crate::AccountStore) -> TenantStore {
+        TenantStore {
+            pool: account.pool.clone(),
+            tenant: account.tenant.clone(),
+        }
+    }
+
     /// The **only** door to user-owned mail data: a handle scoped to one
     /// `(tenant, user)`. Pure — no I/O; every operation it exposes bakes
     /// both ids, so cross-account access is unrepresentable (see

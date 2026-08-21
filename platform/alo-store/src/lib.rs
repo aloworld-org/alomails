@@ -58,6 +58,7 @@ pub mod calendar_availability;
 pub mod campaign_audience;
 pub mod campaign_consent;
 pub mod campaign_content;
+pub mod campaign_dispatch;
 pub mod campaign_html;
 pub mod campaign_merge;
 pub mod campaign_mime;
