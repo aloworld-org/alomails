@@ -22,7 +22,29 @@ import { Button, Spinner } from "../ds";
 import { strings } from "../i18n";
 import { sitesMessage, useSitesApi } from "./api";
 import type { SitePublishSchedule } from "./types";
-import styles from "./SitesModule.module.css";
+
+const ui = {
+  panel:
+    "overflow-hidden rounded-2xl border border-default bg-surface shadow-sm",
+  summary:
+    "flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:px-6",
+  icon:
+    "inline-flex size-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent [&>svg]:size-5",
+  copy: "min-w-0 flex-1",
+  title: "m-0 text-base font-semibold text-primary",
+  hint: "mt-1 flex items-center gap-2 text-sm leading-5 text-secondary",
+  actions: "flex shrink-0 flex-wrap items-center gap-2 sm:justify-end",
+  form:
+    "grid gap-4 border-t border-subtle bg-raised px-5 py-5 sm:grid-cols-[minmax(15rem,1fr)_minmax(14rem,1fr)_auto] sm:items-end sm:px-6",
+  field: "flex min-w-0 flex-col gap-2 text-sm font-semibold text-primary",
+  input:
+    "h-11 w-full rounded-xl border border-default bg-surface px-3.5 text-base text-primary outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-60",
+  zone: "flex min-w-0 flex-col gap-1 text-sm leading-5 text-secondary",
+  zoneStrong: "font-semibold text-primary",
+  formActions: "flex flex-wrap items-center justify-end gap-2",
+  error:
+    "mx-5 mb-5 rounded-xl border border-danger bg-danger-tint px-4 py-3 text-sm text-primary sm:mx-6",
+} as const;
 
 /** How a moment is named on this screen: a weekday a person recognises, plus
  *  the time they chose. Never the raw instant. */
@@ -188,23 +210,23 @@ export function SchedulePublish({
 
   return (
     <section
-      className={styles.schedulePanel}
+      className={ui.panel}
       aria-labelledby="site-schedule-title"
     >
-      <div className={styles.scheduleSummary}>
-        <span className={styles.scheduleIcon} aria-hidden="true">
+      <div className={ui.summary}>
+        <span className={ui.icon} aria-hidden="true">
           <CalendarClock />
         </span>
-        <div className={styles.scheduleCopy}>
-          <h2 id="site-schedule-title" className={styles.scheduleTitle}>
+        <div className={ui.copy}>
+          <h2 id="site-schedule-title" className={ui.title}>
             {strings.sitesScheduleTitle}
           </h2>
           {loading ? (
-            <p className={styles.scheduleHint}>
+            <p className={ui.hint}>
               <Spinner size={14} /> {strings.sitesScheduleLoading}
             </p>
           ) : schedule !== null ? (
-            <p className={styles.scheduleHint} role="status">
+            <p className={ui.hint} role="status">
               {schedule.status === "publishing"
                 ? strings.sitesSchedulePublishingNow
                 : strings.sitesSchedulePending(
@@ -212,13 +234,13 @@ export function SchedulePublish({
                   )}
             </p>
           ) : cancelled !== null ? (
-            <p className={styles.scheduleHint} role="status">
+            <p className={ui.hint} role="status">
               {strings.sitesScheduleCancelled(
                 moment.format(new Date(cancelled.publishAt)),
               )}
             </p>
           ) : outcome !== null ? (
-            <p className={styles.scheduleHint} role="status">
+            <p className={ui.hint} role="status">
               {outcome.status === "published"
                 ? strings.sitesScheduleDone(
                     moment.format(new Date(outcome.publishAt)),
@@ -229,10 +251,10 @@ export function SchedulePublish({
                   )}
             </p>
           ) : (
-            <p className={styles.scheduleHint}>{strings.sitesScheduleHint}</p>
+            <p className={ui.hint}>{strings.sitesScheduleHint}</p>
           )}
         </div>
-        <div className={styles.scheduleActions}>
+        <div className={ui.actions}>
           {schedule !== null && schedule.status === "scheduled" && (
             <Button
               variant="ghost"
@@ -246,7 +268,7 @@ export function SchedulePublish({
           )}
           {!picking && schedule?.status !== "publishing" && (
             <Button
-              variant="ghost"
+              variant={schedule === null ? "primary" : "ghost"}
               size="sm"
               icon={<CalendarClock size="var(--icon-size-inline)" />}
               disabled={busy}
@@ -261,24 +283,26 @@ export function SchedulePublish({
       </div>
 
       {picking && (
-        <div className={styles.scheduleForm}>
-          <label className={styles.scheduleField}>
+        <div className={ui.form}>
+          <label className={ui.field}>
             <span>{strings.sitesScheduleWhen}</span>
             <input
-              className={styles.input}
+              className={ui.input}
               type="datetime-local"
               value={chosen}
               disabled={busy}
               onChange={(event) => setChosen(event.target.value)}
             />
           </label>
-          <p className={styles.scheduleZone}>
+          <p className={ui.zone}>
             {chosenReadable !== null && (
-              <strong>{strings.sitesScheduleGoesLive(chosenReadable)}</strong>
+              <strong className={ui.zoneStrong}>
+                {strings.sitesScheduleGoesLive(chosenReadable)}
+              </strong>
             )}
             {zone !== "" && <span>{strings.sitesScheduleTimeZone(zone)}</span>}
           </p>
-          <div className={styles.scheduleFormActions}>
+          <div className={ui.formActions}>
             <Button
               variant="ghost"
               size="sm"
@@ -302,7 +326,7 @@ export function SchedulePublish({
       )}
 
       {error !== null && (
-        <p className={styles.publishError} role="alert">
+        <p className={ui.error} role="alert">
           {error}
         </p>
       )}
