@@ -20,6 +20,49 @@ const CAP_CONTACTS: &str = "urn:ietf:params:jmap:contacts";
 const CAP_VACATION: &str = "urn:ietf:params:jmap:vacationresponse";
 const CAP_QUOTA: &str = "urn:ietf:params:jmap:quota";
 
+/// The origin the Session resource should advertise its URLs on.
+///
+/// **The host the client actually reached, not the one this service was
+/// configured with.** One `alo-jmap` serves several front-ends — `mail.…` and
+/// `app.aloworkplace.com` today — and Caddy proxies `/jmap/*` on each. Handing
+/// every client the configured `ALO_JMAP_BASE_URL` told the workspace app that
+/// its API lived on the mail host, which is a *different origin*: every request
+/// it made was then blocked by its own `connect-src 'self'`, so the app loaded
+/// and did nothing at all. RFC 8620 §2 makes these URLs the client's only route
+/// to the API, so getting the origin wrong disables the whole session.
+///
+/// **The `Host` header is allowlisted rather than trusted.** It is
+/// caller-controlled, and a value echoed into a URL a client will then call is
+/// exactly the shape of an open redirect. Only a host this deployment already
+/// serves is honoured; anything else falls back to the configured base, which is
+/// the safe and previously-correct answer. The scheme is taken from the
+/// configured base too — a deployment reached over HTTPS does not start
+/// advertising `http://` because a header said so.
+fn session_base(state: &AppState, headers: &HeaderMap) -> String {
+    let configured = state.base_url.trim_end_matches('/');
+    let Some(host) = headers
+        .get(axum::http::header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .map(str::trim)
+        .filter(|h| !h.is_empty())
+    else {
+        return configured.to_owned();
+    };
+    let scheme = configured.split("://").next().unwrap_or("https");
+    let configured_host = configured.split("://").nth(1).unwrap_or_default();
+    if host.eq_ignore_ascii_case(configured_host) {
+        return configured.to_owned();
+    }
+    if state
+        .session_origins
+        .iter()
+        .any(|allowed| allowed.eq_ignore_ascii_case(host))
+    {
+        return format!("{scheme}://{host}");
+    }
+    configured.to_owned()
+}
+
 /// `GET /.well-known/jmap` → the Session resource.
 pub async fn session(
     State(state): State<AppState>,
@@ -55,7 +98,7 @@ pub async fn session(
         send_as.extend(aliases);
     }
     let l = &state.limits;
-    let base = &state.base_url;
+    let base = &session_base(&state, &headers);
 
     let mut accounts = Map::new();
     accounts.insert(
@@ -181,4 +224,123 @@ pub async fn session(
         // compose From picker. Authorized identically in the submission path.
         "alo:sendAs": send_as
     })))
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use super::*;
+    use axum::http::HeaderValue;
+
+    fn headers_with_host(host: &str) -> HeaderMap {
+        let mut h = HeaderMap::new();
+        h.insert(
+            axum::http::header::HOST,
+            HeaderValue::from_str(host).unwrap(),
+        );
+        h
+    }
+
+    /// The base a session would advertise, without standing a server up.
+    fn base_for(configured: &str, allowed: &[&str], host: Option<&str>) -> String {
+        let headers = host.map_or_else(HeaderMap::new, headers_with_host);
+        let configured = configured.trim_end_matches('/');
+        let scheme = configured.split("://").next().unwrap_or("https");
+        let configured_host = configured.split("://").nth(1).unwrap_or_default();
+        let Some(host) = headers
+            .get(axum::http::header::HOST)
+            .and_then(|v| v.to_str().ok())
+            .map(str::trim)
+            .filter(|h| !h.is_empty())
+        else {
+            return configured.to_owned();
+        };
+        if host.eq_ignore_ascii_case(configured_host) {
+            return configured.to_owned();
+        }
+        if allowed.iter().any(|a| a.eq_ignore_ascii_case(host)) {
+            return format!("{scheme}://{host}");
+        }
+        configured.to_owned()
+    }
+
+    #[test]
+    fn a_client_is_told_the_origin_it_actually_reached() {
+        // The bug this exists for: the workspace app was told its API lived on
+        // the mail host, a different origin, and its own connect-src blocked
+        // every call — the app loaded and did nothing.
+        assert_eq!(
+            base_for(
+                "https://mail.alomails.com",
+                &["app.aloworkplace.com"],
+                Some("app.aloworkplace.com")
+            ),
+            "https://app.aloworkplace.com"
+        );
+        assert_eq!(
+            base_for(
+                "https://mail.alomails.com",
+                &["app.aloworkplace.com"],
+                Some("mail.alomails.com")
+            ),
+            "https://mail.alomails.com"
+        );
+    }
+
+    #[test]
+    fn a_host_nobody_allowed_is_ignored_rather_than_echoed() {
+        // The Host header is caller-controlled. Echoing it into a URL the
+        // client will then call is the shape of an open redirect, so anything
+        // outside the allowlist falls back to the configured base.
+        assert_eq!(
+            base_for(
+                "https://mail.alomails.com",
+                &["app.aloworkplace.com"],
+                Some("evil.example")
+            ),
+            "https://mail.alomails.com"
+        );
+        // And with no allowlist at all, the configured base is the only answer.
+        assert_eq!(
+            base_for(
+                "https://mail.alomails.com",
+                &[],
+                Some("app.aloworkplace.com")
+            ),
+            "https://mail.alomails.com"
+        );
+    }
+
+    #[test]
+    fn the_scheme_comes_from_configuration_never_from_the_header() {
+        // A deployment reached over HTTPS does not start advertising http://
+        // because a header said so.
+        let base = base_for(
+            "https://mail.alomails.com",
+            &["app.aloworkplace.com"],
+            Some("app.aloworkplace.com"),
+        );
+        assert!(base.starts_with("https://"), "{base}");
+    }
+
+    #[test]
+    fn an_absent_or_blank_host_falls_back_to_the_configured_base() {
+        assert_eq!(
+            base_for(
+                "https://mail.alomails.com/",
+                &["app.aloworkplace.com"],
+                None
+            ),
+            "https://mail.alomails.com"
+        );
+        assert_eq!(
+            base_for(
+                "https://mail.alomails.com",
+                &["app.aloworkplace.com"],
+                Some("   ")
+            ),
+            "https://mail.alomails.com"
+        );
+    }
 }

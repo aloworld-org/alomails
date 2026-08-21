@@ -175,6 +175,9 @@ async fn bcc_stripped_on_wire_delivered_by_envelope_kept_in_sent() {
         limits: Limits::default(),
         base_url: "http://test".into(),
         submission_addr: Some(sink_addr),
+        // No extra front-end hosts in a harness: the session advertises the
+        // configured base, which is what these tests assert against.
+        session_origins: Vec::new(),
         junk_learner: None,
         personal_domains: Vec::new(),
         signup_limiter: alo_identity::ratelimit::RateLimiter::new(),

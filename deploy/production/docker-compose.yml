@@ -340,6 +340,17 @@ services:
       # editing is disabled (the endpoints 404).
       ALO_JMAP_WOPI_SECRET: ${ALO_JMAP_WOPI_SECRET:-}
       ALO_JMAP_BASE_URL: https://${DOMAIN}
+      # Other hosts this same service answers the API on. One alo-jmap serves
+      # the mail app and the workspace app, and Caddy proxies /jmap/* on both —
+      # but the JMAP Session resource (RFC 8620 §2) must advertise its URLs on
+      # whichever origin the client actually reached. Told the mail host, the
+      # workspace app made cross-origin calls that its own `connect-src 'self'`
+      # blocked, so it loaded and did nothing at all.
+      #
+      # An allowlist, because the Host header is caller-controlled and echoing
+      # it into a URL the client will then call is the shape of an open
+      # redirect. Hosts only, comma-separated, no scheme.
+      ALO_JMAP_SESSION_ORIGINS: ${ALO_JMAP_SESSION_ORIGINS:-app.aloworkplace.com,app.alodrives.com}
       ALO_JMAP_ADDR: 0.0.0.0:8080
       # Where EmailSubmission/set sends: the SMTP trusted internal listener,
       # reached over the private docker network (not the internet).

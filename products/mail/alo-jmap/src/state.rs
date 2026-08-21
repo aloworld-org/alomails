@@ -36,6 +36,19 @@ pub struct AppState {
     /// `EmailSubmission/set` to send. `None` disables sending (the capability
     /// is still advertised but a submit returns `forbiddenToSend`).
     pub submission_addr: Option<String>,
+    /// Extra hosts this deployment serves the API on, besides the configured
+    /// `base_url`.
+    ///
+    /// One service answers several front-ends — the mail app and the workspace
+    /// app — and the JMAP Session resource must advertise its URLs on whichever
+    /// origin the client actually reached, or the client's own `connect-src`
+    /// blocks every call it then makes. An allowlist rather than trusting the
+    /// `Host` header: that header is caller-controlled, and echoing it into a
+    /// URL the client will call is the shape of an open redirect.
+    ///
+    /// From `ALO_JMAP_SESSION_ORIGINS`, comma-separated hosts (no scheme).
+    pub session_origins: Vec<String>,
+
     /// Junk training: Rspamd learn calls on moves into/out of Junk.
     /// `None` disables training (mail management is unaffected).
     pub junk_learner: Option<std::sync::Arc<crate::junk_learn::JunkLearner>>,

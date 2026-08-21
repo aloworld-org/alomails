@@ -1050,14 +1050,27 @@ pub async fn check_subdomain(
 ) -> Result<Json<Value>, Problem> {
     let account = authenticate(&state, &headers).await?;
     let subdomain = q.subdomain.trim().to_lowercase();
-    let available = account
-        .acc
-        .subdomain_available(&subdomain)
-        .await
-        .map_err(map_store_err)?;
-    Ok(Json(
-        json!({ "subdomain": subdomain, "available": available }),
-    ))
+    // **A check answers the question; it does not fail it.** A name that is
+    // reserved, malformed or too short is a perfectly good answer of "no", and
+    // the store says so by refusing — so a `Validation` refusal becomes the
+    // verdict rather than a 422.
+    //
+    // It matters in practice: the composer calls this as somebody types, so
+    // every keystroke against a reserved name logged a failed request in their
+    // console and read as a broken screen. Only a genuine fault — the database
+    // unreachable — is still an error here.
+    let (available, reason) = match account.acc.subdomain_available(&subdomain).await {
+        Ok(available) => (available, None),
+        Err(alo_store::StoreError::Validation(why)) => (false, Some(why)),
+        Err(other) => return Err(map_store_err(other)),
+    };
+    Ok(Json(json!({
+        "subdomain": subdomain,
+        "available": available,
+        // Present only when the name is unusable for a stated reason, so a
+        // screen can say *why* rather than only "no".
+        "reason": reason,
+    })))
 }
 
 /// `GET /sites/:id` → the site plus its current publish (`"publish"` is

@@ -30,6 +30,9 @@ fn signup_app(store: Arc<Store>, identity: Identity, domains: Vec<String>) -> Ro
         limits: Limits::default(),
         base_url: "http://test".into(),
         submission_addr: None,
+        // No extra front-end hosts in a harness: the session advertises the
+        // configured base, which is what these tests assert against.
+        session_origins: Vec::new(),
         junk_learner: None,
         personal_domains: domains,
         signup_limiter: alo_identity::ratelimit::RateLimiter::new(),

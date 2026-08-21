@@ -2385,6 +2385,15 @@ pub fn app_state(store: Arc<Store>, identity: Identity, base_url: impl Into<Stri
         limits: Limits::default(),
         base_url: base_url.into(),
         submission_addr: std::env::var("ALO_JMAP_SUBMISSION_ADDR").ok(),
+        session_origins: std::env::var("ALO_JMAP_SESSION_ORIGINS")
+            .ok()
+            .map(|v| {
+                v.split(',')
+                    .map(|s| s.trim().to_ascii_lowercase())
+                    .filter(|s| !s.is_empty())
+                    .collect()
+            })
+            .unwrap_or_default(),
         junk_learner: crate::junk_learn::JunkLearner::from_env(),
         personal_domains: std::env::var("ALO_PERSONAL_DOMAINS")
             .ok()
