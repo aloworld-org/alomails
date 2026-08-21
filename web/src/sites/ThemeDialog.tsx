@@ -13,7 +13,24 @@ import { Button, IconButton, Spinner } from "../ds";
 import { sitesMessage, useSitesApi } from "./api";
 import { DialogFrame, ErrorBanner } from "./parts";
 import type { ThemeEnvelope, ThemePreset } from "./types";
-import styles from "./SitesModule.module.css";
+
+const styles = {
+  themeSlot:
+    "mt-4 flex flex-col gap-4 rounded-2xl border border-subtle bg-surface-muted p-4 sm:flex-row sm:items-center sm:justify-between",
+  themeSlotText: "min-w-0",
+  label: "block font-semibold text-primary",
+  hint: "mt-1 block max-w-xl text-sm leading-5 text-secondary",
+  themeSlotActions: "flex flex-wrap items-center gap-2",
+  themeSlotState:
+    "mr-1 inline-flex min-h-8 items-center rounded-full bg-surface px-3 text-xs font-semibold text-secondary",
+  presetGrid: "grid gap-3 sm:grid-cols-2 lg:grid-cols-3",
+  presetCard:
+    "flex min-h-28 flex-col justify-between rounded-2xl border-2 p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+  presetCardActive: "ring-2 ring-accent ring-offset-2",
+  presetName: "text-lg",
+  presetSwatches: "mt-5 flex gap-2",
+  presetSwatch: "size-7 rounded-full border border-black/10 shadow-sm",
+} as const;
 
 /** The version this form writes; the server refuses anything else. */
 const THEME_SCHEMA_VERSION = 1;
@@ -65,7 +82,9 @@ function ImageSlot({
           disabled={busy}
           onClick={() => fileInput.current?.click()}
         >
-          {blobId !== null ? strings.sitesThemeReplace : strings.sitesThemeUpload}
+          {blobId !== null
+            ? strings.sitesThemeReplace
+            : strings.sitesThemeUpload}
         </Button>
         {blobId !== null && (
           <IconButton
@@ -116,7 +135,8 @@ export function ThemeDialog({
         setFavicon(site.theme.favicon ?? null);
       },
       (err: unknown) => {
-        if (!stale) setLoadError(sitesMessage(err, strings.sitesThemeLoadFailed));
+        if (!stale)
+          setLoadError(sitesMessage(err, strings.sitesThemeLoadFailed));
       },
     );
     return () => {
@@ -178,7 +198,11 @@ export function ThemeDialog({
       {loadError !== null && <ErrorBanner message={loadError} />}
       {presets !== null && (
         <>
-          <div className={styles.presetGrid} role="radiogroup" aria-label={strings.sitesThemePresets}>
+          <div
+            className={styles.presetGrid}
+            role="radiogroup"
+            aria-label={strings.sitesThemePresets}
+          >
             {presets.map((p) => (
               <button
                 key={p.id}
@@ -190,7 +214,10 @@ export function ThemeDialog({
                     ? `${styles.presetCard} ${styles.presetCardActive}`
                     : styles.presetCard
                 }
-                style={{ background: p.palette.background, borderColor: p.palette.border }}
+                style={{
+                  background: p.palette.background,
+                  borderColor: p.palette.border,
+                }}
                 onClick={() => setPreset(p.id)}
               >
                 <span
@@ -204,15 +231,17 @@ export function ThemeDialog({
                   {p.name}
                 </span>
                 <span className={styles.presetSwatches} aria-hidden="true">
-                  {[p.palette.primary, p.palette.surface, p.palette.mutedText].map(
-                    (color, i) => (
-                      <span
-                        key={i}
-                        className={styles.presetSwatch}
-                        style={{ background: color }}
-                      />
-                    ),
-                  )}
+                  {[
+                    p.palette.primary,
+                    p.palette.surface,
+                    p.palette.mutedText,
+                  ].map((color, i) => (
+                    <span
+                      key={i}
+                      className={styles.presetSwatch}
+                      style={{ background: color }}
+                    />
+                  ))}
                 </span>
               </button>
             ))}
