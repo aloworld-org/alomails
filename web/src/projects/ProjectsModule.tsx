@@ -38,6 +38,7 @@ import { ErrorBanner } from "./parts";
 import { PlanView } from "./PlanView";
 import { ProjectsView } from "./ProjectsView";
 import { ReportView } from "./ReportView";
+import { projectContextId, projectScopedPath, resolveProjectScope } from "./scope";
 import { TemplateDialog } from "./TemplateDialog";
 import { announceTimerChanged, onTimerChanged } from "./timerBus";
 import { WeekView } from "./WeekView";
@@ -71,47 +72,6 @@ const projectTabClass = ({ isActive }: { isActive: boolean }) =>
       : "border-transparent bg-transparent font-medium !text-secondary hover:bg-raised hover:!text-primary"
   }`;
 
-const TOP_LEVEL_PROJECT_ROUTES = new Set([
-  "list",
-  "my-work",
-  "week",
-  "plan",
-  "timeline",
-  "reports",
-  "approvals",
-]);
-
-/** Keep the engagement visible while somebody moves through its work, time,
- * plan, and financial views. The path owns workspace scope; the three
- * aggregate views carry the same scope in their `project` query parameter. */
-export function projectContextId(pathname: string, projectQuery: string | null): string | null {
-  const parts = pathname.split("/").filter(Boolean);
-  if (parts[0] !== "projects") return null;
-  const segment = parts[1];
-  if (segment !== undefined && !TOP_LEVEL_PROJECT_ROUTES.has(segment)) {
-    try {
-      return decodeURIComponent(segment);
-    } catch {
-      return segment;
-    }
-  }
-  if (segment === "week" || segment === "timeline" || segment === "reports") {
-    return projectQuery;
-  }
-  return null;
-}
-
-/** Builds the canonical route for a project-aware portfolio view. */
-export function projectScopedPath(
-  view: "week" | "timeline" | "reports",
-  projectId: string | null,
-): string {
-  const path = `/projects/${view}`;
-  return projectId === null
-    ? path
-    : `${path}?project=${encodeURIComponent(projectId)}`;
-}
-
 export function ProjectsModule() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -130,7 +90,8 @@ export function ProjectsModule() {
   const [startingFromTemplate, setStartingFromTemplate] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
-  const contextProjectId = projectContextId(location.pathname, searchParams.get("project"));
+  const requestedContextProjectId = projectContextId(location.pathname, searchParams.get("project"));
+  const contextProjectId = resolveProjectScope(requestedContextProjectId, loading, projects);
   const [revision, setRevision] = useState(0);
   const [runningTimer, setRunningTimer] = useState<RunningTimer | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -170,6 +131,17 @@ export function ProjectsModule() {
       live = false;
     };
   }, [api, revision]);
+
+  // A removed or inaccessible project is not a durable scope. Once the list is
+  // authoritative, clean the query instead of showing "All projects" under a
+  // URL that still claims otherwise and carrying that stale id to every tab.
+  useEffect(() => {
+    if (loading || !searchParams.has("project")) return;
+    if (contextProjectId !== null) return;
+    const next = new URLSearchParams(searchParams);
+    next.delete("project");
+    setSearchParams(next, { replace: true });
+  }, [contextProjectId, loading, requestedContextProjectId, searchParams, setSearchParams]);
 
   // The templates ride the same revision counter, because marking one, copying
   // one, or archiving a board all change what this list says.
@@ -364,7 +336,7 @@ export function ProjectsModule() {
         <Route path="plan" element={<Navigate to="/projects/timeline" replace />} />
         <Route
           path="timeline"
-          element={<PlanView projects={projects} revision={revision} onChanged={bump} />}
+          element={<PlanView projects={projects} projectsLoading={loading} revision={revision} onChanged={bump} />}
         />
         {/* Profitability is a PROJECT aggregate — engagements, minutes and
             money, and never who worked when — so it is everybody's tab, not

@@ -43,6 +43,7 @@ import {
   weekDays,
 } from "./format";
 import { EmptyState, ErrorBanner, WeekChip } from "./parts";
+import { resolveProjectScope } from "./scope";
 import type { Project, TimeEntry, TimeTotals, TimesheetWeek } from "./types";
 const styles = {
   page: "flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4",
@@ -97,9 +98,7 @@ export function WeekView({
   const api = useProjectsApi();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedProjectId = searchParams.get("project");
-  const projectId = requestedProjectId !== null && (projectsLoading || projects.some((project) => project.id === requestedProjectId))
-    ? requestedProjectId
-    : null;
+  const projectId = resolveProjectScope(requestedProjectId, projectsLoading, projects);
   const [monday, setMonday] = useState(() => mondayOf(new Date()));
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [totals, setTotals] = useState<TimeTotals | null>(null);

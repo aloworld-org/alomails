@@ -25,6 +25,7 @@ import { Button, Spinner } from "../ds";
 import { strings, useLocale } from "../i18n";
 import { saveTextFile } from "../platform/download";
 import { projectsMessage, useProjectsApi } from "./api";
+import { resolveProjectScope } from "./scope";
 import { dayLabel, durationLabel } from "./format";
 import { BudgetBar, EmptyState, ErrorBanner } from "./parts";
 import type { ProfitabilityCurrency, ProfitabilityReport, Project, ProjectProfitability } from "./types";
@@ -51,9 +52,7 @@ export function ReportView({ projects, projectsLoading, customerName, revision }
   const api = useProjectsApi();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedProjectId = searchParams.get("project");
-  const projectId = requestedProjectId !== null && (projectsLoading || projects.some((project) => project.id === requestedProjectId))
-    ? requestedProjectId
-    : null;
+  const projectId = resolveProjectScope(requestedProjectId, projectsLoading, projects);
   // The form opens on the quarter being lived through; the one being reviewed
   // is one click away.
   const [period, setPeriod] = useState<Period>(() => quarterOf(new Date()));

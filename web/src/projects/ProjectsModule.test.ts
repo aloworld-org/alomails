@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { projectContextId, projectScopedPath } from "./ProjectsModule";
+import { projectContextId, projectScopedPath, resolveProjectScope } from "./scope";
 
 describe("projectContextId", () => {
   it("keeps a project workspace visible across its nested task views", () => {
@@ -36,5 +36,22 @@ describe("projectScopedPath", () => {
 
   it("keeps portfolio routes free of an empty project query", () => {
     expect(projectScopedPath("week", null)).toBe("/projects/week");
+  });
+});
+
+describe("resolveProjectScope", () => {
+  const projects = [{ id: "project-1" }, { id: "project-2" }];
+
+  it("retains deep-link scope while the authoritative project list loads", () => {
+    expect(resolveProjectScope("project-1", true, [])).toBe("project-1");
+  });
+
+  it("accepts an accessible project after loading", () => {
+    expect(resolveProjectScope("project-2", false, projects)).toBe("project-2");
+  });
+
+  it("rejects stale or inaccessible project ids after loading", () => {
+    expect(resolveProjectScope("removed-project", false, projects)).toBeNull();
+    expect(resolveProjectScope(null, false, projects)).toBeNull();
   });
 });

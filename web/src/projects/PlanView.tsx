@@ -31,6 +31,7 @@ import { projectsMessage, useProjectsApi } from "./api";
 import { dayLabel, dayString, dayValue } from "./format";
 import { EmptyState, ErrorBanner } from "./parts";
 import { MilestoneDialog } from "./MilestoneDialog";
+import { resolveProjectScope } from "./scope";
 import type { Milestone, Project, ProjectPlan } from "./types";
 const styles = {
   page: "flex min-h-0 flex-col gap-4 overflow-auto px-5 py-4",
@@ -79,10 +80,12 @@ function offsets(milestones: Milestone[]): number[] | null {
 
 export function PlanView({
   projects,
+  projectsLoading,
   revision,
   onChanged,
 }: {
   projects: Project[];
+  projectsLoading: boolean;
   /** Bumped by the module when anything it loaded changed. */
   revision: number;
   onChanged: () => void;
@@ -91,7 +94,9 @@ export function PlanView({
   const client = useJmapClient();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [projectId, setProjectId] = useState<string>(ALL_PROJECTS);
+  const requestedProjectId = searchParams.get("project");
+  const resolvedProjectId = resolveProjectScope(requestedProjectId, projectsLoading, projects);
+  const projectId = resolvedProjectId ?? ALL_PROJECTS;
   const [plan, setPlan] = useState<ProjectPlan>({ milestones: [], placements: [] });
   const [tasks, setTasks] = useState<Task[]>([]);
   const [editing, setEditing] = useState<Milestone | "new" | null>(null);
@@ -101,19 +106,7 @@ export function PlanView({
 
   const bump = useCallback(() => setLocalRevision((r) => r + 1), []);
 
-  // Scope is explicit and survives reload/back/forward. An absent, stale, or
-  // inaccessible project id means the honest portfolio view; it must never
-  // silently become whichever project happens to sort first.
-  useEffect(() => {
-    const requested = searchParams.get("project");
-    const next = requested !== null && projects.some((project) => project.id === requested)
-      ? requested
-      : ALL_PROJECTS;
-    setProjectId(next);
-  }, [projects, searchParams]);
-
   function selectProject(next: string) {
-    setProjectId(next);
     const params = new URLSearchParams(searchParams);
     if (next === ALL_PROJECTS) params.delete("project");
     else params.set("project", next);
@@ -121,6 +114,7 @@ export function PlanView({
   }
 
   useEffect(() => {
+    if (projectsLoading) return;
     let live = true;
     setLoading(true);
     void (async () => {
@@ -156,7 +150,7 @@ export function PlanView({
     return () => {
       live = false;
     };
-  }, [api, client, projectId, projects, revision, localRevision]);
+  }, [api, client, projectId, projects, projectsLoading, revision, localRevision]);
 
   const project = projects.find((p) => p.id === projectId) ?? null;
   const projectById = useMemo(
