@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { projectContextId, projectScopedPath, resolveProjectScope } from "./scope";
+import {
+  projectContextId,
+  projectScopedPath,
+  projectWorkspaceStatus,
+  resolveProjectScope,
+} from "./scope";
 
 describe("projectContextId", () => {
   it("keeps a project workspace visible across its nested task views", () => {
@@ -53,5 +58,22 @@ describe("resolveProjectScope", () => {
   it("rejects stale or inaccessible project ids after loading", () => {
     expect(resolveProjectScope("removed-project", false, projects)).toBeNull();
     expect(resolveProjectScope(null, false, projects)).toBeNull();
+  });
+});
+
+describe("projectWorkspaceStatus", () => {
+  const projects = [{ id: "project-1" }];
+
+  it("does not treat a project as missing before the collection is authoritative", () => {
+    expect(projectWorkspaceStatus("project-1", true, false, [])).toBe("loading");
+  });
+
+  it("distinguishes an unavailable collection from a missing project", () => {
+    expect(projectWorkspaceStatus("project-1", false, true, [])).toBe("unavailable");
+    expect(projectWorkspaceStatus("removed", false, false, projects)).toBe("missing");
+  });
+
+  it("opens an accessible project", () => {
+    expect(projectWorkspaceStatus("project-1", false, false, projects)).toBe("available");
   });
 });

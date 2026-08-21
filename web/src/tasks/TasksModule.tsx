@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
+  CircleAlert,
   CalendarRange,
   ClipboardList,
   GanttChartSquare,
@@ -18,6 +19,7 @@ import {
   Search,
   Sparkles,
   Sun,
+  RefreshCw,
 } from "lucide-react";
 
 import { strings } from "../i18n";
@@ -37,7 +39,7 @@ import { TaskDetail } from "./TaskDetail";
 import { Avatar, DueChip, PriorityChip } from "./parts";
 import { DEFAULT_CONFIG, filterTasks, type ViewConfig } from "./viewConfig";
 import styles from "./TasksModule.module.css";
-import { useProjectsApi } from "../projects/api";
+import { projectsMessage, useProjectsApi } from "../projects/api";
 import { EditProjectDialog } from "../projects/EditProjectDialog";
 import type { Project, ProjectDraft, ProjectPlan } from "../projects/types";
 
@@ -75,6 +77,9 @@ export function TasksModule({
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
   const [engagement, setEngagement] = useState<Project | null>(null);
+  const [engagementLoading, setEngagementLoading] = useState(projectId !== undefined);
+  const [engagementError, setEngagementError] = useState<string | null>(null);
+  const [engagementRevision, setEngagementRevision] = useState(0);
   const [editingProject, setEditingProject] = useState(false);
   const [projectPlan, setProjectPlan] = useState<ProjectPlan>({ milestones: [], placements: [] });
 
@@ -203,10 +208,14 @@ export function TasksModule({
   useEffect(() => {
     if (projectId === undefined) {
       setEngagement(null);
+      setEngagementLoading(false);
+      setEngagementError(null);
       setProjectPlan({ milestones: [], placements: [] });
       return;
     }
     let current = true;
+    setEngagementLoading(true);
+    setEngagementError(null);
     void Promise.all([
       projectsApi.project(projectId),
       projectsApi.plan(projectId),
@@ -214,13 +223,16 @@ export function TasksModule({
       if (!current) return;
       setEngagement(nextProject);
       setProjectPlan(nextPlan);
-    }).catch(() => {
+    }).catch((error: unknown) => {
       if (!current) return;
       setEngagement(null);
+      setEngagementError(projectsMessage(error, strings.projectsWorkspaceLoadFailed));
       setProjectPlan({ milestones: [], placements: [] });
+    }).finally(() => {
+      if (current) setEngagementLoading(false);
     });
     return () => { current = false; };
-  }, [projectId, projectsApi]);
+  }, [engagementRevision, projectId, projectsApi]);
 
   const activeProject = useMemo(
     () => (mode.type === "project" ? projects.find((p) => p.id === mode.id) : undefined),
@@ -387,6 +399,26 @@ export function TasksModule({
                 await reload();
               }}
             />
+          ) : projectId !== undefined && engagementLoading ? (
+            <div className="flex min-h-[28rem] items-center justify-center" role="status">
+              <Spinner size={24} />
+            </div>
+          ) : projectId !== undefined && engagementError !== null ? (
+            <section className="mx-auto flex min-h-[28rem] w-full max-w-2xl flex-col items-center justify-center px-6 py-12 text-center">
+              <span className="flex size-14 items-center justify-center rounded-2xl bg-[var(--danger-tint)] text-danger" aria-hidden="true">
+                <CircleAlert size={26} />
+              </span>
+              <h2 className="mt-4 text-lg font-semibold text-primary">{strings.projectsWorkspaceUnavailable}</h2>
+              <p className="mt-2 max-w-[46ch] text-sm leading-6 text-secondary" role="alert">{engagementError}</p>
+              <button
+                type="button"
+                className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent !no-underline transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2"
+                onClick={() => setEngagementRevision((current) => current + 1)}
+              >
+                <RefreshCw size={16} aria-hidden="true" />
+                {strings.projectsRetry}
+              </button>
+            </section>
           ) : view === "overview" && projectId !== undefined && engagement !== null ? (
             <ProjectOverviewView
               project={engagement}

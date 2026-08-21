@@ -38,7 +38,12 @@ import { ErrorBanner } from "./parts";
 import { PlanView } from "./PlanView";
 import { ProjectsView } from "./ProjectsView";
 import { ReportView } from "./ReportView";
-import { projectContextId, projectScopedPath, resolveProjectScope } from "./scope";
+import {
+  projectContextId,
+  projectScopedPath,
+  projectWorkspaceStatus,
+  resolveProjectScope,
+} from "./scope";
 import { TemplateDialog } from "./TemplateDialog";
 import { announceTimerChanged, onTimerChanged } from "./timerBus";
 import { WeekView } from "./WeekView";
@@ -54,12 +59,35 @@ function today(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-function ProjectWorkspaceRoute() {
+function ProjectWorkspaceRoute({
+  projects,
+  projectsLoading,
+  projectsLoadFailed,
+}: {
+  projects: Project[];
+  projectsLoading: boolean;
+  projectsLoadFailed: boolean;
+}) {
   const { projectId, workspaceView } = useParams<{
     projectId: string;
     workspaceView: string;
   }>();
   if (projectId === undefined) return <Navigate to="/projects/list" replace />;
+  const status = projectWorkspaceStatus(
+    projectId,
+    projectsLoading,
+    projectsLoadFailed,
+    projects,
+  );
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-[28rem] items-center justify-center" role="status">
+        <Spinner size={24} />
+      </div>
+    );
+  }
+  if (status === "missing") return <Navigate to="/projects/list" replace />;
+  if (status === "unavailable") return null;
   return workspaceView === undefined
     ? <TasksModule projectId={projectId} />
     : <TasksModule projectId={projectId} workspaceView={workspaceView} />;
@@ -90,6 +118,7 @@ export function ProjectsModule() {
   const [startingFromTemplate, setStartingFromTemplate] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [projectsLoadFailed, setProjectsLoadFailed] = useState(false);
   const requestedContextProjectId = projectContextId(location.pathname, searchParams.get("project"));
   const contextProjectId = resolveProjectScope(requestedContextProjectId, loading, projects);
   const [revision, setRevision] = useState(0);
@@ -119,10 +148,14 @@ export function ProjectsModule() {
         const list = await api.projects();
         if (live) {
           setProjects(list);
+          setProjectsLoadFailed(false);
           setError(null);
         }
       } catch (err) {
-        if (live) setError(projectsMessage(err, strings.projectsLoadFailed));
+        if (live) {
+          setProjectsLoadFailed(true);
+          setError(projectsMessage(err, strings.projectsLoadFailed));
+        }
       } finally {
         if (live) setLoading(false);
       }
@@ -358,8 +391,26 @@ export function ProjectsModule() {
             />
           )}
         />
-        <Route path=":projectId" element={<ProjectWorkspaceRoute />} />
-        <Route path=":projectId/:workspaceView" element={<ProjectWorkspaceRoute />} />
+        <Route
+          path=":projectId"
+          element={(
+            <ProjectWorkspaceRoute
+              projects={projects}
+              projectsLoading={loading}
+              projectsLoadFailed={projectsLoadFailed}
+            />
+          )}
+        />
+        <Route
+          path=":projectId/:workspaceView"
+          element={(
+            <ProjectWorkspaceRoute
+              projects={projects}
+              projectsLoading={loading}
+              projectsLoadFailed={projectsLoadFailed}
+            />
+          )}
+        />
         {/* An unknown Projects path is a stale link, not an error page. */}
         <Route path="*" element={<Navigate to="/projects/list" replace />} />
       </Routes>

@@ -55,3 +55,22 @@ export function resolveProjectScope(
     ? requestedProjectId
     : null;
 }
+
+export type ProjectWorkspaceStatus = "loading" | "available" | "missing" | "unavailable";
+
+/** Resolve a project deep link from the same authoritative collection that
+ * drives the portfolio. A failed collection read is deliberately distinct
+ * from a missing project: redirecting during an outage would turn a useful
+ * bookmark into an apparently empty portfolio and hide the real problem. */
+export function projectWorkspaceStatus(
+  projectId: string,
+  projectsLoading: boolean,
+  projectsLoadFailed: boolean,
+  projects: Pick<Project, "id">[],
+): ProjectWorkspaceStatus {
+  if (projectsLoading) return "loading";
+  if (projectsLoadFailed) return "unavailable";
+  return projects.some((project) => project.id === projectId)
+    ? "available"
+    : "missing";
+}
