@@ -42,7 +42,13 @@ pub struct SessionContext {
     /// The user who authenticated when the context was created.
     pub user: UserId,
     /// The DN the client connected as, echoed in diagnostics.
+    ///
+    /// A claim the client made at `Connect`, never an authority: what the
+    /// caller may open is decided from [`Self::login`], which is who they
+    /// actually proved to be.
     pub user_dn: String,
+    /// The address the caller authenticated as. **This is the identity.**
+    pub login: String,
     /// When this context stops being valid unless used again.
     pub expires_at: OffsetDateTime,
 }
@@ -91,6 +97,7 @@ impl SessionStore {
         tenant: TenantId,
         user: UserId,
         user_dn: String,
+        login: String,
         now: OffsetDateTime,
     ) -> Option<String> {
         let mut contexts = self.contexts.lock().ok()?;
@@ -107,6 +114,7 @@ impl SessionStore {
                 tenant,
                 user,
                 user_dn,
+                login,
                 expires_at: now + CONTEXT_LIFETIME,
             },
         );
@@ -189,7 +197,13 @@ mod tests {
         let (tenant, user) = ids();
         let now = OffsetDateTime::UNIX_EPOCH;
         let token = store
-            .establish(tenant.clone(), user, "/o=alo/cn=x".to_owned(), now)
+            .establish(
+                tenant.clone(),
+                user,
+                "/o=alo/cn=x".to_owned(),
+                "x@alo.test".to_owned(),
+                now,
+            )
             .expect("established");
 
         assert!(store.touch(&token, now).is_some());
@@ -215,7 +229,13 @@ mod tests {
         let mut seen = std::collections::HashSet::new();
         for _ in 0..256 {
             let token = store
-                .establish(tenant.clone(), user.clone(), "/o=alo/cn=x".to_owned(), now)
+                .establish(
+                    tenant.clone(),
+                    user.clone(),
+                    "/o=alo/cn=x".to_owned(),
+                    "x@alo.test".to_owned(),
+                    now,
+                )
                 .expect("established");
             assert_eq!(token.len(), 64, "expected 32 bytes of hex");
             assert!(token.chars().all(|c| c.is_ascii_hexdigit()));
@@ -236,10 +256,22 @@ mod tests {
         let now = OffsetDateTime::UNIX_EPOCH;
 
         let a = store
-            .establish(tenant_a.clone(), user_a.clone(), "a".to_owned(), now)
+            .establish(
+                tenant_a.clone(),
+                user_a.clone(),
+                "a".to_owned(),
+                "a@alo.test".to_owned(),
+                now,
+            )
             .unwrap();
         let b = store
-            .establish(tenant_b.clone(), user_b, "b".to_owned(), now)
+            .establish(
+                tenant_b.clone(),
+                user_b,
+                "b".to_owned(),
+                "b@alo.test".to_owned(),
+                now,
+            )
             .unwrap();
 
         let found_a = store.touch(&a, now).expect("a");
@@ -257,7 +289,7 @@ mod tests {
         let (tenant, user) = ids();
         let now = OffsetDateTime::UNIX_EPOCH;
         let token = store
-            .establish(tenant, user, "x".to_owned(), now)
+            .establish(tenant, user, "x".to_owned(), "x@alo.test".to_owned(), now)
             .expect("established");
 
         store.end(&token);

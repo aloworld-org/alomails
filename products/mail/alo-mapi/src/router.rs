@@ -187,6 +187,7 @@ async fn emsmdb(State(state): State<MapiState>, headers: HeaderMap, body: Bytes)
                 principal.tenant.clone(),
                 principal.user.clone(),
                 request.user_dn.clone(),
+                username.clone(),
                 now,
             ) else {
                 // The table is full, or the CSPRNG failed. Either way we do not
