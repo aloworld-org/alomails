@@ -265,34 +265,34 @@ export function TasksModule({
         : (activeProject?.name ?? strings.moduleTasks);
 
   return (
-    <div className={styles.tasks}>
+    <div className="flex h-full min-h-0 bg-app">
       {projectId === undefined && (
-        <aside className={styles.sidebar}>
+        <aside className="flex w-60 shrink-0 flex-col gap-4 overflow-y-auto border-r border-default bg-sunken p-4 max-md:w-52 max-sm:hidden">
           <button
             type="button"
-            className={`${styles.plateBtn} ${mode.type === "plate" ? styles.projActive : ""}`}
+            className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${mode.type === "plate" ? "bg-selected font-medium" : ""}`}
             onClick={() => setMode({ type: "plate" })}
           >
             <Sun size={16} /> {projectsContext ? strings.projectsTabMyWork : strings.taskMyPlate}
           </button>
           <button
             type="button"
-            className={`${styles.plateBtn} ${mode.type === "proposals" ? styles.projActive : ""}`}
+            className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${mode.type === "proposals" ? "bg-selected font-medium" : ""}`}
             onClick={() => {
               void loadProposals();
               setMode({ type: "proposals" });
             }}
           >
             <Sparkles size={16} /> {strings.taskProposals}
-            {proposals.length > 0 && <span className={styles.badge}>{proposals.length}</span>}
+            {proposals.length > 0 && <span className="ml-auto inline-flex min-h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-on-accent">{proposals.length}</span>}
           </button>
 
-          <div className={styles.projList}>
-            <div className={styles.sideHead}>
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between px-1 text-xs font-semibold uppercase tracking-wide text-secondary">
               <span>{strings.taskProjects}</span>
               <button
                 type="button"
-                className={styles.iconBtn}
+                className="inline-flex size-8 items-center justify-center rounded-md text-secondary !no-underline transition-colors hover:bg-raised hover:text-accent hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 onClick={() => navigate("/projects/list?new=1")}
                 aria-label={strings.taskNewProject}
                 title={strings.taskNewProject}
@@ -304,25 +304,25 @@ export function TasksModule({
               <button
                 key={p.id}
                 type="button"
-                className={`${styles.projItem} ${
-                  mode.type === "project" && mode.id === p.id ? styles.projActive : ""
+                className={`flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-primary !no-underline transition-colors hover:bg-raised hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+                  mode.type === "project" && mode.id === p.id ? "bg-selected font-medium" : ""
                 }`}
                 onClick={() => openProject(p.id)}
               >
                 <span
-                  className={styles.projDot}
+                  className="size-2.5 shrink-0 rounded-[3px]"
                   style={{ background: p.color ?? "var(--accent)" }}
                   aria-hidden="true"
                 />
-                <span className={styles.projName}>{p.name}</span>
+                <span className="min-w-0 flex-1 truncate">{p.name}</span>
               </button>
             ))}
           </div>
         </aside>
       )}
 
-      <section className={styles.main}>
-        <header className={styles.topbar}>
+      <section className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center gap-5 px-6 pb-3 pt-5 max-lg:flex-wrap max-sm:px-4">
           <div className="min-w-0 shrink-0">
             {projectId !== undefined && (
               <button
@@ -334,26 +334,26 @@ export function TasksModule({
                 {strings.projectsTabList}
               </button>
             )}
-            <h1 className={styles.pageTitle}>{title}</h1>
+            <h1 className="m-0 shrink-0 text-2xl font-bold text-primary">{title}</h1>
           </div>
           <form
-            className={styles.searchWrap}
+            className="mx-auto flex h-10 max-w-[28.75rem] flex-1 items-center gap-2 rounded-full border border-default bg-surface px-3 transition-shadow focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/15 max-sm:order-3 max-sm:w-full max-sm:max-w-none max-sm:basis-full"
             role="search"
             onSubmit={(e) => e.preventDefault()}
           >
-            <Search size={16} className={styles.searchIcon} aria-hidden />
+            <Search size={16} className="shrink-0 text-tertiary" aria-hidden />
             <input
-              className={styles.searchInput}
+              className="min-w-0 flex-1 border-0 bg-transparent text-base text-primary outline-none placeholder:text-tertiary"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={strings.taskSearchPlaceholder}
               aria-label={strings.taskSearchPlaceholder}
             />
           </form>
-          <div className={styles.topActions}>
+          <div className="flex shrink-0 items-center gap-3">
             {loading && <Spinner size={16} />}
             {tasks.length > 0 && mode.type !== "proposals" && (
-              <button type="button" className={styles.newTaskBtn} onClick={() => openCreate()}>
+              <button type="button" className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-on-accent !no-underline shadow-sm transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" onClick={() => openCreate()}>
                 <Plus size={16} /> {strings.taskNew}
               </button>
             )}
@@ -361,7 +361,7 @@ export function TasksModule({
         </header>
 
         {mode.type !== "proposals" && (
-          <div className={styles.tabs} role="tablist">
+          <div className="flex gap-1 overflow-x-auto border-b border-subtle px-6 max-sm:px-4" role="tablist">
             {(
               [
                 { id: "overview", label: strings.taskOverview, Icon: LayoutDashboard },
@@ -377,7 +377,7 @@ export function TasksModule({
                 type="button"
                 role="tab"
                 aria-selected={view === t.id}
-                className={view === t.id ? `${styles.tab} ${styles.tabActive}` : styles.tab}
+                className={`mb-[-1px] inline-flex min-h-11 shrink-0 items-center gap-2 rounded-t-lg border-b-2 px-3 py-2.5 text-sm font-medium !no-underline transition-colors hover:bg-raised/70 hover:text-primary hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent ${view === t.id ? "border-accent bg-selected text-accent" : "border-transparent text-secondary"}`}
                 onClick={() => openView(t.id)}
               >
                 <t.Icon size={16} /> {t.label}
@@ -390,7 +390,7 @@ export function TasksModule({
           <TaskToolbar config={config} onChange={setConfig} />
         )}
 
-        <div className={styles.viewport}>
+        <div className="min-h-0 flex-1 overflow-auto">
           {mode.type === "proposals" ? (
             <ProposalsInbox
               proposals={proposals}
@@ -435,13 +435,13 @@ export function TasksModule({
               onOpenInvoice={(id) => navigate(`/billing/invoices/${encodeURIComponent(id)}`)}
             />
           ) : tasks.length === 0 ? (
-            <div className={styles.emptyState}>
-              <span className={styles.emptyArt}>
+            <div className="flex min-h-[28rem] flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+              <span className="mb-2 inline-flex size-20 items-center justify-center rounded-full bg-[var(--accent-tint)] text-accent-hover">
                 <ClipboardList size={40} />
               </span>
-              <h2 className={styles.emptyTitle}>{strings.taskEmptyTitle}</h2>
-              <p className={styles.emptyBody}>{strings.taskEmptyBody}</p>
-              <button type="button" className={styles.emptyCta} onClick={() => openCreate()}>
+              <h2 className="m-0 text-xl font-bold text-primary">{strings.taskEmptyTitle}</h2>
+              <p className="m-0 max-w-sm text-base leading-relaxed text-secondary">{strings.taskEmptyBody}</p>
+              <button type="button" className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-sm font-semibold text-on-accent !no-underline shadow-sm transition-colors hover:bg-accent-hover hover:!no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2" onClick={() => openCreate()}>
                 <Plus size={17} /> {strings.taskCreateFirst}
               </button>
             </div>
