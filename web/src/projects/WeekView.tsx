@@ -82,6 +82,17 @@ interface CellTarget {
  *  record anybody invented. */
 const OPEN_WEEK_STATUS = "open" as const;
 
+/** The filled timesheet keeps its add action in the section header. An empty
+ * week already has the same action in its empty state, so showing it in both
+ * places creates two competing primary buttons for one operation. */
+export function showTimesheetHeaderAddTime(
+  rowCount: number,
+  locked: boolean,
+  projectCount: number,
+): boolean {
+  return rowCount > 0 && !locked && projectCount > 0;
+}
+
 export function WeekView({
   projects,
   projectsLoading,
@@ -272,7 +283,7 @@ export function WeekView({
           <p className="text-lg font-semibold text-primary">{strings.projectsWeekTitle}</p>
           <p className="mt-1 text-sm text-secondary">{strings.projectsWeekPurpose}</p>
         </div>
-        {!locked && projects.length > 0 && (
+        {showTimesheetHeaderAddTime(rows.length, locked, projects.length) && (
           <Button icon={<Plus size={17} />} onClick={() => {
             if (projectId !== null) startEntry(projectId);
             else setChoosingProject(true);
