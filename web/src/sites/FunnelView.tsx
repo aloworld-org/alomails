@@ -27,11 +27,68 @@ import { ArrowLeft, BarChart3, Inbox, Lock, Sprout } from "lucide-react";
 
 import { strings } from "../i18n";
 import { SitesError, sitesMessage, useSitesApi } from "./api";
-import { funnelMoney, funnelStages, sourceIsQuiet, sourceLabel } from "./funnelReading";
+import {
+  funnelMoney,
+  funnelStages,
+  sourceIsQuiet,
+  sourceLabel,
+} from "./funnelReading";
 import type { FunnelStage } from "./funnelReading";
 import { EmptyState, ErrorBanner } from "./parts";
-import type { SiteAttributionReport, SiteAttributionSource, SiteDetail } from "./types";
-import styles from "./SitesModule.module.css";
+import type {
+  SiteAttributionReport,
+  SiteAttributionSource,
+  SiteDetail,
+} from "./types";
+
+const styles = {
+  page: "mx-auto flex w-full max-w-[96rem] flex-col gap-6 px-6 py-8 lg:px-10",
+  header: "flex flex-wrap items-center gap-3 border-b border-subtle pb-6",
+  analyticsHeader: "",
+  backLink:
+    "inline-flex min-h-11 items-center gap-2 rounded-xl border border-subtle bg-surface px-4 font-semibold text-primary no-underline transition hover:bg-surface-raised",
+  siteHead: "mr-auto min-w-0",
+  title: "text-2xl font-bold tracking-tight text-primary",
+  submissionSiteName: "mt-1 block truncate text-sm text-secondary",
+  analyticsDrill:
+    "inline-flex min-h-11 items-center gap-2 rounded-xl border border-subtle bg-surface px-4 font-semibold text-primary no-underline transition hover:bg-surface-raised",
+  analyticsPeriods: "inline-flex rounded-xl bg-surface-muted p-1",
+  analyticsPeriod:
+    "min-h-9 rounded-lg px-3 text-sm font-semibold text-secondary transition hover:bg-surface hover:text-primary",
+  analyticsPeriodActive: "bg-surface text-primary shadow-sm",
+  funnelDenied:
+    "mx-auto flex min-h-80 w-full max-w-2xl flex-col items-center justify-center rounded-2xl border border-subtle bg-surface px-8 py-12 text-center shadow-sm",
+  emptyArt:
+    "mb-4 inline-flex size-14 items-center justify-center rounded-2xl bg-accent-soft text-accent",
+  emptyTitle: "text-xl font-bold text-primary",
+  emptyBody: "mt-2 max-w-xl text-secondary",
+  funnelDeniedWay: "mt-4 max-w-xl text-sm text-secondary",
+  analyticsSkeletons:
+    "grid gap-4 md:grid-cols-3 [&>span]:h-48 [&>span]:animate-pulse [&>span]:rounded-2xl [&>span]:border [&>span]:border-subtle [&>span]:bg-surface",
+  analyticsContent: "grid gap-6 lg:grid-cols-2",
+  analyticsPanel: "rounded-2xl border border-subtle bg-surface p-6 shadow-sm",
+  analyticsPanelHead:
+    "mb-6 flex flex-wrap items-center justify-between gap-3 [&>h2]:text-lg [&>h2]:font-bold [&>h2]:text-primary [&>span]:text-sm [&>span]:text-secondary",
+  funnelStages: "space-y-4",
+  analyticsNote:
+    "mt-5 border-t border-subtle pt-4 text-sm leading-6 text-secondary",
+  analyticsPanelEmpty:
+    "rounded-xl bg-surface-muted px-4 py-8 text-center text-secondary",
+  funnelMoneyCurrency: "font-bold text-primary",
+  funnelMoney:
+    "space-y-3 [&>li]:grid [&>li]:grid-cols-[4rem_repeat(3,minmax(0,1fr))] [&>li]:items-center [&>li]:gap-3 [&>li]:rounded-xl [&>li]:bg-surface-muted [&>li]:p-4 [&_em]:block [&_em]:text-xs [&_em]:not-italic [&_em]:text-secondary [&_strong]:mt-1 [&_strong]:block [&_strong]:text-primary",
+  tableWrapStatic: "overflow-x-auto rounded-xl border border-subtle",
+  table:
+    "w-full min-w-[46rem] border-collapse text-left [&_th]:bg-surface-muted [&_th]:px-4 [&_th]:py-3 [&_th]:text-xs [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-wide [&_th]:text-secondary [&_td]:border-t [&_td]:border-subtle [&_td]:px-4 [&_td]:py-3 [&_td]:text-sm [&_td]:text-primary",
+  funnelStage:
+    "grid grid-cols-[minmax(7rem,10rem)_minmax(5rem,1fr)_auto] items-center gap-x-4 gap-y-1",
+  funnelStageLabel: "font-semibold text-primary",
+  funnelStageBar: "h-2 min-w-1 rounded-full bg-accent",
+  funnelStageCount: "tabular-nums text-primary",
+  funnelEvidence: "col-start-2 text-xs text-secondary",
+  funnelSourceGone: "italic text-secondary",
+  funnelDeals: "whitespace-nowrap",
+} as const;
 
 type FunnelPeriod = 7 | 30 | 90;
 const PERIODS: FunnelPeriod[] = [7, 30, 90];
@@ -98,7 +155,8 @@ export function FunnelView() {
 
   const numbers = useMemo(() => new Intl.NumberFormat(), []);
   const dates = useMemo(
-    () => new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }),
+    () =>
+      new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }),
     [],
   );
   const stages = report === null ? [] : funnelStages(report.totals);
@@ -109,7 +167,8 @@ export function FunnelView() {
       report === null
         ? []
         : [...report.sources].sort(
-            (left, right) => Number(sourceIsQuiet(left)) - Number(sourceIsQuiet(right)),
+            (left, right) =>
+              Number(sourceIsQuiet(left)) - Number(sourceIsQuiet(right)),
           ),
     [report],
   );
@@ -117,13 +176,18 @@ export function FunnelView() {
   return (
     <div className={styles.page}>
       <header className={`${styles.header} ${styles.analyticsHeader}`}>
-        <Link className={styles.backLink} to={`/sites/${encodeURIComponent(siteId)}`}>
+        <Link
+          className={styles.backLink}
+          to={`/sites/${encodeURIComponent(siteId)}`}
+        >
           <ArrowLeft size="var(--icon-size-inline)" />
           {strings.sitesBackToSite}
         </Link>
         <div className={styles.siteHead}>
           <h1 className={styles.title}>{strings.sitesFunnel}</h1>
-          {site !== null && <span className={styles.submissionSiteName}>{site.name}</span>}
+          {site !== null && (
+            <span className={styles.submissionSiteName}>{site.name}</span>
+          )}
         </div>
         <Link
           className={styles.analyticsDrill}
@@ -132,7 +196,10 @@ export function FunnelView() {
           <BarChart3 size="var(--icon-size-inline)" aria-hidden="true" />
           {strings.sitesAnalytics}
         </Link>
-        <div className={styles.analyticsPeriods} aria-label={strings.sitesFunnelPeriod}>
+        <div
+          className={styles.analyticsPeriods}
+          aria-label={strings.sitesFunnelPeriod}
+        >
           {PERIODS.map((days) => (
             <button
               type="button"
@@ -152,15 +219,22 @@ export function FunnelView() {
       {error !== null && <ErrorBanner message={error} />}
 
       {denial !== null ? (
-        <section className={styles.funnelDenied} aria-label={strings.sitesFunnel}>
+        <section
+          className={styles.funnelDenied}
+          aria-label={strings.sitesFunnel}
+        >
           <span className={styles.emptyArt} aria-hidden="true">
             <Lock size={38} />
           </span>
-          <h2 className={styles.emptyTitle}>{strings.sitesFunnelDeniedTitle}</h2>
+          <h2 className={styles.emptyTitle}>
+            {strings.sitesFunnelDeniedTitle}
+          </h2>
           {/* The server's own sentence, verbatim: it names which rule refused
               this reader, which a generic veil cannot. */}
           <p className={styles.emptyBody}>{denial}</p>
-          <p className={styles.funnelDeniedWay}>{strings.sitesFunnelDeniedWay}</p>
+          <p className={styles.funnelDeniedWay}>
+            {strings.sitesFunnelDeniedWay}
+          </p>
         </section>
       ) : loading ? (
         <div
@@ -182,7 +256,10 @@ export function FunnelView() {
         />
       ) : report !== null ? (
         <div className={styles.analyticsContent}>
-          <section className={styles.analyticsPanel} aria-label={strings.sitesFunnelChain}>
+          <section
+            className={styles.analyticsPanel}
+            aria-label={strings.sitesFunnelChain}
+          >
             <div className={styles.analyticsPanelHead}>
               <h2>{strings.sitesFunnelChain}</h2>
               <span>
@@ -195,28 +272,41 @@ export function FunnelView() {
                 <StageRow key={stage.key} stage={stage} numbers={numbers} />
               ))}
             </ol>
-            <p className={styles.analyticsNote}>{strings.sitesFunnelFloorNote}</p>
+            <p className={styles.analyticsNote}>
+              {strings.sitesFunnelFloorNote}
+            </p>
           </section>
 
-          <section className={styles.analyticsPanel} aria-label={strings.sitesFunnelMoney}>
+          <section
+            className={styles.analyticsPanel}
+            aria-label={strings.sitesFunnelMoney}
+          >
             <div className={styles.analyticsPanelHead}>
               <h2>{strings.sitesFunnelMoney}</h2>
               <span>{strings.sitesFunnelInvoiceRule}</span>
             </div>
             {report.totals.money.length === 0 ? (
-              <p className={styles.analyticsPanelEmpty}>{strings.sitesFunnelMoneyEmpty}</p>
+              <p className={styles.analyticsPanelEmpty}>
+                {strings.sitesFunnelMoneyEmpty}
+              </p>
             ) : (
               <ul className={styles.funnelMoney}>
                 {report.totals.money.map((line) => (
                   <li key={line.currency}>
-                    <span className={styles.funnelMoneyCurrency}>{line.currency}</span>
+                    <span className={styles.funnelMoneyCurrency}>
+                      {line.currency}
+                    </span>
                     <span>
                       <em>{strings.sitesFunnelOpen}</em>
-                      <strong>{funnelMoney(line.openCents, line.currency)}</strong>
+                      <strong>
+                        {funnelMoney(line.openCents, line.currency)}
+                      </strong>
                     </span>
                     <span>
                       <em>{strings.sitesFunnelWon}</em>
-                      <strong>{funnelMoney(line.wonCents, line.currency)}</strong>
+                      <strong>
+                        {funnelMoney(line.wonCents, line.currency)}
+                      </strong>
                     </span>
                     <span>
                       <em>{strings.sitesFunnelInvoiced}</em>
@@ -231,14 +321,21 @@ export function FunnelView() {
               </ul>
             )}
             {!report.billingVisible && (
-              <p className={styles.analyticsNote}>{strings.sitesFunnelBillingOff}</p>
+              <p className={styles.analyticsNote}>
+                {strings.sitesFunnelBillingOff}
+              </p>
             )}
             {report.totals.money.length > 1 && (
-              <p className={styles.analyticsNote}>{strings.sitesFunnelCurrencies}</p>
+              <p className={styles.analyticsNote}>
+                {strings.sitesFunnelCurrencies}
+              </p>
             )}
           </section>
 
-          <section className={styles.analyticsPanel} aria-label={strings.sitesFunnelSources}>
+          <section
+            className={`${styles.analyticsPanel} lg:col-span-2`}
+            aria-label={strings.sitesFunnelSources}
+          >
             <div className={styles.analyticsPanelHead}>
               <h2>{strings.sitesFunnelSources}</h2>
               <Link
@@ -264,7 +361,11 @@ export function FunnelView() {
                 </thead>
                 <tbody>
                   {sources.map((source) => (
-                    <SourceRow key={`${source.kind}:${source.id}`} source={source} numbers={numbers} />
+                    <SourceRow
+                      key={`${source.kind}:${source.id}`}
+                      source={source}
+                      numbers={numbers}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -279,16 +380,29 @@ export function FunnelView() {
 
 /** One step of the chain: the count, a bar against the largest step, and where
  *  the number came from. */
-function StageRow({ stage, numbers }: { stage: FunnelStage; numbers: Intl.NumberFormat }) {
+function StageRow({
+  stage,
+  numbers,
+}: {
+  stage: FunnelStage;
+  numbers: Intl.NumberFormat;
+}) {
   return (
     <li className={styles.funnelStage}>
       <span className={styles.funnelStageLabel}>{stage.label}</span>
       <span
         className={styles.funnelStageBar}
-        style={{ "--funnel-share": stage.share } as CSSProperties}
+        style={
+          {
+            "--funnel-share": stage.share,
+            width: `${Math.max(stage.share * 100, 2)}%`,
+          } as CSSProperties
+        }
         aria-hidden="true"
       />
-      <strong className={styles.funnelStageCount}>{numbers.format(stage.count)}</strong>
+      <strong className={styles.funnelStageCount}>
+        {numbers.format(stage.count)}
+      </strong>
       <span className={styles.funnelEvidence}>
         {stage.evidence === "browser"
           ? strings.sitesFunnelFromBrowser
@@ -312,7 +426,11 @@ function SourceRow({
     <tr>
       <td>
         <span
-          className={source.name === null && source.kind !== "chat" ? styles.funnelSourceGone : ""}
+          className={
+            source.name === null && source.kind !== "chat"
+              ? styles.funnelSourceGone
+              : ""
+          }
         >
           {sourceLabel(source)}
         </span>
@@ -322,10 +440,16 @@ function SourceRow({
       <td>{numbers.format(source.submits)}</td>
       <td>{numbers.format(source.leads)}</td>
       <td className={styles.funnelDeals}>
-        {strings.sitesFunnelDealsSummary(source.dealsOpen, source.dealsWon, source.dealsLost)}
+        {strings.sitesFunnelDealsSummary(
+          source.dealsOpen,
+          source.dealsWon,
+          source.dealsLost,
+        )}
       </td>
       <td>
-        {source.invoices === null ? strings.sitesFunnelHidden : numbers.format(source.invoices)}
+        {source.invoices === null
+          ? strings.sitesFunnelHidden
+          : numbers.format(source.invoices)}
       </td>
     </tr>
   );
