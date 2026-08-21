@@ -42,10 +42,11 @@
 
 use axum::Json;
 use axum::extract::{Path, Query, State};
-use axum::http::HeaderMap;
+use axum::http::{HeaderMap, StatusCode};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
+use alo_store::campaign_unsubscribe_link::UnsubscribeInvitation;
 use alo_store::{
     CampaignId, CampaignMergeField, CampaignPreview, PreviewAgainst, PreviewAs, ResolvedMergeField,
 };
@@ -66,6 +67,17 @@ const FALLBACKS: &str = "fallbacks";
 pub struct PreviewQuery {
     #[serde(default, rename = "as")]
     against: Option<String>,
+    /// The words of the unsubscribe link, in the reader's language.
+    ///
+    /// Supplied by the client and **required**, for the reason this module's
+    /// header already gives about `merge-fields`: a user-facing string belongs
+    /// in `web/src/i18n`, in three languages, not in a Rust literal that would
+    /// arrive in English whatever the reader set. The footer is the one control
+    /// a recipient looks for when they want the mail to stop, so a preview that
+    /// guessed its words in English would be a preview of a letter nobody
+    /// receives.
+    #[serde(default, rename = "unsubscribeText")]
+    unsubscribe_text: Option<String>,
 }
 
 impl PreviewQuery {
@@ -76,6 +88,31 @@ impl PreviewQuery {
             Some(FALLBACKS) => Ok(PreviewAs::Fallbacks),
             Some(address) => Ok(PreviewAs::Recipient(address_of(address)?)),
         }
+    }
+
+    /// The way out the preview shows, or the `422` naming what is missing.
+    ///
+    /// **The URL is the server's**, built from its own public origin: a
+    /// client-supplied address rendered into a letter is an open redirect
+    /// wearing a preview's clothes. Only the words come from the caller.
+    ///
+    /// `/u/preview` is deliberately not a real token. A preview has no
+    /// recipient, so there is nobody to mint one for — and a working token
+    /// minted for a rehearsal is a live unsubscribe link sitting in whatever
+    /// screenshot the colleague pastes into chat.
+    fn unsubscribe(&self, base_url: &str) -> Result<UnsubscribeInvitation, Problem> {
+        let text = stated(self.unsubscribe_text.as_deref()).ok_or_else(|| {
+            Problem::with(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "unsubscribeText names the words of the unsubscribe link, in the reader's \
+                 language — the server has no translations of its own",
+            )
+        })?;
+        Ok(UnsubscribeInvitation {
+            url: format!("{}/u/preview", base_url.trim_end_matches('/')),
+            topic: None,
+            link_text: text.to_owned(),
+        })
     }
 }
 
@@ -159,7 +196,11 @@ pub async fn preview_campaign(
     let account = authenticate(&state, &headers).await?;
     let preview = account
         .acc
-        .preview_campaign(&CampaignId::new(id), &query.against()?)
+        .preview_campaign(
+            &CampaignId::new(id),
+            &query.against()?,
+            &query.unsubscribe(&state.base_url)?,
+        )
         .await
         .map_err(map_store_err)?;
     Ok(Json(json!({ "preview": preview_json(&preview) })))
@@ -181,7 +222,11 @@ pub async fn test_campaign(
     let account = authenticate(&state, &headers).await?;
     let preview = account
         .acc
-        .preview_campaign(&CampaignId::new(id), &query.against()?)
+        .preview_campaign(
+            &CampaignId::new(id),
+            &query.against()?,
+            &query.unsubscribe(&state.base_url)?,
+        )
         .await
         .map_err(map_store_err)?;
 
@@ -230,11 +275,44 @@ mod tests {
     use super::*;
     use axum::http::StatusCode;
 
-    fn asked(value: Option<&str>) -> Result<PreviewAs, Problem> {
+    fn query(against: Option<&str>, unsubscribe_text: Option<&str>) -> PreviewQuery {
         PreviewQuery {
-            against: value.map(str::to_owned),
+            against: against.map(str::to_owned),
+            unsubscribe_text: unsubscribe_text.map(str::to_owned),
         }
-        .against()
+    }
+
+    fn asked(value: Option<&str>) -> Result<PreviewAs, Problem> {
+        query(value, Some("Uitschrijven")).against()
+    }
+
+    #[test]
+    fn a_preview_without_the_footers_words_is_refused_rather_than_guessed() {
+        // The server holds no translations. Guessing "Unsubscribe" would show a
+        // Dutch reader a footer no Dutch recipient receives, in the one place a
+        // recipient looks when they want the mail to stop.
+        for missing in [None, Some(""), Some("   ")] {
+            match query(None, missing).unsubscribe("https://alo.test") {
+                Err(refused) => assert_eq!(refused.status, StatusCode::UNPROCESSABLE_ENTITY),
+                Ok(invitation) => panic!("the words are required, got {}", invitation.link_text),
+            }
+        }
+    }
+
+    #[test]
+    fn the_preview_link_is_the_servers_own_address_and_carries_no_real_token() {
+        let Ok(invitation) = query(None, Some("Uitschrijven")).unsubscribe("https://alo.test/")
+        else {
+            panic!("a query naming the words is a good one");
+        };
+        // Built from the server's origin — a client-supplied address rendered
+        // into a letter would be an open redirect wearing a preview's clothes —
+        // and with the trailing slash not doubled.
+        assert_eq!(invitation.url, "https://alo.test/u/preview");
+        assert_eq!(invitation.link_text, "Uitschrijven");
+        // A preview has no recipient, so there is nobody to mint a token for,
+        // and the placeholder still has to be a letter-worthy invitation.
+        assert!(invitation.validated().is_ok());
     }
 
     #[test]

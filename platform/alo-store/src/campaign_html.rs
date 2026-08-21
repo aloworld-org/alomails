@@ -115,12 +115,15 @@
 //!
 //! ## What this module deliberately does not do
 //!
-//! - **It does not send, and it has no unsubscribe footer.** RFC 8058's link is
-//!   per recipient: it needs a token minted by [`crate::campaign_unsubscribe`]
-//!   and an absolute base URL, and both belong to the send that has neither yet
-//!   (C2 waits on an IP). A footer parameter that is `None` at every call site
-//!   would be pinned empty by every golden file, which is worse than absent.
-//!   It is additive on the day a send can fill it in.
+//! - **It does not send.** The unsubscribe footer it *does* now carry (C2.5)
+//!   arrives as a required [`UnsubscribeInvitation`] on the letter rather than
+//!   as something this module builds: the URL is per recipient, so only the
+//!   sender knows it, and the words are the recipient's language, which this
+//!   crate has no notion of. What is enforced here is that there is no way to
+//!   render a letter without one — the earlier note in this list said such a
+//!   parameter would be `None` at every call site and pinned empty by every
+//!   golden, and making it required rather than optional is exactly what
+//!   answers that.
 //! - **It does not personalise, and that is now a guarantee rather than a gap.**
 //!   [`crate::campaign_merge`] (C3.4) resolves a letter for one recipient
 //!   *before* it reaches here, so this renderer only ever sees finished words
@@ -143,6 +146,7 @@
 use crate::campaign_content::{
     CampaignBlock, CampaignContent, CodeBlock, HeadingBlock, ParagraphBlock, TableBlock,
 };
+use crate::campaign_unsubscribe_link::UnsubscribeInvitation;
 use crate::error::Result;
 
 /// The width of the reading column, in pixels.
@@ -260,6 +264,16 @@ pub struct CampaignLetter<'a> {
     pub preheader: Option<&'a str>,
     /// The body.
     pub content: &'a CampaignContent,
+    /// How this recipient leaves (C2.4/C2.5).
+    ///
+    /// **Required, not optional, and that is the point.** A bulk message with
+    /// no way out is unlawful under GDPR Art. 21(3) and ePrivacy Art. 13, and
+    /// undeliverable to Gmail and Outlook, which have required RFC 8058
+    /// one-click from bulk senders since February 2024. Ten thousand messages
+    /// sent without one cannot be un-sent, and "the sender forgot" is not a
+    /// defence anybody can offer a regulator — so the compiler refuses instead
+    /// of a reviewer noticing.
+    pub unsubscribe: &'a UnsubscribeInvitation,
 }
 
 /// Compiles a campaign into the `text/html` part of a mail.
@@ -426,10 +440,49 @@ fn body_html(letter: &CampaignLetter<'_>, out: &mut String) {
     }
 
     out.push_str("</td>\n</tr>\n</table>\n");
+    unsubscribe_html(letter.unsubscribe, out);
     out.push_str("</div>\n");
     out.push_str("<!--[if mso]></td></tr></table><![endif]-->\n");
     out.push_str("</td>\n</tr>\n</table>\n");
     out.push_str("</body>\n");
+}
+
+/// The visible way out (C2.5), under the card and inside the same column.
+///
+/// **Under the card rather than in it**, which is the convention every bulk
+/// sender follows and every recipient has learned: the card holds the tenant's
+/// words, and this is the machinery around them. Inside it, the footer would
+/// read as part of the message.
+///
+/// A plain link in the letter's own prose colour — never a button, never
+/// disguised as anything else. ADR 0044 §3 is explicit that a recipient who
+/// cannot find the way out presses the spam button instead, and a "manage your
+/// preferences" euphemism is exactly how they fail to find it. The words are
+/// the caller's (see [`UnsubscribeInvitation::link_text`]) because this crate
+/// knows nothing about the language the letter is written in.
+///
+/// The colour is a **plain inline declaration with no `!important`**, and that
+/// is deliberate. [`dark_mode_style`] repaints prose by matching
+/// `[style*="color:…"]` and winning with `!important`; an inline `!important`
+/// here would beat that rule — a style attribute outranks a stylesheet even
+/// between two important declarations — and the footer would stay slate on the
+/// dark navy card, the one link in the message a recipient needs to be able to
+/// read. Following the document's own mechanism costs nothing and inherits the
+/// dark mode the rest of the letter already has.
+fn unsubscribe_html(unsubscribe: &UnsubscribeInvitation, out: &mut String) {
+    out.push_str(&format!(
+        "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" \
+         border=\"0\" style=\"width:100%;border-collapse:collapse;\">\n\
+         <tr>\n<td align=\"center\" style=\"padding:16px 28px 8px 28px;\
+         font-family:{SANS};font-size:12px;line-height:18px;\
+         mso-line-height-rule:exactly;color:{TEXT_COLOUR};\">\n"
+    ));
+    out.push_str(&format!(
+        "<a href=\"{}\" style=\"color:{TEXT_COLOUR};text-decoration:underline;\">{}</a>\n",
+        esc(unsubscribe.url.trim()),
+        esc_text(&unsubscribe.link_text)
+    ));
+    out.push_str("</td>\n</tr>\n</table>\n");
 }
 
 /// The preview text, hidden six ways because no single way works everywhere.
@@ -712,6 +765,7 @@ mod tests {
             subject,
             preheader,
             content,
+            unsubscribe: &crate::campaign_unsubscribe_link::an_invitation(),
         })
         .expect("a validated body renders")
     }
@@ -1079,8 +1133,11 @@ mod tests {
         );
         let presentational = html.matches("role=\"presentation\"").count();
         assert_eq!(
-            presentational, 4,
-            "the two layout tables, the ghost table and the code frame: {html}"
+            presentational, 5,
+            "the two layout tables, the ghost table, the code frame and the \
+             unsubscribe footer — every table that is not the writer's own data \
+             announces itself as layout, so a screen reader reads the letter \
+             rather than \"table, one column\": {html}"
         );
     }
 
@@ -1206,6 +1263,7 @@ mod tests {
             subject: "s",
             preheader: None,
             content: &content,
+            unsubscribe: &crate::campaign_unsubscribe_link::an_invitation(),
         }) {
             Err(StoreError::Validation(detail)) => {
                 assert!(detail.contains("schema_version"), "{detail}");
@@ -1230,6 +1288,7 @@ mod tests {
             subject: "s",
             preheader: None,
             content: &ragged,
+            unsubscribe: &crate::campaign_unsubscribe_link::an_invitation(),
         }) {
             Err(StoreError::Validation(detail)) => assert!(detail.contains("columns"), "{detail}"),
             other => panic!("expected a refusal, got {other:?}"),

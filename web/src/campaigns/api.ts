@@ -14,6 +14,7 @@
 import { useMemo } from "react";
 
 import { useAuth } from "../auth";
+import { strings } from "../i18n";
 import { API_BASE } from "../platform/runtime";
 import { RestError, problemDetail, restMessage } from "../platform/rest";
 import type {
@@ -213,10 +214,16 @@ export class CampaignsApi {
    * will not say which, and neither does this method.
    */
   preview(id: string, against?: string): Promise<CampaignPreview> {
-    const query =
-      against === undefined || against === "" ? "" : `?as=${encodeURIComponent(against)}`;
+    // The words of the unsubscribe footer travel with the request. The server
+    // renders the letter and holds no translations of its own, so a preview
+    // that did not send them would show an English footer to a Dutch reader —
+    // and the footer is the one control a recipient looks for when they have
+    // decided they want the mail to stop. The URL is the server's; only the
+    // words are ours to give.
+    const params = new URLSearchParams({ unsubscribeText: strings.campaignUnsubscribeLinkText });
+    if (against !== undefined && against !== "") params.set("as", against);
     return this.#read<{ preview: CampaignPreview }>(
-      `/campaigns/campaigns/${encodeURIComponent(id)}/preview${query}`,
+      `/campaigns/campaigns/${encodeURIComponent(id)}/preview?${params.toString()}`,
     ).then((r) => r.preview);
   }
 

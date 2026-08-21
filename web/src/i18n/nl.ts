@@ -6523,6 +6523,7 @@ export const nl: Partial<Catalog> = {
   campaignUnsubscribeAlreadyDeclined: (topic: string) =>
     `U hebt „${topic}” al gestopt. Hieronder kunt u nog steeds al het overige stoppen.`,
   campaignUnsubscribeDoneTitle: "Gedaan",
+  campaignUnsubscribeLinkText: "Uitschrijven",
   campaignUnsubscribeDoneAll:
     "Deze werkruimte zal u niet meer mailen. Verder is er niets nodig.",
   campaignUnsubscribeDoneTopic: (topic: string) => `„${topic}” wordt u niet meer gestuurd.`,

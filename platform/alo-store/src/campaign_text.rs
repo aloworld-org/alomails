@@ -77,9 +77,13 @@
 //! - **It carries no preheader.** A preheader is a device for hiding preview
 //!   text from a reader who can see the letter; in a text part there is nothing
 //!   to hide behind, so it would arrive as a duplicated first line.
-//! - **It has no unsubscribe footer**, for the reason [`crate::campaign_html`]
-//!   records: the RFC 8058 link is per recipient and belongs to the send, which
-//!   waits on an IP (C2). It is additive on the day there is one.
+//! - **It does not compose the unsubscribe footer**, though it now renders one
+//!   (C2.5). The link is per recipient and the words are the recipient's
+//!   language, so both arrive as an [`UnsubscribeInvitation`] the caller built.
+//!   What this module decides is only how it is set: below the letter, behind
+//!   the conventional `--` separator, with the URL written out in full — in a
+//!   text part there is nowhere for an address to hide, and a reader has to be
+//!   able to copy it.
 //! - **It does not personalise**, exactly as the HTML part does not.
 //!   [`crate::campaign_merge`] (C3.4) resolves the body once, for one
 //!   recipient, and both renderers are handed the same resolved words — a rule
@@ -88,11 +92,14 @@
 //! - **It emits no string of our own in any language.** The underlines are
 //!   punctuation and the labels are the writer's own header cells, so a text
 //!   part is in whatever language the letter was typed in and there is nothing
-//!   here to translate.
+//!   here to translate. The unsubscribe footer keeps that promise rather than
+//!   breaking it: its words come in on the invitation, already in the
+//!   recipient's language.
 
 use crate::campaign_content::{
     CampaignBlock, CampaignContent, CodeBlock, HeadingBlock, ParagraphBlock, TableBlock,
 };
+use crate::campaign_unsubscribe_link::UnsubscribeInvitation;
 use crate::error::Result;
 
 /// The column the text part wraps at.
@@ -122,8 +129,14 @@ const COLUMN_GAP: &str = "  ";
 /// rendering one would produce a letter no writer could have saved. The HTML
 /// renderer refuses the same bodies for the same reason, so the two parts of a
 /// mail can never disagree about whether the letter was legal.
-pub fn render_campaign_text(content: &CampaignContent) -> Result<String> {
+pub fn render_campaign_text(
+    content: &CampaignContent,
+    unsubscribe: &UnsubscribeInvitation,
+) -> Result<String> {
     content.validate()?;
+    // Refused before a line is rendered, so a letter that cannot be left never
+    // reaches half-built. The HTML part applies the same rule.
+    unsubscribe.validated()?;
 
     let mut lines: Vec<String> = Vec::new();
     for (index, block) in content.blocks.iter().enumerate() {
@@ -142,6 +155,24 @@ pub fn render_campaign_text(content: &CampaignContent) -> Result<String> {
     while lines.last().is_some_and(String::is_empty) {
         lines.pop();
     }
+
+    // The way out (C2.5), below the letter behind the conventional `-- `
+    // separator — the plain-text equivalent of the footer sitting under the
+    // card rather than inside it.
+    //
+    // The URL is written out in full rather than hidden behind words: in a text
+    // part there is nowhere for it to hide, and a reader has to be able to copy
+    // it. The words come first so the line reads as a sentence in the
+    // recipient's own language, with the address after it.
+    if !lines.is_empty() {
+        lines.push(String::new());
+        lines.push("--".to_owned());
+    }
+    lines.push(format!(
+        "{}: {}",
+        unsubscribe.link_text.trim(),
+        unsubscribe.url.trim()
+    ));
 
     let mut out = lines.join("\n");
     if !out.is_empty() {
@@ -380,8 +411,31 @@ mod tests {
             .expect("the fixture body is valid")
     }
 
+    /// The whole part, footer and all.
+    fn render_whole(content: &CampaignContent) -> String {
+        render_campaign_text(content, &crate::campaign_unsubscribe_link::an_invitation())
+            .expect("a validated body renders")
+    }
+
+    /// The letter *without* the unsubscribe footer.
+    ///
+    /// Every test below was written to hold something about how the **writer's**
+    /// blocks are set — wrapping, tables, blank lines, trailing whitespace — and
+    /// the footer is not the writer's. Stripping it keeps each of those claims
+    /// exactly what it was, instead of restating eight expected strings around a
+    /// line none of them is about.
+    /// [`tests::the_part_carries_the_way_out`] holds the footer itself, once.
     fn render(content: &CampaignContent) -> String {
-        render_campaign_text(content).expect("a validated body renders")
+        let whole = render_whole(content);
+        // Cut at the separator and restore the letter's own trailing newline,
+        // so what comes back is byte-for-byte what this renderer produced
+        // before the footer existed. Anything looser would quietly relax the
+        // trailing-whitespace and blank-line claims these tests exist to hold.
+        match whole.find("\n\n--\n") {
+            Some(cut) => format!("{}\n", &whole[..cut]),
+            // No separator means there was no letter above it.
+            None => String::new(),
+        }
     }
 
     fn letter() -> CampaignContent {
@@ -610,7 +664,7 @@ mod tests {
                 rows: vec![vec!["a".to_owned(), "b".to_owned()], vec!["a".to_owned()]],
             })],
         };
-        match render_campaign_text(&ragged) {
+        match render_campaign_text(&ragged, &crate::campaign_unsubscribe_link::an_invitation()) {
             Err(StoreError::Validation(detail)) => assert!(detail.contains("columns"), "{detail}"),
             other => panic!("expected a refusal, got {other:?}"),
         }
@@ -619,7 +673,7 @@ mod tests {
             schema_version: 2,
             blocks: Vec::new(),
         };
-        match render_campaign_text(&newer) {
+        match render_campaign_text(&newer, &crate::campaign_unsubscribe_link::an_invitation()) {
             Err(StoreError::Validation(detail)) => {
                 assert!(detail.contains("schema_version"), "{detail}");
             }
@@ -654,6 +708,47 @@ mod tests {
              \n\
              [bash]\n\
              \x20   curl https://alo\n",
+        );
+    }
+    #[test]
+    fn the_part_carries_the_way_out() {
+        // C2.5: the visible link, in every part, for every recipient whose
+        // client draws no Unsubscribe button of its own.
+        let invitation = crate::campaign_unsubscribe_link::an_invitation();
+        let whole = render_whole(&letter());
+
+        assert!(
+            whole.contains(&invitation.url),
+            "the address is written out in full — a text part has nowhere to              hide a link, and a reader has to be able to copy it: {whole}"
+        );
+        assert!(
+            whole.contains(&invitation.link_text),
+            "and the words are the caller's, in the recipient's language: {whole}"
+        );
+        // Below the letter, behind the conventional separator, rather than
+        // interrupting the writer's last block.
+        let footer_at = whole.find(&invitation.link_text).expect("a footer");
+        assert!(
+            whole[..footer_at].contains(
+                "
+--
+"
+            ),
+            "the footer is set off from the letter: {whole}"
+        );
+    }
+
+    #[test]
+    fn a_letter_with_nothing_in_it_still_says_how_to_leave() {
+        // An empty campaign is a legal record — a draft somebody is still
+        // writing — so this renders rather than refusing. What it must not do
+        // is render a part with no way out of it.
+        let whole = render_whole(&CampaignContent::empty());
+        let invitation = crate::campaign_unsubscribe_link::an_invitation();
+        assert!(whole.contains(&invitation.url), "{whole}");
+        assert!(
+            !whole.contains("--"),
+            "with no letter above it there is nothing to separate from: {whole}"
         );
     }
 }

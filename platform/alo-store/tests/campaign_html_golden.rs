@@ -30,11 +30,23 @@
 use std::fs;
 use std::path::PathBuf;
 
+use alo_store::campaign_unsubscribe_link::UnsubscribeInvitation;
 use alo_store::{
     CAMPAIGN_CONTENT_SCHEMA_VERSION, CampaignBlock, CampaignContent, CampaignLetter,
     render_campaign_html,
 };
 use serde_json::{Value, json};
+
+/// The way out the letter must carry (C2.4/C2.5). Not English on purpose: the
+/// words belong to the caller, and a golden pinning "Unsubscribe" would read as
+/// though they belonged to the renderer.
+fn unsub() -> UnsubscribeInvitation {
+    UnsubscribeInvitation {
+        url: "https://alo.test/u/9tOKENx".to_owned(),
+        topic: Some("Nieuwsbrief".to_owned()),
+        link_text: "Uitschrijven".to_owned(),
+    }
+}
 
 fn body(blocks: Value) -> CampaignContent {
     CampaignContent::from_value(json!({
@@ -137,6 +149,7 @@ fn render(subject: &str, preheader: Option<&str>, content: &CampaignContent) -> 
         subject,
         preheader,
         content,
+        unsubscribe: &unsub(),
     })
     .expect("a body that passed the write gate renders")
 }

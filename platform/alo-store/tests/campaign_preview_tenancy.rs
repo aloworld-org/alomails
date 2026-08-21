@@ -30,12 +30,23 @@
 
 mod common;
 
+use alo_store::campaign_unsubscribe_link::UnsubscribeInvitation;
 use alo_store::{
     AccountStore, CampaignContent, CampaignId, CampaignMergeField, CampaignPreview, ConsentSource,
     FallbackReason, NewCampaign, NewCampaignConsent, NewCustomer, NewSuppression, PreviewAgainst,
     PreviewAs, Store, StoreError, SuppressionReason, TenantStore,
 };
 use serde_json::json;
+
+/// The way out a preview shows because the recipient will see it. Its URL is a
+/// placeholder: a preview has no recipient, so there is no token to mint.
+fn unsub() -> UnsubscribeInvitation {
+    UnsubscribeInvitation {
+        url: "https://alo.test/u/preview".to_owned(),
+        topic: Some("Nieuwsbrief".to_owned()),
+        link_text: "Uitschrijven".to_owned(),
+    }
+}
 
 /// A tenant with one user: the account door for campaigns and customers, the
 /// tenant door for suppression (which has no logged-in colleague behind it).
@@ -134,7 +145,11 @@ async fn a_preview_resolves_against_a_real_record_and_says_which_words_are_their
     let id = campaign(&account, "Spring prices for {{first_name|you}}").await;
 
     let preview = account
-        .preview_campaign(&id, &PreviewAs::Recipient("  JEAN@Cprev.TEST ".to_owned()))
+        .preview_campaign(
+            &id,
+            &PreviewAs::Recipient("  JEAN@Cprev.TEST ".to_owned()),
+            &unsub(),
+        )
         .await
         .unwrap();
 
@@ -193,13 +208,18 @@ async fn one_address_held_by_two_tenants_previews_as_each_tenants_own_record() {
     let theirs_id = campaign(&theirs, "Theirs").await;
 
     let our_preview = ours
-        .preview_campaign(&ours_id, &PreviewAs::Recipient("shared@cprev.test".into()))
+        .preview_campaign(
+            &ours_id,
+            &PreviewAs::Recipient("shared@cprev.test".into()),
+            &unsub(),
+        )
         .await
         .unwrap();
     let their_preview = theirs
         .preview_campaign(
             &theirs_id,
             &PreviewAs::Recipient("shared@cprev.test".into()),
+            &unsub(),
         )
         .await
         .unwrap();
@@ -213,12 +233,12 @@ async fn one_address_held_by_two_tenants_previews_as_each_tenants_own_record() {
     // And neither tenant can reach the other's letter, from an id that is a
     // perfectly good campaign one tenant over.
     assert!(is_not_found(
-        ours.preview_campaign(&theirs_id, &PreviewAs::Fallbacks)
+        ours.preview_campaign(&theirs_id, &PreviewAs::Fallbacks, &unsub())
             .await
     ));
     assert!(is_not_found(
         theirs
-            .preview_campaign(&ours_id, &PreviewAs::AnyRecipient)
+            .preview_campaign(&ours_id, &PreviewAs::AnyRecipient, &unsub())
             .await
     ));
 }
@@ -238,7 +258,11 @@ async fn a_preview_cannot_be_rendered_as_somebody_this_tenant_may_not_mail() {
     // about the suppression and not about a typo in the address.
     assert!(
         account
-            .preview_campaign(&id, &PreviewAs::Recipient("gone@cprev.test".into()))
+            .preview_campaign(
+                &id,
+                &PreviewAs::Recipient("gone@cprev.test".into()),
+                &unsub()
+            )
             .await
             .is_ok()
     );
@@ -255,7 +279,11 @@ async fn a_preview_cannot_be_rendered_as_somebody_this_tenant_may_not_mail() {
     assert!(
         is_not_found(
             account
-                .preview_campaign(&id, &PreviewAs::Recipient("gone@cprev.test".into()))
+                .preview_campaign(
+                    &id,
+                    &PreviewAs::Recipient("gone@cprev.test".into()),
+                    &unsub()
+                )
                 .await
         ),
         "a suppressed address was rendered a letter"
@@ -263,7 +291,11 @@ async fn a_preview_cannot_be_rendered_as_somebody_this_tenant_may_not_mail() {
     assert!(
         is_not_found(
             account
-                .preview_campaign(&id, &PreviewAs::Recipient("quiet@cprev.test".into()))
+                .preview_campaign(
+                    &id,
+                    &PreviewAs::Recipient("quiet@cprev.test".into()),
+                    &unsub()
+                )
                 .await
         ),
         "somebody with no consent record was rendered a letter"
@@ -271,7 +303,11 @@ async fn a_preview_cannot_be_rendered_as_somebody_this_tenant_may_not_mail() {
     assert!(
         is_not_found(
             account
-                .preview_campaign(&id, &PreviewAs::Recipient("stranger@cprev.test".into()))
+                .preview_campaign(
+                    &id,
+                    &PreviewAs::Recipient("stranger@cprev.test".into()),
+                    &unsub()
+                )
                 .await
         ),
         "an address this tenant has never held answers the same way, so the \
@@ -293,7 +329,11 @@ async fn a_preview_cannot_be_rendered_as_somebody_this_tenant_may_not_mail() {
     assert!(
         is_not_found(
             account
-                .preview_campaign(&id, &PreviewAs::Recipient("gone@cprev.test".into()))
+                .preview_campaign(
+                    &id,
+                    &PreviewAs::Recipient("gone@cprev.test".into()),
+                    &unsub()
+                )
                 .await
         ),
         "an import resurrected somebody the preview had refused"
@@ -302,7 +342,7 @@ async fn a_preview_cannot_be_rendered_as_somebody_this_tenant_may_not_mail() {
     // `AnyRecipient` picks from the same query, so it cannot land on them
     // either: the only mailable person is gone, and the answer says nobody.
     let any = account
-        .preview_campaign(&id, &PreviewAs::AnyRecipient)
+        .preview_campaign(&id, &PreviewAs::AnyRecipient, &unsub())
         .await
         .unwrap();
     assert_eq!(
@@ -324,7 +364,7 @@ async fn a_preview_against_nobody_prints_the_writers_fallbacks_and_says_so() {
     // An empty audience does not make a preview impossible, and the reason is
     // reported rather than substituted.
     let empty = account
-        .preview_campaign(&id, &PreviewAs::AnyRecipient)
+        .preview_campaign(&id, &PreviewAs::AnyRecipient, &unsub())
         .await
         .unwrap();
     assert_eq!(
@@ -335,7 +375,7 @@ async fn a_preview_against_nobody_prints_the_writers_fallbacks_and_says_so() {
     // And with a real audience, asking for it anyway is a different answer.
     reachable(&account, "Jean Dupont", "jean@cprev.test", "FR").await;
     let asked = account
-        .preview_campaign(&id, &PreviewAs::Fallbacks)
+        .preview_campaign(&id, &PreviewAs::Fallbacks, &unsub())
         .await
         .unwrap();
     assert_eq!(

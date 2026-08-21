@@ -6584,6 +6584,7 @@ export const fr: Partial<Catalog> = {
   campaignUnsubscribeAlreadyDeclined: (topic: string) =>
     `Vous avez déjà arrêté « ${topic} ». Vous pouvez encore tout arrêter ci-dessous.`,
   campaignUnsubscribeDoneTitle: "C’est fait",
+  campaignUnsubscribeLinkText: "Se désabonner",
   campaignUnsubscribeDoneAll:
     "Cet espace de travail ne vous écrira plus. Rien d’autre n’est nécessaire.",
   campaignUnsubscribeDoneTopic: (topic: string) =>

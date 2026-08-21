@@ -113,6 +113,7 @@
 use crate::campaign_audience::CampaignRecipient;
 use crate::campaign_content::{CampaignBlock, CampaignContent, ParagraphBlock, TableBlock};
 use crate::campaign_html::CampaignLetter;
+use crate::campaign_unsubscribe_link::UnsubscribeInvitation;
 use crate::error::{Result, StoreError};
 
 /// What opens a merge field.
@@ -272,11 +273,18 @@ pub struct PersonalisedLetter {
 
 impl PersonalisedLetter {
     /// The view [`crate::campaign_html::render_campaign_html`] takes.
-    pub fn letter(&self) -> CampaignLetter<'_> {
+    ///
+    /// The invitation is passed in rather than stored on the personalised
+    /// letter, because the two are produced by different things at different
+    /// moments: the words are resolved once per recipient from their record,
+    /// while the way out is minted per recipient by the send. Holding both here
+    /// would suggest one call produced them.
+    pub fn letter<'a>(&'a self, unsubscribe: &'a UnsubscribeInvitation) -> CampaignLetter<'a> {
         CampaignLetter {
             subject: &self.subject,
             preheader: self.preheader.as_deref(),
             content: &self.content,
+            unsubscribe,
         }
     }
 
@@ -811,7 +819,11 @@ mod tests {
             ] },
         ]));
         let resolved = resolve_merge_content(&content, &values()).unwrap();
-        let rendered = render_campaign_text(&resolved).unwrap();
+        let rendered = render_campaign_text(
+            &resolved,
+            &crate::campaign_unsubscribe_link::an_invitation(),
+        )
+        .unwrap();
         assert!(rendered.contains("For Jean"), "{rendered}");
         assert!(rendered.contains("jean.dupont@example.fr"), "{rendered}");
         assert!(rendered.contains("Jean Dupont"), "{rendered}");
@@ -840,6 +852,7 @@ mod tests {
             subject: "A note for {{first_name|you}}",
             preheader: Some("Written to {{email|you}}"),
             content: &content,
+            unsubscribe: &crate::campaign_unsubscribe_link::an_invitation(),
         };
         let personalised = personalise_campaign(&letter, &apostrophe).unwrap();
 
@@ -849,8 +862,15 @@ mod tests {
             Some("Written to o.brien@example.ie")
         );
 
-        let html = render_campaign_html(&personalised.letter()).unwrap();
-        let text = render_campaign_text(personalised.content()).unwrap();
+        let html = render_campaign_html(
+            &personalised.letter(&crate::campaign_unsubscribe_link::an_invitation()),
+        )
+        .unwrap();
+        let text = render_campaign_text(
+            personalised.content(),
+            &crate::campaign_unsubscribe_link::an_invitation(),
+        )
+        .unwrap();
         // Each part escapes for itself, from the same resolved words.
         assert!(html.contains("Dear O&#39;Brien &amp; Sons,"), "{html}");
         assert!(text.contains("Dear O'Brien & Sons,"), "{text}");
@@ -881,6 +901,7 @@ mod tests {
             subject: "Hello",
             preheader: None,
             content: &content,
+            unsubscribe: &crate::campaign_unsubscribe_link::an_invitation(),
         };
         let reported = detail(
             personalise_campaign(&letter, &values()).map(|personalised| personalised.subject),
@@ -892,6 +913,7 @@ mod tests {
             subject: "Hi {{first_name}}",
             preheader: None,
             content: &empty,
+            unsubscribe: &crate::campaign_unsubscribe_link::an_invitation(),
         };
         let reported =
             detail(personalise_campaign(&bad_subject, &values()).map(|letter| letter.subject));
@@ -914,6 +936,7 @@ mod tests {
             subject: "Hi {{first_name|there}}",
             preheader: Some("A note for {{first_name|a customer}}"),
             content: &content,
+            unsubscribe: &crate::campaign_unsubscribe_link::an_invitation(),
         };
         let known = personalise_campaign(&letter, &values()).unwrap();
         assert_eq!(
@@ -979,6 +1002,7 @@ mod tests {
             subject: "Spring prices",
             preheader: None,
             content: &content,
+            unsubscribe: &crate::campaign_unsubscribe_link::an_invitation(),
         };
         assert!(
             personalise_campaign(&letter, &values())

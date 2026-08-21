@@ -6672,6 +6672,12 @@ export const en = {
   campaignUnsubscribeAlreadyDeclined: (topic: string) =>
     `You have already stopped “${topic}”. You can still stop everything else below.`,
   campaignUnsubscribeDoneTitle: "Done",
+  // The words of the unsubscribe link in a campaign's own footer (C2.5).
+  // Sent to the server, which has no translations of its own, and printed in
+  // the letter the recipient receives — so it is read by somebody who has
+  // already decided they want the mail to stop, and must say exactly that
+  // rather than a euphemism like "manage your preferences".
+  campaignUnsubscribeLinkText: "Unsubscribe",
   campaignUnsubscribeDoneAll:
     "This workspace will not email you again. Nothing further is needed.",
   campaignUnsubscribeDoneTopic: (topic: string) =>

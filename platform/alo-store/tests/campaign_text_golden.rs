@@ -28,12 +28,24 @@
 use std::fs;
 use std::path::PathBuf;
 
+use alo_store::campaign_unsubscribe_link::UnsubscribeInvitation;
 use alo_store::{
     CAMPAIGN_CONTENT_SCHEMA_VERSION, CAMPAIGN_HEADER_LINE_MAX, CAMPAIGN_MIME_LINE_MAX,
     CAMPAIGN_TEXT_WIDTH_COLS, CampaignContent, CampaignLetter, render_campaign_html,
     render_campaign_message, render_campaign_text,
 };
 use serde_json::{Value, json};
+
+/// The way out the letter must carry (C2.4/C2.5). Not English on purpose: the
+/// words belong to the caller, and a golden pinning "Unsubscribe" would read as
+/// though they belonged to the renderer.
+fn unsub() -> UnsubscribeInvitation {
+    UnsubscribeInvitation {
+        url: "https://alo.test/u/9tOKENx".to_owned(),
+        topic: Some("Nieuwsbrief".to_owned()),
+        link_text: "Uitschrijven".to_owned(),
+    }
+}
 
 fn body(blocks: Value) -> CampaignContent {
     CampaignContent::from_value(json!({
@@ -157,7 +169,7 @@ fn hostile() -> CampaignContent {
 }
 
 fn text(content: &CampaignContent) -> String {
-    render_campaign_text(content).expect("a body that passed the write gate renders")
+    render_campaign_text(content, &unsub()).expect("a body that passed the write gate renders")
 }
 
 /// The whole text part, pinned. This is the file to read when a change to the
@@ -214,6 +226,7 @@ fn the_assembled_message_is_pinned_byte_for_byte() {
         subject: "Nieuwe prijzen vanaf maandag",
         preheader: Some("Olijfolie 12,50 € — geldig vanaf 2 maart"),
         content: &newsletter(),
+        unsubscribe: &unsub(),
     })
     .expect("a validated letter assembles");
 
@@ -277,12 +290,13 @@ fn the_pinned_message_is_still_a_message() {
         subject: "Nieuwe prijzen vanaf maandag",
         preheader: Some("Olijfolie 12,50 € — geldig vanaf 2 maart"),
         content: &newsletter(),
+        unsubscribe: &unsub(),
     };
     let parts = decode_parts(body, boundary);
     assert_eq!(parts.len(), 2, "two alternatives");
     assert_eq!(
         parts[0],
-        render_campaign_text(letter.content).expect("renders"),
+        render_campaign_text(letter.content, &unsub()).expect("renders"),
         "the pinned text part is not what the renderer produces today"
     );
     assert_eq!(

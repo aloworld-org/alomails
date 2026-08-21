@@ -59,6 +59,7 @@ use crate::campaign_audience::AudiencePage;
 use crate::campaign_html::CampaignLetter;
 use crate::campaign_merge::{CampaignMergeValues, ResolvedMergeField, personalise_campaign};
 use crate::campaign_mime::render_campaign_message;
+use crate::campaign_unsubscribe_link::UnsubscribeInvitation;
 use crate::error::{Result, StoreError};
 use crate::id::CampaignId;
 
@@ -160,17 +161,23 @@ impl AccountStore {
         &self,
         id: &CampaignId,
         against: &PreviewAs,
+        unsubscribe: &UnsubscribeInvitation,
     ) -> Result<CampaignPreview> {
         let campaign = self.campaign(id).await?.ok_or(StoreError::NotFound)?;
         let (values, against) = self.values_for(against).await?;
 
+        // The preview carries the footer because the recipient will see it: a
+        // preview that hid the one control a reader looks for would be a
+        // preview of a different letter. Its URL is the caller's placeholder —
+        // there is no recipient here, so there is no token to mint.
         let letter = CampaignLetter {
             subject: &campaign.subject,
             preheader: campaign.preheader.as_deref(),
             content: &campaign.content,
+            unsubscribe,
         };
         let personalised = personalise_campaign(&letter, &values)?;
-        let message = render_campaign_message(&personalised.letter())?;
+        let message = render_campaign_message(&personalised.letter(unsubscribe))?;
 
         Ok(CampaignPreview {
             subject: personalised.subject,

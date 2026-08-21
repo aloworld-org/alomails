@@ -122,6 +122,16 @@ pub struct CampaignMessage {
     pub text: String,
     /// The HTML alternative, as [`crate::campaign_html`] rendered it.
     pub html: String,
+    /// The headers this entity must be sent with (C2.4): RFC 2369 §3.2's
+    /// `List-Unsubscribe` and RFC 8058 §3.1's `List-Unsubscribe-Post`.
+    ///
+    /// Carried out with the body rather than left for the sender to remember.
+    /// The module doc above says the message headers belong to the sender
+    /// because each is a fact about a *send* — and these two are the exception
+    /// that proves it: they are facts about the **letter**, they are what makes
+    /// a bulk message lawful and deliverable, and a sender that forgot them
+    /// would produce mail that cannot be recalled.
+    pub headers: Vec<(&'static str, String)>,
 }
 
 impl CampaignMessage {
@@ -145,8 +155,13 @@ impl CampaignMessage {
 /// gate, so a letter can never be assembled with one legal part and one
 /// illegal one.
 pub fn render_campaign_message(letter: &CampaignLetter<'_>) -> Result<CampaignMessage> {
-    let text = render_campaign_text(letter.content)?;
+    let text = render_campaign_text(letter.content, letter.unsubscribe)?;
     let html = render_campaign_html(letter)?;
+    // Both parts already refused an invitation they could not carry; this is
+    // the same check reaching the headers, and it is where a non-HTTPS URL
+    // stops a message being built at all rather than producing one whose
+    // one-click header every client ignores.
+    let headers = letter.unsubscribe.header_pair()?.to_vec();
 
     let encoded_text = encode_quoted_printable(&text);
     let encoded_html = encode_quoted_printable(&html);
@@ -164,6 +179,7 @@ pub fn render_campaign_message(letter: &CampaignLetter<'_>) -> Result<CampaignMe
         body,
         text,
         html,
+        headers,
     })
 }
 
@@ -315,6 +331,7 @@ mod tests {
             subject: "Prijzen vanaf maandag",
             preheader: Some("Olijfolie 12,50 €"),
             content,
+            unsubscribe: &crate::campaign_unsubscribe_link::an_invitation(),
         })
         .expect("a validated body assembles")
     }
@@ -617,6 +634,7 @@ mod tests {
             subject: "s",
             preheader: None,
             content: &ragged,
+            unsubscribe: &crate::campaign_unsubscribe_link::an_invitation(),
         }) {
             Err(StoreError::Validation(detail)) => assert!(detail.contains("columns"), "{detail}"),
             other => panic!("expected a refusal, got {other:?}"),
@@ -632,7 +650,8 @@ mod tests {
         let assembled = message(&content);
         assert_eq!(
             assembled.text,
-            render_campaign_text(&content).expect("renders")
+            render_campaign_text(&content, &crate::campaign_unsubscribe_link::an_invitation())
+                .expect("renders")
         );
         assert_eq!(
             assembled.html,
@@ -640,6 +659,7 @@ mod tests {
                 subject: "Prijzen vanaf maandag",
                 preheader: Some("Olijfolie 12,50 €"),
                 content: &content,
+                unsubscribe: &crate::campaign_unsubscribe_link::an_invitation(),
             })
             .expect("renders")
         );

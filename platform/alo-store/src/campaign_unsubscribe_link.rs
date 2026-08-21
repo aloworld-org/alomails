@@ -67,6 +67,19 @@ pub struct UnsubscribeInvitation {
     /// that, because the campaign record already does and one rule in two
     /// places is one rule that can differ.
     pub topic: Option<String>,
+    /// The words of the visible link, **in the recipient's language**.
+    ///
+    /// Supplied by the caller rather than written here, and that is an i18n
+    /// decision rather than a convenience. This crate renders letters and knows
+    /// nothing about locale; the send path knows which language a tenant writes
+    /// to a given audience in. A hardcoded "Unsubscribe" would be the one
+    /// English string in a European product's bulk mail, sitting in the single
+    /// place a recipient looks when they want it to stop — and a footer they
+    /// cannot read is a spam complaint rather than an unsubscribe.
+    ///
+    /// It is never a URL and never markup: it is escaped like any other text on
+    /// its way into the letter.
+    pub link_text: String,
 }
 
 impl UnsubscribeInvitation {
@@ -113,6 +126,20 @@ impl UnsubscribeInvitation {
                 "a blank topic would offer to stop receiving nothing in particular".to_owned(),
             ));
         }
+        // A link with no words is a link nobody finds. This is the one control
+        // a recipient is looking for when they have decided they want the mail
+        // to stop, and the alternative they reach for when they cannot find it
+        // is the spam button.
+        if self.link_text.trim().is_empty() {
+            return Err(StoreError::Validation(
+                "the unsubscribe link needs words a recipient can read and click".to_owned(),
+            ));
+        }
+        if self.link_text.contains('\r') || self.link_text.contains('\n') {
+            return Err(StoreError::Validation(
+                "the unsubscribe link's words are one line".to_owned(),
+            ));
+        }
         Ok(())
     }
 
@@ -135,6 +162,21 @@ impl UnsubscribeInvitation {
     }
 }
 
+/// An invitation for the crate's own tests.
+///
+/// Deliberately **not English**: every renderer test that uses it would
+/// otherwise pin an English footer into a golden file, and the first person to
+/// read one would reasonably conclude the words belong to this crate. They
+/// belong to the caller — see [`UnsubscribeInvitation::link_text`].
+#[cfg(test)]
+pub(crate) fn an_invitation() -> UnsubscribeInvitation {
+    UnsubscribeInvitation {
+        url: "https://alo.test/u/9tOKENx".to_owned(),
+        topic: Some("Nieuwsbrief".to_owned()),
+        link_text: "Uitschrijven".to_owned(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
@@ -145,6 +187,10 @@ mod tests {
         UnsubscribeInvitation {
             url: url.to_owned(),
             topic: Some("Monthly Newsletter".to_owned()),
+            // Deliberately not English: the words come from the caller, and a
+            // fixture that only ever spoke English would let a hardcoded
+            // "Unsubscribe" creep back in unnoticed.
+            link_text: "Se désabonner".to_owned(),
         }
     }
 
@@ -220,5 +266,26 @@ mod tests {
             .header_pair()
             .unwrap();
         assert_eq!(pair[0].1, "<https://alo.test/u/abc>");
+    }
+    #[test]
+    fn a_link_with_no_words_is_refused() {
+        let mut wordless = invitation("https://alo.test/u/abc");
+        wordless.link_text = "   ".to_owned();
+        assert!(
+            wordless.validated().is_err(),
+            "a link nobody can see is a spam complaint waiting to happen"
+        );
+    }
+
+    #[test]
+    fn the_link_words_are_the_callers_language_rather_than_ours() {
+        // The store renders letters and knows nothing about locale. Nothing in
+        // this module may assume English.
+        let dutch = UnsubscribeInvitation {
+            url: "https://alo.test/u/abc".to_owned(),
+            topic: Some("Nieuwsbrief".to_owned()),
+            link_text: "Uitschrijven".to_owned(),
+        };
+        assert!(dutch.validated().is_ok());
     }
 }
