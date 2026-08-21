@@ -10,7 +10,6 @@ import { strings } from "../i18n";
 import type { Task } from "../jmap";
 import { Avatar, LabelChips, dueLabel, isOverdue, statusColor } from "./parts";
 import { filterTasks, groupTasks, sortTasks, type ViewConfig } from "./viewConfig";
-import styles from "./TasksModule.module.css";
 
 interface Props {
   tasks: Task[];
@@ -33,19 +32,19 @@ function assigneeName(email: string, me?: string): string {
 function PriorityCell({ task }: { task: Task }) {
   if (task.status === "done") {
     return (
-      <span className={styles.prioCell}>
-        <span className={`${styles.prioDot} ${styles.prioDotDone}`} aria-hidden />
+      <span className="inline-flex items-center gap-2 text-sm text-primary">
+        <span className="size-2 shrink-0 rounded-full bg-success" aria-hidden />
         {strings.taskColDone}
       </span>
     );
   }
-  if (task.priority === "none") return <span className={styles.prioCellEmpty}>—</span>;
-  const cls =
+  if (task.priority === "none") return <span className="text-tertiary">—</span>;
+  const dotClass =
     task.priority === "high"
-      ? styles.prioDotHigh
+      ? "bg-danger"
       : task.priority === "medium"
-        ? styles.prioDotMedium
-        : styles.prioDotLow;
+        ? "bg-warning"
+        : "bg-success";
   const label =
     task.priority === "high"
       ? strings.taskPrioHigh
@@ -53,8 +52,8 @@ function PriorityCell({ task }: { task: Task }) {
         ? strings.taskPrioMedium
         : strings.taskPrioLow;
   return (
-    <span className={styles.prioCell}>
-      <span className={`${styles.prioDot} ${cls}`} aria-hidden />
+    <span className="inline-flex items-center gap-2 text-sm text-primary">
+      <span className={`size-2 shrink-0 rounded-full ${dotClass}`} aria-hidden />
       {label}
     </span>
   );
@@ -88,8 +87,8 @@ export function ListView({ tasks, config, projectName, me, search, onOpen, onMov
   }
 
   return (
-    <div className={`${styles.table} ${config.compact ? styles.tableCompact : ""}`}>
-      <div className={styles.tHead}>
+    <div className="px-6 pb-6 pt-3">
+      <div className="grid grid-cols-[minmax(220px,2.4fr)_minmax(110px,1fr)_minmax(110px,1fr)_100px_120px] items-center gap-3 border-b border-subtle px-3 py-2 text-sm font-medium text-tertiary">
         <span>{strings.taskColName}</span>
         <span>{strings.taskColProject}</span>
         <span>{strings.taskColAssignee}</span>
@@ -100,14 +99,14 @@ export function ListView({ tasks, config, projectName, me, search, onOpen, onMov
       {groups.map((group) => {
         const isCollapsed = collapsed.has(group.key);
         return (
-          <div key={group.key} className={styles.tGroup}>
-            <button type="button" className={styles.tGroupHead} onClick={() => toggleGroup(group.key)}>
+          <div key={group.key} className="mt-2">
+            <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 pb-2 pt-3 text-left text-secondary transition-colors hover:bg-raised" onClick={() => toggleGroup(group.key)}>
               {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
               {group.status !== undefined && (
-                <span className={styles.tGroupDot} style={{ background: statusColor(group.status) }} aria-hidden />
+                <span className="size-2.5 shrink-0 rounded-full" style={{ background: statusColor(group.status) }} aria-hidden />
               )}
-              <span className={styles.tGroupName}>{group.label}</span>
-              <span className={styles.tGroupCount}>{group.items.length}</span>
+              <span className="text-base font-bold text-primary">{group.label}</span>
+              <span className="text-sm tabular-nums text-tertiary">{group.items.length}</span>
             </button>
 
             {!isCollapsed && (
@@ -117,13 +116,13 @@ export function ListView({ tasks, config, projectName, me, search, onOpen, onMov
                   return (
                     <div
                       key={t.id}
-                      className={`${styles.tRow} ${done ? styles.tRowDone : ""}`}
+                      className={`grid cursor-pointer grid-cols-[minmax(220px,2.4fr)_minmax(110px,1fr)_minmax(110px,1fr)_100px_120px] items-center gap-3 border-t border-subtle px-3 transition-colors hover:bg-raised ${config.compact ? "py-[5px]" : "py-3"}`}
                       onClick={() => onOpen(t.id)}
                     >
-                      <span className={styles.tName}>
+                      <span className="flex min-w-0 items-center gap-3">
                         <button
                           type="button"
-                          className={styles.tCheck}
+                          className={`inline-flex shrink-0 rounded-full text-tertiary transition-colors hover:text-success ${done ? "text-success" : ""}`}
                           onClick={(e) => {
                             e.stopPropagation();
                             toggle(t);
@@ -132,26 +131,26 @@ export function ListView({ tasks, config, projectName, me, search, onOpen, onMov
                         >
                           {done ? <CheckCircle2 size={18} /> : <Circle size={18} />}
                         </button>
-                        <span className={styles.tTitle}>{t.title}</span>
+                        <span className={`truncate text-base text-primary ${done ? "text-tertiary line-through" : ""}`}>{t.title}</span>
                         <LabelChips labels={t.labels} />
                       </span>
-                      <span className={styles.tCell}>{projectName(t.projectId)}</span>
-                      <span className={styles.tCell}>
+                      <span className="truncate text-sm tabular-nums text-secondary">{projectName(t.projectId)}</span>
+                      <span className="truncate text-sm tabular-nums text-secondary">
                         {t.assignee !== null && (
-                          <span className={styles.tAssignee}>
+                          <span className="inline-flex min-w-0 items-center gap-2">
                             <Avatar email={t.assignee} />
                             {assigneeName(t.assignee, me)}
                           </span>
                         )}
                       </span>
                       <span
-                        className={`${styles.tCell} ${
-                          t.dueAt !== null && !done && isOverdue(t.dueAt) ? styles.tDueOverdue : ""
+                        className={`truncate text-sm tabular-nums text-secondary ${
+                          t.dueAt !== null && !done && isOverdue(t.dueAt) ? "font-medium text-danger" : ""
                         }`}
                       >
                         {t.dueAt !== null ? dueLabel(t.dueAt) : ""}
                       </span>
-                      <span className={styles.tCell}>
+                      <span className="truncate text-sm tabular-nums text-secondary">
                         <PriorityCell task={t} />
                       </span>
                     </div>
@@ -160,7 +159,7 @@ export function ListView({ tasks, config, projectName, me, search, onOpen, onMov
                 {onAdd !== undefined && group.status !== undefined && (
                   <button
                     type="button"
-                    className={styles.tAddRow}
+                    className="flex w-full items-center gap-2 border-t border-subtle px-3 py-3 text-left text-sm text-tertiary transition-colors hover:bg-raised hover:text-accent"
                     onClick={() => onAdd(group.status as string)}
                   >
                     <Plus size={15} /> {strings.taskAdd}
