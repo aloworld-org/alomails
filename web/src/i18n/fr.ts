@@ -3629,6 +3629,9 @@ export const fr: Partial<Catalog> = {
     `Connectez-vous avec ${email}. Vous ne verrez que les sites partagés avec vous.`,
   sitesInvitationSignIn: "Se connecter à alo",
   sitesPages: "Pages",
+  sitesPageCount: (count: number) => `${count} page${count === 1 ? "" : "s"}`,
+  sitesSiteTools: "Outils du site",
+  sitesSiteToolsHint: "Contenu, commerce, analyses et paramètres",
   sitesNewPage: "Nouvelle page",
   sitesNoPagesTitle: "Aucune page pour l’instant",
   sitesNoPagesBody:

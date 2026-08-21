@@ -259,16 +259,20 @@ export function SiteView() {
   }
 
   return (
-    <div className={styles.page}>
-      <header className={styles.header}>
-        <Link to=".." relative="path" className={styles.backLink}>
+    <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-6 px-4 py-5 sm:px-6 lg:px-8">
+      <header className="flex min-h-14 flex-wrap items-center gap-4">
+        <Link
+          to=".."
+          relative="path"
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-text-secondary no-underline transition-colors hover:bg-surface-raised hover:text-text-primary"
+        >
           <ArrowLeft size={16} aria-hidden="true" />
           {strings.sitesBack}
         </Link>
         {site !== null && (
-          <div className={styles.siteHead}>
-            <h1 className={styles.title}>{site.name}</h1>
-            <span className={styles.mono}>{site.subdomain}</span>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
+            <h1 className="m-0 truncate text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">{site.name}</h1>
+            <span className="font-mono text-sm text-text-secondary">{site.subdomain}</span>
             <span
               className={
                 live ? `${styles.chip} ${styles.chipLive}` : styles.chip
@@ -284,13 +288,13 @@ export function SiteView() {
       {/* Everything below the header scrolls as one document: this screen is
           a stack of panels, not a viewport column, and on a phone the pages
           table lives below the fold. */}
-      <div className={styles.pageBody}>
+      <div className="flex flex-col gap-5">
       {error !== null && <ErrorBanner message={error} />}
 
       {site !== null && (
         <>
-          <div className={styles.publishBar}>
-            <div className={styles.publishCopy}>
+          <section className="flex flex-col gap-4 rounded-2xl border border-subtle bg-surface px-5 py-5 shadow-sm sm:px-6 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-col gap-1 text-sm text-text-secondary">
               {live && host !== null && (
                 <>
                   <span>{strings.sitesLiveAtLabel}</span>
@@ -298,7 +302,7 @@ export function SiteView() {
                     href={`https://${host}`}
                     target="_blank"
                     rel="noreferrer"
-                    className={styles.liveLink}
+                  className="w-fit font-semibold text-text-primary no-underline hover:text-accent"
                   >
                     {host}
                   </a>
@@ -326,7 +330,7 @@ export function SiteView() {
                 </span>
               )}
             </div>
-            <div className={styles.publishActions}>
+            <div className="flex flex-wrap items-center gap-2">
               {/* Domains belongs beside the address, not among the content
                   screens: it is the question "where does this website live?",
                   which is what the line to its left just answered. */}
@@ -368,7 +372,7 @@ export function SiteView() {
                 {live ? strings.sitesPublishChanges : strings.sitesPublish}
               </Button>
             </div>
-          </div>
+          </section>
 
           {/* Publishing later belongs directly under publishing now: they are
               the same decision, one of them with a moment attached. */}
@@ -376,11 +380,22 @@ export function SiteView() {
 
           {site.canManageCollaborators && <SiteCollaborators siteId={site.id} />}
 
+          <details className="group rounded-2xl border border-subtle bg-surface shadow-sm">
+            <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 rounded-2xl px-5 py-3 marker:content-none hover:bg-surface-raised sm:px-6">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent" aria-hidden="true">
+                <Languages size={20} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-text-primary">{strings.sitesLanguages}</span>
+                <span className="block truncate text-sm text-text-secondary">{strings.sitesLanguagesHint}</span>
+              </span>
+              <span className="text-sm font-medium text-text-secondary">{site.enabledLocales.length}</span>
+            </summary>
           <section
-            className={styles.languagePanel}
+            className="border-t border-subtle px-5 py-5 sm:px-6"
             aria-labelledby="site-languages-title"
           >
-            <div className={styles.languagePanelIntro}>
+            <div className="sr-only">
               <span className={styles.languagePanelIcon} aria-hidden="true">
                 <Languages />
               </span>
@@ -595,10 +610,76 @@ export function SiteView() {
               </section>
             )}
           </section>
+          </details>
 
-          <div className={styles.sectionBar}>
-            <h2 className={styles.sectionTitle}>{strings.sitesPages}</h2>
-            <div className={styles.sectionBarActions}>
+          <section className="overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm">
+            <div className="flex min-h-16 flex-wrap items-center justify-between gap-3 border-b border-subtle px-5 py-3 sm:px-6">
+              <div>
+                <h2 className="m-0 text-lg font-semibold text-text-primary">{strings.sitesPages}</h2>
+                <p className="m-0 text-sm text-text-secondary">{strings.sitesPageCount(pages.length)}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  icon={<Palette size="var(--icon-size-inline)" />}
+                  onClick={() => setTheming(true)}
+                >
+                  {strings.sitesTheme}
+                </Button>
+                <Button size="sm" onClick={() => setCreating(true)}>
+                  {strings.sitesNewPage}
+                </Button>
+              </div>
+            </div>
+
+          {pages.length === 0 && !loading ? (
+            <EmptyState
+              Icon={FileText}
+              title={strings.sitesNoPagesTitle}
+              body={strings.sitesNoPagesBody}
+              cta={strings.sitesNewPage}
+              onCta={() => setCreating(true)}
+            />
+          ) : (
+            <div className={styles.tableWrapStatic}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th scope="col">{strings.sitesColPage}</th>
+                    <th scope="col">{strings.sitesColPath}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pages.map((p) => (
+                    <tr key={p.id}>
+                      <td>
+                        <Link to={`pages/${p.id}`} className={styles.pageLink}>
+                          {p.title}
+                        </Link>
+                        {p.home && <span className={styles.badge}>{strings.sitesHomeBadge}</span>}
+                        {protectedPages.has(p.id) && (
+                          <span className={styles.pageLockBadge}>
+                            <Lock size={11} aria-hidden="true" />
+                            {strings.sitesPagePasswordBadge}
+                          </span>
+                        )}
+                      </td>
+                      <td className={styles.mono}>/{p.slug}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          </section>
+
+          <details className="group rounded-2xl border border-subtle bg-surface shadow-sm">
+            <summary className="flex min-h-16 cursor-pointer list-none items-center justify-between rounded-2xl px-5 py-3 font-semibold text-text-primary marker:content-none hover:bg-surface-raised sm:px-6">
+              <span>{strings.sitesSiteTools}</span>
+              <span className="text-sm font-normal text-text-secondary">{strings.sitesSiteToolsHint}</span>
+            </summary>
+            <div className="grid gap-2 border-t border-subtle p-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               <Button
                 variant="ghost"
                 size="sm"
@@ -711,61 +792,13 @@ export function SiteView() {
               <Button
                 variant="ghost"
                 size="sm"
-                icon={<Palette size="var(--icon-size-inline)" />}
-                onClick={() => setTheming(true)}
+                icon={<Globe2 size="var(--icon-size-inline)" />}
+                onClick={() => navigate("domains")}
               >
-                {strings.sitesTheme}
-              </Button>
-              <Button size="sm" onClick={() => setCreating(true)}>
-                {strings.sitesNewPage}
+                {strings.sitesDomains}
               </Button>
             </div>
-          </div>
-
-          {pages.length === 0 && !loading ? (
-            <EmptyState
-              Icon={FileText}
-              title={strings.sitesNoPagesTitle}
-              body={strings.sitesNoPagesBody}
-              cta={strings.sitesNewPage}
-              onCta={() => setCreating(true)}
-            />
-          ) : (
-            <div className={styles.tableWrapStatic}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th scope="col">{strings.sitesColPage}</th>
-                    <th scope="col">{strings.sitesColPath}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pages.map((p) => (
-                    <tr key={p.id}>
-                      <td>
-                        {/* Opens the page's section editor. */}
-                        <Link to={`pages/${p.id}`} className={styles.pageLink}>
-                          {p.title}
-                        </Link>
-                        {p.home && (
-                          <span className={styles.badge}>
-                            {strings.sitesHomeBadge}
-                          </span>
-                        )}
-                        {protectedPages.has(p.id) && (
-                          <span className={styles.pageLockBadge}>
-                            <Lock size={11} aria-hidden="true" />
-                            {strings.sitesPagePasswordBadge}
-                          </span>
-                        )}
-                      </td>
-                      <td className={styles.mono}>/{p.slug}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          </details>
         </>
       )}
       </div>

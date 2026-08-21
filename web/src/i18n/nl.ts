@@ -3584,7 +3584,10 @@ export const nl: Partial<Catalog> = {
   sitesInvitationDoneBody: (email: string) =>
     `Meld je aan als ${email}. Je ziet alleen de websites die met je zijn gedeeld.`,
   sitesInvitationSignIn: "Aanmelden bij alo",
-  sitesPages: "Pagina’s",
+  sitesPages: "Pagina's",
+  sitesPageCount: (count: number) => `${count} ${count === 1 ? "pagina" : "pagina's"}`,
+  sitesSiteTools: "Websitehulpmiddelen",
+  sitesSiteToolsHint: "Inhoud, handel, inzichten en instellingen",
   sitesNewPage: "Nieuwe pagina",
   sitesNoPagesTitle: "Nog geen pagina’s",
   sitesNoPagesBody:

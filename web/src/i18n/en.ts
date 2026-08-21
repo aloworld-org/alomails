@@ -3314,6 +3314,9 @@ export const en = {
     `Sign in as ${email}. You will see only the websites shared with you.`,
   sitesInvitationSignIn: "Sign in to alo",
   sitesPages: "Pages",
+  sitesPageCount: (count: number) => `${count} ${count === 1 ? "page" : "pages"}`,
+  sitesSiteTools: "Site tools",
+  sitesSiteToolsHint: "Content, commerce, insights, and settings",
   sitesNewPage: "New page",
   sitesNoPagesTitle: "No pages yet",
   sitesNoPagesBody:
