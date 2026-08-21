@@ -46,7 +46,63 @@ import type {
   SiteBookingFieldKind,
   SiteBookingWindow,
 } from "./types";
-import styles from "./SitesModule.module.css";
+
+const styles = {
+  page: "mx-auto flex w-full max-w-[90rem] flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8",
+  header:
+    "flex flex-col gap-4 rounded-2xl border border-subtle bg-surface px-5 py-4 shadow-sm sm:flex-row sm:items-center sm:justify-between",
+  backLink:
+    "inline-flex min-h-10 items-center gap-2 rounded-xl px-3 text-sm font-semibold text-secondary no-underline transition-colors hover:bg-app hover:text-primary",
+  title: "text-xl font-bold tracking-tight text-primary",
+  collectionPageHint: "mt-1 max-w-2xl text-sm leading-6 text-secondary",
+  collectionLoading:
+    "flex min-h-[24rem] items-center justify-center gap-3 rounded-2xl border border-subtle bg-surface text-sm text-secondary",
+  catalogWorkspace:
+    "grid min-h-[42rem] overflow-hidden rounded-2xl border border-subtle bg-surface shadow-sm lg:grid-cols-[19rem_minmax(0,1fr)]",
+  catalogList: "border-b border-subtle bg-app/35 p-2 lg:border-b-0 lg:border-r",
+  collectionListEmpty:
+    "flex flex-col items-center gap-2 px-5 py-10 text-center text-sm text-secondary [&>svg]:h-8 [&>svg]:w-8 [&>svg]:text-muted [&>strong]:text-base [&>strong]:text-primary",
+  collectionListItem:
+    "mb-1 flex w-full items-start gap-3 rounded-xl border border-transparent px-4 py-3 text-left text-primary transition-colors hover:border-subtle hover:bg-surface [&>svg]:mt-0.5 [&>svg]:h-5 [&>svg]:w-5 [&>svg]:shrink-0 [&>span]:min-w-0 [&_strong]:block [&_strong]:truncate [&_strong]:text-sm [&_small]:mt-1 [&_small]:block [&_small]:truncate [&_small]:text-xs [&_small]:text-secondary",
+  collectionListItemActive: "!border-accent/25 !bg-accent-soft shadow-sm",
+  catalogEditor:
+    "grid min-w-0 gap-5 p-4 xl:grid-cols-[minmax(0,1fr)_20rem] xl:p-6",
+  catalogPanel: "min-w-0 space-y-6",
+  catalogItemsPanel:
+    "h-fit min-w-0 rounded-2xl border border-subtle bg-app/35 p-5 xl:sticky xl:top-5",
+  collectionPanelHead:
+    "flex items-start justify-between gap-4 border-b border-subtle pb-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-primary [&_p]:mt-1 [&_p]:text-sm [&_p]:leading-6 [&_p]:text-secondary",
+  collectionSourceFields: "grid gap-4 sm:grid-cols-2",
+  bookingDescription: "block",
+  input:
+    "mt-2 min-h-11 w-full rounded-xl border border-subtle bg-surface px-3.5 py-2.5 text-sm text-primary outline-none transition-shadow placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/15",
+  textarea: "min-h-24 resize-y",
+  bookingCalendar: "rounded-2xl border border-subtle bg-app/40 p-4",
+  hint: "mt-2 text-sm leading-6 text-secondary",
+  publishError: "mt-2 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger",
+  liveLink:
+    "mt-3 inline-flex min-h-10 items-center gap-2 rounded-xl bg-neutral-soft px-3.5 text-sm font-semibold text-primary no-underline hover:bg-neutral-soft/75",
+  bookingNumbers: "grid gap-4 sm:grid-cols-2 xl:grid-cols-3",
+  mono: "font-mono",
+  catalogGroups:
+    "rounded-2xl border border-subtle p-4 [&>h3]:font-semibold [&>h3]:text-primary [&>p]:mt-1 [&>p]:text-sm [&>p]:text-secondary",
+  catalogGroupRows: "mt-4 space-y-3",
+  bookingHoursRow:
+    "grid items-center gap-2 sm:grid-cols-[minmax(8rem,1fr)_8rem_8rem_auto]",
+  bookingQuestionRow:
+    "grid items-center gap-2 rounded-xl bg-app/40 p-3 sm:grid-cols-2 xl:grid-cols-[minmax(8rem,1fr)_minmax(7rem,.7fr)_9rem_auto_auto]",
+  bookingRequired:
+    "flex min-h-11 items-center gap-2 px-2 text-sm text-secondary",
+  catalogOrdersToggle:
+    "flex cursor-pointer items-start gap-3 rounded-2xl border border-subtle bg-app/40 p-4 [&_input]:mt-1 [&_span]:min-w-0 [&_strong]:block [&_strong]:text-sm [&_strong]:text-primary [&_small]:mt-1 [&_small]:block [&_small]:text-sm [&_small]:leading-6 [&_small]:text-secondary",
+  collectionActions:
+    "flex flex-col-reverse gap-3 border-t border-subtle pt-5 sm:flex-row sm:items-center sm:justify-between",
+  collectionDisconnectGroup: "flex items-center gap-3 text-sm text-danger",
+  bookingPreview:
+    "mt-5 space-y-3 text-sm text-secondary [&>strong]:block [&>strong]:text-lg [&>strong]:text-primary",
+  bookingPreviewHours:
+    "space-y-2 rounded-xl bg-surface p-3 text-sm text-primary",
+} as const;
 
 /** The calendar a new service starts on: the first one appointments can
  *  actually be written into, and failing that the first one there is. Choosing
@@ -58,7 +114,12 @@ function defaultCalendar(sources: SiteAvailabilitySource[]): string {
 }
 
 /** The four kinds of extra question, in the order they are offered. */
-const FIELD_KINDS: readonly SiteBookingFieldKind[] = ["text", "long_text", "phone", "choice"];
+const FIELD_KINDS: readonly SiteBookingFieldKind[] = [
+  "text",
+  "long_text",
+  "phone",
+  "choice",
+];
 
 function fieldKindLabel(kind: SiteBookingFieldKind): string {
   switch (kind) {
@@ -79,7 +140,9 @@ export function BookingsView() {
   const [bookings, setBookings] = useState<SiteBooking[]>([]);
   const [sources, setSources] = useState<SiteAvailabilitySource[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<SiteBookingDraft>(() => emptyBookingDraft(""));
+  const [draft, setDraft] = useState<SiteBookingDraft>(() =>
+    emptyBookingDraft(""),
+  );
   const [creating, setCreating] = useState(false);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -118,7 +181,8 @@ export function BookingsView() {
     void load();
   }, [load]);
 
-  const selected = bookings.find((booking) => booking.id === selectedId) ?? null;
+  const selected =
+    bookings.find((booking) => booking.id === selectedId) ?? null;
   /** The calendar the draft names, as the account can see it now. Absent means
    *  it has been deleted or unshared since — the one state that silently stops
    *  a published page taking bookings, so the screen never leaves it unsaid. */
@@ -173,7 +237,9 @@ export function BookingsView() {
           : await api.updateBooking(siteId, selectedId, draft);
       setBookings((current) =>
         current.some((booking) => booking.id === stored.id)
-          ? current.map((booking) => (booking.id === stored.id ? stored : booking))
+          ? current.map((booking) =>
+              booking.id === stored.id ? stored : booking,
+            )
           : [...current, stored],
       );
       setSelectedId(stored.id);
@@ -223,10 +289,15 @@ export function BookingsView() {
         </Link>
         <div>
           <h1 className={styles.title}>{strings.sitesBookings}</h1>
-          <p className={styles.collectionPageHint}>{strings.sitesBookingsHint}</p>
+          <p className={styles.collectionPageHint}>
+            {strings.sitesBookingsHint}
+          </p>
         </div>
         {!loading && bookings.length > 0 && sources.length > 0 && (
-          <Button icon={<Plus size="var(--icon-size-inline)" />} onClick={startCreate}>
+          <Button
+            icon={<Plus size="var(--icon-size-inline)" />}
+            onClick={startCreate}
+          >
             {strings.sitesNewBooking}
           </Button>
         )}
@@ -259,7 +330,10 @@ export function BookingsView() {
         />
       ) : (
         <div className={styles.catalogWorkspace}>
-          <aside className={styles.catalogList} aria-label={strings.sitesBookings}>
+          <aside
+            className={styles.catalogList}
+            aria-label={strings.sitesBookings}
+          >
             {/* The first visit lands here with the create form already open, so
                 the list says what a bookable service IS rather than showing an
                 empty column beside a form nobody asked for. */}
@@ -275,7 +349,9 @@ export function BookingsView() {
                 key={booking.id}
                 type="button"
                 className={`${styles.collectionListItem} ${
-                  booking.id === selectedId ? styles.collectionListItemActive : ""
+                  booking.id === selectedId
+                    ? styles.collectionListItemActive
+                    : ""
                 }`}
                 aria-pressed={booking.id === selectedId}
                 onClick={() => select(booking)}
@@ -296,7 +372,10 @@ export function BookingsView() {
           </aside>
 
           <div className={styles.catalogEditor}>
-            <section className={styles.catalogPanel} aria-labelledby="booking-settings-title">
+            <section
+              className={styles.catalogPanel}
+              aria-labelledby="booking-settings-title"
+            >
               <div className={styles.collectionPanelHead}>
                 <div>
                   <h2 id="booking-settings-title">
@@ -334,7 +413,9 @@ export function BookingsView() {
                   className={`${styles.input} ${styles.textarea}`}
                   rows={3}
                   value={draft.description}
-                  onChange={(event) => edit({ description: event.target.value })}
+                  onChange={(event) =>
+                    edit({ description: event.target.value })
+                  }
                 />
               </label>
 
@@ -347,7 +428,9 @@ export function BookingsView() {
                   <select
                     className={styles.input}
                     value={draft.calendarId}
-                    onChange={(event) => edit({ calendarId: event.target.value })}
+                    onChange={(event) =>
+                      edit({ calendarId: event.target.value })
+                    }
                   >
                     {sources.map((source) => (
                       <option key={source.id} value={source.id}>
@@ -363,7 +446,9 @@ export function BookingsView() {
                     )}
                   </select>
                 </label>
-                <p className={styles.hint}>{strings.sitesBookingCalendarHint}</p>
+                <p className={styles.hint}>
+                  {strings.sitesBookingCalendarHint}
+                </p>
                 {boundSource === undefined && draft.calendarId !== "" && (
                   <p className={styles.publishError} role="alert">
                     {strings.sitesBookingCalendarGoneHint}
@@ -373,7 +458,10 @@ export function BookingsView() {
                     events in a real calendar, and moving or cancelling one is
                     Agenda's job, not this screen's. */}
                 <Link className={styles.liveLink} to="/agenda">
-                  <CalendarDays size="var(--icon-size-inline)" aria-hidden="true" />
+                  <CalendarDays
+                    size="var(--icon-size-inline)"
+                    aria-hidden="true"
+                  />
                   {strings.sitesBookingOpenAgenda}
                 </Link>
               </div>
@@ -398,7 +486,9 @@ export function BookingsView() {
                     type="number"
                     min={0}
                     value={draft.bufferMinutes}
-                    onChange={(event) => edit({ bufferMinutes: Number(event.target.value) })}
+                    onChange={(event) =>
+                      edit({ bufferMinutes: Number(event.target.value) })
+                    }
                   />
                 </label>
                 <label>
@@ -408,7 +498,9 @@ export function BookingsView() {
                     type="number"
                     min={0}
                     value={draft.noticeMinutes}
-                    onChange={(event) => edit({ noticeMinutes: Number(event.target.value) })}
+                    onChange={(event) =>
+                      edit({ noticeMinutes: Number(event.target.value) })
+                    }
                   />
                 </label>
                 <label>
@@ -418,7 +510,9 @@ export function BookingsView() {
                     type="number"
                     min={1}
                     value={draft.horizonDays}
-                    onChange={(event) => edit({ horizonDays: Number(event.target.value) })}
+                    onChange={(event) =>
+                      edit({ horizonDays: Number(event.target.value) })
+                    }
                   />
                 </label>
                 <label>
@@ -442,13 +536,18 @@ export function BookingsView() {
                 <p>{strings.sitesBookingHoursHint}</p>
                 <div className={styles.catalogGroupRows}>
                   {draft.hours.map((window, index) => (
-                    <div className={styles.bookingHoursRow} key={`${index}-${window.weekday}`}>
+                    <div
+                      className={styles.bookingHoursRow}
+                      key={`${index}-${window.weekday}`}
+                    >
                       <select
                         className={styles.input}
                         value={window.weekday}
                         aria-label={strings.sitesBookingDay}
                         onChange={(event) =>
-                          editWindow(index, { weekday: Number(event.target.value) })
+                          editWindow(index, {
+                            weekday: Number(event.target.value),
+                          })
                         }
                       >
                         {WEEKDAYS.map((weekday) => (
@@ -464,7 +563,8 @@ export function BookingsView() {
                         aria-label={strings.sitesBookingFrom}
                         onChange={(event) => {
                           const minutes = timeMinutes(event.target.value);
-                          if (minutes !== null) editWindow(index, { startMinute: minutes });
+                          if (minutes !== null)
+                            editWindow(index, { startMinute: minutes });
                         }}
                       />
                       <input
@@ -474,16 +574,21 @@ export function BookingsView() {
                         aria-label={strings.sitesBookingUntil}
                         onChange={(event) => {
                           const minutes = timeMinutes(event.target.value);
-                          if (minutes !== null) editWindow(index, { endMinute: minutes });
+                          if (minutes !== null)
+                            editWindow(index, { endMinute: minutes });
                         }}
                       />
                       <Button
                         variant="ghost"
                         size="sm"
                         icon={<Trash2 size="var(--icon-size-inline)" />}
-                        aria-label={strings.sitesBookingRemoveWindow(windowLabel(window))}
+                        aria-label={strings.sitesBookingRemoveWindow(
+                          windowLabel(window),
+                        )}
                         onClick={() =>
-                          edit({ hours: draft.hours.filter((_, at) => at !== index) })
+                          edit({
+                            hours: draft.hours.filter((_, at) => at !== index),
+                          })
                         }
                       >
                         {strings.sitesCatalogGroupRemoveShort}
@@ -498,7 +603,9 @@ export function BookingsView() {
                       edit({
                         hours: [
                           ...draft.hours,
-                          blankWindow(draft.hours[draft.hours.length - 1]?.weekday ?? 1),
+                          blankWindow(
+                            draft.hours[draft.hours.length - 1]?.weekday ?? 1,
+                          ),
                         ],
                       })
                     }
@@ -520,7 +627,9 @@ export function BookingsView() {
                       <input
                         className={styles.input}
                         value={field.label}
-                        placeholder={strings.sitesBookingQuestionLabelPlaceholder}
+                        placeholder={
+                          strings.sitesBookingQuestionLabelPlaceholder
+                        }
                         aria-label={strings.sitesBookingQuestionLabel}
                         onChange={(event) => {
                           const label = event.target.value;
@@ -529,10 +638,13 @@ export function BookingsView() {
                           // it outlives the label and renaming a question must
                           // not orphan the answers already taken.
                           const suggested = suggestFieldKey(field.label);
-                          const untouched = field.key === "" || field.key === suggested;
+                          const untouched =
+                            field.key === "" || field.key === suggested;
                           editField(index, {
                             label,
-                            ...(untouched ? { key: suggestFieldKey(label) } : {}),
+                            ...(untouched
+                              ? { key: suggestFieldKey(label) }
+                              : {}),
                           });
                         }}
                       />
@@ -543,7 +655,9 @@ export function BookingsView() {
                         autoCapitalize="none"
                         autoCorrect="off"
                         spellCheck={false}
-                        onChange={(event) => editField(index, { key: event.target.value })}
+                        onChange={(event) =>
+                          editField(index, { key: event.target.value })
+                        }
                       />
                       <select
                         className={styles.input}
@@ -565,7 +679,9 @@ export function BookingsView() {
                         <input
                           className={styles.input}
                           value={field.options.join(", ")}
-                          placeholder={strings.sitesBookingQuestionOptionsPlaceholder}
+                          placeholder={
+                            strings.sitesBookingQuestionOptionsPlaceholder
+                          }
                           aria-label={strings.sitesBookingQuestionOptions}
                           onChange={(event) =>
                             editField(index, {
@@ -595,7 +711,11 @@ export function BookingsView() {
                           field.label === "" ? field.key : field.label,
                         )}
                         onClick={() =>
-                          edit({ fields: draft.fields.filter((_, at) => at !== index) })
+                          edit({
+                            fields: draft.fields.filter(
+                              (_, at) => at !== index,
+                            ),
+                          })
                         }
                       >
                         {strings.sitesCatalogGroupRemoveShort}
@@ -606,7 +726,9 @@ export function BookingsView() {
                     variant="ghost"
                     size="sm"
                     icon={<Plus size="var(--icon-size-inline)" />}
-                    onClick={() => edit({ fields: [...draft.fields, blankBookingField()] })}
+                    onClick={() =>
+                      edit({ fields: [...draft.fields, blankBookingField()] })
+                    }
                   >
                     {strings.sitesBookingAddQuestion}
                   </Button>
@@ -638,11 +760,15 @@ export function BookingsView() {
                         ? strings.sitesBookingDeleteConfirm
                         : strings.sitesBookingDelete}
                     </Button>
-                    {deleteArmed && <span>{strings.sitesBookingDeleteHint}</span>}
+                    {deleteArmed && (
+                      <span>{strings.sitesBookingDeleteHint}</span>
+                    )}
                   </div>
                 )}
                 <Button
-                  disabled={busy || draft.name.trim() === "" || draft.calendarId === ""}
+                  disabled={
+                    busy || draft.name.trim() === "" || draft.calendarId === ""
+                  }
                   onClick={() => void save()}
                 >
                   {creating || selected === null
@@ -656,18 +782,27 @@ export function BookingsView() {
                 It restates the service as it stands — never a second copy of the
                 slot arithmetic, which is the server's and is computed against
                 the calendar at the moment somebody asks. */}
-            <section className={styles.catalogItemsPanel} aria-labelledby="booking-preview-title">
+            <section
+              className={styles.catalogItemsPanel}
+              aria-labelledby="booking-preview-title"
+            >
               <div className={styles.collectionPanelHead}>
                 <div>
-                  <h2 id="booking-preview-title">{strings.sitesBookingPreview}</h2>
+                  <h2 id="booking-preview-title">
+                    {strings.sitesBookingPreview}
+                  </h2>
                   <p>{strings.sitesBookingPreviewHint}</p>
                 </div>
               </div>
               <div className={styles.bookingPreview}>
                 <strong>
-                  {draft.name.trim() === "" ? strings.sitesBookingUnnamed : draft.name}
+                  {draft.name.trim() === ""
+                    ? strings.sitesBookingUnnamed
+                    : draft.name}
                 </strong>
-                <span>{strings.sitesBookingMinutes(draft.durationMinutes)}</span>
+                <span>
+                  {strings.sitesBookingMinutes(draft.durationMinutes)}
+                </span>
                 {draft.description.trim() !== "" && <p>{draft.description}</p>}
                 {draft.location.trim() !== "" && (
                   <span>{strings.sitesBookingWhereLine(draft.location)}</span>
@@ -677,7 +812,9 @@ export function BookingsView() {
                     <li>{strings.sitesBookingNoHours}</li>
                   ) : (
                     draft.hours.map((window, index) => (
-                      <li key={`${index}-${window.weekday}`}>{windowLabel(window)}</li>
+                      <li key={`${index}-${window.weekday}`}>
+                        {windowLabel(window)}
+                      </li>
                     ))
                   )}
                 </ul>
@@ -686,13 +823,17 @@ export function BookingsView() {
                     ? strings.sitesBookingAsksNothingExtra
                     : strings.sitesBookingAsksAlso(
                         draft.fields
-                          .map((field) => (field.label === "" ? field.key : field.label))
+                          .map((field) =>
+                            field.label === "" ? field.key : field.label,
+                          )
                           .join(", "),
                       )}
                 </p>
                 <p className={styles.hint}>{strings.sitesBookingPublishHint}</p>
                 {!draft.active && (
-                  <p className={styles.publishError}>{strings.sitesBookingOffPreview}</p>
+                  <p className={styles.publishError}>
+                    {strings.sitesBookingOffPreview}
+                  </p>
                 )}
               </div>
             </section>
